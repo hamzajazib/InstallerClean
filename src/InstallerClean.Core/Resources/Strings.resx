@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!--
     InstallerClean string resources. Source-of-truth language: en-GB.
@@ -122,6 +122,15 @@
        language that separates list items with something other than a comma, or
        that wants no space after it, says so here. -->
   <data name="Display.ListSeparator" xml:space="preserve"><value>, </value></data>
+  <!-- What ends the heading and separates it from the body when a dialog composes
+       the single line a screen reader announces as it opens. A resx value and not a
+       hard-coded ". " for the same reason as the separator above: the stop is not the
+       same mark everywhere, and a language that ends a sentence differently, or that
+       wants no space after it, says so here. It belongs to the join rather than to the
+       heading because the heading carries no terminal punctuation of its own; the
+       Confirm dialogs, whose headings end in a question mark, join with a bare space
+       and do not come through here. -->
+  <data name="Display.SentenceSeparator" xml:space="preserve"><value>. </value></data>
   <data name="Field.PatchesOnly" xml:space="preserve"><value>(patches only)</value></data>
   <data name="Field.Missing" xml:space="preserve"><value>missing</value></data>
 

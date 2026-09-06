@@ -1,5 +1,6 @@
-using System.Windows;
+﻿using System.Windows;
 using InstallerClean.Helpers;
+using InstallerClean.Resources;
 
 namespace InstallerClean;
 
@@ -35,7 +36,11 @@ public partial class MessageWindow : Window
         // is false and the chrome paints no caption, so the title is never
         // rendered and this is announcement-only, which is why it takes the
         // unbound message rather than the one above it.
-        Title = caption + ". " + message;
+        //
+        // The stop between the two comes from the resx rather than from here,
+        // because the caption ends in no punctuation of its own and the mark that
+        // ends a sentence is not the same in every language.
+        Title = caption + Strings.Display_SentenceSeparator + message;
 
         // Sized to content; the clamp stops a very large text scale pushing the
         // card past the work area, at which point the message scrolls and the

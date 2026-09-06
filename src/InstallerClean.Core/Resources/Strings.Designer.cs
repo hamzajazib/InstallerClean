@@ -300,6 +300,7 @@ public static class Strings
     public static string Display_Elapsed_Ms => Get("Display.Elapsed.Ms");
     public static string Display_Elapsed_S => Get("Display.Elapsed.S");
     public static string Display_ListSeparator => Get("Display.ListSeparator");
+    public static string Display_SentenceSeparator => Get("Display.SentenceSeparator");
     public static string Display_Size_B => Get("Display.Size.B");
     public static string Display_Size_GB => Get("Display.Size.GB");
     public static string Display_Size_KB => Get("Display.Size.KB");

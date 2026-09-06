@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using InstallerClean.Helpers;
 using InstallerClean.Resources;
 
@@ -20,10 +20,12 @@ public partial class UpdateAvailableWindow : Window
         // card alone would go unheard and the versions under it would arrive
         // with nothing saying what they are about.
         //
-        // Joined with a full stop, as MessageWindow joins its own, because
-        // this heading ends in none in any language. The Confirm dialogs join
-        // with a bare space because theirs end in a question mark.
-        Title = Strings.UpdateCheck_UpdateAvailable_Title + ". " + VersionInfo.Text;
+        // Joined with the stop the resx carries, as MessageWindow joins its own,
+        // because this heading ends in none in any language and the mark that ends
+        // a sentence differs between them. The Confirm dialogs join with a bare
+        // space because theirs already end in a question mark.
+        Title = Strings.UpdateCheck_UpdateAvailable_Title
+            + Strings.Display_SentenceSeparator + VersionInfo.Text;
 
         // Sized to content; the clamp stops a very large text scale
         // pushing the card past the work area, at which point the
