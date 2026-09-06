@@ -137,11 +137,12 @@ jobs:
         if: success() || failure()
         run: node scripts/check-cli-help-alignment.mjs
 
-      # The only mechanical check on XAML resource keys. A {StaticResource} whose
-      # key nothing defines compiles clean and throws a XamlParseException when
-      # the window is first opened, so neither the build nor the test run below
-      # can catch a rename that misses a consumer.
-      - name: Check XAML resource keys
+      # Two faults with one trigger. A {StaticResource} whose key nothing defines,
+      # and one whose resource is of a type the consuming property cannot take,
+      # both compile clean and both throw when the template is first realised,
+      # which is when a user opens that window. Neither the build nor the test
+      # run below sees either, because resource lookup happens at neither.
+      - name: Check XAML resource keys and types
         if: success() || failure()
         run: node scripts/check-xaml-resources.mjs
 
