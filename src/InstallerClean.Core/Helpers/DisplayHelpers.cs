@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Reflection;
 using InstallerClean.Resources;
@@ -33,8 +33,16 @@ internal static class DisplayHelpers
     /// THE MACHINE-READ LINES DO NOT COME THROUGH HERE. Tooling matches the
     /// Application-channel entries and the "\d+ errors:" stdout header on their
     /// exact text, so those call sites pass the number itself and it renders as
-    /// bare digits. A count inside an exception message stays bare for the same
-    /// reason, one of those messages reaching a dialog and the event log both.
+    /// bare digits.
+    ///
+    /// A COUNT INSIDE AN EXCEPTION MESSAGE STAYS BARE TOO, ON A DIFFERENT FOOTING.
+    /// That sentence is composed where it is thrown, under whatever culture the app
+    /// is running in, and it reaches the audit line already in that language, so
+    /// nothing reading it is matching English. What keeps its numbers bare is the
+    /// digits themselves: anything picking a figure out of that line by its digits
+    /// stops at a group separator and takes the part in front of it, so a grouped
+    /// count reads back as a smaller one and says nothing about having done so.
+    /// Bare, the whole figure is there to be read or none of it is.
     /// </summary>
     internal static string FormatCount(int count) =>
         count.ToString("N0", Localisation.FormatCulture);
