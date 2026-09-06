@@ -1,4 +1,4 @@
-using InstallerClean.Helpers;
+﻿using InstallerClean.Helpers;
 using InstallerClean.Resources;
 
 namespace InstallerClean.Models;
@@ -99,7 +99,7 @@ public sealed record ProductRow(
     /// name, so that a row no registration names is spoken exactly as its cell
     /// reads and a listener is given what the screen gives.
     /// </summary>
-    public string AccessibleName => string.Join(", ",
+    public string AccessibleName => string.Join(Strings.Display_ListSeparator,
         ProductNameDisplay,
         FileName,
         IsMissing ? Strings.Field_Missing : SizeDisplay,

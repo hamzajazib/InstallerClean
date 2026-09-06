@@ -1,4 +1,4 @@
-using InstallerClean.Resources;
+﻿using InstallerClean.Resources;
 
 namespace InstallerClean.Models;
 
@@ -34,5 +34,5 @@ public sealed record PatchRow(
     /// list paints and matching <see cref="ProductRow.AccessibleName"/> next door.
     /// </summary>
     public string AccessibleName =>
-        $"{FileName}, {(IsMissing ? Strings.Field_Missing : SizeDisplay)}";
+        $"{FileName}{Strings.Display_ListSeparator}{(IsMissing ? Strings.Field_Missing : SizeDisplay)}";
 }

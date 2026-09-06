@@ -1,5 +1,6 @@
-using System.IO;
+﻿using System.IO;
 using InstallerClean.Helpers;
+using InstallerClean.Resources;
 
 namespace InstallerClean.Models;
 
@@ -75,6 +76,11 @@ public record OrphanedFile(
     /// AutomationProperties.Name; without that, UI Automation's item peer
     /// falls back to the record's generated ToString and a screen reader
     /// reads the whole member dump per row.
+    ///
+    /// The cells are joined with the separator the resx carries rather than a
+    /// comma written here, because the mark that separates items in a list is
+    /// a per-language question and this line is read aloud.
     /// </summary>
-    public string AccessibleName => string.Join(", ", FileName, Reason, SizeDisplay);
+    public string AccessibleName =>
+        string.Join(Strings.Display_ListSeparator, FileName, Reason, SizeDisplay);
 }

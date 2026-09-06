@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Automation;
@@ -1051,9 +1051,11 @@ public partial class MainWindow : Window
                 // français" is the same word twice.
                 spokenName.StartsWith(endonym, StringComparison.CurrentCultureIgnoreCase)
                     ? endonym
-                    // A comma, not brackets: pt-BR's display name carries its own
-                    // parenthetical, and nesting them reads badly aloud.
-                    : $"{endonym}, {spokenName}");
+                    // A separator, not brackets: pt-BR's display name carries its
+                    // own parenthetical, and nesting them reads badly aloud. It comes
+                    // from the resx because the mark between two items is a
+                    // per-language question and this name is read aloud.
+                    : $"{endonym}{Strings.Display_ListSeparator}{spokenName}");
             // Close on invoke regardless of what the command does. Picking the
             // displayed language is a no-op command (no relaunch), and a
             // keyboard Enter on that ticked item does not dismiss the menu on
