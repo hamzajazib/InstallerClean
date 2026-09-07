@@ -415,38 +415,62 @@ if (FORCE) {
   for (const f of files) copyFileSync(`${GENDIR}/${f}`, join(backup, f));
 }
 
-for (const p of plans) writeFileSync(p.path, p.text, 'utf8');
+// A WRITE CAN STOP PART WAY THROUGH FOR REASONS OUTSIDE THIS SCRIPT: a generator
+// held open by another process, a file that is read only, a disk with nothing left
+// on it. What has been written by then stays written, and under --force the copies
+// have already been made, so the run that fails is the one whose reader most needs
+// telling where they are. The way back is reached after this block rather than
+// inside it, so it is printed whichever way the write ends and there is one copy of
+// it to keep true rather than two.
+let failure = null;
+try {
+  for (const p of plans) writeFileSync(p.path, p.text, 'utf8');
 
-console.log(`Flagged ${keys.length} key(s) across ${files.length} generator(s). `
-  + 'What each language held before this run:');
-report();
-console.log(`\nTOTALS: ${totalReset} reset in place, ${totalAdded} appended, `
-  + `${totalOverrides} plural override(s) reset.`);
-// PARTITIONED, one line per kind present, on the rule the preview follows: no
-// sentence is true of both. An entry is a neutral key, so a generator's own
-// self-check compares it against the neutral and names it; an override answers for
-// a count form the neutral has no key for, so nothing inside a generator can
-// compare it and check-still-english.mjs is what reads it.
-const reported = [];
-if (totalReset + totalAdded > 0)
-  reported.push(`The ${totalReset + totalAdded} entr(ies) now hold the English neutral value, so every generator`
-    + '\nreports each of them as "still English (untranslated)" until translated.');
-if (totalOverrides > 0)
-  reported.push(`The ${totalOverrides} plural override(s) now hold the English their base key holds. No`
-    + '\nneutral key exists for an override to be compared with, so no generator reports'
-    + '\none as still English: check-still-english.mjs names them until translated.');
-for (const c of reported) console.log(`\n${c}`);
+  console.log(`Flagged ${keys.length} key(s) across ${files.length} generator(s). `
+    + 'What each language held before this run:');
+  report();
+  console.log(`\nTOTALS: ${totalReset} reset in place, ${totalAdded} appended, `
+    + `${totalOverrides} plural override(s) reset.`);
+  // PARTITIONED, one line per kind present, on the rule the preview follows: no
+  // sentence is true of both. An entry is a neutral key, so a generator's own
+  // self-check compares it against the neutral and names it; an override answers for
+  // a count form the neutral has no key for, so nothing inside a generator can
+  // compare it and check-still-english.mjs is what reads it.
+  const reported = [];
+  if (totalReset + totalAdded > 0)
+    reported.push(`The ${totalReset + totalAdded} entr(ies) now hold the English neutral value, so every generator`
+      + '\nreports each of them as "still English (untranslated)" until translated.');
+  if (totalOverrides > 0)
+    reported.push(`The ${totalOverrides} plural override(s) now hold the English their base key holds. No`
+      + '\nneutral key exists for an override to be compared with, so no generator reports'
+      + '\none as still English: check-still-english.mjs names them until translated.');
+  for (const c of reported) console.log(`\n${c}`);
+} catch (err) {
+  failure = err;
+}
 
-// The way back, printed by every run that writes, before the way forward. Nobody
-// should have to remember a restore command or go and look one up at the moment
-// they have just realised they want it.
+// BEFORE THE WAY BACK, so the way back is the last thing on the screen. Someone
+// reading this has just watched the run stop and is looking for the remedy, and a
+// remedy above the wreckage is one they have to scroll for. The error itself is
+// printed whole rather than summarised, because which file refused the write and
+// why is what they need to act on.
+if (failure !== null) {
+  console.error('\nThis run stopped part way through writing.');
+  console.error(failure);
+  console.error('Some generators may hold the new value and some the value they held before.');
+  console.error('The way back below returns every one of them to what it held before this run.');
+}
+
+// The way back, printed whether or not the write finished, and before the way
+// forward. Nobody should have to remember a restore command or go and look one up at
+// the moment they have just realised they want it.
 if (backup !== null) {
   // Says WHICH case it was in. "git could not be relied on" covers both and tells
   // the reader neither, and the two want different things of them afterwards.
-  console.log('\nEvery generator was copied aside before it was written, because --force was');
+  console.log('\nEvery generator was copied aside before this run wrote anything, because --force');
   console.log(dirty === null
-    ? 'given and git could not be asked whether they were clean. The copies from this run are in:'
-    : `given and ${dirty.length} of them had uncommitted changes. The copies from this run are in:`);
+    ? 'was given and git could not be asked whether they were clean. The copies are in:'
+    : `was given and ${dirty.length} of them had uncommitted changes. The copies are in:`);
   console.log(`  ${backup}`);
   console.log('Restore one by copying it back over the file of the same name in '
     + `${GENDIR}/, or all of them at once.`);
@@ -466,6 +490,12 @@ if (backup !== null) {
   console.log('file it wrote:');
   console.log(`  git checkout -- ${targets.join(' ')}`);
 }
+
+// THE EXIT CODE IS UNCHANGED BY ANY OF THE ABOVE: a run that could not finish
+// writing still leaves 1, so a script reading it cannot take a failure for a
+// success. What is below is the way forward, and a run that did not get there has
+// none to offer.
+if (failure !== null) process.exit(1);
 
 // This script writes to the generators and nothing else, so the sign-off says so
 // outright. Keeping track of what is waiting to be translated is a manual step, and
