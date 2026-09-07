@@ -31,9 +31,10 @@
 // lets you not do it. A flag you have to remember is a flag you forget on the run
 // that matters, so the safe mode is the one you get by typing nothing.
 //
-// THE UNDO IS GIT, AND THIS SCRIPT'S JOB IS TO KEEP IT ONE. The fifteen generators
-// are tracked, so from a clean tree `git checkout -- scripts/translations/` restores
-// every translation exactly. That holds only while those files match the last
+// THE UNDO IS GIT, AND THIS SCRIPT'S JOB IS TO KEEP IT ONE. The generators are
+// tracked, so from a clean tree git restores every translation exactly, and a run
+// that writes prints the command, naming the files it wrote rather than the
+// directory they sit in. That holds only while those files match the last
 // commit: with a half-finished translation already in them, restoring takes the
 // human's work out along with what this run wrote. So --apply refuses on a dirty
 // tree and names the files, and --force copies them aside first and says where.
