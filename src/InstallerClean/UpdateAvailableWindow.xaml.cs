@@ -23,7 +23,8 @@ public partial class UpdateAvailableWindow : Window
         // Joined with the stop the resx carries, as MessageWindow joins its own,
         // because this heading ends in none in any language and the mark that ends
         // a sentence differs between them. The Confirm dialogs join with a bare
-        // space because theirs already end in a question mark.
+        // space because their headings ask a question and carry the question
+        // mark their language uses.
         Title = Strings.UpdateCheck_UpdateAvailable_Title
             + Strings.Display_SentenceSeparator + VersionInfo.Text;
 
