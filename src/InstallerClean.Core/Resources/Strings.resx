@@ -128,8 +128,10 @@
        same mark everywhere, and a language that ends a sentence differently, or that
        wants no space after it, says so here. It belongs to the join rather than to the
        heading because the heading carries no terminal punctuation of its own; the
-       Confirm dialogs, whose headings end in a question mark, join with a bare space
-       and do not come through here. -->
+       Confirm dialogs, whose headings ask a question and carry the question mark
+       their language uses, join with a bare space and do not come through here.
+       That mark is not always the last character: Korean puts the bracketed size
+       after it. -->
   <data name="Display.SentenceSeparator" xml:space="preserve"><value>. </value></data>
   <data name="Field.PatchesOnly" xml:space="preserve"><value>(patches only)</value></data>
   <data name="Field.Missing" xml:space="preserve"><value>missing</value></data>
