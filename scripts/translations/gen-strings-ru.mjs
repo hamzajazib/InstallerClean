@@ -43,6 +43,11 @@ const ALSO_KEEP = [
   // mark rather than a word, so there is nothing to translate and nothing to
   // get wrong; only ja and zh-Hans differ, taking the ideographic comma.
   'Display.ListSeparator',       // ", "
+  // The stop that ends a heading before the body is the one English uses. A
+  // punctuation mark rather than a word, so there is nothing to translate and
+  // nothing to get wrong; only ja and zh-Hans differ, taking the ideographic
+  // full stop, which carries no space after it.
+  'Display.SentenceSeparator',   // ". "
 ];
 
 const MAP = {
@@ -412,6 +417,7 @@ const MAP = {
   'Display.Elapsed.Ms': `{0:F0} мс`,
   'Display.Elapsed.S': `{0:F1} с`,
   'Display.ListSeparator': `, `,
+  'Display.SentenceSeparator': `. `,
   'Display.ElapsedLong.LessThanASecond': `меньше секунды`,
   'Display.ElapsedLong.Seconds': `{0:F1} секунды`,
   'CrashLog.PrivacyHeader': `# crash.log собирает необработанные исключения InstallerClean.\n# При повышенных правах сообщения исключений платформы могут\n# содержать пути к файлам текущего сеанса (в том числе профили\n# других пользователей, перечисленные запросами Windows Installer).\n# Сообщения о сетевых сбоях при проверке обновлений или отправке\n# журнала результатов могут содержать URL назначения и разрешённый\n# IP-адрес или адрес прокси. Записи о нечитаемых записях Windows\n# Installer могут содержать SID учётной записи Windows\n# (S-1-5-21-...) и коды продуктов установленного ПО.\n# Удалите все три вида сведений, прежде чем прикладывать этот файл\n# к публичному сообщению об ошибке.\n`,
@@ -590,7 +596,7 @@ const CLI = {
   'Cli.Help.NoteLine1': `installerclean-cli удерживает командную строку до конца работы, чтобы&#10;скрипт или запланированная задача могли его дождаться.`,
   'Cli.Help.ExitCodesHeader': `Коды выхода:`,
   'Cli.Help.ExitCodeOk': `  0   успех: запуск сделал то, о чём просили, и ничего не сбоило`,
-  'Cli.Help.ExitCodeError': `  1   сбой: ничего не обработано (неверные аргументы или&#10;       назначение, неудачное сканирование или все файлы с ошибкой)`,
+  'Cli.Help.ExitCodeError': `  1   ничего не обработано: запуск завершился сбоем или был отклонён`,
   'Cli.Help.ExitCodePartial': `  2   частично: часть обработана, часть нет (сбой или Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  временно: запуск заблокирован временным состоянием (см. сообщение)`,
   'Cli.Help.ExitCodeCancelled': `  130 отменено (Ctrl+C)`,

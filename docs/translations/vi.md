@@ -427,6 +427,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Tiếng Việt |
 | --- | --- |
 | ,  | ,  |
+| .  | .  |
 | {0:F2} GB | {0:F2} GB |
 | {0:F1} MB | {0:F1} MB |
 | {0:F1} KB | {0:F1} KB |
@@ -508,7 +509,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Thư mục theo người dùng; tác vụ theo lịch hoặc SYSTEM: /m ĐƯỜNG_DẪN. |
 | Exit codes: | Mã thoát: |
 |   0   success: the run did what it was asked and nothing failed |   0   thành công: đã làm đúng việc được yêu cầu, không có gì hỏng |
-|   1   failure: nothing processed (bad arguments, a bad destination, a<br>       failed scan or every file failed) |   1   thất bại: không xử lý gì (đối số hoặc đích sai, quét thất bại<br>       hoặc mọi tệp đều lỗi) |
+|   1   nothing processed: the run failed or was refused |   1   không xử lý gì: lần chạy đã thất bại hoặc bị từ chối |
 |   2   partial: some processed, some not (a failure or a Ctrl+C part way) |   2   một phần: xử lý được một phần (một lỗi hoặc một Ctrl+C) |
 |   75  transient: a temporary condition blocked the run (see the message) |   75  tạm thời: một điều kiện tạm thời đã chặn lần chạy (xem thông báo) |
 |   130 cancelled (Ctrl+C) |   130 đã hủy (Ctrl+C) |

@@ -122,6 +122,17 @@
        language that separates list items with something other than a comma, or
        that wants no space after it, says so here. -->
   <data name="Display.ListSeparator" xml:space="preserve"><value>, </value></data>
+  <!-- What ends the heading and separates it from the body when a dialog composes
+       the single line a screen reader announces as it opens. A resx value and not a
+       hard-coded ". " for the same reason as the separator above: the stop is not the
+       same mark everywhere, and a language that ends a sentence differently, or that
+       wants no space after it, says so here. It belongs to the join rather than to the
+       heading because the heading carries no terminal punctuation of its own; the
+       Confirm dialogs, whose headings ask a question and carry the question mark
+       their language uses, join with a bare space and do not come through here.
+       That mark is not always the last character: Korean puts the bracketed size
+       after it. -->
+  <data name="Display.SentenceSeparator" xml:space="preserve"><value>. </value></data>
   <data name="Field.PatchesOnly" xml:space="preserve"><value>(только исправления)</value></data>
   <data name="Field.Missing" xml:space="preserve"><value>отсутствует</value></data>
 
@@ -2069,18 +2080,20 @@ InstallerClean уже был запущен от имени администра
        reader has been doing for twenty years, and that the GUI sits alongside
        in InstallerClean.exe, which is untrue of the command-line download. -->
   <!-- 0 IS NOT A STATEMENT THAT WORK HAPPENED AND NOT A STATEMENT THAT NONE IS
-       LEFT, and this line said the second until 3.0.0. Five runs exit 0: /? and
-       /version, which print and stop; a /s scan that found files and listed them,
-       which is the one the old wording was false of, since a scan that lists
-       sixty-eight files has left an administrator plenty to do; a /s scan that
-       found none; and a /d or /m batch in which every file was processed without
-       error. The sentence has to be true of all five, so it says what they share,
-       which is that the run did what it was asked and nothing in it failed.
-       Anyone tightening it has to check it against the five again. -->
-  <!-- Two printed lines from one value; see Cli.Help.NoteLine1 for why the break
-       is inside the value. The destination causes are named because they are
-       what a scheduled /m actually hits (none given, relative, inside a system
-       folder, not enough room) and all four exit 1. -->
+       LEFT. Five runs exit 0: /? and /version, which print and stop; a /s scan
+       that found files and listed them, which can leave an administrator plenty
+       to do; a /s scan that found none; and a /d or /m batch in which every file
+       was processed without error. The sentence has to be true of all five, so it
+       says what they share, which is that the run did what it was asked and
+       nothing in it failed. Anyone tightening it checks it against the five. -->
+  <!-- The runs that end on this code are not one kind of thing: a refusal is
+       among them, and CliExitCode.Error says in its own capitals that a refusal
+       is not a failure and shares the code anyway. So the line says what they
+       share and names no cause, and it has to hold for every one of them. To
+       take the set, follow CliExitCode.Error itself: the console host returns
+       it directly in places, and in others returns a variable that carries it,
+       from the batch classifiers in CliContract and from the pending-reboot
+       mapping. Anyone tightening this line checks it against that set. -->
   <!-- A Ctrl+C part way through exits 2 with nothing failed at all, so this
        cannot say that some files failed. -->
   <data name="Tooltip.ChangeLanguage" xml:space="preserve"><value>Изменить язык. Программа перезапустится.</value></data>
@@ -2144,7 +2157,7 @@ InstallerClean уже был запущен от имени администра
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli удерживает командную строку до конца работы, чтобы&#10;скрипт или запланированная задача могли его дождаться.</value></data>
   <data name="Cli.Help.ExitCodesHeader" xml:space="preserve"><value>Коды выхода:</value></data>
   <data name="Cli.Help.ExitCodeOk" xml:space="preserve"><value>  0   успех: запуск сделал то, о чём просили, и ничего не сбоило</value></data>
-  <data name="Cli.Help.ExitCodeError" xml:space="preserve"><value>  1   сбой: ничего не обработано (неверные аргументы или&#10;       назначение, неудачное сканирование или все файлы с ошибкой)</value></data>
+  <data name="Cli.Help.ExitCodeError" xml:space="preserve"><value>  1   ничего не обработано: запуск завершился сбоем или был отклонён</value></data>
   <data name="Cli.Help.ExitCodePartial" xml:space="preserve"><value>  2   частично: часть обработана, часть нет (сбой или Ctrl+C)</value></data>
   <data name="Cli.Help.ExitCodeTransient" xml:space="preserve"><value>  75  временно: запуск заблокирован временным состоянием (см. сообщение)</value></data>
   <data name="Cli.Help.ExitCodeCancelled" xml:space="preserve"><value>  130 отменено (Ctrl+C)</value></data>

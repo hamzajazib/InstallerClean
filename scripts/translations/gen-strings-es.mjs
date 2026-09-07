@@ -56,6 +56,11 @@ const ALSO_KEEP = [
   // mark rather than a word, so there is nothing to translate and nothing to
   // get wrong; only ja and zh-Hans differ, taking the ideographic comma.
   'Display.ListSeparator',       // ", "
+  // The stop that ends a heading before the body is the one English uses. A
+  // punctuation mark rather than a word, so there is nothing to translate and
+  // nothing to get wrong; only ja and zh-Hans differ, taking the ideographic
+  // full stop, which carries no space after it.
+  'Display.SentenceSeparator',   // ". "
   // The size and elapsed unit suffixes. Spanish abbreviates them exactly as
   // English does, so there is nothing to translate and nothing to get wrong.
   // A per-language keep rather than a universal one because fr, ru and uk do
@@ -353,6 +358,7 @@ const MAP = {
   'Display.Elapsed.Ms': `{0:F0}ms`,
   'Display.Elapsed.S': `{0:F1}s`,
   'Display.ListSeparator': `, `,
+  'Display.SentenceSeparator': `. `,
   'Display.ElapsedLong.LessThanASecond': `menos de un segundo`,
   'Display.ElapsedLong.Seconds': `{0:F1} segundos`,
   'Cli.UnknownArgument': `Error: argumento desconocido '{0}'`,
@@ -387,7 +393,7 @@ const MAP = {
   'Cli.Help.NoteLine1': `installerclean-cli bloquea el símbolo del sistema hasta terminar, para&#10;que un script o una tarea programada pueda esperarlo.`,
   'Cli.Help.ExitCodesHeader': `Códigos de salida:`,
   'Cli.Help.ExitCodeOk': `  0   correcto: hizo lo que se le pidió y nada falló`,
-  'Cli.Help.ExitCodeError': `  1   fallo: no se procesó nada (argumentos o destino incorrectos,&#10;       análisis fallido o todos los archivos fallaron)`,
+  'Cli.Help.ExitCodeError': `  1   nada procesado: la ejecución falló o fue rechazada`,
   'Cli.Help.ExitCodePartial': `  2   parcial: unos procesados y otros no (un fallo o un Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  transitorio: algo temporal bloqueó la ejecución (ver el mensaje)`,
   'Cli.Help.ExitCodeCancelled': `  130 cancelado (Ctrl+C)`,

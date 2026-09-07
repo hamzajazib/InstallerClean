@@ -46,6 +46,11 @@ const ALSO_KEEP = [
   // mark rather than a word, so there is nothing to translate and nothing to
   // get wrong; only ja and zh-Hans differ, taking the ideographic comma.
   'Display.ListSeparator',       // ", "
+  // The stop that ends a heading before the body is the one English uses. A
+  // punctuation mark rather than a word, so there is nothing to translate and
+  // nothing to get wrong; only ja and zh-Hans differ, taking the ideographic
+  // full stop, which carries no space after it.
+  'Display.SentenceSeparator',   // ". "
   // The size and elapsed unit suffixes. Turkish abbreviates them exactly as
   // English does, so there is nothing to translate and nothing to get wrong.
   // A per-language keep rather than a universal one because fr, ru and uk do
@@ -343,6 +348,7 @@ Ayrıntılar şuraya yazıldı:
   'Display.Elapsed.Ms': `{0:F0}ms`,
   'Display.Elapsed.S': `{0:F1}s`,
   'Display.ListSeparator': `, `,
+  'Display.SentenceSeparator': `. `,
   'Display.ElapsedLong.LessThanASecond': `bir saniyeden az`,
   'Display.ElapsedLong.Seconds': `{0:F1} saniye`,
   'CrashLog.PrivacyHeader': `# crash.log, InstallerClean'in yakalanmamış özel durumlarını tutar.\n# Yükseltilmiş yetkiyle, çerçevenin özel durum iletileri çalışan\n# oturumdaki dosya yollarını içerebilir (Windows Installer\n# sorgularının numaralandırdığı diğer kullanıcı profilleri dahil).\n# Güncelleme denetiminden ya da sonuç günlüğünün gönderiminden gelen\n# ağ hatası iletileri hedef URL'yi ve çözümlenen IP ya da proxy\n# adresini içerebilir. Okunamayan Windows Installer kayıtlarına dair\n# girdiler bir Windows hesabı SID'si (S-1-5-21-...) ve yüklü\n# yazılımın ürün kodlarını içerebilir.\n# Bu dosyayı herkese açık bir hata bildirimine eklemeden önce üç tür\n# bilgiyi de çıkarın.\n`,
@@ -380,7 +386,7 @@ Ayrıntılar şuraya yazıldı:
   'Cli.Help.NoteLine1': `installerclean-cli bitene kadar komut istemini tutar, böylece bir betik&#10;ya da zamanlanmış görev onu bekleyebilir.`,
   'Cli.Help.ExitCodesHeader': `Çıkış kodları:`,
   'Cli.Help.ExitCodeOk': `  0   başarılı: isteneni yaptı ve hiçbir şey başarısız olmadı`,
-  'Cli.Help.ExitCodeError': `  1   başarısız: hiçbir şey işlenmedi (hatalı argüman, hatalı hedef,&#10;       başarısız tarama ya da her dosyanın başarısız olması)`,
+  'Cli.Help.ExitCodeError': `  1   hiçbir şey işlenmedi: çalıştırma başarısız oldu ya da reddedildi`,
   'Cli.Help.ExitCodePartial': `  2   kısmi: bir kısmı işlendi, bir kısmı işlenmedi (hata ya da Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  geçici: geçici bir durum çalıştırmayı engelledi (iletiye bakın)`,
   'Cli.Help.ExitCodeCancelled': `  130 iptal edildi (Ctrl+C)`,

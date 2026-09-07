@@ -47,6 +47,11 @@ const ALSO_KEEP = [
   // mark rather than a word, so there is nothing to translate and nothing to
   // get wrong; only ja and zh-Hans differ, taking the ideographic comma.
   'Display.ListSeparator',       // ", "
+  // The stop that ends a heading before the body is the one English uses. A
+  // punctuation mark rather than a word, so there is nothing to translate and
+  // nothing to get wrong; only ja and zh-Hans differ, taking the ideographic
+  // full stop, which carries no space after it.
+  'Display.SentenceSeparator',   // ". "
   // The size and elapsed unit suffixes. Korean abbreviates them exactly as
   // English does, so there is nothing to translate and nothing to get wrong.
   // A per-language keep rather than a universal one because fr, ru and uk do
@@ -411,6 +416,7 @@ const MAP = {
   'Display.Elapsed.Ms': `{0:F0}ms`,
   'Display.Elapsed.S': `{0:F1}s`,
   'Display.ListSeparator': `, `,
+  'Display.SentenceSeparator': `. `,
   'Display.ElapsedLong.LessThanASecond': `1초 미만`,
   'Display.ElapsedLong.Seconds': `{0:F1}초`,
   'CrashLog.PrivacyHeader': `# crash.log에는 InstallerClean의 처리되지 않은 예외가 기록됩니다.\n# 권한이 상승된 상태에서는 프레임워크의 예외 메시지에 실행 중인\n# 세션의 파일 경로가 포함될 수 있습니다(Windows Installer 쿼리가\n# 열거한 다른 사용자의 프로필 포함). 업데이트 확인이나 결과 로그\n# 전송의 네트워크 실패 메시지에는 대상 URL과 확인된 IP 또는 프록시\n# 주소가 포함될 수 있습니다. 읽을 수 없는 Windows Installer 기록에\n# 대한 항목에는 Windows 계정 SID(S-1-5-21-...)와 설치된 소프트웨어의\n# 제품 코드가 포함될 수 있습니다.\n# 이 파일을 공개 버그 신고에 첨부하기 전에 세 가지 정보를 모두\n# 지우세요.\n`,
@@ -453,7 +459,7 @@ const MAP = {
   'Cli.Help.NoteLine1': `installerclean-cli는 끝날 때까지 프롬프트를 붙잡고 있으므로 스크립트나&#10;예약 작업이 이를 기다릴 수 있습니다.`,
   'Cli.Help.ExitCodesHeader': `종료 코드:`,
   'Cli.Help.ExitCodeOk': `  0   성공: 요청한 일을 했고 실패한 것이 없음`,
-  'Cli.Help.ExitCodeError': `  1   실패: 아무것도 처리되지 않음 (잘못된 인수나 대상,&#10;       검사 실패 또는 모든 파일 실패)`,
+  'Cli.Help.ExitCodeError': `  1   아무것도 처리되지 않음: 실행이 실패했거나 거부됨`,
   'Cli.Help.ExitCodePartial': `  2   부분: 일부는 처리되고 일부는 안 됨 (실패 또는 Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  일시적: 일시적인 상황으로 실행이 차단됨 (메시지 참고)`,
   'Cli.Help.ExitCodeCancelled': `  130 취소됨 (Ctrl+C)`,

@@ -427,6 +427,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Polski |
 | --- | --- |
 | ,  | ,  |
+| .  | .  |
 | {0:F2} GB | {0:F2} GB |
 | {0:F1} MB | {0:F1} MB |
 | {0:F1} KB | {0:F1} KB |
@@ -508,7 +509,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Folder dla każdego użytkownika; zaplanowane lub SYSTEM: /m ŚCIEŻKA. |
 | Exit codes: | Kody zakończenia: |
 |   0   success: the run did what it was asked and nothing failed |   0   sukces: zrobił to, o co poproszono, i nic nie zawiodło |
-|   1   failure: nothing processed (bad arguments, a bad destination, a<br>       failed scan or every file failed) |   1   niepowodzenie: nic nie przetworzono (złe argumenty, złe miejsce<br>       docelowe, nieudane skanowanie albo każdy plik z błędem) |
+|   1   nothing processed: the run failed or was refused |   1   nic nie przetworzono: uruchomienie zawiodło albo zostało odrzucone |
 |   2   partial: some processed, some not (a failure or a Ctrl+C part way) |   2   częściowo: część przetworzona, część nie (błąd albo Ctrl+C) |
 |   75  transient: a temporary condition blocked the run (see the message) |   75  stan przejściowy: coś zablokowało uruchomienie (zob. komunikat) |
 |   130 cancelled (Ctrl+C) |   130 anulowano (Ctrl+C) |

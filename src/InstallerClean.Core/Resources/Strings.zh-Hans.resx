@@ -122,6 +122,17 @@
        language that separates list items with something other than a comma, or
        that wants no space after it, says so here. -->
   <data name="Display.ListSeparator" xml:space="preserve"><value>、</value></data>
+  <!-- What ends the heading and separates it from the body when a dialog composes
+       the single line a screen reader announces as it opens. A resx value and not a
+       hard-coded ". " for the same reason as the separator above: the stop is not the
+       same mark everywhere, and a language that ends a sentence differently, or that
+       wants no space after it, says so here. It belongs to the join rather than to the
+       heading because the heading carries no terminal punctuation of its own; the
+       Confirm dialogs, whose headings ask a question and carry the question mark
+       their language uses, join with a bare space and do not come through here.
+       That mark is not always the last character: Korean puts the bracketed size
+       after it. -->
+  <data name="Display.SentenceSeparator" xml:space="preserve"><value>。</value></data>
   <data name="Field.PatchesOnly" xml:space="preserve"><value>（仅补丁）</value></data>
   <data name="Field.Missing" xml:space="preserve"><value>缺失</value></data>
 
@@ -2132,20 +2143,22 @@ InstallerClean 本来就以管理员身份运行，所以再那样启动一次�
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>该文件夹按用户保存；计划任务或 SYSTEM 运行需要 /m 路径。</value></data>
   <data name="Cli.Help.ExitCodesHeader" xml:space="preserve"><value>退出代码：</value></data>
   <!-- 0 IS NOT A STATEMENT THAT WORK HAPPENED AND NOT A STATEMENT THAT NONE IS
-       LEFT, and this line said the second until 3.0.0. Five runs exit 0: /? and
-       /version, which print and stop; a /s scan that found files and listed them,
-       which is the one the old wording was false of, since a scan that lists
-       sixty-eight files has left an administrator plenty to do; a /s scan that
-       found none; and a /d or /m batch in which every file was processed without
-       error. The sentence has to be true of all five, so it says what they share,
-       which is that the run did what it was asked and nothing in it failed.
-       Anyone tightening it has to check it against the five again. -->
+       LEFT. Five runs exit 0: /? and /version, which print and stop; a /s scan
+       that found files and listed them, which can leave an administrator plenty
+       to do; a /s scan that found none; and a /d or /m batch in which every file
+       was processed without error. The sentence has to be true of all five, so it
+       says what they share, which is that the run did what it was asked and
+       nothing in it failed. Anyone tightening it checks it against the five. -->
   <data name="Cli.Help.ExitCodeOk" xml:space="preserve"><value>  0   成功：本次运行做了要求的事，并且没有任何失败</value></data>
-  <!-- Two printed lines from one value; see Cli.Help.NoteLine1 for why the break
-       is inside the value. The destination causes are named because they are
-       what a scheduled /m actually hits (none given, relative, inside a system
-       folder, not enough room) and all four exit 1. -->
-  <data name="Cli.Help.ExitCodeError" xml:space="preserve"><value>  1   失败：没有处理任何内容（参数或目标有误、扫描失败，&#10;       或者每个文件都失败）</value></data>
+  <!-- The runs that end on this code are not one kind of thing: a refusal is
+       among them, and CliExitCode.Error says in its own capitals that a refusal
+       is not a failure and shares the code anyway. So the line says what they
+       share and names no cause, and it has to hold for every one of them. To
+       take the set, follow CliExitCode.Error itself: the console host returns
+       it directly in places, and in others returns a variable that carries it,
+       from the batch classifiers in CliContract and from the pending-reboot
+       mapping. Anyone tightening this line checks it against that set. -->
+  <data name="Cli.Help.ExitCodeError" xml:space="preserve"><value>  1   没有处理任何内容：本次运行失败或被拒绝</value></data>
   <!-- A Ctrl+C part way through exits 2 with nothing failed at all, so this
        cannot say that some files failed. -->
   <data name="Cli.Help.ExitCodePartial" xml:space="preserve"><value>  2   部分：部分已处理，部分未处理（失败或 Ctrl+C）</value></data>

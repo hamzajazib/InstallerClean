@@ -59,6 +59,11 @@ const ALSO_KEEP = [
   // mark rather than a word, so there is nothing to translate and nothing to
   // get wrong; only ja and zh-Hans differ, taking the ideographic comma.
   'Display.ListSeparator',       // ", "
+  // The stop that ends a heading before the body is the one English uses. A
+  // punctuation mark rather than a word, so there is nothing to translate and
+  // nothing to get wrong; only ja and zh-Hans differ, taking the ideographic
+  // full stop, which carries no space after it.
+  'Display.SentenceSeparator',   // ". "
   // The size and elapsed unit suffixes. Indonesian abbreviates them exactly as
   // English does, so there is nothing to translate and nothing to get wrong.
   // A per-language keep rather than a universal one because fr, ru and uk do
@@ -433,6 +438,7 @@ const MAP = {
   'Display.Elapsed.Ms': `{0:F0}ms`,
   'Display.Elapsed.S': `{0:F1}s`,
   'Display.ListSeparator': `, `,
+  'Display.SentenceSeparator': `. `,
   'Display.ElapsedLong.LessThanASecond': `kurang dari satu detik`,
   'Display.ElapsedLong.Seconds': `{0:F1} detik`,
   'CrashLog.PrivacyHeader': `# crash.log merekam eksepsi tak tertangani dari InstallerClean.\n# Dengan hak tinggi, pesan eksepsi framework bisa memuat jalur file\n# dari sesi yang berjalan (termasuk profil pengguna lain yang didata\n# oleh kueri Windows Installer). Pesan kegagalan jaringan dari\n# pemeriksaan pembaruan atau pengiriman log hasil bisa memuat URL\n# tujuan serta alamat IP atau proksi yang teruraikan. Entri tentang\n# catatan Windows Installer yang tak terbaca bisa memuat SID akun\n# Windows (S-1-5-21-...) dan kode produk perangkat lunak terpasang.\n# Hapus ketiga jenis rincian itu sebelum melampirkan berkas ini ke\n# laporan bug publik.\n`,
@@ -475,7 +481,7 @@ const MAP = {
   'Cli.Help.NoteLine1': `installerclean-cli menahan prompt sampai selesai, sehingga skrip atau&#10;tugas terjadwal bisa menunggunya.`,
   'Cli.Help.ExitCodesHeader': `Kode keluar:`,
   'Cli.Help.ExitCodeOk': `  0   berhasil: menjalankan yang diminta dan tidak ada yang gagal`,
-  'Cli.Help.ExitCodeError': `  1   gagal: tidak ada yang diproses (argumen atau tujuan salah,&#10;       pemindaian gagal, atau semua file gagal)`,
+  'Cli.Help.ExitCodeError': `  1   tidak ada yang diproses: proses gagal atau ditolak`,
   'Cli.Help.ExitCodePartial': `  2   sebagian: sebagian diproses, sebagian tidak (gagal atau Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  sementara: kondisi sementara memblokir proses (lihat pesannya)`,
   'Cli.Help.ExitCodeCancelled': `  130 dibatalkan (Ctrl+C)`,

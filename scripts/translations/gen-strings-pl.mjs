@@ -48,6 +48,11 @@ const ALSO_KEEP = [
   // mark rather than a word, so there is nothing to translate and nothing to
   // get wrong; only ja and zh-Hans differ, taking the ideographic comma.
   'Display.ListSeparator',       // ", "
+  // The stop that ends a heading before the body is the one English uses. A
+  // punctuation mark rather than a word, so there is nothing to translate and
+  // nothing to get wrong; only ja and zh-Hans differ, taking the ideographic
+  // full stop, which carries no space after it.
+  'Display.SentenceSeparator',   // ". "
   // The size and elapsed unit suffixes. Polish abbreviates them exactly as
   // English does, so there is nothing to translate and nothing to get wrong.
   // A per-language keep rather than a universal one because fr, ru and uk do
@@ -454,6 +459,7 @@ const MAP = {
   'Display.Elapsed.Ms': `{0:F0}ms`,
   'Display.Elapsed.S': `{0:F1}s`,
   'Display.ListSeparator': `, `,
+  'Display.SentenceSeparator': `. `,
   'Display.ElapsedLong.LessThanASecond': `mniej niż sekunda`,
   'Display.ElapsedLong.Seconds': `{0:F1} sekundy`,
   'CrashLog.PrivacyHeader': `# crash.log zbiera nieobsłużone wyjątki InstallerClean.\n# Przy podwyższonych uprawnieniach komunikaty wyjątków platformy mogą\n# zawierać ścieżki plików z bieżącej sesji (w tym profile innych\n# użytkowników wyliczone przez zapytania Instalatora Windows).\n# Komunikaty o błędach sieci przy sprawdzaniu aktualizacji lub wysyłce\n# dziennika wyników mogą zawierać docelowy adres URL oraz rozwiązany\n# adres IP albo adres serwera proxy. Wpisy o nieczytelnych rekordach\n# Instalatora Windows mogą zawierać identyfikator SID konta Windows\n# (S-1-5-21-...) i kody produktów zainstalowanego oprogramowania.\n# Usuń wszystkie trzy rodzaje danych, zanim dołączysz ten plik do\n# publicznego zgłoszenia błędu.\n`,
@@ -499,7 +505,7 @@ const MAP = {
   'Cli.Help.NoteLine1': `installerclean-cli blokuje wiersz polecenia aż do końca, więc skrypt&#10;albo zadanie zaplanowane może na niego zaczekać.`,
   'Cli.Help.ExitCodesHeader': `Kody zakończenia:`,
   'Cli.Help.ExitCodeOk': `  0   sukces: zrobił to, o co poproszono, i nic nie zawiodło`,
-  'Cli.Help.ExitCodeError': `  1   niepowodzenie: nic nie przetworzono (złe argumenty, złe miejsce&#10;       docelowe, nieudane skanowanie albo każdy plik z błędem)`,
+  'Cli.Help.ExitCodeError': `  1   nic nie przetworzono: uruchomienie zawiodło albo zostało odrzucone`,
   'Cli.Help.ExitCodePartial': `  2   częściowo: część przetworzona, część nie (błąd albo Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  stan przejściowy: coś zablokowało uruchomienie (zob. komunikat)`,
   'Cli.Help.ExitCodeCancelled': `  130 anulowano (Ctrl+C)`,

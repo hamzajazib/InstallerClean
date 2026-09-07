@@ -108,6 +108,12 @@ const KEEP_ENGLISH = new Set([
 // it is a keep everywhere except ja and zh-Hans, which take the ideographic
 // comma and have a real value.
 //
+// Display.SentenceSeparator is the same shape and sits beside it in the same
+// thirteen. It is the stop that joins a dialog heading to its body in the single
+// line a screen reader announces, ". " in the languages that end a sentence as
+// English does, and the ideographic full stop with no space after it in ja and
+// zh-Hans, which is why those two are absent here and carry a real value.
+//
 // The unit suffixes are here in the same shape. Twelve languages
 // abbreviate a size exactly as English does and keep all six; French keeps only
 // the two elapsed ones, "ms" and "s" being the SI symbols it writes unchanged
@@ -119,20 +125,20 @@ const ELAPSED_UNITS = ['Display.Elapsed.Ms', 'Display.Elapsed.S'];
 const UNITS = [...SIZE_UNITS, ...ELAPSED_UNITS];
 
 const ALSO_KEEP = {
-  de: ['Section.Registered.Patches', 'Field.Patches', 'Automation.Section.Patches', 'Action.Details', 'Version.Display', 'Display.ListSeparator', ...UNITS],
-  es: ['Plural.Error.Singular', 'Display.ListSeparator', ...UNITS],
-  fr: ['Field.Application', 'Version.Display', 'Display.ListSeparator', ...ELAPSED_UNITS],
-  id: ['Plural.File.Singular', 'Plural.Patch.Singular', 'Field.File', 'Display.ListSeparator', ...UNITS],
-  it: ['Field.File', 'Plural.File.Singular', 'Plural.Patch.Singular', 'Display.ListSeparator', ...UNITS],
+  de: ['Section.Registered.Patches', 'Field.Patches', 'Automation.Section.Patches', 'Action.Details', 'Version.Display', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
+  es: ['Plural.Error.Singular', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
+  fr: ['Field.Application', 'Version.Display', 'Display.ListSeparator', 'Display.SentenceSeparator', ...ELAPSED_UNITS],
+  id: ['Plural.File.Singular', 'Plural.Patch.Singular', 'Field.File', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
+  it: ['Field.File', 'Plural.File.Singular', 'Plural.Patch.Singular', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
   ja: [...UNITS],
-  ko: ['Display.ListSeparator', ...UNITS],
-  nl: ['Section.Registered.Patches', 'Field.Patches', 'Automation.Section.Patches', 'Action.Details', 'Plural.Product.Singular', 'Plural.Patch.Singular', 'Plural.Patch.Plural', 'Display.ListSeparator', ...UNITS],
-  pl: ['Display.ListSeparator', ...UNITS],
-  'pt-BR': ['Plural.Patch.Singular', 'Plural.Patch.Plural', 'Field.Patches', 'Section.Registered.Patches', 'Automation.Section.Patches', 'Display.ListSeparator', ...UNITS],
-  ru: ['Display.ListSeparator'],
-  tr: ['Display.ListSeparator', ...UNITS],
-  uk: ['Display.ListSeparator'],
-  vi: ['Display.ListSeparator', ...UNITS],
+  ko: ['Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
+  nl: ['Section.Registered.Patches', 'Field.Patches', 'Automation.Section.Patches', 'Action.Details', 'Plural.Product.Singular', 'Plural.Patch.Singular', 'Plural.Patch.Plural', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
+  pl: ['Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
+  'pt-BR': ['Plural.Patch.Singular', 'Plural.Patch.Plural', 'Field.Patches', 'Section.Registered.Patches', 'Automation.Section.Patches', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
+  ru: ['Display.ListSeparator', 'Display.SentenceSeparator'],
+  tr: ['Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
+  uk: ['Display.ListSeparator', 'Display.SentenceSeparator'],
+  vi: ['Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
   'zh-Hans': [...UNITS],
 };
 

@@ -68,6 +68,11 @@ const ALSO_KEEP = [
   // mark rather than a word, so there is nothing to translate and nothing to
   // get wrong; only ja and zh-Hans differ, taking the ideographic comma.
   'Display.ListSeparator',       // ", "
+  // The stop that ends a heading before the body is the one English uses. A
+  // punctuation mark rather than a word, so there is nothing to translate and
+  // nothing to get wrong; only ja and zh-Hans differ, taking the ideographic
+  // full stop, which carries no space after it.
+  'Display.SentenceSeparator',   // ". "
   // The size and elapsed unit suffixes. Dutch abbreviates them exactly as
   // English does, so there is nothing to translate and nothing to get wrong.
   // A per-language keep rather than a universal one because fr, ru and uk do
@@ -409,6 +414,7 @@ const MAP = {
   'Display.Elapsed.Ms': `{0:F0}ms`,
   'Display.Elapsed.S': `{0:F1}s`,
   'Display.ListSeparator': `, `,
+  'Display.SentenceSeparator': `. `,
   'Display.ElapsedLong.LessThanASecond': `minder dan een seconde`,
   'Display.ElapsedLong.Seconds': `{0:F1} seconden`,
   'CrashLog.PrivacyHeader': `# crash.log legt onafgevangen fouten van InstallerClean vast.\n# Met verhoogde rechten kunnen de foutmeldingen van het framework\n# bestandspaden uit de lopende sessie bevatten (waaronder profielen\n# van andere gebruikers die door Windows Installer-query's zijn\n# opgesomd). Meldingen over netwerkfouten bij de updatecontrole of\n# de POST van het rapport kunnen de bestemmings-URL en het\n# opgeloste IP- of proxyadres bevatten. Regels over onleesbare\n# Windows Installer-records kunnen een Windows-account-SID\n# (S-1-5-21-...) en de productcodes van geïnstalleerde software\n# bevatten.\n# Verwijder alle drie de soorten gegevens voordat je dit bestand\n# aan een openbaar bugrapport toevoegt.\n`,
@@ -458,7 +464,7 @@ const MAP = {
   'Cli.Help.MoveScheduledNote': `Die map geldt per gebruiker; geplande of SYSTEM-taken vereisen /m PAD.`,
   'Cli.Help.ExitCodesHeader': `Afsluitcodes:`,
   'Cli.Help.ExitCodeOk': `  0   geslaagd: de uitvoering deed wat gevraagd was, zonder fouten`,
-  'Cli.Help.ExitCodeError': `  1   mislukt: niets verwerkt (verkeerde argumenten, een verkeerde&#10;       bestemming, een mislukte scan of elk bestand mislukt)`,
+  'Cli.Help.ExitCodeError': `  1   niets verwerkt: de uitvoering is mislukt of is geweigerd`,
   'Cli.Help.ExitCodePartial': `  2   gedeeltelijk: een deel verwerkt, een deel niet (een fout of Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  tijdelijk: iets tijdelijks blokkeerde de uitvoering (zie de melding)`,
   'Cli.Help.ExitCodeCancelled': `  130 geannuleerd (Ctrl+C)`,

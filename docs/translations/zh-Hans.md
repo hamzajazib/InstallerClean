@@ -427,6 +427,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | 简体中文 |
 | --- | --- |
 | ,  | 、 |
+| .  | 。 |
 | {0:F2} GB | {0:F2} GB |
 | {0:F1} MB | {0:F1} MB |
 | {0:F1} KB | {0:F1} KB |
@@ -508,7 +509,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | 该文件夹按用户保存；计划任务或 SYSTEM 运行需要 /m 路径。 |
 | Exit codes: | 退出代码： |
 |   0   success: the run did what it was asked and nothing failed |   0   成功：本次运行做了要求的事，并且没有任何失败 |
-|   1   failure: nothing processed (bad arguments, a bad destination, a<br>       failed scan or every file failed) |   1   失败：没有处理任何内容（参数或目标有误、扫描失败，<br>       或者每个文件都失败） |
+|   1   nothing processed: the run failed or was refused |   1   没有处理任何内容：本次运行失败或被拒绝 |
 |   2   partial: some processed, some not (a failure or a Ctrl+C part way) |   2   部分：部分已处理，部分未处理（失败或 Ctrl+C） |
 |   75  transient: a temporary condition blocked the run (see the message) |   75  暂时性：临时状况阻止了本次运行（见相关消息） |
 |   130 cancelled (Ctrl+C) |   130 已取消（Ctrl+C） |

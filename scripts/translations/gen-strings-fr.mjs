@@ -60,6 +60,11 @@ const ALSO_KEEP = [
   // mark rather than a word, so there is nothing to translate and nothing to
   // get wrong; only ja and zh-Hans differ, taking the ideographic comma.
   'Display.ListSeparator',       // ", "
+  // The stop that ends a heading before the body is the one English uses. A
+  // punctuation mark rather than a word, so there is nothing to translate and
+  // nothing to get wrong; only ja and zh-Hans differ, taking the ideographic
+  // full stop, which carries no space after it.
+  'Display.SentenceSeparator',   // ". "
   // The elapsed-time suffixes, which stay English where the four size
   // suffixes above do not. "ms" and "s" are the SI symbols and French
   // writes them exactly as English does; Go/Mo/Ko/o are abbreviated French
@@ -441,6 +446,7 @@ const MAP = {
   'Display.Elapsed.Ms': `{0:F0}ms`,
   'Display.Elapsed.S': `{0:F1}s`,
   'Display.ListSeparator': `, `,
+  'Display.SentenceSeparator': `. `,
   'Display.ElapsedLong.LessThanASecond': `moins d'une seconde`,
   'Display.ElapsedLong.Seconds': `{0:F1} secondes`,
   'CrashLog.PrivacyHeader': `# crash.log recueille les exceptions non gérées d'InstallerClean.\n# Avec des privilèges élevés, les messages d'exception du framework\n# peuvent contenir des chemins de fichiers de la session en cours (y\n# compris des profils d'autres utilisateurs énumérés par les requêtes\n# Windows Installer). Les messages d'échec réseau de la vérification\n# des mises à jour ou de l'envoi du journal de résultats peuvent\n# contenir l'URL de destination et l'adresse IP ou proxy résolue. Les\n# entrées sur des enregistrements Windows Installer illisibles peuvent\n# contenir un SID de compte Windows (S-1-5-21-...) et les codes\n# produit des logiciels installés.\n# Supprimez ces trois types d'informations avant de joindre ce fichier\n# à un rapport de bogue public.\n`,
@@ -480,7 +486,7 @@ const MAP = {
   'Cli.Help.NoteLine1': `installerclean-cli bloque l'invite jusqu'à la fin, pour qu'un script ou&#10;une tâche planifiée puisse l'attendre.`,
   'Cli.Help.ExitCodesHeader': `Codes de sortie :`,
   'Cli.Help.ExitCodeOk': `  0   succès : l'exécution a fait ce qui lui était demandé, sans échec`,
-  'Cli.Help.ExitCodeError': `  1   échec : rien de traité (arguments ou destination incorrects,&#10;       analyse échouée ou tous les fichiers en échec)`,
+  'Cli.Help.ExitCodeError': `  1   rien de traité : l'exécution a échoué ou a été refusée`,
   'Cli.Help.ExitCodePartial': `  2   partiel : une partie traitée, l'autre non (un échec ou un Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  transitoire : quelque chose a bloqué l'exécution (voir le message)`,
   'Cli.Help.ExitCodeCancelled': `  130 annulé (Ctrl+C)`,

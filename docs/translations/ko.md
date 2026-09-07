@@ -427,6 +427,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | 한국어 |
 | --- | --- |
 | ,  | ,  |
+| .  | .  |
 | {0:F2} GB | {0:F2} GB |
 | {0:F1} MB | {0:F1} MB |
 | {0:F1} KB | {0:F1} KB |
@@ -508,7 +509,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | 폴더는 사용자별 저장. 예약 또는 SYSTEM 실행에는 /m 경로 필요. |
 | Exit codes: | 종료 코드: |
 |   0   success: the run did what it was asked and nothing failed |   0   성공: 요청한 일을 했고 실패한 것이 없음 |
-|   1   failure: nothing processed (bad arguments, a bad destination, a<br>       failed scan or every file failed) |   1   실패: 아무것도 처리되지 않음 (잘못된 인수나 대상,<br>       검사 실패 또는 모든 파일 실패) |
+|   1   nothing processed: the run failed or was refused |   1   아무것도 처리되지 않음: 실행이 실패했거나 거부됨 |
 |   2   partial: some processed, some not (a failure or a Ctrl+C part way) |   2   부분: 일부는 처리되고 일부는 안 됨 (실패 또는 Ctrl+C) |
 |   75  transient: a temporary condition blocked the run (see the message) |   75  일시적: 일시적인 상황으로 실행이 차단됨 (메시지 참고) |
 |   130 cancelled (Ctrl+C) |   130 취소됨 (Ctrl+C) |

@@ -569,7 +569,7 @@ const MAP = {
   'Cli.Help.MoveScheduledNote': `That folder is saved per-user; scheduled or SYSTEM runs need /m PATH.`,
   'Cli.Help.ExitCodesHeader': `Exit codes:`,
   'Cli.Help.ExitCodeOk': `  0   success: the run did what it was asked and nothing failed`,
-  'Cli.Help.ExitCodeError': `  1   failure: nothing processed (bad arguments, a bad destination, a&#10;       failed scan or every file failed)`,
+  'Cli.Help.ExitCodeError': `  1   nothing processed: the run failed or was refused`,
   'Cli.Help.ExitCodePartial': `  2   partial: some processed, some not (a failure or a Ctrl+C part way)`,
   'Cli.Help.ExitCodeTransient': `  75  transient: a temporary condition blocked the run (see the message)`,
   'Cli.Help.ExitCodeCancelled': `  130 cancelled (Ctrl+C)`,
@@ -590,6 +590,7 @@ const MAP = {
   'Cli.MoveInstallerLockAccessRefused': `Error: Windows refused InstallerClean permission to check whether Windows Installer was busy, so it couldn't rule out a file becoming needed part-way through. Nothing has been moved.`,
   // The values are the neutral's own, as every value here must be.
   'Display.ListSeparator': `, `,
+  'Display.SentenceSeparator': `. `,
   'Completion.NothingOffered': `Nothing offered on this PC`,
   'Completion.NothingOfferedBody.Singular': `InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back the one file ({2}) rather than offering it.`,
   'Completion.NothingOfferedBody.Plural': `InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back all {0} {1} ({2}) rather than offering them.`,

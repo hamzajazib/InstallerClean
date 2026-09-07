@@ -36,6 +36,11 @@ const ALSO_KEEP = [
   // mark rather than a word, so there is nothing to translate and nothing to
   // get wrong; only ja and zh-Hans differ, taking the ideographic comma.
   'Display.ListSeparator',       // ", "
+  // The stop that ends a heading before the body is the one English uses. A
+  // punctuation mark rather than a word, so there is nothing to translate and
+  // nothing to get wrong; only ja and zh-Hans differ, taking the ideographic
+  // full stop, which carries no space after it.
+  'Display.SentenceSeparator',   // ". "
 ];
 
 // Satellite-only CLDR plural overrides (uk). base Singular = "one" (1, 21, 31),
@@ -443,6 +448,7 @@ const MAP = {
   'Display.Elapsed.Ms': `{0:F0} мс`,
   'Display.Elapsed.S': `{0:F1} с`,
   'Display.ListSeparator': `, `,
+  'Display.SentenceSeparator': `. `,
   'Display.ElapsedLong.LessThanASecond': `менш ніж секунду`,
   'Display.ElapsedLong.Seconds': `{0:F1} секунди`,
   'CrashLog.PrivacyHeader': `# crash.log збирає необроблені винятки InstallerClean.\n# За підвищених прав повідомлення про винятки платформи можуть\n# містити шляхи до файлів поточного сеансу (зокрема профілі інших\n# користувачів, перелічені запитами Windows Installer). Повідомлення\n# про мережеві збої під час перевірки оновлень або надсилання журналу\n# результатів можуть містити URL призначення та розв'язану IP-адресу\n# чи адресу проксі. Записи про нечитані записи Windows Installer\n# можуть містити SID облікового запису Windows (S-1-5-21-...) і коди\n# продуктів встановленого ПЗ.\n# Приберіть усі три види відомостей, перш ніж додавати цей файл до\n# публічного звіту про помилку.\n`,
@@ -482,7 +488,7 @@ const MAP = {
   'Cli.Help.NoteLine1': `installerclean-cli утримує командний рядок до кінця роботи, щоб&#10;скрипт або запланована задача могли на нього зачекати.`,
   'Cli.Help.ExitCodesHeader': `Коди виходу:`,
   'Cli.Help.ExitCodeOk': `  0   успіх: запуск зробив те, про що просили, і нічого не збоїло`,
-  'Cli.Help.ExitCodeError': `  1   збій: нічого не оброблено (хибні аргументи чи призначення,&#10;       невдале сканування або всі файли з помилкою)`,
+  'Cli.Help.ExitCodeError': `  1   нічого не оброблено: запуск завершився збоєм або був відхилений`,
   'Cli.Help.ExitCodePartial': `  2   частково: щось оброблено, щось ні (збій або Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  тимчасова: запуск заблокувала тимчасова умова (див. повідомлення)`,
   'Cli.Help.ExitCodeCancelled': `  130 скасовано (Ctrl+C)`,

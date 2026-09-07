@@ -5760,21 +5760,21 @@
       "zh-Hans": "1abda42f94db30a1"
     },
     "Cli.Help.ExitCodeError": {
-      "de": "e3971cebdd8ab987",
-      "es": "e3971cebdd8ab987",
-      "fr": "e3971cebdd8ab987",
-      "id": "e3971cebdd8ab987",
-      "it": "e3971cebdd8ab987",
-      "ja": "e3971cebdd8ab987",
-      "ko": "e3971cebdd8ab987",
-      "nl": "e3971cebdd8ab987",
-      "pl": "e3971cebdd8ab987",
-      "pt-BR": "e3971cebdd8ab987",
-      "ru": "e3971cebdd8ab987",
-      "tr": "e3971cebdd8ab987",
-      "uk": "e3971cebdd8ab987",
-      "vi": "e3971cebdd8ab987",
-      "zh-Hans": "e3971cebdd8ab987"
+      "de": "92a7749fb92ef7f7",
+      "es": "92a7749fb92ef7f7",
+      "fr": "92a7749fb92ef7f7",
+      "id": "92a7749fb92ef7f7",
+      "it": "92a7749fb92ef7f7",
+      "ja": "92a7749fb92ef7f7",
+      "ko": "92a7749fb92ef7f7",
+      "nl": "92a7749fb92ef7f7",
+      "pl": "92a7749fb92ef7f7",
+      "pt-BR": "92a7749fb92ef7f7",
+      "ru": "92a7749fb92ef7f7",
+      "tr": "92a7749fb92ef7f7",
+      "uk": "92a7749fb92ef7f7",
+      "vi": "92a7749fb92ef7f7",
+      "zh-Hans": "92a7749fb92ef7f7"
     },
     "Cli.Help.ExitCodePartial": {
       "de": "16b402bba28117df",
@@ -6772,6 +6772,23 @@
     "Summary.RegisteredWindow.Missing.Few": {
       "pl": "19f9fbfd4d5fd205",
       "uk": "19f9fbfd4d5fd205"
+    },
+    "Display.SentenceSeparator": {
+      "de": "8dccf256f6d5783e",
+      "es": "8dccf256f6d5783e",
+      "fr": "8dccf256f6d5783e",
+      "id": "8dccf256f6d5783e",
+      "it": "8dccf256f6d5783e",
+      "ja": "8dccf256f6d5783e",
+      "ko": "8dccf256f6d5783e",
+      "nl": "8dccf256f6d5783e",
+      "pl": "8dccf256f6d5783e",
+      "pt-BR": "8dccf256f6d5783e",
+      "ru": "8dccf256f6d5783e",
+      "tr": "8dccf256f6d5783e",
+      "uk": "8dccf256f6d5783e",
+      "vi": "8dccf256f6d5783e",
+      "zh-Hans": "8dccf256f6d5783e"
     }
   }
 }

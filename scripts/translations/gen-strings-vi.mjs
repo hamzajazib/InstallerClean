@@ -46,6 +46,11 @@ const ALSO_KEEP = [
   // mark rather than a word, so there is nothing to translate and nothing to
   // get wrong; only ja and zh-Hans differ, taking the ideographic comma.
   'Display.ListSeparator',       // ", "
+  // The stop that ends a heading before the body is the one English uses. A
+  // punctuation mark rather than a word, so there is nothing to translate and
+  // nothing to get wrong; only ja and zh-Hans differ, taking the ideographic
+  // full stop, which carries no space after it.
+  'Display.SentenceSeparator',   // ". "
   // The size and elapsed unit suffixes. Vietnamese abbreviates them exactly as
   // English does, so there is nothing to translate and nothing to get wrong.
   // A per-language keep rather than a universal one because fr, ru and uk do
@@ -417,6 +422,7 @@ const MAP = {
   'Display.Elapsed.Ms': `{0:F0}ms`,
   'Display.Elapsed.S': `{0:F1}s`,
   'Display.ListSeparator': `, `,
+  'Display.SentenceSeparator': `. `,
   'Display.ElapsedLong.LessThanASecond': `chưa đến một giây`,
   'Display.ElapsedLong.Seconds': `{0:F1} giây`,
   'CrashLog.PrivacyHeader': `# crash.log ghi lại các ngoại lệ chưa xử lý của InstallerClean.\n# Khi chạy với quyền nâng cao, thông báo ngoại lệ của framework có thể\n# chứa đường dẫn tệp trong phiên đang chạy (kể cả hồ sơ của người dùng\n# khác do các truy vấn Windows Installer liệt kê). Thông báo lỗi mạng\n# từ việc kiểm tra cập nhật hoặc gửi nhật ký kết quả có thể chứa URL\n# đích và địa chỉ IP hoặc proxy đã phân giải. Các mục về bản ghi\n# Windows Installer không đọc được có thể chứa SID tài khoản Windows\n# (S-1-5-21-...) và mã sản phẩm của phần mềm đã cài.\n# Hãy xóa cả ba loại thông tin này trước khi đính kèm tệp này vào một\n# báo cáo lỗi công khai.\n`,
@@ -456,7 +462,7 @@ const MAP = {
   'Cli.Help.NoteLine1': `installerclean-cli giữ dấu nhắc cho tới khi xong, để một tập lệnh hoặc&#10;một tác vụ theo lịch có thể chờ nó.`,
   'Cli.Help.ExitCodesHeader': `Mã thoát:`,
   'Cli.Help.ExitCodeOk': `  0   thành công: đã làm đúng việc được yêu cầu, không có gì hỏng`,
-  'Cli.Help.ExitCodeError': `  1   thất bại: không xử lý gì (đối số hoặc đích sai, quét thất bại&#10;       hoặc mọi tệp đều lỗi)`,
+  'Cli.Help.ExitCodeError': `  1   không xử lý gì: lần chạy đã thất bại hoặc bị từ chối`,
   'Cli.Help.ExitCodePartial': `  2   một phần: xử lý được một phần (một lỗi hoặc một Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  tạm thời: một điều kiện tạm thời đã chặn lần chạy (xem thông báo)`,
   'Cli.Help.ExitCodeCancelled': `  130 đã hủy (Ctrl+C)`,

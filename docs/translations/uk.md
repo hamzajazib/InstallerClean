@@ -427,6 +427,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Українська |
 | --- | --- |
 | ,  | ,  |
+| .  | .  |
 | {0:F2} GB | {0:F2} ГБ |
 | {0:F1} MB | {0:F1} МБ |
 | {0:F1} KB | {0:F1} КБ |
@@ -508,7 +509,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Папка своя в кожного користувача; запланованим і SYSTEM: /m ШЛЯХ. |
 | Exit codes: | Коди виходу: |
 |   0   success: the run did what it was asked and nothing failed |   0   успіх: запуск зробив те, про що просили, і нічого не збоїло |
-|   1   failure: nothing processed (bad arguments, a bad destination, a<br>       failed scan or every file failed) |   1   збій: нічого не оброблено (хибні аргументи чи призначення,<br>       невдале сканування або всі файли з помилкою) |
+|   1   nothing processed: the run failed or was refused |   1   нічого не оброблено: запуск завершився збоєм або був відхилений |
 |   2   partial: some processed, some not (a failure or a Ctrl+C part way) |   2   частково: щось оброблено, щось ні (збій або Ctrl+C) |
 |   75  transient: a temporary condition blocked the run (see the message) |   75  тимчасова: запуск заблокувала тимчасова умова (див. повідомлення) |
 |   130 cancelled (Ctrl+C) |   130 скасовано (Ctrl+C) |

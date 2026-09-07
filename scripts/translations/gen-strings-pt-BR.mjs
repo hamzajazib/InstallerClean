@@ -56,6 +56,11 @@ const ALSO_KEEP = [
   // mark rather than a word, so there is nothing to translate and nothing to
   // get wrong; only ja and zh-Hans differ, taking the ideographic comma.
   'Display.ListSeparator',       // ", "
+  // The stop that ends a heading before the body is the one English uses. A
+  // punctuation mark rather than a word, so there is nothing to translate and
+  // nothing to get wrong; only ja and zh-Hans differ, taking the ideographic
+  // full stop, which carries no space after it.
+  'Display.SentenceSeparator',   // ". "
   // The size and elapsed unit suffixes. Brazilian Portuguese abbreviates them exactly as
   // English does, so there is nothing to translate and nothing to get wrong.
   // A per-language keep rather than a universal one because fr, ru and uk do
@@ -418,6 +423,7 @@ const MAP = {
   'Display.Elapsed.Ms': `{0:F0}ms`,
   'Display.Elapsed.S': `{0:F1}s`,
   'Display.ListSeparator': `, `,
+  'Display.SentenceSeparator': `. `,
   'Display.ElapsedLong.LessThanASecond': `menos de um segundo`,
   'Display.ElapsedLong.Seconds': `{0:F1} segundos`,
   'CrashLog.PrivacyHeader': `# O crash.log registra exceções não tratadas do InstallerClean.\n# Com privilégios elevados, as mensagens de exceção do framework podem\n# incluir caminhos de arquivo da sessão em execução (inclusive perfis\n# de outros usuários enumerados pelas consultas do Windows Installer).\n# Mensagens de falha de rede da verificação de atualizações ou do envio\n# do log de resultados podem incluir a URL de destino e o IP ou proxy\n# resolvido. Entradas sobre registros ilegíveis do Windows Installer\n# podem incluir um SID de conta do Windows (S-1-5-21-...) e os códigos\n# de produto do software instalado.\n# Remova os três tipos de dado antes de anexar este arquivo a um\n# relatório de erro público.\n`,
@@ -459,7 +465,7 @@ const MAP = {
   'Cli.Help.NoteLine1': `O installerclean-cli bloqueia o prompt até terminar, para que um script&#10;ou uma tarefa agendada possa esperar por ele.`,
   'Cli.Help.ExitCodesHeader': `Códigos de saída:`,
   'Cli.Help.ExitCodeOk': `  0   êxito: a execução fez o que foi pedido e nada falhou`,
-  'Cli.Help.ExitCodeError': `  1   falha: nada processado (argumentos ou destino inválidos, uma&#10;       análise com falha ou todos os arquivos com falha)`,
+  'Cli.Help.ExitCodeError': `  1   nada processado: a execução falhou ou foi recusada`,
   'Cli.Help.ExitCodePartial': `  2   parcial: alguns processados, outros não (falha ou Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  transitório: algo temporário bloqueou a execução (veja a mensagem)`,
   'Cli.Help.ExitCodeCancelled': `  130 cancelado (Ctrl+C)`,

@@ -60,6 +60,11 @@ const ALSO_KEEP = [
   // mark rather than a word, so there is nothing to translate and nothing to
   // get wrong; only ja and zh-Hans differ, taking the ideographic comma.
   'Display.ListSeparator',       // ", "
+  // The stop that ends a heading before the body is the one English uses. A
+  // punctuation mark rather than a word, so there is nothing to translate and
+  // nothing to get wrong; only ja and zh-Hans differ, taking the ideographic
+  // full stop, which carries no space after it.
+  'Display.SentenceSeparator',   // ". "
   // The size and elapsed unit suffixes. German abbreviates them exactly as
   // English does, so there is nothing to translate and nothing to get wrong.
   // A per-language keep rather than a universal one because fr, ru and uk do
@@ -435,6 +440,7 @@ const MAP = {
   'Display.Elapsed.Ms': `{0:F0}ms`,
   'Display.Elapsed.S': `{0:F1}s`,
   'Display.ListSeparator': `, `,
+  'Display.SentenceSeparator': `. `,
   'Display.ElapsedLong.LessThanASecond': `weniger als eine Sekunde`,
   'Display.ElapsedLong.Seconds': `{0:F1} Sekunden`,
   'CrashLog.PrivacyHeader': `# crash.log erfasst unbehandelte Ausnahmen von InstallerClean.\n# Mit erhöhten Rechten können die Ausnahmemeldungen des Frameworks\n# Dateipfade aus der laufenden Sitzung enthalten (auch Profile\n# anderer Benutzer, die Windows-Installer-Abfragen aufzählen).\n# Meldungen über Netzwerkfehler bei der Updateprüfung oder beim\n# Senden des Ergebnisprotokolls können die Ziel-URL und die\n# aufgelöste IP- oder Proxyadresse enthalten. Einträge über\n# unlesbare Windows-Installer-Einträge können eine Windows-Konto-SID\n# (S-1-5-21-...) und die Produktcodes installierter Software\n# enthalten.\n# Entferne alle drei Arten von Angaben, bevor du diese Datei an\n# einen öffentlichen Fehlerbericht anhängst.\n`,
@@ -474,7 +480,7 @@ const MAP = {
   'Cli.Help.NoteLine1': `installerclean-cli blockiert die Eingabeaufforderung bis zum Ende,&#10;damit ein Skript oder eine geplante Aufgabe darauf warten kann.`,
   'Cli.Help.ExitCodesHeader': `Exit-Codes:`,
   'Cli.Help.ExitCodeOk': `  0   Erfolg: Der Lauf hat getan, worum gebeten wurde, ohne Fehler`,
-  'Cli.Help.ExitCodeError': `  1   Fehler: nichts verarbeitet (falsche Argumente, falsches Ziel,&#10;       fehlgeschlagener Scan oder jede Datei fehlgeschlagen)`,
+  'Cli.Help.ExitCodeError': `  1   nichts verarbeitet: der Lauf schlug fehl oder wurde abgelehnt`,
   'Cli.Help.ExitCodePartial': `  2   teilweise: einiges verarbeitet, anderes nicht (Fehler oder Strg+C)`,
   'Cli.Help.ExitCodeTransient': `  75  vorübergehend: etwas hat den Lauf blockiert (siehe Meldung)`,
   'Cli.Help.ExitCodeCancelled': `  130 abgebrochen (Strg+C)`,
