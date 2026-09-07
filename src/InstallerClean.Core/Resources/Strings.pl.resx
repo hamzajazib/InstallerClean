@@ -1247,9 +1247,11 @@ InstallerClean działał już jako administrator, więc ponowne uruchomienie go 
   <!-- The move half of Error.InstallerLockAccessRefused. Takes the "Nothing was
        moved" heading. No placeholders. -->
   <data name="Error.MoveInstallerLockAccessRefused" xml:space="preserve"><value>Windows odmówił InstallerClean uprawnień do sprawdzenia, czy Instalator Windows jest zajęty, więc nie mógł wykluczyć, że plik stanie się potrzebny w trakcie, i nic nie zostało przeniesione.</value></data>
-  <!-- Shown when a Delete could not take Global\_MSIExecute and nothing else
-       was shown to be holding it (a DACL that refuses the object, or any other
-       non-fatal failure to acquire). Without that hold nothing stops a program
+  <!-- Shown when a Delete could not take Global\_MSIExecute for a reason that is
+       neither of the two with sentences of their own: another program holding the
+       object, and a security descriptor that refuses this process the rights to
+       open it. Every other non-fatal failure to acquire arrives here, with
+       nothing shown to be holding it. Without that hold nothing stops a program
        registering a package part-way through the batch, so the proof the
        act-time re-verify produced can go stale under the delete, and the batch
        is refused rather than run. Written to the shape of

@@ -1247,9 +1247,11 @@ InstallerClean은 이미 관리자 권한으로 실행 중이었으므로 그런
   <!-- The move half of Error.InstallerLockAccessRefused. Takes the "Nothing was
        moved" heading. No placeholders. -->
   <data name="Error.MoveInstallerLockAccessRefused" xml:space="preserve"><value>Windows가 InstallerClean에 Windows Installer가 사용 중인지 확인할 권한을 주지 않아, 도중에 파일이 필요해질 가능성을 배제할 수 없었고, 아무것도 이동되지 않았습니다.</value></data>
-  <!-- Shown when a Delete could not take Global\_MSIExecute and nothing else
-       was shown to be holding it (a DACL that refuses the object, or any other
-       non-fatal failure to acquire). Without that hold nothing stops a program
+  <!-- Shown when a Delete could not take Global\_MSIExecute for a reason that is
+       neither of the two with sentences of their own: another program holding the
+       object, and a security descriptor that refuses this process the rights to
+       open it. Every other non-fatal failure to acquire arrives here, with
+       nothing shown to be holding it. Without that hold nothing stops a program
        registering a package part-way through the batch, so the proof the
        act-time re-verify produced can go stale under the delete, and the batch
        is refused rather than run. Written to the shape of
