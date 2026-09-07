@@ -32,11 +32,11 @@
 // that matters, so the safe mode is the one you get by typing nothing.
 //
 // THE UNDO IS GIT, AND THIS SCRIPT'S JOB IS TO KEEP IT ONE. The generators are
-// tracked, so from a clean tree git restores every translation exactly, and a run
-// that writes prints the command, naming the files it wrote rather than the
-// directory they sit in. That holds only while those files match the last
-// commit: with a half-finished translation already in them, restoring takes the
-// human's work out along with what this run wrote. So --apply refuses on a dirty
+// tracked, so from a clean tree git restores every translation exactly. It has to
+// be given those files rather than the directory they sit in, which holds more
+// than this script writes. The restore holds only while the generators match the
+// last commit: with a half-finished translation already in them, restoring takes
+// the human's work out along with what this run wrote. So --apply refuses on a dirty
 // tree and names the files, and --force copies them aside first and says where.
 // A hand-rolled backup beside git would go stale, get committed by accident, or be
 // trusted when it came from a different run.
