@@ -199,6 +199,25 @@ const PROPERTY_TYPES = new Map([
   ['Style', 'Style'],
 ]);
 
+// Where a row above claims a resource satisfies something OTHER than its own
+// type, that claim comes from one of two places, and they keep differently.
+//
+// A type declared in this repository can move under us, so its claims are read
+// off its own declaration below rather than recorded here. A framework type
+// cannot: its hierarchy is fixed by the framework and is part of the contract the
+// app compiles against. Those claims are recorded here instead, by name.
+//
+// The point of naming them is that the list is CHECKED both ways. A framework row
+// claiming something not recorded here stops the build, so the set of claims taken
+// on the framework's word cannot grow without somebody writing it down; and a name
+// here that no longer matches a claim stops the build too, so the list cannot keep
+// entries for rows that have gone. Identity rows, where a resource satisfies its
+// own type and nothing else, make no claim and appear in neither place.
+const FRAMEWORK_INHERITANCE = new Map([
+  [`{${WPF_NS}}SolidColorBrush`, ['Brush']],
+  [`{${WPF_NS}}BooleanToVisibilityConverter`, ['IValueConverter']],
+]);
+
 // A resource reached from inside another markup extension fills that
 // extension's property, not the attribute's. Every converter in the app arrives
 // this way, as {Binding ..., Converter={StaticResource ...}}, and the attribute
@@ -604,20 +623,49 @@ const mismatches = []; // resource type cannot satisfy the slot
 const unverifiedLocal = []; // local type whose declaration does not bear it out
 let typeChecked = 0; // sites actually compared, which is what the summary reports
 
+const tableBoundary = []; // a claim whose keeping is not accounted for
+const claimed = new Map(); // expanded -> claims beyond the row's own type
 for (const [expanded, satisfies] of RESOURCE_TYPES) {
   const uri = expanded.slice(1, expanded.indexOf('}'));
   const local = expanded.slice(expanded.indexOf('}') + 1);
-  if (!LOCAL_NS.test(uri)) continue;
-  const decl = new RegExp(`\\b(?:class|struct|record)\\s+${local}\\b([^{]*)`).exec(csText);
-  if (!decl) {
-    unverifiedLocal.push([expanded, 'no declaration of this type is in the C# source']);
+  // A resource element IS its type, so a row that does not satisfy its own name
+  // has been mistyped and every site consuming it is compared against the wrong
+  // thing.
+  if (!satisfies.includes(local)) {
+    tableBoundary.push([expanded, `it does not list ${local}, which is the type the element is`]);
     continue;
   }
-  for (const claim of satisfies) {
-    if (claim === local) continue;
-    if (!new RegExp(`\\b${claim}\\b`).test(decl[1]))
-      unverifiedLocal.push([expanded, `its declaration does not name ${claim}`]);
+  const extra = satisfies.filter((s) => s !== local);
+  claimed.set(expanded, extra);
+  if (!extra.length) continue; // identity row: nothing is claimed, nothing to keep
+
+  if (LOCAL_NS.test(uri)) {
+    const decl = new RegExp(`\\b(?:class|struct|record)\\s+${local}\\b([^{]*)`).exec(csText);
+    if (!decl) {
+      unverifiedLocal.push([expanded, 'no declaration of this type is in the C# source']);
+      continue;
+    }
+    for (const claim of extra)
+      if (!new RegExp(`\\b${claim}\\b`).test(decl[1]))
+        unverifiedLocal.push([expanded, `its declaration does not name ${claim}`]);
+    continue;
   }
+
+  const recorded = FRAMEWORK_INHERITANCE.get(expanded) ?? [];
+  for (const claim of extra)
+    if (!recorded.includes(claim))
+      tableBoundary.push([expanded, `it satisfies ${claim} on the framework's word, and FRAMEWORK_INHERITANCE does not say so`]);
+}
+// The other direction, so the list cannot keep entries for claims that have gone.
+for (const [expanded, claims] of FRAMEWORK_INHERITANCE) {
+  const extra = claimed.get(expanded);
+  if (extra === undefined) {
+    tableBoundary.push([expanded, 'it is recorded here and RESOURCE_TYPES has no such row']);
+    continue;
+  }
+  for (const claim of claims)
+    if (!extra.includes(claim))
+      tableBoundary.push([expanded, `it is recorded here as satisfying ${claim} and RESOURCE_TYPES does not claim that`]);
 }
 
 for (const r of references) {
@@ -759,6 +807,15 @@ if (untypedSlots.length) {
   console.error('EXTENSION_SLOTS, with the type it declares.');
 }
 
+if (tableBoundary.length) {
+  console.error(`\nFAILED: ${tableBoundary.length} row(s) in the type tables that do not account for themselves:`);
+  for (const [expanded, why] of tableBoundary) console.error(`  ${expanded}: ${why}`);
+  console.error('\nEvery claim a resource type makes beyond its own name is kept in one of two');
+  console.error('ways: read off its declaration if the type is declared here, or recorded in');
+  console.error('FRAMEWORK_INHERITANCE if it comes from the framework. A claim in neither is');
+  console.error('one nothing is holding to anything.');
+}
+
 if (unverifiedLocal.length) {
   console.error(`\nFAILED: ${unverifiedLocal.length} claim(s) about a type in this repo that its source does not bear out:`);
   for (const [expanded, why] of unverifiedLocal) console.error(`  ${expanded}: ${why}`);
@@ -769,7 +826,7 @@ if (unverifiedLocal.length) {
 
 if (dangling.length || unconsumed.length || collisions.length || mismatches.length ||
     untypedResources.size || untypedSlots.length || unverifiedLocal.length ||
-    ambiguous.size || outOfScope.length)
+    ambiguous.size || outOfScope.length || tableBoundary.length)
   process.exit(1);
 console.log('OK: every reference resolves and is of a type its consumer can take, every key');
 console.log('has a consumer, and no key is defined twice.');
