@@ -36,7 +36,7 @@
 // languages, where the only thing that moved was column padding that
 // check-cli-help-alignment.mjs already owns. A date is a screen for a human to
 // read, never a gate. flag-retranslation.mjs replaces a translation with the
-// English, and the way back is git.
+// English, and every run that writes prints its own way back.
 //
 // THE PARSE CONTROL ABOVE readResx IS NOT DEFENSIVE PROGRAMMING AND MUST NOT BE
 // SIMPLIFIED INTO A WARNING. This file's regex wants <value> on the same
