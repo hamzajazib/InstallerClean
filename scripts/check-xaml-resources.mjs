@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 // Fails (exit 1) when a XAML resource reference names a key nothing defines,
-// when a defined key has no consumer, or when a resource's runtime type cannot
-// satisfy the property consuming it.
+// when it names one the consumer cannot reach, when a defined key has no
+// consumer, or when a resource's runtime type cannot satisfy the property
+// consuming it.
 //
 // THE DANGLING REFERENCE. A {StaticResource X} naming a key that does not exist
 // is not a compile error: XAML resource lookup happens when the consuming
 // template is first realised, so the failure surfaces as a XamlParseException
-// the first time a user opens the affected window. The build stays green,
-// `dotnet test` never touches XAML, and Core-only logic runs on Linux, so
-// nothing in the ordinary loop catches it. Renaming a token is the operation
-// that produces it: a rename that misses one consumer ships a window that throws
-// on open.
+// the first time a user opens the affected window. The build stays green, and
+// the tests that do read this markup read it for the theme's cross-file ties
+// rather than to resolve a reference, so nothing in the ordinary loop catches
+// it. Renaming a token is the operation that produces it: a rename that misses
+// one consumer ships a window that throws on open.
 //
 // THE TYPE MATCH. Resolution is by name and runs no TypeConverter, so a
 // resource's runtime type has to satisfy the consuming property's declared type
@@ -42,17 +43,34 @@
 // report success.
 //
 // WHAT COUNTS AS A DEFINITION
-//   x:Key="Name" in any .xaml under src/. Both the theme dictionaries and the
-//   three window-local BoolToVis converters are read as one namespace. That is a
-//   simplification: WPF resolves a StaticResource up the tree from the consuming
-//   element, so a window-local key referenced from a DIFFERENT window would pass
-//   here and throw at runtime. It is sound as long as window-local keys stay
-//   defined in the window that uses them (verified: each of the three BoolToVis
-//   definitions is referenced only inside its own file).
+//   x:Key="Name" in any .xaml under src/.
 //
 //   x:Key="{x:Static ...}" is skipped. A markup-extension key resolves to a
 //   value at runtime, not to a name a static parse could match, and the one in
 //   the repo (SystemParameters.FocusVisualStyleKey) is claimed by WPF itself.
+//
+// WHERE A DEFINITION CAN BE REACHED FROM, WHICH IS A DIFFERENT QUESTION FROM
+// WHETHER IT EXISTS. A StaticResource lookup walks up from the consuming element,
+// so it reaches the dictionaries above that element and no others. Everything
+// App.xaml merges is application scope and every file can see it; a key in a
+// window's own Resources can be reached from that window and nowhere else. A
+// reference to one from another file resolves for a reader, and for a check that
+// pools every declaration into one namespace, and throws when the template is
+// realised.
+//
+//   The merge chain is followed from App.xaml rather than listed, so a dictionary
+//   added to it becomes application scope without this file being told, and a
+//   Source naming something not here stops the run rather than leaving the answer
+//   half built.
+//
+//   Reachability is worked out one file at a time, which is the same question as
+//   the real one exactly while no resource is declared below the root element's
+//   own Resources. One inside a Grid or a ControlTemplate is narrower than its
+//   file, so the guard checks that condition instead of resting on it.
+//
+//   A lookup in C# runs from an element this parse cannot identify, so it is held
+//   to the narrower rule that a file-local key is reachable only from the
+//   code-behind of the file declaring it.
 //
 // WHAT COUNTS AS A REFERENCE
 //   XAML: {StaticResource Key} and {DynamicResource Key}, wherever they sit in
@@ -106,6 +124,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, sep } from 'node:path';
 
 const SRC = 'src';
+const APP_XAML = `${SRC}/InstallerClean/App.xaml`;
 const APP_XAML_CS = `${SRC}/InstallerClean/App.xaml.cs`;
 
 const WPF_NS = 'http://schemas.microsoft.com/winfx/2006/xaml/presentation';
@@ -227,7 +246,7 @@ const cs = csFiles.map((f) => [f, stripCsComments(readFileSync(f, 'utf8'))]);
 // --- the XAML walk -----------------------------------------------------------
 // Element tags, whole, however many lines they span. The attribute blob skips
 // over quoted runs so that a > inside an attribute value does not end the tag.
-const TAG = /<([A-Za-z_][\w:.\-]*)((?:[^<>"']|"[^"]*"|'[^']*')*?)(\/?)>/g;
+const TAG = /<(\/?)([A-Za-z_][\w:.\-]*)((?:[^<>"']|"[^"]*"|'[^']*')*?)(\/?)>/g;
 const ATTR = /([\w:.\-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
 // The implicit-style form, recognised so it can be set aside before the by-name
 // pattern runs.
@@ -296,23 +315,63 @@ function enclosingExtension(value, at) {
   };
 }
 
-const definitions = []; // { file, line, key, element }
+const definitions = []; // { file, line, key, element, whole }
 const references = []; // { file, line, key, slot, describeSlot }
+const merged = new Map(); // file -> [file, ...] it merges
 let typeKeyedSites = 0;
+
+// The elements a resource may sit under and still belong to the whole file: the
+// root's own Resources, and a ResourceDictionary inside it. Anything else, a
+// Grid or a Style or a ControlTemplate, scopes the resource to that subtree and
+// not to the file.
+const SCOPE_WRAPPER = /^(?:[\w:.]+\.Resources|ResourceDictionary)$/;
+
+// Relative to the file holding it, and resolved without the platform's separator:
+// CI runs this on Windows, where a resolver that returned backslashes would match
+// nothing against the forward-slash paths everything else here uses.
+const resolveSource = (fromFile, src) => {
+  const out = [];
+  for (const part of fromFile.split('/').slice(0, -1).concat(src.split(/[\\/]/))) {
+    if (part === '' || part === '.') continue;
+    if (part === '..') out.pop();
+    else out.push(part);
+  }
+  return out.join('/');
+};
 
 for (const [file, text] of xaml) {
   const ns = namespaces(file, text);
   const lineAt = lineCounter(text);
+  const stack = [];
   for (const tag of text.matchAll(TAG)) {
-    const element = tag[1];
-    const blob = tag[2];
+    const element = tag[2];
+    const blob = tag[3];
+    if (tag[1] === '/') {
+      stack.pop();
+      continue;
+    }
+    const selfClosing = tag[4] === '/';
     const blobStart = tag.index + 1 + element.length;
     const attrs = new Map();
     for (const a of blob.matchAll(ATTR)) attrs.set(a[1], a[2] ?? a[3]);
+    if (!selfClosing) stack.push(element);
+    const path = selfClosing ? stack : stack.slice(0, -1);
+
+    if (element.split(':').pop() === 'ResourceDictionary' && attrs.has('Source')) {
+      if (!merged.has(file)) merged.set(file, []);
+      merged.get(file).push(resolveSource(file, attrs.get('Source')));
+    }
 
     const keyAttr = attrs.get('x:Key');
     if (keyAttr !== undefined && !keyAttr.startsWith('{'))
-      definitions.push({ file, line: lineAt(tag.index), key: keyAttr, element, ns });
+      definitions.push({
+        file, line: lineAt(tag.index), key: keyAttr, element, ns,
+        // Whether this declaration is reachable from anywhere in its own file, or
+        // only from part of it. The scope check below reasons per file, which is
+        // sound exactly while this holds.
+        whole: path.slice(1).every((e) => SCOPE_WRAPPER.test(e)),
+        under: path.join(' > '),
+      });
 
     for (const a of blob.matchAll(ATTR)) {
       const name = a[1];
@@ -361,24 +420,111 @@ if (!xamlFiles.length || !references.length || !definitions.length) {
   process.exit(1);
 }
 
+// --- scope -------------------------------------------------------------------
+// A resource is visible to a consumer only if the lookup can walk up to the
+// dictionary holding it. Everything App.xaml merges is application scope and is
+// reachable from anywhere; everything else is reachable only inside the file that
+// declares it. Pooling every declaration into one namespace, which is what a
+// name-only check does, answers "does this key exist somewhere" when the question
+// is "can this consumer reach it".
+//
+// The merge chain is followed from App.xaml rather than listed here, so a
+// dictionary added to it becomes application scope without this file being told.
+const declsByFile = new Map(); // file -> Map(key -> definition)
+for (const d of definitions) {
+  if (!declsByFile.has(d.file)) declsByFile.set(d.file, new Map());
+  if (!declsByFile.get(d.file).has(d.key)) declsByFile.get(d.file).set(d.key, d);
+}
+
+const knownXaml = new Set(xamlFiles);
+const unresolvedMerges = [];
+for (const [file, sources] of merged)
+  for (const s of sources) if (!knownXaml.has(s)) unresolvedMerges.push([file, s]);
+if (unresolvedMerges.length) {
+  console.error(`FAILED: ${unresolvedMerges.length} merged dictionary source(s) that do not name a file here:`);
+  for (const [file, s] of unresolvedMerges) console.error(`  ${file} merges ${s}`);
+  console.error('Which keys are application scope is worked out by following these, so an');
+  console.error('unresolved one leaves that answer incomplete. If the dictionary comes from');
+  console.error('outside this repo, this guard needs teaching about it before it can run.');
+  process.exit(1);
+}
+
+const closure = (file, seen = new Set()) => {
+  if (seen.has(file)) return seen;
+  seen.add(file);
+  for (const s of merged.get(file) ?? []) closure(s, seen);
+  return seen;
+};
+
+if (!knownXaml.has(APP_XAML)) {
+  console.error(`FAILED: ${APP_XAML} is not among the XAML files read.`);
+  console.error('It is where application scope starts, so without it every key would read');
+  console.error('as local to its own file and the scope check would pass anything.');
+  process.exit(1);
+}
+const appScopeFiles = closure(APP_XAML);
+const appKeys = new Set();
+for (const f of appScopeFiles)
+  for (const k of declsByFile.get(f)?.keys() ?? []) appKeys.add(k);
+if (!appKeys.size) {
+  console.error(`FAILED: following the merged dictionaries from ${APP_XAML} found no keys.`);
+  console.error('Every key would then read as local to its own file, and a check that cannot');
+  console.error('tell the two apart passes everything.');
+  process.exit(1);
+}
+
+// A file-scope model is only equivalent to the real one while no declaration sits
+// below the root element's own Resources. One inside a Grid or a ControlTemplate
+// is narrower than its file, and a check reasoning per file would pass a
+// reference that cannot reach it.
+const narrower = definitions.filter((d) => !d.whole);
+if (narrower.length) {
+  console.error(`FAILED: ${narrower.length} resource(s) declared below the root of their file:`);
+  for (const d of narrower) console.error(`  ${d.key}  at ${d.file}:${d.line}  under ${d.under}`);
+  console.error('This guard reasons about visibility one file at a time, which stops being');
+  console.error('the same question once a declaration is scoped to part of a file. Move it to');
+  console.error('the root Resources, or teach this guard to reason about the element tree.');
+  process.exit(1);
+}
+
+const visibleIn = (file) => {
+  const v = new Set(appKeys);
+  for (const f of closure(file))
+    for (const k of declsByFile.get(f)?.keys() ?? []) v.add(k);
+  return v;
+};
+const visibility = new Map(xamlFiles.map((f) => [f, visibleIn(f)]));
+
+// Where a reference resolves FROM decides which declaration it gets, so the type
+// half asks the same question rather than taking whichever declaration was read
+// first.
+const declarationsFor = (file, key) => {
+  const local = [];
+  for (const f of closure(file))
+    if (!appScopeFiles.has(f)) {
+      const d = declsByFile.get(f)?.get(key);
+      if (d) local.push(d);
+    }
+  if (local.length) return local;
+  const app = [];
+  for (const f of appScopeFiles) {
+    const d = declsByFile.get(f)?.get(key);
+    if (d) app.push(d);
+  }
+  return app;
+};
+
 // --- definitions -------------------------------------------------------------
 const defs = new Map(); // key -> [file, ...]
-const defElement = new Map(); // key -> { element, ns, file }
-// A key declared in two scopes at two different element types has no single
-// answer to "what type is it": each consuming site resolves up its own tree, and
-// which declaration it reaches is a fact about where the site sits. The type half
-// would silently answer for all of them from one declaration, so it stops instead.
-const ambiguous = new Map(); // key -> Set of element spellings
 for (const d of definitions) {
   if (!defs.has(d.key)) defs.set(d.key, []);
   defs.get(d.key).push(d.file);
-  if (!defElement.has(d.key)) defElement.set(d.key, d);
-  else if (defElement.get(d.key).element !== d.element) {
-    if (!ambiguous.has(d.key))
-      ambiguous.set(d.key, new Set([defElement.get(d.key).element]));
-    ambiguous.get(d.key).add(d.element);
-  }
 }
+// A key a site could reach at two different element types has no single answer to
+// "what type is it". Scope decides which declaration a site gets, so this is only
+// reached when one scope holds two of them, and the type half stops rather than
+// picking one.
+const ambiguous = new Map(); // key -> Set of element spellings
 
 // --- references --------------------------------------------------------------
 const refs = new Map(); // key -> [site, ...]
@@ -388,13 +534,18 @@ const addRef = (key, site) => {
 };
 for (const r of references) addRef(r.key, `${r.file}:${r.line}`);
 
+const csReferences = []; // { file, site, key }
 for (const [file, text] of cs) {
   const lines = text.split('\n');
   lines.forEach((line, i) => {
     const site = `${file}:${i + 1}`;
-    for (const [, key] of line.matchAll(/(?:Try)?FindResource\(\s*"([^"]+)"/g)) addRef(key, site);
-    for (const [, key] of line.matchAll(/Resources\[\s*"([^"]+)"\s*\]/g)) addRef(key, site);
-    for (const [, key] of line.matchAll(/SetResourceReference\([^,]+,\s*"([^"]+)"/g)) addRef(key, site);
+    const here = (key) => {
+      addRef(key, site);
+      csReferences.push({ file, site, key });
+    };
+    for (const [, key] of line.matchAll(/(?:Try)?FindResource\(\s*"([^"]+)"/g)) here(key);
+    for (const [, key] of line.matchAll(/Resources\[\s*"([^"]+)"\s*\]/g)) here(key);
+    for (const [, key] of line.matchAll(/SetResourceReference\([^,]+,\s*"([^"]+)"/g)) here(key);
   });
 }
 
@@ -416,6 +567,29 @@ if (!typeKeys.length) {
   process.exit(1);
 }
 for (const key of typeKeys) addRef(key, `${APP_XAML_CS} (TypeSizeTokenKeys)`);
+
+// --- reachability -------------------------------------------------------------
+// A reference to a key that exists but is declared in another file's own
+// Resources. It resolves for a reader, and for a name-only check, and throws when
+// the template is realised.
+const outOfScope = [];
+for (const r of references) {
+  if (visibility.get(r.file)?.has(r.key)) continue;
+  if (!defs.has(r.key)) continue; // declared nowhere; the dangling arm has it
+  outOfScope.push([r.key, `${r.file}:${r.line}`, defs.get(r.key)]);
+}
+
+// A lookup in code runs from an element, and which element is not something this
+// parse can know. What it can hold is the narrower rule that a file-local key is
+// only reachable from the code-behind of the file declaring it, which is where
+// every lookup here already sits.
+for (const r of csReferences) {
+  if (appKeys.has(r.key)) continue;
+  if (!defs.has(r.key)) continue; // declared nowhere; the dangling arm has it
+  const owners = defs.get(r.key);
+  if (owners.some((owner) => r.file === `${owner}.cs`)) continue;
+  outOfScope.push([r.key, r.site, owners]);
+}
 
 // --- the type match ----------------------------------------------------------
 // A resource declared in a namespace of this assembly is a type in this repo, so
@@ -447,9 +621,14 @@ for (const [expanded, satisfies] of RESOURCE_TYPES) {
 }
 
 for (const r of references) {
-  const declared = defElement.get(r.key);
-  if (!declared) continue; // a dangling reference; the name half reports it
-  if (ambiguous.has(r.key)) continue; // reported below; there is no type to check against
+  const candidates = declarationsFor(r.file, r.key);
+  if (!candidates.length) continue; // a dangling reference; the name half reports it
+  if (new Set(candidates.map((d) => d.element)).size > 1) {
+    if (!ambiguous.has(r.key))
+      ambiguous.set(r.key, new Set(candidates.map((d) => d.element)));
+    continue;
+  }
+  const declared = candidates[0];
 
   const resolved = resolve(declared.ns, declared.element);
   const satisfies = resolved.expanded ? RESOURCE_TYPES.get(resolved.expanded) : undefined;
@@ -562,6 +741,16 @@ if (ambiguous.size) {
   console.error('declare them at the same type.');
 }
 
+if (outOfScope.length) {
+  console.error(`\nFAILED: ${outOfScope.length} reference(s) to a key the consumer cannot reach:`);
+  for (const [key, site, owners] of outOfScope)
+    console.error(`  ${key}  <-  ${site}    (declared in ${owners.join(', ')})`);
+  console.error('\nA resource declared in one file\'s own Resources is invisible to another,');
+  console.error('so lookup runs off the end of the tree and throws when the template is');
+  console.error('realised. Either declare it where the consumer can reach it, or move it into');
+  console.error('the theme, which every file can see.');
+}
+
 if (untypedSlots.length) {
   console.error(`\nFAILED: ${untypedSlots.length} site(s) whose property this guard cannot type:`);
   for (const [slot, site, key] of untypedSlots)
@@ -580,7 +769,7 @@ if (unverifiedLocal.length) {
 
 if (dangling.length || unconsumed.length || collisions.length || mismatches.length ||
     untypedResources.size || untypedSlots.length || unverifiedLocal.length ||
-    ambiguous.size)
+    ambiguous.size || outOfScope.length)
   process.exit(1);
 console.log('OK: every reference resolves and is of a type its consumer can take, every key');
 console.log('has a consumer, and no key is defined twice.');
