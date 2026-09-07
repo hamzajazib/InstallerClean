@@ -11,8 +11,12 @@
 // name is a line that can be deleted or renamed away while everything stays
 // green. This is what makes the two invocations a rule rather than a habit.
 //
-// YAML COMMENTS ARE STRIPPED FIRST, so a commented-out invocation reads as the
-// absence it is rather than as the line it used to be.
+// THE INVOCATION HAS TO OPEN THE COMMAND, after the indent and an optional
+// "run:". A line carrying the name anywhere else is text about the guard rather
+// than a step that runs it: a commented-out step, a step name, an environment
+// value, a string another command echoes. Anchoring it there is what lets this
+// file leave YAML's comment rules alone, since it never has to work out whether
+// a # opens a comment or sits inside a quoted string.
 //
 // Run from the repo root: node scripts/check-guard-wiring.mjs
 import { readFileSync } from 'node:fs';
@@ -33,22 +37,31 @@ const read = (p) => {
   }
 };
 
-// A run: step may carry the guard anywhere on its line, so the test is on the
-// line rather than on the whole file, and a line whose first non-space
-// character is # is not an invocation of anything.
+// The test is on the line rather than on the whole file, and it takes both
+// shapes these workflows use for a node step: straight after "run:", and alone
+// on its own line inside a block scalar. Whatever follows the name is arguments
+// or a trailing comment, and the step runs the guard on either reading. GUARD
+// is a literal, and the one character in it a regular expression reads as
+// anything but itself is the dot before mjs.
+const RUNS_GUARD = new RegExp(
+  String.raw`^\s*(?:run:\s+)?node ${GUARD.replace(/\./g, '\\.')}(?:\s|$)`,
+);
+
 const invocations = (yaml) =>
   yaml
     .split('\n')
-    .filter((line) => !/^\s*#/.test(line))
-    .filter((line) => line.includes(`node ${GUARD}`));
+    .map((text, i) => ({ line: i + 1, text }))
+    .filter(({ text }) => RUNS_GUARD.test(text));
 
 const problems = [];
+const wired = [];
 
 for (const path of WORKFLOWS) {
   const found = invocations(read(path));
   if (found.length === 0) {
-    problems.push(`${path}: does not run "node ${GUARD}" outside a comment`);
+    problems.push(`${path}: no step runs "node ${GUARD}"`);
   }
+  for (const { line, text } of found) wired.push(`  ${path}:${line}: ${text.trim()}`);
 }
 
 if (problems.length) {
@@ -57,8 +70,10 @@ if (problems.length) {
   console.error(`\nFix: add a step running "node ${GUARD}" after the publish steps`);
   console.error('in the workflow named above. It reads built files, so it has to run after');
   console.error('they exist, which is why it is invoked by name rather than picked up with');
-  console.error('the check-*.mjs guards that run before the build.');
+  console.error('the check-*.mjs guards that run before the build. The name has to open the');
+  console.error('command, either straight after "run:" or alone on a line in a block scalar.');
   process.exit(1);
 }
 
-console.log(`check-guard-wiring: OK (${WORKFLOWS.length} workflows invoke ${GUARD})`);
+console.log(`check-guard-wiring: OK, every workflow runs ${GUARD}:`);
+for (const w of wired) console.log(w);
