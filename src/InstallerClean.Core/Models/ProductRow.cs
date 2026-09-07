@@ -1,4 +1,4 @@
-﻿using InstallerClean.Helpers;
+using InstallerClean.Helpers;
 using InstallerClean.Resources;
 
 namespace InstallerClean.Models;

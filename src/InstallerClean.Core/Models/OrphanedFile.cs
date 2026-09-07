@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using InstallerClean.Helpers;
 using InstallerClean.Resources;
 
