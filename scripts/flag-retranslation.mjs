@@ -455,8 +455,15 @@ if (backup !== null) {
   console.log('on a reboot or whenever it next tidies up. Copy it somewhere you choose');
   console.log('if you want it to survive.');
 } else {
-  console.log(`\nThe generators were clean before this run, so git is a complete undo:`);
-  console.log(`  git checkout -- ${GENDIR}/`);
+  // THE FILES ARE NAMED ONE BY ONE RATHER THAN AS THE DIRECTORY, BECAUSE THE
+  // DIRECTORY HOLDS MORE THAN THIS RUN WRITES. gen-strings-template.mjs and the
+  // provenance ledger sit beside the generators. Neither is in the list the check
+  // above asks git about, and neither is copied aside by --force, so a restore
+  // scoped to the directory reaches work this run never touched. An undo is for
+  // what the run did.
+  console.log(`\nThe generators were clean before this run, so git restores every`);
+  console.log('file it wrote:');
+  console.log(`  git checkout -- ${targets.join(' ')}`);
 }
 
 // This script writes to the generators and nothing else, so the sign-off says so
