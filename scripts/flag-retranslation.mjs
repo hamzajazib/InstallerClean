@@ -449,7 +449,7 @@ try {
   failure = err;
 }
 
-// BEFORE THE WAY BACK, so the way back is the last thing on the screen. Someone
+// BEFORE THE WAY BACK, so the way back is the last thing this run prints. Someone
 // reading this has just watched the run stop and is looking for the remedy, and a
 // remedy above the wreckage is one they have to scroll for. The error itself is
 // printed whole rather than summarised, because which file refused the write and
@@ -458,7 +458,7 @@ if (failure !== null) {
   console.error('\nThis run stopped part way through writing.');
   console.error(failure);
   console.error('Some generators may hold the new value and some the value they held before.');
-  console.error('The way back below returns every one of them to what it held before this run.');
+  console.error('The way back this run prints returns each of them to the value it held before.');
 }
 
 // The way back, printed whether or not the write finished, and before the way
