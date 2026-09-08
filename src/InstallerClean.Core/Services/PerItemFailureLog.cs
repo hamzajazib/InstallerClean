@@ -116,8 +116,15 @@ internal sealed class PerItemFailureLog(string operationKind, string detailTrail
         if (_suppressed == 0) return;
 
         var causes = _seenCauses.Count == 1 ? "cause" : "causes";
+        // The suppressed count governs its noun and its verb, and one is the
+        // smallest figure it can carry: nothing is written here when nothing was
+        // suppressed. The logged count needs no such pair, being at least the
+        // budget by the time anything is suppressed at all.
+        var suppressed = _suppressed == 1
+            ? $"{_suppressed} further failure was"
+            : $"{_suppressed} further failures were";
         _write(new InvalidOperationException(
-            $"{operationKind}: {_suppressed} further failures were not logged individually. " +
+            $"{operationKind}: {suppressed} not logged individually. " +
             $"{_logged} were logged in full, covering all {_seenCauses.Count} distinct {causes} " +
             $"this run produced. {detailTrail}"));
     }

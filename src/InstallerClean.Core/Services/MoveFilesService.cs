@@ -392,11 +392,14 @@ public sealed class MoveFilesService : IMoveFilesService
                         // the files are, which is the same either way, so a report
                         // of one of these could not otherwise be told from a report
                         // of the other. Once per batch, on a path that ends it.
+                        // The noun agrees with the batch size, which is what
+                        // "of {total}" governs, rather than with the count moved.
+                        var batchFiles = total == 1 ? "file" : "files";
                         Helpers.CrashLog.TryWrite(new InvalidOperationException(
                             $"Move stopped by the destination guard ({abortReason}). Captured "
                             + $"'{canonicalDestination}' (resolved: {canonicalProven}); re-resolved "
                             + $"'{currentResolved}' (resolved: {resolveProven}). "
-                            + $"{moved} of {total} files had moved."));
+                            + $"{moved} of {total} {batchFiles} had moved."));
 
                         // Out through the one exit below rather than straight up the
                         // stack: everything a stopped batch still owes is under this
