@@ -229,12 +229,19 @@ public partial class CompletionViewModel : ObservableObject
     }
 
     /// <summary>Shows the "All clean" state after a scan finds no orphans.
-    /// <paramref name="installedProductCount"/> is the registered-package
-    /// count surfaced as the scan receipt; <paramref name="scanDurationMs"/>
+    /// <paramref name="scannedFileCount"/> is how many cached files the scan
+    /// accounted for, surfaced as the receipt; <paramref name="scanDurationMs"/>
     /// is the elapsed scan time. The count and the duration together stop
     /// the all-clean overlay from reading as "did nothing" on a fast
-    /// machine where the duration alone shows as a fraction of a second.</summary>
-    public void ShowAllClear(int installedProductCount, long scanDurationMs)
+    /// machine where the duration alone shows as a fraction of a second.
+    ///
+    /// THE NOUN IS FILES BECAUSE THE NUMBER IS OF FILES, and the caller hands over
+    /// the same count the main window's left-alone line prints, which already says
+    /// that word. A registration is not a product and several of them can name one
+    /// program's cached packages, so the noun follows the count rather than the
+    /// records it came out of. A file the scan held back is one of them: it is in
+    /// the folder and this scan judged it.</summary>
+    public void ShowAllClear(int scannedFileCount, long scanDurationMs)
     {
         HeadingIsWarning = false;
         Heading = Strings.Completion_AllClean;
@@ -243,8 +250,8 @@ public partial class CompletionViewModel : ObservableObject
         Summary = Strings.Completion_NothingToCleanUp;
         Restore = string.Format(
             Strings.Completion_NothingToCleanUpReceipt,
-            DisplayHelpers.FormatCount(installedProductCount),
-            DisplayHelpers.PluraliseProduct(installedProductCount),
+            DisplayHelpers.FormatCount(scannedFileCount),
+            DisplayHelpers.PluraliseFile(scannedFileCount),
             DisplayHelpers.FormatElapsedLong(TimeSpan.FromMilliseconds(scanDurationMs)));
         Errors = string.Empty;
         Skipped = string.Empty;
@@ -297,9 +304,19 @@ public partial class CompletionViewModel : ObservableObject
     /// otherwise have been offered. What is not true of all of them at once is any
     /// sentence about why, which is what <paramref name="account"/> is for.
     /// </param>
+    /// <param name="scannedFileCount">
+    /// The receipt's own count, on the terms <see cref="ShowAllClear"/> sets out: how
+    /// many cached files the scan accounted for, in files rather than in programs.
+    ///
+    /// IT CONTAINS <paramref name="withheldCount"/> AND IS MEANT TO. A held-back file
+    /// is in the folder and this scan judged it, so the receipt for what was examined
+    /// covers it, while the body above says how many of them were kept back. The two
+    /// numbers answer different questions about one machine and neither is a share of
+    /// the other.
+    /// </param>
     public void ShowNothingOffered(
         WithholdingAccount account, int withheldCount, long withheldBytes,
-        int installedProductCount, long scanDurationMs)
+        int scannedFileCount, long scanDurationMs)
     {
         HeadingIsWarning = false;
         Heading = Strings.Completion_NothingOffered;
@@ -333,8 +350,8 @@ public partial class CompletionViewModel : ObservableObject
             DisplayHelpers.FormatSize(withheldBytes));
         Restore = string.Format(
             Strings.Completion_NothingToCleanUpReceipt,
-            DisplayHelpers.FormatCount(installedProductCount),
-            DisplayHelpers.PluraliseProduct(installedProductCount),
+            DisplayHelpers.FormatCount(scannedFileCount),
+            DisplayHelpers.PluraliseFile(scannedFileCount),
             DisplayHelpers.FormatElapsedLong(TimeSpan.FromMilliseconds(scanDurationMs)));
         Errors = string.Empty;
         Skipped = string.Empty;

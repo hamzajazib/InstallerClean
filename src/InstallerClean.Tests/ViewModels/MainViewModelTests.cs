@@ -191,6 +191,88 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public async Task The_all_clear_receipt_counts_the_files_the_line_behind_it_counts()
+    {
+        // THE OVERLAY AND THE LINE IT SITS OVER, HELD TOGETHER ON ONE SCAN. Dismissing
+        // the overlay puts that line in front of the reader, so two different numbers
+        // for one machine read as a mistake. Both are taken off the same property here
+        // rather than recounted, and this fixture holds the registration that used to
+        // separate them: a superseded patch whose cached file has gone and whose
+        // absence the scan established nothing can be hurt by.
+        //
+        // IT ALSO PINS THE ORDER. The count is assigned while the scan result is being
+        // applied and read on the completion path that follows, so a read that
+        // overtook the write would show here as a receipt counting nothing.
+        var vm = CreateViewModel();
+        var registered = new List<RegisteredPackage>
+        {
+            new(@"C:\Windows\Installer\here.msi", "Product A", "{AAA}"),
+            new(@"C:\Windows\Installer\alsohere.msi", "Product B", "{BBB}"),
+            new(@"C:\Windows\Installer\a1d2f.msp", "Product C", "{CCC}",
+                PatchState: 2,
+                RemovableWithheld: true,
+                ProductPatchSetVerdict: ProductPatchSet.AllNonRemovable,
+                FileExists: false,
+                WithheldOnUnreadableFile: true),
+        };
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(new ScanResult(Array.Empty<OrphanedFile>(), registered, 2_097_152));
+
+        await vm.Scan.ScanWithProgressAsync(null);
+
+        Assert.Equal(2, vm.Scan.RegisteredFileCount);
+        Assert.StartsWith("Scanned 2 files in ", vm.Completion.Restore, StringComparison.Ordinal);
+
+        RegisteredFilesViewModel? opened = null;
+        _windowService.When(s => s.ShowRegisteredDetails(Arg.Any<RegisteredFilesViewModel>()))
+            .Do(ci => opened = ci.Arg<RegisteredFilesViewModel>());
+        vm.Chrome.OpenRegisteredDetailsCommand.Execute(null);
+        var details = Assert.IsType<RegisteredFilesViewModel>(opened);
+
+        // The window behind the overlay says the same number, holds no row for the
+        // registration whose file the scan cleared, and carries no missing clause.
+        Assert.Equal("2 files left alone (2.0 MB)", details.Summary);
+        Assert.Equal(
+            new[] { @"C:\Windows\Installer\alsohere.msi", @"C:\Windows\Installer\here.msi" },
+            details.Products.Select(p => p.FullPath).OrderBy(p => p, StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task The_nothing_offered_receipt_counts_the_held_back_files_it_has_just_named()
+    {
+        // A HELD-BACK FILE IS IN THE RECEIPT AND IS ALSO NAMED BY THE BODY, and the two
+        // are not a double count. The body says how many files this run kept back; the
+        // receipt says how many the run examined, and it examined that one: it is in
+        // the folder, the scan opened it and judged it. A receipt that left it out
+        // would understate what was looked at, which is the one thing it is for.
+        var vm = CreateViewModel();
+        var registered = new List<RegisteredPackage>
+        {
+            new(@"C:\Windows\Installer\here.msi", "Product A", "{AAA}"),
+            new(@"C:\Windows\Installer\alsohere.msi", "Product B", "{BBB}"),
+        };
+        var withheld = new List<OrphanedFile>
+        {
+            new(@"C:\Windows\Installer\kept.msi", 1_048_576, false, false, false, Orphaned),
+            new(@"C:\Windows\Installer\alsokept.msi", 1_048_576, false, false, false, Orphaned),
+        };
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(new ScanResult(
+                RemovableFiles: Array.Empty<OrphanedFile>(),
+                RegisteredPackages: registered,
+                RegisteredTotalBytes: 2_097_152,
+                WithheldFiles: withheld));
+
+        await vm.Scan.ScanWithProgressAsync(null);
+
+        // Four examined, two of them kept back, and the two sentences sit on one
+        // screen: the body names the two and the receipt counts all four.
+        Assert.Equal(4, vm.Scan.RegisteredFileCount);
+        Assert.StartsWith("Scanned 4 files in ", vm.Completion.Restore, StringComparison.Ordinal);
+        Assert.Contains("2 files", vm.Completion.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ScanAsync_shows_all_clear_when_no_orphans()
     {
         var vm = CreateViewModel();

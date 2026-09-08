@@ -574,13 +574,15 @@ To put it back, you need the installer for the version you already have. Get it 
   <!-- Completion screen -->
   <data name="Completion.AllClean" xml:space="preserve"><value>All clean</value></data>
   <data name="Completion.NothingToCleanUp" xml:space="preserve"><value>Nothing to clean up in {InstallerFolder}</value></data>
-  <!-- 0 = installed product count, 1 = pluralised "product"/"products",
-       2 = natural-phrasing duration ("1.4 seconds" / "850 ms" /
-       "less than a second"). The count is the receipt that a real
-       scan ran; on fast machines a duration alone reads as "did
-       nothing". Rendered in the Restore slot of the completion
-       overlay so the all-clean state has the same heading + summary
-       + smaller-receipt shape as the post-Move and post-Delete
+  <!-- 0 = how many cached files the scan accounted for, 1 = pluralised
+       "file"/"files" (Plural.File), 2 = natural-phrasing duration
+       ("1.4 seconds" / "850 ms" / "less than a second"). The count is
+       the receipt that a real scan ran; on fast machines a duration
+       alone reads as "did nothing". It is the same number the main
+       window's left-alone line prints, so the overlay and the line
+       behind it say one thing. Rendered in the Restore slot of the
+       completion overlay so the all-clean state has the same heading +
+       summary + smaller-receipt shape as the post-Move and post-Delete
        states. -->
   <data name="Completion.NothingToCleanUpReceipt" xml:space="preserve"><value>Scanned {0} {1} in {2}</value></data>
   <!-- THE SCREEN FOR A MACHINE WHOSE WHOLE OFFER A RULE EMPTIED, which is a different

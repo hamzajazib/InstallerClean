@@ -459,7 +459,7 @@ public class CompletionViewModelTests
         Assert.False(vm.HeadingIsWarning);
         Assert.Equal(string.Empty, vm.FailedCount);
 
-        vm.ShowAllClear(installedProductCount: 5, scanDurationMs: 10);
+        vm.ShowAllClear(scannedFileCount: 5, scanDurationMs: 10);
         Assert.False(vm.HeadingIsWarning);
         Assert.Equal(string.Empty, vm.FailedCount);
     }
@@ -477,7 +477,7 @@ public class CompletionViewModelTests
 
         vm.ShowNothingOffered(
             WithholdingAccount.WholeWalkOffer, withheldCount: 3, withheldBytes: 3072,
-            installedProductCount: 5, scanDurationMs: 10);
+            scannedFileCount: 5, scanDurationMs: 10);
 
         Assert.True(vm.IsComplete);
         Assert.False(vm.HeadingIsWarning);
@@ -491,12 +491,18 @@ public class CompletionViewModelTests
         // THE RECEIPT IS NOT DECORATION. A heading and a body with no evidence that a
         // scan ran reads as a failure rather than as a result, which is the opposite
         // of what this screen has to say. It is the same line the all-clear carries.
+        //
+        // ITS NOUN IS FILES, WHICH IS WHAT THE NUMBER COUNTS. The caller hands over
+        // the cached files the scan accounted for, and the held-back files this
+        // screen has just named are among them: they are in the folder and the scan
+        // opened them.
         Assert.Equal(
             string.Format(
                 Strings.Completion_NothingToCleanUpReceipt,
-                5, DisplayHelpers.PluraliseProduct(5),
+                5, DisplayHelpers.PluraliseFile(5),
                 DisplayHelpers.FormatElapsedLong(TimeSpan.FromMilliseconds(10))),
             vm.Restore);
+        Assert.Equal("Scanned 5 files in less than a second", vm.Restore);
 
         // Nothing was freed, so no donate prompt and the Send tooltip takes its
         // please-send-anyway form: this cohort is the one the aggregate most needs.
@@ -517,7 +523,7 @@ public class CompletionViewModelTests
 
         vm.ShowNothingOffered(
             WithholdingAccount.WholeWalkOffer, withheldCount: 1, withheldBytes: 1024,
-            installedProductCount: 5, scanDurationMs: 10);
+            scannedFileCount: 5, scanDurationMs: 10);
 
         Assert.Equal(
             string.Format(
@@ -545,10 +551,10 @@ public class CompletionViewModelTests
         var allClear = new CompletionViewModel();
         var nothingOffered = new CompletionViewModel();
 
-        allClear.ShowAllClear(installedProductCount: 5, scanDurationMs: 10);
+        allClear.ShowAllClear(scannedFileCount: 5, scanDurationMs: 10);
         nothingOffered.ShowNothingOffered(
             WithholdingAccount.WholeWalkOffer, withheldCount: 3, withheldBytes: 3072,
-            installedProductCount: 5, scanDurationMs: 10);
+            scannedFileCount: 5, scanDurationMs: 10);
 
         Assert.NotEqual(allClear.Heading, nothingOffered.Heading);
         Assert.NotEqual(allClear.Summary, nothingOffered.Summary);
@@ -571,10 +577,10 @@ public class CompletionViewModelTests
 
         wholesale.ShowNothingOffered(
             WithholdingAccount.WholeWalkOffer, withheldCount: 3, withheldBytes: 3072,
-            installedProductCount: 5, scanDurationMs: 10);
+            scannedFileCount: 5, scanDurationMs: 10);
         perFile.ShowNothingOffered(
             WithholdingAccount.PerFile, withheldCount: 3, withheldBytes: 3072,
-            installedProductCount: 5, scanDurationMs: 10);
+            scannedFileCount: 5, scanDurationMs: 10);
 
         Assert.NotEqual(wholesale.Summary, perFile.Summary);
         // Everything else about the screen IS shared, which is what makes the body the
@@ -593,7 +599,7 @@ public class CompletionViewModelTests
 
         vm.ShowNothingOffered(
             WithholdingAccount.PerFile, withheldCount: 3, withheldBytes: 3072,
-            installedProductCount: 5, scanDurationMs: 10);
+            scannedFileCount: 5, scanDurationMs: 10);
 
         Assert.Equal(
             string.Format(
@@ -754,7 +760,7 @@ public class CompletionViewModelTests
         vm.ShowDeleteSummary(deletedCount: 3, deletedBytes: 4096, errors: []);
         Assert.True(vm.ShowDonate);
 
-        vm.ShowAllClear(installedProductCount: 5, scanDurationMs: 10);
+        vm.ShowAllClear(scannedFileCount: 5, scanDurationMs: 10);
 
         Assert.False(vm.ShowDonate);
     }

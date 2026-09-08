@@ -333,18 +333,35 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // with nothing withheld, and a screen telling that machine the app had held
             // back all 0 files would be absurd and untrue.
             var withheld = result.WithheldFiles ?? Array.Empty<OrphanedFile>();
+
+            // THE RECEIPT SPENDS THE COUNT THE MAIN WINDOW IS ALREADY SHOWING rather
+            // than recounting the scan result here, so the overlay and the line behind
+            // it cannot come apart. Dismissing the overlay puts that line in front of
+            // the reader, which is close enough for two different numbers to read as a
+            // mistake.
+            //
+            // IT COUNTS FILES IN THE FOLDER AND NOT REGISTRATIONS, which is what the
+            // noun on the receipt says. One product registered with three patches is a
+            // single product and four cached files, and a registration naming a file
+            // the folder does not have adds nothing to a count of what is in it.
+            //
+            // A HELD-BACK FILE IS INSIDE IT, and that is the true reading rather than
+            // an overlap to tidy away. The scan found it, judged it and decided not to
+            // offer it, so a receipt leaving it out would understate what was
+            // examined, which is the whole of what the receipt is for: an elapsed time
+            // on its own reads as though nothing had happened.
             if (result.Withholding != WithholdingAccount.Nothing)
             {
                 Completion.ShowNothingOffered(
                     result.Withholding,
                     withheld.Count,
                     result.WithheldTotalBytes,
-                    result.RegisteredPackages.Count,
+                    Scan.RegisteredFileCount,
                     Scan.LastScanDurationMs);
             }
             else
             {
-                Completion.ShowAllClear(result.RegisteredPackages.Count, Scan.LastScanDurationMs);
+                Completion.ShowAllClear(Scan.RegisteredFileCount, Scan.LastScanDurationMs);
             }
 
             if (suppress) return;
