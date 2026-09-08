@@ -92,7 +92,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Scanning installer cache folder... | Yükleyici önbellek klasörü taranıyor... |
 | Enumerating installed products... | Yüklü ürünler listeleniyor... |
 | Checking registry for additional packages... | Ek paketler için kayıt defteri denetleniyor... |
-| Checking which files are still needed... | Checking which files are still needed... |
+| Checking which files are still needed... | Hangi dosyaların hâlâ gerekli olduğu denetleniyor... |
 | Scan complete ({0}) | Tarama tamamlandı ({0}) |
 | Scanning local packages... | Yerel paketler taranıyor... |
 | Found {0} {1} you can safely delete. | Güvenle silebileceğiniz {0} {1} bulundu. |

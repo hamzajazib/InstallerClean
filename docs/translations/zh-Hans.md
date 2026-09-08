@@ -92,7 +92,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Scanning installer cache folder... | 正在扫描安装程序缓存文件夹… |
 | Enumerating installed products... | 正在枚举已安装的产品… |
 | Checking registry for additional packages... | 正在检查注册表中的其他程序包… |
-| Checking which files are still needed... | Checking which files are still needed... |
+| Checking which files are still needed... | 正在检查还需要哪些文件… |
 | Scan complete ({0}) | 扫描完成（{0}） |
 | Scanning local packages... | 正在扫描本地程序包… |
 | Found {0} {1} you can safely delete. | 找到 {0} 个{1}，可安全删除。 |

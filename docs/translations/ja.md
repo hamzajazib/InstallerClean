@@ -92,7 +92,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Scanning installer cache folder... | インストーラーキャッシュフォルダーをスキャン中... |
 | Enumerating installed products... | インストール済み製品を列挙中... |
 | Checking registry for additional packages... | 追加パッケージがないかレジストリをチェック中... |
-| Checking which files are still needed... | Checking which files are still needed... |
+| Checking which files are still needed... | どのファイルがまだ必要か確認中... |
 | Scan complete ({0}) | スキャン完了 ({0}) |
 | Scanning local packages... | ローカルパッケージをスキャン中... |
 | Found {0} {1} you can safely delete. | 安全に削除できる {0} 個の {1} が見つかりました。 |

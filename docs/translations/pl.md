@@ -92,7 +92,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Scanning installer cache folder... | Skanowanie folderu pamięci podręcznej instalatora... |
 | Enumerating installed products... | Wyliczanie zainstalowanych produktów... |
 | Checking registry for additional packages... | Sprawdzanie rejestru w poszukiwaniu dodatkowych pakietów... |
-| Checking which files are still needed... | Checking which files are still needed... |
+| Checking which files are still needed... | Sprawdzanie, które pliki są nadal potrzebne... |
 | Scan complete ({0}) | Skanowanie zakończone ({0}) |
 | Scanning local packages... | Skanowanie pakietów lokalnych... |
 | Found {0} {1} you can safely delete. | Znaleziono {0} {1} do bezpiecznego usunięcia. |

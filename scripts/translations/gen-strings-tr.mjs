@@ -191,7 +191,7 @@ const MAP = {
   'Status.ScanningCache': `Yükleyici önbellek klasörü taranıyor...`,
   'Status.EnumeratingProducts': `Yüklü ürünler listeleniyor...`,
   'Status.CheckingRegistry': `Ek paketler için kayıt defteri denetleniyor...`,
-  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
+  'Status.RegisteredPackagesFound': `Hangi dosyaların hâlâ gerekli olduğu denetleniyor...`,
   'Status.ScanComplete': `Tarama tamamlandı ({0})`,
   'Status.FoundProducts': `Yerel paketler taranıyor...`,
   'Status.FoundUnused': `Güvenle silebileceğiniz {0} {1} bulundu.`,

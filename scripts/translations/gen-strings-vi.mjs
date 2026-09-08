@@ -210,9 +210,7 @@ const MAP = {
   'Status.ScanningCache': `Đang quét thư mục bộ nhớ đệm trình cài đặt...`,
   'Status.EnumeratingProducts': `Đang liệt kê các sản phẩm đã cài...`,
   'Status.CheckingRegistry': `Đang kiểm tra sổ đăng ký để tìm các gói bổ sung...`,
-
-  // 0 = registered package count, 1 = pluralised "package"/"packages"
-  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
+  'Status.RegisteredPackagesFound': `Đang kiểm tra xem tệp nào còn cần thiết...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Quét xong ({0})`,

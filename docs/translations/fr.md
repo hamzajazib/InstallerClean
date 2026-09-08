@@ -92,7 +92,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Scanning installer cache folder... | Analyse du dossier de cache d'installation... |
 | Enumerating installed products... | Énumération des produits installés... |
 | Checking registry for additional packages... | Vérification du registre pour des paquets supplémentaires... |
-| Checking which files are still needed... | Checking which files are still needed... |
+| Checking which files are still needed... | Identification des fichiers encore utiles... |
 | Scan complete ({0}) | Analyse terminée ({0}) |
 | Scanning local packages... | Analyse des paquets locaux... |
 | Found {0} {1} you can safely delete. | {0} {1} à supprimer sans risque. |

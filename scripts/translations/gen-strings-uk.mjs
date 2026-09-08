@@ -235,9 +235,7 @@ const MAP = {
   'Status.ScanningCache': `Сканування папки кешу інсталятора...`,
   'Status.EnumeratingProducts': `Перелічення встановлених продуктів...`,
   'Status.CheckingRegistry': `Перевірка реєстру на додаткові пакети...`,
-
-  // 0 = registered package count, 1 = pluralised "package"/"packages"
-  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
+  'Status.RegisteredPackagesFound': `Визначення файлів, які ще потрібні...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Сканування завершено ({0})`,

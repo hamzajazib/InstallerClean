@@ -508,11 +508,13 @@ Para recolocá-lo, você precisa do instalador da versão que já tem. Consiga-o
   <data name="Status.ScanningCache" xml:space="preserve"><value>Analisando a pasta do cache de instalação...</value></data>
   <data name="Status.EnumeratingProducts" xml:space="preserve"><value>Enumerando os produtos instalados...</value></data>
   <data name="Status.CheckingRegistry" xml:space="preserve"><value>Verificando o registro em busca de pacotes adicionais...</value></data>
-  <!-- 0 = registered package count, 1 = pluralised "package"/"packages" -->
-  <!-- Fires mid-scan as a step-progress update after the registry-
-       fallback pass; not the end-of-scan pill (that's Status.ScanComplete).
-       0 = registered package count, 1 = pluralised "package"/"packages". -->
-  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Checking which files are still needed...</value></data>
+  <!-- Fires mid-scan as a step-progress update after the registry-fallback
+       pass; not the end-of-scan pill (that's Status.ScanComplete). It closes
+       the phase that asks Windows and names the one that follows, which is the
+       comparison against what the folder holds. No argument, and none belongs:
+       every count this app puts on a screen is a count of files, and no file
+       count is settled until the comparison this line announces. -->
+  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Verificando quais arquivos ainda são necessários...</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>Análise concluída ({0})</value></data>
   <data name="Status.FoundProducts" xml:space="preserve"><value>Analisando os pacotes locais...</value></data>

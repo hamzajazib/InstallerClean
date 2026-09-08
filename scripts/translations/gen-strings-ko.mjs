@@ -207,9 +207,7 @@ const MAP = {
   'Status.ScanningCache': `설치 관리자 캐시 폴더를 검사하는 중...`,
   'Status.EnumeratingProducts': `설치된 제품을 열거하는 중...`,
   'Status.CheckingRegistry': `레지스트리에서 추가 패키지를 확인하는 중...`,
-
-  // 0 = registered package count, 1 = pluralised "package"/"packages"
-  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
+  'Status.RegisteredPackagesFound': `어떤 파일이 아직 필요한지 확인하는 중...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `검사 완료 ({0})`,

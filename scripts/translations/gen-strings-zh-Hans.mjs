@@ -185,7 +185,7 @@ const MAP = {
   'Status.ScanningCache': `正在扫描安装程序缓存文件夹…`,
   'Status.EnumeratingProducts': `正在枚举已安装的产品…`,
   'Status.CheckingRegistry': `正在检查注册表中的其他程序包…`,
-  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
+  'Status.RegisteredPackagesFound': `正在检查还需要哪些文件…`,
   'Status.ScanComplete': `扫描完成（{0}）`,
   'Status.FoundProducts': `正在扫描本地程序包…`,
   'Status.FoundUnused': `找到 {0} 个{1}，可安全删除。`,

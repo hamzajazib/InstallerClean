@@ -226,9 +226,7 @@ const MAP = {
   'Status.ScanningCache': `Installer-Cache-Ordner wird gescannt...`,
   'Status.EnumeratingProducts': `Installierte Produkte werden aufgezählt...`,
   'Status.CheckingRegistry': `Registrierung wird nach weiteren Paketen durchsucht...`,
-
-  // 0 = registered package count, 1 = pluralised "package"/"packages"
-  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
+  'Status.RegisteredPackagesFound': `Es wird geprüft, welche Dateien noch benötigt werden...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Scan abgeschlossen ({0})`,

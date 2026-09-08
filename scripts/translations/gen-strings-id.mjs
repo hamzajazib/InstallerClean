@@ -229,9 +229,7 @@ const MAP = {
   'Status.ScanningCache': `Memindai folder cache penginstal...`,
   'Status.EnumeratingProducts': `Mendata produk yang terpasang...`,
   'Status.CheckingRegistry': `Memeriksa registri untuk paket tambahan...`,
-
-  // 0 = registered package count, 1 = pluralised "package"/"packages"
-  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
+  'Status.RegisteredPackagesFound': `Memeriksa file mana yang masih diperlukan...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Pemindaian selesai ({0})`,
