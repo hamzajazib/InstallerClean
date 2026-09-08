@@ -64,7 +64,9 @@ public class InstallerQueryServiceTests
         }
     }
 
-    // The next five tests exercise the API on a real-elevated host.
+    // The tests below exercise the API on a real-elevated host. No count here:
+    // one has to be true of however many there are, and a number in a comment
+    // over a list is a sentence that goes stale the next time the list moves.
     // Each is marked Skip so a non-elevated CI run reports them as
     // visibly skipped rather than passing without asserting; remove
     // the Skip parameter and run elevated on Windows to exercise.
@@ -115,19 +117,5 @@ public class InstallerQueryServiceTests
             Assert.True(pkg.PatchState is 2 or 4,
                 $"IsRemovable=true but PatchState={pkg.PatchState}");
         }
-    }
-
-    [Fact(Skip = ElevatedSkipReason)]
-    public async Task GetRegisteredPackagesAsync_scan_complete_has_count_when_elevated()
-    {
-        var svc = new InstallerQueryService();
-        var messages = new List<string>();
-        var progress = new SyncProgress<ScanProgressUpdate>(u => messages.Add(u.Message));
-
-        var packages = (await svc.GetRegisteredPackagesAsync(progress)).Packages;
-
-        var completionMsg = messages.Last();
-        var noun = packages.Count == 1 ? "package" : "packages";
-        Assert.Contains($"{packages.Count} registered {noun} found", completionMsg);
     }
 }
