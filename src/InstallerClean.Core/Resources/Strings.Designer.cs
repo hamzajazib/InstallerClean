@@ -164,7 +164,8 @@ public static class Strings
     public static string Cli_EventLogHardError_NoLog => Get("Cli.EventLogHardError.NoLog");
     public static string Cli_EventLogInstallerLockAccessRefused => Get("Cli.EventLogInstallerLockAccessRefused");
     public static string Cli_EventLogInstallerLockUnavailable => Get("Cli.EventLogInstallerLockUnavailable");
-    public static string Cli_EventLogMissingFromDisk => Get("Cli.EventLogMissingFromDisk");
+    public static string Cli_EventLogMissingFromDisk_Plural => Get("Cli.EventLogMissingFromDisk.Plural");
+    public static string Cli_EventLogMissingFromDisk_Singular => Get("Cli.EventLogMissingFromDisk.Singular");
     public static string Cli_EventLogMoveAborted => Get("Cli.EventLogMoveAborted");
     public static string Cli_EventLogMoveDestinationInsideInstaller => Get("Cli.EventLogMoveDestinationInsideInstaller");
     public static string Cli_EventLogMoveDestinationInSystemFolder => Get("Cli.EventLogMoveDestinationInSystemFolder");

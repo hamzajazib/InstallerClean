@@ -229,7 +229,7 @@ public class PluralRuleLanguageTests
         // never be handed one, whatever prefix it asks about.
         var neutral = CultureInfo.GetCultureInfo(SupportedLanguages.Neutral);
         string[] carriesOverridesSomewhere =
-            { "Plural.File", "Cli.MovedFiles", "Status.RegisteredPackagesFound" };
+            { "Plural.File", "Cli.MovedFiles", "Cli.DeletingFiles" };
 
         foreach (var prefix in carriesOverridesSomewhere)
             foreach (var form in new[] { "One", "Few", "Many" })
@@ -240,7 +240,7 @@ public class PluralRuleLanguageTests
         // that has stopped finding anything.
         Assert.True(Resolves(CultureInfo.GetCultureInfo("pl"), "Plural.File.Few"));
         Assert.True(Resolves(CultureInfo.GetCultureInfo("fr"), "Cli.MovedFiles.One"));
-        Assert.True(Resolves(CultureInfo.GetCultureInfo("de"), "Status.RegisteredPackagesFound.One"));
+        Assert.True(Resolves(CultureInfo.GetCultureInfo("de"), "Cli.DeletingFiles.One"));
     }
 
     /// <summary>

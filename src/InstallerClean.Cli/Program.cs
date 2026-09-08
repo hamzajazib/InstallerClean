@@ -1127,7 +1127,11 @@ internal static class Program
                     "Cli.MissingFromDisk"),
                 DisplayHelpers.FormatCount(scanResult.MissingAffectedCount), programs));
             MachineContract.WriteEventLog(CliEventClass.ScanMissingFilesNotice,
-                () => string.Format(Strings.Cli_EventLogMissingFromDisk,
+                () => string.Format(
+                    DisplayHelpers.Pluralise(scanResult.MissingAffectedCount,
+                        Strings.Cli_EventLogMissingFromDisk_Singular,
+                        Strings.Cli_EventLogMissingFromDisk_Plural,
+                        "Cli.EventLogMissingFromDisk"),
                     arg, scanResult.MissingAffectedCount));
         }
     }

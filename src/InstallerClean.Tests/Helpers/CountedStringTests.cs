@@ -55,7 +55,8 @@ public class CountedStringTests
     /// </summary>
     private static readonly string[] CountedPrefixes =
     {
-        "Cli.DeletedFiles", "Cli.DeletingFiles", "Cli.FoundOrphans", "Cli.MissingFromDisk",
+        "Cli.DeletedFiles", "Cli.DeletingFiles", "Cli.EventLogMissingFromDisk",
+        "Cli.FoundOrphans", "Cli.MissingFromDisk",
         "Cli.MovedFiles", "Cli.MovingFiles",
         "Cli.NothingListed", "Cli.NothingListedPerFile",
         "Cli.NothingOffered", "Cli.NothingOfferedPerFile",
@@ -67,7 +68,6 @@ public class CountedStringTests
         "Confirm.DeletePermanently", "Confirm.MoveDestination",
         "Error.AccessDenied", "Error.FileInUse", "Error.IOFailure", "Error.UnknownError",
         "Plural.Error", "Plural.File", "Plural.Package", "Plural.Patch", "Plural.Product",
-        "Status.RegisteredPackagesFound",
         "Summary.MissingFromDisk", "Summary.MissingFromDisk.OtherPrograms",
         "Summary.MissingFromDisk.Unnamed",
         "Summary.NothingListed", "Summary.NothingListedPerFile",
@@ -82,7 +82,8 @@ public class CountedStringTests
     /// </summary>
     private static readonly string[] NewInThisRelease =
     {
-        "Cli.DeletedFiles", "Cli.DeletingFiles", "Cli.FoundOrphans", "Cli.MissingFromDisk",
+        "Cli.DeletedFiles", "Cli.DeletingFiles", "Cli.EventLogMissingFromDisk",
+        "Cli.FoundOrphans", "Cli.MissingFromDisk",
         "Cli.MovedFiles", "Cli.MovingFiles",
         "Cli.NothingListed", "Cli.NothingListedPerFile",
         "Cli.NothingOffered", "Cli.NothingOfferedPerFile",

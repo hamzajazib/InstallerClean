@@ -508,11 +508,13 @@ To put it back, you need the installer for the version you already have. Get it 
   <data name="Status.ScanningCache" xml:space="preserve"><value>Scanning installer cache folder...</value></data>
   <data name="Status.EnumeratingProducts" xml:space="preserve"><value>Enumerating installed products...</value></data>
   <data name="Status.CheckingRegistry" xml:space="preserve"><value>Checking registry for additional packages...</value></data>
-  <!-- 0 = registered package count, 1 = pluralised "package"/"packages" -->
-  <!-- Fires mid-scan as a step-progress update after the registry-
-       fallback pass; not the end-of-scan pill (that's Status.ScanComplete).
-       0 = registered package count, 1 = pluralised "package"/"packages". -->
-  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Found {0} registered {1}.</value></data>
+  <!-- Fires mid-scan as a step-progress update after the registry-fallback
+       pass; not the end-of-scan pill (that's Status.ScanComplete). It closes
+       the phase that asks Windows and names the one that follows, which is the
+       comparison against what the folder holds. No argument, and none belongs:
+       every count this app puts on a screen is a count of files, and no file
+       count is settled until the comparison this line announces. -->
+  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Checking which files are still needed...</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>Scan complete ({0})</value></data>
   <data name="Status.FoundProducts" xml:space="preserve"><value>Scanning local packages...</value></data>
@@ -1880,14 +1882,17 @@ The crash log could not be written.</value></data>
        here is one. -->
   <data name="Cli.EventLogScanWithheld" xml:space="preserve"><value>{0} mode: the enumeration could not account for an estimated {1} of the installed products, so no superseded patch was offered and the count of files missing from the Installer cache may be short.</value></data>
   <!-- 0 = mode arg, 1 = registrations naming a file that is not in the cache. The
-       second notice (Event ID 3001), and the actionable one. Unpluralised, as
-       above.
+       second notice (Event ID 3001), and the actionable one. A pair, because the
+       numeral governs a noun and a verb: one entry NAMES a file and affects one
+       program, several NAME files and affect several. A consumer selects on the
+       Event ID rather than on the words, so the two forms cost it nothing.
 
        IT SAYS NOTHING ABOUT WHAT REMOVED THEM AND MUST NOT: every tool that
        deletes from this folder leaves the same record, this one included up to
        v2.3.0, and the entry sitting in a log beside this tool's name is a reason
        for care rather than a licence. -->
-  <data name="Cli.EventLogMissingFromDisk" xml:space="preserve"><value>{0} mode: {1} entries in the Windows records name a file that is not in the Installer cache. An update or uninstall of the affected programs can fail.</value></data>
+  <data name="Cli.EventLogMissingFromDisk.Singular" xml:space="preserve"><value>{0} mode: {1} entry in the Windows records names a file that is not in the Installer cache. An update or uninstall of the affected program can fail.</value></data>
+  <data name="Cli.EventLogMissingFromDisk.Plural" xml:space="preserve"><value>{0} mode: {1} entries in the Windows records name a file that is not in the Installer cache. An update or uninstall of the affected programs can fail.</value></data>
   <!-- 0 = file count, 1 = pluralised noun "file"/"files". Never printed at a
        count of zero (see Program.cs), so it does not have to read sensibly
        there. It says "unneeded" for the same reason Cli.DeletedFiles below

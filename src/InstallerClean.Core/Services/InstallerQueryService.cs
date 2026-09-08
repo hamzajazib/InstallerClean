@@ -1085,10 +1085,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // rather than covered by withholding.
         var withheldProducts = unreadableProducts + apiNeverClaimed + unresolvedProducts;
 
-        progress?.Report(new ScanProgressUpdate(string.Format(
-            Helpers.DisplayHelpers.Pluralise(claimed.Count, Strings.Status_RegisteredPackagesFound, "Status.RegisteredPackagesFound"),
-            Helpers.DisplayHelpers.FormatCount(claimed.Count),
-            Helpers.DisplayHelpers.PluralisePackage(claimed.Count))));
+        progress?.Report(new ScanProgressUpdate(Strings.Status_RegisteredPackagesFound));
 
         var packages = claimed.Values.ToList();
 
