@@ -5,7 +5,7 @@
 // correct n==1 form for a flat count string, carries the extra form as a
 // satellite-only key: a noun fragment (Plural.File.Few), a whole count template with
 // its noun baked in (Summary.RegisteredStillUsed.Few), or a one-form override for a
-// flat string (Status.RegisteredPackagesFound.One). They are read by name through
+// flat string (Cli.DeletingFiles.One). They are read by name through
 // the ResourceManager and never generated into the Designer, so they live only in
 // the satellites that use them and the neutral declares none of them.
 //

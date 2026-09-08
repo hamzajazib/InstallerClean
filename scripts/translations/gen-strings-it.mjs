@@ -71,7 +71,6 @@ const ALSO_KEEP = [
 // before </root> and read by name at runtime (DisplayHelpers.Pluralise's One
 // branch; an absent one falls back to the base).
 const OVERRIDES = {
-  'Status.RegisteredPackagesFound.One': `Trovato {0} {1} registrato.`,
   'Cli.FoundOrphans.One': `Trovato {0} {1} non necessario da eliminare ({2}).`,
   'Cli.DeletingFiles.One': `Eliminazione di {0} {1} non necessario...`,
   'Cli.DeletedFiles.One': `Eliminato definitivamente {0} {1} non necessario.`,
@@ -209,7 +208,7 @@ const MAP = {
   'Status.ScanningCache': `Scansione cartella cache di installazione...`,
   'Status.EnumeratingProducts': `Enumerazione prodotti installati...`,
   'Status.CheckingRegistry': `Controllo registro per altri pacchetti...`,
-  'Status.RegisteredPackagesFound': `Trovati {0} {1} registrati.`,
+  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
   'Status.ScanComplete': `Scansione completata ({0})`,
   'Status.FoundProducts': `Scansione pacchetti locali...`,
   'Status.FoundUnused': `{0} {1} che puoi eliminare in sicurezza.`,

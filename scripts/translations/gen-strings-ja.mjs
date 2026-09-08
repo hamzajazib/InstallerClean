@@ -193,7 +193,7 @@ const MAP = {
   'Status.ScanningCache': `インストーラーキャッシュフォルダーをスキャン中...`,
   'Status.EnumeratingProducts': `インストール済み製品を列挙中...`,
   'Status.CheckingRegistry': `追加パッケージがないかレジストリをチェック中...`,
-  'Status.RegisteredPackagesFound': `{0} 個の登録済み {1} が見つかりました。`,
+  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
   'Status.ScanComplete': `スキャン完了 ({0})`,
   'Status.FoundProducts': `ローカルパッケージをスキャン中...`,
   'Status.FoundUnused': `安全に削除できる {0} 個の {1} が見つかりました。`,

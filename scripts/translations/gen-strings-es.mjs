@@ -9,8 +9,7 @@
 // Spanish past participles DO inflect for number (encontrado/encontrados,
 // eliminado/eliminados, movido/movidos), so the three CLI completion lines carry
 // .One overrides; the gerund progress lines (Moviendo/Eliminando) do not inflect
-// and need none. Status.RegisteredPackagesFound also overrides for the
-// registrado/registrados adjective agreement. The four held-back sentences carried
+// and need none. The four held-back sentences carried
 // .One overrides too, for the conservado/conservados participle, and went with the
 // sentences themselves when the 3.0.0 round replaced all four with one
 // Completion.HeldBack pair. The
@@ -77,7 +76,6 @@ const ALSO_KEEP = [
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.
 // check-resx-parity.mjs allows each because its base key is in the neutral.
 const OVERRIDES = {
-  'Status.RegisteredPackagesFound.One': `Se encontró {0} {1} registrado.`,
   'Cli.FoundOrphans.One': `Se encontró {0} {1} innecesario para limpiar ({2}).`,
   'Cli.DeletingFiles.One': `Eliminando {0} {1} innecesario...`,
   'Cli.DeletedFiles.One': `Se eliminó definitivamente {0} {1} innecesario.`,
@@ -214,7 +212,7 @@ const MAP = {
   'Status.ScanningCache': `Analizando la carpeta de la caché de instalación...`,
   'Status.EnumeratingProducts': `Enumerando los productos instalados...`,
   'Status.CheckingRegistry': `Comprobando el registro en busca de paquetes adicionales...`,
-  'Status.RegisteredPackagesFound': `Se encontraron {0} {1} registrados.`,
+  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
   'Status.ScanComplete': `Análisis completado ({0})`,
   'Status.FoundProducts': `Analizando los paquetes locales...`,
   'Status.FoundUnused': `Se encontraron {0} {1} que puedes eliminar sin riesgo.`,

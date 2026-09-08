@@ -512,7 +512,7 @@
   <!-- Fires mid-scan as a step-progress update after the registry-
        fallback pass; not the end-of-scan pill (that's Status.ScanComplete).
        0 = registered package count, 1 = pluralised "package"/"packages". -->
-  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>등록된 {1} {0}개를 찾았습니다.</value></data>
+  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Checking which files are still needed...</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>검사 완료 ({0})</value></data>
   <data name="Status.FoundProducts" xml:space="preserve"><value>로컬 패키지를 검사하는 중...</value></data>

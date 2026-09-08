@@ -92,7 +92,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Scanning installer cache folder... | Memindai folder cache penginstal... |
 | Enumerating installed products... | Mendata produk yang terpasang... |
 | Checking registry for additional packages... | Memeriksa registri untuk paket tambahan... |
-| Found {0} registered {1}. | Ditemukan {0} {1} terdaftar. |
+| Checking which files are still needed... | Checking which files are still needed... |
 | Scan complete ({0}) | Pemindaian selesai ({0}) |
 | Scanning local packages... | Memindai paket lokal... |
 | Found {0} {1} you can safely delete. | Ditemukan {0} {1} yang aman Anda hapus. |

@@ -512,7 +512,7 @@ Aby go przywrócić, potrzebujesz instalatora tej wersji, którą już masz. Zdo
   <!-- Fires mid-scan as a step-progress update after the registry-
        fallback pass; not the end-of-scan pill (that's Status.ScanComplete).
        0 = registered package count, 1 = pluralised "package"/"packages". -->
-  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Znaleziono {0} zarejestrowanych {1}.</value></data>
+  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Checking which files are still needed...</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>Skanowanie zakończone ({0})</value></data>
   <data name="Status.FoundProducts" xml:space="preserve"><value>Skanowanie pakietów lokalnych...</value></data>
@@ -2183,7 +2183,6 @@ Nie udało się zapisać dziennika awarii.</value></data>
   <data name="Summary.OrphanedToCleanUp.Few" xml:space="preserve"><value>{0} niepotrzebne pliki do wyczyszczenia</value></data>
   <data name="Summary.RegisteredWindow.Few" xml:space="preserve"><value>{0} pliki pozostawione bez zmian ({1})</value></data>
   <data name="Summary.RegisteredWindow.Missing.Few" xml:space="preserve"><value>{0} brakujące</value></data>
-  <data name="Status.RegisteredPackagesFound.One" xml:space="preserve"><value>Znaleziono {0} zarejestrowany {1}.</value></data>
   <data name="Summary.MissingFromDisk.Unnamed.Few" xml:space="preserve"><value>{0} pliki, dla których rekordy nie wskazują programu</value></data>
   <data name="Summary.MissingFromDisk.OtherPrograms.Few" xml:space="preserve"><value>jeszcze {0} programy</value></data>
   <data name="Cli.FoundOrphans.One" xml:space="preserve"><value>Znaleziono {0} niepotrzebny {1} do wyczyszczenia ({2}).</value></data>
@@ -2196,7 +2195,6 @@ Nie udało się zapisać dziennika awarii.</value></data>
   <data name="Cli.MovingFiles.Few" xml:space="preserve"><value>Trwa przenoszenie: {0} niepotrzebne {1} do {2}...</value></data>
   <data name="Cli.MovedFiles.One" xml:space="preserve"><value>Przeniesiono {0} niepotrzebny {1}.</value></data>
   <data name="Cli.MovedFiles.Few" xml:space="preserve"><value>Przeniesiono {0} niepotrzebne {1}.</value></data>
-  <data name="Status.RegisteredPackagesFound.Few" xml:space="preserve"><value>Znaleziono {0} zarejestrowane {1}.</value></data>
   <data name="Completion.HeldBack.Few" xml:space="preserve"><value>Zatrzymano {0} pliki. Skanowanie uznało je za niepotrzebne. Końcowa kontrola nie mogła tego potwierdzić.</value></data>
   <data name="Summary.SupersededHeldBack.Few" xml:space="preserve"><value>InstallerClean nie zdołał ustalić z pewnością, że {0} zastąpione pliki nie są już potrzebne, więc je zatrzymał.</value></data>
   <data name="Cli.SupersededHeldBack.Few" xml:space="preserve"><value>InstallerClean nie zdołał ustalić z pewnością, że {0} zastąpione pliki nie są już potrzebne, więc je zatrzymał.</value></data>

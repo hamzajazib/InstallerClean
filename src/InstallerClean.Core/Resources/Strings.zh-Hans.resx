@@ -512,7 +512,7 @@
   <!-- Fires mid-scan as a step-progress update after the registry-
        fallback pass; not the end-of-scan pill (that's Status.ScanComplete).
        0 = registered package count, 1 = pluralised "package"/"packages". -->
-  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>找到 {0} 个已注册的{1}。</value></data>
+  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Checking which files are still needed...</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>扫描完成（{0}）</value></data>
   <data name="Status.FoundProducts" xml:space="preserve"><value>正在扫描本地程序包…</value></data>

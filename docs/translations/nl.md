@@ -92,7 +92,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Scanning installer cache folder... | Installatiecache scannen... |
 | Enumerating installed products... | Geïnstalleerde producten opsommen... |
 | Checking registry for additional packages... | Register controleren op extra pakketten... |
-| Found {0} registered {1}. | {0} geregistreerde {1} gevonden. |
+| Checking which files are still needed... | Checking which files are still needed... |
 | Scan complete ({0}) | Scan voltooid ({0}) |
 | Scanning local packages... | Lokale pakketten scannen... |
 | Found {0} {1} you can safely delete. | Je kunt {0} {1} veilig verwijderen. |

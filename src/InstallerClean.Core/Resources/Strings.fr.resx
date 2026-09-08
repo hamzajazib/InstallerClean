@@ -512,7 +512,7 @@ Pour le remettre, il vous faut l'installateur de la version que vous avez déjà
   <!-- Fires mid-scan as a step-progress update after the registry-
        fallback pass; not the end-of-scan pill (that's Status.ScanComplete).
        0 = registered package count, 1 = pluralised "package"/"packages". -->
-  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Trouvé {0} {1} enregistrés.</value></data>
+  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Checking which files are still needed...</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>Analyse terminée ({0})</value></data>
   <data name="Status.FoundProducts" xml:space="preserve"><value>Analyse des paquets locaux...</value></data>
@@ -2175,7 +2175,6 @@ Le crash.log n'a pas pu être écrit.</value></data>
   <data name="Automation.ChangeLanguage" xml:space="preserve"><value>Changer la langue</value></data>
   <data name="Automation.ChangeLanguage.HelpText" xml:space="preserve"><value>Le programme redémarrera.</value></data>
 
-  <data name="Status.RegisteredPackagesFound.One" xml:space="preserve"><value>Trouvé {0} {1} enregistré.</value></data>
   <data name="Cli.FoundOrphans.One" xml:space="preserve"><value>{0} {1} inutile à nettoyer a été trouvé ({2}).</value></data>
   <data name="Cli.DeletingFiles.One" xml:space="preserve"><value>Suppression de {0} {1} inutile...</value></data>
   <data name="Cli.DeletedFiles.One" xml:space="preserve"><value>{0} {1} inutile a été supprimé définitivement.</value></data>

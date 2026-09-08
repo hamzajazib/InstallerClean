@@ -68,9 +68,8 @@ const ALSO_KEEP = [
 
 // Polish CLDR-category overrides (satellite-only, read by name via ResourceManager
 // in DisplayHelpers.Pluralise's One/Few/Many branches). Base .Plural carries Many
-// (genitive plural), so only .Few is needed for the count split, plus a .One/.Few
-// pair for the flat Status.RegisteredPackagesFound whose baked-in adjective agrees
-// three ways. MissingFromDisk needs no .Few ("Brakuje" governs genitive so 2-4 and
+// (genitive plural), so only .Few is needed for the count split.
+// MissingFromDisk needs no .Few ("Brakuje" governs genitive so 2-4 and
 // 5+ collapse); Reassurance/RestoreHint need none (only the pronoun go/je varies).
 // Each value's {N} set matches its base key's set.
 const OVERRIDES = {
@@ -89,7 +88,6 @@ const OVERRIDES = {
   // Completion.PermanentDeleteSummary.Few was removed in the 3.0.0 round, for the
   // reason above: "Trwale usunięto" is impersonal and the counted noun comes from
   // Plural.File, so the paucal band needs no sentence of its own.
-  'Status.RegisteredPackagesFound.One': `Znaleziono {0} zarejestrowany {1}.`,
   'Summary.MissingFromDisk.Unnamed.Few': `{0} pliki, dla których rekordy nie wskazują programu`,
   'Summary.MissingFromDisk.OtherPrograms.Few': `jeszcze {0} programy`,
   'Cli.FoundOrphans.One': `Znaleziono {0} niepotrzebny {1} do wyczyszczenia ({2}).`,
@@ -102,7 +100,6 @@ const OVERRIDES = {
   'Cli.MovingFiles.Few': `Trwa przenoszenie: {0} niepotrzebne {1} do {2}...`,
   'Cli.MovedFiles.One': `Przeniesiono {0} niepotrzebny {1}.`,
   'Cli.MovedFiles.Few': `Przeniesiono {0} niepotrzebne {1}.`,
-  'Status.RegisteredPackagesFound.Few': `Znaleziono {0} zarejestrowane {1}.`,
   'Completion.HeldBack.Few': `Zatrzymano {0} pliki. Skanowanie uznało je za niepotrzebne. Końcowa kontrola nie mogła tego potwierdzić.`,
   'Summary.SupersededHeldBack.Few': `InstallerClean nie zdołał ustalić z pewnością, że {0} zastąpione pliki nie są już potrzebne, więc je zatrzymał.`,
   'Cli.SupersededHeldBack.Few': `InstallerClean nie zdołał ustalić z pewnością, że {0} zastąpione pliki nie są już potrzebne, więc je zatrzymał.`,
@@ -252,7 +249,7 @@ const MAP = {
   'Status.CheckingRegistry': `Sprawdzanie rejestru w poszukiwaniu dodatkowych pakietów...`,
 
   // 0 = registered package count, 1 = pluralised "package"/"packages"
-  'Status.RegisteredPackagesFound': `Znaleziono {0} zarejestrowanych {1}.`,
+  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Skanowanie zakończone ({0})`,

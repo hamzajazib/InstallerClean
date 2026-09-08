@@ -46,7 +46,7 @@
 // or many-form, or the flat key itself where one neutral string serves every count.
 // It can be a noun fragment (Plural.File.Few), a whole count template with its noun
 // baked in (Summary.RegisteredStillUsed.Few), or a one-form override for a flat
-// string (Status.RegisteredPackagesFound.One). These are the extra CLDR categories
+// string (Cli.DeletingFiles.One). These are the extra CLDR categories
 // some languages need, Russian's 2-4 "few" form among them, and a correct n==1 form
 // for a count string the neutral keeps flat; they are optional and language-specific,
 // so they are allowed as satellite-only keys rather than flagged stray. Which form

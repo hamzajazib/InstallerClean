@@ -10,8 +10,7 @@
 // pt-BR plural class: CategoryFor returns One at n==0 and n==1, else Other (the
 // fr/pt branch). Past participles inflect for number, so the three CLI completion
 // lines take a singular .One override (Cli.FoundOrphans / DeletedFiles / MovedFiles:
-// Encontrado/Excluido/Movido vs the plural base), as does the attributive
-// Status.RegisteredPackagesFound. The count-bearing PROGRESS lines (Cli/Status
+// Encontrado/Excluido/Movido vs the plural base). The count-bearing PROGRESS lines (Cli/Status
 // Deleting/Moving) are gerunds, invariant, so they need no override.
 //
 // MAP escaping (template literals): \\ is one backslash (the paths), \n is a real
@@ -218,7 +217,7 @@ const MAP = {
   'Status.CheckingRegistry': `Verificando o registro em busca de pacotes adicionais...`,
 
   // 0 = registered package count, 1 = pluralised "package"/"packages"
-  'Status.RegisteredPackagesFound': `Foram encontrados {0} {1} registrados.`,
+  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Análise concluída ({0})`,
@@ -570,8 +569,8 @@ const MAP = {
 // check-resx-parity.mjs allows each because its base (the .Plural sibling, or the
 // flat key itself) is in the neutral, and the value's {N} set matches the base's.
 // pt counts 0 and 1 as "one" (CategoryFor's fr/pt branch), so .One fires at 0 and 1.
-// The three Cli completion lines inflect the past participle at one; the attributive
-// Status.RegisteredPackagesFound agrees too. Progress gerunds (Deleting/Moving) do not.
+// The three Cli completion lines inflect the past participle at one. Progress
+// gerunds (Deleting/Moving) do not.
 // A held-back key took a singular .One for its mantido/mantidos participle and its
 // dele/deles pronoun, and went with the four sentences the 3.0.0 round replaced with
 // one Completion.HeldBack pair. The three
@@ -580,7 +579,6 @@ const MAP = {
 // different number, so they use a count-invariant "X cancelada apos <infinitive>
 // {0} de {1} {2}" that reads correctly at every count.
 const OVERRIDES = {
-  'Status.RegisteredPackagesFound.One': `Foi encontrado {0} {1} registrado.`,
   'Cli.FoundOrphans.One': `Foi encontrado {0} {1} desnecessário para limpar ({2}).`,
   'Cli.DeletingFiles.One': `Excluindo {0} {1} desnecessário...`,
   'Cli.DeletedFiles.One': `Foi excluído permanentemente {0} {1} desnecessário.`,

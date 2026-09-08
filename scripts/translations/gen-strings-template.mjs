@@ -123,8 +123,7 @@ const ALSO_KEEP = [];
 // {N} set MUST match its base key's set (base = the <Prefix>.Plural sibling if the
 // neutral has one, else the flat key itself), the precondition check-resx-parity.mjs
 // also enforces. Example (Spanish):
-//   'Status.RegisteredPackagesFound.One': `Se encontró {0} {1} registrado.`,
-const OVERRIDES = {};
+//const OVERRIDES = {};
 
 const MAP = {
   // Window titles
@@ -282,7 +281,7 @@ const MAP = {
   'Status.CheckingRegistry': `Checking registry for additional packages...`,
 
   // 0 = registered package count, 1 = pluralised "package"/"packages"
-  'Status.RegisteredPackagesFound': `Found {0} registered {1}.`,
+  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Scan complete ({0})`,

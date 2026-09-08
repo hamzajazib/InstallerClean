@@ -11,9 +11,7 @@
 // inflect for number (gefunden / gelöscht / verschoben are identical at 1 and
 // many), so the three CLI completion lines es/it overrode (Cli.FoundOrphans,
 // Cli.DeletedFiles, Cli.MovedFiles) need no override here. German DOES inflect
-// the finite verb (wird/werden) and the attributive adjective
-// ("1 registriertes Paket" vs "120 registrierte Pakete"), so there are THREE
-// .One overrides: the attributive Status.RegisteredPackagesFound, and the two
+// the finite verb (wird/werden), so there are TWO .One overrides, both of them
 // count-bearing command-line PROGRESS lines (Cli.DeletingFiles,
 // Cli.MovingFiles), whose base is the werden-form and whose .One is the
 // wird-form. Both are routed through DisplayHelpers.Pluralise, so the .One keys
@@ -82,7 +80,6 @@ const ALSO_KEEP = [
 // check-resx-parity.mjs allows each because its base (the flat key itself) is in
 // the neutral. The value's {N} set matches the base key's set.
 const OVERRIDES = {
-  'Status.RegisteredPackagesFound.One': `{0} registriertes {1} gefunden.`,
   'Cli.DeletingFiles.One': `{0} nicht benötigte {1} wird gelöscht...`,
   'Cli.MovingFiles.One': `{0} nicht benötigte {1} wird nach {2} verschoben...`,
 };
@@ -231,7 +228,7 @@ const MAP = {
   'Status.CheckingRegistry': `Registrierung wird nach weiteren Paketen durchsucht...`,
 
   // 0 = registered package count, 1 = pluralised "package"/"packages"
-  'Status.RegisteredPackagesFound': `{0} registrierte {1} gefunden.`,
+  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Scan abgeschlossen ({0})`,

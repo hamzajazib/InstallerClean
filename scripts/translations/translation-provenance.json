@@ -6095,17 +6095,6 @@
       "ru": "unverified",
       "uk": "unverified"
     },
-    "Status.RegisteredPackagesFound.One": {
-      "de": "unverified",
-      "es": "unverified",
-      "fr": "unverified",
-      "it": "unverified",
-      "nl": "unverified",
-      "pl": "unverified",
-      "pt-BR": "unverified",
-      "ru": "unverified",
-      "uk": "unverified"
-    },
     "Cli.DeletedFiles.One": {
       "es": "unverified",
       "fr": "unverified",
@@ -6177,11 +6166,6 @@
       "uk": "unverified"
     },
     "Plural.Product.Few": {
-      "pl": "unverified",
-      "ru": "unverified",
-      "uk": "unverified"
-    },
-    "Status.RegisteredPackagesFound.Few": {
       "pl": "unverified",
       "ru": "unverified",
       "uk": "unverified"

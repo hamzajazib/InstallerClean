@@ -17,8 +17,7 @@
 //     native-reviewed Italian and Windows-FR.
 //   - Plurals: fr = 0 and 1 singular (already in DisplayHelpers.CategoryFor). The
 //     satellite-only .One overrides live in the OVERRIDES block below, each because
-//     a post-nominal adjective or participle has to agree with the count:
-//     Status.RegisteredPackagesFound.One is the adjective "enregistré". A held-back
+//     a post-nominal adjective or participle has to agree with the count. A held-back
 //     override lived there too and went with the four sentences the 3.0.0 round
 //     replaced with one Completion.HeldBack pair. The block is injected before
 //     </root> so a re-run reproduces the file exactly.
@@ -81,7 +80,6 @@ const ALSO_KEEP = [
 // (Cli.FoundOrphans/DeletedFiles/MovedFiles) need NO override: their participle
 // (Trouvé/Supprimé/Déplacé) precedes its object and so stays invariable.
 const OVERRIDES = {
-  'Status.RegisteredPackagesFound.One': `Trouvé {0} {1} enregistré.`,
   'Cli.FoundOrphans.One': `{0} {1} inutile à nettoyer a été trouvé ({2}).`,
   'Cli.DeletingFiles.One': `Suppression de {0} {1} inutile...`,
   'Cli.DeletedFiles.One': `{0} {1} inutile a été supprimé définitivement.`,
@@ -240,7 +238,7 @@ const MAP = {
   'Status.CheckingRegistry': `Vérification du registre pour des paquets supplémentaires...`,
 
   // 0 = registered package count, 1 = pluralised "package"/"packages"
-  'Status.RegisteredPackagesFound': `Trouvé {0} {1} enregistrés.`,
+  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Analyse terminée ({0})`,

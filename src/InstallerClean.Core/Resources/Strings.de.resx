@@ -512,7 +512,7 @@ Um sie zurückzuholen, brauchst du das Installationsprogramm genau der Version, 
   <!-- Fires mid-scan as a step-progress update after the registry-
        fallback pass; not the end-of-scan pill (that's Status.ScanComplete).
        0 = registered package count, 1 = pluralised "package"/"packages". -->
-  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>{0} registrierte {1} gefunden.</value></data>
+  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Checking which files are still needed...</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>Scan abgeschlossen ({0})</value></data>
   <data name="Status.FoundProducts" xml:space="preserve"><value>Lokale Pakete werden gescannt...</value></data>
@@ -2175,7 +2175,6 @@ Das Absturzprotokoll konnte nicht geschrieben werden.</value></data>
   <data name="Automation.ChangeLanguage" xml:space="preserve"><value>Sprache ändern</value></data>
   <data name="Automation.ChangeLanguage.HelpText" xml:space="preserve"><value>Das Programm wird neu gestartet.</value></data>
 
-  <data name="Status.RegisteredPackagesFound.One" xml:space="preserve"><value>{0} registriertes {1} gefunden.</value></data>
   <data name="Cli.DeletingFiles.One" xml:space="preserve"><value>{0} nicht benötigte {1} wird gelöscht...</value></data>
   <data name="Cli.MovingFiles.One" xml:space="preserve"><value>{0} nicht benötigte {1} wird nach {2} verschoben...</value></data>
 </root>

@@ -512,7 +512,7 @@ Para recolocá-lo, você precisa do instalador da versão que já tem. Consiga-o
   <!-- Fires mid-scan as a step-progress update after the registry-
        fallback pass; not the end-of-scan pill (that's Status.ScanComplete).
        0 = registered package count, 1 = pluralised "package"/"packages". -->
-  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Foram encontrados {0} {1} registrados.</value></data>
+  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Checking which files are still needed...</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>Análise concluída ({0})</value></data>
   <data name="Status.FoundProducts" xml:space="preserve"><value>Analisando os pacotes locais...</value></data>
@@ -2174,7 +2174,6 @@ Não foi possível gravar o crash.log.</value></data>
   <data name="Automation.ChangeLanguage" xml:space="preserve"><value>Alterar idioma</value></data>
   <data name="Automation.ChangeLanguage.HelpText" xml:space="preserve"><value>O programa será reiniciado.</value></data>
 
-  <data name="Status.RegisteredPackagesFound.One" xml:space="preserve"><value>Foi encontrado {0} {1} registrado.</value></data>
   <data name="Cli.FoundOrphans.One" xml:space="preserve"><value>Foi encontrado {0} {1} desnecessário para limpar ({2}).</value></data>
   <data name="Cli.DeletingFiles.One" xml:space="preserve"><value>Excluindo {0} {1} desnecessário...</value></data>
   <data name="Cli.DeletedFiles.One" xml:space="preserve"><value>Foi excluído permanentemente {0} {1} desnecessário.</value></data>

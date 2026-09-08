@@ -231,7 +231,7 @@ const MAP = {
   'Status.CheckingRegistry': `Memeriksa registri untuk paket tambahan...`,
 
   // 0 = registered package count, 1 = pluralised "package"/"packages"
-  'Status.RegisteredPackagesFound': `Ditemukan {0} {1} terdaftar.`,
+  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Pemindaian selesai ({0})`,

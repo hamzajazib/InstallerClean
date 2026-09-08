@@ -212,7 +212,7 @@ const MAP = {
   'Status.CheckingRegistry': `Đang kiểm tra sổ đăng ký để tìm các gói bổ sung...`,
 
   // 0 = registered package count, 1 = pluralised "package"/"packages"
-  'Status.RegisteredPackagesFound': `Đã tìm thấy {0} {1} đã đăng ký.`,
+  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Quét xong ({0})`,

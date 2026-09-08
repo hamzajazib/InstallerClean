@@ -209,7 +209,7 @@ const MAP = {
   'Status.CheckingRegistry': `레지스트리에서 추가 패키지를 확인하는 중...`,
 
   // 0 = registered package count, 1 = pluralised "package"/"packages"
-  'Status.RegisteredPackagesFound': `등록된 {1} {0}개를 찾았습니다.`,
+  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `검사 완료 ({0})`,

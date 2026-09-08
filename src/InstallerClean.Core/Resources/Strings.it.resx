@@ -512,7 +512,7 @@ Per rimetterlo, ti serve il programma di installazione della versione che hai gi
   <!-- Fires mid-scan as a step-progress update after the registry-
        fallback pass; not the end-of-scan pill (that's Status.ScanComplete).
        0 = registered package count, 1 = pluralised "package"/"packages". -->
-  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Trovati {0} {1} registrati.</value></data>
+  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Checking which files are still needed...</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>Scansione completata ({0})</value></data>
   <data name="Status.FoundProducts" xml:space="preserve"><value>Scansione pacchetti locali...</value></data>
@@ -2174,7 +2174,6 @@ Non è stato possibile scrivere il file crash.log.</value></data>
   <data name="Automation.ChangeLanguage" xml:space="preserve"><value>Cambia lingua</value></data>
   <data name="Automation.ChangeLanguage.HelpText" xml:space="preserve"><value>Il programma verrà riavviato.</value></data>
 
-  <data name="Status.RegisteredPackagesFound.One" xml:space="preserve"><value>Trovato {0} {1} registrato.</value></data>
   <data name="Cli.FoundOrphans.One" xml:space="preserve"><value>Trovato {0} {1} non necessario da eliminare ({2}).</value></data>
   <data name="Cli.DeletingFiles.One" xml:space="preserve"><value>Eliminazione di {0} {1} non necessario...</value></data>
   <data name="Cli.DeletedFiles.One" xml:space="preserve"><value>Eliminato definitivamente {0} {1} non necessario.</value></data>

@@ -208,7 +208,7 @@ const MAP = {
   'Status.CheckingRegistry': `Проверка реестра на дополнительные пакеты...`,
 
   // 0 = registered package count, 1 = pluralised "package"/"packages"
-  'Status.RegisteredPackagesFound': `Найдено зарегистрированных {1}: {0}.`,
+  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Сканирование завершено ({0})`,
@@ -527,14 +527,6 @@ const OVERRIDES = {
   // CountedStringTests.Every_satellite_override_belongs_to_a_counted_prefix is
   // what says so. The base string itself stays translated, which is the point of
   // keeping those two keys at all.
-  // The flat template «Найдено зарегистрированных {1}: {0}.» mis-agrees for counts
-  // where the numeral is not adjacent to the noun. .One restores nominative agreement
-  // for the One category (1, 21, ...): {1} is nominative singular "пакет" while the
-  // baked-in adjective stays genitive plural, so it reads "Найдено 1 зарегистрированный
-  // пакет." .Few does the same for 2-4, putting the count beside the noun so the
-  // paucal genitive-singular noun agrees ("Найдено 2 зарегистрированных пакета.");
-  // Many keeps the flat label form ("Найдено зарегистрированных пакетов: 5.").
-  'Status.RegisteredPackagesFound.One': `Найдено {0} зарегистрированный {1}.`,
   'Summary.MissingFromDisk.Unnamed.Few': `{0} файла, для которых в записях не названа программа`,
   'Summary.MissingFromDisk.OtherPrograms.Few': `ещё {0} программы`,
   'Cli.FoundOrphans.One': `Найден {0} ненужный {1} для очистки ({2}).`,
@@ -542,7 +534,6 @@ const OVERRIDES = {
   'Cli.DeletedFiles.One': `Безвозвратно удалён {0} ненужный {1}.`,
   'Cli.MovingFiles.One': `Идёт перемещение в {2}: {0} ненужный {1}...`,
   'Cli.MovedFiles.One': `Перемещён {0} ненужный {1}.`,
-  'Status.RegisteredPackagesFound.Few': `Найдено {0} зарегистрированных {1}.`,
   'Completion.HeldBack.Few': `Задержано {0} файла. Сканирование сочло их ненужными. Итоговая проверка не смогла это подтвердить.`,
   'Summary.SupersededHeldBack.Few': `InstallerClean не смог с уверенностью определить, что {0} замещённых файла больше не нужны, поэтому удержал их.`,
   'Cli.SupersededHeldBack.Few': `InstallerClean не смог с уверенностью определить, что {0} замещённых файла больше не нужны, поэтому удержал их.`,

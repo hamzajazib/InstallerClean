@@ -45,8 +45,6 @@ const ALSO_KEEP = [
 
 // Satellite-only CLDR plural overrides (uk). base Singular = "one" (1, 21, 31),
 // base Plural = "many" (5+, 11-14, 0); .Few = the 2-4 NOMINATIVE-PLURAL form.
-// Status.RegisteredPackagesFound is a flat key: its base value is the "many"
-// form, with .One and .Few added (the adjective inflects one/few/many in uk).
 const OVERRIDES = {
   // As ru: the counted noun sits with {0}, so the pair reaches 1 (файл) and
   // 5+ (файлів) but not the paucal 2-4 (файли).
@@ -72,7 +70,6 @@ const OVERRIDES = {
   'Summary.RegisteredWindow.Missing.Few': `{0} відсутні`,
 
   // Flat key with an inflecting adjective: one / few / (base = many).
-  'Status.RegisteredPackagesFound.One': `Знайдено {0} зареєстрований {1}.`,
   'Summary.MissingFromDisk.Unnamed.Few': `{0} файли, для яких у записах не названо програми`,
   'Summary.MissingFromDisk.OtherPrograms.Few': `ще {0} програми`,
   'Cli.FoundOrphans.One': `Знайдено {0} непотрібний {1} для очищення ({2}).`,
@@ -85,7 +82,6 @@ const OVERRIDES = {
   'Cli.MovingFiles.Few': `Триває переміщення до {2}: {0} непотрібні {1}...`,
   'Cli.MovedFiles.One': `Переміщено {0} непотрібний {1}.`,
   'Cli.MovedFiles.Few': `Переміщено {0} непотрібні {1}.`,
-  'Status.RegisteredPackagesFound.Few': `Знайдено {0} зареєстровані {1}.`,
   'Completion.HeldBack.Few': `Затримано {0} файли. Сканування вважало їх непотрібними. Підсумкова перевірка не змогла це підтвердити.`,
   'Cli.MissingFromDisk.Few': `Windows має записи про {0} файли, яких немає в {InstallerFolder}: {1}. У щоденній роботі це не заважає, але оновлення чи видалення цих програм може не виконатися. Щоб повернути файл, вам потрібен інсталятор тієї версії цієї програми, яку ви вже маєте. Візьміть його у виробника програми і запустіть поверх наявної копії. Новіша версія не підійде: їй довелося б спершу видалити ту, що у вас є, а саме цьому крокові й потрібен цей файл. Видалити спершу теж не вийде, з тієї самої причини. Це має відновити файл і залишити ваші налаштування недоторканими, але Microsoft цього не гарантує.`,
   'Summary.SupersededHeldBack.Few': `InstallerClean не зміг упевнено визначити, що {0} заміщені файли більше не потрібні, тож затримав їх.`,
@@ -241,7 +237,7 @@ const MAP = {
   'Status.CheckingRegistry': `Перевірка реєстру на додаткові пакети...`,
 
   // 0 = registered package count, 1 = pluralised "package"/"packages"
-  'Status.RegisteredPackagesFound': `Знайдено {0} зареєстрованих {1}.`,
+  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Сканування завершено ({0})`,

@@ -93,7 +93,6 @@ const ALSO_KEEP = [
 // override, never creates one). The CLI's five counted lines each interpolate
 // the file noun after "overbodig", so each needs its own singular.
 const OVERRIDES = {
-  'Status.RegisteredPackagesFound.One': `{0} geregistreerd {1} gevonden.`,
   'Cli.FoundOrphans.One': `{0} overbodig {1} gevonden om op te ruimen ({2}).`,
   'Cli.DeletingFiles.One': `{0} overbodig {1} verwijderen...`,
   'Cli.DeletedFiles.One': `{0} overbodig {1} definitief verwijderd.`,
@@ -250,7 +249,7 @@ const MAP = {
   'Status.ScanningCache': `Installatiecache scannen...`,
   'Status.EnumeratingProducts': `Geïnstalleerde producten opsommen...`,
   'Status.CheckingRegistry': `Register controleren op extra pakketten...`,
-  'Status.RegisteredPackagesFound': `{0} geregistreerde {1} gevonden.`,
+  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
   'Status.ScanComplete': `Scan voltooid ({0})`,
   'Status.FoundProducts': `Lokale pakketten scannen...`,
   'Status.FoundUnused': `Je kunt {0} {1} veilig verwijderen.`,
