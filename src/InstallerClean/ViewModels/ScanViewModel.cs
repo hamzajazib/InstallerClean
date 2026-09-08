@@ -195,10 +195,11 @@ public partial class ScanViewModel : ObservableObject
     ///
     /// IT IS NOT THE PARTITION MEMBER and must not be pointed at it.
     /// <see cref="ScanResult.RegisteredWithheldCount"/> counts the same rows
-    /// whether or not their file is still there, because the registered-files
-    /// window lists them; this one is what the withholding COST, and a row whose
-    /// file has already gone cost nothing. It is the on-disk term that makes this
-    /// read zero on a machine that is simply tidy.
+    /// whether or not their file is still there, because it is a member of a
+    /// partition of the kept list and a member that dropped one would leave a hole
+    /// in it; this one is what the withholding COST, and a row whose file has
+    /// already gone cost nothing. It is the on-disk term that makes this read zero
+    /// on a machine that is simply tidy.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSupersededHeldBack))]

@@ -426,4 +426,191 @@ public class RegisteredFilesViewModelTests
         Assert.False(patch.IsMissing);
         Assert.Equal("there.msp, 1.0 MB", patch.AccessibleName);
     }
+
+    /// <summary>
+    /// A patch Windows still reports superseded, whose cached file has gone, and
+    /// whose absence this scan positively established nothing can be hurt by: every
+    /// product sharing it holds no patch that could be uninstalled and roll back
+    /// onto the file, and the only verdict taken away was taken away because the
+    /// file itself could not be read, which is what an absent file always answers.
+    ///
+    /// THE VERDICT IS THE PART THAT MATTERS AND IT IS WHY THIS HELPER EXISTS. Every
+    /// other missing fixture in this file leaves ProductPatchSetVerdict at its
+    /// default, which is deliberately unestablished, so all of them sit on the
+    /// reported side of the split. One that carries the clean verdict is the only
+    /// fixture here that reaches the other side.
+    /// </summary>
+    private static RegisteredPackage EstablishedHarmless(
+        string path, string product, string code = "{CCC}") =>
+        new(path, product, code,
+            PatchState: 2,
+            RemovableWithheld: true,
+            ProductPatchSetVerdict: ProductPatchSet.AllNonRemovable,
+            FileExists: false,
+            WithheldOnUnreadableFile: true);
+
+    [Fact]
+    public void A_registration_whose_absence_the_scan_established_is_not_a_row()
+    {
+        var packages = new List<RegisteredPackage>
+        {
+            new(@"C:\Windows\Installer\present.msi", "Product C", "{CCC}",
+                FileSizeBytes: 1_048_576),
+            EstablishedHarmless(@"C:\Windows\Installer\a1d2f.msp", "Product C"),
+        };
+
+        var vm = new RegisteredFilesViewModel(packages, 1_048_576, NullInfoService());
+
+        // The paths rather than a count, so a failure names the file that survived.
+        Assert.Equal(
+            new[] { @"C:\Windows\Installer\present.msi" },
+            vm.Products.Select(p => p.FullPath));
+
+        var product = Assert.Single(vm.Products);
+        Assert.False(product.IsMissing);
+        Assert.Equal(0, product.PatchCount);
+        Assert.Empty(product.Patches);
+
+        // No footer clause, and the product row's own spoken line closes on a patch
+        // count of nought rather than naming a patch that is not on the screen.
+        Assert.Equal("1 file left alone (1.0 MB)", vm.Summary);
+        Assert.Equal($"Product C, {product.FileName}, 1.0 MB, 0 patches", product.AccessibleName);
+    }
+
+    [Fact]
+    public void Only_the_half_the_scan_established_leaves_the_list()
+    {
+        // THE TEST THAT SEPARATES A FILTER FROM A SILENCE, and the two fixtures
+        // differ in what the scan established rather than in the state or the
+        // absence. Both are superseded patches whose files have gone. A change that
+        // dropped the class rather than the established half would empty this list
+        // and every other assertion in this file would still pass.
+        var packages = new List<RegisteredPackage>
+        {
+            EstablishedHarmless(@"C:\Windows\Installer\established.msp", "Product A"),
+            new(@"C:\Windows\Installer\unestablished.msp", "Product B", "{BBB}",
+                PatchState: 2, FileExists: false),
+        };
+
+        var vm = new RegisteredFilesViewModel(packages, 0, NullInfoService());
+
+        Assert.Equal(
+            new[] { @"C:\Windows\Installer\unestablished.msp" },
+            vm.Products.Select(p => p.FullPath));
+        Assert.Equal("0 files left alone (0 B), 1 missing", vm.Summary);
+    }
+
+    [Fact]
+    public void A_product_row_the_scan_could_not_clear_keeps_the_word_in_its_spoken_name()
+    {
+        // THE SURFACE A LOOK AT THE WINDOW CANNOT CHECK. The warning triangle carries
+        // no automation name, so what a screen reader is given is this line and
+        // nothing else. It has to go on carrying the word for a row the scan could not
+        // clear, and this is one: a product sharing the patch holds something that
+        // could be uninstalled and roll back onto its file.
+        var packages = new List<RegisteredPackage>
+        {
+            new(@"C:\Windows\Installer\needed.msi", "Product D", "{DDD}",
+                PatchState: 2,
+                ProductPatchSetVerdict: ProductPatchSet.RemovablePatchPresent,
+                FileExists: false),
+        };
+
+        var vm = new RegisteredFilesViewModel(packages, 0, NullInfoService());
+
+        var row = Assert.Single(vm.Products);
+        Assert.True(row.IsMissing);
+        Assert.True(vm.ShowMissing);
+        Assert.Equal("0 files left alone (0 B), 1 missing", vm.Summary);
+
+        // Composed from the row's own file-name cell rather than a literal, for the
+        // reason the withheld row's spoken-name test gives: spelling the base name out
+        // here would pin the platform's path separator as well, which is a different
+        // subject. What is under test is that the word stands where the size goes.
+        Assert.Equal(
+            $"Product D, {row.FileName}, missing, 0 patches", row.AccessibleName);
+    }
+
+    [Fact]
+    public void A_patch_row_keeps_or_loses_its_spoken_word_on_the_same_split()
+    {
+        // THE PATCH LIST IS ITS OWN SPOKEN SURFACE and it is the one the app's own
+        // removed file lands on, the product's package being present while the patch
+        // has gone. Both patches below are superseded and both files are absent; they
+        // differ only in what the scan established, so a change that dropped the class
+        // rather than the established half would empty this list and a change that
+        // dropped nothing would leave two rows in it.
+        var packages = new List<RegisteredPackage>
+        {
+            new(@"C:\Windows\Installer\present.msi", "Product F", "{FFF}",
+                FileSizeBytes: 1_048_576),
+            EstablishedHarmless(@"C:\Windows\Installer\cleared.msp", "Product F", "{FFF}"),
+            new(@"C:\Windows\Installer\unclear.msp", "Product F", "{FFF}",
+                PatchState: 2, FileExists: false),
+        };
+
+        var vm = new RegisteredFilesViewModel(packages, 1_048_576, NullInfoService());
+
+        var product = Assert.Single(vm.Products);
+        Assert.False(product.IsMissing);
+
+        // The paths rather than a count, so a failure names which patch survived.
+        Assert.Equal(
+            new[] { @"C:\Windows\Installer\unclear.msp" },
+            product.Patches.Select(p => p.FullPath));
+
+        var patch = Assert.Single(product.Patches);
+        Assert.True(patch.IsMissing);
+        Assert.Equal($"{patch.FileName}, missing", patch.AccessibleName);
+        Assert.Equal(1, product.PatchCount);
+    }
+
+    [Fact]
+    public void A_withholding_other_than_the_unread_file_keeps_the_row()
+    {
+        // The third condition read on its own. This row has the state and the clean
+        // per-product verdict, and its removable verdict was taken away for
+        // something other than its own file being unreadable, so the scan has not
+        // established that its absence is harmless and the row stands.
+        var packages = new List<RegisteredPackage>
+        {
+            new(@"C:\Windows\Installer\withheld.msp", "Product E", "{EEE}",
+                PatchState: 2,
+                RemovableWithheld: true,
+                ProductPatchSetVerdict: ProductPatchSet.AllNonRemovable,
+                FileExists: false,
+                WithheldOnUnreadableFile: false),
+        };
+
+        var vm = new RegisteredFilesViewModel(packages, 0, NullInfoService());
+
+        var row = Assert.Single(vm.Products);
+        Assert.True(row.IsMissing);
+        Assert.Equal("0 files left alone (0 B), 1 missing", vm.Summary);
+    }
+
+    [Fact]
+    public void The_left_alone_figure_does_not_move_when_such_a_registration_is_dropped()
+    {
+        // The arithmetic taken two ways rather than asserted. The count subtracts the
+        // missing rows from the list it walks, so dropping one takes a unit off each
+        // term and the figure the reader sees is the same either way. The pair is
+        // identical but for the one extra registration.
+        var without = new List<RegisteredPackage>
+        {
+            Pkg(@"C:\Windows\Installer\aaa.msi", "Product A", "{AAA}"),
+            Pkg(@"C:\Windows\Installer\bbb.msi", "Product B", "{BBB}"),
+        };
+        var with = new List<RegisteredPackage>(without)
+        {
+            EstablishedHarmless(@"C:\Windows\Installer\a1d2f.msp", "Product C"),
+        };
+        var withheld = new List<OrphanedFile> { Withheld(Kept, 1_048_576) };
+
+        var before = new RegisteredFilesViewModel(without, 2_097_152, NullInfoService(), withheld);
+        var after = new RegisteredFilesViewModel(with, 2_097_152, NullInfoService(), withheld);
+
+        Assert.Equal("3 files left alone (3.0 MB)", before.Summary);
+        Assert.Equal(before.Summary, after.Summary);
+    }
 }

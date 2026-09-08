@@ -804,8 +804,8 @@ public sealed record MachineInfo(
 /// <param name="RegisteredWithheldCount">
 /// Registered rows whose removable verdict was taken away because a read established
 /// nothing, whether or not the file is still on the disk:
-/// <c>ScanResult.RegisteredWithheldCount</c>, which is the population the
-/// registered-files window lists.
+/// <c>ScanResult.RegisteredWithheldCount</c>, which is a member of the three-way
+/// partition of the rows the scan kept.
 ///
 /// A THIRD POPULATION AND NOT A RESTATEMENT OF EITHER OF THE OTHERS.
 /// <paramref name="WithheldPatchCount"/> answers what the withholding COST, so it

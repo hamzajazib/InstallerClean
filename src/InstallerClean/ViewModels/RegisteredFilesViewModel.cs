@@ -22,14 +22,17 @@ namespace InstallerClean.ViewModels;
 /// rest all come out of the package's own summary stream, which is why the
 /// orphaned window can show a certificate for a file no registration claims.
 ///
-/// Rows flag as missing on <c>IsMissingFromDisk</c>, which is now the plain
-/// question of whether the file is there. It drives <see cref="ShowMissing"/>,
-/// which puts the recovery note in front of the reader, and the window's
-/// opening selection, and it takes every registration: a superseded patch
-/// reaches this window like any other row and its file having gone is the same
-/// condition, Windows opening every registered patch's cached file whatever
-/// state it carries. The property excluded that class until 3.0.0, on a reading
-/// Microsoft does not support.
+/// Rows flag as missing on <c>IsMissingFromDisk</c>, the plain question of
+/// whether the file is there. It drives <see cref="ShowMissing"/>, which puts
+/// the recovery note in front of the reader, and the window's opening
+/// selection. The flag grades no patch state and must not start: Windows opens
+/// every registered patch's cached file whatever state it carries, so an absent
+/// file is the same condition on a superseded registration as on any other.
+///
+/// WHICH REGISTRATIONS REACH THAT FLAG IS SETTLED BEFORE ANY ROW IS BUILT, at
+/// the head of the constructor, and it is the narrower question of whether
+/// anything could still reach for the file. The two are separate on purpose:
+/// the flag describes a row, and the filter decides whether there is one.
 ///
 /// THIS IS WHERE THE PROGRAMS ARE NAMED. The main window's line says how many
 /// files and names the first few; this window has room for all of them, which is
@@ -82,9 +85,47 @@ public partial class RegisteredFilesViewModel : ObservableObject, IDisposable
     {
         _infoService = infoService;
 
+        // WHAT THE LIST IS BUILT FROM, WHICH IS NARROWER THAN THE SET OF
+        // REGISTRATIONS. A registration whose file has gone is a row unless this
+        // scan established that nothing can reach for the file. Not established is
+        // enough to keep it: the row says what the app could not rule out, never
+        // that anything is wrong, so a verdict nobody could take holds the row here
+        // exactly as it withholds the offer elsewhere.
+        //
+        // THE CONDITION IS THE ONE THE OFFER RESTS ON, PUT TO A FILE THAT HAS GONE.
+        // MissingFilesReport.Affected carries the whole expression, and the clause
+        // doing the work is the per-product verdict: every product sharing the patch
+        // was shown to hold no patch that could be uninstalled and roll back onto
+        // its cached file. The offer requires that same value before it will put
+        // such a file in front of anybody, so the two cannot reach opposite answers
+        // on it. Nothing is remembered between runs either, the verdict being
+        // re-derived from the machine's own records on every scan, so a product that
+        // acquires an uninstallable patch fails the clause next time and the row
+        // comes back.
+        //
+        // NOTHING ABOUT THE FILE PUTS SUCH A ROW HERE, WHICH IS WHY LEAVING IT OUT
+        // CONCEALS NOTHING. This list is built from registrations, and a
+        // registration outlives the file it names. A file offered because no
+        // registration claims it has none to leave behind and is on this screen
+        // neither before it goes nor after; a superseded patch offered on its
+        // per-product verdict does leave one. Without this the same run would say
+        // nothing about the files of the first kind it removed and would flag the
+        // second, which describes how the list is assembled rather than anything
+        // about the disk.
+        //
+        // THE MISSING ROWS THAT REMAIN ARE WHAT THIS WINDOW IS FOR AND THEY STAY.
+        // The main window's missing-from-disk line ends by sending the reader here
+        // for what to do, and what to do is the note on such a row's own detail
+        // pane, which the opening selection at the end of this constructor lands
+        // on. Drop those rows and that line points at a window holding no answer to
+        // the instruction it has just given.
+        var listed = packages
+            .Where(p => !p.IsMissingFromDisk || MissingFilesReport.Affected(p))
+            .ToList();
+
         // Registry-fallback entries share an empty ProductCode; keying on
         // path gives each its own group instead of a single "(unknown)" pile.
-        var groups = packages.GroupBy(
+        var groups = listed.GroupBy(
             p => string.IsNullOrEmpty(p.ProductCode) ? p.LocalPackagePath : p.ProductCode,
             StringComparer.OrdinalIgnoreCase);
 
@@ -245,14 +286,21 @@ public partial class RegisteredFilesViewModel : ObservableObject, IDisposable
         // size describe one population. The withheld files are in both, being real
         // files in the folder that this scan did not offer.
         //
-        // EVERY ROW IS LISTED, THE MISSING ONES INCLUDED. The recovery note lives on a
-        // missing row and the missing flag is what puts it there, so a list trimmed to
-        // match the count would take away the one screen that says what to do. The
-        // clause below says how many of the rows on view are in that state instead,
-        // which is a sentence only this window can carry: the main window's line has
-        // the same count and no list under it.
-        var missingCount = packages.Count(p => p.IsMissingFromDisk);
-        var shownCount = packages.Count - missingCount + withheld.Count;
+        // EVERY ROW ON THE LIST IS SHOWN, THE MISSING ONES INCLUDED, and the count is
+        // narrower than the list on purpose. The recovery note lives on a missing row
+        // and the missing flag is what puts it there, so a list trimmed to match the count
+        // would take away the one screen that says what to do. The clause below says
+        // how many of the rows on view are in that state instead, which is a sentence
+        // only this window can carry: the main window's line has the same count and no
+        // list under it.
+        //
+        // THE SAME COUNT IS MEANT LITERALLY. Both figures are the missing rows the
+        // scan could not establish to be harmless, because the list this method walks
+        // has been filtered on the predicate the main window's own count is taken over.
+        // The two are one click apart and a reader comparing them must not find them
+        // disagreeing.
+        var missingCount = listed.Count(p => p.IsMissingFromDisk);
+        var shownCount = listed.Count - missingCount + withheld.Count;
         var summary = string.Format(
             DisplayHelpers.Pluralise(shownCount, Strings.Summary_RegisteredWindow_Singular, Strings.Summary_RegisteredWindow_Plural, "Summary.RegisteredWindow"),
             DisplayHelpers.FormatCount(shownCount),

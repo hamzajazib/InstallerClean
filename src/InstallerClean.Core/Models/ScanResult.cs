@@ -200,9 +200,10 @@ namespace InstallerClean.Models;
 ///
 /// NEARLY THE SAME POPULATION AS <see cref="WithheldCount"/> AND DELIBERATELY NOT
 /// THE SAME COUNT. This one is a member of a three-way partition of the kept list,
-/// so it counts what the registered-files window lists, and that window lists a row
-/// whose file has gone like any other; leaving such a row out would leave a hole in
-/// the partition. <see cref="WithheldCount"/> answers what the withholding COST,
+/// so it counts every row on that list carrying the flag, one whose file has gone
+/// included; leaving such a row out would leave a hole in the partition, and the
+/// partition is over the list rather than over any screen built from it.
+/// <see cref="WithheldCount"/> answers what the withholding COST,
 /// and a row whose file is absent cost nothing. The two agree on any machine whose
 /// cache is intact and differ by exactly the withheld rows whose files something
 /// else has already removed.

@@ -509,9 +509,9 @@ public class FileSystemScanServiceTests
     public async Task ScanAsync_leaves_no_kept_file_outside_the_three_counts()
     {
         // A partition rather than three tallies that happen to be near the total.
-        // Missing files are in it too, because the count on the screen is of rows
-        // and not of files on the disk, and a row whose file has gone is still
-        // one the window lists.
+        // Missing files are in it too, because what the three partition is the kept
+        // list itself, in rows and not in files on the disk, and a member that
+        // dropped a row whose file has gone would leave a hole in it.
         //
         // AND ONE WITHHELD ROW'S FILE HAS GONE, WHICH IS THE FIXTURE AND NOT THE
         // ASSERTION. Until 3.0.0 every withheld row here was present on the disk, so
@@ -617,8 +617,8 @@ public class FileSystemScanServiceTests
         // file cost nothing: the branch that offers a superseded row is gated on the
         // file being there, so such a row was never offerable and holding it back
         // took nothing away. RegisteredWithheldCount is a member of the partition of
-        // the kept list, and the registered-files window lists that row like any
-        // other, so leaving it out would leave a hole in the partition.
+        // the kept list, which holds that row like any other, so leaving it out would
+        // leave a hole in the partition.
         //
         // THE DIRECTION IS WHY IT IS WORTH ITS OWN TEST. This count travels in the
         // opt-in report and nowhere else, and that report is the only instrument this

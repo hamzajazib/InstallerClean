@@ -789,8 +789,10 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // duplication.
         //
         // The partition member counts ROWS. It has to, because what the three counts
-        // partition is exactly the set the registered-files window lists, and that
-        // window lists a row whose file has already gone like any other.
+        // partition is exactly the kept list, a row whose file has already gone
+        // included, and a member that left one out would leave a hole in it. The
+        // registered-files window is built from that same list and decides its own
+        // rows on its own terms, so it is not what settles this.
         //
         // The cost figure counts FILES, and only the ones that are there. It answers
         // what the withholding cost this run, and a row whose file is not on the disk
