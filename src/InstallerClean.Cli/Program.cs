@@ -494,9 +494,7 @@ internal static class Program
                         WithholdingAccount.PerFile => string.Format(
                             Strings.Cli_EventLogNothingOfferedPerFile,
                             arg, withheldCount, DisplayHelpers.PluraliseFile(withheldCount)),
-                        _ => string.Format(Strings.Cli_EventLogScanNoOrphans,
-                            arg, scanResult.RegisteredPackages.Count,
-                            DisplayHelpers.PluralisePackage(scanResult.RegisteredPackages.Count)),
+                        _ => string.Format(Strings.Cli_EventLogScanNoOrphans, arg),
                     });
                 return ExitOk;
             }
