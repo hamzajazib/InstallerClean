@@ -90,11 +90,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Starting scan... | Початок сканування... |
 | Asking Windows about installed software... | Запит до Windows про встановлені програми... |
 | Scanning installer cache folder... | Сканування папки кешу інсталятора... |
-| Enumerating installed products... | Перелічення встановлених продуктів... |
 | Checking registry for additional packages... | Перевірка реєстру на додаткові пакети... |
-| Checking which files are still needed... | Визначення файлів, які ще потрібні... |
+| Matching the files against the installed programs... | Зіставлення файлів зі встановленими програмами... |
 | Scan complete ({0}) | Сканування завершено ({0}) |
-| Scanning local packages... | Сканування локальних пакетів... |
 | Found {0} {1} you can safely delete. | Знайдено {0} {1} для безпечного видалення. |
 | Preparing destination folder... | Підготовка папки призначення... |
 | Moving unneeded files... | Переміщення непотрібних файлів... |

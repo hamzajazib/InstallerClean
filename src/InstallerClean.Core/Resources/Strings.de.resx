@@ -506,7 +506,6 @@ Um sie zurückzuholen, brauchst du das Installationsprogramm genau der Version, 
   <data name="Status.StartingScan" xml:space="preserve"><value>Scan wird gestartet...</value></data>
   <data name="Status.QueryingApi" xml:space="preserve"><value>Windows wird nach installierter Software gefragt...</value></data>
   <data name="Status.ScanningCache" xml:space="preserve"><value>Installer-Cache-Ordner wird gescannt...</value></data>
-  <data name="Status.EnumeratingProducts" xml:space="preserve"><value>Installierte Produkte werden aufgezählt...</value></data>
   <data name="Status.CheckingRegistry" xml:space="preserve"><value>Registrierung wird nach weiteren Paketen durchsucht...</value></data>
   <!-- Fires mid-scan as a step-progress update after the registry-fallback
        pass; not the end-of-scan pill (that's Status.ScanComplete). It closes
@@ -514,10 +513,9 @@ Um sie zurückzuholen, brauchst du das Installationsprogramm genau der Version, 
        comparison against what the folder holds. No argument, and none belongs:
        every count this app puts on a screen is a count of files, and no file
        count is settled until the comparison this line announces. -->
-  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Es wird geprüft, welche Dateien noch benötigt werden...</value></data>
+  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Dateien werden mit den installierten Programmen abgeglichen...</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>Scan abgeschlossen ({0})</value></data>
-  <data name="Status.FoundProducts" xml:space="preserve"><value>Lokale Pakete werden gescannt...</value></data>
   <!-- 0 = file count, 1 = pluralised noun ("file"/"files") -->
   <data name="Status.FoundUnused" xml:space="preserve"><value>{0} {1} gefunden, die du bedenkenlos löschen kannst.</value></data>
   <data name="Status.PreparingDestination" xml:space="preserve"><value>Zielordner wird vorbereitet...</value></data>

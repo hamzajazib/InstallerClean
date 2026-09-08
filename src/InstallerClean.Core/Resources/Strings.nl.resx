@@ -506,7 +506,6 @@ Om het terug te zetten heb je het installatieprogramma nodig van de versie die j
   <data name="Status.StartingScan" xml:space="preserve"><value>Scan starten...</value></data>
   <data name="Status.QueryingApi" xml:space="preserve"><value>Windows vragen naar geïnstalleerde software...</value></data>
   <data name="Status.ScanningCache" xml:space="preserve"><value>Installatiecache scannen...</value></data>
-  <data name="Status.EnumeratingProducts" xml:space="preserve"><value>Geïnstalleerde producten opsommen...</value></data>
   <data name="Status.CheckingRegistry" xml:space="preserve"><value>Register controleren op extra pakketten...</value></data>
   <!-- Fires mid-scan as a step-progress update after the registry-fallback
        pass; not the end-of-scan pill (that's Status.ScanComplete). It closes
@@ -514,10 +513,9 @@ Om het terug te zetten heb je het installatieprogramma nodig van de versie die j
        comparison against what the folder holds. No argument, and none belongs:
        every count this app puts on a screen is a count of files, and no file
        count is settled until the comparison this line announces. -->
-  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Controleren welke bestanden nog nodig zijn...</value></data>
+  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Bestanden vergelijken met de geïnstalleerde programma's...</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>Scan voltooid ({0})</value></data>
-  <data name="Status.FoundProducts" xml:space="preserve"><value>Lokale pakketten scannen...</value></data>
   <!-- 0 = file count, 1 = pluralised noun ("file"/"files") -->
   <data name="Status.FoundUnused" xml:space="preserve"><value>Je kunt {0} {1} veilig verwijderen.</value></data>
   <data name="Status.PreparingDestination" xml:space="preserve"><value>Doelmap voorbereiden...</value></data>

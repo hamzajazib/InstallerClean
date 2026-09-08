@@ -233,13 +233,11 @@ const MAP = {
   'Status.StartingScan': `Початок сканування...`,
   'Status.QueryingApi': `Запит до Windows про встановлені програми...`,
   'Status.ScanningCache': `Сканування папки кешу інсталятора...`,
-  'Status.EnumeratingProducts': `Перелічення встановлених продуктів...`,
   'Status.CheckingRegistry': `Перевірка реєстру на додаткові пакети...`,
-  'Status.RegisteredPackagesFound': `Визначення файлів, які ще потрібні...`,
+  'Status.RegisteredPackagesFound': `Зіставлення файлів зі встановленими програмами...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Сканування завершено ({0})`,
-  'Status.FoundProducts': `Сканування локальних пакетів...`,
 
   // 0 = file count, 1 = pluralised noun ("file"/"files")
   'Status.FoundUnused': `Знайдено {0} {1} для безпечного видалення.`,

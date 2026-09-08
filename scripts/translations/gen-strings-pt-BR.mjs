@@ -213,13 +213,11 @@ const MAP = {
   'Status.StartingScan': `Iniciando a análise...`,
   'Status.QueryingApi': `Consultando o Windows sobre o software instalado...`,
   'Status.ScanningCache': `Analisando a pasta do cache de instalação...`,
-  'Status.EnumeratingProducts': `Enumerando os produtos instalados...`,
   'Status.CheckingRegistry': `Verificando o registro em busca de pacotes adicionais...`,
-  'Status.RegisteredPackagesFound': `Verificando quais arquivos ainda são necessários...`,
+  'Status.RegisteredPackagesFound': `Comparando os arquivos com os programas instalados...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Análise concluída ({0})`,
-  'Status.FoundProducts': `Analisando os pacotes locais...`,
 
   // 0 = file count, 1 = pluralised noun ("file"/"files")
   'Status.FoundUnused': `Encontrados {0} {1} que você pode excluir com segurança.`,

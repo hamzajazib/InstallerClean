@@ -205,13 +205,11 @@ const MAP = {
   'Status.StartingScan': `검사를 시작하는 중...`,
   'Status.QueryingApi': `설치된 소프트웨어 정보를 Windows에 조회하는 중...`,
   'Status.ScanningCache': `설치 관리자 캐시 폴더를 검사하는 중...`,
-  'Status.EnumeratingProducts': `설치된 제품을 열거하는 중...`,
   'Status.CheckingRegistry': `레지스트리에서 추가 패키지를 확인하는 중...`,
-  'Status.RegisteredPackagesFound': `어떤 파일이 아직 필요한지 확인하는 중...`,
+  'Status.RegisteredPackagesFound': `파일을 설치된 프로그램과 대조하는 중...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `검사 완료 ({0})`,
-  'Status.FoundProducts': `로컬 패키지를 검사하는 중...`,
 
   // 0 = file count, 1 = pluralised noun ("file"/"files")
   'Status.FoundUnused': `안전하게 삭제할 수 있는 {1} {0}개를 찾았습니다.`,

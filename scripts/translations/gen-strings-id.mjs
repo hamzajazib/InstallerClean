@@ -227,13 +227,11 @@ const MAP = {
   'Status.StartingScan': `Memulai pemindaian...`,
   'Status.QueryingApi': `Menanyai Windows tentang perangkat lunak yang terpasang...`,
   'Status.ScanningCache': `Memindai folder cache penginstal...`,
-  'Status.EnumeratingProducts': `Mendata produk yang terpasang...`,
   'Status.CheckingRegistry': `Memeriksa registri untuk paket tambahan...`,
-  'Status.RegisteredPackagesFound': `Memeriksa file mana yang masih diperlukan...`,
+  'Status.RegisteredPackagesFound': `Mencocokkan file dengan program yang terpasang...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Pemindaian selesai ({0})`,
-  'Status.FoundProducts': `Memindai paket lokal...`,
 
   // 0 = file count, 1 = pluralised noun ("file"/"files")
   'Status.FoundUnused': `Ditemukan {0} {1} yang aman Anda hapus.`,

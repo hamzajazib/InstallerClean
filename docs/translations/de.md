@@ -90,11 +90,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Starting scan... | Scan wird gestartet... |
 | Asking Windows about installed software... | Windows wird nach installierter Software gefragt... |
 | Scanning installer cache folder... | Installer-Cache-Ordner wird gescannt... |
-| Enumerating installed products... | Installierte Produkte werden aufgezählt... |
 | Checking registry for additional packages... | Registrierung wird nach weiteren Paketen durchsucht... |
-| Checking which files are still needed... | Es wird geprüft, welche Dateien noch benötigt werden... |
+| Matching the files against the installed programs... | Dateien werden mit den installierten Programmen abgeglichen... |
 | Scan complete ({0}) | Scan abgeschlossen ({0}) |
-| Scanning local packages... | Lokale Pakete werden gescannt... |
 | Found {0} {1} you can safely delete. | {0} {1} gefunden, die du bedenkenlos löschen kannst. |
 | Preparing destination folder... | Zielordner wird vorbereitet... |
 | Moving unneeded files... | Nicht benötigte Dateien werden verschoben... |

@@ -643,8 +643,6 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // place all of them exist at once.
         var patchClaims = new List<PatchClaim>();
 
-        progress?.Report(new ScanProgressUpdate(Strings.Status_EnumeratingProducts));
-
         var (products, unreadableRows) = EnumerateProducts(ct);
 
         // Installed products this scan could not read in full. A skipped product
@@ -693,8 +691,6 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // keeps its own and the two are added at the census, neither half being able
         // to see the other's.
         var pathCensus = new PathCensus();
-
-        progress?.Report(new ScanProgressUpdate(Strings.Status_FoundProducts));
 
         // Budgeted, because the abandonment breadcrumb is one full entry per
         // product and its trigger is a property of the registration rather than

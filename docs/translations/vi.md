@@ -90,11 +90,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Starting scan... | Đang bắt đầu quét... |
 | Asking Windows about installed software... | Đang hỏi Windows về phần mềm đã cài... |
 | Scanning installer cache folder... | Đang quét thư mục bộ nhớ đệm trình cài đặt... |
-| Enumerating installed products... | Đang liệt kê các sản phẩm đã cài... |
 | Checking registry for additional packages... | Đang kiểm tra sổ đăng ký để tìm các gói bổ sung... |
-| Checking which files are still needed... | Đang kiểm tra xem tệp nào còn cần thiết... |
+| Matching the files against the installed programs... | Đang đối chiếu các tệp với các chương trình đã cài... |
 | Scan complete ({0}) | Quét xong ({0}) |
-| Scanning local packages... | Đang quét các gói cục bộ... |
 | Found {0} {1} you can safely delete. | Đã tìm thấy {0} {1} bạn có thể xóa an toàn. |
 | Preparing destination folder... | Đang chuẩn bị thư mục đích... |
 | Moving unneeded files... | Đang chuyển các tệp không cần thiết... |

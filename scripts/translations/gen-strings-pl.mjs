@@ -245,13 +245,11 @@ const MAP = {
   'Status.StartingScan': `Rozpoczynanie skanowania...`,
   'Status.QueryingApi': `Pytanie Windows o zainstalowane oprogramowanie...`,
   'Status.ScanningCache': `Skanowanie folderu pamięci podręcznej instalatora...`,
-  'Status.EnumeratingProducts': `Wyliczanie zainstalowanych produktów...`,
   'Status.CheckingRegistry': `Sprawdzanie rejestru w poszukiwaniu dodatkowych pakietów...`,
-  'Status.RegisteredPackagesFound': `Sprawdzanie, które pliki są nadal potrzebne...`,
+  'Status.RegisteredPackagesFound': `Porównywanie plików z zainstalowanymi programami...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Skanowanie zakończone ({0})`,
-  'Status.FoundProducts': `Skanowanie pakietów lokalnych...`,
 
   // 0 = file count, 1 = pluralised noun ("file"/"files")
   'Status.FoundUnused': `Znaleziono {0} {1} do bezpiecznego usunięcia.`,

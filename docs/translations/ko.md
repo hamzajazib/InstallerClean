@@ -90,11 +90,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Starting scan... | 검사를 시작하는 중... |
 | Asking Windows about installed software... | 설치된 소프트웨어 정보를 Windows에 조회하는 중... |
 | Scanning installer cache folder... | 설치 관리자 캐시 폴더를 검사하는 중... |
-| Enumerating installed products... | 설치된 제품을 열거하는 중... |
 | Checking registry for additional packages... | 레지스트리에서 추가 패키지를 확인하는 중... |
-| Checking which files are still needed... | 어떤 파일이 아직 필요한지 확인하는 중... |
+| Matching the files against the installed programs... | 파일을 설치된 프로그램과 대조하는 중... |
 | Scan complete ({0}) | 검사 완료 ({0}) |
-| Scanning local packages... | 로컬 패키지를 검사하는 중... |
 | Found {0} {1} you can safely delete. | 안전하게 삭제할 수 있는 {1} {0}개를 찾았습니다. |
 | Preparing destination folder... | 대상 폴더를 준비하는 중... |
 | Moving unneeded files... | 불필요한 파일 이동 중... |

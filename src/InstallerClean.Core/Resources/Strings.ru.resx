@@ -506,7 +506,6 @@
   <data name="Status.StartingScan" xml:space="preserve"><value>Запуск сканирования...</value></data>
   <data name="Status.QueryingApi" xml:space="preserve"><value>Запрос к Windows об установленном ПО...</value></data>
   <data name="Status.ScanningCache" xml:space="preserve"><value>Сканирование папки кэша установки...</value></data>
-  <data name="Status.EnumeratingProducts" xml:space="preserve"><value>Перечисление установленных продуктов...</value></data>
   <data name="Status.CheckingRegistry" xml:space="preserve"><value>Проверка реестра на дополнительные пакеты...</value></data>
   <!-- Fires mid-scan as a step-progress update after the registry-fallback
        pass; not the end-of-scan pill (that's Status.ScanComplete). It closes
@@ -514,10 +513,9 @@
        comparison against what the folder holds. No argument, and none belongs:
        every count this app puts on a screen is a count of files, and no file
        count is settled until the comparison this line announces. -->
-  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Определение файлов, которые ещё нужны...</value></data>
+  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Сопоставление файлов с установленными программами...</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>Сканирование завершено ({0})</value></data>
-  <data name="Status.FoundProducts" xml:space="preserve"><value>Сканирование локальных пакетов...</value></data>
   <!-- 0 = file count, 1 = pluralised noun ("file"/"files") -->
   <data name="Status.FoundUnused" xml:space="preserve"><value>Найдено {0} {1} для безопасного удаления.</value></data>
   <data name="Status.PreparingDestination" xml:space="preserve"><value>Подготовка папки назначения...</value></data>

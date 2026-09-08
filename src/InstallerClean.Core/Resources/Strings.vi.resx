@@ -506,7 +506,6 @@
   <data name="Status.StartingScan" xml:space="preserve"><value>Đang bắt đầu quét...</value></data>
   <data name="Status.QueryingApi" xml:space="preserve"><value>Đang hỏi Windows về phần mềm đã cài...</value></data>
   <data name="Status.ScanningCache" xml:space="preserve"><value>Đang quét thư mục bộ nhớ đệm trình cài đặt...</value></data>
-  <data name="Status.EnumeratingProducts" xml:space="preserve"><value>Đang liệt kê các sản phẩm đã cài...</value></data>
   <data name="Status.CheckingRegistry" xml:space="preserve"><value>Đang kiểm tra sổ đăng ký để tìm các gói bổ sung...</value></data>
   <!-- Fires mid-scan as a step-progress update after the registry-fallback
        pass; not the end-of-scan pill (that's Status.ScanComplete). It closes
@@ -514,10 +513,9 @@
        comparison against what the folder holds. No argument, and none belongs:
        every count this app puts on a screen is a count of files, and no file
        count is settled until the comparison this line announces. -->
-  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Đang kiểm tra xem tệp nào còn cần thiết...</value></data>
+  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Đang đối chiếu các tệp với các chương trình đã cài...</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>Quét xong ({0})</value></data>
-  <data name="Status.FoundProducts" xml:space="preserve"><value>Đang quét các gói cục bộ...</value></data>
   <!-- 0 = file count, 1 = pluralised noun ("file"/"files") -->
   <data name="Status.FoundUnused" xml:space="preserve"><value>Đã tìm thấy {0} {1} bạn có thể xóa an toàn.</value></data>
   <data name="Status.PreparingDestination" xml:space="preserve"><value>Đang chuẩn bị thư mục đích...</value></data>

@@ -277,15 +277,13 @@ const MAP = {
   'Status.StartingScan': `Starting scan...`,
   'Status.QueryingApi': `Asking Windows about installed software...`,
   'Status.ScanningCache': `Scanning installer cache folder...`,
-  'Status.EnumeratingProducts': `Enumerating installed products...`,
   'Status.CheckingRegistry': `Checking registry for additional packages...`,
 
   // 0 = registered package count, 1 = pluralised "package"/"packages"
-  'Status.RegisteredPackagesFound': `Checking which files are still needed...`,
+  'Status.RegisteredPackagesFound': `Matching the files against the installed programs...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Scan complete ({0})`,
-  'Status.FoundProducts': `Scanning local packages...`,
 
   // 0 = file count, 1 = pluralised noun ("file"/"files")
   'Status.FoundUnused': `Found {0} {1} you can safely delete.`,

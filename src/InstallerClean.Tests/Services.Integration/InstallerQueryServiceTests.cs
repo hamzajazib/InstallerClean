@@ -49,27 +49,6 @@ public class InstallerQueryServiceTests
     }
 
     [Fact]
-    public async Task GetRegisteredPackagesAsync_progress_receives_initial_message_before_failure()
-    {
-        var svc = new InstallerQueryService();
-        var messages = new List<string>();
-        var progress = new SyncProgress<ScanProgressUpdate>(u => messages.Add(u.Message));
-
-        // The service reports "Enumerating installed products..." before
-        // calling the API, so the message arrives even when the API then fails.
-        try
-        {
-            await svc.GetRegisteredPackagesAsync(progress);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Expected when not elevated
-        }
-
-        Assert.Contains(messages, m => m.Contains("Enumerating installed products"));
-    }
-
-    [Fact]
     public async Task GetRegisteredPackagesAsync_null_progress_does_not_throw()
     {
         var svc = new InstallerQueryService();

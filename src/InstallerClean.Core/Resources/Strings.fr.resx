@@ -506,7 +506,6 @@ Pour le remettre, il vous faut l'installateur de la version que vous avez déjà
   <data name="Status.StartingScan" xml:space="preserve"><value>Démarrage de l'analyse...</value></data>
   <data name="Status.QueryingApi" xml:space="preserve"><value>Interrogation de Windows sur les logiciels installés...</value></data>
   <data name="Status.ScanningCache" xml:space="preserve"><value>Analyse du dossier de cache d'installation...</value></data>
-  <data name="Status.EnumeratingProducts" xml:space="preserve"><value>Énumération des produits installés...</value></data>
   <data name="Status.CheckingRegistry" xml:space="preserve"><value>Vérification du registre pour des paquets supplémentaires...</value></data>
   <!-- Fires mid-scan as a step-progress update after the registry-fallback
        pass; not the end-of-scan pill (that's Status.ScanComplete). It closes
@@ -514,10 +513,9 @@ Pour le remettre, il vous faut l'installateur de la version que vous avez déjà
        comparison against what the folder holds. No argument, and none belongs:
        every count this app puts on a screen is a count of files, and no file
        count is settled until the comparison this line announces. -->
-  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Identification des fichiers encore utiles...</value></data>
+  <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Comparaison des fichiers avec les programmes installés...</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>Analyse terminée ({0})</value></data>
-  <data name="Status.FoundProducts" xml:space="preserve"><value>Analyse des paquets locaux...</value></data>
   <!-- 0 = file count, 1 = pluralised noun ("file"/"files") -->
   <data name="Status.FoundUnused" xml:space="preserve"><value>{0} {1} à supprimer sans risque.</value></data>
   <data name="Status.PreparingDestination" xml:space="preserve"><value>Préparation du dossier de destination...</value></data>

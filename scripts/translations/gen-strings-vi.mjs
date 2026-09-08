@@ -208,13 +208,11 @@ const MAP = {
   'Status.StartingScan': `Đang bắt đầu quét...`,
   'Status.QueryingApi': `Đang hỏi Windows về phần mềm đã cài...`,
   'Status.ScanningCache': `Đang quét thư mục bộ nhớ đệm trình cài đặt...`,
-  'Status.EnumeratingProducts': `Đang liệt kê các sản phẩm đã cài...`,
   'Status.CheckingRegistry': `Đang kiểm tra sổ đăng ký để tìm các gói bổ sung...`,
-  'Status.RegisteredPackagesFound': `Đang kiểm tra xem tệp nào còn cần thiết...`,
+  'Status.RegisteredPackagesFound': `Đang đối chiếu các tệp với các chương trình đã cài...`,
 
   // 0 = elapsed time text (e.g. "1.2s")
   'Status.ScanComplete': `Quét xong ({0})`,
-  'Status.FoundProducts': `Đang quét các gói cục bộ...`,
 
   // 0 = file count, 1 = pluralised noun ("file"/"files")
   'Status.FoundUnused': `Đã tìm thấy {0} {1} bạn có thể xóa an toàn.`,
