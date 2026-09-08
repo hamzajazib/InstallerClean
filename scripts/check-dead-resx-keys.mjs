@@ -26,7 +26,7 @@
 // search. The one such mechanism is DisplayHelpers.Pluralise, which reads
 // {prefix}.One / .Few / .Many override keys by name; those are SATELLITE-ONLY
 // (never in the neutral resx this guard reads), and each prefix's neutral base
-// (Plural.File.Singular, Status.RegisteredPackagesFound, ...) is consumed through
+// (Plural.File.Singular, Cli.DeletingFiles, ...) is consumed through
 // its static Strings.* symbol at the call site, so no plural key is a false
 // orphan here. That is why the allowlist below needs no Pluralise entry: verified
 // by cross-checking against list-unused-resources.sh, which reports the same two

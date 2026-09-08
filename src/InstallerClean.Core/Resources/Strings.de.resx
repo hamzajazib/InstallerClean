@@ -511,8 +511,8 @@ Um sie zurückzuholen, brauchst du das Installationsprogramm genau der Version, 
        pass; not the end-of-scan pill (that's Status.ScanComplete). It closes
        the phase that asks Windows and names the one that follows, which is the
        comparison against what the folder holds. No argument, and none belongs:
-       every count this app puts on a screen is a count of files, and no file
-       count is settled until the comparison this line announces. -->
+       nothing this line could count is settled yet, and the count the reader is
+       waiting for arrives on the line after it. -->
   <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Dateien werden mit den installierten Programmen abgeglichen...</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>Scan abgeschlossen ({0})</value></data>
@@ -1698,9 +1698,12 @@ Das Absturzprotokoll konnte nicht geschrieben werden.</value></data>
   <data name="Cli.WithheldReasons.ScreenUnanswered" xml:space="preserve"><value>  Eine Prüfung, zu welchen Programmen die Dateien gehören, lieferte Antworten, die nicht zu den übergebenen Dateien passten.</value></data>
   <!-- 0 = mode arg, whichever of /s, /d and /m was run: the no-files branch this
        is written from is common to all three, so a fixed mode word here names
-       the wrong flag on two runs in three. Every other entry on this channel
-       opens "{0} mode:", and a filter for delete runs has to find this one.
-       1 = registered package count, 2 = pluralised "package"/"packages". -->
+       the wrong flag on two runs in three, and a filter for delete runs has to
+       find this one.
+       The only argument, and this line takes no count beside it: it answers
+       what the scan found in the folder, and a count of the registrations
+       Windows holds is a different subject, and not one a reader of this log
+       can act on. -->
   <!-- The audit line for the outcome above, so the Application channel splits the
        same three ways stdout does and a monitoring tool is not told a machine is
        clean when the scan could not judge it.
@@ -1775,8 +1778,7 @@ Das Absturzprotokoll konnte nicht geschrieben werden.</value></data>
   <!-- Retired and unread; see the note at Completion.InstanceRefusal. The command line's
        half of the second-instance pair. It said "a second instance" where the window
        said "a second copy of itself": this audience knows the term and that one does
-       not, and the split was deliberate. The event-log line carried no
-       registered-package tail, unlike Cli.EventLogScanNoOrphans above. -->
+       not, and the split was deliberate. -->
   <!-- Retired and unread with the two above. The act-time refusal. It could tell nobody
        to press anything, this surface having no button, so it ends "Run it again." where
        the window's Completion.InstanceRefusal ends "Re-scan to check again." -->

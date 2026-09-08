@@ -511,8 +511,8 @@ To put it back, you need the installer for the version you already have. Get it 
        pass; not the end-of-scan pill (that's Status.ScanComplete). It closes
        the phase that asks Windows and names the one that follows, which is the
        comparison against what the folder holds. No argument, and none belongs:
-       every count this app puts on a screen is a count of files, and no file
-       count is settled until the comparison this line announces. -->
+       nothing this line could count is settled yet, and the count the reader is
+       waiting for arrives on the line after it. -->
   <data name="Status.RegisteredPackagesFound" xml:space="preserve"><value>Matching the files against the installed programs...</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>Scan complete ({0})</value></data>
