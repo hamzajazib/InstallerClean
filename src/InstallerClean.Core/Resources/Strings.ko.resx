@@ -574,13 +574,15 @@
   <!-- Completion screen -->
   <data name="Completion.AllClean" xml:space="preserve"><value>모두 깨끗합니다</value></data>
   <data name="Completion.NothingToCleanUp" xml:space="preserve"><value>{InstallerFolder}에 정리할 것이 없습니다</value></data>
-  <!-- 0 = installed product count, 1 = pluralised "product"/"products",
-       2 = natural-phrasing duration ("1.4 seconds" / "850 ms" /
-       "less than a second"). The count is the receipt that a real
-       scan ran; on fast machines a duration alone reads as "did
-       nothing". Rendered in the Restore slot of the completion
-       overlay so the all-clean state has the same heading + summary
-       + smaller-receipt shape as the post-Move and post-Delete
+  <!-- 0 = how many cached files the scan accounted for, 1 = pluralised
+       "file"/"files" (Plural.File), 2 = natural-phrasing duration
+       ("1.4 seconds" / "850 ms" / "less than a second"). The count is
+       the receipt that a real scan ran; on fast machines a duration
+       alone reads as "did nothing". It is the same number the main
+       window's left-alone line prints, so the overlay and the line
+       behind it say one thing. Rendered in the Restore slot of the
+       completion overlay so the all-clean state has the same heading +
+       summary + smaller-receipt shape as the post-Move and post-Delete
        states. -->
   <data name="Completion.NothingToCleanUpReceipt" xml:space="preserve"><value>{1} {0}개 검사, {2} 소요</value></data>
   <!-- THE SCREEN FOR A MACHINE WHOSE WHOLE OFFER A RULE EMPTIED, which is a different
@@ -1871,8 +1873,10 @@ InstallerClean은 이미 관리자 권한으로 실행 중이었으므로 그런
        which is a different quantity reached by six routes, of which the count
        here is one. -->
   <!-- 0 = mode arg, 1 = registrations naming a file that is not in the cache. The
-       second notice (Event ID 3001), and the actionable one. Unpluralised, as
-       above.
+       second notice (Event ID 3001), and the actionable one. A pair, because the
+       numeral governs a noun and a verb: one entry NAMES a file and affects one
+       program, several NAME files and affect several. A consumer selects on the
+       Event ID rather than on the words, so the two forms cost it nothing.
 
        IT SAYS NOTHING ABOUT WHAT REMOVED THEM AND MUST NOT: every tool that
        deletes from this folder leaves the same record, this one included up to
