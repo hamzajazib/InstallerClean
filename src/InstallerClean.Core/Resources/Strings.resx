@@ -1702,8 +1702,8 @@ The crash log could not be written.</value></data>
   <data name="Cli.WithheldReasons.ScreenUnanswered" xml:space="preserve"><value>  A check on which programs the files belong to gave answers that didn't line up with the files it was handed.</value></data>
   <!-- 0 = mode arg, whichever of /s, /d and /m was run: the no-files branch this
        is written from is common to all three, so a fixed mode word here names
-       the wrong flag on two runs in three. Every other entry on this channel
-       opens "{0} mode:", and a filter for delete runs has to find this one.
+       the wrong flag on two runs in three, and a filter for delete runs has to
+       find this one.
        The only argument, and this line takes no count beside it: it answers
        what the scan found in the folder, and a count of the registrations
        Windows holds is a different subject, and not one a reader of this log
