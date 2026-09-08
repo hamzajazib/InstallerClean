@@ -123,7 +123,8 @@ const ALSO_KEEP = [];
 // {N} set MUST match its base key's set (base = the <Prefix>.Plural sibling if the
 // neutral has one, else the flat key itself), the precondition check-resx-parity.mjs
 // also enforces. Example (Spanish):
-//const OVERRIDES = {};
+//   'Cli.DeletedFiles.One': `Se eliminó definitivamente {0} {1} innecesario.`,
+const OVERRIDES = {};
 
 const MAP = {
   // Window titles
