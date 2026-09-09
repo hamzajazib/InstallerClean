@@ -193,8 +193,25 @@
                         AutomationProperties.HelpText="{loc:Translate Tooltip.BuyMeACuppa.About}"
                         Margin="0,0,0,6"
                         ToolTipService.InitialShowDelay="0">
+                    <!-- Placement Top puts a tooltip's left edge on its button's,
+                         and the cuppa sits after the star on this row, so the
+                         gap between this tooltip and the Section.SayThanks
+                         heading above is set by two strings: the heading, and
+                         the star button's label. Where the heading is long and
+                         that label is short the two meet, and the tooltip reads
+                         as a continuation of the heading rather than as a label
+                         for the button under it. Indonesian is where they come
+                         closest and Turkish is next. The offset carries it clear
+                         whichever language the app is running in, and scales so
+                         it holds that distance as both strings grow.
+
+                         The star's tooltip takes none. It carries a sentence
+                         where this one carries a phrase, so it is the wider of
+                         the two in every language and sits across the heading
+                         rather than meeting its end. -->
                     <Button.ToolTip>
-                        <ToolTip Style="{StaticResource AccentTooltip}" Content="{loc:Translate Tooltip.BuyMeACuppa.About}"/>
+                        <ToolTip Style="{StaticResource AccentTooltip}" Content="{loc:Translate Tooltip.BuyMeACuppa.About}"
+                                 HorizontalOffset="{a11y:TextScaled 32}"/>
                     </Button.ToolTip>
                     <StackPanel Orientation="Horizontal">
                         <Path Data="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
