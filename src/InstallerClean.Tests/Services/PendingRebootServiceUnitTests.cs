@@ -145,6 +145,141 @@ public class PendingRebootServiceUnitTests
         Assert.Equal(@"C:\Windows\Installer\1234.msi", result.Detail);
     }
 
+    /// <summary>
+    /// The marker servicing writes in front of the prefix. Every digit is taken because
+    /// every digit is what the reader in Chromium's installer takes, and pinning the
+    /// range here is what stops it being narrowed later. The Detail assertion is the
+    /// load-bearing one: an entry that does not block, or that blocks without naming
+    /// its file, is the way this handling goes wrong.
+    /// </summary>
+    [Theory]
+    [InlineData("*0")]
+    [InlineData("*1")]
+    [InlineData("*2")]
+    [InlineData("*3")]
+    [InlineData("*4")]
+    [InlineData("*5")]
+    [InlineData("*6")]
+    [InlineData("*7")]
+    [InlineData("*8")]
+    [InlineData("*9")]
+    public void Servicing_marker_before_the_prefix_still_matches(string marker)
+    {
+        Queued(new[] { $@"{marker}\??\C:\Windows\Installer\1234.msi", "" });
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootVerdict.Block, result.Verdict);
+        Assert.Equal(PendingRebootReason.PendingRenameInCache, result.Reason);
+        Assert.Equal(@"C:\Windows\Installer\1234.msi", result.Detail);
+    }
+
+    /// <summary>
+    /// The other half of the same handling, and the half that says the marker was read
+    /// rather than merely carried through: an entry outside the cache is dismissed.
+    /// </summary>
+    [Fact]
+    public void Servicing_marker_on_an_entry_outside_the_cache_returns_clean()
+    {
+        Queued(new[] { @"*1\??\C:\Users\foo.tmp", "" });
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootVerdict.Clean, result.Verdict);
+        Assert.Null(result.Reason);
+    }
+
+    /// <summary>
+    /// The marker comes off before the prefix decides which arm reads the rest, so it
+    /// composes with a volume named rather than lettered exactly as a bare entry does.
+    /// A marker and a volume-GUID spelling are not known to arrive together: this pins
+    /// what the code does with one, not that the queue writes one.
+    /// </summary>
+    [Fact]
+    public void Servicing_marker_on_a_volume_named_by_guid_that_lands_in_the_cache_blocks()
+    {
+        Volume("aaaaaaaa-1111-2222-3333-444444444444", @"\Device\HarddiskVolume3", @"C:\");
+        Queued(@"*1\??\Volume{aaaaaaaa-1111-2222-3333-444444444444}\Windows\Installer\1234.msi", "");
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootVerdict.Block, result.Verdict);
+        Assert.Equal(PendingRebootReason.PendingRenameInCache, result.Reason);
+        Assert.Equal(@"C:\Windows\Installer\1234.msi", result.Detail);
+    }
+
+    /// <summary>
+    /// Both markers on one entry. The order they come off in is the one that reads
+    /// such an entry rather than refusing it.
+    /// </summary>
+    [Fact]
+    public void Servicing_marker_before_a_replace_existing_destination_still_matches()
+    {
+        Queued(new[] { @"\??\C:\Users\elsewhere.tmp", @"*1!\??\C:\Windows\Installer\1234.msi" });
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootVerdict.Block, result.Verdict);
+        Assert.Equal(PendingRebootReason.PendingRenameInCache, result.Reason);
+        Assert.Equal(@"C:\Windows\Installer\1234.msi", result.Detail);
+    }
+
+    /// <summary>
+    /// The marker is taken off wherever it opens an entry, and not only in front of a
+    /// prefix, so a drive-rooted path behind it is read like any other. Nothing is known
+    /// to write a marker with no prefix behind it: this pins what the code does with
+    /// one, not that the queue writes one.
+    /// </summary>
+    [Fact]
+    public void Servicing_marker_without_the_prefix_still_matches()
+    {
+        Queued(new[] { @"*1C:\Windows\Installer\1234.msi", "" });
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootVerdict.Block, result.Verdict);
+        Assert.Equal(PendingRebootReason.PendingRenameInCache, result.Reason);
+        Assert.Equal(@"C:\Windows\Installer\1234.msi", result.Detail);
+    }
+
+    [Fact]
+    public void Servicing_marker_without_the_prefix_outside_the_cache_returns_clean()
+    {
+        Queued(new[] { @"*1C:\Users\foo.tmp", "" });
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootVerdict.Clean, result.Verdict);
+        Assert.Null(result.Reason);
+    }
+
+    /// <summary>
+    /// A second digit is not part of the marker, so what is left is not a path anyone
+    /// can place and the run is held. Both of these pin the width: what is not read as
+    /// a marker stays where an unplaceable entry stays.
+    /// </summary>
+    [Fact]
+    public void A_marker_carrying_more_than_one_digit_blocks()
+    {
+        Queued(new[] { @"*12\??\C:\Users\foo.tmp", "" });
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootVerdict.Block, result.Verdict);
+        Assert.Equal(PendingRebootReason.PendingRenameUnresolved, result.Reason);
+    }
+
+    [Fact]
+    public void An_asterisk_with_no_digit_behind_it_blocks()
+    {
+        Queued(new[] { @"*\??\C:\Users\foo.tmp", "" });
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootVerdict.Block, result.Verdict);
+        Assert.Equal(PendingRebootReason.PendingRenameUnresolved, result.Reason);
+    }
+
     [Fact]
     public void Rename_targets_per_product_folder_blocks()
     {

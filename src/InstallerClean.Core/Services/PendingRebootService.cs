@@ -8,8 +8,9 @@ namespace InstallerClean.Services;
 /// </summary>
 /// <remarks>
 /// Every entry is checked, not just the sources: a queued rename INTO the cache is as
-/// much a reason to keep out as one moving a file within it, and the destination form
-/// is why the leading '!' comes off before anything else.
+/// much a reason to keep out as one moving a file within it, which is why a destination
+/// is read like any other entry. Both of the markers the queue writes in front of a
+/// path come off before the prefix is looked at.
 /// </remarks>
 public sealed class PendingRebootService : IPendingRebootService
 {
@@ -174,10 +175,9 @@ public sealed class PendingRebootService : IPendingRebootService
     /// <summary>
     /// Places one raw entry against the cache folder.
     ///
-    /// The leading '!' comes off first: a destination queued with
-    /// MOVEFILE_REPLACE_EXISTING carries one before the prefix ("!\??\C:\..."), and it
-    /// encodes the replace flag rather than any part of the path, so leaving it on
-    /// means no prefix ever matches and a rename INTO the cache slips the gate.
+    /// <see cref="SkipQueueMarkers"/> runs first: both markers sit in front of the
+    /// prefix, so leaving either one on means no prefix ever matches and a rename
+    /// INTO the cache slips the gate.
     ///
     /// WHAT SURVIVES <see cref="InstallerCacheHelpers.StripLongPathPrefix"/> STILL
     /// CARRYING ITS PREFIX IS THE WHOLE OF WHAT THE VOLUME LOOKUPS ARE FOR, and that is
@@ -190,7 +190,7 @@ public sealed class PendingRebootService : IPendingRebootService
     {
         canonical = null;
 
-        var entry = raw.StartsWith('!') ? raw[1..] : raw;
+        var entry = SkipQueueMarkers(raw);
         var cleaned = InstallerCacheHelpers.StripLongPathPrefix(entry);
 
         foreach (var prefix in NtPathPrefixes)
@@ -200,6 +200,38 @@ public sealed class PendingRebootService : IPendingRebootService
         }
 
         return LocateOrdinaryPath(cleaned, installerRoot, out canonical);
+    }
+
+    /// <summary>
+    /// Takes the queue's own markers off the front of an entry, so that what is handed
+    /// on is the path it names.
+    ///
+    /// There are two of them and neither is any part of a path. An asterisk and one
+    /// decimal digit is what servicing writes in front of the prefix
+    /// ("*1\??\C:\..."), on the source and the destination alike. A '!' is what a
+    /// destination queued with MOVEFILE_REPLACE_EXISTING carries ("!\??\C:\..."),
+    /// where it stands for the replace flag.
+    ///
+    /// ONE DIGIT, WHICH IS WHAT THE READER IN CHROMIUM'S INSTALLER ACCEPTS: an
+    /// asterisk and a single digit, then the prefix. The marker comes off before the
+    /// '!'. Reading a wider range would be guessing at a spelling nobody writes, and a
+    /// spelling this declines to read is left unplaceable, which holds the run rather
+    /// than letting it through.
+    ///
+    /// TAKING A MARKER OFF CANNOT COST A BLOCK. An entry opening with one survives
+    /// <see cref="InstallerCacheHelpers.StripLongPathPrefix"/> whole, matches no
+    /// member of <see cref="NtPathPrefixes"/>, reaches <see cref="LocateOrdinaryPath"/>
+    /// and fails <see cref="Path.IsPathFullyQualified(string)"/>, so the value holding
+    /// it is already held. A value that comes back clean holds no such entry, and one
+    /// that blocks by name blocks on an entry this does not touch.
+    /// </summary>
+    private static string SkipQueueMarkers(string raw)
+    {
+        var entry = raw.Length >= 2 && raw[0] == '*' && char.IsAsciiDigit(raw[1])
+            ? raw[2..]
+            : raw;
+
+        return entry.StartsWith('!') ? entry[1..] : entry;
     }
 
     /// <summary>
