@@ -15,17 +15,11 @@ namespace InstallerClean.Services;
 /// candidate it is cannot be established. That is the whole argument and it does not
 /// distinguish between the members.
 ///
-/// THIS OVERTURNS A DECISION TAKEN TWICE, AND THE REASONING IT OVERTURNS WAS SOUND
-/// ON ITS OWN TERMS. Acting on <see cref="NoExistingAncestor"/> was designed twice
-/// and withdrawn twice, the second time by the session that proposed it, because it
-/// would empty a machine's whole offer because a USB drive was unplugged. That was a
-/// trade-off between an offer and a certainty, and the owner has since ruled the
-/// trade-off away rather than resolved it: where the app can detect that one of its
-/// own checks did not answer, it offers nothing that scan. How often a condition
-/// arises is not admissible in that decision, so the two ordinary machine states
-/// here, an unattached drive and a refused handle, withhold exactly as the other
-/// three do. The old note split the five on that distinction and the split is gone,
-/// because nothing reads it.
+/// ALL FIVE WITHHOLD ALIKE, THE TWO ORDINARY MACHINE STATES INCLUDED. Where the app
+/// can detect that one of its own checks did not answer, it offers nothing that scan,
+/// and how often a condition arises is not admissible in that decision. So an
+/// unattached drive and a refused handle withhold exactly as the other three do, and
+/// nothing here splits the five.
 ///
 /// A REGISTRATION WHOSE FILE IS SIMPLY GONE REACHES NONE OF THESE, which is the
 /// first objection anybody raises and is what keeps the rule off ordinary machines.

@@ -124,21 +124,17 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// <see cref="ProductPatchSet"/> for what the three values mean and
     /// <see cref="ReadProductPatchSet"/> for how each is reached.
     ///
-    /// IT DECIDES WHETHER A CACHED PATCH IS OFFERED, AND THIS NOTE SAID THE OPPOSITE.
-    /// It read "IT DECIDES NOTHING YET AND IS SENT NOWHERE YET", which was true while
-    /// the reading was landing ahead of the rule that consumes it, and stayed on the
-    /// file after that rule landed. Both halves are now false. This dictionary is
+    /// IT DECIDES WHETHER A CACHED PATCH IS OFFERED. This dictionary is
     /// passed to <see cref="ConfirmRemovableAgainstEveryProduct"/>, reaches
     /// <c>JudgeAndWithholdAgainstEveryProductPatchSet</c>, and is read per product by
     /// <see cref="ProductVerdict"/>, which is what stamps the verdict the offer and the
     /// missing-file split both consult. The two counts beside it travel in the opt-in
     /// report through <c>EnumerationCensus</c> and <c>ResultLogEntry</c>.
     ///
-    /// LEAVING IT SAYING OTHERWISE WAS NOT A COSMETIC FAULT. The registry is the half of
+    /// DO NOT READ IT AS MACHINERY WAITING TO BE WIRED UP. The registry is the half of
     /// this verdict that has no index and no early end to be blind to, which is the
-    /// whole reason it is read at all; a reader who believed this note would discount it
-    /// as machinery waiting to be wired up, and with it the one source that cannot be
-    /// silently truncated.
+    /// whole reason it is read at all, and discounting it discards the one source that
+    /// cannot be silently truncated.
     /// </param>
     /// <param name="ProductPatchKeys">
     /// Products whose <c>Patches</c> key opened. Against
@@ -156,22 +152,19 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// between. The figure is dated because it is one machine's state at one moment,
     /// and an undated one reads as current for ever.
     ///
-    /// IT READ "SEEN" UNTIL 3.0.0, AND THE CODE COUNTED WHAT IT SAW. The read stops
-    /// at the first patch declaring itself removable, so the count stopped there
-    /// too. A REPORT FROM AN EARLIER VERSION CARRIES THE OTHER QUANTITY: the two are
-    /// not comparable and must not be summed, and the envelope's app version and
-    /// schema version each separate them.
+    /// THE COUNT IS OF REGISTRATIONS LISTED, NOT OF REGISTRATIONS EXAMINED. The
+    /// per-product read returns at the first patch declaring itself removable. A
+    /// REPORT FROM AN EARLIER SCHEMA CARRIES THE OTHER QUANTITY UNDER THIS NAME: the
+    /// two are not comparable and must not be summed, and the envelope's app version
+    /// and schema version each separate them.
     ///
-    /// THE TWO DATED FIGURES ABOVE ARE UNAFFECTED, AND NOT FOR THE REASON THIS NOTE
-    /// GAVE. It said the read stops early on none of that machine's 147 products
-    /// carrying a Patches key. It stops early on one of them. Read out of that hive on
-    /// 2026-08-28 by two readers taking different routes to the same three numbers: 147
-    /// products carry the key, they hold three patch registrations between them, and one
-    /// of the three declares itself removable, so the loop returns on that product. The
-    /// truncation cost that machine nothing because the product concerned holds exactly
-    /// one registration, which the old code counted before returning. THE FAULT NEEDS A
-    /// PRODUCT WITH A REMOVABLE PATCH AND MORE THAN ONE REGISTRATION, and that machine
-    /// has not got one, which is also why it sat here unseen.
+    /// THE TWO DATED FIGURES ABOVE ARE UNAFFECTED. Read out of that hive on 2026-08-28
+    /// by two readers taking different routes to the same three numbers: 147 products
+    /// carry the key, they hold three patch registrations between them, and one of the
+    /// three declares itself removable, so the loop returns on that product. That
+    /// product holds exactly one registration, so the return costs the count nothing
+    /// there. A DIFFERENCE NEEDS A PRODUCT WITH A REMOVABLE PATCH AND MORE THAN ONE
+    /// REGISTRATION, which that machine does not have.
     /// </param>
     /// <param name="ProductsWithRemovablePatch">
     /// Products where at least one registered patch positively declared itself
@@ -361,11 +354,9 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// receiver would take the second reading. <see cref="ResolverAttempts"/> is
     /// what separates them.
     ///
-    /// BOTH GROUPS NOW DECIDE THE OFFER, AND THE OLD NOTE HERE SAID THE OPPOSITE.
-    /// It said the resolver's five outcomes were read by nothing and existed to size
-    /// a failure before anything was designed around it. That was true for one
-    /// release. From 3.0.0 the five withhold exactly as the four normalisation
-    /// refusals do, on one rule in one place rather than a second quiet copy of one:
+    /// BOTH GROUPS DECIDE THE OFFER. The resolver's five outcomes withhold exactly as
+    /// the four normalisation refusals do, on one rule in one place rather than a
+    /// second quiet copy of one:
     /// FileSystemScanService withholds the whole walk-derived offer where
     /// <c>EnumerationCensus.AnyRecordedPathUnestablished</c> answers true, and that
     /// property is where every population is added to the question.
@@ -1085,13 +1076,10 @@ public sealed class InstallerQueryService : IInstallerQueryService
 
         var packages = claimed.Values.ToList();
 
-        // LIVE, AND ON NO ACCOUNT TO BE DELETED AS DEAD MACHINERY. This note said
-        // the opposite until 3.0.0 restored the superseded offer, and the old
-        // wording was true only while that class was not offered: with nothing
-        // removable in the result no row reached here, so the loop ran over
-        // nothing. Rows reach it again. A superseded row on a machine whose patch
-        // sets read clean arrives here still carrying IsRemovable, and this loop
-        // is what takes it off the offer when the scan lost a claim.
+        // LIVE, AND ON NO ACCOUNT TO BE DELETED AS DEAD MACHINERY. A superseded row
+        // on a machine whose patch sets read clean arrives here still carrying
+        // IsRemovable, and this loop is what takes it off the offer when the scan
+        // lost a claim.
         //
         // Measured rather than argued: the same machine that offers such a patch
         // withholds it once one product's LocalPackage read fails, which is this
@@ -1351,13 +1339,10 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// that could not answer makes it non-removable AND withheld, which is the
     /// existing "this scan could not prove it" state, counted and surfaced as such.
     ///
-    /// IT IS THE CONDITION THE SUPERSEDED OFFER RESTS ON, and this note said the
-    /// opposite until 3.0.0 restored that offer. While the class was not offered
-    /// no row carried a removable verdict for it to confirm, so it returned at its
-    /// first guard and cost nothing. Rows reach it again, and a superseded patch
-    /// is offered only where this pass has asked every product it knows of and
-    /// none of them still holds it. Emptiness here is a machine with nothing
-    /// removable, never a mechanism that is not needed.
+    /// IT IS THE CONDITION THE SUPERSEDED OFFER RESTS ON. A superseded patch is
+    /// offered only where this pass has asked every product it knows of and none of
+    /// them still holds it. Emptiness here is a machine with nothing removable, never
+    /// a mechanism that is not needed.
     ///
     /// AND EMPTINESS NO LONGER RETURNS AT THE TOP, which is a separate statement
     /// and the one most likely to be undone by somebody restoring an obvious
@@ -1518,8 +1503,8 @@ public sealed class InstallerQueryService : IInstallerQueryService
             claimed, patchClaims, holders, recovered, reach, registryPatchSets, apiPatchSets,
             DeclaredTargetsFor, ct);
 
-        // NOW the empty work list settles it. Everything below is per-pairing and there
-        // are no pairings to ask about; see the note where this guard used to sit.
+        // An empty work list settles it. Everything below is per-pairing and there are
+        // no pairings to ask about.
         if (toConfirm.Count == 0) return;
 
         foreach (var (path, patchCode) in toConfirm)
@@ -1638,15 +1623,14 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// that would overturn it.
     ///
     /// THE DOCUMENTED BLIND SPOT IS ON THE SID PARAMETER, SO IT IS NOT THIS ROUTE'S
-    /// ALONE, AND THIS NOTE READ AS THOUGH IT WERE. Microsoft prints the limitation on
+    /// ALONE. Microsoft prints the limitation on
     /// <c>szUserSid</c>: "When enumerating for a user other than current user, any
     /// patches that were applied in a per-user-unmanaged context using a version less
     /// than Windows Installer version 3.0, are not enumerated". The per-product
     /// <see cref="EnumeratePatches"/> passes that product's own SID and context into
-    /// the same export, so it carries the same limitation. "Invisible here" invited a
-    /// reader to take the per-product loop as the complete half, and
-    /// <c>MergeClaim</c>'s downgrade-only rule is argued from that loop producing
-    /// every product's claims.
+    /// the same export, so it carries the same limitation. DO NOT TAKE THE PER-PRODUCT
+    /// LOOP AS THE COMPLETE HALF: <c>MergeClaim</c>'s downgrade-only rule is argued
+    /// from that loop producing every product's claims.
     ///
     /// WHAT COVERS BOTH IS THE KEYED READ, AND THAT IS WHY THIS IS NOT THE ONLY ROUTE.
     /// The patch file's own declared targets are read alongside, and the keyed
@@ -1778,9 +1762,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// product enumeration never returned it, nothing puts it into the per-product
     /// condition's set, so its removable patch cannot overturn a clean verdict.
     ///
-    /// AND THERE IS A DOCUMENTED PRODUCER FOR EXACTLY THAT, which a version of this
-    /// note asserted did not exist and which was on this project's own register of
-    /// such routes three weeks before that was written. <c>MsiApplyPatchW</c> with
+    /// AND THERE IS A DOCUMENTED PRODUCER FOR EXACTLY THAT. <c>MsiApplyPatchW</c> with
     /// <c>INSTALLTYPE_SINGLE_INSTANCE</c>: "the installer applies the patch to the
     /// product specified by szInstallPackage. In this case, other eligible products
     /// listed in the patch package are ignored and the szInstallPackage parameter
@@ -1807,9 +1789,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// </summary>
     /// <param name="unreadable">
     /// True where the file did not yield an identity, WHICH INCLUDES A FILE THAT IS
-    /// NOT THERE. This said the opposite until 2026-08-21, and the sentence it carried
-    /// ("an absent file is not unreadable: there is nothing there to remove and nothing
-    /// to withhold") described an intention the code has never had: the read below is
+    /// NOT THERE. The read below is
     /// the only test, and a path naming no file fails it like any other. A patch whose
     /// own declaration cannot be read has not been shown to be unneeded by anybody, so
     /// the caller withholds rather than proceeding on the other two routes alone, and
@@ -2082,9 +2062,8 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// a registration names and settles nothing about whether that file may go, so a
     /// row it repairs arrives at the offer's conditions unprivileged and is judged
     /// there. That is the whole argument and there is nothing in it that a later
-    /// release can falsify: this paragraph used to say the expansion could only ever
-    /// move a file OFF the offer, which was true only while the superseded class was
-    /// not offered at all, and 3.0.0 put that class back.
+    /// release can falsify, because it turns on where a repaired row is judged rather
+    /// than on which classes are offered.
     ///
     /// HOW OFTEN THE FORM OCCURS IS NOT WHAT MAKES THE HANDLING RIGHT, so no
     /// prevalence finding stands behind it and none is needed. What there is is one
@@ -2185,10 +2164,8 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// file is offered: from 3.0.0 the refusal is counted, and
     /// <c>EnumerationCensus.AnyRecordedPathUnestablished</c> withholds the whole
     /// walk-derived offer on it, because the app cannot say WHICH candidate the
-    /// unresolved claim meant and so cannot hold back a narrower set. This paragraph
-    /// used to end "and its file is still offered", which was true when it was
-    /// written and is the sentence to check against the code rather than against its
-    /// own reasoning. (Resolve, not expand: two different operations are in this
+    /// unresolved claim meant and so cannot hold back a narrower set.
+    /// (Resolve, not expand: two different operations are in this
     /// method and the one word was doing for both. The kernel resolving a final
     /// path is <see cref="InstallerCacheHelpers.TryResolveFinalPath"/>, which
     /// answers yes or no; expanding an environment variable is the paragraph above,
@@ -3039,13 +3016,11 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // The products each path's codes are registered to, from the claims and from
         // route A.
         //
-        // THIS NOTE SAID ROUTE A BEING NULL WAS "ALREADY ANSWERED BY THE CALLER, WHICH
-        // WITHHOLDS EVERY PATH ON IT", AND THAT WAS TRUE OF ONLY HALF THE ROWS. The
-        // caller's downgrade takes a removable verdict away and skips a row that has
-        // none, so it never reaches a row that was never removable. An obsoleted
-        // registration is exactly that. Those rows read their verdict from this pass and
-        // from nowhere else, so a null route A has to be answered here as well; see where
-        // the verdict is seeded below.
+        // A NULL ROUTE A IS ANSWERED HERE AND NOT ONLY BY THE CALLER. The caller's
+        // downgrade takes a removable verdict away and skips a row that has none, so it
+        // never reaches a row that was never removable. An obsoleted registration is
+        // exactly that, and those rows read their verdict from this pass and from
+        // nowhere else; see where the verdict is seeded below.
         var productsByPath = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
         foreach (var claim in patchClaims)
         {
@@ -3586,13 +3561,12 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// that wrote no GUID): each one is an installed product whose patches will
     /// never be enumerated.
     ///
-    /// IT IS ONE WAY INTO ONE SUMMAND, AND THIS NOTE PRESENTED IT AS ONE LOSS OF
-    /// THREE. It reaches <c>unreadableProducts</c>, which the API loop also raises
-    /// per product on an unreadable LocalPackage, on a patch enumeration that came
+    /// IT IS ONE WAY INTO ONE SUMMAND. It reaches <c>unreadableProducts</c>, which
+    /// the API loop also raises per product on an unreadable LocalPackage, on a patch
+    /// enumeration that came
     /// back incomplete, and on an unreadable LocalPackage under one of that product's
     /// patches. <see cref="InstallerQueryResult.RecordsIncomplete"/> is built from
-    /// that count plus <c>apiNeverClaimed</c> and <c>unresolvedProducts</c>, neither
-    /// of which appeared in the sentence this replaces, and
+    /// that count plus <c>apiNeverClaimed</c> and <c>unresolvedProducts</c>, and
     /// <see cref="InstallerQueryResult.UnaccountedProductCount"/> sets out the four
     /// contributors those three summands carry. Read that note before quoting any of
     /// this: two of the four are not failures to read at all.

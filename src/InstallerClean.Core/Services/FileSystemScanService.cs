@@ -394,10 +394,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // where that is not a read failure, so no counter fires and no gate
         // refuses, while the file it means sits in the folder under a spelling the
         // identity match cannot reach because there is nothing to open. Never
-        // observed, on any machine. It stands open and unguarded rather than
-        // closed, and saying so here is the point of this note: two designs to
-        // close it have been proposed and both were withdrawn, the second by its
-        // own author.
+        // observed, on any machine.
         //
         // THE SCREEN NARROWS THAT ONE WITHOUT CLOSING IT, and the half it leaves is
         // the half to remember. Where such a candidate is an installation package
@@ -427,15 +424,11 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // a file back is this app working. The alternative is offering a file it
         // cannot say is spare, and the two are not comparable.
         //
-        // IT CAN NOW BE CAUSED BY AN ABSENCE OR BY A PERMISSION, AND THAT IS THE
-        // CHANGE 3.0.0 MAKES. This comment used to say the opposite, and said it as
-        // the thing separating this rule from two designs that were withdrawn: those
-        // acted on an unattached drive, and emptying a machine's whole offer because a
-        // USB stick was unplugged was judged too much to pay. The owner has since ruled
-        // that trade-off away. Where the app can detect that one of its own checks did
-        // not answer, it offers nothing that scan, and no weighing of how often the
-        // condition arises enters it. So an unattached drive, an unmapped share and a
-        // refused handle now withhold alongside a value that is not a path.
+        // IT CAN BE CAUSED BY AN ABSENCE OR BY A PERMISSION. Where the app can detect
+        // that one of its own checks did not answer, it offers nothing that scan, and
+        // no weighing of how often the condition arises enters it. So an unattached
+        // drive, an unmapped share and a refused handle withhold alongside a value
+        // that is not a path.
         //
         // A REGISTRATION WHOSE FILE IS SIMPLY GONE STILL REACHES NONE OF THIS, which is
         // the first objection anybody raises and remains the answer to it. The resolver
@@ -860,14 +853,12 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // it has and what the folder holds have not correlated, and no healthy
         // machine looks like that.
         //
-        // ONE RULE FOR EVERY ROW, which it was not: a survivor is a registered
-        // path that lexically names a file directly in the walked folder AND is
-        // on disk. It used to be the non-removable rows counted on File.Exists
-        // alone, with no containment test of any kind, plus the removable ones
-        // counted only after the containment guard passed. A handful of packages
-        // cached under a user profile, which exist and are nowhere near the
-        // folder, then held the count above the absolute bound and disarmed this
-        // gate permanently on a machine whose correlation was wholly broken.
+        // ONE RULE FOR EVERY ROW: a survivor is a registered path that lexically
+        // names a file directly in the walked folder AND is on disk. DO NOT COUNT
+        // ANY ROW ON File.Exists ALONE. A handful of packages cached under a user
+        // profile exist and are nowhere near the folder, and counting them holds the
+        // count above the absolute bound, which disarms this gate on exactly the
+        // machine whose correlation is broken.
         // Paths are normalised before they are claimed, in InstallerQueryService's
         // NormaliseLocalPackagePath, which is what makes a lexical test the right
         // one here.
@@ -1034,15 +1025,9 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// costs one handle per registration and nothing more. Nothing is opened at all
     /// where there are no candidates, or where no registration yielded an identity.
     ///
-    /// A FAILED READ IS A WITHHOLDING GIVEN UP, AND UNTIL 3.0.0 THIS NOTE SAID THE
-    /// OPPOSITE. It read "every failure leaves the candidate where it was": a
-    /// registration path that will not open contributes no identity and claims
-    /// nothing extra, a candidate that will not open is compared against nothing and
-    /// carries on being judged by everything downstream. That is sound about a pass
-    /// that only subtracts and false about the machine. The registration this pass
-    /// could not identify is one whose cached file is sitting in the candidate list
-    /// unclaimed, and it was being offered. Both reads are now counted, and both
-    /// answers are acted on.
+    /// A FAILED READ IS A WITHHOLDING GIVEN UP. The registration this pass could not
+    /// identify is one whose cached file is sitting in the candidate list unclaimed,
+    /// so both reads are counted and both answers are acted on.
     ///
     /// THE TWO SIDES ACT DIFFERENTLY AND THE ASYMMETRY IS THE WHOLE DESIGN. A
     /// registration nobody could identify might name ANY candidate in the list, and
@@ -1327,12 +1312,11 @@ public sealed class FileSystemScanService : IFileSystemScanService
     ///
     /// IT FEEDS THREE COUNTS, AND THROUGH ONE OF THEM IT CAN REFUSE THE WHOLE SCAN.
     /// <c>registeredNamingFolder</c> and <c>registeredInFolderPresent</c> are the two
-    /// correlation counts. <c>missingInFolder</c> is the third and this note left it
-    /// out: it is the other term in the proportional clause that throws
-    /// <c>Error_ScanCorrelationFailed</c>, so an audit of what that gate rests on has
-    /// to be able to reach it from the predicate the gate is built on. No individual
-    /// file's fate turns on any of the three, which is what "decides nothing about any
-    /// file" was reaching for and is worth keeping in those narrower words.
+    /// correlation counts. <c>missingInFolder</c> is the third: it is the other term
+    /// in the proportional clause that throws <c>Error_ScanCorrelationFailed</c>, so
+    /// an audit of what that gate rests on has to be able to reach it from the
+    /// predicate the gate is built on. NO INDIVIDUAL FILE'S FATE TURNS ON ANY OF THE
+    /// THREE.
     ///
     /// NOT A GATE, and the distance from <see cref="CandidateGuard.CheckSafeToRemove"/>
     /// is why it exists rather than borrowing that. The guard asks the kernel
@@ -1400,8 +1384,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// an 8.3 short name), and it is the test the classification loop applies to
     /// every candidate anyway.
     ///
-    /// The three things the enumeration options used to say, said here instead,
-    /// because the entry's own metadata is wanted and only the
+    /// The three things the enumeration options would otherwise carry are stated
+    /// here instead, because the entry's own metadata is wanted and only the
     /// <see cref="IDirectoryInfo"/> form carries it, and that form rejects a
     /// changed AttributesToSkip under the test double (System.IO.Abstractions
     /// 22.2.0 raises NotSupportedException). SearchOption.TopDirectoryOnly maps

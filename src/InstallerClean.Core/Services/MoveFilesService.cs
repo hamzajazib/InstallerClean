@@ -357,10 +357,9 @@ public sealed class MoveFilesService : IMoveFilesService
                     // the reparse read, the containment guard's real-filesystem
                     // resolution and the destination Exists test all sit after it,
                     // and each of them can go to a network destination inside the
-                    // machine-wide mutex. Small, and not nothing. This used to be
-                    // the worse claim it now is not: the destination test was a
-                    // collision loop bounded at 10,000 probes, so the window it left
-                    // open was up to 10,000 round trips rather than one.
+                    // machine-wide mutex. Small, and not nothing. KEEP THE
+                    // DESTINATION TEST A SINGLE PROBE: a collision loop would make
+                    // the window as many round trips as it is bounded at.
                     //
                     // THAT LIST OF FOUR IS A SPECIFICATION AND NOT A DESCRIPTION. It
                     // is what makes the size of the window a stated figure rather

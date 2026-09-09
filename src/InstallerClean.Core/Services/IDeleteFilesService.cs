@@ -114,11 +114,9 @@ public interface IDeleteFilesService
 /// producers hold back different files, so the run's one held-back line counts
 /// both and neither host prints twice.
 ///
-/// THE COUNTS OUTLIVED THE SENTENCES THEY WERE FOR. Until 3.0.0 the user was shown
-/// one line per cause, and this note gave that as the reason for carrying them
-/// through. The line names no cause now, and these are still carried because they
-/// travel in the opt-in result log, which is the only place the causes can still
-/// be told apart on a real machine.
+/// THE COUNTS ARE CARRIED THOUGH THE LINE NAMES NO CAUSE. They travel in the
+/// opt-in result log, which is the only place the causes can be told apart on a
+/// real machine.
 /// </param>
 public record DeleteResult(
     int DeletedCount,

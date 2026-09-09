@@ -274,9 +274,7 @@ public enum HeldBackReason
 /// THEY ARE INSTRUMENTATION NOW RATHER THAN COPY. The report reads
 /// <see cref="Total"/> and nothing else, one sentence naming no cause; these four
 /// travel in the opt-in result log, which is the only place the causes can still be
-/// told apart on a real machine. This note used to justify them by a sentence being
-/// false of four files in five, which was the argument for the partition that
-/// replaced them.
+/// told apart on a real machine.
 ///
 /// The paths themselves are carried alongside by whichever result holds this. Every
 /// producer increments at the point it adds the path, so the two cannot come apart,

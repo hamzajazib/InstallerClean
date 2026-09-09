@@ -120,14 +120,10 @@ public static class FileIdentityReadOutcomes
 /// the same file, so a registration whose path OPENS is matched to its file
 /// whatever it was written as, and no list has to be right.
 ///
-/// A FAILED READ IS NOT A NEUTRAL ANSWER AND THIS INTERFACE USED TO SAY IT WAS.
-/// The old contract read "it only ever withholds, and that is what makes it safe
-/// to add": a path that will not open yields no identity, so it claims nothing
-/// extra and the candidate goes on being judged by everything downstream. That is
-/// sound about a pass that only subtracts and false about the machine. The
-/// registration whose path would not open is one whose cached file is in the
-/// folder unclaimed, and the app was offering it. From 3.0.0 every outcome above
-/// is counted and the four give-ups are acted on, at
+/// A FAILED READ IS NOT A NEUTRAL ANSWER. A path that will not open yields no
+/// identity, and the registration behind it is one whose cached file is sitting in
+/// the folder unclaimed. Every outcome above is counted and the four give-ups are
+/// acted on, at
 /// <c>FileSystemScanService.DropCandidatesRegisteredUnderAnotherSpelling</c>.
 ///
 /// THE DIRECTION OF A FAULT IN HERE IS UNCHANGED, which is worth keeping apart

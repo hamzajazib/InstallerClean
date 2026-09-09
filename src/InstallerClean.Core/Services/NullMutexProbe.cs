@@ -8,12 +8,10 @@ namespace InstallerClean.Services;
 /// always gets the real <see cref="MutexProbe"/> through DI.
 /// </summary>
 /// <remarks>
-/// It used to report "could not acquire, nothing shown to be holding it"
-/// instead, which meant the same thing back when both services ran on without
-/// the hold. Both refuse that answer now, so reporting it here would have every
-/// test built through those constructors exercise the refusal path rather than
-/// the move or delete it was written for, and pass or fail for a reason
-/// unrelated to its subject.
+/// DO NOT MAKE IT REPORT "could not acquire, nothing shown to be holding it".
+/// Both services refuse that answer, so every test built through those
+/// constructors would exercise the refusal path rather than the move or delete it
+/// was written for, and pass or fail for a reason unrelated to its subject.
 ///
 /// So the fall-back is deliberately NOT what this stands for. A test that means
 /// to drive an acquire failure says so with <c>FakeMutexProbe</c>, whose modes
