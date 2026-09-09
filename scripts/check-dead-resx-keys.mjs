@@ -44,9 +44,9 @@ const RESX = `${SRC}/InstallerClean.Core/Resources/Strings.resx`;
 const ALLOWLIST = new Set([
   // Both were the body-row status line for a cancelled Move/Delete. That copy
   // moved to the completion overlay once a cancelled run's partial tally was
-  // made to survive, leaving these two with no code consumer. The owner kept
-  // them: they are between uses, not dead, so the guard passes them rather than
-  // the resx losing a string a later state might want back.
+  // made to survive, leaving these two with no code consumer. They are kept
+  // deliberately, being between uses rather than dead, so the guard passes them
+  // rather than the resx losing a string a later state might want back.
   'Status.MoveCancelled.Partial',
   'Status.DeleteCancelled.Partial',
 

@@ -85,8 +85,8 @@ const OVERRIDES = {
   // joined to, so the adjective is the only word the numeral governs and it takes
   // its own form at 2-4.
   'Summary.RegisteredWindow.Missing.Few': `{0} brakujące`,
-  // Completion.PermanentDeleteSummary.Few was removed in the 3.0.0 round, for the
-  // reason above: "Trwale usunięto" is impersonal and the counted noun comes from
+  // Completion.PermanentDeleteSummary carries no .Few override, for the reason
+  // above: "Trwale usunięto" is impersonal and the counted noun comes from
   // Plural.File, so the paucal band needs no sentence of its own.
   'Summary.MissingFromDisk.Unnamed.Few': `{0} pliki, dla których rekordy nie wskazują programu`,
   'Summary.MissingFromDisk.OtherPrograms.Few': `jeszcze {0} programy`,

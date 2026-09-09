@@ -503,23 +503,21 @@ const OVERRIDES = {
   'Plural.Patch.Few': `исправления`,
   'Summary.RegisteredStillUsed.Few': `{0} файла оставлено без изменений`,
   'Summary.OrphanedToCleanUp.Few': `{0} ненужных файла для очистки`,
-  // Summary.MissingFromDisk.Few was removed in the 3.0.0 round. After the
+  // Summary.MissingFromDisk carries no .Few override. After the
   // preposition the noun takes the prepositional plural at 2-4 and at 5+ alike
-  // ("о 2 файлах", "о 5 файлах"), so the paucal form is the base form and the
-  // override said the same thing twice. It had been holding a superseded English
-  // sentence, which neither arm of the still-English gate can see: not equal to the
-  // current neutral, and its base not equal either.
+  // ("о 2 файлах", "о 5 файлах"), so the paucal form is the base form and an
+  // override would say the same thing twice.
   // 2-4 takes the accusative-plural "установленные программы"; the base Plural
   // key carries the 5+ genitive "установленных программ".
   'Summary.RegisteredWindow.Few': `{0} файла оставлено без изменений ({1})`,
-  // Completion.PermanentDeleteSummary.Few was removed in the 3.0.0 round. The
+  // Completion.PermanentDeleteSummary carries no .Few override. The
   // participle is impersonal ("удалено") and does not move between the paucal and
-  // the 5+ band, and the noun inflects through Plural.File, so the .Few form came
-  // out byte-identical to the base and was the same sentence twice. An absent
-  // override falls back to the base, which is the form wanted here.
-  // Completion.ReverifyIdentityUnreadable.One was added and removed again in the 3.0.0 round. Its base is
+  // the 5+ band, and the noun inflects through Plural.File, so a .Few form would
+  // come out byte-identical to the base. An absent override falls back to the
+  // base, which is the form wanted here.
+  // Completion.ReverifyIdentityUnreadable carries no .One override. Its base is
   // one of the two retired identity causes: no code reads it, so nothing passes
-  // the prefix to Pluralise and the override could never be selected.
+  // the prefix to Pluralise and an override could never be selected.
   // CountedStringTests.Every_satellite_override_belongs_to_a_counted_prefix is
   // what says so. The base string itself stays translated, which is the point of
   // keeping those two keys at all.
