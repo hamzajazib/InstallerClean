@@ -140,7 +140,7 @@
          popup from what it is drawn over, where this one has to be findable. -->
     <SolidColorBrush x:Key="Border.Control" Color="{StaticResource Primitive.Slate.500}"/>
 
-    <!-- Progress. Its own role rather than the accent fill it used to share,
+    <!-- Progress. Its own role rather than the accent fill,
          because a progress bar is measured against its own track and the
          accent is 2.33:1 there. Indigo.400 is 4.90:1 on the Surface.Sidebar
          track the three bars sit in and 5.98:1 on the card behind the

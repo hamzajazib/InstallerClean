@@ -471,11 +471,11 @@ public partial class ScanViewModel : ObservableObject
                 result.Withholding != WithholdingAccount.Nothing && orphanedCount > 0
                     ? withheld.Count
                     : 0;
-            // OFF THE SCAN'S OWN COST FIGURE, not off the machine-wide trigger the
-            // line used to read. ScanResult.UnaccountedProductCount is untouched and
-            // still travels in the opt-in report and the command line's event log; it
-            // simply no longer decides what this window says, being the trigger for
-            // one of six routes into the count rather than a count of files.
+            // OFF THE SCAN'S OWN COST FIGURE, never off the machine-wide trigger.
+            // ScanResult.UnaccountedProductCount travels in the opt-in report and the
+            // command line's event log and decides nothing this window says, being the
+            // trigger for one of six routes into the count rather than a count of
+            // files.
             //
             // THE THREE FOOTNOTE COUNTS ARE ASSIGNED IN THE ORDER THEIR LINES ARE
             // DRAWN, and this is the middle one. Each assignment raises the

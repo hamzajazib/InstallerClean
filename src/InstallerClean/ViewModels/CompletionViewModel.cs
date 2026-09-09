@@ -373,11 +373,10 @@ public partial class CompletionViewModel : ObservableObject
     /// ONE SENTENCE, NAMING NO CAUSE, AND IT IS CORE'S
     /// (<see cref="HeldBackReport.Line"/>) because the command line prints the same
     /// one and the two hosts must not answer differently for one machine state.
-    /// There were four until 3.0.0, one per cause, and this note argued for them on
-    /// the ground that a sentence chosen for the batch would be false of some of
-    /// its files. It is not chosen: every file on the line was offered by the scan
-    /// and not confirmed by the check made immediately before acting, which is true
-    /// of all four causes by construction. The causes survive as counts on
+    /// The sentence is not chosen for the batch: every file on the line was offered
+    /// by the scan and not confirmed by the check made immediately before acting,
+    /// which is true of all four causes by construction. The causes are carried as
+    /// counts on
     /// <see cref="HeldBackReasons"/> and in the opt-in result log.
     ///
     /// Nothing left to join, so it is read by a wrapping TextBlock as it comes. The
@@ -697,31 +696,22 @@ public partial class CompletionViewModel : ObservableObject
         //
         // Not Completion_AllClean, which ShowAllClear uses correctly for a machine
         // with nothing to do. Here everything the user confirmed was kept back,
-        // which is not the same as there having been nothing to remove, and the
-        // screen previously read "All clean" over a summary naming the causes.
+        // which is not the same as there having been nothing to remove.
         //
         // And per button rather than one word for both, because the user pressed
         // Move or pressed Delete and a heading naming neither is a word they never
-        // asked for. It read "Nothing removed" whichever was pressed. The pass that
-        // took "All clean" off this screen invented that string with both of these
-        // already in the file and already picked between by ShowMoveSummary and
-        // ShowDeleteSummary above, because it was aimed at the word that was wrong
-        // rather than at the choice behind it. A comment justifying half a decision
-        // is how the other half gets lost, so this one carries both.
+        // asked for. Both strings are already in the file and already picked between
+        // by ShowMoveSummary and ShowDeleteSummary above, so DO NOT REPLACE THE PAIR
+        // WITH ONE WORD: the wording and the per-button choice are two decisions and
+        // changing the first must not quietly settle the second.
         Heading = deleting ? Strings.Completion_NothingDeleted : Strings.Completion_NothingMoved;
         FailedCount = string.Empty;
         SummaryDestination = string.Empty;
-        // EVERY CAUSE REACHES THE COUNT AND NO CONDITION OVERRIDES IT. One did until
-        // 3.0.0: the machine gaining a product
-        // installed as a second instance of itself between the scan and the click,
-        // which was not a finding about the files at all, so no file in the batch was
-        // at fault and the per-file causes had nothing to say about any of them. It
-        // went with the check that detected it.
+        // EVERY CAUSE REACHES THE COUNT AND NO CONDITION OVERRIDES IT.
         //
-        // A WHOLE-BATCH CONDITION RETURNING WOULD NOW NEED LESS, NOT THE SAME, which
-        // is why this is not left as it stood: the line names no cause, so such a
-        // condition needs no sentence of its own and no override, only a count that
-        // reaches Total like every other.
+        // A WHOLE-BATCH CONDITION ARRIVING LATER NEEDS ONLY A COUNT THAT REACHES
+        // Total, LIKE EVERY OTHER. The line names no cause, so such a condition needs
+        // no sentence of its own and no override.
         Summary = SkippedText(reverify);
         Restore = string.Empty;
         Errors = string.Empty;

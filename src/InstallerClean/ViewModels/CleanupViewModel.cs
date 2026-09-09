@@ -1060,8 +1060,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // Cancelled mid-batch: the service returned what completed rather
                 // than throwing the tally away. Report the partial on the
                 // completion overlay, and write no result-log entry for a
-                // cancelled run (the owner's decision keeps the public reports
-                // stats meaning what they mean). Only raise the overlay when
+                // cancelled run, which keeps the public reports stats meaning
+                // what they mean. Only raise the overlay when
                 // something actually moved or errored; a cancel that reached no
                 // file just clears.
                 await RefreshAfterBatchAsync();
@@ -1525,15 +1525,13 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         if (heldBack.Count == 0) return reverify;
 
         var condemned = new HashSet<string>(heldBack, StringComparer.OrdinalIgnoreCase);
-        // A with-expression rather than a rebuild, and that is the whole of why
-        // SiblingPatchClaims is still here. The positional form named four of the
-        // record's five members, the fifth defaulted to empty, and the result was a
-        // batch with no siblings: the exact pairing UnderLeaseClaims was created to
-        // make unconstructible, and whose detector was removed on the ground that
-        // it had become so. This form carries whatever the author did not name, so
-        // a member added to ReverifyResult later arrives here without anybody
-        // having to remember it. The fault stops being available rather than being
-        // fixed once.
+        // A WITH-EXPRESSION RATHER THAN A REBUILD, and that is the whole of why
+        // SiblingPatchClaims is still here. A positional form naming four of the
+        // record's five members leaves the fifth at its default, which is a batch
+        // with no siblings: the exact pairing UnderLeaseClaims exists to make
+        // unconstructible. This form carries whatever the author did not name, so a
+        // member added to ReverifyResult later arrives here without anybody having
+        // to remember it.
         //
         // AND THE SIBLING LIST PASSES THROUGH UNFILTERED, WHICH IS NOT AN OVERSIGHT
         // AND IS THE THING TO GET WRONG HERE. The surviving claims are keyed by
