@@ -701,28 +701,45 @@
               KeyboardNavigation.TabNavigation="Cycle"
               KeyboardNavigation.ControlTabNavigation="Cycle">
             <chrome:DecorativeBorder Background="{StaticResource Surface.Overlay}"/>
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <ProgressBar IsIndeterminate="True" Width="240" Height="8" Margin="{StaticResource GapBottom.Md}"
-                             AutomationProperties.Name="{loc:Translate Automation.ScanningProgress}"/>
-                <TextBlock Text="{Binding Scan.ScanProgress}" Foreground="{StaticResource Text.Heading}"
-                           FontSize="{DynamicResource Type.Heading.Sm}" HorizontalAlignment="Center" Margin="{StaticResource GapBottom.Sm}"
-                           AutomationProperties.LiveSetting="Polite"/>
-                <!-- Per-product ticker: names each package as the
-                     enumeration passes it. Display-only; no LiveSetting,
-                     because it updates once per installed product and a
-                     live region would queue one announcement per product.
-                     The milestone line above stays the announced one. -->
-                <TextBlock Text="{Binding Scan.ScanTicker}"
-                           Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Caption}"
-                           HorizontalAlignment="Center" Margin="{StaticResource GapBottom.Lg}"
-                           TextTrimming="CharacterEllipsis" MaxWidth="{a11y:TextScaled 240}"/>
-                <Button x:Name="ScanCancelButton" Style="{StaticResource GhostPill}"
-                        Content="{loc:Translate Action.Cancel}" Command="{Binding Scan.CancelScanCommand}"
-                        MinHeight="28" Padding="16,0" FontSize="{DynamicResource Type.Body}"
-                        HorizontalAlignment="Center"
-                        FocusVisualStyle="{StaticResource SmallPillFocusVisual}"
-                        AutomationProperties.Name="{loc:Translate Automation.CancelScan}"/>
-            </StackPanel>
+            <!-- Opaque card over the dim, as on the operating overlay below and
+                 on the confirm dialogs. Without it the bar and the milestone
+                 line sit straight on the half-transparent dim and the summary
+                 rows behind them read through.
+
+                 Width is fixed rather than taken from the content. The milestone
+                 line is replaced at each step of a scan and the steps are
+                 different lengths, so a card that took its width from the text
+                 would resize several times in one scan. The line wraps inside the
+                 fixed width instead: it holds the longest English step on one
+                 line, and the longer German ones take two. Scaled, so the card
+                 keeps pace with the text it holds. -->
+            <Border Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.Pill}"
+                    Padding="28,22" Width="{a11y:TextScaled 480}"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <ProgressBar IsIndeterminate="True" Width="240" Height="8" Margin="{StaticResource GapBottom.Md}"
+                                 AutomationProperties.Name="{loc:Translate Automation.ScanningProgress}"/>
+                    <TextBlock Text="{Binding Scan.ScanProgress}" Foreground="{StaticResource Text.Heading}"
+                               FontSize="{DynamicResource Type.Heading.Sm}" TextWrapping="Wrap" TextAlignment="Center"
+                               Margin="{StaticResource GapBottom.Sm}"
+                               AutomationProperties.LiveSetting="Polite"/>
+                    <!-- Per-product ticker: names each package as the
+                         enumeration passes it. Display-only; no LiveSetting,
+                         because it updates once per installed product and a
+                         live region would queue one announcement per product.
+                         The milestone line above stays the announced one. -->
+                    <TextBlock Text="{Binding Scan.ScanTicker}"
+                               Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Caption}"
+                               HorizontalAlignment="Center" Margin="{StaticResource GapBottom.Lg}"
+                               TextTrimming="CharacterEllipsis" MaxWidth="{a11y:TextScaled 240}"/>
+                    <Button x:Name="ScanCancelButton" Style="{StaticResource GhostPill}"
+                            Content="{loc:Translate Action.Cancel}" Command="{Binding Scan.CancelScanCommand}"
+                            MinHeight="28" Padding="16,0" FontSize="{DynamicResource Type.Body}"
+                            HorizontalAlignment="Center"
+                            FocusVisualStyle="{StaticResource SmallPillFocusVisual}"
+                            AutomationProperties.Name="{loc:Translate Automation.CancelScan}"/>
+                </StackPanel>
+            </Border>
         </Grid>
 
         <!-- Operating overlay -->
