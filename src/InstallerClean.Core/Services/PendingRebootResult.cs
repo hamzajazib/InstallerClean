@@ -40,7 +40,7 @@ public enum PendingRebootReason
     /// <summary>HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\InProgress exists: a previous Windows Installer transaction is suspended. Source: MS Learn, Msizap Remarks.</summary>
     InstallerInProgress,
 
-    /// <summary>An entry in HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\PendingFileRenameOperations targets a path under %SystemRoot%\Installer. Source: MS Learn, MoveFileExA.</summary>
+    /// <summary>An entry in HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\PendingFileRenameOperations targets a path under %SystemRoot%\Installer. The value and its pair format are documented at MS Learn, MoveFileExA.</summary>
     PendingRenameInCache,
 
     /// <summary>
