@@ -94,11 +94,6 @@ public record InstallerQueryResult(
     /// which is the whole of the superseded offer on a run where it fires; and a
     /// registration this scan never saw is also one whose file, had it gone, went
     /// uncounted. Exposed for the copy that says so.
-    ///
-    /// The opening of this note used to read "what it bears on is NOW the missing-files
-    /// report rather than the offer", which was true only while the superseded class was
-    /// out of the offer altogether, between 2026-08-11 and 2026-08-17. The clause below
-    /// it always said the opposite and was always right.
     /// </summary>
     public bool RecordsIncomplete => UnaccountedProductCount > 0;
 }
@@ -192,8 +187,8 @@ public record InstallerQueryResult(
 /// <param name="ProductCount">
 /// Product rows the API enumeration returned. With
 /// <see cref="PatchClaimCount"/> it gives the patch-to-product ratio, which is
-/// the shape of a machine's cache and the thing the owner's own machine, at two
-/// patches, is least like.
+/// the shape of a machine's cache and the thing a two-patch machine is least
+/// like.
 /// </param>
 /// <param name="PatchClaimCount">
 /// Product-to-patch claims read, one per claim rather than per patch: a patch
@@ -257,17 +252,11 @@ public record InstallerQueryResult(
 /// instance of themselves under an instance transform. PRODUCTS, not files, and
 /// not a count of anything held back.
 ///
-/// IT DECIDES, AND THIS NOTE SAID FOR A WEEK THAT IT DECIDED NOTHING. That was true
-/// when it was written and stopped being true the following day, which is the more
-/// dangerous half: the sentence stayed well argued and specific while its subject
-/// moved. It read that the condition emptied the whole offer until 3.0.0, on the
-/// reading that a keyed question about the product code written inside a cached
+/// IT DECIDES. A keyed question about the product code written inside a cached
 /// package can answer "no record" while a registration under a transform-generated
-/// code still needs the file, and that "nothing reads inside a file any more", so
-/// the reading had no subject. Something reads a product code out of a cached file
-/// again (<see cref="Services.DeclaredProductCheck"/>), and it is the last pass
-/// standing between an unclaimed candidate and the offer. The subject came back and
-/// nobody re-read the sentence.
+/// code still needs the file, and <see cref="Services.DeclaredProductCheck"/> reads
+/// that code out of the file: it is the last pass standing between an unclaimed
+/// candidate and the offer.
 ///
 /// What acts on it is <see cref="SecondInstanceNotRuledOut"/>, which reads this
 /// count together with the one below and never on its own. This member is still
@@ -291,12 +280,12 @@ public record InstallerQueryResult(
 /// machines needs. A count beside a count is the shape every other member here
 /// uses.
 ///
-/// WHICH PRODUCTS WERE ASKED AT ALL, and the answer moved in 3.0.0. Both counts
+/// WHICH PRODUCTS WERE ASKED AT ALL. Both counts
 /// cover the products the enumeration returned AND the products it lost that the
 /// registry named and the recovery pass resolved as installed
-/// (<see cref="RecoveredProductCount"/>), which are asked one keyed read each. This
-/// note used to say that a product the walk never reached was never asked, and that
-/// is now true only of the two states the recovery cannot settle: a code Windows
+/// (<see cref="RecoveredProductCount"/>), which are asked one keyed read each. A
+/// product the walk never reached goes unasked only in the two states the recovery
+/// cannot settle: a code Windows
 /// would not answer about (<see cref="UnansweredProductCount"/>) and a registry key
 /// whose name yielded no code (<see cref="UnparseableProductKeyNames"/>). Either of
 /// those non-zero, or <see cref="UnreadableProducts"/> on a run where no fallback
@@ -306,23 +295,16 @@ public record InstallerQueryResult(
 /// Products whose registry <c>Patches</c> key opened, from the per-product patch
 /// listing the superseded-patch condition rests on.
 ///
-/// THESE FOUR ARE READ AND THEY ARE SENT, AND THIS NOTE SAID THE OPPOSITE. It read
-/// "THESE FOUR ARE CARRIED AND NOT YET SENT ... Nothing outside this record reads them
-/// today, which is deliberate", which was true when the counters landed at 61d33b8c and
-/// false from e055f3ff the same day, the commit that added the readers.
+/// THESE FOUR ARE READ AND THEY ARE SENT.
 /// <see cref="ResultLogEntry"/> takes all four off this census, declares them as
 /// parameters of its scan record, and that record is the file the Send-result button
 /// POSTs.
 ///
-/// THE MISREADING IT INVITED IS THE EXPENSIVE ONE. An unread counter is ordinarily fair
-/// game to drop, to rename or to quietly redefine, and these four are the only
-/// instrument this project has for sizing what the per-product condition withholds on
-/// any machine but the one it was written on. Something is receiving them, so a change
-/// of meaning here is a schema decision and not a tidy-up.
-///
-/// The identical sentence had already been found and corrected once, on
-/// <c>FallbackRead.ProductPatchSets</c> in <c>InstallerQueryService</c>, and that sweep
-/// stopped at the instance it found.
+/// DO NOT DROP, RENAME OR QUIETLY REDEFINE THEM. An unread counter is ordinarily fair
+/// game for all three, and these four are the only instrument this project has for
+/// sizing what the per-product condition withholds on any machine but the one it was
+/// written on. Something is receiving them, so a change of meaning here is a schema
+/// decision and not a tidy-up.
 ///
 /// Against <see cref="ProductCount"/> it says how usual it is for a product to carry a
 /// Patches key at all, a product holding no registered patch having no reason to.

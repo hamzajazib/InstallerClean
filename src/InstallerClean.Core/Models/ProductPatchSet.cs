@@ -43,18 +43,16 @@ public enum ProductPatchSet
     /// carried no <c>Uninstallable</c>, or one carried a value that was not a
     /// number. Anything that is not a positive zero lands here or above.
     ///
-    /// A PRODUCT WITH NO PATCHES AT ALL DOES NOT READ AS THIS, AND IT USED TO. The
-    /// reason recorded for that was twofold and both halves have gone. The first was
-    /// that an absent <c>Patches</c> key could not be told from a key that would not
-    /// open: they are told apart, and at the caller rather than in the read, because
-    /// a key that exists and refuses throws and is caught and written as this verdict
-    /// with its own failure cause, while a key that is not there returns null and
-    /// never reaches the exception path. The second was that it cost nothing, since
-    /// the verdict was only ever consulted for a product some candidate patch was
-    /// registered to. That stopped being true when the judged product set gained the
-    /// patch file's own declared targets, which name products holding no patch at all
-    /// and often no patch this machine has ever seen. Reading those as unestablished
-    /// would have withheld the superseded class on any ordinary machine.
+    /// A PRODUCT WITH NO PATCHES AT ALL DOES NOT READ AS THIS. An absent
+    /// <c>Patches</c> key is told from a key that would not open, at the caller rather
+    /// than in the read: a key that exists and refuses throws and is caught and
+    /// written as this verdict with its own failure cause, while a key that is not
+    /// there returns null and never reaches the exception path.
+    ///
+    /// IT MATTERS BECAUSE THE JUDGED PRODUCT SET INCLUDES THE PATCH FILE'S OWN
+    /// DECLARED TARGETS, which name products holding no patch at all and often no
+    /// patch this machine has ever seen. Reading those as unestablished would withhold
+    /// the superseded class on any ordinary machine.
     ///
     /// So a product whose <c>Patches</c> key is absent now reads
     /// <see cref="AllNonRemovable"/>: it holds no registered patch, so it holds no

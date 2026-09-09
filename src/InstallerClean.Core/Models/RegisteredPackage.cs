@@ -115,18 +115,16 @@ public record RegisteredPackage(
     /// Windows holds a record naming this file and the file is not there. The one
     /// condition the missing-from-disk report is for, and the whole of it.
     ///
-    /// IT USED TO EXCLUDE SUPERSEDED AND OBSOLETED PATCHES AND THAT WAS WRONG. The
-    /// exclusion rested on the file having gone being those patches' expected end
-    /// state, which rested in turn on the state meaning Windows had finished with
-    /// the file. It does not. Microsoft's own Windows Installer engineer, on
+    /// SUPERSEDED AND OBSOLETED PATCHES ARE IN IT. The file having gone is not those
+    /// patches' end state, because the state does not mean Windows has finished with
+    /// the file. Microsoft's own Windows Installer engineer, on
     /// Microsoft's setup blog on 16 August 2008: "Windows Installer will always
     /// open every patch registered to a product whether or not it has already been
     /// obsolesced or superseded when opening a product or package handle (as long
     /// as machine state is not ignored)".
     ///
-    /// WHAT A MISSING FILE THEN COSTS IS NOT ONE OUTCOME, AND THIS NOTE NAMED ONE.
-    /// It said the file having gone "then gives error 1635", which compressed a
-    /// four-step chain into two. The same post states the chain: the handle opens,
+    /// WHAT A MISSING FILE THEN COSTS IS NOT ONE OUTCOME. The same post states the
+    /// chain: the handle opens,
     /// the cached copy is not there, Windows goes looking for a source, and
     /// "failing to resolve the source location for the patch, Windows Installer
     /// returns error code 1635". This project then measured the other end of it. On
@@ -149,8 +147,8 @@ public record RegisteredPackage(
     /// registration naming a file that has gone is a record Windows will act on and
     /// cannot satisfy. That is enough to report it and no more is claimed here.
     ///
-    /// KB 971187 IS CITED FOR ITS TEST AND IS NOT AN ARTICLE ABOUT THIS STATE,
-    /// which is what this note called it. It is a Windows Server article whose
+    /// KB 971187 IS CITED FOR ITS TEST AND IS NOT AN ARTICLE ABOUT THIS STATE. It is
+    /// a Windows Server article whose
     /// symptom is a MISSING patch registration, whose own logged error is 1612, and
     /// whose resolution is to re-create or to delete a registration rather than to
     /// restore a file. Its test is the part that carries, and it carries with no

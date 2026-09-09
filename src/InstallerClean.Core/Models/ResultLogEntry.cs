@@ -342,13 +342,9 @@ public sealed record AppInfo(string Version, string Language)
 /// sent: it is the attempts less these five, and a stored copy could disagree with its
 /// own parts.
 ///
-/// THESE FIVE ARE SENT APART AND ACTED ON TOGETHER, and the note here used to say the
-/// opposite: that two were ordinary machine states, that a count folding all five
-/// together could not be acted on, and that acting on such a count had been designed
-/// twice and withdrawn twice. The withdrawals happened and the reasoning was sound on
-/// the trade-off it was making. From 3.0.0 the owner has ruled that trade-off away and
-/// all five withhold alike, so the split survives here as five numbers a receiver can
-/// read separately and no longer as an argument about what may be acted on.
+/// THESE FIVE ARE SENT APART AND ACTED ON TOGETHER. All five withhold alike, and the
+/// split is here as five numbers a receiver can read separately rather than as one
+/// figure folding them together.
 /// See <see cref="PathResolverRefusedCount"/>.
 /// </param>
 /// <param name="PathNormalisationRefusedCount">
@@ -683,19 +679,17 @@ public sealed record MachineInfo(
 /// ANYWAY. What lands here is an absence this scan could not establish to be
 /// harmless, which is a fact about what the scan managed to read rather than a
 /// finding that anything wants the file back: a rise in this figure can as easily be
-/// a run that read less. This note used to close by saying the two halves are
-/// registrations naming a file that is not there and "neither is the lesser", which
-/// is the proposition its own first paragraph denies. From 3.0.0 they ARE graded,
-/// positively and narrowly, and both hosts print the graded half rather than the
-/// total. What that sentence was reaching for is true and is worth keeping: the patch
-/// STATE does not grade them, Windows opening every registered patch's cached file
-/// whether superseded or not, so the state is one conjunct of three and settles
-/// nothing on its own. The population did move at this release, so a series crossing
-/// it is not comparable, but not in the way this note said either: through v2.3.0 the
-/// figure excluded every patch a scan called removable and every one whose verdict it
-/// had withheld, and it now excludes only rows meeting that whole conjunction rather
-/// than "every superseded or obsoleted one". Renaming a key is a schema decision with
-/// a receiver on the other end of it, so the key stays and this note is the record.
+/// a run that read less. The two halves are registrations naming a file that is not
+/// there, and they ARE graded, positively and narrowly, both hosts printing the graded
+/// half rather than the total. The patch STATE does not grade them, Windows opening
+/// every registered patch's cached file whether superseded or not, so the state is one
+/// conjunct of three and settles nothing on its own.
+///
+/// THE POPULATION MOVED AT THIS RELEASE, SO A SERIES CROSSING IT IS NOT COMPARABLE.
+/// Through v2.3.0 the figure excluded every patch a scan called removable and every one
+/// whose verdict it had withheld; it now excludes only rows meeting that whole
+/// conjunction. Renaming a key is a schema decision with a receiver on the other end
+/// of it, so the key stays and this note is the record.
 /// </param>
 /// <param name="WithheldPatchCount">
 /// Superseded files a scan would have offered and did not, on one condition rather
@@ -706,7 +700,7 @@ public sealed record MachineInfo(
 /// are simply not offered, and they have their own count.
 ///
 /// A PRODUCT HOLDING A PATCH THAT COULD BE UNINSTALLED AND ROLL BACK ONTO THE FILE IS
-/// NOT IN IT, AND THIS NOTE LISTED IT AS A CONTRIBUTOR. That row is downgraded with
+/// NOT IN IT. That row is downgraded with
 /// withheld FALSE, the scan having positively established a live claim rather than
 /// having failed to establish anything, so it never reaches this count. Stated here
 /// because this is a wire contract and the receiver cannot see the predicate.
@@ -980,10 +974,8 @@ public sealed record ScanInfo(
 /// can meet more than one cause and a cause named for the set would be false of some
 /// of its members; they are not summed here for the same reason.
 ///
-/// THE COUNT IS DELIBERATELY NOT WRITTEN HERE. This note said "the five held-back
-/// counts" while there were three, having been correct before two of them left with
-/// the check that produced them, and a figure in prose beside a list that moves is a
-/// figure that goes stale silently. The list below is the count.
+/// THE COUNT IS DELIBERATELY NOT WRITTEN HERE. A figure in prose beside a list that
+/// moves is a figure that goes stale silently. The list below is the count.
 ///
 /// THE FOURTH ARRIVED AS A REQUIRED KEY RATHER THAN AN OPTIONAL ONE, and the window
 /// for that closes at the tag. The receiver may only start requiring a key while no

@@ -26,9 +26,8 @@ public static class MsiError
     /// products that are currently installed", Microsoft's Windows Installer
     /// error-code table). Distinct from <see cref="UnknownProperty"/>, which is a
     /// record that exists and does not carry the property asked for; this is no
-    /// record to ask. Observed live on the owner's machine through this project's
-    /// own property reads, so it is a code this code path really meets rather
-    /// than one taken out of a table.
+    /// record to ask. Observed live from a property read, so it is a code this code
+    /// path really meets rather than one taken out of a table.
     /// </summary>
     public const uint UnknownProduct = 1605;
 

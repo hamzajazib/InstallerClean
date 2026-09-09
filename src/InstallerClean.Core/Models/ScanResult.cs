@@ -70,15 +70,8 @@ namespace InstallerClean.Models;
 /// A scan that has just declined to rely on a verdict may not then rely on it to stay
 /// quiet.
 ///
-/// IT WAS CALLED <c>MissingNotSupersededCount</c> AND THAT NAME DESCRIBED AN AXIS
-/// THE CODE STOPPED USING. The split moved to the conjunction in 3.0.0 and the two
-/// names stayed behind, so both said the state decided it when the state is half of
-/// what decides it. A name is a specification to the next reader, and these two were
-/// specifying the rule the release had just replaced.
-///
-/// IT STATES NO CAUSE AND NOTHING BUILT ON IT MAY EITHER. It used to say a
-/// non-zero value means another tool removed files Windows still references. That
-/// is one cause named for a set that can have several, and after 3.0.0 this
+/// IT STATES NO CAUSE AND NOTHING BUILT ON IT MAY EITHER. One cause named for a set
+/// that can have several is false of some of its members, and this
 /// application is itself a candidate cause on any machine that ran v1.0.0 to
 /// v2.3.0: those versions offered superseded patches, and deleting one leaves
 /// exactly this record. What the number says is that Windows holds records naming
@@ -126,20 +119,18 @@ namespace InstallerClean.Models;
 /// was on disk and which the scan would have offered, had it been able to say that
 /// no installed product still needed them.
 ///
-/// A REAL FIGURE AGAIN, HAVING BEEN A LITERAL ZERO WHILE NOTHING WAS OFFERED. It
-/// counts what the withholding cost this run: rows Windows reports superseded whose
+/// WHAT THE WITHHOLDING COST THIS RUN: rows Windows reports superseded whose
 /// file is on disk and which declared themselves non-removable, held back because a
 /// read established nothing. Obsoleted rows are NOT in it; they are not withheld,
-/// they are simply not offered, and they have their own count. This paragraph and
-/// the line above it said "superseded or obsoleted" while this one said the
-/// opposite, and the predicate settles it: nothing reaches the flag without having
+/// they are simply not offered, and they have their own count. The predicate settles
+/// it: nothing reaches the flag without having
 /// carried IsRemovable, and IsRemovablePatch requires state 2. THAT IS A
 /// USER-FACING CLAIM NOW RATHER THAN AN INTERNAL ONE: both hosts name the class in
 /// as many words (<c>Summary.SupersededHeldBack</c>, <c>Cli.SupersededHeldBack</c>),
 /// so this count and that noun have to agree.
 ///
-/// AND A PRODUCT THAT COULD ROLL BACK ONTO THE FILE IS NOT IN IT EITHER, WHICH THIS
-/// NOTE USED TO LIST AS A CONTRIBUTOR. That condition is
+/// AND A PRODUCT THAT COULD ROLL BACK ONTO THE FILE IS NOT IN IT EITHER. That
+/// condition is
 /// <see cref="ProductPatchSet.RemovablePatchPresent"/>, and the downgrade it reaches
 /// passes withheld FALSE, because the scan positively established a live claim
 /// rather than failing to establish anything. Worse() lets it beat Unestablished
