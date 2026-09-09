@@ -674,9 +674,10 @@ internal static class Program
                 // Ahead of the "deleted N" line, so the run reads in the order it
                 // happened: what was intended, what was held back, what was done.
                 // Ahead of the cancel re-entry below for a harder reason than
-                // order: that re-entry leaves this method, so a run that held
-                // files back and was then cancelled used to say nothing at all
-                // about them, where the window reports them on both paths.
+                // order: that re-entry leaves this method, so a run that holds
+                // files back and is then cancelled would say nothing at all about
+                // them if this line sat any later. The window reports them on
+                // both paths.
                 heldBack += result.HeldBackReasons;
                 ReportHeldBack(heldBack);
                 // Held-back files were never touched, so they leave the tally the
