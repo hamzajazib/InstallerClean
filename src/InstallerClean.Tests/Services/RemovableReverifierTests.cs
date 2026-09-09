@@ -68,13 +68,10 @@ public class RemovableReverifierTests
     [Fact]
     public async Task Drops_a_candidate_a_superseded_registration_names()
     {
-        // THE INVERSE OF WHAT THIS PINNED, and it is a tightening rather than a
-        // loss. It used to assert that a candidate still marked removable
-        // survived, because a removable row was excluded from the non-removable
-        // map by construction and the superseded class was offered on exactly that
-        // verdict. No enumeration grants the verdict now, so every registered path
-        // is in that map and a candidate any registration names is dropped with a
-        // cause, superseded ones included.
+        // EVERY REGISTERED PATH IS IN THE NON-REMOVABLE MAP, so a candidate any
+        // registration names is dropped with a cause, superseded ones included. No
+        // enumeration grants the removable verdict, so nothing is excluded from that
+        // map by construction.
         const string superseded = @"C:\Windows\Installer\superseded.msp";
         var svc = Reverifier(Query(NonRemovable(superseded) with { PatchState = 2 }));
 

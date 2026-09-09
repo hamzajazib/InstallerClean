@@ -757,10 +757,8 @@ public class MainViewModelTests
         Assert.True(vm.Completion.IsComplete);
         // %TEMP% and the installer cache are on one volume on every host this
         // runs on, so this classifies as a same-volume move and the heading
-        // claims "moved", not "freed". It read "%TEMP% sits on the system
-        // drive", which is the same fact under a name the comparison stopped
-        // using: what the destination is measured against is the cache's
-        // volume.
+        // claims "moved", not "freed". WHAT THE DESTINATION IS MEASURED AGAINST
+        // IS THE CACHE'S VOLUME, never the system drive.
         //
         // AND THIS ASSERTION IS FALSE WHERE THOSE TWO PART. With a volume
         // mounted at C:\Windows\Installer, %TEMP% is not on the cache's volume,
@@ -1042,8 +1040,8 @@ public class MainViewModelTests
         Assert.True(vm.Completion.IsComplete);
         Assert.Contains("2 of 3", vm.Completion.Summary);
         Assert.Contains("cancel", vm.Completion.Summary, StringComparison.OrdinalIgnoreCase);
-        // A cancelled run writes no result-log entry (owner's decision keeps the
-        // public reports stats meaning what they mean).
+        // A cancelled run writes no result-log entry, which keeps the public
+        // reports stats meaning what they mean.
         await _resultLogService.DidNotReceive().WriteAsync(
             Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
     }
@@ -1751,16 +1749,14 @@ public class MainViewModelTests
         // through instead reported a completed delete of zero and wrote a run that
         // freed nothing into the public reports.
         //
-        // NOT THE ALL-CLEAN HEADING, WHICH THIS TEST ASSERTED UNTIL 3.0.0 AND WHICH
-        // ITS OWN NAME USED TO CLAIM. That heading belongs to a machine with nothing
-        // to do. Here everything the user confirmed was kept back, which is the
-        // opposite finding, and saying "All clean" over a summary naming the causes
-        // said the opposite of what had happened.
+        // NOT THE ALL-CLEAN HEADING. That one belongs to a machine with nothing to
+        // do. Here everything the user confirmed was kept back, which is the opposite
+        // finding, and "All clean" over a summary naming the causes would say the
+        // opposite of what happened.
         //
-        // AND THE DELETE HEADING RATHER THAN A WORD COVERING BOTH BUTTONS, which
-        // this test's own name asserted for a second release after the first fault
-        // was corrected. The Move twin below asserts the other one, so a change
-        // collapsing the two back into one string cannot leave both green.
+        // AND THE DELETE HEADING RATHER THAN A WORD COVERING BOTH BUTTONS. The Move
+        // twin below asserts the other one, so a change collapsing the two back into
+        // one string cannot leave both green.
         var vm = CreateViewModel();
         var orphans = new List<OrphanedFile>
         {
@@ -2819,12 +2815,10 @@ public class MainViewModelTests
         // outright that Windows has no record of these files would be an assertion
         // the app cannot make. What it did establish is that it asked.
         //
-        // IT USED TO PIN THE PHRASE "no record" AND THE COPY MOVED OUT FROM UNDER
-        // IT. The sentence was rewritten to stop naming one cause for a list that
-        // has two, which is a standing rule and a correct fix, and it says "no
-        // program claims it" where it used to say "no record". The copy is right
-        // and this assertion was stale. What follows guards the same property
-        // against the wording that ships, and against a rewrite of it.
+        // DO NOT PIN A PHRASE. The sentence must not name one cause for a list that
+        // has two, so the wording is free to move and an assertion on it would go
+        // stale without failing for anything real. What follows guards the property
+        // against the wording that ships and against a rewrite of it.
         //
         // THE THREE THINGS IT HOLDS. The opening clause carries the epistemics for
         // both halves, so the sentence has to say that the app ASKED. The two

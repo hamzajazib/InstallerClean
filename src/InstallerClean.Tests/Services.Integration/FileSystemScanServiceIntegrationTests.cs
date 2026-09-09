@@ -119,9 +119,7 @@ public class FileSystemScanServiceIntegrationTests : IDisposable
         // exactly as an unspellable claim's does.
         //
         // TWO OF THE FIVE ARE ORDINARY MACHINE STATES and they are in this theory on
-        // purpose. An unattached drive and a refused handle were counted apart and
-        // acted on nothing until this release, on a trade-off the owner has since
-        // ruled away: where the app can detect that one of its own checks did not
+        // purpose. Where the app can detect that one of its own checks did not
         // answer, it offers nothing that scan.
         //
         // A CASE PER MEMBER RATHER THAN ONE CASE OVER THE SUM, on the same reasoning
@@ -400,11 +398,11 @@ public class FileSystemScanServiceIntegrationTests : IDisposable
     [Fact]
     public async Task Real_directory_walk_matches_the_two_patterns_it_replaced()
     {
-        // The walk is one pass over the folder filtered on the extension, where
-        // it used to be a "*.msi" pass concatenated with a "*.msp" one. This is
-        // the equivalence that swap rests on, asserted against the real matcher
-        // rather than argued: the names below are the ones where a pattern and
-        // an extension test could plausibly disagree.
+        // The walk is one pass over the folder filtered on the extension rather
+        // than a "*.msi" pass concatenated with a "*.msp" one. This is the
+        // equivalence the single pass rests on, asserted against the real matcher rather than
+        // argued: the names below are the ones where a pattern and an extension
+        // test could plausibly disagree.
         var names = new[]
         {
             "a.msi", "b.msp", "UPPER.MSI", "MiXeD.MsP", ".msi",

@@ -706,9 +706,9 @@ public class CompletionViewModelTests
     public void The_all_skipped_screen_names_the_button_that_was_pressed(bool deleting)
     {
         // The screen only ever follows Move or Delete, so a heading naming neither
-        // is a word the user never pressed. It read "Nothing removed" both ways
-        // until 3.0.0, with both of these strings already in the file and already
-        // picked between by ShowMoveSummary and ShowDeleteSummary.
+        // is a word the user never pressed. Both strings are in the file and already
+        // picked between by ShowMoveSummary and ShowDeleteSummary, so DO NOT COLLAPSE
+        // THE PAIR INTO ONE WORD.
         var vm = new CompletionViewModel();
 
         vm.ShowReverifyAllSkipped(

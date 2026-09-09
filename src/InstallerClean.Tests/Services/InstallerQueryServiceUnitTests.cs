@@ -420,7 +420,7 @@ public class InstallerQueryServiceUnitTests
         Assert.True(row.IsSupersededOrObsoleted);
 
         // The displacement still happened, which is what stops this passing for the
-        // wrong reason: the row carries B, and no longer says a read failed.
+        // wrong reason: the row carries B and does not say a read failed.
         Assert.Equal("{B}", row.ProductCode);
         Assert.False(row.VerdictUnreadable);
         Assert.False(row.IsRemovable);
@@ -1929,14 +1929,12 @@ public class InstallerQueryServiceUnitTests
     [Fact]
     public async Task An_ordinary_recorded_value_is_asked_about_too_and_carries_no_flagged_spelling()
     {
-        // IT USED TO ASSERT THAT AN ORDINARY VALUE ASKED THE RESOLVER NOTHING, and that
-        // was the must-miss control for a gate that no longer exists. Until 3.0.0 the
-        // character scan below decided whether a handle was opened at all, so an
-        // ordinary path, which is nearly every path on a healthy machine, was normalised
-        // as a string and compared as text. Every recorded path is resolved now, and the
-        // invariant that buys is that a claim leaving normalisation is either a location
-        // the kernel proved or one whose failure to resolve has been counted and is
-        // already withholding the whole walk-derived offer.
+        // EVERY RECORDED VALUE IS ASKED ABOUT, ORDINARY ONES INCLUDED. The character
+        // scan below does not decide whether a handle is opened; it decides only what
+        // the flagged-spelling count reports. The invariant that buys is that a claim
+        // leaving normalisation is either a location the kernel proved or one whose
+        // failure to resolve has been counted and is already withholding the whole
+        // walk-derived offer.
         //
         // SO THE MUST-MISS MOVED WITH THE SCAN RATHER THAN GOING AWAY. The scan still
         // exists and still selects exactly what it did; what changed is that it counts
@@ -2144,13 +2142,11 @@ public class InstallerQueryServiceUnitTests
 
     // ---- The instance-product reading, which decides the walk-derived offer ----
     //
-    // THIS HEADING SAID "WHICH DECIDES NOTHING" AND WAS TRUE FOR A WEEK. The condition
-    // emptied the offer until the check that detected it was removed, on the ground that
-    // nothing read a product code out of a cached file any more; something does again,
-    // and it is the last pass between an unclaimed candidate and the offer. What acts on
-    // these two counts is EnumerationCensus.SecondInstanceNotRuledOut, which reads them
-    // together and never one on its own. The tests below are about the READING and are
-    // unchanged by that: what a positive is, what an absence is, and what a failure is.
+    // THE READING DECIDES THE WALK-DERIVED OFFER, and the pass that reads a product
+    // code out of a cached file is the last one between an unclaimed candidate and the
+    // offer. What acts on these two counts is EnumerationCensus.SecondInstanceNotRuledOut,
+    // which reads them together and never one on its own. The tests below are about the
+    // READING: what a positive is, what an absence is, and what a failure is.
     // The population these cover is the products the enumeration returned; the ones it
     // lost are in InstallerQueryServiceSecondInstanceTests.
 

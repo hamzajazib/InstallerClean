@@ -342,11 +342,10 @@ public class CountedStringTests
         // cardinality string answers a yes-or-no question, so collapsing everything
         // that is not One into Other reads as the tidier version of it.
         //
-        // THIS PINS THE SELECTOR AND NO LONGER A RENDERING, AND THE REASON IS THE POINT
-        // OF THE NOTE. It used to assert that Completion.NothingOfferedBody.Few read at
-        // two to four files in these three languages. That override is gone: the key's
-        // noun moved into a slot Plural.File fills, which left the .Few value
-        // character-identical to its own .Plural and therefore a copy waiting to drift.
+        // THIS PINS THE SELECTOR AND NOT A RENDERING. DO NOT PIN A KEY WHOSE COUNTED
+        // NOUN SITS IN A SLOT Plural.File FILLS: its .Few value comes out
+        // character-identical to its own .Plural, which is a copy waiting to drift, so
+        // such an override does not exist to be asserted on.
         //
         // SO THE BAND HAS A LIVE CONSUMER, AND THE PIN STILL BELONGS ON THE SELECTOR.
         // Summary.SupersededHeldBack and Cli.SupersededHeldBack carry a .Few in these

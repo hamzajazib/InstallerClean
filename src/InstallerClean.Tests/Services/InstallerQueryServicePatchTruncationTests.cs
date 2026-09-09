@@ -638,16 +638,14 @@ public class InstallerQueryServicePatchTruncationTests
     [Fact]
     public void A_machine_with_nothing_removable_walks_the_machine_wide_enumeration_once()
     {
-        // IT USED TO ASSERT THAT THIS MACHINE NEVER RAN THE ENUMERATION AT ALL, and that
-        // saving was given up deliberately rather than lost. The pass that stamps the
-        // per-product verdict has two consumers, the offer and the missing-files split,
-        // and on a machine with nothing to offer the split is the only one there is. The
-        // pass used to be skipped on exactly those machines, so a row whose file had gone
-        // was reported or not according to whether some unrelated program happened to
-        // hold an offer-eligible patch that day. The guard moved below the pass, and this
-        // enumeration is what the pass reads to find a product no other source can name,
-        // so it now runs where it once did not. Its own tests are the obsoleted-row pair
-        // in the route A file.
+        // THE ENUMERATION RUNS ON A MACHINE WITH NOTHING TO OFFER, AND THAT IS
+        // DELIBERATE. The pass that stamps the per-product verdict has two consumers,
+        // the offer and the missing-files split, and where there is nothing to offer the
+        // split is the only one there is. DO NOT GUARD THE PASS ON THE OFFER: a row
+        // whose file had gone would then be reported or not according to whether some
+        // unrelated program happened to hold an offer-eligible patch that day. This
+        // enumeration is what the pass reads to find a product no other source can name.
+        // Its own tests are the obsoleted-row pair in the route A file.
         //
         // WHAT IS STILL WORTH PINNING IS THE SHAPE OF THE COST AND NOT ITS ABSENCE. This
         // is the one call in the pass that scales with the whole machine, and it is
@@ -705,12 +703,12 @@ public class InstallerQueryServicePatchTruncationTests
         // pass will find is not removable. The same reasoning, and the same shape, as
         // TwoProductsTheRegistryCannotSettle.
         //
-        // IT USED TO DECLARE THE PATCH UNINSTALLABLE, AND THAT STOPPED TESTING THIS.
-        // Once the patch file's declared targets were unioned into the per-product
-        // condition as well, a hidden product carrying a removable patch was settled
-        // by that condition BEFORE this pass ran, so the pairing below was never asked
-        // and both assertions passed on the earlier mechanism. Nothing about the
-        // assertions would have shown it, which is why the ask is now asserted too.
+        // THE PATCH MUST NOT BE DECLARED UNINSTALLABLE HERE, OR THIS STOPS TESTING WHAT
+        // IT IS FOR. The patch file's declared targets are unioned into the per-product
+        // condition, so a hidden product carrying a removable patch is settled by that
+        // condition BEFORE this pass runs, the pairing below is never asked, and both
+        // assertions pass on the wrong mechanism. Nothing about the assertions shows
+        // that, which is why the ask is asserted too.
         var msi = new FakeApi();
         msi.AddProduct(Superseding);
         msi.HoldPatch(Superseding, Patch, Shared, state: "2", uninstallable: "0");
@@ -974,15 +972,13 @@ public class InstallerQueryServicePatchTruncationTests
         // verdict is AllNonRemovable; this value is reachable only by the recovered
         // product having entered the judged set and been asked what it holds.
         //
-        // IT USED TO PIN THE CONFIRMATION ASK AND THAT ASK NO LONGER HAPPENS HERE.
-        // The per-product condition now receives the recovered products, sees that this
+        // NO CONFIRMATION ASK HAPPENS HERE, AND THE ABSENCE IS THE POINT. The
+        // per-product condition receives the recovered products, sees that this
         // one holds something uninstallable, and settles the path before the per-pairing
         // pass runs; that pass skips a path already settled, so nothing asks the pairing
-        // and the record of asks is empty. The row's two flags are what they always
-        // were, and the same answer is now reached one pass earlier and for a reason
-        // that is true of this machine. The ask itself is still what establishes a claim
-        // wherever the per-product condition does NOT settle the path, which is the
-        // ordinary case and is the test below.
+        // and the record of asks is empty. The ask is what establishes a claim wherever
+        // the per-product condition does NOT settle the path, which is the ordinary case
+        // and is the test below.
         Assert.Equal(ProductPatchSet.RemovablePatchPresent, row.ProductPatchSetVerdict);
     }
 
@@ -1135,9 +1131,8 @@ public class InstallerQueryServicePatchTruncationTests
     /// <summary>
     /// The two census tallies. A machine reporting a recovered product and one
     /// reporting only residue are the two states a difference between product
-    /// totals cannot tell apart, which is what a tolerance band on that difference
-    /// was guessing at before it was removed. These separate them by name, and
-    /// report the separation per machine.
+    /// totals cannot tell apart. These separate them by name, and report the
+    /// separation per machine.
     /// </summary>
     [Fact]
     public async Task The_census_separates_a_recovered_product_from_registry_residue()

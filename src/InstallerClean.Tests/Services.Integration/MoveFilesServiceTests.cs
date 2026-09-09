@@ -187,9 +187,9 @@ public class MoveFilesServiceTests : IDisposable
         var written = await reader.ReadToEndAsync();
         var appended = written.Length >= baseline ? written[(int)baseline..] : written;
         // The whole clause, not the "Move refused" opening: this service writes
-        // that opening for its containment refusals too, so the prefix alone no
-        // longer says which refusal reached the log. Its delete twin pins the
-        // same clause.
+        // that opening for its containment refusals too, so the prefix alone does
+        // not say which refusal reached the log. Its delete twin pins the same
+        // clause.
         Assert.Contains(
             "Move refused: the Windows Installer mutex could not be acquired", appended);
     }

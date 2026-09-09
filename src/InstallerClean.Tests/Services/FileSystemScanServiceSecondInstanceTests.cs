@@ -89,7 +89,7 @@ public class FileSystemScanServiceSecondInstanceTests
         // The instance transform's peculiarity is confined to a code read out of a FILE,
         // and the only pass that does that is refused for patches at its own call site.
         //
-        // Measured before it was written: with the cached patch's own Template naming
+        // Measured rather than argued: with the cached patch's own Template naming
         // only the base code, the second copy still answered and the offer still went;
         // and on a machine where the holder is one neither the enumeration nor the
         // registry can name, the same file is wrongly offered whether or not any product

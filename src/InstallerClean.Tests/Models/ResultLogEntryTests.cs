@@ -377,12 +377,11 @@ public class ResultLogEntryTests
         // Distinct values so a transposition between two of them fails rather than
         // cancelling out.
         //
-        // THE NAME NO LONGER CARRIES THE COUNT, and that is the point of this edit
-        // rather than tidiness. It read "all three" while the fourth cause was being
-        // added, so the test would have gone on passing over three of four with its
-        // own name saying it covered the lot: the count in a name is a claim nothing
-        // checks. The tally's own Total is the only figure here, and it is asserted
-        // against the sum of what was set rather than against a literal.
+        // KEEP THE COUNT OUT OF THE NAME. A name saying "all three" goes on passing
+        // over three of four while a fourth cause is added, its own name claiming it
+        // covered the lot: a count in a name is a claim nothing checks. The tally's
+        // own Total is the only figure here, and it is asserted against the sum of
+        // what was set rather than against a literal.
         var reasons = new HeldBackReasons(
             Reclaimed: 1, RecordsChanged: 2, RecordsUnreadable: 3, OwnershipUnestablished: 4);
 

@@ -137,13 +137,13 @@ public class FileSystemScanServiceTests
     [Fact]
     public async Task ScanAsync_does_not_let_a_registered_file_outside_the_folder_hold_the_survivor_count_up()
     {
-        // The survivor count is what disarms the gate, and it used to count a
-        // registered path existing ANYWHERE on disk. Three packages cached under
-        // a user profile, which is where Windows Installer caches a per-user
-        // unmanaged install, then held it past the absolute bound and disarmed
-        // the gate permanently on a machine whose folder correlation is wholly
-        // broken. They exist, they are registered, and they say nothing whatever
-        // about the folder this scan walked.
+        // The survivor count is what disarms the gate, so it counts only a
+        // registered path inside the walked folder. Packages cached under a user
+        // profile, which is where Windows Installer caches a per-user unmanaged
+        // install, exist and are registered and say nothing whatever about the
+        // folder this scan walked. COUNTING THEM WOULD HOLD THE COUNT PAST THE
+        // ABSOLUTE BOUND and disarm the gate on a machine whose folder
+        // correlation is wholly broken.
         const string orphan = @"C:\Windows\Installer\orphan.msi";
         var packages = new List<RegisteredPackage>();
         var fs = new MockFileSystem();
@@ -171,13 +171,12 @@ public class FileSystemScanServiceTests
     [Fact]
     public async Task ScanAsync_does_not_weigh_a_missing_file_the_folder_never_held_against_the_folder()
     {
-        // The other half of the same mixed measurement. The survivor count asks
-        // about registrations naming this folder; the missing count used to take
-        // the whole needed set wherever its paths pointed, so absent
-        // registrations that were never in the folder counted against a
-        // correlation they say nothing about and could never answer back on the
-        // survivor side. This machine's folder correlation is perfect, two of two
-        // present, and forty needed files registered elsewhere have gone.
+        // The other half of the same measurement. Both counts ask about
+        // registrations naming this folder. AN ABSENT REGISTRATION THAT WAS NEVER
+        // IN THE FOLDER MUST NOT COUNT AGAINST THE CORRELATION: it says nothing
+        // about it and could never answer back on the survivor side. This
+        // machine's folder correlation is perfect, two of two present, and forty
+        // needed files registered elsewhere have gone.
         const string orphan = @"C:\Windows\Installer\orphan.msi";
         var packages = new List<RegisteredPackage>();
         var fs = new MockFileSystem();
@@ -890,16 +889,14 @@ public class FileSystemScanServiceTests
     [Fact]
     public async Task A_superseded_patch_the_scan_accounted_for_is_unaffected_even_on_a_run_that_lost_a_claim()
     {
-        // THE QUESTION THIS SETTLES, IN THE OWNER'S WORDS: what is the point of the app
-        // deleting a file that it is going to say is missing next time it runs. Until
-        // 3.0.0 the answer was that it did, on any later run that came up short of a
-        // product anywhere on the machine. It does not now, and this is that row.
+        // THE QUESTION THIS SETTLES: what is the point of the app deleting a file that
+        // it is going to say is missing next time it runs. This row is the answer.
         //
-        // A run that loses a claim withholds the whole removable class, and it used to do
-        // one more thing: clear the unread-file marker on rows the per-product pass had
-        // already judged clean and left alone. That put this row back under a banner
-        // saying a repair, update or uninstall could fail on the file, which is the exact
-        // claim the offer's own condition had ruled out before the file was ever offered.
+        // A run that loses a claim withholds the whole removable class AND LEAVES THE
+        // UNREAD-FILE MARKER ALONE on rows the per-product pass has already judged clean.
+        // Clearing it would put such a row under a banner saying a repair, update or
+        // uninstall could fail on the file, which is the exact claim the offer's own
+        // condition ruled out before the file was ever offered.
         //
         // WHAT FIRED IT WAS NOTHING TO DO WITH THIS FILE. The count has three terms: a
         // failed read on a product the enumeration DID return, a product the registry saw
@@ -1013,13 +1010,9 @@ public class FileSystemScanServiceTests
     [Fact]
     public async Task The_scan_after_a_superseded_patch_is_removed_says_nothing_about_it()
     {
-        // THE FAULT THIS EXISTS FOR NEEDS TWO SCANS AND CANNOT BE SEEN IN ONE, which is
-        // the whole reason it reached a shipped screenshot. The app offered a superseded
-        // patch, the file was removed, and the next scan warned that a repair could fail
-        // on it: the claim the offer's own condition exists to rule out. Every instrument
-        // looked at one scan. The tests built one, the audits read the code that builds
-        // one, and the eye-verify list asked for a scan and a Move and not for a scan
-        // after it.
+        // WHAT THIS PINS NEEDS TWO SCANS AND CANNOT BE SEEN IN ONE: a superseded patch
+        // is offered, the file goes, and the scan after it must say nothing about the
+        // file. A single-scan test cannot reach that claim at all.
         //
         // ONE FILESYSTEM AND ONE READER ACROSS BOTH SCANS, because the fixture has to
         // change in exactly the way the machine does: a file leaves the disk and every
@@ -1205,9 +1198,9 @@ public class FileSystemScanServiceTests
     {
         // A symlink or junction sitting at the root, which the walk drops before
         // anything else looks at it: following one would pull an OS file out of
-        // System32. The walk used to say this through
-        // EnumerationOptions.AttributesToSkip, which MockFileSystem ignores, so
-        // this could not be asserted until the test moved into managed code.
+        // System32. The walk applies this in managed code rather than through
+        // EnumerationOptions.AttributesToSkip, which MockFileSystem ignores and
+        // which would leave this unassertable.
         var mockQuery = QueryReturning(new InstallerQueryResult(new List<RegisteredPackage>().AsReadOnly()));
 
         var fs = new MockFileSystem(new Dictionary<string, MockFileData>

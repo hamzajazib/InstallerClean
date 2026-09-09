@@ -147,17 +147,15 @@ public class ProductPatchSetTests
         // removable one, so nothing on it can be uninstalled and reach for a
         // superseded patch's cached file. The verdict says so.
         //
-        // IT USED TO ANSWER Unestablished AND THE RECORDED REASON WAS THAT THE TWO WAYS
-        // OF GETTING NOTHING COULD NOT BE TOLD APART. They can: a key that exists and
-        // will not open THROWS, and the caller catches it and writes Unestablished with
-        // its own failure cause. Nothing that fails to open arrives here.
+        // IT MUST NOT ANSWER Unestablished. THE TWO WAYS OF GETTING NOTHING ARE TOLD
+        // APART: a key that exists and will not open THROWS, and the caller catches it
+        // and writes Unestablished with its own failure cause, so nothing that fails to
+        // open arrives here.
         //
-        // AND THE OLD REASON'S SECOND HALF WAS THAT IT COST NOTHING, because the
-        // verdict was only ever consulted for a product some candidate patch was
-        // registered to. That stopped being true when the judged product set gained
-        // the patch file's own declared targets, which name products holding no patch
-        // at all. Withholding on those would have withheld the superseded class on
-        // every ordinary machine.
+        // AND THE VERDICT IS NOT ONLY CONSULTED FOR A PRODUCT SOME CANDIDATE PATCH IS
+        // REGISTERED TO. The judged product set includes the patch file's own declared
+        // targets, which name products holding no patch at all, so withholding on those
+        // would withhold the superseded class on every ordinary machine.
         WithProductsKey(products =>
         {
             using var _ = products.CreateSubKey($@"{Product}\InstallProperties", writable: true)!;
