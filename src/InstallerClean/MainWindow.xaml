@@ -714,6 +714,7 @@
                  line, and the longer German ones take two. Scaled, so the card
                  keeps pace with the text it holds. -->
             <Border Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.Pill}"
+                    BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}"
                     Padding="28,22" Width="{a11y:TextScaled 480}"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel>
@@ -748,6 +749,7 @@
               KeyboardNavigation.ControlTabNavigation="Cycle">
             <chrome:DecorativeBorder Background="{StaticResource Surface.Overlay}"/>
             <Border Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.Pill}"
+                    BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}"
                     Padding="28,22" MinWidth="260"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel>
