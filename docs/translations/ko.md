@@ -114,7 +114,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 
 | English | 한국어 |
 | --- | --- |
-| Any unneeded files below are [safe to delete]. | 아래에 있는 불필요한 파일은 모두 [안전하게 삭제할 수 있습니다]. |
+| Any unneeded files below are safe to delete. | 아래에 있는 불필요한 파일은 모두 안전하게 삭제할 수 있습니다. |
 | They sit in {InstallerFolder}. InstallerClean asks Windows about every installed program: a file is listed when no program claims it ({0}), or when a newer patch has replaced it and no program could roll back to it ({1}). | 이 파일들은 {InstallerFolder}에 있습니다. InstallerClean은 설치된 모든 프로그램에 대해 Windows에 문의합니다. 어떤 프로그램도 자기 것이라고 하지 않거나({0}), 더 새로운 패치가 그 파일을 대체했고 어떤 프로그램도 그 파일로 되돌아갈 수 없을 때({1}) 목록에 오릅니다. |
 | Move them to a backup folder you choose, then delete that folder when you're satisfied your programs still update and uninstall as normal. Putting them back into {InstallerFolder} restores everything. Or delete them permanently now. | 직접 고른 백업 폴더로 옮긴 다음, 프로그램이 여전히 정상적으로 업데이트되고 제거되는지 확인되면 그 폴더를 삭제하세요. {InstallerFolder}에 다시 넣으면 모두 원래대로 돌아갑니다. 아니면 지금 영구히 삭제하세요. |
 | Nothing scanned yet. | 아직 검사하지 않았습니다. |

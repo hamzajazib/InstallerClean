@@ -114,7 +114,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 
 | English | Русский |
 | --- | --- |
-| Any unneeded files below are [safe to delete]. | Любые ненужные файлы ниже [можно безопасно удалить]. |
+| Any unneeded files below are safe to delete. | Любые ненужные файлы ниже можно безопасно удалить. |
 | They sit in {InstallerFolder}. InstallerClean asks Windows about every installed program: a file is listed when no program claims it ({0}), or when a newer patch has replaced it and no program could roll back to it ({1}). | Они лежат в {InstallerFolder}. InstallerClean спрашивает Windows о каждой установленной программе: файл попадает в список, когда его не заявляет ни одна программа ({0}) или когда его заменило более новое исправление и ни одна программа не смогла бы к нему откатиться ({1}). |
 | Move them to a backup folder you choose, then delete that folder when you're satisfied your programs still update and uninstall as normal. Putting them back into {InstallerFolder} restores everything. Or delete them permanently now. | Переместите их в выбранную вами папку резервных копий, а затем удалите эту папку, когда убедитесь, что ваши программы по-прежнему обновляются и удаляются как обычно. Возвращение их в {InstallerFolder} восстанавливает всё. Или удалите их безвозвратно прямо сейчас. |
 | Nothing scanned yet. | Пока ничего не просканировано. |

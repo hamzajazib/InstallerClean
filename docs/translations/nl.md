@@ -114,7 +114,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 
 | English | Nederlands |
 | --- | --- |
-| Any unneeded files below are [safe to delete]. | Overbodige bestanden hieronder zijn [veilig te verwijderen]. |
+| Any unneeded files below are safe to delete. | Overbodige bestanden hieronder zijn veilig te verwijderen. |
 | They sit in {InstallerFolder}. InstallerClean asks Windows about every installed program: a file is listed when no program claims it ({0}), or when a newer patch has replaced it and no program could roll back to it ({1}). | Ze staan in {InstallerFolder}. InstallerClean vraagt Windows naar elk geïnstalleerd programma: een bestand komt in de lijst wanneer geen enkel programma het opeist ({0}), of wanneer een nieuwere patch het heeft vervangen en geen enkel programma erop kan terugvallen ({1}). |
 | Move them to a backup folder you choose, then delete that folder when you're satisfied your programs still update and uninstall as normal. Putting them back into {InstallerFolder} restores everything. Or delete them permanently now. | Verplaats ze naar een back-upmap die je zelf kiest en verwijder die map zodra je zeker weet dat je programma's nog gewoon bijwerken en verwijderen. Terugzetten in {InstallerFolder} herstelt alles. Of verwijder ze nu definitief. |
 | Nothing scanned yet. | Nog niets gescand. |

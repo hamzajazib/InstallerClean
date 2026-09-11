@@ -114,7 +114,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 
 | English | Français |
 | --- | --- |
-| Any unneeded files below are [safe to delete]. | Tous les fichiers inutiles ci-dessous sont [supprimables sans risque]. |
+| Any unneeded files below are safe to delete. | Tous les fichiers inutiles ci-dessous sont supprimables sans risque. |
 | They sit in {InstallerFolder}. InstallerClean asks Windows about every installed program: a file is listed when no program claims it ({0}), or when a newer patch has replaced it and no program could roll back to it ({1}). | Ils se trouvent dans {InstallerFolder}. InstallerClean interroge Windows sur chaque programme installé : un fichier est listé quand aucun programme ne le revendique ({0}), ou quand un correctif plus récent l'a remplacé et qu'aucun programme ne pourrait revenir à lui ({1}). |
 | Move them to a backup folder you choose, then delete that folder when you're satisfied your programs still update and uninstall as normal. Putting them back into {InstallerFolder} restores everything. Or delete them permanently now. | Déplacez-les vers un dossier de sauvegarde de votre choix, puis supprimez ce dossier dès que vous serez convaincu que vos programmes se mettent toujours à jour et se désinstallent normalement. Les remettre dans {InstallerFolder} restaure tout. Ou supprimez-les définitivement maintenant. |
 | Nothing scanned yet. | Rien n'a encore été analysé. |
