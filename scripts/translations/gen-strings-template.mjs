@@ -250,7 +250,7 @@ const MAP = {
   'Tooltip.SigningCertificate': `Subject name from the embedded Authenticode certificate. Not chain-verified.`,
 
   // Body copy
-  'Body.MainExplanation.Lead': `Any unneeded files below are [safe to delete].`,
+  'Body.MainExplanation.Lead': `Any unneeded files below are safe to delete.`,
   'Body.MainExplanation.Why': `They sit in {InstallerFolder}. InstallerClean asks Windows about every installed program: a file is listed when no program claims it ({0}), or when a newer patch has replaced it and no program could roll back to it ({1}).`,
   'Body.MainExplanation.Action': `Move them to a backup folder you choose, then delete that folder when you're satisfied your programs still update and uninstall as normal. Putting them back into {InstallerFolder} restores everything. Or delete them permanently now.`,
   'Body.NotScanned.Lead': `Nothing scanned yet.`,

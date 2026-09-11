@@ -261,14 +261,12 @@ const FOLDER_TOKEN = '{InstallerFolder}';
 // ---------------------------------------------------------------------------
 // Rule 9. A bracketed link phrase survives translation.
 //
-// Three screens link into the README's safety section, and each link is a
-// phrase inside a sentence rather than a line of its own. The resx marks it
-// with [square brackets] and CompositionParsing.SplitAtBracketedPhrase turns
-// the pair into a Hyperlink as the window is built. A value with no pair
-// renders as plain prose, which is the right fallback and is also completely
-// silent: a translator who drops the brackets takes a link off a screen and
-// nothing anywhere says so. The delete confirmation's is the one that matters
-// most, being the reason a modal carries its own at all.
+// A sentence that carries a link holds it as a phrase inside itself rather than
+// as a line of its own. The resx marks the phrase with [square brackets] and
+// CompositionParsing.SplitAtBracketedPhrase turns the pair into a Hyperlink as
+// the window is built. A value with no pair renders as plain prose, which is the
+// right fallback and is also completely silent: a translator who drops the
+// brackets takes a link off a screen and nothing anywhere says so.
 //
 // Which keys carry a pair is the neutral's decision, as with rule 6, so there
 // is no list here to go stale as screens gain and lose links. Both directions

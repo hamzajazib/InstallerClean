@@ -189,7 +189,7 @@ const MAP = {
   'Tooltip.SigningCertificate': `Nome do titular do certificado Authenticode incorporado. Cadeia não verificada.`,
 
   // Body copy
-  'Body.MainExplanation.Lead': `Qualquer arquivo desnecessário abaixo pode ser [excluído com segurança].`,
+  'Body.MainExplanation.Lead': `Qualquer arquivo desnecessário abaixo pode ser excluído com segurança.`,
   'Body.MainExplanation.Why': `Eles ficam em {InstallerFolder}. O InstallerClean pergunta ao Windows sobre cada programa instalado: um arquivo entra na lista quando nenhum programa o reivindica ({0}), ou quando um patch mais novo o substituiu e nenhum programa poderia voltar a ele ({1}).`,
   'Body.MainExplanation.Action': `Mova-os para uma pasta de backup que você escolher e depois exclua essa pasta quando estiver convencido de que seus programas ainda atualizam e desinstalam normalmente. Colocá-los de volta em {InstallerFolder} restaura tudo. Ou exclua-os permanentemente agora.`,
   'Body.PendingReboot.MsiExecuteMutex': `Algo está usando o Windows Installer neste momento, como uma atualização do Windows ou um programa instalando em segundo plano. Mover e Excluir ficam pausados enquanto isso acontece, para que o InstallerClean não toque em {InstallerFolder} enquanto ela muda. Quando terminar, reanalise e eles voltam.`,

@@ -220,7 +220,7 @@ const MAP = {
   'Tooltip.SigningCertificate': `Naam van het onderwerp uit het ingebedde Authenticode-certificaat. Niet via de certificaatketen geverifieerd.`,
 
   // Body copy
-  'Body.MainExplanation.Lead': `Overbodige bestanden hieronder zijn [veilig te verwijderen].`,
+  'Body.MainExplanation.Lead': `Overbodige bestanden hieronder zijn veilig te verwijderen.`,
   'Body.MainExplanation.Why': `Ze staan in {InstallerFolder}. InstallerClean vraagt Windows naar elk geïnstalleerd programma: een bestand komt in de lijst wanneer geen enkel programma het opeist ({0}), of wanneer een nieuwere patch het heeft vervangen en geen enkel programma erop kan terugvallen ({1}).`,
   'Body.MainExplanation.Action': `Verplaats ze naar een back-upmap die je zelf kiest en verwijder die map zodra je zeker weet dat je programma's nog gewoon bijwerken en verwijderen. Terugzetten in {InstallerFolder} herstelt alles. Of verwijder ze nu definitief.`,
   'Body.NotScanned.Lead': `Nog niets gescand.`,

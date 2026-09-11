@@ -186,7 +186,7 @@ const MAP = {
   'Tooltip.MoveNeedsDestination': `Sposta i file non necessari in una cartella di backup. La scegli subito dopo.`,
   'Tooltip.Delete': `Elimina definitivamente i file non necessari. Usa invece Sposta se vuoi la possibilità di convincerti che vada tutto bene.`,
   'Tooltip.SigningCertificate': `Nome soggetto dal certificato Authenticode incorporato. Catena non verificata.`,
-  'Body.MainExplanation.Lead': `Tutti i file non necessari qui sotto sono [sicuri da eliminare].`,
+  'Body.MainExplanation.Lead': `Tutti i file non necessari qui sotto sono sicuri da eliminare.`,
   'Body.MainExplanation.Why': `Si trovano in {InstallerFolder}. InstallerClean interroga Windows su ogni programma installato: un file compare nell'elenco quando nessun programma lo rivendica ({0}), oppure quando una patch più recente lo ha sostituito e nessun programma potrebbe tornare a esso ({1}).`,
   'Body.MainExplanation.Action': `Spostali in una cartella di backup che scegli tu, poi elimina quella cartella quando sei convinto che i tuoi programmi si aggiornino e si disinstallino ancora normalmente. Rimetterli in {InstallerFolder} ripristina tutto. Oppure eliminali definitivamente adesso.`,
   'Body.PendingReboot.MsiExecuteMutex': `Qualcosa sta usando Windows Installer in questo momento, ad esempio un aggiornamento di Windows o un programma che si installa in background. Sposta ed Elimina sono in pausa mentre accade, così InstallerClean non tocca {InstallerFolder} mentre cambia. Quando ha finito, ripeti la scansione e tornano disponibili.`,

@@ -147,16 +147,9 @@
                      where it collapses. Its 8 plus the 8 on the last visible
                      line is the 16 the intro has always had under it. -->
                 <StackPanel Margin="{StaticResource GapBottom.Sm}">
-                    <!-- Inlines are composed in code-behind (BuildIntroLeadLine)
-                         so the bracketed phrase in the scanned state's lead
-                         renders as a hyperlink into the README's "Is it safe?"
-                         section; a TextBlock cannot bind Text and host an
-                         inline Hyperlink at once, so there is no Text binding
-                         here. The other three leads (not scanned, scan failed,
-                         Windows Installer hold) carry no brackets and render
-                         verbatim. -->
-                    <TextBlock x:Name="IntroLeadText" TextWrapping="Wrap" Foreground="{StaticResource Text.Heading}"
-                               FontSize="{DynamicResource Type.Heading.Sm}" Margin="{StaticResource GapBottom.Sm}"/>
+                    <TextBlock TextWrapping="Wrap" Foreground="{StaticResource Text.Heading}"
+                               FontSize="{DynamicResource Type.Heading.Sm}" Margin="{StaticResource GapBottom.Sm}"
+                               Text="{Binding IntroLead, Converter={StaticResource KeepInstallerPathWhole}}"/>
                     <!-- The converter prepares the line for layout. It binds the
                          installer cache folder's path together so it cannot wrap
                          mid-path, the line naming the folder in three of its four
@@ -1003,17 +996,11 @@
                          LiveSetting + the code-behind raise on reveal: this
                          line is the second half of the outcome (where the files
                          went after a Move; the scan receipt on an all-clear).
-                         Inlines are composed in code-behind
-                         (BuildCompletionRestoreLine), which renders a
-                         bracketed phrase as a hyperlink to the README's "Is it
-                         safe?" section; a TextBlock cannot bind Text and host
-                         an inline Hyperlink at once, so there is no Text
-                         binding here. Whether a line links is the value's
-                         decision and a translation makes it per language, so
-                         the split reads whatever it is given rather than a
-                         list of keys. The collapse trigger still reads
-                         Completion.Restore. -->
+                         The converter binds the installer cache folder's path
+                         together so it cannot wrap mid-path, the cancelled-Move
+                         line naming the folder. -->
                     <TextBlock x:Name="CompletionRestoreText"
+                               Text="{Binding Completion.Restore, Converter={StaticResource KeepInstallerPathWhole}}"
                                AutomationProperties.LiveSetting="Polite"
                                Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Body}"
                                HorizontalAlignment="Center" TextAlignment="Center"

@@ -210,7 +210,7 @@ const MAP = {
   'Tooltip.SigningCertificate': `Nom du titulaire du certificat Authenticode incorporé. Chaîne non vérifiée.`,
 
   // Body copy
-  'Body.MainExplanation.Lead': `Tous les fichiers inutiles ci-dessous sont [supprimables sans risque].`,
+  'Body.MainExplanation.Lead': `Tous les fichiers inutiles ci-dessous sont supprimables sans risque.`,
   'Body.MainExplanation.Why': `Ils se trouvent dans {InstallerFolder}. InstallerClean interroge Windows sur chaque programme installé : un fichier est listé quand aucun programme ne le revendique ({0}), ou quand un correctif plus récent l'a remplacé et qu'aucun programme ne pourrait revenir à lui ({1}).`,
   'Body.MainExplanation.Action': `Déplacez-les vers un dossier de sauvegarde de votre choix, puis supprimez ce dossier dès que vous serez convaincu que vos programmes se mettent toujours à jour et se désinstallent normalement. Les remettre dans {InstallerFolder} restaure tout. Ou supprimez-les définitivement maintenant.`,
   'Body.PendingReboot.MsiExecuteMutex': `Quelque chose utilise Windows Installer en ce moment, par exemple une mise à jour de Windows ou un programme qui s'installe en arrière-plan. Déplacer et Supprimer sont en pause pendant ce temps, pour qu'InstallerClean ne touche pas à {InstallerFolder} pendant qu'il change. Une fois terminé, réanalysez et ils reviennent.`,

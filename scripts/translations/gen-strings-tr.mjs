@@ -169,7 +169,7 @@ const MAP = {
   'Tooltip.MoveNeedsDestination': `Gereksiz dosyaları bir yedek klasörüne taşır. Klasörü hemen ardından seçeceksiniz.`,
   'Tooltip.Delete': `Gereksiz dosyaları kalıcı olarak siler. Her şeyin yolunda olduğuna kendiniz kanaat getirmek isterseniz onun yerine Taşı'yı kullanın.`,
   'Tooltip.SigningCertificate': `Gömülü Authenticode sertifikasındaki konu adı. Zincir doğrulaması yapılmadı.`,
-  'Body.MainExplanation.Lead': `Aşağıdaki gereksiz dosyaların hepsi [güvenle silinebilir].`,
+  'Body.MainExplanation.Lead': `Aşağıdaki gereksiz dosyaların hepsi güvenle silinebilir.`,
   'Body.MainExplanation.Why': `Bunlar {InstallerFolder} içinde duruyor. InstallerClean, yüklü her programı Windows'a sorar: bir dosya, hiçbir program onu sahiplenmediğinde ({0}) ya da daha yeni bir yama onun yerine geçtiğinde ve hiçbir program ona geri dönemeyecek durumdayken ({1}) listelenir.`,
   'Body.MainExplanation.Action': `Onları seçeceğiniz bir yedek klasörüne taşıyın, sonra programlarınızın hâlâ normal şekilde güncellendiğine ve kaldırıldığına kanaat getirdiğinizde o klasörü silin. Onları {InstallerFolder} içine geri koymak her şeyi eski haline getirir. Ya da şimdi kalıcı olarak silin.`,
   'Body.PendingReboot.MsiExecuteMutex': `Şu anda bir şey Windows Installer'ı kullanıyor, örneğin bir Windows güncelleştirmesi ya da arka planda kurulan bir program. O sürerken Taşı ve Sil duraklatılır, böylece InstallerClean değişmekte olan {InstallerFolder} klasörüne dokunmaz. Bittiğinde yeniden tarayın, ikisi de geri gelir.`,

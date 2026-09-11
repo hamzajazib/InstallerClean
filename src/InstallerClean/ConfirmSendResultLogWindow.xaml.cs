@@ -49,9 +49,9 @@ public partial class ConfirmSendResultLogWindow : Window
     /// Composes the Reassurance line from <see cref="Strings.ConfirmSendResultLog_Reassurance"/>,
     /// rendering the <c>[ ]</c>-delimited phrase as a Hyperlink into the
     /// README's reports-stats FAQ answer: a prefix Run, the Hyperlink, then a
-    /// suffix Run. Mirrors MainWindow's BuildCompletionRestoreLine; the URL
-    /// opens through <see cref="UrlLauncher"/> so this elevated process does
-    /// not launch the browser as Administrator.
+    /// suffix Run. Mirrors <see cref="RegisteredFilesWindow"/>'s BuildSeeAlsoLine;
+    /// the URL opens through <see cref="UrlLauncher"/> so this elevated process
+    /// does not launch the browser as Administrator.
     ///
     /// Returns the same sentence as plain text, brackets removed, for the
     /// window title to announce. Returned rather than recomputed there so the

@@ -9,7 +9,7 @@ namespace InstallerClean.Tests.Helpers;
 /// Every sentence the app renders with a link inside it, across all sixteen
 /// languages.
 ///
-/// Four windows hand a resx value to CompositionParsing.SplitAtBracketedPhrase and
+/// Two windows hand a resx value to CompositionParsing.SplitAtBracketedPhrase and
 /// hyperlink the phrase wrapped in <c>[ ]</c>. The brackets are ordinary characters
 /// in a resx value, so a translation can drop one, add one or add a second pair, and
 /// check-resx-parity, which reads key presence and placeholder arity, is looking at
@@ -19,7 +19,7 @@ namespace InstallerClean.Tests.Helpers;
 ///
 /// THE SUBJECTS ARE DERIVED FROM THE NEUTRAL'S OWN PUNCTUATION rather than listed
 /// here, which is how check-cross-key-rules builds the same set: a key is a subject
-/// because the English sentence carries a bracket, so a fifth linked sentence is
+/// because the English sentence carries a bracket, so a third linked sentence is
 /// covered the day somebody writes it and nothing below has to be edited. Membership
 /// is any bracket rather than a well-formed pair, so an unbalanced English value is a
 /// failure here rather than a key that quietly leaves the rule.
@@ -35,10 +35,9 @@ namespace InstallerClean.Tests.Helpers;
 /// language that declares none of its own is served the neutral, which is what that
 /// language would render.
 ///
-/// IntroLeadCompositionTests covers the main window's four leads and asserts more
-/// about the one that links than its bracket shape;
-/// DeleteConfirmationCompositionTests covers the dialog whose value must carry no
-/// pair at all, which is the opposite rule. The overlap on the lead costs nothing.
+/// IntroLeadCompositionTests and DeleteConfirmationCompositionTests hold the
+/// opposite rule over two surfaces whose values must carry no bracket at all: the
+/// main window's four leads, and the delete dialog, whose value varies by count.
 ///
 /// The parse itself is CompositionParsing.SplitAtBracketedPhrase, covered for its own
 /// edge cases in CompositionParsingTests; what is covered here is the shipped text it
@@ -53,7 +52,6 @@ public class LinkPhraseCompositionTests
     /// </summary>
     private static readonly string[] KnownLinkKeys =
     {
-        "Body.MainExplanation.Lead",              // the main window's scanned lead
         "Body.RegisteredMissingFromDisk.SeeAlso", // the registered-files window
         "ConfirmSendResultLog.Reassurance",       // the send-report confirmation
     };

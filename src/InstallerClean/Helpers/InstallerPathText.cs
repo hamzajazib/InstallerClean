@@ -67,8 +67,8 @@ namespace InstallerClean.Helpers;
 ///
 /// Applied wherever this project turns a resource string into text that gets
 /// drawn: <c>TranslateExtension</c> for everything XAML resolves, the converter
-/// below for the main window's intro line, and by hand in the completion
-/// overlay's two inline builders and the message dialog's body. A drawn string
+/// below for the main window's bound body lines, and by hand in the completion
+/// overlay's summary builder and the message dialog's body. A drawn string
 /// keeps its joiners even where it is also the spoken one, a TextBlock's
 /// automation peer reporting its Text as its name. A string that is only ever
 /// spoken does not get them, having no layout to protect and nothing to hand a
@@ -221,10 +221,12 @@ internal static class InstallerPathText
 
 /// <summary>
 /// <see cref="ForDrawing"/> for a binding, where the string comes from a view
-/// model rather than from the resx at parse time. The main window's intro detail
-/// line is the one consumer: it carries the "they sit in" sentence that names the
-/// cache folder, the not-yet-scanned prompt and, on a failed scan, either of the
-/// two diagnoses, which name the cache folder and the log's path.
+/// model rather than from the resx at parse time. The consumers are the main
+/// window's three bound body lines: the intro lead, the intro detail and the
+/// completion restore line. The detail is the one that reaches every treatment
+/// here, carrying the "they sit in" sentence that names the cache folder, the
+/// not-yet-scanned prompt and, on a failed scan, either of the two diagnoses,
+/// which name the cache folder and the log's path.
 /// </summary>
 internal sealed class InstallerPathTextConverter : IValueConverter
 {

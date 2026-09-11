@@ -200,7 +200,7 @@ const MAP = {
   'Tooltip.SigningCertificate': `Antragstellername aus dem eingebetteten Authenticode-Zertifikat. Die Zertifikatskette wurde nicht geprüft.`,
 
   // Body copy
-  'Body.MainExplanation.Lead': `Alle nicht benötigten Dateien unten kannst du [bedenkenlos löschen].`,
+  'Body.MainExplanation.Lead': `Alle nicht benötigten Dateien unten kannst du bedenkenlos löschen.`,
   'Body.MainExplanation.Why': `Sie liegen in {InstallerFolder}. InstallerClean fragt Windows nach jedem installierten Programm: Eine Datei wird aufgeführt, wenn kein Programm sie beansprucht ({0}) oder wenn ein neuerer Patch sie ersetzt hat und kein Programm auf sie zurückgehen könnte ({1}).`,
   'Body.MainExplanation.Action': `Verschiebe sie in einen Sicherungsordner deiner Wahl und lösche diesen Ordner, sobald du dich überzeugt hast, dass deine Programme sich weiterhin wie gewohnt aktualisieren und deinstallieren lassen. Wenn du sie zurück nach {InstallerFolder} legst, ist alles wieder da. Oder lösche sie jetzt endgültig.`,
   'Body.PendingReboot.MsiExecuteMutex': `Etwas nutzt gerade Windows Installer, etwa ein Windows-Update oder ein Programm, das im Hintergrund installiert wird. Verschieben und Löschen pausieren, solange das läuft, damit InstallerClean {InstallerFolder} nicht anfasst, während sich der Ordner ändert. Danach einmal neu scannen, und sie sind wieder da.`,

@@ -190,7 +190,7 @@ const MAP = {
   'Tooltip.MoveNeedsDestination': `Mueve los archivos innecesarios a una carpeta de copia de seguridad. La elegirás a continuación.`,
   'Tooltip.Delete': `Elimina definitivamente los archivos innecesarios. Usa Mover en su lugar si quieres la oportunidad de convencerte de que todo va bien.`,
   'Tooltip.SigningCertificate': `Nombre del firmante del certificado Authenticode incorporado. La cadena no está verificada.`,
-  'Body.MainExplanation.Lead': `Cualquier archivo innecesario de los de abajo se puede [eliminar sin riesgo].`,
+  'Body.MainExplanation.Lead': `Cualquier archivo innecesario de los de abajo se puede eliminar sin riesgo.`,
   'Body.MainExplanation.Why': `Están en {InstallerFolder}. InstallerClean pregunta a Windows por cada programa instalado: un archivo aparece en la lista cuando ningún programa lo reclama ({0}), o cuando un parche más nuevo lo ha sustituido y ningún programa podría volver atrás hasta él ({1}).`,
   'Body.MainExplanation.Action': `Muévelos a una carpeta de copia de seguridad que elijas y luego elimina esa carpeta cuando estés convencido de que tus programas siguen actualizándose y desinstalándose con normalidad. Devolverlos a {InstallerFolder} lo restaura todo. O elimínalos definitivamente ahora.`,
   'Body.PendingReboot.MsiExecuteMutex': `Algo está usando Windows Installer en este momento, como una actualización de Windows o un programa instalándose en segundo plano. Mover y Eliminar están en pausa mientras eso ocurre, así que InstallerClean no tocará {InstallerFolder} mientras cambia. Cuando termine, vuelve a analizar y estarán de nuevo disponibles.`,

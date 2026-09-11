@@ -203,7 +203,7 @@ const MAP = {
   'Tooltip.SigningCertificate': `Nama subjek dari sertifikat Authenticode yang disematkan. Rantai sertifikat tidak diverifikasi.`,
 
   // Body copy
-  'Body.MainExplanation.Lead': `File apa pun yang tidak diperlukan di bawah ini [aman dihapus].`,
+  'Body.MainExplanation.Lead': `File apa pun yang tidak diperlukan di bawah ini aman dihapus.`,
   'Body.MainExplanation.Why': `File-file itu ada di {InstallerFolder}. InstallerClean menanyakan setiap program yang terpasang kepada Windows: sebuah file masuk daftar jika tidak ada program yang mengakuinya ({0}), atau jika sebuah patch yang lebih baru telah menggantikannya dan tidak ada program yang bisa kembali kepadanya ({1}).`,
   'Body.MainExplanation.Action': `Pindahkan ke folder cadangan pilihan Anda, lalu hapus folder itu setelah Anda yakin program-program Anda masih bisa diperbarui dan dicopot seperti biasa. Mengembalikannya ke {InstallerFolder} memulihkan semuanya. Atau hapus permanen sekarang.`,
   'Body.PendingReboot.MsiExecuteMutex': `Ada yang sedang memakai Windows Installer saat ini, misalnya pembaruan Windows atau program yang memasang diri di latar belakang. Pindahkan dan Hapus dijeda selama itu berjalan, sehingga InstallerClean tidak menyentuh {InstallerFolder} selagi berubah. Setelah selesai, pindai ulang dan keduanya kembali aktif.`,

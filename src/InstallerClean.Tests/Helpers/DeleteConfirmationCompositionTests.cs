@@ -8,27 +8,28 @@ namespace InstallerClean.Tests.Helpers;
 /// <summary>
 /// The delete confirmation's body, across all sixteen languages.
 ///
-/// ConfirmDeleteWindow's BuildBodyLine takes one of the two count forms from
-/// DisplayHelpers.Pluralise and renders it, hyperlinking a phrase wrapped in
-/// <c>[ ]</c>. Neither form carries a pair, in any language.
+/// ConfirmDeleteWindow takes one of the two count forms from
+/// DisplayHelpers.Pluralise and paints it as the card's body. No form carries a
+/// square bracket, in any language.
 ///
-/// The brackets are ordinary characters in a resx value, so a translation can add
-/// one, drop one or move it, and check-resx-parity, which reads key presence and
-/// placeholder arity, is looking at something else. check-cross-key-rules reads
-/// the resx files and compares each language's brackets against the neutral
-/// sentence each key answers for, leaving a key the neutral has not got to
-/// check-resx-parity; this reads the values through the door the app opens, with
-/// the culture set, so what it asserts is what the dialog would be handed.
+/// A bracket is an ordinary character in a resx value, so a translation can add
+/// one and check-resx-parity, which reads key presence and placeholder arity, is
+/// looking at something else. Nothing splits this value, so a bracket in one
+/// paints on the card, in the sentence somebody reads before agreeing to a
+/// permanent delete. check-cross-key-rules reads the resx files and compares each
+/// language's brackets against the neutral sentence each key answers for, leaving
+/// a key the neutral has not got to check-resx-parity; this reads the values
+/// through the door the app opens, with the culture set, so what it asserts is
+/// what the dialog would be handed.
 ///
 /// IntroLeadCompositionTests does this job for the main window's four leads. This
-/// is the same job for the delete confirmation, which is the only value the app
-/// splits whose form varies by count. None of the four leads goes through
+/// is the same job for the delete confirmation, which is the one value under the
+/// rule whose form varies by count. None of the four leads goes through
 /// DisplayHelpers.Pluralise and this value does, so the set read here is every
 /// form Pluralise can choose and not only the pair the neutral declares.
 ///
-/// The parse itself is CompositionParsing.SplitAtBracketedPhrase, covered for its
-/// own edge cases in CompositionParsingTests; what is covered here is the shipped
-/// text it is fed.
+/// LinkPhraseCompositionTests holds the opposite rule over the sentences that do
+/// carry a link phrase.
 /// </summary>
 public class DeleteConfirmationCompositionTests
 {
@@ -45,7 +46,7 @@ public class DeleteConfirmationCompositionTests
     /// Every form the dialog can be handed in this language: the two count forms
     /// the neutral declares, plus any category override this language defines for
     /// the same prefix. Pluralise takes an override in preference to the pair, so a
-    /// bracket in one reaches the dialog exactly as a bracket in the pair does.
+    /// bracket in one reaches the card exactly as a bracket in the pair does.
     ///
     /// The overrides are enumerated from the language's own resource set rather
     /// than named here, because which language defines which is the language's
@@ -84,7 +85,7 @@ public class DeleteConfirmationCompositionTests
 
     [Theory]
     [MemberData(nameof(Cultures))]
-    public void Both_delete_confirmation_bodies_render_as_plain_text(string cultureName)
+    public void Every_delete_confirmation_body_renders_as_plain_text(string cultureName)
     {
         var culture = CultureInfo.GetCultureInfo(cultureName);
         var faults = new List<string>();
@@ -93,25 +94,12 @@ public class DeleteConfirmationCompositionTests
         {
             var value = Body(key, culture);
 
-            // No complete pair, so the dialog takes the single-Run arm. The key is
-            // named in the message because the set read here varies by language: a
-            // failure that named only the value would leave a reader working out
-            // which form it came from.
-            if (CompositionParsing.SplitAtBracketedPhrase(value) is not null)
-            {
-                faults.Add($"{key} splits at a bracketed phrase, so the dialog would "
-                    + $"render a hyperlink in it: \"{value}\"");
-            }
-
-            // And no half of a pair either: an unmatched bracket leaves the split
-            // returning null exactly as a clean sentence does, so the test above it
-            // cannot see one. It would paint on screen. Reported only where the pair
-            // did not fire, because a complete pair carries brackets as well and one
-            // form is owed one line rather than two.
-            else if (value.Contains('[') || value.Contains(']'))
-            {
+            // Either bracket on its own is the whole fault: the character is drawn
+            // as it stands. The key is named in the message because the set read
+            // here varies by language, and a failure that named only the value
+            // would leave a reader working out which form it came from.
+            if (value.Contains('[') || value.Contains(']'))
                 faults.Add($"{key} carries a square bracket: \"{value}\"");
-            }
         }
 
         // Collected across every form and asserted once, so one run names all of them.

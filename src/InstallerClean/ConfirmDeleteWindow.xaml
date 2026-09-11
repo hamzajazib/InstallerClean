@@ -52,11 +52,6 @@
                           HorizontalScrollBarVisibility="Disabled"
                           Style="{StaticResource BodyScrollRegion}"
                           AutomationProperties.Name="{loc:Translate Automation.Scroll.DialogBody}">
-                <!-- Inlines composed in code-behind (BuildBodyLine), which
-                     renders a bracketed phrase as a hyperlink into the
-                     README's "Is it safe?" section; a TextBlock cannot bind
-                     Text and host an inline Hyperlink at once, so there is no
-                     Text binding here. -->
                 <TextBlock x:Name="BodyText"
                            Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Body}" TextWrapping="Wrap"
                            Margin="{StaticResource GapBottom.Xl}"/>

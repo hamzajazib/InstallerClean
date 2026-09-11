@@ -24,16 +24,9 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = _vm = viewModel;
-        // The lead has no Text binding, hosting inlines composed in code, so it
-        // is built once here for the state the window opens in and rebuilt from
-        // PropertyChanged after that.
-        BuildIntroLeadLine();
         // Each child VM raises its own PropertyChanged stream. Listen
         // on all three so the window can move keyboard focus to the
-        // most-relevant Cancel button as overlays appear. The parent VM is
-        // listened to as well, for the one property that reaches a TextBlock
-        // hosting inlines rather than a Text binding.
-        _vm.PropertyChanged += OnMainPropertyChanged;
+        // most-relevant Cancel button as overlays appear.
         _vm.Completion.PropertyChanged += OnCompletionPropertyChanged;
         _vm.Cleanup.PropertyChanged += OnCleanupPropertyChanged;
         _vm.Scan.PropertyChanged += OnScanPropertyChanged;
@@ -59,14 +52,12 @@ public partial class MainWindow : Window
         // overlay.
         if (_vm.Completion.IsComplete)
         {
-            // Neither the summary nor the restore line has a Text binding
-            // (each hosts inlines composed in code), so build both now for
-            // the overlay already up at construction; the PropertyChanged
-            // path that normally builds them never fired for this
-            // pre-construction completion (the startup all-clear set during
-            // the splash).
+            // The summary has no Text binding, hosting inlines composed in
+            // code, so build it now for the overlay already up at
+            // construction; the PropertyChanged path that normally builds it
+            // never fired for this pre-construction completion (the startup
+            // all-clear set during the splash).
             BuildCompletionSummaryLine();
-            BuildCompletionRestoreLine();
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () => CompletionCloseButton.Focus());
             // The overlay was never revealed inside this window's lifetime
             // (the startup all-clear is set during the splash, before
@@ -247,7 +238,6 @@ public partial class MainWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
-        _vm.PropertyChanged -= OnMainPropertyChanged;
         _vm.Completion.PropertyChanged -= OnCompletionPropertyChanged;
         _vm.Cleanup.PropertyChanged -= OnCleanupPropertyChanged;
         _vm.Scan.PropertyChanged -= OnScanPropertyChanged;
@@ -260,12 +250,6 @@ public partial class MainWindow : Window
         SizeChanged -= OnWindowSizeChanged;
         Closing -= OnClosing;
         Closed -= OnClosed;
-    }
-
-    private void OnMainPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(MainViewModel.IntroLead))
-            BuildIntroLeadLine();
     }
 
     /// <summary>
@@ -308,15 +292,11 @@ public partial class MainWindow : Window
 
     private void OnCompletionPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        // Summary and Restore are both set on every Show* path before
-        // IsComplete flips, so rebuilding their inlines here means they are
-        // in place by the time the IsComplete branch below announces the
-        // outcome.
+        // Summary is set on every Show* path before IsComplete flips, so
+        // rebuilding its inlines here means they are in place by the time the
+        // IsComplete branch below announces the outcome.
         if (e.PropertyName == nameof(CompletionViewModel.Summary))
             BuildCompletionSummaryLine();
-
-        if (e.PropertyName == nameof(CompletionViewModel.Restore))
-            BuildCompletionRestoreLine();
 
         if (e.PropertyName == nameof(CompletionViewModel.IsComplete) && _vm.Completion.IsComplete)
         {
@@ -695,49 +675,6 @@ public partial class MainWindow : Window
         AnnounceLiveRegions(CompletionHeadingText, CompletionFailedCountText,
             CompletionSummaryText, CompletionRestoreText, CompletionSkippedText);
 
-    // Stable README anchor (an explicit <a id="is-it-safe"> before the
-    // "Is it safe?" section of every README, so rewording a heading never
-    // breaks the link); the URL targets the README in the displayed language.
-    // It is the destination for every link this window composes out of a
-    // displayed value. Two lines compose that way, the intro lead and the
-    // completion restore line, each by splitting its value at a
-    // bracket-delimited phrase.
-    private static string SafetyUrl => ReadmeLinks.For("is-it-safe", Localisation.UiCulture);
-
-    /// <summary>
-    /// Composes the main window's intro lead, rendering a phrase delimited by
-    /// <c>[ ]</c> as a hyperlink into the README's "Is it safe?" section. Only
-    /// the scanned state's lead carries a pair; the not-scanned, scan-failed
-    /// and Windows-Installer-hold leads have none and render verbatim as a
-    /// single Run, which is what the shared split already does with them.
-    /// </summary>
-    private void BuildIntroLeadLine()
-    {
-        var raw = InstallerPathText.KeepWhole(_vm.IntroLead);
-        IntroLeadText.Inlines.Clear();
-
-        if (CompositionParsing.SplitAtBracketedPhrase(raw) is not { } split)
-        {
-            IntroLeadText.Inlines.Add(new Run(raw));
-            return;
-        }
-
-        var link = new Hyperlink(new Run(split.LinkText))
-        {
-            NavigateUri = new Uri(SafetyUrl),
-            Style = (Style)FindResource("SubtleLink"),
-        };
-        link.Click += Hyperlink_Click;
-        // The bracketed phrase is part of the sentence rather than a
-        // destination, so the whole sentence with the brackets removed is the
-        // link's accessible name; see BuildCompletionRestoreLine.
-        AutomationProperties.SetName(link, split.Prefix + split.LinkText + split.Suffix);
-
-        if (split.Prefix.Length > 0) IntroLeadText.Inlines.Add(new Run(split.Prefix));
-        IntroLeadText.Inlines.Add(link);
-        if (split.Suffix.Length > 0) IntroLeadText.Inlines.Add(new Run(split.Suffix));
-    }
-
     /// <summary>
     /// Composes the completion summary line from <see cref="CompletionViewModel.Summary"/>,
     /// forcing the destination path (<see cref="CompletionViewModel.SummaryDestination"/>)
@@ -745,10 +682,10 @@ public partial class MainWindow : Window
     /// sentence, whatever word order the target language uses (mirrors
     /// ConfirmMoveWindow's destination-on-its-own-line treatment). A value with
     /// no destination (the all-clear receipt, either delete summary) renders
-    /// verbatim. Locating the raw substring
-    /// rather than a bracket-delimited marker (as <see cref="BuildCompletionRestoreLine"/>
-    /// uses for its hyperlink) is deliberate: the destination is a user-chosen
-    /// folder path that could itself contain a literal '[' or ']'.
+    /// verbatim. Locating the raw substring rather than a bracket-delimited
+    /// marker, which is how the windows that carry a link mark one, is
+    /// deliberate: the destination is a user-chosen folder path that could
+    /// itself contain a literal '[' or ']'.
     ///
     /// The summary can be more than one line: the overlay shown when the act-time
     /// re-check held the WHOLE batch back puts the held-back sentence here, and the
@@ -813,58 +750,6 @@ public partial class MainWindow : Window
             if (i > 0) CompletionSummaryText.Inlines.Add(new LineBreak());
             CompletionSummaryText.Inlines.Add(new Run(lines[i].TrimEnd('\r')));
         }
-    }
-
-    /// <summary>
-    /// Composes the completion restore line from <see cref="CompletionViewModel.Restore"/>.
-    /// A value with no <c>[ ]</c> pair renders verbatim as a single Run, which is
-    /// what the scan receipt and both post-Move lines do. A value carrying such a
-    /// pair renders as a prefix Run, a Hyperlink into the README's "Is it safe?"
-    /// section, then a suffix Run.
-    ///
-    /// Whether a line links is the value's decision and a translation makes it
-    /// per language, which is why the split runs over whatever it is handed
-    /// rather than over a list of keys. Mirrors <see cref="RegisteredFilesWindow"/>'s
-    /// BuildSeeAlsoLine; the URL opens through <see cref="UrlLauncher"/> so this
-    /// elevated process does not launch the browser as Administrator.
-    /// </summary>
-    private void BuildCompletionRestoreLine()
-    {
-        // The post-Move line names the installer cache folder. Bound before the
-        // split: KeepWhole inserts only between the path's own characters, so
-        // the [ ] pair the split looks for is untouched.
-        var raw = InstallerPathText.KeepWhole(_vm.Completion.Restore);
-        CompletionRestoreText.Inlines.Clear();
-
-        // Where the sentence splits around its [ ]-delimited link is pure string
-        // work in Core (see CompositionParsing); this method only builds inlines.
-        if (CompositionParsing.SplitAtBracketedPhrase(raw) is not { } split)
-        {
-            CompletionRestoreText.Inlines.Add(new Run(raw));
-            return;
-        }
-
-        var link = new Hyperlink(new Run(split.LinkText))
-        {
-            NavigateUri = new Uri(SafetyUrl),
-            Style = (Style)FindResource("SubtleLink"),
-        };
-        link.Click += Hyperlink_Click;
-        // The bracketed phrase is a parenthetical aside, not a destination, so
-        // it says nothing to a screen reader focused on the link alone; the
-        // whole restore sentence (brackets removed) is the self-contained
-        // accessible name, already in the user's language.
-        AutomationProperties.SetName(link, split.Prefix + split.LinkText + split.Suffix);
-
-        if (split.Prefix.Length > 0) CompletionRestoreText.Inlines.Add(new Run(split.Prefix));
-        CompletionRestoreText.Inlines.Add(link);
-        if (split.Suffix.Length > 0) CompletionRestoreText.Inlines.Add(new Run(split.Suffix));
-    }
-
-    private void Hyperlink_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Hyperlink link && link.NavigateUri is not null)
-            UrlLauncher.OpenUrl(link.NavigateUri.AbsoluteUri);
     }
 
     private static void RaiseLiveRegionChanged(FrameworkElement element)

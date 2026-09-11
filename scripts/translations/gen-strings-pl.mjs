@@ -221,7 +221,7 @@ const MAP = {
   'Tooltip.SigningCertificate': `Nazwa podmiotu z osadzonego certyfikatu Authenticode. Łańcuch nie został zweryfikowany.`,
 
   // Body copy
-  'Body.MainExplanation.Lead': `Wszystkie niepotrzebne pliki poniżej [można bezpiecznie usunąć].`,
+  'Body.MainExplanation.Lead': `Wszystkie niepotrzebne pliki poniżej można bezpiecznie usunąć.`,
   'Body.MainExplanation.Why': `Leżą w {InstallerFolder}. InstallerClean pyta system Windows o każdy zainstalowany program: plik trafia na listę, gdy żaden program się do niego nie przyznaje ({0}) albo gdy nowsza poprawka go zastąpiła i żaden program nie mógłby do niego wrócić ({1}).`,
   'Body.MainExplanation.Action': `Przenieś je do wybranego przez siebie folderu kopii zapasowej, a potem skasuj ten folder, gdy nabierzesz pewności, że twoje programy nadal normalnie się aktualizują i odinstalowują. Przełożenie ich z powrotem do {InstallerFolder} przywraca wszystko. Albo usuń je trwale już teraz.`,
   'Body.PendingReboot.MsiExecuteMutex': `Coś właśnie korzysta z Instalatora Windows, na przykład aktualizacja systemu albo program instalujący się w tle. Przenieś i Usuń są wstrzymane, dopóki to trwa, żeby InstallerClean nie ruszał {InstallerFolder} w trakcie zmian. Gdy się skończy, skanuj ponownie, a wrócą.`,

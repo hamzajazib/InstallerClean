@@ -11,8 +11,8 @@ public class ReadmeLinksTests
     [InlineData("sv-SE")] // unshipped language: the English README is what the app displays
     public void For_links_the_repository_home_when_english_is_displayed(string culture)
         => Assert.Equal(
-            "https://github.com/no-faff/InstallerClean#is-it-safe",
-            ReadmeLinks.For("is-it-safe", CultureInfo.GetCultureInfo(culture)));
+            "https://github.com/no-faff/InstallerClean#recovery",
+            ReadmeLinks.For("recovery", CultureInfo.GetCultureInfo(culture)));
 
     [Theory]
     [InlineData("it", "README.it.md")]

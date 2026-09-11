@@ -7,40 +7,33 @@ namespace InstallerClean.Tests.Helpers;
 /// <summary>
 /// The main window's first line, across all sixteen languages.
 ///
-/// MainViewModel.IntroLead picks one of four strings and MainWindow's
-/// BuildIntroLeadLine renders it, hyperlinking a phrase wrapped in <c>[ ]</c>.
-/// Only the scanned state's lead carries a pair; the scan-failed,
-/// nothing-scanned-yet and Windows-Installer-hold leads carry none and must
-/// render verbatim as a single Run.
+/// MainViewModel.IntroLead picks one of four strings and the window binds it as
+/// the TextBlock's text. None of the four carries a square bracket, in any
+/// language.
 ///
-/// Neither half of that is visible to any existing gate. The brackets are
-/// ordinary characters in a resx value, so a translator can drop one, add one or
-/// move it, and check-resx-parity (key presence and placeholder arity) sees
-/// nothing. The two ways it goes wrong are opposites and both reach a user:
-/// a lead that should have no link growing a stray bracket renders the bracket
-/// on screen as text, and the one lead that should have a link losing its pair
-/// renders the sentence with no link at all, silently dropping the window's only
-/// route to the safety reasoning.
+/// That is visible to no existing gate. A bracket is an ordinary character in a
+/// resx value, so a translator can add one and check-resx-parity, which reads
+/// key presence and placeholder arity, is looking at something else. Nothing
+/// splits these values, so a bracket in one paints on screen, at the top of the
+/// window and in the sentence a reader meets first.
 ///
-/// The parse itself is CompositionParsing.SplitAtBracketedPhrase, covered for
-/// its own edge cases in CompositionParsingTests; what is covered here is the
-/// shipped text it is fed.
+/// LinkPhraseCompositionTests holds the opposite rule over the sentences that
+/// do carry a link phrase.
 /// </summary>
 public class IntroLeadCompositionTests
 {
     /// <summary>
-    /// The three leads that must render as plain text. Keys rather than typed
-    /// accessors, because the assertion is about what each language ships and
-    /// the lookup has to name a culture.
+    /// The four leads, each of which renders as plain text. Keys rather than
+    /// typed accessors, because the assertion is about what each language ships
+    /// and the lookup has to name a culture.
     /// </summary>
-    private static readonly string[] PlainLeadKeys =
+    private static readonly string[] LeadKeys =
     {
-        "Error.ScanFailedTitle",   // a scan failed, startup or Re-scan
-        "Body.NotScanned.Lead",    // the startup scan was cancelled
-        "Body.PendingReboot.Lead", // files found, but Windows Installer is busy
+        "Body.MainExplanation.Lead", // a scan found files
+        "Error.ScanFailedTitle",     // a scan failed, startup or Re-scan
+        "Body.NotScanned.Lead",      // the startup scan was cancelled
+        "Body.PendingReboot.Lead",   // files found, but Windows Installer is busy
     };
-
-    private const string LinkLeadKey = "Body.MainExplanation.Lead";
 
     public static TheoryData<string> Cultures()
     {
@@ -51,57 +44,26 @@ public class IntroLeadCompositionTests
 
     [Theory]
     [MemberData(nameof(Cultures))]
-    public void The_three_non_link_leads_render_as_plain_text(string cultureName)
+    public void Every_lead_renders_as_plain_text(string cultureName)
     {
         var culture = CultureInfo.GetCultureInfo(cultureName);
+        var faults = new List<string>();
 
-        foreach (var key in PlainLeadKeys)
+        foreach (var key in LeadKeys)
         {
             var value = Lead(key, culture);
 
-            // No complete pair, so the window takes the single-Run arm.
-            Assert.Null(CompositionParsing.SplitAtBracketedPhrase(value));
-
-            // And no half of a pair either: an unmatched bracket leaves the
-            // split returning null exactly as a clean sentence does, so the
-            // assertion above cannot see one. It would paint on screen.
-            Assert.DoesNotContain('[', value);
-            Assert.DoesNotContain(']', value);
+            // Either bracket on its own is the whole fault: the character is
+            // drawn as it stands. The key is named in the message because four
+            // leads are read and a fault quoting only the value would leave a
+            // reader working out which state it came from.
+            if (value.Contains('[') || value.Contains(']'))
+                faults.Add($"{key} carries a square bracket: \"{value}\"");
         }
-    }
 
-    [Theory]
-    [MemberData(nameof(Cultures))]
-    public void The_scanned_lead_carries_exactly_one_link_phrase(string cultureName)
-    {
-        var culture = CultureInfo.GetCultureInfo(cultureName);
-        var value = Lead(LinkLeadKey, culture);
-
-        var split = CompositionParsing.SplitAtBracketedPhrase(value);
-
-        Assert.NotNull(split);
-        Assert.NotEqual("", split!.LinkText);
-        // The window builds its accessible name as prefix + link + suffix, so
-        // the three parts have to reconstitute the sentence exactly, minus the
-        // two brackets. A second pair would leave one of them in the suffix.
-        Assert.Equal(value.Replace("[", "").Replace("]", ""),
-            split.Prefix + split.LinkText + split.Suffix);
-    }
-
-    [Theory]
-    [MemberData(nameof(Cultures))]
-    public void The_link_phrase_is_a_phrase_rather_than_the_whole_sentence(string cultureName)
-    {
-        // The bracketed span is part of the sentence, not a destination: it
-        // reads as words a person clicks mid-sentence. A translation that
-        // wrapped the entire line would turn the whole lead into a hyperlink,
-        // which no other language does and which reads as an error.
-        var value = Lead(LinkLeadKey, CultureInfo.GetCultureInfo(cultureName));
-        var split = CompositionParsing.SplitAtBracketedPhrase(value);
-
-        Assert.NotNull(split);
-        Assert.True(split!.Prefix.Length + split.Suffix.Length > 0,
-            $"{cultureName}: the whole lead is inside the brackets");
+        // Collected across the four and asserted once, so one run names every
+        // lead a language gets wrong rather than stopping at the first.
+        Assert.True(faults.Count == 0, $"{cultureName}: {string.Join("; ", faults)}");
     }
 
     /// <summary>
