@@ -450,7 +450,7 @@ const MAP = {
   'Cli.MovingFiles': `Movendo {0} {1} desnecessários para {2}...`,
   'Cli.MovedFiles': `Foram movidos {0} {1} desnecessários.`,
   'Cli.MutexBlocked': `Outro processo do InstallerClean mantém o bloqueio de instância única (a GUI ou outra execução da CLI). Código de saída 75 (transitório); seguro tentar novamente mais tarde.`,
-  'Cli.EventLogUnavailable': `Observação: falha ao gravar no Log de Eventos. Verifique as permissões do log de Aplicativo ou a Diretiva de Grupo.`,
+  'Cli.EventLogUnavailable': `Observação: falha ao gravar no Log de Eventos. Verifique as permissões do log de Aplicativo ou a Política de Grupo.`,
   'Cli.Help.Header': `InstallerClean - limpeza de {InstallerFolder}`,
   'Cli.Help.Usage': `Uso:`,
   'Cli.Help.Help': `  installerclean-cli --help      Mostra esta ajuda (aceita também /?, -h)`,

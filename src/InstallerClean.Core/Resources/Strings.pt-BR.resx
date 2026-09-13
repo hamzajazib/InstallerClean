@@ -2113,7 +2113,7 @@ Não foi possível gravar o crash.log.</value></data>
        Event Log write failed (Group Policy or service unavailable).
        Tells an RMM consumer expecting an Application entry that the
        channel was unwritable, not just empty. -->
-  <data name="Cli.EventLogUnavailable" xml:space="preserve"><value>Observação: falha ao gravar no Log de Eventos. Verifique as permissões do log de Aplicativo ou a Diretiva de Grupo.</value></data>
+  <data name="Cli.EventLogUnavailable" xml:space="preserve"><value>Observação: falha ao gravar no Log de Eventos. Verifique as permissões do log de Aplicativo ou a Política de Grupo.</value></data>
 
   <!-- crash.log privacy header. Prepended to a fresh crash.log so a
        user attaching the file to a public bug report has the
