@@ -18,11 +18,6 @@ public partial class AboutWindow : Window
     public AboutWindow(ISettingsService settings)
     {
         InitializeComponent();
-        // The donate pill sits wherever the star label beside it leaves room,
-        // so its tooltip lines up left edges and takes the offset the tooltip
-        // itself carries.
-        DonateToolTip.CustomPopupPlacementCallback = TooltipPlacement.KeptInsideWindow(
-            DonateToolTip, this, ToolTipAnchor.Left, ToolTipEdgeMargin);
         _settings = settings;
         VersionText.Text = DisplayHelpers.GetVersionString();
 
@@ -160,11 +155,6 @@ public partial class AboutWindow : Window
         if (sender is System.Windows.Documents.Hyperlink link && link.NavigateUri is not null)
             UrlLauncher.OpenUrl(link.NavigateUri.AbsoluteUri);
     }
-
-    // How close the donate tooltip may come to either edge of the window.
-    // Matches where the say-thanks row's own pills start, the WrapPanel's
-    // negative left margin having pulled them in from the window inset.
-    private const double ToolTipEdgeMargin = 12;
 
     private void StarClick(object sender, RoutedEventArgs e) =>
         UrlLauncher.OpenUrl("https://github.com/no-faff/InstallerClean");
