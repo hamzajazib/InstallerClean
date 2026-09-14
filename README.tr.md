@@ -19,34 +19,46 @@
   <a href="https://dotnet.microsoft.com/download/dotnet/10.0"><img src="https://img.shields.io/badge/.NET-10.0-purple.svg" alt=".NET 10"></a>
   <a href="https://github.com/no-faff/InstallerClean/actions/workflows/ci.yml"><img src="https://github.com/no-faff/InstallerClean/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/no-faff/InstallerClean/releases"><img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4.svg" alt="Windows 10/11"></a>
-  <a href="https://github.com/no-faff/InstallerClean/releases/latest"><img src="https://img.shields.io/badge/release-v2.3.0-blue" alt="GitHub Sürümü"></a>
-  <a href="https://github.com/no-faff/InstallerClean/releases"><img src="https://img.shields.io/badge/downloads-73k-brightgreen" alt="Toplam indirme"></a>
+  <a href="https://github.com/no-faff/InstallerClean/releases/latest"><img src="https://img.shields.io/badge/release-v3.0.0-blue" alt="GitHub sürümü"></a>
+  <a href="https://github.com/no-faff/InstallerClean/releases"><img src="https://img.shields.io/badge/downloads-72k-brightgreen" alt="Toplam indirme"></a>
 </p>
 
-![Başarılı bir temizliğin ardından InstallerClean'in ekran görüntüsü: 1,28 GB temizlendi, 68 dosya Geri Dönüşüm Kutusu'na taşındı](docs/screenshots/tr/07-success-done.webp)
+<a id="reports-stats"></a>
 
-- **Ne yapar:** InstallerClean tek bir iş yapar: Windows'un hiç temizlemediği gizli bir klasör olan `C:\Windows\Installer` içindeki gereksiz dosyaları kaldırır. Neredeyse anında biten bir taramanın ardından böyle dosyalarınız olup olmadığını size söyler, merak edenler için daha fazla ayrıntı gösterir ve C: sürücünüzde yer açmak için bunları silmenize olanak tanır. Bir kez kullanır, yolunuza devam edersiniz.
-- **Buraya gelme nedeniniz belki de şu:** [WinDirStat](https://github.com/windirstat/windirstat), WizTree ya da TreeSize kullandınız, `C:\Windows\Installer`'ın çok yer kapladığını gördünüz ama içinde ne olduğunu bilmiyordunuz. InstallerClean tam da ihtiyacınız olan şey. `9f05cba.msi` gibi rastgele görünen adlı o dosyaların içinde ne olduğunu bilir ve hangilerini güvenle silebileceğinizi size hızlıca söyler.
-- **Ne kadar yer:** Şimdiye dek gönderilen (isteğe bağlı ve anonim) raporlara göre, temizlenecek gereksiz dosyası bulunan makinelerin oranı <!-- reports-freedpct-start -->%65<!-- reports-freedpct-end -->. Bunlarda kurtarılan alanın ortancası <!-- reports-median-start -->15,5 GB<!-- reports-median-end --><!-- reports-biggest-start -->, en büyüğü ise koskoca 462 GB<!-- reports-biggest-end -->. Geri kalan <!-- reports-nothingpct-start -->%35<!-- reports-nothingpct-end --> ise kaldıracak bir şey bulamadı; bu da yalnızca Installer klasörlerinin zaten temiz olduğu anlamına geliyor. Daha fazla ayrıntı aşağıdaki [SSS](#sss) bölümünde.
-- **Güvenli mi:** Evet. Hangi dosyaların hâlâ gerekli olduğunu doğrudan Windows Installer API'sine sorar ve yalnızca Windows'un işi bittiğini bildirdiği dosyaları listeler. Açık kaynaklıdır (Apache 2.0) ve sizinle ilgili hiçbir şey sormaz: hesap yok, reklam yok, takip yok, telemetri yok, arka planda çalışan hiçbir şey yok. Kendiliğinden çevrimiçi olarak yaptığı tek şey, siz çalıştırdığınızda GitHub'da daha yeni bir sürüm olup olmadığına bakmaktır; bunu da kapatabilirsiniz.
-- **Edinme:** [En son sürümü indirin](../../releases/latest). Çalıştırın; [“bilinmeyen yayımcı” uyarısına](#unknown-publisher) ve [yönetici istemine](#admin) tıklayıp geçin. Gereksiz dosyaları silin. Tamam.
+<!-- reports-stats-start chart-only (generated; do not hand-edit between these markers) -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/reports-tr-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="docs/reports-tr-light.svg" />
+    <img alt="Kaç raporun yer açtığını ve ne kadar yer açtıklarını gösteren çubuk grafik" src="docs/reports-tr-light.svg" width="800" />
+  </picture>
+</p>
+<!-- reports-stats-end -->
+
+- **Ne yapar:** InstallerClean tek bir iş yapar: yazılım kurdukça ve güncelledikçe dolan gizli bir klasör olan `C:\Windows\Installer` içindeki gereksiz dosyaları kaldırır. Kısa bir taramanın ardından böyle dosyalarınız olup olmadığını size söyler, merak edenler için daha fazla ayrıntı gösterir ve C: sürücünüzde yer açmak için onları başka bir yere taşımanıza ya da silmenize olanak tanır.
+- **Buraya gelme nedeniniz belki de şu:** [WinDirStat](https://github.com/windirstat/windirstat), WizTree ya da TreeSize kullandınız, `C:\Windows\Installer`'ın çok yer kapladığını gördünüz ama içinde ne olduğunu bilmiyordunuz. Öyleyse InstallerClean tam da ihtiyacınız olan şey. `9f05cba.msi` gibi rastgele görünen adlara sahip o dosyaların içinde ne olduğunu bilir ve hangilerini güvenle kaldırabileceğinizi size hızlıca söyler.
+- **Ne kadar yer:** Yukarıdaki grafik, v1.8.0'dan beri damla damla gelmeyi sürdüren isteğe bağlı raporların sonuçlarını gösteriyor. (Düğmeye tıklayan herkese teşekkürler. Siz olmasaydınız yukarıdaki grafik de olmazdı.) Yer açan raporların oranı <!-- reports-freedpct-start -->%64<!-- reports-freedpct-end -->; bunlarda kurtarılan alanın ortancası <!-- reports-median-start -->15,3 GB<!-- reports-median-end -->. <!-- reports-biggest-start -->Bir makine koskoca 462 GB geri kazandı.<!-- reports-biggest-end --> Geri kalan <!-- reports-nothingpct-start -->%36<!-- reports-nothingpct-end --> hiç yer açmadı; yani makineye bağlı: ek yazılımı olmayan temiz bir Windows 11 kurulumunda kaldırılacak bir şey yoktur. En çok gereksiz dosya, yıllardır çalışan makinelerde, MSI tabanlı ağır yazılım barındıran her makinede (Acrobat, Office, LibreOffice, büyük geliştirme araçları) ve bol bol yazılım kurup kaldıran herkeste birikir. Ne kadar olduğunu, çalıştırdığınız anda tam olarak görürsünüz.
+- **Güvenli mi:** Evet. InstallerClean yalnızca `C:\Windows\Installer` içindeki dosyalara dokunur. Hâlâ nelerin gerekli olduğunu Windows Installer'a sorar, aynı kayıtları bir de kayıt defterinden okur. Bir dosyayı ancak makinede kurulu hiçbir şey onu sahiplenmiyorsa ya da daha yeni bir yama onun yerine geçmişse ve buradaki hiçbir program eskisine geri dönemiyorsa sunar. Net bir yanıt alamadığı her şeyi geri tutar. [Daha fazlası aşağıda](#nasıl-çalışır).
+- **InstallerClean sizinle ilgili hiçbir şey öğrenmez:** Açık kaynak (Apache 2.0). Hesap yok, reklam yok, takip yok, telemetri yok, arka planda çalışan hiçbir şey yok. Kendiliğinden çevrimiçi olarak yaptığı tek şey, siz çalıştırdığınızda GitHub'da daha yeni bir sürüm olup olmadığına bakmaktır; bunu da kapatabilirsiniz.
+- **Edinme:** [En son sürümü indirin](../../releases/latest). Çalıştırın; [Windows'un göstereceği uyarıya](#unknown-publisher) ve [yönetici istemine](#admin) tıklayıp geçin. Bulduklarını taşıyın ya da silin. Bu kadar.
 
 ## İçindekiler
 
 - [Kimsenin size bahsetmediği klasör](#kimsenin-size-bahsetmediği-klasör)
 - [Yardım arayışı](#yardım-arayışı)
-- [Ne yapar](#ne-yapar)
+- [InstallerClean ne yapar](#installerclean-ne-yapar)
 - [Ekran görüntüleri](#ekran-görüntüleri)
 - [Nasıl çalışır](#nasıl-çalışır)
-- [Güvenli mi?](#güvenli-mi)
-- [Kod imzalama politikası](#kod-imzalama-politikası)
-- [C:\Windows\Installer'da eksik bir dosyanız varsa](#recovery)
-- [Erişilebilirlik](#erişilebilirlik)
-- [Neleri yapmaz](#neleri-yapmaz)
-- [SSS](#sss)
 - [İndirme](#indirme)
-- [PatchCleaner ile karşılaştırma](#patchcleaner-ile-karşılaştırma)
+  - [Dosyanın kendisini denetleme](#dosyanın-kendisini-denetleme)
+- [SSS](#sss)
 - [Komut satırı](#komut-satırı)
+- [Erişilebilirlik](#erişilebilirlik)
+- [Kod imzalama politikası](#kod-imzalama-politikası)
+- [Gizlilik](#gizlilik)
+- [Neleri yapmaz](#neleri-yapmaz)
+- [Alternatifler](#alternatifler)
+- [C:\Windows\Installer içinde bir dosya eksik kalırsa](#recovery)
 - [Gereksinimler](#gereksinimler)
 - [Kaynaktan derleme](#kaynaktan-derleme)
 - [Katkıda bulunma](#katkıda-bulunma)
@@ -60,7 +72,7 @@
 
 Her Windows bilgisayarında `C:\Windows\Installer` adlı gizli bir klasör vardır. Windows Installer sistemini kullanan bir yazılım her kurduğunuzda ya da Microsoft Office, Adobe Acrobat, Visual Studio veya `.msi` tabanlı başka bir uygulamaya bir yama uyguladığınızda, o yükleyicinin veya `.msp` yama dosyasının bir kopyası bu klasöre düşer ve orada kalır.
 
-Yazılımı kaldırdığınızda dosyalar kalır. Daha yeni bir yama eskisinin yerini aldığında ikisi birden kalır. Windows onları hiç temizlemez. Disk Temizleme onlara dokunmaz. DISM ise bambaşka bir klasör içindir. Zamanla klasör büyür: 1 GB, 5 GB, 20 GB, 50 GB. MSI kullanan çok sayıda yazılımın olduğu makinelerde (Acrobat sık rastlanan bir suçludur) [100 GB'ı geçebilir](https://www.reddit.com/r/sysadmin/comments/1oxcrmh/acrobat_filling_up_the_cwindowsinstaller_folder/).
+Daha yeni bir yama eskisinin yerine geçtiğinde ikisi de kalır. Uzun zaman önce kaldırdığınız yazılımların yükleyicileri de öyle. Disk Temizleme bunların hiçbirine dokunmaz, Akıllı Depolama da dokunmaz. DISM ise bambaşka bir klasör içindir. Zamanla klasör büyür: 1 GB, 5 GB, 20 GB, 50 GB. MSI kullanan ağır yazılımların bulunduğu makinelerde (Acrobat sık rastlanan bir suçludur) [100 GB'ı geçebilir](https://www.reddit.com/r/sysadmin/comments/1oxcrmh/acrobat_filling_up_the_cwindowsinstaller_folder/).
 
 Bunlar kendiliğinden geri gelen geçici dosyalar değildir. Gerçek bir ölü yüktürler: yıllar önce kaldırdığınız yazılımlardan kalma eski yükleyiciler ve defalarca yerine yenisi gelmiş yamalar. Bir kez gittiklerinde geri gelmezler.
 
@@ -76,14 +88,15 @@ Bu klasörle ilgili daha önce hiç yardım aradıysanız, gidişatı muhtemelen
 
 Ya da hiç dokunmamaları söylenir. Bir başlıkta, 60 GB'lık bir Installer klasörü olan birine [“ona dokunma.”](https://www.reddit.com/r/techsupport/comments/1hw4suq/my_windows_installer_folder_is_like_60gb_so_i/) denmiş. Bunun yerine ne yapması gerektiğini sorduğunda ise yanıt şu olmuş: *“Az önce söyledim ya.”*
 
-Sıradan tavsiyeler, dosyaları gelişigüzel silmeyi (ki bu gerçekten tehlikelidir) Windows'un kendisinin artık gerekmediğini söylediği dosyaları kaldırmakla (ki bu tehlikeli değildir) karıştırır. InstallerClean ikincisini yapar.
+Sıradan tavsiyeler iki ayrı şeyi birbirine karıştırır. Dosyaları gelişigüzel silmek, o dosyaların ait olduğu programları güncellemenizi ya da kaldırmanızı engeller. Yalnızca makinedeki hiçbir şeyin sahiplenmediği ya da Windows'un yerine geçilmiş olarak kaydettiği dosyaları kaldırmak engellemez. InstallerClean ikincisini yapar.
 
-## Ne yapar
+## InstallerClean ne yapar
 
 1. `C:\Windows\Installer` klasörünü `.msi` ve `.msp` dosyaları için **tarar**
-2. Hangi dosyaların hâlâ kayıtlı olduğunu bulmak için Windows Installer API'sini **sorgular**
-3. Ne kadar yer açabileceğinizi ve ne kadarının hâlâ gerekli olduğunu, her dosyayı listeleyen isteğe bağlı ayrıntı pencereleriyle **gösterir**
-4. Gereksiz dosyaları **kaldırır**: Geri Dönüşüm Kutusu'na silin ya da seçtiğiniz bir klasöre taşıyın
+2. Hâlâ nelerin gerekli olduğunu Windows Installer'a **sorar**, aynı kayıtları bir de kayıt defterinden okur
+3. İki okumanın kendi aralarında karara bağlayamadığı her şeyi **geri tutar**
+4. Ne kadar yer açabileceğinizi ve ne kadarını olduğu gibi bıraktığını, her dosyayı listeleyen isteğe bağlı ayrıntı pencereleriyle **gösterir**
+5. Gereksiz dosyaları **kaldırır**: seçtiğiniz bir yedek klasörüne taşıyın ya da kalıcı olarak silin
 
 ## Ekran görüntüleri
 
@@ -94,211 +107,102 @@ Sıradan tavsiyeler, dosyaları gelişigüzel silmeyi (ki bu gerçekten tehlikel
 </p>
 
 <p>
-  <img src="docs/screenshots/tr/02-main-window.webp" alt="Hâlâ gerekli 138 dosya (2,93 GB) ve temizlenecek 68 gereksiz dosya (1,28 GB) gösteren, taşıma konumu kutusu ile Sil ve Taşı düğmelerinin bulunduğu ana pencere" width="900"><br>
-  <em>Sonuçlar: ne kadarı hâlâ gerekli, ne kadarı kaldırılabilir.</em>
+  <img src="docs/screenshots/tr/02-main-window.webp" alt="Ana pencere: temizlenecek 77 gereksiz dosya (2,88 GB) ve 149 dosya olduğu gibi bırakıldı (3,07 GB), yanlarında yedek klasörü kutusu ile Kalıcı olarak sil ve Taşı düğmeleri" width="900"><br>
+  <em>Sonuçlar: ne kadarı kaldırılabilir, ne kadarı olduğu gibi bırakıldı.</em>
   <br><br>
 </p>
 
 <p>
-  <img src="docs/screenshots/tr/03-details-safe-to-delete.webp" alt="Boyuta göre sıralanmış kaldırılabilir .msi dosyalarını, her birinin neden kaldırılabilir olduğunu ve seçili dosyanın ayrıntılarını listeleyen gereksiz dosyalar penceresi" width="900"><br>
-  <em>Artık gerekli olmayan dosyaların ayrıntıları.</em>
+  <img src="docs/screenshots/tr/03-details-safe-to-delete.webp" alt="Kaldırılabilir dosyaları boyuta göre sıralı listeleyen, her birinin neden kaldırılabilir olduğunu ve seçili dosyanın ayrıntılarını gösteren “Silinmesi güvenli, gereksiz dosyalar” penceresi" width="900"><br>
+  <em>Gidebilecek dosyaların ayrıntıları: her birinin neden gerekli olmadığı ve dosyanın kendisi hakkında söyledikleri.</em>
   <br><br>
 </p>
 
 <p>
-  <img src="docs/screenshots/tr/04-details-registered.webp" alt="Kurulu ürünleri listeleyen, seçili ürün için yükleyici veritabanı ayrıntılarını gösteren kayıtlı dosyalar penceresi" width="900"><br>
-  <em>Hâlâ gerekli dosyaların, yükleyici veritabanından okunan meta verilerle birlikte ayrıntıları.</em>
+  <img src="docs/screenshots/tr/04-details-registered.webp" alt="Kurulu programları listeleyen, seçili paketin kendisi hakkında taşıdığı ayrıntıları gösteren “Olduğu gibi bırakılan dosyalar” penceresi" width="900"><br>
+  <em>Olduğu gibi bırakılan dosyaların ayrıntıları: Windows'un her birinin hangi programa ait olduğunu söylediği bilgi ve dosyanın kendisi hakkında söyledikleri.</em>
   <br><br>
 </p>
 
 <p>
-  <img src="docs/screenshots/tr/05-delete-dialog.webp" alt="68 dosyayı (1,28 GB) silmeyi soran, dosyaların Geri Dönüşüm Kutusu'na taşınacağını belirten silme onayı" width="900"><br>
-  <em>Her iki işlemden önce onay. Sil, Geri Dönüşüm Kutusu'na taşır; Taşı, dosyaları seçtiğiniz bir yere koyar.</em>
+  <img src="docs/screenshots/tr/05-move-dialog.webp" alt="77 dosyanın (2,88 GB) seçilen yedek klasörüne taşınmasını soran taşıma onayı" width="900"><br>
+  <em>Her iki işlemden önce onay. Taşı, dosyaları seçtiğiniz bir klasöre yedekler. Ya da onları kalıcı olarak silin.</em>
   <br><br>
 </p>
 
 <p>
-  <img src="docs/screenshots/tr/06-deleting.webp" alt="Silme sürerken görünen ilerleme katmanı: 68 dosyadan 49'u bitti (%72), o anda silinen dosya ve bir İptal düğmesi" width="900"><br>
-  <em>Silme işlemi sürerken. İptal, işlemi yarıda durdurur.</em>
+  <img src="docs/screenshots/tr/06-moving.webp" alt="Taşıma sürerken görünen ilerleme katmanı: 77 dosya içinden 41'i bitti (%53), o anda taşınan dosya ve bir İptal düğmesi" width="900"><br>
+  <em>Taşıma işlemi sürerken. Aynı sürücüye anında olur. Başka bir sürücüye ise GB arttıkça daha uzun sürer.</em>
   <br><br>
 </p>
 
 <p>
-  <img src="docs/screenshots/tr/07-success-done.webp" alt="1,28 GB temizlendiğini ve 68 dosyanın Geri Dönüşüm Kutusu'na taşındığını gösteren başarı katmanı" width="900"><br>
-  <em>Başarılı bir Sil işleminin ardından.</em>
+  <img src="docs/screenshots/tr/07-success-done.webp" alt="2,88 GB yer açıldığını, 77 dosyanın yedek klasörüne taşındığını ve her şeyin yolunda olduğuna kanaat getirildiğinde o klasörün silinmesi gerektiğini gösteren başarı katmanı" width="900"><br>
+  <em>Bitti. Yer geri kazanıldı. Her şeyin yolunda olduğuna kanaat getirene kadar dosyalar yedekte. Sonra yedek klasörünü silin.</em>
   <br><br>
 </p>
 
 <p>
-  <img src="docs/screenshots/tr/08-scanned-again-all-clean.webp" alt="Yeniden tarandıktan sonra her şey temiz katmanı: C:\Windows\Installer klasöründe temizlenecek bir şey yok" width="900"><br>
+  <img src="docs/screenshots/tr/08-scanned-again-all-clean.webp" alt="Yeniden tarandıktan sonra her şey temiz katmanı: C:\Windows\Installer içinde temizlenecek bir şey yok" width="900"><br>
   <em>Yeniden tarandıktan sonra. Temizlenecek bir şey kalmadı.</em>
   <br><br>
 </p>
 
+<a id="is-it-safe"></a>
 ## Nasıl çalışır
 
-InstallerClean üç tür gereksiz dosya tanır.
+Windows Installer bir programı kurduğunda yükleyicinin bir kopyasını `C:\Windows\Installer` içinde tutar; bir yama bir programa kaydedildiğinde o yamanın da bir kopyasını tutar. Yazılımı sonradan onarırken, güncellerken ya da kaldırırken çalıştığı şey bu kopyalardır; kurulum bittikten çok sonra bile orada durmalarının nedeni budur. Klasöre iki tür kopya da düşer: `.msi` yükleyiciler ve zaten sahip olduğunuz bir programı değiştirmek yerine güncelleyen `.msp` yamalar.
 
-**Yetim dosyalar**, bir yazılımı kaldırdıktan sonra geride kalan `.msi` yükleyicileridir (ve varsa `.msp` yamalarıdır). Windows artık onlara başvurmaz, ama dosyalar klasörde durup yer kaplar.
+InstallerClean bir dosyayı iki nedenden biriyle sunar.
 
-**Yerine yenisi gelen yamalar**, daha yenileri tarafından değiştirilmiş eski `.msp` yamalarıdır. Windows bunları kendi veritabanında yerine yenisi gelmiş olarak işaretler, ama hiç silmez. Bunun bu kadar sık karşımıza çıkmasının sebebi Adobe: her Acrobat güncellemesi kendi başına yeni bir yükleyici olarak değil, hep aynı asıl yükleyiciye uygulanan bir yama olarak çıkar; böylece makinede bugüne dek gelmiş her güncelleme için bir yama birikir. Office ve büyük geliştirme araçları da aynı şekilde birikir, sadece daha yavaş.
+**Sahipsiz**, makinedeki hiçbir şeyin o dosyayı sahiplenmediği anlamına gelir. Ne kurulu bir ürün ne de kayıtlı bir yama o dosyanın adını verir.
 
-**Geçersiz kılınan yamalar**, yayımcının daha yeni bir sürümle değiştirmek yerine geri çektiği ya da kullanımdan kaldırdığı `.msp` yamalarıdır. Windows bu durumu da kaydeder ve dosyayı yine klasörde bırakır.
+**Yerine geçilmiş**, Windows'un bu yamanın yerine daha yenisinin geçtiğini kaydettiği, dosyayı ise yine de tuttuğu anlamına gelir. Bir yama ancak kayıtlı olduğu her program kaldırıldığında ya da yama hepsinden sökülüp alındığında silinir. Yerine daha yenisinin geçmesi bunların ikisi de değildir, dolayısıyla dosya kalır. Adobe Acrobat Windows'ta böyle çalışır: güncelleştirmeleri yepyeni birer yükleyici olarak değil, bir asıl kuruluma uygulanan yamalar olarak gelir; dolayısıyla Acrobat'ı bir süredir barındıran bir makinede bunlardan birkaç tane birikmiş olabilir.
 
-Bunları bulmak için InstallerClean, Windows Installer COM arabirimini doğrudan P/Invoke ile çağırır:
+InstallerClean bu ikisini birbirinin tersi yönlerden saptar ve klasörün içine bakmak yalnızca birincisinde devreye girer.
 
-- Her kurulu ürünü saymak için `MsiEnumProductsEx`
-- Her ürün için kayıtlı tüm yamaları bulmak için `MsiEnumPatchesEx`
-- Yama durumunu (uygulanmış, yerine yenisi gelmiş veya geçersiz kılınmış) okumak için `MsiGetPatchInfoEx`
+**Klasörü listeleme.** InstallerClean, doğrudan `C:\Windows\Installer` içinde duran `.msi` ve `.msp` dosyalarını listeler. Alt klasörlere girmez.
 
-`C:\Windows\Installer` içindeki, kayıtlı bir ürüne ait olmayan her `.msi` veya `.msp` dosyası yetimdir ve kaldırılabilir olarak işaretlenir. Veritabanının yerine yenisi gelmiş ya da geçersiz kılınmış olarak işaretlediği ve kaldırma için gerekmeyen her yama da öyle.
+**Kayıtları iki kez okuma.** InstallerClean, `msi.dll` içindeki Windows Installer API'sini çağırarak Windows Installer'dan kurulu her ürünü, kayıtlı her yamayı ve her birinin adını verdiği önbellek dosyasını ister. Sonra aynı kayıtları ikinci bir yoldan, doğrudan kayıt defterinden okur; çünkü sorma işi hiç belli etmeden eksik dönebilir: Windows kayıtları, artık kalmadığını söyleyene kadar birer birer verir ve iki yüz kaydın üçüncüsünde duran bir çalıştırma, sona ulaşmış olanla birebir aynı görünür. Bir kayıt defteri anahtarı ise adların tamamını tek seferde verir, dolayısıyla eksik bir liste tam görünemez. Kayıt defterinin adını verdiği, sormanın ise atladığı her ürün, sonra adıyla ve birer birer Windows'a geri sorulur. Bu ikinci okuma bir dosyayı yalnızca “hâlâ gerekli” tarafına geçirebilir. Onu kaldırılacak dosyalar listesine koyabileceği bir yol yoktur.
 
-Uygulama her taramada aynı kayıtları doğrudan kayıt defterinden de okur; bu ikinci, bağımsız bir kaynaktır. İki okumadan herhangi biri eksik dönerse (nadirdir, ama bozuk bir Installer durumunda olabilir), InstallerClean tahmin yürütmek yerine dosyaları geride tutar ya da taramayı reddeder. Bu ikinci okuma, dosyaları yalnızca “hâlâ gerekli” kümesine ekler, asla “kaldırılabilir” kümesine değil.
+**Bir kaydı dosyasıyla eşleştirme.** Bir kayıt, önbellekteki dosyasının adını bir yol olarak verir ve aynı klasör bu yollarda her zaman aynı şekilde yazılmaz. Bu yüzden InstallerClean yazılışa güvenmek yerine, kayıtlı her yolun gerçekte nereyi gösterdiğini Windows'a sorar ve bunu klasörde listelediği dosyalarla karşılaştırır. Hâlâ sahiplenilmemiş olan her şey, adların hiç işe karışmadığı ikinci bir karşılaştırmadan geçer: InstallerClean dosyayı açıp Windows'tan onu tanımlamasını ister, böylece aynı dosyanın iki farklı adı tek bir dosya olarak tanınır.
 
-Bir Taşı veya Sil işlemi tamamlandıktan sonra, `C:\Windows\Installer` içindeki boş alt klasörler (önbelleğin, içeriği gittiğinde geride bıraktığı dizinler) aynı geçişte budanır.
+**Eşleştirilemeyen kayıtlar.** Windows kayıtlı bir yolun nereyi gösterdiğini söylemezse ya da yolun ucundaki dosya tanımlanamazsa, InstallerClean o kaydın hangi dosyayla ilgili olduğunu bilmez ve listelediği dosyaların herhangi biri o dosya olabilir. Bir program birden fazla kez kurulmuş olabiliyorsa da aynısı geçerlidir, çünkü o zaman InstallerClean hangi önbellek dosyasının hangi kuruluma ait olduğunu ayırt edemez. Bu durumların herhangi birinde, o seferki klasör listelemesinde bulduklarının hiçbirini sunmaz. Çoktan gitmiş bir dosyayı gösteren kayıt farklıdır: kastetmiş olabileceği bir şey kalmamıştır, dolayısıyla klasörde hâlâ duran dosyaların hiçbiriyle ilgili olamaz.
 
-<a id="is-it-safe"></a>
-## Güvenli mi?
+**Öbür uçtan sorma.** Sahipsizliğe bir yokluk karar verir ve bir yokluk, uygulamanın kaydı bulamamış olması anlamına da gelebilir. Bu yüzden InstallerClean bir `.msi` yükleyiciyi sunmadan önce dosyayı açar, dosyanın kendi taşıdığı ürün kodunu okur ve o ürünün kurulu olup olmadığını Windows'a sorar. Kuruluysa, taramanın geri kalanı ne bulmuş olursa olsun dosya kalır. Bu denetim bir dosyayı listeden yalnızca çıkarabilir. Verebileceği hiçbir yanıt listeye dosya eklemez.
 
-Evet. InstallerClean, Windows'un kurulu olanı izlemek için kendi kullandığı Windows Installer API veritabanını sorgular. Windows bir dosyanın artık gerekli olmadığını söylüyorsa, uygulama buna güvenir; dosya adlarına ya da tarihlere bakarak tahmin yürütmez.
+**Bir `.msp` yamaya neyin karar verdiği.** Bir yama açılıp hangi programa ait olduğu kendisine sorulmaz. Bunun yerine işi bağlayan şey, bir yama kaydının önbellekteki dosyasının adını iki yerde vermesidir: her ürüne kayıtlı yamalar; makinedeki her yama kaydını içeren tek bir kayıt defteri listesi. Bir yama, ancak bu iki yerden hiçbiri o yamanın önbellekteki dosyasının adını vermiyorsa sahipsiz olarak sunulur.
 
-**Sil ve Taşı hakkında.** InstallerClean'in sildiği dosyalar kalıcı olarak silinmesinde sakınca olmayan dosyalardır. **Sil** onları Geri Dönüşüm Kutusu'na taşır (kutu kullanılamıyorsa uyarılırsınız); Geri Dönüşüm Kutusu'nu boşalttığınızda C: sürücünüzdeki alanı geri kazanırsınız.
-
-Yine de dosyaların silinmesinde sakınca olmadığına benim sözüme güvenmek zorunda değilsiniz. Dosyalar Geri Dönüşüm Kutusu'ndayken, bu klasörü kullanan uygulamaların (Office, Acrobat, Visual Studio ve benzerlerinin) hâlâ sorunsuz güncellenip kaldırıldığını kontrol etme fırsatınız olur. Bozulan bir şey bulursanız (ihtimali son derece düşük, üstelik <!-- downloads-start -->73.000+<!-- downloads-end --> indirmenin ardından bugüne dek bildirilmiş tek bir örnek yok), düzeltmek için dosyaları Geri Dönüşüm Kutusu'ndan geri yükleyin. Daha da güvende olmak için bunun yerine **Taşı**'yı kullanabilirsiniz; bu, dosyaları seçtiğiniz bir klasöre yedekler (C: sürücüsünde yer açmak istiyorsanız elbette başka bir bölümde/sürücüde bir klasör seçin). Her şeyi eskisi gibi geri almak için dosyaları `C:\Windows\Installer` klasörüne geri kopyalamanız yeterli (gerçi buna neredeyse kesinlikle hiç ihtiyacınız olmayacak). Bir dosyanın adına “(1)” eklenmişse (dosyaları aynı klasöre iki kez taşıdıysanız böyle olur), dosyayı geri kopyalamadan önce bunu kaldırın.
-
-Windows Installer şu anda önbelleğe yazıyorsa, önceki bir işlemi askıya alınmışsa ya da önbelleği hedefleyen, yeniden başlatma sonrasına sıraya alınmış bir yeniden adlandırma varsa, Taşı ve Sil devre dışı kalır ve nedeni açıkça gösterilir.
-
-Tarama, sorgulama, taşıma, silme, ayarlar ve bekleyen yeniden başlatma hizmetleri, her commit'te çalışan otomatik bir test paketiyle kapsanır (yukarıdaki CI rozetine bakın).
-
-**İkili dosyayı doğrulama.** InstallerClean imzasızdır, ama güvenli olduğuna körü körüne inanmanız gerekmez:
-
-- Her sürümün SHA-256 karmaları [sürümler sayfasında](../../releases/latest) listelenir.
-- VirusTotal: her yapı taranır; her motordaki tam sonuçlar ilgili sürümün sayfasında bağlantılanır, böylece her dosyanın nasıl puanlandığını görebilir ve kendiniz yeniden tarayabilirsiniz. Bir sürüm çıkarken hâlâ etkin olan bir yanlış pozitif, o sürümün sayfasında adıyla belirtilir ve açıklanır; üretici geri çektiğinde de sayfa güncellenir.
-- Kaynak kod [github.com/no-faff/InstallerClean](https://github.com/no-faff/InstallerClean) adresinde ve CI her commit'i derleyip test ediyor (yukarıdaki yeşil CI rozetine bakın).
-- Sürüm yapıları deterministiktir: derleyici ayarları aynı kaynak kodun ve aynı SDK'nın hep aynı baytları üretmesini sağlar; ayrıca yayımlanan exe dosyaları tam o etiketteki temiz bir çalışma ağacından derlenmemişse yayım süreci o sürüme etiket koymayı reddeder. Yani o etikete geçip kendiniz derleyebilir, karmaları yayımlananlarla karşılaştırabilirsiniz: indirdiğiniz dosyanın herkese açık kaynak kodla eşleştiği böylece kanıtlanmış olur. Önce SDK sürümünü tutturun (her sürümün notlarında hangisiyle derlendiği yazar); farklı bir SDK yaması farklı baytlar üretir; bu, uyuşmazlık gibi görünür ama değildir.
-- GitHub, MajorGeeks ve Softpedia üzerinden <!-- downloads-start -->73.000+<!-- downloads-end --> indirme.
-- [MajorGeeks](https://www.majorgeeks.com/files/details/installerclean.html) her gönderimi bir sanal makinede test eder ve yalnızca incelemelerinden geçerse listeler.<br><a href="https://www.majorgeeks.com/files/details/installerclean.html"><img src="docs/badges/majorgeeks-certified.webp" alt="MajorGeeks tarafından %100 temiz olarak onaylandı" width="263"></a>
-- [Softpedia](https://www.softpedia.com/get/System/Hard-Disk-Utils/InstallerClean.shtml) her sürümü virüs, casus yazılım ve reklam yazılımı için test eder.<br><a href="https://www.softpedia.com/get/System/Hard-Disk-Utils/InstallerClean.shtml"><img src="docs/badges/softpedia-100-free2.webp" alt="Softpedia tarafından %100 temiz olarak onaylandı" width="190"></a>
-
-## Kod imzalama politikası
-
-InstallerClean, ücretsiz kod imzalama için [SignPath Foundation](https://signpath.org)'a başvurdu; bu, açık kaynak yazılımları imzalayarak onların makinenize bilinmeyen bir yayımcıdan gelmesine son veren bir program. Başvuru henüz sonuçlanmadı, dolayısıyla buradaki indirmeler şimdilik imzasız ve Windows bunlar için uyarı verecek.
-
-Kabul edilirse her sürüm, SignPath'in istediği şu satırı taşıyacak: “free code signing provided by SignPath.io, certificate by SignPath Foundation”. Sertifika bana değil vakfa ait, çünkü bir sertifikanın tüzel bir kişiliğe düzenlenmesi gerekir ve tek kişilik bir proje tüzel kişilik değildir. Bu, InstallerClean'in onlara ait olduğu ya da imzalamanın ötesinde projeye karıştıkları anlamına gelmez.
-
-**Roller.** InstallerClean'i tek bir kişi, yani ben sürdürüyorum ve rollerin hepsi bende:
-
-- Commit edenler ve gözden geçirenler, yani projeye kimin kod ekleyebileceği: ben. Her çekme isteği birleştirilmeden önce gözden geçirilir.
-- Onaylayanlar, yani bir sürümün imzalanmasına kimin izin verebileceği: ben.
-
-**Gizlilik.** Ne sizin hakkınızda ne de dosyalarınız hakkında hiçbir şey öğrenmiyorum; tamamen isteğe bağlı olan o anonim raporu göndermeyi kendiniz seçmediğiniz sürece, ki o rapor da bana yalnızca uygulamanın çalıştığını bildiriyor. Reklam yok, telemetri yok. Bunun dışındaki tek bağlantılar, uygulama açılırken yapılan sürüm denetimi (GitHub'a tek bir istek; Hakkında penceresinden kapatabilirsiniz) ve GitHub'a ve cömert hissederseniz bağış yapabileceğiniz bir sayfaya götüren düğmeler. [Gizlilik politikasının](PRIVACY.md) tamamı (İngilizce).
-
-<a id="recovery"></a>
-## C:\Windows\Installer'da eksik bir dosyanız varsa
-
-InstallerClean yalnızca Windows'un kendisinin artık gerekmediğini bildirdiği dosyaları kaldırır, dolayısıyla bir dosyanın eksik olmasının nedeni asla o olamaz. Ama bir tanesi çoktan gitmişse, InstallerClean bunu fark eder ve işaretler. Çözümü şöyle.
-
-O programın yükleyicisini üreticisinden indirin ve mevcut kurulumunuzun üzerine çalıştırın; önce kaldırmayın. Mümkünse şu an sahip olduğunuz sürümü kullanın, çünkü Windows farklı bir sürümü geri çevirebilir. Bu genellikle dosyayı yerine koyar ve ayarlarınıza dokunmaz. InstallerClean'de yeniden tarayın; işe yaradıysa uyarı kaybolacaktır.
-
-Bu çoğunlukla işe yarar. Sonrasındaki, Microsoft'un kendi daha ayrıntılı açıklamasıdır: resmi ayrıntılar ve işin o kadar basit olmadığı daha zorlu durumlar. Hiçbiri InstallerClean'in işi değil ve Microsoft'un kılavuzunu geliştiremem, ben sadece aktarıyorum.
+**Yerine geçilmiş bir yamanın farkı.** Böyle bir yama bunların hiçbirinden geçmez, çünkü sahiplenilmemiş bir dosya değildir. Windows'un o yamaya dair bir kaydı vardır ve yerine başkasının geçtiğini söyleyen de o kayıttır. Buradaki risk başkadır: bir yama birkaç programa birden kayıtlı olabilir ve bunlardan yalnızca birinin onunla işi bitmiştir. Bu yüzden yerine geçilmiş bir yama ancak şu durumda sunulur: Windows onun kaldırılamayacağını kaydetmişse, kayıtlı olduğu her programa sorulmuşsa, hiçbirinde hâlâ uygulanmış değilse ve hiçbiri Windows'un kaldırılabilir dediği bir yama barındırmıyorsa. Sonuncusu şunun için var: bir programdaki bir yamayı geri almak, eski dosyaya kadar uzanabilir. Bunların herhangi biri yanıtlanamazsa dosya kalır.
 
 <details>
-<summary>Microsoft'un daha ayrıntılı görüşü</summary>
+<summary>Bunun kullandığı Windows Installer çağrıları</summary>
 
-*Aşağıdaki Microsoft alıntıları İngilizce orijinalindedir.*
-
-Tam kılavuz: [Restore missing Windows Installer cache files](https://learn.microsoft.com/en-us/troubleshoot/windows-client/application-management/missing-windows-installer-cache).
-
-*Sorun hemen ortaya çıkmayabilir:*
-> "If the installer cache is compromised, you may not immediately see problems until you take an action such as uninstalling, repairing, or updating a product."
-
-*Dosyalar her makineye özgüdür, bu yüzden başka bir bilgisayardan kopyalayamazsınız:*
-> "Missing files cannot be copied between computers because the files are unique."
-
-*Dosyayı yalnızca bir yedekten de geri alamazsınız:*
-> "To restore the missing files, a full system state restoration is required. It is not possible to replace only the missing files from a previous backup."
-
-*Önerilen kurtarma yöntemi ve onun açık sınırları:*
-> "If application files are missing from the Windows Installer Cache, ask the vendor or support team for the application about the missing files. You must follow the procedures or steps recommended by the application vendor to restore the files. In some cases, you may have to rebuild the operating system and reinstall the application to fix the problem."
->
-> "Windows support engineers cannot help you recover missing application files from the Windows Installer cache."
-
-*Aynı sürümün neden önemli olduğu:*
-> "The upgrade cannot be installed by the Windows Installer service because the program to be upgraded may be missing, or the upgrade may update a different version of the program."
+- Kurulu her ürünü listelemek için `MsiEnumProductsEx`; belirli bir ürünün kurulu olup olmadığını sormak için de tek bir ürün koduyla yine o
+- Kayıtlı yamaları hem ürün başına hem de makinenin tamamında listelemek için `MsiEnumPatchesEx`
+- Bir ürünün adını, adını verdiği önbellek dosyasını ve aynı ürünün birkaç kurulumundan biri olup olmadığını okumak için `MsiGetProductInfoEx`
+- Bir yamanın durumunu, Windows'un onu kaldırıp kaldıramayacağını ve o yamanın adını verdiği önbellek dosyasını okumak için `MsiGetPatchInfoEx`
+- Bir yama dosyasının içinden hangi programlara uygulanabileceğini okumak için `MsiGetSummaryInformation` ve `MsiSummaryInfoGetProperty`
+- Bir yükleyici dosyasının içinden, o dosyanın bildirdiği ürün kodunu okumak için `MsiOpenDatabase`, `MsiDatabaseOpenView`, `MsiViewExecute`, `MsiViewFetch` ve `MsiRecordGetString`
 
 </details>
 
-## Erişilebilirlik
-
-InstallerClean, tümüyle klavyeden ve bir ekran okuyucusuyla kullanılabilecek şekilde yapılmıştır.
-
-- **Baştan sona klavyeyle kullanılabilir.** Sekme tuşu her denetime ulaşır ve ayrıntı pencerelerinin sütunları klavyeden sıralanır, dolayısıyla burada hiçbir şey fare gerektirmez. Klavye odağı, nereye giderse gitsin görünür kalır.
-- **Ekran Okuyucusu ve Sesli erişim.** Her denetim etiketlidir ve bir düğmenin üzerinde görünen sözcük, onu sesle çalıştıran sözcüktür. Bir Taşı veya Sil işlemi bittiğinde sonuç sesli okunur.
-- **Okunmak için yapıldı.** Metin, koyu temanın her yerinde WCAG AA kontrastını karşılar.
-
-Burada bir şey size engel oluyorsa, [bir konu açın](../../issues). Erişilebilirlik sorunları uç durumlar değil, hatalardır.
-
-## Neleri yapmaz
-
-- WinSxS (`C:\Windows\WinSxS`) farklı kurallara sahip farklı bir klasördür. Onun için, yükseltilmiş bir komut isteminden `Dism /Online /Cleanup-Image /StartComponentCleanup` komutunu çalıştırın.
-- Arka plan hizmeti yok, zamanlanmış görev yok, otomatik temizlik yok. Uygulama yalnızca siz başlattığınızda çalışır.
-- Yüklü programlarınızı ya da Windows Installer veritabanını değiştirmez, yalnızca okur. Kayıt defterine yazdığı tek şey, komut satırı aracının çalıştırmalarının Windows Olay Günlüğü'nde görünebilmesi için ihtiyaç duyduğu tek seferlik olay kaynağı kaydıdır.
-- Kendiliğinden kurduğu tek bir bağlantı türü var: siz çalıştırdığınızda GitHub'ın sürümler sayfasında daha yeni bir sürüm olup olmadığına hızlıca bakması; bunu Hakkında penceresinden kapatabilirsiniz. Geri kalan her şey yalnızca siz söylediğinizde olur: isteğe bağlı anonim rapor (yalnızca çalıştığını bana bildirmek için) ve GitHub belgelerine ve bir bağış sayfasına giden, tıklarsanız tarayıcınızda açılan bağlantılar. Kendi başına hiçbir şey indirmez.
-- Araç çubuğu yok, paketlenmiş yazılım yok, reklam yazılımı yok.
-
-## SSS
-
-<a id="reports-stats"></a>
-**Gerçekten GB'larca yer açar mıyım?** Bu makinenize bağlı. Ek yazılımı olmayan temiz bir Windows 11 kurulumunda kaldırılacak bir şey yoktur. Uzun süredir kullanılan bir geliştirici iş istasyonu ya da çok sayıda MSI tabanlı yazılımı (Acrobat, Office, LibreOffice, büyük geliştirme araçları) olan herhangi bir makine, onlarca GB barındırabilir. Her hâlükârda, çalıştırdığınız anda tam olarak ne kadar olduğunu görürsünüz.
-
-<!-- reports-stats-start (generated; do not hand-edit between these markers) -->
-v1.8.0'dan beri sonucu kısa ve anonim bir raporla gönderme seçeneği var. Şimdiye dek 289 rapor geldi (herkese teşekkürler 🙏); temizlenecek bir şeyi olan makinelerin oranı %65 ve bunlarda kurtarılan alanın ortancası 15,5 GB. Bir makine tam tamına 462 GB geri kazandı. Sonuçların özeti şöyle.
-
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/reports-tr-dark.svg" />
-    <source media="(prefers-color-scheme: light)" srcset="docs/reports-tr-light.svg" />
-    <img alt="Kaç makinede temizlenecek bir şey olduğunu ve ne kadar yer kurtardıklarını gösteren çubuk grafik" src="docs/reports-tr-light.svg" width="800" />
-  </picture>
-  <br>
-  <em>Rapor göndermek, uygulamada bir düğmeye basmaktan ibaret ve tamamen isteğe bağlı. İçinde kişisel hiçbir şey yok; gönderilecek olanı size aynen gösterir, şöyle:</em>
-</p>
-<!-- reports-stats-end -->
-
-<a id="admin"></a>
-
-**Neden Yönetici istiyor?** `C:\Windows\Installer` yöneticilere kilitlidir. Onu okumak, Installer veritabanını sorgulamak ve dosyaları taşımak ya da silmek için bunların hepsi gereklidir, dolayısıyla uygulama yönetici olarak çalışmak zorundadır.
-
-<a id="unknown-publisher"></a>
-
-**Windows neden “Bilinmeyen yayımcı” diyor?** InstallerClean kod imzalı değil ve Windows internetten indirilen dosyaları işaretliyor; bu yüzden ilk çalıştırmada Windows SmartScreen genellikle “Windows kişisel bilgisayarınızı korudu” gösterir ve yayımcıyı bilinmeyen olarak listeler. Ücretli bir imzalama sertifikası her yıl para tutar ve ben bunun için ödeme yapmaktansa uygulamayı ücretsiz tutmayı yeğliyorum; bu yüzden açık kaynak yazılımları karşılıksız imzalayan SignPath Foundation'a başvurdum (bkz. [Kod imzalama politikası](#kod-imzalama-politikası)). O sonuçlanana kadar **Ek bilgi**'ye, ardından **Yine de çalıştır**'a tıklayın. Bunu yapmak güvenlidir: kaynak kod herkese açık ve her sürümde önceden kontrol edebileceğiniz VirusTotal bağlantıları ve SHA-256 karmaları var.
-
-**Bir Sil işlemini geri alabilir miyim?** Genellikle, evet. Sürücü için Geri Dönüşüm Kutusu kullanılabilir olduğunda Sil dosyaları oraya taşır ve onları kutudan geri yükleyebilirsiniz. Kutu kullanılamıyorsa, uygulama kendi başına asla kalıcı olarak silmez (bkz. [Güvenli mi?](#güvenli-mi)). Ve denetimi sizde olan bir geri dönüş yolu isterseniz, Taşı dosyaları seçtiğiniz bir klasöre koyar; içiniz rahat ettiğinde onları oradan silersiniz.
-
-**Bu dosyaları kaldırırsam Windows şikâyet eder mi?** Hayır. InstallerClean her zaman yalnızca Windows'un kendisinin işi bittiğini bildirdiği dosyaları kaldırır, dolayısıyla kaldırdığı hiçbir şey bir programı onarmak, güncellemek ya da kaldırmak için gerekli değildir. Başka bir yolla `C:\Windows\Installer` klasöründen gerekli bir dosya gerçekten eksilirse, [C:\Windows\Installer'da eksik bir dosyanız varsa](#recovery) bölümüne bakın.
-
-**Neden `Win32_Product` (WMI) yok?** [`Win32_Product`, sayım sırasında her üründe MSI onarım işlemlerini tetikler](https://gregramsey.net/2012/02/20/win32_product-is-evil/), bu da dakikalar sürebilir ve diski ağır yükleyebilir. InstallerClean, Windows Installer COM API'sini hiçbir yan etki olmadan doğrudan çağırır.
-
-**Neden basitçe bir PowerShell betiği değil?** `MsiEnumPatchesEx` çağıran kısa bir betik yamaları *listelemeye* yeter, ama InstallerClean'in yük taşıyan parçaları bir betiğin geçiştirdiği yerlerdir: yetim-mi-yoksa-yerine-yenisi-mi-gelmiş sınıflandırması, dosyaları yalnızca “hâlâ gerekli” kümesine ekleyen (asla “kaldırılabilir” kümesine değil) kayıt defteri yedeği, bekleyen yeniden başlatma engeli, başka bir yere taşıma güvenlik ağı, iptal edilebilen dosya başına ilerleme ve kalıcı-silme-yerine-Geri-Dönüşüm-Kutusu varsayılanı. Çok sayıda MSI barındıran gerçek makinelerdeki uç durumlar (bozuk kayıtlar, önbellek içindeki bağlantılar, `HKU\.DEFAULT` içindeki ürünler, askıya alınmış Installer işlemleri) gelişigüzel bir betikte kolayca yanlış ele alınır. `installerclean-cli`, istediğiniz şey betik yazmaksa, arayüzsüz yüzdür.
-
-**Windows 7 veya 8'de çalışır mı?** Test edilmedi ve desteklenmiyor. Windows 10 ve 11 hedeflenir.
-
-**RMM / toplu dağıtım için uygun mu?** Evet. CLI, sonuca göre ayrı kodlarla çıkar (0 başarı, 2 kısmi, 1 ağır başarısızlık, 75 geçici, herhangi bir dosya işlenmeden önce bir Ctrl+C için 130; toplu işin ortasına denk gelen bir Ctrl+C ise 2 ile çıkar, çünkü iş yapılmıştır), böylece zamanlanmış bir görev, ağır başarısızlıklarla karıştırmadan 75'te yeniden deneyebilir. Her çalıştırma için Uygulama olay günlüğüne bir özet yazar ve GUI ile aynı tek örnek muteksine uyar. Kurulum da Inno Setup'ın standart anahtarlarıyla (`/SILENT` veya `/VERYSILENT`) sessizce kurulur; sessiz kurulumlarda kurulum sonrası başlatma atlanır. Komut satırı bölümüne bakın.
+Bütün bunlara rağmen uygulama sizi dosyaları bir yedek klasörüne taşımaya yönlendirir (C'de yer açmak istiyorsanız başka bir sürücüde/bölümde olsun). Böylece gereksiz dosyaları en sonunda silmeden önce her şeyin gerçekten yolunda olduğuna kanaat getirme fırsatınız olur.
 
 <a id="indirme"></a>
 ## İndirme
 
 Üç yapı, birini seçin:
 
-- **Kurulum** (`InstallerClean-2.3.0-setup.exe`): .NET 10 çalışma zamanı paketlenmiş, sıradan bir Windows yükleyicisi. Başlat menüsüne bir giriş ekler ve temizce kaldırılır. Programların arasına yerleştirilir, böylece altı ay sonra bulması kolay olur.
-- **Taşınabilir** (`InstallerClean-2.3.0-portable.exe`): çalışma zamanı paketlenmiş, tek bir kendi kendine yeten exe. Kurulum yok, kaldırıcı yok. Çalıştırın, kullanın, silin. Ne zaman isterseniz tekrar çalıştırın.
-- **CLI** (`installerclean-cli.exe`): komut satırı sürümü tek başına, tek bir kendi kendine yeten exe. Kurulum yok, sonrasında makinede hiçbir şey kalmaz. Bir istemciye bırakın, bir tarama ya da temizlik çalıştırın, silin. Betik yazma, zamanlanmış görevler ve istemcide bir masaüstü uygulaması olmadan işlemleri istediğiniz toplu dağıtım için yapıldı. Argümanlar ve çıkış kodları için [Komut satırı](#komut-satırı) bölümüne bakın.
+- **Kurulum** (`InstallerClean-3.0.0-setup.exe`): .NET 10 çalışma zamanı paketlenmiş, sıradan bir Windows yükleyicisi. Başlat menüsüne bir giriş ekler ve temizce kaldırılır. Programların arasına yerleşir, böylece altı ay sonra bulması kolay olur; bol bol yazılım kurup kaldırıyorsanız daha sık çalıştırmak da kolay olur.
+- **Taşınabilir** (`InstallerClean-3.0.0-portable.exe`): .NET 10 çalışma zamanı içinde, tek bir dosya. Kurulum yok, kaldırıcı yok: çift tıklayın, çalışır. Dosyayı bir sonraki sefer için bir yerde tutun ya da işiniz bitince silin.
+- **CLI** (`installerclean-cli.exe`): komut satırı sürümü tek başına, çalışma zamanı içinde tek bir dosya. Kurulum yok, kaldırıcı yok. Bir istemciye bırakın, bir tarama ya da temizlik çalıştırın, silin. Betik yazma, zamanlanmış görevler ve istemcide bir masaüstü uygulaması istemediğiniz toplu dağıtım için yapıldı. Argümanlar ve çıkış kodları için [Komut satırı](#komut-satırı) bölümüne bakın.
 
 2.2.0'dan itibaren kurulum ve taşınabilir sürümlerin dosya adları sürüm numarasını taşıyor, böylece indirilen bir kopya ne olduğunu her zaman söylüyor; komut satırı aracı ise sade `installerclean-cli.exe` adını koruyor, ki ona işaret eden zamanlanmış görevler ve betikler güncellemeler boyunca çalışmayı sürdürsün.
 
 [Sürümler sayfasından](../../releases/latest) indirin, sonra çalıştırın. İmzasızdır, dolayısıyla Windows “bilinmeyen yayımcı” uyarısı gösterir; [SSS](#unknown-publisher) ne göreceğinizi ve neden güvenli olduğunu açıklar.
 
-Uygulama başlangıçta otomatik tarar. Sonuçları gözden geçirin, sonra **Sil** ya da **Taşı**'ya tıklayın.
+Uygulama başlangıçta otomatik tarar. Sonuçları gözden geçirin, sonra **Taşı** ya da **Kalıcı olarak sil**'e tıklayın.
 
 Ya da [winget](https://learn.microsoft.com/windows/package-manager/winget/) ile kurun:
 
@@ -312,80 +216,236 @@ Ya da [Scoop](https://scoop.sh) ile kurun:
 scoop install installerclean
 ```
 
-## PatchCleaner ile karşılaştırma
+### Dosyanın kendisini denetleme
 
-Bu klasörü daha önce arattıysanız, büyük olasılıkla karşınıza çıkmış olan araç [PatchCleaner](https://www.homedev.com.au/free/patchcleaner) olacaktır. Hâlâ gayet iyi gidiyor, ama InstallerClean'i yaptım çünkü PatchCleaner kapalı kaynaklı, Mart 2016'dan beri güncelleme almadı ve varsayılan olarak Adobe ürünlerine dokunmuyor. Yetim denetimi Adobe'nin yamalarını yanlışlıkla işaretliyordu ve onları kaldırmak Adobe'nin güncellemelerini bozuyordu, bu yüzden filtreyi kapatmadıkça tüm Adobe dosyalarını rahat bırakıyor. Adobe'nin en büyük suçlu olduğu makinelerde ise alanın çoğu orada:
+InstallerClean imzasızdır. Çalıştırmadan önce neleri denetleyebileceğiniz şöyle:
 
-> *“Yetim `.msp` dosyalarını silmek için Patchcleaner'ı indirdim, ama görünüşe göre bu yalnızca 250 MB yer açacakmış. Dosyaların 29 GB'ı ‘filtreler tarafından hariç tutulmuş’, yani Patchcleaner pek işe yaramıyor gibi.”*
->
-> HeatherBunny1111, [r/techsupport](https://www.reddit.com/r/techsupport/comments/1qc4tcf/how_to_delete_msp_files_safely/) (İngilizce orijinalinden çevrilmiştir)
+- Her indirmenin SHA-256 karması, hem notların içinde hem de indirmenin yanındaki ayrı bir `.sha256` dosyası olarak sürüm sayfasındadır.
+- VirusTotal: her yapı çıkmadan önce taranır ve sürüm sayfası her indirme için motor motor tam sonucu taşır.
+- Kaynak kod burada, [github.com/no-faff/InstallerClean](https://github.com/no-faff/InstallerClean) adresinde. Tarama, sorgulama, taşıma, silme, ayarlar ve bekleyen yeniden başlatma hizmetleri, `main` dalına her gönderimde ve her çekme isteğinde Windows üzerinde çalışan otomatik bir test paketiyle kapsanır; bu sayfanın başındaki CI rozeti de sonucu bildirir.
+- Sürüm yapıları deterministiktir: aynı kaynak, aynı SDK ve aynı yayımlama bayrakları aynı baytları üretir; ayrıca her yapı girdisi o etiketteki kaynakla eşleşmedikçe bir sürüme etiket konulamaz. Yani etikete geçip kendiniz derleyebilir, karmaları yayımlananlarla karşılaştırabilirsiniz. Bunun için gerekenler her sürümün notlarındadır: hangi SDK sürümüyle derlendiği ve varsayılanlarla derlenmemiş indirmeler için yayımlama bayrakları. Kurulum bunun dışındadır: SDK ile değil Inno Setup ile derlenir ve yapım yılını kendi içine damgalar, dolayısıyla karmasını yeniden üretmek aynı Inno sürümünü ve aynı takvim yılını da gerektirir.
+- GitHub, MajorGeeks ve Softpedia üzerinden <!-- downloads-start -->72.000+<!-- downloads-end --> indirme.
+- [MajorGeeks](https://www.majorgeeks.com/files/details/installerclean.html) her gönderimi bir sanal makinede test eder ve yalnızca incelemelerinden geçerse listeler.<br><a href="https://www.majorgeeks.com/files/details/installerclean.html"><img src="docs/badges/majorgeeks-certified.webp" alt="MajorGeeks tarafından %100 temiz olarak onaylandı" width="263"></a>
+- [Softpedia](https://www.softpedia.com/get/System/Hard-Disk-Utils/InstallerClean.shtml) inceledi ve casus yazılım, reklam yazılımı ile virüs içermediğini onayladı.<br><a href="https://www.softpedia.com/get/System/Hard-Disk-Utils/InstallerClean.shtml"><img src="docs/badges/softpedia-100-free2.webp" alt="Softpedia %100 ücretsiz ödülü; casus yazılım, reklam yazılımı ve virüs içermediği onaylı" width="190"></a>
 
-InstallerClean, Windows Installer'ın kendi yama kayıtlarını okur; dolayısıyla bütün Adobe dosyalarını toptan bir filtrenin arkasına saklamak yerine, Windows'un yerine yenisi geldi diye işaretlediği yamaları ayırt eder ve tam olarak öyle etiketler. İkisi şöyle karşılaştırılır:
+## SSS
 
-| | **InstallerClean** | **PatchCleaner** |
-|---|---|---|
-| Son güncelleme | 2026 (etkin) | 3 Mart 2016 |
-| Kaynak kod | Açık kaynak (Apache 2.0) | Kapalı kaynak |
-| Çalışma zamanı | .NET 10 (kendi kendine yeten) | .NET + VBScript |
-| API | Windows Installer COM (süreç içi) | Windows Installer COM (VBScript ile süreç dışı) |
-| Yerine yenisi gelen yama algılama | Var | Yok |
-| Adobe işleme | Yerine yenisi gelen yamaları algılar | Varsayılan olarak hariç tutar |
-| Arayüz | Koyu tema (WPF) | Windows Forms |
-| Veri toplama | Yok | Yok |
-| Silme güvenliği | Geri Dönüşüm Kutusu. Kullanılamıyorsa, sorar: bunun yerine taşı ya da kalıcı olarak sil | Kalıcı, Geri Dönüşüm Kutusu yok |
+<a id="admin"></a>
 
-> **`Win32_Product` hakkında bir not:** Kurulu ürünleri listelemek için yaygın ama bozuk olan yaklaşım, sayım sırasında [her üründe MSI onarım işlemlerini tetikleyen](https://gregramsey.net/2012/02/20/win32_product-is-evil/) `Win32_Product` (WMI) yaklaşımıdır. Hem InstallerClean hem de PatchCleaner ondan kaçınır. İkisi de Windows Installer COM arabirimini kullanır. PatchCleaner'ın betiğindeki `WMIProducts.vbs` dosya adı yanıltıcıdır; betik WMI değil, MSI COM kullanır.
+**Neden Yönetici istiyor?** İki nedenle. `C:\Windows\Installer` yöneticilere kilitlidir; onu okumak, Windows Installer'ı sorgulamak ve dosyaları taşımak ya da silmek bunu gerektirir. Bir de yönetici, makinedeki herhangi bir hesap altında kurulu programları Windows'a sorabilirken yönetici olmayan soramaz: yönetici olmadan çalıştırın, bir dosyanın hâlâ gerekli olup olmadığına karar veren denetimin içinde Windows, kurulu olan bir programa kurulu değil diyecektir.
 
-[Ultra Virus Killer (UVK)](https://www.carifred.com/uvk/) de System Booster modülünün bir parçası olarak Installer temizliği sunar, ama bu ücretli bir araçtır (15-25 USD) ve temizlik, çok daha büyük bir uygulamanın içindeki küçük bir özelliktir. InstallerClean ücretsiz, odaklı ve açık kaynaklıdır.
+<a id="unknown-publisher"></a>
 
-[CCleaner](https://www.ccleaner.com/) ve [BleachBit](https://www.bleachbit.org/) gibi genel amaçlı sistem temizleyiciler `C:\Windows\Installer` klasörüne dokunmaz. Bu klasör, kayıtlı paketleri gereksizlerinden ayırmak için Windows Installer API sorguları gerektirir ve yalnızca dosya ağacında gezinen genel bir temizleyici kurulu uygulamaları bozabilir. InstallerClean, gerçekten temizlenmesini istediğiniz klasör bu olduğunda başvuracağınız araçtır.
+**Windows neden “Bilinmeyen yayımcı” diyor?** InstallerClean kod imzalı değil ve Windows internetten indirilen dosyaları işaretliyor; bu yüzden ilk çalıştırmada SmartScreen genellikle “Windows kişisel bilgisayarınızı korudu” gösterir ve yayımcıyı bilinmeyen olarak listeler. Ücretli bir imzalama sertifikası her yıl para tutar ve ben bunun için ödeme yapmaktansa uygulamayı ücretsiz tutmayı yeğliyorum; bu yüzden açık kaynak yazılımları karşılıksız imzalayan SignPath Foundation'a başvurdum ve InstallerClean kabul edildi (bkz. [Kod imzalama politikası](#kod-imzalama-politikası)). Sertifika henüz düzenlenmedi, dolayısıyla şimdilik **Ek bilgi**'ye, ardından **Yine de çalıştır**'a tıklayın. Bunu yapmak güvenlidir: kaynak kod herkese açık ve her sürümde önceden kontrol edebileceğiniz VirusTotal bağlantıları ile SHA-256 karmaları var.
+
+**Windows 7 veya 8'de çalışır mı?** Hayır. .NET 10 çalışma zamanının desteklediği en eski yapı olan Windows 10 sürüm 1607 ya da üzerini gerektirir. Kurulum daha eskisine kurulmayı reddeder, taşınabilir yapı da başlamaz.
 
 ## Komut satırı
 
-InstallerClean, betik yazma ve sistem yöneticisi kullanımı için arayüzsüz çalışmayı destekler:
+`installerclean-cli.exe`, GUI'nin yanına kurulan ayrı bir konsol yürütülebilir dosyasıdır. Aynı tarama, aynı taşıma, aynı silme, penceresiz. Bitene kadar komut istemini bloke eder, böylece bir betik ya da zamanlanmış görev onu bekleyebilir.
+
+### Bayraklar
+
+| Bayrak | Ne yapar | Ayrıca kabul ettiği |
+|---|---|---|
+| `/s` | Yalnızca tarar. Kaldıracaklarını, her birinin adı, boyutu ve nedeniyle listeler. Hiçbir şeyi değiştirmez. | |
+| `/d` | Tarar, sonra gereksiz dosyaları kalıcı olarak siler. | |
+| `/m` | Tarar, sonra onları GUI'de kaydedilmiş klasöre taşır. | |
+| `/m YOL` | Tarar, sonra onları `YOL` konumuna taşır. İçinde boşluk varsa tırnak içine alın. | |
+| `--help` | Kullanımı yazdırır ve `0` ile çıkar. | `/?`, `-h` |
+| `--version` | Sürümü yazdırır ve `0` ile çıkar. | `-v` |
+
+Bayraklar büyük/küçük harfe duyarsızdır, dolayısıyla `/S` ve `/D` de `/s` ve `/d` kadar iyi çalışır. Çalıştırma başına tek bayrak: birleştirilemezler ve `/s` ile `/d` kendilerinden sonra bir şey almaz.
+
+Argümansız çalıştırın, kullanımı yazdırır ve `1` ile çıkar; böylece bayrağını düşüren zamanlanmış bir görev, sessizce hiçbir şey yapmak yerine görünür biçimde başarısız olur. Tanımadığı bir bayrak için bir hata satırı, ardından kullanımı yazdırır ve yine `1` ile çıkar. İçinde boşluk olan, tırnağa alınmamış bir taşıma yolu da sessizce kırpılmak yerine aynı şekilde geri çevrilir ve ileti size tırnak içine almanızı söyler.
+
+### Çıkış kodları
+
+Aracın `--help` içinde kendi belgelediği kodlar şunlar:
+
+| Kod | Anlamı |
+|---|---|
+| `0` | Başarılı. Çalıştırma isteneni yaptı ve hiçbir şey başarısız olmadı. |
+| `1` | Hiçbir şey işlenmedi. Çalıştırma başarısız oldu ya da geri çevrildi. |
+| `2` | Kısmi. Bir kısmı işlendi, bir kısmı işlenmedi; yarıda basılan bir Ctrl+C de buraya girer. |
+| `75` | Geçici. Geçici bir durum çalıştırmayı engelledi; yazdırılan ileti hangisi olduğunu söyler. |
+| `130` | Hiçbir şey işlenmeden önce Ctrl+C ile iptal edildi. |
+
+`1`, başarısızlığın yanı sıra geri çevrilmeyi de kapsar ve geri çevrilme bir kusur değildir: yalnızca dolu olan bir hedef de, uygulamanın hiçbir şeye dokunmadan önce okuyamadığı bir kayıt defteri değeri de buraya düşer. `0`, hiçbir şeyin başarısız olmadığı anlamına gelir, geriye bir şey kalmadığı değil: `--help`, `--version` ve yalnızca tarama çalıştırması, tarama altmış sekiz dosya bulmuş da olsa hiç bulmamış da olsa `0` ile çıkar.
+
+### Olay günlüğü
+
+Her çalıştırma uygulama günlüğüne bir sonuç girişi yazar ve yanına bir ya da daha fazla bildirim ekleyebilir. Olay kimliği makineler için kararlı bir sözleşmedir, dolayısıyla bir RMM hiçbir metni ayrıştırmadan numaraya göre süzebilir:
+
+| Kimlik | Anlamı |
+|---|---|
+| `1000` | Başarılı |
+| `1002` | Kısmi |
+| `2000` | Atlandı, geçici |
+| `4000` | Ağır başarısızlık |
+| `3000` | Bildirim: tarama kurulu her ürünü kapsayamadı |
+| `3001` | Bildirim: Windows'un beklediği dosyalar klasörde yok |
+| `3002` | Bildirim: dosyalar sunulmak yerine geri tutuldu |
+
+`3000` bandı bir sonuç değil bir bildirimdir ve çalıştırma sonucu sayılmaz. Giriş türü, çalıştırmada ters giden bir şey olmadığında Bilgi, olduğunda Uyarı'dır. **Olay günlüğü her zaman İngilizcedir**, makinenin görüntü dili ne olursa olsun; böylece bilinen bir ifadeye yapılan bir grep'in kararlı bir hedefi olur. Çevrilen kısım konsoldur: makinenin kendi dilini izler, boyutları ve tarihleri de kendi bölgesine göre biçimlendirir.
+
+### Örnekler
+
+Hiçbir şeyi değiştirmeden bir dosyaya denetim çıkarmak:
 
 ```
-Kullanım:
-  installerclean-cli --help     Bu yardımı göster (/?, -h de kabul edilir)
-  installerclean-cli --version  Sürümü yazdır (-v de kabul edilir)
-  installerclean-cli /s         Yalnızca tara - gereksiz dosyaları listele
-  installerclean-cli /d         Gereksiz dosyaları sil (Geri Dönüşüm Kutusu)
-  installerclean-cli /m         Kayıtlı varsayılan konuma taşı
-  installerclean-cli /m YOL     Belirtilen yola taşı
+installerclean-cli /s > audit.txt
 ```
 
-GUI'yi başlatmak için `InstallerClean.exe` çalıştırın (ya da kurulumdan gelen Başlat menüsü kısayolunu kullanın).
-
-`installerclean-cli` argümansız ya da tanınmayan bir bayrakla çalıştırılırsa, bu kullanımı yazdırır ve `1` ile çıkar, böylece bayrağını düşüren zamanlanmış bir görev, hiçbir şey yapmadan sessizce “başarılı olmak” yerine görünür biçimde başarısız olur. Açık bir `--help`, `/?` veya `-h` aynı kullanımı yazdırır ve `0` ile çıkar.
-
-`/s` bir deneme çalıştırmasıdır: tarar, kaldıracağı şeyleri dosya adları ve boyutlarıyla listeler, sonra çıkar. Temizlikten önce denetlemek için kullanışlıdır. Çıkış kodu başarılı bir taramada `0`, tarama başarısız olursa `1` ve Ctrl+C'de `130`'dur. Tüm dosyalar `C:\Windows\Installer` içindedir.
-
-`/d` ve `/m` tarar ve ardından harekete geçer. `/d` kaldırılabilir dosyaları Geri Dönüşüm Kutusu'na taşır. `/m` onları bir klasöre taşır (ya komut satırında belirttiğiniz birine, ya da GUI'den kaydedilmiş varsayılana). Kaydedilen bu varsayılan, kullanıcı başına saklanır, dolayısıyla SYSTEM ya da bir hizmet hesabı olarak çalışan zamanlanmış bir görev onu göremez; bu tür çalıştırmaların klasörü `/m PATH` ile açıkça belirtmesi gerekir. Çıkış kodları: tam başarı için `0`, kısmi için `2` (bazı dosyalar başarılı, bazıları başarısız), tam başarısızlık için `1` (tarama başarısız, hatalı argümanlar ya da toplu işteki her dosya başarısız), çalıştırmayı engelleyen geçici bir durum için `75` (yazdırılan ileti hangisi olduğunu ve yeniden denemenin yardımcı olup olmayacağını açıklar), herhangi bir dosya işlenmeden önce bir Ctrl+C için `130` (toplu işin ortasına denk gelen bir Ctrl+C, iş yapıldığından `2` ile, yani kısmi olarak çıkar).
-
-CLI'nin tüm çıktısı, hata ve tanılama iletileri dahil, stdout'a gider; ayrı bir stderr akışı yoktur. Çıkış kodu makinece okunabilen sinyaldir (ve çalıştırma başına Uygulama olay günlüğü girişi onu yansıtır), dolayısıyla bir betik metni ayrıştırmak yerine çıkış koduna göre hareket etmelidir ve `installerclean-cli /s > audit.txt` varsa herhangi bir hata satırı dahil çalıştırmanın tamamını yakalar.
-
-Üçü de yükseltilmiş (yönetici) bir komut istemi gerektirir. Bir Grup İlkesi UAC yükseltme istemini engellerse, süreç başlamayı reddeder ve Windows üst kabuğa 740 hatası döndürür (PowerShell'de `$LASTEXITCODE = 740`). `taskkill /pid <pid>` düzgün bir iptal tetiklemez; tek örnek muteksi, AbandonedMutexException yolu üzerinden bir sonraki çalıştırma tarafından kurtarılır.
-
-### Düzenli bir temizliği zamanlama
-
-Düzenli aralıklarla temizlemek için Görev Zamanlayıcı'yı `installerclean-cli`'ye yönlendirin. Onu SYSTEM olarak ya da bir hizmet hesabıyla ve en yüksek ayrıcalıklarla çalıştırın ki etkileşimli bir istem olmadan ihtiyaç duyduğu yükseltmeyi alsın; taşıma hedefini de komut satırında verin, çünkü GUI'den kaydedilen varsayılan kullanıcı başına saklanır ve SYSTEM ya da hizmet hesabı çalıştırmalarında geçerli olmaz. CLI'nin bir kopyası `C:\Tools` içindeyken `D:\InstallerBackup` klasörüne aylık taşıma şöyle görünür:
+CLI'nin bir kopyası `C:\Tools` içindeyken `D:\InstallerBackup` klasörüne aylık taşıma:
 
 ```
 schtasks /create /tn "InstallerClean monthly" /tr "C:\Tools\installerclean-cli.exe /m D:\InstallerBackup" /sc monthly /ru SYSTEM /rl highest
 ```
 
-Görev, çalıştırma bitene kadar bloke olur ve çıkış kodunu Son Çalıştırma Sonucu olarak kaydeder; böylece RMM'iniz de yukarıdaki kodlara (`0` tam başarı, `2` kısmi, `75` geçici, `1` tam başarısızlık) tıpkı bir betiğin yapacağı gibi dayanabilir.
+Görev, çalıştırma bitene kadar bloke olur ve çıkış kodunu Son Çalıştırma Sonucu olarak kaydeder; böylece bir RMM yukarıdaki kodlara dayanabilir.
 
-### Neden `installerclean-cli`, `installerclean.exe` değil?
+PowerShell'den:
 
-`InstallerClean.exe` WPF GUI'sidir; komut satırı argümanlarına yanıt vermez. `installerclean-cli.exe`, aynı kurulum dizininde bulunan ve aynı tarama / taşıma / silme işlemlerini PowerShell, cmd ve zamanlanmış görevlere sunan ayrı bir konsol yürütülebilir dosyasıdır. Gerçek bir konsol süreci olduğundan, bitene kadar istemi bloke eder; çıktısını diğer her konsol exe'sinde olduğu gibi yönlendirin ya da bir boruyla aktarın.
+```powershell
+& 'C:\Tools\installerclean-cli.exe' /m D:\InstallerBackup
+switch ($LASTEXITCODE) {
+    0       { 'Temiz' }
+    2       { 'Kısmi, çıktıyı denetleyin' }
+    75      { 'Engellendi, sonra yeniden deneyin' }
+    default { "Başarısız ($LASTEXITCODE)" }
+}
+```
 
-Taşınabilir indirme yalnızca GUI exe'sini içerir. Komut satırını GUI olmadan istiyorsanız, `installerclean-cli.exe` dosyasını [sürümler sayfasından](../../releases/latest) indirip doğrudan çalıştırın. Kurulum da onu GUI ile birlikte kurar.
+### Betik yazmadan önce
+
+- **Yükseltme gerektirir.** Hepsi gerektirir, `/s` dahil. Yükseltilmemiş bir komut isteminden Windows onu başlatmayı reddeder ve kabuğunuza `740` verir.
+- **GUI'nin kaydettiği klasör kullanıcı başınadır.** SYSTEM ya da bir hizmet hesabı olarak çalışan bir görev onu göremez, dolayısıyla o çalıştırmaların `/m YOL` vermesi gerekir.
+- **SYSTEM ağa makine hesabı olarak erişir**, dolayısıyla bir `\\sunucu\paylaşım` hedefi için o hesaba hak verilmesi gerekir.
+- **`/s` hiçbir zaman bloke etmez.** Salt okunurdur ve kilit almaz, dolayısıyla masaüstü uygulaması açıkken tarama yapabilirsiniz. `/d` ve `/m` makine genelinde bir kilit alır ve kilidi başka bir InstallerClean çalıştırması tutuyorsa `75` ile çıkar.
+- **Her şey stdout'a gider**, hatalar dahil; stderr yoktur. Metni ayrıştırmak yerine çıkış koduna dayanın.
+- **Taşıma, yeniden adlandırmak yerine geri çevirir.** Hedefte o adda bir dosya zaten varsa, o dosya önbellekte bırakılır ve çıktıda adı verilir; toplu işin geri kalanı yine taşınır. Her dosyanın çakıştığı bir çalıştırma hiçbir şey işlemez ve `1` ile çıkar.
+- **Yedek klasörünü boşaltan hiçbir şey yok.** `/m` yalnızca ekler. Onu ayrıca sizin temizlemeniz gerekir.
+- **`taskkill /pid` düzgün bir iptal değildir.** Tek örnek kilidini bir sonraki çalıştırma kurtarır.
+- **İlk çalıştırma bir olay günlüğü kaynağı kaydeder**, şurada: `HKLM\SYSTEM\CurrentControlSet\Services\EventLog\Application\InstallerClean`. Onu yerinde bırakın: Olay Görüntüleyicisi bir girişin açıklamasını kaynağı üzerinden okur, dolayısıyla kaynağı kaldırmak, aracın daha önce yazdığı her girişi bilinmeyen kaynak hatasına çevirir.
+
+### Neden `installerclean-cli`, `installerclean.exe` değil
+
+`InstallerClean.exe` penceredir ve komut satırı argümanlarını yok sayar. `installerclean-cli.exe` gerçek bir konsol sürecidir, dolayısıyla bitene kadar komut istemini bloke eder, diğer her şey gibi yönlendirilir ve boruyla aktarılır. Kurulum ikisini de kurar. Taşınabilir indirme yalnızca GUI'dir; komut satırını penceresiz istiyorsanız `installerclean-cli.exe` dosyasını [sürümler sayfasından](../../releases/latest) tek başına indirin.
+
+## Erişilebilirlik
+
+InstallerClean, tümüyle klavyeden ve bir ekran okuyucusuyla kullanılabilecek şekilde yapılmıştır.
+
+- **Baştan sona klavyeyle kullanılabilir.** Uygulamanın yaptığı her şeye klavyeden ulaşılır ve ayrıntı pencerelerinin sütunları da klavyeden sıralanır, dolayısıyla burada hiçbir şey fare gerektirmez. Başlık çubuğu düğmeleri Windows'unkiler gibi davranır ve Alt+Boşluk ya da Alt+F4 ile açılır. Klavye odağı, nereye giderse gitsin görünür kalır.
+- **Ekran Okuyucusu ve Sesli erişim.** Her denetim etiketlidir ve bir düğmenin üzerinde görünen sözcük, onu sesle çalıştıran sözcüktür. Bir Taşı veya Sil işlemi bittiğinde sonuç sesli okunur.
+- **Okunmak için yapıldı.** Metin, koyu temanın her yerinde WCAG AA kontrastını karşılar.
+
+Burada bir şey size engel oluyorsa, [bir konu açın](../../issues). Erişilebilirlik sorunları uç durumlar değil, hatalardır.
+
+## Kod imzalama politikası
+
+InstallerClean, ücretsiz kod imzalama için [SignPath Foundation](https://signpath.org) tarafından kabul edildi; bu, açık kaynak yazılımları imzalayarak onların makinenize bilinmeyen bir yayımcıdan gelmesine son veren bir program. Sertifikanın kendisi henüz düzenlenmedi, dolayısıyla buradaki indirmeler bugün imzasız ve Windows onlar için uyarı verecek.
+
+Düzenlendiğinde her sürüm, SignPath'in istediği şu satırı taşıyacak: “free code signing provided by SignPath.io, certificate by SignPath Foundation”. Sertifika bana değil vakfa ait, çünkü bir sertifikanın tüzel bir kişiliğe düzenlenmesi gerekir ve tek kişilik bir proje tüzel kişilik değildir. Bu, InstallerClean'in onlara ait olduğu ya da imzalamanın ötesinde projeye karıştıkları anlamına gelmez.
+
+**Roller.** InstallerClean'in bakımını tek bir kişi üstleniyor. Commit edenler ve gözden geçirenler, yani projeye kimin kod ekleyebileceği: ben. Onaylayanlar, yani bir sürümün imzalanmasına kimin izin verebileceği: ben.
+
+## Gizlilik
+
+Bir çalıştırma hakkında herhangi bir şey gönderen tek şey isteğe bağlı rapordur ve o da yalnızca siz düğmeye bastığınızda gider. İçinde şunlar var: taramanın ne bulduğu, neyi neden geri tuttuğu, taşıdınız mı sildiniz mi, bunun ne kadar yer açtığı, ne kadar sürdüğü ve başarısız olan her şey; yanında uygulamanın sürümü, onu hangi dilde okuduğunuz ve Windows sürümünüz. Dosya adı yok, klasör adı yok, hesap adı yok, makinenizi tanımlayan hiçbir şey yok ve iki raporu birbirine bağlayabilecek hiçbir şey yok. Uygulamanın kendi makinem dışındaki makinelerde çalışıp çalışmadığını ve neyi geri tuttuğunu böyle öğreniyorum.
+
+Reklam yok, telemetri yok. Bunun dışındaki tek bağlantılar, uygulama açılırken yapılan sürüm denetimi (GitHub'a tek bir istek; Hakkında penceresinden kapatabilirsiniz) ve GitHub'a ve cömert hissederseniz bağış yapabileceğiniz bir sayfaya götüren düğmeler. [Gizlilik politikasının](PRIVACY.md) tamamı (İngilizce).
+
+## Neleri yapmaz
+
+- WinSxS (`C:\Windows\WinSxS`) farklı kurallara sahip farklı bir klasördür. Onun için, yükseltilmiş bir komut isteminden `Dism /Online /Cleanup-Image /StartComponentCleanup` komutunu çalıştırın.
+- Arka plan hizmeti yok, zamanlanmış görev yok, otomatik temizlik yok. Uygulama yalnızca siz başlattığınızda çalışır.
+- Yüklü programlarınızı ya da Windows Installer veritabanını değiştirmez, yalnızca okur. Kayıt defterine yazdığı tek şey, komut satırı aracının çalıştırmalarının Windows Olay Günlüğü'nde görünebilmesi için ihtiyaç duyduğu tek seferlik olay kaynağı kaydıdır.
+- Kendiliğinden kurduğu tek bir bağlantı türü var: siz çalıştırdığınızda GitHub'ın sürümler sayfasında daha yeni bir sürüm olup olmadığına hızlıca bakması; bunu Hakkında penceresinden kapatabilirsiniz. Geri kalan her şey yalnızca siz söylediğinizde olur: isteğe bağlı anonim rapor (çalıştırmaya dair sayılar; sizi ya da dosyalarınızı adlandıran hiçbir şey yok) ve GitHub belgelerine ve bir bağış sayfasına giden, tıklarsanız tarayıcınızda açılan bağlantılar. Kendi başına hiçbir şey indirmez.
+- Araç çubuğu yok, paketlenmiş yazılım yok, reklam yazılımı yok.
+
+## Alternatifler
+
+Bu klasörü daha önce arattıysanız, büyük olasılıkla karşınıza çıkmış olan araç [PatchCleaner](https://www.homedev.com.au/free/patchcleaner) olacaktır. Bu işi ilk o yaptı, InstallerClean var olmadan önce on yıl boyunca yaptı, hâlâ gayet iyi gidiyor ve InstallerClean onsuz var olmazdı.
+
+InstallerClean'i yaptım, çünkü PatchCleaner kapalı kaynaklı, Mart 2016'dan beri güncelleme almadı ve Adobe dosyalarını varsayılan olarak hariç tutuyor. Bu hariç tutmanın iyi bir nedeni var ve HomeDev bunu o zamanki sürüm notlarında açıkça söyledi:
+
+> *“Önceki sürümlerde, PatchCleaner'ın Adobe Acrobat Reader yamalarını yanlışlıkla gerekli değilmiş gibi tanımladığı bilinen bir sorun var. Adobe, otomatik güncelleme konusunda kendine özgü bir şey yapıyor; öyle ki PatchCleaner ‘yetim’ yamaları yükleyici dizininden kaldırırsa, Adobe Reader'ın otomatik güncelleştirmeleri artık başarıyla kurulamıyor.”*
+>
+> [PatchCleaner sürüm notları, sürüm 1.4.0.0](https://www.homedev.com.au/free/patchcleaner) (İngilizce orijinalinden çevrilmiştir)
+
+Onunla birlikte gelen filtre, bir dosyanın meta verisinde ve imzasında “Acrobat” sözcüğünü arar. Acrobat'ın en büyük suçlu olduğu makinelerde bu, alanın çoğu olabilir:
+
+> *“Yetim `.msp` dosyalarını silmek için Patchcleaner'ı indirdim, ama görünüşe göre bu yalnızca 250 MB yer açacakmış. Dosyaların 29 GB'ı ‘filtreler tarafından hariç tutulmuş’, yani Patchcleaner pek işe yaramıyor gibi.”*
+>
+> HeatherBunny1111, [r/techsupport](https://www.reddit.com/r/techsupport/comments/1qc4tcf/how_to_delete_msp_files_safely/) (İngilizce orijinalinden çevrilmiştir)
+
+İki araç arasındaki fark burada, her birinin Windows'tan ne istediğidir; Adobe hakkında bir görüş ayrılığı değil. Windows'un, bir ürüne *uygulanmış* yamaları veren listesi, yerine daha yeni bir yama geçmiş olanları dışarıda bırakır; dolayısıyla bu listeyi okuyan bir araç, yerine geçilmiş bir yamanın dosyasıyla, diğerleri gibi hiçbir şeyin sahiplenmediği bir dosya olarak karşılaşır. Adobe'ninkileri adından yakalayan şey, hariç tutma filtresidir. InstallerClean ise Windows'a yama durumunu sorar, dolayısıyla yerine geçilmiş bir yama öyle etiketlenmiş olarak gelir ve ona ne olacağına, adının ne dediğine değil Windows'un onun hakkında kaydettiğine bakılarak karar verilir. İkisi şöyle karşılaştırılır:
+
+| | **InstallerClean** | **PatchCleaner** |
+|---|---|---|
+| Son güncelleme | 2026 (etkin) | 3 Mart 2016 |
+| Kaynak kod | Açık kaynak (Apache 2.0) | Kapalı kaynak |
+| Çalışma zamanı | .NET 10 (kendi kendine yeten) | .NET Framework 4.5.2 + VBScript |
+| API | `msi.dll` içindeki Windows Installer API'si (süreç içi) | Windows Installer COM (VBScript ile süreç dışı) |
+| Yerine geçilmiş yamalar | Windows'un yama kayıtlarından saptanır | Sahiplenilmemiş dosyalardan ayırt edilmez |
+| Adobe dosyaları | Yerine geçilmiş yamalar saptanır ve etiketlenir | Varsayılan olarak açık bir ad filtresiyle hariç tutulur |
+
+> **`Win32_Product` hakkında bir not:** Kurulu ürünleri listelemek için yaygın ama bozuk olan yaklaşım, sayım sırasında [her üründe MSI onarım işlemlerini tetikleyen](https://gregramsey.net/2012/02/20/win32_product-is-evil/) `Win32_Product` (WMI) yaklaşımıdır. Hem InstallerClean hem de PatchCleaner ondan kaçınır. InstallerClean `msi.dll` içindeki Windows Installer API'sini çağırır; PatchCleaner ise Windows Installer COM nesnesini kullanan bir yardımcı betik çalıştırır. O betiğin adı `WMIProducts.vbs`, bu da onu başka türlü gösteriyor; ama dosya, Microsoft'un kendi örnek betiğinin düzenlenmiş hâli ve WMI'ya değil Windows Installer'a soruyor. Onunla ilgili yanıltıcı olan tek şey adı.
+
+Disk Temizleme, Akıllı Depolama, CCleaner ve BleachBit `C:\Windows\Installer` klasörünü temizlemez.
+
+<a id="recovery"></a>
+## `C:\Windows\Installer` içinde bir dosya eksik kalırsa
+
+O klasörden bir dosya gerçekten eksikse, ait olduğu program yine de normal çalışır. Ama o programı güncellemeye ya da kaldırmaya çalıştığınızda büyük olasılıkla başarısız olur. Windows dosyayı aramaya gider, bulamaz ve adım durur.
+
+InstallerClean'in bütün amacı, yalnızca gerekli *olmayan* dosyaları taşımayı ya da silmeyi önermektir; ama bir dosyanın eksik olduğunu da anlar, dolayısıyla bulduklarını bir uyarı üçgeni ve buraya götüren bir bağlantıyla işaretler. Programı onarmayı denemek için yapılacaklar şunlar:
+
+- Kurulu programınızın sürüm numarasını öğrenin (Ayarlar, Uygulamalar, Yüklü uygulamalar)
+- **O sürümün** yükleyicisini üreticisinden indirin. Daha yenisi işe yaramaz, önce kaldırmak da yaramaz: ikisi de devam edebilmek için kurulu olanı kaldırmak zorundadır ve eksik dosyaya ihtiyaç duyan adım tam da o kaldırma adımıdır.
+- O yükleyiciyi çalıştırın
+- Bu, dosyayı geri getirmeli ve ayarlarınıza dokunmamalı. InstallerClean'de yeniden tarayın; işe yaradıysa uyarı kaybolmuş olacak.
+
+Yine de Microsoft bunun işe yarayacağını garanti etmiyor. Aşağıdaki, onun kendi daha ayrıntılı açıklaması:
+
+<details>
+<summary>Microsoft'un daha ayrıntılı görüşü</summary>
+
+*Aşağıdaki Microsoft alıntıları İngilizce orijinalindedir.*
+
+Tam kılavuz: [Restore missing Windows Installer cache files](https://learn.microsoft.com/en-us/troubleshoot/windows-client/application-management/missing-windows-installer-cache), KB 2667628.
+
+*Sorun hemen ortaya çıkmayabilir:*
+> "If the installer cache is compromised, you may not immediately see problems until you take an action such as uninstalling, repairing, or updating a product."
+
+*Dosyalar her makineye özgüdür, bu yüzden başka bir bilgisayardan kopyalayamazsınız:*
+> "Missing files cannot be copied between computers because the files are unique."
+
+*Dosya eksilmeden önce alınmış bir yedeğiniz varsa, Microsoft şu sırayla dört yol sayıyor:*
+> - System Restore points (available only on client operating systems)
+> - Restoreable system state backup
+> - Failure recovery methods that can restore the full system state backup
+> - Reinstallation of the operating system and all applications
+
+*Ve dördünün de püf noktası. Bu, bir sistem yedeği için geçerli; dosyaları kendinizin taşıdığı bir klasör için değil: onları doğrudan geri kopyalayabilirsiniz, klasöre kopyalarken Windows'un gösterdiği yönetici istemini onaylamanız yeter.*
+> "To restore the missing files, a full system state restoration is required. It is not possible to replace only the missing files from a previous backup."
+
+*Önerilen kurtarma yöntemi ve onun açık sınırları:*
+> "If application files are missing from the Windows Installer Cache, ask the vendor or support team for the application about the missing files. You must follow the procedures or steps recommended by the application vendor to restore the files. In some cases, you may have to rebuild the operating system and reinstall the application to fix the problem."
+>
+> "Windows support engineers cannot help you recover missing application files from the Windows Installer cache."
+
+</details>
+
+Bir dosyanın eksik olmasının nedeni InstallerClean ise bunu bilmek isterim. [Bir konu açın](../../issues), düzelteyim.
 
 ## Gereksinimler
 
 - Windows 10 (sürüm 1607 / derleme 14393 veya üzeri, .NET 10 çalışma zamanının desteklediği en eskisi) ya da Windows 11
-- Yönetici ayrıcalıkları (`C:\Windows\Installer` yalnızca yöneticilere açıktır)
+- 64 bit Windows. Kurulum 32 bit sistemlere kurulmaz ve bunu size söyler.
+- Kurulum için ve uygulama için yönetici ayrıcalıkları (`C:\Windows\Installer` yalnızca yöneticilere açıktır)
 
 Kurulum, taşınabilir ve CLI yapı seçenekleri için [İndirme](#indirme) bölümüne bakın.
 
@@ -407,11 +467,11 @@ dotnet test src/InstallerClean.Tests/
 
 Bir hata mı buldunuz ya da bir öneriniz mi var? [Bir konu açın](../../issues) ya da bir [tartışma](../../discussions) başlatın. Çekme istekleri memnuniyetle karşılanır. Lütfen göndermeden önce `dotnet test` çalıştırın.
 
-InstallerClean artık baştan sona Türkçe: uygulama, kurulum, komut satırı ve bu README. Bunların hepsi elimden gelenin en iyisi olan makine çevirileri; kusursuz olmayacaklar, bu yüzden anadili Türkçe olan birinin gözden geçirmesini beklemek yerine oldukları gibi yayımladım. Geliştirilebilecek bir şey fark ederseniz, bir [konu](../../issues/new?template=translation_review.md), bir çekme isteği ya da bir tartışma yoluyla bana iletmenizden memnuniyet duyarım. Uygulama varsayılan olarak Windows dilinizde açılır; küre simgesiyle istediğiniz zaman İngilizceye geçebilirsiniz.
+InstallerClean 16 dilde geliyor ve her biri onun tamamını kapsıyor: uygulama, kurulum, komut satırı ve bu README. Uygulamada, kurulumda ve komut satırında Japoncanın ve Felemenkçenin tamamı coolvitto ile RijckAlex'ten geldi, İtalyanca ise kendi makine çevirimin bovirus tarafından düzeltilip onaylanmış hâli; üçü de anadili konuşuru. Geri kalanı kendi makine çevirilerim. Her dildeki her README benim. Onlara epey emek verdim, ama kusursuz olmayacaklar; her birini anadili konuşuru biri denetleyene kadar bekletmektense oldukları gibi yayımlamaya karar verdim. İngilizceyi ve bu dillerden birini biliyorsanız ve geliştirilebilecek bir şey fark ederseniz, bunu bir [konu](../../issues/new?template=translation_review.md), bir çekme isteği ya da bir [tartışma](../../discussions) yoluyla duymaktan memnuniyet duyarım.
 
 ## Projeyi destekleyin
 
-InstallerClean işinize yaradıysa, [No Faff'ı desteklemeyi](https://nofaff.netlify.app/support) ya da GitHub'da bir yıldız bırakmayı düşünün.
+InstallerClean biraz yer açarsa ve cömert hissediyorsanız, [küçük bir bağış](https://nofaff.netlify.app/support) beni gerçekten mutlu eder. Uygulamada aynı yere götüren bir ❤️ düğmesi var. Her miktar minnetle kabul edilir. Şimdiye dek bağış yapan herkese çok teşekkürler. Çok büyük bir emek oldu ve buna değdiğine sevindim.
 
 ## Yıldız geçmişi
 
