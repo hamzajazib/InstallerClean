@@ -1762,15 +1762,15 @@ public class InstallerQueryServiceUnitTests
     }
 
     [Theory]
-    // A volume-GUID value and the device forms beside it. None has a drive
-    // letter behind the prefix, so none can have it taken off: what was left
-    // had no root at all, and GetFullPath completed it from the process working
-    // directory, which is a different answer from the GUI and from the command
-    // line for the same registration.
+    // A volume-GUID value and the device form beside it. Neither carries a drive
+    // letter behind the prefix, so neither can have it taken off: what would be
+    // left has no root at all, and GetFullPath completes such a value from the
+    // process working directory, which is a different answer from the GUI and
+    // from the command line for the same registration.
     [InlineData(@"\\?\Volume{9c3a1d2e-0000-0000-0000-100000000000}\Windows\Installer\vol.msi")]
     [InlineData(@"\??\Volume{9c3a1d2e-0000-0000-0000-100000000000}\Windows\Installer\vol.msi")]
     [InlineData(@"\\?\GLOBALROOT\Device\HarddiskVolume3\Windows\Installer\vol.msi")]
-    public async Task A_value_with_no_drive_letter_behind_its_prefix_keeps_the_prefix(string registeredAs)
+    public async Task A_value_with_no_drive_letter_behind_its_prefix_is_never_completed_from_the_working_directory(string registeredAs)
     {
         var msi = new FakeMsiApi();
         msi.AddProduct("{A}");
@@ -1778,12 +1778,24 @@ public class InstallerQueryServiceUnitTests
 
         var claimed = Assert.Single((await Run(msi)).Packages).LocalPackagePath;
 
-        // Asserted at the two ends rather than as equality with the input: what
-        // matters is that the value still names a volume and still names the
-        // file, not that GetFullPath left every character of an extended path
-        // alone. Keeping the prefix is what rules out the old answer, which
-        // began at whatever drive and folder the process was started from.
-        Assert.StartsWith(registeredAs.Substring(0, 4), claimed, StringComparison.Ordinal);
+        // THE ASSERTION NAMES THE DEFECT RATHER THAN ONE OF THE TWO SHAPES A
+        // CORRECT ANSWER CAN TAKE, and the difference decides whether this test
+        // says the same thing on every machine. Two answers are right here. A
+        // volume the machine does not have leaves the value carrying its prefix,
+        // still naming its file and still naming its volume. A device the machine
+        // does have resolves to the drive-letter spelling the folder walk
+        // produces, which is what the resolver is for and is the better of the
+        // two. Asserting the prefix survives accepts the first and refuses the
+        // second, so it turns on whether the machine running it happens to have
+        // the volume named in the value.
+        //
+        // What is wrong on every machine is the third answer: the prefix taken
+        // off blind, leaving a rootless value that GetFullPath completes against
+        // wherever the process was started. That is the one spelling that moves
+        // with the caller, and naming it directly holds both correct answers and
+        // admits neither the old one.
+        var completedFromTheWorkingDirectory = Path.GetFullPath(registeredAs.Substring(4));
+        Assert.NotEqual(completedFromTheWorkingDirectory, claimed, StringComparer.OrdinalIgnoreCase);
         Assert.EndsWith(@"\vol.msi", claimed, StringComparison.OrdinalIgnoreCase);
     }
 
