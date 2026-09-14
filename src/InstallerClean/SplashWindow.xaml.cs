@@ -10,7 +10,21 @@ namespace InstallerClean;
 
 public partial class SplashWindow : Window
 {
-    private int _progressMessageCount;
+    // Where the bar stands is worked out by ScanProgressFill, which holds the
+    // band arithmetic and no drawing; this window turns what it returns into
+    // motion. See that class for how the scan's milestones and ticker divide the
+    // range between the floor and the ceiling.
+    private readonly ScanProgressFill _fill = new();
+
+    // How long a step of the fill takes when the caller does not say. The closing
+    // step does say, so that the last of the bar arrives as the window goes
+    // rather than being cut off by it.
+    private static readonly TimeSpan StepEase = TimeSpan.FromMilliseconds(250);
+
+    // Set when the user asks to stop. The scan observes cancellation at its next
+    // checkpoint, so updates already in flight arrive after this and would
+    // otherwise write a phase message over the line saying the app is stopping.
+    private bool _cancelling;
 
     public event EventHandler? CancelRequested;
 
@@ -44,35 +58,33 @@ public partial class SplashWindow : Window
 
     public void OnScanProgress(ScanProgressUpdate update)
     {
-        // Asymptote to 95; every update, milestone or ticker, advances
-        // the bar so the fill tracks the enumeration. The closing
-        // UpdateStep("Done", 100) finishes the fill.
-        _progressMessageCount++;
-        var percent = 10 + 85.0 * _progressMessageCount / (_progressMessageCount + 15);
+        if (_cancelling) return;
+
         if (update.IsMilestone)
         {
-            UpdateStep(update.Message, percent);
+            UpdateStep(update.Message, _fill.AtMilestone());
             return;
         }
-        // Ticker: per-product, display-only. The step text (the live
+        // Ticker: per-item, display-only. The step text (the live
         // region) is left alone so the splash does not queue one
         // announcement per installed product.
         ProductTicker.Text = update.Message;
-        AnimateProgress(percent);
+        AnimateProgress(_fill.AtTicker(update.Position, update.Total));
     }
 
-    public void UpdateStep(string message, double progressPercent)
+    public void UpdateStep(string message, double progressPercent, TimeSpan? ease = null)
     {
         StepText.Text = message;
         // A milestone closes the phase the ticker was narrating; clear
         // it so the last product name does not sit stale beside the next
         // phase's message.
         ProductTicker.Text = string.Empty;
-        AnimateProgress(progressPercent);
+        AnimateProgress(progressPercent, ease);
     }
 
-    private void AnimateProgress(double progressPercent)
+    private void AnimateProgress(double progressPercent, TimeSpan? ease = null)
     {
+        progressPercent = _fill.At(progressPercent);
         if (AccessibilitySettings.Current.ReduceMotion)
         {
             // Reduced motion: set the value with no easing. Clearing the
@@ -85,12 +97,12 @@ public partial class SplashWindow : Window
         }
         // ProgressBar.Value isn't implicitly animated; on a fast scan
         // the bar would jump 0 -> ~95 -> 100 in two frames. Ease each
-        // step over 250ms so the splash feels like a deliberate motion
-        // rather than a sequence of instantaneous frames.
+        // step so the splash feels like a deliberate motion rather than
+        // a sequence of instantaneous frames.
         var animation = new DoubleAnimation
         {
             To = progressPercent,
-            Duration = TimeSpan.FromMilliseconds(250),
+            Duration = ease ?? StepEase,
             EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
         };
         SplashProgress.BeginAnimation(System.Windows.Controls.ProgressBar.ValueProperty, animation);
@@ -98,6 +110,7 @@ public partial class SplashWindow : Window
 
     private void CancelClick(object sender, RoutedEventArgs e)
     {
+        _cancelling = true;
         CancelButton.IsEnabled = false;
         CancelButton.Content = Strings.Status_Cancelling;
         // SR-announced name tracks the visible Content swap; a
@@ -119,6 +132,15 @@ public partial class SplashWindow : Window
         AutomationProperties.SetHelpText(CancelButton, Strings.Tooltip_CancellingPending);
         StepText.Text = Strings.Status_Cancelling;
         ProductTicker.Text = string.Empty;
+
+        // The length of this wait is set by where the scan happens to be, so the
+        // bar stops claiming a position and shows only that the app is working,
+        // which is the bar the main window shows for a scan of its own. The
+        // animation clock is cleared first because a determinate animation left
+        // running holds its end value against the bar it no longer drives.
+        SplashProgress.BeginAnimation(System.Windows.Controls.ProgressBar.ValueProperty, null);
+        SplashProgress.IsIndeterminate = true;
+
         CancelRequested?.Invoke(this, EventArgs.Empty);
     }
 }

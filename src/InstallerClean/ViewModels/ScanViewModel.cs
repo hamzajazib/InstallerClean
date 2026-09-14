@@ -639,7 +639,12 @@ public partial class ScanViewModel : ObservableObject
 
         try
         {
-            var progress = new Progress<ScanProgressUpdate>(ApplyProgressUpdate);
+            // Throttled on the same terms as the startup scan's: the ticker fires
+            // once per installed product and once per cached file, and each one
+            // that gets through crosses to the dispatcher and replaces the
+            // overlay's second line.
+            var progress = new ThrottledScanProgress(
+                new Progress<ScanProgressUpdate>(ApplyProgressUpdate));
             var scanTask = RunScanCoreAsync(progress, cts.Token);
             if (await Task.WhenAny(scanTask, Task.Delay(200, cts.Token)) != scanTask)
                 IsScanning = true;

@@ -18,10 +18,12 @@ namespace InstallerClean.Services;
 public interface IFileSystemScanService
 {
     /// <summary>
-    /// Run the scan. Reports human-readable progress via
-    /// <paramref name="progress"/> (status text only, not percentages):
-    /// milestone updates carry the fixed phase messages, non-milestone
-    /// updates the per-product ticker (see <see cref="ScanProgressUpdate"/>).
+    /// Run the scan. Reports progress via <paramref name="progress"/> as text and
+    /// item counts, never as a percentage: milestone updates carry the fixed
+    /// phase messages, and non-milestone updates carry the ticker along with the
+    /// position the current phase has reached and, where the phase knows it, the
+    /// total it is working towards (see <see cref="ScanProgressUpdate"/>). What
+    /// share of a bar a phase is worth belongs to whatever draws the bar.
     /// Throws <see cref="UnauthorizedAccessException"/> if the process
     /// cannot read the MSI database (typically: not elevated), or
     /// <see cref="InvalidOperationException"/> if Windows Installer

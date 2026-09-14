@@ -369,8 +369,8 @@ public sealed class InstallerQueryService : IInstallerQueryService
     internal sealed class PathCensus
     {
         /// <summary>
-        /// Recorded paths put to the final-path resolver, which from 3.0.0 is every
-        /// value that got past the embedded-null test and the expansion.
+        /// Recorded paths put to the final-path resolver, which is every value that
+        /// got past the embedded-null test and the expansion.
         /// </summary>
         internal int ResolverAttempts;
 
@@ -380,10 +380,10 @@ public sealed class InstallerQueryService : IInstallerQueryService
         ///
         /// IT DECIDES NOTHING AND IS THE ONLY MEMBER HERE THAT NEVER DID. The other
         /// counters record what happened to a value; this records what the value
-        /// LOOKED LIKE. It exists because widening the resolver to every path took
-        /// the answer away from <see cref="ResolverAttempts"/>, which used to be both
-        /// figures at once, and how often these spellings occur on real machines is a
-        /// question this project has been trying to answer rather than an incidental.
+        /// LOOKED LIKE. It exists because the resolver is put every path, so
+        /// <see cref="ResolverAttempts"/> cannot also say how many of them carried
+        /// such a spelling: one counter answering both questions answers neither.
+        /// How often these spellings occur on real machines is what this one is for.
         /// </summary>
         internal int FlaggedSpellings;
 
@@ -651,7 +651,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
 
         // Products installed as a second instance of themselves, and the products
         // that would not answer the question. NEITHER MAY BE READ WITHOUT THE OTHER,
-        // and from 3.0.0 there is a rule that obeys that rather than a note saying it:
+        // and there is a rule that obeys that rather than a note saying it:
         // EnumerationCensus.SecondInstanceNotRuledOut asks them together and the walk's
         // offer is withheld wholesale on the answer. See that property for what the
         // pair means and InstanceProductCount for what a positive reading rests on.
@@ -728,9 +728,19 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // exactly the broken registration that makes this storm.
         try
         {
+        // Which product of how many this loop is on. The enumeration above
+        // materialises its list before a single product is asked about anything,
+        // so the total is settled here and a host can fill a bar in proportion
+        // rather than approximate one. It counts products the enumeration
+        // returned, which is the loop's own length and not a claim about how many
+        // are installed: the products it could not read are recovered by name
+        // further down and are counted where that happens.
+        var productIndex = 0;
+
         foreach (var (productCode, userSid, context) in products)
         {
             ct.ThrowIfCancellationRequested();
+            productIndex++;
 
             // Every way this one product's records can come back short reaches
             // the same count, and reaches it once. The number the user reads is
@@ -742,6 +752,20 @@ public sealed class InstallerQueryService : IInstallerQueryService
 
             var productName = GetProductProperty(productCode, userSid, context, MsiInstallProperty.ProductName).Value;
             var localPackage = GetProductProperty(productCode, userSid, context, MsiInstallProperty.LocalPackage);
+
+            // Ticker, not milestone: one of these fires per product, up to
+            // hundreds in a few seconds, so the consumer must not feed it to a
+            // screen-reader live region.
+            //
+            // Reported for every product the loop reaches, including the ones
+            // whose records come back short below, because the position says how
+            // far through the list this loop is and every product in the list
+            // takes the same turn. Reporting only the products that claim a file
+            // would leave the position short of the total by however many did
+            // not, and a host filling a bar from it would stop before the end.
+            progress?.Report(new ScanProgressUpdate(
+                productName.Length > 0 ? productName : productCode,
+                IsMilestone: false, Position: productIndex, Total: products.Count));
 
             // One more keyed property read on a product this loop has already
             // reached, rather than a second enumeration: the walk behind this loop
@@ -777,11 +801,6 @@ public sealed class InstallerQueryService : IInstallerQueryService
             }
             else if (localPackage.Value.Length > 0)
             {
-                // Ticker, not milestone: one of these fires per product,
-                // up to hundreds in a few seconds, so the consumer must
-                // not feed it to a screen-reader live region.
-                progress?.Report(new ScanProgressUpdate(
-                    productName.Length > 0 ? productName : productCode, IsMilestone: false));
                 MergeClaim(claimed,
                     new RegisteredPackage(NormaliseLocalPackagePath(localPackage.Value, pathCensus), productName, productCode),
                     ClaimSource.InstallerApi);
@@ -1111,10 +1130,9 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // scan that lost a row or is short against the registry's own count.
         //
         // AND IT TOUCHES NOTHING ELSE, WHICH IS A DECISION RATHER THAN THE ABSENCE OF
-        // ONE. It ran a second arm until 3.0.0 that cleared the unread-file marker on
-        // a row something else had already withheld, so that the missing-files split
-        // would treat such a row as unaccounted for. That arm is gone and must not
-        // come back by a different name.
+        // ONE. A second arm here, clearing the unread-file marker on a row something
+        // else has already withheld so that the missing-files split treats such a row
+        // as unaccounted for, is not wanted and must not be added under any name.
         //
         // WHAT THE MARKER MEANS IS WHY. It records that the ONLY reason the row lost
         // its verdict was that the pass reading the patch file could not read it, and
@@ -1479,11 +1497,11 @@ public sealed class InstallerQueryService : IInstallerQueryService
             var unaskable = false;
             foreach (var target in declared)
             {
-                // EVERY TARGET IS RESOLVED EVEN ONCE ONE HAS FAILED, where the pairing
-                // pass used to stop at the first. The outcome for the path is the same
-                // either way, that path being withheld on the flag below, and reading
-                // the rest is what makes one cached answer serve both consumers rather
-                // than depending on which of them asked first.
+                // EVERY TARGET IS RESOLVED EVEN ONCE ONE HAS FAILED. Stopping at the
+                // first failure gives the same outcome for the path, that path being
+                // withheld on the flag below, and reading the rest is what makes one
+                // cached answer serve both consumers rather than depending on which
+                // of them asked first.
                 var resolved = ResolveProductInstances(_msi, target);
                 if (resolved.Unaskable) { unaskable = true; continue; }
                 foreach (var (sid, context) in resolved.Instances)
@@ -2024,37 +2042,35 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// running from. Which prefixes come off, and why one is left on, is
     /// <see cref="InstallerCacheHelpers.StripLongPathPrefix"/>'s.
     ///
-    /// AN ENVIRONMENT-VARIABLE FORM IS ANOTHER SUCH SPELLING AND IS EXPANDED HERE
-    /// FROM 3.0.0. A value spelled <c>%SystemRoot%\Installer\1e038.msi</c> is a
-    /// claim on a real cached file, and nothing in this application expanded one:
-    /// <see cref="CarriesFlaggedSpelling"/> answers false for a <c>%</c>, so the
-    /// value fell through to GetFullPath, which completed it from the process's
-    /// working directory and produced a well-formed path naming nothing. The claim
-    /// then failed to match the walk and the file it meant was offered as
-    /// unclaimed, which is the one way a spelling fault puts a needed file in front
-    /// of somebody rather than merely mis-filing a row.
+    /// AN ENVIRONMENT-VARIABLE FORM IS ANOTHER SUCH SPELLING AND IS EXPANDED HERE.
+    /// A value spelled <c>%SystemRoot%\Installer\1e038.msi</c> is a claim on a real
+    /// cached file, and <see cref="CarriesFlaggedSpelling"/> answers false for a
+    /// <c>%</c>, so without the expansion the value reaches GetFullPath, which
+    /// completes it from the process's working directory and produces a well-formed
+    /// path naming nothing. That claim matches nothing the walk found, and a
+    /// spelling fault leaving a needed file in front of somebody is a worse outcome
+    /// than one that merely mis-files a row.
     ///
-    /// THE DEFECT WAS THAT BEHAVIOUR TURNED ON A REGISTRY VALUE'S TYPE. .NET
-    /// expands a <c>REG_EXPAND_SZ</c> as part of reading it, so the registry
-    /// fallback already coped with that form without anything here deciding to
-    /// (<see cref="TryReadLocalPackage"/>, where it is now explicit). The
-    /// <c>REG_SZ</c> value holding the same text was expanded nowhere, and neither
-    /// was anything the API side returned. Two registrations naming one location,
-    /// one stored expandable and one stored plain, got different answers, and no
-    /// comment anywhere said so or meant it.
+    /// AND WITHOUT IT THE BEHAVIOUR WOULD TURN ON A REGISTRY VALUE'S TYPE. .NET
+    /// expands a <c>REG_EXPAND_SZ</c> as part of reading it, so the registry fallback
+    /// copes with that form without anything here deciding to
+    /// (<see cref="TryReadLocalPackage"/>, where it is explicit). A <c>REG_SZ</c>
+    /// value holding the same text is expanded nowhere else, and neither is anything
+    /// the API side returns. Two registrations naming one location, one stored
+    /// expandable and one stored plain, would otherwise get different answers.
     ///
     /// WHAT THE EXPANSION DOES TO THE OFFER, ONE LINE PER HALF, because the two
     /// halves reach the list by opposite routes and no one sentence is true of both.
-    /// A walked file is offered when no registration names it, so a value that now
-    /// resolves takes its file OFF the list: the registration matches, and the file
-    /// is claimed and kept. A value that expands to somewhere else either names
-    /// nothing, which is exactly the old behaviour, or names some other file, which
-    /// is then claimed and kept in its place. A registered superseded patch is on
-    /// the list BECAUSE of its registration, and there the expansion can ADD:
-    /// <c>%SystemRoot%\Installer\1e038.msi</c> named nothing, so the row read as
-    /// missing from disk and the branch that offers it is gated on the file being
-    /// there; expanded, the row names the file that is really there and can reach
-    /// the offer.
+    /// A walked file is offered when no registration names it, so a value the
+    /// expansion resolves takes its file OFF the list: the registration matches, and
+    /// the file is claimed and kept. A value that expands to somewhere else either
+    /// names nothing, which is what an unexpanded one does, or names some other file,
+    /// which is then claimed and kept in its place. A registered superseded patch is
+    /// on the list BECAUSE of its registration, and there the expansion can ADD:
+    /// unexpanded, <c>%SystemRoot%\Installer\1e038.msi</c> names nothing, so the row
+    /// reads as missing from disk and the branch that offers it is gated on the file
+    /// being there; expanded, the row names the file that is really there and can
+    /// reach the offer.
     ///
     /// AND WHAT MAKES THAT SAFE IS NOT THIS METHOD. Such a row is put to the same
     /// per-product condition, the same confirmation pass and the same act-time
@@ -2099,13 +2115,12 @@ public sealed class InstallerQueryService : IInstallerQueryService
     ///
     /// Both are settled by asking the filesystem what the path really is, which
     /// is what <see cref="InstallerCacheHelpers.TryResolveFinalPath"/> already
-    /// does at every containment gate. EVERY RECORDED PATH IS ASKED, FROM 3.0.0,
-    /// where until then only a path announcing one of the two spellings in its own
-    /// characters was.
+    /// does at every containment gate. EVERY RECORDED PATH IS ASKED, and not only
+    /// one announcing either spelling in its own characters.
     ///
-    /// THE INVARIANT THAT BUYS IS THE REASON FOR THE CHANGE, and it is worth more
-    /// than the spellings it settles. Every claim leaving this method is EITHER a
-    /// location the kernel proved OR one whose failure to resolve has been counted.
+    /// THE INVARIANT ASKING EVERY PATH BUYS IS WORTH MORE THAN THE SPELLINGS IT
+    /// SETTLES. Every claim leaving this method is EITHER a location the kernel
+    /// proved OR one whose failure to resolve has been counted.
     /// There is no third case, so a reader asking whether a claim's location was
     /// proved has an answer rather than a case analysis.
     ///
@@ -2160,8 +2175,8 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// WHAT THIS STILL DOES NOT DO, and what stopped following from it. A flagged
     /// path the kernel declines to RESOLVE is still kept in the spelling Windows
     /// gave, and its claim still fails to match anything the walk produces. That much
-    /// is unchanged and cannot be improved here. What no longer follows is that its
-    /// file is offered: from 3.0.0 the refusal is counted, and
+    /// is unchanged and cannot be improved here. What does not follow is that its
+    /// file is offered: the refusal is counted, and
     /// <c>EnumerationCensus.AnyRecordedPathUnestablished</c> withholds the whole
     /// walk-derived offer on it, because the app cannot say WHICH candidate the
     /// unresolved claim meant and so cannot hold back a narrower set.
@@ -2251,14 +2266,12 @@ public sealed class InstallerQueryService : IInstallerQueryService
             // Only a proven expansion is taken. A false return means the kernel
             // never expanded this path, so its out value is the same string by
             // another route and using it would dress a guess as an answer.
-            // COUNTED BEFORE THE ASK AND NO LONGER GATING IT. The two spellings
-            // announce themselves in the string, and until 3.0.0 that character scan
-            // decided whether a handle was opened at all. It decides nothing now:
-            // every recorded path is resolved. What the scan still answers is how
-            // many of a machine's recorded values carry such a spelling, which is a
-            // fact about that machine this project has been trying to size and which
-            // the attempts count stopped being able to report the moment the ask
-            // widened to everything.
+            // COUNTED BEFORE THE ASK AND NOT GATING IT. The two spellings announce
+            // themselves in the string, and this scan decides nothing: the resolver
+            // below is put every recorded path whatever the scan says, so a reader
+            // taking this line for a gate has it wrong. What it answers is how many
+            // of a machine's recorded values carry such a spelling, which the
+            // attempts count cannot report while everything is asked.
             if (CarriesFlaggedSpelling(stripped)) census.RecordFlaggedSpelling();
 
             // COUNTED WHETHER IT ANSWERS OR NOT, which is the whole use of the
@@ -2285,15 +2298,18 @@ public sealed class InstallerQueryService : IInstallerQueryService
             // A value GetFullPath refuses (a device name, a length past the API's
             // limit) is kept exactly as Windows returned it. It cannot be improved,
             // and dropping the claim would turn an unreadable spelling into an
-            // orphaned file. The embedded null used to be named here as the third
-            // and is refused above instead, because on Windows it never reaches
-            // this call: the expansion truncates it away without throwing.
+            // orphaned file. An embedded null is not one of them and is refused
+            // above instead, because on Windows it never reaches this call: the
+            // expansion truncates it away without throwing.
             //
-            // AND THE FACT IS NOW CARRIED OUT RATHER THAN ENDING HERE. What leaves
-            // this method is a claim that cannot match anything the folder walk
-            // produces, so the file it means is offered as unclaimed. Until this
-            // release nothing downstream was told, and the count is the first step
-            // in finding out how often it happens on a real machine.
+            // AND THE FACT IS CARRIED OUT RATHER THAN ENDING HERE, WHICH IS WHAT
+            // KEEPS THE FILE. What leaves this method is a claim that cannot match
+            // anything the folder walk produces, so on its own it would leave the
+            // file it means unclaimed and on the offer. The refusal recorded on the
+            // next line is what stops that: it reaches
+            // <c>EnumerationCensus.AnyRecordedPathUnestablished</c>, which withholds
+            // the whole walk-derived offer, so no file is offered on the strength of
+            // a claim nobody could read.
             census.RecordNormalisationRefusal(stage);
             return value;
         }
@@ -2306,23 +2322,20 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// <see cref="InstallerCacheHelpers.StripLongPathPrefix"/> leaves on a path with
     /// no drive root, which in this position means a volume-GUID or device path.
     ///
-    /// IT DECIDES NOTHING. It was the gate on the final-path resolution until 3.0.0,
-    /// which is what the old name said, and every recorded path is resolved now
-    /// whatever this answers. What it does is COUNT, into
-    /// <see cref="PathCensus.FlaggedSpellings"/>, and the reason that survived the
-    /// gate is that the two questions came apart when the ask widened.
-    /// <see cref="PathCensus.ResolverAttempts"/> used to answer both, being the
-    /// number of paths asked about AND therefore the number carrying such a
-    /// spelling; it now answers only the first. Losing the second would have been a
-    /// measurement quietly disappearing from the only instrument this project has,
+    /// IT DECIDES NOTHING, AND ITS ONE PRODUCTION CALLER FEEDS A COUNTER. Every
+    /// recorded path is resolved whatever this answers, so a reader taking it for a
+    /// gate on the final-path resolution has it wrong. What it does is COUNT, into
+    /// <see cref="PathCensus.FlaggedSpellings"/>, and that is separate from
+    /// <see cref="PathCensus.ResolverAttempts"/> because the attempts count is the
+    /// number of paths asked about, which with every path asked is no longer also the
+    /// number carrying such a spelling. One counter serving both loses the second,
     /// and a report that stops being able to answer a question reads exactly like a
     /// machine that has nothing to report.
     ///
-    /// It over-selects deliberately, and what that costs has changed with its job. A
-    /// long name may legitimately hold a tilde-and-digit; as a gate a false positive
-    /// cost one handle on a path that resolved to itself, and as a count it inflates
-    /// a figure nothing acts on. A false negative used to cost a file and now costs
-    /// nothing at all, the resolution no longer depending on it.
+    /// It over-selects deliberately: a long name may legitimately hold a
+    /// tilde-and-digit, and as a count a false positive inflates a figure nothing
+    /// acts on. A false negative costs nothing at all, the resolution not depending
+    /// on it.
     /// </summary>
     internal static bool CarriesFlaggedSpelling(string path)
     {
@@ -2909,13 +2922,12 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// <summary>
     /// Withholds every still-removable path that any product could roll back onto.
     ///
-    /// THE DEFECT THIS CLOSES, MEASURED RATHER THAN REASONED. The rule that decided
-    /// this until 3.0.0 read the SUPERSEDED patch's own removability, and the risk
-    /// turns on the SUPERSEDING patch's. Uninstalling patch C with the superseded
-    /// patches' cached files present rolled a product back one step correctly; with
-    /// those files missing it went all the way to the unpatched base, discarded both
-    /// patches and reported success, and the log carries Windows looking for the
-    /// absent files by name. So removing a superseded patch's cached file can silently
+    /// THE DEFECT THIS CLOSES. A rule reading the SUPERSEDED patch's own removability
+    /// asks the wrong patch: the risk turns on the SUPERSEDING patch's. Uninstalling
+    /// patch C with the superseded patches' cached files present rolls a product back
+    /// one step correctly; with those files missing it goes all the way to the
+    /// unpatched base, discards both patches and reports success, and the log carries
+    /// Windows looking for the absent files by name. So removing a superseded patch's cached file can silently
     /// cost somebody a security update, in exactly the operation Microsoft always
     /// named as the reason the file is cached.
     ///
@@ -3108,9 +3120,10 @@ public sealed class InstallerQueryService : IInstallerQueryService
             // changes is which pass got there first. What it DOES change is the row that
             // was never removable, chiefly an obsoleted registration, which the caller's
             // downgrade cannot touch because Downgrade takes a verdict away and there is
-            // none to take. Such a row used to keep a positively clean verdict off a
-            // product set route A had refused to complete, and the missing-files split
-            // then read that as the app having established the absence was harmless.
+            // none to take. Such a row would otherwise carry a positively clean verdict
+            // off a product set route A had refused to complete, and the missing-files
+            // split would read that as the app having established the absence was
+            // harmless.
             //
             // IT IS THE SAME MISTAKE THE SPLIT'S OWN NOTE WARNS ABOUT, arriving where that
             // note was not looking: trusting for the purpose of staying quiet what the
@@ -3252,13 +3265,14 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // into the null set above.
         var patchNames = patchesKey.GetSubKeyNames();
 
-        // COUNTED OFF THE LISTING RATHER THAN INSIDE THE LOOP, and it was inside the
-        // loop until 3.0.0. The loop returns on the first patch declaring itself
-        // removable, so a product holding fifty-eight registrations could contribute
-        // one, and it did so on exactly the products that make
-        // ProductsWithRemovablePatch non-zero. Those two are collected in one walk
-        // and published side by side, so the figure went quiet on the machines it
-        // exists to measure, which reads as good news rather than as a fault.
+        // COUNTED OFF THE LISTING RATHER THAN INSIDE THE LOOP, so every registration
+        // under the key reaches the figure. The loop returns on the first patch
+        // declaring itself removable, so counting inside it would let a product
+        // holding fifty-eight registrations contribute one, and would do so on
+        // exactly the products that make ProductsWithRemovablePatch non-zero. The two
+        // are collected in one walk and published side by side, so that figure would
+        // go quiet on the machines it exists to measure, which reads as good news
+        // rather than as a fault.
         patchRegistrations += patchNames.Length;
 
         // A NAME THAT WILL NOT UNPACK LEAVES THE LISTING UNESTABLISHED, because the
@@ -3378,17 +3392,16 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// names it holds is what separates the two, because the name list is typed
     /// nowhere and carries every value whatever its type.
     ///
-    /// AND IT HAS ALWAYS EXPANDED A <c>REG_EXPAND_SZ</c> VALUE WITHOUT ANYBODY
-    /// DECIDING TO, which is worth stating because it was the load-bearing half of a
-    /// defect nobody had noticed. .NET expands that type as part of the read, so a
-    /// registration spelled <c>%SystemRoot%\Installer\...</c> and STORED expandable
-    /// came back as a usable path here, while the same text stored as a plain
-    /// <c>REG_SZ</c> was expanded nowhere in the application and became a claim on a
-    /// location that did not exist. Behaviour turned on the value's registry type
-    /// rather than on anything in the code.
-    /// <c>NormaliseLocalPackagePath</c> closes that from 3.0.0 by expanding on the
-    /// main path, so this read's expansion is now the belt to that brace rather than
-    /// the only thing standing between one storage type and a wrong answer.
+    /// AND IT EXPANDS A <c>REG_EXPAND_SZ</c> VALUE WITHOUT ANYBODY DECIDING TO, which
+    /// is worth stating because it is one half of a behaviour that would otherwise
+    /// turn on a registry value's type rather than on anything in the code. .NET
+    /// expands that type as part of the read, so a registration spelled
+    /// <c>%SystemRoot%\Installer\...</c> and STORED expandable comes back as a usable
+    /// path here, while the same text stored as a plain <c>REG_SZ</c> is a claim on a
+    /// location that does not exist unless something else expands it.
+    /// <c>NormaliseLocalPackagePath</c> is what does, on the main path, so this
+    /// read's expansion is the belt to that brace rather than the only thing standing
+    /// between one storage type and a wrong answer.
     /// </summary>
     internal static bool TryReadLocalPackage(Microsoft.Win32.RegistryKey? key, out string? path)
     {
@@ -4003,7 +4016,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// is still withheld unless every product sharing the patch passes that.
     /// **Nothing may read this alone as permission to remove a file.**
     ///
-    /// SUPERSEDED ONLY FROM 3.0.0, WHERE IT WAS <c>2 or 4</c>. Obsoleted patches come
+    /// SUPERSEDED ONLY, WHICH IS STATE 2 AND NOT <c>2 or 4</c>. Obsoleted patches come
     /// off the offer for a reason that is not about safety: measured across every
     /// opt-in report this project had received as at 2026-08-17, obsoleted patches had
     /// never been seen on any machine at all, so offering them reclaims nothing, and

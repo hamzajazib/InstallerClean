@@ -302,7 +302,7 @@ public partial class App : Application
             splash = new SplashWindow();
             splash.Show();
 
-            splash.UpdateStep(Strings.Status_Scanning, 10);
+            splash.UpdateStep(Strings.Status_Scanning, ScanProgressFill.FloorPercent);
 
             // Single container, single resolve. OnExit disposes the
             // container; MainViewModel, ChromeViewModel and CleanupViewModel
@@ -325,12 +325,27 @@ public partial class App : Application
             using var startupCts = new CancellationTokenSource();
             splash.CancelRequested += (_, _) => startupCts.Cancel();
 
-            var splashProgress = new Progress<ScanProgressUpdate>(splash.OnScanProgress);
+            // The splash is held open for its own minimum however little the scan
+            // costs, so that a scan finishing in a fraction of a second still
+            // leaves a window somebody can read. The closing step below is eased
+            // over the time the window has left rather than over the bar's own
+            // step, so the last of the fill arrives as the window goes instead of
+            // being cut off by it.
+            var splashFloor = TimeSpan.FromMilliseconds(800);
+            var splashClose = TimeSpan.FromMilliseconds(200);
+
+            // Throttled, because the scan's ticker fires once per installed
+            // product and once per cached file, so its rate belongs to the
+            // machine. Wrapped outside the Progress<T> rather than inside it, so
+            // an update the interval drops is never posted to the dispatcher at
+            // all.
+            var splashProgress = new ThrottledScanProgress(
+                new Progress<ScanProgressUpdate>(splash.OnScanProgress));
             var cancelled = false;
             try
             {
                 var scanTask = viewModel.Scan.ScanWithProgressAsync(splashProgress, startupCts.Token);
-                await Task.WhenAll(scanTask, Task.Delay(800, startupCts.Token));
+                await Task.WhenAll(scanTask, Task.Delay(splashFloor, startupCts.Token));
             }
             catch (OperationCanceledException)
             {
@@ -343,8 +358,8 @@ public partial class App : Application
 
             if (!cancelled)
             {
-                splash.UpdateStep(Strings.Status_Done, 100);
-                await Task.Delay(200);
+                splash.UpdateStep(Strings.Status_Done, 100, splashClose);
+                await Task.Delay(splashClose);
             }
 
             var window = new MainWindow(viewModel);

@@ -22,6 +22,17 @@ public sealed class FileSystemScanService : IFileSystemScanService
     private readonly IEnumerable<string>? _overrideFiles;
     private readonly string? _installerFolderOverride;
 
+    // How often the walk and the classification loop report where they have
+    // reached. Both run once per file in a folder whose size is the machine's, so
+    // reporting per file would make the number of updates a property of the
+    // machine: the walk reports on each multiple of the stride, and the
+    // classification divides its own length so that a folder of any size produces
+    // about the same number of updates. A host throttles again on its own
+    // account; this is what keeps the work off a folder holding millions of
+    // files.
+    private const int WalkReportStride = 1_000;
+    private const int ClassifyReportCount = 200;
+
     /// <summary>Production constructor. DI supplies all four dependencies; the override fields stay null.</summary>
     /// <remarks>
     /// Microsoft.Extensions.DependencyInjection resolves the public ctor
@@ -139,7 +150,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         else
         {
             var folder = _installerFolderOverride ?? InstallerCacheHelpers.InstallerFolder;
-            diskFiles = await Task.Run(() => MaterialiseInstallerFiles(folder, cancellationToken), cancellationToken)
+            diskFiles = await Task.Run(() => MaterialiseInstallerFiles(folder, progress, cancellationToken), cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -225,10 +236,10 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // The correlation gate's inputs, counted here rather than derived from the
         // branches below because they answer a different question from the ones
         // those branches exist for. Every registered row is measured by ONE rule,
-        // whether it is removable or not: the survivor count used to be a
-        // non-removable half counted on File.Exists alone plus a removable half
-        // counted only after the containment guard passed, which is two rules in
-        // one sum, and the larger half proved nothing about the folder at all.
+        // whether it is removable or not: a survivor count that tested the
+        // non-removable half on File.Exists alone and the removable half only after
+        // the containment guard is two rules in one sum, and the larger half then
+        // proves nothing about the folder at all.
         //
         // ALL THREE ASK ABOUT ONE POPULATION, the registrations naming a file
         // directly in the folder this run walked, and they ask it of every row on
@@ -271,9 +282,26 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // count is worth having.
         try
         {
+        // One update per this many files, so a folder of any size produces about
+        // ClassifyReportCount of them. Floored at one, so a folder shorter than
+        // that reports every file rather than none.
+        var classifyStride = Math.Max(1, diskFiles.Count / ClassifyReportCount);
+        var classified = 0;
+
         foreach (var walked in diskFiles)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            // Counted before the three tests below rather than after them, so the
+            // position measures how far through the folder the loop has reached
+            // rather than how many files got past the tests. Every file in the
+            // list reaches this line, and the last one is reported whatever the
+            // stride, so the position always ends on the total.
+            classified++;
+            if (classified % classifyStride == 0 || classified == diskFiles.Count)
+                progress?.Report(new ScanProgressUpdate(
+                    DisplayHelpers.FormatCount(classified), IsMilestone: false,
+                    Position: classified, Total: diskFiles.Count));
 
             var filePath = walked.FullPath;
             if (registeredPaths.Contains(filePath))
@@ -455,18 +483,16 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // second copy is finished with the patch and the file is offered. The one shape
         // in which such a file IS wrongly offered is a holder neither the enumeration
         // nor the registry can name, and on that machine the condition is undetectable,
-        // so a blanket refusal would not have saved the file either: measured on a pair
-        // that differs only in whether an unrelated product reads as a second instance,
-        // where the same file is wrongly offered both times.
+        // so a blanket refusal would not save the file either: on a pair of machines
+        // differing only in whether an unrelated product reads as a second instance,
+        // the same file is wrongly offered both times.
         //
-        // THE QUESTION IS ASKED OF THE CENSUS RATHER THAN ASSEMBLED HERE. This line
-        // used to name the members one by one, which was correct and was one edit
-        // away from not being: a cause added to the split is a cause this rule would
-        // silently not act on, with a green build, a counter still reporting it and
-        // nothing to show for it but files still being offered. The release that
-        // added a fourth cause is the release that would have walked into it, and the
-        // release that added a second POPULATION is this one. So the question is
-        // spelled once, where the members are.
+        // THE QUESTION IS ASKED OF THE CENSUS RATHER THAN ASSEMBLED HERE. Naming the
+        // members one by one at this line is correct and is one edit away from not
+        // being: a cause added to the split is then a cause this rule silently does
+        // not act on, with a green build, a counter still reporting it and nothing to
+        // show for it but files still being offered. So the question is spelled once,
+        // where the members are.
         // ASKED ONCE AND KEPT, rather than asked here and asked again where the
         // result is reported. The hosts need to know that this branch was taken, and
         // a second reading of the census further down would be a copy of this rule
@@ -574,8 +600,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
             // The correlation measurement, taken on every registered row before
             // the branch below splits them by verdict. A row's verdict has
             // nothing to do with whether the two sides of the scan describe the
-            // same folder, so measuring it inside the branches is what let two
-            // rules into one sum.
+            // same folder, so measuring it inside the branches is what would let
+            // two rules into one sum.
             var namesFileInFolder = NamesFileDirectlyIn(pkg.LocalPackagePath, walkedFolder);
             if (namesFileInFolder)
             {
@@ -597,7 +623,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
             else if (pkg.PatchState == 4) obsoletedRegistrations++;
 
             // A SUPERSEDED PATCH THAT SURVIVED EVERY WITHHOLDING IS OFFERED, and this
-            // is the branch 3.0.0 puts back. What it rests on is not this line: by the
+            // is the branch that offers it. What it rests on is not this line: by the
             // time a row arrives here carrying IsRemovable it has passed a positively
             // read Superseded state, its own positively read Uninstallable, and the
             // per-product condition that asks whether anything on any product sharing
@@ -654,8 +680,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
             // patches and went to the unpatched base, with Windows demonstrably looking
             // for the absent files. Splitting on the app's own REMOVABLE verdict alone
             // fires on every missing obsoleted registration, because an obsoleted patch
-            // is not removable in 3.0.0 for a policy reason rather than a dangerous
-            // one. And that is precisely an alarm at past users about files THIS APP
+            // is not removable for a policy reason rather than a dangerous one. And
+            // that is precisely an alarm at past users about files THIS APP
             // removed, which is the scenario the whole reversal exists to avoid.
             //
             // So the benign half is the conjunction: the state is superseded or
@@ -672,14 +698,13 @@ public sealed class FileSystemScanService : IFileSystemScanService
             // silence that should have been an alarm costs them a failure months later
             // with nothing pointing back at this.
             //
-            // AND A WITHHELD ROW FIRES TOO, WITH ONE EXCEPTION, though v2.3.0 put every
-            // withheld row on the benign side. What changed is what the flag means.
-            // There it meant one thing: the enumeration was short of a product, so the
-            // whole class was withheld. From 3.0.0 it ALSO means this product's patch
-            // set could not be established, which is exactly the case where the app
-            // cannot say that nothing could reach for the file, so putting it on the
-            // benign side would call an absence harmless in the one case where the app
-            // explicitly failed to establish harmlessness.
+            // AND A WITHHELD ROW FIRES TOO, WITH ONE EXCEPTION, which turns on what the
+            // flag means. It means the enumeration was short of a product, so the whole
+            // class is withheld, and it ALSO means this product's patch set could not be
+            // established. Such a row fires, and the second reading is why: where the
+            // app cannot say that nothing could reach for the file, it has not
+            // established that the absence is harmless, so the benign side is closed
+            // to it.
             //
             // THE EXCEPTION IS A ROW WITHHELD ONLY BECAUSE ITS PATCH FILE COULD NOT BE
             // READ, and for a row that has reached this branch the file is GONE, so that
@@ -688,12 +713,12 @@ public sealed class FileSystemScanService : IFileSystemScanService
             // file, so treating it as a reason to warn had the app raise an alarm about a
             // file the same scan had positively established nothing could reach for.
             //
-            // THAT EXCEPTION HOLDS ON A RUN THAT CAME UP SHORT ELSEWHERE, WHICH IS THE
-            // WHOLE OF WHAT 3.0.0 SETTLED HERE. The scan-wide withholding used to clear
-            // that marker on any run that lost a claim, which put the row back under the
-            // banner on the strength of a count whose terms are all about OTHER products.
-            // The residual it was reaching for is real and is answered where answering
-            // still changes an outcome: such a run removes no superseded patch at all.
+            // THAT EXCEPTION HOLDS ON A RUN THAT CAME UP SHORT ELSEWHERE. A scan-wide
+            // withholding that cleared this marker on any run that lost a claim would
+            // put the row back under the banner on the strength of a count whose terms
+            // are all about OTHER products. The residual such a count reaches for is
+            // real and is answered where answering still changes an outcome: such a run
+            // removes no superseded patch at all.
             //
             // WHAT STILL FIRES FROM THE WITHHELD SIDE. A row whose patch set could not be
             // established carries an Unestablished verdict, so the state-and-verdict test
@@ -740,15 +765,13 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // WHAT THE GATES BELOW ARE MEASURED AGAINST, AND IT IS NOT THE OFFER.
         // Each asks whether the COMPARISON worked and reads an empty result as its
         // evidence that it did not, so what they need is the count of files the
-        // walk put in front of the comparison. That was a separate quantity from
-        // the offer while a per-candidate screen sat between the two; the screen has
-        // gone and on most runs the two numbers are now equal, but they are still
-        // not the same question, and the file-identity match is why. It removes the
-        // candidates that turned out to be registered files under another spelling,
-        // which are claims the comparison MADE rather than files it failed to
-        // judge, so a machine whose every candidate resolved that way has an empty
-        // offer and a comparison that worked perfectly. Reading the offer here
-        // would refuse that machine.
+        // walk put in front of the comparison. On most runs that count and the offer
+        // are equal, and they are still not the same question: the file-identity
+        // match is why. It removes the candidates that turned out to be registered
+        // files under another spelling, which are claims the comparison MADE rather
+        // than files it failed to judge, so a machine whose every candidate resolved
+        // that way has an empty offer and a comparison that worked perfectly.
+        // Reading the offer here would refuse that machine.
         //
         // It is the walk's candidates and NOT the offer, and the difference is real
         // again now that a registered row can reach the offer without ever having been
@@ -777,9 +800,9 @@ public sealed class FileSystemScanService : IFileSystemScanService
         var registeredClaimedBytes = stillUsed
             .Where(p => p.FileExists && !p.RemovableWithheld && !p.VerdictUnreadable)
             .Sum(p => p.FileSizeBytes);
-        // TWO COUNTS OVER ONE FLAG, AND THEY ANSWER DIFFERENT QUESTIONS. Both were
-        // one variable until 3.0.0, and the pair below is the fix rather than a
-        // duplication.
+        // TWO COUNTS OVER ONE FLAG, AND THEY ANSWER DIFFERENT QUESTIONS. The pair
+        // below is not a duplication: one variable serving both gives one answer to
+        // two questions.
         //
         // The partition member counts ROWS. It has to, because what the three counts
         // partition is exactly the kept list, a row whose file has already gone
@@ -878,20 +901,22 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // much as an applied one's. One that exists in the folder and then fails
         // the containment guard counts too, and that is not an oversight: the
         // guard answers whether a file may be removed, which is a different
-        // question from whether the records and the folder line up, and a row
-        // answering neither counter used to fall out of this arithmetic entirely.
+        // question from whether the records and the folder line up, and a row that
+        // answered neither counter would fall out of this arithmetic entirely.
         //
         // BOTH SIDES OF THE PROPORTION ASK ABOUT THE SAME POPULATION, the
-        // registrations naming a file directly in this folder. The missing side
-        // was the whole needed set wherever its paths pointed, so a registration
-        // naming a file somewhere else that had gone counted against a folder it
-        // says nothing about, and could never answer back on the survivor side.
-        // A machine whose folder correlation was perfect could be refused on
-        // forty absent registrations that were never in the folder to begin with.
-        // Its narrower reading is not shared with the missing-from-disk report,
-        // which still counts every registration whose file has gone wherever it
-        // pointed: see the counters' own notes above for why the two must not be
-        // the same number.
+        // registrations naming a file directly in this folder, and the gate reads
+        // them on that one rule. A missing side taken as the whole needed set
+        // wherever its paths pointed would count a registration naming a file
+        // somewhere else that has gone against a folder it says nothing about, with
+        // that registration unable to answer back on the survivor side, and would
+        // refuse a machine whose folder correlation is perfect on forty absent
+        // registrations that were never in the folder to begin with.
+        //
+        // THE NARROWER READING IS THIS GATE'S ALONE and is not shared with the
+        // missing-from-disk report, which still counts every registration whose file
+        // has gone wherever it pointed: see the counters' own notes above for why the
+        // two must not be the same number.
         //
         // AND IT DID NOT ASK ABOUT ONE POPULATION UNTIL 3.0.0, the sentence above
         // notwithstanding. The survivor side counted every in-folder registration
@@ -941,20 +966,19 @@ public sealed class FileSystemScanService : IFileSystemScanService
         progress?.Report(new ScanProgressUpdate(string.Format(Strings.Status_FoundUnused,
             DisplayHelpers.FormatCount(removable.Count),
             DisplayHelpers.PluraliseFile(removable.Count))));
-        // THE PROGRESS LINE COUNTS WHAT IS OFFERED AND NAMES NOTHING KEPT BACK, and
-        // the three identity counts that used to travel here went with the pass that
-        // produced them. Files ARE kept back per file, by the declared-product screen
+        // THE PROGRESS LINE COUNTS WHAT IS OFFERED AND NAMES NOTHING KEPT BACK.
+        // Files ARE kept back per file, by the declared-product screen
         // and by the identity comparison, and they go on the withheld list rather
         // than into this sentence: what put them there differs between them, and one
         // running count over the lot could only be described by a cause false of some
         // of its members.
         //
-        // WHAT REPLACED THEM AS THE QUESTION THIS SCAN CAN ANSWER ABOUT ITSELF is
-        // in query.Census, which carries the enumeration's own failures per
-        // product. That is a fact about the records rather than about any file, and
-        // it is the shape the removed counts should have had: a count of files kept
-        // back is only ever interesting alongside the reason, and the four reasons
-        // had no honest superordinate to report them under.
+        // WHAT THIS SCAN CAN ANSWER ABOUT ITSELF is in query.Census, which carries
+        // the enumeration's own failures per product. That is a fact about the
+        // records rather than about any file, and it is the shape a count of
+        // withholding has to have: a count of files kept back is only ever
+        // interesting alongside the reason, and the four reasons here have no honest
+        // superordinate to report them under.
         return new ScanResult(removable.AsReadOnly(), stillUsed, stillUsedBytes,
             missingAffected, missingUnaffected,
             // WITHHELD IS A REAL FIGURE AGAIN AND WAS A LITERAL ZERO IN THE COMMITS
@@ -1350,14 +1374,24 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// Enumerates the walk into a list, checking the cancellation token per
     /// file. Runs inside a <c>Task.Run</c> so the directory walk stays off the
     /// caller's thread (the GUI's dispatcher).
+    ///
+    /// Reports the running count and no total, because the walk is what
+    /// establishes how many files there are: a host gets a number it can show and
+    /// cannot place. A total reported from here is one that is still being
+    /// counted, and a bar filled in proportion to it moves against a denominator
+    /// that keeps growing.
     /// </summary>
-    private List<WalkedFile> MaterialiseInstallerFiles(string folder, CancellationToken cancellationToken)
+    private List<WalkedFile> MaterialiseInstallerFiles(string folder,
+        IProgress<ScanProgressUpdate>? progress, CancellationToken cancellationToken)
     {
         var list = new List<WalkedFile>();
         foreach (var file in GetInstallerFiles(folder))
         {
             cancellationToken.ThrowIfCancellationRequested();
             list.Add(file);
+            if (list.Count % WalkReportStride == 0)
+                progress?.Report(new ScanProgressUpdate(
+                    DisplayHelpers.FormatCount(list.Count), IsMilestone: false, Position: list.Count));
         }
         return list;
     }
