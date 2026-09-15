@@ -110,3 +110,13 @@ updates:
       github-actions:
         patterns:
           - "*"
+    # Version 3 of the SignPath action submits the signing request to a
+    # different connector, and that connector requires a SignPath GitHub App
+    # installed on the organisation. The major is held here so that one
+    # dependency does not hold the rest of the group with it; minor and patch
+    # bumps still come through. Remove the ignore below once the App is
+    # installed.
+    ignore:
+      - dependency-name: SignPath/github-action-submit-signing-request
+        update-types:
+          - version-update:semver-major
