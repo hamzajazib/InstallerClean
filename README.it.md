@@ -219,7 +219,7 @@ scoop install installerclean
 
 InstallerClean non è firmato. Ecco cosa puoi controllare prima di eseguirlo:
 
-- L'hash SHA-256 di ogni file scaricabile è sulla pagina della sua versione, sia nelle note sia come file `.sha256` separato accanto al download.
+- L'hash SHA-256 di ogni file scaricabile è sulla pagina della sua versione.
 - VirusTotal: ogni build viene analizzata prima di uscire, e la pagina della versione riporta il risultato completo motore per motore di ogni file scaricabile.
 - Il codice sorgente è qui, su [github.com/no-faff/InstallerClean](https://github.com/no-faff/InstallerClean). I servizi di scansione, interrogazione, spostamento, eliminazione, impostazioni e riavvio in sospeso sono coperti da una suite di test automatici che gira su Windows a ogni push su `main` e a ogni pull request, e il badge CI in cima a questa pagina ne riporta l'esito.
 - Le build di rilascio sono deterministiche: lo stesso codice sorgente, lo stesso SDK e gli stessi parametri di pubblicazione producono gli stessi byte, e non si può assegnare il tag a una versione a meno che ogni elemento in ingresso della build non corrisponda al codice sorgente di quel tag. Puoi quindi fare il checkout del tag, compilare tu stesso e confrontare gli hash con quelli pubblicati. Le note di ogni versione portano quello che ti serve per farlo: la versione dell'SDK con cui è stata compilata, e i parametri di pubblicazione di ogni file scaricabile che non sia stato compilato con quelli predefiniti. Il setup è l'eccezione: lo compila Inno Setup e non l'SDK, e ci stampa dentro l'anno di compilazione, quindi per riprodurne l'hash servono anche la stessa versione di Inno e lo stesso anno di calendario.

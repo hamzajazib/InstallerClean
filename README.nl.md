@@ -219,7 +219,7 @@ scoop install installerclean
 
 InstallerClean is niet ondertekend. Dit kun je controleren voordat je het uitvoert:
 
-- De SHA-256 van elke download staat op de bijbehorende releasepagina, zowel in de release-notes als in een apart `.sha256`-bestand naast de download.
+- De SHA-256 van elke download staat op de bijbehorende releasepagina.
 - VirusTotal: elke build wordt gescand voordat hij uitgaat, en op de releasepagina staat voor elke download het volledige resultaat per engine.
 - De broncode staat hier op [github.com/no-faff/InstallerClean](https://github.com/no-faff/InstallerClean). De services voor scannen, opvragen, verplaatsen, verwijderen, instellingen en een openstaande herstart worden gedekt door een geautomatiseerde testsuite die op Windows draait bij elke push naar `main` en bij elke pull request, en de CI-badge boven aan deze pagina meldt de uitkomst.
 - Release-builds zijn deterministisch: dezelfde broncode, dezelfde SDK en dezelfde publicatieopties leveren dezelfde bytes op, en een release kan pas worden getagd als elke bouwinvoer overeenkomt met de broncode op die tag. Je kunt de tag dus uitchecken, zelf bouwen en de hashes vergelijken met de gepubliceerde. De release-notes van elke versie dragen wat je daarvoor nodig hebt: de SDK-versie waarmee is gebouwd, en de publicatieopties voor elke download die niet met de standaardopties is gebouwd. De setup is de uitzondering: die wordt door Inno Setup gecompileerd in plaats van door de SDK en stempelt het bouwjaar in zichzelf, dus om die hash te reproduceren heb je ook dezelfde Inno-versie en hetzelfde kalenderjaar nodig.

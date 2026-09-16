@@ -219,7 +219,7 @@ scoop install installerclean
 
 InstallerClean không được ký số. Đây là những thứ bạn có thể kiểm tra trước khi chạy nó:
 
-- Mã băm SHA-256 của mỗi bản tải về đều nằm trên trang phát hành của nó, vừa trong phần ghi chú vừa dưới dạng một tệp `.sha256` riêng đặt cạnh bản tải.
+- Mã băm SHA-256 của mỗi bản tải về đều nằm trên trang phát hành của nó.
 - VirusTotal: mỗi bản dựng đều được quét trước khi phát hành, và trang phát hành mang kết quả đầy đủ theo từng công cụ cho mỗi bản tải về.
 - Mã nguồn nằm ở đây, tại [github.com/no-faff/InstallerClean](https://github.com/no-faff/InstallerClean). Các dịch vụ quét, truy vấn, chuyển, xóa, cài đặt và kiểm tra khởi động lại đang chờ đều được một bộ kiểm thử tự động bao phủ, và bộ kiểm thử đó chạy trên Windows ở mỗi lần đẩy lên `main` và ở mỗi pull request, còn huy hiệu CI ở đầu trang này cho biết kết quả.
 - Các bản dựng phát hành có tính tất định: cùng một mã nguồn, cùng một SDK và cùng những cờ publish sẽ cho ra đúng những byte như nhau, và một bản phát hành không thể được gắn tag trừ khi mọi đầu vào của bản dựng khớp với mã nguồn tại tag đó. Vậy nên bạn có thể checkout tag đó, tự dựng lấy rồi đối chiếu mã băm với mã băm đã công bố. Ghi chú của mỗi bản phát hành mang đủ những gì bạn cần cho việc đó: phiên bản SDK mà nó được dựng bằng, và các cờ publish của bất kỳ bản tải nào không dựng bằng giá trị mặc định. Bản setup là ngoại lệ: nó do Inno Setup biên dịch chứ không phải SDK, và nó tự đóng dấu năm dựng vào bên trong, nên muốn tái tạo mã băm của nó thì cần cả đúng phiên bản Inno lẫn đúng năm dương lịch.

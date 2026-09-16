@@ -219,7 +219,7 @@ scoop install installerclean
 
 InstallerClean n'est pas signé. Voici ce que vous pouvez vérifier avant de le lancer :
 
-- L'empreinte SHA-256 de chaque téléchargement figure sur la page de sa version, à la fois dans les notes et dans un fichier `.sha256` distinct, à côté du téléchargement.
+- L'empreinte SHA-256 de chaque téléchargement figure sur la page de sa version.
 - VirusTotal : chaque build est analysé avant d'être publié, et la page de la version porte le résultat complet, moteur par moteur, pour chaque téléchargement.
 - Le code source est ici, sur [github.com/no-faff/InstallerClean](https://github.com/no-faff/InstallerClean). Les services d'analyse, de requête, de déplacement, de suppression, de réglages et de redémarrage en attente sont couverts par une suite de tests automatisés qui s'exécute sous Windows à chaque push sur `main` et à chaque pull request, et le badge CI en haut de cette page en donne le résultat.
 - Les builds de publication sont déterministes : les mêmes sources, le même SDK et les mêmes options de publication produisent les mêmes octets, et une version ne peut pas être taguée si chacune des entrées du build ne correspond pas aux sources à ce tag. Vous pouvez donc basculer sur le tag, compiler vous-même et comparer les empreintes à celles publiées. Les notes de chaque version portent ce qu'il faut pour cela : la version du SDK avec laquelle elle a été compilée, et les options de publication de tout téléchargement qui n'a pas été compilé avec les valeurs par défaut. Le setup fait exception : il est compilé par Inno Setup et non par le SDK, et y inscrit l'année de compilation, si bien que reproduire son empreinte demande en plus la même version d'Inno et la même année civile.
