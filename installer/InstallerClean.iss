@@ -114,6 +114,23 @@ ShowLanguageDialog=yes
 ; install's pick, so a language added in a later version becomes the default
 ; for an upgrading user whose OS matches it; the dialog still lists them all.
 UsePreviousLanguage=no
+; The uninstaller is signed only by the release workflow, which defines
+; UninstallerSignatureDir. With SignedUninstaller=yes and no SignTool, the
+; compiler writes the uninstaller it is about to embed into that folder as
+; uninst-<Inno Setup version>-<hash>.e32 and stops, unless a signed copy of that
+; exact file is already there. The workflow compiles once to get the file, has it
+; signed with the executables, puts the signed copy back and compiles again. The
+; hash is of the file's contents, so the second compile stops the same way if
+; anything that goes into the uninstaller changed in between. An installed
+; unins000.exe then carries the setup's publisher, and that is the name Windows
+; shows when uninstalling asks for administrator rights. Setup also writes the
+; uninstaller's messages to unins000.msg beside it, because they cannot be added
+; to a signed file. Every other build leaves the name undefined and embeds an
+; unsigned uninstaller.
+#ifdef UninstallerSignatureDir
+SignedUninstaller=yes
+SignedUninstallerDir={#UninstallerSignatureDir}
+#endif
 
 ; Language, message and custom-message definitions live in their own file so the
 ; main script stays on install logic; each added language touches only that file.

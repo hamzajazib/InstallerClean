@@ -18,13 +18,14 @@
 # unsigned build says nothing about what people will download.
 #
 # THE TWO SIGNING ROUNDS ARE NOT AN ACCIDENT OF LAYOUT. The setup carries the
-# portable GUI and the command-line tool inside it, so those two are signed
-# first, the setup is compiled around the signed copies, and the setup is then
-# signed in its own right. Signing only the setup would install an unsigned
-# InstallerClean.exe and leave the app people actually run showing an unknown
-# publisher, which is the whole thing signing is for. Each round is one signing
-# request and each request is approved separately, so a release asks for two
-# approvals rather than one.
+# portable GUI, the command-line tool and Inno Setup's own uninstaller inside it,
+# so those three are signed first, the setup is compiled around the signed
+# copies, and the setup is then signed in its own right. Signing only the setup
+# would install an unsigned InstallerClean.exe and leave the app people actually
+# run showing an unknown publisher, which is the whole thing signing is for, and
+# an unsigned uninstaller shows an unknown publisher when uninstalling asks for
+# administrator rights. Each round is one signing request and each request is
+# approved separately, so a release asks for two approvals rather than one.
 
 name: Release build
 
@@ -181,6 +182,14 @@ jobs:
       - name: Check the built artefacts carry every satellite assembly and ask for administrator
         run: node scripts/verify-shipped-artefacts.mjs
 
+      # ISCC is not on the runner image. The version is pinned for the same
+      # reason the runner is, and it is the compiler the bundled community
+      # language files are known to compile against. It is installed before the
+      # first signing round because that round signs an uninstaller the compiler
+      # writes out.
+      - name: Install Inno Setup
+        run: choco install innosetup --version=6.7.1 --no-progress -y
+
       # THE FIRST SIGNING ROUND. The three exes go up under distinct names
       # because two of them are called InstallerClean.exe, and they come back
       # into the folders the compile step reads from.
@@ -190,6 +199,38 @@ jobs:
           Copy-Item publish/self-contained/InstallerClean.exe      signing/executables/InstallerClean-portable.exe
           Copy-Item publish/framework-dependent/InstallerClean.exe signing/executables/InstallerClean-slim.exe
           Copy-Item publish/cli/installerclean-cli.exe             signing/executables/installerclean-cli.exe
+
+      # THE UNINSTALLER GOES UP IN THE SAME ROUND. Defining
+      # UninstallerSignatureDir tells the script to embed a signed uninstaller,
+      # and on this first compile no signed copy exists yet, so the compiler
+      # writes the unsigned one into that folder and stops before it writes a
+      # setup. That stop is what this step expects, so it fails unless the
+      # compiler stopped for exactly that reason and left exactly one file. The
+      # message it matches is the compiler's own, and an Inno Setup upgrade that
+      # rewords it fails this step rather than passing it. The file goes up as
+      # InstallerClean-uninstaller.exe because that is the name the artifact
+      # configuration in SignPath lists; renaming it here without changing the
+      # configuration fails the signing request.
+      - name: Write out the uninstaller for signing
+        run: |
+          $iscc = Get-ChildItem "${env:ProgramFiles(x86)}" -Filter ISCC.exe -Recurse -Depth 1 -ErrorAction SilentlyContinue |
+                  Select-Object -First 1 -ExpandProperty FullName
+          if (-not $iscc) { throw "ISCC.exe not found under ${env:ProgramFiles(x86)} after installing Inno Setup." }
+          $version = ([xml](Get-Content Directory.Build.props)).Project.PropertyGroup.Version |
+                     Where-Object { $_ } | Select-Object -First 1
+          if (-not $version) { throw "Could not read <Version> from Directory.Build.props." }
+          $dir = Join-Path $env:GITHUB_WORKSPACE 'signing\uninstaller'
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          $output = & $iscc "/DAppVersion=$version" "/DUninstallerSignatureDir=$dir" installer\InstallerClean.iss 2>&1 | ForEach-Object { "$_" }
+          $exitCode = $LASTEXITCODE
+          $output | ForEach-Object { Write-Host $_ }
+          if ($exitCode -eq 0) { throw "The compiler finished a setup with no signed uninstaller to embed." }
+          if (-not ($output -match 'Signed uninstaller mode is enabled')) { throw "The compiler stopped (exit code $exitCode) for a reason other than the uninstaller needing a signature." }
+          $files = @(Get-ChildItem $dir -Filter 'uninst-*.e32')
+          if ($files.Count -ne 1) { throw "Expected one uninst-*.e32 in $dir and found $($files.Count)." }
+          Write-Host "  $($files[0].Name)"
+          Copy-Item $files[0].FullName signing/executables/InstallerClean-uninstaller.exe
+          exit 0
 
       - name: Upload the executables for signing
         id: upload-executables
@@ -231,12 +272,18 @@ jobs:
       # validates, because a test certificate chains to nothing this runner
       # trusts and a status check would refuse the artefacts the test policy
       # exists to produce.
+      #
+      # The signed uninstaller goes back over the unsigned file of the same
+      # name, which is where the compiler looks for it. The compiler accepts it
+      # only if it is that file with a signature appended and nothing else
+      # changed, so a request that altered it stops the compile below.
       - name: Put the signed executables back
         run: |
           $expected = @(
             'signing/signed-executables/InstallerClean-portable.exe',
             'signing/signed-executables/InstallerClean-slim.exe',
-            'signing/signed-executables/installerclean-cli.exe'
+            'signing/signed-executables/installerclean-cli.exe',
+            'signing/signed-executables/InstallerClean-uninstaller.exe'
           )
           $missing = $expected | Where-Object { -not (Test-Path $_) }
           if ($missing) { throw "Signing returned without: $($missing -join ', ')" }
@@ -245,17 +292,14 @@ jobs:
             if (-not $sig.SignerCertificate) { throw "$f came back with no signature." }
             Write-Host "  $(Split-Path $f -Leaf): $($sig.SignerCertificate.Subject)"
           }
-          Copy-Item signing/signed-executables/InstallerClean-portable.exe publish/self-contained/InstallerClean.exe      -Force
-          Copy-Item signing/signed-executables/InstallerClean-slim.exe     publish/framework-dependent/InstallerClean.exe -Force
-          Copy-Item signing/signed-executables/installerclean-cli.exe      publish/cli/installerclean-cli.exe             -Force
+          $unsigned = @(Get-ChildItem signing/uninstaller -Filter 'uninst-*.e32')
+          if ($unsigned.Count -ne 1) { throw "Expected one uninst-*.e32 in signing/uninstaller and found $($unsigned.Count)." }
+          Copy-Item signing/signed-executables/InstallerClean-portable.exe    publish/self-contained/InstallerClean.exe      -Force
+          Copy-Item signing/signed-executables/InstallerClean-slim.exe        publish/framework-dependent/InstallerClean.exe -Force
+          Copy-Item signing/signed-executables/installerclean-cli.exe         publish/cli/installerclean-cli.exe             -Force
+          Copy-Item signing/signed-executables/InstallerClean-uninstaller.exe $unsigned[0].FullName                          -Force
 
-      # ISCC is not on the runner image. The version is pinned for the same
-      # reason the runner is, and it is the compiler the bundled community
-      # language files are known to compile against.
-      - name: Install Inno Setup
-        run: choco install innosetup --version=6.7.1 --no-progress -y
-
-      - name: Compile the installer around the signed executables
+      - name: Compile the installer around the signed executables and uninstaller
         run: |
           $iscc = Get-ChildItem "${env:ProgramFiles(x86)}" -Filter ISCC.exe -Recurse -Depth 1 -ErrorAction SilentlyContinue |
                   Select-Object -First 1 -ExpandProperty FullName
@@ -263,7 +307,8 @@ jobs:
           $version = ([xml](Get-Content Directory.Build.props)).Project.PropertyGroup.Version |
                      Where-Object { $_ } | Select-Object -First 1
           if (-not $version) { throw "Could not read <Version> from Directory.Build.props." }
-          & $iscc "/DAppVersion=$version" installer\InstallerClean.iss
+          $dir = Join-Path $env:GITHUB_WORKSPACE 'signing\uninstaller'
+          & $iscc "/DAppVersion=$version" "/DUninstallerSignatureDir=$dir" installer\InstallerClean.iss
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed" }
 
       # THE SECOND SIGNING ROUND, the setup on its own.
@@ -339,6 +384,34 @@ jobs:
             if (-not $sig.SignerCertificate) { throw "$f is not signed." }
             Write-Host "  $(Split-Path $f -Leaf): $($sig.SignerCertificate.Subject)"
           }
+
+      # AN INSTALLED UNINSTALLER ONLY EXISTS ONCE THE SETUP HAS RUN, so the
+      # setup that will be published is installed here, silently and into a
+      # folder of the runner's own, and the uninstaller it leaves is asked for
+      # its signer. The compiler refuses a signed file that is not the
+      # uninstaller it built; this checks the other end, that what lands on a
+      # machine carries the same certificate as the setup that put it there.
+      - name: Install the setup and ask the installed uninstaller for its signer
+        run: |
+          $version = ([xml](Get-Content Directory.Build.props)).Project.PropertyGroup.Version |
+                     Where-Object { $_ } | Select-Object -First 1
+          $setup = (Resolve-Path "publish/InstallerClean-$version-setup.exe").Path
+          $dir = Join-Path $env:RUNNER_TEMP 'installed'
+          $log = Join-Path $env:RUNNER_TEMP 'setup-install.log'
+          $p = Start-Process -FilePath $setup -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=`"$dir`"", "/LOG=`"$log`"" -Wait -PassThru
+          if ($p.ExitCode -ne 0) {
+            if (Test-Path $log) { Get-Content $log | ForEach-Object { Write-Host $_ } }
+            throw "The setup exited with code $($p.ExitCode)."
+          }
+          $uninstallers = @(Get-ChildItem $dir -Filter 'unins*.exe')
+          if ($uninstallers.Count -ne 1) { throw "Expected one uninstaller in $dir and found $($uninstallers.Count)." }
+          $setupSig = Get-AuthenticodeSignature $setup
+          $uninstallerSig = Get-AuthenticodeSignature $uninstallers[0].FullName
+          if (-not $uninstallerSig.SignerCertificate) { throw "The installed $($uninstallers[0].Name) is not signed." }
+          if ($uninstallerSig.SignerCertificate.Thumbprint -ne $setupSig.SignerCertificate.Thumbprint) {
+            throw "The installed $($uninstallers[0].Name) is signed by $($uninstallerSig.SignerCertificate.Subject), not by the setup's certificate."
+          }
+          Write-Host "  $($uninstallers[0].Name): $($uninstallerSig.SignerCertificate.Subject)"
 
       # build-provenance.txt is what the release script reads before it tags: it
       # refuses to tag when the recorded commit is not in the repository, when a
