@@ -79,11 +79,10 @@ DefaultGroupName=InstallerClean
 UninstallDisplayName=InstallerClean
 UninstallDisplayIcon={app}\InstallerClean.exe
 OutputDir={#PublishDir}
-; The version is part of the download's name from 2.2.0 on. A setup exe sitting
-; in a Downloads folder months later otherwise has nothing on it to say which
-; release it is, and neither does the SHA-256 sidecar published beside it. The
-; release pipeline builds the same name from the same version to find this
-; file afterwards, so the two have to agree.
+; The version is part of the download's name, so a setup exe sitting in a
+; Downloads folder months later says which release it is before anybody opens
+; its properties. The release pipeline builds the same name from the same
+; version to find this file afterwards, so the two have to agree.
 OutputBaseFilename=InstallerClean-{#AppVersion}-setup
 ; Compression=bzip; SolidCompression=no. Of the Inno compression combinations
 ; tested for this setup, this is the one that did not trip a static false
