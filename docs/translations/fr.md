@@ -428,9 +428,10 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | --- | --- |
 | ,  | ,  |
 | .  | .  |
-| {0:F2} GB | {0:F2} Go |
-| {0:F1} MB | {0:F1} Mo |
-| {0:F1} KB | {0:F1} Ko |
+| {0} TB | {0} To |
+| {0} GB | {0} Go |
+| {0} MB | {0} Mo |
+| {0} KB | {0} Ko |
 | {0} B | {0} o |
 | {0:F0}ms | {0:F0}ms |
 | {0:F1}s | {0:F1}s |

@@ -87,11 +87,11 @@ const isMachineCliKey = (key) =>
 // Universal keeps: the product name and the pure-placeholder announcement string,
 // byte-identical to English in every language on purpose. Mirrors KEEP_ENGLISH in
 // every gen-strings-<code>.mjs (they are identical across all fifteen; the template
-// carries six more and says why in its own comment).
+// carries seven more and says why in its own comment).
 //
-// The four size suffixes and the two elapsed suffixes are not here and are not
-// universal: French writes Go/Mo/Ko/o and Russian and Ukrainian write
-// ГБ/МБ/КБ/Б and мс/с. They are a per-language keep below, so a language that
+// The five size suffixes and the two elapsed suffixes are not here and are not
+// universal: French writes To/Go/Mo/Ko/o and Russian and Ukrainian write
+// ТБ/ГБ/МБ/КБ/Б and мс/с. They are a per-language keep below, so a language that
 // abbreviates as English does still passes while a language that has its own forms
 // and has not taken them FAILS, which is what this check is for.
 const KEEP_ENGLISH = new Set([
@@ -115,12 +115,12 @@ const KEEP_ENGLISH = new Set([
 // zh-Hans, which is why those two are absent here and carry a real value.
 //
 // The unit suffixes are here in the same shape. Twelve languages
-// abbreviate a size exactly as English does and keep all six; French keeps only
+// abbreviate a size exactly as English does and keep all seven; French keeps only
 // the two elapsed ones, "ms" and "s" being the SI symbols it writes unchanged
-// while Go/Mo/Ko/o are abbreviated French words; Russian and Ukrainian keep none,
-// taking ГБ/МБ/КБ/Б and мс/с. So ja and zh-Hans have an entry here where they had
+// while To/Go/Mo/Ko/o are abbreviated French words; Russian and Ukrainian keep none,
+// taking ТБ/ГБ/МБ/КБ/Б and мс/с. So ja and zh-Hans have an entry here where they had
 // none, and ru and uk keep only the separator.
-const SIZE_UNITS = ['Display.Size.GB', 'Display.Size.MB', 'Display.Size.KB', 'Display.Size.B'];
+const SIZE_UNITS = ['Display.Size.TB', 'Display.Size.GB', 'Display.Size.MB', 'Display.Size.KB', 'Display.Size.B'];
 const ELAPSED_UNITS = ['Display.Elapsed.Ms', 'Display.Elapsed.S'];
 const UNITS = [...SIZE_UNITS, ...ELAPSED_UNITS];
 

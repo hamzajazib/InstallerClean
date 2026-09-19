@@ -200,6 +200,28 @@ public class CliHeldBackTests
             MachineContract.English(() => $"1 of 2 {DisplayHelpers.PluraliseFile(2)}"), line);
     }
 
+    [Fact]
+    public void AbortedMoveEventLogLine_carries_the_size_in_the_form_tooling_reads()
+    {
+        // Two terabytes moved before the batch stopped. The window and the console
+        // say "2.00 TB"; the Application channel says "2048.00 GB", ungrouped and in
+        // the largest unit its entries carry, because tooling reads that line by its
+        // exact text.
+        var files = new[] { File("a.msi", 2_199_023_255_552), File("b.msi", 2048) };
+        var ex = new MoveAbortedException(
+            "stopped", new MoveResult(1, Array.Empty<FileOperationError>()),
+            @"E:\where-they-really-went", MoveAbortReason.StoppedResolving);
+
+        var line = MachineContract.English(
+            () => Program.AbortedMoveEventLogLine("/m", ex, files.Length, files));
+
+        Assert.Contains("2048.00 GB", line, StringComparison.Ordinal);
+        Assert.DoesNotContain("TB", line, StringComparison.Ordinal);
+        // The people-facing form of the same size, so the pair above is shown to be
+        // telling the two forms apart rather than passing on a line with no size in it.
+        Assert.Equal("2.00 TB", MachineContract.English(() => DisplayHelpers.FormatSize(2_199_023_255_552)));
+    }
+
     [Theory]
     [InlineData(MoveAbortReason.ResolvesElsewhere)]
     [InlineData(MoveAbortReason.StoppedResolving)]

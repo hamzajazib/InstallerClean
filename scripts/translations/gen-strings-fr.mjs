@@ -36,9 +36,9 @@ const OUT = `${dir}/Strings.fr.resx`;
 // someone adds it here", never silently passes. Do NOT translate these values. Do
 // NOT edit this list per language.
 //
-// The four size suffixes and the two elapsed suffixes do not belong in this list,
-// because they are not universal: French writes Go/Mo/Ko/o, Russian and Ukrainian
-// write ГБ/МБ/КБ/Б and мс/с. Those three carry real
+// The five size suffixes and the two elapsed suffixes do not belong in this list,
+// because they are not universal: French writes To/Go/Mo/Ko/o, Russian and Ukrainian
+// write ТБ/ГБ/МБ/КБ/Б and мс/с. Those three carry real
 // values in their MAP; the languages that do abbreviate as English does keep them in
 // ALSO_KEEP, which is the per-language list. Display.ListSeparator is the same shape,
 // for the same reason.
@@ -64,9 +64,9 @@ const ALSO_KEEP = [
   // nothing to get wrong; only ja and zh-Hans differ, taking the ideographic
   // full stop, which carries no space after it.
   'Display.SentenceSeparator',   // ". "
-  // The elapsed-time suffixes, which stay English where the four size
+  // The elapsed-time suffixes, which stay English where the five size
   // suffixes above do not. "ms" and "s" are the SI symbols and French
-  // writes them exactly as English does; Go/Mo/Ko/o are abbreviated French
+  // writes them exactly as English does; To/Go/Mo/Ko/o are abbreviated French
   // words, so those are translated. Russian and Ukrainian localise both.
   'Display.Elapsed.Ms',        // {0:F0}ms
   'Display.Elapsed.S',         // {0:F1}s
@@ -435,9 +435,10 @@ const MAP = {
   'Plural.Product.Plural': `produits`,
   'Plural.Patch.Singular': `correctif`,
   'Plural.Patch.Plural': `correctifs`,
-  'Display.Size.GB': `{0:F2} Go`,
-  'Display.Size.MB': `{0:F1} Mo`,
-  'Display.Size.KB': `{0:F1} Ko`,
+  'Display.Size.TB': `{0} To`,
+  'Display.Size.GB': `{0} Go`,
+  'Display.Size.MB': `{0} Mo`,
+  'Display.Size.KB': `{0} Ko`,
   'Display.Size.B': `{0} o`,
   'Display.Elapsed.Ms': `{0:F0}ms`,
   'Display.Elapsed.S': `{0:F1}s`,

@@ -33,9 +33,9 @@ const OUT = `${dir}/Strings.es.resx`;
 // someone adds it here", never silently passes. Do NOT translate these values. Do
 // NOT edit this list per language.
 //
-// The four size suffixes and the two elapsed suffixes do not belong in this list,
-// because they are not universal: French writes Go/Mo/Ko/o, Russian and Ukrainian
-// write ГБ/МБ/КБ/Б and мс/с. Those three carry real
+// The five size suffixes and the two elapsed suffixes do not belong in this list,
+// because they are not universal: French writes To/Go/Mo/Ko/o, Russian and Ukrainian
+// write ТБ/ГБ/МБ/КБ/Б and мс/с. Those three carry real
 // values in their MAP; the languages that do abbreviate as English does keep them in
 // ALSO_KEEP, which is the per-language list. Display.ListSeparator is the same shape,
 // for the same reason.
@@ -63,11 +63,12 @@ const ALSO_KEEP = [
   // The size and elapsed unit suffixes. Spanish abbreviates them exactly as
   // English does, so there is nothing to translate and nothing to get wrong.
   // A per-language keep rather than a universal one because fr, ru and uk do
-  // NOT: French takes Go/Mo/Ko/o, Russian and Ukrainian take ГБ/МБ/КБ/Б and
+  // NOT: French takes To/Go/Mo/Ko/o, Russian and Ukrainian take ТБ/ГБ/МБ/КБ/Б and
   // мс/с, and all three carry real values in their MAP.
-  'Display.Size.GB',           // {0:F2} GB
-  'Display.Size.MB',           // {0:F1} MB
-  'Display.Size.KB',           // {0:F1} KB
+  'Display.Size.TB',           // {0} TB
+  'Display.Size.GB',           // {0} GB
+  'Display.Size.MB',           // {0} MB
+  'Display.Size.KB',           // {0} KB
   'Display.Size.B',            // {0} B
   'Display.Elapsed.Ms',        // {0:F0}ms
   'Display.Elapsed.S',         // {0:F1}s
@@ -349,9 +350,10 @@ const MAP = {
   'Plural.Product.Plural': `productos`,
   'Plural.Patch.Singular': `parche`,
   'Plural.Patch.Plural': `parches`,
-  'Display.Size.GB': `{0:F2} GB`,
-  'Display.Size.MB': `{0:F1} MB`,
-  'Display.Size.KB': `{0:F1} KB`,
+  'Display.Size.TB': `{0} TB`,
+  'Display.Size.GB': `{0} GB`,
+  'Display.Size.MB': `{0} MB`,
+  'Display.Size.KB': `{0} KB`,
   'Display.Size.B': `{0} B`,
   'Display.Elapsed.Ms': `{0:F0}ms`,
   'Display.Elapsed.S': `{0:F1}s`,

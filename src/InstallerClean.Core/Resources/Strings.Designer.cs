@@ -308,6 +308,7 @@ public static class Strings
     public static string Display_Size_GB => Get("Display.Size.GB");
     public static string Display_Size_KB => Get("Display.Size.KB");
     public static string Display_Size_MB => Get("Display.Size.MB");
+    public static string Display_Size_TB => Get("Display.Size.TB");
     public static string Error_AccessDeniedDestination => Get("Error.AccessDeniedDestination");
     public static string Error_AccessDenied_Plural => Get("Error.AccessDenied.Plural");
     public static string Error_AccessDenied_Singular => Get("Error.AccessDenied.Singular");

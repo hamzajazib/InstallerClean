@@ -518,11 +518,12 @@ internal static class Program
                         $"  {f.FileName.PadRight(nameColumn)}  ({f.SizeDisplay}, {f.Reason})")));
                 // The noun and size are recomputed inside the en-GB scope rather
                 // than reusing the human-facing `size` (which is in the OS
-                // region), so this audit line reads fully English.
+                // region and grouped), so this audit line reads fully English
+                // and carries the size in the form tooling reads.
                 MachineContract.WriteEventLog(CliEventClass.Ok,
                     () => string.Format(Strings.Cli_EventLogScanFound,
                         arg, count, DisplayHelpers.PluraliseFile(count),
-                        DisplayHelpers.FormatSize(totalBytes)));
+                        DisplayHelpers.FormatSizeForMachine(totalBytes)));
                 return ExitOk;
             }
 
@@ -738,11 +739,12 @@ internal static class Program
                 var outcome = CliContract.ClassifyFileOperation(result.DeletedCount, result.Errors.Count);
                 // Size and nouns are recomputed inside the en-GB scope, not
                 // reused from the stdout copies, so the audit line reads fully
-                // English ("3.2 GB", "files") on a localised machine.
+                // English ("3.2 GB", "files") on a localised machine, and the size
+                // takes the ungrouped form tooling reads.
                 MachineContract.WriteEventLog(outcome.EventClass,
                     () => string.Format(Strings.Cli_EventLogDeleteSummary,
                         arg, result.DeletedCount, count, DisplayHelpers.PluraliseFile(count),
-                        DisplayHelpers.FormatSize(actualBytes), result.Errors.Count,
+                        DisplayHelpers.FormatSizeForMachine(actualBytes), result.Errors.Count,
                         DisplayHelpers.PluraliseError(result.Errors.Count)));
                 return outcome.ExitCode;
             }
@@ -767,8 +769,8 @@ internal static class Program
                 // below for why the stdout copies are not reused.
                 MachineContract.WriteEventLog(CliEventClass.HardError,
                     () => string.Format(Strings.Cli_EventLogMoveNotEnoughSpace,
-                        arg, moveDest, DisplayHelpers.FormatSize(freeAtDestination),
-                        DisplayHelpers.FormatSize(totalBytes)));
+                        arg, moveDest, DisplayHelpers.FormatSizeForMachine(freeAtDestination),
+                        DisplayHelpers.FormatSizeForMachine(totalBytes)));
                 return ExitError;
             }
 
@@ -897,7 +899,7 @@ internal static class Program
             MachineContract.WriteEventLog(moveOutcome.EventClass,
                 () => string.Format(Strings.Cli_EventLogMoveSummary,
                     arg, moveResult.MovedCount, count, DisplayHelpers.PluraliseFile(count),
-                    moveDest, DisplayHelpers.FormatSize(actualMovedBytes), moveResult.Errors.Count,
+                    moveDest, DisplayHelpers.FormatSizeForMachine(actualMovedBytes), moveResult.Errors.Count,
                     DisplayHelpers.PluraliseError(moveResult.Errors.Count)));
             return moveOutcome.ExitCode;
         }
@@ -1352,7 +1354,7 @@ internal static class Program
         var partial = ex.Partial;
         return string.Format(Strings.Cli_EventLogMoveAborted,
             arg, partial.MovedCount, count, DisplayHelpers.PluraliseFile(count), ex.Destination,
-            DisplayHelpers.FormatSize(CompletedBytes(survivingFiles, partial.MovedCount, partial.Errors)),
+            DisplayHelpers.FormatSizeForMachine(CompletedBytes(survivingFiles, partial.MovedCount, partial.Errors)),
             partial.Errors.Count, DisplayHelpers.PluraliseError(partial.Errors.Count));
     }
 

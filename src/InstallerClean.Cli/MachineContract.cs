@@ -17,7 +17,8 @@ namespace InstallerClean.Cli;
 /// The mechanism is a thread-culture swap, and it is load-bearing that it
 /// reaches the whole line, not just the resx template. A summary interpolates a
 /// pluralised noun (<see cref="DisplayHelpers.PluraliseError"/>) and a size
-/// (<see cref="DisplayHelpers.FormatSize"/>); the template resolves through
+/// (<see cref="DisplayHelpers.FormatSizeForMachine"/>, which carries no group
+/// separator and no unit above gigabytes); the template resolves through
 /// <see cref="Localisation.UiCulture"/>, the noun through the same, the size
 /// through <see cref="Localisation.FormatCulture"/>. Both of those fall through
 /// to the thread's <see cref="CultureInfo.CurrentUICulture"/> /

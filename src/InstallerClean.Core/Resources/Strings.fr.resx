@@ -1518,13 +1518,17 @@ Le crash.log n'a pas pu être écrit.</value></data>
   <data name="Plural.Patch.Plural" xml:space="preserve"><value>correctifs</value></data>
 
   <!-- Display-format fragments used by DisplayHelpers.FormatSize /
-       FormatElapsed / FormatElapsedLong. Number portion stays in
-       string.Format with the consumer's CurrentCulture (so 1.5 GB
-       becomes 1,5 GB on de-DE etc.); only the unit suffix and the
-       sub-second long-form sentence are localisable. -->
-  <data name="Display.Size.GB" xml:space="preserve"><value>{0:F2} Go</value></data>
-  <data name="Display.Size.MB" xml:space="preserve"><value>{0:F1} Mo</value></data>
-  <data name="Display.Size.KB" xml:space="preserve"><value>{0:F1} Ko</value></data>
+       FormatSizeForMachine / FormatElapsed / FormatElapsedLong. In the
+       Display.Size values {0} is the figure, already formatted with the
+       consumer's CurrentCulture (so 1,023.9 MB becomes 1.023,9 MB on
+       de-DE), and the value places the unit and nothing else. In the
+       elapsed values the number stays in string.Format with the same
+       culture. Only the unit suffix and the sub-second long-form sentence
+       are localisable. -->
+  <data name="Display.Size.TB" xml:space="preserve"><value>{0} To</value></data>
+  <data name="Display.Size.GB" xml:space="preserve"><value>{0} Go</value></data>
+  <data name="Display.Size.MB" xml:space="preserve"><value>{0} Mo</value></data>
+  <data name="Display.Size.KB" xml:space="preserve"><value>{0} Ko</value></data>
   <data name="Display.Size.B" xml:space="preserve"><value>{0} o</value></data>
   <data name="Display.Elapsed.Ms" xml:space="preserve"><value>{0:F0}ms</value></data>
   <data name="Display.Elapsed.S" xml:space="preserve"><value>{0:F1}s</value></data>

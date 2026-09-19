@@ -15,19 +15,86 @@ internal static class DisplayHelpers
             : string.Empty;
     }
 
-    internal static string FormatSize(long bytes) => bytes switch
+    /// <summary>
+    /// A size as a person reads it, in binary units from bytes up to terabytes, each
+    /// unit 1,024 of the one below. The figure carries the group and decimal
+    /// separators of the reader's region, as <see cref="FormatCount"/> does, so a
+    /// figure in the band between 1,000 and 1,024 of a unit reads "1,023.9 MB" in
+    /// English and "1.023,9 MB" in German. The resx value for each unit places the
+    /// unit and nothing else; the figure arrives already formatted.
+    ///
+    /// THE UNIT IS CHOSEN ON THE FIGURE AS IT PRINTS. A size a few bytes short of the
+    /// next unit rounds up to 1,024 of the one below it, so each step compares the
+    /// rounded figure rather than the raw one, and such a size reads "1.00 GB" where
+    /// comparing the raw one would print "1,024.0 MB". The rounding sends a figure
+    /// exactly halfway between two printed values to the even one, which is what .NET
+    /// does when it formats a double, so for any size the digits match those
+    /// <see cref="FormatSizeForMachine"/> prints, apart from three things: the group
+    /// separator, the terabyte unit and the step just described.
+    ///
+    /// THE MACHINE-READ LINES DO NOT COME THROUGH HERE. The Application-channel
+    /// entries take <see cref="FormatSizeForMachine"/>, for the reason given there.
+    /// </summary>
+    internal static string FormatSize(long bytes)
     {
-        >= 1_073_741_824 => string.Format(Localisation.FormatCulture, Strings.Display_Size_GB, bytes / 1_073_741_824.0),
-        >= 1_048_576 => string.Format(Localisation.FormatCulture, Strings.Display_Size_MB, bytes / 1_048_576.0),
-        >= 1_024 => string.Format(Localisation.FormatCulture, Strings.Display_Size_KB, bytes / 1_024.0),
-        _ => string.Format(Localisation.FormatCulture, Strings.Display_Size_B, bytes)
+        if (bytes < 1_024)
+            return string.Format(Strings.Display_Size_B, bytes.ToString("N0", Localisation.FormatCulture));
+
+        var kilobytes = Printed(bytes, 1_024, 1);
+        if (kilobytes < 1_024)
+            return Sized(Strings.Display_Size_KB, kilobytes, "N1");
+
+        var megabytes = Printed(bytes, 1_048_576, 1);
+        if (megabytes < 1_024)
+            return Sized(Strings.Display_Size_MB, megabytes, "N1");
+
+        var gigabytes = Printed(bytes, 1_073_741_824, 2);
+        if (gigabytes < 1_024)
+            return Sized(Strings.Display_Size_GB, gigabytes, "N2");
+
+        return Sized(Strings.Display_Size_TB, Printed(bytes, 1_099_511_627_776, 2), "N2");
+    }
+
+    /// <summary>
+    /// The size in <paramref name="unit"/>s, rounded to the places it prints to.
+    /// Decimal rather than double so that the figure the unit is chosen on and the
+    /// figure printed are one value: a whole number of bytes over a power of two has
+    /// a finite decimal expansion, so the division is exact to far more places than
+    /// the rounding reads.
+    /// </summary>
+    private static decimal Printed(long bytes, long unit, int places) =>
+        Math.Round((decimal)bytes / unit, places, MidpointRounding.ToEven);
+
+    private static string Sized(string template, decimal figure, string format) =>
+        string.Format(template, figure.ToString(format, Localisation.FormatCulture));
+
+    /// <summary>
+    /// A size as the Application-channel entries carry it: no group separator, and
+    /// gigabytes as the largest unit, so a cache of two terabytes reads
+    /// "2048.00 GB". Tooling matches those entries on their exact text, which is why
+    /// the counts on the same lines are bare digits (see <see cref="FormatCount"/>).
+    /// A group separator in a size splits the figure for anything taking it by its
+    /// digits, which stops at the separator and reads the part in front of it. A
+    /// terabyte unit is one no match written against these entries expects, so
+    /// gigabytes stay the largest unit here.
+    ///
+    /// The culture is the caller's. On those lines it is the en-GB scope
+    /// MachineContract puts round the whole entry, which is what makes the decimal
+    /// separator a full stop on every machine.
+    /// </summary>
+    internal static string FormatSizeForMachine(long bytes) => bytes switch
+    {
+        >= 1_073_741_824 => string.Format(Strings.Display_Size_GB, (bytes / 1_073_741_824.0).ToString("F2", Localisation.FormatCulture)),
+        >= 1_048_576 => string.Format(Strings.Display_Size_MB, (bytes / 1_048_576.0).ToString("F1", Localisation.FormatCulture)),
+        >= 1_024 => string.Format(Strings.Display_Size_KB, (bytes / 1_024.0).ToString("F1", Localisation.FormatCulture)),
+        _ => string.Format(Strings.Display_Size_B, bytes.ToString(Localisation.FormatCulture)),
     };
 
     /// <summary>
     /// A count as the reader's region writes it, so that four figures carry the
     /// group separator that region uses: a comma in English, a full stop in German,
     /// a space in French. It reads <see cref="Localisation.FormatCulture"/>, which
-    /// is where the sizes above take their decimal separator from, so a count and a
+    /// is where <see cref="FormatSize"/> takes its separators from, so a count and a
     /// size in one sentence are punctuated alike.
     ///
     /// THE MACHINE-READ LINES DO NOT COME THROUGH HERE. Tooling matches the
