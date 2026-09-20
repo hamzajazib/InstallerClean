@@ -1,7 +1,11 @@
 using System.Globalization;
 using InstallerClean.Cli;
+using InstallerClean.Helpers;
+using InstallerClean.Models;
 using InstallerClean.Resources;
 using InstallerClean.Services;
+using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 
 namespace InstallerClean.Tests.Helpers;
 
@@ -13,12 +17,16 @@ namespace InstallerClean.Tests.Helpers;
 /// the app was refused permission to open writes.
 /// </summary>
 /// <remarks>
-/// What is NOT held here, so nobody reads this file as covering the branch: the
-/// method emitting the first refusal is private and stays that way, because
-/// reaching it would mean a test run writing a real entry to the Application log.
-/// So nothing in the suite proves that such a batch calls it, or that it exits
-/// transient. Those hold by inspection of two call sites and the exit code the
-/// method returns, and a change that stopped calling it would pass everything here.
+/// The two wording tests read the lines back through the methods that build them,
+/// which is what lets the wording be held without an assertion on the Application
+/// channel itself. The last two tests drive a whole run instead, so what they hold
+/// is that a refused batch reaches those lines at all and what it exits with.
+///
+/// WHAT IS STILL NOT HELD ANYWHERE: the class an entry is written under. It is
+/// handed to a static write that nothing here observes, so the Event ID a
+/// monitoring tool filters on rests on the pair of values in the emitter rather
+/// than on anything read back. CliPendingRebootOutcomeTests says the same of its
+/// own column.
 ///
 /// A refused lock goes out through the pending-reboot emitter under the gate's own
 /// reason for it, wherever it is met, and CliPendingRebootOutcomeTests holds its
@@ -135,5 +143,100 @@ public class CliLockRefusalTests
             + "whether an installation was in progress could not be established and no "
             + "files were moved or deleted.",
             line);
+    }
+
+    /// <summary>
+    /// The whole run, for the refusal with nothing shown to be holding the lock.
+    /// The wording tests above read the two lines back from the methods that build
+    /// them; this says that a batch refused that way prints the one the operator
+    /// reads and exits the code a scheduler acts on, which no assertion on a
+    /// builder can say.
+    /// </summary>
+    [Theory]
+    [InlineData("/d")]
+    [InlineData("/m")]
+    public async Task A_batch_refused_with_nothing_holding_the_lock_prints_its_line_and_exits_transient(string arg)
+    {
+        var (exitCode, stdout) = await RunRefusedByUnavailableLock(arg);
+
+        Assert.Equal(CliExitCode.Transient, exitCode);
+        Assert.Contains(Program.InstallerLockUnavailableLine(arg), stdout);
+        // Not the refusal the app was not allowed to look at, which is a different
+        // condition with a different sentence and a different exit code.
+        Assert.DoesNotContain(Program.InstallerLockAccessRefusedLine(arg), stdout);
+    }
+
+    private const string OfferA = @"C:\Windows\Installer\offer-a.msi";
+    private const string OfferB = @"C:\Windows\Installer\offer-b.msi";
+
+    /// <summary>
+    /// Temp is fully qualified on either host and outside both forbidden sets, so
+    /// the /m destination gates pass it. Nothing is created there: the move service
+    /// is a substitute.
+    /// </summary>
+    private static readonly string Destination =
+        Path.Combine(Path.GetTempPath(), "installerclean-cli-lock-refusal-test");
+
+    /// <summary>
+    /// Runs <paramref name="arg"/> against a clean gate and an action service that
+    /// refuses at its acquire with nothing shown to be holding the lock. Returns
+    /// the exit code and stdout.
+    /// </summary>
+    private static async Task<(int ExitCode, string Stdout)> RunRefusedByUnavailableLock(string arg)
+    {
+        // The gate sits after the scan, so the offer has to be non-empty or the run
+        // returns on "nothing to do" before ever reaching the service.
+        var scan = Substitute.For<IFileSystemScanService>();
+        scan.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(new ScanResult(
+                [new OrphanedFile(OfferA, 1024, false, false, false, "unclaimed"),
+                 new OrphanedFile(OfferB, 1024, false, false, false, "unclaimed")],
+                Array.Empty<RegisteredPackage>(), 0));
+
+        var reboot = Substitute.For<IPendingRebootService>();
+        reboot.Check().Returns(PendingRebootResult.Clean);
+
+        var reverifier = Substitute.For<IRemovableReverifier>();
+        reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(new ReverifyResult(new[] { OfferA, OfferB }, Array.Empty<string>()));
+
+        var delete = Substitute.For<IDeleteFilesService>();
+        delete.DeleteFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new DeleteResult(0, Array.Empty<FileOperationError>(), InstallerLockUnavailable: true));
+
+        var move = Substitute.For<IMoveFilesService>();
+        move.MoveFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>(),
+                Arg.Any<UnderLeaseClaims>(), Arg.Any<IProgress<OperationProgress>?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new MoveResult(0, Array.Empty<FileOperationError>(), InstallerLockUnavailable: true));
+
+        var services = new ServiceCollection()
+            .AddSingleton(scan)
+            .AddSingleton(reboot)
+            .AddSingleton(reverifier)
+            .AddSingleton(delete)
+            .AddSingleton(move)
+            .AddSingleton(Substitute.For<ISettingsService>())
+            .BuildServiceProvider();
+
+        var invocation = arg == "/m"
+            ? new CliInvocation(CliCommand.Move, null, Destination)
+            : new CliInvocation(CliCommand.Delete, null, null);
+
+        // Console.SetOut is process-global; the assembly disables test
+        // parallelisation, which is what makes reading stdout back safe here.
+        var original = Console.Out;
+        using var buffer = new StringWriter();
+        try
+        {
+            Console.SetOut(buffer);
+            var exitCode = await Program.RunWorkAsync(arg, invocation, CancellationToken.None, services);
+            return (exitCode, buffer.ToString());
+        }
+        finally
+        {
+            Console.SetOut(original);
+        }
     }
 }

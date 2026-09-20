@@ -81,14 +81,12 @@ public sealed class DeleteFilesService : IDeleteFilesService
             // its probe reading such a failure as not held, so this result carries
             // its own sentence.
             //
-            // Refusing the second case is younger than the hold itself, and what
-            // changed the sum was the delete becoming permanent rather than
-            // anything about the mutex. Running on unserialised used to risk, at
-            // worst, a file that had just become needed going to the Recycle Bin,
-            // where the user could fetch it back; there is no bin to fetch it from.
-            // MoveFilesService refuses on the same answer, for reasons it states at
-            // its own acquire: its exposure to the hazard is this one's, and only
-            // the recovery differs.
+            // Both refusals stop the batch rather than letting it run unserialised,
+            // and what settles that here is the delete being permanent: a file that
+            // becomes needed while the batch runs is gone, with no bin to fetch it
+            // back from. MoveFilesService refuses on the same answers, for reasons
+            // it states at its own acquire: its exposure to the hazard is this
+            // one's, and only the recovery differs.
             //
             // What the hold costs, so nobody widens it and nobody removes it:
             // _MSIExecute is the machine-wide Windows Installer serialisation

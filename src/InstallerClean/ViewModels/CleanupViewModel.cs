@@ -1012,19 +1012,22 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             {
                 // The object's security refused the service the rights to open it,
                 // so it never learned whether a transaction held it and refused
-                // without touching anything. Same handling as the arm above and a
-                // different sentence: the app was not allowed to look, which is not
-                // the same as finding the lock busy, and only one of those two is
-                // something an administrator can go and change.
+                // without touching anything. A different sentence from the arm
+                // above: the app was not allowed to look, which is not the same as
+                // finding the lock busy, and only one of those two is something an
+                // administrator can go and change.
                 //
-                // No gate re-check here either. The gate's probe asks for the rights
-                // the service's acquire asks for, so a refusal standing at the
-                // re-check above stopped the click there, and this one began after
-                // it. The dialog says what happened to this click; if the refusal
-                // lasts, the next click's re-check paints the banner for it.
+                // The dialog says what happened to this click, and the gate is then
+                // re-run as the busy arm runs it, because the gate has a reason for
+                // this condition and paints a banner of its own for it. A refusal
+                // that stands leaves the window saying so with both commands out,
+                // rather than offering buttons that will refuse the next click the
+                // same way. A refusal that has already gone leaves the window as it
+                // was, which is the state the machine is now in.
                 _dialogService.ShowWarning(
                     Strings.Error_MoveInstallerLockAccessRefused,
                     Strings.Error_MoveInstallerLockUnavailableTitle);
+                await _scan.RecheckPendingRebootAsync();
                 OperationProgress = string.Empty;
                 if (createdDestination) await RemoveCreatedDestinationAsync(dest);
                 return;
@@ -1346,18 +1349,21 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             {
                 // The object's security refused the service the rights to open it,
                 // so it never learned whether a transaction held it and refused
-                // without touching anything. Same handling as the arm above and a
-                // different sentence: the app was not allowed to look, which is not
-                // the same as finding the lock busy, and only one of those two is
-                // something an administrator can go and change.
+                // without touching anything. A different sentence from the arm
+                // above: the app was not allowed to look, which is not the same as
+                // finding the lock busy, and only one of those two is something an
+                // administrator can go and change.
                 //
-                // No gate re-check here either. The gate's probe asks for the rights
-                // the service's acquire asks for, so a refusal standing at the
-                // re-check above stopped the click there, and this one began after
-                // it. The dialog says what happened to this click; if the refusal
-                // lasts, the next click's re-check paints the banner for it.
+                // The dialog says what happened to this click, and the gate is then
+                // re-run as the busy arm runs it, because the gate has a reason for
+                // this condition and paints a banner of its own for it. A refusal
+                // that stands leaves the window saying so with both commands out,
+                // rather than offering buttons that will refuse the next click the
+                // same way. A refusal that has already gone leaves the window as it
+                // was, which is the state the machine is now in.
                 _dialogService.ShowWarning(
                     Strings.Error_InstallerLockAccessRefused, Strings.Error_InstallerLockUnavailableTitle);
+                await _scan.RecheckPendingRebootAsync();
                 OperationProgress = string.Empty;
                 return;
             }

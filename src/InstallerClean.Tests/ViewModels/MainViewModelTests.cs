@@ -1367,18 +1367,58 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public async Task MoveAllAsync_lock_refused_result_shows_the_dialog_and_paints_the_banner()
+    {
+        // The third of the three lock answers, and it takes something from each of
+        // the other two. A dialog, because the click is owed an answer naming what
+        // did not happen to the files, and then the gate, because the gate has a
+        // reason for a refused lock and a banner of its own for it. Clean at the
+        // scan and at the act-time gate, so the refusal the service meets began
+        // after that gate, which is the only way this arm is reached.
+        var vm = CreateViewModel();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2));
+        _rebootService.Check().Returns(
+            PendingRebootResult.Clean,
+            PendingRebootResult.Clean,
+            PendingRebootResult.Block(PendingRebootReason.MsiExecuteMutexAccessRefused));
+        _moveService.MoveFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new MoveResult(0, Array.Empty<FileOperationError>(),
+                InstallerLockAccessRefused: true));
+        _confirmationService.ConfirmMove(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
+
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = Path.Combine(Path.GetTempPath(), "ic-test-lock-refused");
+
+        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        _dialogService.Received(1).ShowWarning(
+            Strings.Error_MoveInstallerLockAccessRefused,
+            Strings.Error_MoveInstallerLockUnavailableTitle);
+        // Three: the scan, the act-time gate, and the re-check this arm runs.
+        _rebootService.Received(3).Check();
+        Assert.True(vm.Scan.HasPendingReboot);
+        Assert.Equal(Strings.Body_PendingReboot_MsiExecuteMutexAccessRefused, vm.Scan.PendingRebootBannerText);
+        Assert.False(vm.Completion.IsComplete);
+        await _resultLogService.DidNotReceive().WriteAsync(
+            Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task MoveAllAsync_lock_unavailable_result_shows_the_dialog_and_leaves_the_gate_alone()
     {
         // The twin of the installer-busy test above, and of the delete path's own
         // pair, which is why this is a second flag rather than a second cause
         // behind the first. Busy re-runs the pending-reboot gate, which meets the
         // held mutex and paints its banner. This one must NOT, because the gate
-        // can account for the condition neither way: clean paints nothing and
-        // leaves the user refused with no reason on screen, and held asserts an
-        // install nothing has shown. The dialog carries it instead,
-        // and the title is pinned as well as the body because the Move copy is a
-        // separate pair from the Delete copy and either could be wired to the
-        // other's.
+        // has no account of the condition: its probe reads the same failure as not
+        // held, so a re-check comes back clean and leaves the user refused with no
+        // reason on screen. The dialog carries it instead, and the title is pinned
+        // as well as the body because the Move copy is a separate pair from the
+        // Delete copy and either could be wired to the other's.
         var vm = CreateViewModel();
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(ScanResultWithOrphans(2));
@@ -2138,17 +2178,53 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public async Task DeleteAllAsync_lock_refused_result_shows_the_dialog_and_paints_the_banner()
+    {
+        // The delete path's copy of the Move test above: the dialog for the click,
+        // then the gate, which has a banner for a refused lock. The pair is kept
+        // because the two sentences and the two titles are separate keys and
+        // either could be wired to the other's.
+        var vm = CreateViewModel();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2));
+        _rebootService.Check().Returns(
+            PendingRebootResult.Clean,
+            PendingRebootResult.Clean,
+            PendingRebootResult.Block(PendingRebootReason.MsiExecuteMutexAccessRefused));
+        _deleteService.DeleteFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new DeleteResult(0, Array.Empty<FileOperationError>(),
+                InstallerLockAccessRefused: true));
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
+
+        await vm.Scan.ScanWithProgressAsync(null);
+
+        await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+
+        _dialogService.Received(1).ShowWarning(
+            Strings.Error_InstallerLockAccessRefused, Strings.Error_InstallerLockUnavailableTitle);
+        // Three: the scan, the act-time gate, and the re-check this arm runs.
+        _rebootService.Received(3).Check();
+        Assert.True(vm.Scan.HasPendingReboot);
+        Assert.Equal(Strings.Body_PendingReboot_MsiExecuteMutexAccessRefused, vm.Scan.PendingRebootBannerText);
+        Assert.False(vm.Completion.IsComplete);
+        await _resultLogService.DidNotReceive().WriteAsync(
+            Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task DeleteAllAsync_lock_unavailable_result_shows_the_dialog_and_leaves_the_gate_alone()
     {
         // The twin of the installer-busy test above, and the difference between
         // them is the whole reason this is a second flag rather than a second
         // cause behind the first. Busy re-runs the pending-reboot gate, which now
         // meets the held mutex and paints its banner. This one must NOT, because
-        // the gate can account for the condition neither way: clean paints nothing
-        // and leaves the user refused with no reason on screen, and held asserts an
-        // install nothing has shown. The dialog carries it instead, and the title
-        // is pinned as well as the body because this arm borrowed the crash arm's
-        // title once.
+        // the gate has no account of the condition: its probe reads the same
+        // failure as not held, so a re-check comes back clean and leaves the user
+        // refused with no reason on screen. The dialog carries it instead, and the
+        // title is pinned as well as the body because this arm borrowed the crash
+        // arm's title once.
         var vm = CreateViewModel();
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(ScanResultWithOrphans(2));
