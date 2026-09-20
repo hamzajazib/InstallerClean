@@ -23,6 +23,10 @@
   <a href="https://github.com/no-faff/InstallerClean/releases"><img src="https://img.shields.io/badge/downloads-81k-brightgreen" alt="Total downloads"></a>
 </p>
 
+<p align="center">
+  <a href="https://ko-fi.com/L4L11VBDJG"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi"></a>
+</p>
+
 <a id="reports-stats"></a>
 
 <!-- reports-stats-start chart-only (generated; do not hand-edit between these markers) -->
