@@ -24,7 +24,7 @@
 </p>
 
 <p align="center">
-  <a href="https://ko-fi.com/L4L11VBDJG"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi"></a>
+  <a href="https://ko-fi.com/nofaff"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi"></a>
 </p>
 
 <a id="reports-stats"></a>
