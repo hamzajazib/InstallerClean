@@ -102,50 +102,32 @@ public sealed class MoveFilesService : IMoveFilesService
             // synchronous, so no await hops threads between acquire and release.
             //
             // No way of missing the hold proceeds, and they are reported separately
-            // because the caller can account for only one of them and owes the user
-            // a different sentence for each. Held
+            // because the caller owes the user a different sentence for each. Held
             // by a live transaction => the pending-reboot gate the caller re-runs
             // meets the same mutex and paints its banner, which says an install is
             // in progress, which it is. Refused because the object's security would
-            // not let us open it => the app was not allowed to look, and it says so
-            // in those words. Refused any other way with nothing shown to be holding
-            // it => that gate is no account of the condition at all, whichever way
-            // it answers.
-            // IsHeld asks through a different call requesting different rights, so
-            // it can come back clean, leaving a refusal with nothing on screen
-            // explaining it; and on a DACL it returns held (its own catch says so),
-            // which would paint a banner asserting an install nothing has shown. So
-            // this result carries its own sentence rather than deferring to the
-            // gate. Holding the mutex closes only the sub-millisecond race after
-            // the host-side gate re-check has passed.
+            // not let us open it => the app was not allowed to look, and the caller
+            // says so in those words. The gate's probe asks for the rights this
+            // acquire asks for, so a refusal standing when the gate ran stopped the
+            // batch there, and one met here began after it. Refused any other way
+            // with nothing shown to be holding it => the gate has no account of it,
+            // its probe reading such a failure as not held, so this result carries
+            // its own sentence. Holding the mutex closes only the sub-millisecond
+            // race after the host-side gate re-check has passed.
             //
-            // Refusing the second case rather than running on unheld, and the three
-            // things that decide it. A false there does not mean nothing is
-            // installing, it means this process could not find out, which is what
-            // the flag is named for and what the branch reading it must not forget.
-            // The object is not permanent, so being refused it is evidence rather
-            // than noise:
-            // Windows Installer creates _MSIExecute when an install begins and drops
-            // it when the install ends, so between installs the create-or-open path
-            // below makes the object and succeeds, and the only object that can
-            // refuse this process is one something else has already made. That is
-            // the documented lifetime plus MutexProbe's account of the
-            // create-or-open; it has not been measured on a live machine. And a
-            // move's exposure to the hazard is the delete's: a moved file is as
-            // absent from the cache as a deleted one, so a transaction that starts
-            // mid-batch fails to find it either way. Only the recovery differs, and
-            // running on here bought a recovery property at the price of a safety
-            // one.
-            //
-            // The counter-argument this rejects: MutexProbe's DACL comment reasons
-            // that the plausible cause of a refusal is a non-elevated per-user
-            // install, which does not write the machine cache, so the hazard would
-            // not apply. Separating the access refusal from the rest tells the user
-            // which refusal they met; it does not tell this branch whether anything
-            // is installing, because a refusal to open the object is silence about
-            // who owns it. The benign reading is a guess at who set the security,
-            // and running on it would trade a safety property for a recovery one on
-            // the strength of that guess.
+            // Both refusals stop the batch rather than letting it run on unheld.
+            // Neither says nothing is installing; each says this process could not
+            // find out, because failing to open or take the object is silence
+            // about who owns it. The object is not permanent, so being refused it
+            // is evidence rather than noise: Windows Installer creates _MSIExecute
+            // when an install begins and drops it when the install ends, so
+            // between installs the create-or-open path below makes the object and
+            // succeeds, and the only object that can refuse this process is one
+            // something else has already made. And a move's exposure to the hazard
+            // is the delete's: a moved file is as absent from the cache as a
+            // deleted one, so a transaction that starts mid-batch fails to find it
+            // either way. Only the recovery differs, and the recovery a move leaves
+            // the user is not a reason to run without the hold.
             //
             // What the hold costs, so nobody widens it and nobody removes it:
             // _MSIExecute is the machine-wide Windows Installer serialisation

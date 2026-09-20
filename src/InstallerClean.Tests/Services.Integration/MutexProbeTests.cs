@@ -1,4 +1,7 @@
+using System.ComponentModel;
+using System.Runtime.InteropServices;
 using InstallerClean.Services;
+using Microsoft.Win32.SafeHandles;
 
 namespace InstallerClean.Tests.Services.Integration;
 
@@ -17,11 +20,12 @@ namespace InstallerClean.Tests.Services.Integration;
 /// would serialise every installer on whichever machine ran the suite, which
 /// is the very cost the production comment warns about.
 ///
-/// The access-refused arm (returns null with
-/// <see cref="MutexAcquireOutcome.AccessRefused"/>, which both callers refuse on
-/// under a sentence of its own) is not covered: reproducing it means creating a
-/// named object with a deny ACE, and a test that got that setup subtly wrong
-/// would pass for the wrong reason.
+/// The access-refused answers (<see cref="MutexSample.AccessRefused"/> from the
+/// sample, and a null lease with <see cref="MutexAcquireOutcome.AccessRefused"/>
+/// from the acquire) are reproduced with a named object whose DACL is empty. Each
+/// test using one first shows a plain open of that object being refused with the
+/// very call the probe makes, so a setup that went subtly wrong fails there rather
+/// than letting the assertion after it pass for the wrong reason.
 /// </summary>
 public class MutexProbeTests
 {
@@ -149,33 +153,121 @@ public class MutexProbeTests
     }
 
     [Fact]
-    public void IsHeld_is_false_for_a_name_nobody_holds()
+    public void Sample_is_not_held_for_a_name_nobody_holds()
     {
-        // A name nothing has ever created: IsHeld opens with TryOpenExisting,
+        // A name nothing has ever created: Sample opens with TryOpenExisting,
         // which does not create, so this exercises the name-does-not-exist
         // miss rather than the exists-but-unheld answer.
-        Assert.False(new MutexProbe().IsHeld(_name));
+        Assert.Equal(MutexSample.NotHeld, new MutexProbe().Sample(_name));
     }
 
     [Fact]
-    public void IsHeld_is_false_for_a_name_that_exists_but_nobody_holds()
+    public void Sample_is_not_held_for_a_name_that_exists_but_nobody_holds()
     {
         // The case the acquire-rather-than-check design exists for, and the one
-        // the name-does-not-exist test above cannot reach. The Windows Installer
-        // service keeps Global\_MSIExecute alive unheld for minutes after its
-        // last job, so an existence test would answer "installer busy" long
-        // after the install finished and refuse every batch in that window.
-        // An unowned handle held open is precisely that state: the object
-        // exists, so TryOpenExisting succeeds, and the zero-wait acquire is
-        // what tells the two apart.
+        // the name-does-not-exist test above cannot reach. A named mutex exists
+        // for as long as any process holds a handle to it, owned or not, so an
+        // existence test would answer "installer busy" whenever something merely
+        // had the object open. An unowned handle held open is precisely that
+        // state: the object exists, so TryOpenExisting succeeds, and the
+        // zero-wait acquire is what tells the two apart.
         using var existsUnheld = new Mutex(initiallyOwned: false, _name);
 
-        Assert.False(new MutexProbe().IsHeld(_name));
+        Assert.Equal(MutexSample.NotHeld, new MutexProbe().Sample(_name));
     }
 
     [Fact]
-    public void IsHeld_is_true_while_another_thread_holds_the_name()
+    public void Sample_is_held_while_another_thread_holds_the_name()
     {
-        WithNameHeldElsewhere(_name, () => Assert.True(new MutexProbe().IsHeld(_name)));
+        WithNameHeldElsewhere(_name,
+            () => Assert.Equal(MutexSample.Held, new MutexProbe().Sample(_name)));
     }
+
+    [Fact]
+    public void Sample_reports_a_name_whose_security_refuses_the_open_as_refused_and_not_as_held()
+    {
+        using var refusing = CreateRefusingMutex(_name);
+
+        // THE CONTROL. The object is there and a plain open of it, the same call
+        // Sample makes, is refused. Without this the assertion below could pass
+        // against an object that refused for some other reason, or against no
+        // object at all.
+        Assert.Throws<UnauthorizedAccessException>(() => Mutex.TryOpenExisting(_name, out _));
+
+        // The answer that decides which banner the window paints and which sentence
+        // and exit code the command line gives. Held would tell the user something
+        // is installing, which nothing here has seen.
+        Assert.Equal(MutexSample.AccessRefused, new MutexProbe().Sample(_name));
+    }
+
+    [Fact]
+    public void TryAcquire_reports_a_name_whose_security_refuses_the_open_as_refused()
+    {
+        using var refusing = CreateRefusingMutex(_name);
+
+        // The control, for the call TryAcquire makes: the create-or-open
+        // constructor meets the existing object and is refused.
+        Assert.Throws<UnauthorizedAccessException>(() => new Mutex(initiallyOwned: false, _name));
+
+        var probe = new MutexProbe();
+        var lease = probe.TryAcquire(_name, out var outcome);
+
+        Assert.Null(lease);
+        Assert.Equal(MutexAcquireOutcome.AccessRefused, outcome);
+        // And the sample of the same object agrees with it, which is what lets the
+        // pending-reboot gate meet a standing refusal before the action does.
+        Assert.Equal(MutexSample.AccessRefused, probe.Sample(_name));
+    }
+
+    /// <summary>
+    /// Creates <paramref name="name"/> carrying an empty DACL, which grants nothing to
+    /// anybody. SYNCHRONIZE and MUTEX_MODIFY_STATE are not rights an owner holds
+    /// implicitly, so every later open asking for them is refused, this process's
+    /// included, elevated or not. The create itself returns a handle whatever the new
+    /// object's security says, since that security governs the opens after it, and
+    /// the handle keeps the object alive until the test disposes it.
+    /// </summary>
+    private static SafeWaitHandle CreateRefusingMutex(string name)
+    {
+        if (!ConvertStringSecurityDescriptorToSecurityDescriptorW("D:", SddlRevision1, out var descriptor, IntPtr.Zero))
+            throw new Win32Exception(Marshal.GetLastPInvokeError());
+        try
+        {
+            var attributes = new SecurityAttributes
+            {
+                Length = Marshal.SizeOf<SecurityAttributes>(),
+                SecurityDescriptor = descriptor,
+                InheritHandle = 0,
+            };
+            var handle = CreateMutexW(ref attributes, initialOwner: false, name);
+            if (handle.IsInvalid)
+                throw new Win32Exception(Marshal.GetLastPInvokeError());
+            return handle;
+        }
+        finally
+        {
+            LocalFree(descriptor);
+        }
+    }
+
+    private const uint SddlRevision1 = 1;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SecurityAttributes
+    {
+        public int Length;
+        public IntPtr SecurityDescriptor;
+        public int InheritHandle;
+    }
+
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool ConvertStringSecurityDescriptorToSecurityDescriptorW(
+        string stringSecurityDescriptor, uint revision, out IntPtr securityDescriptor, IntPtr size);
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern SafeWaitHandle CreateMutexW(
+        ref SecurityAttributes attributes, bool initialOwner, string name);
+
+    [DllImport("kernel32.dll")]
+    private static extern IntPtr LocalFree(IntPtr memory);
 }

@@ -188,6 +188,7 @@ const MAP = {
   'Body.MainExplanation.Why': `이 파일들은 {InstallerFolder}에 있습니다. InstallerClean은 설치된 모든 프로그램에 대해 Windows에 문의합니다. 어떤 프로그램도 자기 것이라고 하지 않거나({0}), 더 새로운 패치가 그 파일을 대체했고 어떤 프로그램도 그 파일로 되돌아갈 수 없을 때({1}) 목록에 오릅니다.`,
   'Body.MainExplanation.Action': `직접 고른 백업 폴더로 옮긴 다음, 프로그램이 여전히 정상적으로 업데이트되고 제거되는지 확인되면 그 폴더를 삭제하세요. {InstallerFolder}에 다시 넣으면 모두 원래대로 돌아갑니다. 아니면 지금 영구히 삭제하세요.`,
   'Body.PendingReboot.MsiExecuteMutex': `지금 무언가가 Windows Installer를 사용하고 있습니다. Windows 업데이트이거나 백그라운드에서 설치 중인 프로그램일 수 있습니다. 그동안 이동과 삭제는 일시 중지되어, InstallerClean이 변경 중인 {InstallerFolder}를 건드리지 않습니다. 끝나면 다시 검사하면 두 기능이 돌아옵니다.`,
+  'Body.PendingReboot.MsiExecuteMutexAccessRefused': `Windows가 InstallerClean에 Windows Installer가 사용 중인지 확인할 권한을 주지 않아, 이동과 삭제가 일시 중지되었고 InstallerClean은 {InstallerFolder}를 건드리지 않습니다. Windows를 다시 시작한 뒤 다시 검사하세요. 그래도 Windows가 거부한다면, 이 PC는 InstallerClean이 정리할 수 있는 PC가 아닙니다.`,
   'Body.PendingReboot.InstallerInProgress': `이 컴퓨터에 이전 Windows Installer 트랜잭션이 중단된 채 남아 있습니다. {InstallerFolder}를 정리하기 전에 그 설치를 계속하거나 되돌리세요(또는 Windows를 다시 시작하세요).`,
   'Body.PendingReboot.PendingRenameInCache': `Windows가 다음 재시작 때 처리할 파일 이름 변경을 대기열에 넣어 두었고, 그 대상이 {InstallerFolder}입니다. 정리하기 전에 Windows를 다시 시작하세요.`,
   'Body.NoFileSelected': `세부 정보를 보려면 파일을 선택하세요.`,

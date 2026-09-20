@@ -105,6 +105,7 @@ public partial class ScanViewModel : ObservableObject
     public string PendingRebootBannerText => PendingRebootResult?.Reason switch
     {
         PendingRebootReason.MsiExecuteMutexHeld => Strings.Body_PendingReboot_MsiExecuteMutex,
+        PendingRebootReason.MsiExecuteMutexAccessRefused => Strings.Body_PendingReboot_MsiExecuteMutexAccessRefused,
         PendingRebootReason.InstallerInProgress => Strings.Body_PendingReboot_InstallerInProgress,
         PendingRebootReason.PendingRenameInCache => Strings.Body_PendingReboot_PendingRenameInCache,
         PendingRebootReason.PendingRenameUnresolved => Strings.Body_PendingReboot_PendingRenameUnresolved,

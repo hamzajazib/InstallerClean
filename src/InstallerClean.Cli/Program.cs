@@ -572,10 +572,11 @@ internal static class Program
             //
             // THE PATHS THAT NOW PRINT NOTHING ARE THE ONES THE WINDOW IS ALSO
             // SILENT ON, which is the point rather than a loss: an installer-busy
-            // refusal, an unavailable lock and a free-space refusal all return
-            // before the print, and none of them commits anything, so there is no
-            // completed-of-intended count for the sentence to sit beside. The
-            // window reaches no completion screen on any of the three either.
+            // refusal, a refused lock, an unavailable lock and a free-space refusal
+            // all return before the print, and none of them commits anything, so
+            // there is no completed-of-intended count for the sentence to sit
+            // beside. The window reaches no completion screen on any of the four
+            // either.
             // A WHOLE-BATCH REFUSAL STOOD HERE UNTIL 3.0.0 and its shape is worth
             // keeping in mind rather than rediscovering. It fired when the machine
             // gained a product installed as a second instance of itself between the
@@ -657,12 +658,18 @@ internal static class Program
                 if (result.InstallerBusy)
                     return EmitPendingRebootBlocked(arg, PendingRebootReason.MsiExecuteMutexHeld, null);
 
+                // The security on Global\_MSIExecute refused the service the rights
+                // to open it, a refusal that began after the gate check passed, so
+                // it refused and touched nothing. Reported under the gate's own
+                // reason for the same refusal, so the run reads identically wherever
+                // the refusal was met.
+                if (result.InstallerLockAccessRefused)
+                    return EmitPendingRebootBlocked(arg, PendingRebootReason.MsiExecuteMutexAccessRefused, null);
+
                 // The service could not take Global\_MSIExecute and nothing was
                 // shown to be holding it, so it refused and touched nothing.
                 if (result.InstallerLockUnavailable)
                     return EmitInstallerLockUnavailable(arg);
-                if (result.InstallerLockAccessRefused)
-                    return EmitInstallerLockAccessRefused(arg);
 
                 // THE RUN'S ONE HELD-BACK LINE, printed here because this is the
                 // last of the two producers to answer: the service takes the
@@ -822,13 +829,16 @@ internal static class Program
             if (moveResult.InstallerBusy)
                 return EmitPendingRebootBlocked(arg, PendingRebootReason.MsiExecuteMutexHeld, null);
 
+            // Global\_MSIExecute refused the service the rights to open it: same
+            // outcome as the gate meeting that refusal. See the /d branch.
+            if (moveResult.InstallerLockAccessRefused)
+                return EmitPendingRebootBlocked(arg, PendingRebootReason.MsiExecuteMutexAccessRefused, null);
+
             // The service could not take Global\_MSIExecute and nothing was shown
             // to be holding it, so it refused and touched nothing, its own
             // destination folder included.
             if (moveResult.InstallerLockUnavailable)
                 return EmitInstallerLockUnavailable(arg);
-            if (moveResult.InstallerLockAccessRefused)
-                return EmitInstallerLockAccessRefused(arg);
 
             // The run's one held-back line. See the /d branch for why the two
             // producers' tallies are added and printed here rather than one each,
@@ -1390,39 +1400,30 @@ internal static class Program
 
     /// <summary>
     /// The stdout sentence for a run refused because the security on
-    /// <c>Global\_MSIExecute</c> would not let the app open it. Keyed off the flag
-    /// exactly as <see cref="InstallerLockUnavailableLine"/> is, and separate from
-    /// it because the two refusals are different facts about the machine: one says
-    /// nothing could be shown to hold the lock, this one says the app was not
-    /// allowed to look.
+    /// <c>Global\_MSIExecute</c> would not let the app open it, wherever the
+    /// refusal was met: <see cref="PendingRebootBlockedMessage"/> prints it for
+    /// <see cref="PendingRebootReason.MsiExecuteMutexAccessRefused"/>, which covers the
+    /// gate and the action services' acquire alike. Keyed off the flag exactly as
+    /// <see cref="InstallerLockUnavailableLine"/> is, and separate from it because
+    /// the two refusals are different facts about the machine: one says nothing
+    /// could be shown to hold the lock, this one says the app was not allowed to
+    /// look.
     /// </summary>
     internal static string InstallerLockAccessRefusedLine(string arg) =>
         arg == "/m" ? Strings.Cli_MoveInstallerLockAccessRefused : Strings.Cli_InstallerLockAccessRefused;
 
     /// <summary>
-    /// The Application-channel line for that refusal. ONE line covers both flags
-    /// and <c>{0}</c> names which one ran, on the same terms as
-    /// <see cref="InstallerLockUnavailableEventLogLine"/>: an ending naming a
-    /// single action is false of half the runs that can produce it.
+    /// Reports a <c>/d</c> or <c>/m</c> the action service refused because it could
+    /// not take <c>Global\_MSIExecute</c> and nothing was shown to be holding it, and
+    /// returns the exit code for it.
     /// </summary>
     /// <remarks>
-    /// Built outside the en-GB scope, like its sibling: the caller wraps it, so the
-    /// line renders English in production and in the ambient culture anywhere else.
-    /// </remarks>
-    internal static string InstallerLockAccessRefusedEventLogLine(string arg) =>
-        string.Format(Strings.Cli_EventLogInstallerLockAccessRefused, arg);
-
-    /// <summary>
-    /// Reports a <c>/d</c> or <c>/m</c> the action service refused for want of
-    /// <c>Global\_MSIExecute</c>, and returns the exit code for it.
-    /// </summary>
-    /// <remarks>
-    /// Deliberately NOT routed through <see cref="EmitPendingRebootBlocked"/>:
-    /// every <see cref="PendingRebootReason"/> it can name asserts something is in
-    /// progress, and the defining fact here is that nothing has been shown to be.
-    /// TransientSkip and ExitTransient all the same, on that method's own
-    /// reasoning: the condition can clear on its own, so a scheduler should come
-    /// back rather than treat the machine as broken.
+    /// Deliberately NOT routed through <see cref="EmitPendingRebootBlocked"/>: no
+    /// <see cref="PendingRebootReason"/> describes it. The gate's probe reads the
+    /// same failure as not held, so the gate never reports this condition and has no
+    /// sentence for it. TransientSkip and ExitTransient, on the reasoning that
+    /// method gives its transient reasons: the condition can clear on its own, so a
+    /// scheduler should come back rather than treat the machine as broken.
     ///
     /// The two lines it emits are separately reachable and this method is not, so
     /// that the wording can be held by tests without one of them writing to the
@@ -1436,33 +1437,6 @@ internal static class Program
         Console.WriteLine(InstallerLockUnavailableLine(arg));
         MachineContract.WriteEventLog(CliEventClass.TransientSkip,
             () => InstallerLockUnavailableEventLogLine(arg));
-        return ExitTransient;
-    }
-
-    /// <summary>
-    /// Reports a <c>/d</c> or <c>/m</c> the action service refused because the
-    /// security on <c>Global\_MSIExecute</c> would not let it open the object, and
-    /// returns the exit code for it.
-    /// </summary>
-    /// <remarks>
-    /// The SAME exit code and event class as
-    /// <see cref="EmitInstallerLockUnavailable"/>, and only the wording differs.
-    /// What the two refusals have in common is a run that stopped before it
-    /// touched anything, which is what the shared code carries to a scheduler;
-    /// what the operator is told is which of the two happened, which is what they
-    /// differ in. Neither line tells the operator whether to retry: the app was
-    /// refused the one question that would have said, so it reports what happened
-    /// and leaves that judgement to whoever reads it.
-    ///
-    /// Its two lines are separately reachable and this method is not, on the same
-    /// terms as its sibling: the wording can be held by tests without one of them
-    /// writing to the Application channel.
-    /// </remarks>
-    private static int EmitInstallerLockAccessRefused(string arg)
-    {
-        Console.WriteLine(InstallerLockAccessRefusedLine(arg));
-        MachineContract.WriteEventLog(CliEventClass.TransientSkip,
-            () => InstallerLockAccessRefusedEventLogLine(arg));
         return ExitTransient;
     }
 
@@ -1523,12 +1497,18 @@ internal static class Program
     /// which is what keeps the fallback below unreachable; the window's banner is held
     /// to the same standard by ScanViewModelPendingRebootTests and is testable already,
     /// being a bound property.
+    ///
+    /// <paramref name="arg"/> is the lower-cased flag. One reason reads it: a refused
+    /// lock prints the sentence the action services' refusal prints, which closes by
+    /// naming what did not happen to the files and so comes in a /d and a /m form.
     /// </summary>
-    internal static string PendingRebootBlockedMessage(PendingRebootReason reason, string? detail) =>
+    internal static string PendingRebootBlockedMessage(string arg, PendingRebootReason reason, string? detail) =>
         reason switch
         {
             PendingRebootReason.MsiExecuteMutexHeld =>
                 Strings.Cli_PendingRebootBlocked_MsiExecuteMutex,
+            PendingRebootReason.MsiExecuteMutexAccessRefused =>
+                InstallerLockAccessRefusedLine(arg),
             PendingRebootReason.InstallerInProgress =>
                 Strings.Cli_PendingRebootBlocked_InstallerInProgress,
             PendingRebootReason.PendingRenameInCache =>
@@ -1539,11 +1519,10 @@ internal static class Program
                 Strings.Cli_PendingRebootBlocked_PendingRenameUnresolved,
             PendingRebootReason.RegistryCheckUnreadable =>
                 Strings.Cli_PendingRebootBlocked_RegistryCheckUnreadable,
-            // What a reason with no line of its own gets. It threw before, which
-            // landed in the generic catch and reported an unexpected crash with
-            // exit 1, where a blocked run wants the 75 a scheduler retries on.
-            // It cannot fire for a null reason either: PendingRebootResult.Block
-            // takes a non-nullable one.
+            // What a reason with no line of its own gets: a sentence true of the
+            // whole family, where a throw would reach the generic catch and report
+            // a held run as an unexpected crash. It cannot fire for a null reason
+            // either: PendingRebootResult.Block takes a non-nullable one.
             _ => Strings.Cli_PendingRebootBlocked_Other,
         };
 
@@ -1566,6 +1545,8 @@ internal static class Program
         {
             PendingRebootReason.MsiExecuteMutexHeld =>
                 Strings.Cli_EventLogReason_MsiExecuteMutex,
+            PendingRebootReason.MsiExecuteMutexAccessRefused =>
+                Strings.Cli_EventLogReason_MsiExecuteMutexAccessRefused,
             PendingRebootReason.InstallerInProgress =>
                 Strings.Cli_EventLogReason_InstallerInProgress,
             PendingRebootReason.PendingRenameInCache =>
@@ -1587,13 +1568,14 @@ internal static class Program
     /// this line back without doing both.
     ///
     /// WHAT THE FIXED HALF SAYS, AND WHY IT SAYS SO LITTLE. The label is the whole of
-    /// what the line claims about the condition. Of the five, one is an installer
-    /// running right now, one a suspended transaction, two are operations queued for
-    /// the next restart, and one is a registry value the check could not read, so
-    /// nothing shorter than the label is true of all five.
+    /// what the line claims about the condition. Of the six, one is an installer
+    /// running right now, one a lock the app was refused permission to open, one a
+    /// suspended transaction, two are operations queued for the next restart, and one
+    /// is a registry value the check could not read, so nothing shorter than the label
+    /// is true of all six.
     ///
     /// The detail arrives carrying its own separator, which is why the template ends
-    /// in a placeholder with no space in front of it: the four reasons that never
+    /// in a placeholder with no space in front of it: the five reasons that never
     /// carry a detail would otherwise each log a line with a space hanging off it.
     ///
     /// CALL IT FROM INSIDE THE EVENT-LOG SCOPE, for the reason
@@ -1620,11 +1602,16 @@ internal static class Program
     /// mapping that to <see cref="PendingRebootReason.MsiExecuteMutexHeld"/> here
     /// makes the service-boundary refusal produce the identical machine contract
     /// (stdout line, event-log entry, exit code) a gate block does, so an RMM
-    /// consumer cannot tell the two apart.
+    /// consumer cannot tell the two apart. A service refused the rights to open the
+    /// object (<see cref="Models.MoveResult.InstallerLockAccessRefused"/> /
+    /// <see cref="Models.DeleteResult.InstallerLockAccessRefused"/>) maps to
+    /// <see cref="PendingRebootReason.MsiExecuteMutexAccessRefused"/> on the same
+    /// terms, so one refusal carries one sentence and one exit code wherever it is
+    /// met.
     /// </summary>
     private static int EmitPendingRebootBlocked(string arg, PendingRebootReason reason, string? detail)
     {
-        Console.WriteLine(PendingRebootBlockedMessage(reason, detail));
+        Console.WriteLine(PendingRebootBlockedMessage(arg, reason, detail));
 
         // WHAT A SCHEDULER IS TOLD, DECIDED FROM THE REASON AND TAKEN AS A PAIR.
         // The exit code and the entry class are one statement about this run said to
@@ -1646,6 +1633,11 @@ internal static class Program
         // run: nothing was processed. A reason added to the enum later lands here
         // too, on the same reasoning, until somebody decides otherwise in
         // CliPendingRebootOutcomeTests' own table.
+        //
+        // NOR IS A LOCK THE APP WAS REFUSED PERMISSION TO OPEN, which takes the same
+        // arm. Nothing has been seen holding it, and the security on an object does
+        // not change by being waited on: the refusal stands for as long as the object
+        // does, and every run until then is refused identically.
         var (exitCode, entryClass) = reason switch
         {
             PendingRebootReason.MsiExecuteMutexHeld or

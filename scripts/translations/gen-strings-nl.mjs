@@ -230,6 +230,7 @@ const MAP = {
   'Body.NotScanned.Why': `Klik op Opnieuw scannen om {InstallerFolder} te doorzoeken op installatiebestanden die geen enkel programma nog nodig heeft.`,
   'Body.PendingReboot.Lead': `Deze bestanden kunnen op dit moment niet worden opgeruimd.`,
   'Body.PendingReboot.MsiExecuteMutex': `Er is op dit moment iets bezig met Windows Installer, zoals een Windows-update of een programma dat op de achtergrond installeert. Verplaatsen en Verwijderen staan stil zolang dat loopt, zodat InstallerClean {InstallerFolder} niet aanraakt terwijl daar iets verandert. Zodra het klaar is, klik je op Opnieuw scannen en komen ze terug.`,
+  'Body.PendingReboot.MsiExecuteMutexAccessRefused': `Windows weigerde InstallerClean toestemming om te controleren of Windows Installer bezig is, dus Verplaatsen en Verwijderen staan stil en InstallerClean raakt {InstallerFolder} niet aan. Start Windows opnieuw op en kies Opnieuw scannen. Als Windows het dan nog steeds weigert, is dit geen machine die InstallerClean kan opruimen.`,
   'Body.PendingReboot.InstallerInProgress': `Een eerdere Windows Installer-transactie is op deze computer opgeschort. Hervat die installatie of draai haar terug (of herstart Windows) voordat je {InstallerFolder} opruimt.`,
   'Body.PendingReboot.PendingRenameInCache': `Windows heeft voor de volgende herstart een bestandshernoeming in de wachtrij staan die {InstallerFolder} raakt. Herstart Windows voordat je opruimt.`,
   'Body.NoFileSelected': `Selecteer een bestand om de details te bekijken.`,

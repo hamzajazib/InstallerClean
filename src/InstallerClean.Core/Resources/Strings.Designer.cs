@@ -144,6 +144,7 @@ public static class Strings
     public static string Body_PendingReboot_InstallerInProgress => Get("Body.PendingReboot.InstallerInProgress");
     public static string Body_PendingReboot_Lead => Get("Body.PendingReboot.Lead");
     public static string Body_PendingReboot_MsiExecuteMutex => Get("Body.PendingReboot.MsiExecuteMutex");
+    public static string Body_PendingReboot_MsiExecuteMutexAccessRefused => Get("Body.PendingReboot.MsiExecuteMutexAccessRefused");
     public static string Body_PendingReboot_Other => Get("Body.PendingReboot.Other");
     public static string Body_PendingReboot_PendingRenameInCache => Get("Body.PendingReboot.PendingRenameInCache");
     public static string Body_PendingReboot_PendingRenameUnresolved => Get("Body.PendingReboot.PendingRenameUnresolved");
@@ -164,7 +165,6 @@ public static class Strings
     public static string Cli_EventLogDeleteSummary => Get("Cli.EventLogDeleteSummary");
     public static string Cli_EventLogHardError => Get("Cli.EventLogHardError");
     public static string Cli_EventLogHardError_NoLog => Get("Cli.EventLogHardError.NoLog");
-    public static string Cli_EventLogInstallerLockAccessRefused => Get("Cli.EventLogInstallerLockAccessRefused");
     public static string Cli_EventLogInstallerLockUnavailable => Get("Cli.EventLogInstallerLockUnavailable");
     public static string Cli_EventLogMissingFromDisk_Plural => Get("Cli.EventLogMissingFromDisk.Plural");
     public static string Cli_EventLogMissingFromDisk_Singular => Get("Cli.EventLogMissingFromDisk.Singular");
@@ -184,6 +184,7 @@ public static class Strings
     public static string Cli_EventLogPendingRebootBlocked => Get("Cli.EventLogPendingRebootBlocked");
     public static string Cli_EventLogReason_InstallerInProgress => Get("Cli.EventLogReason.InstallerInProgress");
     public static string Cli_EventLogReason_MsiExecuteMutex => Get("Cli.EventLogReason.MsiExecuteMutex");
+    public static string Cli_EventLogReason_MsiExecuteMutexAccessRefused => Get("Cli.EventLogReason.MsiExecuteMutexAccessRefused");
     public static string Cli_EventLogReason_PendingRenameInCache => Get("Cli.EventLogReason.PendingRenameInCache");
     public static string Cli_EventLogReason_PendingRenameUnresolved => Get("Cli.EventLogReason.PendingRenameUnresolved");
     public static string Cli_EventLogReason_RegistryCheckUnreadable => Get("Cli.EventLogReason.RegistryCheckUnreadable");

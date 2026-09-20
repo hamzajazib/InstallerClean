@@ -6,7 +6,8 @@ namespace InstallerClean.Tests.Helpers;
 /// Hand fake for <see cref="IMutexProbe"/> so the action services'
 /// <c>Global\_MSIExecute</c> hold can be driven without a real Windows named
 /// mutex. Simulates the outcomes of
-/// <see cref="IMutexProbe.TryAcquire"/>, named for what the probe returns rather
+/// <see cref="IMutexProbe.TryAcquire"/>, and the matching answer from
+/// <see cref="IMutexProbe.Sample"/>, named for what the probe returns rather
 /// than for what a caller does with it: the mutex was acquired, it is held by
 /// another process, the object's security refused the open, or the acquire failed
 /// some other way with nothing shown to be holding it. Records how many times a
@@ -47,7 +48,18 @@ internal sealed class FakeMutexProbe : IMutexProbe
 
     public FakeMutexProbe(Mode mode) => _mode = mode;
 
-    public bool IsHeld(string name) => _mode == Mode.HeldByAnother;
+    /// <summary>
+    /// The sample the real probe takes of the same machine: a mutex another process
+    /// holds reads as held, and one whose security refuses the acquire refuses the
+    /// sample too, the two asking for the same rights. Every other mode reads as not
+    /// held.
+    /// </summary>
+    public MutexSample Sample(string name) => _mode switch
+    {
+        Mode.HeldByAnother => MutexSample.Held,
+        Mode.AccessRefused => MutexSample.AccessRefused,
+        _ => MutexSample.NotHeld,
+    };
 
     public IMutexLease? TryAcquire(string name, out MutexAcquireOutcome outcome)
     {

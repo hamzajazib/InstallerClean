@@ -1,21 +1,28 @@
 using System.Globalization;
 using InstallerClean.Cli;
 using InstallerClean.Resources;
+using InstallerClean.Services;
 
 namespace InstallerClean.Tests.Helpers;
 
 /// <summary>
 /// The two lines a <c>/d</c> or <c>/m</c> emits when the action service refused
 /// the batch for want of <c>Global\_MSIExecute</c>: the sentence the operator
-/// reads and the Application-channel entry an RMM matches on.
+/// reads and the Application-channel entry an RMM matches on. Most of this file is
+/// the refusal with nothing shown holding the lock; the last test is the line a lock
+/// the app was refused permission to open writes.
 /// </summary>
 /// <remarks>
 /// What is NOT held here, so nobody reads this file as covering the branch: the
-/// emitting method is private and stays that way, because reaching it would mean
-/// a test run writing a real entry to the Application log. So nothing in the
-/// suite proves that a refused batch calls it, or that it exits transient. Those
-/// hold by inspection of two call sites and the exit code the method returns, and
-/// a change that stopped calling it would pass everything here.
+/// method emitting the first refusal is private and stays that way, because
+/// reaching it would mean a test run writing a real entry to the Application log.
+/// So nothing in the suite proves that such a batch calls it, or that it exits
+/// transient. Those hold by inspection of two call sites and the exit code the
+/// method returns, and a change that stopped calling it would pass everything here.
+///
+/// A refused lock goes out through the pending-reboot emitter under the gate's own
+/// reason for it, wherever it is met, and CliPendingRebootOutcomeTests holds its
+/// exit code at both points.
 /// </remarks>
 public class CliLockRefusalTests
 {
@@ -110,5 +117,23 @@ public class CliLockRefusalTests
             CultureInfo.CurrentUICulture = ui;
             CultureInfo.CurrentCulture = format;
         }
+    }
+
+    [Theory]
+    [InlineData("/d")]
+    [InlineData("/m")]
+    public void A_refused_lock_writes_one_line_naming_the_flag_and_both_actions(string arg)
+    {
+        // The whole line, because Application-log tooling matches on its words: a
+        // refused lock writes exactly this, at the pending-reboot check and at the
+        // acquire alike, and the flag it opens with is the only part that varies.
+        var line = MachineContract.English(() => Program.PendingRebootEventLogLine(
+            arg, PendingRebootReason.MsiExecuteMutexAccessRefused, detail: null));
+
+        Assert.Equal(
+            $"{arg} mode aborted: access to the Windows Installer mutex was refused, so "
+            + "whether an installation was in progress could not be established and no "
+            + "files were moved or deleted.",
+            line);
     }
 }

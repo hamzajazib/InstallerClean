@@ -1,10 +1,11 @@
 namespace InstallerClean.Services;
 
 /// <summary>
-/// Returns Block when any of three signals indicates the MSI cache is currently at risk:
-/// the _MSIExecute mutex, the Installer\InProgress key, or any PendingFileRenameOperations
-/// entry, source or destination, that names a path under %SystemRoot%\Installer or that
-/// the app cannot place at all.
+/// Returns Block when any of three signals says the MSI cache is at risk or cannot be
+/// shown not to be: the _MSIExecute mutex, held or refusing this process the rights to
+/// open it; the Installer\InProgress key; or any PendingFileRenameOperations entry, source
+/// or destination, that names a path under %SystemRoot%\Installer or that the app cannot
+/// place at all.
 /// </summary>
 /// <remarks>
 /// Every entry is checked, not just the sources: a queued rename INTO the cache is as
@@ -55,20 +56,25 @@ public sealed class PendingRebootService : IPendingRebootService
     {
         // Mutex first because an active install is the most decisive signal; if it
         // fires, the InProgress and PendingFileRenameOperations probes are skipped.
-        bool mutexHeld;
+        // A refused open is read here too and stops the run just as early: the
+        // action services' acquire asks for the same rights, so a refusal standing
+        // now refuses the batch later whatever the other two signals say.
+        MutexSample mutex;
         try
         {
-            mutexHeld = _mutex.IsHeld(MsiExecuteMutexName);
+            mutex = _mutex.Sample(MsiExecuteMutexName);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
         {
             // OOM and StackOverflow propagate, matching RegistryReader / MutexProbe:
             // swallowing them here would downgrade a real memory-pressure failure to
             // "no signal" and let the gate report Clean while an install is in flight.
-            mutexHeld = false;
+            mutex = MutexSample.NotHeld;
         }
-        if (mutexHeld)
+        if (mutex is MutexSample.Held)
             return PendingRebootResult.Block(PendingRebootReason.MsiExecuteMutexHeld);
+        if (mutex is MutexSample.AccessRefused)
+            return PendingRebootResult.Block(PendingRebootReason.MsiExecuteMutexAccessRefused);
 
         // IRegistryReader documents "never throws", but the unit tests deliberately
         // substitute throwing fakes to exercise what a non-conforming implementation

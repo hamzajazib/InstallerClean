@@ -6790,6 +6790,23 @@
       "uk": "e440cbd7e5b49242",
       "vi": "e440cbd7e5b49242",
       "zh-Hans": "e440cbd7e5b49242"
+    },
+    "Body.PendingReboot.MsiExecuteMutexAccessRefused": {
+      "de": "7513635677f59dab",
+      "es": "7513635677f59dab",
+      "fr": "7513635677f59dab",
+      "id": "7513635677f59dab",
+      "it": "7513635677f59dab",
+      "ja": "7513635677f59dab",
+      "ko": "7513635677f59dab",
+      "nl": "7513635677f59dab",
+      "pl": "7513635677f59dab",
+      "pt-BR": "7513635677f59dab",
+      "ru": "7513635677f59dab",
+      "tr": "7513635677f59dab",
+      "uk": "7513635677f59dab",
+      "vi": "7513635677f59dab",
+      "zh-Hans": "7513635677f59dab"
     }
   }
 }

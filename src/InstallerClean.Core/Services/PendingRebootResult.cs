@@ -37,6 +37,22 @@ public enum PendingRebootReason
     /// <summary>Global\_MSIExecute mutex is held: a Windows Installer transaction is currently running. Source: MS Learn, _MSIExecute Mutex.</summary>
     MsiExecuteMutexHeld,
 
+    /// <summary>
+    /// Global\_MSIExecute exists and its security refuses this process the rights to
+    /// open it, so whether a Windows Installer transaction holds it was never sampled.
+    ///
+    /// IT IS A SEPARATE VERDICT FROM <see cref="MsiExecuteMutexHeld"/> BECAUSE ONE
+    /// MESSAGE CANNOT BE TRUE OF BOTH. That one says something is using Windows
+    /// Installer right now; this one says only that the app was not allowed to look,
+    /// and nothing has been seen holding the lock.
+    ///
+    /// The action services' acquire asks for the same rights the gate's probe does, so
+    /// they meet the same refusal, and the command line reports a refusal met there
+    /// under this reason too: one condition, one sentence and one exit code, wherever it
+    /// is met.
+    /// </summary>
+    MsiExecuteMutexAccessRefused,
+
     /// <summary>HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\InProgress exists: a previous Windows Installer transaction is suspended. Source: MS Learn, Msizap Remarks.</summary>
     InstallerInProgress,
 

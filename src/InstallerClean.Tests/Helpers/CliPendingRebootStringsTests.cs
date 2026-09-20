@@ -22,14 +22,16 @@ namespace InstallerClean.Tests.Helpers;
 /// </summary>
 public class CliPendingRebootStringsTests
 {
-    [Fact]
-    public void Every_reason_has_a_stdout_line_of_its_own()
+    [Theory]
+    [InlineData("/d")]
+    [InlineData("/m")]
+    public void Every_reason_has_a_stdout_line_of_its_own(string arg)
     {
         var seen = new List<string>();
 
         foreach (var reason in Enum.GetValues<PendingRebootReason>())
         {
-            var line = Program.PendingRebootBlockedMessage(reason, detail: null);
+            var line = Program.PendingRebootBlockedMessage(arg, reason, detail: null);
 
             Assert.False(string.IsNullOrWhiteSpace(line), $"{reason} prints nothing");
             Assert.NotEqual(Strings.Cli_PendingRebootBlocked_Other, line);
@@ -40,6 +42,25 @@ public class CliPendingRebootStringsTests
         // for every reason at once and this test would pass over the very gap it
         // exists to close.
         Assert.Equal(seen.Count, seen.Distinct().Count());
+    }
+
+    /// <summary>
+    /// A refused lock prints the refusal sentence the action services' refusal
+    /// prints, for the flag that ran, and never the sentence saying something is
+    /// using Windows Installer, which nothing has seen.
+    /// </summary>
+    [Fact]
+    public void A_refused_lock_prints_the_refusal_sentence_for_the_flag_that_ran()
+    {
+        var delete = Program.PendingRebootBlockedMessage(
+            "/d", PendingRebootReason.MsiExecuteMutexAccessRefused, detail: null);
+        var move = Program.PendingRebootBlockedMessage(
+            "/m", PendingRebootReason.MsiExecuteMutexAccessRefused, detail: null);
+
+        Assert.Equal(Strings.Cli_InstallerLockAccessRefused, delete);
+        Assert.Equal(Strings.Cli_MoveInstallerLockAccessRefused, move);
+        Assert.NotEqual(Strings.Cli_PendingRebootBlocked_MsiExecuteMutex, delete);
+        Assert.NotEqual(Strings.Cli_PendingRebootBlocked_MsiExecuteMutex, move);
     }
 
     [Fact]
@@ -74,7 +95,7 @@ public class CliPendingRebootStringsTests
 
         Assert.Equal(
             Strings.Cli_PendingRebootBlocked_Other,
-            Program.PendingRebootBlockedMessage(unwritten, detail: null));
+            Program.PendingRebootBlockedMessage("/d", unwritten, detail: null));
         Assert.Equal(
             unwritten.ToString(),
             MachineContract.English(() => Program.PendingRebootEventLogReason(unwritten)));
@@ -92,10 +113,11 @@ public class CliPendingRebootStringsTests
             var line = MachineContract.English(
                 () => Program.PendingRebootEventLogLine("/m", reason, detail: null));
 
-            // Only two of the five are a restart waiting to happen. One is an
-            // installer running right now, one a suspended transaction, and one a
-            // registry value the check could not read, which is the check saying it
-            // cannot answer rather than an answer.
+            // Only two of the six are a restart waiting to happen. One is an
+            // installer running right now, one a lock the app was refused permission
+            // to open, one a suspended transaction, and one a registry value the
+            // check could not read, which is the check saying it cannot answer
+            // rather than an answer.
             Assert.DoesNotContain(
                 "pending reboot detected", line, StringComparison.OrdinalIgnoreCase);
             // Beside the absence, so the absence is attributable: a line that had
@@ -114,7 +136,7 @@ public class CliPendingRebootStringsTests
             "/m", PendingRebootReason.PendingRenameUnresolved, detail: null));
 
         // The separator comes with the detail, so the reason that has one reads as a
-        // sentence and the four that do not end where their sentence ends.
+        // sentence and the five that do not end where their sentence ends.
         Assert.EndsWith(@". C:\Windows\Installer\1234.msi", withPath);
         Assert.EndsWith(".", withNothing);
         Assert.Equal(withNothing, withNothing.TrimEnd());
@@ -128,9 +150,9 @@ public class CliPendingRebootStringsTests
     public void The_in_cache_line_spends_its_placeholder_on_the_path_it_was_given()
     {
         var withPath = Program.PendingRebootBlockedMessage(
-            PendingRebootReason.PendingRenameInCache, @"C:\Windows\Installer\1234.msi");
+            "/d", PendingRebootReason.PendingRenameInCache, @"C:\Windows\Installer\1234.msi");
         var withNothing = Program.PendingRebootBlockedMessage(
-            PendingRebootReason.PendingRenameInCache, detail: null);
+            "/d", PendingRebootReason.PendingRenameInCache, detail: null);
 
         Assert.Contains(@"C:\Windows\Installer\1234.msi", withPath);
         Assert.DoesNotContain("{0}", withPath);

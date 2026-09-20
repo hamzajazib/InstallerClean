@@ -1,15 +1,21 @@
 namespace InstallerClean.Services;
 
-/// <summary>Probes whether a named system mutex is currently held, without creating it.</summary>
+/// <summary>Probes a named system mutex: whether it is held, and whether this process may open it.</summary>
 public interface IMutexProbe
 {
     /// <summary>
-    /// True when the named mutex exists and is currently owned by some
-    /// thread. Never creates the mutex. An existing mutex whose DACL
-    /// refuses the probe counts as held (held cannot be ruled out);
-    /// a missing mutex and other failures count as not held.
+    /// Samples the named mutex with a zero wait. Never creates it.
+    /// <see cref="MutexSample.Held"/> when it exists and another thread owns it.
+    /// <see cref="MutexSample.AccessRefused"/> when it exists and its security
+    /// refuses this process the rights to open it, so whether anything owns it was
+    /// never sampled. <see cref="MutexSample.NotHeld"/> for a mutex that is not
+    /// there, one that is there and unowned, an abandoned one, and a probe that
+    /// fails any other non-fatal way.
+    ///
+    /// The open asks for exactly the rights <see cref="TryAcquire"/> asks for, so an
+    /// object that refuses one refuses the other.
     /// </summary>
-    bool IsHeld(string name);
+    MutexSample Sample(string name);
 
     /// <summary>
     /// Acquires the named mutex with a zero wait, creating it if it does not
@@ -39,6 +45,35 @@ public interface IMutexProbe
     /// three.
     /// </summary>
     IMutexLease? TryAcquire(string name, out MutexAcquireOutcome outcome);
+}
+
+/// <summary>
+/// What a zero-wait sample of a named mutex found. The two answers that stop a
+/// caller are kept apart because they are different facts about the machine: one
+/// says another thread owns the mutex, the other says this process was not allowed
+/// to look.
+///
+/// NotHeld stays the first member: it is what <c>default(MutexSample)</c> and an
+/// unconfigured test substitute return, and every other member stops a caller. A
+/// member added here reads as not held to <see cref="PendingRebootService"/> until it
+/// takes an arm of its own there.
+/// </summary>
+public enum MutexSample
+{
+    /// <summary>
+    /// Nothing was seen owning the mutex: it is not there, it is there and unowned, it
+    /// was abandoned, or the probe failed some other non-fatal way.
+    /// </summary>
+    NotHeld,
+
+    /// <summary>The mutex was opened and a zero wait failed to take it, so another thread owns it.</summary>
+    Held,
+
+    /// <summary>
+    /// The object exists and its security descriptor refused this process the rights
+    /// to open it, so whether anything owns it was never sampled.
+    /// </summary>
+    AccessRefused,
 }
 
 /// <summary>

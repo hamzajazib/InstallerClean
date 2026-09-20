@@ -7,8 +7,8 @@ using NSubstitute;
 namespace InstallerClean.Tests.ViewModels;
 
 /// <summary>
-/// The banner shown over Move and Delete while Windows Installer is busy, driven
-/// from the enum itself rather than from a list a test author kept in step.
+/// The banner shown over Move and Delete while the pending-reboot check holds them,
+/// driven from the enum itself rather than from a list a test author kept in step.
 ///
 /// Both properties here are read at the one moment the buttons are dead, and
 /// both fail quietly rather than loudly if a reason is ever added without them:
@@ -44,6 +44,23 @@ public class ScanViewModelPendingRebootTests
         // above for every reason at once and this test would pass over the very
         // gap it exists to close.
         Assert.Equal(seen.Count, seen.Distinct().Count());
+    }
+
+    /// <summary>
+    /// A Windows Installer lock the app was refused permission to open paints its own
+    /// banner, never the one saying something is using Windows Installer: nothing has
+    /// been seen holding the lock, and that banner would tell the user to wait for
+    /// something that may not be happening.
+    /// </summary>
+    [Fact]
+    public void A_refused_lock_paints_its_own_banner_and_not_the_busy_one()
+    {
+        var vm = NewViewModel();
+        vm.PendingRebootResult = PendingRebootResult.Block(PendingRebootReason.MsiExecuteMutexAccessRefused);
+
+        Assert.True(vm.HasPendingReboot);
+        Assert.Equal(Strings.Body_PendingReboot_MsiExecuteMutexAccessRefused, vm.PendingRebootBannerText);
+        Assert.NotEqual(Strings.Body_PendingReboot_MsiExecuteMutex, vm.PendingRebootBannerText);
     }
 
     [Fact]

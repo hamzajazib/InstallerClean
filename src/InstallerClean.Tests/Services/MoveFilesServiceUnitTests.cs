@@ -367,6 +367,33 @@ public class MoveFilesServiceUnitTests
     }
 
     [Fact]
+    public async Task MoveFilesAsync_refuses_when_the_installer_mutex_refuses_it_the_rights_to_open_it()
+    {
+        var fs = new MockFileSystem();
+        var source = $@"{SourceDir}\a.msi";
+        fs.AddFile(source, new MockFileData("payload"));
+        // Not pre-created, for the reason the test above gives: a folder left
+        // unmade is the proof that the acquire is what stopped the batch.
+        var mutex = new Helpers.FakeMutexProbe(Helpers.FakeMutexProbe.Mode.AccessRefused);
+
+        var svc = new MoveFilesService(fs, mutex, installerFolderOverride: null);
+        var result = await svc.MoveFilesAsync(new[] { source }, DestDir, UnderLeaseClaims.None);
+
+        // Refused, touching nothing, and under its own flag: the app was not allowed
+        // to look, which is neither the lock being held nor an acquire that failed
+        // some other way, and the caller tells the user each in different words.
+        Assert.True(result.InstallerLockAccessRefused);
+        Assert.False(result.InstallerBusy);
+        Assert.False(result.InstallerLockUnavailable);
+        Assert.Equal(0, result.MovedCount);
+        Assert.Empty(result.Errors);
+        Assert.True(fs.File.Exists(source));
+        Assert.False(fs.Directory.Exists(DestDir));
+        Assert.Equal(1, mutex.AcquireAttempts);
+        Assert.Equal(0, mutex.Released);
+    }
+
+    [Fact]
     public async Task MoveFilesAsync_re_reads_inside_the_hold_and_before_the_destination_is_made()
     {
         // Two properties at once. Inside the hold, which is the only place the

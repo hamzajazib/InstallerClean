@@ -1,6 +1,7 @@
 using InstallerClean.Cli;
 using InstallerClean.Helpers;
 using InstallerClean.Models;
+using InstallerClean.Resources;
 using InstallerClean.Services;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -38,6 +39,7 @@ public class CliPendingRebootOutcomeTests
     private static readonly Dictionary<PendingRebootReason, (int Exit, CliEventClass Class)> Declared = new()
     {
         [PendingRebootReason.MsiExecuteMutexHeld]     = (CliExitCode.Transient, CliEventClass.TransientSkip),
+        [PendingRebootReason.MsiExecuteMutexAccessRefused] = (CliExitCode.Error, CliEventClass.HardError),
         [PendingRebootReason.InstallerInProgress]     = (CliExitCode.Transient, CliEventClass.TransientSkip),
         [PendingRebootReason.PendingRenameInCache]    = (CliExitCode.Transient, CliEventClass.TransientSkip),
         [PendingRebootReason.PendingRenameUnresolved] = (CliExitCode.Transient, CliEventClass.TransientSkip),
@@ -136,7 +138,62 @@ public class CliPendingRebootOutcomeTests
         Assert.NotEqual(CliExitCode.Partial, exit);
     }
 
-    private static async Task<int> RunHeldBy(PendingRebootReason reason)
+    /// <summary>
+    /// A lock the action service meets at its acquire is reported under the gate's own
+    /// reason for the same condition, so a run exits with the same code and prints the
+    /// same sentence whether the gate met the lock or the acquire did. One row per
+    /// mapping the host makes, for both flags.
+    ///
+    /// THE REFUSAL'S ROWS ARE THE ONES WITH TEETH. The acquire meets a refusal only when
+    /// it began after the gate ran, the two asking for the same rights, so a scheduler
+    /// that is told one thing on the night the refusal appears and another on every
+    /// night after it has been told two things about one condition.
+    /// </summary>
+    [Theory]
+    [InlineData("/d", PendingRebootReason.MsiExecuteMutexHeld)]
+    [InlineData("/m", PendingRebootReason.MsiExecuteMutexHeld)]
+    [InlineData("/d", PendingRebootReason.MsiExecuteMutexAccessRefused)]
+    [InlineData("/m", PendingRebootReason.MsiExecuteMutexAccessRefused)]
+    public async Task A_lock_met_at_the_acquire_reports_what_the_gate_reports_for_it(
+        string arg, PendingRebootReason reason)
+    {
+        var sentence = Program.PendingRebootBlockedMessage(arg, reason, detail: null);
+
+        var (gateExit, gateStdout) = await Run(arg, PendingRebootResult.Block(reason), metAtAcquire: null);
+        var (acquireExit, acquireStdout) = await Run(arg, PendingRebootResult.Clean, metAtAcquire: reason);
+
+        Assert.Equal(Declared[reason].Exit, gateExit);
+        Assert.Equal(gateExit, acquireExit);
+        Assert.Contains(sentence, gateStdout);
+        Assert.Contains(sentence, acquireStdout);
+        // A refusal never tells the operator something is using Windows Installer,
+        // at either point; nothing has been seen holding the lock.
+        if (reason == PendingRebootReason.MsiExecuteMutexAccessRefused)
+        {
+            Assert.DoesNotContain(Strings.Cli_PendingRebootBlocked_MsiExecuteMutex, gateStdout);
+            Assert.DoesNotContain(Strings.Cli_PendingRebootBlocked_MsiExecuteMutex, acquireStdout);
+        }
+    }
+
+    private static async Task<int> RunHeldBy(PendingRebootReason reason) =>
+        (await Run("/d", PendingRebootResult.Block(reason), metAtAcquire: null)).ExitCode;
+
+    /// <summary>
+    /// A move destination fully qualified on either host and outside both forbidden
+    /// sets, so the destination gates pass it. Nothing is created there: the move
+    /// service is a substitute.
+    /// </summary>
+    private static readonly string Destination =
+        Path.Combine(Path.GetTempPath(), "installerclean-cli-pending-reboot-outcome-test");
+
+    /// <summary>
+    /// Runs <paramref name="arg"/> to its end against a gate answering
+    /// <paramref name="gate"/>, and an action service that, when the run reaches it,
+    /// refuses at its acquire for the lock condition <paramref name="metAtAcquire"/>
+    /// names: held, or refused permission to open. Returns the exit code and stdout.
+    /// </summary>
+    private static async Task<(int ExitCode, string Stdout)> Run(
+        string arg, PendingRebootResult gate, PendingRebootReason? metAtAcquire)
     {
         // The gate sits after the scan, so the offer has to be non-empty or the run
         // returns on "nothing to do" before ever reaching it.
@@ -148,25 +205,50 @@ public class CliPendingRebootOutcomeTests
                 Array.Empty<RegisteredPackage>(), 0));
 
         var reboot = Substitute.For<IPendingRebootService>();
-        reboot.Check().Returns(PendingRebootResult.Block(reason));
+        reboot.Check().Returns(gate);
+
+        // Both files survive the re-verify, so a run the gate lets through reaches the
+        // action service with a batch to act on.
+        var reverifier = Substitute.For<IRemovableReverifier>();
+        reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(new ReverifyResult(new[] { OfferA, OfferB }, Array.Empty<string>()));
+
+        var busy = metAtAcquire == PendingRebootReason.MsiExecuteMutexHeld;
+        var refused = metAtAcquire == PendingRebootReason.MsiExecuteMutexAccessRefused;
+
+        var delete = Substitute.For<IDeleteFilesService>();
+        delete.DeleteFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new DeleteResult(0, Array.Empty<FileOperationError>(),
+                InstallerBusy: busy, InstallerLockAccessRefused: refused));
+
+        var move = Substitute.For<IMoveFilesService>();
+        move.MoveFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>(),
+                Arg.Any<UnderLeaseClaims>(), Arg.Any<IProgress<OperationProgress>?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new MoveResult(0, Array.Empty<FileOperationError>(),
+                InstallerBusy: busy, InstallerLockAccessRefused: refused));
 
         var services = new ServiceCollection()
             .AddSingleton(scan)
             .AddSingleton(reboot)
-            .AddSingleton(Substitute.For<IRemovableReverifier>())
-            .AddSingleton(Substitute.For<IDeleteFilesService>())
-            .AddSingleton(Substitute.For<IMoveFilesService>())
+            .AddSingleton(reverifier)
+            .AddSingleton(delete)
+            .AddSingleton(move)
             .AddSingleton(Substitute.For<ISettingsService>())
             .BuildServiceProvider();
+
+        var invocation = arg == "/m"
+            ? new CliInvocation(CliCommand.Move, null, Destination)
+            : new CliInvocation(CliCommand.Delete, null, null);
 
         var original = Console.Out;
         using var buffer = new StringWriter();
         try
         {
             Console.SetOut(buffer);
-            return await Program.RunWorkAsync(
-                "/d", new CliInvocation(CliCommand.Delete, null, null),
-                CancellationToken.None, services);
+            var exitCode = await Program.RunWorkAsync(arg, invocation, CancellationToken.None, services);
+            return (exitCode, buffer.ToString());
         }
         finally
         {

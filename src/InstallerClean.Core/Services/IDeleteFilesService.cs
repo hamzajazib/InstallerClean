@@ -81,12 +81,9 @@ public interface IDeleteFilesService
 /// could not be acquired and nothing was shown to be holding it: nothing was
 /// touched. Kept separate from <see cref="InstallerBusy"/> because the two need
 /// different answers, not different wording. The pending-reboot gate is what
-/// reports the busy case, and it accounts for this one neither way: its probe
-/// asks through a different call requesting different rights, so it can come
-/// back clean and leave a refusal with nothing on screen explaining it, and on
-/// an object whose DACL refuses that call too it reports held, which would
-/// assert an install nothing has shown. This flag carries its own sentence
-/// instead.
+/// reports the busy case, and it has no account of this one: its probe reads such
+/// a failure as not held, so re-running it would leave a refusal with nothing on
+/// screen explaining it. This flag carries its own sentence instead.
 /// </param>
 /// <param name="InstallerLockAccessRefused">
 /// The batch was refused before it started because the security on
@@ -96,7 +93,11 @@ public interface IDeleteFilesService
 /// Kept apart from that flag because the two are different facts about the
 /// machine and the user is told them in different words. This one is a setting on
 /// the object rather than a condition that arose while asking, so a sentence
-/// telling the user something was holding the lock would be false of it.
+/// telling the user something was holding the lock would be false of it. The
+/// pending-reboot gate meets the same refusal as
+/// <see cref="PendingRebootReason.MsiExecuteMutexAccessRefused"/>, its probe asking
+/// for the same rights, so to a caller that runs the gate first, as both hosts do,
+/// this flag means a refusal that began after the gate ran.
 /// </param>
 /// <param name="HeldBack">
 /// Paths dropped from the batch by the re-read taken under the installer mutex,

@@ -178,6 +178,7 @@ const MAP = {
   'Body.MainExplanation.Why': `これらは {InstallerFolder} にあります。InstallerClean はインストール済みのすべてのプログラムについて Windows に問い合わせます。どのプログラムもそのファイルを自分のものだと示さない場合({0})、または新しいパッチが置き換えていてどのプログラムもそこへ戻れない場合({1})に、そのファイルが一覧に載ります。`,
   'Body.MainExplanation.Action': `選んだバックアップフォルダーへ移動し、プログラムがこれまでどおり更新およびアンインストールできると納得できたら、そのフォルダーを削除してください。{InstallerFolder} に戻せばすべて元どおりになります。または、今すぐ完全に削除することもできます。`,
   'Body.PendingReboot.MsiExecuteMutex': `現在、Windows Update やバックグラウンドでインストール中のプログラムなど、何かが Windows Installer を使用しています。その間は移動と削除が一時停止し、InstallerClean は変更中の {InstallerFolder} に触れません。終わったら再スキャンすれば、どちらも使えるようになります。`,
+  'Body.PendingReboot.MsiExecuteMutexAccessRefused': `Windows は InstallerClean に Windows Installer が処理中かどうかを確認する権限を与えていないため、移動と削除は一時停止し、InstallerClean は {InstallerFolder} に触れません。Windows を再起動してから再スキャンしてください。それでも Windows が拒否する場合、この PC は InstallerClean がクリーンアップできる PC ではありません。`,
   'Body.PendingReboot.InstallerInProgress': `このコンピューターには、中断されたままの以前の Windows Installer トランザクションがあります。{InstallerFolder} をクリーンアップする前に、そのインストールを再開するかロールバックしてください(または Windows を再起動してください)。`,
   'Body.PendingReboot.PendingRenameInCache': `Windows は次回の再起動時に実行するファイル名の変更をキューに入れており、それが {InstallerFolder} に影響します。クリーンアップする前に Windows を再起動してください。`,
   'Body.NoFileSelected': `ファイルを選択して詳細を表示します。`,
@@ -561,7 +562,7 @@ const STRIPPED = new Set([
   'Cli.EventLogNothingOfferedPerFile',
   'Cli.EventLogNothingOfferedPerFileNotice',
   'Cli.EventLogReason.RegistryCheckUnreadable',
-  'Cli.EventLogInstallerLockAccessRefused',
+  'Cli.EventLogReason.MsiExecuteMutexAccessRefused',
   'Cli.EventLogReason.PendingRenameUnresolved',
   // And four that outlived their English, the first way. Two named Ctrl+C where
   // the entry now covers a cancel however it arrives at the console; one spelled

@@ -431,7 +431,7 @@
   </data>
   <data name="Body.PendingReboot.Lead" xml:space="preserve">
     <value>これらのファイルは今はクリーンアップできません。</value>
-    <comment>Main window intro (heading tier) when a scan found files but a Windows Installer operation is in progress, so Move and Delete are held. Replaces the "safe to delete" lead, which reads wrong above dead buttons. The reason-specific banner below it (Body.PendingReboot.*) carries the why; keep this one short.</comment>
+    <comment>Main window intro (heading tier) when a scan found files but the pending-reboot check holds Move and Delete, whatever its reason. Replaces the "safe to delete" lead, which reads wrong above dead buttons. The reason-specific banner below it (Body.PendingReboot.*) carries the why; keep this one short.</comment>
   </data>
   <!-- The reason-specific banners. Each names the folder with the
        {InstallerFolder} token, like every other line in the app that names it:
@@ -439,6 +439,15 @@
        may not know what an MSI is, so "the cache" was a term the app used here
        and introduced nowhere. -->
   <data name="Body.PendingReboot.MsiExecuteMutex" xml:space="preserve"><value>現在、Windows Update やバックグラウンドでインストール中のプログラムなど、何かが Windows Installer を使用しています。その間は移動と削除が一時停止し、InstallerClean は変更中の {InstallerFolder} に触れません。終わったら再スキャンすれば、どちらも使えるようになります。</value></data>
+  <!-- The banner for a Windows Installer lock InstallerClean was refused permission
+       to open. Names the folder with the {InstallerFolder} token like the rest of the
+       family. It says only what the app knows: Windows refused it the check, so nothing
+       has been seen using Windows Installer and the banner above would be untrue here.
+       The restart is offered because the lock exists only while something holds it
+       open, and the last sentence says plainly what it means if the refusal survives
+       one, as Body.PendingReboot.RegistryCheckUnreadable does for its own read. "Re-scan"
+       is the button's own label. -->
+  <data name="Body.PendingReboot.MsiExecuteMutexAccessRefused" xml:space="preserve"><value>Windows は InstallerClean に Windows Installer が処理中かどうかを確認する権限を与えていないため、移動と削除は一時停止し、InstallerClean は {InstallerFolder} に触れません。Windows を再起動してから再スキャンしてください。それでも Windows が拒否する場合、この PC は InstallerClean がクリーンアップできる PC ではありません。</value></data>
   <data name="Body.PendingReboot.InstallerInProgress" xml:space="preserve"><value>このコンピューターには、中断されたままの以前の Windows Installer トランザクションがあります。{InstallerFolder} をクリーンアップする前に、そのインストールを再開するかロールバックしてください(または Windows を再起動してください)。</value></data>
   <data name="Body.PendingReboot.PendingRenameInCache" xml:space="preserve"><value>Windows は次回の再起動時に実行するファイル名の変更をキューに入れており、それが {InstallerFolder} に影響します。クリーンアップする前に Windows を再起動してください。</value></data>
   <!-- The banner for an entry the gate cannot place. Names the folder with the
@@ -1973,7 +1982,8 @@ InstallerClean はすでに管理者として実行されていたため、同�
   <data name="Cli.MoveInstallerLockUnavailable" xml:space="preserve"><value>エラー：二つのプログラムが同時にインストール済みソフトウェアを変更しないようにする Windows Installer のロックを InstallerClean が取得できなかったため、途中でファイルが必要になる可能性を排除できませんでした。何も移動されていません。もう一度お試しください。繰り返す場合は Windows を再起動してください。</value></data>
   <!-- The console pair of Error.InstallerLockAccessRefused, /d then /m. Opens
        "Error: " like the rest of this family, and like it says nothing about
-       trying again. No placeholders. -->
+       trying again. Printed for a refused lock wherever it is met, at the
+       pending-reboot check and at the acquire alike. No placeholders. -->
   <data name="Cli.InstallerLockAccessRefused" xml:space="preserve"><value>エラー: Windows は InstallerClean に Windows Installer が処理中かどうかを確認する権限を与えなかったため、途中でファイルが必要になる可能性を排除できませんでした。何も削除されていません。</value></data>
   <data name="Cli.MoveInstallerLockAccessRefused" xml:space="preserve"><value>エラー: Windows は InstallerClean に Windows Installer が処理中かどうかを確認する権限を与えなかったため、途中でファイルが必要になる可能性を排除できませんでした。何も移動されていません。</value></data>
   <!-- Short human labels for the EventLog ({1} slot in
@@ -1985,30 +1995,30 @@ InstallerClean はすでに管理者として実行されていたため、同�
   <data name="Cli.EventLogReason.MsiExecuteMutex" xml:space="preserve"><value>Windows Installer ミューテックスが保持されています</value></data>
   <data name="Cli.EventLogReason.InstallerInProgress" xml:space="preserve"><value>インストーラートランザクションが進行中</value></data>
   <data name="Cli.EventLogReason.PendingRenameInCache" xml:space="preserve"><value>キューに入れられた再起動後のファイル名変更がインストーラーキャッシュを対象としています</value></data>
+  <!-- Longer than its siblings: besides the condition it says what the refusal leaves
+       unknown and that nothing was moved or deleted, naming both actions because the
+       line covers both modes. The line it completes is the one a refused lock writes
+       wherever it is met, at the pending-reboot check or at the acquire. -->
   <!-- 0 = arg ("/d" or "/m"), 1 = short reason label from Cli.EventLogReason.*,
        2 = detail (matched path for PendingRenameInCache, otherwise empty).
 
        The reason label is the whole of what this line says about the condition,
-       and it is why the line names none of its own: the five labels cover an
-       installer running now, a suspended transaction, two queued post-restart
-       renames and a registry read that could not answer, and no one phrase is
-       true of all five. The label carries the difference, so the fixed half
-       carries nothing but the mode and the fact that the run stopped.
+       and it is why the line names none of its own: the six labels cover an
+       installer running now, a lock the app was refused permission to open, a
+       suspended transaction, two queued post-restart renames and a registry read
+       that could not answer, and no one phrase is true of all six. The label
+       carries the difference, so the fixed half carries nothing but the mode and
+       the fact that the run stopped.
 
        The detail arrives with its own leading separator rather than the template
-       spacing it, so the four reasons that never carry one do not each log a
+       spacing it, so the five reasons that never carry one do not each log a
        line ending in a space. -->
   <!-- 0 = arg ("/d" or "/m"). The audit twin of the two stdout lines above, and
        ONE line for both modes where they are a pair, because a machine-read line
        is matched on its shape and {0} already carries which mode ran. It cannot
        share Cli.EventLogPendingRebootBlocked: that line names a reason from
-       Cli.EventLogReason.*, and every one of those asserts something is in
-       progress, which is exactly what nothing here has shown. Machine-read like
-       every Cli.EventLog* line, so it is forced English at the emit site and
-       states the condition rather than the advice. The tail names both actions
-       because the line covers both modes; naming one would be false of a run in
-       the other. -->
-  <!-- 0 = mode arg. The access-refused pair of the line above, machine-read like
+       Cli.EventLogReason.*, and none of those describes an acquire that failed
+       with nothing shown holding the object or refusing it. Machine-read like
        every Cli.EventLog* line, so it is forced English at the emit site and
        states the condition rather than the advice. The tail names both actions
        because the line covers both modes; naming one would be false of a run in

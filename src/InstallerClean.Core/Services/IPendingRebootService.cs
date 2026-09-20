@@ -11,9 +11,11 @@ public interface IPendingRebootService
     /// not established, and this returns a Block naming that rather than the verdict
     /// a quiet machine would have produced.
     ///
-    /// The mutex answers on its own terms, stated on <see cref="IMutexProbe.IsHeld"/>:
-    /// a probe an existing mutex's DACL refuses counts as held, while a mutex that is
-    /// not there and a probe that fails for any other reason count as not held.
+    /// The mutex answers on its own terms, stated on <see cref="IMutexProbe.Sample"/>:
+    /// a held mutex blocks as <see cref="PendingRebootReason.MsiExecuteMutexHeld"/>, an
+    /// existing mutex whose security refuses the probe blocks as
+    /// <see cref="PendingRebootReason.MsiExecuteMutexAccessRefused"/>, and a mutex that
+    /// is not there and a probe that fails for any other reason count as not held.
     /// </summary>
     PendingRebootResult Check();
 }

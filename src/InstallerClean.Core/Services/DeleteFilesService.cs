@@ -69,21 +69,17 @@ public sealed class DeleteFilesService : IDeleteFilesService
             // threads between acquire and release.
             //
             // No way of missing the hold proceeds, and they are reported separately
-            // because the caller can account for only one of them and owes the user
-            // a different sentence for each. Held
+            // because the caller owes the user a different sentence for each. Held
             // by a live transaction => the pending-reboot gate the caller re-runs
             // meets the same mutex and paints its banner, which says an install is
             // in progress, which it is. Refused because the object's security would
-            // not let us open it => the app was not allowed to look, and it says so
-            // in those words. Refused any other way with nothing shown to be holding
-            // it => that gate is no account of the condition at all, whichever way
-            // it answers.
-            // IsHeld asks through a different call requesting different rights, so
-            // it can come back clean, leaving a refusal with nothing on screen
-            // explaining it; and on a DACL it returns held (its own catch says so),
-            // which would paint a banner asserting an install nothing has shown. So
-            // this result carries its own sentence rather than deferring to the
-            // gate.
+            // not let us open it => the app was not allowed to look, and the caller
+            // says so in those words. The gate's probe asks for the rights this
+            // acquire asks for, so a refusal standing when the gate ran stopped the
+            // batch there, and one met here began after it. Refused any other way
+            // with nothing shown to be holding it => the gate has no account of it,
+            // its probe reading such a failure as not held, so this result carries
+            // its own sentence.
             //
             // Refusing the second case is younger than the hold itself, and what
             // changed the sum was the delete becoming permanent rather than

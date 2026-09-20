@@ -418,6 +418,29 @@ public class DeleteFilesServiceUnitTests
     }
 
     [Fact]
+    public async Task Refuses_when_the_installer_mutex_refuses_it_the_rights_to_open_it()
+    {
+        var fs = new MockFileSystem();
+        var a = AddFile(fs, "a.msi");
+        var mutex = new FakeMutexProbe(FakeMutexProbe.Mode.AccessRefused);
+        var svc = new DeleteFilesService(fs, mutex, installerFolderOverride: null);
+
+        var result = await svc.DeleteFilesAsync(new[] { a }, UnderLeaseClaims.None);
+
+        // Refused, touching nothing, and under its own flag: the app was not allowed
+        // to look, which is neither the lock being held nor an acquire that failed
+        // some other way, and the caller tells the user each in different words.
+        Assert.True(result.InstallerLockAccessRefused);
+        Assert.False(result.InstallerBusy);
+        Assert.False(result.InstallerLockUnavailable);
+        Assert.Equal(0, result.DeletedCount);
+        Assert.Empty(result.Errors);
+        Assert.True(fs.File.Exists(a));
+        Assert.Equal(1, mutex.AcquireAttempts);
+        Assert.Equal(0, mutex.Released);
+    }
+
+    [Fact]
     public async Task Holds_and_releases_the_installer_mutex_when_acquired()
     {
         var fs = new MockFileSystem();

@@ -489,9 +489,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         }
     }
 
-    // Move and Delete are gated on HasPendingReboot for three reasons:
-    // an MSI is in flight, a previous transaction is suspended, or a queued
-    // post-reboot rename targets the cache (see IPendingRebootService).
+    // Move and Delete are gated on HasPendingReboot, which is true whenever the
+    // pending-reboot check blocks, whichever PendingRebootReason it names.
     // The banner is informational only; the CanExecute predicate is what
     // stops a click from reaching the service.
     // Both gates are execution flags, not the overlay flags: IsScanning is only
@@ -990,12 +989,11 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // shown to be holding it, so it refused and touched nothing. No
                 // gate re-check here, unlike the arm above, and that is the whole
                 // reason this is a separate flag rather than a second cause behind
-                // the same one: the gate is no account of this condition whichever
-                // way it answers, since it can come back clean and paint nothing,
-                // leaving a refusal with no reason on screen, and on a DACL it
-                // reports held and would paint a banner asserting an install
-                // nothing has shown. A dialog carries the reason instead. The
-                // service's own acquire has the detail.
+                // the same one: the gate has no account of this condition, its
+                // probe reading such a failure as not held, so a re-check would
+                // come back clean and leave a refusal with no reason on screen. A
+                // dialog carries the reason instead. The service's own acquire has
+                // the detail.
                 //
                 // The destination cleanup matches the arm above, and for the same
                 // reason: the service refuses ahead of its own
@@ -1018,6 +1016,12 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // different sentence: the app was not allowed to look, which is not
                 // the same as finding the lock busy, and only one of those two is
                 // something an administrator can go and change.
+                //
+                // No gate re-check here either. The gate's probe asks for the rights
+                // the service's acquire asks for, so a refusal standing at the
+                // re-check above stopped the click there, and this one began after
+                // it. The dialog says what happened to this click; if the refusal
+                // lasts, the next click's re-check paints the banner for it.
                 _dialogService.ShowWarning(
                     Strings.Error_MoveInstallerLockAccessRefused,
                     Strings.Error_MoveInstallerLockUnavailableTitle);
@@ -1327,12 +1331,11 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // shown to be holding it, so it refused and touched nothing. No
                 // gate re-check here, unlike the arm above, and that is the whole
                 // reason this is a separate flag rather than a second cause behind
-                // the same one: the gate is no account of this condition whichever
-                // way it answers, since it can come back clean and paint nothing,
-                // leaving a refusal with no reason on screen, and on a DACL it
-                // reports held and would paint a banner asserting an install
-                // nothing has shown. A dialog carries the reason instead. The
-                // service's own acquire has the detail.
+                // the same one: the gate has no account of this condition, its
+                // probe reading such a failure as not held, so a re-check would
+                // come back clean and leave a refusal with no reason on screen. A
+                // dialog carries the reason instead. The service's own acquire has
+                // the detail.
                 _dialogService.ShowWarning(
                     Strings.Error_InstallerLockUnavailable, Strings.Error_InstallerLockUnavailableTitle);
                 OperationProgress = string.Empty;
@@ -1347,6 +1350,12 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // different sentence: the app was not allowed to look, which is not
                 // the same as finding the lock busy, and only one of those two is
                 // something an administrator can go and change.
+                //
+                // No gate re-check here either. The gate's probe asks for the rights
+                // the service's acquire asks for, so a refusal standing at the
+                // re-check above stopped the click there, and this one began after
+                // it. The dialog says what happened to this click; if the refusal
+                // lasts, the next click's re-check paints the banner for it.
                 _dialogService.ShowWarning(
                     Strings.Error_InstallerLockAccessRefused, Strings.Error_InstallerLockUnavailableTitle);
                 OperationProgress = string.Empty;

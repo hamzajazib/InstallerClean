@@ -170,6 +170,7 @@ const MAP = {
   'Body.MainExplanation.Why': `它们位于 {InstallerFolder} 中。InstallerClean 会就每个已安装的程序询问 Windows：当没有任何程序认领某个文件时（{0}），或者当更新的补丁已经取代了它、并且没有任何程序能够回退到它时（{1}），该文件才会列出。`,
   'Body.MainExplanation.Action': `把它们移动到您选择的备份文件夹，等您确信自己的程序仍能照常更新和卸载时，再删除那个文件夹。把它们放回 {InstallerFolder} 就能恢复原状。或者现在就永久删除。`,
   'Body.PendingReboot.MsiExecuteMutex': `此刻有程序正在使用 Windows Installer，比如 Windows 更新，或者某个正在后台安装的程序。在此期间，移动和删除会暂停，这样 InstallerClean 就不会在 {InstallerFolder} 变动时去碰它。等结束后重新扫描，两者就会恢复。`,
+  'Body.PendingReboot.MsiExecuteMutexAccessRefused': `Windows 拒绝了 InstallerClean 检查 Windows Installer 是否正忙的权限，因此移动和删除已暂停，InstallerClean 不会去碰 {InstallerFolder}。请重启 Windows 并重新扫描。如果 Windows 仍然拒绝，这台机器就不是 InstallerClean 能清理的。`,
   'Body.PendingReboot.InstallerInProgress': `这台计算机上有一个先前的 Windows Installer 事务处于挂起状态。请先继续或回滚那次安装（或重启 Windows），再清理 {InstallerFolder}。`,
   'Body.PendingReboot.PendingRenameInCache': `Windows 已把一次文件重命名排入下次重启的队列，且会影响 {InstallerFolder}。请先重启 Windows 再清理。`,
   'Body.NoFileSelected': `选择一个文件以查看详情。`,

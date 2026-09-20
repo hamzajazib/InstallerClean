@@ -12,13 +12,15 @@ public class PendingRebootServiceUnitTests
 
     /// <summary>
     /// The quiet machine every test starts from, stated rather than left to the
-    /// fakes: nothing suspended and nothing queued. Both registry reads answer
-    /// their type's own zero when nobody sets one, and that zero says the read
-    /// did not answer, which is a refusal rather than a clean machine. A test
-    /// about either read names it and overwrites what is set here.
+    /// fakes: nothing holding the installer mutex, nothing suspended and nothing
+    /// queued. Both registry reads answer their type's own zero when nobody sets
+    /// one, and that zero says the read did not answer, which is a refusal rather
+    /// than a clean machine. A test about any of the three names it and overwrites
+    /// what is set here.
     /// </summary>
     public PendingRebootServiceUnitTests()
     {
+        _mutex.Sample(Arg.Any<string>()).Returns(MutexSample.NotHeld);
         InProgress(RegistryKeyPresence.Absent);
         Renames(new RegistryMultiStringRead(RegistryMultiStringState.Absent));
     }
@@ -71,12 +73,29 @@ public class PendingRebootServiceUnitTests
     [Fact]
     public void Mutex_held_blocks()
     {
-        _mutex.IsHeld(PendingRebootService.MsiExecuteMutexName).Returns(true);
+        _mutex.Sample(PendingRebootService.MsiExecuteMutexName).Returns(MutexSample.Held);
 
         var result = Build().Check();
 
         Assert.Equal(PendingRebootVerdict.Block, result.Verdict);
         Assert.Equal(PendingRebootReason.MsiExecuteMutexHeld, result.Reason);
+    }
+
+    /// <summary>
+    /// A mutex whose security refuses the probe blocks under a reason of its own and
+    /// never as held: nothing has been seen holding it, and the held reason's banner
+    /// and command-line sentence both say something is using Windows Installer.
+    /// </summary>
+    [Fact]
+    public void Mutex_access_refused_blocks_with_its_own_reason()
+    {
+        _mutex.Sample(PendingRebootService.MsiExecuteMutexName).Returns(MutexSample.AccessRefused);
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootVerdict.Block, result.Verdict);
+        Assert.Equal(PendingRebootReason.MsiExecuteMutexAccessRefused, result.Reason);
+        Assert.Null(result.Detail);
     }
 
     [Fact]
@@ -486,7 +505,7 @@ public class PendingRebootServiceUnitTests
     [Fact]
     public void Mutex_probe_throws_fails_open_continues_to_other_checks()
     {
-        _mutex.IsHeld(Arg.Any<string>())
+        _mutex.Sample(Arg.Any<string>())
             .Returns(_ => throw new InvalidOperationException("transient"));
         InProgress(RegistryKeyPresence.Present);
 
@@ -496,10 +515,17 @@ public class PendingRebootServiceUnitTests
         Assert.Equal(PendingRebootReason.InstallerInProgress, result.Reason);
     }
 
+    /// <summary>
+    /// The probe's contract answers a refused open with
+    /// <see cref="MutexSample.AccessRefused"/> rather than throwing, which the test
+    /// above for that answer covers. A probe that throws the refusal instead has not
+    /// answered at all, and Check reads any throw from the probe as not held, so the
+    /// other two signals still run.
+    /// </summary>
     [Fact]
-    public void Mutex_probe_access_denied_fails_open_continues_to_other_checks()
+    public void Mutex_probe_throwing_access_denied_fails_open_continues_to_other_checks()
     {
-        _mutex.IsHeld(Arg.Any<string>())
+        _mutex.Sample(Arg.Any<string>())
             .Returns(_ => throw new UnauthorizedAccessException("denied"));
         Queued(new[] { @"\??\C:\Windows\Installer\foo.msi", "" });
 
@@ -767,13 +793,33 @@ public class PendingRebootServiceUnitTests
     [Fact]
     public void Mutex_wins_over_in_progress_and_pending_rename()
     {
-        _mutex.IsHeld(PendingRebootService.MsiExecuteMutexName).Returns(true);
+        _mutex.Sample(PendingRebootService.MsiExecuteMutexName).Returns(MutexSample.Held);
         InProgress(RegistryKeyPresence.Present);
         Queued(new[] { @"\??\C:\Windows\Installer\foo.msi", "" });
 
         var result = Build().Check();
 
         Assert.Equal(PendingRebootReason.MsiExecuteMutexHeld, result.Reason);
+        _registry.DidNotReceive().LocalMachineKeyPresence(Arg.Any<string>());
+        _registry.DidNotReceive().LocalMachineMultiStringValue(
+            Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    /// <summary>
+    /// A refused open is read where a held one is and stops the check there too. The
+    /// action services' acquire asks for the same rights and would refuse the batch
+    /// whatever the other two signals said, so the refusal is the reason reported.
+    /// </summary>
+    [Fact]
+    public void Mutex_access_refused_wins_over_in_progress_and_pending_rename()
+    {
+        _mutex.Sample(PendingRebootService.MsiExecuteMutexName).Returns(MutexSample.AccessRefused);
+        InProgress(RegistryKeyPresence.Present);
+        Queued(new[] { @"\??\C:\Windows\Installer\foo.msi", "" });
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootReason.MsiExecuteMutexAccessRefused, result.Reason);
         _registry.DidNotReceive().LocalMachineKeyPresence(Arg.Any<string>());
         _registry.DidNotReceive().LocalMachineMultiStringValue(
             Arg.Any<string>(), Arg.Any<string>());
