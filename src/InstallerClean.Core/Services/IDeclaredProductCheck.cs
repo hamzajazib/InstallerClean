@@ -5,7 +5,9 @@ namespace InstallerClean.Services;
 /// <summary>
 /// Asks a cached PRODUCT PACKAGE which product it declares itself to belong to,
 /// puts that product code to Windows, and reports whether Windows still holds a
-/// record of it.
+/// record of it. Where it does, the check reads the cached package each
+/// installation of that product records, and reports whether every one of them is
+/// a different file that is present.
 ///
 /// WHY IT EXISTS, AND IT IS ABOUT WHERE THE OTHER SOURCES START. Everything else
 /// that decides whether a cached product package is spare begins at a
@@ -27,11 +29,20 @@ namespace InstallerClean.Services;
 /// has two, and they read the same underlying value. The genuinely independent
 /// third view of a product's cached file is the FILE, which is this.
 ///
-/// IT ONLY EVER WITHHOLDS, and the whole design rests on that. No answer it can
-/// give puts a file on the list, clears one another gate kept, or weakens
-/// anything upstream. A file it cannot read, a question it cannot put and a
-/// source that answers off the allowlist all keep the file, so the worst a fault
-/// in here can do is offer fewer files than the app could have offered.
+/// AN INSTALLED PRODUCT DOES NOT ON ITS OWN MAKE THIS FILE THE ONE IT USES. Windows
+/// Installer opens a product's cached package through the <c>LocalPackage</c> value
+/// recorded for each installation of it. The folder can hold further copies that
+/// declare the same product code while no installation's value names them, and
+/// those are not the package any installation of the product opens. So the file is
+/// kept only while some installation's package cannot be seen: a value that is
+/// empty, that will not read, that names nothing identifiable, that names a file
+/// declaring another product, or that names this file under another spelling.
+///
+/// IT ONLY EVER WITHHOLDS. No answer it can give puts a file on the list, clears
+/// one another gate kept, or weakens anything upstream: a candidate it lets
+/// through is decided by the rest of the scan exactly as if this check had not
+/// run. A file it cannot read, a question it cannot put, a source that answers off
+/// the allowlist and a recorded package it cannot identify all keep the file.
 ///
 /// PRODUCT PACKAGES ONLY, AND THAT RESTRICTION IS LOAD-BEARING RATHER THAN
 /// INCIDENTAL. The same question asked of a patch keeps back every registered
@@ -75,7 +86,7 @@ public interface IDeclaredProductCheck
 }
 
 /// <summary>
-/// What one candidate's own declaration settled. Two of the four keep the file,
+/// What one candidate's own declaration settled. Two of the five keep the file,
 /// and <see cref="Withholds"/> is the only place that says which.
 /// </summary>
 public enum DeclaredProductOutcome
@@ -121,15 +132,44 @@ public enum DeclaredProductOutcome
 
     /// <summary>
     /// Windows still holds a record of the product this file declares it belongs
-    /// to. Kept back.
+    /// to, and at least one installation of that product records no cached package
+    /// the check can show is a different file that is present. Kept back.
+    ///
+    /// That covers a recorded <c>LocalPackage</c> value that is empty or will not
+    /// read, one naming a folder or a file that is absent or cannot be identified,
+    /// one naming a file that declares another product, and one naming this very
+    /// file under another spelling. In each of them the check
+    /// cannot see which package that installation opens, so this file could be it.
+    /// A check constructed without its two file readers answers this for every
+    /// installed product, having no way to look.
     ///
     /// WHAT IT DOES NOT ESTABLISH, so no copy may be built on it: that a program
-    /// would break without this particular copy. A product that cached a fresh
-    /// package on each of twenty updates leaves nineteen files that answer to a
-    /// live product code and are dead weight. Keeping them is this app working;
-    /// the alternative is offering a file it cannot say is spare.
+    /// would break without this particular copy.
     /// </summary>
     DeclaredProductInstalled,
+
+    /// <summary>
+    /// Windows still holds a record of the product this file declares, and every
+    /// installation of that product records a cached package that is present, is a
+    /// different file, and itself declares the same product. The candidate goes on
+    /// being decided by everything else.
+    ///
+    /// Windows Installer opens a product's cached package through the
+    /// <c>LocalPackage</c> value recorded for each installation, so a copy that none
+    /// of those values names is not the package any installation of the product
+    /// uses.
+    ///
+    /// EVERY INSTALLATION, NOT ONE. One code can name a per-machine installation and
+    /// per-user installations under several accounts, each recording its own
+    /// package, and a single installation whose package cannot be seen gives
+    /// <see cref="DeclaredProductInstalled"/> instead.
+    ///
+    /// DIFFERENT IS DECIDED BY FILE IDENTITY, NOT BY SPELLING. A recorded value can
+    /// reach this file through a short name, a long-path prefix or a link, so the
+    /// comparison is between the volume and file ID each path opens, and a recorded
+    /// package that opens as this file keeps it.
+    /// </summary>
+    DeclaredProductCachedAsAnotherFile,
 }
 
 /// <summary>Reading a <see cref="DeclaredProductOutcome"/>.</summary>
@@ -138,7 +178,7 @@ public static class DeclaredProductOutcomes
     /// <summary>
     /// Whether this outcome keeps the file back.
     ///
-    /// STATED AS "ANYTHING BUT THESE TWO" RATHER THAN BY NAMING THE WITHHOLDING
+    /// STATED AS "ANYTHING BUT THESE THREE" RATHER THAN BY NAMING THE WITHHOLDING
     /// MEMBERS, and that is the safety property rather than a style. Named
     /// positively, a member added later would silently not withhold: a green
     /// build, a verdict the pass sets, and files going on being offered. Named
@@ -147,5 +187,6 @@ public static class DeclaredProductOutcomes
     /// </summary>
     public static bool Withholds(this DeclaredProductOutcome outcome) =>
         outcome is not (DeclaredProductOutcome.NotAProductPackage
-            or DeclaredProductOutcome.DeclaredProductNotInstalled);
+            or DeclaredProductOutcome.DeclaredProductNotInstalled
+            or DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile);
 }

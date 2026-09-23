@@ -4209,11 +4209,28 @@ public sealed class InstallerQueryService : IInstallerQueryService
     }
 
     /// <summary>
+    /// Retrieves a product property through this service's own API.
+    /// See <see cref="ReadProductProperty"/>.
+    /// </summary>
+    private PropertyRead GetProductProperty(
+        string productCode,
+        string? userSid,
+        MsiInstallContext context,
+        string propertyName) =>
+        ReadProductProperty(_msi, productCode, userSid, context, propertyName);
+
+    /// <summary>
     /// Retrieves a product property using the double-call buffer pattern,
     /// reporting whether an empty result is an absence or a failed read (see
     /// <see cref="PropertyRead"/>).
+    ///
+    /// STATIC AND SHARED RATHER THAN COPIED, for the reason
+    /// <see cref="ResolveProductInstances"/> is: <see cref="DeclaredProductCheck"/>
+    /// reads the same property of the same records, and which returns count as an
+    /// absence rather than a failed read is decided here once.
     /// </summary>
-    private PropertyRead GetProductProperty(
+    internal static PropertyRead ReadProductProperty(
+        IMsiApi msi,
         string productCode,
         string? userSid,
         MsiInstallContext context,
@@ -4221,7 +4238,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
     {
         uint bufferLen = 0;
 
-        var error = _msi.GetProductInfo(
+        var error = msi.GetProductInfo(
             productCode: productCode,
             userSid: userSid,
             context: context,
@@ -4239,7 +4256,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
         bufferLen++; // space for null terminator
         var buffer = new char[bufferLen];
 
-        error = _msi.GetProductInfo(
+        error = msi.GetProductInfo(
             productCode: productCode,
             userSid: userSid,
             context: context,

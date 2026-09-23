@@ -38,7 +38,9 @@ public class FileSystemScanServiceDeclaredProductTests
         // THE ROUTE THIS EXISTS FOR. No registration names the file, so the path
         // comparison and the file-identity match have both let it through; the
         // package itself says which product it belongs to and Windows still has
-        // that product.
+        // that product. The screen here is built without its file readers, so it
+        // cannot look at what the product records; the two tests after this one
+        // give it both readers.
         var identities = new ScriptedPackageIdentities();
         identities.Declares($@"{Folder}\held.msi", ProductA);
 
@@ -50,6 +52,74 @@ public class FileSystemScanServiceDeclaredProductTests
         Assert.Empty(result.RemovableFiles);
         var kept = Assert.Single(result.WithheldFiles!);
         Assert.Equal($@"{Folder}\held.msi", kept.FullPath);
+    }
+
+    [Fact]
+    public async Task A_copy_beside_the_package_its_installed_product_records_is_offered()
+    {
+        // The pair of the test above, with the same product installed. b.msi is the
+        // package product A records, so the scan's own path comparison claims it and
+        // it is never a candidate. a.msi declares product A and no record names it.
+        // The screen reads the package A records, finds a present file that is not
+        // a.msi and declares product A, and lets a.msi through; the test below scans
+        // the same two files and keeps a.msi when what A records cannot be seen.
+        var identities = new ScriptedPackageIdentities();
+        identities.Declares($@"{Folder}\a.msi", ProductA);
+        identities.Declares($@"{Folder}\b.msi", ProductA);
+
+        var msi = new ScriptedMsiProducts();
+        msi.Installed(ProductA);
+        msi.RecordsPackage(ProductA, null, MsiInstallContext.Machine, $@"{Folder}\b.msi");
+
+        var files = new ScriptedFileIdentities();
+        files.Opens($@"{Folder}\a.msi", 1);
+        files.Opens($@"{Folder}\b.msi", 2);
+
+        var result = await ScanWithRecordedPackage(msi, identities, files);
+
+        var offered = Assert.Single(result.RemovableFiles);
+        Assert.Equal($@"{Folder}\a.msi", offered.FullPath);
+        Assert.Empty(result.WithheldFiles!);
+    }
+
+    [Fact]
+    public async Task A_copy_whose_installed_product_records_no_package_is_kept_by_the_same_screen()
+    {
+        // The same scan as the test above, with product A recording no package. The
+        // screen cannot see which package A opens, so a.msi could be it.
+        var identities = new ScriptedPackageIdentities();
+        identities.Declares($@"{Folder}\a.msi", ProductA);
+
+        var msi = new ScriptedMsiProducts();
+        msi.Installed(ProductA);
+        msi.RecordsPackage(ProductA, null, MsiInstallContext.Machine, "");
+
+        var result = await ScanWithRecordedPackage(msi, identities, new ScriptedFileIdentities());
+
+        Assert.Empty(result.RemovableFiles);
+        var kept = Assert.Single(result.WithheldFiles!);
+        Assert.Equal($@"{Folder}\a.msi", kept.FullPath);
+        Assert.Equal(1, result.WithheldBy.DeclaredProductInstalledCount);
+    }
+
+    /// <summary>
+    /// A scan of a folder holding a.msi and b.msi, where b.msi is registered to
+    /// product A and a.msi is not registered, with the screen given both file
+    /// readers.
+    /// </summary>
+    private static Task<ScanResult> ScanWithRecordedPackage(
+        ScriptedMsiProducts msi,
+        ScriptedPackageIdentities identities,
+        ScriptedFileIdentities files)
+    {
+        var fs = FolderHolding($@"{Folder}\a.msi", $@"{Folder}\b.msi");
+        var registered = new[] { new RegisteredPackage($@"{Folder}\b.msi", "Product A", ProductA) };
+
+        return new FileSystemScanService(
+            QueryReturning(registered), fs, null,
+            new[] { $@"{Folder}\a.msi", $@"{Folder}\b.msi" }, null, null,
+            new DeclaredProductCheck(msi, identities, files, fs))
+            .ScanAsync();
     }
 
     [Fact]

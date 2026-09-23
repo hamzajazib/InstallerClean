@@ -57,9 +57,8 @@ public static class CoreComposition
         services.AddSingleton<IPackageIdentityReader, PackageIdentityReader>();
         // The scan's third source for product packages, and the only one that
         // starts at the file rather than at a registration. It can keep a
-        // candidate back and can do nothing else, so a fault in it costs offers
-        // rather than files; see IDeclaredProductCheck for why it may never be
-        // asked about a patch.
+        // candidate back and can do nothing else; see IDeclaredProductCheck for
+        // why it may never be asked about a patch.
         services.AddSingleton<IDeclaredProductCheck, DeclaredProductCheck>();
         // Answers which file a recorded path names, so the scan's path comparison
         // is not defeated by a registration written in a spelling the folder walk

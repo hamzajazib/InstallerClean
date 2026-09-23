@@ -388,11 +388,12 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // REGISTRATION and ask whether it names this file. The screen a few lines
         // below starts at the FILE: it asks an installation package which product
         // it declares itself to belong to, puts that product code to Windows, and
-        // keeps the file back where Windows still holds a record of it or where
-        // the question could not be settled. It can subtract from the offer and do
-        // nothing else, so what survives all three is the offer. Product packages
-        // only, for a reason that is load-bearing rather than incidental; see
-        // IDeclaredProductCheck.
+        // keeps the file back where Windows still holds a record of it and some
+        // installation of it records no package shown to be another present file,
+        // or where the question could not be settled. It can subtract from the
+        // offer and do nothing else, so what survives all three is the offer.
+        // Product packages only, for a reason that is load-bearing rather than
+        // incidental; see IDeclaredProductCheck.
         //
         // THE CLASS WHERE A REGISTRATION EXISTS AND THE SCAN FAILED TO MATCH IT TO
         // ITS FILE is reached by four separate mechanisms besides, which is the
@@ -427,10 +428,11 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // THE SCREEN NARROWS THAT ONE WITHOUT CLOSING IT, and the half it leaves is
         // the half to remember. Where such a candidate is an installation package
         // the screen reaches it, having no interest in the registration that could
-        // not be resolved: it either finds the declared product installed or fails
-        // to settle the question, and both keep the file. Where the candidate is a
-        // PATCH the screen does not run at all, so that half stands exactly as the
-        // paragraph above describes it.
+        // not be resolved: it either finds the declared product installed with a
+        // recorded package that is not present, or fails to settle the question,
+        // and both keep the file. Where the candidate is a PATCH the screen does
+        // not run at all, so that half stands exactly as the paragraph above
+        // describes it.
         //
         // SO THE FOUR ABOVE ARE NOT BELT AND BRACES. This release alone fixed six
         // separate faults in that class, four of them live in every shipped
@@ -1227,7 +1229,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         /// The screen's own two withholding verdicts, named one by one.
         ///
         /// NEITHER IS A CATCH-ALL, AND THAT IS THE POINT. <c>Withholds</c> is written
-        /// as the complement of the two verdicts that keep a file, so a member added
+        /// as the complement of the verdicts that let a file through, so a member added
         /// to the enum withholds by default and would arrive here unnamed. Counting it
         /// under either of these would put a cause on it that nobody established, so an
         /// unnamed verdict counts nowhere and the split falls short of the list it
@@ -1259,22 +1261,22 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// <summary>
     /// Moves out of <paramref name="candidates"/> and into
     /// <paramref name="withheld"/> every installation package whose own declared
-    /// product Windows still holds a record of, and every one this pass could not
-    /// settle. Both lists keep walk order.
+    /// product Windows still holds a record of, unless every installation of that
+    /// product records a different cached package that is present, and every one
+    /// this pass could not settle. Both lists keep walk order.
     ///
     /// THE THIRD SOURCE, AND IT IS THE ONLY ONE THAT STARTS AT THE FILE. The two
     /// comparisons above it start at a registration and work towards a file, and
     /// both of them read the same recorded LocalPackage value, so a product whose
     /// records hold no value to read has nothing for either to find and nothing
     /// records the gap. See <see cref="IDeclaredProductCheck"/> for the mechanism
-    /// in full; what it means here is that a product package can be walked,
-    /// matched against nothing and offered while its product is installed.
+    /// in full; what it means here is that a product package can be walked and
+    /// matched against nothing while its product is installed and names no
+    /// package, and this is where such a file is kept.
     ///
     /// IT CAN ONLY EVER SUBTRACT FROM THE OFFER. Nothing it returns adds a file,
-    /// clears a withholding made anywhere else, or reaches a patch at all. So a
-    /// scan with no screen injected offers exactly what it offered before the
-    /// screen existed, and a fault inside the screen costs offers rather than
-    /// files.
+    /// clears a withholding made anywhere else, or reaches a patch at all, so a
+    /// scan with no screen injected offers what the rest of the scan decides.
     ///
     /// A WITHHELD CANDIDATE CARRIES NO CAUSE AND MUST NOT ACQUIRE ONE. It joins a
     /// list that already holds files kept back for a different reason entirely,

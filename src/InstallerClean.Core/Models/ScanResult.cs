@@ -257,8 +257,9 @@ namespace InstallerClean.Models;
 /// candidate's own identity could not be read, so nothing could compare it against the
 /// registrations and it is kept back while the rest stand
 /// (<see cref="CandidateIdentityReads"/>); or the candidate is an installation package
-/// whose own declared product Windows still holds a record of, or whose declaration this
-/// scan could not settle, which withholds that one file. A run can hold files put here by
+/// whose own declared product Windows still holds a record of without every installation
+/// of it recording another present package, or whose declaration this scan could not
+/// settle, which withholds that one file. A run can hold files put here by
 /// any of the three, and a reader of this list may assume none of them.
 ///
 /// NO SURFACE STATES A CAUSE OVER IT AND NONE MAY START. The main window counts these
@@ -447,11 +448,11 @@ public record ScanResult(
     /// accounts for all of them" rather than as "no per-file arm fired". The per-file
     /// sentence says the scan could not establish these files were unneeded, which is
     /// true of every file on that list whatever put it there. The wholesale sentence
-    /// names a cause, and that cause is false of a file kept back because Windows still
-    /// holds a record of the product it declares: for that file the scan was certain,
-    /// which is the opposite of what the sentence would say. So the wholesale reading
-    /// is reached only where the wholesale arm accounts for the whole list, and
-    /// everything else takes the sentence that is true of all of them.
+    /// names a cause, and that cause is false of a file kept back one at a time, such
+    /// as one whose declared product Windows still holds a record of: the wholesale
+    /// cause is a finding about the machine's records and did not keep that file. So
+    /// the wholesale reading is reached only where the wholesale arm accounts for the
+    /// whole list, and everything else takes the sentence that is true of all of them.
     ///
     /// WHICH IS ALSO WHAT MAKES THIS RIGHT OVER A SPLIT THAT HAS FALLEN SHORT. A file
     /// on the list that no arm counted leaves the wholesale arm short of the list's own

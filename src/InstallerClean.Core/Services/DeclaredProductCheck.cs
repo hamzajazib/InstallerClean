@@ -1,3 +1,4 @@
+using System.IO.Abstractions;
 using InstallerClean.Interop;
 using InstallerClean.Models;
 
@@ -6,28 +7,57 @@ namespace InstallerClean.Services;
 /// <summary>
 /// Production <see cref="IDeclaredProductCheck"/>: reads each candidate
 /// installation package's own ProductCode through
-/// <see cref="IPackageIdentityReader"/> and puts it to Windows through the same
-/// keyed enumeration the patch-target route uses.
+/// <see cref="IPackageIdentityReader"/>, puts it to Windows through the same
+/// keyed enumeration the patch-target route uses, and for an installed product
+/// reads the <c>LocalPackage</c> each installation records.
 ///
-/// IT COMPOSES TWO THINGS THAT ALREADY EXIST AND ADDS NO THIRD. The reading is
-/// the reader's, which has always been able to take the product reading and has
-/// only ever been asked for the patch one. The asking is
-/// <see cref="InstallerQueryService.ResolveProductInstances"/>, shared rather than
-/// copied because the part of it that decides anything is which returns are
-/// allowed to mean "not installed": that allowlist is the difference between a
-/// file kept and a file offered, and a second copy of it is a second thing to
-/// keep right.
+/// IT COMPOSES THINGS THAT ALREADY EXIST. The reading is the reader's, which has
+/// always been able to take the product reading and has only ever been asked for
+/// the patch one. The asking is
+/// <see cref="InstallerQueryService.ResolveProductInstances"/> and
+/// <see cref="InstallerQueryService.ReadProductProperty"/>, shared rather than
+/// copied because the part of them that decides anything is which returns are
+/// allowed to mean "not installed" or "no value": those allowlists are the
+/// difference between a file kept and a file offered, and a second copy of them is
+/// a second thing to keep right. The comparison of recorded packages against the
+/// candidate is <see cref="IFileIdentityReader"/>, the reader the scan's own
+/// path comparison uses.
 /// </summary>
 public sealed class DeclaredProductCheck : IDeclaredProductCheck
 {
     private readonly IMsiApi _msi;
     private readonly IPackageIdentityReader _identityReader;
+    private readonly IFileIdentityReader? _fileIdentities;
+    private readonly IFileSystem? _fileSystem;
 
-    public DeclaredProductCheck(IMsiApi msi, IPackageIdentityReader identityReader)
+    /// <param name="fileIdentities">
+    /// Identifies the file each recorded package path opens, and the candidate's own.
+    /// </param>
+    /// <param name="fileSystem">
+    /// Answers whether a recorded package path names a file, so that a value naming a
+    /// folder is not taken for a package.
+    /// </param>
+    /// <remarks>
+    /// WITHOUT BOTH FILE READERS NO RECORDED PACKAGE IS LOOKED AT, and every candidate
+    /// whose declared product is installed is kept as
+    /// <see cref="DeclaredProductOutcome.DeclaredProductInstalled"/>. That is the
+    /// direction a missing dependency has to fail in. The composition root supplies
+    /// both.
+    /// </remarks>
+    public DeclaredProductCheck(
+        IMsiApi msi,
+        IPackageIdentityReader identityReader,
+        IFileIdentityReader? fileIdentities = null,
+        IFileSystem? fileSystem = null)
     {
         _msi = msi;
         _identityReader = identityReader;
+        _fileIdentities = fileIdentities;
+        _fileSystem = fileSystem;
     }
+
+    /// <summary>Whether this check compares recorded packages with the candidate.</summary>
+    internal bool ComparesRecordedPackages => _fileIdentities is not null && _fileSystem is not null;
 
     /// <inheritdoc />
     public IReadOnlyList<DeclaredProductOutcome> Screen(
@@ -46,7 +76,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         // braced upper-case form for exactly this: two readings of one code are
         // then the same string, and a comparer that folded case would be covering
         // for a reader that had stopped doing that.
-        var asked = new Dictionary<string, DeclaredProductOutcome>(StringComparer.Ordinal);
+        var asked = new Dictionary<string, ProductAnswer>(StringComparer.Ordinal);
 
         for (var i = 0; i < candidates.Count; i++)
         {
@@ -100,33 +130,125 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             }
 
             var code = identity.Value.Code;
-            if (asked.TryGetValue(code, out var already))
+            if (!asked.TryGetValue(code, out var answer))
             {
-                outcomes[i] = already;
-                continue;
+                answer = Ask(code);
+                asked[code] = answer;
             }
 
-            var resolved = InstallerQueryService.ResolveProductInstances(_msi, code);
-
-            // THE ORDER OF THE ARMS IS THE WHOLE OF IT, and the unaskable one is
-            // first because it is the one that reads as an answer if it is left
-            // last. A call that could not be made has not shown the product to be
-            // absent, and treating "no answer" as "no product" would offer the
-            // file on the strength of a question that was never really put.
-            //
-            // ONE INSTANCE IS AS GOOD AS SEVERAL TO THIS SCREEN, which asks only
-            // whether the machine holds the code the file declares. Where the
-            // instances matter is the keyed patch reads, which are put per account
-            // and per context; this arm needs to know that there is at least one.
-            outcomes[i] = resolved.Unaskable
-                ? DeclaredProductOutcome.Unestablished
-                : resolved.Instances.Count > 0
-                    ? DeclaredProductOutcome.DeclaredProductInstalled
-                    : DeclaredProductOutcome.DeclaredProductNotInstalled;
-
-            asked[code] = outcomes[i];
+            // The product-level answer is shared by every candidate declaring the
+            // code; whether the recorded packages are OTHER files is a question about
+            // this candidate, so it is asked per file.
+            outcomes[i] = answer.Outcome == DeclaredProductOutcome.DeclaredProductInstalled
+                && answer.RecordedPackages is { } recorded
+                && IsNoneOf(candidate.FullPath, recorded)
+                    ? DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile
+                    : answer.Outcome;
         }
 
         return outcomes;
     }
+
+    /// <summary>
+    /// What Windows holds for one declared product code, asked once per code per
+    /// pass.
+    /// </summary>
+    private ProductAnswer Ask(string code)
+    {
+        var resolved = InstallerQueryService.ResolveProductInstances(_msi, code);
+
+        // THE ORDER OF THE ARMS IS THE WHOLE OF IT, and the unaskable one is
+        // first because it is the one that reads as an answer if it is left
+        // last. A call that could not be made has not shown the product to be
+        // absent, and treating "no answer" as "no product" would offer the
+        // file on the strength of a question that was never really put.
+        if (resolved.Unaskable)
+            return new ProductAnswer(DeclaredProductOutcome.Unestablished, null);
+
+        if (resolved.Instances.Count == 0)
+            return new ProductAnswer(DeclaredProductOutcome.DeclaredProductNotInstalled, null);
+
+        return new ProductAnswer(
+            DeclaredProductOutcome.DeclaredProductInstalled,
+            RecordedPackagesOf(code, resolved.Instances));
+    }
+
+    /// <summary>
+    /// The identity of the cached package every installation of <paramref name="code"/>
+    /// records, one per installation, or null where any one of them cannot be read.
+    ///
+    /// NULL IS THE ANSWER THAT KEEPS THE FILE, and every way an installation's package
+    /// can fail to be seen reaches it: a <c>LocalPackage</c> read that failed or came
+    /// back empty, a value that names nothing, names a folder, will not open to an
+    /// identity, or names a file that does not declare <paramref name="code"/>. One
+    /// such installation is enough, because its package is the one this candidate
+    /// could be.
+    /// </summary>
+    private IReadOnlyList<FileIdentity>? RecordedPackagesOf(
+        string code,
+        IReadOnlyList<(string? Sid, MsiInstallContext Context)> instances)
+    {
+        if (_fileIdentities is null || _fileSystem is null) return null;
+
+        var identities = new List<FileIdentity>(instances.Count);
+        foreach (var (sid, context) in instances)
+        {
+            var read = InstallerQueryService.ReadProductProperty(
+                _msi, code, sid, context, MsiInstallProperty.LocalPackage);
+            if (read.Unreadable) return null;
+
+            var path = read.Value.TrimEnd('\0');
+            if (path.Length == 0) return null;
+
+            // File.Exists is false for a folder and for a path that will not parse,
+            // and the identity read below opens folders too, so this is what keeps a
+            // value naming a folder from standing in for a package.
+            if (!_fileSystem.File.Exists(path)) return null;
+
+            if (_fileIdentities.ReadOutcome(path, out var recorded) != FileIdentityRead.Read)
+                return null;
+
+            // THE RECORDED PACKAGE HAS TO DECLARE THE SAME PRODUCT. The Windows Installer
+            // record says which file the installation uses and this reads the file
+            // itself, so the verdict rests on the two agreeing: a value naming a file that
+            // is not this product's package shows nothing about where the package is, and
+            // keeps the candidate.
+            var declared = _identityReader.Read(path, isPatch: false, out _);
+            if (declared is null
+                || declared.Value.IsPatch
+                || !string.Equals(declared.Value.Code, code, StringComparison.Ordinal))
+                return null;
+
+            identities.Add(recorded);
+        }
+
+        return identities;
+    }
+
+    /// <summary>
+    /// Whether the candidate at <paramref name="candidatePath"/> is a different file
+    /// from every recorded package. A candidate whose own identity will not read is
+    /// not shown to be different, so it answers false and is kept.
+    /// </summary>
+    private bool IsNoneOf(string candidatePath, IReadOnlyList<FileIdentity> recorded)
+    {
+        if (_fileIdentities is null) return false;
+        if (_fileIdentities.ReadOutcome(candidatePath, out var candidate) != FileIdentityRead.Read)
+            return false;
+
+        foreach (var package in recorded)
+            if (package == candidate) return false;
+
+        return true;
+    }
+
+    /// <param name="Outcome">The verdict the product code alone gives.</param>
+    /// <param name="RecordedPackages">
+    /// For an installed product, the identity of the package each installation
+    /// records, or null where any installation's package could not be identified.
+    /// Null for every other verdict.
+    /// </param>
+    private readonly record struct ProductAnswer(
+        DeclaredProductOutcome Outcome,
+        IReadOnlyList<FileIdentity>? RecordedPackages);
 }

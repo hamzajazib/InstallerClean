@@ -843,17 +843,19 @@ public sealed record MachineInfo(
 /// </param>
 /// <param name="WithheldDeclaredProductInstalledCount">
 /// Candidates the declared-product screen kept back because Windows still holds a
-/// record of the product the file itself declares it belongs to:
+/// record of the product the file itself declares it belongs to, and some
+/// installation of that product records no cached package the screen could show
+/// is another file that is present:
 /// <c>ScanResult.WithheldBy.DeclaredProductInstalledCount</c>.
 /// </param>
 /// <param name="WithheldDeclaredProductUnestablishedCount">
 /// Candidates the same screen kept back having settled nothing about them:
 /// <c>ScanResult.WithheldBy.DeclaredProductUnestablishedCount</c>.
 ///
-/// IT IS THE OPPOSITE FINDING FROM THE ONE ABOVE IT AND THE TWO MUST NOT BE ADDED. That
-/// one is a positive answer about a machine; this one is a question that went
-/// unanswered, and it covers two different inabilities under one name deliberately.
-/// A total over the pair would state a cause true of neither.
+/// IT IS A DIFFERENT FINDING FROM THE ONE ABOVE IT AND THE TWO MUST NOT BE ADDED. That
+/// one starts from a positive answer that the product is installed; this one is a
+/// question that went unanswered, and it covers two different inabilities under one
+/// name deliberately. A total over the pair would state a cause true of neither.
 /// </param>
 /// <param name="WithheldScreenUnansweredCount">
 /// Candidates kept back because the screen answered a different number of files than it

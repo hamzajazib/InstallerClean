@@ -1,6 +1,8 @@
+using System.IO.Abstractions.TestingHelpers;
 using InstallerClean.Interop;
 using InstallerClean.Models;
 using InstallerClean.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace InstallerClean.Tests.Services;
 
@@ -12,9 +14,10 @@ namespace InstallerClean.Tests.Services;
 /// scan decides a cached file is spare starts at a registration and looks for the
 /// file it names, so where a product's records hold no usable path there is
 /// nothing for any of them to work from. That is the class this reaches, and the
-/// tests below are about the direction it fails in: only a POSITIVE answer that
-/// Windows does not hold the declared product lets a file through, and every
-/// inability keeps it.
+/// tests below are about the direction it fails in. Two answers let a file
+/// through: a POSITIVE answer that Windows does not hold the declared product, and
+/// every installation of that product recording a package that is present and is
+/// another file. Every inability keeps it.
 ///
 /// AND IT REACHES THAT CLASS FOR PRODUCT PACKAGES ONLY. A patch is refused
 /// outright, which two tests here pin, because Windows holds a record of every
@@ -48,7 +51,8 @@ public class DeclaredProductCheckTests
         // THE WHOLE POINT OF THE CHECK. Nothing registered names this file, so
         // every other mechanism in the scan has already let it through; the file
         // itself says which product it belongs to, and Windows still has that
-        // product.
+        // product. Built without the file readers, the check cannot look at what
+        // the product records, which is the section further down.
         var identities = new ScriptedPackageIdentities();
         identities.Declares(@"C:\Windows\Installer\a.msi", ProductA);
 
@@ -230,10 +234,10 @@ public class DeclaredProductCheckTests
     [Fact]
     public void A_package_whose_declared_product_is_installed_twice_is_kept_back()
     {
-        // One code, two installations: per machine and for a user at once. The screen
-        // asks only whether the machine holds the code the file declares, so the
-        // answer is the same as for one installation, and this pins that a walk over
-        // several rows still reaches it.
+        // One code, two installations: per machine and for a user at once. Built
+        // without the file readers, the screen asks only whether the machine holds the
+        // code the file declares, so the answer is the same as for one installation,
+        // and this pins that a walk over several rows still reaches it.
         var identities = new ScriptedPackageIdentities();
         identities.Declares(@"C:\Windows\Installer\a.msi", ProductA);
 
@@ -348,12 +352,265 @@ public class DeclaredProductCheckTests
                 .Screen(new[] { Package(@"C:\Windows\Installer\a.msi") }, cts.Token));
     }
 
+    // ---- An installed product whose recorded package is another file ----
+    //
+    // Windows Installer opens a product's cached package through the LocalPackage
+    // value each installation records. A copy in the folder that no such value names
+    // is not the package any installation uses, so it is let through, and only when
+    // EVERY installation's recorded package is present and is another file. Each
+    // test after the first is one way an installation's package can fail to be
+    // seen, and every one of them keeps the file.
+
+    private const string Candidate = @"C:\Windows\Installer\a.msi";
+    private const string Recorded = @"C:\Windows\Installer\b.msi";
+    private const string UserSid = "S-1-5-21-9-9-9-1001";
+
+    /// <summary>
+    /// Product A installed once per machine, recording <see cref="Recorded"/>, with
+    /// both files on disk as two different files that both declare product A. Each
+    /// test changes one thing.
+    /// </summary>
+    private static (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+        ScriptedFileIdentities Files, MockFileSystem Disk) ACopyBesideTheRecordedPackage()
+    {
+        var packages = new ScriptedPackageIdentities();
+        packages.Declares(Candidate, ProductA);
+        packages.Declares(Recorded, ProductA);
+
+        var msi = new ScriptedMsiProducts();
+        msi.Installed(ProductA);
+        msi.RecordsPackage(ProductA, null, MsiInstallContext.Machine, Recorded);
+
+        var files = new ScriptedFileIdentities();
+        files.Opens(Candidate, 1);
+        files.Opens(Recorded, 2);
+
+        var disk = new MockFileSystem();
+        disk.AddFile(Candidate, new MockFileData(new byte[100]));
+        disk.AddFile(Recorded, new MockFileData(new byte[100]));
+
+        return (packages, msi, files, disk);
+    }
+
+    private static DeclaredProductOutcome ScreenTheCopy(
+        (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+            ScriptedFileIdentities Files, MockFileSystem Disk) f) =>
+        new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk)
+            .Screen(new[] { Package(Candidate) })[0];
+
+    [Fact]
+    public void A_copy_beside_the_package_its_installed_product_records_is_let_through()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+
+        var outcome = ScreenTheCopy(f);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome);
+        Assert.False(outcome.Withholds());
+        // Both files were identified, which is what the verdict rests on.
+        Assert.Contains(Recorded, f.Files.Reads);
+        Assert.Contains(Candidate, f.Files.Reads);
+    }
+
+    [Fact]
+    public void A_copy_is_let_through_when_every_installation_records_another_present_package()
+    {
+        const string UsersPackage = @"C:\Windows\Installer\c.msi";
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Installed(ProductA,
+            (null, MsiInstallContext.Machine),
+            (UserSid, MsiInstallContext.UserUnmanaged));
+        f.Msi.RecordsPackage(ProductA, UserSid, MsiInstallContext.UserUnmanaged, UsersPackage);
+        f.Packages.Declares(UsersPackage, ProductA);
+        f.Files.Opens(UsersPackage, 3);
+        f.Disk.AddFile(UsersPackage, new MockFileData(new byte[100]));
+
+        var outcome = ScreenTheCopy(f);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome);
+        Assert.Equal(2, f.Msi.PackageReads.Count);
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_one_installation_records_no_package()
+    {
+        // The per-machine installation records another file; the per-user one records
+        // nothing, so the package that installation opens cannot be seen and this copy
+        // could be it.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Installed(ProductA,
+            (null, MsiInstallContext.Machine),
+            (UserSid, MsiInstallContext.UserUnmanaged));
+        f.Msi.RecordsPackage(ProductA, UserSid, MsiInstallContext.UserUnmanaged, "");
+
+        var outcome = ScreenTheCopy(f);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome);
+        Assert.True(outcome.Withholds());
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_only_installation_records_no_package()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsPackage(ProductA, null, MsiInstallContext.Machine, "");
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_record_carries_no_package_property_at_all()
+    {
+        // ERROR_UNKNOWN_PROPERTY is a record that never carried the value. It reads as
+        // an empty value rather than a failure, and an empty value names no package.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.PackageReadAnswers(ProductA, null, MsiInstallContext.Machine, MsiError.UnknownProperty);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_recorded_package_will_not_read()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.PackageReadAnswers(ProductA, null, MsiInstallContext.Machine, MsiError.AccessDenied);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_recorded_package_is_not_on_disk()
+    {
+        // The identity fake still answers for the recorded path, so this is decided by
+        // the file being absent and not by an identity that would not read.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Disk.RemoveFile(Recorded);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_recorded_package_path_names_a_folder()
+    {
+        // A folder opens to an identity like a file does, so without the file test a
+        // value naming a folder would read as another package.
+        const string AFolder = @"C:\Windows\Installer\{11111111-1111-1111-1111-111111111111}";
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsPackage(ProductA, null, MsiInstallContext.Machine, AFolder);
+        f.Files.Opens(AFolder, 4);
+        f.Disk.AddDirectory(AFolder);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_recorded_package_opens_as_the_copy_itself()
+    {
+        // The record names this very file under another spelling: a short name, a
+        // long-path prefix, a link. The two paths open to one file ID.
+        const string ShortName = @"C:\Windows\Installer\A~1.MSI";
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsPackage(ProductA, null, MsiInstallContext.Machine, ShortName);
+        f.Packages.Declares(ShortName, ProductA);
+        f.Files.Opens(ShortName, 1);
+        f.Disk.AddFile(ShortName, new MockFileData(new byte[100]));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_recorded_package_will_not_identify()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Files.Answers(Recorded, FileIdentityRead.OpenRefused);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_recorded_package_declares_another_product()
+    {
+        // The Windows Installer record names a present file, and that file is not
+        // product A's package, so the record shows nothing about where A's package is.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Packages.Declares(Recorded, ProductB);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_recorded_package_declares_nothing()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Packages.YieldsNothing(Recorded, "no Property table");
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_copy_itself_will_not_identify()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Files.Answers(Candidate, FileIdentityRead.IdentityUnavailable);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void Without_the_file_readers_no_recorded_package_is_read()
+    {
+        // The same fixture as the tests above, which scripts every read, handed to a
+        // check built without its two file readers. Nothing may be read: the
+        // assertions below are that the package reads and the identity reads never
+        // happened.
+        var f = ACopyBesideTheRecordedPackage();
+
+        var outcome = new DeclaredProductCheck(f.Msi, f.Packages)
+            .Screen(new[] { Package(Candidate) })[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome);
+        Assert.Empty(f.Msi.PackageReads);
+        Assert.Empty(f.Files.Reads);
+    }
+
+    [Fact]
+    public void Two_copies_of_one_product_ask_Windows_once_and_are_each_compared()
+    {
+        const string SecondCopy = @"C:\Windows\Installer\a2.msi";
+        var f = ACopyBesideTheRecordedPackage();
+        f.Packages.Declares(SecondCopy, ProductA);
+        f.Files.Opens(SecondCopy, 5);
+        f.Disk.AddFile(SecondCopy, new MockFileData(new byte[100]));
+
+        var outcomes = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk)
+            .Screen(new[] { Package(Candidate), Package(SecondCopy) });
+
+        Assert.All(outcomes, o => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, o));
+        Assert.Single(f.Msi.Asked);
+        Assert.Single(f.Msi.PackageReads);
+        Assert.Contains(Candidate, f.Files.Reads);
+        Assert.Contains(SecondCopy, f.Files.Reads);
+    }
+
+    [Fact]
+    public void The_composition_root_gives_the_check_both_file_readers()
+    {
+        // Constructed by hand everywhere else in this file. Without both readers the
+        // check keeps every copy of an installed product, and nothing on any screen
+        // would show that it had stopped comparing.
+        using var services = new ServiceCollection().AddInstallerCleanCore().BuildServiceProvider();
+
+        var check = Assert.IsType<DeclaredProductCheck>(services.GetRequiredService<IDeclaredProductCheck>());
+
+        Assert.True(check.ComparesRecordedPackages);
+    }
+
     // ---- What the outcomes mean, pinned over the whole enum ----
 
     [Fact]
-    public void Exactly_two_outcomes_let_a_file_through_and_an_unset_verdict_does_not()
+    public void Exactly_three_outcomes_let_a_file_through_and_an_unset_verdict_does_not()
     {
-        // The rule is written as "anything but these two" so that a member added
+        // The rule is written as "anything but these three" so that a member added
         // later withholds rather than silently not withholding. This pins the
         // permitting set by name, so adding one that permits has to be a
         // deliberate edit here as well as there.
@@ -366,6 +623,7 @@ public class DeclaredProductCheckTests
             {
                 DeclaredProductOutcome.NotAProductPackage,
                 DeclaredProductOutcome.DeclaredProductNotInstalled,
+                DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile,
             },
             permitting);
 
@@ -487,8 +745,9 @@ internal sealed class ScriptedPackageIdentities : IPackageIdentityReader
 }
 
 /// <summary>
-/// A scripted <see cref="IMsiApi"/> answering the one keyed product question this
-/// area asks. The other three members are not reachable from here and say so.
+/// A scripted <see cref="IMsiApi"/> answering the two questions this area asks: the
+/// keyed product enumeration, and the LocalPackage each installation records. The
+/// other two members are not reachable from here and say so.
 ///
 /// AN UNSCRIPTED CODE THROWS, for the reason the reader's does: "Windows does not
 /// hold that product" is the single answer that lets a file through, so a fake
@@ -599,11 +858,91 @@ internal sealed class ScriptedMsiProducts : IMsiApi
         char[]? targetUserSid, ref uint targetUserSidLength) =>
         throw new InvalidOperationException("the declared-product check enumerates no patches");
 
+    private readonly Dictionary<(string ProductCode, string? Sid, MsiInstallContext Context), (uint Error, string Value)>
+        _localPackages = new();
+
+    /// <summary>Every LocalPackage read this API answered, in order.</summary>
+    public List<(string ProductCode, string? Sid, MsiInstallContext Context)> PackageReads { get; } = new();
+
+    /// <summary>
+    /// The LocalPackage value one installation of a product records. An empty value is
+    /// a record that names no package, which the real API returns for a record that
+    /// never carried the property.
+    /// </summary>
+    public void RecordsPackage(string productCode, string? sid, MsiInstallContext context, string localPackage) =>
+        _localPackages[(productCode, sid, context)] = (MsiError.Success, localPackage);
+
+    /// <summary>What reading one installation's LocalPackage returns instead of a value.</summary>
+    public void PackageReadAnswers(string productCode, string? sid, MsiInstallContext context, uint error) =>
+        _localPackages[(productCode, sid, context)] = (error, string.Empty);
+
+    /// <summary>
+    /// Answers LocalPackage alone, the one product property the check reads, with the
+    /// real API's two-call shape: a null buffer is answered with the length, a buffer
+    /// with the value.
+    ///
+    /// AN UNSCRIPTED INSTALLATION THROWS. A recorded package that is present and is
+    /// another file is the answer that lets a file through, so a fake inventing one
+    /// would let a test assert an offer nothing established.
+    /// </summary>
     public uint GetProductInfo(string productCode, string? userSid, MsiInstallContext context, string property,
-        char[]? value, ref uint valueLength) =>
-        throw new InvalidOperationException("the declared-product check reads no product properties");
+        char[]? value, ref uint valueLength)
+    {
+        if (property != MsiInstallProperty.LocalPackage)
+            throw new InvalidOperationException(
+                $"the declared-product check reads LocalPackage and nothing else, and was asked for {property}");
+
+        if (!_localPackages.TryGetValue((productCode, userSid, context), out var scripted))
+            throw new InvalidOperationException(
+                $"the fake was asked for the package {productCode} records for {userSid ?? "the machine"} "
+                + $"in {context}, which no test scripted");
+
+        if (value is null) PackageReads.Add((productCode, userSid, context));
+        if (scripted.Error != MsiError.Success) return scripted.Error;
+
+        if (value is not null)
+            for (var i = 0; i < scripted.Value.Length && i < value.Length; i++) value[i] = scripted.Value[i];
+        valueLength = (uint)scripted.Value.Length;
+        return MsiError.Success;
+    }
 
     public uint GetPatchInfo(string patchCode, string productCode, string? userSid, MsiInstallContext context,
         string property, char[]? value, ref uint valueLength) =>
         throw new InvalidOperationException("the declared-product check reads no patch properties");
+}
+
+/// <summary>
+/// A scripted <see cref="IFileIdentityReader"/>, standing in for the volume and file
+/// ID a path opens.
+///
+/// AN UNSCRIPTED PATH THROWS. "A different file from the candidate" is the answer
+/// that lets a file through, and a fake handing out fresh identities by default would
+/// make every recorded package look like another file.
+/// </summary>
+internal sealed class ScriptedFileIdentities : IFileIdentityReader
+{
+    private readonly Dictionary<string, (FileIdentityRead Outcome, FileIdentity Identity)> _byPath =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Every path this reader was asked about, in order.</summary>
+    public List<string> Reads { get; } = new();
+
+    /// <summary>
+    /// The path opens as the file numbered <paramref name="fileId"/>. Two paths given
+    /// the same number are one file under two spellings.
+    /// </summary>
+    public void Opens(string path, ulong fileId) =>
+        _byPath[path] = (FileIdentityRead.Read, new FileIdentity(1, fileId, 0));
+
+    public void Answers(string path, FileIdentityRead outcome) => _byPath[path] = (outcome, default);
+
+    public FileIdentityRead ReadOutcome(string path, out FileIdentity identity)
+    {
+        Reads.Add(path);
+        if (!_byPath.TryGetValue(path, out var scripted))
+            throw new InvalidOperationException(
+                $"the fake identity reader was asked about {path}, which no test scripted");
+        identity = scripted.Identity;
+        return scripted.Outcome;
+    }
 }
