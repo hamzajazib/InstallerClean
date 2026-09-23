@@ -100,6 +100,13 @@ public class FileSystemScanServiceDeclaredProductTests
         var kept = Assert.Single(result.WithheldFiles!);
         Assert.Equal($@"{Folder}\a.msi", kept.FullPath);
         Assert.Equal(1, result.WithheldBy.DeclaredProductInstalledCount);
+        // The file's size goes to the declared-product-installed arm's byte
+        // figure, so the held-back sentences, which leave this file out, are left
+        // nothing to count.
+        Assert.Equal(kept.SizeBytes, result.WithheldDeclaredProductInstalledBytes);
+        Assert.Equal(0, result.UnestablishedWithheldCount);
+        Assert.Equal(0, result.UnestablishedWithheldBytes);
+        Assert.Equal(WithholdingAccount.DeclaredProductsInstalled, result.Withholding);
     }
 
     /// <summary>

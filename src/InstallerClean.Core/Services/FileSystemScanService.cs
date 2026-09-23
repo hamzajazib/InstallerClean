@@ -1022,7 +1022,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
             // rather than derived, and held to that list's own length by a test:
             // five counts that no longer sum to it mean a sixth arm has been
             // added and is reported by none of them.
-            withheldBy.Taken());
+            withheldBy.Taken(),
+            withheldBy.DeclaredProductInstalledBytes);
     }
 
     /// <summary>
@@ -1216,6 +1217,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         private int _identityUnestablished;
         private int _wholesale;
         private int _declaredProductInstalled;
+        private long _declaredProductInstalledBytes;
         private int _declaredProductUnestablished;
         private int _screenUnanswered;
 
@@ -1237,18 +1239,26 @@ public sealed class FileSystemScanService : IFileSystemScanService
         /// WithholdingSplitTallyTests walks the enum's withholding members against this
         /// switch, so adding one has to be a deliberate edit here as well as there.
         /// </summary>
-        internal void Screened(DeclaredProductOutcome outcome)
+        internal void Screened(DeclaredProductOutcome outcome, long sizeBytes)
         {
             switch (outcome)
             {
                 case DeclaredProductOutcome.DeclaredProductInstalled:
                     _declaredProductInstalled++;
+                    _declaredProductInstalledBytes += sizeBytes;
                     break;
                 case DeclaredProductOutcome.Unestablished:
                     _declaredProductUnestablished++;
                     break;
             }
         }
+
+        /// <summary>
+        /// The size of the files counted under the declared-product-installed arm,
+        /// which the result carries beside the split so the held-back sentences can
+        /// give the size of the files they speak of and no others.
+        /// </summary>
+        internal long DeclaredProductInstalledBytes => _declaredProductInstalledBytes;
 
         internal WithholdingSplit Taken() => new(
             _identityUnestablished,
@@ -1323,7 +1333,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
             if (outcomes[i].Withholds())
             {
                 withheld.Add(candidates[i]);
-                withheldBy.Screened(outcomes[i]);
+                withheldBy.Screened(outcomes[i], candidates[i].SizeBytes);
             }
             else survivors.Add(candidates[i]);
         }

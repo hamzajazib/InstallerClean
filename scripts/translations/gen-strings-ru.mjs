@@ -633,7 +633,6 @@ const CLI = {
   // and a rendering that keeps one half states a cause the app did not establish for
   // the files the other half holds. Keep the two leading spaces on all four.
   'Cli.WithheldReasons.CandidateIdentity': `  Файл в папке не удалось опознать, поэтому его не удалось сопоставить с записями.`,
-  'Cli.WithheldReasons.DeclaredProductInstalled': `  Файл заявляет, что принадлежит программе, которая всё ещё установлена, поэтому он может быть ещё нужен.`,
   'Cli.WithheldReasons.DeclaredProductUnestablished': `  Либо файл не указал, какой программе он принадлежит, либо Windows не ответил об этой программе.`,
   'Cli.WithheldReasons.ScreenUnanswered': `  Проверка того, каким программам принадлежат файлы, дала ответы, которые не совпали с переданными ей файлами.`,
   'Cli.PendingRebootBlocked.PendingRenameUnresolved': `Ошибка: файловая операция поставлена в очередь до следующей перезагрузки, и InstallerClean не может определить, какие файлы в ней названы, поэтому не может исключить {InstallerFolder}. Перезагрузите Windows перед очисткой.`,

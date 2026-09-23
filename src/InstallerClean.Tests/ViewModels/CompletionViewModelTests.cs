@@ -589,6 +589,31 @@ public class CompletionViewModelTests
     }
 
     [Fact]
+    public void Every_reading_but_the_wholesale_one_renders_the_per_file_body()
+    {
+        // The wholesale body names a cause and is the one that has to be earned, so a
+        // reading this screen is handed that is not WholeWalkOffer gets the body true
+        // of every file it counts. The two silent readings never reach this screen in
+        // the app; they are passed here to pin which body a stray one would get.
+        var perFile = new CompletionViewModel();
+        perFile.ShowNothingOffered(
+            WithholdingAccount.PerFile, withheldCount: 3, withheldBytes: 3072,
+            scannedFileCount: 5, scanDurationMs: 10);
+
+        foreach (var account in Enum.GetValues<WithholdingAccount>())
+        {
+            if (account == WithholdingAccount.WholeWalkOffer) continue;
+
+            var vm = new CompletionViewModel();
+            vm.ShowNothingOffered(
+                account, withheldCount: 3, withheldBytes: 3072,
+                scannedFileCount: 5, scanDurationMs: 10);
+
+            Assert.True(perFile.Summary == vm.Summary, $"{account} rendered another body");
+        }
+    }
+
+    [Fact]
     public void The_per_file_body_is_the_one_the_per_file_reading_renders()
     {
         // The key-level assertion the test above cannot make: NotEqual would be

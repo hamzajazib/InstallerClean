@@ -1696,17 +1696,17 @@ Das Absturzprotokoll konnte nicht geschrieben werden.</value></data>
   <data name="Cli.WithheldReasons.RecordedPath" xml:space="preserve"><value>  Ein Dateipfad in den eigenen Aufzeichnungen von Windows Installer ließ sich nicht auflösen, sodass ihm nichts zugeordnet werden konnte.</value></data>
   <data name="Cli.WithheldReasons.FileIdentity" xml:space="preserve"><value>  Eine Datei, über die Windows eine Aufzeichnung hat, ließ sich nicht identifizieren und konnte deshalb dem Inhalt des Ordners nicht zugeordnet werden.</value></data>
   <data name="Cli.WithheldReasons.SecondInstance" xml:space="preserve"><value>  Ein Programm ist auf diesem PC möglicherweise mehrfach installiert, und die Aufzeichnungen geben nicht her, zu welcher Kopie eine Datei gehört.</value></data>
-  <!-- The four per-file arms. Each is a decision taken about one candidate, where
-       the three lines above are findings about the machine's records that withheld
-       the walk-derived offer whole. They name four different causes and have to
-       stay four and distinct: a rendering that blurs any two of them makes the app
-       state a cause it cannot support for the other's files.
+  <!-- The per-file arms that have a line. Each is a decision taken about one
+       candidate, where the lines above are findings about the machine's records that
+       withheld the walk-derived offer whole. They name different causes and have to
+       stay distinct: a rendering that blurs any two of them makes the app state a
+       cause it cannot support for the other's files.
+
+       Files the declared-product-installed arm keeps have no line here:
+       WithholdingSplit.ArmsFired leaves that arm out.
 
        CandidateIdentity is the identity pass failing to read one file in the folder,
        so that file could not be compared against the records at all.
-
-       DeclaredProductInstalled is a file whose own declared product Windows still has
-       a record of, so the file may still be needed.
 
        DeclaredProductUnestablished is a disjunction and must stay one: either the file
        would not say which program it belongs to, or Windows would not answer about the
@@ -1716,11 +1716,10 @@ Das Absturzprotokoll konnte nicht geschrieben werden.</value></data>
        ScreenUnanswered is the check answering about a different number of files than it
        was handed, so no answer could be attached to any particular file.
 
-       None of the four carries a count and none may acquire one: each is one fact about
+       None of them carries a count and none may acquire one: each is one fact about
        one machine, and nothing may add it to another and call the result a cause. The
-       count and the size of what was held back are on the line above. -->
+       count and size of the files these lines explain are on the line above. -->
   <data name="Cli.WithheldReasons.CandidateIdentity" xml:space="preserve"><value>  Eine Datei im Ordner ließ sich nicht identifizieren und konnte deshalb nicht den Aufzeichnungen zugeordnet werden.</value></data>
-  <data name="Cli.WithheldReasons.DeclaredProductInstalled" xml:space="preserve"><value>  Eine Datei gibt an, zu einem noch installierten Programm zu gehören, und wird deshalb möglicherweise noch gebraucht.</value></data>
   <data name="Cli.WithheldReasons.DeclaredProductUnestablished" xml:space="preserve"><value>  Entweder gab eine Datei nicht an, zu welchem Programm sie gehört, oder Windows gab zu diesem Programm keine Auskunft.</value></data>
   <data name="Cli.WithheldReasons.ScreenUnanswered" xml:space="preserve"><value>  Eine Prüfung, zu welchen Programmen die Dateien gehören, lieferte Antworten, die nicht zu den übergebenen Dateien passten.</value></data>
   <!-- 0 = mode arg, whichever of /s, /d and /m was run: the no-files branch this

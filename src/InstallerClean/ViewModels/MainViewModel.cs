@@ -311,28 +311,30 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (Scan.OrphanedFileCount != 0 || Cleanup.IsOperating || Scan.LastScanResult is not { } result)
                 return;
 
-            // TWO FINDINGS AND TWO SCREENS, and which one is shown turns on a fact
-            // the lists cannot carry. An empty offer means EITHER that the scan found
-            // nothing it could offer, which is a clean folder, OR that a rule about
-            // the machine's records emptied the walk-derived offer in one go, which
-            // is a folder that may be full of files nobody has vouched for. Telling
-            // the second machine there is nothing to clean up in its Installer folder
-            // is a claim about that disk the scan never made.
+            // TWO SCREENS, and which one is shown turns on a fact the lists cannot
+            // carry. An empty offer means EITHER that the scan held nothing back that
+            // it reports, which gets the all-clear, OR that it held files back and
+            // reports them, whether a rule about the machine's records emptied the
+            // walk-derived offer in one go or the files were judged one at a time.
+            // Telling the second machine there is nothing to clean up in its Installer
+            // folder is a claim about that disk the scan never made.
             //
             // THE READING IS THE SCAN'S AND THIS HOST DOES NOT PARTITION ANYTHING TO
             // GET IT, which is the constraint on anything that replaces these lines.
             // More than one decision fills the withheld list, so a host counting that
             // list is inferring one decision's outcome from figures the others also
             // write to: the moment any of their memberships moves, the gate means
-            // something different and nothing fails. ScanResult.Withholding answers it
-            // where the withholding happens, in the three states these branches want,
-            // and the host spends the answer rather than deriving it.
+            // something different and nothing fails. The scan result answers it where
+            // the withholding happens, and the host spends the answer rather than
+            // deriving it.
             //
-            // A RUN THAT HELD NOTHING BACK IS THE ALL-CLEAR'S, and the reading says so
-            // by reading the list itself: a walk that produced no candidates arrives
-            // with nothing withheld, and a screen telling that machine the app had held
-            // back all 0 files would be absurd and untrue.
-            var withheld = result.WithheldFiles ?? Array.Empty<OrphanedFile>();
+            // A RUN THAT HELD NOTHING BACK IS THE ALL-CLEAR'S, and so is a run whose
+            // every held file declares a program Windows still has installed.
+            // HasWithholdingToReport is false for both.
+            //
+            // THE SCREEN COUNTS ONLY UnestablishedWithheldCount, so a run that held
+            // some files for an installed program and some for anything else speaks of
+            // the second kind alone.
 
             // THE RECEIPT SPENDS THE COUNT THE MAIN WINDOW IS ALREADY SHOWING rather
             // than recounting the scan result here, so the overlay and the line behind
@@ -350,12 +352,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // offer it, so a receipt leaving it out would understate what was
             // examined, which is the whole of what the receipt is for: an elapsed time
             // on its own reads as though nothing had happened.
-            if (result.Withholding != WithholdingAccount.Nothing)
+            if (result.HasWithholdingToReport)
             {
                 Completion.ShowNothingOffered(
                     result.Withholding,
-                    withheld.Count,
-                    result.WithheldTotalBytes,
+                    result.UnestablishedWithheldCount,
+                    result.UnestablishedWithheldBytes,
                     Scan.RegisteredFileCount,
                     Scan.LastScanDurationMs);
             }

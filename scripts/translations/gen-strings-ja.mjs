@@ -475,7 +475,6 @@ const MAP = {
   'Summary.NothingListedPerFile.Singular': `InstallerClean は、見つけたキャッシュ内のファイルの 1 つについて確信が持てなかったため、そのファイルを提示せずに保留しました。`,
   'Summary.NothingListedPerFile.Plural': `InstallerClean は、見つけたキャッシュ内のファイルの一部について確信が持てなかったため、{0} 個の{1}を提示せずに保留しました。`,
   'Cli.WithheldReasons.CandidateIdentity': `  フォルダー内のファイルを識別できなかったため、記録と照合できませんでした。`,
-  'Cli.WithheldReasons.DeclaredProductInstalled': `  あるファイルがまだインストールされているプログラムのものだと示しているため、まだ必要な可能性があります。`,
   'Cli.WithheldReasons.DeclaredProductUnestablished': `  ファイルがどのプログラムのものか示さなかったか、Windows がそのプログラムについて応答しませんでした。`,
   'Cli.WithheldReasons.ScreenUnanswered': `  ファイルがどのプログラムのものかを調べたところ、渡されたファイルと合わない答えが返りました。`,
   'Body.PendingReboot.RegistryCheckUnreadable': `InstallerClean は {InstallerFolder} に触れる前に確認する Windows 設定の一つを読み取れなかったため、インストール操作が実行中か再起動待ちかを判断できません。Windows を再起動してから再スキャンしてください。それでも設定を読み取れない場合、この PC は InstallerClean がクリーンアップできる PC ではありません。`,

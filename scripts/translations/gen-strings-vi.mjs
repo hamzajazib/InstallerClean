@@ -546,7 +546,6 @@ const MAP = {
   'Summary.NothingListedPerFile.Singular': `InstallerClean không chắc chắn về một trong những tệp trong bộ nhớ đệm mà nó tìm thấy, nên đã giữ lại nó thay vì đề xuất.`,
   'Summary.NothingListedPerFile.Plural': `InstallerClean không chắc chắn về một số tệp trong bộ nhớ đệm mà nó tìm thấy, nên đã giữ lại {0} {1} thay vì đề xuất chúng.`,
   'Cli.WithheldReasons.CandidateIdentity': `  Không nhận dạng được một tệp trong thư mục, nên không thể đối chiếu nó với hồ sơ.`,
-  'Cli.WithheldReasons.DeclaredProductInstalled': `  Một tệp khai rằng nó thuộc về một chương trình vẫn còn được cài, nên có thể vẫn còn cần đến.`,
   'Cli.WithheldReasons.DeclaredProductUnestablished': `  Hoặc một tệp không cho biết nó thuộc về chương trình nào, hoặc Windows không trả lời về chương trình đó.`,
   'Cli.WithheldReasons.ScreenUnanswered': `  Một lần kiểm tra xem các tệp thuộc về những chương trình nào đã trả về các câu trả lời không khớp với những tệp được giao cho nó.`,
   'Body.PendingReboot.RegistryCheckUnreadable': `InstallerClean không đọc được một trong các thiết lập Windows mà nó kiểm tra trước khi đụng vào {InstallerFolder}, nên không biết được có thao tác cài đặt nào đang chạy hay đang chờ khởi động lại không. Hãy khởi động lại Windows rồi quét lại. Nếu thiết lập đó vẫn không đọc được thì đây không phải máy mà InstallerClean có thể dọn.`,

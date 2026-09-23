@@ -527,7 +527,6 @@ const MAP = {
   'Summary.NothingListedPerFile.Singular': `InstallerClean was niet zeker over een van de gevonden bestanden in de cache, en heeft het daarom achtergehouden in plaats van het aan te bieden.`,
   'Summary.NothingListedPerFile.Plural': `InstallerClean was niet zeker over sommige van de gevonden bestanden in de cache, en heeft daarom {0} {1} achtergehouden in plaats van ze aan te bieden.`,
   'Cli.WithheldReasons.CandidateIdentity': `  Een bestand in de map was niet te identificeren, en kon daarom niet met de administratie worden vergeleken.`,
-  'Cli.WithheldReasons.DeclaredProductInstalled': `  Een bestand zegt bij een programma te horen dat nog geïnstalleerd is, en is daarom mogelijk nog nodig.`,
   'Cli.WithheldReasons.DeclaredProductUnestablished': `  Ofwel gaf een bestand niet aan bij welk programma het hoort, ofwel gaf Windows geen antwoord over dat programma.`,
   'Cli.WithheldReasons.ScreenUnanswered': `  Een controle op bij welke programma's de bestanden horen, gaf antwoorden die niet overeenkwamen met de bestanden die eraan waren doorgegeven.`,
   'Body.PendingReboot.RegistryCheckUnreadable': `InstallerClean kon een van de Windows-instellingen die het controleert voordat het {InstallerFolder} aanraakt niet lezen, en kan dus niet zien of er een installatiebewerking loopt of op een herstart wacht. Start Windows opnieuw op en kies Opnieuw scannen. Als de instelling dan nog steeds niet te lezen is, is dit geen machine die InstallerClean kan opruimen.`,

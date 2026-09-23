@@ -1696,17 +1696,17 @@ Không thể ghi nhật ký sự cố.</value></data>
   <data name="Cli.WithheldReasons.RecordedPath" xml:space="preserve"><value>  Một đường dẫn tệp trong chính hồ sơ của Windows Installer không phân giải được, nên không thể đối chiếu gì với nó.</value></data>
   <data name="Cli.WithheldReasons.FileIdentity" xml:space="preserve"><value>  Không nhận dạng được một tệp mà Windows có hồ sơ, nên không thể đối chiếu nó với những gì có trong thư mục.</value></data>
   <data name="Cli.WithheldReasons.SecondInstance" xml:space="preserve"><value>  Một chương trình có thể đã được cài nhiều hơn một lần trên máy này, và hồ sơ không cho biết một tệp thuộc về bản sao nào.</value></data>
-  <!-- The four per-file arms. Each is a decision taken about one candidate, where
-       the three lines above are findings about the machine's records that withheld
-       the walk-derived offer whole. They name four different causes and have to
-       stay four and distinct: a rendering that blurs any two of them makes the app
-       state a cause it cannot support for the other's files.
+  <!-- The per-file arms that have a line. Each is a decision taken about one
+       candidate, where the lines above are findings about the machine's records that
+       withheld the walk-derived offer whole. They name different causes and have to
+       stay distinct: a rendering that blurs any two of them makes the app state a
+       cause it cannot support for the other's files.
+
+       Files the declared-product-installed arm keeps have no line here:
+       WithholdingSplit.ArmsFired leaves that arm out.
 
        CandidateIdentity is the identity pass failing to read one file in the folder,
        so that file could not be compared against the records at all.
-
-       DeclaredProductInstalled is a file whose own declared product Windows still has
-       a record of, so the file may still be needed.
 
        DeclaredProductUnestablished is a disjunction and must stay one: either the file
        would not say which program it belongs to, or Windows would not answer about the
@@ -1716,11 +1716,10 @@ Không thể ghi nhật ký sự cố.</value></data>
        ScreenUnanswered is the check answering about a different number of files than it
        was handed, so no answer could be attached to any particular file.
 
-       None of the four carries a count and none may acquire one: each is one fact about
+       None of them carries a count and none may acquire one: each is one fact about
        one machine, and nothing may add it to another and call the result a cause. The
-       count and the size of what was held back are on the line above. -->
+       count and size of the files these lines explain are on the line above. -->
   <data name="Cli.WithheldReasons.CandidateIdentity" xml:space="preserve"><value>  Không nhận dạng được một tệp trong thư mục, nên không thể đối chiếu nó với hồ sơ.</value></data>
-  <data name="Cli.WithheldReasons.DeclaredProductInstalled" xml:space="preserve"><value>  Một tệp khai rằng nó thuộc về một chương trình vẫn còn được cài, nên có thể vẫn còn cần đến.</value></data>
   <data name="Cli.WithheldReasons.DeclaredProductUnestablished" xml:space="preserve"><value>  Hoặc một tệp không cho biết nó thuộc về chương trình nào, hoặc Windows không trả lời về chương trình đó.</value></data>
   <data name="Cli.WithheldReasons.ScreenUnanswered" xml:space="preserve"><value>  Một lần kiểm tra xem các tệp thuộc về những chương trình nào đã trả về các câu trả lời không khớp với những tệp được giao cho nó.</value></data>
   <!-- 0 = mode arg, whichever of /s, /d and /m was run: the no-files branch this

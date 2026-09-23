@@ -63,9 +63,9 @@ public class ScanResultTests
     // which is true of every file on the list whatever put it there. The wholesale
     // reading names what the scan could not establish about the machine's records, and
     // that is false of a file kept back because Windows still holds a record of the
-    // product it declares: for that file the scan was certain. So the wholesale reading
-    // is the one that has to be earned, and the fixtures below differ in what they give
-    // it to earn it with.
+    // product it declares, which no finding about the machine's records kept. So the
+    // wholesale reading is the one that has to be earned, and the fixtures below differ
+    // in what they give it to earn it with.
 
     [Fact]
     public void A_scan_that_kept_nothing_back_has_no_withholding_to_account_for()
@@ -93,13 +93,99 @@ public class ScanResultTests
     [Fact]
     public void A_withholding_with_no_wholesale_share_reads_as_per_file()
     {
-        // The declared-product screen keeping two files, which is the machine the
-        // per-file reading exists for: the flag is false and the folder is not clean.
+        // The declared-product screen failing to settle two files, which is the machine
+        // the per-file reading exists for: the flag is false and the folder is not clean.
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 2));
+            WithheldBy: new WithholdingSplit(DeclaredProductUnestablishedCount: 2));
 
         Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
+        Assert.True(result.HasWithholdingToReport);
+        Assert.Equal(2, result.UnestablishedWithheldCount);
+        Assert.Equal(3072, result.UnestablishedWithheldBytes);
+    }
+
+    [Fact]
+    public void Files_all_kept_for_an_installed_program_read_as_that_and_have_nothing_to_report()
+    {
+        // Every file on the list was counted by the declared-product-installed arm, so
+        // the reading is its own and no surface says anything about it.
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 2),
+            WithheldDeclaredProductInstalledBytes: 3072);
+
+        Assert.Equal(WithholdingAccount.DeclaredProductsInstalled, result.Withholding);
+        Assert.False(result.HasWithholdingToReport);
+        Assert.Equal(0, result.UnestablishedWithheldCount);
+        Assert.Equal(0, result.UnestablishedWithheldBytes);
+    }
+
+    [Fact]
+    public void A_file_kept_for_an_installed_program_beside_one_the_scan_could_not_settle_reads_as_per_file()
+    {
+        // The per-file sentence speaks of the file the scan could not settle, and its
+        // count and size leave the other out.
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1, IdentityUnestablishedCount: 1),
+            WithheldDeclaredProductInstalledBytes: 1024);
+
+        Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
+        Assert.True(result.HasWithholdingToReport);
+        Assert.Equal(1, result.UnestablishedWithheldCount);
+        Assert.Equal(2048, result.UnestablishedWithheldBytes);
+    }
+
+    [Fact]
+    public void A_withheld_file_the_split_did_not_count_keeps_a_run_off_the_installed_program_reading()
+    {
+        // THE MUST-MISS FOR THE DECLARED-PRODUCT-INSTALLED ARM. One file counted under
+        // it and one counted under nothing: no other arm fired, and the run still reads
+        // per-file, because the rule is that this arm accounts for the whole list. The
+        // uncounted file is among those the per-file sentence counts.
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1),
+            WithheldDeclaredProductInstalledBytes: 1024);
+
+        Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
+        Assert.True(result.HasWithholdingToReport);
+        Assert.Equal(1, result.UnestablishedWithheldCount);
+        Assert.Equal(2048, result.UnestablishedWithheldBytes);
+    }
+
+    [Fact]
+    public void Only_the_two_silent_readings_have_nothing_to_report()
+    {
+        // Held against the enum's length, so a reading added later fails here until a
+        // result that derives it is added. Each reading is reached through a result
+        // that derives it, not set.
+        var nothing = new ScanResult([], [], 0);
+        var wholesale = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msi", 1024)],
+            WithheldBy: new WithholdingSplit(WholesaleCount: 1));
+        var perFile = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msi", 1024)],
+            WithheldBy: new WithholdingSplit(ScreenUnansweredCount: 1));
+        var installed = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msi", 1024)],
+            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1));
+
+        var byReading = new Dictionary<WithholdingAccount, ScanResult>
+        {
+            [nothing.Withholding] = nothing,
+            [wholesale.Withholding] = wholesale,
+            [perFile.Withholding] = perFile,
+            [installed.Withholding] = installed,
+        };
+
+        Assert.Equal(Enum.GetValues<WithholdingAccount>().Length, byReading.Count);
+        foreach (var (reading, result) in byReading)
+        {
+            var silent = reading is WithholdingAccount.Nothing or WithholdingAccount.DeclaredProductsInstalled;
+            Assert.True(silent != result.HasWithholdingToReport, $"{reading} reported {result.HasWithholdingToReport}");
+        }
     }
 
     [Fact]

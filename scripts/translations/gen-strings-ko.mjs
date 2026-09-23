@@ -543,7 +543,6 @@ const MAP = {
   'Summary.NothingListedPerFile.Singular': `InstallerClean이 찾은 캐시 파일 중 하나에 대해 확신할 수 없어서, 그 파일을 제시하지 않고 보류했습니다.`,
   'Summary.NothingListedPerFile.Plural': `InstallerClean이 찾은 캐시 파일 중 일부에 대해 확신할 수 없어서, {1} {0}개를 제시하지 않고 보류했습니다.`,
   'Cli.WithheldReasons.CandidateIdentity': `  폴더에 있는 파일 하나의 신원을 확인할 수 없어서, 기록과 대조할 수 없었습니다.`,
-  'Cli.WithheldReasons.DeclaredProductInstalled': `  어떤 파일이 아직 설치되어 있는 프로그램에 속한다고 밝히고 있어서, 아직 필요할 수 있습니다.`,
   'Cli.WithheldReasons.DeclaredProductUnestablished': `  어떤 파일이 어느 프로그램에 속하는지 밝히지 않았거나, Windows가 그 프로그램에 대해 답하지 않았습니다.`,
   'Cli.WithheldReasons.ScreenUnanswered': `  파일이 어느 프로그램에 속하는지 확인하는 검사가, 건네받은 파일과 맞지 않는 답을 내놓았습니다.`,
   'Body.PendingReboot.RegistryCheckUnreadable': `InstallerClean이 {InstallerFolder}를 건드리기 전에 확인하는 Windows 설정 중 하나를 읽을 수 없어서, 설치 작업이 실행 중인지 재시작을 기다리는지 알 수 없습니다. Windows를 다시 시작한 뒤 다시 검사하세요. 그래도 설정을 읽을 수 없다면, 이 PC는 InstallerClean이 정리할 수 있는 PC가 아닙니다.`,

@@ -43,7 +43,7 @@ public class CliHeldBackBesideAnOfferTests
         // run's only statement of them.
         var (_, stdout) = await Run(Scan(
             offer: 2, withheld: 2,
-            split: new WithholdingSplit(DeclaredProductInstalledCount: 2)));
+            split: new WithholdingSplit(DeclaredProductUnestablishedCount: 2)));
 
         Assert.Contains(HeldBackLead(Strings.Cli_NothingListedPerFile_Plural, 2),
             stdout, StringComparison.Ordinal);
@@ -65,6 +65,43 @@ public class CliHeldBackBesideAnOfferTests
         // The clean line is a statement about the folder and this folder has two files
         // in it that nobody vouched for.
         Assert.DoesNotContain(Strings.Cli_FoundNoOrphans, stdout, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Files_kept_for_an_installed_program_beside_a_live_offer_get_no_lead_line()
+    {
+        // Both held files declare a program Windows still has installed, so the run
+        // says what it says about its offer and nothing more.
+        var (_, stdout) = await Run(Scan(
+            offer: 2, withheld: 2,
+            split: new WithholdingSplit(DeclaredProductInstalledCount: 2),
+            positiveBytes: 2048));
+
+        // By each sentence's opening words rather than its formatted whole, so a lead
+        // printed with any count or size at all is caught.
+        foreach (var lead in new[]
+                 {
+                     Strings.Cli_NothingListedPerFile_Singular, Strings.Cli_NothingListedPerFile_Plural,
+                     Strings.Cli_NothingListed_Singular, Strings.Cli_NothingListed_Plural,
+                 })
+            Assert.DoesNotContain(Opening(lead), stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain(Strings.Cli_WithheldReasons_Header, stdout, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_lead_beside_a_live_offer_counts_only_the_files_the_scan_could_not_settle()
+    {
+        // One held file declares an installed program and one could not be settled: the
+        // lead speaks of the second, in its one-file form, and its size is that file's.
+        var (_, stdout) = await Run(Scan(
+            offer: 2, withheld: 2,
+            split: new WithholdingSplit(DeclaredProductInstalledCount: 1, ScreenUnansweredCount: 1),
+            positiveBytes: 1024));
+
+        Assert.Contains(HeldBackLead(Strings.Cli_NothingListedPerFile_Singular, 1),
+            stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain(HeldBackLead(Strings.Cli_NothingListedPerFile_Plural, 2),
+            stdout, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -132,17 +169,22 @@ public class CliHeldBackBesideAnOfferTests
                 Strings.Completion_HeldBack_Plural, "Completion.HeldBack"),
             DisplayHelpers.FormatCount(count));
 
+    // A sentence's words up to its first placeholder, which no count or size changes.
+    private static string Opening(string value) => value[..value.IndexOf('{')];
+
     private static string HeldBackLead(string value, int count) =>
         string.Format(value, count, DisplayHelpers.PluraliseFile(count),
             DisplayHelpers.FormatSize(count * 1024L));
 
     // WHICH LEAD A RUN GETS IS DECIDED BY THE SPLIT AND NOTHING ELSE, so the split is
     // the only thing these fixtures vary for it: ScanResult.Withholding compares the
-    // withheld count against WithholdingSplit.WholesaleCount, and reads no flag.
-    private static ScanResult Scan(int offer, int withheld, WithholdingSplit split) =>
+    // withheld count against the split's wholesale and declared-product-installed
+    // counts, and reads no flag.
+    private static ScanResult Scan(int offer, int withheld, WithholdingSplit split, long positiveBytes = 0) =>
         new(Files(offer, OfferA, OfferB), Array.Empty<RegisteredPackage>(), 0,
             WithheldFiles: Files(withheld, HeldA, HeldB),
-            WithheldBy: split);
+            WithheldBy: split,
+            WithheldDeclaredProductInstalledBytes: positiveBytes);
 
     private static OrphanedFile[] Files(int n, string first, string second) =>
         n switch

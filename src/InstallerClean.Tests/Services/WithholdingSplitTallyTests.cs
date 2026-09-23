@@ -77,9 +77,9 @@ public class WithholdingSplitTallyTests
         tally.IdentityUnestablished();
         tally.Wholesale(7);
         tally.ScreenUnanswered(3);
-        tally.Screened(DeclaredProductOutcome.DeclaredProductInstalled);
-        tally.Screened(DeclaredProductOutcome.Unestablished);
-        tally.Screened(DeclaredProductOutcome.Unestablished);
+        tally.Screened(DeclaredProductOutcome.DeclaredProductInstalled, 1024);
+        tally.Screened(DeclaredProductOutcome.Unestablished, 2048);
+        tally.Screened(DeclaredProductOutcome.Unestablished, 4096);
 
         var split = tally.Taken();
 
@@ -92,6 +92,23 @@ public class WithholdingSplitTallyTests
     }
 
     [Fact]
+    public void Only_the_declared_product_installed_arm_adds_to_its_byte_figure()
+    {
+        // The figure the held-back sentences subtract to give the size of the files
+        // they speak of, so a byte counted here from any other verdict would shrink the
+        // size shown for files the scan could not settle.
+        var tally = new FileSystemScanService.WithholdingSplitTally();
+
+        tally.Screened(DeclaredProductOutcome.DeclaredProductInstalled, 1000);
+        tally.Screened(DeclaredProductOutcome.DeclaredProductInstalled, 200);
+        tally.Screened(DeclaredProductOutcome.Unestablished, 30);
+        tally.Screened(DeclaredProductOutcome.DeclaredProductNotInstalled, 4);
+        tally.Screened((DeclaredProductOutcome)99, 5);
+
+        Assert.Equal(1200, tally.DeclaredProductInstalledBytes);
+    }
+
+    [Fact]
     public void A_screen_verdict_that_keeps_the_file_is_counted_nowhere()
     {
         // The two verdicts that let a file through never reach the tally, the caller
@@ -99,10 +116,11 @@ public class WithholdingSplitTallyTests
         // a withholding arm if that call site is ever restructured.
         var tally = new FileSystemScanService.WithholdingSplitTally();
 
-        tally.Screened(DeclaredProductOutcome.NotAProductPackage);
-        tally.Screened(DeclaredProductOutcome.DeclaredProductNotInstalled);
+        tally.Screened(DeclaredProductOutcome.NotAProductPackage, 1024);
+        tally.Screened(DeclaredProductOutcome.DeclaredProductNotInstalled, 1024);
 
         Assert.Equal(default, tally.Taken());
+        Assert.Equal(0, tally.DeclaredProductInstalledBytes);
     }
 
     [Fact]
@@ -114,7 +132,7 @@ public class WithholdingSplitTallyTests
         // their causes was established for it.
         var tally = new FileSystemScanService.WithholdingSplitTally();
 
-        tally.Screened((DeclaredProductOutcome)99);
+        tally.Screened((DeclaredProductOutcome)99, 1024);
 
         var split = tally.Taken();
 
@@ -154,7 +172,7 @@ public class WithholdingSplitTallyTests
         {
             var tally = new FileSystemScanService.WithholdingSplitTally();
 
-            tally.Screened(outcome);
+            tally.Screened(outcome, 1024);
 
             var moved = Moved(tally.Taken());
 

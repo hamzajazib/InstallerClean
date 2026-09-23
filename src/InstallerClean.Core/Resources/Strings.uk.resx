@@ -1696,17 +1696,17 @@ InstallerClean уже працював від імені адміністрат�
   <data name="Cli.WithheldReasons.RecordedPath" xml:space="preserve"><value>  Шлях до файлу з власних записів Windows Installer не вдалося розв'язати, тож із ним нічого не вдалося зіставити.</value></data>
   <data name="Cli.WithheldReasons.FileIdentity" xml:space="preserve"><value>  Файл, про який Windows має запис, не вдалося розпізнати, тож його не вдалося зіставити з тим, що є в теці.</value></data>
   <data name="Cli.WithheldReasons.SecondInstance" xml:space="preserve"><value>  Програму може бути встановлено на цьому ПК більше одного разу, а записи не можуть сказати, якій копії належить файл.</value></data>
-  <!-- The four per-file arms. Each is a decision taken about one candidate, where
-       the three lines above are findings about the machine's records that withheld
-       the walk-derived offer whole. They name four different causes and have to
-       stay four and distinct: a rendering that blurs any two of them makes the app
-       state a cause it cannot support for the other's files.
+  <!-- The per-file arms that have a line. Each is a decision taken about one
+       candidate, where the lines above are findings about the machine's records that
+       withheld the walk-derived offer whole. They name different causes and have to
+       stay distinct: a rendering that blurs any two of them makes the app state a
+       cause it cannot support for the other's files.
+
+       Files the declared-product-installed arm keeps have no line here:
+       WithholdingSplit.ArmsFired leaves that arm out.
 
        CandidateIdentity is the identity pass failing to read one file in the folder,
        so that file could not be compared against the records at all.
-
-       DeclaredProductInstalled is a file whose own declared product Windows still has
-       a record of, so the file may still be needed.
 
        DeclaredProductUnestablished is a disjunction and must stay one: either the file
        would not say which program it belongs to, or Windows would not answer about the
@@ -1716,11 +1716,10 @@ InstallerClean уже працював від імені адміністрат�
        ScreenUnanswered is the check answering about a different number of files than it
        was handed, so no answer could be attached to any particular file.
 
-       None of the four carries a count and none may acquire one: each is one fact about
+       None of them carries a count and none may acquire one: each is one fact about
        one machine, and nothing may add it to another and call the result a cause. The
-       count and the size of what was held back are on the line above. -->
+       count and size of the files these lines explain are on the line above. -->
   <data name="Cli.WithheldReasons.CandidateIdentity" xml:space="preserve"><value>  Файл у теці не вдалося розпізнати, тож його не вдалося зіставити із записами.</value></data>
-  <data name="Cli.WithheldReasons.DeclaredProductInstalled" xml:space="preserve"><value>  Файл заявляє, що належить програмі, яка досі встановлена, тож він може бути ще потрібен.</value></data>
   <data name="Cli.WithheldReasons.DeclaredProductUnestablished" xml:space="preserve"><value>  Або файл не вказав, якій програмі він належить, або Windows не відповів про цю програму.</value></data>
   <data name="Cli.WithheldReasons.ScreenUnanswered" xml:space="preserve"><value>  Перевірка того, яким програмам належать файли, дала відповіді, які не збіглися з переданими їй файлами.</value></data>
   <!-- 0 = mode arg, whichever of /s, /d and /m was run: the no-files branch this

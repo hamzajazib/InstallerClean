@@ -366,7 +366,7 @@ public class MainViewModelTests
             .Returns(new ScanResult(
                 Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
                 WithheldFiles: withheld, WalkOfferWithheldWholesale: false,
-                WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1)));
+                WithheldBy: new WithholdingSplit(DeclaredProductUnestablishedCount: 1)));
 
         await vm.Scan.ScanWithProgressAsync(null);
 
@@ -379,6 +379,59 @@ public class MainViewModelTests
             string.Format(
                 Strings.Completion_NothingOfferedPerFileBody_Singular,
                 1, DisplayHelpers.PluraliseFile(1), DisplayHelpers.FormatSize(1024)),
+            vm.Completion.Summary);
+    }
+
+    [Fact]
+    public async Task Files_kept_for_an_installed_program_get_the_all_clear()
+    {
+        // Nothing offered, and every held file declares a program Windows still has
+        // installed, so the machine gets the screen a clean folder gets.
+        var vm = CreateViewModel();
+        var withheld = new List<OrphanedFile>
+        {
+            new(@"C:\Windows\Installer\a.msi", 1024, false, false, false, Orphaned),
+            new(@"C:\Windows\Installer\b.msi", 2048, false, false, false, Orphaned),
+        };
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(new ScanResult(
+                Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
+                WithheldFiles: withheld, WalkOfferWithheldWholesale: false,
+                WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 2),
+                WithheldDeclaredProductInstalledBytes: 3072));
+
+        await vm.Scan.ScanWithProgressAsync(null);
+
+        Assert.Equal(Strings.Completion_AllClean, vm.Completion.Heading);
+        Assert.NotEqual(Strings.Completion_NothingOffered, vm.Completion.Heading);
+    }
+
+    [Fact]
+    public async Task The_per_file_screen_counts_only_the_files_the_scan_could_not_settle()
+    {
+        // Two held: one for an installed program and one the scan could not settle. The
+        // screen's body speaks of the second alone, in its one-file form, with that
+        // file's size.
+        var vm = CreateViewModel();
+        var withheld = new List<OrphanedFile>
+        {
+            new(@"C:\Windows\Installer\a.msi", 1024, false, false, false, Orphaned),
+            new(@"C:\Windows\Installer\b.msi", 2048, false, false, false, Orphaned),
+        };
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(new ScanResult(
+                Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
+                WithheldFiles: withheld, WalkOfferWithheldWholesale: false,
+                WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1, ScreenUnansweredCount: 1),
+                WithheldDeclaredProductInstalledBytes: 1024));
+
+        await vm.Scan.ScanWithProgressAsync(null);
+
+        Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
+        Assert.Equal(
+            string.Format(
+                Strings.Completion_NothingOfferedPerFileBody_Singular,
+                1, DisplayHelpers.PluraliseFile(1), DisplayHelpers.FormatSize(2048)),
             vm.Completion.Summary);
     }
 

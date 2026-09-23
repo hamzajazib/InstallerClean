@@ -290,20 +290,20 @@ public partial class CompletionViewModel : ObservableObject
     /// rather than as a result, which is the opposite of what it has to say.
     /// </summary>
     /// <param name="account">
-    /// Which of the two bodies this machine has earned, read off the scan result. A run
-    /// that kept files back both wholesale and one at a time reads as the per-file one,
-    /// that being the only sentence true of every file on the list.
+    /// Which of the two bodies this machine has earned, read off the scan result. The
+    /// wholesale body is shown for <see cref="WithholdingAccount.WholeWalkOffer"/> alone
+    /// and the per-file body for anything else, the wholesale sentence being the one
+    /// that names a cause. A run that kept files back both wholesale and one at a time
+    /// reads as the per-file one, that being the only sentence true of every file it
+    /// counts.
     /// </param>
     /// <param name="withheldCount">
-    /// How many files were held back, and <paramref name="withheldBytes"/> their
-    /// size. Both come from the WHOLE withheld list rather than from any one
-    /// decision's share of it, so this screen and the main window's left-alone line
-    /// cannot disagree about one machine.
+    /// How many files the body speaks of, and <paramref name="withheldBytes"/> their
+    /// size: the scan result's <see cref="ScanResult.UnestablishedWithheldCount"/> and
+    /// <see cref="ScanResult.UnestablishedWithheldBytes"/>. The command line reads the
+    /// same two, and the main window's held-back line the same count.
     ///
-    /// A RUN CAN FILL THAT LIST FROM MORE THAN ONE DECISION AND THE FIGURES STILL HOLD.
-    /// What is true of every file counted here is that it was held back and would
-    /// otherwise have been offered. What is not true of all of them at once is any
-    /// sentence about why, which is what <paramref name="account"/> is for.
+    /// A FILE THE DECLARED-PRODUCT-INSTALLED ARM KEPT IS NOT AMONG THEM.
     /// </param>
     /// <param name="scannedFileCount">
     /// The receipt's own count, on the terms <see cref="ShowAllClear"/> sets out: how
@@ -333,7 +333,7 @@ public partial class CompletionViewModel : ObservableObject
         // picks the sentence and PluraliseFile picks the noun, and they answer two
         // different questions, so both are needed here. See the key's own note in
         // Strings.resx for which language puts the slot where.
-        var perFile = account == WithholdingAccount.PerFile;
+        var perFile = account != WithholdingAccount.WholeWalkOffer;
         Summary = string.Format(
             DisplayHelpers.Pluralise(
                 withheldCount,

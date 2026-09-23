@@ -1696,17 +1696,17 @@ InstallerClean はすでに管理者として実行されていたため、同�
   <data name="Cli.WithheldReasons.RecordedPath" xml:space="preserve"><value>  Windows Installer 自身の記録にあるファイルパスを解決できなかったため、それに何も照合できませんでした。</value></data>
   <data name="Cli.WithheldReasons.FileIdentity" xml:space="preserve"><value>  Windows に記録のあるファイルを識別できなかったため、フォルダー内のものと照合できませんでした。</value></data>
   <data name="Cli.WithheldReasons.SecondInstance" xml:space="preserve"><value>  この PC には同じプログラムが複数回インストールされている可能性があり、記録ではファイルがどのコピーのものか分かりません。</value></data>
-  <!-- The four per-file arms. Each is a decision taken about one candidate, where
-       the three lines above are findings about the machine's records that withheld
-       the walk-derived offer whole. They name four different causes and have to
-       stay four and distinct: a rendering that blurs any two of them makes the app
-       state a cause it cannot support for the other's files.
+  <!-- The per-file arms that have a line. Each is a decision taken about one
+       candidate, where the lines above are findings about the machine's records that
+       withheld the walk-derived offer whole. They name different causes and have to
+       stay distinct: a rendering that blurs any two of them makes the app state a
+       cause it cannot support for the other's files.
+
+       Files the declared-product-installed arm keeps have no line here:
+       WithholdingSplit.ArmsFired leaves that arm out.
 
        CandidateIdentity is the identity pass failing to read one file in the folder,
        so that file could not be compared against the records at all.
-
-       DeclaredProductInstalled is a file whose own declared product Windows still has
-       a record of, so the file may still be needed.
 
        DeclaredProductUnestablished is a disjunction and must stay one: either the file
        would not say which program it belongs to, or Windows would not answer about the
@@ -1716,11 +1716,10 @@ InstallerClean はすでに管理者として実行されていたため、同�
        ScreenUnanswered is the check answering about a different number of files than it
        was handed, so no answer could be attached to any particular file.
 
-       None of the four carries a count and none may acquire one: each is one fact about
+       None of them carries a count and none may acquire one: each is one fact about
        one machine, and nothing may add it to another and call the result a cause. The
-       count and the size of what was held back are on the line above. -->
+       count and size of the files these lines explain are on the line above. -->
   <data name="Cli.WithheldReasons.CandidateIdentity" xml:space="preserve"><value>  フォルダー内のファイルを識別できなかったため、記録と照合できませんでした。</value></data>
-  <data name="Cli.WithheldReasons.DeclaredProductInstalled" xml:space="preserve"><value>  あるファイルがまだインストールされているプログラムのものだと示しているため、まだ必要な可能性があります。</value></data>
   <data name="Cli.WithheldReasons.DeclaredProductUnestablished" xml:space="preserve"><value>  ファイルがどのプログラムのものか示さなかったか、Windows がそのプログラムについて応答しませんでした。</value></data>
   <data name="Cli.WithheldReasons.ScreenUnanswered" xml:space="preserve"><value>  ファイルがどのプログラムのものかを調べたところ、渡されたファイルと合わない答えが返りました。</value></data>
   <!-- 0 = mode arg, whichever of /s, /d and /m was run: the no-files branch this

@@ -459,18 +459,23 @@ public partial class ScanViewModel : ObservableObject
             //
             // Off the scan's own reading rather than off the withheld list's length:
             // that list is filled by more than one decision and neither the list nor
-            // the wholesale flag says which sentence is true of it. The reading is
-            // Nothing on a run whose withholding caught nothing, which is what keeps
-            // the line off a tidy machine.
+            // the wholesale flag says which sentence is true of it. The scan has
+            // nothing to report on a run whose withholding caught nothing, or whose
+            // every held file declares a program Windows still has installed, which
+            // is what keeps the line off both machines.
+            //
+            // THE COUNT IS UnestablishedWithheldCount, NOT THE WHOLE LIST, so a file
+            // kept for an installed program is left out of it. Every withheld file is
+            // still counted among the files left alone.
             //
             // AND ZERO WHERE NOTHING IS OFFERED, because that machine gets the
             // completion screen instead and never reads this window's list. Folded in
             // here rather than into the predicate so the gate has one input; see its
             // own note for what a second input would have cost.
-            NothingListedIsPerFile = result.Withholding == WithholdingAccount.PerFile;
+            NothingListedIsPerFile = result.Withholding != WithholdingAccount.WholeWalkOffer;
             NothingListedCount =
-                result.Withholding != WithholdingAccount.Nothing && orphanedCount > 0
-                    ? withheld.Count
+                result.HasWithholdingToReport && orphanedCount > 0
+                    ? result.UnestablishedWithheldCount
                     : 0;
             // OFF THE SCAN'S OWN COST FIGURE, never off the machine-wide trigger.
             // ScanResult.UnaccountedProductCount travels in the opt-in report and the

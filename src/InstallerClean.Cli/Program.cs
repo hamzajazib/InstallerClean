@@ -424,25 +424,27 @@ internal static class Program
             // commonest output this tool produces, and somebody reading a
             // scheduled task's log wants the state of the machine rather than
             // the tool's intention towards it.
-            // THREE OUTCOMES WHERE NOTHING IS OFFERED, AND WHICH ONE IS
-            // ScanResult.Withholding's ANSWER RATHER THAN THIS HOST'S. An empty offer
-            // has three meanings: the folder holds nothing this scan can offer; a rule
-            // about the machine's records emptied the walk-derived offer in one go; or
-            // the scan judged the files one at a time and could not clear them. "Found
-            // no unneeded files" is a statement about the folder and only the first
-            // machine has earned it, and the two withholding sentences say different
-            // things that are each false of the other's machine.
+            // THREE OUTCOMES WHERE NOTHING IS OFFERED, AND WHICH ONE IS THE SCAN
+            // RESULT'S ANSWER RATHER THAN THIS HOST'S. An empty offer has three
+            // meanings: the folder holds nothing this scan can offer, or holds only
+            // files it kept because they declare a program Windows still has
+            // installed; a rule about the machine's records emptied the walk-derived
+            // offer in one go; or the scan judged the files one at a time and could
+            // not clear them. "Found no unneeded files" is printed for the first
+            // machine only, and the two withholding sentences say different things
+            // that are each false of the other's machine.
             //
             // THE HOST DOES NOT PARTITION ANYTHING TO GET HERE. Deciding it here would
             // mean reading a split the scan owns, and a host that infers one decision's
             // outcome from figures the others also write to means something different
             // the moment any of them moves. The scan answers it where the withholding
-            // happens; this switch spends the answer.
+            // happens; this branch spends the answer.
             //
-            // The count and the size are the whole withheld set rather than any one
-            // condition's share of it, exactly as the window's screen uses, so the two
-            // hosts cannot disagree about one machine.
-            var withheldCount = scanResult.WithheldFiles?.Count ?? 0;
+            // The count and the size are UnestablishedWithheldCount and
+            // UnestablishedWithheldBytes, which leave out any file kept because it
+            // declares an installed program, and they are the figures the window's
+            // screen uses, so the two hosts cannot disagree about one machine.
+            var withheldCount = scanResult.UnestablishedWithheldCount;
 
             // The one-form names the size and not the numeral ("the one file"), so it
             // spends {2} and leaves {0} and {1} unused; all three are passed on every
@@ -453,22 +455,26 @@ internal static class Program
                     DisplayHelpers.Pluralise(withheldCount, singular, plural, keyPrefix),
                     DisplayHelpers.FormatCount(withheldCount),
                     DisplayHelpers.PluraliseFile(withheldCount),
-                    DisplayHelpers.FormatSize(scanResult.WithheldTotalBytes));
+                    DisplayHelpers.FormatSize(scanResult.UnestablishedWithheldBytes));
+
+            // The wholesale sentence names a cause, so it is spoken only for the
+            // reading that earns it and the per-file one for every other reading the
+            // scan says is worth reporting.
+            var wholesale = scanResult.Withholding == WithholdingAccount.WholeWalkOffer;
 
             Console.WriteLine(count > 0
                 ? string.Format(
                     DisplayHelpers.Pluralise(count, Strings.Cli_FoundOrphans, "Cli.FoundOrphans"),
                     DisplayHelpers.FormatCount(count), DisplayHelpers.PluraliseFile(count), size)
-                : scanResult.Withholding switch
-                {
-                    WithholdingAccount.WholeWalkOffer => HeldBackLine(
-                        Strings.Cli_NothingOffered_Singular,
-                        Strings.Cli_NothingOffered_Plural, "Cli.NothingOffered"),
-                    WithholdingAccount.PerFile => HeldBackLine(
-                        Strings.Cli_NothingOfferedPerFile_Singular,
-                        Strings.Cli_NothingOfferedPerFile_Plural, "Cli.NothingOfferedPerFile"),
-                    _ => Strings.Cli_FoundNoOrphans,
-                });
+                : !scanResult.HasWithholdingToReport
+                    ? Strings.Cli_FoundNoOrphans
+                    : wholesale
+                        ? HeldBackLine(
+                            Strings.Cli_NothingOffered_Singular,
+                            Strings.Cli_NothingOffered_Plural, "Cli.NothingOffered")
+                        : HeldBackLine(
+                            Strings.Cli_NothingOfferedPerFile_Singular,
+                            Strings.Cli_NothingOfferedPerFile_Plural, "Cli.NothingOfferedPerFile"));
 
             ReportScanSignals(arg, scanResult);
 
@@ -486,16 +492,13 @@ internal static class Program
                 // decision of its own; the alternative, leaving the clean line to
                 // cover both, is the false statement this branch exists to stop.
                 MachineContract.WriteEventLog(CliEventClass.Ok,
-                    () => scanResult.Withholding switch
-                    {
-                        WithholdingAccount.WholeWalkOffer => string.Format(
-                            Strings.Cli_EventLogNothingOffered,
-                            arg, withheldCount, DisplayHelpers.PluraliseFile(withheldCount)),
-                        WithholdingAccount.PerFile => string.Format(
-                            Strings.Cli_EventLogNothingOfferedPerFile,
-                            arg, withheldCount, DisplayHelpers.PluraliseFile(withheldCount)),
-                        _ => string.Format(Strings.Cli_EventLogScanNoOrphans, arg),
-                    });
+                    () => !scanResult.HasWithholdingToReport
+                        ? string.Format(Strings.Cli_EventLogScanNoOrphans, arg)
+                        : string.Format(
+                            wholesale
+                                ? Strings.Cli_EventLogNothingOffered
+                                : Strings.Cli_EventLogNothingOfferedPerFile,
+                            arg, withheldCount, DisplayHelpers.PluraliseFile(withheldCount)));
                 return ExitOk;
             }
 
@@ -1026,13 +1029,21 @@ internal static class Program
         // and reported, so its outcome entry stays in the 1000 band; what the band
         // cannot carry is the difference between this machine and a clean one, which
         // is what a number in the 3000 band is for. See CliEventClass.
-        if (scanResult.Withholding != WithholdingAccount.Nothing)
+        //
+        // NOTHING IS REPORTED HERE FOR A RUN WHOSE EVERY HELD FILE DECLARES A PROGRAM
+        // WINDOWS STILL HAS INSTALLED: HasWithholdingToReport is false for it.
+        if (scanResult.HasWithholdingToReport)
         {
-            // WHICH OF THE TWO SENTENCES, ASKED ONCE AND SPENT THREE TIMES BELOW, so
-            // the audit line, the lead and the breakdown cannot describe one machine
-            // three different ways.
-            var perFile = scanResult.Withholding == WithholdingAccount.PerFile;
-            var heldBack = scanResult.WithheldFiles?.Count ?? 0;
+            // WHICH OF THE TWO SENTENCES, ASKED ONCE AND SPENT BY BOTH THE AUDIT LINE
+            // AND THE LEAD BELOW, so the two cannot describe one machine two different
+            // ways. The wholesale one names a cause and is spoken only for the reading
+            // that earns it.
+            //
+            // THE COUNT AND THE SIZE ARE UnestablishedWithheldCount AND
+            // UnestablishedWithheldBytes: the count the window's line uses, and the
+            // count and size its screen uses.
+            var perFile = scanResult.Withholding != WithholdingAccount.WholeWalkOffer;
+            var heldBack = scanResult.UnestablishedWithheldCount;
 
             MachineContract.WriteEventLog(CliEventClass.ScanNothingOfferedNotice,
                 () => string.Format(
@@ -1058,7 +1069,7 @@ internal static class Program
                             : Strings.Cli_NothingListed_Plural,
                         perFile ? "Cli.NothingListedPerFile" : "Cli.NothingListed"),
                     DisplayHelpers.FormatCount(heldBack), DisplayHelpers.PluraliseFile(heldBack),
-                    DisplayHelpers.FormatSize(scanResult.WithheldTotalBytes)));
+                    DisplayHelpers.FormatSize(scanResult.UnestablishedWithheldBytes)));
 
             // AND WHY, ONE LINE PER CONDITION THE RUN MET, FROM BOTH HALVES OF THE
             // WITHHOLDING. The legs are read off the result, which calls the same
@@ -1472,6 +1483,9 @@ internal static class Program
     /// speak for it, and a line here as well would say the same thing twice about one
     /// machine.
     ///
+    /// NOR DOES THE DECLARED-PRODUCT-INSTALLED ARM, so the command line prints no
+    /// reason line for the files it counts.
+    ///
     /// The fallback is the heading's own antecedent rather than a blank, on the same
     /// reasoning as above, and it is unreachable while every arm is handled.
     /// </summary>
@@ -1479,8 +1493,6 @@ internal static class Program
     {
         WithholdingSplitArm.IdentityUnestablished =>
             Strings.Cli_WithheldReasons_CandidateIdentity,
-        WithholdingSplitArm.DeclaredProductInstalled =>
-            Strings.Cli_WithheldReasons_DeclaredProductInstalled,
         WithholdingSplitArm.DeclaredProductUnestablished =>
             Strings.Cli_WithheldReasons_DeclaredProductUnestablished,
         WithholdingSplitArm.ScreenUnanswered =>

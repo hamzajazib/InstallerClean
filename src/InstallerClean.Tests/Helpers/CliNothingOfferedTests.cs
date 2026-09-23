@@ -13,10 +13,11 @@ namespace InstallerClean.Tests.Helpers;
 /// work method rather than through the strings.
 ///
 /// THREE MACHINES REACH THAT BRANCH AND THEY ARE NOT ONE THING. The folder held nothing
-/// this scan can offer; a rule about the machine's records emptied the walk-derived
+/// this scan can offer, or only files it kept because they declare a program Windows
+/// still has installed; a rule about the machine's records emptied the walk-derived
 /// offer in one go; or the files were judged one at a time and none could be cleared.
-/// The clean line is a statement about the FOLDER and only the first has earned it, and
-/// the two withholding sentences each name something the other's machine did not meet.
+/// The clean line is printed for the first alone, and the two withholding sentences
+/// each name something the other's machine did not meet.
 ///
 /// THE FIXTURES ARE WHAT THIS FILE IS. Every other file that drives this method scripts
 /// a scan with two removable files in it, so the branch below is reached by none of
@@ -62,15 +63,38 @@ public class CliNothingOfferedTests
     }
 
     [Fact]
-    public async Task A_per_file_withholding_gets_its_own_line_and_not_the_wholesale_one()
+    public async Task A_run_whose_every_held_file_declares_an_installed_program_gets_the_clean_line()
     {
-        // THE MACHINE THE PER-FILE LINE EXISTS FOR. Nothing emptied the offer wholesale; the
-        // declared-product screen kept two files and the folder is not clean. Before
-        // there was a line for it this run printed "Found no unneeded files", which is
-        // a statement about a folder that has two files nobody vouched for in it.
+        // Every held file declares a program Windows still has installed, so the files
+        // are left alone like any registered file and the run prints the clean line.
         var (exit, stdout) = await Run(Scan(
             withheld: 2,
-            split: new WithholdingSplit(DeclaredProductInstalledCount: 2)));
+            split: new WithholdingSplit(DeclaredProductInstalledCount: 2),
+            positiveBytes: 2048));
+
+        Assert.Equal(CliExitCode.Ok, exit);
+        Assert.Contains(Strings.Cli_FoundNoOrphans, stdout, StringComparison.Ordinal);
+        // By each sentence's opening words rather than its formatted whole, so a line
+        // printed with any count or size at all is caught.
+        foreach (var line in new[]
+                 {
+                     Strings.Cli_NothingOfferedPerFile_Singular, Strings.Cli_NothingOfferedPerFile_Plural,
+                     Strings.Cli_NothingOffered_Singular, Strings.Cli_NothingOffered_Plural,
+                     Strings.Cli_NothingListedPerFile_Singular, Strings.Cli_NothingListedPerFile_Plural,
+                 })
+            Assert.DoesNotContain(Opening(line), stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain(Strings.Cli_WithheldReasons_Header, stdout, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_per_file_withholding_gets_its_own_line_and_not_the_wholesale_one()
+    {
+        // THE MACHINE THE PER-FILE LINE EXISTS FOR. Nothing emptied the offer wholesale;
+        // the declared-product screen could not settle two files, so the folder holds two
+        // files nobody vouched for and "Found no unneeded files" is not printed for it.
+        var (exit, stdout) = await Run(Scan(
+            withheld: 2,
+            split: new WithholdingSplit(DeclaredProductUnestablishedCount: 2)));
 
         Assert.Equal(CliExitCode.Ok, exit);
         Assert.Contains(Expected(Strings.Cli_NothingOfferedPerFile_Plural, 2), stdout, StringComparison.Ordinal);
@@ -111,15 +135,35 @@ public class CliNothingOfferedTests
         // it actually met did not hold.
         var (_, stdout) = await Run(Scan(
             withheld: 2,
-            split: new WithholdingSplit(DeclaredProductInstalledCount: 1, WholesaleCount: 1),
+            split: new WithholdingSplit(IdentityUnestablishedCount: 1, WholesaleCount: 1),
             wholesaleFlag: true,
             census: SecondInstanceUnruled));
 
         Assert.Contains(Strings.Cli_WithheldReasons_Header, stdout, StringComparison.Ordinal);
         Assert.Contains(Program.LineFor(WithholdingLeg.SecondInstanceNotRuledOut), stdout, StringComparison.Ordinal);
-        Assert.Contains(Program.LineFor(WithholdingSplitArm.DeclaredProductInstalled), stdout, StringComparison.Ordinal);
+        Assert.Contains(Program.LineFor(WithholdingSplitArm.IdentityUnestablished), stdout, StringComparison.Ordinal);
         // And nothing it did not meet.
         Assert.DoesNotContain(Program.LineFor(WithholdingSplitArm.ScreenUnanswered), stdout, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_file_kept_for_an_installed_program_is_left_out_of_the_line_and_its_reasons()
+    {
+        // Two files held back: one the declared-product-installed arm counted and one
+        // the screen could not settle. The line counts and sizes the second alone, and
+        // the reasons under it are the second's alone.
+        var (exit, stdout) = await Run(Scan(
+            withheld: 2,
+            split: new WithholdingSplit(DeclaredProductInstalledCount: 1, DeclaredProductUnestablishedCount: 1),
+            positiveBytes: 1024));
+
+        Assert.Equal(CliExitCode.Ok, exit);
+        Assert.Contains(Expected(Strings.Cli_NothingOfferedPerFile_Singular, 1), stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain(Expected(Strings.Cli_NothingOfferedPerFile_Plural, 2), stdout, StringComparison.Ordinal);
+        Assert.Contains(Strings.Cli_WithheldReasons_Header, stdout, StringComparison.Ordinal);
+        Assert.Contains(Program.LineFor(WithholdingSplitArm.DeclaredProductUnestablished), stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain(Program.LineFor(WithholdingSplitArm.ScreenUnanswered), stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain(Program.LineFor(WithholdingSplitArm.IdentityUnestablished), stdout, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -142,7 +186,7 @@ public class CliNothingOfferedTests
         // and the plural form renders "held back all 1 files" for it.
         var (_, stdout) = await Run(Scan(
             withheld: 1,
-            split: new WithholdingSplit(DeclaredProductInstalledCount: 1)));
+            split: new WithholdingSplit(DeclaredProductUnestablishedCount: 1)));
 
         Assert.Contains(Expected(Strings.Cli_NothingOfferedPerFile_Singular, 1), stdout, StringComparison.Ordinal);
         Assert.DoesNotContain("1 files", stdout, StringComparison.Ordinal);
@@ -159,18 +203,22 @@ public class CliNothingOfferedTests
     private static EnumerationCensus SecondInstanceUnruled =>
         new(InstanceProductCount: 1);
 
+    // A sentence's words up to its first placeholder, which no count or size changes.
+    private static string Opening(string value) => value[..value.IndexOf('{')];
+
     private static string Expected(string value, int count) =>
         string.Format(value, count, DisplayHelpers.PluraliseFile(count),
             DisplayHelpers.FormatSize(count * 1024L));
 
     private static ScanResult Scan(
         int withheld, WithholdingSplit split,
-        bool wholesaleFlag = false, EnumerationCensus census = default) =>
+        bool wholesaleFlag = false, EnumerationCensus census = default, long positiveBytes = 0) =>
         new(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
             Census: census,
             WithheldFiles: Held(withheld),
             WalkOfferWithheldWholesale: wholesaleFlag,
-            WithheldBy: split);
+            WithheldBy: split,
+            WithheldDeclaredProductInstalledBytes: positiveBytes);
 
     private static OrphanedFile[] Held(int n) =>
         n switch

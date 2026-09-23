@@ -1696,17 +1696,17 @@ Não foi possível gravar o crash.log.</value></data>
   <data name="Cli.WithheldReasons.RecordedPath" xml:space="preserve"><value>  Um caminho de arquivo nos próprios registros do Windows Installer não pôde ser resolvido, então nada pôde ser associado a ele.</value></data>
   <data name="Cli.WithheldReasons.FileIdentity" xml:space="preserve"><value>  Não foi possível identificar um arquivo do qual o Windows tem registro, então não foi possível compará-lo com o que há na pasta.</value></data>
   <data name="Cli.WithheldReasons.SecondInstance" xml:space="preserve"><value>  Um programa pode estar instalado mais de uma vez neste PC, e os registros não conseguem dizer a qual cópia um arquivo pertence.</value></data>
-  <!-- The four per-file arms. Each is a decision taken about one candidate, where
-       the three lines above are findings about the machine's records that withheld
-       the walk-derived offer whole. They name four different causes and have to
-       stay four and distinct: a rendering that blurs any two of them makes the app
-       state a cause it cannot support for the other's files.
+  <!-- The per-file arms that have a line. Each is a decision taken about one
+       candidate, where the lines above are findings about the machine's records that
+       withheld the walk-derived offer whole. They name different causes and have to
+       stay distinct: a rendering that blurs any two of them makes the app state a
+       cause it cannot support for the other's files.
+
+       Files the declared-product-installed arm keeps have no line here:
+       WithholdingSplit.ArmsFired leaves that arm out.
 
        CandidateIdentity is the identity pass failing to read one file in the folder,
        so that file could not be compared against the records at all.
-
-       DeclaredProductInstalled is a file whose own declared product Windows still has
-       a record of, so the file may still be needed.
 
        DeclaredProductUnestablished is a disjunction and must stay one: either the file
        would not say which program it belongs to, or Windows would not answer about the
@@ -1716,11 +1716,10 @@ Não foi possível gravar o crash.log.</value></data>
        ScreenUnanswered is the check answering about a different number of files than it
        was handed, so no answer could be attached to any particular file.
 
-       None of the four carries a count and none may acquire one: each is one fact about
+       None of them carries a count and none may acquire one: each is one fact about
        one machine, and nothing may add it to another and call the result a cause. The
-       count and the size of what was held back are on the line above. -->
+       count and size of the files these lines explain are on the line above. -->
   <data name="Cli.WithheldReasons.CandidateIdentity" xml:space="preserve"><value>  Não foi possível identificar um arquivo da pasta, então não foi possível compará-lo com os registros.</value></data>
-  <data name="Cli.WithheldReasons.DeclaredProductInstalled" xml:space="preserve"><value>  Um arquivo diz pertencer a um programa que ainda está instalado, então ainda pode ser necessário.</value></data>
   <data name="Cli.WithheldReasons.DeclaredProductUnestablished" xml:space="preserve"><value>  Ou um arquivo não informou a qual programa pertence, ou o Windows não respondeu sobre esse programa.</value></data>
   <data name="Cli.WithheldReasons.ScreenUnanswered" xml:space="preserve"><value>  Uma verificação de a quais programas os arquivos pertencem deu respostas que não correspondiam aos arquivos que lhe foram entregues.</value></data>
   <!-- 0 = mode arg, whichever of /s, /d and /m was run: the no-files branch this

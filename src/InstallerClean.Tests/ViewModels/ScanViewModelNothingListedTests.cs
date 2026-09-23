@@ -74,7 +74,7 @@ public class ScanViewModelNothingListedTests
                 MissingAffectedCount: 2,
                 WithheldCount: 5,
                 WithheldFiles: Files(3, "held"),
-                WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 3)));
+                WithheldBy: new WithholdingSplit(DeclaredProductUnestablishedCount: 3)));
 
         var vm = new ScanViewModel(
             scan,
@@ -112,7 +112,7 @@ public class ScanViewModelNothingListedTests
             RegisteredPackages: Array.Empty<RegisteredPackage>(),
             RegisteredTotalBytes: 0,
             WithheldFiles: Files(3, "held"),
-            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 3)));
+            WithheldBy: new WithholdingSplit(DeclaredProductUnestablishedCount: 3)));
 
         Assert.True(vm.HasNothingListed);
         Assert.Equal(3, vm.NothingListedCount);
@@ -143,7 +143,7 @@ public class ScanViewModelNothingListedTests
             RegisteredPackages: Array.Empty<RegisteredPackage>(),
             RegisteredTotalBytes: 0,
             WithheldFiles: Files(3, "held"),
-            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 3)));
+            WithheldBy: new WithholdingSplit(DeclaredProductUnestablishedCount: 3)));
 
         Assert.False(vm.HasNothingListed);
         Assert.Equal(0, vm.NothingListedCount);
@@ -161,7 +161,7 @@ public class ScanViewModelNothingListedTests
             RegisteredPackages: Array.Empty<RegisteredPackage>(),
             RegisteredTotalBytes: 0,
             WithheldFiles: Files(1, "held"),
-            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1)));
+            WithheldBy: new WithholdingSplit(DeclaredProductUnestablishedCount: 1)));
 
         Assert.Equal(1, vm.NothingListedCount);
         Assert.Equal(
@@ -172,17 +172,55 @@ public class ScanViewModelNothingListedTests
     }
 
     [Fact]
-    public void The_count_is_every_file_kept_back_and_not_one_decision_s_share()
+    public void The_line_is_off_where_every_held_file_declares_an_installed_program()
+    {
+        // Every held file declares a program Windows still has installed, so the line
+        // has nothing to say. The files stay among those left alone.
+        var vm = Driven(new ScanResult(
+            RemovableFiles: Files(4, "offered"),
+            RegisteredPackages: Array.Empty<RegisteredPackage>(),
+            RegisteredTotalBytes: 0,
+            WithheldFiles: Files(3, "held"),
+            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 3),
+            WithheldDeclaredProductInstalledBytes: 3072));
+
+        Assert.False(vm.HasNothingListed);
+        Assert.Equal(0, vm.NothingListedCount);
+        Assert.Equal(3, vm.RegisteredFileCount);
+    }
+
+    [Fact]
+    public void The_count_leaves_out_the_files_kept_for_an_installed_program()
+    {
+        // Four held: one for an installed program, two whose identity would not read and
+        // one no arm counted. The line counts the other three, the uncounted one among
+        // them, and not the file kept for an installed program.
+        var vm = Driven(new ScanResult(
+            RemovableFiles: Files(2, "offered"),
+            RegisteredPackages: Array.Empty<RegisteredPackage>(),
+            RegisteredTotalBytes: 0,
+            WithheldFiles: Files(4, "held"),
+            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1, IdentityUnestablishedCount: 2),
+            WithheldDeclaredProductInstalledBytes: 1024));
+
+        Assert.True(vm.HasNothingListed);
+        Assert.True(vm.NothingListedIsPerFile);
+        Assert.Equal(3, vm.NothingListedCount);
+        Assert.Equal(4, vm.RegisteredFileCount);
+    }
+
+    [Fact]
+    public void The_count_is_the_list_less_the_installed_program_files_and_not_one_decision_s_share()
     {
         // THE MUST-MISS THAT SETS THE FIGURES APART. Four figures are within reach here
         // and only one of them is the answer: the wholesale arm reads 1, the superseded
         // figure reads 9, the split's own total reads 2 because it does not account for
-        // every file on the list, and only the list's own length reads 3. No assertion
-        // here accepts any of the other three.
+        // every file on the list, and only the list's own length less the files kept
+        // for an installed program, none here, reads 3. No assertion here accepts any
+        // of the other three.
         //
-        // THE SPLIT IS LEFT SHORT ON PURPOSE. The line is the whole withholding, so a
-        // count derived from the split would under-report against the list the Details
-        // window shows on any machine the split does not account for whole.
+        // THE SPLIT IS LEFT SHORT ON PURPOSE. A count summed from the split's other arms
+        // would leave out a withheld file no arm counted.
         var vm = Driven(new ScanResult(
             RemovableFiles: Files(2, "offered"),
             RegisteredPackages: Array.Empty<RegisteredPackage>(),
@@ -251,7 +289,7 @@ public class ScanViewModelNothingListedTests
             RegisteredTotalBytes: 0,
             WithheldCount: 7,
             WithheldFiles: Files(3, "held"),
-            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 3)));
+            WithheldBy: new WithholdingSplit(DeclaredProductUnestablishedCount: 3)));
 
         Assert.True(vm.HasNothingListed);
         Assert.True(vm.HasSupersededHeldBack);

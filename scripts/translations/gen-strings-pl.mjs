@@ -586,7 +586,6 @@ const MAP = {
   'Summary.NothingListedPerFile.Singular': `InstallerClean nie miał pewności co do jednego ze znalezionych plików w pamięci podręcznej, więc go zatrzymał, zamiast go zaproponować.`,
   'Summary.NothingListedPerFile.Plural': `InstallerClean nie miał pewności co do niektórych ze znalezionych plików w pamięci podręcznej, więc zatrzymał {0} {1}, zamiast je zaproponować.`,
   'Cli.WithheldReasons.CandidateIdentity': `  Nie udało się zidentyfikować pliku w folderze, więc nie dało się go dopasować do rejestrów.`,
-  'Cli.WithheldReasons.DeclaredProductInstalled': `  Plik podaje, że należy do programu, który jest nadal zainstalowany, więc może być jeszcze potrzebny.`,
   'Cli.WithheldReasons.DeclaredProductUnestablished': `  Albo plik nie podał, do którego programu należy, albo Windows nie udzielił odpowiedzi na temat tego programu.`,
   'Cli.WithheldReasons.ScreenUnanswered': `  Sprawdzenie, do których programów należą pliki, dało odpowiedzi, które nie zgadzały się z przekazanymi mu plikami.`,
   'Body.PendingReboot.RegistryCheckUnreadable': `InstallerClean nie zdołał odczytać jednego z ustawień Windows, które sprawdza przed dotknięciem {InstallerFolder}, więc nie potrafi ustalić, czy operacja instalatora jest w toku, czy czeka na ponowne uruchomienie. Uruchom Windows ponownie i skanuj ponownie. Jeśli ustawienie nadal się nie odczytuje, to nie jest maszyna, którą InstallerClean może wyczyścić.`,
