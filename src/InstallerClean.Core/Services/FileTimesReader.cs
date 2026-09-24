@@ -40,8 +40,12 @@ internal sealed class FileTimesReader : IFileTimesReader
         try
         {
             // FILE_READ_ATTRIBUTES and every share flag. The right asked for is
-            // outside the data-sharing check, so this open neither fails on a file
-            // Windows Installer holds nor stops Windows Installer opening it.
+            // outside the data-sharing check, so this open does not fail on a file
+            // Windows Installer holds, and while it is open another process can still
+            // open the file, delete it and create a new file at its name. What it does
+            // hold off is a rename that would replace the file: Windows refuses that
+            // while this handle is open. The handle is closed when this method
+            // returns.
             //
             // FILE_FLAG_OPEN_REPARSE_POINT so a link is opened as itself rather than
             // followed, and reported below. FILE_FLAG_BACKUP_SEMANTICS so a path that
@@ -65,51 +69,104 @@ internal sealed class FileTimesReader : IFileTimesReader
                     : FileTimesRead.OpenRefused;
             }
 
-            if (!Kernel32.GetFileBasicInfoByHandle(
-                    handle,
-                    Kernel32.FileBasicInfo,
-                    out var basic,
-                    (uint)System.Runtime.CompilerServices.Unsafe.SizeOf<Kernel32.FILE_BASIC_INFO>()))
-                return FileTimesRead.TimesUnavailable;
-
-            if ((basic.FileAttributes & (Kernel32.FILE_ATTRIBUTE_REPARSE_POINT | FileAttributeDirectory)) != 0)
-                return FileTimesRead.NotAPlainFile;
-
-            // A change time of zero is NTFS not answering rather than a file last
-            // changed in 1601, and a negative value is not a time at all. Either
-            // would read as a very old file, so both are refused here.
-            if (!TryFromFileTime(basic.ChangeTime, out var change)
-                || basic.ChangeTime == 0
-                || !TryFromFileTime(basic.CreationTime, out var creation)
-                || !TryFromFileTime(basic.LastWriteTime, out var lastWrite))
-                return FileTimesRead.TimesUnavailable;
-
+            // Every question is asked before any answer is judged, so that what the
+            // answers mean is decided in one place that takes no handle. Each call
+            // reads and none of them changes anything.
+            var basicRead = Kernel32.GetFileBasicInfoByHandle(
+                handle,
+                Kernel32.FileBasicInfo,
+                out var basic,
+                (uint)System.Runtime.CompilerServices.Unsafe.SizeOf<Kernel32.FILE_BASIC_INFO>());
             var volume = VolumeOf(handle);
-            if (volume is null) return FileTimesRead.VolumeUnestablished;
 
-            if (StorageHelpers.GetDriveKind(volume) != DriveType.Fixed)
-                return FileTimesRead.NotAFixedVolume;
-
-            var fileSystem = new char[FileSystemNameBufferLength];
-            if (!Kernel32.GetVolumeInformationByHandle(
-                    handle, IntPtr.Zero, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero,
-                    fileSystem, (uint)fileSystem.Length))
-                return FileTimesRead.VolumeUnestablished;
-
-            var end = Array.IndexOf(fileSystem, '\0');
-            var name = new string(fileSystem, 0, end < 0 ? fileSystem.Length : end);
-
-            // Exactly NTFS. Any other name, ReFS included, keeps the file back.
-            if (!string.Equals(name, "NTFS", StringComparison.Ordinal))
-                return FileTimesRead.NotNtfs;
-
-            times = new FileTimes(creation, lastWrite, change);
-            return FileTimesRead.Read;
+            return Classify(
+                new HandleAnswers(
+                    basicRead ? basic : null,
+                    volume,
+                    volume is null ? DriveType.Unknown : StorageHelpers.GetDriveKind(volume),
+                    FileSystemOf(handle)),
+                out times);
         }
         catch
         {
             return FileTimesRead.Faulted;
         }
+    }
+
+    /// <summary>
+    /// What Windows answered about the file behind one open handle, before anything is
+    /// concluded from it.
+    /// </summary>
+    /// <param name="Basic">The file's times and attributes, or null where the call failed.</param>
+    /// <param name="VolumeRoot">
+    /// The <c>\\?\Volume{guid}\</c> root of the volume holding the file, or null where
+    /// the handle yields none.
+    /// </param>
+    /// <param name="DriveKind">That volume's drive type. Not read where there is no root.</param>
+    /// <param name="FileSystemName">
+    /// The name of that volume's file system, or null where the call failed.
+    /// </param>
+    internal readonly record struct HandleAnswers(
+        Kernel32.FILE_BASIC_INFO? Basic,
+        string? VolumeRoot,
+        DriveType DriveKind,
+        string? FileSystemName);
+
+    /// <summary>
+    /// What the answers establish, and the file's times where they establish all of it.
+    ///
+    /// <see cref="FileTimesRead.Read"/> ONLY FOR A PLAIN FILE WHOSE THREE TIMES ARE
+    /// READABLE AND WHOSE CHANGE TIME IS NOT ZERO, ON A VOLUME NAMED BY A GUID PATH, OF A
+    /// FIXED DRIVE, WHOSE FILE SYSTEM IS EXACTLY NTFS. Any answer missing or different
+    /// keeps the file back, and the checks run in that order, so the first one short
+    /// names the outcome.
+    /// </summary>
+    internal static FileTimesRead Classify(HandleAnswers answers, out FileTimes times)
+    {
+        times = default;
+
+        if (answers.Basic is not { } basic) return FileTimesRead.TimesUnavailable;
+
+        if ((basic.FileAttributes & (Kernel32.FILE_ATTRIBUTE_REPARSE_POINT | FileAttributeDirectory)) != 0)
+            return FileTimesRead.NotAPlainFile;
+
+        // A change time of zero is NTFS not answering rather than a file last
+        // changed in 1601, and a negative value is not a time at all. Either
+        // would read as a very old file, so both are refused here.
+        if (!TryFromFileTime(basic.ChangeTime, out var change)
+            || basic.ChangeTime == 0
+            || !TryFromFileTime(basic.CreationTime, out var creation)
+            || !TryFromFileTime(basic.LastWriteTime, out var lastWrite))
+            return FileTimesRead.TimesUnavailable;
+
+        if (answers.VolumeRoot is null) return FileTimesRead.VolumeUnestablished;
+
+        if (answers.DriveKind != DriveType.Fixed) return FileTimesRead.NotAFixedVolume;
+
+        if (answers.FileSystemName is null) return FileTimesRead.VolumeUnestablished;
+
+        // Exactly NTFS. Any other name, ReFS included, keeps the file back.
+        if (!string.Equals(answers.FileSystemName, "NTFS", StringComparison.Ordinal))
+            return FileTimesRead.NotNtfs;
+
+        times = new FileTimes(creation, lastWrite, change);
+        return FileTimesRead.Read;
+    }
+
+    /// <summary>
+    /// The name of the file system on the volume holding the file behind
+    /// <paramref name="handle"/>, or null where the call fails.
+    /// </summary>
+    private static string? FileSystemOf(Microsoft.Win32.SafeHandles.SafeFileHandle handle)
+    {
+        var fileSystem = new char[FileSystemNameBufferLength];
+        if (!Kernel32.GetVolumeInformationByHandle(
+                handle, IntPtr.Zero, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero,
+                fileSystem, (uint)fileSystem.Length))
+            return null;
+
+        var end = Array.IndexOf(fileSystem, '\0');
+        return new string(fileSystem, 0, end < 0 ? fileSystem.Length : end);
     }
 
     // FILE_ATTRIBUTE_DIRECTORY. Declared here rather than in Kernel32 because this

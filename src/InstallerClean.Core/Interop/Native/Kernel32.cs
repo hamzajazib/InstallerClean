@@ -294,7 +294,10 @@ internal static partial class Kernel32
     ///
     /// THE HANDLE NEEDS <see cref="FILE_READ_ATTRIBUTES"/> AND NOTHING MORE. That
     /// right is outside the data-sharing check, so a handle carrying it alone
-    /// neither waits on nor excludes any other opener of the file.
+    /// neither waits on nor excludes any other opener of the file. Opened with every
+    /// share flag, it also leaves the file free to be deleted and its name free to be
+    /// used again. A rename that would replace the file is refused while the handle
+    /// is open.
     /// </summary>
     [LibraryImport(Library, EntryPoint = "GetFileInformationByHandleEx", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -310,8 +313,12 @@ internal static partial class Kernel32
     /// because the API declares LARGE_INTEGER.
     ///
     /// <see cref="ChangeTime"/> IS THE ONE THE FILE SYSTEM KEEPS FOR ITSELF. NTFS
-    /// sets it to the present when the file's contents or attributes change. A
-    /// caller can set it as well, but only by asking for that explicitly.
+    /// sets it to the present when the file's contents or attributes change, and
+    /// when the file is renamed. It is not always the file's own: CopyFile gives a
+    /// copy its source's change time along with its last-write time, and the
+    /// creation time is the only one of the three the copy gets fresh. So no one
+    /// time dates a file by itself; <see cref="Services.CachedFileAge"/> reads the
+    /// three together.
     ///
     /// Byte-for-byte the FILE_BASIC_INFO the API writes, trailing padding included:
     /// sequential layout pads the final DWORD to the struct's eight-byte alignment,
