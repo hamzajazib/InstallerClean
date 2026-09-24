@@ -287,6 +287,76 @@ internal static partial class Kernel32
     /// <summary>FileIdInfo of FILE_INFO_BY_HANDLE_CLASS.</summary>
     public const uint FileIdInfo = 18;
 
+    /// <summary>
+    /// The same call as <see cref="GetFileInformationByHandleEx"/>, declared a second
+    /// time for <see cref="FILE_BASIC_INFO"/>, because the API writes a different
+    /// struct for each class and an out-parameter has one type.
+    ///
+    /// THE HANDLE NEEDS <see cref="FILE_READ_ATTRIBUTES"/> AND NOTHING MORE. That
+    /// right is outside the data-sharing check, so a handle carrying it alone
+    /// neither waits on nor excludes any other opener of the file.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "GetFileInformationByHandleEx", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetFileBasicInfoByHandle(
+        SafeFileHandle hFile,
+        uint fileInformationClass,
+        out FILE_BASIC_INFO lpFileInformation,
+        uint dwBufferSize);
+
+    /// <summary>
+    /// A file's four times and its attributes. Each time is a FILETIME count of
+    /// 100-nanosecond intervals since 1601, UTC, carried as a signed 64-bit value
+    /// because the API declares LARGE_INTEGER.
+    ///
+    /// <see cref="ChangeTime"/> IS THE ONE THE FILE SYSTEM KEEPS FOR ITSELF. NTFS
+    /// sets it to the present when the file's contents or attributes change. A
+    /// caller can set it as well, but only by asking for that explicitly.
+    ///
+    /// Byte-for-byte the FILE_BASIC_INFO the API writes, trailing padding included:
+    /// sequential layout pads the final DWORD to the struct's eight-byte alignment,
+    /// which is the size the API expects to be told.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct FILE_BASIC_INFO
+    {
+        public long CreationTime;
+        public long LastAccessTime;
+        public long LastWriteTime;
+        public long ChangeTime;
+        public uint FileAttributes;
+    }
+
+    /// <summary>FileBasicInfo of FILE_INFO_BY_HANDLE_CLASS.</summary>
+    public const uint FileBasicInfo = 0;
+
+    /// <summary>
+    /// The name of the file system on the volume that holds the file behind
+    /// <paramref name="hFile"/>: <c>NTFS</c>, <c>ReFS</c>, <c>FAT32</c>,
+    /// <c>exFAT</c> and so on.
+    ///
+    /// IT IS ASKED OF THE HANDLE AND NOT OF A PATH, which is what makes the answer
+    /// the file's own. By the time a handle exists, every junction, mount point,
+    /// substituted drive and symbolic link in the path that opened it has been
+    /// followed, so the volume answering is the one the file is on, however the
+    /// path was spelled.
+    ///
+    /// The other outputs are optional and are passed as null pointers; only the
+    /// file-system name is asked for. <c>CountElementName</c> for the name buffer,
+    /// the function taking its size as a parameter.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "GetVolumeInformationByHandleW", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetVolumeInformationByHandle(
+        SafeFileHandle hFile,
+        IntPtr lpVolumeNameBuffer,
+        uint nVolumeNameSize,
+        IntPtr lpVolumeSerialNumber,
+        IntPtr lpMaximumComponentLength,
+        IntPtr lpFileSystemFlags,
+        [MarshalUsing(CountElementName = nameof(nFileSystemNameSize))] char[] lpFileSystemNameBuffer,
+        uint nFileSystemNameSize);
+
     [StructLayout(LayoutKind.Sequential)]
     public struct FILETIME
     {
@@ -336,6 +406,13 @@ internal static partial class Kernel32
     // which callers strip (InstallerCacheHelpers.StripLongPathPrefix) to
     // get back a path comparable to a user-typed one.
     public const uint VOLUME_NAME_DOS = 0x0;
+
+    // VOLUME_NAME_GUID names the volume by its GUID path, "\\?\Volume{guid}\...",
+    // instead. The mount manager gives a GUID path to local volumes, and a file
+    // reached over the network has none to give; FileTimesReader treats any
+    // answer that is not a GUID path on a fixed drive as a volume it cannot vouch
+    // for, whichever way the call reports that.
+    public const uint VOLUME_NAME_GUID = 0x1;
 
     // The two codes CreateFile reports for an absence, and the only two a caller
     // may read as "nothing is at this path": the leaf is missing, or a component

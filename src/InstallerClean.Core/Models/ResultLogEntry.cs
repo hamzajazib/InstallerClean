@@ -774,11 +774,12 @@ public sealed record MachineInfo(
 /// ANSWERS THAT. It is the figure that says whether a machine got nothing because its
 /// folder was clean or because the scan could not settle it.
 ///
-/// NO CAUSE TRAVELS WITH THIS FIGURE AND NONE MAY BE ATTACHED TO IT. Three separate
+/// NO CAUSE TRAVELS WITH THIS FIGURE AND NONE MAY BE ATTACHED TO IT. Four separate
 /// conditions put files on that list and they are different facts about a machine; a
 /// sentence naming any one of them would be false of the others. The five counts below
 /// are where those conditions are counted apart, one finding each, and they are read
-/// apart for the same reason.
+/// apart for the same reason. The scan splits the list six ways and five are sent: this
+/// figure less the five is the count of files the age check kept back.
 /// </param>
 /// <param name="WithheldTotalBytes">
 /// The bytes of the files behind <paramref name="WithheldCandidateCount"/>, summed
@@ -817,8 +818,8 @@ public sealed record MachineInfo(
 /// <param name="WithheldIdentityUnestablishedCount">
 /// Candidates the identity comparison kept back one at a time, because the filesystem
 /// would not say which file the candidate's own path names:
-/// <c>ScanResult.WithheldBy.IdentityUnestablishedCount</c>. The first member of the
-/// five-way split of <paramref name="WithheldCandidateCount"/>.
+/// <c>ScanResult.WithheldBy.IdentityUnestablishedCount</c>. The first of the five
+/// counts that split <paramref name="WithheldCandidateCount"/>.
 ///
 /// IT IS SENT RATHER THAN DERIVED, AND THAT IS DELIBERATE. The same population is
 /// recoverable today from <c>machine</c>'s candidate-side refusal total, which has the
@@ -939,8 +940,9 @@ public sealed record ScanInfo(
             // Counted off the kept list by the scan, so the number sent and the rows
             // the registered-files window shows cannot come apart.
             scan.RegisteredWithheldCount,
-            // The five-way split of the count three lines up, taken off the one place
-            // that knows it. Appended rather than placed among the members they belong
+            // Five of the six counts that split the count three lines up, taken off the
+            // one place that knows them; that count less these five is the sixth.
+            // Appended rather than placed among the members they belong
             // beside: every argument after an insertion point re-points at its
             // neighbour's value, and a shift within a run of ints compiles silently.
             scan.WithheldBy.IdentityUnestablishedCount,

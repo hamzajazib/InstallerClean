@@ -442,8 +442,9 @@ internal static class Program
             //
             // The count and the size are UnestablishedWithheldCount and
             // UnestablishedWithheldBytes, which leave out any file kept because it
-            // declares an installed program, and they are the figures the window's
-            // screen uses, so the two hosts cannot disagree about one machine.
+            // declares an installed program or was not shown to be a day old, and they
+            // are the figures the window's screen uses, so the two hosts cannot
+            // disagree about one machine.
             var withheldCount = scanResult.UnestablishedWithheldCount;
 
             // The one-form names the size and not the numeral ("the one file"), so it
@@ -1031,7 +1032,8 @@ internal static class Program
         // is what a number in the 3000 band is for. See CliEventClass.
         //
         // NOTHING IS REPORTED HERE FOR A RUN WHOSE EVERY HELD FILE DECLARES A PROGRAM
-        // WINDOWS STILL HAS INSTALLED: HasWithholdingToReport is false for it.
+        // WINDOWS STILL HAS INSTALLED OR WAS NOT SHOWN TO BE A DAY OLD:
+        // HasWithholdingToReport is false for it.
         if (scanResult.HasWithholdingToReport)
         {
             // WHICH OF THE TWO SENTENCES, ASKED ONCE AND SPENT BY BOTH THE AUDIT LINE
@@ -1483,8 +1485,8 @@ internal static class Program
     /// speak for it, and a line here as well would say the same thing twice about one
     /// machine.
     ///
-    /// NOR DOES THE DECLARED-PRODUCT-INSTALLED ARM, so the command line prints no
-    /// reason line for the files it counts.
+    /// NOR DO THE DECLARED-PRODUCT-INSTALLED AND NOT-SHOWN-A-DAY-OLD ARMS, so the
+    /// command line prints no reason line for the files they count.
     ///
     /// The fallback is the heading's own antecedent rather than a blank, on the same
     /// reasoning as above, and it is unreachable while every arm is handled.

@@ -461,12 +461,13 @@ public partial class ScanViewModel : ObservableObject
             // that list is filled by more than one decision and neither the list nor
             // the wholesale flag says which sentence is true of it. The scan has
             // nothing to report on a run whose withholding caught nothing, or whose
-            // every held file declares a program Windows still has installed, which
-            // is what keeps the line off both machines.
+            // every held file declares a program Windows still has installed or was
+            // not shown to be a day old, which is what keeps the line off both
+            // machines.
             //
             // THE COUNT IS UnestablishedWithheldCount, NOT THE WHOLE LIST, so a file
-            // kept for an installed program is left out of it. Every withheld file is
-            // still counted among the files left alone.
+            // kept for an installed program or for its age is left out of it. Every
+            // withheld file is still counted among the files left alone.
             //
             // AND ZERO WHERE NOTHING IS OFFERED, because that machine gets the
             // completion screen instead and never reads this window's list. Folded in

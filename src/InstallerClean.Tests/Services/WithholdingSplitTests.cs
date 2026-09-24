@@ -9,22 +9,24 @@ namespace InstallerClean.Tests.Services;
 /// The split of why a scan kept each file back, driven through real scans rather
 /// than built by hand.
 ///
-/// THE POINT IS THE COMPLETENESS ASSERTION AND NOT THE INDIVIDUAL COUNTS. Three
-/// decisions put a file on the withheld list, and the five counts are a partition of
-/// it. A partition stays one until somebody adds a branch, and a sixth arm
-/// arriving later would appear in none of the five while the list grew underneath
-/// them: five counts that no longer sum to the list are the only thing that says so.
+/// THE POINT IS THE COMPLETENESS ASSERTION AND NOT THE INDIVIDUAL COUNTS. Four
+/// decisions put a file on the withheld list, and the six counts are a partition of
+/// it. A partition stays one until somebody adds a branch, and a seventh arm
+/// arriving later would appear in none of the six while the list grew underneath
+/// them: six counts that no longer sum to the list are the only thing that says so.
 /// Every test here asserts the sum as well as its own arm, so a fixture reaching a
 /// new decision fails whichever arm it was written for.
 ///
 /// EACH ARM IS REACHED ON ITS OWN, WHICH IS WHAT THE DECISIONS MAKE POSSIBLE. The
-/// wholesale arm skips the per-file screen entirely, so no one scan can exercise all
-/// five, and a fixture claiming to would be describing a machine that cannot exist.
+/// wholesale arm skips the per-file screen and the age check entirely, so no one scan
+/// can exercise all six, and a fixture claiming to would be describing a machine that
+/// cannot exist.
 /// </summary>
 public class WithholdingSplitTests
 {
     private const string Folder = @"C:\Windows\Installer";
     private const string ProductA = "{11111111-1111-1111-1111-111111111111}";
+    private const string ProductB = "{22222222-2222-2222-2222-222222222222}";
 
     /// <summary>
     /// The one thing every test here asserts beside its own arm: the five account for
@@ -128,7 +130,7 @@ public class WithholdingSplitTests
     }
 
     [Fact]
-    public async Task A_scan_that_withheld_nothing_reports_five_zeroes()
+    public async Task A_scan_that_withheld_nothing_reports_every_count_at_zero()
     {
         // The state the great majority of machines are in, and the one a partition can
         // satisfy by accident: every count is zero and so is the list, so the sum
@@ -173,6 +175,41 @@ public class WithholdingSplitTests
         AssertPartitions(result);
     }
 
+    [Fact]
+    public async Task The_age_check_is_counted_as_its_own_arm_beside_the_screens()
+    {
+        // The screen keeps held.msi, and lets fresh.msi and old.msi through; the age
+        // check then keeps fresh.msi and lets old.msi through. Three decisions on one
+        // pass, each file counted once.
+        var identities = new ScriptedPackageIdentities();
+        identities.Declares($@"{Folder}\held.msi", ProductA);
+        identities.Declares($@"{Folder}\fresh.msi", ProductB);
+        identities.Declares($@"{Folder}\old.msi", ProductB);
+
+        var msi = new ScriptedMsiProducts();
+        msi.Installed(ProductA);
+        msi.NotInstalled(ProductB, InstallerClean.Interop.MsiError.UnknownProduct);
+
+        var clock = new DateTimeOffset(2030, 6, 15, 12, 0, 0, TimeSpan.Zero);
+        var times = new ScriptedFileTimes();
+        var recent = clock.UtcDateTime.AddHours(-1);
+        var old = clock.UtcDateTime.AddDays(-2);
+        times.Reads($@"{Folder}\fresh.msi", recent, recent, recent);
+        times.Reads($@"{Folder}\old.msi", old, old, old);
+
+        var result = await Scan(
+            walked: new[] { $@"{Folder}\held.msi", $@"{Folder}\fresh.msi", $@"{Folder}\old.msi" },
+            registered: Array.Empty<string>(),
+            screen: new DeclaredProductCheck(msi, identities),
+            times: times,
+            clock: new FixedClock(clock));
+
+        Assert.Equal(1, result.WithheldBy.DeclaredProductInstalledCount);
+        Assert.Equal(1, result.WithheldBy.NotShownADayOldCount);
+        Assert.Equal($@"{Folder}\old.msi", Assert.Single(result.RemovableFiles).FullPath);
+        AssertPartitions(result);
+    }
+
     // ---- fixtures ----
 
     /// <summary>
@@ -208,7 +245,9 @@ public class WithholdingSplitTests
         string[] registered,
         IFileIdentityReader? identities = null,
         IDeclaredProductCheck? screen = null,
-        EnumerationCensus census = default)
+        EnumerationCensus census = default,
+        IFileTimesReader? times = null,
+        TimeProvider? clock = null)
     {
         var fs = new MockFileSystem();
         fs.AddDirectory(Folder);
@@ -224,7 +263,7 @@ public class WithholdingSplitTests
                 Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(new InstallerQueryResult(packages.AsReadOnly(), Census: census));
 
-        return new FileSystemScanService(query, fs, null, walked, null, identities, screen)
+        return new FileSystemScanService(query, fs, null, walked, null, identities, screen, times, clock)
             .ScanAsync();
     }
 }

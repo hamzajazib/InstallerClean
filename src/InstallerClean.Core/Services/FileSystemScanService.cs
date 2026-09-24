@@ -19,6 +19,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
     private readonly IShortNameCreationProbe? _shortNames;
     private readonly IFileIdentityReader? _fileIds;
     private readonly IDeclaredProductCheck? _declaredProducts;
+    private readonly IFileTimesReader? _fileTimes;
+    private readonly TimeProvider _clock;
     private readonly IEnumerable<string>? _overrideFiles;
     private readonly string? _installerFolderOverride;
 
@@ -33,7 +35,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
     private const int WalkReportStride = 1_000;
     private const int ClassifyReportCount = 200;
 
-    /// <summary>Production constructor. DI supplies all four dependencies; the override fields stay null.</summary>
+    /// <summary>Production constructor. DI supplies every dependency; the override fields stay null.</summary>
     /// <remarks>
     /// Microsoft.Extensions.DependencyInjection resolves the public ctor
     /// with the most resolvable parameters and ignores internal ctors.
@@ -47,15 +49,17 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// </remarks>
     public FileSystemScanService(IInstallerQueryService queryService, IFileSystem fileSystem,
         IShortNameCreationProbe shortNames, IFileIdentityReader fileIdentities,
-        IDeclaredProductCheck declaredProducts)
-        : this(queryService, fileSystem, shortNames, null, null, fileIdentities, declaredProducts) { }
+        IDeclaredProductCheck declaredProducts, IFileTimesReader fileTimes, TimeProvider clock)
+        : this(queryService, fileSystem, shortNames, null, null, fileIdentities, declaredProducts,
+            fileTimes, clock) { }
 
     /// <summary>
     /// Test constructor. Injects a filesystem and nothing else, for the tests
     /// whose subject is the walk itself.
     /// </summary>
     internal FileSystemScanService(IInstallerQueryService queryService, IFileSystem fileSystem)
-        : this(queryService, fileSystem, null, null, null, null, null) { }
+        : this(queryService, fileSystem, shortNames: null, overrideFiles: null,
+            installerFolderOverride: null, fileIdentities: null) { }
 
     /// <summary>Test constructor. Injects a fake file list.</summary>
     internal FileSystemScanService(IInstallerQueryService queryService, IEnumerable<string>? overrideFiles)
@@ -105,25 +109,51 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// injects one for BOTH directions, and the pinning test for what the default
     /// itself means is in the suite beside them.
     /// </param>
+    /// <param name="fileTimes">
+    /// Null in every test that is not about the age check, which runs no age check at
+    /// all, on the same terms as <paramref name="declaredProducts"/> and with the same
+    /// hazard: a test asserting that the age check lets a file through passes just as
+    /// well against a scan that has none. The tests whose subject is the age check
+    /// inject a reader and show it holding a file back in the same fixture, and the
+    /// pinning test for the default is beside them. Production always supplies one.
+    /// </param>
+    /// <param name="clock">
+    /// The clock the age check judges against. Null means the system clock.
+    /// </param>
     internal FileSystemScanService(IInstallerQueryService queryService, IFileSystem fileSystem,
         IShortNameCreationProbe? shortNames,
         IEnumerable<string>? overrideFiles, string? installerFolderOverride,
         IFileIdentityReader? fileIdentities,
-        IDeclaredProductCheck? declaredProducts = null)
+        IDeclaredProductCheck? declaredProducts = null,
+        IFileTimesReader? fileTimes = null,
+        TimeProvider? clock = null)
     {
         _queryService = queryService;
         _fs = fileSystem;
         _shortNames = shortNames;
         _fileIds = fileIdentities;
         _declaredProducts = declaredProducts;
+        _fileTimes = fileTimes;
+        _clock = clock ?? TimeProvider.System;
         _overrideFiles = overrideFiles;
         _installerFolderOverride = installerFolderOverride;
     }
+
+    /// <summary>
+    /// Whether this scan runs the age check, for the test that holds the hosts' scan
+    /// to running it. Every test constructor defaults the reader to null.
+    /// </summary>
+    internal bool ChecksAge => _fileTimes is not null;
 
     public async Task<ScanResult> ScanAsync(
         IProgress<ScanProgressUpdate>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        // The age check's clock, read once and before the walk, so every candidate is
+        // judged against the same instant and a file created or changed while the
+        // scan runs is later than it.
+        var scanClock = _clock.GetUtcNow();
+
         progress?.Report(new ScanProgressUpdate(Strings.Status_ScanningCache));
 
         // Walk the disk BEFORE querying the API, and materialise the walk here
@@ -178,10 +208,10 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // place the question can be answered is where the decision is taken.
         var withheldBy = new WithholdingSplitTally();
 
-        // Candidates no registration claims, in walk order. The path comparison and
-        // the file-identity match below it are the whole of what decides THIS half of
-        // the offer, and there is no second screening pass over it, so a survivor of
-        // those two is an offered file.
+        // Candidates no registration claims, in walk order. Four passes decide THIS
+        // half of the offer: the path comparison, the file-identity match below it,
+        // the declared-product screen and the age check. A survivor of all four is an
+        // offered file.
         //
         // IT IS ONE OF TWO SOURCES OF OFFERED FILES AND THE OTHER IS NOT THE WALK AT
         // ALL. A superseded patch reaches the offer from the registered set, having
@@ -369,10 +399,10 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // counted, in the two tallies this returns.
         //
         // THE THREE GATES BELOW ARE MEASURED BEFORE IT RUNS, and before the
-        // declared-product screen too. Each of them reads an empty candidate list
-        // as evidence that the comparison never worked, and a candidate dropped
-        // here is the comparison WORKING: it found the registration that names the
-        // file. Counting after the drop would let a machine whose every candidate
+        // declared-product screen and the age check too. Each of them reads an empty
+        // candidate list as evidence that the comparison never worked, and a
+        // candidate dropped here is the comparison WORKING: it found the registration
+        // that names the file. Counting after the drop would let a machine whose every candidate
         // turned out to be a registered file under another spelling be refused as a
         // machine whose comparison was broken, and counting after the screen would
         // do the same to a machine whose candidates were all kept back.
@@ -382,18 +412,19 @@ public sealed class FileSystemScanService : IFileSystemScanService
             DropCandidatesRegisteredUnderAnotherSpelling(
                 unclaimedByPath, withheld, withheldBy, registered, cancellationToken);
 
-        // WHAT DECIDES THIS HALF OF THE OFFER: TWO COMPARISONS AND ONE SCREEN, and
-        // the difference between them is which end they start at. The path
-        // comparison and the file-identity match above both start at a
+        // WHAT DECIDES THIS HALF OF THE OFFER: TWO COMPARISONS, ONE SCREEN AND ONE
+        // AGE CHECK, and the difference between them is which end they start at. The
+        // path comparison and the file-identity match above both start at a
         // REGISTRATION and ask whether it names this file. The screen a few lines
         // below starts at the FILE: it asks an installation package which product
         // it declares itself to belong to, puts that product code to Windows, and
         // keeps the file back where Windows still holds a record of it and some
         // installation of it records no package shown to be another present file,
-        // or where the question could not be settled. It can subtract from the
-        // offer and do nothing else, so what survives all three is the offer.
-        // Product packages only, for a reason that is load-bearing rather than
-        // incidental; see IDeclaredProductCheck.
+        // or where the question could not be settled. Product packages only, for a
+        // reason that is load-bearing rather than incidental; see
+        // IDeclaredProductCheck. The age check after it also starts at the file, and
+        // asks it when it was last created, written or changed. Both can subtract
+        // from the offer and do nothing else, so what survives all four is the offer.
         //
         // THE CLASS WHERE A REGISTRATION EXISTS AND THE SCAN FAILED TO MATCH IT TO
         // ITS FILE is reached by four separate mechanisms besides, which is the
@@ -570,6 +601,14 @@ public sealed class FileSystemScanService : IFileSystemScanService
             WithholdCandidatesTheirOwnProductStillClaims(
                 unclaimedByPath, withheld, withheldBy, cancellationToken,
                 (ex, cause) => refusalLog.Record(ex, cause));
+
+            // THE LAST DECISION ON THIS HALF, AND IT TAKES WHAT THE SCREEN LET THROUGH.
+            // Run after the screen rather than before it, so the screen's own verdicts
+            // are counted where they always were and this counts only what it kept
+            // back from the offer.
+            WithholdCandidatesNotShownADayOld(
+                unclaimedByPath, withheld, withheldBy, scanClock, cancellationToken);
+
             removable.AddRange(unclaimedByPath);
         }
 
@@ -969,8 +1008,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
             DisplayHelpers.FormatCount(removable.Count),
             DisplayHelpers.PluraliseFile(removable.Count))));
         // THE PROGRESS LINE COUNTS WHAT IS OFFERED AND NAMES NOTHING KEPT BACK.
-        // Files ARE kept back per file, by the declared-product screen
-        // and by the identity comparison, and they go on the withheld list rather
+        // Files ARE kept back per file, by the declared-product screen, the age check
+        // and the identity comparison, and they go on the withheld list rather
         // than into this sentence: what put them there differs between them, and one
         // running count over the lot could only be described by a cause false of some
         // of its members.
@@ -1020,10 +1059,11 @@ public sealed class FileSystemScanService : IFileSystemScanService
             candidateIdentityReads,
             // Which decision took each file on the list two lines above. Read here
             // rather than derived, and held to that list's own length by a test:
-            // five counts that no longer sum to it mean a sixth arm has been
+            // six counts that no longer sum to it mean a seventh arm has been
             // added and is reported by none of them.
             withheldBy.Taken(),
-            withheldBy.DeclaredProductInstalledBytes);
+            withheldBy.DeclaredProductInstalledBytes,
+            withheldBy.NotShownADayOldBytes);
     }
 
     /// <summary>
@@ -1220,8 +1260,22 @@ public sealed class FileSystemScanService : IFileSystemScanService
         private long _declaredProductInstalledBytes;
         private int _declaredProductUnestablished;
         private int _screenUnanswered;
+        private int _notShownADayOld;
+        private long _notShownADayOldBytes;
 
         internal void IdentityUnestablished() => _identityUnestablished++;
+
+        internal void NotShownADayOld(long sizeBytes)
+        {
+            _notShownADayOld++;
+            _notShownADayOldBytes += sizeBytes;
+        }
+
+        /// <summary>
+        /// The size of the files counted under the not-shown-a-day-old arm, carried
+        /// beside the split for the reason <see cref="DeclaredProductInstalledBytes"/> is.
+        /// </summary>
+        internal long NotShownADayOldBytes => _notShownADayOldBytes;
 
         internal void Wholesale(int count) => _wholesale += count;
 
@@ -1265,7 +1319,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
             _wholesale,
             _declaredProductInstalled,
             _declaredProductUnestablished,
-            _screenUnanswered);
+            _screenUnanswered,
+            _notShownADayOld);
     }
 
     /// <summary>
@@ -1336,6 +1391,62 @@ public sealed class FileSystemScanService : IFileSystemScanService
                 withheldBy.Screened(outcomes[i], candidates[i].SizeBytes);
             }
             else survivors.Add(candidates[i]);
+        }
+
+        candidates.Clear();
+        candidates.AddRange(survivors);
+    }
+
+    /// <summary>
+    /// Moves out of <paramref name="candidates"/> and into
+    /// <paramref name="withheld"/> every file whose times, read on a local NTFS volume,
+    /// do not show it was created, written and changed at least a day before
+    /// <paramref name="scanClock"/>. Both lists keep walk order.
+    ///
+    /// WHAT IT IS FOR. Windows Installer writes a package's new copy into this folder
+    /// before any record names it, and until a record does, no comparison with the
+    /// records can tell that copy from a spare: it declares its product like any other
+    /// copy, and where the product is already installed its records name a different
+    /// file that is present. So a file here is offered only once it was created,
+    /// written and changed a day or more before the scan, which is read off the file
+    /// rather than out of any record. See <see cref="CachedFileAge"/> for how the age
+    /// is taken and why from three times.
+    ///
+    /// EVERY CANDIDATE, INSTALLATION PACKAGE AND PATCH ALIKE. A patch's cached copy
+    /// arrives the same way, and the screen before this one passes patches over.
+    ///
+    /// ONLY THE WALK'S CANDIDATES. A superseded patch reaches the offer from its own
+    /// registration, which names the file, so it is never on this list.
+    ///
+    /// IT CAN ONLY EVER SUBTRACT FROM THE OFFER. A scan built with no reader runs no
+    /// age check, and nothing it returns adds a file or clears a withholding made
+    /// anywhere else.
+    /// </summary>
+    private void WithholdCandidatesNotShownADayOld(
+        List<OrphanedFile> candidates,
+        List<OrphanedFile> withheld,
+        WithholdingSplitTally withheldBy,
+        DateTimeOffset scanClock,
+        CancellationToken cancellationToken)
+    {
+        if (_fileTimes is null || candidates.Count == 0) return;
+
+        // Partitioned forward into a second list for the reason the screen's pass
+        // gives: both sides keep walk order without either being reversed.
+        var survivors = new List<OrphanedFile>(candidates.Count);
+        foreach (var candidate in candidates)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var outcome = _fileTimes.ReadOutcome(candidate.FullPath, out var times);
+            if (CachedFileAge.ShownADayOld(outcome, times, scanClock))
+            {
+                survivors.Add(candidate);
+                continue;
+            }
+
+            withheld.Add(candidate);
+            withheldBy.NotShownADayOld(candidate.SizeBytes);
         }
 
         candidates.Clear();

@@ -106,7 +106,7 @@ public class FileSystemScanServiceDeclaredProductTests
         Assert.Equal(kept.SizeBytes, result.WithheldDeclaredProductInstalledBytes);
         Assert.Equal(0, result.UnestablishedWithheldCount);
         Assert.Equal(0, result.UnestablishedWithheldBytes);
-        Assert.Equal(WithholdingAccount.DeclaredProductsInstalled, result.Withholding);
+        Assert.Equal(WithholdingAccount.KeptWithoutNotice, result.Withholding);
     }
 
     /// <summary>

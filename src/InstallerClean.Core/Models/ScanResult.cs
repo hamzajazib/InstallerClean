@@ -372,6 +372,10 @@ namespace InstallerClean.Models;
 /// counts, so that <see cref="UnestablishedWithheldBytes"/> can be the size of the rest.
 /// Carried here rather than on the split, which holds counts and nothing else.
 /// </param>
+/// <param name="WithheldNotShownADayOldBytes">
+/// The size of the files <see cref="WithholdingSplit.NotShownADayOldCount"/> counts, for
+/// the same reason and carried the same way.
+/// </param>
 public record ScanResult(
     IReadOnlyList<OrphanedFile> RemovableFiles,
     IReadOnlyList<RegisteredPackage> RegisteredPackages,
@@ -395,7 +399,8 @@ public record ScanResult(
     FileIdentityReadTally RegistrationIdentityReads = default,
     FileIdentityReadTally CandidateIdentityReads = default,
     WithholdingSplit WithheldBy = default,
-    long WithheldDeclaredProductInstalledBytes = 0)
+    long WithheldDeclaredProductInstalledBytes = 0,
+    long WithheldNotShownADayOldBytes = 0)
 {
     /// <summary>
     /// Every registration naming a file that is not on disk, the sum of the two
@@ -423,23 +428,29 @@ public record ScanResult(
 
     /// <summary>
     /// How many withheld files the held-back sentences speak of: every withheld file
-    /// except those <see cref="WithholdingSplit.DeclaredProductInstalledCount"/>
-    /// counts. <see cref="UnestablishedWithheldBytes"/> is their size.
+    /// except those <see cref="WithholdingSplit.DeclaredProductInstalledCount"/> and
+    /// <see cref="WithholdingSplit.NotShownADayOldCount"/> count.
+    /// <see cref="UnestablishedWithheldBytes"/> is their size.
     ///
-    /// IT IS THE LIST LESS THAT ONE ARM, NOT A SUM OF THE OTHERS, so a withheld file no
-    /// arm counted, or one counted by an arm added to <see cref="WithholdingSplit"/>
+    /// IT IS THE LIST LESS THOSE TWO ARMS, NOT A SUM OF THE OTHERS, so a withheld file
+    /// no arm counted, or one counted by an arm added to <see cref="WithholdingSplit"/>
     /// later, is counted here.
     /// </summary>
     public int UnestablishedWithheldCount =>
-        Math.Max(0, (WithheldFiles?.Count ?? 0) - WithheldBy.DeclaredProductInstalledCount);
+        Math.Max(0, (WithheldFiles?.Count ?? 0)
+            - WithheldBy.DeclaredProductInstalledCount
+            - WithheldBy.NotShownADayOldCount);
 
     /// <summary>
     /// The size of the files <see cref="UnestablishedWithheldCount"/> counts, on the same
     /// reading: the whole withheld list's size less that of the files kept because they
-    /// declare a program Windows still has installed.
+    /// declare a program Windows still has installed and that of the files kept because
+    /// they were not shown to be a day old.
     /// </summary>
     public long UnestablishedWithheldBytes =>
-        Math.Max(0, WithheldTotalBytes - WithheldDeclaredProductInstalledBytes);
+        Math.Max(0, WithheldTotalBytes
+            - WithheldDeclaredProductInstalledBytes
+            - WithheldNotShownADayOldBytes);
 
     /// <summary>
     /// Which conditions kept the walk-derived offer back, for a host that explains the
@@ -464,7 +475,7 @@ public record ScanResult(
     /// withholding at all, which <see cref="HasWithholdingToReport"/> answers, and
     /// which of the two sentences the machine has earned. A surface says nothing for
     /// <see cref="WithholdingAccount.Nothing"/> and
-    /// <see cref="WithholdingAccount.DeclaredProductsInstalled"/> alike. Asking
+    /// <see cref="WithholdingAccount.KeptWithoutNotice"/> alike. Asking
     /// whether <see cref="WithheldFiles"/> is empty answers neither question, and
     /// <see cref="WalkOfferWithheldWholesale"/> cannot answer it either: that flag is
     /// true of a run whose wholesale branch fired after the identity pass had already
@@ -488,10 +499,11 @@ public record ScanResult(
     /// nobody established.
     ///
     /// A RUN WHOSE WITHHELD FILES WERE ALL COUNTED BY THE DECLARED-PRODUCT-INSTALLED
-    /// ARM READS AS <see cref="WithholdingAccount.DeclaredProductsInstalled"/>. The
-    /// test is that this arm accounts for the whole list, never that no other arm
-    /// fired, so a file no arm counted, or one counted by an arm added later, keeps the
-    /// run on the per-file sentence.
+    /// AND NOT-SHOWN-A-DAY-OLD ARMS READS AS
+    /// <see cref="WithholdingAccount.KeptWithoutNotice"/>. The test is that those two
+    /// arms account for the whole list, never that no other arm fired, so a file no
+    /// arm counted, or one counted by an arm added later, keeps the run on the per-file
+    /// sentence.
     ///
     /// IT IS DERIVED AND NOT CARRIED, so nothing can set it apart from the two values
     /// it is read off and leave a result disagreeing with itself.
@@ -506,8 +518,8 @@ public record ScanResult(
             if (WithheldBy.WholesaleCount == withheld)
                 return WithholdingAccount.WholeWalkOffer;
 
-            return WithheldBy.DeclaredProductInstalledCount == withheld
-                ? WithholdingAccount.DeclaredProductsInstalled
+            return WithheldBy.DeclaredProductInstalledCount + WithheldBy.NotShownADayOldCount == withheld
+                ? WithholdingAccount.KeptWithoutNotice
                 : WithholdingAccount.PerFile;
         }
     }
@@ -515,18 +527,18 @@ public record ScanResult(
     /// <summary>
     /// Whether a surface has anything to say about this run's withholding: false for
     /// <see cref="WithholdingAccount.Nothing"/> and
-    /// <see cref="WithholdingAccount.DeclaredProductsInstalled"/>, true for every other
+    /// <see cref="WithholdingAccount.KeptWithoutNotice"/>, true for every other
     /// reading. Written as the two silent readings excluded, so a reading added to the
     /// enum is reported rather than silenced.
     /// </summary>
     public bool HasWithholdingToReport =>
-        Withholding is not (WithholdingAccount.Nothing or WithholdingAccount.DeclaredProductsInstalled);
+        Withholding is not (WithholdingAccount.Nothing or WithholdingAccount.KeptWithoutNotice);
 }
 
 /// <summary>
 /// What a scan's withholding amounts to, in the terms a host has to speak it.
 ///
-/// A HOST STAYS SILENT FOR <see cref="Nothing"/> AND <see cref="DeclaredProductsInstalled"/>
+/// A HOST STAYS SILENT FOR <see cref="Nothing"/> AND <see cref="KeptWithoutNotice"/>
 /// AND FOR NOTHING ELSE, through <see cref="ScanResult.HasWithholdingToReport"/>, and
 /// speaks the wholesale sentence for <see cref="WholeWalkOffer"/> and the per-file one
 /// for every other member. A member added later is therefore spoken of in the sentence
@@ -551,25 +563,27 @@ public enum WithholdingAccount
     WholeWalkOffer,
 
     /// <summary>
-    /// Files were kept back and neither the wholesale arm nor the
-    /// declared-product-installed arm accounts for all of them, so the only sentence
+    /// Files were kept back and neither the wholesale arm nor the two arms read as
+    /// <see cref="KeptWithoutNotice"/> account for all of them, so the only sentence
     /// true of every file this reading counts is that the scan could not establish they
     /// were unneeded. A run that kept files back both ways reads as this, the wholesale
     /// sentence being false of the half it did not cover.
     ///
     /// THE SENTENCE COUNTS <see cref="ScanResult.UnestablishedWithheldCount"/>, NOT THE
-    /// WHOLE LIST, so a file the declared-product-installed arm kept is left out of it.
+    /// WHOLE LIST, so a file either of those two arms kept is left out of it.
     /// </summary>
     PerFile,
 
     /// <summary>
-    /// Every file kept back was counted by the declared-product-installed arm: it
-    /// declares a program Windows still has installed, and at least one installation of
-    /// that program records no cached package the check could show is a different file.
-    /// A surface says what it says on a run that kept nothing back, and the files stay
-    /// among those left alone.
+    /// Every file kept back was counted by the declared-product-installed arm or the
+    /// not-shown-a-day-old arm. The first is a file that declares a program Windows
+    /// still has installed, where at least one installation of that program records no
+    /// cached package the check could show is a different file. The second is a file
+    /// whose times did not show it was created, written and changed a day or more
+    /// before the scan, which every later scan judges afresh. A surface says what it says on a run
+    /// that kept nothing back, and the files stay among those left alone.
     /// </summary>
-    DeclaredProductsInstalled,
+    KeptWithoutNotice,
 }
 
 /// <summary>
@@ -704,35 +718,49 @@ public static class ShortNameCreationLabels
 /// <summary>
 /// Which decision kept each file on <see cref="ScanResult.WithheldFiles"/> back.
 ///
-/// EXACTLY THREE DECISIONS PUT A FILE ON THAT LIST AND THEY ARE MUTUALLY EXCLUSIVE
-/// PER FILE, so this is a partition of it rather than five overlapping views. The
+/// EXACTLY FOUR DECISIONS PUT A FILE ON THAT LIST AND THEY ARE MUTUALLY EXCLUSIVE
+/// PER FILE, so this is a partition of it rather than six overlapping views. The
 /// identity comparison keeps one candidate at a time; the wholesale arm keeps every
-/// remaining candidate in one go and the per-file screen is skipped entirely; and the
-/// screen itself keeps a candidate on its own verdict. A file the identity pass has
-/// already taken is off the list the wholesale arm adds, so nothing lands twice.
+/// remaining candidate in one go and the per-file screen and age check are skipped
+/// entirely; the screen keeps a candidate on its own verdict; and the age check keeps
+/// a candidate the screen let through that has not been shown to be a day old. A file
+/// an earlier decision has already taken is off the list a later one is handed, so
+/// nothing lands twice.
 ///
-/// THE COUNTS ARE CARRIED APART BECAUSE THE REPORT READS THEM APART. Each member is
-/// one fact about one machine, and nothing may add any two of them and call the
-/// result a cause: what is true of every file on the list is only that the scan
-/// declined to offer it.
+/// THE COUNTS ARE CARRIED APART BECAUSE THEY ARE READ APART. Each member is one fact
+/// about one machine, and nothing may add any two of them and call the result a
+/// cause: what is true of every file on the list is only that the scan declined to
+/// offer it. The opt-in report carries the first five; the sixth is read by
+/// <see cref="ScanResult.UnestablishedWithheldCount"/> and
+/// <see cref="ScanResult.Withholding"/>.
 ///
 /// <see cref="Total"/> IS WHAT HOLDS THE PARTITION HONEST, and it is asserted against
 /// the list's own length rather than trusted. A partition is a partition until
-/// somebody adds a branch, and a sixth arm arriving later would appear in none of
-/// these five while the list grew underneath them.
+/// somebody adds a branch, and a seventh arm arriving later would appear in none of
+/// these six while the list grew underneath them.
 /// </summary>
+/// <param name="NotShownADayOldCount">
+/// Candidates the age check kept back: every other decision let the file through, and
+/// its times, read on a local NTFS volume, did not show it was created, written and
+/// changed at least <see cref="Services.CachedFileAge.MinimumAge"/> before the scan's
+/// own clock. See <see cref="Services.CachedFileAge"/>.
+///
+/// APPENDED AFTER THE OTHER FIVE, so a positional construction of the first five still
+/// means what it meant.
+/// </param>
 public readonly record struct WithholdingSplit(
     int IdentityUnestablishedCount = 0,
     int WholesaleCount = 0,
     int DeclaredProductInstalledCount = 0,
     int DeclaredProductUnestablishedCount = 0,
-    int ScreenUnansweredCount = 0)
+    int ScreenUnansweredCount = 0,
+    int NotShownADayOldCount = 0)
 {
     /// <summary>
-    /// Every file the five account for. It equals <see cref="ScanResult.WithheldFiles"/>'s
+    /// Every file the six account for. It equals <see cref="ScanResult.WithheldFiles"/>'s
     /// own length on any scan that filled both, and a test holds it there.
     ///
-    /// IT IS A COUNT AND NEVER A CAUSE. The five members are five different findings
+    /// IT IS A COUNT AND NEVER A CAUSE. The six members are six different findings
     /// about a machine, so this figure answers "how many were held back" and nothing
     /// whatever about why.
     /// </summary>
@@ -741,7 +769,8 @@ public readonly record struct WithholdingSplit(
         + WholesaleCount
         + DeclaredProductInstalledCount
         + DeclaredProductUnestablishedCount
-        + ScreenUnansweredCount;
+        + ScreenUnansweredCount
+        + NotShownADayOldCount;
 
     /// <summary>
     /// Which of the per-file decisions the scan could not settle kept anything back,
@@ -754,8 +783,8 @@ public readonly record struct WithholdingSplit(
     /// conditions held. A line built on the count would say less than the legs do and
     /// would say it a second time.
     ///
-    /// NOR IS THE DECLARED-PRODUCT-INSTALLED ARM, so a host reading this list names no
-    /// reason for the files that arm counts.
+    /// NOR ARE THE DECLARED-PRODUCT-INSTALLED AND NOT-SHOWN-A-DAY-OLD ARMS, so a host
+    /// reading this list names no reason for the files those two count.
     ///
     /// A MEMBER MEANS ONE DECISION KEPT AT LEAST ONE FILE, AND NEVER A CAUSE FOR ANY
     /// PARTICULAR ONE. Any combination of them can hold at once, so nothing sums over
@@ -783,8 +812,8 @@ public readonly record struct WithholdingSplit(
 /// <summary>
 /// The per-file withholding decisions the scan could not settle, one member per arm of
 /// <see cref="WithholdingSplit"/> that speaks for itself. The wholesale arm is spoken
-/// for by the legs and the declared-product-installed arm has no reason line, so
-/// neither has a member.
+/// for by the legs, and the declared-product-installed and not-shown-a-day-old arms
+/// have no reason line, so none of the three has a member.
 ///
 /// ONE MEMBER PER ARM RATHER THAN ONE PER CAUSE. They are different inabilities, so
 /// nothing may add them together or write one sentence over them that names a cause.

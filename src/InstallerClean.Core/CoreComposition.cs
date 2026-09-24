@@ -64,6 +64,11 @@ public static class CoreComposition
         // is not defeated by a registration written in a spelling the folder walk
         // does not produce. Stateless, and it holds nothing between scans.
         services.AddSingleton<IFileIdentityReader, FileIdentityReader>();
+        // Reads a cached file's times and the file system that keeps them, for the
+        // scan's age check. Stateless in the same way.
+        services.AddSingleton<IFileTimesReader, FileTimesReader>();
+        // The clock the age check judges against.
+        services.AddSingleton(TimeProvider.System);
         // Re-verifies removable candidates against the API at action time; the
         // GUI and CLI call it just before a Move/Delete batch.
         services.AddSingleton<IRemovableReverifier, RemovableReverifier>();

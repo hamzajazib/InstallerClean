@@ -115,10 +115,82 @@ public class ScanResultTests
             WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 2),
             WithheldDeclaredProductInstalledBytes: 3072);
 
-        Assert.Equal(WithholdingAccount.DeclaredProductsInstalled, result.Withholding);
+        Assert.Equal(WithholdingAccount.KeptWithoutNotice, result.Withholding);
         Assert.False(result.HasWithholdingToReport);
         Assert.Equal(0, result.UnestablishedWithheldCount);
         Assert.Equal(0, result.UnestablishedWithheldBytes);
+    }
+
+    [Fact]
+    public void Files_all_kept_for_their_age_have_nothing_to_report()
+    {
+        // The age check's files take the same reading as those kept for an installed
+        // program, and leave the held-back sentences nothing to count.
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msi", 1024), File("b.msp", 2048)],
+            WithheldBy: new WithholdingSplit(NotShownADayOldCount: 2),
+            WithheldNotShownADayOldBytes: 3072);
+
+        Assert.Equal(WithholdingAccount.KeptWithoutNotice, result.Withholding);
+        Assert.False(result.HasWithholdingToReport);
+        Assert.Equal(0, result.UnestablishedWithheldCount);
+        Assert.Equal(0, result.UnestablishedWithheldBytes);
+        Assert.Empty(result.WithheldBy.ArmsFired);
+    }
+
+    [Fact]
+    public void Files_kept_for_an_installed_program_and_for_their_age_together_have_nothing_to_report()
+    {
+        // The two silent arms between them account for the list.
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1, NotShownADayOldCount: 1),
+            WithheldDeclaredProductInstalledBytes: 1024,
+            WithheldNotShownADayOldBytes: 2048);
+
+        Assert.Equal(WithholdingAccount.KeptWithoutNotice, result.Withholding);
+        Assert.False(result.HasWithholdingToReport);
+        Assert.Equal(0, result.UnestablishedWithheldCount);
+        Assert.Equal(0, result.UnestablishedWithheldBytes);
+    }
+
+    [Fact]
+    public void A_file_kept_for_its_age_beside_one_the_scan_could_not_settle_reads_as_per_file()
+    {
+        // The per-file sentence speaks of the file the scan could not settle, and its
+        // count and size leave the other out.
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+            WithheldBy: new WithholdingSplit(NotShownADayOldCount: 1, DeclaredProductUnestablishedCount: 1),
+            WithheldNotShownADayOldBytes: 1024);
+
+        Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
+        Assert.True(result.HasWithholdingToReport);
+        Assert.Equal(1, result.UnestablishedWithheldCount);
+        Assert.Equal(2048, result.UnestablishedWithheldBytes);
+        Assert.Equal(new[] { WithholdingSplitArm.DeclaredProductUnestablished }, result.WithheldBy.ArmsFired);
+    }
+
+    [Fact]
+    public void A_withheld_file_the_split_did_not_count_keeps_a_run_off_the_silent_reading_beside_an_age_hold()
+    {
+        // THE MUST-MISS FOR THE AGE ARM, on the same rule as the one below for the
+        // installed-program arm: the two silent arms have to account for the whole
+        // list, and a file neither counted keeps the run per-file.
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+            WithheldBy: new WithholdingSplit(NotShownADayOldCount: 1),
+            WithheldNotShownADayOldBytes: 1024);
+
+        Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
+        Assert.Equal(1, result.UnestablishedWithheldCount);
+        Assert.Equal(2048, result.UnestablishedWithheldBytes);
+    }
+
+    [Fact]
+    public void The_age_arm_counts_towards_the_split_total()
+    {
+        Assert.Equal(21, new WithholdingSplit(1, 2, 3, 4, 5, 6).Total);
     }
 
     [Fact]
@@ -168,7 +240,7 @@ public class ScanResultTests
         var perFile = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024)],
             WithheldBy: new WithholdingSplit(ScreenUnansweredCount: 1));
-        var installed = new ScanResult([], [], 0,
+        var keptWithoutNotice = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024)],
             WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1));
 
@@ -177,13 +249,13 @@ public class ScanResultTests
             [nothing.Withholding] = nothing,
             [wholesale.Withholding] = wholesale,
             [perFile.Withholding] = perFile,
-            [installed.Withholding] = installed,
+            [keptWithoutNotice.Withholding] = keptWithoutNotice,
         };
 
         Assert.Equal(Enum.GetValues<WithholdingAccount>().Length, byReading.Count);
         foreach (var (reading, result) in byReading)
         {
-            var silent = reading is WithholdingAccount.Nothing or WithholdingAccount.DeclaredProductsInstalled;
+            var silent = reading is WithholdingAccount.Nothing or WithholdingAccount.KeptWithoutNotice;
             Assert.True(silent != result.HasWithholdingToReport, $"{reading} reported {result.HasWithholdingToReport}");
         }
     }

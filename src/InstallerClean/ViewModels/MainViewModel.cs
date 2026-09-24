@@ -329,12 +329,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // deriving it.
             //
             // A RUN THAT HELD NOTHING BACK IS THE ALL-CLEAR'S, and so is a run whose
-            // every held file declares a program Windows still has installed.
-            // HasWithholdingToReport is false for both.
+            // every held file declares a program Windows still has installed or was
+            // not shown to be a day old. HasWithholdingToReport is false for both.
             //
             // THE SCREEN COUNTS ONLY UnestablishedWithheldCount, so a run that held
-            // some files for an installed program and some for anything else speaks of
-            // the second kind alone.
+            // some files for an installed program or for their age and some for
+            // anything else speaks of the second kind alone.
 
             // THE RECEIPT SPENDS THE COUNT THE MAIN WINDOW IS ALREADY SHOWING rather
             // than recounting the scan result here, so the overlay and the line behind

@@ -16,13 +16,15 @@ namespace InstallerClean.Models;
 /// that could be uninstalled and roll back onto its file. <see cref="Reason"/>
 /// carries the two labels and is the only thing on the row that tells them apart.
 ///
-/// THE FIRST PATHWAY IS DECIDED BY THREE MECHANISMS AND NOT ONE, which is worth
+/// THE FIRST PATHWAY IS DECIDED BY FOUR MECHANISMS AND NOT ONE, which is worth
 /// knowing before anybody reasons about how a file gets here. A recorded path is
 /// compared with the walk as text; then by the file each names, so a registration
 /// spelled in a form the walk never produces is still matched; then the candidate
 /// package itself is asked which product it declares it belongs to and that code is
-/// put to Windows. The third only ever keeps a file back, and it runs on
-/// installation packages alone.
+/// put to Windows; then the file's own times are read, and it is offered only once
+/// it was created, written and changed a day or more before the scan. The third and
+/// fourth only ever keep a file back, and the third runs on installation packages
+/// alone.
 ///
 /// AN OBSOLETED PATCH (PatchState 4) IS NOT OFFERED AT ALL. It is not a pathway and
 /// never becomes one; see <see cref="IsObsoleted"/> for why that is a decision
