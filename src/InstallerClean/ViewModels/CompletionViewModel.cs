@@ -263,16 +263,19 @@ public partial class CompletionViewModel : ObservableObject
     }
 
     /// <summary>
-    /// The second empty-offer screen, for a machine where a rule about the RECORDS
-    /// emptied the walk-derived offer in one go rather than each candidate being
-    /// judged and kept.
+    /// The second empty-offer screen, for a machine where the scan offered nothing and
+    /// kept back files from the folder walk that it could not settle, whether a rule
+    /// about the RECORDS kept them all in one go or each was judged and kept.
     ///
     /// TWO FINDINGS BOTH END WITH AN EMPTY OFFER AND THEY ARE OPPOSITE THINGS TO TELL
     /// SOMEBODY. <see cref="ShowAllClear"/> says the folder holds nothing to remove.
     /// This says the app could not establish enough to offer anything, on a machine
-    /// whose folder may be full of files nobody has vouched for. Showing the first
-    /// where the second is true is a claim about somebody's disk that the scan never
-    /// made.
+    /// whose folder may be full of files nobody has vouched for. The caller chooses
+    /// between them from the walk-derived withheld list alone, through
+    /// <see cref="ScanResult.HasWithholdingToReport"/>, and on that list two kinds of
+    /// file are kept without choosing this screen: a file that declares a program
+    /// Windows still holds a record of, and a file under a day old. Any other file on
+    /// the list chooses it.
     ///
     /// ONE SCREEN WITH TWO BODIES, CHOSEN BY <paramref name="account"/> AND NOT HERE.
     /// The two say what the scan could not establish, and they could not establish

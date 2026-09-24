@@ -42,10 +42,9 @@ internal sealed class FileTimesReader : IFileTimesReader
             // FILE_READ_ATTRIBUTES and every share flag. The right asked for is
             // outside the data-sharing check, so this open does not fail on a file
             // Windows Installer holds, and while it is open another process can still
-            // open the file, delete it and create a new file at its name. What it does
-            // hold off is a rename that would replace the file: Windows refuses that
-            // while this handle is open. The handle is closed when this method
-            // returns.
+            // open the file and delete it. What it does hold off is a rename that
+            // would replace the file: Windows refuses that while this handle is open.
+            // The handle is closed when this method returns.
             //
             // FILE_FLAG_OPEN_REPARSE_POINT so a link is opened as itself rather than
             // followed, and reported below. FILE_FLAG_BACKUP_SEMANTICS so a path that

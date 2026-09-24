@@ -138,12 +138,57 @@ public static class CachedFileAge
     }
 
     /// <summary>
-    /// True only where <paramref name="outcome"/> is <see cref="FileTimesRead.Read"/>
-    /// and the latest of the file's times is at least <see cref="MinimumAge"/> before
-    /// <paramref name="scanClock"/>. A latest time after the clock is less than a day
-    /// before it, so it keeps the file on the same test.
+    /// True only where <see cref="Judge"/> answers <see cref="CachedFileAgeVerdict.ShownADayOld"/>.
     /// </summary>
     public static bool ShownADayOld(FileTimesRead outcome, FileTimes times, DateTimeOffset scanClock) =>
-        outcome == FileTimesRead.Read
-        && scanClock.UtcDateTime - Latest(times) >= MinimumAge;
+        Judge(outcome, times, scanClock) == CachedFileAgeVerdict.ShownADayOld;
+
+    /// <summary>
+    /// What the file's times establish about its age against <paramref name="scanClock"/>.
+    ///
+    /// <see cref="CachedFileAgeVerdict.ShownADayOld"/> where the reader answered
+    /// <see cref="FileTimesRead.Read"/> and the latest of the three times is at least
+    /// <see cref="MinimumAge"/> before the clock.
+    /// <see cref="CachedFileAgeVerdict.UnderADayOld"/> where it is less than that
+    /// before the clock, or after the clock by no more than <see cref="MinimumAge"/>: a
+    /// copy written a moment before the clock was set back reads as a little way ahead
+    /// of it and is simply new.
+    /// <see cref="CachedFileAgeVerdict.Unestablished"/> for every other answer from the
+    /// reader, and for a latest time more than <see cref="MinimumAge"/> after the clock,
+    /// which is not an age.
+    /// </summary>
+    public static CachedFileAgeVerdict Judge(FileTimesRead outcome, FileTimes times, DateTimeOffset scanClock)
+    {
+        if (outcome != FileTimesRead.Read) return CachedFileAgeVerdict.Unestablished;
+
+        var age = scanClock.UtcDateTime - Latest(times);
+        if (age >= MinimumAge) return CachedFileAgeVerdict.ShownADayOld;
+        return -age > MinimumAge ? CachedFileAgeVerdict.Unestablished : CachedFileAgeVerdict.UnderADayOld;
+    }
+}
+
+/// <summary>
+/// What <see cref="CachedFileAge.Judge"/> established about one file's age. Only
+/// <see cref="ShownADayOld"/> lets the file through.
+///
+/// THE TWO THAT KEEP IT ARE TOLD APART because the app speaks of them differently: a
+/// file under a day old is left alone without a word, and a file whose age was not
+/// established is among those the held-back sentence counts.
+/// </summary>
+public enum CachedFileAgeVerdict
+{
+    /// <summary>
+    /// The age was not established. The zero, so a verdict nobody set keeps the file
+    /// and is spoken of.
+    /// </summary>
+    Unestablished,
+
+    /// <summary>The latest of the file's times is a day or more before the scan's clock.</summary>
+    ShownADayOld,
+
+    /// <summary>
+    /// The latest of the file's times is less than a day before the scan's clock, or
+    /// no more than a day after it.
+    /// </summary>
+    UnderADayOld,
 }

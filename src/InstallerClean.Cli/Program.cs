@@ -442,7 +442,7 @@ internal static class Program
             //
             // The count and the size are UnestablishedWithheldCount and
             // UnestablishedWithheldBytes, which leave out any file kept because it
-            // declares an installed program or was read as under a day old, and they
+            // declares an installed program or is under a day old, and they
             // are the figures the window's screen uses, so the two hosts cannot
             // disagree about one machine.
             var withheldCount = scanResult.UnestablishedWithheldCount;
@@ -1032,7 +1032,7 @@ internal static class Program
         // is what a number in the 3000 band is for. See CliEventClass.
         //
         // NOTHING IS REPORTED HERE FOR A RUN WHOSE EVERY HELD FILE DECLARES A PROGRAM
-        // WINDOWS STILL HAS INSTALLED OR WAS READ AS UNDER A DAY OLD:
+        // WINDOWS STILL HAS INSTALLED OR IS UNDER A DAY OLD:
         // HasWithholdingToReport is false for it.
         if (scanResult.HasWithholdingToReport)
         {

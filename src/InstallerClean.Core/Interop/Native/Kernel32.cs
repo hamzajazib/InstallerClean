@@ -295,9 +295,8 @@ internal static partial class Kernel32
     /// THE HANDLE NEEDS <see cref="FILE_READ_ATTRIBUTES"/> AND NOTHING MORE. That
     /// right is outside the data-sharing check, so a handle carrying it alone
     /// neither waits on nor excludes any other opener of the file. Opened with every
-    /// share flag, it also leaves the file free to be deleted and its name free to be
-    /// used again. A rename that would replace the file is refused while the handle
-    /// is open.
+    /// share flag, it also leaves the file free to be deleted. A rename that would
+    /// replace the file is refused while the handle is open.
     /// </summary>
     [LibraryImport(Library, EntryPoint = "GetFileInformationByHandleEx", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

@@ -445,7 +445,7 @@ public record ScanResult(
     /// The size of the files <see cref="UnestablishedWithheldCount"/> counts, on the same
     /// reading: the whole withheld list's size less that of the files kept because they
     /// declare a program Windows still has installed and that of the files kept because
-    /// their age was read and is under a day.
+    /// they are under a day old.
     /// </summary>
     public long UnestablishedWithheldBytes =>
         Math.Max(0, WithheldTotalBytes
@@ -603,7 +603,8 @@ public enum WithholdingAccount
     /// has installed, where at least one installation of that program records no cached
     /// package the check could show is a different file. The second is a file whose
     /// times were read and show it was created, written or changed less than a day
-    /// before the scan, or after it, which every later scan judges afresh. A surface says what it
+    /// before the scan, or no more than a day after it, which every later scan judges
+    /// afresh. A surface says what it
     /// says on a run that kept nothing back, and the files stay among those left alone.
     /// </summary>
     KeptWithoutNotice,
@@ -747,7 +748,7 @@ public static class ShortNameCreationLabels
 /// remaining candidate in one go and the per-file screen and age check are skipped
 /// entirely; the screen keeps a candidate on its own verdict; and the age check keeps
 /// a candidate the screen let through that has not been shown to be a day old,
-/// counted in two arms by whether its age was read. A file an earlier decision has
+/// counted in two arms by whether its age was established. A file an earlier decision has
 /// already taken is off the list a later one is handed, so nothing lands twice.
 ///
 /// THE COUNTS ARE CARRIED APART BECAUSE THEY ARE READ APART. Each member is one fact
@@ -763,10 +764,10 @@ public static class ShortNameCreationLabels
 /// these seven while the list grew underneath them.
 /// </summary>
 /// <param name="UnderADayOldCount">
-/// Candidates the age check kept back with their age read: every other decision let
-/// the file through, its times were read on a local NTFS volume, and the latest of
-/// them is less than <see cref="Services.CachedFileAge.MinimumAge"/> before the scan's
-/// own clock, or later than it. See <see cref="Services.CachedFileAge"/>.
+/// Candidates the age check kept back as under a day old: every other decision let the
+/// file through, its times were read on a local NTFS volume, and the latest of them is
+/// less than <see cref="Services.CachedFileAge.MinimumAge"/> before the scan's own
+/// clock, or no more than that after it. See <see cref="Services.CachedFileAge.Judge"/>.
 ///
 /// APPENDED AFTER THE OTHER FIVE, so a positional construction of the first five still
 /// means what it meant.
@@ -774,7 +775,9 @@ public static class ShortNameCreationLabels
 /// <param name="AgeUnestablishedCount">
 /// Candidates the age check kept back because their age was not established: the
 /// reader answered anything but <see cref="Services.FileTimesRead.Read"/>, so the
-/// times could not be read, or were not read on a local, fixed NTFS volume.
+/// times could not be read, or were not read on a local, fixed NTFS volume; or the
+/// latest of them is more than <see cref="Services.CachedFileAge.MinimumAge"/> after
+/// the scan's own clock, which is not an age.
 /// </param>
 public readonly record struct WithholdingSplit(
     int IdentityUnestablishedCount = 0,

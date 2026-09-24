@@ -103,6 +103,46 @@ public class CachedFileAgeTests
         Assert.Equal(new[] { FileTimesRead.Read }, permitting);
     }
 
+    // ---- Which of the two keeping verdicts ----
+
+    [Fact]
+    public void A_latest_time_a_day_after_the_clock_is_under_a_day_old()
+    {
+        // A copy written just before the clock was set back reads as ahead of it, and
+        // is new. A day ahead is still that.
+        Assert.Equal(CachedFileAgeVerdict.UnderADayOld, CachedFileAge.Judge(
+            FileTimesRead.Read, AllAt(Clock.UtcDateTime + CachedFileAge.MinimumAge), Clock));
+    }
+
+    [Fact]
+    public void A_latest_time_more_than_a_day_after_the_clock_is_not_an_age()
+    {
+        Assert.Equal(CachedFileAgeVerdict.Unestablished, CachedFileAge.Judge(
+            FileTimesRead.Read,
+            AllAt(Clock.UtcDateTime + CachedFileAge.MinimumAge + TimeSpan.FromTicks(1)),
+            Clock));
+    }
+
+    [Fact]
+    public void A_file_read_as_under_a_day_before_the_clock_is_under_a_day_old()
+    {
+        Assert.Equal(CachedFileAgeVerdict.UnderADayOld, CachedFileAge.Judge(
+            FileTimesRead.Read, AllAt(Clock.UtcDateTime.AddHours(-1)), Clock));
+    }
+
+    [Fact]
+    public void Every_answer_but_a_read_is_an_age_not_established()
+    {
+        // Times that would read as under a day old, so the verdict has to come from
+        // the outcome.
+        var notEstablished = Enum.GetValues<FileTimesRead>()
+            .Where(o => CachedFileAge.Judge(o, AllAt(Clock.UtcDateTime.AddHours(-1)), Clock)
+                == CachedFileAgeVerdict.Unestablished)
+            .ToArray();
+
+        Assert.Equal(Enum.GetValues<FileTimesRead>().Where(o => o != FileTimesRead.Read), notEstablished);
+    }
+
     // ---- Which time the age is taken from ----
 
     [Fact]

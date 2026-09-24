@@ -4,9 +4,9 @@ using InstallerClean.Services;
 namespace InstallerClean.Tests.Services;
 
 /// <summary>
-/// What the reader concludes from Windows' answers about one open handle, on answers
-/// written out here rather than read off a disk, so every volume and file system the
-/// reader refuses can be put to it on any machine.
+/// What the reader concludes from the answers Windows gives about one open handle, on
+/// answers written out here rather than read off a disk, so every volume and file
+/// system the reader refuses can be put to it on any machine.
 ///
 /// EVERY ROW IS THE CONTROL WITH ONE ANSWER CHANGED, so the answer that changed is
 /// the one that moved the outcome.

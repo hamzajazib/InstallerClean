@@ -1443,17 +1443,19 @@ public sealed class FileSystemScanService : IFileSystemScanService
             cancellationToken.ThrowIfCancellationRequested();
 
             var outcome = _fileTimes.ReadOutcome(candidate.FullPath, out var times);
-            if (CachedFileAge.ShownADayOld(outcome, times, scanClock))
+            var verdict = CachedFileAge.Judge(outcome, times, scanClock);
+            if (verdict == CachedFileAgeVerdict.ShownADayOld)
             {
                 survivors.Add(candidate);
                 continue;
             }
 
-            // Counted by whether the age was read, because the two are told apart: a
-            // file read as under a day old is kept without a word, and a file whose
-            // age was not established is among those the held-back sentence counts.
+            // Counted by which of the two keeping verdicts it was, because they are
+            // told apart: a file under a day old is kept without a word, and a file
+            // whose age was not established is among those the held-back sentence
+            // counts.
             withheld.Add(candidate);
-            if (outcome == FileTimesRead.Read)
+            if (verdict == CachedFileAgeVerdict.UnderADayOld)
                 withheldBy.UnderADayOld(candidate.SizeBytes);
             else
                 withheldBy.AgeUnestablished();
