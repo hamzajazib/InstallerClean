@@ -161,6 +161,21 @@ internal static class InstallerCacheHelpers
     }
 
     /// <summary>
+    /// <paramref name="value"/>, a path Windows Installer recorded, with its environment
+    /// variables expanded from this process's environment. A variable that is not set
+    /// is left as it was, '%' signs and all.
+    ///
+    /// REFUSE A VALUE HOLDING A NULL BEFORE CALLING THIS. On Windows the expansion cuts
+    /// such a value at the null and does not throw, and what comes back is a shorter,
+    /// well-formed path that can name a real file.
+    ///
+    /// The recorded cached-package path and every entry of a product's source list are
+    /// expanded here, so a change to how it is done reaches both.
+    /// </summary>
+    internal static string ExpandRecordedPath(string value) =>
+        Environment.ExpandEnvironmentVariables(value);
+
+    /// <summary>
     /// Whether <paramref name="path"/>, not yet resolved, names a file directly in the
     /// Installer folder once the kernel has expanded it: true or false where the
     /// comparison was made, and null where it could not be.

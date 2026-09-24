@@ -2,6 +2,7 @@ using System.IO.Abstractions.TestingHelpers;
 using InstallerClean.Interop;
 using InstallerClean.Models;
 using InstallerClean.Services;
+using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 
 namespace InstallerClean.Tests.Services;
@@ -29,6 +30,11 @@ public class FileSystemScanServiceDeclaredProductTests
     private const string Folder = @"C:\Windows\Installer";
     private const string ProductA = "{11111111-1111-1111-1111-111111111111}";
     private const string ProductB = "{22222222-2222-2222-2222-222222222222}";
+
+    // A source folder outside the Installer folder. The screen resolves a source's
+    // package against the real disk, and a package that is not there resolves through
+    // the nearest folder that is, so this needs only the C: drive.
+    private const string SetupFolder = @"C:\Setup\";
 
     // ---- The withholding fires ----
 
@@ -61,8 +67,10 @@ public class FileSystemScanServiceDeclaredProductTests
         // package product A records, so the scan's own path comparison claims it and
         // it is never a candidate. a.msi declares product A and no record names it.
         // The screen reads the package A records, finds a present file that is not
-        // a.msi and declares product A, and lets a.msi through; the test below scans
-        // the same two files and keeps a.msi when what A records cannot be seen.
+        // a.msi and declares product A, finds A's source outside the Installer folder
+        // with no package there, and lets a.msi through; the two tests below scan the
+        // same two files and keep a.msi, one when what A records cannot be seen and one
+        // when A was installed from the Installer folder.
         var identities = new ScriptedPackageIdentities();
         identities.Declares($@"{Folder}\a.msi", ProductA);
         identities.Declares($@"{Folder}\b.msi", ProductA);
@@ -70,6 +78,35 @@ public class FileSystemScanServiceDeclaredProductTests
         var msi = new ScriptedMsiProducts();
         msi.Installed(ProductA);
         msi.RecordsPackage(ProductA, null, MsiInstallContext.Machine, $@"{Folder}\b.msi");
+        msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, "setup.msi", SetupFolder);
+
+        var files = new ScriptedFileIdentities();
+        files.Opens($@"{Folder}\a.msi", 1);
+        files.Opens($@"{Folder}\b.msi", 2);
+        files.Answers(SetupFolder + "setup.msi", FileIdentityRead.NamesNothing);
+
+        var result = await ScanWithRecordedPackage(msi, identities, files);
+
+        var offered = Assert.Single(result.RemovableFiles);
+        Assert.Equal($@"{Folder}\a.msi", offered.FullPath);
+        Assert.Empty(result.WithheldFiles!);
+    }
+
+    [Fact]
+    public async Task A_copy_whose_program_was_installed_from_the_Installer_folder_is_kept_by_the_same_screen()
+    {
+        // The scan above with product A's source in the Installer folder. The screen
+        // compares a source against the Installer folder only through what the scan
+        // hands it, which is the folder the scan resolved for the run, so a.msi is
+        // kept here and offered above only if the scan hands it that.
+        var identities = new ScriptedPackageIdentities();
+        identities.Declares($@"{Folder}\a.msi", ProductA);
+        identities.Declares($@"{Folder}\b.msi", ProductA);
+
+        var msi = new ScriptedMsiProducts();
+        msi.Installed(ProductA);
+        msi.RecordsPackage(ProductA, null, MsiInstallContext.Machine, $@"{Folder}\b.msi");
+        msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, "c.msi", $@"{Folder}\");
 
         var files = new ScriptedFileIdentities();
         files.Opens($@"{Folder}\a.msi", 1);
@@ -77,9 +114,22 @@ public class FileSystemScanServiceDeclaredProductTests
 
         var result = await ScanWithRecordedPackage(msi, identities, files);
 
-        var offered = Assert.Single(result.RemovableFiles);
-        Assert.Equal($@"{Folder}\a.msi", offered.FullPath);
-        Assert.Empty(result.WithheldFiles!);
+        Assert.Empty(result.RemovableFiles);
+        var kept = Assert.Single(result.WithheldFiles!);
+        Assert.Equal($@"{Folder}\a.msi", kept.FullPath);
+        Assert.Equal(1, result.WithheldBy.DeclaredProductInstalledCount);
+    }
+
+    [Fact]
+    public void The_scan_the_hosts_build_screens_declared_products()
+    {
+        // Constructed by hand everywhere else in this file, where the default is no
+        // screen. The container is what the hosts use.
+        using var services = new ServiceCollection().AddInstallerCleanCore().BuildServiceProvider();
+
+        var scan = Assert.IsType<FileSystemScanService>(services.GetRequiredService<IFileSystemScanService>());
+
+        Assert.True(scan.ScreensDeclaredProducts);
     }
 
     [Fact]

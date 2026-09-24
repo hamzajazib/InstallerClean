@@ -249,9 +249,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     ///
     /// FALSE, WHICH KEEPS THE FILE, for: no way to compare against the Installer
     /// folder; a package name or a source list that will not read; an empty package
-    /// name; a source whose package would be a file directly in the Installer folder,
-    /// or where that cannot be established; and a source package that exists and will
-    /// not identify. A source package that is not there is skipped, being no file.
+    /// name; a source entry holding a null, one that will not expand and one still
+    /// holding a '%' once expanded; a source whose package would be a file directly in
+    /// the Installer folder, or where that cannot be established; and a source package
+    /// that exists and will not identify. A source package that is not there is
+    /// skipped, being no file.
     /// </summary>
     private bool AddSourcePackages(
         string code,
@@ -272,8 +274,26 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var sources = NetworkSourcesOf(code, sid, context);
         if (sources is null) return false;
 
-        foreach (var folder in sources)
+        foreach (var entry in sources)
         {
+            // Expanded the way the recorded cached-package path is, so a folder spelled
+            // with a variable is compared as the folder it names. Where the source
+            // points is not known, and the copy is kept, for an entry holding a null,
+            // which the expansion would cut short; for one that will not expand; and
+            // for one still holding a '%' once expanded, as a variable that is not set
+            // leaves it.
+            if (entry.Contains('\0')) return false;
+            string folder;
+            try
+            {
+                folder = InstallerCacheHelpers.ExpandRecordedPath(entry);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+            {
+                return false;
+            }
+            if (folder.Contains('%')) return false;
+
             // Joined with a backslash by hand rather than with Path.Combine, whose
             // separator is the host's.
             var package = folder.EndsWith('\\') ? folder + packageName : folder + '\\' + packageName;

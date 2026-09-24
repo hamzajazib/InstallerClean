@@ -2253,7 +2253,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
             // Expanding first makes it drive-rooted and the strip then works as it
             // always did. On a value holding no % this is the identity, so nothing
             // that reached here before reaches anything different now.
-            var expanded = Environment.ExpandEnvironmentVariables(value);
+            var expanded = InstallerCacheHelpers.ExpandRecordedPath(value);
 
             stage = NormalisationStage.PrefixStrip;
             var stripped = InstallerCacheHelpers.StripLongPathPrefix(expanded);

@@ -145,6 +145,13 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// </summary>
     internal bool ChecksAge => _fileTimes is not null;
 
+    /// <summary>
+    /// Whether this scan puts candidates to the declared-product screen, for the test
+    /// that holds the hosts' scan to doing so. Every test constructor defaults the
+    /// screen to null.
+    /// </summary>
+    internal bool ScreensDeclaredProducts => _declaredProducts is not null;
+
     public async Task<ScanResult> ScanAsync(
         IProgress<ScanProgressUpdate>? progress = null,
         CancellationToken cancellationToken = default)

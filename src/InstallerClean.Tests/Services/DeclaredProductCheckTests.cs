@@ -648,6 +648,21 @@ public class DeclaredProductCheckTests
     }
 
     [Fact]
+    public void A_copy_is_kept_when_a_source_entry_holds_a_variable_that_is_not_set()
+    {
+        // The entry keeps its '%' signs through the expansion, so where it points is
+        // not known. Read as it stands, the path finds no file and would be skipped.
+        const string Variable = "INSTALLERCLEAN_TEST_UNSET_SOURCE";
+        Assert.Null(Environment.GetEnvironmentVariable(Variable));
+        var entry = $@"%{Variable}%\Setup\";
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, SetupName, entry);
+        f.Files.Answers(entry + SetupName, FileIdentityRead.NamesNothing);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
     public void A_copy_is_kept_when_the_package_name_will_not_read()
     {
         var f = ACopyBesideTheRecordedPackage();
