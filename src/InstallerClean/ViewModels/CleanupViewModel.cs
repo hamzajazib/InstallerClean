@@ -833,7 +833,27 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         // the one condition the gate exists to block. Blocked => the banner paints
         // via HasPendingReboot and both commands drop out; refuse without calling
         // the service.
-        if (await _scan.RecheckPendingRebootAsync())
+        //
+        // Check() throws when a read of Windows Installer's in-progress file fails
+        // in a way none of its readings names. Nothing has been touched at this
+        // point, so the throw ends here in the same dialog as the unforeseen-failure
+        // arm below. The counts on screen still describe the folder, so there is
+        // no rescan, and the folder the pre-flight made is removed as it is when
+        // the gate blocks.
+        bool blocked;
+        try
+        {
+            blocked = await _scan.RecheckPendingRebootAsync();
+        }
+        catch (Exception ex)
+        {
+            DisposeOperationCts();
+            OperationProgress = string.Empty;
+            if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+            ShowActionFailed(ex, deleting: false);
+            return;
+        }
+        if (blocked)
         {
             DisposeOperationCts();
             OperationProgress = string.Empty;
@@ -1181,21 +1201,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // only they can skip the rescan. The delete path's twin of this arm
             // is certain of just as little, and rescans on the same reasoning.
             await RefreshAfterBatchAsync();
-            // A mid-move crash is surfaced the way every other failure in the
-            // app is: a dialog naming the exception type and the crash-log
-            // path, never ex.Message (it can carry another user's profile path
-            // under elevation). It is not left to the body-row status, which
-            // trims at a width cap and would cut the log path off, and the log
-            // path is the one actionable thing for a report. Reaching here is
-            // rare: the move service collects per-file errors rather than throwing.
-            var crash = CrashLog.TryWrite(ex);
-            var typeName = ex.GetType().Name;
+            // Reaching here is rare: the move service collects per-file errors
+            // rather than throwing.
             OperationProgress = string.Empty;
-            _dialogService.ShowWarning(
-                crash.Written
-                    ? string.Format(Strings.Status_MoveFailed, typeName, crash.Path)
-                    : string.Format(Strings.Status_MoveFailed_NoLog, typeName),
-                Strings.Error_MoveFailedTitle);
+            ShowActionFailed(ex, deleting: false);
         }
         finally
         {
@@ -1254,8 +1263,22 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
 
         // Re-check the pending-reboot gate at the moment of action: a
         // transaction can start while the user is reading the confirmation
-        // dialog. Blocked => paint the banner and refuse.
-        if (await _scan.RecheckPendingRebootAsync())
+        // dialog. Blocked => paint the banner and refuse. A throw from the check
+        // touches nothing and ends in the failure dialog without a rescan, as on
+        // the Move path.
+        bool blocked;
+        try
+        {
+            blocked = await _scan.RecheckPendingRebootAsync();
+        }
+        catch (Exception ex)
+        {
+            DisposeOperationCts();
+            OperationProgress = string.Empty;
+            ShowActionFailed(ex, deleting: true);
+            return;
+        }
+        if (blocked)
         {
             DisposeOperationCts();
             OperationProgress = string.Empty;
@@ -1468,19 +1491,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // Deletes are permanent, so a stale count here is the window
             // offering to act on files a second time.
             await RefreshAfterBatchAsync();
-            // A dialog naming the exception type and the crash-log path, never
-            // ex.Message (under elevation it can carry another user's profile
-            // path) and never the body-row status, which trims at a width cap
-            // and would cut off the log path, the one actionable thing in a
-            // report.
-            var crash = CrashLog.TryWrite(ex);
-            var typeName = ex.GetType().Name;
             OperationProgress = string.Empty;
-            _dialogService.ShowWarning(
-                crash.Written
-                    ? string.Format(Strings.Status_DeleteFailed, typeName, crash.Path)
-                    : string.Format(Strings.Status_DeleteFailed_NoLog, typeName),
-                Strings.Error_DeleteFailedTitle);
+            ShowActionFailed(ex, deleting: true);
         }
         finally
         {
@@ -1634,6 +1646,32 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // the user exactly where a pre-2.1.0 cancel did.
         }
     });
+
+    /// <summary>
+    /// The dialog a Move or Delete ends in when it fails in a way none of its own
+    /// arms accounts for, the way every other failure in the app is surfaced: the
+    /// exception's type and the crash-log path, never ex.Message, which under
+    /// elevation can carry another user's profile path. A dialog rather than the
+    /// body-row status, which trims at a width cap and would cut off the log
+    /// path, the one actionable thing in a report.
+    /// </summary>
+    private void ShowActionFailed(Exception ex, bool deleting)
+    {
+        var crash = CrashLog.TryWrite(ex);
+        var typeName = ex.GetType().Name;
+        if (deleting)
+            _dialogService.ShowWarning(
+                crash.Written
+                    ? string.Format(Strings.Status_DeleteFailed, typeName, crash.Path)
+                    : string.Format(Strings.Status_DeleteFailed_NoLog, typeName),
+                Strings.Error_DeleteFailedTitle);
+        else
+            _dialogService.ShowWarning(
+                crash.Written
+                    ? string.Format(Strings.Status_MoveFailed, typeName, crash.Path)
+                    : string.Format(Strings.Status_MoveFailed_NoLog, typeName),
+                Strings.Error_MoveFailedTitle);
+    }
 
 
     /// <summary>

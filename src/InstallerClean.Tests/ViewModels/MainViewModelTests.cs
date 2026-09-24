@@ -1387,6 +1387,78 @@ public class MainViewModelTests
         Assert.False(vm.Completion.IsComplete);
     }
 
+    // The pair below covers the one case in which Check() throws rather than
+    // answering: a read of Windows Installer's in-progress file that failed in a
+    // way it has no reading for. At the click that throw arrives before anything
+    // has been touched, so each command ends in its own failure dialog, acts on
+    // nothing, and is available again afterwards.
+
+    [Fact]
+    public async Task MoveAllAsync_reboot_gate_throwing_at_action_time_shows_the_move_failed_dialog_and_moves_nothing()
+    {
+        var vm = CreateViewModel();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2));
+        _rebootService.Check().Returns(
+            _ => PendingRebootResult.Clean,
+            _ => throw new IOException("boom"));
+        _confirmationService.ConfirmMove(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
+
+        await vm.Scan.ScanWithProgressAsync(null);
+        var dest = Path.Combine(Path.GetTempPath(), "ic-test-reboot-gate-throws");
+        vm.Cleanup.MoveDestination = dest;
+
+        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        _dialogService.Received(1).ShowWarning(
+            Arg.Is<string>(s => s.Contains(nameof(IOException))), Strings.Error_MoveFailedTitle);
+        await _reverifier.DidNotReceive().ReverifyAsync(
+            Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
+        await _moveService.DidNotReceive().MoveFilesAsync(
+            Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
+            Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
+        await _resultLogService.DidNotReceive().WriteAsync(
+            Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
+        Assert.False(vm.Completion.IsComplete);
+        Assert.Equal(string.Empty, vm.Cleanup.OperationProgress);
+        // The folder the pre-flight made is removed, as on every other arm that
+        // stops before the batch, and both commands come back for the next click.
+        Assert.False(_fileSystem.Directory.Exists(dest));
+        Assert.True(vm.Cleanup.MoveAllCommand.CanExecute(null));
+        Assert.True(vm.Cleanup.DeleteAllCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task DeleteAllAsync_reboot_gate_throwing_at_action_time_shows_the_delete_failed_dialog_and_deletes_nothing()
+    {
+        var vm = CreateViewModel();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2));
+        _rebootService.Check().Returns(
+            _ => PendingRebootResult.Clean,
+            _ => throw new IOException("boom"));
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
+
+        await vm.Scan.ScanWithProgressAsync(null);
+
+        await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+
+        _dialogService.Received(1).ShowWarning(
+            Arg.Is<string>(s => s.Contains(nameof(IOException))), Strings.Error_DeleteFailedTitle);
+        await _reverifier.DidNotReceive().ReverifyAsync(
+            Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
+        await _deleteService.DidNotReceive().DeleteFilesAsync(
+            Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+            Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
+        await _resultLogService.DidNotReceive().WriteAsync(
+            Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
+        Assert.False(vm.Completion.IsComplete);
+        Assert.Equal(string.Empty, vm.Cleanup.OperationProgress);
+        Assert.True(vm.Cleanup.MoveAllCommand.CanExecute(null));
+        Assert.True(vm.Cleanup.DeleteAllCommand.CanExecute(null));
+    }
+
     [Fact]
     public async Task MoveAllAsync_installer_busy_result_paints_the_banner_and_reports_no_completion()
     {
