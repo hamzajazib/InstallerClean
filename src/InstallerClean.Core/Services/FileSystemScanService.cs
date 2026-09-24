@@ -446,8 +446,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // reads, the scan does not offer the file: it refuses outright, at
         // InstallerQueryService's records-unreadable gate, on one unreadable
         // product and any fallback failure. And a recorded path holding an
-        // environment variable now resolves, that having been the one live hole in
-        // the set.
+        // environment variable is expanded before it is resolved, so it is compared
+        // as the path it names.
         //
         // ALL FOUR OF THOSE READ A REGISTRATION, WHICH IS WHY THE SCREEN IS NOT ONE
         // MORE OF THEM. Where a product's or a patch's records hold no path to
@@ -470,10 +470,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // registrations, it finds that registration's recorded copy not present and
         // keeps the file.
         //
-        // SO THE FOUR ABOVE ARE NOT BELT AND BRACES. This release alone fixed six
-        // separate faults in that class, four of them live in every shipped
-        // version, so treating any one of them as redundant cover for the others is
-        // the mistake this comment exists to prevent.
+        // THE FOUR ABOVE ARE NOT BELT AND BRACES. Each is there for the case written
+        // beside it, which none of the others reaches.
         //
         // AND THE FIFTH IS HERE: A CLAIM THIS SCAN COULD NOT SETTLE WITHHOLDS THIS
         // WHOLE HALF. Where any registration's recorded path could not be turned into
@@ -504,26 +502,14 @@ public sealed class FileSystemScanService : IFileSystemScanService
         //
         // THE SUPERSEDED HALF OF THE OFFER IS NOT WITHHELD WITH IT. Those rows are
         // judged on products, through registry keys read by product code and patch
-        // code, and nothing on that path reads a cached-package path at all; measured
-        // with a planted unspellable value against an ordinary-value control, the
-        // sibling patch's offer did not move. What is unobserved rather than ruled out
-        // is an unsettled registration naming the very same file an offered
-        // superseded row names, which would be a second claim on that path that the
-        // merge cannot see.
+        // code, and each reaches the offer from its own registration rather than by
+        // being matched against the claims, which is the comparison a claim this scan
+        // could not settle leaves in doubt.
         //
-        // AND IT IS NOT WITHHELD WITH THE SECOND-INSTANCE CONDITION EITHER, which was
-        // put to fixtures rather than argued because the blunter rule was the obvious
-        // one to write. A second copy is registered under its own product code and is
-        // therefore asked by the per-product condition like any other product, so a
-        // patch it still holds takes the offer away; measured with the cached patch's
-        // own Template naming ONLY the base code, which is the instance transform's
-        // whole peculiarity, and the offer still went, against a twin in which the same
-        // second copy is finished with the patch and the file is offered. The one shape
-        // in which such a file IS wrongly offered is a holder neither the enumeration
-        // nor the registry can name, and on that machine the condition is undetectable,
-        // so a blanket refusal would not save the file either: on a pair of machines
-        // differing only in whether an unrelated product reads as a second instance,
-        // the same file is wrongly offered both times.
+        // AND IT IS NOT WITHHELD WITH THE SECOND-INSTANCE CONDITION EITHER. A second
+        // copy is registered under its own product code and is therefore asked by the
+        // per-product condition like any other product, whatever the cached patch's
+        // own Template names, so a patch it still holds takes the offer away.
         //
         // THE QUESTION IS ASKED OF THE CENSUS RATHER THAN ASSEMBLED HERE. Naming the
         // members one by one at this line is correct and is one edit away from not

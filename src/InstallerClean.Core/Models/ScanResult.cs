@@ -286,14 +286,12 @@ namespace InstallerClean.Models;
 /// nothing needs it.
 ///
 /// THE SUPERSEDED HALF OF THE OFFER IS NEVER PUT HERE. Those rows are judged on
-/// products, through registry keys read by product code and patch code, and nothing on
-/// that path reads a cached-package path at all. They cannot be reached by the per-file
-/// decisions either, and the structure is what says so: the identity comparison, the
-/// screen and the age check all run over the walk's unclaimed candidates, and a
-/// superseded row reaches the offer from the registered set without ever having been
-/// one. What remains unobserved rather than ruled out is an
-/// unspellable registration naming the very same file an offered superseded row
-/// names, which would be a second claim on that path that the merge cannot see.
+/// products, through registry keys read by product code and patch code, and the
+/// wholesale conditions withhold the walk's unclaimed candidates, which a superseded row
+/// never is. They cannot be reached by the per-file decisions either, and the structure
+/// is what says so: the identity comparison, the screen and the age check all run over
+/// the walk's unclaimed candidates, and a superseded row reaches the offer from the
+/// registered set without ever having been one.
 ///
 /// IT EXISTS SO THE TWO SUMMARY LINES ACCOUNT FOR EVERY FILE IN THE FOLDER. A
 /// withheld file would otherwise appear in neither: not offered, and not a registered

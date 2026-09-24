@@ -85,16 +85,11 @@ public class FileSystemScanServiceSecondInstanceTests
         // and nothing in the code would stop somebody writing it. The superseded half of
         // the offer is judged by REGISTERED product code and patch code: a second copy is
         // registered under its own code, so the per-product condition asks it like any
-        // other product and a patch it still holds takes the offer away by that route.
-        // The instance transform's peculiarity is confined to a code read out of a FILE,
-        // and the only pass that does that is refused for patches at its own call site.
-        //
-        // Measured rather than argued: with the cached patch's own Template naming
-        // only the base code, the second copy still answered and the offer still went;
-        // and on a machine where the holder is one neither the enumeration nor the
-        // registry can name, the same file is wrongly offered whether or not any product
-        // reads as a second instance, so emptying this half would protect nothing that
-        // the walk-derived rule does not already protect.
+        // other product and a patch it still holds takes the offer away by that route,
+        // whatever the cached patch's own Template names. The instance transform's
+        // peculiarity is confined to a code read out of a FILE, and the declared-product
+        // screen, which puts such a code to Windows and lets a file through on a no, runs
+        // over the walk's unclaimed candidates and never reads a superseded row.
         var result = await Scan(
             new EnumerationCensus(InstanceProductCount: 1),
             supersededOffer: true);
