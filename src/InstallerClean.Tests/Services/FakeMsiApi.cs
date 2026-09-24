@@ -258,6 +258,10 @@ internal sealed class FakeMsiApi : IMsiApi
         uint index, char[]? source, ref uint sourceLength) =>
         throw new InvalidOperationException("the query service reads no source lists");
 
+    public uint GetSourceListInfo(string productCodeOrPatchCode, string? userSid, MsiInstallContext context,
+        uint options, string property, char[]? value, ref uint valueLength) =>
+        throw new InvalidOperationException("the query service reads no source lists");
+
     public uint GetPatchInfo(string patchCode, string productCode, string? userSid, MsiInstallContext context,
         string property, char[]? value, ref uint valueLength)
     {

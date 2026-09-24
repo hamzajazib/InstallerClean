@@ -258,11 +258,13 @@ namespace InstallerClean.Models;
 /// registrations and it is kept back while the rest stand
 /// (<see cref="CandidateIdentityReads"/>); or the screen kept the candidate on what the
 /// file declares: an installation package whose own declared product Windows still holds
-/// a record of without every installation of it recording another present package, or
-/// whose declaration this scan could not settle, or a patch whose declared patch Windows
-/// holds a registration of without every registration recording another present copy;
-/// or the age check kept a candidate everything else let through, its age not being
-/// shown to be a day or more (<see cref="WithholdingSplit.UnderADayOldCount"/> and
+/// a record of where some installation of it opens a package, its cached copy or its
+/// original at a source, not shown to be another file, or whose declaration this scan
+/// could not settle, or a patch whose declared patch Windows holds a registration of
+/// where some registration opens a copy of the patch, its cached copy or its original at
+/// a source, not shown to be another file; or the age check kept a candidate everything
+/// else let through, its age not being shown to be a day or more
+/// (<see cref="WithholdingSplit.UnderADayOldCount"/> and
 /// <see cref="WithholdingSplit.AgeUnestablishedCount"/>). A run can hold files put here
 /// by any of the four, and a reader of this list may assume none of them.
 ///
@@ -614,14 +616,15 @@ public enum WithholdingAccount
     /// Every file kept back was counted by the declared-product-installed arm, the
     /// under-a-day-old arm or the declared-patch-registered arm. The first is a file
     /// that declares a program Windows still has installed, where at least one
-    /// installation of that program records no cached package the check could show is
-    /// a different file. The second is a file whose times were read and show it was
-    /// created, written or changed less than a day before the scan, or no more than a
-    /// day after it, which every later scan judges afresh. The third is a patch copy
-    /// whose declared patch Windows holds a registration of, where at least one
-    /// registration records no cached copy the check could show is a different file. A
-    /// surface says what it says on a run that kept nothing back, and the files stay
-    /// among those left alone.
+    /// installation of that program opens a package, its cached copy or its original at
+    /// a source, that the check could not show is a different file. The second is a file
+    /// whose times were read and show it was created, written or changed less than a day
+    /// before the scan, or no more than a day after it, which every later scan judges
+    /// afresh. The third is a patch copy whose declared patch Windows holds a
+    /// registration of, where at least one registration opens a copy of the patch, its
+    /// cached copy or its original at a source, that the check could not show is a
+    /// different file. A surface says what it says on a run that kept nothing back, and
+    /// the files stay among those left alone.
     /// </summary>
     KeptWithoutNotice,
 }
@@ -798,8 +801,8 @@ public static class ShortNameCreationLabels
 /// </param>
 /// <param name="DeclaredPatchRegisteredCount">
 /// Patch copies the screen kept back because Windows holds a registration of the patch
-/// each declares, and for at least one registration the screen could not show that the
-/// cached copy it records is a different file. See
+/// each declares, and for at least one registration the screen could not show that every
+/// copy of the patch it opens, cached or original, is a different file. See
 /// <see cref="Services.DeclaredProductOutcome.DeclaredPatchRegistered"/>.
 ///
 /// APPENDED AFTER THE OTHER SEVEN, so a positional construction of the first seven

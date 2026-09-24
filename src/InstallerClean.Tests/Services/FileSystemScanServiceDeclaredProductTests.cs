@@ -274,7 +274,8 @@ public class FileSystemScanServiceDeclaredProductTests
     {
         // The pair of the test above, the same two files and the same screen. The
         // registration records cached.msp, which the scan's own path comparison claims,
-        // and the screen finds it present, a different file from copy.msp, and patch Q.
+        // and the screen finds it present, a different file from copy.msp, and patch Q,
+        // and finds Q's source outside the Installer folder with no package there.
         var (msi, identities, files) = APatchCopyBesideTheRecordedCopy();
         msi.RecordsPatchPackage(PatchQ, ProductA, null, MsiInstallContext.Machine, $@"{Folder}\cached.msp");
 
@@ -286,12 +287,37 @@ public class FileSystemScanServiceDeclaredProductTests
         Assert.Contains($@"{Folder}\copy.msp", identities.PatchReads);
     }
 
+    [Fact]
+    public async Task A_patch_copy_its_patch_was_applied_from_is_kept_by_the_same_screen()
+    {
+        // The scan above with patch Q's source in the Installer folder and its package
+        // name copy.msp: the patch was applied from the copy in the cache, and nothing
+        // but the source list names it. The screen compares a source against the
+        // Installer folder only through what the scan hands it, which is the folder the
+        // scan resolved for the run, so copy.msp is kept here and offered above only if
+        // the scan hands it that.
+        var (msi, identities, files) = APatchCopyBesideTheRecordedCopy();
+        msi.RecordsPatchPackage(PatchQ, ProductA, null, MsiInstallContext.Machine, $@"{Folder}\cached.msp");
+        msi.RecordsPatchSources(PatchQ, null, MsiInstallContext.Machine, "copy.msp", $@"{Folder}\");
+
+        var result = await ScanWithRecordedPatch(msi, identities, files);
+
+        Assert.Empty(result.RemovableFiles);
+        var kept = Assert.Single(result.WithheldFiles!);
+        Assert.Equal($@"{Folder}\copy.msp", kept.FullPath);
+        Assert.Equal(1, result.WithheldBy.DeclaredPatchRegisteredCount);
+        Assert.Equal(kept.SizeBytes, result.WithheldDeclaredPatchRegisteredBytes);
+        Assert.Equal(WithholdingAccount.KeptWithoutNotice, result.Withholding);
+    }
+
     private const string PatchQ = "{33333333-3333-3333-3333-333333333333}";
 
     /// <summary>
     /// Patch Q, declaring product A as its target, registered against A's one
-    /// per-machine installation. copy.msp and cached.msp both declare Q and open as two
-    /// different files. What the registration records is each test's to script.
+    /// per-machine installation and applied from fix.msp in a folder outside the
+    /// Installer folder, the file no longer being there. copy.msp and cached.msp both
+    /// declare Q and open as two different files. What the registration records is each
+    /// test's to script.
     /// </summary>
     private static (ScriptedMsiProducts Msi, ScriptedPackageIdentities Identities, ScriptedFileIdentities Files)
         APatchCopyBesideTheRecordedCopy()
@@ -303,10 +329,12 @@ public class FileSystemScanServiceDeclaredProductTests
         var msi = new ScriptedMsiProducts();
         msi.Installed(ProductA);
         msi.HoldsPatch(PatchQ, ProductA, null, MsiInstallContext.Machine);
+        msi.RecordsPatchSources(PatchQ, null, MsiInstallContext.Machine, "fix.msp", SetupFolder);
 
         var files = new ScriptedFileIdentities();
         files.Opens($@"{Folder}\copy.msp", 1);
         files.Opens($@"{Folder}\cached.msp", 2);
+        files.Answers(SetupFolder + "fix.msp", FileIdentityRead.NamesNothing);
 
         return (msi, identities, files);
     }

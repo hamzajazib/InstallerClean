@@ -4068,7 +4068,8 @@ public sealed class InstallerQueryService : IInstallerQueryService
     }
 
     /// <summary>
-    /// The benign returns of an Msi*GetInfoEx property read, as an ALLOWLIST.
+    /// The benign returns of a property read, through <c>MsiGetProductInfoEx</c>,
+    /// <c>MsiGetPatchInfoEx</c> or <c>MsiSourceListGetInfo</c>, as an ALLOWLIST.
     /// ERROR_SUCCESS is a value (or, at zero length, a property present and
     /// empty); ERROR_UNKNOWN_PROPERTY is the answer for a property the record
     /// does not carry, which is what a product or a registered-not-applied patch
@@ -4332,6 +4333,65 @@ public sealed class InstallerQueryService : IInstallerQueryService
             valueLength: ref bufferLen);
 
         // See GetProductProperty: the second call's narrower rule, and the
+        // reason for the clamp.
+        return error == MsiError.Success
+            ? new PropertyRead(new string(buffer, 0, (int)Math.Min(bufferLen, (uint)buffer.Length)), Unreadable: false)
+            : new PropertyRead(string.Empty, Unreadable: true);
+    }
+
+    /// <summary>
+    /// Retrieves a property of the source list Windows Installer holds for a product or
+    /// a patch in one account and context, using the double-call buffer pattern and
+    /// reporting whether an empty result is an absence or a failed read (see
+    /// <see cref="PropertyRead"/>). <paramref name="codeKind"/> is
+    /// <see cref="MsiSourceListOptions.Product"/> or
+    /// <see cref="MsiSourceListOptions.Patch"/>, saying which of the two
+    /// <paramref name="code"/> is.
+    ///
+    /// STATIC AND SHARED RATHER THAN COPIED, for the reason
+    /// <see cref="ReadProductProperty"/> is: <see cref="DeclaredProductCheck"/> reads a
+    /// patch's package name through it, and which returns count as an absence rather
+    /// than a failed read is decided here once.
+    /// </summary>
+    internal static PropertyRead ReadSourceListProperty(
+        IMsiApi msi,
+        string code,
+        string? userSid,
+        MsiInstallContext context,
+        uint codeKind,
+        string propertyName)
+    {
+        uint bufferLen = 0;
+
+        var error = msi.GetSourceListInfo(
+            productCodeOrPatchCode: code,
+            userSid: userSid,
+            context: context,
+            options: codeKind,
+            property: propertyName,
+            value: null,
+            valueLength: ref bufferLen);
+
+        if (error != MsiError.Success && error != MsiError.MoreData)
+            return new PropertyRead(string.Empty, Unreadable: !IsBenignPropertyRead(error),
+                NotRegistered: IsRecordAbsent(error));
+
+        if (bufferLen == 0)
+            return new PropertyRead(string.Empty, Unreadable: false);
+
+        bufferLen++; // space for null terminator
+        var buffer = new char[bufferLen];
+
+        error = msi.GetSourceListInfo(
+            productCodeOrPatchCode: code,
+            userSid: userSid,
+            context: context,
+            options: codeKind,
+            property: propertyName,
+            value: buffer,
+            valueLength: ref bufferLen);
+
+        // See ReadProductProperty: the second call's narrower rule, and the
         // reason for the clamp.
         return error == MsiError.Success
             ? new PropertyRead(new string(buffer, 0, (int)Math.Min(bufferLen, (uint)buffer.Length)), Unreadable: false)

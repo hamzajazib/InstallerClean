@@ -426,14 +426,15 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // below starts at the FILE: it asks an installation package which product
         // it declares itself to belong to, puts that product code to Windows, and
         // keeps the file back where Windows still holds a record of it and some
-        // installation of it records no package shown to be another present file,
-        // or where the question could not be settled. It asks a patch which patch it
-        // declares itself to be, finds the registrations Windows holds of that patch,
-        // and keeps the file back where some registration records no cached copy
-        // shown to be another present file; see IDeclaredProductCheck. The age check
-        // after it also starts at the file, and asks it when it was last created,
-        // written or changed. Both can subtract from the offer and do nothing else, so
-        // what survives all four is the offer.
+        // installation of it opens a package, its cached copy or its original at a
+        // source, not shown to be another file, or where the question could not be
+        // settled. It asks a patch which patch it declares itself to be, finds the
+        // registrations Windows holds of that patch, and keeps the file back where
+        // some registration opens a copy of the patch, its cached copy or its original
+        // at a source, not shown to be another file; see IDeclaredProductCheck. The
+        // age check after it also starts at the file, and asks it when it was last
+        // created, written or changed. Both can subtract from the offer and do nothing
+        // else, so what survives all four is the offer.
         //
         // THE CLASS WHERE A REGISTRATION EXISTS AND THE SCAN FAILED TO MATCH IT TO
         // ITS FILE is reached by four separate mechanisms besides, which is the
@@ -1339,8 +1340,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// installation of that product opens, cached or original, is shown to be a
     /// different file; every installation package this pass could not settle; and
     /// every patch whose own declared patch Windows holds a registration of, unless
-    /// the cached copy every registration records is shown to be a different file.
-    /// Both lists keep walk order.
+    /// every copy of the patch each registration opens, cached or original, is shown
+    /// to be a different file. Both lists keep walk order.
     ///
     /// THE THIRD SOURCE, AND IT IS THE ONLY ONE THAT STARTS AT THE FILE. The two
     /// comparisons above it start at a registration and work towards a file, and
@@ -1373,8 +1374,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
     {
         if (_declaredProducts is null || candidates.Count == 0) return;
 
-        // The folder a product's source list is compared against is the root this run
-        // resolved, the one every candidate was judged against.
+        // The folder a product's or a patch's source list is compared against is the
+        // root this run resolved, the one every candidate was judged against.
         var outcomes = _declaredProducts.Screen(
             candidates, cancellationToken, recordRefusal,
             path => InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(path, cacheRoot));

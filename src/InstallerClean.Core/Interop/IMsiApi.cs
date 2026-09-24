@@ -55,13 +55,25 @@ public interface IMsiApi
     /// Wraps <c>MsiSourceListEnumSourcesW</c>. See <c>Msi.MsiSourceListEnumSources</c>.
     /// </summary>
     uint EnumSources(
-        string productCode,
+        string productCodeOrPatchCode,
         string? userSid,
         MsiInstallContext context,
         uint options,
         uint index,
         char[]? source,
         ref uint sourceLength);
+
+    /// <summary>
+    /// Wraps <c>MsiSourceListGetInfoW</c>. See <c>Msi.MsiSourceListGetInfo</c>.
+    /// </summary>
+    uint GetSourceListInfo(
+        string productCodeOrPatchCode,
+        string? userSid,
+        MsiInstallContext context,
+        uint options,
+        string property,
+        char[]? value,
+        ref uint valueLength);
 
     /// <summary>Wraps <c>MsiGetPatchInfoExW</c>. See <c>Msi.MsiGetPatchInfoEx</c>.</summary>
     uint GetPatchInfo(

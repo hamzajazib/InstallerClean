@@ -784,5 +784,10 @@ public class RemovableReverifierTests
             InstallerClean.Interop.MsiInstallContext context, uint options, uint index,
             char[]? source, ref uint sourceLength) =>
             throw new InvalidOperationException("The under-lease re-read must not read source lists.");
+
+        public uint GetSourceListInfo(string productCodeOrPatchCode, string? userSid,
+            InstallerClean.Interop.MsiInstallContext context, uint options, string property,
+            char[]? value, ref uint valueLength) =>
+            throw new InvalidOperationException("The under-lease re-read must not read source lists.");
     }
 }

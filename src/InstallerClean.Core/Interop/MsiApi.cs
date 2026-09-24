@@ -51,7 +51,7 @@ internal sealed class MsiApi : IMsiApi
             productCode, userSid, context, property, value, ref valueLength);
 
     public uint EnumSources(
-        string productCode,
+        string productCodeOrPatchCode,
         string? userSid,
         MsiInstallContext context,
         uint options,
@@ -59,7 +59,18 @@ internal sealed class MsiApi : IMsiApi
         char[]? source,
         ref uint sourceLength) =>
         Msi.MsiSourceListEnumSources(
-            productCode, userSid, context, options, index, source, ref sourceLength);
+            productCodeOrPatchCode, userSid, context, options, index, source, ref sourceLength);
+
+    public uint GetSourceListInfo(
+        string productCodeOrPatchCode,
+        string? userSid,
+        MsiInstallContext context,
+        uint options,
+        string property,
+        char[]? value,
+        ref uint valueLength) =>
+        Msi.MsiSourceListGetInfo(
+            productCodeOrPatchCode, userSid, context, options, property, value, ref valueLength);
 
     public uint GetPatchInfo(
         string patchCode,

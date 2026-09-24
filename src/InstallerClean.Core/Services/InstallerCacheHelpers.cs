@@ -169,8 +169,8 @@ internal static class InstallerCacheHelpers
     /// such a value at the null and does not throw, and what comes back is a shorter,
     /// well-formed path that can name a real file.
     ///
-    /// The recorded cached-package path and every entry of a product's source list are
-    /// expanded here, so a change to how it is done reaches both.
+    /// The recorded cached-package path and every entry of a product's or a patch's
+    /// source list are expanded here, so a change to how it is done reaches both.
     /// </summary>
     internal static string ExpandRecordedPath(string value) =>
         Environment.ExpandEnvironmentVariables(value);

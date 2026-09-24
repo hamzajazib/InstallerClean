@@ -13,8 +13,10 @@ namespace InstallerClean.Services;
 ///
 /// A PATCH declares its own patch code and the products it may be applied to. The
 /// check finds the registrations Windows holds of that patch and reports whether there
-/// are any. Where there are, the check reads the cached copy each registration records,
-/// and reports whether every one of them is a different file from this one.
+/// are any. Where there are, the check reads the cached copy each registration records
+/// and the patch package the patch's source list points at in each registration's
+/// account and context, and reports whether every one of them is a different file from
+/// this one.
 ///
 /// WHY IT EXISTS, AND IT IS ABOUT WHERE THE OTHER SOURCES START. Everything else
 /// that decides whether a walked file is claimed begins at a REGISTRATION and works
@@ -42,13 +44,18 @@ namespace InstallerClean.Services;
 /// cannot be ruled out: one in the Installer folder itself, one naming this file, and
 /// one that cannot be read.
 ///
-/// A REGISTERED PATCH DOES NOT ON ITS OWN MAKE THIS FILE ITS CACHED COPY EITHER.
+/// A REGISTERED PATCH DOES NOT ON ITS OWN MAKE THIS FILE A COPY OF IT WINDOWS OPENS
+/// EITHER.
 /// Windows Installer opens a registered patch's cached copy through the
-/// <c>LocalPackage</c> value each registration of it records. The folder can hold
-/// further copies that declare the same patch code while no registration names them.
-/// So the file is kept while some registration's copy cannot be seen: a value that is
-/// empty, that will not read, that names nothing identifiable, that names a file that
-/// does not read as the same patch, or that names this file under another spelling.
+/// <c>LocalPackage</c> value each registration of it records, and the patch has a
+/// source list and a package name of its own, as a product has. The folder can hold
+/// further copies that declare the same patch code while nothing in either place names
+/// them. So the file is kept while some registration's copy cannot be seen: a value
+/// that is empty, that will not read, that names nothing identifiable, that names a
+/// file that does not read as the same patch, or that names this file under another
+/// spelling. It is kept too while some source on the patch's list cannot be ruled
+/// out: one in the Installer folder itself, one naming this file, and one that cannot
+/// be read.
 ///
 /// A PATCH'S REGISTRATIONS ARE FOUND TWO WAYS, AND THE TWO ARE UNIONED. The
 /// machine-wide patch enumeration lists the registrations it names, each with its
@@ -62,9 +69,10 @@ namespace InstallerClean.Services;
 /// through is decided by the rest of the scan exactly as if this check had not
 /// run. For an installation package, a file it cannot read, a question it cannot
 /// put, a source that answers off the allowlist and a recorded package it cannot
-/// identify all keep the file. For a patch, a recorded copy it cannot identify keeps
-/// the file, and a patch whose registrations it cannot establish is left to the rest
-/// of the scan; see <see cref="DeclaredProductOutcome.NotAProductPackage"/>.
+/// identify all keep the file. For a patch, a recorded copy it cannot identify and a
+/// source that answers off the allowlist keep the file, and a patch whose
+/// registrations it cannot establish is left to the rest of the scan; see
+/// <see cref="DeclaredProductOutcome.NotAProductPackage"/>.
 ///
 /// THE SUPERSEDED HALF OF THE OFFER IS NEVER PUT TO IT, AND THAT IS LOAD-BEARING. A
 /// registered superseded patch's cached file is the very file its registrations
@@ -105,7 +113,8 @@ public interface IDeclaredProductCheck
     /// Installer folder: true, false, or null where that was not established. Handed in
     /// by the scan, which has resolved that folder once for the run, as a delegate for
     /// the reason <paramref name="recordRefusal"/> is one. Without it no source can be
-    /// ruled out, so every candidate whose declared product is installed is kept.
+    /// ruled out, so every candidate whose declared product is installed, and every
+    /// candidate whose declared patch is registered, is kept.
     /// </param>
     IReadOnlyList<DeclaredProductOutcome> Screen(
         IReadOnlyList<OrphanedFile> candidates,
@@ -224,14 +233,18 @@ public enum DeclaredProductOutcome
 
     /// <summary>
     /// Windows holds a registration of the patch this file declares, and for at least
-    /// one registration the check cannot show that the cached copy it records is a
-    /// different file. Kept back.
+    /// one registration the check cannot show that every copy of the patch it opens is
+    /// a different file. Kept back.
     ///
     /// That covers a recorded <c>LocalPackage</c> value that is empty or will not
     /// read, one naming a folder or a file that is absent or cannot be identified, one
     /// naming a file that does not read as the same patch, and one naming this very
-    /// file under another spelling. A check constructed without its two file readers
-    /// answers this for every registered patch, having no way to look.
+    /// file under another spelling. It covers a source list or package name of the
+    /// patch that will not read, a source in the Installer folder itself, a source
+    /// whose package is this file, and a source that cannot be resolved or whose
+    /// package will not identify. A check constructed without its two file readers, or
+    /// screening without the Installer folder to compare against, answers this for
+    /// every registered patch, having no way to look.
     ///
     /// A REGISTRATION IS ANY RECORD WINDOWS HOLDS OF THE PATCH AGAINST AN INSTALLATION
     /// OF A PRODUCT, whatever state the patch is in there, so it is wider than
@@ -243,10 +256,11 @@ public enum DeclaredProductOutcome
     DeclaredPatchRegistered,
 
     /// <summary>
-    /// Windows holds a registration of the patch this file declares, and every
+    /// Windows holds a registration of the patch this file declares, every
     /// registration records a cached copy that is present, is a different file, and
-    /// itself declares the same patch. The candidate goes on being decided by
-    /// everything else.
+    /// itself declares the same patch, and no source list of the patch, in the account
+    /// and context of any registration, points at the Installer folder or at this file.
+    /// The candidate goes on being decided by everything else.
     ///
     /// EVERY REGISTRATION, NOT ONE. A patch can be registered against several products
     /// and under several accounts, each registration recording its own value, and a

@@ -68,11 +68,12 @@ internal static partial class Msi
         ref uint pcchValue);
 
     /// <summary>
-    /// Reads one entry of the source list registered for one installation of a
-    /// product, among the source types <paramref name="dwOptions"/> names.
-    /// <paramref name="pcchSource"/> is the double-call buffer-size in/out parameter,
-    /// as on <see cref="MsiGetProductInfoEx"/>. <paramref name="szUserSid"/> is null
-    /// for a per-machine installation.
+    /// Reads one entry of the source list Windows Installer holds for a product or a
+    /// patch in one account and context, among the source types
+    /// <paramref name="dwOptions"/> names; the same flags say which of the two the code
+    /// is. <paramref name="pcchSource"/> is the double-call buffer-size in/out
+    /// parameter, as on <see cref="MsiGetProductInfoEx"/>. <paramref name="szUserSid"/>
+    /// is null for a per-machine installation.
     /// </summary>
     [LibraryImport(Library, EntryPoint = "MsiSourceListEnumSourcesW",
                    StringMarshalling = StringMarshalling.Utf16)]
@@ -84,6 +85,24 @@ internal static partial class Msi
         uint dwIndex,
         [MarshalUsing(CountElementName = nameof(pcchSource))] char[]? szSource,
         ref uint pcchSource);
+
+    /// <summary>
+    /// Reads one property of the source list Windows Installer holds for a product or
+    /// a patch in one account and context, <paramref name="dwOptions"/> saying which of
+    /// the two the code is. <paramref name="pcchValue"/> is the double-call buffer-size
+    /// in/out parameter, as on <see cref="MsiGetProductInfoEx"/>.
+    /// <paramref name="szUserSid"/> is null for a per-machine installation.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "MsiSourceListGetInfoW",
+                   StringMarshalling = StringMarshalling.Utf16)]
+    public static partial uint MsiSourceListGetInfo(
+        string szProductCodeOrPatchCode,
+        string? szUserSid,
+        MsiInstallContext dwContext,
+        uint dwOptions,
+        string szProperty,
+        [MarshalUsing(CountElementName = nameof(pcchValue))] char[]? szValue,
+        ref uint pcchValue);
 
     /// <summary>
     /// Enumerates patches against a product, returning patch and
