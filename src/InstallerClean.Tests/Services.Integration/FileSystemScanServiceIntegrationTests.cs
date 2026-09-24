@@ -239,10 +239,9 @@ public class FileSystemScanServiceIntegrationTests : IDisposable
     public async Task An_unspellable_recorded_path_does_not_withhold_a_superseded_row()
     {
         // The withholding covers the WALK-DERIVED half only. A superseded patch
-        // reaches the offer from the registered set, judged on products through
-        // registry keys read by product and patch code, and nothing on that path
-        // reads a cached-package path. Withholding it here would cost a file for a
-        // condition that has no bearing on it.
+        // reaches the offer from its own registration, judged on products through
+        // registry keys read by product and patch code, and the rule withholds the
+        // walk's unclaimed candidates, which a superseded row never is.
         var superseded = Path.Combine(_fakeInstallerDir, "superseded.msp");
         File.WriteAllBytes(superseded, new byte[] { 3, 3, 3 });
 
