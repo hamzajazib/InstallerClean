@@ -262,7 +262,8 @@ namespace InstallerClean.Models;
 /// original at a source, not shown to be another file, or whose declaration this scan
 /// could not settle, or a patch whose declared patch Windows holds a registration of
 /// where some registration opens a copy of the patch, its cached copy or its original at
-/// a source, not shown to be another file; or the age check kept a candidate everything
+/// a source, not shown to be another file, or whose declaration this scan could not
+/// settle; or the age check kept a candidate everything
 /// else let through, its age not being shown to be a day or more
 /// (<see cref="WithholdingSplit.UnderADayOldCount"/> and
 /// <see cref="WithholdingSplit.AgeUnestablishedCount"/>). A run can hold files put here
@@ -569,6 +570,7 @@ public record ScanResult(
         + WithheldBy.IdentityUnestablishedCount
         + WithheldBy.DeclaredProductUnestablishedCount
         + WithheldBy.ScreenUnansweredCount
+        + WithheldBy.DeclaredPatchUnestablishedCount
         == UnestablishedWithheldCount;
 }
 
@@ -762,7 +764,7 @@ public static class ShortNameCreationLabels
 /// Which decision kept each file on <see cref="ScanResult.WithheldFiles"/> back.
 ///
 /// EXACTLY FOUR DECISIONS PUT A FILE ON THAT LIST AND THEY ARE MUTUALLY EXCLUSIVE
-/// PER FILE, so this is a partition of it rather than eight overlapping views. The
+/// PER FILE, so this is a partition of it rather than nine overlapping views. The
 /// identity comparison keeps one candidate at a time; the wholesale arm keeps every
 /// remaining candidate in one go and the per-file screen and age check are skipped
 /// entirely; the screen keeps a candidate on its own verdict, counted in an arm per
@@ -774,14 +776,17 @@ public static class ShortNameCreationLabels
 /// THE COUNTS ARE CARRIED APART BECAUSE THEY ARE READ APART. Each member is one fact
 /// about one machine, and nothing may add any two of them and call the result a
 /// cause: what is true of every file on the list is only that the scan declined to
-/// offer it. The opt-in report carries the first five; the last three are read by
+/// offer it. The opt-in report carries the first five. The under-a-day-old and
+/// declared-patch-registered counts are read by
 /// <see cref="ScanResult.UnestablishedWithheldCount"/> and
-/// <see cref="ScanResult.Withholding"/>.
+/// <see cref="ScanResult.Withholding"/>, the age-unestablished count by
+/// <see cref="Total"/> alone, and the declared-patch-unestablished count by
+/// <see cref="ArmsFired"/> and <see cref="ScanResult.NamedConditionsCoverEveryHeldBackFile"/>.
 ///
 /// <see cref="Total"/> IS WHAT HOLDS THE PARTITION HONEST, and it is asserted against
 /// the list's own length rather than trusted. A partition is a partition until
-/// somebody adds a branch, and a ninth arm arriving later would appear in none of
-/// these eight while the list grew underneath them.
+/// somebody adds a branch, and a tenth arm arriving later would appear in none of
+/// these nine while the list grew underneath them.
 /// </summary>
 /// <param name="UnderADayOldCount">
 /// Candidates the age check kept back as under a day old: every other decision let the
@@ -808,6 +813,14 @@ public static class ShortNameCreationLabels
 /// APPENDED AFTER THE OTHER SEVEN, so a positional construction of the first seven
 /// still means what it meant.
 /// </param>
+/// <param name="DeclaredPatchUnestablishedCount">
+/// Patch copies the screen kept back because the copy yielded no patch code and target
+/// products to ask about, or the registrations of the patch it declares could not all be
+/// found. See <see cref="Services.DeclaredProductOutcome.DeclaredPatchUnestablished"/>.
+///
+/// APPENDED AFTER THE OTHER EIGHT, so a positional construction of the first eight
+/// still means what it meant.
+/// </param>
 public readonly record struct WithholdingSplit(
     int IdentityUnestablishedCount = 0,
     int WholesaleCount = 0,
@@ -816,13 +829,14 @@ public readonly record struct WithholdingSplit(
     int ScreenUnansweredCount = 0,
     int UnderADayOldCount = 0,
     int AgeUnestablishedCount = 0,
-    int DeclaredPatchRegisteredCount = 0)
+    int DeclaredPatchRegisteredCount = 0,
+    int DeclaredPatchUnestablishedCount = 0)
 {
     /// <summary>
-    /// Every file the eight account for. It equals <see cref="ScanResult.WithheldFiles"/>'s
+    /// Every file the nine account for. It equals <see cref="ScanResult.WithheldFiles"/>'s
     /// own length on any scan that filled both, and a test holds it there.
     ///
-    /// IT IS A COUNT AND NEVER A CAUSE. The eight members are eight different findings
+    /// IT IS A COUNT AND NEVER A CAUSE. The nine members are nine different findings
     /// about a machine, so this figure answers "how many were held back" and nothing
     /// whatever about why.
     /// </summary>
@@ -834,7 +848,8 @@ public readonly record struct WithholdingSplit(
         + ScreenUnansweredCount
         + UnderADayOldCount
         + AgeUnestablishedCount
-        + DeclaredPatchRegisteredCount;
+        + DeclaredPatchRegisteredCount
+        + DeclaredPatchUnestablishedCount;
 
     /// <summary>
     /// Which of the per-file decisions the scan could not settle kept anything back,
@@ -871,6 +886,8 @@ public readonly record struct WithholdingSplit(
                 fired.Add(WithholdingSplitArm.DeclaredProductUnestablished);
             if (ScreenUnansweredCount > 0)
                 fired.Add(WithholdingSplitArm.ScreenUnanswered);
+            if (DeclaredPatchUnestablishedCount > 0)
+                fired.Add(WithholdingSplitArm.DeclaredPatchUnestablished);
 
             return fired;
         }
@@ -908,6 +925,14 @@ public enum WithholdingSplitArm
     /// none of its answers could be read against a file.
     /// </summary>
     ScreenUnanswered,
+
+    /// <summary>
+    /// A patch copy would not say which patch it is, or would not say which products it
+    /// is for, or Windows would not fully answer which installations hold the patch it
+    /// named. Several inabilities under one arm, as the verdict they come from keeps
+    /// them.
+    /// </summary>
+    DeclaredPatchUnestablished,
 }
 
 /// <summary>

@@ -4013,8 +4013,17 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// narrower question. It is set only for a code documented as meaning the
     /// record itself is not there, which is a positive answer about the machine
     /// and not a failure to read one.
+    ///
+    /// <paramref name="PatchNotHeld"/> NARROWS IT AGAIN, AND ONLY THE PATCH READ SETS
+    /// IT. <see cref="GetPatchProperty"/> sets it for the one return an installation
+    /// gives when it holds no record of the patch asked about; see
+    /// <see cref="IsPatchNotHeld"/>. <paramref name="NotRegistered"/> carries that
+    /// return and ERROR_UNKNOWN_PRODUCT alike, and the second is an answer about the
+    /// installation rather than the patch, so a caller that has already established the
+    /// installation is there asks this instead.
     /// </summary>
-    internal readonly record struct PropertyRead(string Value, bool Unreadable, bool NotRegistered = false);
+    internal readonly record struct PropertyRead(
+        string Value, bool Unreadable, bool NotRegistered = false, bool PatchNotHeld = false);
 
     /// <summary>
     /// HALF the rule that decides whether a patch's cached .msp is offered, from its
@@ -4112,6 +4121,22 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// </summary>
     private static bool IsRecordAbsent(uint error) =>
         error is MsiError.UnknownProduct or MsiError.UnknownPatch;
+
+    /// <summary>
+    /// The one return of <c>MsiGetPatchInfoEx</c> that says the installation the read
+    /// named holds no record of the patch: ERROR_UNKNOWN_PATCH. A further ALLOWLIST, for
+    /// the reason the ones above are, and narrower than <see cref="IsRecordAbsent"/> by
+    /// exactly one code.
+    ///
+    /// ERROR_UNKNOWN_PRODUCT IS NOT ON IT. Microsoft's return table for the function
+    /// glosses that code as the product not being installed on the computer, which is an
+    /// answer about the installation rather than about the patch, and an installation
+    /// that is there and does not hold the patch answers ERROR_UNKNOWN_PATCH. So a caller
+    /// that listed the installation moments earlier and is then told it is not there has
+    /// an answer contradicting what the run established, and it stays on the unreadable
+    /// side, which withholds.
+    /// </summary>
+    private static bool IsPatchNotHeld(uint error) => error is MsiError.UnknownPatch;
 
     /// <summary>
     /// The returns of a KEYED <c>MsiEnumProductsEx</c> that positively establish
@@ -4315,7 +4340,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
 
         if (error != MsiError.Success && error != MsiError.MoreData)
             return new PropertyRead(string.Empty, Unreadable: !IsBenignPropertyRead(error),
-                NotRegistered: IsRecordAbsent(error));
+                NotRegistered: IsRecordAbsent(error), PatchNotHeld: IsPatchNotHeld(error));
 
         if (bufferLen == 0)
             return new PropertyRead(string.Empty, Unreadable: false);

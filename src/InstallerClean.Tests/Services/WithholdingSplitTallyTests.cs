@@ -56,11 +56,12 @@ public class WithholdingSplitTallyTests
             ScreenUnansweredCount: 50000,
             UnderADayOldCount: 600000,
             AgeUnestablishedCount: 7000000,
-            DeclaredPatchRegisteredCount: 80000000);
+            DeclaredPatchRegisteredCount: 80000000,
+            DeclaredPatchUnestablishedCount: 900000000);
 
         // Distinct powers of ten, so any member left out of the sum or counted twice
         // changes the answer rather than happening to cancel.
-        Assert.Equal(87654321, split.Total);
+        Assert.Equal(987654321, split.Total);
     }
 
     [Fact]
@@ -86,6 +87,10 @@ public class WithholdingSplitTallyTests
         tally.Screened(DeclaredProductOutcome.DeclaredPatchRegistered, 8192);
         tally.Screened(DeclaredProductOutcome.DeclaredPatchRegistered, 8192);
         tally.Screened(DeclaredProductOutcome.DeclaredPatchRegistered, 8192);
+        tally.Screened(DeclaredProductOutcome.DeclaredPatchUnestablished, 16384);
+        tally.Screened(DeclaredProductOutcome.DeclaredPatchUnestablished, 16384);
+        tally.Screened(DeclaredProductOutcome.DeclaredPatchUnestablished, 16384);
+        tally.Screened(DeclaredProductOutcome.DeclaredPatchUnestablished, 16384);
 
         var split = tally.Taken();
 
@@ -95,7 +100,8 @@ public class WithholdingSplitTallyTests
         Assert.Equal(1, split.DeclaredProductInstalledCount);
         Assert.Equal(2, split.DeclaredProductUnestablishedCount);
         Assert.Equal(3, split.DeclaredPatchRegisteredCount);
-        Assert.Equal(18, split.Total);
+        Assert.Equal(4, split.DeclaredPatchUnestablishedCount);
+        Assert.Equal(22, split.Total);
     }
 
     [Fact]
@@ -111,6 +117,7 @@ public class WithholdingSplitTallyTests
         tally.Screened(DeclaredProductOutcome.Unestablished, 30);
         tally.Screened(DeclaredProductOutcome.DeclaredProductNotInstalled, 4);
         tally.Screened(DeclaredProductOutcome.DeclaredPatchRegistered, 60000);
+        tally.Screened(DeclaredProductOutcome.DeclaredPatchUnestablished, 700000);
         tally.Screened((DeclaredProductOutcome)99, 5);
 
         Assert.Equal(1200, tally.DeclaredProductInstalledBytes);
@@ -127,6 +134,7 @@ public class WithholdingSplitTallyTests
         tally.Screened(DeclaredProductOutcome.DeclaredProductInstalled, 60000);
         tally.Screened(DeclaredProductOutcome.Unestablished, 30);
         tally.Screened(DeclaredProductOutcome.DeclaredPatchNotRegistered, 4);
+        tally.Screened(DeclaredProductOutcome.DeclaredPatchUnestablished, 700000);
         tally.Screened((DeclaredProductOutcome)99, 5);
 
         Assert.Equal(1200, tally.DeclaredPatchRegisteredBytes);
@@ -140,7 +148,6 @@ public class WithholdingSplitTallyTests
         // withholding arm if that call site is ever restructured.
         var tally = new FileSystemScanService.WithholdingSplitTally();
 
-        tally.Screened(DeclaredProductOutcome.NotAProductPackage, 1024);
         tally.Screened(DeclaredProductOutcome.DeclaredProductNotInstalled, 1024);
         tally.Screened(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, 1024);
         tally.Screened(DeclaredProductOutcome.DeclaredPatchNotRegistered, 1024);
@@ -167,6 +174,7 @@ public class WithholdingSplitTallyTests
         Assert.Equal(0, split.DeclaredProductInstalledCount);
         Assert.Equal(0, split.DeclaredProductUnestablishedCount);
         Assert.Equal(0, split.DeclaredPatchRegisteredCount);
+        Assert.Equal(0, split.DeclaredPatchUnestablishedCount);
         // And the total falls short of the file rather than claiming it under a cause
         // nobody established. This is a value cast past the enum, so no scan produces
         // it; a real member arriving in this position is what the walk below asks an

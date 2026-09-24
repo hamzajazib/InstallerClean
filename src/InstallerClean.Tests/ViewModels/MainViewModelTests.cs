@@ -432,6 +432,36 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public async Task A_patch_copy_the_scan_could_not_settle_gets_the_per_file_screen_and_not_the_all_clear()
+    {
+        // Two held patch copies: one kept for its patch's registrations, which is
+        // silent, and one the scan could not settle, which is not. The screen is the
+        // nothing-offered one and its body speaks of the second alone, with its size.
+        var vm = CreateViewModel();
+        var withheld = new List<OrphanedFile>
+        {
+            new(@"C:\Windows\Installer\a.msp", 1024, true, false, false, Orphaned),
+            new(@"C:\Windows\Installer\b.msp", 2048, true, false, false, Orphaned),
+        };
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(new ScanResult(
+                Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
+                WithheldFiles: withheld, WalkOfferWithheldWholesale: false,
+                WithheldBy: new WithholdingSplit(DeclaredPatchRegisteredCount: 1, DeclaredPatchUnestablishedCount: 1),
+                WithheldDeclaredPatchRegisteredBytes: 1024));
+
+        await vm.Scan.ScanWithProgressAsync(null);
+
+        Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
+        Assert.NotEqual(Strings.Completion_AllClean, vm.Completion.Heading);
+        Assert.Equal(
+            string.Format(
+                Strings.Completion_NothingOfferedPerFileBody_Singular,
+                1, DisplayHelpers.PluraliseFile(1), DisplayHelpers.FormatSize(2048)),
+            vm.Completion.Summary);
+    }
+
+    [Fact]
     public async Task The_per_file_screen_counts_only_the_files_the_scan_could_not_settle()
     {
         // Two held: one for an installed program and one the scan could not settle. The

@@ -487,6 +487,7 @@ Ayrıntılar şuraya yazıldı:
   'Summary.RegisteredWindow.Missing.Plural': `{0} eksik`,
   'Summary.RegisteredWindow.Missing.Singular': `{0} eksik`,
   'UpdateCheck.Failed.Unknown.NoLog': `Denetim bilinmeyen bir nedenle başarısız oldu. Çökme günlüğü yazılamadı.`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

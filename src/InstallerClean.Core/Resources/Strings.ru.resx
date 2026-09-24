@@ -1694,6 +1694,17 @@ InstallerClean уже был запущен от имени администра
        ScreenUnanswered is the check answering about a different number of files than it
        was handed, so no answer could be attached to any particular file.
 
+       DeclaredPatchUnestablished is the patch half's own line, and is a disjunction of
+       three that must stay one: a patch file would not say which patch it is, or would not
+       say which programs it is for, or Windows would not say in full which programs have
+       the patch it named. The first two are separate clauses because "would not say which
+       patch it is or which programs it is for" reads as the file saying neither, which is
+       false of a file whose patch code reads and whose program list does not. The third
+       says "in full" because Windows can already have named some programs holding the
+       patch when an answer about another is missing. It is not merged with
+       DeclaredProductUnestablished: a run can print both, and each speaks for its own
+       files.
+
        None of them carries a count and none may acquire one: each is one fact about
        one machine, and nothing may add it to another and call the result a cause. The
        count and size of the files these lines explain are on the line above. -->
@@ -2229,4 +2240,5 @@ InstallerClean уже был запущен от имени администра
   <data name="Cli.MoveCancelledRestoreHint" xml:space="preserve"><value>Это легко отменить. Переместите их из {0} обратно в {InstallerFolder}, и всё вернётся как было.</value></data>
   <data name="Cli.MoveInstallerLockAccessRefused" xml:space="preserve"><value>Ошибка: Windows отказал InstallerClean в праве проверить, занят ли Windows Installer, поэтому он не смог исключить, что файл понадобится в процессе. Ничего не было перемещено.</value></data>
   <data name="Cli.PendingRebootBlocked.RegistryCheckUnreadable" xml:space="preserve"><value>Ошибка: InstallerClean не смог прочитать одно из значений реестра, которые проверяет перед тем, как трогать {InstallerFolder}, поэтому не может исключить операцию Windows Installer, выполняющуюся сейчас или поставленную в очередь до следующей перезагрузки. /m и /d заблокированы. Перезагрузите Windows и попробуйте снова. Если чтение по-прежнему не удаётся, это не та машина, которую InstallerClean может очистить.</value></data>
+  <data name="Cli.WithheldReasons.DeclaredPatchUnestablished" xml:space="preserve"><value>  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.</value></data>
 </root>

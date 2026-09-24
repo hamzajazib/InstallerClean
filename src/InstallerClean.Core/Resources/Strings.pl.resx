@@ -1716,12 +1716,24 @@ Nie udało się zapisać dziennika awarii.</value></data>
        ScreenUnanswered is the check answering about a different number of files than it
        was handed, so no answer could be attached to any particular file.
 
+       DeclaredPatchUnestablished is the patch half's own line, and is a disjunction of
+       three that must stay one: a patch file would not say which patch it is, or would not
+       say which programs it is for, or Windows would not say in full which programs have
+       the patch it named. The first two are separate clauses because "would not say which
+       patch it is or which programs it is for" reads as the file saying neither, which is
+       false of a file whose patch code reads and whose program list does not. The third
+       says "in full" because Windows can already have named some programs holding the
+       patch when an answer about another is missing. It is not merged with
+       DeclaredProductUnestablished: a run can print both, and each speaks for its own
+       files.
+
        None of them carries a count and none may acquire one: each is one fact about
        one machine, and nothing may add it to another and call the result a cause. The
        count and size of the files these lines explain are on the line above. -->
   <data name="Cli.WithheldReasons.CandidateIdentity" xml:space="preserve"><value>  Nie udało się zidentyfikować pliku w folderze, więc nie dało się go dopasować do rejestrów.</value></data>
   <data name="Cli.WithheldReasons.DeclaredProductUnestablished" xml:space="preserve"><value>  Albo plik nie podał, do którego programu należy, albo Windows nie udzielił odpowiedzi na temat tego programu.</value></data>
   <data name="Cli.WithheldReasons.ScreenUnanswered" xml:space="preserve"><value>  Sprawdzenie, do których programów należą pliki, dało odpowiedzi, które nie zgadzały się z przekazanymi mu plikami.</value></data>
+  <data name="Cli.WithheldReasons.DeclaredPatchUnestablished" xml:space="preserve"><value>  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.</value></data>
   <!-- 0 = mode arg, whichever of /s, /d and /m was run: the no-files branch this
        is written from is common to all three, so a fixed mode word here names
        the wrong flag on two runs in three, and a filter for delete runs has to

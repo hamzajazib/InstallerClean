@@ -1509,6 +1509,8 @@ internal static class Program
             Strings.Cli_WithheldReasons_DeclaredProductUnestablished,
         WithholdingSplitArm.ScreenUnanswered =>
             Strings.Cli_WithheldReasons_ScreenUnanswered,
+        WithholdingSplitArm.DeclaredPatchUnestablished =>
+            Strings.Cli_WithheldReasons_DeclaredPatchUnestablished,
         _ => Strings.Cli_WithheldReasons_Header,
     };
 

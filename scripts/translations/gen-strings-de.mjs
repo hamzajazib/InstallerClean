@@ -576,6 +576,7 @@ const MAP = {
   'Summary.RegisteredWindow.Missing.Plural': `{0} fehlen`,
   'Summary.RegisteredWindow.Missing.Singular': `{0} fehlt`,
   'UpdateCheck.Failed.Unknown.NoLog': `Die Prüfung ist aus unbekanntem Grund fehlgeschlagen. Das Absturzprotokoll konnte nicht geschrieben werden.`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

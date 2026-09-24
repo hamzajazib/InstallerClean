@@ -139,13 +139,13 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
     /// A patch's own code and the products it declares it may be applied to, both
     /// out of its summary-information stream.
     ///
-    /// The patch code alone is not enough and that is not a shortcoming of this
-    /// reader. <c>MsiGetPatchInfoEx</c> takes a product code as a required
-    /// parameter, so there is no way to ask Windows about a patch except through
-    /// a product that might hold it, and the Template is where the file says which
-    /// products those are. A patch that names none is one there is no way to ask
-    /// about at all, so it is reported unread rather than returned as an identity
-    /// whose question cannot be put.
+    /// The patch code alone is not enough for what is asked about a patch.
+    /// <c>MsiGetPatchInfoEx</c> takes a product code as a required parameter, so the
+    /// keyed patch read, which reaches a registration the machine-wide patch
+    /// enumeration does not list, can only be put through a product that might hold
+    /// the patch, and the Template is where the file says which products those are. A
+    /// patch that names none is one that read cannot be put for, so it is reported
+    /// unread rather than returned as an identity whose questions cannot all be put.
     /// </summary>
     private static PackageIdentity? ReadPatch(string filePath, out string detail)
     {
@@ -199,10 +199,8 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
 
             if (targets.Count == 0)
             {
-                // A present but empty Template. Whether Windows reads that as
-                // "any product" is not something this project has established,
-                // and the difference does not change the outcome: with no product
-                // named there is nothing to ask through either way.
+                // A present but empty Template names no product to put the keyed
+                // patch read through, so it is reported unread like an absent one.
                 detail = "patch names no target product";
                 return null;
             }

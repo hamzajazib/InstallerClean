@@ -103,7 +103,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             // installations of a product.
             if (candidate.IsPatch)
             {
-                outcomes[i] = ScreenPatch(candidate.FullPath, pass, namesAFileInInstallerFolder);
+                outcomes[i] = ScreenPatch(candidate.FullPath, pass, recordRefusal, namesAFileInInstallerFolder);
                 continue;
             }
 
@@ -388,9 +388,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// every copy each registration opens, cached or original.
     /// </summary>
     private DeclaredProductOutcome ScreenPatch(
-        string path, PassAnswers pass, Func<string, bool?>? namesAFileInInstallerFolder)
+        string path,
+        PassAnswers pass,
+        Action<Exception, string>? recordRefusal,
+        Func<string, bool?>? namesAFileInInstallerFolder)
     {
-        var identity = _identityReader.Read(path, isPatch: true, out _);
+        var identity = _identityReader.Read(path, isPatch: true, out var detail);
 
         // FOUR READINGS LEAVE NOTHING TO ASK ABOUT, and each of them is the file
         // failing to give this pass a patch code and the products to put it to. Null is
@@ -402,7 +405,20 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             || identity.Value.Code.Length == 0
             || !identity.Value.IsPatch
             || identity.Value.TargetProductCodes.Count == 0)
-            return DeclaredProductOutcome.NotAProductPackage;
+        {
+            // ONLY THE NULL READING HAS A DETAIL TO KEEP, for the reason given at the
+            // product half's arm: the other three are answers the reader gave rather
+            // than failures it had, and it wrote nothing down about them.
+            if (identity is null)
+                recordRefusal?.Invoke(
+                    new InvalidOperationException(
+                        "A cached patch did not yield the patch code and target products it "
+                        + "declares, so it is kept rather than offered. Reader detail: "
+                        + (detail.Length == 0 ? "none given" : detail) + "."),
+                    detail);
+
+            return DeclaredProductOutcome.DeclaredPatchUnestablished;
+        }
 
         var code = identity.Value.Code;
         var targets = identity.Value.TargetProductCodes;
@@ -436,6 +452,13 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// product the patch's Template does not list; the keyed read reaches an
     /// installation of a listed product the enumeration does not name. Each can only
     /// add a registration.
+    ///
+    /// AND EITHER FAILING KEEPS THE FILE. An enumeration that did not run to its end, a
+    /// named product whose installations would not list, and an installation that would
+    /// not answer the keyed read each leave registrations unfound, and the answer is
+    /// <see cref="DeclaredProductOutcome.DeclaredPatchUnestablished"/>. The enumeration
+    /// is walked once per pass, so where it fails, every patch copy the pass asks about
+    /// is kept.
     /// </summary>
     private DeclarationAnswer AskAboutPatch(
         string code,
@@ -444,7 +467,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         Func<string, bool?>? namesAFileInInstallerFolder)
     {
         var holders = pass.PatchHolders;
-        if (holders is null) return new DeclarationAnswer(DeclaredProductOutcome.NotAProductPackage, null);
+        if (holders is null)
+            return new DeclarationAnswer(DeclaredProductOutcome.DeclaredPatchUnestablished, null);
 
         var registrations = new List<(string ProductCode, string? Sid, MsiInstallContext Context)>();
         if (holders.TryGetValue(code, out var listed)) registrations.AddRange(listed);
@@ -454,7 +478,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             pass.CancellationToken.ThrowIfCancellationRequested();
 
             var resolved = pass.InstancesOf(target);
-            if (resolved.Unaskable) return new DeclarationAnswer(DeclaredProductOutcome.NotAProductPackage, null);
+            if (resolved.Unaskable)
+                return new DeclarationAnswer(DeclaredProductOutcome.DeclaredPatchUnestablished, null);
 
             foreach (var (sid, context) in resolved.Instances)
             {
@@ -465,13 +490,16 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                 var state = InstallerQueryService.GetPatchProperty(
                     _msi, code, target, sid, context, MsiInstallProperty.State);
 
-                // NOT REGISTERED IS READ FIRST, because a return meaning it is marked
-                // unreadable as well, for the other readers of the same call. Here it is
-                // the installation answering that it does not hold the patch, which is
-                // the question put, and the query service's own per-pairing pass reads it
-                // the same way.
-                if (state.NotRegistered) continue;
-                if (state.Unreadable) return new DeclarationAnswer(DeclaredProductOutcome.NotAProductPackage, null);
+                // ONLY THE INSTALLATION ANSWERING THAT IT HOLDS NO RECORD OF THE PATCH IS
+                // SKIPPED, and that answer is read first because it is marked unreadable
+                // as well, for the other readers of the same call. An answer that the
+                // installation's product is not installed is not that answer: the keyed
+                // product enumeration listed this installation moments earlier, in this
+                // account and context, so it contradicts what the pass established and
+                // keeps the file with every other read that did not answer.
+                if (state.PatchNotHeld) continue;
+                if (state.Unreadable)
+                    return new DeclarationAnswer(DeclaredProductOutcome.DeclaredPatchUnestablished, null);
 
                 registrations.Add((target, sid, context));
             }

@@ -495,6 +495,7 @@ const MAP = {
   'Summary.RegisteredWindow.Missing.Plural': `{0} ausentes`,
   'Summary.RegisteredWindow.Missing.Singular': `{0} ausente`,
   'UpdateCheck.Failed.Unknown.NoLog': `La comprobación falló por un motivo desconocido. No se pudo escribir el archivo crash.log.`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

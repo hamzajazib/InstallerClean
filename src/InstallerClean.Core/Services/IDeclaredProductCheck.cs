@@ -69,10 +69,9 @@ namespace InstallerClean.Services;
 /// through is decided by the rest of the scan exactly as if this check had not
 /// run. For an installation package, a file it cannot read, a question it cannot
 /// put, a source that answers off the allowlist and a recorded package it cannot
-/// identify all keep the file. For a patch, a recorded copy it cannot identify and a
-/// source that answers off the allowlist keep the file, and a patch whose
-/// registrations it cannot establish is left to the rest of the scan; see
-/// <see cref="DeclaredProductOutcome.NotAProductPackage"/>.
+/// identify all keep the file. For a patch, a file it cannot read, a registration it
+/// cannot list or ask about, a source that answers off the allowlist and a recorded
+/// copy it cannot identify all keep the file.
 ///
 /// THE SUPERSEDED HALF OF THE OFFER IS NEVER PUT TO IT, AND THAT IS LOAD-BEARING. A
 /// registered superseded patch's cached file is the very file its registrations
@@ -124,7 +123,7 @@ public interface IDeclaredProductCheck
 }
 
 /// <summary>
-/// What one candidate's own declaration settled. Three of the eight keep the file,
+/// What one candidate's own declaration settled. Four of the eight keep the file,
 /// and <see cref="Withholds"/> is the only place that says which.
 /// </summary>
 public enum DeclaredProductOutcome
@@ -147,18 +146,6 @@ public enum DeclaredProductOutcome
     /// established. Nothing outside this pass reads which of the two it was.
     /// </summary>
     Unestablished,
-
-    /// <summary>
-    /// A patch whose registrations this check could not establish, so it says nothing
-    /// about the file. The candidate goes on being decided by everything else, exactly
-    /// as it would have been had this pass never run.
-    ///
-    /// That covers a patch the reader gives no patch code and target list for, a
-    /// machine-wide patch enumeration that does not run to its end, and a product the
-    /// patch names whose installations will not list or will not answer whether the
-    /// patch is registered against them.
-    /// </summary>
-    NotAProductPackage,
 
     /// <summary>
     /// The file declared a product code and Windows positively answered that no
@@ -218,16 +205,42 @@ public enum DeclaredProductOutcome
     DeclaredProductCachedAsAnotherFile,
 
     /// <summary>
+    /// The file is a patch, and either it yielded no patch code and target products to
+    /// ask about, or the registrations of the patch it declares could not all be found.
+    /// Kept back.
+    ///
+    /// SEVERAL INABILITIES UNDER ONE NAME, AS FOR <see cref="Unestablished"/>, AND THE
+    /// NAME STATES NONE OF THEM. One is about the FILE: its summary stream would not
+    /// open, its patch code is absent or is not a GUID, or its Template is absent, is not
+    /// a list of GUIDs or names no product. The others are about the RECORDS: the
+    /// machine-wide patch enumeration did not run to its end, a product the patch names
+    /// would not list its installations, or an installation of one would not answer the
+    /// keyed patch read. That last includes an installation answering that its product
+    /// is not installed, which contradicts the keyed product enumeration that listed it
+    /// moments earlier. What they share, and the whole of what this value claims, is
+    /// that nothing was established.
+    ///
+    /// A PATCH HAS A VERDICT OF ITS OWN FOR THIS RATHER THAN SHARING
+    /// <see cref="Unestablished"/>, so that everything counting the two can tell a
+    /// patch copy from an installation package.
+    /// </summary>
+    DeclaredPatchUnestablished,
+
+    /// <summary>
     /// The file is a patch, and Windows positively answered that it holds no
     /// registration of the patch the file declares: the machine-wide patch enumeration
     /// ran to its end and listed none, and every installation of every product the
-    /// patch names answered that the patch is not registered against it, or no such
-    /// product is installed. The candidate goes on being decided by everything else.
+    /// patch names answered that it holds no record of the patch, or no such product is
+    /// installed. The candidate goes on being decided by everything else.
     ///
     /// A POSITIVE ANSWER AND NOT AN ABSENCE OF ONE, as for
-    /// <see cref="DeclaredProductNotInstalled"/>. An enumeration that did not reach its
-    /// end, and a keyed read answering anything but a return documented to mean the
-    /// patch is not there, do not reach this.
+    /// <see cref="DeclaredProductNotInstalled"/>. Only ERROR_UNKNOWN_PATCH from the keyed
+    /// read, the return of an installation that holds no record of the patch, counts as
+    /// an installation answering that way. Any other return of that read is either a
+    /// registration or, where it gave no answer that can be used,
+    /// <see cref="DeclaredPatchUnestablished"/>,
+    /// and an enumeration that did not reach its end gives
+    /// <see cref="DeclaredPatchUnestablished"/> too.
     /// </summary>
     DeclaredPatchNotRegistered,
 
@@ -279,7 +292,7 @@ public static class DeclaredProductOutcomes
     /// <summary>
     /// Whether this outcome keeps the file back.
     ///
-    /// STATED AS "ANYTHING BUT THE FIVE THAT LET A FILE THROUGH" RATHER THAN BY
+    /// STATED AS "ANYTHING BUT THE FOUR THAT LET A FILE THROUGH" RATHER THAN BY
     /// NAMING THE WITHHOLDING MEMBERS, and that is the safety property rather than a
     /// style. Named positively, a member added later would silently not withhold: a
     /// green build, a verdict the pass sets, and files going on being offered. Named
@@ -287,8 +300,7 @@ public static class DeclaredProductOutcomes
     /// mistake here has to fail in.
     /// </summary>
     public static bool Withholds(this DeclaredProductOutcome outcome) =>
-        outcome is not (DeclaredProductOutcome.NotAProductPackage
-            or DeclaredProductOutcome.DeclaredProductNotInstalled
+        outcome is not (DeclaredProductOutcome.DeclaredProductNotInstalled
             or DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile
             or DeclaredProductOutcome.DeclaredPatchNotRegistered
             or DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile);

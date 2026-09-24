@@ -191,6 +191,47 @@ public class CliNothingOfferedTests
     }
 
     [Fact]
+    public async Task A_patch_copy_the_scan_could_not_settle_gets_the_per_file_line_and_its_own_reason()
+    {
+        // The patch half's unsettled arm is not one of the silent arms: the line counts
+        // its file, and the reason under it is that arm's own. The heading and the
+        // reason are each counted, so a reason falling back to the heading's text reads
+        // as the heading printed twice rather than as a reason found. The fixture's file
+        // names are the shared ones; this host reads counts and never a name.
+        var (exit, stdout) = await Run(Scan(
+            withheld: 1,
+            split: new WithholdingSplit(DeclaredPatchUnestablishedCount: 1)));
+
+        Assert.Equal(CliExitCode.Ok, exit);
+        Assert.Contains(Expected(Strings.Cli_NothingOfferedPerFile_Singular, 1), stdout, StringComparison.Ordinal);
+        Assert.Equal(1, Occurrences(stdout, Strings.Cli_WithheldReasons_Header));
+        Assert.Equal(1, Occurrences(stdout, Program.LineFor(WithholdingSplitArm.DeclaredPatchUnestablished)));
+        Assert.DoesNotContain(Program.LineFor(WithholdingSplitArm.DeclaredProductUnestablished), stdout, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_package_and_a_patch_copy_the_scan_could_not_settle_each_get_their_own_reason()
+    {
+        // One of each half's unsettled arm. Two lines, each printed once, the package's
+        // first as the split declares them: a line shared between the two would state
+        // one half's cause over the other's file.
+        var (_, stdout) = await Run(Scan(
+            withheld: 2,
+            split: new WithholdingSplit(DeclaredProductUnestablishedCount: 1, DeclaredPatchUnestablishedCount: 1)));
+
+        var product = Program.LineFor(WithholdingSplitArm.DeclaredProductUnestablished);
+        var patch = Program.LineFor(WithholdingSplitArm.DeclaredPatchUnestablished);
+
+        Assert.Contains(Expected(Strings.Cli_NothingOfferedPerFile_Plural, 2), stdout, StringComparison.Ordinal);
+        Assert.Equal(1, Occurrences(stdout, Strings.Cli_WithheldReasons_Header));
+        Assert.Equal(1, Occurrences(stdout, product));
+        Assert.Equal(1, Occurrences(stdout, patch));
+        Assert.True(
+            stdout.IndexOf(product, StringComparison.Ordinal) < stdout.IndexOf(patch, StringComparison.Ordinal),
+            "the package's reason should come before the patch copy's");
+    }
+
+    [Fact]
     public async Task A_per_file_withholding_reports_its_reason_with_no_leg_to_carry_it()
     {
         // The half that had no surface at all before: no leg fired, so the whole
@@ -277,6 +318,18 @@ public class CliNothingOfferedTests
 
     // A sentence's words up to its first placeholder, which no count or size changes.
     private static string Opening(string value) => value[..value.IndexOf('{')];
+
+    // How many times a line appears in the output, compared ordinally and without
+    // overlap.
+    private static int Occurrences(string text, string value)
+    {
+        var count = 0;
+        for (var at = text.IndexOf(value, StringComparison.Ordinal);
+             at >= 0;
+             at = text.IndexOf(value, at + value.Length, StringComparison.Ordinal))
+            count++;
+        return count;
+    }
 
     private static string Expected(string value, int count) =>
         string.Format(value, count, DisplayHelpers.PluraliseFile(count),

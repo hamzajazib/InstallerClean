@@ -431,10 +431,11 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // settled. It asks a patch which patch it declares itself to be, finds the
         // registrations Windows holds of that patch, and keeps the file back where
         // some registration opens a copy of the patch, its cached copy or its original
-        // at a source, not shown to be another file; see IDeclaredProductCheck. The
-        // age check after it also starts at the file, and asks it when it was last
-        // created, written or changed. Both can subtract from the offer and do nothing
-        // else, so what survives all four is the offer.
+        // at a source, not shown to be another file, or where the question could not
+        // be settled; see IDeclaredProductCheck. The age check after it also starts at
+        // the file, and asks it when it was last created, written or changed. Both can
+        // subtract from the offer and do nothing else, so what survives all four is the
+        // offer.
         //
         // THE CLASS WHERE A REGISTRATION EXISTS AND THE SCAN FAILED TO MATCH IT TO
         // ITS FILE is reached by four separate mechanisms besides, which is the
@@ -467,9 +468,9 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // could not be resolved. Where the file is an installation package, the
         // screen either finds the declared product installed with a recorded package
         // that is not present, or fails to settle the question, and both keep the
-        // file. Where the file is a patch and the screen establishes the patch's
-        // registrations, it finds that registration's recorded copy not present and
-        // keeps the file.
+        // file. Where the file is a patch, the screen keeps it where it finds that
+        // registration with its recorded copy not present, and where it cannot settle
+        // the patch's registrations.
         //
         // THE FOUR ABOVE ARE NOT BELT AND BRACES. Each is there for the case written
         // beside it, which none of the others reaches.
@@ -1051,7 +1052,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
             candidateIdentityReads,
             // Which decision took each file on the list two lines above. Read here
             // rather than derived, and held to that list's own length by a test:
-            // eight counts that no longer sum to it mean a ninth arm has been
+            // nine counts that no longer sum to it mean a tenth arm has been
             // added and is reported by none of them.
             withheldBy.Taken(),
             withheldBy.DeclaredProductInstalledBytes,
@@ -1258,6 +1259,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         private int _ageUnestablished;
         private int _declaredPatchRegistered;
         private long _declaredPatchRegisteredBytes;
+        private int _declaredPatchUnestablished;
 
         internal void IdentityUnestablished() => _identityUnestablished++;
 
@@ -1306,6 +1308,9 @@ public sealed class FileSystemScanService : IFileSystemScanService
                     _declaredPatchRegistered++;
                     _declaredPatchRegisteredBytes += sizeBytes;
                     break;
+                case DeclaredProductOutcome.DeclaredPatchUnestablished:
+                    _declaredPatchUnestablished++;
+                    break;
             }
         }
 
@@ -1330,7 +1335,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
             _screenUnanswered,
             _underADayOld,
             _ageUnestablished,
-            _declaredPatchRegistered);
+            _declaredPatchRegistered,
+            _declaredPatchUnestablished);
     }
 
     /// <summary>
@@ -1338,10 +1344,11 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// <paramref name="withheld"/> every installation package whose own declared
     /// product Windows still holds a record of, unless every package each
     /// installation of that product opens, cached or original, is shown to be a
-    /// different file; every installation package this pass could not settle; and
-    /// every patch whose own declared patch Windows holds a registration of, unless
-    /// every copy of the patch each registration opens, cached or original, is shown
-    /// to be a different file. Both lists keep walk order.
+    /// different file; every installation package this pass could not settle; every
+    /// patch whose own declared patch Windows holds a registration of, unless every
+    /// copy of the patch each registration opens, cached or original, is shown to be a
+    /// different file; and every patch this pass could not settle. Both lists keep walk
+    /// order.
     ///
     /// THE THIRD SOURCE, AND IT IS THE ONLY ONE THAT STARTS AT THE FILE. The two
     /// comparisons above it start at a registration and work towards a file, and

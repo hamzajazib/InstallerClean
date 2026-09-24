@@ -10,16 +10,16 @@ namespace InstallerClean.Tests.Services;
 /// than built by hand.
 ///
 /// THE POINT IS THE COMPLETENESS ASSERTION AND NOT THE INDIVIDUAL COUNTS. Four
-/// decisions put a file on the withheld list, and the eight counts are a partition of
-/// it. A partition stays one until somebody adds a branch, and a ninth arm arriving
-/// later would appear in none of the eight while the list grew underneath them: eight
+/// decisions put a file on the withheld list, and the nine counts are a partition of
+/// it. A partition stays one until somebody adds a branch, and a tenth arm arriving
+/// later would appear in none of the nine while the list grew underneath them: nine
 /// counts that no longer sum to the list are the only thing that says so. Every test
 /// here asserts the sum as well as its own arm, so a fixture reaching a new decision
 /// fails whichever arm it was written for.
 ///
 /// EACH ARM IS REACHED ON ITS OWN, WHICH IS WHAT THE DECISIONS MAKE POSSIBLE. The
 /// wholesale arm skips the per-file screen and the age check entirely, so no one scan
-/// can exercise all eight, and a fixture claiming to would be describing a machine that
+/// can exercise all nine, and a fixture claiming to would be describing a machine that
 /// cannot exist.
 /// </summary>
 public class WithholdingSplitTests
@@ -80,11 +80,12 @@ public class WithholdingSplitTests
     [Fact]
     public async Task The_screens_withholding_verdicts_are_each_counted_apart()
     {
-        // All three arms in one scan, because the screen answers per file and the
-        // three answers are different findings: Windows positively holding the
-        // product, nothing having been settled at all, and Windows holding a
-        // registration of the patch a patch copy declares. A single count over any
-        // two would state a cause that is false of one of them.
+        // All four arms in one scan, because the screen answers per file and the
+        // four answers are different findings: Windows positively holding the
+        // product, nothing having been settled about a package, Windows holding a
+        // registration of the patch a patch copy declares, and nothing having been
+        // settled about a patch copy. A single count over any two would state a cause
+        // that is false of one of them.
         var identities = new ScriptedPackageIdentities();
         identities.Declares($@"{Folder}\held.msi", ProductA);
         identities.DeclaresPatch($@"{Folder}\patch.msp", PatchQ, ProductA);
@@ -94,19 +95,25 @@ public class WithholdingSplitTests
         // that it had nothing to read, which is the answer the Unestablished count
         // is about.
         identities.YieldsNothing($@"{Folder}\unreadable.msi");
+        identities.YieldsNothing($@"{Folder}\unreadable.msp");
 
         var msi = new ScriptedMsiProducts();
         msi.Installed(ProductA);
         msi.HoldsPatch(PatchQ, ProductA, null, InstallerClean.Interop.MsiInstallContext.Machine);
 
         var result = await Scan(
-            walked: new[] { $@"{Folder}\held.msi", $@"{Folder}\unreadable.msi", $@"{Folder}\patch.msp" },
+            walked: new[]
+            {
+                $@"{Folder}\held.msi", $@"{Folder}\unreadable.msi", $@"{Folder}\patch.msp",
+                $@"{Folder}\unreadable.msp",
+            },
             registered: Array.Empty<string>(),
             screen: new DeclaredProductCheck(msi, identities));
 
         Assert.Equal(1, result.WithheldBy.DeclaredProductInstalledCount);
         Assert.Equal(1, result.WithheldBy.DeclaredProductUnestablishedCount);
         Assert.Equal(1, result.WithheldBy.DeclaredPatchRegisteredCount);
+        Assert.Equal(1, result.WithheldBy.DeclaredPatchUnestablishedCount);
         Assert.Equal(0, result.WithheldBy.WholesaleCount);
         AssertPartitions(result);
     }

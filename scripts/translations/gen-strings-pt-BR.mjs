@@ -563,6 +563,7 @@ const MAP = {
   'Summary.RegisteredWindow.Missing.Plural': `{0} ausentes`,
   'Summary.RegisteredWindow.Missing.Singular': `{0} ausente`,
   'UpdateCheck.Failed.Unknown.NoLog': `A verificação falhou por um motivo desconhecido. Não foi possível gravar o crash.log.`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

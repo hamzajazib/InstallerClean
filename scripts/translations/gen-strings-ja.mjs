@@ -490,6 +490,7 @@ const MAP = {
   'Summary.RegisteredWindow.Missing.Plural': `{0} 件が見つかりません`,
   'Summary.RegisteredWindow.Missing.Singular': `{0} 件が見つかりません`,
   'UpdateCheck.Failed.Unknown.NoLog': `確認が不明な理由で失敗しました。クラッシュログを書き込めませんでした。`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

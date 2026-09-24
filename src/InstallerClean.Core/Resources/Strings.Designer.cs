@@ -252,6 +252,7 @@ public static class Strings
     public static string Cli_TooManyArgumentsNoPath => Get("Cli.TooManyArgumentsNoPath");
     public static string Cli_UnknownArgument => Get("Cli.UnknownArgument");
     public static string Cli_WithheldReasons_CandidateIdentity => Get("Cli.WithheldReasons.CandidateIdentity");
+    public static string Cli_WithheldReasons_DeclaredPatchUnestablished => Get("Cli.WithheldReasons.DeclaredPatchUnestablished");
     public static string Cli_WithheldReasons_DeclaredProductUnestablished => Get("Cli.WithheldReasons.DeclaredProductUnestablished");
     public static string Cli_WithheldReasons_FileIdentity => Get("Cli.WithheldReasons.FileIdentity");
     public static string Cli_WithheldReasons_Header => Get("Cli.WithheldReasons.Header");

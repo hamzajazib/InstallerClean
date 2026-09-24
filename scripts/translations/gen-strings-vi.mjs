@@ -561,6 +561,7 @@ const MAP = {
   'Summary.RegisteredWindow.Missing.Plural': `{0} thiếu`,
   'Summary.RegisteredWindow.Missing.Singular': `{0} thiếu`,
   'UpdateCheck.Failed.Unknown.NoLog': `Việc kiểm tra thất bại vì một lý do không xác định. Không thể ghi nhật ký sự cố.`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

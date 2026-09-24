@@ -10,10 +10,10 @@ namespace InstallerClean.Models;
 /// identity is written by the package author into the package, is required to be
 /// there, and does not change with the spelling of anything.
 ///
-/// A value of this type means the file yielded something the app can put to
-/// Windows as a question. A file that yielded nothing askable produces no value
-/// at all; see <see cref="Services.IPackageIdentityReader"/>, which will not
-/// hand back a half-read identity for a caller to notice or fail to notice.
+/// A value of this type means the file yielded everything the app's questions
+/// about it need. A file that yielded less produces no value at all; see
+/// <see cref="Services.IPackageIdentityReader"/>, which will not hand back a
+/// half-read identity for a caller to notice or fail to notice.
 /// </summary>
 /// <param name="Code">
 /// The package's own code: a ProductCode for an installation package, a
@@ -21,16 +21,17 @@ namespace InstallerClean.Models;
 /// two readings of the same code are the same string and can key a cache.
 /// </param>
 /// <param name="IsPatch">
-/// Which of the two <paramref name="Code"/> is, because the question Windows is
-/// asked differs entirely: a product code can be asked about on its own, and a
-/// patch code cannot be asked about at all except through a product that might
-/// hold it.
+/// Which of the two <paramref name="Code"/> is, because the questions Windows is
+/// asked differ entirely: a product code can be asked about on its own, and the
+/// keyed patch read takes a product that might hold the patch as well as the patch
+/// code.
 /// </param>
 /// <param name="TargetProductCodes">
 /// For a patch, the product codes it declares it may be applied to, from its
 /// Template. Empty for an installation package, and never empty for a patch: a
-/// patch naming no target is a patch there is no way to ask about, so the reader
-/// treats it as unread rather than returning an identity that cannot be used.
+/// patch naming no target is one the keyed patch read cannot be put for, so the
+/// reader treats it as unread rather than returning an identity whose questions
+/// cannot all be put.
 /// </param>
 public readonly record struct PackageIdentity(
     string Code,

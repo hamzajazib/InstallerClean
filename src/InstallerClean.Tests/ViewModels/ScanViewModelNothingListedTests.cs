@@ -209,6 +209,26 @@ public class ScanViewModelNothingListedTests
     }
 
     [Fact]
+    public void The_line_counts_the_patch_copies_the_scan_could_not_settle()
+    {
+        // Three held: one patch copy kept for its patch's registrations, which the line
+        // leaves out, and two the scan could not settle, which it counts. The host reads
+        // counts and never a name, so the shared file names serve.
+        var vm = Driven(new ScanResult(
+            RemovableFiles: Files(4, "offered"),
+            RegisteredPackages: Array.Empty<RegisteredPackage>(),
+            RegisteredTotalBytes: 0,
+            WithheldFiles: Files(3, "held"),
+            WithheldBy: new WithholdingSplit(DeclaredPatchRegisteredCount: 1, DeclaredPatchUnestablishedCount: 2),
+            WithheldDeclaredPatchRegisteredBytes: 1024));
+
+        Assert.True(vm.HasNothingListed);
+        Assert.True(vm.NothingListedIsPerFile);
+        Assert.Equal(2, vm.NothingListedCount);
+        Assert.Equal(3, vm.RegisteredFileCount);
+    }
+
+    [Fact]
     public void The_count_leaves_out_the_files_kept_for_an_installed_program()
     {
         // Four held: one for an installed program, two whose identity would not read and

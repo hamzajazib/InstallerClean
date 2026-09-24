@@ -582,6 +582,7 @@ const MAP = {
   'Summary.RegisteredWindow.Missing.Plural': `{0} відсутніх`,
   'Summary.RegisteredWindow.Missing.Singular': `{0} відсутній`,
   'UpdateCheck.Failed.Unknown.NoLog': `Перевірка не вдалася з невідомої причини. Не вдалося записати журнал збоїв.`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

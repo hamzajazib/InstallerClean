@@ -109,6 +109,22 @@ public class CliHeldBackBesideAnOfferTests
     }
 
     [Fact]
+    public async Task Patch_copies_the_scan_could_not_settle_beside_a_live_offer_get_the_lead_line_and_their_reason()
+    {
+        // The patch half's unsettled arm is not silent. The lead counts both files and
+        // the reason under it is that arm's own, printed once under a heading printed
+        // once, so a reason falling back to the heading's text is caught.
+        var (_, stdout) = await Run(Scan(
+            offer: 2, withheld: 2,
+            split: new WithholdingSplit(DeclaredPatchUnestablishedCount: 2)));
+
+        Assert.Contains(HeldBackLead(Strings.Cli_NothingListedPerFile_Plural, 2),
+            stdout, StringComparison.Ordinal);
+        Assert.Equal(1, Occurrences(stdout, Strings.Cli_WithheldReasons_Header));
+        Assert.Equal(1, Occurrences(stdout, Program.LineFor(WithholdingSplitArm.DeclaredPatchUnestablished)));
+    }
+
+    [Fact]
     public async Task A_lead_beside_a_live_offer_counts_only_the_files_the_scan_could_not_settle()
     {
         // One held file declares an installed program and one could not be settled: the
@@ -195,6 +211,18 @@ public class CliHeldBackBesideAnOfferTests
     private static string HeldBackLead(string value, int count) =>
         string.Format(value, count, DisplayHelpers.PluraliseFile(count),
             DisplayHelpers.FormatSize(count * 1024L));
+
+    // How many times a line appears in the output, compared ordinally and without
+    // overlap.
+    private static int Occurrences(string text, string value)
+    {
+        var count = 0;
+        for (var at = text.IndexOf(value, StringComparison.Ordinal);
+             at >= 0;
+             at = text.IndexOf(value, at + value.Length, StringComparison.Ordinal))
+            count++;
+        return count;
+    }
 
     // WHICH LEAD A RUN GETS IS DECIDED BY THE SPLIT AND NOTHING ELSE, so the split is
     // the only thing these fixtures vary for it: ScanResult.Withholding compares the

@@ -468,6 +468,7 @@ const MAP = {
   'Summary.RegisteredWindow.Missing.Plural': `缺失 {0} 个`,
   'Summary.RegisteredWindow.Missing.Singular': `缺失 {0} 个`,
   'UpdateCheck.Failed.Unknown.NoLog': `检查因未知原因失败。无法写入崩溃日志。`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

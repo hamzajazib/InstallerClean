@@ -310,6 +310,33 @@ public class FileSystemScanServiceDeclaredProductTests
         Assert.Equal(WithholdingAccount.KeptWithoutNotice, result.Withholding);
     }
 
+    [Fact]
+    public async Task A_patch_copy_whose_registrations_cannot_be_found_is_kept_and_spoken_of()
+    {
+        // The scan that offers copy.msp, with the machine-wide patch enumeration refusing
+        // at its first row. The screen cannot find the registrations of patch Q, so
+        // copy.msp is kept, counted in the patch half's unsettled arm with no byte
+        // figure of its own, and among the files the held-back sentences speak of,
+        // with a reason line of its own.
+        var (msi, identities, files) = APatchCopyBesideTheRecordedCopy();
+        msi.RecordsPatchPackage(PatchQ, ProductA, null, MsiInstallContext.Machine, $@"{Folder}\cached.msp");
+        msi.PatchEnumerationAnswersAt(0, MsiError.AccessDenied);
+
+        var result = await ScanWithRecordedPatch(msi, identities, files);
+
+        Assert.Empty(result.RemovableFiles);
+        var kept = Assert.Single(result.WithheldFiles!);
+        Assert.Equal($@"{Folder}\copy.msp", kept.FullPath);
+        Assert.Equal(1, result.WithheldBy.DeclaredPatchUnestablishedCount);
+        Assert.Equal(result.WithheldFiles!.Count, result.WithheldBy.Total);
+        Assert.Equal(0, result.WithheldDeclaredPatchRegisteredBytes);
+        Assert.Equal(1, result.UnestablishedWithheldCount);
+        Assert.Equal(kept.SizeBytes, result.UnestablishedWithheldBytes);
+        Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
+        Assert.Equal(new[] { WithholdingSplitArm.DeclaredPatchUnestablished }, result.WithheldBy.ArmsFired);
+        Assert.True(result.NamedConditionsCoverEveryHeldBackFile);
+    }
+
     private const string PatchQ = "{33333333-3333-3333-3333-333333333333}";
 
     /// <summary>

@@ -224,6 +224,60 @@ public class ScanResultTests
     }
 
     [Fact]
+    public void A_patch_copy_the_scan_could_not_settle_is_spoken_of_with_a_line_of_its_own()
+    {
+        // The patch half's unsettled arm is not one of the silent arms. The per-file
+        // sentence counts and sizes its file, and it names a line of its own, so the
+        // reasons account for everything the sentence counts.
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msp", 1024)],
+            WithheldBy: new WithholdingSplit(DeclaredPatchUnestablishedCount: 1));
+
+        Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
+        Assert.True(result.HasWithholdingToReport);
+        Assert.Equal(1, result.UnestablishedWithheldCount);
+        Assert.Equal(1024, result.UnestablishedWithheldBytes);
+        Assert.Equal(new[] { WithholdingSplitArm.DeclaredPatchUnestablished }, result.WithheldBy.ArmsFired);
+        Assert.True(result.NamedConditionsCoverEveryHeldBackFile);
+    }
+
+    [Fact]
+    public void A_patch_copy_and_a_package_the_scan_could_not_settle_each_name_their_own_arm()
+    {
+        // Two members, not one shared: each half's unsettled arm is a different set of
+        // inabilities, and a line for one would state a cause over the other's file.
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msi", 1024), File("b.msp", 2048)],
+            WithheldBy: new WithholdingSplit(
+                DeclaredProductUnestablishedCount: 1, DeclaredPatchUnestablishedCount: 1));
+
+        Assert.Equal(2, result.UnestablishedWithheldCount);
+        Assert.Equal(new[]
+        {
+            WithholdingSplitArm.DeclaredProductUnestablished,
+            WithholdingSplitArm.DeclaredPatchUnestablished,
+        }, result.WithheldBy.ArmsFired);
+        Assert.True(result.NamedConditionsCoverEveryHeldBackFile);
+    }
+
+    [Fact]
+    public void A_patch_copy_the_scan_could_not_settle_is_counted_apart_from_one_kept_for_its_patch_s_registrations()
+    {
+        // One of each. The sentence counts and sizes the first alone, and only the
+        // first has a line.
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msp", 1024), File("b.msp", 2048)],
+            WithheldBy: new WithholdingSplit(DeclaredPatchRegisteredCount: 1, DeclaredPatchUnestablishedCount: 1),
+            WithheldDeclaredPatchRegisteredBytes: 1024);
+
+        Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
+        Assert.Equal(1, result.UnestablishedWithheldCount);
+        Assert.Equal(2048, result.UnestablishedWithheldBytes);
+        Assert.Equal(new[] { WithholdingSplitArm.DeclaredPatchUnestablished }, result.WithheldBy.ArmsFired);
+        Assert.True(result.NamedConditionsCoverEveryHeldBackFile);
+    }
+
+    [Fact]
     public void A_file_kept_for_its_age_beside_one_the_scan_could_not_settle_reads_as_per_file()
     {
         // The per-file sentence speaks of the file the scan could not settle, and its

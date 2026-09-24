@@ -558,6 +558,7 @@ const MAP = {
   'Summary.RegisteredWindow.Missing.Plural': `{0}개 누락`,
   'Summary.RegisteredWindow.Missing.Singular': `{0}개 누락`,
   'UpdateCheck.Failed.Unknown.NoLog': `알 수 없는 이유로 확인에 실패했습니다. 크래시 로그를 기록할 수 없었습니다.`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,
