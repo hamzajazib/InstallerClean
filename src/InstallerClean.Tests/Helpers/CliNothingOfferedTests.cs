@@ -13,9 +13,10 @@ namespace InstallerClean.Tests.Helpers;
 /// work method rather than through the strings.
 ///
 /// THREE MACHINES REACH THAT BRANCH AND THEY ARE NOT ONE THING. The folder held nothing
-/// this scan can offer, or only files it kept because they declare a program Windows
-/// still has installed; a rule about the machine's records emptied the walk-derived
-/// offer in one go; or the files were judged one at a time and none could be cleared.
+/// this scan can offer, or only files it keeps back without a notice, such as a file
+/// declaring a program Windows still has installed; a rule about the machine's records
+/// emptied the walk-derived offer in one go; or the files were judged one at a time and
+/// none could be cleared.
 /// The clean line is printed for the first alone, and the two withholding sentences
 /// each name something the other's machine did not meet.
 ///
@@ -76,6 +77,29 @@ public class CliNothingOfferedTests
         Assert.Contains(Strings.Cli_FoundNoOrphans, stdout, StringComparison.Ordinal);
         // By each sentence's opening words rather than its formatted whole, so a line
         // printed with any count or size at all is caught.
+        foreach (var line in new[]
+                 {
+                     Strings.Cli_NothingOfferedPerFile_Singular, Strings.Cli_NothingOfferedPerFile_Plural,
+                     Strings.Cli_NothingOffered_Singular, Strings.Cli_NothingOffered_Plural,
+                     Strings.Cli_NothingListedPerFile_Singular, Strings.Cli_NothingListedPerFile_Plural,
+                 })
+            Assert.DoesNotContain(Opening(line), stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain(Strings.Cli_WithheldReasons_Header, stdout, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_run_whose_every_held_file_is_kept_for_its_patch_s_registrations_gets_the_clean_line()
+    {
+        // Every held file is a patch copy kept because Windows holds a registration of
+        // the patch it declares, so the files are left alone like a file kept for an
+        // installed program and the run prints the clean line.
+        var (exit, stdout) = await Run(Scan(
+            withheld: 2,
+            split: new WithholdingSplit(DeclaredPatchRegisteredCount: 2),
+            patchBytes: 2048));
+
+        Assert.Equal(CliExitCode.Ok, exit);
+        Assert.Contains(Strings.Cli_FoundNoOrphans, stdout, StringComparison.Ordinal);
         foreach (var line in new[]
                  {
                      Strings.Cli_NothingOfferedPerFile_Singular, Strings.Cli_NothingOfferedPerFile_Plural,
@@ -261,14 +285,15 @@ public class CliNothingOfferedTests
     private static ScanResult Scan(
         int withheld, WithholdingSplit split,
         bool wholesaleFlag = false, EnumerationCensus census = default, long positiveBytes = 0,
-        long underADayOldBytes = 0) =>
+        long underADayOldBytes = 0, long patchBytes = 0) =>
         new(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
             Census: census,
             WithheldFiles: Held(withheld),
             WalkOfferWithheldWholesale: wholesaleFlag,
             WithheldBy: split,
             WithheldDeclaredProductInstalledBytes: positiveBytes,
-            WithheldUnderADayOldBytes: underADayOldBytes);
+            WithheldUnderADayOldBytes: underADayOldBytes,
+            WithheldDeclaredPatchRegisteredBytes: patchBytes);
 
     private static OrphanedFile[] Held(int n) =>
         n switch

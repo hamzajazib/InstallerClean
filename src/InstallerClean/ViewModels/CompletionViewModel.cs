@@ -272,10 +272,10 @@ public partial class CompletionViewModel : ObservableObject
     /// This says the app could not establish enough to offer anything, on a machine
     /// whose folder may be full of files nobody has vouched for. The caller chooses
     /// between them from the walk-derived withheld list alone, through
-    /// <see cref="ScanResult.HasWithholdingToReport"/>, and on that list two kinds of
+    /// <see cref="ScanResult.HasWithholdingToReport"/>, and on that list three kinds of
     /// file are kept without choosing this screen: a file that declares a program
-    /// Windows still holds a record of, and a file under a day old. Any other file on
-    /// the list chooses it.
+    /// Windows still holds a record of, a file under a day old, and a patch copy whose
+    /// patch Windows holds a registration of. Any other file on the list chooses it.
     ///
     /// ONE SCREEN WITH TWO BODIES, CHOSEN BY <paramref name="account"/> AND NOT HERE.
     /// The two say what the scan could not establish, and they could not establish
@@ -306,8 +306,9 @@ public partial class CompletionViewModel : ObservableObject
     /// <see cref="ScanResult.UnestablishedWithheldBytes"/>. The command line reads the
     /// same two, and the main window's held-back line the same count.
     ///
-    /// A FILE THE DECLARED-PRODUCT-INSTALLED OR UNDER-A-DAY-OLD ARM KEPT IS NOT AMONG
-    /// THEM. A file the age check kept because its age was not established is.
+    /// A FILE THE DECLARED-PRODUCT-INSTALLED, UNDER-A-DAY-OLD OR DECLARED-PATCH-REGISTERED
+    /// ARM KEPT IS NOT AMONG THEM. A file the age check kept because its age was not
+    /// established is.
     /// </param>
     /// <param name="scannedFileCount">
     /// The receipt's own count, on the terms <see cref="ShowAllClear"/> sets out: how

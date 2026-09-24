@@ -10,16 +10,16 @@ namespace InstallerClean.Tests.Services;
 /// than built by hand.
 ///
 /// THE POINT IS THE COMPLETENESS ASSERTION AND NOT THE INDIVIDUAL COUNTS. Four
-/// decisions put a file on the withheld list, and the seven counts are a partition of
-/// it. A partition stays one until somebody adds a branch, and an eighth arm
-/// arriving later would appear in none of the seven while the list grew underneath
-/// them: seven counts that no longer sum to the list are the only thing that says so.
-/// Every test here asserts the sum as well as its own arm, so a fixture reaching a
-/// new decision fails whichever arm it was written for.
+/// decisions put a file on the withheld list, and the eight counts are a partition of
+/// it. A partition stays one until somebody adds a branch, and a ninth arm arriving
+/// later would appear in none of the eight while the list grew underneath them: eight
+/// counts that no longer sum to the list are the only thing that says so. Every test
+/// here asserts the sum as well as its own arm, so a fixture reaching a new decision
+/// fails whichever arm it was written for.
 ///
 /// EACH ARM IS REACHED ON ITS OWN, WHICH IS WHAT THE DECISIONS MAKE POSSIBLE. The
 /// wholesale arm skips the per-file screen and the age check entirely, so no one scan
-/// can exercise all seven, and a fixture claiming to would be describing a machine that
+/// can exercise all eight, and a fixture claiming to would be describing a machine that
 /// cannot exist.
 /// </summary>
 public class WithholdingSplitTests
@@ -27,9 +27,10 @@ public class WithholdingSplitTests
     private const string Folder = @"C:\Windows\Installer";
     private const string ProductA = "{11111111-1111-1111-1111-111111111111}";
     private const string ProductB = "{22222222-2222-2222-2222-222222222222}";
+    private const string PatchQ = "{33333333-3333-3333-3333-333333333333}";
 
     /// <summary>
-    /// The one thing every test here asserts beside its own arm: the five account for
+    /// The one thing every test here asserts beside its own arm: the arms account for
     /// the list exactly. Named rather than inlined so a test that forgets it is
     /// visible as a test that does not call it.
     /// </summary>
@@ -62,7 +63,7 @@ public class WithholdingSplitTests
     {
         // The census says a product may be installed more than once, which is one of
         // the three conditions that keep the whole walk-derived offer back. The screen
-        // is never reached on this path, so its two arms must read zero.
+        // is never reached on this path, so its arms must read zero.
         var result = await Scan(
             walked: new[] { $@"{Folder}\a.msi", $@"{Folder}\b.msi" },
             registered: Array.Empty<string>(),
@@ -72,18 +73,21 @@ public class WithholdingSplitTests
         Assert.Equal(2, result.WithheldBy.WholesaleCount);
         Assert.Equal(0, result.WithheldBy.DeclaredProductInstalledCount);
         Assert.Equal(0, result.WithheldBy.DeclaredProductUnestablishedCount);
+        Assert.Equal(0, result.WithheldBy.DeclaredPatchRegisteredCount);
         AssertPartitions(result);
     }
 
     [Fact]
-    public async Task The_screens_two_withholding_verdicts_are_counted_apart()
+    public async Task The_screens_withholding_verdicts_are_each_counted_apart()
     {
-        // Both arms in one scan, because the screen answers per file and these two
-        // answers are opposite findings: one is Windows positively holding the
-        // product, the other is nothing having been settled at all. A single count
-        // over the pair would state a cause that is false of half of it.
+        // All three arms in one scan, because the screen answers per file and the
+        // three answers are different findings: Windows positively holding the
+        // product, nothing having been settled at all, and Windows holding a
+        // registration of the patch a patch copy declares. A single count over any
+        // two would state a cause that is false of one of them.
         var identities = new ScriptedPackageIdentities();
         identities.Declares($@"{Folder}\held.msi", ProductA);
+        identities.DeclaresPatch($@"{Folder}\patch.msp", PatchQ, ProductA);
         // The second file has to be scripted as yielding nothing rather than left
         // unscripted. An unscripted path throws by design, so the arm this test is
         // named for would never be reached; YieldsNothing is the reader answering
@@ -93,14 +97,16 @@ public class WithholdingSplitTests
 
         var msi = new ScriptedMsiProducts();
         msi.Installed(ProductA);
+        msi.HoldsPatch(PatchQ, ProductA, null, InstallerClean.Interop.MsiInstallContext.Machine);
 
         var result = await Scan(
-            walked: new[] { $@"{Folder}\held.msi", $@"{Folder}\unreadable.msi" },
+            walked: new[] { $@"{Folder}\held.msi", $@"{Folder}\unreadable.msi", $@"{Folder}\patch.msp" },
             registered: Array.Empty<string>(),
             screen: new DeclaredProductCheck(msi, identities));
 
         Assert.Equal(1, result.WithheldBy.DeclaredProductInstalledCount);
         Assert.Equal(1, result.WithheldBy.DeclaredProductUnestablishedCount);
+        Assert.Equal(1, result.WithheldBy.DeclaredPatchRegisteredCount);
         Assert.Equal(0, result.WithheldBy.WholesaleCount);
         AssertPartitions(result);
     }

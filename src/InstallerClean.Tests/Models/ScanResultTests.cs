@@ -141,7 +141,7 @@ public class ScanResultTests
     [Fact]
     public void Files_kept_for_an_installed_program_and_for_their_age_together_have_nothing_to_report()
     {
-        // The two silent arms between them account for the list.
+        // Two of the silent arms between them account for the list.
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
             WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1, UnderADayOldCount: 1),
@@ -152,6 +152,75 @@ public class ScanResultTests
         Assert.False(result.HasWithholdingToReport);
         Assert.Equal(0, result.UnestablishedWithheldCount);
         Assert.Equal(0, result.UnestablishedWithheldBytes);
+    }
+
+    [Fact]
+    public void Files_all_kept_for_their_patch_s_registrations_have_nothing_to_report()
+    {
+        // A patch copy kept because Windows holds a registration of the patch it declares
+        // takes the reading a file kept for an installed program takes, and leaves the
+        // held-back sentences nothing to count.
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msp", 1024), File("b.msp", 2048)],
+            WithheldBy: new WithholdingSplit(DeclaredPatchRegisteredCount: 2),
+            WithheldDeclaredPatchRegisteredBytes: 3072);
+
+        Assert.Equal(WithholdingAccount.KeptWithoutNotice, result.Withholding);
+        Assert.False(result.HasWithholdingToReport);
+        Assert.Equal(0, result.UnestablishedWithheldCount);
+        Assert.Equal(0, result.UnestablishedWithheldBytes);
+        Assert.Empty(result.WithheldBy.ArmsFired);
+    }
+
+    [Fact]
+    public void Files_kept_by_the_three_silent_arms_together_have_nothing_to_report()
+    {
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048), File("c.msp", 4096)],
+            WithheldBy: new WithholdingSplit(
+                DeclaredProductInstalledCount: 1, UnderADayOldCount: 1, DeclaredPatchRegisteredCount: 1),
+            WithheldDeclaredProductInstalledBytes: 1024,
+            WithheldUnderADayOldBytes: 2048,
+            WithheldDeclaredPatchRegisteredBytes: 4096);
+
+        Assert.Equal(WithholdingAccount.KeptWithoutNotice, result.Withholding);
+        Assert.False(result.HasWithholdingToReport);
+        Assert.Equal(0, result.UnestablishedWithheldCount);
+        Assert.Equal(0, result.UnestablishedWithheldBytes);
+    }
+
+    [Fact]
+    public void A_file_kept_for_its_patch_s_registrations_beside_one_the_scan_could_not_settle_reads_as_per_file()
+    {
+        // The per-file sentence speaks of the file the scan could not settle, and its
+        // count and size leave the patch copy out.
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msp", 1024), File("b.msi", 2048)],
+            WithheldBy: new WithholdingSplit(DeclaredPatchRegisteredCount: 1, IdentityUnestablishedCount: 1),
+            WithheldDeclaredPatchRegisteredBytes: 1024);
+
+        Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
+        Assert.True(result.HasWithholdingToReport);
+        Assert.Equal(1, result.UnestablishedWithheldCount);
+        Assert.Equal(2048, result.UnestablishedWithheldBytes);
+        Assert.Equal(new[] { WithholdingSplitArm.IdentityUnestablished }, result.WithheldBy.ArmsFired);
+        Assert.True(result.NamedConditionsCoverEveryHeldBackFile);
+    }
+
+    [Fact]
+    public void A_withheld_file_the_split_did_not_count_keeps_a_run_off_the_silent_reading_beside_a_patch_hold()
+    {
+        // THE MUST-MISS FOR THE DECLARED-PATCH-REGISTERED ARM, on the rule the must-miss
+        // tests for the other two silent arms pin: the silent arms have to account for
+        // the whole list, and a file none of them counted keeps the run per-file.
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msp", 1024), File("b.msi", 2048)],
+            WithheldBy: new WithholdingSplit(DeclaredPatchRegisteredCount: 1),
+            WithheldDeclaredPatchRegisteredBytes: 1024);
+
+        Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
+        Assert.Equal(1, result.UnestablishedWithheldCount);
+        Assert.Equal(2048, result.UnestablishedWithheldBytes);
     }
 
     [Fact]
@@ -175,8 +244,8 @@ public class ScanResultTests
     public void A_withheld_file_the_split_did_not_count_keeps_a_run_off_the_silent_reading_beside_an_age_hold()
     {
         // THE MUST-MISS FOR THE AGE ARM, on the same rule as the one below for the
-        // installed-program arm: the two silent arms have to account for the whole
-        // list, and a file neither counted keeps the run per-file.
+        // installed-program arm: the silent arms have to account for the whole list,
+        // and a file none of them counted keeps the run per-file.
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
             WithheldBy: new WithholdingSplit(UnderADayOldCount: 1),
@@ -196,9 +265,9 @@ public class ScanResultTests
     [Fact]
     public void A_file_whose_age_was_not_established_is_spoken_of_per_file()
     {
-        // Kept by the age check with no age read. Not one of the two silent arms, so
-        // it is among the files the held-back sentence counts, and no reason line
-        // speaks for it.
+        // Kept by the age check with no age read. Not one of the silent arms, so it
+        // is among the files the held-back sentence counts, and no reason line speaks
+        // for it.
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024)],
             WithheldBy: new WithholdingSplit(AgeUnestablishedCount: 1));

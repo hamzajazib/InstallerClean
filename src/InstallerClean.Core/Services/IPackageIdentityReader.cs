@@ -25,14 +25,16 @@ public interface IPackageIdentityReader
     /// ask about. <paramref name="detail"/> carries the difference for the crash
     /// log alone.
     ///
-    /// THE CALLER MUST HAVE GATED THE PATH. This opens the file named and asks it
-    /// what it is, so a path that resolves somewhere else answers about somewhere
-    /// else. Every production call site runs
+    /// THE CALLER DECIDES WHAT THE PATH IS TAKEN TO NAME. This opens the file named
+    /// and asks it what it is, so a path that resolves somewhere else answers about
+    /// somewhere else. A candidate from the folder walk has been through
     /// <see cref="CandidateGuard.CheckSafeToRemove"/> against the real filesystem
-    /// first, which is the app's sanctioned source gate and settles reparse
-    /// points and containment together. Repeating that check here would be a
-    /// second real-filesystem round trip per candidate, on the one pass whose
-    /// cost is measured, closing nothing the gate leaves open.
+    /// before it is read, which is the app's sanctioned source gate and settles
+    /// reparse points and containment together. A path recorded by Windows Installer
+    /// is read as the file it opens, which is the file Windows Installer opens
+    /// through that record. Repeating the gate here would be a second
+    /// real-filesystem round trip for every walked candidate, closing nothing the
+    /// gate leaves open.
     /// </summary>
     /// <param name="isPatch">
     /// Which reading to take, decided by the caller from the extension rather

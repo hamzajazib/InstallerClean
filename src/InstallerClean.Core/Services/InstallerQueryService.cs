@@ -1468,7 +1468,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // run to a clean end, and that withholds rather than reading as nothing
         // to report: an enumeration that came back empty because it refused,
         // taken as an answer, is the exact fault this whole pass exists to close.
-        var holders = EnumeratePatchHoldersAcrossAllProducts(ct);
+        var holders = EnumeratePatchHoldersAcrossAllProducts(_msi, ct);
 
         // ROUTE B, READ ONCE PER PATH AND SHARED BY BOTH PASSES BELOW. The file names
         // the products it may be applied to, so it answers about a product no
@@ -1661,9 +1661,17 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// or refused enumeration read as "no other product holds it" is the fault
     /// this pass exists to close, so nothing here distinguishes a refusal from an
     /// empty machine.
+    ///
+    /// STATIC AND SHARED RATHER THAN COPIED, for the reason
+    /// <see cref="ResolveProductInstances"/> is: <see cref="DeclaredProductCheck"/>
+    /// finds the registrations of a patch a cached copy declares through the same
+    /// walk, and what is worth sharing is which returns end the list and which leave
+    /// it short. A second copy of that is a second place for a return to be read as
+    /// the end of the list, and a list taken as ended short of its end is missing the
+    /// registrations past that point.
     /// </summary>
-    private Dictionary<string, List<(string ProductCode, string? Sid, MsiInstallContext Context)>>?
-        EnumeratePatchHoldersAcrossAllProducts(CancellationToken ct)
+    internal static Dictionary<string, List<(string ProductCode, string? Sid, MsiInstallContext Context)>>?
+        EnumeratePatchHoldersAcrossAllProducts(IMsiApi msi, CancellationToken ct)
     {
         var holders = new Dictionary<string, List<(string, string?, MsiInstallContext)>>(
             StringComparer.OrdinalIgnoreCase);
@@ -1684,7 +1692,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
             var sidBuffer = new char[SidBufferLength];
             uint sidLength = SidBufferLength;
 
-            var error = _msi.EnumPatches(
+            var error = msi.EnumPatches(
                 productCode: null,
                 userSid: AllUsersSid,
                 context: MsiInstallContext.All,
@@ -1702,7 +1710,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
                 // terminator, so the retry is that plus one.
                 sidLength++;
                 sidBuffer = new char[sidLength];
-                error = _msi.EnumPatches(
+                error = msi.EnumPatches(
                     productCode: null,
                     userSid: AllUsersSid,
                     context: MsiInstallContext.All,

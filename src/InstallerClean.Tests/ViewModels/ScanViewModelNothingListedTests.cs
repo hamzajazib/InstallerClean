@@ -190,6 +190,25 @@ public class ScanViewModelNothingListedTests
     }
 
     [Fact]
+    public void The_line_is_off_where_every_held_file_is_kept_for_its_patch_s_registrations()
+    {
+        // Every held file is a patch copy kept because Windows holds a registration of
+        // the patch it declares, so the line has nothing to say. The files stay among
+        // those left alone.
+        var vm = Driven(new ScanResult(
+            RemovableFiles: Files(4, "offered"),
+            RegisteredPackages: Array.Empty<RegisteredPackage>(),
+            RegisteredTotalBytes: 0,
+            WithheldFiles: Files(3, "held"),
+            WithheldBy: new WithholdingSplit(DeclaredPatchRegisteredCount: 3),
+            WithheldDeclaredPatchRegisteredBytes: 3072));
+
+        Assert.False(vm.HasNothingListed);
+        Assert.Equal(0, vm.NothingListedCount);
+        Assert.Equal(3, vm.RegisteredFileCount);
+    }
+
+    [Fact]
     public void The_count_leaves_out_the_files_kept_for_an_installed_program()
     {
         // Four held: one for an installed program, two whose identity would not read and

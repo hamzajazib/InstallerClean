@@ -242,46 +242,107 @@ public class FileSystemScanServiceDeclaredProductTests
         Assert.Equal($@"{Folder}\held.msi", kept.FullPath);
     }
 
-    // ---- The restriction ----
+    // ---- A patch copy and its patch's registrations ----
 
     [Fact]
-    public async Task A_patch_candidate_is_offered_beside_a_package_the_screen_keeps()
+    public async Task A_patch_copy_whose_registration_records_no_copy_is_kept_without_a_notice()
     {
-        // THE CONTROL ON THE PRODUCT-PACKAGE RESTRICTION, and the fixture is
-        // hostile on purpose: the identity reader would throw if the patch were
-        // read at all, so the test can only pass if the screen never touched it.
-        // The package beside it is kept by the same screen in the same run, so the
-        // patch being offered is the restriction working and not the screen being
-        // absent.
-        //
-        // Asked of a patch, the keeping arm is true of every registered superseded
-        // patch on every machine, which is the whole class the offer's other half
-        // is made of.
+        // copy.msp declares patch Q, which Windows holds registered against product A,
+        // and that registration records no cached copy. The screen cannot see which
+        // copy the registration opens, so copy.msp could be it. It is kept the way a
+        // file declaring an installed program is: counted in its own arm with its
+        // size, and left out of the held-back sentences.
+        var (msi, identities, files) = APatchCopyBesideTheRecordedCopy();
+        msi.RecordsPatchPackage(PatchQ, ProductA, null, MsiInstallContext.Machine, "");
+
+        var result = await ScanWithRecordedPatch(msi, identities, files);
+
+        Assert.Empty(result.RemovableFiles);
+        var kept = Assert.Single(result.WithheldFiles!);
+        Assert.Equal($@"{Folder}\copy.msp", kept.FullPath);
+        Assert.Equal(1, result.WithheldBy.DeclaredPatchRegisteredCount);
+        Assert.Equal(result.WithheldFiles!.Count, result.WithheldBy.Total);
+        Assert.Equal(kept.SizeBytes, result.WithheldDeclaredPatchRegisteredBytes);
+        Assert.Equal(0, result.UnestablishedWithheldCount);
+        Assert.Equal(0, result.UnestablishedWithheldBytes);
+        Assert.Equal(WithholdingAccount.KeptWithoutNotice, result.Withholding);
+        Assert.False(result.HasWithholdingToReport);
+    }
+
+    [Fact]
+    public async Task A_patch_copy_beside_the_copy_its_registration_records_is_offered()
+    {
+        // The pair of the test above, the same two files and the same screen. The
+        // registration records cached.msp, which the scan's own path comparison claims,
+        // and the screen finds it present, a different file from copy.msp, and patch Q.
+        var (msi, identities, files) = APatchCopyBesideTheRecordedCopy();
+        msi.RecordsPatchPackage(PatchQ, ProductA, null, MsiInstallContext.Machine, $@"{Folder}\cached.msp");
+
+        var result = await ScanWithRecordedPatch(msi, identities, files);
+
+        var offered = Assert.Single(result.RemovableFiles);
+        Assert.Equal($@"{Folder}\copy.msp", offered.FullPath);
+        Assert.Empty(result.WithheldFiles!);
+        Assert.Contains($@"{Folder}\copy.msp", identities.PatchReads);
+    }
+
+    private const string PatchQ = "{33333333-3333-3333-3333-333333333333}";
+
+    /// <summary>
+    /// Patch Q, declaring product A as its target, registered against A's one
+    /// per-machine installation. copy.msp and cached.msp both declare Q and open as two
+    /// different files. What the registration records is each test's to script.
+    /// </summary>
+    private static (ScriptedMsiProducts Msi, ScriptedPackageIdentities Identities, ScriptedFileIdentities Files)
+        APatchCopyBesideTheRecordedCopy()
+    {
         var identities = new ScriptedPackageIdentities();
-        identities.Declares($@"{Folder}\held.msi", ProductA);   // the patch is deliberately unscripted
+        identities.DeclaresPatch($@"{Folder}\copy.msp", PatchQ, ProductA);
+        identities.DeclaresPatch($@"{Folder}\cached.msp", PatchQ, ProductA);
 
         var msi = new ScriptedMsiProducts();
         msi.Installed(ProductA);
+        msi.HoldsPatch(PatchQ, ProductA, null, MsiInstallContext.Machine);
 
-        var result = await Scan(new[] { $@"{Folder}\orphan.msp", $@"{Folder}\held.msi" },
-            msi, identities);
+        var files = new ScriptedFileIdentities();
+        files.Opens($@"{Folder}\copy.msp", 1);
+        files.Opens($@"{Folder}\cached.msp", 2);
 
-        var offered = Assert.Single(result.RemovableFiles);
-        Assert.Equal($@"{Folder}\orphan.msp", offered.FullPath);
-        Assert.Single(result.WithheldFiles!);
-        Assert.DoesNotContain($@"{Folder}\orphan.msp", identities.Reads);
+        return (msi, identities, files);
     }
+
+    /// <summary>
+    /// A scan of a folder holding copy.msp and cached.msp, where cached.msp is
+    /// registered as a patch applied to product A and copy.msp is not registered, with
+    /// the screen given both file readers.
+    /// </summary>
+    private static Task<ScanResult> ScanWithRecordedPatch(
+        ScriptedMsiProducts msi,
+        ScriptedPackageIdentities identities,
+        ScriptedFileIdentities files)
+    {
+        var fs = FolderHolding($@"{Folder}\copy.msp", $@"{Folder}\cached.msp");
+        var registered = new[] { new RegisteredPackage($@"{Folder}\cached.msp", "Product A", ProductA, PatchState: 1) };
+
+        return new FileSystemScanService(
+            QueryReturning(registered), fs, null,
+            new[] { $@"{Folder}\copy.msp", $@"{Folder}\cached.msp" }, null, null,
+            new DeclaredProductCheck(msi, identities, files, fs))
+            .ScanAsync();
+    }
+
+    // ---- The superseded half ----
 
     [Fact]
     public async Task A_registered_superseded_row_is_never_put_to_the_screen()
     {
-        // The same restriction from the side that matters most. A superseded patch
-        // reaches the offer from the REGISTERED set without ever having been a
-        // walk candidate, so the screen should not see it, and this asserts that
-        // directly rather than through whatever the superseded branch currently
-        // does with the row. The reader throws on any path no test scripted, so a
-        // screen that reached for it would fail the run rather than quietly
-        // withhold.
+        // A superseded patch reaches the offer from the REGISTERED set without ever
+        // having been a walk candidate, so the screen does not see it, and this
+        // asserts that directly rather than through whatever the superseded branch
+        // does with the row. It matters because the screen keeps a registered patch's
+        // own cached file: that patch's registrations record that very file. The
+        // reader throws on any path no test scripted, so a screen that reached for it
+        // would fail the run rather than quietly withhold.
         var registered = new List<RegisteredPackage>
         {
             new($@"{Folder}\superseded.msp", "Test Product", ProductB, PatchState: 2),

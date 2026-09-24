@@ -427,11 +427,13 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // it declares itself to belong to, puts that product code to Windows, and
         // keeps the file back where Windows still holds a record of it and some
         // installation of it records no package shown to be another present file,
-        // or where the question could not be settled. Product packages only, for a
-        // reason that is load-bearing rather than incidental; see
-        // IDeclaredProductCheck. The age check after it also starts at the file, and
-        // asks it when it was last created, written or changed. Both can subtract
-        // from the offer and do nothing else, so what survives all four is the offer.
+        // or where the question could not be settled. It asks a patch which patch it
+        // declares itself to be, finds the registrations Windows holds of that patch,
+        // and keeps the file back where some registration records no cached copy
+        // shown to be another present file; see IDeclaredProductCheck. The age check
+        // after it also starts at the file, and asks it when it was last created,
+        // written or changed. Both can subtract from the offer and do nothing else, so
+        // what survives all four is the offer.
         //
         // THE CLASS WHERE A REGISTRATION EXISTS AND THE SCAN FAILED TO MATCH IT TO
         // ITS FILE is reached by four separate mechanisms besides, which is the
@@ -448,29 +450,25 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // the set.
         //
         // ALL FOUR OF THOSE READ A REGISTRATION, WHICH IS WHY THE SCREEN IS NOT ONE
-        // MORE OF THEM. Where a product's records hold no path to match, all four
-        // have nothing to work from and nothing records the gap: a LocalPackage
-        // value that is present and zero-length merges no claim AND sets no
-        // shortfall, so the enumeration reports itself complete while short of a
-        // claim, and the product's cached package is walked, matched against
-        // nothing and offered while the product is installed. Asking the file is
-        // the only view of that which does not go through the records.
+        // MORE OF THEM. Where a product's or a patch's records hold no path to
+        // match, all four have nothing to work from and nothing records the gap: a
+        // LocalPackage value that is present and zero-length merges no claim AND
+        // sets no shortfall, so the enumeration reports itself complete while short
+        // of a claim, and the cached file is walked and matched against nothing.
+        // Asking the file is the only view of that which does not go through the
+        // records, and the screen is what keeps such a file.
         //
-        // WHAT IS LEFT UNGUARDED, stated so a reader can find it rather than
-        // rediscover it: a registration whose recorded path resolves to nothing
-        // where that is not a read failure, so no counter fires and no gate
-        // refuses, while the file it means sits in the folder under a spelling the
-        // identity match cannot reach because there is nothing to open. Never
-        // observed, on any machine.
-        //
-        // THE SCREEN NARROWS THAT ONE WITHOUT CLOSING IT, and the half it leaves is
-        // the half to remember. Where such a candidate is an installation package
-        // the screen reaches it, having no interest in the registration that could
-        // not be resolved: it either finds the declared product installed with a
-        // recorded package that is not present, or fails to settle the question,
-        // and both keep the file. Where the candidate is a PATCH the screen does
-        // not run at all, so that half stands exactly as the paragraph above
-        // describes it.
+        // A REGISTRATION WHOSE RECORDED PATH RESOLVES TO NOTHING, WHERE THAT IS NOT A
+        // READ FAILURE, IS REACHED BY THE SCREEN. No counter fires and no gate
+        // refuses for it, and the file it means can sit in the folder under a
+        // spelling the identity match cannot reach, there being nothing to open. The
+        // screen starts at that file and has no interest in the registration that
+        // could not be resolved. Where the file is an installation package, the
+        // screen either finds the declared product installed with a recorded package
+        // that is not present, or fails to settle the question, and both keep the
+        // file. Where the file is a patch and the screen establishes the patch's
+        // registrations, it finds that registration's recorded copy not present and
+        // keeps the file.
         //
         // SO THE FOUR ABOVE ARE NOT BELT AND BRACES. This release alone fixed six
         // separate faults in that class, four of them live in every shipped
@@ -605,7 +603,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         }
         else
         {
-            WithholdCandidatesTheirOwnProductStillClaims(
+            WithholdCandidatesByWhatTheyDeclare(
                 unclaimedByPath, withheld, withheldBy, cacheRoot, cancellationToken,
                 (ex, cause) => refusalLog.Record(ex, cause));
 
@@ -1066,11 +1064,12 @@ public sealed class FileSystemScanService : IFileSystemScanService
             candidateIdentityReads,
             // Which decision took each file on the list two lines above. Read here
             // rather than derived, and held to that list's own length by a test:
-            // seven counts that no longer sum to it mean an eighth arm has been
+            // eight counts that no longer sum to it mean a ninth arm has been
             // added and is reported by none of them.
             withheldBy.Taken(),
             withheldBy.DeclaredProductInstalledBytes,
-            withheldBy.UnderADayOldBytes);
+            withheldBy.UnderADayOldBytes,
+            withheldBy.DeclaredPatchRegisteredBytes);
     }
 
     /// <summary>
@@ -1270,6 +1269,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
         private int _underADayOld;
         private long _underADayOldBytes;
         private int _ageUnestablished;
+        private int _declaredPatchRegistered;
+        private long _declaredPatchRegisteredBytes;
 
         internal void IdentityUnestablished() => _identityUnestablished++;
 
@@ -1292,12 +1293,12 @@ public sealed class FileSystemScanService : IFileSystemScanService
         internal void ScreenUnanswered(int count) => _screenUnanswered += count;
 
         /// <summary>
-        /// The screen's own two withholding verdicts, named one by one.
+        /// The screen's own withholding verdicts, named one by one.
         ///
-        /// NEITHER IS A CATCH-ALL, AND THAT IS THE POINT. <c>Withholds</c> is written
+        /// NONE IS A CATCH-ALL, AND THAT IS THE POINT. <c>Withholds</c> is written
         /// as the complement of the verdicts that let a file through, so a member added
         /// to the enum withholds by default and would arrive here unnamed. Counting it
-        /// under either of these would put a cause on it that nobody established, so an
+        /// under any of these would put a cause on it that nobody established, so an
         /// unnamed verdict counts nowhere and the split falls short of the list it
         /// splits. Such a member wants an arm of its own, and
         /// WithholdingSplitTallyTests walks the enum's withholding members against this
@@ -1314,6 +1315,10 @@ public sealed class FileSystemScanService : IFileSystemScanService
                 case DeclaredProductOutcome.Unestablished:
                     _declaredProductUnestablished++;
                     break;
+                case DeclaredProductOutcome.DeclaredPatchRegistered:
+                    _declaredPatchRegistered++;
+                    _declaredPatchRegisteredBytes += sizeBytes;
+                    break;
             }
         }
 
@@ -1324,6 +1329,12 @@ public sealed class FileSystemScanService : IFileSystemScanService
         /// </summary>
         internal long DeclaredProductInstalledBytes => _declaredProductInstalledBytes;
 
+        /// <summary>
+        /// The size of the files counted under the declared-patch-registered arm,
+        /// carried beside the split for the reason <see cref="DeclaredProductInstalledBytes"/> is.
+        /// </summary>
+        internal long DeclaredPatchRegisteredBytes => _declaredPatchRegisteredBytes;
+
         internal WithholdingSplit Taken() => new(
             _identityUnestablished,
             _wholesale,
@@ -1331,7 +1342,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
             _declaredProductUnestablished,
             _screenUnanswered,
             _underADayOld,
-            _ageUnestablished);
+            _ageUnestablished,
+            _declaredPatchRegistered);
     }
 
     /// <summary>
@@ -1339,21 +1351,23 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// <paramref name="withheld"/> every installation package whose own declared
     /// product Windows still holds a record of, unless every package each
     /// installation of that product opens, cached or original, is shown to be a
-    /// different file, and every one this pass could not settle. Both lists keep walk
-    /// order.
+    /// different file; every installation package this pass could not settle; and
+    /// every patch whose own declared patch Windows holds a registration of, unless
+    /// the cached copy every registration records is shown to be a different file.
+    /// Both lists keep walk order.
     ///
     /// THE THIRD SOURCE, AND IT IS THE ONLY ONE THAT STARTS AT THE FILE. The two
     /// comparisons above it start at a registration and work towards a file, and
-    /// both of them read the same recorded LocalPackage value, so a product whose
-    /// records hold no value to read has nothing for either to find and nothing
-    /// records the gap. See <see cref="IDeclaredProductCheck"/> for the mechanism
-    /// in full; what it means here is that a product package can be walked and
-    /// matched against nothing while its product is installed and names no
-    /// package, and this is where such a file is kept.
+    /// both of them read the same recorded LocalPackage value, so a product or a
+    /// patch whose records hold no value to read has nothing for either to find and
+    /// nothing records the gap. See <see cref="IDeclaredProductCheck"/> for the
+    /// mechanism in full; what it means here is that a cached file can be walked and
+    /// matched against nothing while its product is installed or its patch
+    /// registered, and this is where such a file is kept.
     ///
-    /// IT CAN ONLY EVER SUBTRACT FROM THE OFFER. Nothing it returns adds a file,
-    /// clears a withholding made anywhere else, or reaches a patch at all, so a
-    /// scan with no screen injected offers what the rest of the scan decides.
+    /// IT CAN ONLY EVER SUBTRACT FROM THE OFFER. Nothing it returns adds a file or
+    /// clears a withholding made anywhere else, so a scan with no screen injected
+    /// offers what the rest of the scan decides.
     ///
     /// A WITHHELD CANDIDATE CARRIES NO CAUSE AND MUST NOT ACQUIRE ONE. It joins a
     /// list that already holds files kept back for a different reason entirely,
@@ -1363,7 +1377,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// behind an unestablished verdict have no honest superordinate between them
     /// either.
     /// </summary>
-    private void WithholdCandidatesTheirOwnProductStillClaims(
+    private void WithholdCandidatesByWhatTheyDeclare(
         List<OrphanedFile> candidates,
         List<OrphanedFile> withheld,
         WithholdingSplitTally withheldBy,
@@ -1430,7 +1444,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// is taken and why from three times.
     ///
     /// EVERY CANDIDATE, INSTALLATION PACKAGE AND PATCH ALIKE. A patch's cached copy
-    /// arrives the same way, and the screen before this one passes patches over.
+    /// arrives the same way, before any registration names it, and no comparison with
+    /// the records can tell it from a spare either.
     ///
     /// ONLY THE WALK'S CANDIDATES. A superseded patch reaches the offer from its own
     /// registration, which names the file, so it is never on this list.

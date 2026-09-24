@@ -89,6 +89,26 @@ public class CliHeldBackBesideAnOfferTests
     }
 
     [Fact]
+    public async Task Patch_copies_kept_for_their_registrations_beside_a_live_offer_get_no_lead_line()
+    {
+        // Both held files are patch copies kept because Windows holds a registration of
+        // the patch they declare, so the run says what it says about its offer and
+        // nothing more.
+        var (_, stdout) = await Run(Scan(
+            offer: 2, withheld: 2,
+            split: new WithholdingSplit(DeclaredPatchRegisteredCount: 2),
+            patchBytes: 2048));
+
+        foreach (var lead in new[]
+                 {
+                     Strings.Cli_NothingListedPerFile_Singular, Strings.Cli_NothingListedPerFile_Plural,
+                     Strings.Cli_NothingListed_Singular, Strings.Cli_NothingListed_Plural,
+                 })
+            Assert.DoesNotContain(Opening(lead), stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain(Strings.Cli_WithheldReasons_Header, stdout, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task A_lead_beside_a_live_offer_counts_only_the_files_the_scan_could_not_settle()
     {
         // One held file declares an installed program and one could not be settled: the
@@ -178,13 +198,15 @@ public class CliHeldBackBesideAnOfferTests
 
     // WHICH LEAD A RUN GETS IS DECIDED BY THE SPLIT AND NOTHING ELSE, so the split is
     // the only thing these fixtures vary for it: ScanResult.Withholding compares the
-    // withheld count against the split's wholesale and declared-product-installed
-    // counts, and reads no flag.
-    private static ScanResult Scan(int offer, int withheld, WithholdingSplit split, long positiveBytes = 0) =>
+    // withheld count against the split's wholesale count and its silent arms' counts,
+    // and reads no flag.
+    private static ScanResult Scan(int offer, int withheld, WithholdingSplit split, long positiveBytes = 0,
+        long patchBytes = 0) =>
         new(Files(offer, OfferA, OfferB), Array.Empty<RegisteredPackage>(), 0,
             WithheldFiles: Files(withheld, HeldA, HeldB),
             WithheldBy: split,
-            WithheldDeclaredProductInstalledBytes: positiveBytes);
+            WithheldDeclaredProductInstalledBytes: positiveBytes,
+            WithheldDeclaredPatchRegisteredBytes: patchBytes);
 
     private static OrphanedFile[] Files(int n, string first, string second) =>
         n switch

@@ -3,32 +3,31 @@ using InstallerClean.Models;
 namespace InstallerClean.Services;
 
 /// <summary>
-/// Asks a cached PRODUCT PACKAGE which product it declares itself to belong to,
-/// puts that product code to Windows, and reports whether Windows still holds a
-/// record of it. Where it does, the check reads the cached package each
-/// installation of that product records and the original package each one's source
-/// list points at, and reports whether every one of them is a different file from
-/// this one.
+/// Asks a cached file what it declares itself to be, and puts that to Windows.
+///
+/// AN INSTALLATION PACKAGE declares the product it belongs to. The check puts that
+/// product code to Windows and reports whether Windows still holds a record of it.
+/// Where it does, the check reads the cached package each installation of that product
+/// records and the original package each one's source list points at, and reports
+/// whether every one of them is a different file from this one.
+///
+/// A PATCH declares its own patch code and the products it may be applied to. The
+/// check finds the registrations Windows holds of that patch and reports whether there
+/// are any. Where there are, the check reads the cached copy each registration records,
+/// and reports whether every one of them is a different file from this one.
 ///
 /// WHY IT EXISTS, AND IT IS ABOUT WHERE THE OTHER SOURCES START. Everything else
-/// that decides whether a cached product package is spare begins at a
-/// REGISTRATION and works towards a file. The path comparison asks whether any
-/// recorded <c>LocalPackage</c> value is spelled the same as a walked file; the
-/// file-identity match asks whether any recorded value NAMES the same file; and
-/// the registry fallback contributes recorded values the API enumeration lost.
-/// Those are three ways of finding a claim, and all three read the same recorded
-/// value. Where a product's records hold no value to read, none of them has
-/// anything to find, and the enumeration does not notice: a <c>LocalPackage</c>
-/// that is present and zero-length merges no claim AND records no gap, so the
-/// scan reports itself complete while short of a claim. The product's cached
-/// package is then walked, matched against nothing, and offered while the product
-/// is installed.
-///
-/// A PATCH ALREADY HAS THREE SOURCES AND TAKES THE WORST ANSWER. Its loop has the
-/// identical silent-empty hole, and the registry patch-set read and the
-/// all-products patch enumeration are what see what the loop misses. A product
-/// has two, and they read the same underlying value. The genuinely independent
-/// third view of a product's cached file is the FILE, which is this.
+/// that decides whether a walked file is claimed begins at a REGISTRATION and works
+/// towards a file. The path comparison asks whether any recorded <c>LocalPackage</c>
+/// value is spelled the same as a walked file; the file-identity match asks whether
+/// any recorded value NAMES the same file; and the registry fallback contributes
+/// recorded values the API enumeration lost. Those are three ways of finding a claim,
+/// and all three read the same recorded value. Where a product's or a patch's records
+/// hold no value to read, none of them has anything to find, and the enumeration does
+/// not notice: a <c>LocalPackage</c> that is present and zero-length merges no claim
+/// AND records no gap, so the scan reports itself complete while short of a claim. The
+/// cached file is then walked and matched against nothing, and the one view of it that
+/// does not go through those records is the FILE, which is this.
 ///
 /// AN INSTALLED PRODUCT DOES NOT ON ITS OWN MAKE THIS FILE THE ONE IT USES. Windows
 /// Installer opens a product's cached package through the <c>LocalPackage</c> value
@@ -43,20 +42,36 @@ namespace InstallerClean.Services;
 /// cannot be ruled out: one in the Installer folder itself, one naming this file, and
 /// one that cannot be read.
 ///
+/// A REGISTERED PATCH DOES NOT ON ITS OWN MAKE THIS FILE ITS CACHED COPY EITHER.
+/// Windows Installer opens a registered patch's cached copy through the
+/// <c>LocalPackage</c> value each registration of it records. The folder can hold
+/// further copies that declare the same patch code while no registration names them.
+/// So the file is kept while some registration's copy cannot be seen: a value that is
+/// empty, that will not read, that names nothing identifiable, that names a file that
+/// does not read as the same patch, or that names this file under another spelling.
+///
+/// A PATCH'S REGISTRATIONS ARE FOUND TWO WAYS, AND THE TWO ARE UNIONED. The
+/// machine-wide patch enumeration lists the registrations it names, each with its
+/// product, account and context. The keyed patch read puts the patch to every
+/// installation of every product the patch's own Template names, which reaches a
+/// registration of those products that the enumeration does not list. Either can
+/// only add a registration, and so only add a reason to keep the file.
+///
 /// IT ONLY EVER WITHHOLDS. No answer it can give puts a file on the list, clears
 /// one another gate kept, or weakens anything upstream: a candidate it lets
 /// through is decided by the rest of the scan exactly as if this check had not
-/// run. A file it cannot read, a question it cannot put, a source that answers off
-/// the allowlist and a recorded package it cannot identify all keep the file.
+/// run. For an installation package, a file it cannot read, a question it cannot
+/// put, a source that answers off the allowlist and a recorded package it cannot
+/// identify all keep the file. For a patch, a recorded copy it cannot identify keeps
+/// the file, and a patch whose registrations it cannot establish is left to the rest
+/// of the scan; see <see cref="DeclaredProductOutcome.NotAProductPackage"/>.
 ///
-/// PRODUCT PACKAGES ONLY, AND THAT RESTRICTION IS LOAD-BEARING RATHER THAN
-/// INCIDENTAL. The same question asked of a patch keeps back every registered
-/// superseded patch on every machine, for ever, with a green build: a superseded
-/// patch is one Windows has a record of BY CONSTRUCTION, that being what makes it
-/// superseded rather than unknown, so "Windows knows this code" is true of the
-/// entire class the offer's other half is made of. The restriction is enforced
-/// inside <see cref="Screen"/> rather than left to callers, so passing a patch in
-/// cannot screen it.
+/// THE SUPERSEDED HALF OF THE OFFER IS NEVER PUT TO IT, AND THAT IS LOAD-BEARING. A
+/// registered superseded patch's cached file is the very file its registrations
+/// record, so this check would keep it: Windows holds a record of such a patch by
+/// construction, that being what makes it superseded rather than unknown. The scan hands this check the walk's unclaimed candidates and
+/// nothing else, and a superseded row reaches the offer from its own registration
+/// without ever being one of them.
 /// </summary>
 public interface IDeclaredProductCheck
 {
@@ -67,8 +82,9 @@ public interface IDeclaredProductCheck
     /// The whole pass is one call so that everything per-scan lives inside it.
     /// Several cached packages of one product declare one product code, so a
     /// folder holding six versions of the same program asks Windows once and not
-    /// six times, and that cache dies with the pass rather than outliving the
-    /// machine state it describes.
+    /// six times; the machine-wide patch enumeration is walked at most once, however
+    /// many patches the list holds; and every such cache dies with the pass rather
+    /// than outliving the machine state it describes.
     /// </summary>
     /// <param name="candidates">
     /// The files the path comparison and the file-identity match between them
@@ -99,14 +115,14 @@ public interface IDeclaredProductCheck
 }
 
 /// <summary>
-/// What one candidate's own declaration settled. Two of the five keep the file,
+/// What one candidate's own declaration settled. Three of the eight keep the file,
 /// and <see cref="Withholds"/> is the only place that says which.
 /// </summary>
 public enum DeclaredProductOutcome
 {
     /// <summary>
-    /// The file yielded no product code to ask about, or the code was read and
-    /// the question could not be put. Kept back.
+    /// An installation package yielded no product code to ask about, or the code was
+    /// read and the question could not be put. Kept back.
     ///
     /// IT IS FIRST SO THAT THE DEFAULT VALUE WITHHOLDS. A verdict nobody set is a
     /// verdict nobody established, and this enum's zero has to mean that rather
@@ -124,11 +140,14 @@ public enum DeclaredProductOutcome
     Unestablished,
 
     /// <summary>
-    /// Not an installation package, so this check has nothing to say about it and
-    /// says nothing. The candidate goes on being decided by everything else,
-    /// exactly as it would have been had this pass never run.
+    /// A patch whose registrations this check could not establish, so it says nothing
+    /// about the file. The candidate goes on being decided by everything else, exactly
+    /// as it would have been had this pass never run.
     ///
-    /// See the type's own note for why a patch may never be screened here.
+    /// That covers a patch the reader gives no patch code and target list for, a
+    /// machine-wide patch enumeration that does not run to its end, and a product the
+    /// patch names whose installations will not list or will not answer whether the
+    /// patch is registered against them.
     /// </summary>
     NotAProductPackage,
 
@@ -188,6 +207,56 @@ public enum DeclaredProductOutcome
     /// package that opens as this file keeps it.
     /// </summary>
     DeclaredProductCachedAsAnotherFile,
+
+    /// <summary>
+    /// The file is a patch, and Windows positively answered that it holds no
+    /// registration of the patch the file declares: the machine-wide patch enumeration
+    /// ran to its end and listed none, and every installation of every product the
+    /// patch names answered that the patch is not registered against it, or no such
+    /// product is installed. The candidate goes on being decided by everything else.
+    ///
+    /// A POSITIVE ANSWER AND NOT AN ABSENCE OF ONE, as for
+    /// <see cref="DeclaredProductNotInstalled"/>. An enumeration that did not reach its
+    /// end, and a keyed read answering anything but a return documented to mean the
+    /// patch is not there, do not reach this.
+    /// </summary>
+    DeclaredPatchNotRegistered,
+
+    /// <summary>
+    /// Windows holds a registration of the patch this file declares, and for at least
+    /// one registration the check cannot show that the cached copy it records is a
+    /// different file. Kept back.
+    ///
+    /// That covers a recorded <c>LocalPackage</c> value that is empty or will not
+    /// read, one naming a folder or a file that is absent or cannot be identified, one
+    /// naming a file that does not read as the same patch, and one naming this very
+    /// file under another spelling. A check constructed without its two file readers
+    /// answers this for every registered patch, having no way to look.
+    ///
+    /// A REGISTRATION IS ANY RECORD WINDOWS HOLDS OF THE PATCH AGAINST AN INSTALLATION
+    /// OF A PRODUCT, whatever state the patch is in there, so it is wider than
+    /// <see cref="Interop.MsiPatchFilter.Registered"/>, which is one of those states.
+    ///
+    /// WHAT IT DOES NOT ESTABLISH, so no copy may be built on it: that a program
+    /// would break without this particular copy.
+    /// </summary>
+    DeclaredPatchRegistered,
+
+    /// <summary>
+    /// Windows holds a registration of the patch this file declares, and every
+    /// registration records a cached copy that is present, is a different file, and
+    /// itself declares the same patch. The candidate goes on being decided by
+    /// everything else.
+    ///
+    /// EVERY REGISTRATION, NOT ONE. A patch can be registered against several products
+    /// and under several accounts, each registration recording its own value, and a
+    /// single registration whose copy cannot be seen gives
+    /// <see cref="DeclaredPatchRegistered"/> instead.
+    ///
+    /// DIFFERENT IS DECIDED BY FILE IDENTITY, NOT BY SPELLING, for the reason given at
+    /// <see cref="DeclaredProductCachedAsAnotherFile"/>.
+    /// </summary>
+    DeclaredPatchCachedAsAnotherFile,
 }
 
 /// <summary>Reading a <see cref="DeclaredProductOutcome"/>.</summary>
@@ -196,15 +265,17 @@ public static class DeclaredProductOutcomes
     /// <summary>
     /// Whether this outcome keeps the file back.
     ///
-    /// STATED AS "ANYTHING BUT THESE THREE" RATHER THAN BY NAMING THE WITHHOLDING
-    /// MEMBERS, and that is the safety property rather than a style. Named
-    /// positively, a member added later would silently not withhold: a green
-    /// build, a verdict the pass sets, and files going on being offered. Named
+    /// STATED AS "ANYTHING BUT THE FIVE THAT LET A FILE THROUGH" RATHER THAN BY
+    /// NAMING THE WITHHOLDING MEMBERS, and that is the safety property rather than a
+    /// style. Named positively, a member added later would silently not withhold: a
+    /// green build, a verdict the pass sets, and files going on being offered. Named
     /// this way an unconsidered member keeps the file, which is the direction a
     /// mistake here has to fail in.
     /// </summary>
     public static bool Withholds(this DeclaredProductOutcome outcome) =>
         outcome is not (DeclaredProductOutcome.NotAProductPackage
             or DeclaredProductOutcome.DeclaredProductNotInstalled
-            or DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile);
+            or DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile
+            or DeclaredProductOutcome.DeclaredPatchNotRegistered
+            or DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile);
 }

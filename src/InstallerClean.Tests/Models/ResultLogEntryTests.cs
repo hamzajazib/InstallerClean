@@ -239,14 +239,15 @@ public class ResultLogEntryTests
                 // there. Three withheld figures over three different populations;
                 // adding any two of them would answer no question.
                 "withheldTotalBytes", "registeredWithheldCount",
-                // Five of the seven counts that split withheldCandidateCount, appended as
+                // Five of the eight counts that split withheldCandidateCount, appended as
                 // one block in the order the split declares them. Each is one finding
                 // about one machine and nothing may add any two of them: two are
                 // opposite answers from the same screen, one is that screen having
                 // answered about nothing, one is a per-file identity read that gave
                 // up, and one is the whole walk-derived offer going at once on a fact
                 // about the machine. withheldCandidateCount less these five is the
-                // files the age check kept back, in both of its arms.
+                // files the age check kept back, in both of its arms, and the patch
+                // copies the screen kept for their patch's registrations.
                 "withheldIdentityUnestablishedCount", "withheldWholesaleCount",
                 "withheldDeclaredProductInstalledCount",
                 "withheldDeclaredProductUnestablishedCount",

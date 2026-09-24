@@ -329,13 +329,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // deriving it.
             //
             // A RUN THAT HELD NOTHING BACK IS THE ALL-CLEAR'S, and so is a run whose
-            // every held file declares a program Windows still has installed or was
-            // is under a day old. HasWithholdingToReport is false for both.
+            // every held file declares a program Windows still has installed, is under
+            // a day old, or is a copy of a patch Windows holds a registration of.
+            // HasWithholdingToReport is false for both.
             //
             // THE SCREEN COUNTS ONLY UnestablishedWithheldCount, so a run that held
-            // some files for an installed program or for being under a day old and
-            // some for anything else speaks of the second kind alone. A file whose age
-            // could not be established is of the second kind.
+            // some files for an installed program, for being under a day old or for
+            // their patch's registrations, and some for anything else, speaks of the
+            // second kind alone. A file whose age could not be established is of the
+            // second kind.
 
             // THE RECEIPT SPENDS THE COUNT THE MAIN WINDOW IS ALREADY SHOWING rather
             // than recounting the scan result here, so the overlay and the line behind

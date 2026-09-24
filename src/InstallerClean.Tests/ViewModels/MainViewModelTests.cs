@@ -407,6 +407,31 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public async Task Patch_copies_kept_for_their_patch_s_registrations_get_the_all_clear()
+    {
+        // Nothing offered, and every held file is a patch copy kept because Windows
+        // holds a registration of the patch it declares, so the machine gets the screen
+        // a clean folder gets.
+        var vm = CreateViewModel();
+        var withheld = new List<OrphanedFile>
+        {
+            new(@"C:\Windows\Installer\a.msp", 1024, true, false, false, Orphaned),
+            new(@"C:\Windows\Installer\b.msp", 2048, true, false, false, Orphaned),
+        };
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(new ScanResult(
+                Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
+                WithheldFiles: withheld, WalkOfferWithheldWholesale: false,
+                WithheldBy: new WithholdingSplit(DeclaredPatchRegisteredCount: 2),
+                WithheldDeclaredPatchRegisteredBytes: 3072));
+
+        await vm.Scan.ScanWithProgressAsync(null);
+
+        Assert.Equal(Strings.Completion_AllClean, vm.Completion.Heading);
+        Assert.NotEqual(Strings.Completion_NothingOffered, vm.Completion.Heading);
+    }
+
+    [Fact]
     public async Task The_per_file_screen_counts_only_the_files_the_scan_could_not_settle()
     {
         // Two held: one for an installed program and one the scan could not settle. The

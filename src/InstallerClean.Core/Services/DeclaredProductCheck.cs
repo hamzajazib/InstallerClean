@@ -5,24 +5,28 @@ using InstallerClean.Models;
 namespace InstallerClean.Services;
 
 /// <summary>
-/// Production <see cref="IDeclaredProductCheck"/>: reads each candidate
-/// installation package's own ProductCode through
-/// <see cref="IPackageIdentityReader"/>, puts it to Windows through the same
-/// keyed enumeration the patch-target route uses, and for an installed product
-/// reads the <c>LocalPackage</c> each installation records and the package each
-/// one's source list points at.
+/// Production <see cref="IDeclaredProductCheck"/>. For each candidate installation
+/// package it reads the package's own ProductCode through
+/// <see cref="IPackageIdentityReader"/>, puts it to Windows through the same keyed
+/// enumeration the patch-target route uses, and for an installed product reads the
+/// <c>LocalPackage</c> each installation records and the package each one's source
+/// list points at. For each candidate patch it reads the patch's own code and the
+/// products its Template names, finds the registrations of that patch through the
+/// machine-wide patch enumeration and the keyed patch read, and reads the
+/// <c>LocalPackage</c> each registration records.
 ///
-/// IT COMPOSES THINGS THAT ALREADY EXIST. The reading is the reader's, which has
-/// always been able to take the product reading and has only ever been asked for
-/// the patch one. The asking is
-/// <see cref="InstallerQueryService.ResolveProductInstances"/> and
-/// <see cref="InstallerQueryService.ReadProductProperty"/>, shared rather than
-/// copied because the part of them that decides anything is which returns are
-/// allowed to mean "not installed" or "no value": those allowlists are the
-/// difference between a file kept and a file offered, and a second copy of them is
-/// a second thing to keep right. The comparison of recorded packages against the
-/// candidate is <see cref="IFileIdentityReader"/>, the reader the scan's own
-/// path comparison uses.
+/// IT COMPOSES THINGS THAT ALREADY EXIST. The reading of each file, package or
+/// patch, is the reader's. The asking is
+/// <see cref="InstallerQueryService.ResolveProductInstances"/>,
+/// <see cref="InstallerQueryService.EnumeratePatchHoldersAcrossAllProducts"/>,
+/// <see cref="InstallerQueryService.ReadProductProperty"/> and
+/// <see cref="InstallerQueryService.GetPatchProperty"/>, shared rather than copied
+/// because the part of them that decides anything is which returns are allowed to
+/// mean "not installed", "not registered", "the end of the list" or "no value":
+/// those allowlists are the difference between a file kept and a file offered, and
+/// a second copy of them is a second thing to keep right. The comparison of recorded
+/// packages against the candidate is <see cref="IFileIdentityReader"/>, the reader
+/// the scan's own path comparison uses.
 /// </summary>
 public sealed class DeclaredProductCheck : IDeclaredProductCheck
 {
@@ -41,7 +45,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <remarks>
     /// WITHOUT BOTH FILE READERS NO RECORDED PACKAGE IS LOOKED AT, and every candidate
     /// whose declared product is installed is kept as
-    /// <see cref="DeclaredProductOutcome.DeclaredProductInstalled"/>. That is the
+    /// <see cref="DeclaredProductOutcome.DeclaredProductInstalled"/>, and every
+    /// candidate whose declared patch is registered as
+    /// <see cref="DeclaredProductOutcome.DeclaredPatchRegistered"/>. That is the
     /// direction a missing dependency has to fail in. The composition root supplies
     /// both.
     /// </remarks>
@@ -78,7 +84,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         // braced upper-case form for exactly this: two readings of one code are
         // then the same string, and a comparer that folded case would be covering
         // for a reader that had stopped doing that.
-        var asked = new Dictionary<string, ProductAnswer>(StringComparer.Ordinal);
+        var asked = new Dictionary<string, DeclarationAnswer>(StringComparer.Ordinal);
+
+        // What the pass has asked about installations and patch registrations, shared
+        // by both halves, for the same reason and with the same lifetime.
+        var pass = new PassAnswers(_msi, cancellationToken);
 
         for (var i = 0; i < candidates.Count; i++)
         {
@@ -86,16 +96,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
             var candidate = candidates[i];
 
-            // THE RESTRICTION, AND IT IS ENFORCED HERE RATHER THAN AT THE CALL
-            // SITE ON PURPOSE. Asked of a patch this question keeps back every
-            // registered superseded patch on every machine for ever: Windows
-            // holds a record of such a patch's code by construction, that being
-            // what superseded means, so the keeping arm would be true of the
-            // whole class. A caller that passes the whole candidate list in gets
-            // the patches back untouched instead of screening them by accident.
+            // A PATCH DECLARES A PATCH CODE AND NOT A PRODUCT CODE, so it is screened
+            // against the registrations of that patch rather than against the
+            // installations of a product.
             if (candidate.IsPatch)
             {
-                outcomes[i] = DeclaredProductOutcome.NotAProductPackage;
+                outcomes[i] = ScreenPatch(candidate.FullPath, pass);
                 continue;
             }
 
@@ -134,7 +140,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             var code = identity.Value.Code;
             if (!asked.TryGetValue(code, out var answer))
             {
-                answer = Ask(code, namesAFileInInstallerFolder);
+                answer = Ask(code, pass, namesAFileInInstallerFolder);
                 asked[code] = answer;
             }
 
@@ -155,9 +161,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// What Windows holds for one declared product code, asked once per code per
     /// pass.
     /// </summary>
-    private ProductAnswer Ask(string code, Func<string, bool?>? namesAFileInInstallerFolder)
+    private DeclarationAnswer Ask(
+        string code, PassAnswers pass, Func<string, bool?>? namesAFileInInstallerFolder)
     {
-        var resolved = InstallerQueryService.ResolveProductInstances(_msi, code);
+        var resolved = pass.InstancesOf(code);
 
         // THE ORDER OF THE ARMS IS THE WHOLE OF IT, and the unaskable one is
         // first because it is the one that reads as an answer if it is left
@@ -165,12 +172,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         // absent, and treating "no answer" as "no product" would offer the
         // file on the strength of a question that was never really put.
         if (resolved.Unaskable)
-            return new ProductAnswer(DeclaredProductOutcome.Unestablished, null);
+            return new DeclarationAnswer(DeclaredProductOutcome.Unestablished, null);
 
         if (resolved.Instances.Count == 0)
-            return new ProductAnswer(DeclaredProductOutcome.DeclaredProductNotInstalled, null);
+            return new DeclarationAnswer(DeclaredProductOutcome.DeclaredProductNotInstalled, null);
 
-        return new ProductAnswer(
+        return new DeclarationAnswer(
             DeclaredProductOutcome.DeclaredProductInstalled,
             PackagesOpenedBy(code, resolved.Instances, namesAFileInInstallerFolder));
     }
@@ -359,6 +366,189 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     private const uint MaxSourceIndex = 1024;
 
     /// <summary>
+    /// The verdict for one patch copy: whether Windows holds a registration of the patch
+    /// it declares, and if so whether this file is shown to be a different file from the
+    /// cached copy every registration records.
+    /// </summary>
+    private DeclaredProductOutcome ScreenPatch(string path, PassAnswers pass)
+    {
+        var identity = _identityReader.Read(path, isPatch: true, out _);
+
+        // FOUR READINGS LEAVE NOTHING TO ASK ABOUT, and each of them is the file
+        // failing to give this pass a patch code and the products to put it to. Null is
+        // the reader's own "nothing here to ask". An empty code is the same outcome
+        // reached without a null, which the seam's do-nothing implementations produce.
+        // A reading not marked as a patch did not answer the question asked. And a
+        // patch naming no product gives the keyed patch read no installation to ask.
+        if (identity is null
+            || identity.Value.Code.Length == 0
+            || !identity.Value.IsPatch
+            || identity.Value.TargetProductCodes.Count == 0)
+            return DeclaredProductOutcome.NotAProductPackage;
+
+        var code = identity.Value.Code;
+        var targets = identity.Value.TargetProductCodes;
+
+        // KEYED BY THE TARGET LIST AS WELL AS THE CODE. The keyed patch read asks the
+        // products the file names, so two files carrying one patch code with different
+        // lists put different questions, and each is answered from its own list.
+        var key = code + "|" + string.Join(";", targets);
+        if (!pass.Patches.TryGetValue(key, out var answer))
+        {
+            answer = AskAboutPatch(code, targets, pass);
+            pass.Patches[key] = answer;
+        }
+
+        // As for a product: the registrations are shared by every copy declaring the
+        // patch, and whether the recorded copies are OTHER files is asked per file.
+        return answer.Outcome == DeclaredProductOutcome.DeclaredPatchRegistered
+            && answer.RecordedPackages is { } recorded
+            && IsNoneOf(path, recorded)
+                ? DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile
+                : answer.Outcome;
+    }
+
+    /// <summary>
+    /// What Windows holds for one declared patch, asked once per patch code and target
+    /// list per pass: every registration the machine-wide patch enumeration lists for
+    /// the code, unioned with every installation of a named target product that
+    /// answers the keyed patch read with a state.
+    ///
+    /// THE UNION IS WHY IT IS BOTH. The enumeration names a registration against a
+    /// product the patch's Template does not list; the keyed read reaches an
+    /// installation of a listed product the enumeration does not name. Each can only
+    /// add a registration.
+    /// </summary>
+    private DeclarationAnswer AskAboutPatch(string code, IReadOnlyList<string> targets, PassAnswers pass)
+    {
+        var holders = pass.PatchHolders;
+        if (holders is null) return new DeclarationAnswer(DeclaredProductOutcome.NotAProductPackage, null);
+
+        var registrations = new List<(string ProductCode, string? Sid, MsiInstallContext Context)>();
+        if (holders.TryGetValue(code, out var listed)) registrations.AddRange(listed);
+
+        foreach (var target in targets)
+        {
+            pass.CancellationToken.ThrowIfCancellationRequested();
+
+            var resolved = pass.InstancesOf(target);
+            if (resolved.Unaskable) return new DeclarationAnswer(DeclaredProductOutcome.NotAProductPackage, null);
+
+            foreach (var (sid, context) in resolved.Instances)
+            {
+                // Already a registration: the enumeration listed it, and its copy is
+                // read below whatever the keyed read would say.
+                if (IsListed(registrations, target, sid, context)) continue;
+
+                var state = InstallerQueryService.GetPatchProperty(
+                    _msi, code, target, sid, context, MsiInstallProperty.State);
+
+                // NOT REGISTERED IS READ FIRST, because a return meaning it is marked
+                // unreadable as well, for the other readers of the same call. Here it is
+                // the installation answering that it does not hold the patch, which is
+                // the question put, and the query service's own per-pairing pass reads it
+                // the same way.
+                if (state.NotRegistered) continue;
+                if (state.Unreadable) return new DeclarationAnswer(DeclaredProductOutcome.NotAProductPackage, null);
+
+                registrations.Add((target, sid, context));
+            }
+        }
+
+        if (registrations.Count == 0)
+            return new DeclarationAnswer(DeclaredProductOutcome.DeclaredPatchNotRegistered, null);
+
+        return new DeclarationAnswer(
+            DeclaredProductOutcome.DeclaredPatchRegistered,
+            CopiesRecordedBy(code, registrations));
+    }
+
+    /// <summary>
+    /// Whether <paramref name="registrations"/> already holds the installation of
+    /// <paramref name="productCode"/> in <paramref name="sid"/> and
+    /// <paramref name="context"/>. Codes and accounts are compared without case, the
+    /// enumeration and the product walk each handing back their own spelling; the
+    /// context is compared exactly.
+    /// </summary>
+    private static bool IsListed(
+        List<(string ProductCode, string? Sid, MsiInstallContext Context)> registrations,
+        string productCode,
+        string? sid,
+        MsiInstallContext context)
+    {
+        foreach (var registration in registrations)
+            if (registration.Context == context
+                && string.Equals(registration.ProductCode, productCode, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(registration.Sid, sid, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+        return false;
+    }
+
+    /// <summary>
+    /// The identity of the cached copy every registration of <paramref name="code"/>
+    /// records, or null where any of them cannot be seen.
+    ///
+    /// NULL IS THE ANSWER THAT KEEPS THE FILE, as it is for
+    /// <see cref="PackagesOpenedBy"/>, and every way a registration's copy can fail to
+    /// be seen reaches it: a <c>LocalPackage</c> read that failed or came back empty, a
+    /// value that names nothing, names a folder, will not open to an identity, or names
+    /// a file that does not read as patch <paramref name="code"/>. One such
+    /// registration is enough, because its copy is the one this candidate could be.
+    ///
+    /// A READ ANSWERING THAT THE PATCH IS NOT THERE KEEPS THE FILE LIKE ANY OTHER
+    /// FAILED READ. Every registration here was named by one of the two routes moments
+    /// earlier, so that answer contradicts it, and which copy the registration records
+    /// is then not known.
+    ///
+    /// Several registrations can record one copy, so each path is looked at once.
+    /// </summary>
+    private IReadOnlyList<FileIdentity>? CopiesRecordedBy(
+        string code,
+        IReadOnlyList<(string ProductCode, string? Sid, MsiInstallContext Context)> registrations)
+    {
+        if (_fileIdentities is null || _fileSystem is null) return null;
+
+        var identities = new List<FileIdentity>(registrations.Count);
+        var looked = new Dictionary<string, FileIdentity>(StringComparer.Ordinal);
+        foreach (var (productCode, sid, context) in registrations)
+        {
+            var read = InstallerQueryService.GetPatchProperty(
+                _msi, code, productCode, sid, context, MsiInstallProperty.LocalPackage);
+            if (read.Unreadable) return null;
+
+            var path = read.Value.TrimEnd('\0');
+            if (path.Length == 0) return null;
+
+            if (!looked.TryGetValue(path, out var recorded))
+            {
+                // File.Exists is false for a folder and for a path that will not parse,
+                // and the identity read below opens folders too, so this is what keeps a
+                // value naming a folder from standing in for a copy.
+                if (!_fileSystem.File.Exists(path)) return null;
+
+                if (_fileIdentities.ReadOutcome(path, out recorded) != FileIdentityRead.Read)
+                    return null;
+
+                // THE RECORDED COPY HAS TO READ AS THE SAME PATCH, for the reason the
+                // product half's recorded package has to declare the same product: the
+                // verdict rests on the record and the file agreeing.
+                var declared = _identityReader.Read(path, isPatch: true, out _);
+                if (declared is null
+                    || !declared.Value.IsPatch
+                    || !string.Equals(declared.Value.Code, code, StringComparison.Ordinal))
+                    return null;
+
+                looked[path] = recorded;
+            }
+
+            identities.Add(recorded);
+        }
+
+        return identities;
+    }
+
+    /// <summary>
     /// Whether the candidate at <paramref name="candidatePath"/> is a different file
     /// from every package an installation opens. A candidate whose own identity will
     /// not read is not shown to be different, so it answers false and is kept.
@@ -375,13 +565,73 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         return true;
     }
 
-    /// <param name="Outcome">The verdict the product code alone gives.</param>
+    /// <param name="Outcome">The verdict the declared code alone gives.</param>
     /// <param name="RecordedPackages">
     /// For an installed product, the identity of every file an installation opens as
-    /// its package, or null where any of them could not be seen. Null for every other
-    /// verdict.
+    /// its package; for a registered patch, the identity of the cached copy every
+    /// registration records. Null where any of them could not be seen, and null for
+    /// every other verdict.
     /// </param>
-    private readonly record struct ProductAnswer(
+    private readonly record struct DeclarationAnswer(
         DeclaredProductOutcome Outcome,
         IReadOnlyList<FileIdentity>? RecordedPackages);
+
+    /// <summary>
+    /// What one pass has asked Windows about installations and patch registrations,
+    /// kept so that nothing is asked twice inside the pass and nothing outlives it.
+    /// </summary>
+    private sealed class PassAnswers
+    {
+        private readonly IMsiApi _msi;
+        private readonly Dictionary<string, (IReadOnlyList<(string? Sid, MsiInstallContext Context)> Instances, bool Unaskable)>
+            _instances = new(StringComparer.Ordinal);
+        private Dictionary<string, List<(string ProductCode, string? Sid, MsiInstallContext Context)>>? _holders;
+        private bool _holdersRead;
+
+        internal PassAnswers(IMsiApi msi, CancellationToken cancellationToken)
+        {
+            _msi = msi;
+            CancellationToken = cancellationToken;
+        }
+
+        internal CancellationToken CancellationToken { get; }
+
+        /// <summary>Each declared patch's answer, keyed by patch code and target list.</summary>
+        internal Dictionary<string, DeclarationAnswer> Patches { get; } = new(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Every installation of one product code, asked once per pass whichever half
+        /// asks.
+        /// </summary>
+        internal (IReadOnlyList<(string? Sid, MsiInstallContext Context)> Instances, bool Unaskable)
+            InstancesOf(string productCode)
+        {
+            if (!_instances.TryGetValue(productCode, out var resolved))
+            {
+                resolved = InstallerQueryService.ResolveProductInstances(_msi, productCode);
+                _instances[productCode] = resolved;
+            }
+
+            return resolved;
+        }
+
+        /// <summary>
+        /// Every patch registration the machine-wide enumeration lists, keyed by patch
+        /// code, or null where the enumeration did not run to its end. Walked the first
+        /// time a patch asks, and not at all on a pass holding none.
+        /// </summary>
+        internal Dictionary<string, List<(string ProductCode, string? Sid, MsiInstallContext Context)>>? PatchHolders
+        {
+            get
+            {
+                if (!_holdersRead)
+                {
+                    _holders = InstallerQueryService.EnumeratePatchHoldersAcrossAllProducts(_msi, CancellationToken);
+                    _holdersRead = true;
+                }
+
+                return _holders;
+            }
+        }
+    }
 }

@@ -7,30 +7,30 @@ using Microsoft.Extensions.DependencyInjection;
 namespace InstallerClean.Tests.Services;
 
 /// <summary>
-/// The scan's third source for product packages: what a cached installation
-/// package says it belongs to, put to Windows.
+/// The scan's screen of what a cached file says it is: the product an installation
+/// package declares it belongs to, or the patch a patch file declares it is, put to
+/// Windows.
 ///
 /// IT IS THE ONLY THING IN THE TREE THAT STARTS AT THE FILE. Every other way the
 /// scan decides a cached file is spare starts at a registration and looks for the
-/// file it names, so where a product's records hold no usable path there is
-/// nothing for any of them to work from. That is the class this reaches, and the
-/// tests below are about the direction it fails in. Two answers let a file
-/// through: a POSITIVE answer that Windows does not hold the declared product, and
-/// every installation of that product recording a package that is present and is
-/// another file. Every inability keeps it.
+/// file it names, so where the records hold no usable path there is nothing for any
+/// of them to work from. That is the class this reaches, and the tests below are
+/// about the direction it fails in. For a package two answers let a file through: a
+/// POSITIVE answer that Windows does not hold the declared product, and every
+/// installation of that product recording a package that is present and is another
+/// file. For a patch the same two: a POSITIVE answer that Windows holds no
+/// registration of the declared patch, and every registration of it recording a
+/// cached copy that is present and is another file. Every inability keeps the file,
+/// except the patch half's, which the tests under their own heading pin as leaving
+/// the file to the rest of the scan.
 ///
-/// AND IT REACHES THAT CLASS FOR PRODUCT PACKAGES ONLY. A patch is refused
-/// outright, which two tests here pin, because Windows holds a record of every
-/// registered superseded patch by construction and the keeping arm would
-/// therefore be true of that whole class on every machine.
-///
-/// BOTH FAKES THROW ON ANYTHING NO TEST SCRIPTED, which is the point of them
-/// rather than strictness. A fake answering an unscripted question with a
-/// plausible default is how a test comes to pass without ever reaching its own
-/// subject, and the two questions here have a permissive answer each: "Windows
-/// does not hold that product" and "there was nothing to read". Either as a
-/// default would let a test assert the file was offered while proving nothing
-/// about why.
+/// THE FAKES THROW ON ANYTHING NO TEST SCRIPTED, which is the point of them rather
+/// than strictness. A fake answering an unscripted question with a plausible default
+/// is how a test comes to pass without ever reaching its own subject, and the
+/// questions here have a permissive answer each: "Windows does not hold that
+/// product", "no product holds that patch" and "there was nothing to read". Any of
+/// them as a default would let a test assert the file was offered while proving
+/// nothing about why.
 /// </summary>
 public class DeclaredProductCheckTests
 {
@@ -180,44 +180,22 @@ public class DeclaredProductCheckTests
         Assert.Equal(DeclaredProductOutcome.Unestablished, outcomes[0]);
     }
 
-    // ---- The restriction, which is the control on the whole design ----
+    // ---- A patch and a package in one pass ----
 
     [Fact]
-    public void A_patch_is_never_read_and_never_asked_about()
+    public void A_patch_and_a_package_in_one_pass_are_each_screened_on_their_own_terms()
     {
-        // THE CONTROL THAT PROVES THE RESTRICTION IS REAL RATHER THAN INTENDED,
-        // and the fixture is built the hostile way round on purpose: the msi fake
-        // would answer "installed" to any product code it were given, and the
-        // identity reader would throw if asked to read this path at all. So the
-        // test can only pass if the patch never reached either.
-        //
-        // Asked of a patch, the keeping arm is true of every registered superseded
-        // patch on every machine, superseded being precisely the state of a patch
-        // Windows holds a record of. That would withhold the whole class the
-        // offer's other half is made of, for ever, with a green build.
-        var identities = new ScriptedPackageIdentities();      // nothing scripted: any read throws
-        var msi = new ScriptedMsiProducts();                   // nothing scripted: any ask throws
-
-        var outcomes = new DeclaredProductCheck(msi, identities)
-            .Screen(new[] { Patch(@"C:\Windows\Installer\p.msp") });
-
-        Assert.Equal(DeclaredProductOutcome.NotAProductPackage, outcomes[0]);
-        Assert.False(outcomes[0].Withholds());
-        Assert.Empty(identities.Reads);
-        Assert.Empty(msi.Asked);
-    }
-
-    [Fact]
-    public void A_patch_beside_a_package_leaves_the_package_screened_and_the_patch_alone()
-    {
-        // The pair in one fixture, because the test above passes equally well
-        // against a screen that has stopped working altogether. Same list, same
-        // scan, opposite outcomes.
+        // Same list, same pass, opposite outcomes. The package declares an installed
+        // product and is kept; the patch declares a patch no product holds and is let
+        // through. Each verdict answers its own file, and the patch is read as a patch.
         var identities = new ScriptedPackageIdentities();
         identities.Declares(@"C:\Windows\Installer\a.msi", ProductA);
+        identities.DeclaresPatch(@"C:\Windows\Installer\p.msp", PatchQ, ProductB);
 
         var msi = new ScriptedMsiProducts();
         msi.Installed(ProductA);
+        msi.NotInstalled(ProductB, MsiError.UnknownProduct);
+        msi.HoldsNoPatches();
 
         var outcomes = new DeclaredProductCheck(msi, identities).Screen(new[]
         {
@@ -225,8 +203,9 @@ public class DeclaredProductCheckTests
             Package(@"C:\Windows\Installer\a.msi"),
         });
 
-        Assert.Equal(DeclaredProductOutcome.NotAProductPackage, outcomes[0]);
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchNotRegistered, outcomes[0]);
         Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcomes[1]);
+        Assert.Equal(new[] { @"C:\Windows\Installer\p.msp" }, identities.PatchReads);
     }
 
     // ---- A product code the machine holds more than once ----
@@ -757,12 +736,538 @@ public class DeclaredProductCheckTests
         Assert.True(check.ComparesRecordedPackages);
     }
 
+    // ---- A patch copy and its patch's registrations ----
+    //
+    // A cached patch declares its own patch code and the products it may be applied to.
+    // Windows Installer opens a registered patch's cached copy through the LocalPackage
+    // value each registration records. A copy in the folder that no such value names is
+    // let through only when EVERY registration of the patch records a copy that is
+    // present, is another file and declares the same patch. Each test after the first is
+    // the fixture with one thing changed, and every one of them keeps the file.
+
+    private const string PatchQ = "{33333333-3333-3333-3333-333333333333}";
+    private const string PatchR = "{44444444-4444-4444-4444-444444444444}";
+    private const string PatchCopy = @"C:\Windows\Installer\copy.msp";
+    private const string RecordedPatch = @"C:\Windows\Installer\cached.msp";
+
+    /// <summary>
+    /// Patch Q, declaring product A as its target, registered against A's one
+    /// per-machine installation and recording <see cref="RecordedPatch"/>, with both
+    /// files on disk as two different files that both declare patch Q. The machine-wide
+    /// patch enumeration lists that registration. Each test changes one thing.
+    /// </summary>
+    private static (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+        ScriptedFileIdentities Files, MockFileSystem Disk) APatchCopyBesideTheRecordedCopy()
+    {
+        var packages = new ScriptedPackageIdentities();
+        packages.DeclaresPatch(PatchCopy, PatchQ, ProductA);
+        packages.DeclaresPatch(RecordedPatch, PatchQ, ProductA);
+
+        var msi = new ScriptedMsiProducts();
+        msi.Installed(ProductA);
+        msi.HoldsPatch(PatchQ, ProductA, null, MsiInstallContext.Machine);
+        msi.RecordsPatchPackage(PatchQ, ProductA, null, MsiInstallContext.Machine, RecordedPatch);
+
+        var files = new ScriptedFileIdentities();
+        files.Opens(PatchCopy, 1);
+        files.Opens(RecordedPatch, 2);
+
+        var disk = new MockFileSystem();
+        disk.AddFile(PatchCopy, new MockFileData(new byte[100]));
+        disk.AddFile(RecordedPatch, new MockFileData(new byte[100]));
+
+        return (packages, msi, files, disk);
+    }
+
+    private static DeclaredProductOutcome ScreenThePatchCopy(
+        (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+            ScriptedFileIdentities Files, MockFileSystem Disk) f) =>
+        new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk)
+            .Screen(new[] { Patch(PatchCopy) }, default, null, InInstallerFolder)[0];
+
+    [Fact]
+    public void A_patch_copy_beside_the_copy_its_registration_records_is_let_through()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+
+        var outcome = ScreenThePatchCopy(f);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile, outcome);
+        Assert.False(outcome.Withholds());
+        // Both files were identified and both were read as patches, which is what the
+        // verdict rests on.
+        Assert.Contains(RecordedPatch, f.Files.Reads);
+        Assert.Contains(PatchCopy, f.Files.Reads);
+        Assert.Equal(new[] { PatchCopy, RecordedPatch }, f.Packages.PatchReads);
+        // The registration the machine-wide enumeration listed is read for its copy and
+        // not asked about again.
+        Assert.Empty(f.Msi.PatchStateReads);
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_its_registration_records_no_copy()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.RecordsPatchPackage(PatchQ, ProductA, null, MsiInstallContext.Machine, "");
+
+        var outcome = ScreenThePatchCopy(f);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, outcome);
+        Assert.True(outcome.Withholds());
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_registration_carries_no_package_property_at_all()
+    {
+        // ERROR_UNKNOWN_PROPERTY is a record that does not carry the value. It reads as
+        // an empty value, and an empty value names no copy.
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.PatchPackageReadAnswers(PatchQ, ProductA, null, MsiInstallContext.Machine, MsiError.UnknownProperty);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_recorded_copy_will_not_read()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.PatchPackageReadAnswers(PatchQ, ProductA, null, MsiInstallContext.Machine, MsiError.AccessDenied);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_a_listed_registration_answers_that_the_patch_is_not_there()
+    {
+        // The enumeration listed the registration and the keyed read of its copy answers
+        // that the patch is not registered against that product. The two answers
+        // disagree, so which copy that registration records is not known.
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.PatchPackageReadAnswers(PatchQ, ProductA, null, MsiInstallContext.Machine, MsiError.UnknownPatch);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_recorded_copy_is_not_on_disk()
+    {
+        // The identity fake still answers for the recorded path, so this is decided by
+        // the file being absent and not by an identity that would not read.
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Disk.RemoveFile(RecordedPatch);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_recorded_copy_path_names_a_folder()
+    {
+        // A folder opens to an identity like a file does, so without the file test a
+        // value naming a folder would read as another copy.
+        const string AFolder = @"C:\Windows\Installer\{33333333-3333-3333-3333-333333333333}";
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.RecordsPatchPackage(PatchQ, ProductA, null, MsiInstallContext.Machine, AFolder);
+        f.Files.Opens(AFolder, 4);
+        f.Disk.AddDirectory(AFolder);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_recorded_copy_opens_as_the_copy_itself()
+    {
+        // The registration names this very file under another spelling: a short name, a
+        // long-path prefix, a link. The two paths open to one file ID.
+        const string ShortName = @"C:\Windows\Installer\COPY~1.MSP";
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.RecordsPatchPackage(PatchQ, ProductA, null, MsiInstallContext.Machine, ShortName);
+        f.Packages.DeclaresPatch(ShortName, PatchQ, ProductA);
+        f.Files.Opens(ShortName, 1);
+        f.Disk.AddFile(ShortName, new MockFileData(new byte[100]));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_recorded_copy_will_not_identify()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Files.Answers(RecordedPatch, FileIdentityRead.OpenRefused);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_recorded_copy_declares_another_patch()
+    {
+        // The registration names a present file, and that file is not patch Q, so the
+        // record shows nothing about where Q's cached copy is.
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Packages.DeclaresPatch(RecordedPatch, PatchR, ProductA);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_recorded_copy_declares_nothing()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Packages.YieldsNothing(RecordedPatch, "patch summary stream would not open");
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_recorded_copy_reads_as_something_other_than_a_patch()
+    {
+        // The reading carries patch Q's code and is not marked as a patch, so it is not
+        // the reading that was asked for and shows nothing about the file.
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Packages.Yields(RecordedPatch, new PackageIdentity(PatchQ, IsPatch: false, Array.Empty<string>()));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_copy_itself_will_not_identify()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Files.Answers(PatchCopy, FileIdentityRead.IdentityUnavailable);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_a_second_registration_records_no_copy()
+    {
+        // Product B holds patch Q as well, for a user, and records nothing, so the copy
+        // that registration opens cannot be seen and this copy could be it. B is not in
+        // the patch's own target list: the machine-wide enumeration is what names it.
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.HoldsPatch(PatchQ, ProductB, UserSid, MsiInstallContext.UserUnmanaged);
+        f.Msi.RecordsPatchPackage(PatchQ, ProductB, UserSid, MsiInstallContext.UserUnmanaged, "");
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_let_through_when_every_registration_records_the_same_present_copy()
+    {
+        // A patch is cached once and shared by the products holding it, so two
+        // registrations name one file. Each registration's value is read and the file
+        // they name is identified once.
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.HoldsPatch(PatchQ, ProductB, UserSid, MsiInstallContext.UserUnmanaged);
+        f.Msi.RecordsPatchPackage(PatchQ, ProductB, UserSid, MsiInstallContext.UserUnmanaged, RecordedPatch);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile, ScreenThePatchCopy(f));
+        Assert.Equal(2, f.Msi.PatchPackageReads.Count);
+        Assert.Single(f.Files.Reads, p => p == RecordedPatch);
+    }
+
+    [Fact]
+    public void A_patch_registration_in_a_user_account_is_read_in_that_account()
+    {
+        // The only registration is per user. Its copy is asked for in that account and
+        // context, and the fake answers nothing else, so a read in any other place fails
+        // the test rather than being answered.
+        var packages = new ScriptedPackageIdentities();
+        packages.DeclaresPatch(PatchCopy, PatchQ, ProductA);
+        packages.DeclaresPatch(RecordedPatch, PatchQ, ProductA);
+
+        var msi = new ScriptedMsiProducts();
+        msi.Installed(ProductA, (UserSid, MsiInstallContext.UserUnmanaged));
+        msi.HoldsPatch(PatchQ, ProductA, UserSid, MsiInstallContext.UserUnmanaged);
+        msi.RecordsPatchPackage(PatchQ, ProductA, UserSid, MsiInstallContext.UserUnmanaged, RecordedPatch);
+
+        var files = new ScriptedFileIdentities();
+        files.Opens(PatchCopy, 1);
+        files.Opens(RecordedPatch, 2);
+
+        var disk = new MockFileSystem();
+        disk.AddFile(PatchCopy, new MockFileData(new byte[100]));
+        disk.AddFile(RecordedPatch, new MockFileData(new byte[100]));
+
+        var outcome = ScreenThePatchCopy((packages, msi, files, disk));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile, outcome);
+        Assert.Equal(
+            new[] { (PatchQ, ProductA, (string?)UserSid, MsiInstallContext.UserUnmanaged) },
+            msi.PatchPackageReads);
+    }
+
+    // ---- Finding the registrations ----
+    //
+    // Two ways, unioned. The machine-wide patch enumeration lists every registration it
+    // will name. The keyed question puts the patch to each installation of each product
+    // the patch declares it may be applied to, which reaches an installation the
+    // enumeration does not list. Either can only add a registration.
+
+    [Fact]
+    public void A_patch_Windows_holds_no_registration_of_is_left_where_it_was()
+    {
+        // The must-miss half. Product A is installed and answers that patch Q is not
+        // registered against it, and the enumeration lists nothing.
+        var packages = new ScriptedPackageIdentities();
+        packages.DeclaresPatch(PatchCopy, PatchQ, ProductA);
+
+        var msi = new ScriptedMsiProducts();
+        msi.Installed(ProductA);
+        msi.HoldsNoPatches();
+        msi.PatchStateAnswers(PatchQ, ProductA, null, MsiInstallContext.Machine, MsiError.UnknownPatch);
+
+        var outcome = new DeclaredProductCheck(msi, packages)
+            .Screen(new[] { Patch(PatchCopy) })[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchNotRegistered, outcome);
+        Assert.False(outcome.Withholds());
+        Assert.Single(msi.PatchStateReads);
+    }
+
+    [Fact]
+    public void A_patch_whose_target_products_are_not_installed_is_left_where_it_was()
+    {
+        // No installation of product A to ask, so the keyed question is not put at all.
+        var packages = new ScriptedPackageIdentities();
+        packages.DeclaresPatch(PatchCopy, PatchQ, ProductA);
+
+        var msi = new ScriptedMsiProducts();
+        msi.NotInstalled(ProductA, MsiError.UnknownProduct);
+        msi.HoldsNoPatches();
+
+        var outcome = new DeclaredProductCheck(msi, packages)
+            .Screen(new[] { Patch(PatchCopy) })[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchNotRegistered, outcome);
+        Assert.Empty(msi.PatchStateReads);
+    }
+
+    [Fact]
+    public void A_registration_only_the_keyed_question_finds_keeps_the_copy_like_any_other()
+    {
+        // The enumeration lists nothing and product A answers that patch Q is registered
+        // against it, recording no copy. The test above is this one with A answering the
+        // other way.
+        var packages = new ScriptedPackageIdentities();
+        packages.DeclaresPatch(PatchCopy, PatchQ, ProductA);
+
+        var msi = new ScriptedMsiProducts();
+        msi.Installed(ProductA);
+        msi.HoldsNoPatches();
+        msi.PatchState(PatchQ, ProductA, null, MsiInstallContext.Machine, "1");
+        msi.RecordsPatchPackage(PatchQ, ProductA, null, MsiInstallContext.Machine, "");
+
+        var outcome = new DeclaredProductCheck(msi, packages, new ScriptedFileIdentities(), new MockFileSystem())
+            .Screen(new[] { Patch(PatchCopy) })[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, outcome);
+        Assert.True(outcome.Withholds());
+    }
+
+    [Fact]
+    public void Copies_declaring_one_patch_for_different_products_are_each_asked_about_their_own()
+    {
+        // Two files carrying patch Q's code with different target lists. The keyed
+        // question for the first finds nothing on product A; the second's target, product
+        // B, holds the patch and records no copy. Each file is answered from its own
+        // target list.
+        const string OtherCopy = @"C:\Windows\Installer\other.msp";
+        var packages = new ScriptedPackageIdentities();
+        packages.DeclaresPatch(PatchCopy, PatchQ, ProductA);
+        packages.DeclaresPatch(OtherCopy, PatchQ, ProductB);
+
+        var msi = new ScriptedMsiProducts();
+        msi.Installed(ProductA);
+        msi.Installed(ProductB);
+        msi.HoldsNoPatches();
+        msi.PatchStateAnswers(PatchQ, ProductA, null, MsiInstallContext.Machine, MsiError.UnknownPatch);
+        msi.PatchState(PatchQ, ProductB, null, MsiInstallContext.Machine, "1");
+        msi.RecordsPatchPackage(PatchQ, ProductB, null, MsiInstallContext.Machine, "");
+
+        var outcomes = new DeclaredProductCheck(msi, packages, new ScriptedFileIdentities(), new MockFileSystem())
+            .Screen(new[] { Patch(PatchCopy), Patch(OtherCopy) });
+
+        Assert.Equal(new[]
+        {
+            DeclaredProductOutcome.DeclaredPatchNotRegistered,
+            DeclaredProductOutcome.DeclaredPatchRegistered,
+        }, outcomes);
+    }
+
+    [Fact]
+    public void Two_copies_of_one_patch_ask_Windows_once_and_are_each_compared()
+    {
+        const string SecondCopy = @"C:\Windows\Installer\copy2.msp";
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Packages.DeclaresPatch(SecondCopy, PatchQ, ProductA);
+        f.Files.Opens(SecondCopy, 5);
+        f.Disk.AddFile(SecondCopy, new MockFileData(new byte[100]));
+
+        var outcomes = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk)
+            .Screen(new[] { Patch(PatchCopy), Patch(SecondCopy) }, default, null, InInstallerFolder);
+
+        Assert.All(outcomes, o => Assert.Equal(DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile, o));
+        Assert.Equal(1, f.Msi.PatchEnumerations);
+        Assert.Single(f.Msi.Asked);
+        Assert.Single(f.Msi.PatchPackageReads);
+        Assert.Contains(PatchCopy, f.Files.Reads);
+        Assert.Contains(SecondCopy, f.Files.Reads);
+    }
+
+    [Fact]
+    public void One_pass_walks_the_machine_wide_patch_enumeration_once_for_every_patch()
+    {
+        // Two different patches. The enumeration lists every patch on the machine, so the
+        // second patch is answered from the same walk.
+        const string OtherPatchCopy = @"C:\Windows\Installer\r.msp";
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Packages.DeclaresPatch(OtherPatchCopy, PatchR, ProductB);
+        f.Msi.NotInstalled(ProductB, MsiError.UnknownProduct);
+
+        var outcomes = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk)
+            .Screen(new[] { Patch(PatchCopy), Patch(OtherPatchCopy) }, default, null, InInstallerFolder);
+
+        Assert.Equal(new[]
+        {
+            DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile,
+            DeclaredProductOutcome.DeclaredPatchNotRegistered,
+        }, outcomes);
+        Assert.Equal(1, f.Msi.PatchEnumerations);
+    }
+
+    [Fact]
+    public void Without_the_file_readers_a_registered_patch_s_copy_is_kept_and_nothing_is_read()
+    {
+        // The fixture that lets the copy through, handed to a check built without its two
+        // file readers. The copy is kept, and neither the recorded copy nor any file's
+        // identity is read.
+        var f = APatchCopyBesideTheRecordedCopy();
+
+        var outcome = new DeclaredProductCheck(f.Msi, f.Packages)
+            .Screen(new[] { Patch(PatchCopy) })[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, outcome);
+        Assert.Empty(f.Msi.PatchPackageReads);
+        Assert.Empty(f.Files.Reads);
+    }
+
+    // ---- A patch the check can say nothing about ----
+    //
+    // Each of these is the check failing to establish the patch's registrations. The
+    // check says nothing about such a file and the rest of the scan decides it.
+
+    [Fact]
+    public void A_patch_that_will_not_yield_its_code_is_left_to_the_rest_of_the_scan()
+    {
+        var packages = new ScriptedPackageIdentities();
+        packages.YieldsNothing(PatchCopy, "patch summary stream would not open (1627)");
+
+        var outcome = new DeclaredProductCheck(new ScriptedMsiProducts(), packages)
+            .Screen(new[] { Patch(PatchCopy) })[0];
+
+        Assert.Equal(DeclaredProductOutcome.NotAProductPackage, outcome);
+    }
+
+    [Fact]
+    public void A_patch_reading_with_an_empty_code_is_left_to_the_rest_of_the_scan()
+    {
+        var packages = new ScriptedPackageIdentities();
+        packages.Yields(PatchCopy, new PackageIdentity(string.Empty, IsPatch: true, new[] { ProductA }));
+
+        var outcome = new DeclaredProductCheck(new ScriptedMsiProducts(), packages)
+            .Screen(new[] { Patch(PatchCopy) })[0];
+
+        Assert.Equal(DeclaredProductOutcome.NotAProductPackage, outcome);
+    }
+
+    [Fact]
+    public void A_patch_reading_that_comes_back_as_a_product_is_left_to_the_rest_of_the_scan()
+    {
+        // The reading names a product, so the only thing stopping it is that it is not
+        // marked as a patch.
+        var packages = new ScriptedPackageIdentities();
+        packages.Yields(PatchCopy, new PackageIdentity(PatchQ, IsPatch: false, new[] { ProductA }));
+
+        var outcome = new DeclaredProductCheck(new ScriptedMsiProducts(), packages)
+            .Screen(new[] { Patch(PatchCopy) })[0];
+
+        Assert.Equal(DeclaredProductOutcome.NotAProductPackage, outcome);
+    }
+
+    [Fact]
+    public void A_patch_reading_that_names_no_target_is_left_to_the_rest_of_the_scan()
+    {
+        // With no product named, there is no installation to put the keyed question to.
+        var packages = new ScriptedPackageIdentities();
+        packages.Yields(PatchCopy, new PackageIdentity(PatchQ, IsPatch: true, Array.Empty<string>()));
+
+        var outcome = new DeclaredProductCheck(new ScriptedMsiProducts(), packages)
+            .Screen(new[] { Patch(PatchCopy) })[0];
+
+        Assert.Equal(DeclaredProductOutcome.NotAProductPackage, outcome);
+    }
+
+    [Fact]
+    public void A_patch_is_left_to_the_rest_of_the_scan_when_the_patch_enumeration_will_not_start()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.PatchEnumerationAnswersAt(0, MsiError.AccessDenied);
+
+        Assert.Equal(DeclaredProductOutcome.NotAProductPackage, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_is_left_to_the_rest_of_the_scan_when_the_patch_enumeration_stops_part_way()
+    {
+        // One row, then a return that is not the end of the list: what lies past it is
+        // unread.
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.PatchEnumerationAnswersAt(1, MsiError.AccessDenied);
+
+        Assert.Equal(DeclaredProductOutcome.NotAProductPackage, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_is_left_to_the_rest_of_the_scan_when_the_patch_enumeration_does_not_end()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.PatchEnumerationNeverEnds(PatchR, ProductB);
+
+        Assert.Equal(DeclaredProductOutcome.NotAProductPackage, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_is_left_to_the_rest_of_the_scan_when_a_target_s_installations_will_not_list()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.Answers(ProductA, MsiError.AccessDenied);
+
+        Assert.Equal(DeclaredProductOutcome.NotAProductPackage, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_is_left_to_the_rest_of_the_scan_when_the_keyed_question_is_not_answered()
+    {
+        var packages = new ScriptedPackageIdentities();
+        packages.DeclaresPatch(PatchCopy, PatchQ, ProductA);
+
+        var msi = new ScriptedMsiProducts();
+        msi.Installed(ProductA);
+        msi.HoldsNoPatches();
+        msi.PatchStateAnswers(PatchQ, ProductA, null, MsiInstallContext.Machine, MsiError.AccessDenied);
+
+        var outcome = new DeclaredProductCheck(msi, packages)
+            .Screen(new[] { Patch(PatchCopy) })[0];
+
+        Assert.Equal(DeclaredProductOutcome.NotAProductPackage, outcome);
+    }
+
     // ---- What the outcomes mean, pinned over the whole enum ----
 
     [Fact]
-    public void Exactly_three_outcomes_let_a_file_through_and_an_unset_verdict_does_not()
+    public void Exactly_five_outcomes_let_a_file_through_and_an_unset_verdict_does_not()
     {
-        // The rule is written as "anything but these three" so that a member added
+        // The rule is written as "anything but these five" so that a member added
         // later withholds rather than silently not withholding. This pins the
         // permitting set by name, so adding one that permits has to be a
         // deliberate edit here as well as there.
@@ -776,6 +1281,8 @@ public class DeclaredProductCheckTests
                 DeclaredProductOutcome.NotAProductPackage,
                 DeclaredProductOutcome.DeclaredProductNotInstalled,
                 DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile,
+                DeclaredProductOutcome.DeclaredPatchNotRegistered,
+                DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile,
             },
             permitting);
 
@@ -869,8 +1376,20 @@ internal sealed class ScriptedPackageIdentities : IPackageIdentityReader
     /// <summary>Every path this reader was asked about, in order.</summary>
     public List<string> Reads { get; } = new();
 
+    /// <summary>
+    /// Every path this reader was asked to take the patch reading of, in order. The real
+    /// reader opens a patch's summary stream and an installation package's database, and
+    /// a patch read the other way yields nothing, so which reading was asked for is part
+    /// of what a test pins.
+    /// </summary>
+    public List<string> PatchReads { get; } = new();
+
     public void Declares(string path, string productCode) =>
         _byPath[path] = new PackageIdentity(productCode, IsPatch: false, Array.Empty<string>());
+
+    /// <summary>The file is a patch declaring its own code and the products it may be applied to.</summary>
+    public void DeclaresPatch(string path, string patchCode, params string[] targets) =>
+        _byPath[path] = new PackageIdentity(patchCode, IsPatch: true, targets);
 
     public void Yields(string path, PackageIdentity identity) => _byPath[path] = identity;
 
@@ -888,6 +1407,7 @@ internal sealed class ScriptedPackageIdentities : IPackageIdentityReader
     public PackageIdentity? Read(string filePath, bool isPatch, out string detail)
     {
         Reads.Add(filePath);
+        if (isPatch) PatchReads.Add(filePath);
         detail = _notes.TryGetValue(filePath, out var note) ? note : string.Empty;
         if (!_byPath.TryGetValue(filePath, out var identity))
             throw new InvalidOperationException(
@@ -899,12 +1419,14 @@ internal sealed class ScriptedPackageIdentities : IPackageIdentityReader
 /// <summary>
 /// A scripted <see cref="IMsiApi"/> answering the questions this area asks: the keyed
 /// product enumeration, the LocalPackage and PackageName each installation records,
-/// and each installation's network source list. Patch enumeration and patch
-/// properties are not reachable from here and say so.
+/// each installation's network source list, the machine-wide patch enumeration, and
+/// the State and LocalPackage a patch records against each product holding it.
 ///
 /// AN UNSCRIPTED CODE THROWS, for the reason the reader's does: "Windows does not
 /// hold that product" is the single answer that lets a file through, so a fake
-/// giving it by default would let a test assert an offer nothing established.
+/// giving it by default would let a test assert an offer nothing established. The
+/// patch questions throw on anything unscripted for the same reason: "no registration
+/// of that patch" is the answer that lets a patch copy through.
 /// </summary>
 internal sealed class ScriptedMsiProducts : IMsiApi
 {
@@ -1006,10 +1528,96 @@ internal sealed class ScriptedMsiProducts : IMsiApi
         return MsiError.Success;
     }
 
+    private readonly List<(string PatchCode, string ProductCode, string? Sid, MsiInstallContext Context)> _patchRows = new();
+    private readonly Dictionary<uint, uint> _patchRowAnswers = new();
+    private bool _patchRowsScripted;
+    private bool _patchRowsEndless;
+
+    /// <summary>
+    /// How many times the machine-wide patch enumeration was started, counted at its
+    /// first index, so a test can pin that one pass walks it once.
+    /// </summary>
+    public int PatchEnumerations { get; private set; }
+
+    /// <summary>
+    /// One row of the machine-wide patch enumeration: the patch is registered against
+    /// the product in that account and context. Rows come back in the order scripted.
+    /// </summary>
+    public void HoldsPatch(string patchCode, string productCode, string? sid, MsiInstallContext context)
+    {
+        _patchRowsScripted = true;
+        _patchRows.Add((patchCode, productCode, sid, context));
+    }
+
+    /// <summary>The machine-wide patch enumeration ends at once, naming no registration.</summary>
+    public void HoldsNoPatches() => _patchRowsScripted = true;
+
+    /// <summary>What one index of the machine-wide patch enumeration returns instead of a row.</summary>
+    public void PatchEnumerationAnswersAt(uint index, uint error)
+    {
+        _patchRowsScripted = true;
+        _patchRowAnswers[index] = error;
+    }
+
+    /// <summary>A machine-wide patch enumeration whose every index answers with one row, and which never ends.</summary>
+    public void PatchEnumerationNeverEnds(string patchCode, string productCode)
+    {
+        _patchRowsScripted = true;
+        _patchRowsEndless = true;
+        _patchRows.Add((patchCode, productCode, null, MsiInstallContext.Machine));
+    }
+
+    /// <summary>
+    /// Answers the machine-wide patch enumeration, the one call made with no product
+    /// code, one scripted row per index and <see cref="MsiError.NoMoreItems"/> past the
+    /// last. Anything narrower is a question this area does not ask, and throws.
+    ///
+    /// AN UNSCRIPTED ENUMERATION THROWS. A machine holding no patch registration is an
+    /// answer that lets a patch copy through, so a fake giving it by default would let a
+    /// test assert an offer nothing established.
+    /// </summary>
     public uint EnumPatches(string? productCode, string? userSid, MsiInstallContext context, MsiPatchFilter filter,
         uint index, char[]? patchCode, char[]? targetProductCode, out MsiInstallContext targetProductContext,
-        char[]? targetUserSid, ref uint targetUserSidLength) =>
-        throw new InvalidOperationException("the declared-product check enumerates no patches");
+        char[]? targetUserSid, ref uint targetUserSidLength)
+    {
+        targetProductContext = MsiInstallContext.Machine;
+
+        if (productCode is not null || userSid != "S-1-1-0"
+            || context != MsiInstallContext.All || filter != MsiPatchFilter.All)
+            throw new InvalidOperationException(
+                "the declared-product check enumerates every patch of every product in every account, "
+                + $"and was asked for {productCode ?? "every product"} as {userSid ?? "the current user"} "
+                + $"in {context} with filter {filter}");
+
+        if (!_patchRowsScripted)
+            throw new InvalidOperationException(
+                "the fake was asked for the machine's patch registrations, which no test scripted");
+
+        if (index == 0) PatchEnumerations++;
+
+        if (_patchRowAnswers.TryGetValue(index, out var error)) return error;
+        if (!_patchRowsEndless && index >= _patchRows.Count) return MsiError.NoMoreItems;
+
+        var (rowPatch, rowProduct, rowSid, rowContext) = _patchRows[_patchRowsEndless ? 0 : (int)index];
+
+        // Both GUID buffers and the account are written, because the real API writes
+        // them and the caller reads the account back only outside the machine context.
+        if (patchCode is not null)
+            for (var i = 0; i < rowPatch.Length && i < patchCode.Length - 1; i++) patchCode[i] = rowPatch[i];
+        if (targetProductCode is not null)
+            for (var i = 0; i < rowProduct.Length && i < targetProductCode.Length - 1; i++)
+                targetProductCode[i] = rowProduct[i];
+
+        targetProductContext = rowContext;
+        if (rowSid is not null && targetUserSid is not null)
+        {
+            for (var i = 0; i < rowSid.Length && i < targetUserSid.Length; i++) targetUserSid[i] = rowSid[i];
+            targetUserSidLength = (uint)rowSid.Length;
+        }
+        else targetUserSidLength = 0;
+
+        return MsiError.Success;
+    }
 
     private readonly Dictionary<(string ProductCode, string? Sid, MsiInstallContext Context), (uint Error, string Value)>
         _localPackages = new();
@@ -1122,9 +1730,80 @@ internal sealed class ScriptedMsiProducts : IMsiApi
         return MsiError.Success;
     }
 
+    private readonly Dictionary<(string PatchCode, string ProductCode, string? Sid, MsiInstallContext Context), (uint Error, string Value)>
+        _patchStates = new();
+
+    private readonly Dictionary<(string PatchCode, string ProductCode, string? Sid, MsiInstallContext Context), (uint Error, string Value)>
+        _patchPackages = new();
+
+    /// <summary>Every patch State read this API answered, in order.</summary>
+    public List<(string PatchCode, string ProductCode, string? Sid, MsiInstallContext Context)> PatchStateReads { get; } = new();
+
+    /// <summary>Every patch LocalPackage read this API answered, in order.</summary>
+    public List<(string PatchCode, string ProductCode, string? Sid, MsiInstallContext Context)> PatchPackageReads { get; } = new();
+
+    /// <summary>
+    /// The State a patch has against one installation of a product: a value where the
+    /// patch is registered against it.
+    /// </summary>
+    public void PatchState(string patchCode, string productCode, string? sid, MsiInstallContext context, string state) =>
+        _patchStates[(patchCode, productCode, sid, context)] = (MsiError.Success, state);
+
+    /// <summary>
+    /// What reading a patch's State against one installation returns instead of a value.
+    /// <see cref="MsiError.UnknownPatch"/> is the answer for an installation the patch is
+    /// not registered against.
+    /// </summary>
+    public void PatchStateAnswers(string patchCode, string productCode, string? sid, MsiInstallContext context, uint error) =>
+        _patchStates[(patchCode, productCode, sid, context)] = (error, string.Empty);
+
+    /// <summary>
+    /// The LocalPackage value one registration of a patch records. An empty value is a
+    /// registration that names no cached copy.
+    /// </summary>
+    public void RecordsPatchPackage(string patchCode, string productCode, string? sid, MsiInstallContext context,
+        string localPackage) =>
+        _patchPackages[(patchCode, productCode, sid, context)] = (MsiError.Success, localPackage);
+
+    /// <summary>What reading one registration's LocalPackage returns instead of a value.</summary>
+    public void PatchPackageReadAnswers(string patchCode, string productCode, string? sid, MsiInstallContext context,
+        uint error) =>
+        _patchPackages[(patchCode, productCode, sid, context)] = (error, string.Empty);
+
+    /// <summary>
+    /// Answers State and LocalPackage, the two patch properties the check reads, with the
+    /// real API's two-call shape: a null buffer is answered with the length, a buffer
+    /// with the value.
+    ///
+    /// AN UNSCRIPTED PAIRING THROWS. "The patch is not registered against this product"
+    /// is an answer that lets a patch copy through, and a recorded copy that is present
+    /// and is another file is the other, so a fake inventing either would let a test
+    /// assert an offer nothing established.
+    /// </summary>
     public uint GetPatchInfo(string patchCode, string productCode, string? userSid, MsiInstallContext context,
-        string property, char[]? value, ref uint valueLength) =>
-        throw new InvalidOperationException("the declared-product check reads no patch properties");
+        string property, char[]? value, ref uint valueLength)
+    {
+        var (table, reads) = property switch
+        {
+            MsiInstallProperty.State => (_patchStates, PatchStateReads),
+            MsiInstallProperty.LocalPackage => (_patchPackages, PatchPackageReads),
+            _ => throw new InvalidOperationException(
+                $"the declared-product check reads a patch's State and LocalPackage, and was asked for {property}"),
+        };
+
+        if (!table.TryGetValue((patchCode, productCode, userSid, context), out var scripted))
+            throw new InvalidOperationException(
+                $"the fake was asked for the {property} patch {patchCode} records against {productCode} "
+                + $"for {userSid ?? "the machine"} in {context}, which no test scripted");
+
+        if (value is null) reads.Add((patchCode, productCode, userSid, context));
+        if (scripted.Error != MsiError.Success) return scripted.Error;
+
+        if (value is not null)
+            for (var i = 0; i < scripted.Value.Length && i < value.Length; i++) value[i] = scripted.Value[i];
+        valueLength = (uint)scripted.Value.Length;
+        return MsiError.Success;
+    }
 }
 
 /// <summary>

@@ -442,9 +442,10 @@ internal static class Program
             //
             // The count and the size are UnestablishedWithheldCount and
             // UnestablishedWithheldBytes, which leave out any file kept because it
-            // declares an installed program or is under a day old, and they
-            // are the figures the window's screen uses, so the two hosts cannot
-            // disagree about one machine.
+            // declares an installed program, is under a day old or is a copy of a
+            // patch Windows holds a registration of, and they are the figures the
+            // window's screen uses, so the two hosts cannot disagree about one
+            // machine.
             var withheldCount = scanResult.UnestablishedWithheldCount;
 
             // The one-form names the size and not the numeral ("the one file"), so it
@@ -1032,8 +1033,8 @@ internal static class Program
         // is what a number in the 3000 band is for. See CliEventClass.
         //
         // NOTHING IS REPORTED HERE FOR A RUN WHOSE EVERY HELD FILE DECLARES A PROGRAM
-        // WINDOWS STILL HAS INSTALLED OR IS UNDER A DAY OLD:
-        // HasWithholdingToReport is false for it.
+        // WINDOWS STILL HAS INSTALLED, IS UNDER A DAY OLD, OR IS A COPY OF A PATCH
+        // WINDOWS HOLDS A REGISTRATION OF: HasWithholdingToReport is false for it.
         if (scanResult.HasWithholdingToReport)
         {
             // WHICH OF THE TWO SENTENCES, ASKED ONCE AND SPENT BY BOTH THE AUDIT LINE
@@ -1492,10 +1493,10 @@ internal static class Program
     /// speak for it, and a line here as well would say the same thing twice about one
     /// machine.
     ///
-    /// NOR DO THE DECLARED-PRODUCT-INSTALLED, UNDER-A-DAY-OLD AND AGE-UNESTABLISHED
-    /// ARMS, so the command line prints no reason line for the files they count. The
-    /// first two are not in the held-back lead's count; the third is, and a run holding
-    /// one prints the lead with no list under it.
+    /// NOR DO THE DECLARED-PRODUCT-INSTALLED, UNDER-A-DAY-OLD, DECLARED-PATCH-REGISTERED
+    /// AND AGE-UNESTABLISHED ARMS, so the command line prints no reason line for the
+    /// files they count. The first three are not in the held-back lead's count; the
+    /// fourth is, and a run holding one prints the lead with no list under it.
     ///
     /// The fallback is the heading's own antecedent rather than a blank, on the same
     /// reasoning as above, and it is unreachable while every arm is handled.

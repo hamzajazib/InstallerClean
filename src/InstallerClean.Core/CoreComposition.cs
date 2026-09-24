@@ -53,15 +53,15 @@ public static class CoreComposition
         // nothing else. Registered beside the other registry readers rather than
         // inside the scan because it answers about the machine, not about the run.
         services.AddSingleton<IShortNameCreationProbe, ShortNameCreationProbe>();
-        // Reads a cached package's own declared identity. Two consumers, and they
-        // take the two different readings: the enumeration's patch-target route
-        // asks a patch file which products it names, and the declared-product
-        // screen below asks an installation package which product it belongs to.
+        // Reads a cached package's own declared identity. Two consumers: the
+        // enumeration's patch-target route asks a patch file which products it
+        // names, and the declared-product screen below asks an installation package
+        // which product it belongs to and a patch which patch it is.
         services.AddSingleton<IPackageIdentityReader, PackageIdentityReader>();
-        // The scan's third source for product packages, and the only one that
-        // starts at the file rather than at a registration. It can keep a
-        // candidate back and can do nothing else; see IDeclaredProductCheck for
-        // why it may never be asked about a patch.
+        // The scan's third source for cached files, and the only one that starts at
+        // the file rather than at a registration. It can keep a candidate back and
+        // can do nothing else; see IDeclaredProductCheck for why the superseded half
+        // of the offer is never put to it.
         services.AddSingleton<IDeclaredProductCheck, DeclaredProductCheck>();
         // Answers which file a recorded path names, so the scan's path comparison
         // is not defeated by a registration written in a spelling the folder walk
