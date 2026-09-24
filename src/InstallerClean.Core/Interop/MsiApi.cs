@@ -50,6 +50,17 @@ internal sealed class MsiApi : IMsiApi
         Msi.MsiGetProductInfoEx(
             productCode, userSid, context, property, value, ref valueLength);
 
+    public uint EnumSources(
+        string productCode,
+        string? userSid,
+        MsiInstallContext context,
+        uint options,
+        uint index,
+        char[]? source,
+        ref uint sourceLength) =>
+        Msi.MsiSourceListEnumSources(
+            productCode, userSid, context, options, index, source, ref sourceLength);
+
     public uint GetPatchInfo(
         string patchCode,
         string productCode,

@@ -254,6 +254,10 @@ internal sealed class FakeMsiApi : IMsiApi
         return DoubleCall(_productProps.GetValueOrDefault((productCode, property), ""), value, ref valueLength);
     }
 
+    public uint EnumSources(string productCode, string? userSid, MsiInstallContext context, uint options,
+        uint index, char[]? source, ref uint sourceLength) =>
+        throw new InvalidOperationException("the query service reads no source lists");
+
     public uint GetPatchInfo(string patchCode, string productCode, string? userSid, MsiInstallContext context,
         string property, char[]? value, ref uint valueLength)
     {

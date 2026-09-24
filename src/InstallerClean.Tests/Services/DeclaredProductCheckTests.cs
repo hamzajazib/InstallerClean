@@ -355,20 +355,33 @@ public class DeclaredProductCheckTests
     // ---- An installed product whose recorded package is another file ----
     //
     // Windows Installer opens a product's cached package through the LocalPackage
-    // value each installation records. A copy in the folder that no such value names
-    // is not the package any installation uses, so it is let through, and only when
-    // EVERY installation's recorded package is present and is another file. Each
-    // test after the first is one way an installation's package can fail to be
-    // seen, and every one of them keeps the file.
+    // value each installation records. A copy in the folder that no such value names,
+    // and that no source reaches, is let through, and only when EVERY installation's
+    // recorded package is present and is another file. Each test after the first is
+    // one way an installation's package can fail to be seen, and every one of them
+    // keeps the file. The sources have their own tests further down.
 
     private const string Candidate = @"C:\Windows\Installer\a.msi";
     private const string Recorded = @"C:\Windows\Installer\b.msi";
     private const string UserSid = "S-1-5-21-9-9-9-1001";
+    private const string InstallerFolder = @"C:\Windows\Installer";
+    private const string SetupFolder = @"D:\Setup\";
+    private const string SetupName = "setup.msi";
+    private const string SetupPackage = @"D:\Setup\setup.msi";
+
+    /// <summary>
+    /// The scan's answer to whether a path names a file directly in the Installer
+    /// folder, on the spelling alone, which is all a scripted path has.
+    /// </summary>
+    private static bool? InInstallerFolder(string path) =>
+        path.StartsWith(InstallerFolder + @"\", StringComparison.OrdinalIgnoreCase)
+        && path.IndexOf('\\', InstallerFolder.Length + 1) < 0;
 
     /// <summary>
     /// Product A installed once per machine, recording <see cref="Recorded"/>, with
-    /// both files on disk as two different files that both declare product A. Each
-    /// test changes one thing.
+    /// both files on disk as two different files that both declare product A, and
+    /// installed from <see cref="SetupPackage"/>, which is no longer there. Each test
+    /// changes one thing.
     /// </summary>
     private static (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
         ScriptedFileIdentities Files, MockFileSystem Disk) ACopyBesideTheRecordedPackage()
@@ -380,10 +393,12 @@ public class DeclaredProductCheckTests
         var msi = new ScriptedMsiProducts();
         msi.Installed(ProductA);
         msi.RecordsPackage(ProductA, null, MsiInstallContext.Machine, Recorded);
+        msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, SetupName, SetupFolder);
 
         var files = new ScriptedFileIdentities();
         files.Opens(Candidate, 1);
         files.Opens(Recorded, 2);
+        files.Answers(SetupPackage, FileIdentityRead.NamesNothing);
 
         var disk = new MockFileSystem();
         disk.AddFile(Candidate, new MockFileData(new byte[100]));
@@ -394,9 +409,11 @@ public class DeclaredProductCheckTests
 
     private static DeclaredProductOutcome ScreenTheCopy(
         (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
-            ScriptedFileIdentities Files, MockFileSystem Disk) f) =>
+            ScriptedFileIdentities Files, MockFileSystem Disk) f,
+        Func<string, bool?>? namesAFileInInstallerFolder = null) =>
         new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk)
-            .Screen(new[] { Package(Candidate) })[0];
+            .Screen(new[] { Package(Candidate) }, default, null,
+                namesAFileInInstallerFolder ?? InInstallerFolder)[0];
 
     [Fact]
     public void A_copy_beside_the_package_its_installed_product_records_is_let_through()
@@ -421,6 +438,7 @@ public class DeclaredProductCheckTests
             (null, MsiInstallContext.Machine),
             (UserSid, MsiInstallContext.UserUnmanaged));
         f.Msi.RecordsPackage(ProductA, UserSid, MsiInstallContext.UserUnmanaged, UsersPackage);
+        f.Msi.RecordsSources(ProductA, UserSid, MsiInstallContext.UserUnmanaged, SetupName, SetupFolder);
         f.Packages.Declares(UsersPackage, ProductA);
         f.Files.Opens(UsersPackage, 3);
         f.Disk.AddFile(UsersPackage, new MockFileData(new byte[100]));
@@ -556,6 +574,125 @@ public class DeclaredProductCheckTests
         Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
     }
 
+    // ---- The installation's sources ----
+    //
+    // When Windows Installer needs a product's original package rather than its
+    // cached copy, it looks for the package name in the folders on the product's
+    // source list. A copy in the Installer folder that such a source can reach is
+    // kept, and so is one whose sources cannot be ruled out. Each keeping test is
+    // the fixture above, which lets the copy through, with one thing changed.
+
+    [Fact]
+    public void A_copy_is_kept_when_its_product_was_installed_from_the_Installer_folder()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, "c.msi", InstallerFolder + @"\");
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_a_source_package_is_the_copy_itself()
+    {
+        // A source outside the folder whose package opens as this file.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Files.Opens(SetupPackage, 1);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_whether_a_source_is_in_the_Installer_folder_is_not_established()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f, _ => null));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_screen_has_no_Installer_folder_to_compare_against()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+
+        var outcome = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk)
+            .Screen(new[] { Package(Candidate) })[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome);
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_source_list_will_not_read()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.SourceListAnswers(ProductA, null, MsiInstallContext.Machine, MsiError.AccessDenied);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_source_list_does_not_end()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.SourceListNeverEnds(ProductA, null, MsiInstallContext.Machine);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_a_source_entry_is_empty()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, SetupName, "");
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_package_name_will_not_read()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.PackageNameAnswers(ProductA, null, MsiInstallContext.Machine, MsiError.AccessDenied);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_package_name_is_empty()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, "", SetupFolder);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_a_source_package_will_not_identify()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Files.Answers(SetupPackage, FileIdentityRead.OpenRefused);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_let_through_when_its_source_package_is_another_file()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Files.Opens(SetupPackage, 9);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+        Assert.Contains(SetupPackage, f.Files.Reads);
+    }
+
+    [Fact]
+    public void A_copy_is_let_through_when_its_product_records_no_network_source()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, SetupName);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+    }
+
     [Fact]
     public void Without_the_file_readers_no_recorded_package_is_read()
     {
@@ -583,7 +720,7 @@ public class DeclaredProductCheckTests
         f.Disk.AddFile(SecondCopy, new MockFileData(new byte[100]));
 
         var outcomes = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk)
-            .Screen(new[] { Package(Candidate), Package(SecondCopy) });
+            .Screen(new[] { Package(Candidate), Package(SecondCopy) }, default, null, InInstallerFolder);
 
         Assert.All(outcomes, o => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, o));
         Assert.Single(f.Msi.Asked);
@@ -745,9 +882,10 @@ internal sealed class ScriptedPackageIdentities : IPackageIdentityReader
 }
 
 /// <summary>
-/// A scripted <see cref="IMsiApi"/> answering the two questions this area asks: the
-/// keyed product enumeration, and the LocalPackage each installation records. The
-/// other two members are not reachable from here and say so.
+/// A scripted <see cref="IMsiApi"/> answering the questions this area asks: the keyed
+/// product enumeration, the LocalPackage and PackageName each installation records,
+/// and each installation's network source list. Patch enumeration and patch
+/// properties are not reachable from here and say so.
 ///
 /// AN UNSCRIPTED CODE THROWS, for the reason the reader's does: "Windows does not
 /// hold that product" is the single answer that lets a file through, so a fake
@@ -876,10 +1014,39 @@ internal sealed class ScriptedMsiProducts : IMsiApi
     public void PackageReadAnswers(string productCode, string? sid, MsiInstallContext context, uint error) =>
         _localPackages[(productCode, sid, context)] = (error, string.Empty);
 
+    private readonly Dictionary<(string ProductCode, string? Sid, MsiInstallContext Context), (uint Error, string Value)>
+        _packageNames = new();
+
+    private readonly Dictionary<(string ProductCode, string? Sid, MsiInstallContext Context), (uint Error, string[] Folders, bool Endless)>
+        _sources = new();
+
     /// <summary>
-    /// Answers LocalPackage alone, the one product property the check reads, with the
-    /// real API's two-call shape: a null buffer is answered with the length, a buffer
-    /// with the value.
+    /// The package name and the network source folders one installation records, in
+    /// list order.
+    /// </summary>
+    public void RecordsSources(string productCode, string? sid, MsiInstallContext context,
+        string packageName, params string[] folders)
+    {
+        _packageNames[(productCode, sid, context)] = (MsiError.Success, packageName);
+        _sources[(productCode, sid, context)] = (MsiError.Success, folders, false);
+    }
+
+    /// <summary>What reading one installation's PackageName returns instead of a value.</summary>
+    public void PackageNameAnswers(string productCode, string? sid, MsiInstallContext context, uint error) =>
+        _packageNames[(productCode, sid, context)] = (error, string.Empty);
+
+    /// <summary>What reading one installation's source list returns instead of an entry.</summary>
+    public void SourceListAnswers(string productCode, string? sid, MsiInstallContext context, uint error) =>
+        _sources[(productCode, sid, context)] = (error, Array.Empty<string>(), false);
+
+    /// <summary>A source list whose every index answers with another folder, and which never ends.</summary>
+    public void SourceListNeverEnds(string productCode, string? sid, MsiInstallContext context) =>
+        _sources[(productCode, sid, context)] = (MsiError.Success, new[] { @"D:\Somewhere\" }, true);
+
+    /// <summary>
+    /// Answers LocalPackage and PackageName, the two product properties the check
+    /// reads, with the real API's two-call shape: a null buffer is answered with the
+    /// length, a buffer with the value.
     ///
     /// AN UNSCRIPTED INSTALLATION THROWS. A recorded package that is present and is
     /// another file is the answer that lets a file through, so a fake inventing one
@@ -888,21 +1055,55 @@ internal sealed class ScriptedMsiProducts : IMsiApi
     public uint GetProductInfo(string productCode, string? userSid, MsiInstallContext context, string property,
         char[]? value, ref uint valueLength)
     {
-        if (property != MsiInstallProperty.LocalPackage)
-            throw new InvalidOperationException(
-                $"the declared-product check reads LocalPackage and nothing else, and was asked for {property}");
+        var table = property switch
+        {
+            MsiInstallProperty.LocalPackage => _localPackages,
+            MsiInstallProperty.PackageName => _packageNames,
+            _ => throw new InvalidOperationException(
+                $"the declared-product check reads LocalPackage and PackageName, and was asked for {property}"),
+        };
 
-        if (!_localPackages.TryGetValue((productCode, userSid, context), out var scripted))
+        if (!table.TryGetValue((productCode, userSid, context), out var scripted))
             throw new InvalidOperationException(
-                $"the fake was asked for the package {productCode} records for {userSid ?? "the machine"} "
+                $"the fake was asked for the {property} {productCode} records for {userSid ?? "the machine"} "
                 + $"in {context}, which no test scripted");
 
-        if (value is null) PackageReads.Add((productCode, userSid, context));
+        if (value is null && property == MsiInstallProperty.LocalPackage) PackageReads.Add((productCode, userSid, context));
         if (scripted.Error != MsiError.Success) return scripted.Error;
 
         if (value is not null)
             for (var i = 0; i < scripted.Value.Length && i < value.Length; i++) value[i] = scripted.Value[i];
         valueLength = (uint)scripted.Value.Length;
+        return MsiError.Success;
+    }
+
+    /// <summary>
+    /// Answers the network source list with the real API's two-call shape, one entry
+    /// per index and <see cref="MsiError.NoMoreItems"/> past the last.
+    ///
+    /// AN UNSCRIPTED INSTALLATION THROWS. An empty list is an answer that lets a file
+    /// through, so a fake giving one by default would let a test assert an offer
+    /// nothing established.
+    /// </summary>
+    public uint EnumSources(string productCode, string? userSid, MsiInstallContext context, uint options,
+        uint index, char[]? source, ref uint sourceLength)
+    {
+        if (options != (MsiSourceListOptions.Product | MsiSourceListOptions.Network))
+            throw new InvalidOperationException(
+                $"the declared-product check reads a product's network sources, and was asked with options {options}");
+
+        if (!_sources.TryGetValue((productCode, userSid, context), out var scripted))
+            throw new InvalidOperationException(
+                $"the fake was asked for the sources {productCode} records for {userSid ?? "the machine"} "
+                + $"in {context}, which no test scripted");
+
+        if (scripted.Error != MsiError.Success) return scripted.Error;
+        if (!scripted.Endless && index >= scripted.Folders.Length) return MsiError.NoMoreItems;
+
+        var folder = scripted.Folders[scripted.Endless ? 0 : (int)index];
+        if (source is not null)
+            for (var i = 0; i < folder.Length && i < source.Length; i++) source[i] = folder[i];
+        sourceLength = (uint)folder.Length;
         return MsiError.Success;
     }
 

@@ -1,8 +1,8 @@
 namespace InstallerClean.Interop;
 
 /// <summary>
-/// Test seam over the four Windows Installer enumeration and property
-/// P/Invokes that decide a cached file's fate. Introduced so the verdict
+/// Test seam over the Windows Installer enumeration and property P/Invokes that
+/// decide a cached file's fate. Introduced so the verdict
 /// logic in <c>InstallerQueryService</c> can be pinned by unit tests with a
 /// fake, exactly as <c>PendingRebootService</c> takes <c>IRegistryReader</c>
 /// and <c>IMutexProbe</c>. The production implementation (<c>MsiApi</c>) is a
@@ -50,6 +50,18 @@ public interface IMsiApi
         string property,
         char[]? value,
         ref uint valueLength);
+
+    /// <summary>
+    /// Wraps <c>MsiSourceListEnumSourcesW</c>. See <c>Msi.MsiSourceListEnumSources</c>.
+    /// </summary>
+    uint EnumSources(
+        string productCode,
+        string? userSid,
+        MsiInstallContext context,
+        uint options,
+        uint index,
+        char[]? source,
+        ref uint sourceLength);
 
     /// <summary>Wraps <c>MsiGetPatchInfoExW</c>. See <c>Msi.MsiGetPatchInfoEx</c>.</summary>
     uint GetPatchInfo(

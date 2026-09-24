@@ -9,7 +9,8 @@ namespace InstallerClean.Services;
 /// installation package's own ProductCode through
 /// <see cref="IPackageIdentityReader"/>, puts it to Windows through the same
 /// keyed enumeration the patch-target route uses, and for an installed product
-/// reads the <c>LocalPackage</c> each installation records.
+/// reads the <c>LocalPackage</c> each installation records and the package each
+/// one's source list points at.
 ///
 /// IT COMPOSES THINGS THAT ALREADY EXIST. The reading is the reader's, which has
 /// always been able to take the product reading and has only ever been asked for
@@ -63,7 +64,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     public IReadOnlyList<DeclaredProductOutcome> Screen(
         IReadOnlyList<OrphanedFile> candidates,
         CancellationToken cancellationToken = default,
-        Action<Exception, string>? recordRefusal = null)
+        Action<Exception, string>? recordRefusal = null,
+        Func<string, bool?>? namesAFileInInstallerFolder = null)
     {
         var outcomes = new DeclaredProductOutcome[candidates.Count];
 
@@ -132,7 +134,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             var code = identity.Value.Code;
             if (!asked.TryGetValue(code, out var answer))
             {
-                answer = Ask(code);
+                answer = Ask(code, namesAFileInInstallerFolder);
                 asked[code] = answer;
             }
 
@@ -153,7 +155,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// What Windows holds for one declared product code, asked once per code per
     /// pass.
     /// </summary>
-    private ProductAnswer Ask(string code)
+    private ProductAnswer Ask(string code, Func<string, bool?>? namesAFileInInstallerFolder)
     {
         var resolved = InstallerQueryService.ResolveProductInstances(_msi, code);
 
@@ -170,23 +172,27 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         return new ProductAnswer(
             DeclaredProductOutcome.DeclaredProductInstalled,
-            RecordedPackagesOf(code, resolved.Instances));
+            PackagesOpenedBy(code, resolved.Instances, namesAFileInInstallerFolder));
     }
 
     /// <summary>
-    /// The identity of the cached package every installation of <paramref name="code"/>
-    /// records, one per installation, or null where any one of them cannot be read.
+    /// The identity of every file an installation of <paramref name="code"/> opens as
+    /// its package: the cached package each installation records, and the original
+    /// package at each folder on its source list that holds one. Null where any of
+    /// them cannot be seen.
     ///
     /// NULL IS THE ANSWER THAT KEEPS THE FILE, and every way an installation's package
     /// can fail to be seen reaches it: a <c>LocalPackage</c> read that failed or came
     /// back empty, a value that names nothing, names a folder, will not open to an
-    /// identity, or names a file that does not declare <paramref name="code"/>. One
-    /// such installation is enough, because its package is the one this candidate
-    /// could be.
+    /// identity, or names a file that does not declare <paramref name="code"/>; and
+    /// any source the check cannot rule out, which <see cref="AddSourcePackages"/>
+    /// sets out. One such installation is enough, because its package is the one this
+    /// candidate could be.
     /// </summary>
-    private IReadOnlyList<FileIdentity>? RecordedPackagesOf(
+    private IReadOnlyList<FileIdentity>? PackagesOpenedBy(
         string code,
-        IReadOnlyList<(string? Sid, MsiInstallContext Context)> instances)
+        IReadOnlyList<(string? Sid, MsiInstallContext Context)> instances,
+        Func<string, bool?>? namesAFileInInstallerFolder)
     {
         if (_fileIdentities is null || _fileSystem is null) return null;
 
@@ -220,15 +226,122 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                 return null;
 
             identities.Add(recorded);
+
+            if (!AddSourcePackages(code, sid, context, namesAFileInInstallerFolder, identities))
+                return null;
         }
 
         return identities;
     }
 
     /// <summary>
+    /// Adds to <paramref name="opened"/> the identity of the original package at each
+    /// folder on one installation's network source list, and answers false where that
+    /// installation's sources cannot be ruled out.
+    ///
+    /// WHAT IT READS, AND WHY THAT IS ALL. When Windows Installer needs a product's
+    /// original package rather than its cached copy, a repair among other things, it
+    /// looks for the file named by <c>PackageName</c> in the folders on the product's
+    /// source list, starting with the last one it used, which is itself an entry on
+    /// that list. The network sources are the ones that are folders; the others are
+    /// web addresses and removable media. So the package name and the network sources
+    /// between them name every file a source can be.
+    ///
+    /// FALSE, WHICH KEEPS THE FILE, for: no way to compare against the Installer
+    /// folder; a package name or a source list that will not read; an empty package
+    /// name; a source whose package would be a file directly in the Installer folder,
+    /// or where that cannot be established; and a source package that exists and will
+    /// not identify. A source package that is not there is skipped, being no file.
+    /// </summary>
+    private bool AddSourcePackages(
+        string code,
+        string? sid,
+        MsiInstallContext context,
+        Func<string, bool?>? namesAFileInInstallerFolder,
+        List<FileIdentity> opened)
+    {
+        if (namesAFileInInstallerFolder is null || _fileIdentities is null) return false;
+
+        var name = InstallerQueryService.ReadProductProperty(
+            _msi, code, sid, context, MsiInstallProperty.PackageName);
+        if (name.Unreadable) return false;
+
+        var packageName = name.Value.TrimEnd('\0');
+        if (packageName.Length == 0) return false;
+
+        var sources = NetworkSourcesOf(code, sid, context);
+        if (sources is null) return false;
+
+        foreach (var folder in sources)
+        {
+            // Joined with a backslash by hand rather than with Path.Combine, whose
+            // separator is the host's.
+            var package = folder.EndsWith('\\') ? folder + packageName : folder + '\\' + packageName;
+
+            // A source in the Installer folder keeps every copy of the product, not
+            // only the one it names: the folder the product was installed from is
+            // the cache itself.
+            if (namesAFileInInstallerFolder(package) is not false) return false;
+
+            switch (_fileIdentities.ReadOutcome(package, out var identity))
+            {
+                case FileIdentityRead.Read:
+                    opened.Add(identity);
+                    break;
+                case FileIdentityRead.NamesNothing:
+                    break;
+                default:
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// The folders on one installation's network source list, in the order Windows
+    /// lists them, or null where the list did not read to its end.
+    ///
+    /// ONLY <see cref="MsiError.NoMoreItems"/> ENDS THE LIST. Every other return keeps
+    /// the file, and so does a list that runs past <see cref="MaxSourceIndex"/> without
+    /// ending, since what lies beyond it is unread.
+    /// </summary>
+    private IReadOnlyList<string>? NetworkSourcesOf(string code, string? sid, MsiInstallContext context)
+    {
+        const uint options = MsiSourceListOptions.Product | MsiSourceListOptions.Network;
+        var sources = new List<string>();
+
+        for (uint index = 0; index < MaxSourceIndex; index++)
+        {
+            uint length = 0;
+            var error = _msi.EnumSources(code, sid, context, options, index, null, ref length);
+            if (error == MsiError.NoMoreItems) return sources;
+            if (error != MsiError.Success && error != MsiError.MoreData) return null;
+
+            length++; // space for the terminator
+            var buffer = new char[length];
+            error = _msi.EnumSources(code, sid, context, options, index, buffer, ref length);
+            if (error != MsiError.Success) return null;
+
+            var source = new string(buffer, 0, (int)Math.Min(length, (uint)buffer.Length)).TrimEnd('\0');
+            if (source.Length == 0) return null;
+            sources.Add(source);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// How many entries of one source list are read before the list is taken as not
+    /// having ended. A source list holds a handful of folders; the bound is there so an
+    /// answer that never reports an end cannot hold the scan.
+    /// </summary>
+    private const uint MaxSourceIndex = 1024;
+
+    /// <summary>
     /// Whether the candidate at <paramref name="candidatePath"/> is a different file
-    /// from every recorded package. A candidate whose own identity will not read is
-    /// not shown to be different, so it answers false and is kept.
+    /// from every package an installation opens. A candidate whose own identity will
+    /// not read is not shown to be different, so it answers false and is kept.
     /// </summary>
     private bool IsNoneOf(string candidatePath, IReadOnlyList<FileIdentity> recorded)
     {
@@ -244,9 +357,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
     /// <param name="Outcome">The verdict the product code alone gives.</param>
     /// <param name="RecordedPackages">
-    /// For an installed product, the identity of the package each installation
-    /// records, or null where any installation's package could not be identified.
-    /// Null for every other verdict.
+    /// For an installed product, the identity of every file an installation opens as
+    /// its package, or null where any of them could not be seen. Null for every other
+    /// verdict.
     /// </param>
     private readonly record struct ProductAnswer(
         DeclaredProductOutcome Outcome,

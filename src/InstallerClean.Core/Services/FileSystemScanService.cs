@@ -599,7 +599,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         else
         {
             WithholdCandidatesTheirOwnProductStillClaims(
-                unclaimedByPath, withheld, withheldBy, cancellationToken,
+                unclaimedByPath, withheld, withheldBy, cacheRoot, cancellationToken,
                 (ex, cause) => refusalLog.Record(ex, cause));
 
             // THE LAST DECISION ON THIS HALF, AND IT TAKES WHAT THE SCREEN LET THROUGH.
@@ -1330,9 +1330,10 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// <summary>
     /// Moves out of <paramref name="candidates"/> and into
     /// <paramref name="withheld"/> every installation package whose own declared
-    /// product Windows still holds a record of, unless every installation of that
-    /// product records a different cached package that is present, and every one
-    /// this pass could not settle. Both lists keep walk order.
+    /// product Windows still holds a record of, unless every package each
+    /// installation of that product opens, cached or original, is shown to be a
+    /// different file, and every one this pass could not settle. Both lists keep walk
+    /// order.
     ///
     /// THE THIRD SOURCE, AND IT IS THE ONLY ONE THAT STARTS AT THE FILE. The two
     /// comparisons above it start at a registration and work towards a file, and
@@ -1359,12 +1360,17 @@ public sealed class FileSystemScanService : IFileSystemScanService
         List<OrphanedFile> candidates,
         List<OrphanedFile> withheld,
         WithholdingSplitTally withheldBy,
+        InstallerCacheRoot cacheRoot,
         CancellationToken cancellationToken,
         Action<Exception, string>? recordRefusal = null)
     {
         if (_declaredProducts is null || candidates.Count == 0) return;
 
-        var outcomes = _declaredProducts.Screen(candidates, cancellationToken, recordRefusal);
+        // The folder a product's source list is compared against is the root this run
+        // resolved, the one every candidate was judged against.
+        var outcomes = _declaredProducts.Screen(
+            candidates, cancellationToken, recordRefusal,
+            path => InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(path, cacheRoot));
 
         // A screen that answered a different number of candidates than it was
         // given has not answered about these files, and reading it positionally

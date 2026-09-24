@@ -846,8 +846,8 @@ public sealed record MachineInfo(
 /// <param name="WithheldDeclaredProductInstalledCount">
 /// Candidates the declared-product screen kept back because Windows still holds a
 /// record of the product the file itself declares it belongs to, and some
-/// installation of that product records no cached package the screen could show
-/// is another file that is present:
+/// installation of that product opens a package, its cached copy or its original at
+/// a source, that the screen could not show is another file:
 /// <c>ScanResult.WithheldBy.DeclaredProductInstalledCount</c>.
 /// </param>
 /// <param name="WithheldDeclaredProductUnestablishedCount">

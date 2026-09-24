@@ -6,8 +6,9 @@ namespace InstallerClean.Services;
 /// Asks a cached PRODUCT PACKAGE which product it declares itself to belong to,
 /// puts that product code to Windows, and reports whether Windows still holds a
 /// record of it. Where it does, the check reads the cached package each
-/// installation of that product records, and reports whether every one of them is
-/// a different file that is present.
+/// installation of that product records and the original package each one's source
+/// list points at, and reports whether every one of them is a different file from
+/// this one.
 ///
 /// WHY IT EXISTS, AND IT IS ABOUT WHERE THE OTHER SOURCES START. Everything else
 /// that decides whether a cached product package is spare begins at a
@@ -31,12 +32,16 @@ namespace InstallerClean.Services;
 ///
 /// AN INSTALLED PRODUCT DOES NOT ON ITS OWN MAKE THIS FILE THE ONE IT USES. Windows
 /// Installer opens a product's cached package through the <c>LocalPackage</c> value
-/// recorded for each installation of it. The folder can hold further copies that
-/// declare the same product code while no installation's value names them, and
-/// those are not the package any installation of the product opens. So the file is
-/// kept only while some installation's package cannot be seen: a value that is
-/// empty, that will not read, that names nothing identifiable, that names a file
-/// declaring another product, or that names this file under another spelling.
+/// recorded for each installation of it, and its original package, when it needs
+/// that rather than the cached copy, by looking for the package name in the folders
+/// on the product's source list. The folder can hold further copies that declare the
+/// same product code while nothing in either place names them, and those are not a
+/// package any installation of the product opens. So the file is kept while some
+/// installation's package cannot be seen: a value that is empty, that will not read,
+/// that names nothing identifiable, that names a file declaring another product, or
+/// that names this file under another spelling. It is kept too while some source
+/// cannot be ruled out: one in the Installer folder itself, one naming this file, and
+/// one that cannot be read.
 ///
 /// IT ONLY EVER WITHHOLDS. No answer it can give puts a file on the list, clears
 /// one another gate kept, or weakens anything upstream: a candidate it lets
@@ -79,10 +84,18 @@ public interface IDeclaredProductCheck
     /// has no run and writes nothing. A delegate rather than the log itself because
     /// this interface is public and that type is not.
     /// </param>
+    /// <param name="namesAFileInInstallerFolder">
+    /// Whether a path, once the kernel has expanded it, names a file directly in the
+    /// Installer folder: true, false, or null where that was not established. Handed in
+    /// by the scan, which has resolved that folder once for the run, as a delegate for
+    /// the reason <paramref name="recordRefusal"/> is one. Without it no source can be
+    /// ruled out, so every candidate whose declared product is installed is kept.
+    /// </param>
     IReadOnlyList<DeclaredProductOutcome> Screen(
         IReadOnlyList<OrphanedFile> candidates,
         CancellationToken cancellationToken = default,
-        Action<Exception, string>? recordRefusal = null);
+        Action<Exception, string>? recordRefusal = null,
+        Func<string, bool?>? namesAFileInInstallerFolder = null);
 }
 
 /// <summary>
@@ -132,16 +145,19 @@ public enum DeclaredProductOutcome
 
     /// <summary>
     /// Windows still holds a record of the product this file declares it belongs
-    /// to, and at least one installation of that product records no cached package
-    /// the check can show is a different file that is present. Kept back.
+    /// to, and for at least one installation of that product the check cannot show
+    /// that every package it opens is a different file. Kept back.
     ///
     /// That covers a recorded <c>LocalPackage</c> value that is empty or will not
     /// read, one naming a folder or a file that is absent or cannot be identified,
     /// one naming a file that declares another product, and one naming this very
-    /// file under another spelling. In each of them the check
-    /// cannot see which package that installation opens, so this file could be it.
-    /// A check constructed without its two file readers answers this for every
-    /// installed product, having no way to look.
+    /// file under another spelling. It covers a source list or package name that will
+    /// not read, a source in the Installer folder itself, a source whose package is
+    /// this file, and a source that cannot be resolved or whose package will not
+    /// identify. In each of them the check cannot see which package that installation
+    /// opens, so this file could be it. A check constructed without its two file
+    /// readers, or screening without the Installer folder to compare against, answers
+    /// this for every installed product, having no way to look.
     ///
     /// WHAT IT DOES NOT ESTABLISH, so no copy may be built on it: that a program
     /// would break without this particular copy.
@@ -149,15 +165,17 @@ public enum DeclaredProductOutcome
     DeclaredProductInstalled,
 
     /// <summary>
-    /// Windows still holds a record of the product this file declares, and every
+    /// Windows still holds a record of the product this file declares, every
     /// installation of that product records a cached package that is present, is a
-    /// different file, and itself declares the same product. The candidate goes on
-    /// being decided by everything else.
+    /// different file, and itself declares the same product, and no installation's
+    /// source list points at the Installer folder or at this file. The candidate goes
+    /// on being decided by everything else.
     ///
     /// Windows Installer opens a product's cached package through the
-    /// <c>LocalPackage</c> value recorded for each installation, so a copy that none
-    /// of those values names is not the package any installation of the product
-    /// uses.
+    /// <c>LocalPackage</c> value recorded for each installation, and its original
+    /// package through the package name in the folders on the source list, so a copy
+    /// that none of those names is not a package any installation of the product
+    /// opens.
     ///
     /// EVERY INSTALLATION, NOT ONE. One code can name a per-machine installation and
     /// per-user installations under several accounts, each recording its own

@@ -236,6 +236,10 @@ public class FileSystemScanServiceAgeCheckTests
         Assert.Single(injected.RemovableFiles);
         Assert.Empty(system.RemovableFiles);
         Assert.Single(system.WithheldFiles!);
+        // Decades after the system clock, which is not an age, so the file is kept as
+        // one whose age was not established and the held-back sentence counts it.
+        Assert.Equal(1, system.WithheldBy.AgeUnestablishedCount);
+        Assert.Equal(1, system.UnestablishedWithheldCount);
     }
 
     [Fact]

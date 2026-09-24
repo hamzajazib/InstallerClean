@@ -161,6 +161,26 @@ internal static class InstallerCacheHelpers
     }
 
     /// <summary>
+    /// Whether <paramref name="path"/>, not yet resolved, names a file directly in the
+    /// Installer folder once the kernel has expanded it: true or false where the
+    /// comparison was made, and null where it could not be.
+    ///
+    /// ONLY A PROVEN LOCATION IS COMPARED. A root the kernel never expanded, and a path
+    /// that answers anything but <see cref="PathResolution.Resolved"/>, give null,
+    /// because a spelling that did not resolve is exactly what a junction or a
+    /// substituted drive leaves behind. A path to a file that is not there still
+    /// resolves, through the nearest folder that is, so a missing file is compared
+    /// like any other.
+    /// </summary>
+    internal static bool? NamesAFileDirectlyInInstallerFolder(string path, InstallerCacheRoot root)
+    {
+        if (!root.Proven) return null;
+        return ResolveFinalPathOutcome(path, out var resolved) == PathResolution.Resolved
+            ? ResolvesDirectlyInInstallerFolder(resolved, root)
+            : null;
+    }
+
+    /// <summary>
     /// True if <paramref name="path"/> resolves under any of the
     /// canonical Windows system folders: <c>%SystemRoot%</c>,
     /// <c>%ProgramFiles%</c>, <c>%ProgramFiles(x86)%</c>, or

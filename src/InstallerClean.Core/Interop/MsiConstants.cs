@@ -91,6 +91,22 @@ public enum MsiPatchFilter : uint
 }
 
 /// <summary>
+/// The <c>dwOptions</c> flags <c>MsiSourceListEnumSources</c> takes, msi.h's MSICODE and
+/// MSISOURCETYPE values.
+/// </summary>
+public static class MsiSourceListOptions
+{
+    /// <summary>MSICODE_PRODUCT: the code passed is a product code.</summary>
+    public const uint Product = 0x00000000;
+
+    /// <summary>
+    /// MSISOURCETYPE_NETWORK: sources that are folder paths, local or shared, as
+    /// against URL and removable-media sources.
+    /// </summary>
+    public const uint Network = 0x00000001;
+}
+
+/// <summary>
 /// Install property name strings used with MsiGetProductInfoEx and
 /// MsiGetPatchInfoEx.
 /// </summary>
@@ -113,6 +129,13 @@ public static class MsiInstallProperty
 
     /// <summary>Display name of the installed product.</summary>
     public const string ProductName = "ProductName";
+
+    /// <summary>
+    /// The file name of the product's original installation package, which Windows
+    /// Installer looks for in each folder on the product's source list when it needs
+    /// the original rather than the cached copy (INSTALLPROPERTY_PACKAGENAME).
+    /// </summary>
+    public const string PackageName = "PackageName";
 
     /// <summary>Patch state: 1=Applied, 2=Superseded, 4=Obsoleted.</summary>
     public const string State = "State";
