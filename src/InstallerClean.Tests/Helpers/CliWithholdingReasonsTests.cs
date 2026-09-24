@@ -176,11 +176,13 @@ public class CliWithholdingReasonsTests
         {
             // The wholesale arm is deliberately not among the members: the leg lines
             // above speak for it, and a line here as well would say the same thing
-            // twice about one machine. Nor is the declared-product-installed arm, which
-            // has no reason line. Both are spelled out rather than derived, so that
-            // renaming either member fails this test rather than quietly widening the
-            // exception.
-            if (arm is "Wholesale" or "DeclaredProductInstalled") continue;
+            // twice about one machine. Nor are the declared-product-installed and
+            // under-a-day-old arms, whose files the held-back line does not count, or
+            // the age-unestablished arm, whose files it counts with no list printed
+            // under it. All four are spelled out rather than derived, so that renaming
+            // any of them fails this test rather than quietly widening the exception.
+            if (arm is "Wholesale" or "DeclaredProductInstalled" or "UnderADayOld" or "AgeUnestablished")
+                continue;
 
             Assert.True(named.Contains(arm),
                 $"{arm} is an arm of the split with no line of its own");

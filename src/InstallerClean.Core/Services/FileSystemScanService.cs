@@ -1059,11 +1059,11 @@ public sealed class FileSystemScanService : IFileSystemScanService
             candidateIdentityReads,
             // Which decision took each file on the list two lines above. Read here
             // rather than derived, and held to that list's own length by a test:
-            // six counts that no longer sum to it mean a seventh arm has been
+            // seven counts that no longer sum to it mean an eighth arm has been
             // added and is reported by none of them.
             withheldBy.Taken(),
             withheldBy.DeclaredProductInstalledBytes,
-            withheldBy.NotShownADayOldBytes);
+            withheldBy.UnderADayOldBytes);
     }
 
     /// <summary>
@@ -1260,22 +1260,25 @@ public sealed class FileSystemScanService : IFileSystemScanService
         private long _declaredProductInstalledBytes;
         private int _declaredProductUnestablished;
         private int _screenUnanswered;
-        private int _notShownADayOld;
-        private long _notShownADayOldBytes;
+        private int _underADayOld;
+        private long _underADayOldBytes;
+        private int _ageUnestablished;
 
         internal void IdentityUnestablished() => _identityUnestablished++;
 
-        internal void NotShownADayOld(long sizeBytes)
+        internal void UnderADayOld(long sizeBytes)
         {
-            _notShownADayOld++;
-            _notShownADayOldBytes += sizeBytes;
+            _underADayOld++;
+            _underADayOldBytes += sizeBytes;
         }
 
+        internal void AgeUnestablished() => _ageUnestablished++;
+
         /// <summary>
-        /// The size of the files counted under the not-shown-a-day-old arm, carried
-        /// beside the split for the reason <see cref="DeclaredProductInstalledBytes"/> is.
+        /// The size of the files counted under the under-a-day-old arm, carried beside
+        /// the split for the reason <see cref="DeclaredProductInstalledBytes"/> is.
         /// </summary>
-        internal long NotShownADayOldBytes => _notShownADayOldBytes;
+        internal long UnderADayOldBytes => _underADayOldBytes;
 
         internal void Wholesale(int count) => _wholesale += count;
 
@@ -1320,7 +1323,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
             _declaredProductInstalled,
             _declaredProductUnestablished,
             _screenUnanswered,
-            _notShownADayOld);
+            _underADayOld,
+            _ageUnestablished);
     }
 
     /// <summary>
@@ -1399,8 +1403,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
 
     /// <summary>
     /// Moves out of <paramref name="candidates"/> and into
-    /// <paramref name="withheld"/> every file whose times, read on a local NTFS volume,
-    /// do not show it was created, written and changed at least a day before
+    /// <paramref name="withheld"/> every file not shown, by times read on a local NTFS
+    /// volume, to have been created, written and changed at least a day before
     /// <paramref name="scanClock"/>. Both lists keep walk order.
     ///
     /// WHAT IT IS FOR. Windows Installer writes a package's new copy into this folder
@@ -1445,8 +1449,14 @@ public sealed class FileSystemScanService : IFileSystemScanService
                 continue;
             }
 
+            // Counted by whether the age was read, because the two are told apart: a
+            // file read as under a day old is kept without a word, and a file whose
+            // age was not established is among those the held-back sentence counts.
             withheld.Add(candidate);
-            withheldBy.NotShownADayOld(candidate.SizeBytes);
+            if (outcome == FileTimesRead.Read)
+                withheldBy.UnderADayOld(candidate.SizeBytes);
+            else
+                withheldBy.AgeUnestablished();
         }
 
         candidates.Clear();

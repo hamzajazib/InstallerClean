@@ -778,8 +778,9 @@ public sealed record MachineInfo(
 /// conditions put files on that list and they are different facts about a machine; a
 /// sentence naming any one of them would be false of the others. The five counts below
 /// are where those conditions are counted apart, one finding each, and they are read
-/// apart for the same reason. The scan splits the list six ways and five are sent: this
-/// figure less the five is the count of files the age check kept back.
+/// apart for the same reason. The scan splits the list seven ways and five are sent: this
+/// figure less the five is the count of files the age check kept back, in both of its
+/// arms.
 /// </param>
 /// <param name="WithheldTotalBytes">
 /// The bytes of the files behind <paramref name="WithheldCandidateCount"/>, summed
@@ -940,8 +941,9 @@ public sealed record ScanInfo(
             // Counted off the kept list by the scan, so the number sent and the rows
             // the registered-files window shows cannot come apart.
             scan.RegisteredWithheldCount,
-            // Five of the six counts that split the count three lines up, taken off the
-            // one place that knows them; that count less these five is the sixth.
+            // Five of the seven counts that split the count three lines up, taken off
+            // the one place that knows them; that count less these five is the files
+            // the age check kept back.
             // Appended rather than placed among the members they belong
             // beside: every argument after an insertion point re-points at its
             // neighbour's value, and a shift within a run of ints compiles silently.

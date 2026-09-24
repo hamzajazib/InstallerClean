@@ -47,8 +47,9 @@ public class FileSystemScanServiceAgeCheckTests
 
         var kept = Assert.Single(result.WithheldFiles!);
         Assert.Equal($@"{Folder}\new.msi", kept.FullPath);
-        Assert.Equal(1, result.WithheldBy.NotShownADayOldCount);
-        Assert.Equal(kept.SizeBytes, result.WithheldNotShownADayOldBytes);
+        Assert.Equal(1, result.WithheldBy.UnderADayOldCount);
+        Assert.Equal(0, result.WithheldBy.AgeUnestablishedCount);
+        Assert.Equal(kept.SizeBytes, result.WithheldUnderADayOldBytes);
         Assert.Equal(result.WithheldFiles!.Count, result.WithheldBy.Total);
     }
 
@@ -93,9 +94,14 @@ public class FileSystemScanServiceAgeCheckTests
     [InlineData(FileTimesRead.TimesUnavailable)]
     [InlineData(FileTimesRead.OpenRefused)]
     [InlineData(FileTimesRead.NotAPlainFile)]
+    [InlineData(FileTimesRead.NamesNothing)]
     [InlineData(FileTimesRead.Faulted)]
-    public async Task A_file_whose_times_could_not_be_vouched_for_is_kept(FileTimesRead answer)
+    public async Task A_file_whose_times_could_not_be_vouched_for_is_kept_and_spoken_of(FileTimesRead answer)
     {
+        // Kept like a file read as under a day old, and counted apart from one: its
+        // age was not established, so it is among the files the held-back sentence
+        // counts, and no reason line speaks for it, so the list under that sentence
+        // is not printed.
         var times = new ScriptedFileTimes();
         times.Reads($@"{Folder}\old.msi", Old, Old, Old);
         times.Answers($@"{Folder}\unvouched.msi", answer);
@@ -103,8 +109,15 @@ public class FileSystemScanServiceAgeCheckTests
         var result = await Scan(new[] { $@"{Folder}\old.msi", $@"{Folder}\unvouched.msi" }, times);
 
         Assert.Equal($@"{Folder}\old.msi", Assert.Single(result.RemovableFiles).FullPath);
-        Assert.Equal($@"{Folder}\unvouched.msi", Assert.Single(result.WithheldFiles!).FullPath);
-        Assert.Equal(1, result.WithheldBy.NotShownADayOldCount);
+        var kept = Assert.Single(result.WithheldFiles!);
+        Assert.Equal($@"{Folder}\unvouched.msi", kept.FullPath);
+        Assert.Equal(1, result.WithheldBy.AgeUnestablishedCount);
+        Assert.Equal(0, result.WithheldBy.UnderADayOldCount);
+        Assert.Equal(result.WithheldFiles!.Count, result.WithheldBy.Total);
+        Assert.Equal(1, result.UnestablishedWithheldCount);
+        Assert.Equal(kept.SizeBytes, result.UnestablishedWithheldBytes);
+        Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
+        Assert.False(result.NamedConditionsCoverEveryHeldBackFile);
     }
 
     [Fact]
@@ -151,7 +164,7 @@ public class FileSystemScanServiceAgeCheckTests
         Assert.Equal(new[] { $@"{Folder}\gone.msi" }, times.Asked);
         Assert.Empty(result.RemovableFiles);
         Assert.Equal(1, result.WithheldBy.DeclaredProductInstalledCount);
-        Assert.Equal(1, result.WithheldBy.NotShownADayOldCount);
+        Assert.Equal(1, result.WithheldBy.UnderADayOldCount);
         Assert.Equal(2, result.WithheldBy.Total);
         Assert.Equal(WithholdingAccount.KeptWithoutNotice, result.Withholding);
     }
@@ -177,7 +190,8 @@ public class FileSystemScanServiceAgeCheckTests
 
         Assert.Empty(times.Asked);
         Assert.Equal(1, result.WithheldBy.WholesaleCount);
-        Assert.Equal(0, result.WithheldBy.NotShownADayOldCount);
+        Assert.Equal(0, result.WithheldBy.UnderADayOldCount);
+        Assert.Equal(0, result.WithheldBy.AgeUnestablishedCount);
     }
 
     [Fact]

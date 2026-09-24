@@ -472,11 +472,12 @@ public partial class ScanViewModel : ObservableObject
             // the wholesale flag says which sentence is true of it. The scan has
             // nothing to report on a run whose withholding caught nothing, or whose
             // every held file declares a program Windows still has installed or was
-            // not shown to be a day old, which is what keeps the line off both
+            // read as under a day old, which is what keeps the line off both
             // machines.
             //
             // THE COUNT IS UnestablishedWithheldCount, NOT THE WHOLE LIST, so a file
-            // kept for an installed program or for its age is left out of it. Every
+            // kept for an installed program or for being under a day old is left out
+            // of it, and a file whose age could not be established is in it. Every
             // withheld file is still counted among the files left alone.
             //
             // AND ZERO WHERE NOTHING IS OFFERED, because that machine gets the

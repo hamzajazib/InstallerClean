@@ -10,16 +10,16 @@ namespace InstallerClean.Tests.Services;
 /// than built by hand.
 ///
 /// THE POINT IS THE COMPLETENESS ASSERTION AND NOT THE INDIVIDUAL COUNTS. Four
-/// decisions put a file on the withheld list, and the six counts are a partition of
-/// it. A partition stays one until somebody adds a branch, and a seventh arm
-/// arriving later would appear in none of the six while the list grew underneath
-/// them: six counts that no longer sum to the list are the only thing that says so.
+/// decisions put a file on the withheld list, and the seven counts are a partition of
+/// it. A partition stays one until somebody adds a branch, and an eighth arm
+/// arriving later would appear in none of the seven while the list grew underneath
+/// them: seven counts that no longer sum to the list are the only thing that says so.
 /// Every test here asserts the sum as well as its own arm, so a fixture reaching a
 /// new decision fails whichever arm it was written for.
 ///
 /// EACH ARM IS REACHED ON ITS OWN, WHICH IS WHAT THE DECISIONS MAKE POSSIBLE. The
 /// wholesale arm skips the per-file screen and the age check entirely, so no one scan
-/// can exercise all six, and a fixture claiming to would be describing a machine that
+/// can exercise all seven, and a fixture claiming to would be describing a machine that
 /// cannot exist.
 /// </summary>
 public class WithholdingSplitTests
@@ -205,7 +205,7 @@ public class WithholdingSplitTests
             clock: new FixedClock(clock));
 
         Assert.Equal(1, result.WithheldBy.DeclaredProductInstalledCount);
-        Assert.Equal(1, result.WithheldBy.NotShownADayOldCount);
+        Assert.Equal(1, result.WithheldBy.UnderADayOldCount);
         Assert.Equal($@"{Folder}\old.msi", Assert.Single(result.RemovableFiles).FullPath);
         AssertPartitions(result);
     }

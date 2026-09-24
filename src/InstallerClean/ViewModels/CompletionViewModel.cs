@@ -303,8 +303,8 @@ public partial class CompletionViewModel : ObservableObject
     /// <see cref="ScanResult.UnestablishedWithheldBytes"/>. The command line reads the
     /// same two, and the main window's held-back line the same count.
     ///
-    /// A FILE THE DECLARED-PRODUCT-INSTALLED OR NOT-SHOWN-A-DAY-OLD ARM KEPT IS NOT
-    /// AMONG THEM.
+    /// A FILE THE DECLARED-PRODUCT-INSTALLED OR UNDER-A-DAY-OLD ARM KEPT IS NOT AMONG
+    /// THEM. A file the age check kept because its age was not established is.
     /// </param>
     /// <param name="scannedFileCount">
     /// The receipt's own count, on the terms <see cref="ShowAllClear"/> sets out: how

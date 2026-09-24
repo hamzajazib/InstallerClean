@@ -372,8 +372,8 @@ namespace InstallerClean.Models;
 /// counts, so that <see cref="UnestablishedWithheldBytes"/> can be the size of the rest.
 /// Carried here rather than on the split, which holds counts and nothing else.
 /// </param>
-/// <param name="WithheldNotShownADayOldBytes">
-/// The size of the files <see cref="WithholdingSplit.NotShownADayOldCount"/> counts, for
+/// <param name="WithheldUnderADayOldBytes">
+/// The size of the files <see cref="WithholdingSplit.UnderADayOldCount"/> counts, for
 /// the same reason and carried the same way.
 /// </param>
 public record ScanResult(
@@ -400,7 +400,7 @@ public record ScanResult(
     FileIdentityReadTally CandidateIdentityReads = default,
     WithholdingSplit WithheldBy = default,
     long WithheldDeclaredProductInstalledBytes = 0,
-    long WithheldNotShownADayOldBytes = 0)
+    long WithheldUnderADayOldBytes = 0)
 {
     /// <summary>
     /// Every registration naming a file that is not on disk, the sum of the two
@@ -429,7 +429,7 @@ public record ScanResult(
     /// <summary>
     /// How many withheld files the held-back sentences speak of: every withheld file
     /// except those <see cref="WithholdingSplit.DeclaredProductInstalledCount"/> and
-    /// <see cref="WithholdingSplit.NotShownADayOldCount"/> count.
+    /// <see cref="WithholdingSplit.UnderADayOldCount"/> count.
     /// <see cref="UnestablishedWithheldBytes"/> is their size.
     ///
     /// IT IS THE LIST LESS THOSE TWO ARMS, NOT A SUM OF THE OTHERS, so a withheld file
@@ -439,18 +439,18 @@ public record ScanResult(
     public int UnestablishedWithheldCount =>
         Math.Max(0, (WithheldFiles?.Count ?? 0)
             - WithheldBy.DeclaredProductInstalledCount
-            - WithheldBy.NotShownADayOldCount);
+            - WithheldBy.UnderADayOldCount);
 
     /// <summary>
     /// The size of the files <see cref="UnestablishedWithheldCount"/> counts, on the same
     /// reading: the whole withheld list's size less that of the files kept because they
     /// declare a program Windows still has installed and that of the files kept because
-    /// they were not shown to be a day old.
+    /// their age was read and is under a day.
     /// </summary>
     public long UnestablishedWithheldBytes =>
         Math.Max(0, WithheldTotalBytes
             - WithheldDeclaredProductInstalledBytes
-            - WithheldNotShownADayOldBytes);
+            - WithheldUnderADayOldBytes);
 
     /// <summary>
     /// Which conditions kept the walk-derived offer back, for a host that explains the
@@ -499,7 +499,7 @@ public record ScanResult(
     /// nobody established.
     ///
     /// A RUN WHOSE WITHHELD FILES WERE ALL COUNTED BY THE DECLARED-PRODUCT-INSTALLED
-    /// AND NOT-SHOWN-A-DAY-OLD ARMS READS AS
+    /// AND UNDER-A-DAY-OLD ARMS READS AS
     /// <see cref="WithholdingAccount.KeptWithoutNotice"/>. The test is that those two
     /// arms account for the whole list, never that no other arm fired, so a file no
     /// arm counted, or one counted by an arm added later, keeps the run on the per-file
@@ -518,7 +518,7 @@ public record ScanResult(
             if (WithheldBy.WholesaleCount == withheld)
                 return WithholdingAccount.WholeWalkOffer;
 
-            return WithheldBy.DeclaredProductInstalledCount + WithheldBy.NotShownADayOldCount == withheld
+            return WithheldBy.DeclaredProductInstalledCount + WithheldBy.UnderADayOldCount == withheld
                 ? WithholdingAccount.KeptWithoutNotice
                 : WithholdingAccount.PerFile;
         }
@@ -533,6 +533,28 @@ public record ScanResult(
     /// </summary>
     public bool HasWithholdingToReport =>
         Withholding is not (WithholdingAccount.Nothing or WithholdingAccount.KeptWithoutNotice);
+
+    /// <summary>
+    /// Whether the conditions a host can name account for every file
+    /// <see cref="UnestablishedWithheldCount"/> counts: the wholesale arm, spoken for by
+    /// <see cref="WithholdingLegsFired"/>, and the arms
+    /// <see cref="WithholdingSplit.ArmsFired"/> can return.
+    ///
+    /// WHERE IT IS FALSE, A LIST OF REASONS UNDER THE HELD-BACK SENTENCE WOULD BE SHORT
+    /// OF THE FILES THAT SENTENCE COUNTS, so a host prints the sentence on its own. The
+    /// age-unestablished arm has no reason line and is the arm that makes it false; a
+    /// file no arm counted makes it false too.
+    ///
+    /// WRITTEN AS THE NAMED ARMS ADDING UP TO THE COUNT, so an arm added to
+    /// <see cref="WithholdingSplit"/> later without a reason line makes it false rather
+    /// than leaving a list that leaves its files out.
+    /// </summary>
+    public bool NamedConditionsCoverEveryHeldBackFile =>
+        WithheldBy.WholesaleCount
+        + WithheldBy.IdentityUnestablishedCount
+        + WithheldBy.DeclaredProductUnestablishedCount
+        + WithheldBy.ScreenUnansweredCount
+        == UnestablishedWithheldCount;
 }
 
 /// <summary>
@@ -570,18 +592,19 @@ public enum WithholdingAccount
     /// sentence being false of the half it did not cover.
     ///
     /// THE SENTENCE COUNTS <see cref="ScanResult.UnestablishedWithheldCount"/>, NOT THE
-    /// WHOLE LIST, so a file either of those two arms kept is left out of it.
+    /// WHOLE LIST, so a file either of those two arms kept is left out of it. A file the
+    /// age check kept because its age was not established is in it.
     /// </summary>
     PerFile,
 
     /// <summary>
     /// Every file kept back was counted by the declared-product-installed arm or the
-    /// not-shown-a-day-old arm. The first is a file that declares a program Windows
-    /// still has installed, where at least one installation of that program records no
-    /// cached package the check could show is a different file. The second is a file
-    /// whose times did not show it was created, written and changed a day or more
-    /// before the scan, which every later scan judges afresh. A surface says what it says on a run
-    /// that kept nothing back, and the files stay among those left alone.
+    /// under-a-day-old arm. The first is a file that declares a program Windows still
+    /// has installed, where at least one installation of that program records no cached
+    /// package the check could show is a different file. The second is a file whose
+    /// times were read and show it was created, written or changed less than a day
+    /// before the scan, or after it, which every later scan judges afresh. A surface says what it
+    /// says on a run that kept nothing back, and the files stay among those left alone.
     /// </summary>
     KeptWithoutNotice,
 }
@@ -719,34 +742,39 @@ public static class ShortNameCreationLabels
 /// Which decision kept each file on <see cref="ScanResult.WithheldFiles"/> back.
 ///
 /// EXACTLY FOUR DECISIONS PUT A FILE ON THAT LIST AND THEY ARE MUTUALLY EXCLUSIVE
-/// PER FILE, so this is a partition of it rather than six overlapping views. The
+/// PER FILE, so this is a partition of it rather than seven overlapping views. The
 /// identity comparison keeps one candidate at a time; the wholesale arm keeps every
 /// remaining candidate in one go and the per-file screen and age check are skipped
 /// entirely; the screen keeps a candidate on its own verdict; and the age check keeps
-/// a candidate the screen let through that has not been shown to be a day old. A file
-/// an earlier decision has already taken is off the list a later one is handed, so
-/// nothing lands twice.
+/// a candidate the screen let through that has not been shown to be a day old,
+/// counted in two arms by whether its age was read. A file an earlier decision has
+/// already taken is off the list a later one is handed, so nothing lands twice.
 ///
 /// THE COUNTS ARE CARRIED APART BECAUSE THEY ARE READ APART. Each member is one fact
 /// about one machine, and nothing may add any two of them and call the result a
 /// cause: what is true of every file on the list is only that the scan declined to
-/// offer it. The opt-in report carries the first five; the sixth is read by
+/// offer it. The opt-in report carries the first five; the last two are read by
 /// <see cref="ScanResult.UnestablishedWithheldCount"/> and
 /// <see cref="ScanResult.Withholding"/>.
 ///
 /// <see cref="Total"/> IS WHAT HOLDS THE PARTITION HONEST, and it is asserted against
 /// the list's own length rather than trusted. A partition is a partition until
-/// somebody adds a branch, and a seventh arm arriving later would appear in none of
-/// these six while the list grew underneath them.
+/// somebody adds a branch, and an eighth arm arriving later would appear in none of
+/// these seven while the list grew underneath them.
 /// </summary>
-/// <param name="NotShownADayOldCount">
-/// Candidates the age check kept back: every other decision let the file through, and
-/// its times, read on a local NTFS volume, did not show it was created, written and
-/// changed at least <see cref="Services.CachedFileAge.MinimumAge"/> before the scan's
-/// own clock. See <see cref="Services.CachedFileAge"/>.
+/// <param name="UnderADayOldCount">
+/// Candidates the age check kept back with their age read: every other decision let
+/// the file through, its times were read on a local NTFS volume, and the latest of
+/// them is less than <see cref="Services.CachedFileAge.MinimumAge"/> before the scan's
+/// own clock, or later than it. See <see cref="Services.CachedFileAge"/>.
 ///
 /// APPENDED AFTER THE OTHER FIVE, so a positional construction of the first five still
 /// means what it meant.
+/// </param>
+/// <param name="AgeUnestablishedCount">
+/// Candidates the age check kept back because their age was not established: the
+/// reader answered anything but <see cref="Services.FileTimesRead.Read"/>, so the
+/// times could not be read, or were not read on a local, fixed NTFS volume.
 /// </param>
 public readonly record struct WithholdingSplit(
     int IdentityUnestablishedCount = 0,
@@ -754,13 +782,14 @@ public readonly record struct WithholdingSplit(
     int DeclaredProductInstalledCount = 0,
     int DeclaredProductUnestablishedCount = 0,
     int ScreenUnansweredCount = 0,
-    int NotShownADayOldCount = 0)
+    int UnderADayOldCount = 0,
+    int AgeUnestablishedCount = 0)
 {
     /// <summary>
-    /// Every file the six account for. It equals <see cref="ScanResult.WithheldFiles"/>'s
+    /// Every file the seven account for. It equals <see cref="ScanResult.WithheldFiles"/>'s
     /// own length on any scan that filled both, and a test holds it there.
     ///
-    /// IT IS A COUNT AND NEVER A CAUSE. The six members are six different findings
+    /// IT IS A COUNT AND NEVER A CAUSE. The seven members are seven different findings
     /// about a machine, so this figure answers "how many were held back" and nothing
     /// whatever about why.
     /// </summary>
@@ -770,7 +799,8 @@ public readonly record struct WithholdingSplit(
         + DeclaredProductInstalledCount
         + DeclaredProductUnestablishedCount
         + ScreenUnansweredCount
-        + NotShownADayOldCount;
+        + UnderADayOldCount
+        + AgeUnestablishedCount;
 
     /// <summary>
     /// Which of the per-file decisions the scan could not settle kept anything back,
@@ -783,8 +813,12 @@ public readonly record struct WithholdingSplit(
     /// conditions held. A line built on the count would say less than the legs do and
     /// would say it a second time.
     ///
-    /// NOR ARE THE DECLARED-PRODUCT-INSTALLED AND NOT-SHOWN-A-DAY-OLD ARMS, so a host
-    /// reading this list names no reason for the files those two count.
+    /// NOR ARE THE DECLARED-PRODUCT-INSTALLED, UNDER-A-DAY-OLD AND AGE-UNESTABLISHED
+    /// ARMS, so a host reading this list names no reason for the files those three
+    /// count. The first two are silent. The third is spoken of in the per-file sentence
+    /// with no line of its own, and
+    /// <see cref="ScanResult.NamedConditionsCoverEveryHeldBackFile"/> is what tells a
+    /// host that such files are among those the sentence counts.
     ///
     /// A MEMBER MEANS ONE DECISION KEPT AT LEAST ONE FILE, AND NEVER A CAUSE FOR ANY
     /// PARTICULAR ONE. Any combination of them can hold at once, so nothing sums over
@@ -812,8 +846,8 @@ public readonly record struct WithholdingSplit(
 /// <summary>
 /// The per-file withholding decisions the scan could not settle, one member per arm of
 /// <see cref="WithholdingSplit"/> that speaks for itself. The wholesale arm is spoken
-/// for by the legs, and the declared-product-installed and not-shown-a-day-old arms
-/// have no reason line, so none of the three has a member.
+/// for by the legs, and the declared-product-installed, under-a-day-old and
+/// age-unestablished arms have no reason line, so none of the four has a member.
 ///
 /// ONE MEMBER PER ARM RATHER THAN ONE PER CAUSE. They are different inabilities, so
 /// nothing may add them together or write one sentence over them that names a cause.

@@ -180,6 +180,54 @@ public class CliNothingOfferedTests
     }
 
     [Fact]
+    public async Task A_run_whose_every_held_file_was_read_as_under_a_day_old_gets_the_clean_line()
+    {
+        // Kept for their age with their age read, which is left alone without a word
+        // as the installed-program arm's files are.
+        var (exit, stdout) = await Run(Scan(
+            withheld: 2,
+            split: new WithholdingSplit(UnderADayOldCount: 2),
+            underADayOldBytes: 2048));
+
+        Assert.Equal(CliExitCode.Ok, exit);
+        Assert.Contains(Strings.Cli_FoundNoOrphans, stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain(Opening(Strings.Cli_NothingOfferedPerFile_Plural), stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain(Strings.Cli_WithheldReasons_Header, stdout, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_file_whose_age_was_not_established_gets_the_per_file_line_with_no_reasons_under_it()
+    {
+        // Counted by the per-file line, and no reason line speaks for it, so the
+        // heading is not printed over nothing.
+        var (exit, stdout) = await Run(Scan(
+            withheld: 2,
+            split: new WithholdingSplit(AgeUnestablishedCount: 2)));
+
+        Assert.Equal(CliExitCode.Ok, exit);
+        Assert.Contains(Expected(Strings.Cli_NothingOfferedPerFile_Plural, 2), stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain(Strings.Cli_FoundNoOrphans, stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain(Strings.Cli_WithheldReasons_Header, stdout, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_reason_list_that_would_leave_a_counted_file_out_is_not_printed()
+    {
+        // Two files in the line: one the screen could not settle, which has a reason
+        // line, and one whose age was not established, which has none. A list under
+        // the line would give a reason for one of the two files it counts, so the line
+        // stands alone.
+        var (exit, stdout) = await Run(Scan(
+            withheld: 2,
+            split: new WithholdingSplit(DeclaredProductUnestablishedCount: 1, AgeUnestablishedCount: 1)));
+
+        Assert.Equal(CliExitCode.Ok, exit);
+        Assert.Contains(Expected(Strings.Cli_NothingOfferedPerFile_Plural, 2), stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain(Strings.Cli_WithheldReasons_Header, stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain(Program.LineFor(WithholdingSplitArm.DeclaredProductUnestablished), stdout, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task The_one_form_names_the_size_and_never_the_numeral()
     {
         // A count of one is reachable, being a folder holding a single unclaimed file,
@@ -212,13 +260,15 @@ public class CliNothingOfferedTests
 
     private static ScanResult Scan(
         int withheld, WithholdingSplit split,
-        bool wholesaleFlag = false, EnumerationCensus census = default, long positiveBytes = 0) =>
+        bool wholesaleFlag = false, EnumerationCensus census = default, long positiveBytes = 0,
+        long underADayOldBytes = 0) =>
         new(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
             Census: census,
             WithheldFiles: Held(withheld),
             WalkOfferWithheldWholesale: wholesaleFlag,
             WithheldBy: split,
-            WithheldDeclaredProductInstalledBytes: positiveBytes);
+            WithheldDeclaredProductInstalledBytes: positiveBytes,
+            WithheldUnderADayOldBytes: underADayOldBytes);
 
     private static OrphanedFile[] Held(int n) =>
         n switch

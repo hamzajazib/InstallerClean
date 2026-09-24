@@ -124,12 +124,12 @@ public class ScanResultTests
     [Fact]
     public void Files_all_kept_for_their_age_have_nothing_to_report()
     {
-        // The age check's files take the same reading as those kept for an installed
-        // program, and leave the held-back sentences nothing to count.
+        // Files read as under a day old take the same reading as those kept for an
+        // installed program, and leave the held-back sentences nothing to count.
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msp", 2048)],
-            WithheldBy: new WithholdingSplit(NotShownADayOldCount: 2),
-            WithheldNotShownADayOldBytes: 3072);
+            WithheldBy: new WithholdingSplit(UnderADayOldCount: 2),
+            WithheldUnderADayOldBytes: 3072);
 
         Assert.Equal(WithholdingAccount.KeptWithoutNotice, result.Withholding);
         Assert.False(result.HasWithholdingToReport);
@@ -144,9 +144,9 @@ public class ScanResultTests
         // The two silent arms between them account for the list.
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1, NotShownADayOldCount: 1),
+            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1, UnderADayOldCount: 1),
             WithheldDeclaredProductInstalledBytes: 1024,
-            WithheldNotShownADayOldBytes: 2048);
+            WithheldUnderADayOldBytes: 2048);
 
         Assert.Equal(WithholdingAccount.KeptWithoutNotice, result.Withholding);
         Assert.False(result.HasWithholdingToReport);
@@ -161,8 +161,8 @@ public class ScanResultTests
         // count and size leave the other out.
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-            WithheldBy: new WithholdingSplit(NotShownADayOldCount: 1, DeclaredProductUnestablishedCount: 1),
-            WithheldNotShownADayOldBytes: 1024);
+            WithheldBy: new WithholdingSplit(UnderADayOldCount: 1, DeclaredProductUnestablishedCount: 1),
+            WithheldUnderADayOldBytes: 1024);
 
         Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
         Assert.True(result.HasWithholdingToReport);
@@ -179,8 +179,8 @@ public class ScanResultTests
         // list, and a file neither counted keeps the run per-file.
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-            WithheldBy: new WithholdingSplit(NotShownADayOldCount: 1),
-            WithheldNotShownADayOldBytes: 1024);
+            WithheldBy: new WithholdingSplit(UnderADayOldCount: 1),
+            WithheldUnderADayOldBytes: 1024);
 
         Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
         Assert.Equal(1, result.UnestablishedWithheldCount);
@@ -188,9 +188,80 @@ public class ScanResultTests
     }
 
     [Fact]
-    public void The_age_arm_counts_towards_the_split_total()
+    public void Both_age_arms_count_towards_the_split_total()
     {
-        Assert.Equal(21, new WithholdingSplit(1, 2, 3, 4, 5, 6).Total);
+        Assert.Equal(28, new WithholdingSplit(1, 2, 3, 4, 5, 6, 7).Total);
+    }
+
+    [Fact]
+    public void A_file_whose_age_was_not_established_is_spoken_of_per_file()
+    {
+        // Kept by the age check with no age read. Not one of the two silent arms, so
+        // it is among the files the held-back sentence counts, and no reason line
+        // speaks for it.
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msi", 1024)],
+            WithheldBy: new WithholdingSplit(AgeUnestablishedCount: 1));
+
+        Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
+        Assert.True(result.HasWithholdingToReport);
+        Assert.Equal(1, result.UnestablishedWithheldCount);
+        Assert.Equal(1024, result.UnestablishedWithheldBytes);
+        Assert.Empty(result.WithheldBy.ArmsFired);
+        Assert.False(result.NamedConditionsCoverEveryHeldBackFile);
+    }
+
+    [Fact]
+    public void A_file_whose_age_was_not_established_is_counted_apart_from_one_under_a_day_old()
+    {
+        // One of each. The sentence counts and sizes the second alone.
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+            WithheldBy: new WithholdingSplit(UnderADayOldCount: 1, AgeUnestablishedCount: 1),
+            WithheldUnderADayOldBytes: 1024);
+
+        Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
+        Assert.Equal(1, result.UnestablishedWithheldCount);
+        Assert.Equal(2048, result.UnestablishedWithheldBytes);
+        Assert.False(result.NamedConditionsCoverEveryHeldBackFile);
+    }
+
+    [Fact]
+    public void The_named_conditions_cover_a_run_whose_every_counted_file_has_a_line()
+    {
+        // The screen's unsettled file has a line; the file under a day old is not in
+        // the count at all. So the reasons account for everything the sentence counts.
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+            WithheldBy: new WithholdingSplit(UnderADayOldCount: 1, DeclaredProductUnestablishedCount: 1),
+            WithheldUnderADayOldBytes: 1024);
+
+        Assert.True(result.NamedConditionsCoverEveryHeldBackFile);
+    }
+
+    [Fact]
+    public void The_named_conditions_do_not_cover_a_run_beside_a_file_whose_age_was_not_established()
+    {
+        // The same run with the second file's age not established: the screen's line
+        // is true of one of the two files the sentence counts and says nothing of the
+        // other.
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+            WithheldBy: new WithholdingSplit(AgeUnestablishedCount: 1, DeclaredProductUnestablishedCount: 1));
+
+        Assert.Equal(2, result.UnestablishedWithheldCount);
+        Assert.False(result.NamedConditionsCoverEveryHeldBackFile);
+    }
+
+    [Fact]
+    public void The_named_conditions_cover_a_wholesale_withholding()
+    {
+        // The legs speak for the wholesale arm.
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+            WithheldBy: new WithholdingSplit(WholesaleCount: 2));
+
+        Assert.True(result.NamedConditionsCoverEveryHeldBackFile);
     }
 
     [Fact]

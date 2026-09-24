@@ -442,7 +442,7 @@ internal static class Program
             //
             // The count and the size are UnestablishedWithheldCount and
             // UnestablishedWithheldBytes, which leave out any file kept because it
-            // declares an installed program or was not shown to be a day old, and they
+            // declares an installed program or was read as under a day old, and they
             // are the figures the window's screen uses, so the two hosts cannot
             // disagree about one machine.
             var withheldCount = scanResult.UnestablishedWithheldCount;
@@ -1032,7 +1032,7 @@ internal static class Program
         // is what a number in the 3000 band is for. See CliEventClass.
         //
         // NOTHING IS REPORTED HERE FOR A RUN WHOSE EVERY HELD FILE DECLARES A PROGRAM
-        // WINDOWS STILL HAS INSTALLED OR WAS NOT SHOWN TO BE A DAY OLD:
+        // WINDOWS STILL HAS INSTALLED OR WAS READ AS UNDER A DAY OLD:
         // HasWithholdingToReport is false for it.
         if (scanResult.HasWithholdingToReport)
         {
@@ -1086,11 +1086,17 @@ internal static class Program
             // couldn't be certain:" over nothing reads as output that failed rather
             // than as a run with nothing to add, so it is printed from the list rather
             // than beside it.
+            //
+            // AND THE LIST IS PRINTED ONLY WHERE IT ACCOUNTS FOR EVERY FILE THE LEAD
+            // COUNTS. A file the age check kept because its age was not established is
+            // in that count and has no line, so on a run holding one the lead stands on
+            // its own rather than over a list that states reasons for the other files
+            // alone.
             var reasons = scanResult.WithholdingLegsFired.Select(leg => LineFor(leg))
                 .Concat(scanResult.WithheldBy.ArmsFired.Select(arm => LineFor(arm)))
                 .ToList();
 
-            if (reasons.Count > 0)
+            if (reasons.Count > 0 && scanResult.NamedConditionsCoverEveryHeldBackFile)
             {
                 Console.WriteLine(Strings.Cli_WithheldReasons_Header);
                 foreach (var line in reasons)
@@ -1479,14 +1485,17 @@ internal static class Program
     /// Its own method for the same reason the one above it is, so
     /// CliWithholdingReasonsTests can walk the enum against it: an arm added to
     /// WithholdingSplit is an arm the scan counts files into, and an arm with no line
-    /// here would leave a reader a heading with one fewer reason under it.
+    /// here is one whose files the list cannot account for, which keeps the list off
+    /// every run holding them.
     ///
     /// THE WHOLESALE ARM HAS NO MEMBER AND SO CANNOT REACH THIS. The three leg lines
     /// speak for it, and a line here as well would say the same thing twice about one
     /// machine.
     ///
-    /// NOR DO THE DECLARED-PRODUCT-INSTALLED AND NOT-SHOWN-A-DAY-OLD ARMS, so the
-    /// command line prints no reason line for the files they count.
+    /// NOR DO THE DECLARED-PRODUCT-INSTALLED, UNDER-A-DAY-OLD AND AGE-UNESTABLISHED
+    /// ARMS, so the command line prints no reason line for the files they count. The
+    /// first two are not in the held-back lead's count; the third is, and a run holding
+    /// one prints the lead with no list under it.
     ///
     /// The fallback is the heading's own antecedent rather than a blank, on the same
     /// reasoning as above, and it is unreachable while every arm is handled.
