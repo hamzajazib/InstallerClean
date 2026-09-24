@@ -29,13 +29,17 @@ public enum InstallerInProgressMarkerReading
 /// Whether Windows Installer's in-progress marker, <c>inprogressinstallinfo.ipi</c>
 /// in the Installer folder, is there.
 ///
-/// WHAT IT IS FOR. Windows Installer writes the file while an installation is under
-/// way and removes it at the end. Across a transaction of several packages it stays
-/// for the whole transaction, including the stretches between packages when
-/// <c>Global\_MSIExecute</c> is free, and those are stretches in which a rollback at
-/// the end of the transaction can still put the records back as they were. So the
-/// marker being there is a reason not to act on anything the records' present state
-/// says.
+/// WHAT IT IS FOR. Windows Installer writes the file once an installation is under
+/// way, a moment after the installation has taken <c>Global\_MSIExecute</c> rather
+/// than at its start, and removes it when the installation has finished. The start of
+/// each package, before the file appears, is covered by that lock, which
+/// <see cref="PendingRebootService"/> reads first. Across a transaction of several
+/// packages the file stays for the whole transaction, including the stretches between
+/// packages when <c>Global\_MSIExecute</c> is free, and those are stretches in which a
+/// rollback at the end of the transaction can still put the records back as they
+/// were. So the marker being there is a reason not to act on anything the records'
+/// present state says, and it covers an installation together with the lock rather
+/// than on its own.
 ///
 /// NOTHING HERE SAYS WHY THE FILE IS THERE. The file being present is the whole of
 /// what is read, and it is Windows Installer's own record of an installation it has

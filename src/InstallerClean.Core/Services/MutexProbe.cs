@@ -84,17 +84,12 @@ internal sealed class MutexProbe : IMutexProbe
         // this (elevated) process's token, rather than the wider one the
         // Installer service would have given it.
         //
-        // Left at the default deliberately. A token default DACL grants SYSTEM,
-        // and the installs that write the cache this app is protecting run
-        // through the Windows Installer service as SYSTEM, so they can still
-        // open the object and find it owned. Passing an explicit permissive
-        // DACL to cover the remaining case (a non-elevated per-user install,
-        // which does not write the machine cache anyway) would hand every
+        // Left at the default. An explicit permissive DACL would hand every
         // logged-on user the right to take the machine's installer mutex for as
-        // long as they cared to hold it. A stray refusal on a per-user install
-        // for the length of one batch is the better end of that trade.
-        // The object dies with the last handle, so the window is the batch, not
-        // the session.
+        // long as they cared to hold it. Nothing here depends on what a process
+        // the default DACL refuses does when it cannot open the object. The
+        // object dies with the last handle, so the window is the batch, not the
+        // session.
         Mutex mutex;
         try
         {
