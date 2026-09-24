@@ -25,9 +25,8 @@ namespace InstallerClean.Tests.Services;
 /// <c>MutexProbe.MutexLease.Dispose</c> catches and swallows the wrong-thread
 /// <c>ApplicationException</c> by design, because a release that throws after a
 /// committed batch must not take the process down. So the machine-wide installer mutex
-/// would stay held until the process exits, every installer on the box that wants it
-/// would wait or fail with 1618, and there would be no exception, no log line and
-/// nothing red.
+/// would stay held until the process exits, and there would be no exception, no log
+/// line and nothing red.
 ///
 /// Two kinds of test hold it, and why each is needed is written at the structural one.
 /// </summary>

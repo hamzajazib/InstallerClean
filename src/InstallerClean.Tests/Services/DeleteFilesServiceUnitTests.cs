@@ -493,8 +493,8 @@ public class DeleteFilesServiceUnitTests
         // The lease is released by a finally that encloses the re-read, so this
         // holds today. Nothing exercised it, and the identity work is about to
         // build in this exact region: a refactor narrowing that try would leave
-        // the machine-wide installer mutex held until the process exits, every
-        // installer on the machine failing 1618 behind it, with the suite green.
+        // the machine-wide installer mutex held until the process exits, with the
+        // suite green.
         var fs = new MockFileSystem();
         var a = AddFile(fs, "a.msi");
         var mutex = new FakeMutexProbe(FakeMutexProbe.Mode.Acquire);

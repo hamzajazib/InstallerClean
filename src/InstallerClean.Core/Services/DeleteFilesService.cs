@@ -27,8 +27,8 @@ public sealed class DeleteFilesService : IDeleteFilesService
     /// <summary>
     /// Constructor. The DI container injects the registered
     /// <see cref="IFileSystem"/> and <see cref="IMutexProbe"/> singletons in
-    /// production; the mutex is held for the batch so a msiexec starting
-    /// mid-delete waits instead of racing the cache.
+    /// production; the mutex is taken for the batch, and a batch refuses where a
+    /// live install owns it.
     /// </summary>
     public DeleteFilesService(IFileSystem fileSystem, IMutexProbe mutex, IRemovableReverifier reverifier)
         : this(fileSystem, mutex, null, reverifier) { }
@@ -62,9 +62,10 @@ public sealed class DeleteFilesService : IDeleteFilesService
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Hold Global\_MSIExecute for the batch on this worker thread so a
-            // msiexec starting mid-delete waits on the mutex instead of racing the
-            // cache. Acquired here and released in the finally on the SAME thread
+            // Take Global\_MSIExecute for the batch on this worker thread. The
+            // acquire refuses the batch where a live install owns it, and for the
+            // batch the object reads owned to anything that opens it. Acquired
+            // here and released in the finally on the SAME thread
             // (Win32 owner-thread rule); the body is synchronous, so no await hops
             // threads between acquire and release.
             //
@@ -90,10 +91,9 @@ public sealed class DeleteFilesService : IDeleteFilesService
             //
             // What the hold costs, so nobody widens it and nobody removes it:
             // _MSIExecute is the machine-wide Windows Installer serialisation
-            // mutex, so for as long as this batch runs, every installer on the
-            // machine that wants it waits or fails with 1618. That is accepted
-            // because the alternative is msiexec writing the cache in the middle
-            // of a delete, which costs a needed file rather than a wait.
+            // mutex, which Windows Installer's client takes at the start of every
+            // install, so for as long as this batch runs that client cannot take
+            // it.
             //
             // What it is NOT is bounded by the batch's file count, and the one
             // thing inside the hold that breaks that bound is not a file

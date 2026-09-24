@@ -29,8 +29,8 @@ public sealed class MoveFilesService : IMoveFilesService
     /// <summary>
     /// Constructor. The DI container injects the registered
     /// <see cref="IFileSystem"/> and <see cref="IMutexProbe"/> singletons in
-    /// production; the mutex is held for the batch so a msiexec starting
-    /// mid-move waits instead of racing the cache.
+    /// production; the mutex is taken for the batch, and a batch refuses where a
+    /// live install owns it.
     /// </summary>
     public MoveFilesService(IFileSystem fileSystem, IMutexProbe mutex, IRemovableReverifier reverifier)
         : this(fileSystem, mutex, null, reverifier) { }
@@ -95,9 +95,10 @@ public sealed class MoveFilesService : IMoveFilesService
                 throw new LocalisedInvalidOperationException(
                     string.Format(Strings.Error_DestinationInSystemFolder, destinationFolder));
 
-            // Hold Global\_MSIExecute for the batch on this worker thread so a
-            // msiexec starting mid-move waits on the mutex instead of racing the
-            // cache. Acquired here (not on the dispatcher) and released in the
+            // Take Global\_MSIExecute for the batch on this worker thread. The
+            // acquire refuses the batch where a live install owns it, and for the
+            // batch the object reads owned to anything that opens it. Acquired
+            // here (not on the dispatcher) and released in the
             // finally on the SAME thread (Win32 owner-thread rule); the body is
             // synchronous, so no await hops threads between acquire and release.
             //
@@ -112,8 +113,8 @@ public sealed class MoveFilesService : IMoveFilesService
             // batch there, and one met here began after it. Refused any other way
             // with nothing shown to be holding it => the gate has no account of it,
             // its probe reading such a failure as not held, so this result carries
-            // its own sentence. Holding the mutex closes only the sub-millisecond
-            // race after the host-side gate re-check has passed.
+            // its own sentence. The acquire is the last sample of the lock, taken
+            // after the host-side gate's re-check.
             //
             // Both refusals stop the batch rather than letting it run on unheld.
             // Neither says nothing is installing; each says this process could not
@@ -131,13 +132,11 @@ public sealed class MoveFilesService : IMoveFilesService
             //
             // What the hold costs, so nobody widens it and nobody removes it:
             // _MSIExecute is the machine-wide Windows Installer serialisation
-            // mutex, so for as long as this batch runs, every installer on the
-            // machine that wants it waits or fails with 1618. A single file
-            // operation that hangs (a stalled network destination) therefore
-            // holds the machine's installer lock until this process is killed.
-            // That is accepted because the alternative is msiexec writing the
-            // cache in the middle of a move, which costs a needed file rather
-            // than a wait.
+            // mutex, which Windows Installer's client takes at the start of every
+            // install, so for as long as this batch runs that client cannot take
+            // it. A single file operation that hangs (a stalled network
+            // destination) therefore holds the machine's installer lock until this
+            // process is killed.
             //
             // One more thing inside the hold is unbounded by the batch, and it
             // is not a file operation at all. The progress callback below hands

@@ -20,9 +20,10 @@ public interface IMutexProbe
     /// <summary>
     /// Acquires the named mutex with a zero wait, creating it if it does not
     /// exist, so the caller can HOLD it for the duration of an operation and
-    /// release it via the returned lease. This converts a sample of
-    /// <c>Global\_MSIExecute</c> into real mutual exclusion: a msiexec starting
-    /// while the lease is held waits on the mutex instead of racing the cache.
+    /// release it via the returned lease. The acquire is a measurement as well as
+    /// a hold: it fails where a live install owns <c>Global\_MSIExecute</c>, which
+    /// is what every caller refuses on, and while the lease is held the object reads
+    /// owned to anything that samples it.
     ///
     /// Returns:
     /// <list type="bullet">
