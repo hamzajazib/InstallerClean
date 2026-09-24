@@ -455,6 +455,7 @@ const MAP = {
   'Cli.WithheldReasons.CandidateIdentity': `  无法识别文件夹中的某个文件，因此无法把它与记录对应起来。`,
   'Cli.WithheldReasons.DeclaredProductUnestablished': `  要么某个文件没有说明它属于哪个程序，要么 Windows 没有就该程序作出回答。`,
   'Cli.WithheldReasons.ScreenUnanswered': `  一项关于这些文件属于哪些程序的检查，给出的答案与交给它的文件对不上。`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  要么某个补丁文件没有说明它是哪个补丁，要么没有说明它适用于哪些程序，要么 Windows 没有完整说明哪些程序装有该补丁。`,
   'Body.PendingReboot.RegistryCheckUnreadable': `InstallerClean 无法读取它在碰 {InstallerFolder} 之前会检查的一项 Windows 设置，因此无法判断是否有安装程序操作正在进行或正在等待重启。请重启 Windows 并重新扫描。如果该设置仍然无法读取，这台机器就不是 InstallerClean 能清理的。`,
   'Cli.InstallerLockAccessRefused': `错误：Windows 拒绝了 InstallerClean 检查 Windows Installer 是否正忙的权限，因此它无法排除某个文件在中途变得需要。没有删除任何文件。`,
   'Cli.MoveCancelledRestoreHint': `撤销很简单。把它们从 {0} 移回 {InstallerFolder}，一切就会恢复原样。`,
@@ -468,7 +469,6 @@ const MAP = {
   'Summary.RegisteredWindow.Missing.Plural': `缺失 {0} 个`,
   'Summary.RegisteredWindow.Missing.Singular': `缺失 {0} 个`,
   'UpdateCheck.Failed.Unknown.NoLog': `检查因未知原因失败。无法写入崩溃日志。`,
-  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

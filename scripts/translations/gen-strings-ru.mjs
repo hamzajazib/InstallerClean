@@ -635,13 +635,13 @@ const CLI = {
   'Cli.WithheldReasons.CandidateIdentity': `  Файл в папке не удалось опознать, поэтому его не удалось сопоставить с записями.`,
   'Cli.WithheldReasons.DeclaredProductUnestablished': `  Либо файл не указал, какой программе он принадлежит, либо Windows не ответил об этой программе.`,
   'Cli.WithheldReasons.ScreenUnanswered': `  Проверка того, каким программам принадлежат файлы, дала ответы, которые не совпали с переданными ей файлами.`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Либо файл исправления не указал, какое это исправление, либо не указал, для каких программ он предназначен, либо Windows не указал полностью, у каких программ есть это исправление.`,
   'Cli.PendingRebootBlocked.PendingRenameUnresolved': `Ошибка: файловая операция поставлена в очередь до следующей перезагрузки, и InstallerClean не может определить, какие файлы в ней названы, поэтому не может исключить {InstallerFolder}. Перезагрузите Windows перед очисткой.`,
   'Cli.MoveRestoreHint': `Убедитесь, что ваши программы по-прежнему обновляются и удаляются как обычно, а затем удалите {0}.`,
   'Cli.InstallerLockAccessRefused': `Ошибка: Windows отказал InstallerClean в праве проверить, занят ли Windows Installer, поэтому он не смог исключить, что файл понадобится в процессе. Ничего не было удалено.`,
   'Cli.MoveCancelledRestoreHint': `Это легко отменить. Переместите их из {0} обратно в {InstallerFolder}, и всё вернётся как было.`,
   'Cli.MoveInstallerLockAccessRefused': `Ошибка: Windows отказал InstallerClean в праве проверить, занят ли Windows Installer, поэтому он не смог исключить, что файл понадобится в процессе. Ничего не было перемещено.`,
   'Cli.PendingRebootBlocked.RegistryCheckUnreadable': `Ошибка: InstallerClean не смог прочитать одно из значений реестра, которые проверяет перед тем, как трогать {InstallerFolder}, поэтому не может исключить операцию Windows Installer, выполняющуюся сейчас или поставленную в очередь до следующей перезагрузки. /m и /d заблокированы. Перезагрузите Windows и попробуйте снова. Если чтение по-прежнему не удаётся, это не та машина, которую InstallerClean может очистить.`,
-  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

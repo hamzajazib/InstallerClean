@@ -569,6 +569,7 @@ const MAP = {
   'Cli.WithheldReasons.CandidateIdentity': `  Файл у теці не вдалося розпізнати, тож його не вдалося зіставити із записами.`,
   'Cli.WithheldReasons.DeclaredProductUnestablished': `  Або файл не вказав, якій програмі він належить, або Windows не відповів про цю програму.`,
   'Cli.WithheldReasons.ScreenUnanswered': `  Перевірка того, яким програмам належать файли, дала відповіді, які не збіглися з переданими їй файлами.`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Або файл виправлення не вказав, яке це виправлення, або не вказав, для яких програм він призначений, або Windows не вказав повністю, які програми мають це виправлення.`,
   'Body.PendingReboot.RegistryCheckUnreadable': `InstallerClean не зміг прочитати один із параметрів Windows, які перевіряє перед тим, як торкатися {InstallerFolder}, тож не може визначити, чи операція встановлювача виконується, чи чекає на перезавантаження. Перезавантажте Windows і повторіть сканування. Якщо параметр і далі не читається, це не та машина, яку InstallerClean може очистити.`,
   'Cli.InstallerLockAccessRefused': `Помилка: Windows відмовив InstallerClean у праві перевірити, чи зайнятий Windows Installer, тож він не зміг виключити, що файл знадобиться в процесі. Нічого не було видалено.`,
   'Cli.MoveCancelledRestoreHint': `Це легко скасувати. Перемістіть їх з {0} назад до {InstallerFolder}, і все повернеться як було.`,
@@ -582,7 +583,6 @@ const MAP = {
   'Summary.RegisteredWindow.Missing.Plural': `{0} відсутніх`,
   'Summary.RegisteredWindow.Missing.Singular': `{0} відсутній`,
   'UpdateCheck.Failed.Unknown.NoLog': `Перевірка не вдалася з невідомої причини. Не вдалося записати журнал збоїв.`,
-  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -567,6 +567,7 @@ const MAP = {
   'Cli.WithheldReasons.CandidateIdentity': `  Sebuah file dalam folder tidak bisa dikenali, jadi file itu tidak bisa dicocokkan dengan catatan.`,
   'Cli.WithheldReasons.DeclaredProductUnestablished': `  Entah sebuah file tidak menyebutkan ia milik program mana, atau Windows tidak menjawab tentang program itu.`,
   'Cli.WithheldReasons.ScreenUnanswered': `  Pemeriksaan tentang file-file itu milik program mana memberi jawaban yang tidak cocok dengan file-file yang diserahkan kepadanya.`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Entah sebuah file patch tidak menyebutkan ia patch yang mana, atau file itu tidak menyebutkan ia ditujukan untuk program mana saja, atau Windows tidak menyebutkan secara lengkap program mana saja yang memiliki patch itu.`,
   'Body.PendingReboot.RegistryCheckUnreadable': `InstallerClean tidak bisa membaca salah satu pengaturan Windows yang diperiksanya sebelum menyentuh {InstallerFolder}, jadi tidak bisa tahu apakah ada operasi pemasangan yang sedang berjalan atau menunggu restart. Restart Windows lalu Pindai ulang. Kalau pengaturan itu tetap tidak terbaca, ini bukan komputer yang bisa dibersihkan InstallerClean.`,
   'Cli.InstallerLockAccessRefused': `Kesalahan: Windows menolak izin InstallerClean untuk memeriksa apakah Windows Installer sedang sibuk, jadi tidak bisa mengesampingkan bahwa sebuah file menjadi diperlukan di tengah jalan. Tidak ada yang dihapus.`,
   'Cli.MoveCancelledRestoreHint': `Mudah untuk dibatalkan. Pindahkan kembali dari {0} ke {InstallerFolder} dan semuanya akan kembali seperti semula.`,
@@ -580,7 +581,6 @@ const MAP = {
   'Summary.RegisteredWindow.Missing.Plural': `{0} hilang`,
   'Summary.RegisteredWindow.Missing.Singular': `{0} hilang`,
   'UpdateCheck.Failed.Unknown.NoLog': `Pemeriksaan gagal karena alasan yang tidak diketahui. Log kerusakan tidak bisa ditulis.`,
-  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -545,6 +545,7 @@ const MAP = {
   'Cli.WithheldReasons.CandidateIdentity': `  폴더에 있는 파일 하나의 신원을 확인할 수 없어서, 기록과 대조할 수 없었습니다.`,
   'Cli.WithheldReasons.DeclaredProductUnestablished': `  어떤 파일이 어느 프로그램에 속하는지 밝히지 않았거나, Windows가 그 프로그램에 대해 답하지 않았습니다.`,
   'Cli.WithheldReasons.ScreenUnanswered': `  파일이 어느 프로그램에 속하는지 확인하는 검사가, 건네받은 파일과 맞지 않는 답을 내놓았습니다.`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  어떤 패치 파일이 어느 패치인지 밝히지 않았거나, 어느 프로그램용인지 밝히지 않았거나, Windows가 그 패치가 적용된 프로그램을 모두 밝히지는 않았습니다.`,
   'Body.PendingReboot.RegistryCheckUnreadable': `InstallerClean이 {InstallerFolder}를 건드리기 전에 확인하는 Windows 설정 중 하나를 읽을 수 없어서, 설치 작업이 실행 중인지 재시작을 기다리는지 알 수 없습니다. Windows를 다시 시작한 뒤 다시 검사하세요. 그래도 설정을 읽을 수 없다면, 이 PC는 InstallerClean이 정리할 수 있는 PC가 아닙니다.`,
   'Cli.InstallerLockAccessRefused': `오류: Windows가 InstallerClean에 Windows Installer가 사용 중인지 확인할 권한을 주지 않아, 도중에 파일이 필요해질 가능성을 배제할 수 없었습니다. 아무것도 삭제되지 않았습니다.`,
   'Cli.MoveCancelledRestoreHint': `되돌리기는 간단합니다. {0}에서 {InstallerFolder}로 다시 옮기면 모든 것이 원래대로 돌아갑니다.`,
@@ -558,7 +559,6 @@ const MAP = {
   'Summary.RegisteredWindow.Missing.Plural': `{0}개 누락`,
   'Summary.RegisteredWindow.Missing.Singular': `{0}개 누락`,
   'UpdateCheck.Failed.Unknown.NoLog': `알 수 없는 이유로 확인에 실패했습니다. 크래시 로그를 기록할 수 없었습니다.`,
-  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -588,6 +588,7 @@ const MAP = {
   'Cli.WithheldReasons.CandidateIdentity': `  Nie udało się zidentyfikować pliku w folderze, więc nie dało się go dopasować do rejestrów.`,
   'Cli.WithheldReasons.DeclaredProductUnestablished': `  Albo plik nie podał, do którego programu należy, albo Windows nie udzielił odpowiedzi na temat tego programu.`,
   'Cli.WithheldReasons.ScreenUnanswered': `  Sprawdzenie, do których programów należą pliki, dało odpowiedzi, które nie zgadzały się z przekazanymi mu plikami.`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Albo plik poprawki nie podał, o którą poprawkę chodzi, albo nie podał, dla których programów jest przeznaczony, albo Windows nie podał w pełni, które programy mają tę poprawkę.`,
   'Body.PendingReboot.RegistryCheckUnreadable': `InstallerClean nie zdołał odczytać jednego z ustawień Windows, które sprawdza przed dotknięciem {InstallerFolder}, więc nie potrafi ustalić, czy operacja instalatora jest w toku, czy czeka na ponowne uruchomienie. Uruchom Windows ponownie i skanuj ponownie. Jeśli ustawienie nadal się nie odczytuje, to nie jest maszyna, którą InstallerClean może wyczyścić.`,
   'Cli.InstallerLockAccessRefused': `Błąd: Windows odmówił InstallerClean uprawnień do sprawdzenia, czy Instalator Windows jest zajęty, więc nie mógł wykluczyć, że plik stanie się potrzebny w trakcie. Nic nie zostało usunięte.`,
   'Cli.MoveCancelledRestoreHint': `Łatwo to cofnąć. Przenieś je z {0} z powrotem do {InstallerFolder}, a wszystko wróci do stanu sprzed.`,
@@ -601,7 +602,6 @@ const MAP = {
   'Summary.RegisteredWindow.Missing.Plural': `{0} brakujących`,
   'Summary.RegisteredWindow.Missing.Singular': `{0} brakujący`,
   'UpdateCheck.Failed.Unknown.NoLog': `Sprawdzanie nie powiodło się z nieznanej przyczyny. Nie udało się zapisać dziennika awarii.`,
-  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

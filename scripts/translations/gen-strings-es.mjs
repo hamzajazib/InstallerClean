@@ -482,6 +482,7 @@ const MAP = {
   'Cli.WithheldReasons.CandidateIdentity': `  No se pudo identificar un archivo de la carpeta, así que no se pudo cotejar con los registros.`,
   'Cli.WithheldReasons.DeclaredProductUnestablished': `  O bien un archivo no indicó a qué programa pertenece, o bien Windows no respondió sobre ese programa.`,
   'Cli.WithheldReasons.ScreenUnanswered': `  Una comprobación de a qué programas pertenecen los archivos dio respuestas que no encajaban con los archivos que se le pasaron.`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  O bien un archivo de parche no indicó de qué parche se trata, o bien no indicó a qué programas está destinado, o bien Windows no indicó de forma completa qué programas tienen ese parche.`,
   'Body.PendingReboot.RegistryCheckUnreadable': `InstallerClean no pudo leer una de las opciones de Windows que comprueba antes de tocar {InstallerFolder}, así que no puede saber si hay una operación de instalación en curso o esperando a un reinicio. Reinicia Windows y usa Volver a analizar. Si la opción sigue sin poder leerse, este no es un equipo que InstallerClean pueda limpiar.`,
   'Cli.InstallerLockAccessRefused': `Error: Windows le negó a InstallerClean el permiso para comprobar si Windows Installer estaba ocupado, así que no pudo descartar que un archivo hiciera falta a mitad del proceso. No se ha eliminado nada.`,
   'Cli.MoveCancelledRestoreHint': `Deshacerlo es sencillo. Muévelos de vuelta desde {0} a {InstallerFolder} y todo quedará como estaba.`,
@@ -495,7 +496,6 @@ const MAP = {
   'Summary.RegisteredWindow.Missing.Plural': `{0} ausentes`,
   'Summary.RegisteredWindow.Missing.Singular': `{0} ausente`,
   'UpdateCheck.Failed.Unknown.NoLog': `La comprobación falló por un motivo desconocido. No se pudo escribir el archivo crash.log.`,
-  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

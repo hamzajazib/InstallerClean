@@ -548,6 +548,7 @@ const MAP = {
   'Cli.WithheldReasons.CandidateIdentity': `  Không nhận dạng được một tệp trong thư mục, nên không thể đối chiếu nó với hồ sơ.`,
   'Cli.WithheldReasons.DeclaredProductUnestablished': `  Hoặc một tệp không cho biết nó thuộc về chương trình nào, hoặc Windows không trả lời về chương trình đó.`,
   'Cli.WithheldReasons.ScreenUnanswered': `  Một lần kiểm tra xem các tệp thuộc về những chương trình nào đã trả về các câu trả lời không khớp với những tệp được giao cho nó.`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Hoặc một tệp bản vá không cho biết nó là bản vá nào, hoặc không cho biết nó dành cho những chương trình nào, hoặc Windows không cho biết đầy đủ những chương trình nào có bản vá đó.`,
   'Body.PendingReboot.RegistryCheckUnreadable': `InstallerClean không đọc được một trong các thiết lập Windows mà nó kiểm tra trước khi đụng vào {InstallerFolder}, nên không biết được có thao tác cài đặt nào đang chạy hay đang chờ khởi động lại không. Hãy khởi động lại Windows rồi quét lại. Nếu thiết lập đó vẫn không đọc được thì đây không phải máy mà InstallerClean có thể dọn.`,
   'Cli.InstallerLockAccessRefused': `Lỗi: Windows đã từ chối cho InstallerClean quyền kiểm tra xem Windows Installer có đang bận không, nên nó không thể loại trừ khả năng một tệp trở nên cần thiết giữa chừng. Không có gì bị xóa.`,
   'Cli.MoveCancelledRestoreHint': `Hoàn tác rất đơn giản. Hãy chuyển chúng từ {0} trở lại {InstallerFolder} và mọi thứ sẽ như cũ.`,
@@ -561,7 +562,6 @@ const MAP = {
   'Summary.RegisteredWindow.Missing.Plural': `{0} thiếu`,
   'Summary.RegisteredWindow.Missing.Singular': `{0} thiếu`,
   'UpdateCheck.Failed.Unknown.NoLog': `Việc kiểm tra thất bại vì một lý do không xác định. Không thể ghi nhật ký sự cố.`,
-  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -1733,7 +1733,7 @@ Das Absturzprotokoll konnte nicht geschrieben werden.</value></data>
   <data name="Cli.WithheldReasons.CandidateIdentity" xml:space="preserve"><value>  Eine Datei im Ordner ließ sich nicht identifizieren und konnte deshalb nicht den Aufzeichnungen zugeordnet werden.</value></data>
   <data name="Cli.WithheldReasons.DeclaredProductUnestablished" xml:space="preserve"><value>  Entweder gab eine Datei nicht an, zu welchem Programm sie gehört, oder Windows gab zu diesem Programm keine Auskunft.</value></data>
   <data name="Cli.WithheldReasons.ScreenUnanswered" xml:space="preserve"><value>  Eine Prüfung, zu welchen Programmen die Dateien gehören, lieferte Antworten, die nicht zu den übergebenen Dateien passten.</value></data>
-  <data name="Cli.WithheldReasons.DeclaredPatchUnestablished" xml:space="preserve"><value>  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.</value></data>
+  <data name="Cli.WithheldReasons.DeclaredPatchUnestablished" xml:space="preserve"><value>  Entweder gab eine Patch-Datei nicht an, um welchen Patch es sich handelt, oder sie gab nicht an, für welche Programme sie bestimmt ist, oder Windows gab keine vollständige Auskunft darüber, welche Programme diesen Patch haben.</value></data>
   <!-- 0 = mode arg, whichever of /s, /d and /m was run: the no-files branch this
        is written from is common to all three, so a fixed mode word here names
        the wrong flag on two runs in three, and a filter for delete runs has to

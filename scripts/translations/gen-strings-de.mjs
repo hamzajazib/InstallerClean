@@ -563,6 +563,7 @@ const MAP = {
   'Cli.WithheldReasons.CandidateIdentity': `  Eine Datei im Ordner ließ sich nicht identifizieren und konnte deshalb nicht den Aufzeichnungen zugeordnet werden.`,
   'Cli.WithheldReasons.DeclaredProductUnestablished': `  Entweder gab eine Datei nicht an, zu welchem Programm sie gehört, oder Windows gab zu diesem Programm keine Auskunft.`,
   'Cli.WithheldReasons.ScreenUnanswered': `  Eine Prüfung, zu welchen Programmen die Dateien gehören, lieferte Antworten, die nicht zu den übergebenen Dateien passten.`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Entweder gab eine Patch-Datei nicht an, um welchen Patch es sich handelt, oder sie gab nicht an, für welche Programme sie bestimmt ist, oder Windows gab keine vollständige Auskunft darüber, welche Programme diesen Patch haben.`,
   'Body.PendingReboot.RegistryCheckUnreadable': `InstallerClean konnte eine der Windows-Einstellungen nicht lesen, die es prüft, bevor es {InstallerFolder} anfasst, und kann deshalb nicht erkennen, ob gerade ein Installationsvorgang läuft oder auf einen Neustart wartet. Starte Windows neu und wähle Neu scannen. Lässt sich die Einstellung dann immer noch nicht lesen, ist das kein Rechner, den InstallerClean aufräumen kann.`,
   'Cli.InstallerLockAccessRefused': `Fehler: Windows hat InstallerClean die Berechtigung verweigert zu prüfen, ob Windows Installer beschäftigt ist, und damit ließ sich nicht ausschließen, dass eine Datei mittendrin doch gebraucht wird. Es wurde nichts gelöscht.`,
   'Cli.MoveCancelledRestoreHint': `Das lässt sich leicht rückgängig machen. Verschiebe sie aus {0} zurück nach {InstallerFolder}, und alles ist wieder wie vorher.`,
@@ -576,7 +577,6 @@ const MAP = {
   'Summary.RegisteredWindow.Missing.Plural': `{0} fehlen`,
   'Summary.RegisteredWindow.Missing.Singular': `{0} fehlt`,
   'UpdateCheck.Failed.Unknown.NoLog': `Die Prüfung ist aus unbekanntem Grund fehlgeschlagen. Das Absturzprotokoll konnte nicht geschrieben werden.`,
-  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

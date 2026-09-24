@@ -569,6 +569,7 @@ const MAP = {
   'Cli.WithheldReasons.CandidateIdentity': `  Un fichier du dossier n'a pas pu être identifié, il n'a donc pas pu être rapproché des enregistrements.`,
   'Cli.WithheldReasons.DeclaredProductUnestablished': `  Soit un fichier n'a pas indiqué à quel programme il appartient, soit Windows n'a pas répondu au sujet de ce programme.`,
   'Cli.WithheldReasons.ScreenUnanswered': `  Une vérification des programmes auxquels appartiennent les fichiers a donné des réponses qui ne correspondaient pas aux fichiers qui lui avaient été transmis.`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Soit un fichier de correctif n'a pas indiqué de quel correctif il s'agit, soit il n'a pas indiqué à quels programmes il est destiné, soit Windows n'a pas indiqué de façon complète quels programmes ont ce correctif.`,
   'Body.PendingReboot.RegistryCheckUnreadable': `InstallerClean n'a pas pu lire l'un des paramètres Windows qu'il vérifie avant de toucher à {InstallerFolder}, il ne peut donc pas savoir si une opération d'installation est en cours ou attend un redémarrage. Redémarrez Windows puis Réanalyser. Si le paramètre reste illisible, ce n'est pas une machine qu'InstallerClean peut nettoyer.`,
   'Cli.InstallerLockAccessRefused': `Erreur : Windows a refusé à InstallerClean l'autorisation de vérifier si Windows Installer était occupé, il n'a donc pas pu exclure qu'un fichier devienne nécessaire en cours de route. Rien n'a été supprimé.`,
   'Cli.MoveCancelledRestoreHint': `C'est simple à annuler. Redéplacez-les depuis {0} dans {InstallerFolder} et tout redeviendra comme avant.`,
@@ -582,7 +583,6 @@ const MAP = {
   'Summary.RegisteredWindow.Missing.Plural': `{0} manquants`,
   'Summary.RegisteredWindow.Missing.Singular': `{0} manquant`,
   'UpdateCheck.Failed.Unknown.NoLog': `La vérification a échoué pour une raison inconnue. Le crash.log n'a pas pu être écrit.`,
-  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

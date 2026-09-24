@@ -1733,7 +1733,7 @@ Não foi possível gravar o crash.log.</value></data>
   <data name="Cli.WithheldReasons.CandidateIdentity" xml:space="preserve"><value>  Não foi possível identificar um arquivo da pasta, então não foi possível compará-lo com os registros.</value></data>
   <data name="Cli.WithheldReasons.DeclaredProductUnestablished" xml:space="preserve"><value>  Ou um arquivo não informou a qual programa pertence, ou o Windows não respondeu sobre esse programa.</value></data>
   <data name="Cli.WithheldReasons.ScreenUnanswered" xml:space="preserve"><value>  Uma verificação de a quais programas os arquivos pertencem deu respostas que não correspondiam aos arquivos que lhe foram entregues.</value></data>
-  <data name="Cli.WithheldReasons.DeclaredPatchUnestablished" xml:space="preserve"><value>  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.</value></data>
+  <data name="Cli.WithheldReasons.DeclaredPatchUnestablished" xml:space="preserve"><value>  Ou um arquivo de patch não informou de qual patch se trata, ou não informou a quais programas se destina, ou o Windows não informou de forma completa quais programas têm esse patch.</value></data>
   <!-- 0 = mode arg, whichever of /s, /d and /m was run: the no-files branch this
        is written from is common to all three, so a fixed mode word here names
        the wrong flag on two runs in three, and a filter for delete runs has to

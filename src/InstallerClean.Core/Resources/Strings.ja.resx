@@ -1733,7 +1733,7 @@ InstallerClean はすでに管理者として実行されていたため、同�
   <data name="Cli.WithheldReasons.CandidateIdentity" xml:space="preserve"><value>  フォルダー内のファイルを識別できなかったため、記録と照合できませんでした。</value></data>
   <data name="Cli.WithheldReasons.DeclaredProductUnestablished" xml:space="preserve"><value>  ファイルがどのプログラムのものか示さなかったか、Windows がそのプログラムについて応答しませんでした。</value></data>
   <data name="Cli.WithheldReasons.ScreenUnanswered" xml:space="preserve"><value>  ファイルがどのプログラムのものかを調べたところ、渡されたファイルと合わない答えが返りました。</value></data>
-  <data name="Cli.WithheldReasons.DeclaredPatchUnestablished" xml:space="preserve"><value>  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.</value></data>
+  <data name="Cli.WithheldReasons.DeclaredPatchUnestablished" xml:space="preserve"><value>  パッチファイルがどのパッチであるかを示さなかったか、どのプログラム向けであるかを示さなかったか、Windows がそのパッチが適用されているプログラムを完全には示しませんでした。</value></data>
   <!-- 0 = mode arg, whichever of /s, /d and /m was run: the no-files branch this
        is written from is common to all three, so a fixed mode word here names
        the wrong flag on two runs in three, and a filter for delete runs has to

@@ -1733,7 +1733,7 @@ Nie udało się zapisać dziennika awarii.</value></data>
   <data name="Cli.WithheldReasons.CandidateIdentity" xml:space="preserve"><value>  Nie udało się zidentyfikować pliku w folderze, więc nie dało się go dopasować do rejestrów.</value></data>
   <data name="Cli.WithheldReasons.DeclaredProductUnestablished" xml:space="preserve"><value>  Albo plik nie podał, do którego programu należy, albo Windows nie udzielił odpowiedzi na temat tego programu.</value></data>
   <data name="Cli.WithheldReasons.ScreenUnanswered" xml:space="preserve"><value>  Sprawdzenie, do których programów należą pliki, dało odpowiedzi, które nie zgadzały się z przekazanymi mu plikami.</value></data>
-  <data name="Cli.WithheldReasons.DeclaredPatchUnestablished" xml:space="preserve"><value>  Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch.</value></data>
+  <data name="Cli.WithheldReasons.DeclaredPatchUnestablished" xml:space="preserve"><value>  Albo plik poprawki nie podał, o którą poprawkę chodzi, albo nie podał, dla których programów jest przeznaczony, albo Windows nie podał w pełni, które programy mają tę poprawkę.</value></data>
   <!-- 0 = mode arg, whichever of /s, /d and /m was run: the no-files branch this
        is written from is common to all three, so a fixed mode word here names
        the wrong flag on two runs in three, and a filter for delete runs has to
