@@ -44,6 +44,8 @@ public class CliPendingRebootOutcomeTests
         [PendingRebootReason.PendingRenameInCache]    = (CliExitCode.Transient, CliEventClass.TransientSkip),
         [PendingRebootReason.PendingRenameUnresolved] = (CliExitCode.Transient, CliEventClass.TransientSkip),
         [PendingRebootReason.RegistryCheckUnreadable] = (CliExitCode.Error, CliEventClass.HardError),
+        [PendingRebootReason.InstallerInProgressMarker] = (CliExitCode.Transient, CliEventClass.TransientSkip),
+        [PendingRebootReason.InstallerInProgressMarkerAccessRefused] = (CliExitCode.Error, CliEventClass.HardError),
     };
 
     [Fact]

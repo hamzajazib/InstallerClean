@@ -1533,6 +1533,18 @@ internal static class Program
                 Strings.Cli_PendingRebootBlocked_PendingRenameUnresolved,
             PendingRebootReason.RegistryCheckUnreadable =>
                 Strings.Cli_PendingRebootBlocked_RegistryCheckUnreadable,
+            // The in-progress file's own sentence is the one the fallback below
+            // prints: Windows Installer has something in progress, which is what
+            // the file records. A reason added later without a line of its own
+            // falls through to the same text and meets the test's distinctness
+            // check, which this arm keeps armed.
+            PendingRebootReason.InstallerInProgressMarker =>
+                Strings.Cli_PendingRebootBlocked_Other,
+            // Windows refused the read of the in-progress file: the refused-lock
+            // sentence says Windows refused permission to check whether Windows
+            // Installer was busy, which is as true of this read as of the mutex's.
+            PendingRebootReason.InstallerInProgressMarkerAccessRefused =>
+                InstallerLockAccessRefusedLine(arg),
             // What a reason with no line of its own gets: a sentence true of the
             // whole family, where a throw would reach the generic catch and report
             // a held run as an unexpected crash. It cannot fire for a null reason
@@ -1569,6 +1581,13 @@ internal static class Program
                 Strings.Cli_EventLogReason_PendingRenameUnresolved,
             PendingRebootReason.RegistryCheckUnreadable =>
                 Strings.Cli_EventLogReason_RegistryCheckUnreadable,
+            // The two in-progress-file reasons are labelled with their own names,
+            // written out here so the choice is visible rather than left to the
+            // fallback. Each is stable and names what the gate read.
+            PendingRebootReason.InstallerInProgressMarker =>
+                nameof(PendingRebootReason.InstallerInProgressMarker),
+            PendingRebootReason.InstallerInProgressMarkerAccessRefused =>
+                nameof(PendingRebootReason.InstallerInProgressMarkerAccessRefused),
             _ => reason.ToString(),
         };
 
@@ -1582,15 +1601,16 @@ internal static class Program
     /// this line back without doing both.
     ///
     /// WHAT THE FIXED HALF SAYS, AND WHY IT SAYS SO LITTLE. The label is the whole of
-    /// what the line claims about the condition. Of the six, one is an installer
+    /// what the line claims about the condition. Of the eight, one is an installer
     /// running right now, one a lock the app was refused permission to open, one a
-    /// suspended transaction, two are operations queued for the next restart, and one
-    /// is a registry value the check could not read, so nothing shorter than the label
-    /// is true of all six.
+    /// suspended transaction, two are operations queued for the next restart, one is
+    /// a registry value the check could not read, one is Windows Installer's
+    /// in-progress file and one is a read of that file Windows refused, so nothing
+    /// shorter than the label is true of all eight.
     ///
     /// The detail arrives carrying its own separator, which is why the template ends
-    /// in a placeholder with no space in front of it: the five reasons that never
-    /// carry a detail would otherwise each log a line with a space hanging off it.
+    /// in a placeholder with no space in front of it: the reasons that never carry a
+    /// detail would otherwise each log a line with a space hanging off it.
     ///
     /// CALL IT FROM INSIDE THE EVENT-LOG SCOPE, for the reason
     /// <see cref="PendingRebootEventLogReason"/> gives: it reads through the ordinary
@@ -1633,10 +1653,10 @@ internal static class Program
         // "come back later" beside an entry classed as a run that failed outright
         // would leave the machine contract disagreeing with itself.
         //
-        // THE FOUR THAT ASSERT SOMETHING IS IN FLIGHT TAKE THE TRANSIENT CODE. An
-        // install holding the mutex, a suspended transaction, a queued rename: each
-        // of those ends by itself, so a scheduler that comes back finds the machine
-        // in a different state.
+        // THE FIVE THAT ASSERT SOMETHING IS IN FLIGHT TAKE THE TRANSIENT CODE. An
+        // install holding the mutex, a suspended transaction, Windows Installer's
+        // in-progress file, a queued rename: each of those ends by itself, so a
+        // scheduler that comes back finds the machine in a different state.
         //
         // A READ THE APP COULD NOT MAKE IS NOT ONE OF THEM, and this is the arm the
         // default falls to. Nothing about waiting says the value will read next
@@ -1648,14 +1668,16 @@ internal static class Program
         // too, on the same reasoning, until somebody decides otherwise in
         // CliPendingRebootOutcomeTests' own table.
         //
-        // NOR IS A LOCK THE APP WAS REFUSED PERMISSION TO OPEN, which takes the same
-        // arm. Nothing has been seen holding it, and the security on an object does
-        // not change by being waited on: the refusal stands for as long as the object
-        // does, and every run until then is refused identically.
+        // NOR IS A LOCK OR AN IN-PROGRESS FILE THE APP WAS REFUSED PERMISSION TO
+        // READ, which take the same arm. Nothing has been seen behind either refusal,
+        // and the security on an object does not change by being waited on: the
+        // refusal stands for as long as the object does, and every run until then is
+        // refused identically.
         var (exitCode, entryClass) = reason switch
         {
             PendingRebootReason.MsiExecuteMutexHeld or
             PendingRebootReason.InstallerInProgress or
+            PendingRebootReason.InstallerInProgressMarker or
             PendingRebootReason.PendingRenameInCache or
             PendingRebootReason.PendingRenameUnresolved =>
                 (ExitTransient, CliEventClass.TransientSkip),

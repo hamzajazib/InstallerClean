@@ -4,7 +4,12 @@ namespace InstallerClean.Services;
 public interface IPendingRebootService
 {
     /// <summary>
-    /// Probes the three signals and returns a result. Reads only. Never throws.
+    /// Probes the four signals and returns a result. Reads only.
+    ///
+    /// IT THROWS IN ONE CASE AND NO OTHER: a read of Windows Installer's in-progress
+    /// file that failed in a way none of <see cref="InstallerInProgressMarkerReading"/>'s
+    /// members names. Nothing is established by such a read and none of this gate's
+    /// sentences is true of it, so it reaches the caller's own error path instead.
     ///
     /// A REGISTRY READ THAT COULD NOT BE MADE IS NOT A READ THAT CAME BACK CLEAR.
     /// Where either registry read does not answer, whether the cache is at risk is

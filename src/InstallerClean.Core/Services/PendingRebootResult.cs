@@ -91,4 +91,32 @@ public enum PendingRebootReason
     /// cannot resolve and is refused for the same reason.
     /// </summary>
     RegistryCheckUnreadable,
+
+    /// <summary>
+    /// <c>inprogressinstallinfo.ipi</c> is in the Installer folder: Windows Installer's
+    /// record of an installation it has not finished. See
+    /// <see cref="IInstallerInProgressMarker"/> for what it covers that the mutex does
+    /// not, which is a transaction of several packages between one package and the
+    /// next.
+    ///
+    /// AFTER THE MEMBERS BEFORE IT rather than beside the InProgress key, so no other
+    /// member's value moves. The gate checks it straight after that key.
+    ///
+    /// Its sentence is <c>Body.PendingReboot.Other</c> and
+    /// <c>Cli.PendingRebootBlocked.Other</c>, which say that Windows Installer has
+    /// something in progress, and its Application-log label is its own name.
+    /// </summary>
+    InstallerInProgressMarker,
+
+    /// <summary>
+    /// Windows refused the read of <c>inprogressinstallinfo.ipi</c>, so whether the
+    /// marker is there was not established.
+    ///
+    /// IT SHARES <see cref="MsiExecuteMutexAccessRefused"/>'S TWO SENTENCES, which say
+    /// that Windows refused the app permission to check whether Windows Installer is
+    /// busy and are as true of this read as of that one. It is a member of its own
+    /// because that reason's Application-log label names the mutex. Its label is its
+    /// own name, and a scheduler is told what that reason tells it.
+    /// </summary>
+    InstallerInProgressMarkerAccessRefused,
 }

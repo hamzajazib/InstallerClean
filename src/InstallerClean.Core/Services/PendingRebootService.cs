@@ -1,11 +1,12 @@
 namespace InstallerClean.Services;
 
 /// <summary>
-/// Returns Block when any of three signals says the MSI cache is at risk or cannot be
+/// Returns Block when any of four signals says the MSI cache is at risk or cannot be
 /// shown not to be: the _MSIExecute mutex, held or refusing this process the rights to
-/// open it; the Installer\InProgress key; or any PendingFileRenameOperations entry, source
-/// or destination, that names a path under %SystemRoot%\Installer or that the app cannot
-/// place at all.
+/// open it; the Installer\InProgress key; Windows Installer's in-progress file in the
+/// cache folder, there or refusing the read; or any PendingFileRenameOperations entry,
+/// source or destination, that names a path under %SystemRoot%\Installer or that the
+/// app cannot place at all.
 /// </summary>
 /// <remarks>
 /// Every entry is checked, not just the sources: a queued rename INTO the cache is as
@@ -30,12 +31,14 @@ public sealed class PendingRebootService : IPendingRebootService
     private readonly IRegistryReader _registry;
     private readonly IMutexProbe _mutex;
     private readonly IVolumeMountProbe _volumes;
+    private readonly IInstallerInProgressMarker _marker;
 
     /// <summary>Override for %SystemRoot%; null in production.</summary>
     private readonly string? _windowsRootOverride;
 
-    public PendingRebootService(IRegistryReader registry, IMutexProbe mutex, IVolumeMountProbe volumes)
-        : this(registry, mutex, volumes, windowsRootOverride: null)
+    public PendingRebootService(IRegistryReader registry, IMutexProbe mutex, IVolumeMountProbe volumes,
+        IInstallerInProgressMarker marker)
+        : this(registry, mutex, volumes, marker, windowsRootOverride: null)
     {
     }
 
@@ -44,18 +47,20 @@ public sealed class PendingRebootService : IPendingRebootService
         IRegistryReader registry,
         IMutexProbe mutex,
         IVolumeMountProbe volumes,
+        IInstallerInProgressMarker marker,
         string? windowsRootOverride)
     {
         _registry = registry;
         _mutex = mutex;
         _volumes = volumes;
+        _marker = marker;
         _windowsRootOverride = windowsRootOverride;
     }
 
     public PendingRebootResult Check()
     {
         // Mutex first because an active install is the most decisive signal; if it
-        // fires, the InProgress and PendingFileRenameOperations probes are skipped.
+        // fires, every probe after it is skipped.
         // A refused open is read here too and stops the run just as early: the
         // action services' acquire asks for the same rights, so a refusal standing
         // now refuses the batch later whatever the other two signals say.
@@ -101,6 +106,21 @@ public sealed class PendingRebootService : IPendingRebootService
         // state added to the enum later falls here rather than through.
         if (installerInProgress is not RegistryKeyPresence.Absent)
             return PendingRebootResult.Block(PendingRebootReason.RegistryCheckUnreadable);
+
+        // Windows Installer's in-progress file, which is there for the whole of a
+        // transaction of several packages, the stretches between packages included,
+        // when the mutex above is free. Absent is the only reading that carries on,
+        // on the rule the key above follows, so a reading added later blocks.
+        //
+        // NOT WRAPPED, UNLIKE THE READS ABOVE. The probe throws only for a failure
+        // that none of its readings names, and no sentence this gate has is true of
+        // that, so it leaves through the caller's own error path, which reports it
+        // and acts on nothing. See IInstallerInProgressMarker.Read.
+        var marker = _marker.Read();
+        if (marker is InstallerInProgressMarkerReading.AccessRefused)
+            return PendingRebootResult.Block(PendingRebootReason.InstallerInProgressMarkerAccessRefused);
+        if (marker is not InstallerInProgressMarkerReading.Absent)
+            return PendingRebootResult.Block(PendingRebootReason.InstallerInProgressMarker);
 
         // Bare PendingFileRenameOperations is too broad (any third-party uninstaller
         // writes to it); refine to "an entry, source or destination, that names a path

@@ -36,15 +36,37 @@ public class ScanViewModelPendingRebootTests
             var text = vm.PendingRebootBannerText;
 
             Assert.False(string.IsNullOrWhiteSpace(text), $"{reason} paints an empty banner");
-            Assert.NotEqual(Strings.Body_PendingReboot_Other, text);
+
+            // A reason that shares another's banner on purpose is checked against
+            // that reason's banner and left out of the distinct set, so the set
+            // still holds one banner per reason.
+            if (SharedBanner.TryGetValue(reason, out var sharedWith))
+            {
+                vm.PendingRebootResult = PendingRebootResult.Block(sharedWith);
+                Assert.Equal(vm.PendingRebootBannerText, text);
+                continue;
+            }
+
             seen.Add(text);
         }
 
-        // Distinct, because the fallback would otherwise satisfy the assertion
-        // above for every reason at once and this test would pass over the very
-        // gap it exists to close.
+        // DISTINCT, AND IT IS WHAT CATCHES A REASON WITH NO BANNER OF ITS OWN. The
+        // in-progress file's banner is the fallback's text, so a reason added later
+        // that falls through to the fallback duplicates it here.
         Assert.Equal(seen.Count, seen.Distinct().Count());
+        Assert.Contains(Strings.Body_PendingReboot_Other, seen);
     }
+
+    /// <summary>
+    /// The reasons whose banner is another reason's, each with the reason it shares.
+    /// A refused read of Windows Installer's in-progress file shows the refused-lock
+    /// banner, whose sentence says Windows refused the app permission to check
+    /// whether Windows Installer is busy.
+    /// </summary>
+    private static readonly Dictionary<PendingRebootReason, PendingRebootReason> SharedBanner = new()
+    {
+        [PendingRebootReason.InstallerInProgressMarkerAccessRefused] = PendingRebootReason.MsiExecuteMutexAccessRefused,
+    };
 
     /// <summary>
     /// A Windows Installer lock the app was refused permission to open paints its own

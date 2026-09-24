@@ -34,15 +34,46 @@ public class CliPendingRebootStringsTests
             var line = Program.PendingRebootBlockedMessage(arg, reason, detail: null);
 
             Assert.False(string.IsNullOrWhiteSpace(line), $"{reason} prints nothing");
-            Assert.NotEqual(Strings.Cli_PendingRebootBlocked_Other, line);
+
+            // A reason that shares another's line on purpose is checked against that
+            // reason's line and left out of the distinct set.
+            if (SharedLine.TryGetValue(reason, out var sharedWith))
+            {
+                Assert.Equal(Program.PendingRebootBlockedMessage(arg, sharedWith, detail: null), line);
+                continue;
+            }
+
             seen.Add(line);
         }
 
-        // Distinct, because the fallback would otherwise satisfy the assertion above
-        // for every reason at once and this test would pass over the very gap it
-        // exists to close.
+        // DISTINCT, AND IT IS WHAT CATCHES A REASON WITH NO LINE OF ITS OWN. The
+        // in-progress file's line is the fallback's text, so a reason added later
+        // that falls through to the fallback duplicates it here.
         Assert.Equal(seen.Count, seen.Distinct().Count());
+        Assert.Contains(Strings.Cli_PendingRebootBlocked_Other, seen);
     }
+
+    /// <summary>
+    /// The reasons whose stdout line is another reason's, each with the reason it
+    /// shares. A refused read of Windows Installer's in-progress file prints the
+    /// refused-lock line, whose sentence says Windows refused the app permission to
+    /// check whether Windows Installer was busy.
+    /// </summary>
+    private static readonly Dictionary<PendingRebootReason, PendingRebootReason> SharedLine = new()
+    {
+        [PendingRebootReason.InstallerInProgressMarkerAccessRefused] = PendingRebootReason.MsiExecuteMutexAccessRefused,
+    };
+
+    /// <summary>
+    /// The reasons whose Application-channel label is the member's own name, written
+    /// out rather than reached through the fallback. Each is stable and greppable and
+    /// names what the gate read.
+    /// </summary>
+    private static readonly PendingRebootReason[] LabelledByName =
+    {
+        PendingRebootReason.InstallerInProgressMarker,
+        PendingRebootReason.InstallerInProgressMarkerAccessRefused,
+    };
 
     /// <summary>
     /// A refused lock prints the refusal sentence the action services' refusal
@@ -76,8 +107,13 @@ public class CliPendingRebootStringsTests
             Assert.False(string.IsNullOrWhiteSpace(label), $"{reason} logs nothing");
             // The member name is the fallback, so a label equal to it is a reason whose
             // own label was never written. Comparing against the name rather than
-            // against a list is what keeps this true for a reason added later.
-            Assert.NotEqual(reason.ToString(), label);
+            // against a list is what keeps this true for a reason added later. The
+            // reasons labelled by their name on purpose are listed, and their label
+            // is held to that name.
+            if (LabelledByName.Contains(reason))
+                Assert.Equal(reason.ToString(), label);
+            else
+                Assert.NotEqual(reason.ToString(), label);
             seen.Add(label);
         }
 

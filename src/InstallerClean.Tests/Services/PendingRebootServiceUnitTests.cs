@@ -9,11 +9,13 @@ public class PendingRebootServiceUnitTests
     private readonly IRegistryReader _registry = Substitute.For<IRegistryReader>();
     private readonly IMutexProbe _mutex = Substitute.For<IMutexProbe>();
     private readonly IVolumeMountProbe _volumes = Substitute.For<IVolumeMountProbe>();
+    private readonly IInstallerInProgressMarker _marker = Substitute.For<IInstallerInProgressMarker>();
 
     /// <summary>
     /// The quiet machine every test starts from, stated rather than left to the
-    /// fakes: nothing holding the installer mutex, nothing suspended and nothing
-    /// queued. Both registry reads answer their type's own zero when nobody sets
+    /// fakes: nothing holding the installer mutex, nothing suspended, no in-progress
+    /// file and nothing queued. The in-progress file's own zero reads as present, so
+    /// it is stated too. Both registry reads answer their type's own zero when nobody sets
     /// one, and that zero says the read did not answer, which is a refusal rather
     /// than a clean machine. A test about any of the three names it and overwrites
     /// what is set here.
@@ -22,12 +24,13 @@ public class PendingRebootServiceUnitTests
     {
         _mutex.Sample(Arg.Any<string>()).Returns(MutexSample.NotHeld);
         InProgress(RegistryKeyPresence.Absent);
+        _marker.Read().Returns(InstallerInProgressMarkerReading.Absent);
         Renames(new RegistryMultiStringRead(RegistryMultiStringState.Absent));
     }
 
     /// <summary>Builds a service with a fixed Windows root so path comparisons don't depend on the host.</summary>
     private PendingRebootService Build(string windowsRoot = @"C:\Windows") =>
-        new(_registry, _mutex, _volumes, windowsRoot);
+        new(_registry, _mutex, _volumes, _marker, windowsRoot);
 
     /// <summary>
     /// Scripts one volume: the GUID name the enumeration hands back, the NT device it
@@ -107,6 +110,99 @@ public class PendingRebootServiceUnitTests
 
         Assert.Equal(PendingRebootVerdict.Block, result.Verdict);
         Assert.Equal(PendingRebootReason.InstallerInProgress, result.Reason);
+    }
+
+    // ---- Windows Installer's in-progress file ----
+
+    [Fact]
+    public void The_in_progress_file_blocks_with_its_own_reason()
+    {
+        _marker.Read().Returns(InstallerInProgressMarkerReading.Present);
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootVerdict.Block, result.Verdict);
+        Assert.Equal(PendingRebootReason.InstallerInProgressMarker, result.Reason);
+        Assert.Null(result.Detail);
+    }
+
+    [Fact]
+    public void A_refused_read_of_the_in_progress_file_blocks_with_its_own_reason()
+    {
+        // Never as the file being there: nothing has been seen, and the file's own
+        // sentence says Windows Installer has something in progress.
+        _marker.Read().Returns(InstallerInProgressMarkerReading.AccessRefused);
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootVerdict.Block, result.Verdict);
+        Assert.Equal(PendingRebootReason.InstallerInProgressMarkerAccessRefused, result.Reason);
+    }
+
+    [Fact]
+    public void An_in_progress_file_reading_nobody_set_blocks()
+    {
+        // The enum's zero, which is what a reading added later without a rule, or a
+        // fake nobody scripted, arrives as.
+        _marker.Read().Returns(default(InstallerInProgressMarkerReading));
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootReason.InstallerInProgressMarker, result.Reason);
+    }
+
+    [Fact]
+    public void Only_an_absent_in_progress_file_lets_the_check_carry_on()
+    {
+        // Walked over the enum against a machine that is otherwise quiet, so a
+        // reading that lets the check through is named here or fails.
+        var through = Enum.GetValues<InstallerInProgressMarkerReading>()
+            .Where(reading =>
+            {
+                _marker.Read().Returns(reading);
+                return !Build().Check().IsBlocked;
+            })
+            .ToArray();
+
+        Assert.Equal(new[] { InstallerInProgressMarkerReading.Absent }, through);
+    }
+
+    [Fact]
+    public void A_read_of_the_in_progress_file_that_throws_leaves_the_check()
+    {
+        // The probe throws only for a failure none of its readings names. No
+        // sentence of this gate is true of it, so it is not caught here: the
+        // caller's own error path reports it and acts on nothing.
+        _marker.Read().Returns(_ => throw new IOException("device not ready"));
+
+        Assert.Throws<IOException>(() => Build().Check());
+    }
+
+    [Fact]
+    public void A_held_mutex_is_reported_without_reading_the_in_progress_file()
+    {
+        _mutex.Sample(PendingRebootService.MsiExecuteMutexName).Returns(MutexSample.Held);
+        _marker.Read().Returns(_ => throw new InvalidOperationException("read after the mutex fired"));
+
+        Assert.Equal(PendingRebootReason.MsiExecuteMutexHeld, Build().Check().Reason);
+    }
+
+    [Fact]
+    public void A_suspended_transaction_is_reported_without_reading_the_in_progress_file()
+    {
+        InProgress(RegistryKeyPresence.Present);
+        _marker.Read().Returns(_ => throw new InvalidOperationException("read after the key fired"));
+
+        Assert.Equal(PendingRebootReason.InstallerInProgress, Build().Check().Reason);
+    }
+
+    [Fact]
+    public void The_in_progress_file_is_reported_before_the_rename_queue_is_read()
+    {
+        _marker.Read().Returns(InstallerInProgressMarkerReading.Present);
+        Queued(new[] { @"\??\C:\Windows\Installer\1234.msi", "" });
+
+        Assert.Equal(PendingRebootReason.InstallerInProgressMarker, Build().Check().Reason);
     }
 
     [Fact]

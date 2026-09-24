@@ -40,6 +40,9 @@ public static class CoreComposition
         // queued rename can name its volume rather than carrying a drive root, and
         // placing one of those against the cache folder is the only thing this does.
         services.AddSingleton<IVolumeMountProbe, VolumeMountProbe>();
+        // Reads whether Windows Installer's in-progress file is in the cache folder,
+        // for the pending-reboot gate alone.
+        services.AddSingleton<IInstallerInProgressMarker, InstallerInProgressMarker>();
         services.AddSingleton<Interop.IMsiApi, Interop.MsiApi>();
 
         // Win32 / registry / MSI-API wrappers.

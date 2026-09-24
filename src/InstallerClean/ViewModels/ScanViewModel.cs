@@ -101,6 +101,12 @@ public partial class ScanViewModel : ObservableObject
     /// silent gap because Every_reason_has_a_banner_of_its_own walks the enum,
     /// and A_reason_with_no_banner_of_its_own_still_says_something covers this
     /// arm (ScanViewModelPendingRebootTests).
+    ///
+    /// THE SAME SENTENCE IS ALSO THE IN-PROGRESS FILE'S OWN, named in its arm
+    /// above: it says Windows Installer has something in progress, which is what
+    /// that file records. A member added later without a banner falls through to
+    /// the same text and meets the test's distinctness check, which the file's arm
+    /// keeps armed.
     /// </summary>
     public string PendingRebootBannerText => PendingRebootResult?.Reason switch
     {
@@ -110,6 +116,10 @@ public partial class ScanViewModel : ObservableObject
         PendingRebootReason.PendingRenameInCache => Strings.Body_PendingReboot_PendingRenameInCache,
         PendingRebootReason.PendingRenameUnresolved => Strings.Body_PendingReboot_PendingRenameUnresolved,
         PendingRebootReason.RegistryCheckUnreadable => Strings.Body_PendingReboot_RegistryCheckUnreadable,
+        PendingRebootReason.InstallerInProgressMarker => Strings.Body_PendingReboot_Other,
+        // Windows refused the read of the in-progress file: the refused-permission
+        // sentence is as true of that read as of the mutex's.
+        PendingRebootReason.InstallerInProgressMarkerAccessRefused => Strings.Body_PendingReboot_MsiExecuteMutexAccessRefused,
         null => string.Empty,
         _ => Strings.Body_PendingReboot_Other,
     };
