@@ -776,7 +776,8 @@ public static class ShortNameCreationLabels
 /// THE COUNTS ARE CARRIED APART BECAUSE THEY ARE READ APART. Each member is one fact
 /// about one machine, and nothing may add any two of them and call the result a
 /// cause: what is true of every file on the list is only that the scan declined to
-/// offer it. The opt-in report carries the first five. The under-a-day-old and
+/// offer it. The opt-in report carries all nine, each under its own key, and a member
+/// added here goes there too. Inside the app, the under-a-day-old and
 /// declared-patch-registered counts are read by
 /// <see cref="ScanResult.UnestablishedWithheldCount"/> and
 /// <see cref="ScanResult.Withholding"/>, the age-unestablished count by

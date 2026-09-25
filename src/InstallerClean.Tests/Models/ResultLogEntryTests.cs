@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using InstallerClean.Helpers;
 using InstallerClean.Models;
@@ -64,7 +65,11 @@ public class ResultLogEntryTests
         WithheldWholesaleCount: 0,
         WithheldDeclaredProductInstalledCount: 0,
         WithheldDeclaredProductUnestablishedCount: 0,
-        WithheldScreenUnansweredCount: 0);
+        WithheldScreenUnansweredCount: 0,
+        WithheldUnderADayOldCount: 0,
+        WithheldAgeUnestablishedCount: 0,
+        WithheldDeclaredPatchRegisteredCount: 0,
+        WithheldDeclaredPatchUnestablishedCount: 0);
 
     private static MachineInfo SampleMachine() => new(
         ShortNameCreation: ShortNameCreationLabels.NoVolumes,
@@ -106,11 +111,12 @@ public class ResultLogEntryTests
         CandidateIdentityNotAPathCount: 0,
         CandidateIdentityOpenRefusedCount: 0,
         CandidateIdentityUnavailableCount: 0,
-        CandidateIdentityFaultedCount: 0);
+        CandidateIdentityFaultedCount: 0,
+        RegistryKeyReadFailureCount: 0);
 
     private static ResultLogEntry SampleEntry() => new(
         SchemaVersion: ResultLogEntry.CurrentSchemaVersion,
-        App: new AppInfo("1.8.0", "en-GB"),
+        App: new AppInfo("1.8.0", "en-GB", "en"),
         Os: "Windows 11 (X64)",
         Machine: SampleMachine(),
         Scan: SampleScan(),
@@ -137,7 +143,7 @@ public class ResultLogEntryTests
     }
 
     [Fact]
-    public void Schema_version_is_four()
+    public void Schema_version_is_five()
     {
         // The receiving Edge Function field-validates per version; a silent bump
         // routes every record through its lenient v<n>-unknown/ path. This pin
@@ -150,7 +156,13 @@ public class ResultLogEntryTests
         // It moved to 4 for the population fields, which are additions, and for
         // pendingReboot leaving, which is not: a receiver that requires that field
         // has to be told which versions still carry it.
-        Assert.Equal(4, ResultLogEntry.CurrentSchemaVersion);
+        //
+        // It moved to 5 for six keys added to objects schema 4 already carries, and
+        // for app.language changing what it carries. A release sends 4, and the
+        // receiver requires every key in a version's shape, so under 4 the new keys
+        // could only have been permitted, never required, without rejecting that
+        // release's reports.
+        Assert.Equal(5, ResultLogEntry.CurrentSchemaVersion);
     }
 
     [Fact]
@@ -170,7 +182,7 @@ public class ResultLogEntryTests
             root.EnumerateObject().Select(p => p.Name));
 
         Assert.Equal(
-            ["version", "language"],
+            ["version", "language", "windowsLanguage"],
             root.GetProperty("app").EnumerateObject().Select(p => p.Name));
 
         Assert.Equal(
@@ -205,6 +217,9 @@ public class ResultLogEntryTests
                 "candidateIdentityAttemptCount", "candidateIdentityNamesNothingCount",
                 "candidateIdentityNotAPathCount", "candidateIdentityOpenRefusedCount",
                 "candidateIdentityUnavailableCount", "candidateIdentityFaultedCount",
+                // The registry side's failed reads, a figure of which
+                // nonStringLocalPackageCount near the top of this list is a part.
+                "registryKeyReadFailureCount",
                 // THE DERIVED TOTALS COME LAST AS A BLOCK, not beside their parts:
                 // each is a property rather than a constructor parameter, so a total
                 // contradicting its own breakdown inside one object is impossible
@@ -239,19 +254,19 @@ public class ResultLogEntryTests
                 // there. Three withheld figures over three different populations;
                 // adding any two of them would answer no question.
                 "withheldTotalBytes", "registeredWithheldCount",
-                // Five of the nine counts that split withheldCandidateCount, appended as
-                // one block in the order the split declares them. Each is one finding
-                // about one machine and nothing may add any two of them: two are
-                // opposite answers from the same screen, one is that screen having
-                // answered about nothing, one is a per-file identity read that gave
-                // up, and one is the whole walk-derived offer going at once on a fact
-                // about the machine. withheldCandidateCount less these five is the
-                // files the age check kept back, in both of its arms, and the patch
-                // copies the screen kept, in both of the patch half's arms.
+                // The nine counts that split withheldCandidateCount, appended in the
+                // order the split declares them, and they add up to it. Each is one
+                // finding about one machine and nothing may add any two of them: the
+                // screen's four verdicts, that screen having answered about nothing,
+                // a per-file identity read that gave up, the whole walk-derived offer
+                // going at once on a fact about the machine, and the age check's two.
                 "withheldIdentityUnestablishedCount", "withheldWholesaleCount",
                 "withheldDeclaredProductInstalledCount",
                 "withheldDeclaredProductUnestablishedCount",
                 "withheldScreenUnansweredCount",
+                "withheldUnderADayOldCount", "withheldAgeUnestablishedCount",
+                "withheldDeclaredPatchRegisteredCount",
+                "withheldDeclaredPatchUnestablishedCount",
             ],
             root.GetProperty("scan").EnumerateObject().Select(p => p.Name));
 
@@ -502,15 +517,35 @@ public class ResultLogEntryTests
     }
 
     [Fact]
-    public void The_display_language_is_the_UI_culture_and_never_empty()
+    public void The_report_language_is_the_language_the_app_shows()
     {
-        // Sixteen possible values on any shipped build, so it narrows nobody; it
-        // is here because which languages are actually used is not otherwise
-        // knowable. The invariant culture has an empty name and is reported as a
-        // word rather than as a blank, which would read as a field that failed.
-        var language = AppInfo.Current().Language;
+        // The language the app's strings resolve to, which is what the user read. A
+        // UI culture with no translation of its own reports the English the app
+        // showed, a regional culture reports its language, and a language picked in
+        // the app is reported as picked whatever the thread's culture says.
+        var ui = CultureInfo.CurrentUICulture;
+        var uiOverride = Localisation.UiCultureOverride;
+        var formatOverride = Localisation.FormatCultureOverride;
+        try
+        {
+            Localisation.Reset();
 
-        Assert.False(string.IsNullOrWhiteSpace(language));
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("cs-CZ");
+            Assert.Equal(SupportedLanguages.Neutral, AppInfo.Current().Language);
+
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("de-AT");
+            Assert.Equal("de", AppInfo.Current().Language);
+
+            var picked = CultureInfo.GetCultureInfo("ja");
+            Localisation.Set(picked, picked);
+            Assert.Equal("ja", AppInfo.Current().Language);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = ui;
+            if (uiOverride is null) Localisation.Reset();
+            else Localisation.Set(uiOverride, formatOverride ?? uiOverride);
+        }
     }
 
     [Fact]
@@ -759,7 +794,7 @@ public class ResultLogEntryTests
                 UnansweredProductCount: 18),
             RegisteredWithheldCount: 19,
             WithheldFiles: withheld,
-            WithheldBy: new WithholdingSplit(20, 21, 22, 23, 24));
+            WithheldBy: new WithholdingSplit(20, 21, 22, 23, 24, 25, 26, 27, 28));
 
         var info = ScanInfo.From(scan, 7001);
 
@@ -787,14 +822,62 @@ public class ResultLogEntryTests
         Assert.Equal(22, info.WithheldDeclaredProductInstalledCount);
         Assert.Equal(23, info.WithheldDeclaredProductUnestablishedCount);
         Assert.Equal(24, info.WithheldScreenUnansweredCount);
+        Assert.Equal(25, info.WithheldUnderADayOldCount);
+        Assert.Equal(26, info.WithheldAgeUnestablishedCount);
+        Assert.Equal(27, info.WithheldDeclaredPatchRegisteredCount);
+        Assert.Equal(28, info.WithheldDeclaredPatchUnestablishedCount);
+    }
+
+    [Fact]
+    public void Every_arm_of_the_withholding_split_travels_under_its_own_key()
+    {
+        // WALKED OFF THE SPLIT'S CONSTRUCTOR RATHER THAN LISTED, so an arm added to
+        // WithholdingSplit fails here until the report carries it. The split is a
+        // partition of withheldCandidateCount, and an arm missing from the report
+        // leaves a reader holding counts that no longer add up to it with nothing
+        // on the wire to say why.
+        //
+        // Each arm gets a distinct value, so an arm carried under its neighbour's
+        // key fails too rather than passing on a coincidence.
+        var arms = typeof(WithholdingSplit).GetConstructors()
+            .OrderByDescending(c => c.GetParameters().Length).First();
+        var members = arms.GetParameters();
+        Assert.True(members.Length >= 9,
+            $"WithholdingSplit has {members.Length} parameters, which is too few for this walk "
+            + "to be measuring what it claims.");
+
+        var values = members.Select(p => (object)(100 + p.Position)).ToArray();
+        var split = (WithholdingSplit)arms.Invoke(values);
+        var scan = new ScanResult(
+            Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
+            WithheldBy: split);
+
+        var info = ScanInfo.From(scan, 0);
+
+        var missing = new List<string>();
+        var carried = 0;
+        foreach (var member in members)
+        {
+            var key = typeof(ScanInfo).GetProperty("Withheld" + member.Name);
+            var sent = key?.GetValue(info);
+            if (!Equals(sent, values[member.Position]))
+                missing.Add($"{member.Name} (sent {sent ?? "nothing"})");
+            else
+                carried += (int)sent!;
+        }
+
+        Assert.True(missing.Count == 0,
+            "The report does not carry every arm of the withholding split under its own "
+            + "key: " + string.Join(", ", missing));
+        Assert.Equal(split.Total, carried);
     }
 
     [Fact]
     public void MachineInfo_From_maps_every_member_to_the_scan_figure_it_names()
     {
         // THE SAME MECHANISM AS THE SCANINFO TEST ABOVE AND FOR THE SAME REASON.
-        // MachineInfo is a positional record and From fills it positionally; thirty-
-        // nine of its forty members are ints, so a value placed among them re-points
+        // MachineInfo is a positional record and From fills it positionally; forty of
+        // its forty-one members are ints, so a value placed among them re-points
         // every one after it at its neighbour's and still compiles. Every figure
         // below is distinct and every member is read, so a shift anywhere in the run
         // fails at least one assertion here.
@@ -829,7 +912,8 @@ public class ResultLogEntryTests
                 PathNormalisationRefusedAtPrefixStripCount: 125,
                 PathNormalisationRefusedAtFullPathCount: 126,
                 PathNormalisationRefusedAtEmbeddedNullCount: 127,
-                PathFlaggedSpellingCount: 128),
+                PathFlaggedSpellingCount: 128,
+                RegistryKeyReadFailures: 141),
             ShortNameCreation: ShortNameCreationLabels.PerVolume,
             SupersededRegistrationCount: 112,
             ObsoletedRegistrationCount: 113,
@@ -878,5 +962,6 @@ public class ResultLogEntryTests
         Assert.Equal(138, machine.CandidateIdentityOpenRefusedCount);
         Assert.Equal(139, machine.CandidateIdentityUnavailableCount);
         Assert.Equal(140, machine.CandidateIdentityFaultedCount);
+        Assert.Equal(141, machine.RegistryKeyReadFailureCount);
     }
 }

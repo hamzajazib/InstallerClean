@@ -475,7 +475,8 @@ public readonly record struct EnumerationCensus(
     // the fallback failing to read a key at all. The refusal that weighs both
     // needs each to be above zero, so a machine whose enumeration answers
     // cleanly while the registry side fails reads leaves that refusal unarmed,
-    // and the count is the only record that the reads failed.
+    // and the count is the only record that the reads failed. The opt-in report
+    // carries it as registryKeyReadFailureCount.
     int RegistryKeyReadFailures = 0)
 {
     /// <summary>

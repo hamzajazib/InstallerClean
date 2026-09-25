@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
+using InstallerClean.Helpers;
 using InstallerClean.Services;
 
 namespace InstallerClean.Models;
@@ -61,6 +62,20 @@ public sealed record ResultLogEntry(
     /// KEY WHOSE MEANING CHANGES IS NOT, which is why the missing-files split was
     /// added beside its total rather than over it.
     ///
+    /// SCHEMA 5 ADDS SIX KEYS AND TAKES NONE AWAY: the registry side's failed reads
+    /// under <c>machine</c>, and under <c>scan</c> the four arms of the withholding
+    /// split that schema 4 does not carry, so that from 5 the split's nine counts add up
+    /// to <c>withheldCandidateCount</c>. Under <c>app</c> it adds
+    /// <c>windowsLanguage</c>, the Windows display language with no country, AND
+    /// <c>app.language</c> CHANGES WHAT IT MEANS AT 5: it is the language the app was
+    /// showing, one of the languages it ships, where schema 4 carries the UI culture's
+    /// own tag, which on Automatic is the Windows display language with its region, or
+    /// <c>invariant</c>. AN ADDITION MOVES THE VERSION ONCE A RELEASE SENDS THE VERSION
+    /// IT WOULD BE ADDED TO. From schema 4 on, the receiver holds each version to its
+    /// exact set of keys and requires every count in it, so a key added to a version a
+    /// release already sends could only be permitted there, never required, without
+    /// rejecting every report from that release.
+    ///
     /// A receiver that does not recognise a version stores the report under a
     /// lenient v&lt;n&gt;-unknown/ prefix rather than rejecting it, so a bump
     /// never loses data even if the allowlist has not caught up. THAT LENIENCE
@@ -69,7 +84,7 @@ public sealed record ResultLogEntry(
     /// <c>machine</c> arriving before the receiving end knows the name is a
     /// rejected report and a user told sending failed. The receiver ships first.
     /// </summary>
-    public const int CurrentSchemaVersion = 4;
+    public const int CurrentSchemaVersion = 5;
 
     public static ResultLogEntry ForScanOnly(ScanResult scan, long scanDurationMs) =>
         new(
@@ -139,24 +154,44 @@ public sealed record ResultLogEntry(
 }
 
 /// <summary>
-/// Which build produced the report, and which language its user was reading.
+/// Which build produced the report, which language its user was reading, and which
+/// language Windows was showing them.
 /// </summary>
 /// <param name="Language">
-/// The UI culture the app resolved for this run, as a plain BCP 47 tag. One of
-/// sixteen values on any build that ships, so it cannot narrow anybody: it is
-/// there because a report about a screen nobody can read in their own language
-/// is a different report, and because which languages are actually used is not
+/// The language the app was showing for this run: one of
+/// <see cref="SupportedLanguages.CultureNames"/>, as
+/// <see cref="SupportedLanguages.Active"/> resolves it from
+/// <see cref="Localisation.UiCulture"/>, the culture the app's strings are looked up
+/// in, which is the same answer the language menu ticks. It follows a language picked
+/// in the app, and on Automatic, the Windows display language resolved the way the app's
+/// own strings resolve, so a display language the app has no translation for reports
+/// <see cref="SupportedLanguages.Neutral"/>, the English the user saw.
+///
+/// It can only be one of the languages the app ships, so it cannot narrow anybody. It
+/// is there because a report about a screen nobody can read in their own language is
+/// a different report, and because which languages are actually used is not
 /// otherwise knowable.
 /// </param>
-public sealed record AppInfo(string Version, string Language)
+/// <param name="WindowsLanguage">
+/// The language Windows shows its own interface in for this user, with any country or
+/// region taken off and a script kept: <see cref="WindowsDisplayLanguage.Current"/>,
+/// which also gives its two fixed labels. It is read from Windows, so a language picked
+/// in the app does not change it.
+///
+/// BESIDE <paramref name="Language"/>, THE PAIR SAYS WHO READ THE APP IN A LANGUAGE
+/// OTHER THAN THE ONE WINDOWS SHOWS: a machine showing Windows in Czech and the app in
+/// English is somebody the app has no translation for. It names a language and never a
+/// country, so it narrows nobody either.
+/// </param>
+public sealed record AppInfo(string Version, string Language, string WindowsLanguage)
 {
     public static AppInfo Current() =>
         new(Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0",
-            // The UI culture rather than the format culture: this answers which
-            // strings the user was shown. Invariant resolves to an empty name,
-            // which is reported as it is rather than being filled in with a
-            // plausible tag.
-            CultureInfo.CurrentUICulture.Name is { Length: > 0 } name ? name : "invariant");
+            // The UI culture rather than the format culture, resolved to the
+            // language whose strings were shown: a UI culture with no satellite of
+            // its own, the invariant culture included, shows the neutral English.
+            SupportedLanguages.Active(Localisation.UiCulture),
+            WindowsDisplayLanguage.Current());
 }
 
 /// <summary>
@@ -464,6 +499,21 @@ public sealed record AppInfo(string Version, string Language)
 /// above gives: these are positional <c>int</c> parameters and an insertion re-points
 /// every argument after it with nothing in the build to say so.
 /// </param>
+/// <param name="RegistryKeyReadFailureCount">
+/// Reads of Windows Installer's own registry records, under its <c>UserData</c> key,
+/// that failed: a read that threw, whether of that key, of one account's products or
+/// patches, or of one product's or patch's entry, and a package path value that was
+/// there and was not a string.
+/// <see cref="NonStringLocalPackageCount"/> is that last kind, so it is a part of this
+/// figure and the reads that threw are this less that.
+///
+/// IT IS ONE OF THE TWO TERMS OF THE CHECK THAT REFUSES A SCAN OUTRIGHT, the other
+/// being the scan object's <c>unreadableProductCount</c>. With both above zero the scan
+/// stops before it produces a result, so no report carries both above zero. With the
+/// product enumeration whole, that check passes whatever this says.
+///
+/// Appended after the identity groups for the reason given above.
+/// </param>
 public sealed record MachineInfo(
     string ShortNameCreation,
     int LongFileNameCount,
@@ -504,7 +554,8 @@ public sealed record MachineInfo(
     int CandidateIdentityNotAPathCount,
     int CandidateIdentityOpenRefusedCount,
     int CandidateIdentityUnavailableCount,
-    int CandidateIdentityFaultedCount)
+    int CandidateIdentityFaultedCount,
+    int RegistryKeyReadFailureCount)
 {
     public static MachineInfo From(ScanResult scan) =>
         new(
@@ -551,7 +602,8 @@ public sealed record MachineInfo(
             scan.CandidateIdentityReads.NotAPathCount,
             scan.CandidateIdentityReads.OpenRefusedCount,
             scan.CandidateIdentityReads.IdentityUnavailableCount,
-            scan.CandidateIdentityReads.FaultedCount);
+            scan.CandidateIdentityReads.FaultedCount,
+            scan.Census.RegistryKeyReadFailures);
 
     /// <summary>
     /// Every recorded value this scan could not turn into a path, whatever refused
@@ -776,11 +828,10 @@ public sealed record MachineInfo(
 ///
 /// NO CAUSE TRAVELS WITH THIS FIGURE AND NONE MAY BE ATTACHED TO IT. Four separate
 /// conditions put files on that list and they are different facts about a machine; a
-/// sentence naming any one of them would be false of the others. The five counts below
+/// sentence naming any one of them would be false of the others. The nine counts below
 /// are where those conditions are counted apart, one finding each, and they are read
-/// apart for the same reason. The scan splits the list nine ways and five are sent: this
-/// figure less the five is the count of files the age check kept back, in both of its
-/// arms, and of the patch copies the screen kept, in both of the patch half's arms.
+/// apart for the same reason. They are the scan's whole split of the list, taken off the
+/// same result as this figure, so the nine add up to it.
 /// </param>
 /// <param name="WithheldTotalBytes">
 /// The bytes of the files behind <paramref name="WithheldCandidateCount"/>, summed
@@ -819,7 +870,7 @@ public sealed record MachineInfo(
 /// <param name="WithheldIdentityUnestablishedCount">
 /// Candidates the identity comparison kept back one at a time, because the filesystem
 /// would not say which file the candidate's own path names:
-/// <c>ScanResult.WithheldBy.IdentityUnestablishedCount</c>. The first of the five
+/// <c>ScanResult.WithheldBy.IdentityUnestablishedCount</c>. The first of the nine
 /// counts that split <paramref name="WithheldCandidateCount"/>.
 ///
 /// IT IS SENT RATHER THAN DERIVED, AND THAT IS DELIBERATE. The same population is
@@ -868,6 +919,42 @@ public sealed record MachineInfo(
 /// the screen reached about a file; this is the screen having reached none, and filing
 /// it under either would state a cause that was never established.
 /// </param>
+/// <param name="WithheldUnderADayOldCount">
+/// Candidates the age check kept back because their times show them to be under a day
+/// old: <c>ScanResult.WithheldBy.UnderADayOldCount</c>. Neither host's held-back line
+/// counts them; they are among the files left alone.
+/// </param>
+/// <param name="WithheldAgeUnestablishedCount">
+/// Candidates the age check kept back because their age was not established:
+/// <c>ScanResult.WithheldBy.AgeUnestablishedCount</c>. Both hosts' held-back lines count
+/// them, and no reason line names them.
+///
+/// A DIFFERENT FINDING FROM THE ONE ABOVE AND THE TWO MUST NOT BE ADDED. That one is an
+/// age the scan established; this is an age it did not, and a total over the pair would
+/// say the files were new when some of them were never shown to be.
+/// </param>
+/// <param name="WithheldDeclaredPatchRegisteredCount">
+/// Patch copies the declared-product screen kept back because Windows holds a
+/// registration of the patch each declares, and for at least one registration the screen
+/// could not show that every copy of the patch it opens, cached or original at a source,
+/// is a different file: <c>ScanResult.WithheldBy.DeclaredPatchRegisteredCount</c>.
+/// Neither host's held-back line counts them, as with
+/// <paramref name="WithheldDeclaredProductInstalledCount"/>.
+/// </param>
+/// <param name="WithheldDeclaredPatchUnestablishedCount">
+/// Patch copies the same screen kept back without settling them: the copy yielded no
+/// patch code and target products to ask about, or the registrations of the patch it
+/// declares could not all be found:
+/// <c>ScanResult.WithheldBy.DeclaredPatchUnestablishedCount</c>. Both
+/// hosts' held-back lines count them, and the command line names them in a reason line
+/// of their own.
+///
+/// NOT TO BE ADDED TO THE ONE ABOVE, for the reason given at the product half's pair.
+///
+/// THESE FOUR ARE APPENDED AFTER THE OTHER FIVE, in the order the split declares them,
+/// because the members here are positional <c>int</c> parameters and an insertion would
+/// re-point every argument after it with nothing in the build to say so.
+/// </param>
 public sealed record ScanInfo(
     long DurationMs,
     int RegisteredCount,
@@ -892,7 +979,11 @@ public sealed record ScanInfo(
     int WithheldWholesaleCount,
     int WithheldDeclaredProductInstalledCount,
     int WithheldDeclaredProductUnestablishedCount,
-    int WithheldScreenUnansweredCount)
+    int WithheldScreenUnansweredCount,
+    int WithheldUnderADayOldCount,
+    int WithheldAgeUnestablishedCount,
+    int WithheldDeclaredPatchRegisteredCount,
+    int WithheldDeclaredPatchUnestablishedCount)
 {
     public static ScanInfo From(ScanResult scan, long durationMs)
     {
@@ -941,17 +1032,20 @@ public sealed record ScanInfo(
             // Counted off the kept list by the scan, so the number sent and the rows
             // the registered-files window shows cannot come apart.
             scan.RegisteredWithheldCount,
-            // Five of the nine counts that split the count three lines up, taken off
-            // the one place that knows them; that count less these five is the files
-            // the age check kept back and the patch copies the screen kept.
-            // Appended rather than placed among the members they belong
-            // beside: every argument after an insertion point re-points at its
-            // neighbour's value, and a shift within a run of ints compiles silently.
+            // The nine counts that split the count three lines up, taken off the one
+            // place that knows them, so the nine add up to it. Appended rather than
+            // placed among the members they belong beside: every argument after an
+            // insertion point re-points at its neighbour's value, and a shift within a
+            // run of ints compiles silently.
             scan.WithheldBy.IdentityUnestablishedCount,
             scan.WithheldBy.WholesaleCount,
             scan.WithheldBy.DeclaredProductInstalledCount,
             scan.WithheldBy.DeclaredProductUnestablishedCount,
-            scan.WithheldBy.ScreenUnansweredCount);
+            scan.WithheldBy.ScreenUnansweredCount,
+            scan.WithheldBy.UnderADayOldCount,
+            scan.WithheldBy.AgeUnestablishedCount,
+            scan.WithheldBy.DeclaredPatchRegisteredCount,
+            scan.WithheldBy.DeclaredPatchUnestablishedCount);
     }
 }
 

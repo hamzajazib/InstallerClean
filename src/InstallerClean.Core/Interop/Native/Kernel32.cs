@@ -406,6 +406,28 @@ internal static partial class Kernel32
     public const uint DRIVE_CDROM       = 5;
     public const uint DRIVE_RAMDISK     = 6;
 
+    /// <summary>
+    /// The user's preferred display languages, most preferred first. With
+    /// <see cref="MUI_LANGUAGE_NAME"/> each is a culture name such as
+    /// <c>en-GB</c>, ended by a null, and the list by a second null. The first
+    /// entry is the language Windows shows its own interface in for this user,
+    /// and it is what .NET reads for the UI culture of a thread nobody has given
+    /// one. A setting the app makes on its own culture does not reach it.
+    ///
+    /// The count is in characters, the terminators included. A call with a null
+    /// buffer and a count of zero answers the size needed.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "GetUserPreferredUILanguages", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetUserPreferredUILanguages(
+        uint dwFlags,
+        out uint pulNumLanguages,
+        [MarshalUsing(CountElementName = nameof(pcchLanguagesBuffer))] char[]? pwszLanguagesBuffer,
+        ref uint pcchLanguagesBuffer);
+
+    // GetUserPreferredUILanguages flag: culture names rather than language ids.
+    public const uint MUI_LANGUAGE_NAME = 0x8;
+
     // GetFinalPathNameByHandle flags. VOLUME_NAME_DOS names the volume by
     // its drive letter, giving "\\?\X:\Folder\...", where VOLUME_NAME_GUID
     // would give "\\?\Volume{guid}\...". Both forms keep the \\?\ prefix,
