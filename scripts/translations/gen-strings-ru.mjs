@@ -542,7 +542,13 @@ const OVERRIDES = {
 // keys (every EventLog* bar EventLogUnavailable) are deliberately OMITTED: they are
 // forced English at the emit site so an RMM/monitoring grep matches a fixed phrase
 // regardless of OS language, so they must not appear in a satellite. Appended as a
-// block before </root>, like OVERRIDES.
+// block before </root>, like OVERRIDES, in this object's own order.
+//
+// The generator removes every Cli.* key the neutral carries and writes back only
+// what this object holds, so a human-facing Cli.* key missing here is missing from
+// the Russian resx, and the self-check reports it as a human Cli key missing from
+// the CLI map. In the other fourteen languages an unmapped key arrives as the
+// neutral's English instead.
 //
 // Count lines (FoundOrphans/DeletedFiles/MovedFiles) use the impersonal verb-first
 // frame (Найдено/Удалено/Перемещено), which is invariant across the CLDR One/Few/Many
@@ -597,17 +603,9 @@ const CLI = {
   'Cli.MoveNotEnoughSpace': `Ошибка: недостаточно места в {0}. Для перемещения этих файлов нужно {1}, а свободно {2}. Ничего не перемещено.`,
   'Cli.PendingRebootBlocked.Other': `Ошибка: у Windows Installer что-то выполняется, поэтому /m и /d заблокированы. InstallerClean не будет трогать {InstallerFolder}, пока она меняется. Попробуйте снова, когда всё закончится.`,
   'Cli.FoundNoOrphans': `Ненужных файлов не найдено.`,
-  // These hold the English while the wording settles. Russian's command-line
-  // block is a separate object, so a
-  // key added to the neutral reaches the other fourteen MAPs and never this
-  // one, and the key goes missing from the Russian resx rather than merely
-  // untranslated. Translate both when the English is ruled.
   'Cli.NothingOffered.Singular': `InstallerClean не смог с уверенностью определить, какие файлы в кэше принадлежат установленным здесь программам, поэтому удержал единственный файл ({2}), вместо того чтобы предложить его.`,
   'Cli.NothingOffered.Plural': `InstallerClean не смог с уверенностью определить, какие файлы в кэше принадлежат установленным здесь программам, поэтому удержал все {0} {1} ({2}), вместо того чтобы предложить их.`,
-  // The per-file forms hold the English on the same terms as the pair above, and
-  // for the same reason: this object is Russian's own command-line block, so a key
-  // added to the neutral reaches the other fourteen MAPs and never this one, and it
-  // would go missing from the Russian resx rather than arriving untranslated.
+  // The per-file forms of the pair above.
   'Cli.NothingOfferedPerFile.Singular': `InstallerClean не смог установить, что найденный им файл в кэше не нужен, поэтому удержал этот единственный файл ({2}), вместо того чтобы предложить его.`,
   'Cli.NothingOfferedPerFile.Plural': `InstallerClean ни об одном из найденных им файлов в кэше не смог установить, что он не нужен, поэтому удержал все {0} {1} ({2}), вместо того чтобы предложить их.`,
   'Cli.DestinationChangedMidBatch': `InstallerClean больше не смог подтвердить папку резервных копий и остановился. Проверьте {0}, затем запустите команду снова.`,
@@ -619,15 +617,15 @@ const CLI = {
   'Cli.SupersededHeldBack.Plural': `InstallerClean не смог с уверенностью определить, что {0} замещённых файлов больше не нужны, поэтому удержал их.`,
   'Cli.NothingListed.Singular': `InstallerClean не смог с уверенностью определить, какие файлы в кэше принадлежат установленным здесь программам, поэтому удержал единственный файл ({2}), вместо того чтобы предложить его.`,
   'Cli.NothingListed.Plural': `InstallerClean не смог с уверенностью определить, какие файлы в кэше принадлежат установленным здесь программам, поэтому удержал {0} {1} ({2}), вместо того чтобы предложить их.`,
-  // The per-file forms of the pair above, holding the English on the same terms.
+  // The per-file forms of the pair above.
   'Cli.NothingListedPerFile.Singular': `InstallerClean не был уверен насчёт одного из найденных им файлов в кэше, поэтому удержал именно его ({2}), вместо того чтобы предложить.`,
   'Cli.NothingListedPerFile.Plural': `InstallerClean не был уверен насчёт некоторых из найденных им файлов в кэше, поэтому удержал {0} {1} ({2}), вместо того чтобы предложить их.`,
   'Cli.WithheldReasons.Header': `Почему уверенности не было:`,
   'Cli.WithheldReasons.RecordedPath': `  Путь к файлу из собственных записей Windows Installer не удалось разрешить, поэтому с ним ничего не удалось сопоставить.`,
   'Cli.WithheldReasons.FileIdentity': `  Файл, о котором у Windows есть запись, не удалось опознать, поэтому его не удалось сопоставить с тем, что лежит в папке.`,
   'Cli.WithheldReasons.SecondInstance': `  Программа может быть установлена на этом ПК более одного раза, а записи не могут сказать, какой копии принадлежит файл.`,
-  // The four per-file arms, holding the English on the same terms. Each names a
-  // different cause and the four have to stay four and distinct once translated:
+  // The four per-file arms. Each names a different cause and the four have to stay
+  // four and distinct once translated:
   // DeclaredProductUnestablished is itself a disjunction, either the file would not
   // say which program it belongs to or Windows would not answer about that program,
   // and a rendering that keeps one half states a cause the app did not establish for
