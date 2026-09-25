@@ -249,8 +249,8 @@ public class FileSystemScanServiceDeclaredProductTests
     {
         // copy.msp declares patch Q, which Windows holds registered against product A,
         // and that registration records no cached copy. The screen cannot see which
-        // copy the registration opens, so copy.msp could be it. It is kept the way a
-        // file declaring an installed program is: counted in its own arm with its
+        // copy the registration opens, so copy.msp could be it. It is treated the way
+        // a file kept for an installed program is: counted in its own arm with its
         // size, and left out of the held-back sentences.
         var (msi, identities, files) = APatchCopyBesideTheRecordedCopy();
         msi.RecordsPatchPackage(PatchQ, ProductA, null, MsiInstallContext.Machine, "");

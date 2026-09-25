@@ -427,12 +427,13 @@ internal static class Program
             // THREE OUTCOMES WHERE NOTHING IS OFFERED, AND WHICH ONE IS THE SCAN
             // RESULT'S ANSWER RATHER THAN THIS HOST'S. An empty offer has three
             // meanings: the folder holds nothing this scan can offer, or holds only
-            // files it kept because they declare a program Windows still has
-            // installed; a rule about the machine's records emptied the walk-derived
-            // offer in one go; or the scan judged the files one at a time and could
-            // not clear them. "Found no unneeded files" is printed for the first
-            // machine only, and the two withholding sentences say different things
-            // that are each false of the other's machine.
+            // files it kept for a program Windows still has installed, for being under
+            // a day old or for their patch's registrations; a rule about the machine's
+            // records emptied the walk-derived offer in one go; or the scan judged the
+            // files one at a time and could not clear them. "Found no unneeded files"
+            // is printed for the first machine only, and the two withholding
+            // sentences say different things that are each false of the other's
+            // machine.
             //
             // THE HOST DOES NOT PARTITION ANYTHING TO GET HERE. Deciding it here would
             // mean reading a split the scan owns, and a host that infers one decision's

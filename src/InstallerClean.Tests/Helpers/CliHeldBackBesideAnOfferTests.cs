@@ -70,8 +70,8 @@ public class CliHeldBackBesideAnOfferTests
     [Fact]
     public async Task Files_kept_for_an_installed_program_beside_a_live_offer_get_no_lead_line()
     {
-        // Both held files declare a program Windows still has installed, so the run
-        // says what it says about its offer and nothing more.
+        // Both held files were kept for a program Windows still has installed, so the
+        // run says what it says about its offer and nothing more.
         var (_, stdout) = await Run(Scan(
             offer: 2, withheld: 2,
             split: new WithholdingSplit(DeclaredProductInstalledCount: 2),
@@ -127,8 +127,9 @@ public class CliHeldBackBesideAnOfferTests
     [Fact]
     public async Task A_lead_beside_a_live_offer_counts_only_the_files_the_scan_could_not_settle()
     {
-        // One held file declares an installed program and one could not be settled: the
-        // lead speaks of the second, in its one-file form, and its size is that file's.
+        // One held file was kept for an installed program and one could not be settled:
+        // the lead speaks of the second, in its one-file form, and its size is that
+        // file's.
         var (_, stdout) = await Run(Scan(
             offer: 2, withheld: 2,
             split: new WithholdingSplit(DeclaredProductInstalledCount: 1, ScreenUnansweredCount: 1),

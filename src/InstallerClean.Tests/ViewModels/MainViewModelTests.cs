@@ -385,8 +385,8 @@ public class MainViewModelTests
     [Fact]
     public async Task Files_kept_for_an_installed_program_get_the_all_clear()
     {
-        // Nothing offered, and every held file declares a program Windows still has
-        // installed, so the machine gets the screen a clean folder gets.
+        // Nothing offered, and every held file was kept for a program Windows still
+        // has installed, so the machine gets the screen a clean folder gets.
         var vm = CreateViewModel();
         var withheld = new List<OrphanedFile>
         {

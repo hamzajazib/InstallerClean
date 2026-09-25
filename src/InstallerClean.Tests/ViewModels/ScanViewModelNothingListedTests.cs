@@ -172,10 +172,10 @@ public class ScanViewModelNothingListedTests
     }
 
     [Fact]
-    public void The_line_is_off_where_every_held_file_declares_an_installed_program()
+    public void The_line_is_off_where_every_held_file_is_kept_for_an_installed_program()
     {
-        // Every held file declares a program Windows still has installed, so the line
-        // has nothing to say. The files stay among those left alone.
+        // Every held file was kept for a program Windows still has installed, so the
+        // line has nothing to say. The files stay among those left alone.
         var vm = Driven(new ScanResult(
             RemovableFiles: Files(4, "offered"),
             RegisteredPackages: Array.Empty<RegisteredPackage>(),

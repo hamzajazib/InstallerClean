@@ -64,10 +64,11 @@ public class CliNothingOfferedTests
     }
 
     [Fact]
-    public async Task A_run_whose_every_held_file_declares_an_installed_program_gets_the_clean_line()
+    public async Task A_run_whose_every_held_file_is_kept_for_an_installed_program_gets_the_clean_line()
     {
-        // Every held file declares a program Windows still has installed, so the files
-        // are left alone like any registered file and the run prints the clean line.
+        // Every held file was kept for a program Windows still has installed, so the
+        // files are left alone like any registered file and the run prints the clean
+        // line.
         var (exit, stdout) = await Run(Scan(
             withheld: 2,
             split: new WithholdingSplit(DeclaredProductInstalledCount: 2),
