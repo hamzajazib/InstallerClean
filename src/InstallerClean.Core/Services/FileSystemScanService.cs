@@ -479,12 +479,12 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // WHOLE HALF. Where any registration's recorded path could not be turned into
         // a path at all, or could be but the filesystem would not settle its spelling,
         // that claim is compared in a form that matches nothing the walk produces, so
-        // the cached file it names is sitting in this candidate list right now,
-        // unclaimed. WHICH ONE cannot be established: the claim did not resolve, and
-        // the identity match immediately above cannot be relied on to have reached it,
-        // since the reasons a path will not resolve are largely the reasons a handle on
-        // it will not open. Every candidate is therefore one that claim could have
-        // meant, so none of them can be offered.
+        // any candidate in this list can be the cached file it names, left unclaimed.
+        // WHICH ONE cannot be established: the claim did not resolve, and the identity
+        // match immediately above cannot be relied on to have reached it, since the
+        // reasons a path will not resolve are largely the reasons a handle on it will
+        // not open. Every candidate is therefore one that claim could have meant, so
+        // none of them can be offered.
         //
         // THE WHOLE SET, WHICH IS THE COST AND IS NOT AN ARGUMENT AGAINST IT. Holding
         // a file back is this app working. The alternative is offering a file it
@@ -496,8 +496,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // drive, an unmapped share and a refused handle withhold alongside a value
         // that is not a path.
         //
-        // A REGISTRATION WHOSE FILE IS SIMPLY GONE STILL REACHES NONE OF THIS, which is
-        // the first objection anybody raises and remains the answer to it. The resolver
+        // A REGISTRATION WHOSE FILE IS SIMPLY GONE REACHES NONE OF THIS. The resolver
         // climbs to an existing ancestor and reattaches the missing suffix as text, so
         // a missing file resolves normally and this rule never sees it. What fires here
         // is a value that is not a path, or one the filesystem declined to settle.
@@ -529,39 +528,35 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // AND THE SIXTH, WHICH IS THE SAME ARGUMENT ABOUT THE OTHER HALF OF THE
         // COMPARISON. A recorded path can be settled and the file it names still not
         // be identifiable: the handle is refused, or the volume will not answer for
-        // it. Such a registration claims nothing through the identity pass either,
-        // so once again a cached file that is needed is sitting in this candidate
-        // list and WHICH ONE cannot be established. It is the same conclusion for a
-        // different reason, which is why the two are asked separately here and never
-        // added into one number anywhere.
+        // it. Such a registration claims nothing through the identity pass, so any
+        // candidate in this list can be the cached file it names and WHICH ONE cannot
+        // be established. It is the same conclusion for a different reason, which is
+        // why the two are asked separately here and never added into one number
+        // anywhere.
         //
         // TWO RECORDS, EACH ASKED ITS OWN QUESTION, AND NO MEMBER NAMED IN THIS
-        // FILE. That is the rule the paragraph above earned: a cause added to either
-        // population is acted on because the question is spelled where the members
-        // are declared, and this line only says that a failure on either side
-        // withholds.
+        // FILE. A cause added to either population is acted on because the question
+        // is spelled where the members are declared, and this line only says that a
+        // failure on either side withholds.
         //
-        // AND THE THIRD, WHICH IS A POSITIVE FINDING RATHER THAN A FAILURE TO READ, so
-        // the sentence above is now true of two of the three and the superordinate over
-        // all of them is one step wider: something this scan established or could not
+        // AND THE THIRD, WHICH IS A POSITIVE FINDING RATHER THAN A FAILURE TO READ.
+        // What all three share is that something this scan established or could not
         // establish leaves it unable to say which cached files belong to which programs.
         // A product installed as a second instance of itself registers under a code the
         // instance transform produced while its cached package declares the base code,
-        // and the per-file screen below is the one pass that reads a code out of a file
-        // and asks Windows about it. On such a machine that screen can be told there is
-        // no record while a live registration still needs the file, and no part of this
-        // scan can work out WHICH cached file belongs to the second copy. So the screen
-        // is not run and nothing walk-derived is offered. The question is asked of the
-        // census, where its two members live, on the same rule as the other two.
+        // and the per-file screen below reads a code out of a file and asks Windows
+        // about it. On such a machine that screen can be told there is no record while
+        // a live registration still needs the file, and no part of this scan can work
+        // out WHICH cached file belongs to the second copy. So the screen is not run
+        // and nothing walk-derived is offered. The question is asked of the census,
+        // where its two members live, on the same rule as the other two.
         //
-        // AND IT IS ONE CALL RATHER THAN THREE CONDITIONS SPELLED OUT HERE, which is
-        // the paragraph above arriving where it was always going. A host now names
-        // which of these held rather than only that the branch was taken, so the gate
-        // and that host read the same expression: a condition added to WithholdingLeg
-        // is one this line acts on and one that host prints. A condition written in
-        // beside this call instead, which would withhold an offer the breakdown has
-        // nothing to say about, is what
-        // FileSystemScanServiceWithholdingLegsTests holds this line against.
+        // AND IT IS ONE CALL RATHER THAN THREE CONDITIONS SPELLED OUT HERE. A host
+        // names which of these held, so the gate and that host read the same
+        // expression: a condition added to WithholdingLeg is one this line acts on and
+        // one that host prints. A condition written in beside this call instead,
+        // which would withhold an offer the breakdown has nothing to say about, is
+        // what FileSystemScanServiceWithholdingLegsTests holds this line against.
         var withholdWalkOfferWholesale =
             WithholdingLegs.Any(query.Census, registrationIdentityReads);
 
@@ -1088,9 +1083,9 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// costs one handle per registration and nothing more. Nothing is opened at all
     /// where there are no candidates, or where no registration yielded an identity.
     ///
-    /// A FAILED READ IS A WITHHOLDING GIVEN UP. The registration this pass could not
-    /// identify is one whose cached file is sitting in the candidate list unclaimed,
-    /// so both reads are counted and both answers are acted on.
+    /// A FAILED READ IS A WITHHOLDING GIVEN UP. The cached file of a registration this
+    /// pass could not identify can be any candidate in the list, left unclaimed, so
+    /// both reads are counted and both answers are acted on.
     ///
     /// THE TWO SIDES ACT DIFFERENTLY AND THE ASYMMETRY IS THE WHOLE DESIGN. A
     /// registration nobody could identify might name ANY candidate in the list, and
@@ -1369,9 +1364,10 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// list that already holds files kept back for a different reason entirely,
     /// and the surfaces that read that list say only that the app left these
     /// alone, which is true of both. Any sentence naming a cause over the whole
-    /// list would be false of one half or the other, and the two inabilities
-    /// behind an unestablished verdict have no honest superordinate between them
-    /// either.
+    /// list would be false of one half or the other. A cause is spoken per arm of
+    /// the split instead, as the command line's reason lines speak it, and the line
+    /// for an unestablished verdict is written as alternatives rather than as one
+    /// cause.
     /// </summary>
     private void WithholdCandidatesByWhatTheyDeclare(
         List<OrphanedFile> candidates,

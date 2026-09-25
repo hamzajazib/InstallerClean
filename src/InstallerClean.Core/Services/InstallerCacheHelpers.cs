@@ -11,8 +11,8 @@ namespace InstallerClean.Services;
 /// ALL FIVE WITHHOLD, ON THE ONE THING TRUE OF EVERY MEMBER: the resolver was asked
 /// about a recorded path and did not answer. A registration whose spelling the
 /// filesystem would not settle is compared in a form the folder walk never produces,
-/// so the cached file it names sits in the candidate list unclaimed, and which
-/// candidate it is cannot be established. That is the whole argument and it does not
+/// so any candidate in the list can be the cached file it names, left unclaimed, and
+/// which one it is cannot be established. That is the whole argument and it does not
 /// distinguish between the members.
 ///
 /// ALL FIVE WITHHOLD ALIKE, THE TWO ORDINARY MACHINE STATES INCLUDED. Where the app
@@ -21,17 +21,15 @@ namespace InstallerClean.Services;
 /// unattached drive and a refused handle withhold exactly as the other three do, and
 /// nothing here splits the five.
 ///
-/// A REGISTRATION WHOSE FILE IS SIMPLY GONE REACHES NONE OF THESE, which is the
-/// first objection anybody raises and is what keeps the rule off ordinary machines.
-/// The walk climbs to an existing ancestor and reattaches the missing suffix as text,
-/// so a missing file resolves normally and answers <see cref="Resolved"/>.
+/// A REGISTRATION WHOSE FILE IS SIMPLY GONE REACHES NONE OF THESE, which is what
+/// keeps the rule off ordinary machines. The walk climbs to an existing ancestor and
+/// reattaches the missing suffix as text, so a missing file resolves normally and
+/// answers <see cref="Resolved"/>.
 ///
-/// NOTHING IN THE APPLICATION BRANCHES ON WHICH MEMBER IT IS, and that is still true
-/// of the gates: every containment gate asks the bool question. What changed is that
-/// the counts are no longer carried for measurement alone. They travel to the opt-in
-/// report AND they decide the offer, through
-/// <c>EnumerationCensus.AnyRecordedPathUnestablished</c>, which is the single place
-/// the question is asked.
+/// NOTHING IN THE APPLICATION BRANCHES ON WHICH MEMBER IT IS: every containment gate
+/// asks the bool question. The counts travel to the opt-in report AND decide the
+/// offer, through <c>EnumerationCensus.AnyRecordedPathUnestablished</c>, which is the
+/// single place the question is asked.
 /// </summary>
 internal enum PathResolution
 {

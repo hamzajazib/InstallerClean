@@ -44,9 +44,9 @@ public class FileSystemScanServiceIntegrationTests : IDisposable
     {
         // The condition is a registration whose recorded path could not be turned
         // into a path at all, so its claim is kept in the raw spelling Windows gave
-        // and matches nothing the walk produces. The cached file it means is
-        // therefore sitting in the candidate list unclaimed, and WHICH one cannot be
-        // established, so none of them may be offered.
+        // and matches nothing the walk produces. Any candidate can therefore be the
+        // cached file it means, left unclaimed, and WHICH one cannot be established,
+        // so none of them may be offered.
         File.WriteAllBytes(Path.Combine(_fakeInstallerDir, "one.msi"), new byte[] { 1 });
         File.WriteAllBytes(Path.Combine(_fakeInstallerDir, "two.msp"), new byte[] { 2, 2 });
 

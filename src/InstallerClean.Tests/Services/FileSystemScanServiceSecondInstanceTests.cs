@@ -10,12 +10,11 @@ namespace InstallerClean.Tests.Services;
 ///
 /// THE CONDITION AND WHY IT EMPTIES ANYTHING. A product installed under an instance
 /// transform registers under a product code the transform produced, while the package
-/// cached for it declares the base code. The last thing standing between a candidate no
-/// registration claims and the offer is the declared-product screen, which reads a
-/// product code OUT OF the candidate file and asks Windows about it, so on such a machine
-/// that screen can be told there is no record while the second copy's own registration
-/// still needs the file. Nothing in the scan can work out WHICH cached file belongs to
-/// the second copy, so no walk-derived file is offered.
+/// cached for it declares the base code. The declared-product screen reads a product
+/// code OUT OF the candidate file and asks Windows about it, so on such a machine that
+/// screen can be told there is no record while the second copy's own registration still
+/// needs the file. Nothing in the scan can work out WHICH cached file belongs to the
+/// second copy, so no walk-derived file is offered.
 ///
 /// READ WHAT THESE FIXTURES SET UP AND NOT WHAT THEY ASSERT. Every one of them differs
 /// from <see cref="An_ordinary_machine_keeps_every_file_it_would_have_offered"/> in the

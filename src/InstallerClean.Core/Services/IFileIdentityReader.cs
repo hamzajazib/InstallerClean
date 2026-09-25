@@ -7,10 +7,10 @@ namespace InstallerClean.Services;
 /// FOUR OF THE FIVE GIVE UP A WITHHOLDING AND ONE DOES NOT, and that is the only
 /// distinction anything here draws. A path this reader cannot identify is a path
 /// the scan cannot match to a walked file, so a registration it was asked about
-/// claims nothing and the cached file that registration means is sitting in the
-/// candidate list unclaimed. <see cref="NamesNothing"/> is the exception and is
-/// the reason the split had to be made at all: a registration whose cached file
-/// has already gone gives up nothing, because there is no file for anything to
+/// claims nothing through it and the cached file that registration means can be any
+/// candidate in the list, left unclaimed. <see cref="NamesNothing"/> is the
+/// exception and the reason the members are kept apart: a registration whose cached
+/// file has already gone gives up nothing, because there is no file for anything to
 /// have claimed.
 ///
 /// THAT EXCEPTION IS ONLY READABLE BECAUSE EVERY RECORDED PATH IS RESOLVED FIRST.
@@ -102,17 +102,16 @@ public static class FileIdentityReadOutcomes
 /// and the scan finds files by walking the folder. Deciding whether a walked file
 /// is the one a registration names by comparing those two strings only works
 /// while the two strings agree, and Windows Installer writes whatever spelling was
-/// in force when the product was installed. One machine's own records spell the
-/// same folder three ways (<c>C:\WINDOWS\Installer</c> 121 times,
-/// <c>C:\Windows\Installer</c> 15, <c>c:\Windows\Installer</c> twice), and only a
-/// case-insensitive comparison keeps those together.
+/// in force when the product was installed. One machine's records can spell the
+/// same folder as <c>C:\WINDOWS\Installer</c>, <c>C:\Windows\Installer</c> and
+/// <c>c:\Windows\Installer</c>, and only a case-insensitive comparison keeps those
+/// together.
 ///
-/// Case is the divergence anybody has seen. The ones nobody has seen are the
-/// problem: a junction, directory symlink or volume mount point anywhere in the
-/// chain, a leaf that is itself a symlink, a substituted or mapped drive letter,
-/// a UNC spelling, the <c>\\.\</c> device form, an unexpanded environment
-/// variable, and an extended-length prefix the kernel declines to expand. Each
-/// one names the right file and does not look like the walk's spelling.
+/// Case is the one divergence that comparison closes. The others are a junction,
+/// directory symlink or volume mount point anywhere in the chain, a leaf that is
+/// itself a symlink, a substituted or mapped drive letter, a UNC spelling, the
+/// <c>\\.\</c> device form and an extended-length prefix the kernel declines to
+/// expand. Each one names the right file and does not look like the walk's spelling.
 ///
 /// CLOSING THOSE ONE AT A TIME CANNOT BE FINISHED, because the list is somebody's
 /// enumeration and nothing tells you when it is complete. Asking the filesystem
@@ -121,16 +120,14 @@ public static class FileIdentityReadOutcomes
 /// whatever it was written as, and no list has to be right.
 ///
 /// A FAILED READ IS NOT A NEUTRAL ANSWER. A path that will not open yields no
-/// identity, and the registration behind it is one whose cached file is sitting in
-/// the folder unclaimed. Every outcome above is counted and the four give-ups are
-/// acted on, at
+/// identity, and the cached file of the registration behind it can be any file in
+/// the folder, left unclaimed. Every outcome above is counted and the four give-ups
+/// are acted on, at
 /// <c>FileSystemScanService.DropCandidatesRegisteredUnderAnotherSpelling</c>.
 ///
-/// THE DIRECTION OF A FAULT IN HERE IS UNCHANGED, which is worth keeping apart
-/// from the sentence above it. A wrong answer can still only ever cost an offer:
-/// an identity that matches nothing changes nothing, an identity that matches
-/// wrongly keeps a file back, and a failure now keeps files back rather than
-/// letting them through. Nothing in here can put a file on the offer.
+/// A WRONG ANSWER IN HERE CAN ONLY EVER COST AN OFFER: an identity that matches
+/// nothing changes nothing, an identity that matches wrongly keeps a file back, and
+/// a failure keeps files back. Nothing in here can put a file on the offer.
 /// </summary>
 public interface IFileIdentityReader
 {

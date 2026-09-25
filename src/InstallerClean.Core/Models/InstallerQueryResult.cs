@@ -255,13 +255,12 @@ public record InstallerQueryResult(
 /// IT DECIDES. A keyed question about the product code written inside a cached
 /// package can answer "no record" while a registration under a transform-generated
 /// code still needs the file, and <see cref="Services.DeclaredProductCheck"/> reads
-/// that code out of the file: it is the last pass standing between an unclaimed
-/// candidate and the offer.
+/// that code out of the file and asks exactly that question.
 ///
 /// What acts on it is <see cref="SecondInstanceNotRuledOut"/>, which reads this
-/// count together with the one below and never on its own. This member is still
-/// carried and sent apart, because how often a machine ANSWERS the question and how
-/// often it REFUSES to are different facts and nobody has measured either.
+/// count together with the one below and never on its own. This member is carried
+/// and sent apart, because how often a machine ANSWERS the question and how often
+/// it REFUSES to are different facts.
 ///
 /// A POSITIVE READING IS THE ONLY THING COUNTED. A value that will not parse is
 /// not a positive, and neither is an absent property, which Microsoft documents as
@@ -566,12 +565,11 @@ public readonly record struct EnumerationCensus(
     ///
     /// WHY EITHER WITHHOLDS. A product installed under an instance transform registers
     /// under a product code the transform produced, while the package cached for it
-    /// declares the base code. So the one pass that reads a product code OUT OF A CACHED
-    /// FILE and puts it to Windows (<see cref="Services.DeclaredProductCheck"/>) can be
-    /// told there is no such record while a live registration still needs that file, and
-    /// that pass is the last thing standing between a candidate nothing claimed and the
-    /// offer. It cannot be made to work: the app has no way to tell WHICH cached file
-    /// belongs to the second copy, which is the whole condition.
+    /// declares the base code. So <see cref="Services.DeclaredProductCheck"/>, which
+    /// reads a product code OUT OF A CACHED FILE and puts it to Windows, can be told
+    /// there is no such record while a live registration still needs that file. The app
+    /// has no way to tell WHICH cached file belongs to the second copy, which is the
+    /// whole condition, so the walk-derived offer is withheld.
     ///
     /// AND NOT KNOWING WITHHOLDS ON THE SAME TERMS AS KNOWING. A read that failed leaves
     /// the machine in exactly the state the positive reading describes as far as this rule
