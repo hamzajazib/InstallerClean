@@ -11,8 +11,9 @@ namespace InstallerClean.Services;
 /// package it reads the package's own ProductCode through
 /// <see cref="IPackageIdentityReader"/>, puts it to Windows through the same keyed
 /// enumeration the patch-target route uses, and for an installed product reads the
-/// <c>LocalPackage</c> each installation records and the package each one's source
-/// list points at. For each candidate patch it reads the patch's own code and the
+/// <c>LocalPackage</c> each installation records, the package each one's source list
+/// points at and the package in the folder each one records as its
+/// <c>InstallSource</c>. For each candidate patch it reads the patch's own code and the
 /// products its Template names, finds the registrations of that patch through the
 /// machine-wide patch enumeration and the keyed patch read, and reads the
 /// <c>LocalPackage</c> each registration records and the patch package the patch's
@@ -20,7 +21,8 @@ namespace InstallerClean.Services;
 /// a per-user-unmanaged context is not read, and an installation or registration in
 /// one keeps the file. Every source list it does read is read twice, through the API
 /// and from the registry key that holds it, and a list the two do not agree on keeps
-/// the file.
+/// the file. Every <c>InstallSource</c> it reads is read the same two ways, and one the
+/// two do not agree on keeps the file too.
 ///
 /// IT COMPOSES THINGS THAT ALREADY EXIST. The reading of each file, package or
 /// patch, is the reader's. The asking is
@@ -272,8 +274,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// source list, network folders, media and URLs, looking in each for the file named
     /// by <c>PackageName</c>. A patch has a source list and a package name of its own,
     /// and this reads them as it reads a product's. The folders compared are the network
-    /// sources. Everything else on the list is read to decide whether the copy is kept,
-    /// and it is kept for any of these:
+    /// sources and, for a product, the folder the installation records as its
+    /// <c>InstallSource</c>, the one its package was installed from. Windows Installer
+    /// puts that folder on the list when it installs the product, and the list can
+    /// change afterwards, so the folder is compared whether or not the list still holds
+    /// it (<see cref="InstallSourceOf"/>). Everything else on the list is read to decide
+    /// whether the copy is kept, and it is kept for any of these:
     /// - A URL ENTRY, WHATEVER ITS SCHEME. A web address can name this PC as well as any
     ///   other. No URL is compared, and one on the list keeps the copy.
     /// - AN ENTRY NAMING AN ENVIRONMENT VARIABLE, one holding a '%'. Whoever reads the
@@ -296,10 +302,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// or to read the registry; a per-user-unmanaged account and context, whose list is
     /// not read; a package name, a source list or a property of the list that will not
     /// read; an empty package name, or one holding a '\', a '/', a ':' or a '%'; each
-    /// of the five above; a source entry holding a null; a source whose package would be
-    /// a file directly in the Installer folder, or where that cannot be established; and
-    /// a source package that exists and will not identify. A source package that is not
-    /// there is skipped, being no file.
+    /// of the five above; a source entry holding a null; a product's
+    /// <c>InstallSource</c> that <see cref="InstallSourceOf"/> answers null for; a source
+    /// whose package would be a file directly in the Installer folder, or where that
+    /// cannot be established; and a source package that exists and will not identify. A
+    /// source package that is not there is skipped, being no file.
     /// </summary>
     /// <param name="isPatch">
     /// Whether <paramref name="code"/> is a patch code rather than a product code. The
@@ -372,7 +379,18 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             || !SourceUsedLastIsOnTheList(code, isPatch, sid, context, sources, sourceList.Values))
             return false;
 
-        foreach (var folder in sources)
+        // A product's InstallSource joins the folders compared, unless it is already one
+        // of the network entries. It is read for a product only.
+        var folders = sources;
+        if (!isPatch)
+        {
+            var installSource = InstallSourceOf(_registry, code, sid, context);
+            if (installSource is null) return false;
+            if (installSource.Length > 0 && !sources.Contains(installSource, StringComparer.Ordinal))
+                folders = [.. sources, installSource];
+        }
+
+        foreach (var folder in folders)
         {
             // Joined with a backslash by hand rather than with Path.Combine, whose
             // separator is the host's.
@@ -521,6 +539,50 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     }
 
     /// <summary>
+    /// The folder one installation of a product records as its <c>InstallSource</c>, read
+    /// through the API and from the installation's <c>InstallProperties</c> key
+    /// (<see cref="InstallPropertiesKeyPath"/>): the folder; an empty string where the
+    /// two agree that there is none; or null, which keeps the file.
+    ///
+    /// NULL for: a read through the API that fails; a key that is not there or will not
+    /// read, and a context or account that will not make its path; a key whose
+    /// <c>InstallSource</c> is not one REG_SZ holding the API's text, or which holds one
+    /// where the API answers none; a folder holding a '%' or a null; and a folder that
+    /// starts neither with a drive letter, a ':' and a '\' nor with two '\'. A
+    /// REG_EXPAND_SZ is refused even where its text is the same, being a value its reader
+    /// may expand in the reader's own environment. Only those two forms of folder are
+    /// compared, so a URL and any form not named here keep the file.
+    /// </summary>
+    private string? InstallSourceOf(IRegistryReader registry, string code, string? sid, MsiInstallContext context)
+    {
+        var read = InstallerQueryService.ReadProductProperty(
+            _msi, code, sid, context, MsiInstallProperty.InstallSource);
+        if (read.Unreadable) return null;
+
+        var folder = read.Value.TrimEnd('\0');
+
+        var path = InstallPropertiesKeyPath(code, sid, context);
+        if (path is null) return null;
+
+        var properties = registry.LocalMachineValues(path);
+        if (properties.Presence != RegistryKeyPresence.Present || properties.Values is null) return null;
+
+        var stored = ValueNamed(properties.Values, MsiInstallProperty.InstallSource, out var count);
+        var agrees = count == 0
+            ? folder.Length == 0
+            : count == 1
+                && stored is { Kind: RegistryValueKind.String } value
+                && string.Equals(value.Text, folder, StringComparison.Ordinal);
+        if (!agrees) return null;
+
+        if (folder.Length == 0) return folder;
+        if (folder.Contains('%') || folder.Contains('\0')) return null;
+
+        var onADrive = folder.Length >= 3 && char.IsAsciiLetter(folder[0]) && folder[1] == ':' && folder[2] == '\\';
+        return onADrive || folder.StartsWith(@"\\", StringComparison.Ordinal) ? folder : null;
+    }
+
+    /// <summary>
     /// Whether <paramref name="key"/> holds exactly <paramref name="entries"/>: values
     /// named 1 to n and nothing else, n being the number of entries, each holding as its
     /// text the entry at its place. A key that is not there holds an empty list. A key
@@ -607,6 +669,30 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             return $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Managed\{sid}\Installer\{kind}\{packed}\SourceList";
 
         return null;
+    }
+
+    /// <summary>
+    /// The HKLM path this check reads a product installation's <c>InstallProperties</c>
+    /// key from: <c>SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData</c>, then
+    /// <c>S-1-5-18</c> per machine or the account per user and managed, then
+    /// <c>Products</c>, the code in its packed form and <c>InstallProperties</c>. A key
+    /// not found at this path keeps the file.
+    ///
+    /// NULL, WHICH KEEPS THE FILE, for the contexts, accounts and codes
+    /// <see cref="SourceListKeyPath"/> answers null for.
+    /// </summary>
+    private static string? InstallPropertiesKeyPath(string code, string? sid, MsiInstallContext context)
+    {
+        var packed = InstallerQueryService.PackRegistryCode(code);
+        if (packed is null) return null;
+
+        var account = context == MsiInstallContext.Machine && sid is null ? "S-1-5-18"
+            : context == MsiInstallContext.UserManaged && IsAccount(sid) ? sid
+            : null;
+
+        return account is null
+            ? null
+            : $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\{account}\Products\{packed}\InstallProperties";
     }
 
     /// <summary>Whether <paramref name="sid"/> is 'S-' followed by digits and hyphens.</summary>

@@ -843,6 +843,10 @@ public class DeclaredProductCheckTests
     private const string ProductAKey =
         @"SOFTWARE\Classes\Installer\Products\11111111111111111111111111111111\SourceList";
 
+    private const string ProductAProperties =
+        @"SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-18\Products\"
+        + @"11111111111111111111111111111111\InstallProperties";
+
     /// <summary>A REG_SZ value, the type a source list's package name and media entries have.</summary>
     private static RegistryValue Sz(string name, string text) => new(name, RegistryValueKind.String, text);
 
@@ -859,7 +863,10 @@ public class DeclaredProductCheckTests
 
         Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
         Assert.Equal(
-            new[] { ProductAKey, ProductAKey + @"\Net", ProductAKey + @"\URL", ProductAKey + @"\Media" },
+            new[]
+            {
+                ProductAKey, ProductAKey + @"\Net", ProductAKey + @"\URL", ProductAKey + @"\Media", ProductAProperties,
+            },
             f.Msi.Registry.Reads);
     }
 
@@ -1231,8 +1238,11 @@ public class DeclaredProductCheckTests
         const string Key =
             @"SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Managed\S-1-5-21-9-9-9-1001\Installer\Products\"
             + @"11111111111111111111111111111111\SourceList";
+        const string Properties =
+            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-21-9-9-9-1001\Products\"
+            + @"11111111111111111111111111111111\InstallProperties";
         Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
-        Assert.Equal(new[] { Key, Key + @"\Net", Key + @"\URL", Key + @"\Media" }, f.Msi.Registry.Reads);
+        Assert.Equal(new[] { Key, Key + @"\Net", Key + @"\URL", Key + @"\Media", Properties }, f.Msi.Registry.Reads);
     }
 
     [Theory]
@@ -1319,6 +1329,215 @@ public class DeclaredProductCheckTests
         var check = Assert.IsType<DeclaredProductCheck>(services.GetRequiredService<IDeclaredProductCheck>());
 
         Assert.True(check.ComparesRecordedPackages);
+    }
+
+    // ---- The folder the installation was installed from ----
+    //
+    // Each installation of a product records the folder its package was installed from
+    // as its InstallSource, and the check compares that folder as one more source
+    // whether or not the list still holds it, read through the API and from the
+    // installation's InstallProperties key. In the fixture it is the list's own first
+    // entry, which is how Windows Installer records it at install, and the copy is let
+    // through. Each test below changes one thing and leaves the list holding the
+    // fixture's entry alone, so every keeping test is kept by the InstallSource.
+
+    private const string OtherFolder = @"D:\Other\";
+    private const string OtherPackage = @"D:\Other\setup.msi";
+
+    [Fact]
+    public void A_copy_is_kept_when_the_folder_its_product_was_installed_from_is_the_Installer_folder()
+    {
+        var asked = new List<string>();
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsInstallSource(ProductA, null, MsiInstallContext.Machine, InstallerFolder + @"\");
+
+        var outcome = ScreenTheCopy(f, path =>
+        {
+            asked.Add(path);
+            return InInstallerFolder(path);
+        });
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome);
+        Assert.Contains(InstallerFolder + @"\" + SetupName, asked);
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_package_in_the_folder_its_product_was_installed_from_is_the_copy_itself()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsInstallSource(ProductA, null, MsiInstallContext.Machine, OtherFolder);
+        f.Files.Opens(OtherPackage, 1);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_package_in_the_folder_its_product_was_installed_from_will_not_identify()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsInstallSource(ProductA, null, MsiInstallContext.Machine, OtherFolder);
+        f.Files.Answers(OtherPackage, FileIdentityRead.OpenRefused);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_let_through_when_the_package_in_the_folder_its_product_was_installed_from_is_another_file()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsInstallSource(ProductA, null, MsiInstallContext.Machine, OtherFolder);
+        f.Files.Opens(OtherPackage, 9);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+        Assert.Contains(OtherPackage, f.Files.Reads);
+    }
+
+    [Theory]
+    [InlineData(OtherFolder)]
+    [InlineData(@"\\server\setup\")]
+    [InlineData(@"D:\Other")]
+    public void A_copy_is_let_through_when_the_folder_its_product_was_installed_from_holds_no_package(string folder)
+    {
+        // A folder on a drive and one on a network share, and the drive's folder without
+        // its closing '\'.
+        var package = (folder.EndsWith('\\') ? folder : folder + @"\") + SetupName;
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsInstallSource(ProductA, null, MsiInstallContext.Machine, folder);
+        f.Files.Answers(package, FileIdentityRead.NamesNothing);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+        Assert.Contains(package, f.Files.Reads);
+    }
+
+    [Fact]
+    public void The_package_in_the_folder_its_product_was_installed_from_is_read_once_where_the_list_holds_the_folder()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+        Assert.Single(f.Files.Reads, path => path == SetupPackage);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_copy_is_let_through_when_the_installation_records_no_InstallSource(bool asAnEmptyValue)
+    {
+        // The API answers an empty value, or that the record does not carry the property,
+        // and the key holds no InstallSource.
+        var f = ACopyBesideTheRecordedPackage();
+        if (asAnEmptyValue)
+            f.Msi.RecordsInstallSource(ProductA, null, MsiInstallContext.Machine, "");
+        else
+            f.Msi.InstallSourceAnswers(ProductA, null, MsiInstallContext.Machine, MsiError.UnknownProperty);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+        Assert.Contains(ProductAProperties, f.Msi.Registry.Reads);
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_InstallSource_will_not_read()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.InstallSourceAnswers(ProductA, null, MsiInstallContext.Machine, MsiError.AccessDenied);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Theory]
+    [InlineData(RegistryKeyPresence.Absent)]
+    [InlineData(RegistryKeyPresence.Unreadable)]
+    public void A_copy_is_kept_when_the_InstallProperties_key_is_not_read(RegistryKeyPresence presence)
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Answers(ProductAProperties, presence);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Theory]
+    [InlineData(OtherFolder)]
+    [InlineData(@"d:\setup\")]
+    [InlineData(@"D:\Setup")]
+    [InlineData("")]
+    public void A_copy_is_kept_when_the_InstallProperties_key_holds_another_InstallSource(string stored)
+    {
+        // The API answers the fixture's own folder.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Holds(ProductAProperties, Sz(MsiInstallProperty.InstallSource, stored));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_InstallProperties_key_holds_no_InstallSource_while_the_API_answers_one()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Holds(ProductAProperties);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_InstallProperties_key_holds_the_InstallSource_as_a_REG_EXPAND_SZ()
+    {
+        // The API's own text, so only the type keeps the copy.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Holds(ProductAProperties, ExpandSz(MsiInstallProperty.InstallSource, SetupFolder));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_InstallProperties_key_holds_the_InstallSource_as_a_value_of_another_type()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Holds(ProductAProperties, Dword(MsiInstallProperty.InstallSource));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_InstallProperties_key_holds_an_InstallSource_the_API_answers_as_none()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.InstallSourceAnswers(ProductA, null, MsiInstallContext.Machine, MsiError.UnknownProperty);
+        f.Msi.Registry.Holds(ProductAProperties, Sz(MsiInstallProperty.InstallSource, SetupFolder));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Theory]
+    [InlineData(@"D:\%SETUP%\")]
+    [InlineData("D:\\Set\0up\\")]
+    public void A_copy_is_kept_when_the_folder_its_product_was_installed_from_holds_a_variable_or_a_null(string folder)
+    {
+        // Each is a folder on a drive holding no package, so only the '%' or the null keeps
+        // the copy.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsInstallSource(ProductA, null, MsiInstallContext.Machine, folder);
+        f.Files.Answers(folder + SetupName, FileIdentityRead.NamesNothing);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Theory]
+    [InlineData("http://localhost/setup/")]
+    [InlineData("file:///D:/Other/")]
+    [InlineData(@"Other\")]
+    [InlineData(@"D:Other\")]
+    [InlineData(@"\Other\")]
+    [InlineData("D:/Other/")]
+    public void A_copy_is_kept_when_the_folder_its_product_was_installed_from_starts_neither_with_a_drive_letter_a_colon_and_a_backslash_nor_with_two_backslashes(
+        string folder)
+    {
+        // Each names no package the file reader knows of, so only its form keeps the copy.
+        var package = (folder.EndsWith('\\') ? folder : folder + @"\") + SetupName;
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsInstallSource(ProductA, null, MsiInstallContext.Machine, folder);
+        f.Files.Answers(package, FileIdentityRead.NamesNothing);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
     }
 
     // ---- A patch copy and its patch's registrations ----
@@ -2615,10 +2834,11 @@ internal sealed class ScriptedPackageIdentities : IPackageIdentityReader
 
 /// <summary>
 /// A scripted <see cref="IMsiApi"/> answering the questions this area asks: the keyed
-/// product enumeration, the LocalPackage and PackageName each installation records,
-/// each installation's network source list, the machine-wide patch enumeration, the
-/// State and LocalPackage a patch records against each product holding it, and the
-/// package name and network source list a patch has in each account and context.
+/// product enumeration, the LocalPackage, PackageName and InstallSource each
+/// installation records, each installation's network source list, the machine-wide
+/// patch enumeration, the State and LocalPackage a patch records against each product
+/// holding it, and the package name and network source list a patch has in each
+/// account and context.
 ///
 /// AN UNSCRIPTED CODE THROWS, for the reason the reader's does: "Windows does not
 /// hold that product" is the single answer that lets a file through, so a fake
@@ -2906,10 +3126,41 @@ internal sealed class ScriptedMsiProducts : IMsiApi
     public void SourceListNeverEnds(string productCode, string? sid, MsiInstallContext context) =>
         _sources[(productCode, sid, context)] = new SourceList(new[] { @"D:\Somewhere\" }, Endless: true);
 
+    private readonly Dictionary<(string ProductCode, string? Sid, MsiInstallContext Context), (uint Error, string Value)>
+        _installSources = new();
+
     /// <summary>
-    /// Answers LocalPackage and PackageName, the two product properties the check
-    /// reads, with the real API's two-call shape: a null buffer is answered with the
-    /// length, a buffer with the value.
+    /// The InstallSource one installation records, in place of what its scripted source
+    /// list gives: the list's first network entry, or none where it has no network entry.
+    /// </summary>
+    public void RecordsInstallSource(string productCode, string? sid, MsiInstallContext context, string folder) =>
+        _installSources[(productCode, sid, context)] = (MsiError.Success, folder);
+
+    /// <summary>What reading one installation's InstallSource returns instead of a value.</summary>
+    public void InstallSourceAnswers(string productCode, string? sid, MsiInstallContext context, uint error) =>
+        _installSources[(productCode, sid, context)] = (error, string.Empty);
+
+    /// <summary>
+    /// The answer for one installation's InstallSource: as scripted, or else the first
+    /// network entry of its scripted list. AN UNSCRIPTED LIST THROWS, for the reason every
+    /// other read here does.
+    /// </summary>
+    private (uint Error, string Value) InstallSourceFor(string productCode, string? sid, MsiInstallContext context)
+    {
+        if (_installSources.TryGetValue((productCode, sid, context), out var scripted)) return scripted;
+
+        if (!_sources.TryGetValue((productCode, sid, context), out var list))
+            throw new InvalidOperationException(
+                $"the fake was asked for the InstallSource {productCode} records for {sid ?? "the machine"} "
+                + $"in {context}, whose source list no test scripted");
+
+        return (MsiError.Success, list.Folders.Length > 0 ? list.Folders[0] : string.Empty);
+    }
+
+    /// <summary>
+    /// Answers LocalPackage, PackageName and InstallSource, the three product properties
+    /// the check reads, with the real API's two-call shape: a null buffer is answered
+    /// with the length, a buffer with the value.
     ///
     /// AN UNSCRIPTED INSTALLATION THROWS. A recorded package that is present and is
     /// another file is the answer that lets a file through, so a fake inventing one
@@ -2918,18 +3169,27 @@ internal sealed class ScriptedMsiProducts : IMsiApi
     public uint GetProductInfo(string productCode, string? userSid, MsiInstallContext context, string property,
         char[]? value, ref uint valueLength)
     {
-        var table = property switch
+        (uint Error, string Value) scripted;
+        if (property == MsiInstallProperty.InstallSource)
         {
-            MsiInstallProperty.LocalPackage => _localPackages,
-            MsiInstallProperty.PackageName => _packageNames,
-            _ => throw new InvalidOperationException(
-                $"the declared-product check reads LocalPackage and PackageName, and was asked for {property}"),
-        };
+            scripted = InstallSourceFor(productCode, userSid, context);
+        }
+        else
+        {
+            var table = property switch
+            {
+                MsiInstallProperty.LocalPackage => _localPackages,
+                MsiInstallProperty.PackageName => _packageNames,
+                _ => throw new InvalidOperationException(
+                    "the declared-product check reads LocalPackage, PackageName and InstallSource, "
+                    + $"and was asked for {property}"),
+            };
 
-        if (!table.TryGetValue((productCode, userSid, context), out var scripted))
-            throw new InvalidOperationException(
-                $"the fake was asked for the {property} {productCode} records for {userSid ?? "the machine"} "
-                + $"in {context}, which no test scripted");
+            if (!table.TryGetValue((productCode, userSid, context), out scripted))
+                throw new InvalidOperationException(
+                    $"the fake was asked for the {property} {productCode} records for {userSid ?? "the machine"} "
+                    + $"in {context}, which no test scripted");
+        }
 
         if (value is null && property == MsiInstallProperty.LocalPackage) PackageReads.Add((productCode, userSid, context));
         if (value is null && property == MsiInstallProperty.PackageName) PackageNameReads.Add((productCode, userSid, context));
@@ -3053,19 +3313,46 @@ internal sealed class ScriptedMsiProducts : IMsiApi
         RegexOptions.CultureInvariant);
 
     /// <summary>
+    /// An installation's <c>InstallProperties</c> key, per machine under <c>S-1-5-18</c>
+    /// or per user and managed under the account.
+    /// </summary>
+    private static readonly Regex InstallPropertiesKey = new(
+        @"^SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\(?<sid>S-[0-9-]+)"
+        + @"\\Products\\(?<packed>[0-9A-F]{32})\\InstallProperties$",
+        RegexOptions.CultureInvariant);
+
+    /// <summary>
     /// What the registry key at <paramref name="path"/> holds for the list this API was
     /// scripted with, as Windows holds it: the package name as a REG_SZ; the source used
     /// last as a REG_EXPAND_SZ holding its type, the index 1 and its text, each followed
     /// by a ';' but the last; each network entry as a REG_EXPAND_SZ named by its number
     /// from 1, and each URL entry the same way, a key with none being absent; and a
     /// <c>Media</c> key holding the REG_SZ "1" and the media package path where there is
-    /// one. A path that names no scripted list throws.
+    /// one. An installation's <c>InstallProperties</c> key holds its InstallSource as a
+    /// REG_SZ where it has one. A path that names no scripted list throws.
     /// </summary>
     internal RegistryKeyValues MirroredKey(string path)
     {
+        var properties = InstallPropertiesKey.Match(path);
+        if (properties.Success)
+        {
+            var account = properties.Groups["sid"].Value;
+            var (installSid, installContext) = account == "S-1-5-18"
+                ? ((string?)null, MsiInstallContext.Machine)
+                : (account, MsiInstallContext.UserManaged);
+            var installSource = InstallSourceFor(
+                UnpackedForTheFake(properties.Groups["packed"].Value), installSid, installContext);
+
+            return new RegistryKeyValues(RegistryKeyPresence.Present,
+                installSource.Error == MsiError.Success && installSource.Value.Length > 0
+                    ? new[] { new RegistryValue(MsiInstallProperty.InstallSource, RegistryValueKind.String, installSource.Value) }
+                    : Array.Empty<RegistryValue>());
+        }
+
         var match = SourceListKey.Match(path);
         if (!match.Success)
-            throw new InvalidOperationException($"the fake registry was asked for {path}, which is no source-list key");
+            throw new InvalidOperationException(
+                $"the fake registry was asked for {path}, which is neither a source-list key nor an InstallProperties key");
 
         var isPatch = match.Groups["kind"].Value == "Patches";
         var sid = match.Groups["sid"].Success ? match.Groups["sid"].Value : null;
@@ -3384,9 +3671,10 @@ internal sealed class ScriptedFileIdentities : IFileIdentityReader
 }
 
 /// <summary>
-/// A scripted <see cref="IRegistryReader"/> for the keys holding source lists. By default
-/// each key holds what the <see cref="ScriptedMsiProducts"/> it belongs to was scripted
-/// with, so the registry and the API agree (<see cref="ScriptedMsiProducts.MirroredKey"/>).
+/// A scripted <see cref="IRegistryReader"/> for the keys holding source lists and each
+/// installation's InstallSource. By default each key holds what the
+/// <see cref="ScriptedMsiProducts"/> it belongs to was scripted with, so the registry and
+/// the API agree (<see cref="ScriptedMsiProducts.MirroredKey"/>).
 /// A key a test scripts here answers as scripted instead, which is how a test makes the
 /// two disagree. The scripted keys are matched by their exact spelling, so a test
 /// scripting one also pins the path the check reads.

@@ -8,8 +8,9 @@ namespace InstallerClean.Services;
 /// AN INSTALLATION PACKAGE declares the product it belongs to. The check puts that
 /// product code to Windows and reports whether Windows still holds a record of it.
 /// Where it does, the check reads the cached package each installation of that product
-/// records and the original package each one's source list points at, and reports
-/// whether every one of them is a different file from this one.
+/// records, the original package each one's source list points at and the package in
+/// the folder each one records as its <c>InstallSource</c>, and reports whether every
+/// one of them is a different file from this one.
 ///
 /// A PATCH declares its own patch code and the products it may be applied to. The
 /// check finds the registrations Windows holds of that patch and reports whether there
@@ -42,13 +43,19 @@ namespace InstallerClean.Services;
 /// that names nothing identifiable, that names a file declaring another product, or
 /// that names this file under another spelling. It is kept too while some source
 /// cannot be ruled out: one in the Installer folder itself, one naming this file, and
-/// one that cannot be read. So it is while a source list holds something the check
-/// does not compare, a URL, an entry naming an environment variable, a media package
-/// path or a package name naming a folder, a drive or a variable; while the source
-/// used last is not a network entry on the list; and while the registry key holding
-/// the list does not hold what the API returned for it, package name included, or
-/// holds that name as anything but a REG_SZ. An installation in a per-user-unmanaged
-/// context keeps it as well, its source list not being read.
+/// one that cannot be read. The folder an installation records as its
+/// <c>InstallSource</c>, the one its package was installed from, counts as a source
+/// whether or not the list still holds it. So it is while a source list holds
+/// something the check does not compare, a URL, an entry naming an environment
+/// variable, a media package path or a package name naming a folder, a drive or a
+/// variable; while the source used last is not a network entry on the list; and while
+/// the registry key holding the list does not hold what the API returned for it,
+/// package name included, or holds that name as anything but a REG_SZ. So it is while
+/// an installation's <c>InstallSource</c> will not read, is held in the registry
+/// otherwise than the API answers it or as anything but a REG_SZ, names an environment
+/// variable, or starts neither with a drive letter, a ':' and a '\' nor with two '\'.
+/// An installation in a per-user-unmanaged context keeps it as well, its source list
+/// not being read.
 ///
 /// A REGISTERED PATCH DOES NOT ON ITS OWN MAKE THIS FILE A COPY OF IT WINDOWS OPENS
 /// EITHER.
@@ -182,11 +189,15 @@ public enum DeclaredProductOutcome
     /// environment variable, a media package path or a package name naming a folder, a
     /// drive or a variable, one whose source used last is not a network entry on it,
     /// and one whose registry key does not hold what the API returned for it, package
-    /// name included, or holds that name as anything but a REG_SZ. In each of them the
-    /// check cannot see which package that installation opens, so this file could be
-    /// it. A check constructed without its two file readers or its registry reader, or
-    /// screening without the Installer folder to compare against, answers this for
-    /// every installed product, having no way to look.
+    /// name included, or holds that name as anything but a REG_SZ. It covers an
+    /// <c>InstallSource</c> that is the Installer folder itself, whose package is this
+    /// file or will not identify, that will not read, that the registry holds otherwise
+    /// than the API answers it or as anything but a REG_SZ, that names an environment
+    /// variable, or that starts neither with a drive letter, a ':' and a '\' nor with two
+    /// '\'. In each of them the check cannot see which package that installation opens,
+    /// so this file could be it. A check constructed without its two file readers or its
+    /// registry reader, or screening without the Installer folder to compare against,
+    /// answers this for every installed product, having no way to look.
     ///
     /// WHAT IT DOES NOT ESTABLISH, so no copy may be built on it: that a program
     /// would break without this particular copy.
@@ -197,13 +208,15 @@ public enum DeclaredProductOutcome
     /// Windows still holds a record of the product this file declares, every
     /// installation of that product records a cached package that is present, is a
     /// different file, and itself declares the same product, no installation is in a
-    /// per-user-unmanaged context, and no installation's source list points at the
-    /// Installer folder or at this file. Every installation's source list is held in
-    /// the registry as the API returns it, with its package name as a REG_SZ, holds
-    /// network entries only, none of them naming an environment variable, names no
-    /// media package path, has a package name naming a file alone, and was last used
-    /// from one of its own network entries or not at all. The candidate goes on being
-    /// decided by everything else.
+    /// per-user-unmanaged context, and no installation's source list or
+    /// <c>InstallSource</c> points at the Installer folder or at this file. Every
+    /// installation's source list is held in the registry as the API returns it, with
+    /// its package name as a REG_SZ, and so is its <c>InstallSource</c> where there is
+    /// one, which starts with a drive letter, a ':' and a '\', or with two '\'. Every
+    /// source list holds network entries only, none of them naming an environment
+    /// variable, names no media package path, has a package name naming a file alone,
+    /// and was last used from one of its own network entries or not at all. The
+    /// candidate goes on being decided by everything else.
     ///
     /// Windows Installer opens a product's cached package through the
     /// <c>LocalPackage</c> value recorded for each installation, and its original

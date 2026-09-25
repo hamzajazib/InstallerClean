@@ -148,6 +148,14 @@ public static class MsiInstallProperty
     public const string PackageName = "PackageName";
 
     /// <summary>
+    /// A product installation's installation source (INSTALLPROPERTY_INSTALLSOURCE),
+    /// which Microsoft documents as the SourceDir property: the folder holding the
+    /// package the product was installed from. Read through <c>MsiGetProductInfoEx</c>,
+    /// for a product only: <c>MsiGetPatchInfoEx</c> does not take the property.
+    /// </summary>
+    public const string InstallSource = "InstallSource";
+
+    /// <summary>
     /// The source location Windows Installer used most recently for a product or a
     /// patch (INSTALLPROPERTY_LASTUSEDSOURCE), which it tries before it searches the
     /// source list. Read through <c>MsiSourceListGetInfo</c>.
