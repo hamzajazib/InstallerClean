@@ -719,6 +719,77 @@ public class DeclaredProductCheckTests
         Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
     }
 
+    // ---- A source list of more than one entry ----
+    //
+    // The list is read one entry per call, in the order Windows lists them, to the end
+    // Windows reports. The fake keeps the position of the walk between calls as Windows
+    // does, so once a call at an index past the first has succeeded, a second call at
+    // that index is refused, as it is on Windows.
+
+    private const string MediaFolder = @"E:\Media\";
+    private const string MediaPackage = @"E:\Media\setup.msi";
+
+    [Fact]
+    public void A_copy_is_let_through_when_both_sources_on_its_list_are_ruled_out()
+    {
+        // The first source holds no package and the second holds another file, so the
+        // copy is ruled out only by reading the list to its end.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, SetupName, SetupFolder, MediaFolder);
+        f.Files.Opens(MediaPackage, 9);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+        Assert.Contains(MediaPackage, f.Files.Reads);
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_second_source_on_its_list_is_the_Installer_folder()
+    {
+        // The first source holds no package, so the list's first entry alone would let
+        // the copy through. The second is the Installer folder.
+        var asked = new List<string>();
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, SetupName,
+            SetupFolder, InstallerFolder + @"\");
+
+        var outcome = ScreenTheCopy(f, path =>
+        {
+            asked.Add(path);
+            return InInstallerFolder(path);
+        });
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome);
+        Assert.Contains(InstallerFolder + @"\" + SetupName, asked);
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_an_entry_after_the_first_will_not_read()
+    {
+        // The first entry reads and holds no package. The second answers
+        // ERROR_INVALID_PARAMETER, which is not the end of the list, so what the rest
+        // of the list holds is unread.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, SetupName, SetupFolder, MediaFolder);
+        f.Msi.SourceListEntryAnswers(ProductA, null, MsiInstallContext.Machine, 1,
+            ScriptedMsiProducts.InvalidParameter);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_a_source_entry_is_longer_than_any_path()
+    {
+        // An entry longer than the longest path the Windows API takes does not fit the
+        // buffer it is read into. Nothing is at the package it names, so only its length
+        // keeps the copy.
+        var entry = @"D:\" + new string('a', 32_765) + @"\";
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, SetupName, entry);
+        f.Files.Answers(entry + SetupName, FileIdentityRead.NamesNothing);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
     [Fact]
     public void Without_the_file_readers_no_recorded_package_is_read()
     {
@@ -1224,6 +1295,21 @@ public class DeclaredProductCheckTests
         f.Msi.RecordsPatchSources(PatchQ, null, MsiInstallContext.Machine, PatchSetupName);
 
         Assert.Equal(DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_let_through_when_both_sources_on_the_patch_s_list_are_ruled_out()
+    {
+        // The first source holds no patch package and the second holds another file, so
+        // the copy is ruled out only by reading the list to its end.
+        const string MediaPatch = @"E:\Media\fix.msp";
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.RecordsPatchSources(PatchQ, null, MsiInstallContext.Machine, PatchSetupName,
+            SetupFolder, MediaFolder);
+        f.Files.Opens(MediaPatch, 9);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile, ScreenThePatchCopy(f));
+        Assert.Contains(MediaPatch, f.Files.Reads);
     }
 
     [Fact]
@@ -2063,13 +2149,28 @@ internal sealed class ScriptedMsiProducts : IMsiApi
     private readonly Dictionary<(string ProductCode, string? Sid, MsiInstallContext Context), (uint Error, string Value)>
         _packageNames = new();
 
-    private readonly Dictionary<(string ProductCode, string? Sid, MsiInstallContext Context), (uint Error, string[] Folders, bool Endless)>
+    /// <summary>
+    /// One network source list as a test scripts it: the folders in list order, what
+    /// every index answers instead where the list will not read, whether it never ends,
+    /// and one index that answers an error of its own where the rest read.
+    /// </summary>
+    private sealed record SourceList(
+        string[] Folders,
+        uint Error = MsiError.Success,
+        bool Endless = false,
+        uint? FailingIndex = null,
+        uint FailingError = MsiError.Success);
+
+    private readonly Dictionary<(string ProductCode, string? Sid, MsiInstallContext Context), SourceList>
         _sources = new();
 
     /// <summary>Every product PackageName read this API answered, in order.</summary>
     public List<(string ProductCode, string? Sid, MsiInstallContext Context)> PackageNameReads { get; } = new();
 
-    /// <summary>Every walk of a product's source list this API started, in order.</summary>
+    /// <summary>
+    /// Every walk of a product's source list this API started, in order, recorded at
+    /// the call at index 0 that carries a buffer.
+    /// </summary>
     public List<(string ProductCode, string? Sid, MsiInstallContext Context)> SourceListWalks { get; } = new();
 
     /// <summary>
@@ -2080,7 +2181,7 @@ internal sealed class ScriptedMsiProducts : IMsiApi
         string packageName, params string[] folders)
     {
         _packageNames[(productCode, sid, context)] = (MsiError.Success, packageName);
-        _sources[(productCode, sid, context)] = (MsiError.Success, folders, false);
+        _sources[(productCode, sid, context)] = new SourceList(folders);
     }
 
     /// <summary>What reading one installation's PackageName returns instead of a value.</summary>
@@ -2089,11 +2190,23 @@ internal sealed class ScriptedMsiProducts : IMsiApi
 
     /// <summary>What reading one installation's source list returns instead of an entry.</summary>
     public void SourceListAnswers(string productCode, string? sid, MsiInstallContext context, uint error) =>
-        _sources[(productCode, sid, context)] = (error, Array.Empty<string>(), false);
+        _sources[(productCode, sid, context)] = new SourceList(Array.Empty<string>(), error);
+
+    /// <summary>
+    /// What one index of an installation's scripted source list returns instead of its
+    /// entry. The entries before it read.
+    /// </summary>
+    public void SourceListEntryAnswers(string productCode, string? sid, MsiInstallContext context,
+        uint index, uint error) =>
+        _sources[(productCode, sid, context)] = _sources[(productCode, sid, context)] with
+        {
+            FailingIndex = index,
+            FailingError = error,
+        };
 
     /// <summary>A source list whose every index answers with another folder, and which never ends.</summary>
     public void SourceListNeverEnds(string productCode, string? sid, MsiInstallContext context) =>
-        _sources[(productCode, sid, context)] = (MsiError.Success, new[] { @"D:\Somewhere\" }, true);
+        _sources[(productCode, sid, context)] = new SourceList(new[] { @"D:\Somewhere\" }, Endless: true);
 
     /// <summary>
     /// Answers LocalPackage and PackageName, the two product properties the check
@@ -2133,13 +2246,16 @@ internal sealed class ScriptedMsiProducts : IMsiApi
     private readonly Dictionary<(string PatchCode, string? Sid, MsiInstallContext Context), (uint Error, string Value)>
         _patchPackageNames = new();
 
-    private readonly Dictionary<(string PatchCode, string? Sid, MsiInstallContext Context), (uint Error, string[] Folders, bool Endless)>
+    private readonly Dictionary<(string PatchCode, string? Sid, MsiInstallContext Context), SourceList>
         _patchSources = new();
 
     /// <summary>Every patch PackageName read this API answered, in order.</summary>
     public List<(string PatchCode, string? Sid, MsiInstallContext Context)> PatchPackageNameReads { get; } = new();
 
-    /// <summary>Every walk of a patch's source list this API started, in order.</summary>
+    /// <summary>
+    /// Every walk of a patch's source list this API started, in order, recorded at the
+    /// call at index 0 that carries a buffer.
+    /// </summary>
     public List<(string PatchCode, string? Sid, MsiInstallContext Context)> PatchSourceListWalks { get; } = new();
 
     /// <summary>
@@ -2150,7 +2266,7 @@ internal sealed class ScriptedMsiProducts : IMsiApi
         string packageName, params string[] folders)
     {
         _patchPackageNames[(patchCode, sid, context)] = (MsiError.Success, packageName);
-        _patchSources[(patchCode, sid, context)] = (MsiError.Success, folders, false);
+        _patchSources[(patchCode, sid, context)] = new SourceList(folders);
     }
 
     /// <summary>What reading a patch's PackageName in one account and context returns instead of a value.</summary>
@@ -2159,18 +2275,34 @@ internal sealed class ScriptedMsiProducts : IMsiApi
 
     /// <summary>What reading a patch's source list in one account and context returns instead of an entry.</summary>
     public void PatchSourceListAnswers(string patchCode, string? sid, MsiInstallContext context, uint error) =>
-        _patchSources[(patchCode, sid, context)] = (error, Array.Empty<string>(), false);
+        _patchSources[(patchCode, sid, context)] = new SourceList(Array.Empty<string>(), error);
 
     /// <summary>A patch source list whose every index answers with another folder, and which never ends.</summary>
     public void PatchSourceListNeverEnds(string patchCode, string? sid, MsiInstallContext context) =>
-        _patchSources[(patchCode, sid, context)] = (MsiError.Success, new[] { @"D:\Somewhere\" }, true);
+        _patchSources[(patchCode, sid, context)] = new SourceList(new[] { @"D:\Somewhere\" }, Endless: true);
+
+    /// <summary>ERROR_INVALID_PARAMETER, which a source-list call out of sequence answers.</summary>
+    internal const uint InvalidParameter = 87;
 
     /// <summary>
-    /// Answers a network source list with the real API's two-call shape, one entry per
-    /// index and <see cref="MsiError.NoMoreItems"/> past the last: a product's when the
-    /// options say the code is a product code, and a patch's when they say it is a
-    /// patch code. Each kind is looked up only among what was scripted for that kind,
-    /// so a product code asked about as a patch, or a patch code as a product, throws.
+    /// Where the source-list walk stands between calls: besides 0, the one index the
+    /// next call may ask for.
+    /// </summary>
+    private uint _sourcePosition;
+
+    /// <summary>
+    /// Answers a network source list the way Windows does, one entry per index and
+    /// <see cref="MsiError.NoMoreItems"/> past the last: a product's when the options
+    /// say the code is a product code, and a patch's when they say it is a patch code.
+    /// Each kind is looked up only among what was scripted for that kind, so a product
+    /// code asked about as a patch, or a patch code as a product, throws.
+    ///
+    /// IT KEEPS THE POSITION OF THE WALK BETWEEN CALLS. A call at index 0 starts the
+    /// walk again, a call at the position is answered, and a call at any other index
+    /// answers ERROR_INVALID_PARAMETER. A success moves the position on by one, a call
+    /// with a null buffer included. A buffer too small for the entry and its terminator
+    /// answers <see cref="MsiError.MoreData"/> with the entry's length and leaves the
+    /// position where it was.
     ///
     /// AN UNSCRIPTED INSTALLATION THROWS. An empty list is an answer that lets a file
     /// through, so a fake giving one by default would let a test assert an offer
@@ -2193,15 +2325,37 @@ internal sealed class ScriptedMsiProducts : IMsiApi
                 $"the fake was asked for the sources of {kind} {productCodeOrPatchCode} "
                 + $"for {userSid ?? "the machine"} in {context}, which no test scripted");
 
-        if (index == 0 && source is null)
-            (kind == "patch" ? PatchSourceListWalks : SourceListWalks).Add((productCodeOrPatchCode, userSid, context));
+        if (index == 0)
+        {
+            _sourcePosition = 0;
+            if (source is not null)
+                (kind == "patch" ? PatchSourceListWalks : SourceListWalks)
+                    .Add((productCodeOrPatchCode, userSid, context));
+        }
+        else if (index != _sourcePosition)
+        {
+            return InvalidParameter;
+        }
+
         if (scripted.Error != MsiError.Success) return scripted.Error;
+        if (index == scripted.FailingIndex) return scripted.FailingError;
         if (!scripted.Endless && index >= scripted.Folders.Length) return MsiError.NoMoreItems;
 
         var folder = scripted.Folders[scripted.Endless ? 0 : (int)index];
         if (source is not null)
-            for (var i = 0; i < folder.Length && i < source.Length; i++) source[i] = folder[i];
+        {
+            if (sourceLength <= (uint)folder.Length)
+            {
+                sourceLength = (uint)folder.Length;
+                return MsiError.MoreData;
+            }
+
+            folder.CopyTo(0, source, 0, folder.Length);
+            source[folder.Length] = '\0';
+        }
+
         sourceLength = (uint)folder.Length;
+        _sourcePosition = index + 1;
         return MsiError.Success;
     }
 

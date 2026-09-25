@@ -71,10 +71,17 @@ internal static partial class Msi
     /// Reads one entry of the source list Windows Installer holds for a product or a
     /// patch in one account and context, among the source types
     /// <paramref name="dwOptions"/> names; the same flags say which of the two the code
-    /// is. <paramref name="pcchSource"/> is the double-call buffer-size in/out
-    /// parameter, as on <see cref="MsiGetProductInfoEx"/>. <paramref name="szUserSid"/>
-    /// is null for a per-machine installation.
+    /// is. <paramref name="pcchSource"/> is the buffer's size in characters going in and
+    /// the entry's length coming out. <paramref name="szUserSid"/> is null for a
+    /// per-machine installation.
     /// </summary>
+    /// <remarks>
+    /// Windows keeps the position of the walk between calls, and a success moves it on,
+    /// a call with a null buffer included. So an entry is read in one call with a
+    /// buffer. A sizing call followed by a second call at the same index, the way a
+    /// property is read, answers ERROR_INVALID_PARAMETER at every index after the
+    /// first.
+    /// </remarks>
     [LibraryImport(Library, EntryPoint = "MsiSourceListEnumSourcesW",
                    StringMarshalling = StringMarshalling.Utf16)]
     public static partial uint MsiSourceListEnumSources(

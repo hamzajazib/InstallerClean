@@ -357,9 +357,20 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <paramref name="isPatch"/> says, in the order Windows lists them, or null where
     /// the list did not read to its end.
     ///
+    /// ONE CALL PER ENTRY, WITH THE BUFFER. Windows keeps the position of the walk
+    /// between calls. A call at index 0 starts the walk again, a call at the position
+    /// is answered, and a call at any other index answers ERROR_INVALID_PARAMETER. A
+    /// success moves the position on by one, and a call made to learn the length alone
+    /// is a success too, so do not split a read into that call and a second one at the
+    /// same index: the second is then out of sequence at every index after the first.
+    /// Microsoft requires every call of one walk to come from the same thread, and this
+    /// loop makes them all with nothing awaited between them.
+    ///
     /// ONLY <see cref="MsiError.NoMoreItems"/> ENDS THE LIST. Every other return keeps
-    /// the file, and so does a list that runs past <see cref="MaxSourceIndex"/> without
-    /// ending, since what lies beyond it is unread.
+    /// the file, <see cref="MsiError.MoreData"/> from an entry longer than the buffer
+    /// among them, and so does a list that runs past <see cref="MaxSourceIndex"/>
+    /// without ending, since what lies beyond it is unread. The index moves on only
+    /// after a success, so no entry is passed over.
     /// </summary>
     private IReadOnlyList<string>? NetworkSourcesOf(
         string code, bool isPatch, string? sid, MsiInstallContext context)
@@ -367,17 +378,17 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var options = (isPatch ? MsiSourceListOptions.Patch : MsiSourceListOptions.Product)
             | MsiSourceListOptions.Network;
         var sources = new List<string>();
+        var buffer = new char[SourceBufferLength];
 
         for (uint index = 0; index < MaxSourceIndex; index++)
         {
-            uint length = 0;
-            var error = _msi.EnumSources(code, sid, context, options, index, null, ref length);
-            if (error == MsiError.NoMoreItems) return sources;
-            if (error != MsiError.Success && error != MsiError.MoreData) return null;
+            // Cleared per entry, so a length reported longer than what was written
+            // reads as nulls and not as the tail of the entry before.
+            Array.Clear(buffer);
 
-            length++; // space for the terminator
-            var buffer = new char[length];
-            error = _msi.EnumSources(code, sid, context, options, index, buffer, ref length);
+            uint length = (uint)buffer.Length;
+            var error = _msi.EnumSources(code, sid, context, options, index, buffer, ref length);
+            if (error == MsiError.NoMoreItems) return sources;
             if (error != MsiError.Success) return null;
 
             var source = new string(buffer, 0, (int)Math.Min(length, (uint)buffer.Length)).TrimEnd('\0');
@@ -387,6 +398,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         return null;
     }
+
+    /// <summary>
+    /// The length in characters of the buffer a source entry is read into: the longest
+    /// path the Windows API takes, 32,767 characters, and a terminator.
+    /// </summary>
+    private const int SourceBufferLength = 32_768;
 
     /// <summary>
     /// How many entries of one source list are read before the list is taken as not
