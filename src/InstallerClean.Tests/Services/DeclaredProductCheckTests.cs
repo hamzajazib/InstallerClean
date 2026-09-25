@@ -1,7 +1,10 @@
+using System.Globalization;
 using System.IO.Abstractions.TestingHelpers;
+using System.Text.RegularExpressions;
 using InstallerClean.Interop;
 using InstallerClean.Models;
 using InstallerClean.Services;
+using Microsoft.Win32;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace InstallerClean.Tests.Services;
@@ -23,7 +26,8 @@ namespace InstallerClean.Tests.Services;
 /// Windows holds no registration of the declared patch, and every registration of it
 /// recording a cached copy that is present and is another file, with none of them per
 /// user and unmanaged and no source of the patch reaching the Installer folder or the
-/// file. Every inability keeps the file.
+/// file. Either way, every source list read has to be held in the registry as the API
+/// returns it and hold no URL. Every inability keeps the file.
 ///
 /// THE FAKES THROW ON ANYTHING NO TEST SCRIPTED, which is the point of them rather
 /// than strictness. A fake answering an unscripted question with a plausible default
@@ -392,7 +396,7 @@ public class DeclaredProductCheckTests
         (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
             ScriptedFileIdentities Files, MockFileSystem Disk) f,
         Func<string, bool?>? namesAFileInInstallerFolder = null) =>
-        new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk)
+        new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
             .Screen(new[] { Package(Candidate) }, default, null,
                 namesAFileInInstallerFolder ?? InInstallerFolder)[0];
 
@@ -625,7 +629,7 @@ public class DeclaredProductCheckTests
     {
         var f = ACopyBesideTheRecordedPackage();
 
-        var outcome = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk)
+        var outcome = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
             .Screen(new[] { Package(Candidate) })[0];
 
         Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome);
@@ -661,8 +665,7 @@ public class DeclaredProductCheckTests
     [Fact]
     public void A_copy_is_kept_when_a_source_entry_holds_a_variable_that_is_not_set()
     {
-        // The entry keeps its '%' signs through the expansion, so where it points is
-        // not known. Read as it stands, the path finds no file and would be skipped.
+        // Read as it stands, the path finds no file and would be skipped.
         const string Variable = "INSTALLERCLEAN_TEST_UNSET_SOURCE";
         Assert.Null(Environment.GetEnvironmentVariable(Variable));
         var entry = $@"%{Variable}%\Setup\";
@@ -791,6 +794,485 @@ public class DeclaredProductCheckTests
     }
 
     [Fact]
+    public void A_copy_is_kept_when_a_source_entry_holds_a_variable_that_is_set()
+    {
+        // The variable is set and the folder it names holds no package, so only the
+        // variable keeps the copy.
+        const string Variable = "INSTALLERCLEAN_TEST_SET_SOURCE";
+        var entry = $@"%{Variable}%\";
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, SetupName, entry);
+        f.Files.Answers(entry + SetupName, FileIdentityRead.NamesNothing);
+
+        Environment.SetEnvironmentVariable(Variable, @"D:\Setup");
+        try
+        {
+            Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(Variable, null);
+        }
+    }
+
+    [Theory]
+    [InlineData(@"Windows\Installer\setup.msi")]
+    [InlineData("../setup.msi")]
+    [InlineData("C:setup.msi")]
+    [InlineData("%SETUP%.msi")]
+    public void A_copy_is_kept_when_the_package_name_names_more_than_a_file(string packageName)
+    {
+        // The source folder holds no package under any of these names, so only the name
+        // keeps the copy.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, packageName, SetupFolder);
+        f.Files.Answers(SetupFolder + packageName, FileIdentityRead.NamesNothing);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    // ---- The registry key holding the list ----
+    //
+    // Every list the API returns is compared with the registry key that holds it, and so
+    // are the package name and the source used last. The fake's registry holds by default
+    // what the fake's API was scripted with, as Windows holds it and in the same value
+    // types, so the fixture lets the copy through, which the first test pins with the keys
+    // it reads. Each test after it changes one thing on one side, and every keeping test
+    // is kept by that change alone.
+
+    private const string ProductAKey =
+        @"SOFTWARE\Classes\Installer\Products\11111111111111111111111111111111\SourceList";
+
+    /// <summary>A REG_SZ value, the type a source list's package name and media entries have.</summary>
+    private static RegistryValue Sz(string name, string text) => new(name, RegistryValueKind.String, text);
+
+    /// <summary>A REG_EXPAND_SZ value, the type a network entry and the source used last have.</summary>
+    private static RegistryValue ExpandSz(string name, string text) => new(name, RegistryValueKind.ExpandString, text);
+
+    /// <summary>A REG_DWORD value, which reads with no text.</summary>
+    private static RegistryValue Dword(string name) => new(name, RegistryValueKind.DWord, null);
+
+    [Fact]
+    public void A_copy_is_let_through_when_the_registry_holds_the_list_the_API_returned()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+        Assert.Equal(
+            new[] { ProductAKey, ProductAKey + @"\Net", ProductAKey + @"\URL", ProductAKey + @"\Media" },
+            f.Msi.Registry.Reads);
+    }
+
+    [Fact]
+    public void A_copy_is_let_through_when_the_list_s_keys_are_written_out_value_by_value_as_Windows_holds_them()
+    {
+        // Every key written out rather than left to the fake: the package name and the
+        // media entry a REG_SZ, the network entry and the source used last a
+        // REG_EXPAND_SZ, and no URL key.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Holds(ProductAKey,
+            Sz(MsiInstallProperty.PackageName, SetupName),
+            ExpandSz(MsiInstallProperty.LastUsedSource, "n;1;" + SetupFolder));
+        f.Msi.Registry.Holds(ProductAKey + @"\Net", ExpandSz("1", SetupFolder));
+        f.Msi.Registry.Answers(ProductAKey + @"\URL", RegistryKeyPresence.Absent);
+        f.Msi.Registry.Holds(ProductAKey + @"\Media", Sz("1", ";"));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+    }
+
+    [Theory]
+    [InlineData("other.msi")]
+    [InlineData("SETUP.MSI")]
+    [InlineData("")]
+    [InlineData(@"Windows\Installer\setup.msi")]
+    [InlineData("Windows/setup.msi")]
+    [InlineData("C:setup.msi")]
+    [InlineData("%SETUP%.msi")]
+    public void A_copy_is_kept_when_the_list_s_key_holds_another_package_name(string stored)
+    {
+        // The API answers the fixture's own name, so only the name the key holds keeps
+        // the copy.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Holds(ProductAKey,
+            Sz(MsiInstallProperty.PackageName, stored),
+            ExpandSz(MsiInstallProperty.LastUsedSource, "n;1;" + SetupFolder));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_list_s_key_holds_no_package_name()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Holds(ProductAKey, ExpandSz(MsiInstallProperty.LastUsedSource, "n;1;" + SetupFolder));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_list_s_key_holds_the_package_name_as_a_REG_EXPAND_SZ()
+    {
+        // The API's own text, so only the type keeps the copy.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Holds(ProductAKey,
+            ExpandSz(MsiInstallProperty.PackageName, SetupName),
+            ExpandSz(MsiInstallProperty.LastUsedSource, "n;1;" + SetupFolder));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_list_s_key_holds_the_package_name_as_a_value_of_another_type()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Holds(ProductAKey,
+            Dword(MsiInstallProperty.PackageName),
+            ExpandSz(MsiInstallProperty.LastUsedSource, "n;1;" + SetupFolder));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_list_s_key_holds_an_entry_past_a_gap()
+    {
+        // The API returned the first entry. The key also holds the Installer folder,
+        // numbered 3, which the API's walk does not reach.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Holds(ProductAKey + @"\Net",
+            ExpandSz("1", SetupFolder), ExpandSz("3", InstallerFolder + @"\"));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_list_s_key_holds_one_entry_more_than_the_API_returned()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Holds(ProductAKey + @"\Net",
+            ExpandSz("1", SetupFolder), ExpandSz("2", MediaFolder));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_list_s_key_holds_one_entry_fewer_than_the_API_returned()
+    {
+        // The same two entries let the copy through when the key holds both.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, SetupName, SetupFolder, MediaFolder);
+        f.Files.Opens(MediaPackage, 9);
+        f.Msi.Registry.Holds(ProductAKey + @"\Net", ExpandSz("1", SetupFolder));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Theory]
+    [InlineData("2")]
+    [InlineData("01")]
+    [InlineData("")]
+    public void A_copy_is_kept_when_the_list_s_one_value_is_named_anything_but_1(string name)
+    {
+        // The empty name is the key's default value.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Holds(ProductAKey + @"\Net", ExpandSz(name, SetupFolder));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Theory]
+    [InlineData(@"D:\Other\")]
+    [InlineData(@"d:\setup\")]
+    [InlineData(@"D:\Setup")]
+    [InlineData(null)]
+    public void A_copy_is_kept_when_the_list_s_key_holds_other_text_than_the_API_returned(string? text)
+    {
+        // Null is a value of a type other than a string.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Holds(ProductAKey + @"\Net", text is null ? Dword("1") : ExpandSz("1", text));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Theory]
+    [InlineData(RegistryKeyPresence.Absent)]
+    [InlineData(RegistryKeyPresence.Unreadable)]
+    public void A_copy_is_kept_when_the_source_list_key_is_not_read(RegistryKeyPresence presence)
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Answers(ProductAKey, presence);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Theory]
+    [InlineData(RegistryKeyPresence.Absent)]
+    [InlineData(RegistryKeyPresence.Unreadable)]
+    public void A_copy_is_kept_when_the_network_key_is_not_read_while_the_API_returned_an_entry(
+        RegistryKeyPresence presence)
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Answers(ProductAKey + @"\Net", presence);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_let_through_when_the_network_key_is_empty_and_the_API_returned_nothing()
+    {
+        // Beside the product recording no network source, where the key is not there at
+        // all.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, SetupName);
+        f.Msi.Registry.Holds(ProductAKey + @"\Net");
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+    }
+
+    [Theory]
+    [InlineData("http://localhost/setup/")]
+    [InlineData("file:///D:/Other/")]
+    [InlineData("ftp://server/setup/")]
+    public void A_copy_is_kept_when_its_list_holds_a_URL(string url)
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsUrls(ProductA, isPatch: false, null, MsiInstallContext.Machine, url);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_its_URL_entries_will_not_read()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.UrlListAnswers(ProductA, isPatch: false, null, MsiInstallContext.Machine, MsiError.AccessDenied);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_URL_key_holds_an_entry_the_API_did_not_return()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Holds(ProductAKey + @"\URL", ExpandSz("2", "file:///C:/Windows/Installer/"));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Theory]
+    [InlineData(MsiInstallProperty.LastUsedSource)]
+    [InlineData(MsiInstallProperty.LastUsedType)]
+    [InlineData(MsiInstallProperty.MediaPackagePath)]
+    public void A_copy_is_kept_when_a_property_of_its_list_will_not_read(string property)
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.ListPropertyAnswers(ProductA, isPatch: false, null, MsiInstallContext.Machine, property,
+            MsiError.AccessDenied);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_neither_property_of_the_source_used_last_will_read()
+    {
+        // The key holds no source used last, which is how a list with none reads, so only
+        // the two failed reads keep the copy.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.ListPropertyAnswers(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedSource, MsiError.AccessDenied);
+        f.Msi.ListPropertyAnswers(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedType, MsiError.AccessDenied);
+        f.Msi.Registry.Holds(ProductAKey, Sz(MsiInstallProperty.PackageName, SetupName));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_source_used_last_is_on_no_list()
+    {
+        // The registry holds it as the API answers it, so only its place keeps the copy.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedSource, InstallerFolder + @"\");
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Theory]
+    [InlineData("u", "http://localhost/setup/")]
+    [InlineData("m", @"E:\")]
+    [InlineData("u", SetupFolder)]
+    [InlineData("x", SetupFolder)]
+    public void A_copy_is_kept_when_the_source_used_last_is_not_a_network_source(string type, string source)
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedType, type);
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedSource, source);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_let_through_when_there_is_no_source_used_last()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedSource, "");
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedType, "");
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+    }
+
+    [Theory]
+    [InlineData(@"n;1;C:\Windows\Installer\")]
+    [InlineData(@"u;1;D:\Setup\")]
+    [InlineData("n;1")]
+    [InlineData("n")]
+    [InlineData(null)]
+    public void A_copy_is_kept_when_the_registry_holds_the_source_used_last_otherwise_than_the_API_answers(
+        string? stored)
+    {
+        // The API answers the fixture's own entry, of type "n". Null is a value of a type
+        // other than a string.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Holds(ProductAKey,
+            Sz(MsiInstallProperty.PackageName, SetupName),
+            stored is null
+                ? Dword(MsiInstallProperty.LastUsedSource)
+                : ExpandSz(MsiInstallProperty.LastUsedSource, stored));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_copy_is_kept_when_the_registry_holds_no_source_used_last_while_the_API_answers_one(bool emptyValue)
+    {
+        // The API answers the fixture's own entry, which is on the list, so only what the
+        // key holds keeps the copy: no LastUsedSource value, or an empty one.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Holds(ProductAKey, emptyValue
+            ? new[] { Sz(MsiInstallProperty.PackageName, SetupName), ExpandSz(MsiInstallProperty.LastUsedSource, "") }
+            : new[] { Sz(MsiInstallProperty.PackageName, SetupName) });
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_registry_holds_a_source_used_last_the_API_answers_as_none()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedSource, "");
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedType, "");
+        f.Msi.Registry.Holds(ProductAKey,
+            Sz(MsiInstallProperty.PackageName, SetupName),
+            ExpandSz(MsiInstallProperty.LastUsedSource, "n;1;" + SetupFolder));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_API_answers_a_media_package_path()
+    {
+        // The registry's Media key names none, so only the API's answer keeps the copy.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.MediaPackagePath, "disk1");
+        f.Msi.Registry.Holds(ProductAKey + @"\Media", Sz("1", ";"));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Theory]
+    [InlineData("disk1")]
+    [InlineData(null)]
+    public void A_copy_is_kept_when_the_media_key_holds_a_media_package_path(string? text)
+    {
+        // The API answers none, so only the registry's value keeps the copy. Null is a
+        // value of a type other than a string.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Holds(ProductAKey + @"\Media",
+            Sz("1", ";"), text is null ? Dword("MediaPackage") : Sz("MediaPackage", text));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_media_key_will_not_read()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Answers(ProductAKey + @"\Media", RegistryKeyPresence.Unreadable);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_let_through_when_there_is_no_media_key()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Registry.Answers(ProductAKey + @"\Media", RegistryKeyPresence.Absent);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_per_user_managed_installation_s_list_is_read_under_its_account()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Installed(ProductA, (UserSid, MsiInstallContext.UserManaged));
+        f.Msi.RecordsPackage(ProductA, UserSid, MsiInstallContext.UserManaged, Recorded);
+        f.Msi.RecordsSources(ProductA, UserSid, MsiInstallContext.UserManaged, SetupName, SetupFolder);
+
+        const string Key =
+            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Managed\S-1-5-21-9-9-9-1001\Installer\Products\"
+            + @"11111111111111111111111111111111\SourceList";
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+        Assert.Equal(new[] { Key, Key + @"\Net", Key + @"\URL", Key + @"\Media" }, f.Msi.Registry.Reads);
+    }
+
+    [Theory]
+    [InlineData(@"S-1-5-21-9-9-9-1001\..\..")]
+    [InlineData("s-1-5-21-9-9-9-1001")]
+    [InlineData("S-")]
+    public void A_copy_is_kept_when_its_account_will_not_make_a_key_name(string sid)
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Installed(ProductA, (sid, MsiInstallContext.UserManaged));
+        f.Msi.RecordsPackage(ProductA, sid, MsiInstallContext.UserManaged, Recorded);
+        f.Msi.RecordsSources(ProductA, sid, MsiInstallContext.UserManaged, SetupName, SetupFolder);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+        Assert.Empty(f.Msi.Registry.Reads);
+    }
+
+    [Fact]
+    public void Without_the_registry_reader_a_copy_is_kept_and_no_key_is_read()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+
+        var outcome = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk)
+            .Screen(new[] { Package(Candidate) }, default, null, InInstallerFolder)[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome);
+        Assert.Empty(f.Msi.Registry.Reads);
+    }
+
+    [Fact]
+    public void The_composition_root_gives_the_check_its_registry_reader()
+    {
+        using var services = new ServiceCollection().AddInstallerCleanCore().BuildServiceProvider();
+
+        var check = Assert.IsType<DeclaredProductCheck>(services.GetRequiredService<IDeclaredProductCheck>());
+
+        Assert.True(check.ReadsSourceListKeys);
+    }
+
+    [Fact]
     public void Without_the_file_readers_no_recorded_package_is_read()
     {
         // The same fixture as the tests above, which scripts every read, handed to a
@@ -816,7 +1298,7 @@ public class DeclaredProductCheckTests
         f.Files.Opens(SecondCopy, 5);
         f.Disk.AddFile(SecondCopy, new MockFileData(new byte[100]));
 
-        var outcomes = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk)
+        var outcomes = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
             .Screen(new[] { Package(Candidate), Package(SecondCopy) }, default, null, InInstallerFolder);
 
         Assert.All(outcomes, o => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, o));
@@ -893,7 +1375,7 @@ public class DeclaredProductCheckTests
         (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
             ScriptedFileIdentities Files, MockFileSystem Disk) f,
         Func<string, bool?>? namesAFileInInstallerFolder = null) =>
-        new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk)
+        new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
             .Screen(new[] { Patch(PatchCopy) }, default, null,
                 namesAFileInInstallerFolder ?? InInstallerFolder)[0];
 
@@ -1192,7 +1674,7 @@ public class DeclaredProductCheckTests
     {
         var f = APatchCopyBesideTheRecordedCopy();
 
-        var outcome = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk)
+        var outcome = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
             .Screen(new[] { Patch(PatchCopy) })[0];
 
         Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, outcome);
@@ -1228,8 +1710,7 @@ public class DeclaredProductCheckTests
     [Fact]
     public void A_patch_copy_is_kept_when_a_source_entry_of_the_patch_holds_a_variable_that_is_not_set()
     {
-        // The entry keeps its '%' signs through the expansion, so where it points is
-        // not known. Read as it stands, the path finds no file and would be skipped.
+        // Read as it stands, the path finds no file and would be skipped.
         const string Variable = "INSTALLERCLEAN_TEST_UNSET_SOURCE";
         Assert.Null(Environment.GetEnvironmentVariable(Variable));
         var entry = $@"%{Variable}%\Setup\";
@@ -1380,6 +1861,214 @@ public class DeclaredProductCheckTests
         Assert.Equal(4, f.Msi.PatchPackageReads.Count);
     }
 
+    [Fact]
+    public void A_patch_copy_is_kept_when_a_source_entry_of_the_patch_holds_a_variable_that_is_set()
+    {
+        const string Variable = "INSTALLERCLEAN_TEST_SET_PATCH_SOURCE";
+        var entry = $@"%{Variable}%\";
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.RecordsPatchSources(PatchQ, null, MsiInstallContext.Machine, PatchSetupName, entry);
+        f.Files.Answers(entry + PatchSetupName, FileIdentityRead.NamesNothing);
+
+        Environment.SetEnvironmentVariable(Variable, @"D:\Setup");
+        try
+        {
+            Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(Variable, null);
+        }
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_patch_s_package_name_names_more_than_a_file()
+    {
+        const string Name = @"Windows\Installer\fix.msp";
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.RecordsPatchSources(PatchQ, null, MsiInstallContext.Machine, Name, SetupFolder);
+        f.Files.Answers(SetupFolder + Name, FileIdentityRead.NamesNothing);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    // ---- The registry key holding the patch's list ----
+    //
+    // The same comparison as a product's, through the same code. These pin the patch's
+    // own keys and that each rule reaches a patch.
+
+    private const string PatchQKey =
+        @"SOFTWARE\Classes\Installer\Patches\33333333333333333333333333333333\SourceList";
+
+    [Fact]
+    public void A_patch_copy_is_let_through_when_the_registry_holds_the_patch_s_list_the_API_returned()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile, ScreenThePatchCopy(f));
+        Assert.Equal(
+            new[] { PatchQKey, PatchQKey + @"\Net", PatchQKey + @"\URL", PatchQKey + @"\Media" },
+            f.Msi.Registry.Reads);
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_patch_s_list_key_holds_an_entry_past_a_gap()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.Registry.Holds(PatchQKey + @"\Net",
+            ExpandSz("1", SetupFolder), ExpandSz("3", InstallerFolder + @"\"));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_patch_s_list_key_holds_other_text_than_the_API_returned()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.Registry.Holds(PatchQKey + @"\Net", ExpandSz("1", @"D:\Other\"));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_patch_s_list_key_holds_another_package_name()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.Registry.Holds(PatchQKey,
+            Sz(MsiInstallProperty.PackageName, @"Windows\Installer\" + PatchSetupName),
+            ExpandSz(MsiInstallProperty.LastUsedSource, "n;1;" + SetupFolder));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_patch_s_list_key_holds_no_package_name()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.Registry.Holds(PatchQKey, ExpandSz(MsiInstallProperty.LastUsedSource, "n;1;" + SetupFolder));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_patch_s_list_key_holds_the_package_name_as_a_REG_EXPAND_SZ()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.Registry.Holds(PatchQKey,
+            ExpandSz(MsiInstallProperty.PackageName, PatchSetupName),
+            ExpandSz(MsiInstallProperty.LastUsedSource, "n;1;" + SetupFolder));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_patch_s_list_holds_a_URL()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.RecordsUrls(PatchQ, isPatch: true, null, MsiInstallContext.Machine, "http://localhost/fix/");
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_patch_s_URL_key_holds_an_entry_the_API_did_not_return()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.Registry.Holds(PatchQKey + @"\URL", ExpandSz("1", "file:///C:/Windows/Installer/"));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Theory]
+    [InlineData(RegistryKeyPresence.Absent)]
+    [InlineData(RegistryKeyPresence.Unreadable)]
+    public void A_patch_copy_is_kept_when_the_patch_s_source_list_key_is_not_read(RegistryKeyPresence presence)
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.Registry.Answers(PatchQKey, presence);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_patch_s_source_used_last_is_on_no_list()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.ListProperty(PatchQ, isPatch: true, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedSource, InstallerFolder + @"\");
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_registry_holds_no_source_used_last_for_the_patch_while_the_API_answers_one()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.Registry.Holds(PatchQKey, Sz(MsiInstallProperty.PackageName, PatchSetupName));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_registry_holds_the_patch_s_source_used_last_otherwise()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.Registry.Holds(PatchQKey,
+            Sz(MsiInstallProperty.PackageName, PatchSetupName),
+            ExpandSz(MsiInstallProperty.LastUsedSource, @"n;1;C:\Windows\Installer\"));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_patch_s_list_names_a_media_package_path()
+    {
+        // The registry's Media key names none, so only the API's answer keeps the copy.
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.ListProperty(PatchQ, isPatch: true, null, MsiInstallContext.Machine,
+            MsiInstallProperty.MediaPackagePath, "disk1");
+        f.Msi.Registry.Holds(PatchQKey + @"\Media", Sz("1", ";"));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_patch_s_media_key_holds_a_media_package_path()
+    {
+        // The API answers none, so only the registry's value keeps the copy.
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.Registry.Holds(PatchQKey + @"\Media", Sz("1", ";"), Sz("MediaPackage", "disk1"));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+    }
+
+    [Fact]
+    public void Without_the_registry_reader_a_patch_copy_is_kept_and_no_key_is_read()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+
+        var outcome = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk)
+            .Screen(new[] { Patch(PatchCopy) }, default, null, InInstallerFolder)[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, outcome);
+        Assert.Empty(f.Msi.Registry.Reads);
+    }
+
+    [Fact]
+    public void A_patch_s_list_in_a_user_account_is_read_under_that_account()
+    {
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.HoldsPatch(PatchQ, ProductB, UserSid, MsiInstallContext.UserManaged);
+        f.Msi.RecordsPatchPackage(PatchQ, ProductB, UserSid, MsiInstallContext.UserManaged, RecordedPatch);
+        f.Msi.RecordsPatchSources(PatchQ, UserSid, MsiInstallContext.UserManaged, PatchSetupName, SetupFolder);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile, ScreenThePatchCopy(f));
+        Assert.Contains(
+            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Managed\S-1-5-21-9-9-9-1001\Installer\Patches\"
+            + @"33333333333333333333333333333333\SourceList",
+            f.Msi.Registry.Reads);
+    }
+
     // ---- Finding the registrations ----
     //
     // Two ways, unioned. The machine-wide patch enumeration lists every registration it
@@ -1441,7 +2130,7 @@ public class DeclaredProductCheckTests
         msi.PatchState(PatchQ, ProductA, null, MsiInstallContext.Machine, "1");
         msi.RecordsPatchPackage(PatchQ, ProductA, null, MsiInstallContext.Machine, "");
 
-        var outcome = new DeclaredProductCheck(msi, packages, new ScriptedFileIdentities(), new MockFileSystem())
+        var outcome = new DeclaredProductCheck(msi, packages, new ScriptedFileIdentities(), new MockFileSystem(), msi.Registry)
             .Screen(new[] { Patch(PatchCopy) })[0];
 
         Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, outcome);
@@ -1468,7 +2157,7 @@ public class DeclaredProductCheckTests
         msi.PatchState(PatchQ, ProductB, null, MsiInstallContext.Machine, "1");
         msi.RecordsPatchPackage(PatchQ, ProductB, null, MsiInstallContext.Machine, "");
 
-        var outcomes = new DeclaredProductCheck(msi, packages, new ScriptedFileIdentities(), new MockFileSystem())
+        var outcomes = new DeclaredProductCheck(msi, packages, new ScriptedFileIdentities(), new MockFileSystem(), msi.Registry)
             .Screen(new[] { Patch(PatchCopy), Patch(OtherCopy) });
 
         Assert.Equal(new[]
@@ -1487,7 +2176,7 @@ public class DeclaredProductCheckTests
         f.Files.Opens(SecondCopy, 5);
         f.Disk.AddFile(SecondCopy, new MockFileData(new byte[100]));
 
-        var outcomes = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk)
+        var outcomes = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
             .Screen(new[] { Patch(PatchCopy), Patch(SecondCopy) }, default, null, InInstallerFolder);
 
         Assert.All(outcomes, o => Assert.Equal(DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile, o));
@@ -1510,7 +2199,7 @@ public class DeclaredProductCheckTests
         f.Packages.DeclaresPatch(OtherPatchCopy, PatchR, ProductB);
         f.Msi.NotInstalled(ProductB, MsiError.UnknownProduct);
 
-        var outcomes = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk)
+        var outcomes = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
             .Screen(new[] { Patch(PatchCopy), Patch(OtherPatchCopy) }, default, null, InInstallerFolder);
 
         Assert.Equal(new[]
@@ -1764,7 +2453,7 @@ public class DeclaredProductCheckTests
         var f = APatchCopyBesideTheRecordedCopy();
         var recorded = new List<Exception>();
 
-        var outcome = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk)
+        var outcome = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
             .Screen(new[] { Patch(PatchCopy) }, default, (ex, _) => recorded.Add(ex), InInstallerFolder)[0];
 
         Assert.Equal(DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile, outcome);
@@ -1939,6 +2628,14 @@ internal sealed class ScriptedPackageIdentities : IPackageIdentityReader
 /// </summary>
 internal sealed class ScriptedMsiProducts : IMsiApi
 {
+    public ScriptedMsiProducts() => Registry = new ScriptedSourceListRegistry(this);
+
+    /// <summary>
+    /// The registry keys holding the source lists this API was scripted with, which hold
+    /// by default what the API answers.
+    /// </summary>
+    public ScriptedSourceListRegistry Registry { get; }
+
     private readonly Dictionary<string, uint> _answers = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (string? Sid, MsiInstallContext Context)[]> _instances =
         new(StringComparer.Ordinal);
@@ -2182,6 +2879,7 @@ internal sealed class ScriptedMsiProducts : IMsiApi
     {
         _packageNames[(productCode, sid, context)] = (MsiError.Success, packageName);
         _sources[(productCode, sid, context)] = new SourceList(folders);
+        _urlSources[(productCode, sid, context)] = new SourceList(Array.Empty<string>());
     }
 
     /// <summary>What reading one installation's PackageName returns instead of a value.</summary>
@@ -2267,6 +2965,7 @@ internal sealed class ScriptedMsiProducts : IMsiApi
     {
         _patchPackageNames[(patchCode, sid, context)] = (MsiError.Success, packageName);
         _patchSources[(patchCode, sid, context)] = new SourceList(folders);
+        _patchUrlSources[(patchCode, sid, context)] = new SourceList(Array.Empty<string>());
     }
 
     /// <summary>What reading a patch's PackageName in one account and context returns instead of a value.</summary>
@@ -2281,6 +2980,158 @@ internal sealed class ScriptedMsiProducts : IMsiApi
     public void PatchSourceListNeverEnds(string patchCode, string? sid, MsiInstallContext context) =>
         _patchSources[(patchCode, sid, context)] = new SourceList(new[] { @"D:\Somewhere\" }, Endless: true);
 
+    private readonly Dictionary<(string Code, string? Sid, MsiInstallContext Context), SourceList>
+        _urlSources = new();
+
+    private readonly Dictionary<(string Code, string? Sid, MsiInstallContext Context), SourceList>
+        _patchUrlSources = new();
+
+    /// <summary>
+    /// The URL entries on an installation's or a patch's source list, in list order. A
+    /// list scripted with <see cref="RecordsSources"/> or <see cref="RecordsPatchSources"/>
+    /// holds none until this says otherwise.
+    /// </summary>
+    public void RecordsUrls(string code, bool isPatch, string? sid, MsiInstallContext context, params string[] urls) =>
+        (isPatch ? _patchUrlSources : _urlSources)[(code, sid, context)] = new SourceList(urls);
+
+    /// <summary>What reading an installation's or a patch's URL entries returns instead of an entry.</summary>
+    public void UrlListAnswers(string code, bool isPatch, string? sid, MsiInstallContext context, uint error) =>
+        (isPatch ? _patchUrlSources : _urlSources)[(code, sid, context)] =
+            new SourceList(Array.Empty<string>(), error);
+
+    private readonly Dictionary<(string Code, bool IsPatch, string? Sid, MsiInstallContext Context, string Property),
+        (uint Error, string Value)> _listProperties = new();
+
+    /// <summary>
+    /// What an installation's or a patch's source list answers for
+    /// <see cref="MsiInstallProperty.LastUsedSource"/>,
+    /// <see cref="MsiInstallProperty.LastUsedType"/> or
+    /// <see cref="MsiInstallProperty.MediaPackagePath"/>, in place of what the scripted
+    /// list gives: its first network entry as the source used last, of type "n", no source
+    /// used last where it has no network entry, and no media package path.
+    /// </summary>
+    public void ListProperty(string code, bool isPatch, string? sid, MsiInstallContext context,
+        string property, string value) =>
+        _listProperties[(code, isPatch, sid, context, property)] = (MsiError.Success, value);
+
+    /// <summary>What reading one of those three properties returns instead of a value.</summary>
+    public void ListPropertyAnswers(string code, bool isPatch, string? sid, MsiInstallContext context,
+        string property, uint error) =>
+        _listProperties[(code, isPatch, sid, context, property)] = (error, string.Empty);
+
+    /// <summary>
+    /// The answer for one of the three properties <see cref="ListProperty"/> names.
+    /// AN UNSCRIPTED LIST THROWS, for the reason every other read here does.
+    /// </summary>
+    private (uint Error, string Value) ListPropertyOf(string code, bool isPatch, string? sid,
+        MsiInstallContext context, string property)
+    {
+        if (_listProperties.TryGetValue((code, isPatch, sid, context, property), out var scripted)) return scripted;
+
+        if (!(isPatch ? _patchSources : _sources).TryGetValue((code, sid, context), out var list))
+            throw new InvalidOperationException(
+                $"the fake was asked for the {property} of {(isPatch ? "patch" : "product")} {code} "
+                + $"for {sid ?? "the machine"} in {context}, whose source list no test scripted");
+
+        var first = list.Folders.Length > 0 ? list.Folders[0] : string.Empty;
+        return property switch
+        {
+            MsiInstallProperty.LastUsedSource => (MsiError.Success, first),
+            MsiInstallProperty.LastUsedType => (MsiError.Success, first.Length > 0 ? "n" : string.Empty),
+            MsiInstallProperty.MediaPackagePath => (MsiError.Success, string.Empty),
+            _ => throw new InvalidOperationException($"the fake scripts no source-list property {property}"),
+        };
+    }
+
+    /// <summary>
+    /// A <c>SourceList</c> key, or its <c>Net</c>, <c>URL</c> or <c>Media</c> key, per
+    /// machine or per user and managed.
+    /// </summary>
+    private static readonly Regex SourceListKey = new(
+        @"^SOFTWARE\\(?:Classes\\Installer|Microsoft\\Windows\\CurrentVersion\\Installer\\Managed\\(?<sid>S-[0-9-]+)\\Installer)"
+        + @"\\(?<kind>Products|Patches)\\(?<packed>[0-9A-F]{32})\\SourceList(?:\\(?<key>Net|URL|Media))?$",
+        RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// What the registry key at <paramref name="path"/> holds for the list this API was
+    /// scripted with, as Windows holds it: the package name as a REG_SZ; the source used
+    /// last as a REG_EXPAND_SZ holding its type, the index 1 and its text, each followed
+    /// by a ';' but the last; each network entry as a REG_EXPAND_SZ named by its number
+    /// from 1, and each URL entry the same way, a key with none being absent; and a
+    /// <c>Media</c> key holding the REG_SZ "1" and the media package path where there is
+    /// one. A path that names no scripted list throws.
+    /// </summary>
+    internal RegistryKeyValues MirroredKey(string path)
+    {
+        var match = SourceListKey.Match(path);
+        if (!match.Success)
+            throw new InvalidOperationException($"the fake registry was asked for {path}, which is no source-list key");
+
+        var isPatch = match.Groups["kind"].Value == "Patches";
+        var sid = match.Groups["sid"].Success ? match.Groups["sid"].Value : null;
+        var context = sid is null ? MsiInstallContext.Machine : MsiInstallContext.UserManaged;
+        var code = UnpackedForTheFake(match.Groups["packed"].Value);
+
+        if (!(isPatch ? _patchSources : _sources).TryGetValue((code, sid, context), out var list))
+            throw new InvalidOperationException(
+                $"the fake registry was asked for {path}, whose list no test scripted");
+
+        switch (match.Groups["key"].Value)
+        {
+            case "Net":
+                return Numbered(list.Folders);
+            case "URL":
+                return Numbered((isPatch ? _patchUrlSources : _urlSources).TryGetValue((code, sid, context), out var urls)
+                    ? urls.Folders
+                    : Array.Empty<string>());
+            case "Media":
+            {
+                var media = new List<RegistryValue> { new("1", RegistryValueKind.String, ";") };
+                var packagePath = ListPropertyOf(code, isPatch, sid, context, MsiInstallProperty.MediaPackagePath);
+                if (packagePath.Error == MsiError.Success && packagePath.Value.Length > 0)
+                    media.Add(new RegistryValue("MediaPackage", RegistryValueKind.String, packagePath.Value));
+                return new RegistryKeyValues(RegistryKeyPresence.Present, media);
+            }
+            default:
+            {
+                var values = new List<RegistryValue>();
+                if ((isPatch ? _patchPackageNames : _packageNames).TryGetValue((code, sid, context), out var name)
+                    && name.Error == MsiError.Success)
+                    values.Add(new RegistryValue(MsiInstallProperty.PackageName, RegistryValueKind.String, name.Value));
+
+                var source = ListPropertyOf(code, isPatch, sid, context, MsiInstallProperty.LastUsedSource);
+                var type = ListPropertyOf(code, isPatch, sid, context, MsiInstallProperty.LastUsedType);
+                if (source.Error == MsiError.Success && type.Error == MsiError.Success && source.Value.Length > 0)
+                    values.Add(new RegistryValue(MsiInstallProperty.LastUsedSource, RegistryValueKind.ExpandString,
+                        $"{type.Value};1;{source.Value}"));
+                return new RegistryKeyValues(RegistryKeyPresence.Present, values);
+            }
+        }
+    }
+
+    private static RegistryKeyValues Numbered(string[] entries) =>
+        entries.Length == 0
+            ? new RegistryKeyValues(RegistryKeyPresence.Absent)
+            : new RegistryKeyValues(RegistryKeyPresence.Present,
+                entries.Select((entry, i) => new RegistryValue(
+                        (i + 1).ToString(CultureInfo.InvariantCulture), RegistryValueKind.ExpandString, entry))
+                    .ToArray());
+
+    /// <summary>
+    /// A packed code turned back into its braced GUID through the GUID's bytes: each pair
+    /// of characters is one byte in the GUID's own byte order, written low digit first.
+    /// Worked out apart from the production code's field-by-field form, so the two are
+    /// not one mistake made twice.
+    /// </summary>
+    private static string UnpackedForTheFake(string packed)
+    {
+        var bytes = new byte[16];
+        for (var i = 0; i < 16; i++)
+            bytes[i] = byte.Parse(string.Concat(packed[2 * i + 1], packed[2 * i]),
+                NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+        return new Guid(bytes).ToString("B").ToUpperInvariant();
+    }
+
     /// <summary>ERROR_INVALID_PARAMETER, which a source-list call out of sequence answers.</summary>
     internal const uint InvalidParameter = 87;
 
@@ -2291,11 +3142,13 @@ internal sealed class ScriptedMsiProducts : IMsiApi
     private uint _sourcePosition;
 
     /// <summary>
-    /// Answers a network source list the way Windows does, one entry per index and
-    /// <see cref="MsiError.NoMoreItems"/> past the last: a product's when the options
+    /// Answers a network or a URL source list the way Windows does, one entry per index
+    /// and <see cref="MsiError.NoMoreItems"/> past the last: a product's when the options
     /// say the code is a product code, and a patch's when they say it is a patch code.
     /// Each kind is looked up only among what was scripted for that kind, so a product
-    /// code asked about as a patch, or a patch code as a product, throws.
+    /// code asked about as a patch, or a patch code as a product, throws. Only a network
+    /// walk is recorded in <see cref="SourceListWalks"/> or
+    /// <see cref="PatchSourceListWalks"/>.
     ///
     /// IT KEEPS THE POSITION OF THE WALK BETWEEN CALLS. A call at index 0 starts the
     /// walk again, a call at the position is answered, and a call at any other index
@@ -2315,8 +3168,10 @@ internal sealed class ScriptedMsiProducts : IMsiApi
         {
             MsiSourceListOptions.Product | MsiSourceListOptions.Network => (_sources, "product"),
             MsiSourceListOptions.Patch | MsiSourceListOptions.Network => (_patchSources, "patch"),
+            MsiSourceListOptions.Product | MsiSourceListOptions.Url => (_urlSources, "product URL"),
+            MsiSourceListOptions.Patch | MsiSourceListOptions.Url => (_patchUrlSources, "patch URL"),
             _ => throw new InvalidOperationException(
-                "the declared-product check reads a product's or a patch's network sources, "
+                "the declared-product check reads a product's or a patch's network and URL sources, "
                 + $"and was asked with options {options}"),
         };
 
@@ -2328,9 +3183,10 @@ internal sealed class ScriptedMsiProducts : IMsiApi
         if (index == 0)
         {
             _sourcePosition = 0;
-            if (source is not null)
-                (kind == "patch" ? PatchSourceListWalks : SourceListWalks)
-                    .Add((productCodeOrPatchCode, userSid, context));
+            if (source is not null && kind == "product")
+                SourceListWalks.Add((productCodeOrPatchCode, userSid, context));
+            else if (source is not null && kind == "patch")
+                PatchSourceListWalks.Add((productCodeOrPatchCode, userSid, context));
         }
         else if (index != _sourcePosition)
         {
@@ -2360,29 +3216,53 @@ internal sealed class ScriptedMsiProducts : IMsiApi
     }
 
     /// <summary>
-    /// Answers PackageName off a patch's source list, with the real API's two-call
-    /// shape. It is the one source-list property the check reads and a patch the one
-    /// kind it reads it for, a product's being read through
-    /// <see cref="GetProductInfo"/>, so anything else throws.
+    /// Answers the source-list properties the check reads, with the real API's two-call
+    /// shape: PackageName for a patch, a product's being read through
+    /// <see cref="GetProductInfo"/>, and for either kind the three
+    /// <see cref="ListProperty"/> names. Anything else throws.
     ///
-    /// AN UNSCRIPTED PATCH THROWS. A package name naming no file at any source is an
-    /// answer that lets a patch copy through, so a fake inventing one would let a test
+    /// AN UNSCRIPTED PATCH OR LIST THROWS. A package name naming no file at any source is
+    /// an answer that lets a patch copy through, so a fake inventing one would let a test
     /// assert an offer nothing established.
     /// </summary>
     public uint GetSourceListInfo(string productCodeOrPatchCode, string? userSid, MsiInstallContext context,
         uint options, string property, char[]? value, ref uint valueLength)
     {
-        if (options != MsiSourceListOptions.Patch || property != MsiInstallProperty.PackageName)
-            throw new InvalidOperationException(
-                "the declared-product check reads a patch's PackageName off its source list, "
-                + $"and was asked for {property} with options {options}");
+        var isPatch = options switch
+        {
+            MsiSourceListOptions.Patch => true,
+            MsiSourceListOptions.Product => false,
+            _ => throw new InvalidOperationException(
+                $"the declared-product check reads a source-list property with a product or a patch code, "
+                + $"and was asked with options {options}"),
+        };
 
-        if (!_patchPackageNames.TryGetValue((productCodeOrPatchCode, userSid, context), out var scripted))
-            throw new InvalidOperationException(
-                $"the fake was asked for the PackageName patch {productCodeOrPatchCode} has "
-                + $"for {userSid ?? "the machine"} in {context}, which no test scripted");
+        (uint Error, string Value) scripted;
+        if (property == MsiInstallProperty.PackageName)
+        {
+            if (!isPatch)
+                throw new InvalidOperationException(
+                    "the declared-product check reads a product's PackageName through MsiGetProductInfoEx, "
+                    + "and was asked for it off the source list");
 
-        if (value is null) PatchPackageNameReads.Add((productCodeOrPatchCode, userSid, context));
+            if (!_patchPackageNames.TryGetValue((productCodeOrPatchCode, userSid, context), out scripted))
+                throw new InvalidOperationException(
+                    $"the fake was asked for the PackageName patch {productCodeOrPatchCode} has "
+                    + $"for {userSid ?? "the machine"} in {context}, which no test scripted");
+
+            if (value is null) PatchPackageNameReads.Add((productCodeOrPatchCode, userSid, context));
+        }
+        else if (property is MsiInstallProperty.LastUsedSource or MsiInstallProperty.LastUsedType
+                 or MsiInstallProperty.MediaPackagePath)
+        {
+            scripted = ListPropertyOf(productCodeOrPatchCode, isPatch, userSid, context, property);
+        }
+        else
+        {
+            throw new InvalidOperationException(
+                $"the declared-product check reads no source-list property {property}");
+        }
+
         if (scripted.Error != MsiError.Success) return scripted.Error;
 
         if (value is not null)
@@ -2501,4 +3381,49 @@ internal sealed class ScriptedFileIdentities : IFileIdentityReader
         identity = scripted.Identity;
         return scripted.Outcome;
     }
+}
+
+/// <summary>
+/// A scripted <see cref="IRegistryReader"/> for the keys holding source lists. By default
+/// each key holds what the <see cref="ScriptedMsiProducts"/> it belongs to was scripted
+/// with, so the registry and the API agree (<see cref="ScriptedMsiProducts.MirroredKey"/>).
+/// A key a test scripts here answers as scripted instead, which is how a test makes the
+/// two disagree. The scripted keys are matched by their exact spelling, so a test
+/// scripting one also pins the path the check reads.
+///
+/// A PATH NAMING NO SCRIPTED LIST THROWS, and so does every read other than a key's
+/// values.
+/// </summary>
+internal sealed class ScriptedSourceListRegistry : IRegistryReader
+{
+    private readonly ScriptedMsiProducts _msi;
+    private readonly Dictionary<string, RegistryKeyValues> _keys = new(StringComparer.Ordinal);
+
+    internal ScriptedSourceListRegistry(ScriptedMsiProducts msi) => _msi = msi;
+
+    /// <summary>Every key path this reader was asked for, in order, spelled as asked.</summary>
+    public List<string> Reads { get; } = new();
+
+    /// <summary>The key is there and holds these values.</summary>
+    public void Holds(string keyPath, params RegistryValue[] values) =>
+        _keys[keyPath] = new RegistryKeyValues(RegistryKeyPresence.Present, values);
+
+    /// <summary>The key is not there, or will not read.</summary>
+    public void Answers(string keyPath, RegistryKeyPresence presence) =>
+        _keys[keyPath] = new RegistryKeyValues(presence);
+
+    public RegistryKeyValues LocalMachineValues(string keyPath)
+    {
+        Reads.Add(keyPath);
+        return _keys.TryGetValue(keyPath, out var scripted) ? scripted : _msi.MirroredKey(keyPath);
+    }
+
+    public RegistryKeyPresence LocalMachineKeyPresence(string relativePath) =>
+        throw new InvalidOperationException($"the declared-product check reads values, and was asked whether {relativePath} is there");
+
+    public RegistryMultiStringRead LocalMachineMultiStringValue(string keyPath, string valueName) =>
+        throw new InvalidOperationException($"the declared-product check reads no string array, and was asked for {keyPath} {valueName}");
+
+    public RegistryDwordRead LocalMachineDwordValue(string keyPath, string valueName) =>
+        throw new InvalidOperationException($"the declared-product check reads no number, and was asked for {keyPath} {valueName}");
 }

@@ -85,4 +85,33 @@ internal sealed class RegistryReader : IRegistryReader
         catch (UnauthorizedAccessException) { return new RegistryDwordRead(RegistryDwordState.Unreadable); }
         catch (ObjectDisposedException) { return new RegistryDwordRead(RegistryDwordState.Unreadable); }
     }
+
+    public RegistryKeyValues LocalMachineValues(string keyPath)
+    {
+        try
+        {
+            using var hive = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
+            using var key = hive.OpenSubKey(keyPath);
+            if (key is null) return new RegistryKeyValues(RegistryKeyPresence.Absent);
+
+            // The default value is listed under the empty name when it is set, so a
+            // caller sees it as a value like any other. Each value's type is read beside
+            // its text. DoNotExpandEnvironmentNames gives a REG_EXPAND_SZ as the text it
+            // holds; a REG_SZ and a REG_EXPAND_SZ come back as strings and every other
+            // type as something else, which is reported as no text rather than converted.
+            var names = key.GetValueNames();
+            var values = new RegistryValue[names.Length];
+            for (var i = 0; i < names.Length; i++)
+                values[i] = new RegistryValue(
+                    names[i],
+                    key.GetValueKind(names[i]),
+                    key.GetValue(names[i], null, RegistryValueOptions.DoNotExpandEnvironmentNames) as string);
+
+            return new RegistryKeyValues(RegistryKeyPresence.Present, values);
+        }
+        catch (SecurityException) { return new RegistryKeyValues(RegistryKeyPresence.Unreadable); }
+        catch (IOException) { return new RegistryKeyValues(RegistryKeyPresence.Unreadable); }
+        catch (UnauthorizedAccessException) { return new RegistryKeyValues(RegistryKeyPresence.Unreadable); }
+        catch (ObjectDisposedException) { return new RegistryKeyValues(RegistryKeyPresence.Unreadable); }
+    }
 }

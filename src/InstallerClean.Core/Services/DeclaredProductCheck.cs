@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.IO.Abstractions;
 using InstallerClean.Interop;
 using InstallerClean.Models;
+using Microsoft.Win32;
 
 namespace InstallerClean.Services;
 
@@ -16,7 +18,9 @@ namespace InstallerClean.Services;
 /// <c>LocalPackage</c> each registration records and the patch package the patch's
 /// source list points at in each registration's account and context. A source list in
 /// a per-user-unmanaged context is not read, and an installation or registration in
-/// one keeps the file.
+/// one keeps the file. Every source list it does read is read twice, through the API
+/// and from the registry key that holds it, and a list the two do not agree on keeps
+/// the file.
 ///
 /// IT COMPOSES THINGS THAT ALREADY EXIST. The reading of each file, package or
 /// patch, is the reader's. The asking is
@@ -38,6 +42,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     private readonly IPackageIdentityReader _identityReader;
     private readonly IFileIdentityReader? _fileIdentities;
     private readonly IFileSystem? _fileSystem;
+    private readonly IRegistryReader? _registry;
 
     /// <param name="fileIdentities">
     /// Identifies the file each recorded package path opens, and the candidate's own.
@@ -46,29 +51,39 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// Answers whether a recorded package path names a file, so that a value naming a
     /// folder is not taken for a package.
     /// </param>
+    /// <param name="registry">
+    /// Reads the registry key each source list is held in, which the list the API
+    /// returns is checked against.
+    /// </param>
     /// <remarks>
     /// WITHOUT BOTH FILE READERS NO RECORDED PACKAGE IS LOOKED AT, and every candidate
     /// whose declared product is installed is kept as
     /// <see cref="DeclaredProductOutcome.DeclaredProductInstalled"/>, and every
     /// candidate whose declared patch is registered as
-    /// <see cref="DeclaredProductOutcome.DeclaredPatchRegistered"/>. That is the
-    /// direction a missing dependency has to fail in. The composition root supplies
-    /// both.
+    /// <see cref="DeclaredProductOutcome.DeclaredPatchRegistered"/>. WITHOUT THE
+    /// REGISTRY READER NO SOURCE LIST IS RELIED ON, and every candidate the comparison
+    /// reaches a source list for is kept the same way. That is the direction a missing
+    /// dependency has to fail in. The composition root supplies all three.
     /// </remarks>
     public DeclaredProductCheck(
         IMsiApi msi,
         IPackageIdentityReader identityReader,
         IFileIdentityReader? fileIdentities = null,
-        IFileSystem? fileSystem = null)
+        IFileSystem? fileSystem = null,
+        IRegistryReader? registry = null)
     {
         _msi = msi;
         _identityReader = identityReader;
         _fileIdentities = fileIdentities;
         _fileSystem = fileSystem;
+        _registry = registry;
     }
 
     /// <summary>Whether this check compares recorded packages with the candidate.</summary>
     internal bool ComparesRecordedPackages => _fileIdentities is not null && _fileSystem is not null;
+
+    /// <summary>Whether this check reads the registry key each source list is held in.</summary>
+    internal bool ReadsSourceListKeys => _registry is not null;
 
     /// <inheritdoc />
     public IReadOnlyList<DeclaredProductOutcome> Screen(
@@ -251,23 +266,40 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// patch's in one account and context, and answers false where those sources
     /// cannot be ruled out.
     ///
-    /// WHAT IT READS, AND WHY THAT IS ALL. When Windows Installer needs a product's
-    /// original package rather than its cached copy, a repair among other things, it
-    /// looks for the file named by <c>PackageName</c> in the folders on the product's
-    /// source list, starting with the last one it used, which is itself an entry on
-    /// that list. A patch has a source list and a package name of its own, and this
-    /// reads them as it reads a product's. The network sources are the ones that are
-    /// folders; the others are web addresses and removable media. So the package name
-    /// and the network sources between them name every file a source can be.
+    /// WHAT IT COMPARES, AND WHAT KEEPS THE COPY INSTEAD. When Windows Installer needs a
+    /// product's original package rather than its cached copy, a repair among other
+    /// things, it tries the source it used last and then the sources on the product's
+    /// source list, network folders, media and URLs, looking in each for the file named
+    /// by <c>PackageName</c>. A patch has a source list and a package name of its own,
+    /// and this reads them as it reads a product's. The folders compared are the network
+    /// sources. Everything else on the list is read to decide whether the copy is kept,
+    /// and it is kept for any of these:
+    /// - A URL ENTRY, WHATEVER ITS SCHEME. A web address can name this PC as well as any
+    ///   other. No URL is compared, and one on the list keeps the copy.
+    /// - AN ENTRY NAMING AN ENVIRONMENT VARIABLE, one holding a '%'. Whoever reads the
+    ///   entry may expand the variable in its own environment, so the folder Windows
+    ///   Installer looks in need not be the text compared.
+    /// - A LIST THE REGISTRY HOLDS DIFFERENTLY. The list the API returns is compared
+    ///   with the key it is held in (<see cref="SourceListKeyPath"/>), entry by entry
+    ///   (<see cref="IsTheList"/>), so an entry the API does not return, past a gap in
+    ///   the numbering or anywhere else, keeps the copy. So does a package name the key
+    ///   holds otherwise than the API answers it, or holds as a REG_EXPAND_SZ
+    ///   (<see cref="HoldsThePackageName"/>).
+    /// - A SOURCE USED LAST THAT IS NOT A NETWORK ENTRY ON THE LIST, it being the one
+    ///   Windows Installer tries first, or that the registry holds differently
+    ///   (<see cref="SourceUsedLastIsOnTheList"/>).
+    /// - A MEDIA PACKAGE PATH, the package's path on the installation media
+    ///   (<see cref="NamesNoMediaPackagePath"/>). No media source is compared, and a list
+    ///   naming a path on one keeps the copy.
     ///
-    /// FALSE, WHICH KEEPS THE FILE, for: no way to compare against the Installer
-    /// folder; a per-user-unmanaged account and context, whose list is not read; a
-    /// package name or a source list that will not read; an empty package
-    /// name; a source entry holding a null, one that will not expand and one still
-    /// holding a '%' once expanded; a source whose package would be a file directly in
-    /// the Installer folder, or where that cannot be established; and a source package
-    /// that exists and will not identify. A source package that is not there is
-    /// skipped, being no file.
+    /// FALSE, WHICH KEEPS THE FILE, for: no way to compare against the Installer folder
+    /// or to read the registry; a per-user-unmanaged account and context, whose list is
+    /// not read; a package name, a source list or a property of the list that will not
+    /// read; an empty package name, or one holding a '\', a '/', a ':' or a '%'; each
+    /// of the five above; a source entry holding a null; a source whose package would be
+    /// a file directly in the Installer folder, or where that cannot be established; and
+    /// a source package that exists and will not identify. A source package that is not
+    /// there is skipped, being no file.
     /// </summary>
     /// <param name="isPatch">
     /// Whether <paramref name="code"/> is a patch code rather than a product code. The
@@ -281,7 +313,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         Func<string, bool?>? namesAFileInInstallerFolder,
         List<FileIdentity> opened)
     {
-        if (namesAFileInInstallerFolder is null || _fileIdentities is null) return false;
+        if (namesAFileInInstallerFolder is null || _fileIdentities is null || _registry is null) return false;
 
         // A PER-USER-UNMANAGED SOURCE LIST IS NOT READ, IN ANY ACCOUNT, AND THE COPY IS
         // KEPT. Microsoft documents that an administrator cannot enumerate another
@@ -305,29 +337,43 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var packageName = name.Value.TrimEnd('\0');
         if (packageName.Length == 0) return false;
 
-        var sources = NetworkSourcesOf(code, isPatch, sid, context);
+        // A package name holding a '\', a '/' or a ':' names a folder or a drive as well
+        // as a file. Such a name keeps the copy, since with no media package path a media
+        // source's package is that name below the root of its volume, and no media source
+        // is compared. A package name holding a '%' names a variable, which whoever reads
+        // the name may expand in its own environment, and keeps the copy as well.
+        if (packageName.IndexOfAny(['\\', '/', ':', '%']) >= 0) return false;
+
+        var sources = SourcesOf(code, isPatch, sid, context, MsiSourceListOptions.Network);
         if (sources is null) return false;
 
-        foreach (var entry in sources)
-        {
-            // Expanded the way the recorded cached-package path is, so a folder spelled
-            // with a variable is compared as the folder it names. Where the source
-            // points is not known, and the copy is kept, for an entry holding a null,
-            // which the expansion would cut short; for one that will not expand; and
-            // for one still holding a '%' once expanded, as a variable that is not set
-            // leaves it.
-            if (entry.Contains('\0')) return false;
-            string folder;
-            try
-            {
-                folder = InstallerCacheHelpers.ExpandRecordedPath(entry);
-            }
-            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
-            {
-                return false;
-            }
-            if (folder.Contains('%')) return false;
+        var urls = SourcesOf(code, isPatch, sid, context, MsiSourceListOptions.Url);
+        if (urls is null || urls.Count > 0) return false;
 
+        // An entry naming an environment variable keeps the copy, and so does one holding
+        // a null, which would cut the entry short wherever it is read as a path.
+        foreach (var entry in sources)
+            if (entry.Contains('%') || entry.Contains('\0')) return false;
+
+        var path = SourceListKeyPath(code, isPatch, sid, context);
+        if (path is null) return false;
+
+        var sourceList = _registry.LocalMachineValues(path);
+        if (sourceList.Presence != RegistryKeyPresence.Present || sourceList.Values is null) return false;
+
+        // The name the key holds has to be the one the API answered, text for text, so
+        // a '\', a '/', a ':' or a '%' keeps the copy whichever of the two holds it.
+        // Loosen that comparison and the stored name needs the character test of its own.
+        if (!HoldsThePackageName(sourceList.Values, packageName)) return false;
+
+        if (!IsTheList(_registry.LocalMachineValues(path + @"\Net"), sources)
+            || !IsTheList(_registry.LocalMachineValues(path + @"\URL"), urls)
+            || !NamesNoMediaPackagePath(code, isPatch, sid, context, _registry.LocalMachineValues(path + @"\Media"))
+            || !SourceUsedLastIsOnTheList(code, isPatch, sid, context, sources, sourceList.Values))
+            return false;
+
+        foreach (var folder in sources)
+        {
             // Joined with a backslash by hand rather than with Path.Combine, whose
             // separator is the host's.
             var package = folder.EndsWith('\\') ? folder + packageName : folder + '\\' + packageName;
@@ -353,9 +399,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     }
 
     /// <summary>
-    /// The folders on one network source list, a product's or a patch's as
-    /// <paramref name="isPatch"/> says, in the order Windows lists them, or null where
-    /// the list did not read to its end.
+    /// The entries on one source list, network or URL as <paramref name="sourceType"/>
+    /// says, of a product or a patch as <paramref name="isPatch"/> says, in the order
+    /// Windows lists them, or null where the list did not read to its end.
     ///
     /// ONE CALL PER ENTRY, WITH THE BUFFER. Windows keeps the position of the walk
     /// between calls. A call at index 0 starts the walk again, a call at the position
@@ -372,11 +418,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// without ending, since what lies beyond it is unread. The index moves on only
     /// after a success, so no entry is passed over.
     /// </summary>
-    private IReadOnlyList<string>? NetworkSourcesOf(
-        string code, bool isPatch, string? sid, MsiInstallContext context)
+    private IReadOnlyList<string>? SourcesOf(
+        string code, bool isPatch, string? sid, MsiInstallContext context, uint sourceType)
     {
-        var options = (isPatch ? MsiSourceListOptions.Patch : MsiSourceListOptions.Product)
-            | MsiSourceListOptions.Network;
+        var options = (isPatch ? MsiSourceListOptions.Patch : MsiSourceListOptions.Product) | sourceType;
         var sources = new List<string>();
         var buffer = new char[SourceBufferLength];
 
@@ -397,6 +442,181 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Whether neither the API nor the registry gives a product's or a patch's list a
+    /// media package path: the API's answer for
+    /// <see cref="MsiInstallProperty.MediaPackagePath"/> and the <c>MediaPackage</c>
+    /// value of the list's <c>Media</c> key, <paramref name="media"/>. A key that is not
+    /// there names none. A read of the property that fails, a key that will not read and
+    /// a value of a type other than a string all answer false, which keeps the file.
+    /// </summary>
+    private bool NamesNoMediaPackagePath(
+        string code, bool isPatch, string? sid, MsiInstallContext context, RegistryKeyValues media)
+    {
+        var kind = isPatch ? MsiSourceListOptions.Patch : MsiSourceListOptions.Product;
+        var answered = InstallerQueryService.ReadSourceListProperty(
+            _msi, code, sid, context, kind, MsiInstallProperty.MediaPackagePath);
+        if (answered.Unreadable || answered.Value.TrimEnd('\0').Length > 0) return false;
+
+        if (media.Presence == RegistryKeyPresence.Absent) return true;
+        if (media.Presence != RegistryKeyPresence.Present || media.Values is null) return false;
+
+        var stored = ValueNamed(media.Values, "MediaPackage", out var count)?.Text;
+        return count == 0 || stored is { Length: 0 };
+    }
+
+    /// <summary>
+    /// Whether the source Windows Installer used last for a product or a patch, in one
+    /// account and context, is one of <paramref name="network"/>, compared as text, so
+    /// that the folder it tries first is one of the folders compared; and whether the
+    /// registry holds it as the API answers it.
+    ///
+    /// THE REGISTRY HOLDS IT AS ONE VALUE of the <c>SourceList</c> key,
+    /// <paramref name="sourceList"/>: the source's type, its index on the list and its
+    /// text, each followed by a ';' but the last. The API answers the type and the text
+    /// as two properties. The stored type and text have to be the two the API answers,
+    /// and a value that is not there or is empty has to be answered as no source at all.
+    ///
+    /// NO SOURCE USED LAST ANSWERS TRUE, Windows Installer then going straight to the
+    /// list. A URL or a media source, a source of any other kind, one on no list, one the
+    /// registry holds differently and a read that fails answer false, which keeps the
+    /// file.
+    /// </summary>
+    private bool SourceUsedLastIsOnTheList(
+        string code,
+        bool isPatch,
+        string? sid,
+        MsiInstallContext context,
+        IReadOnlyList<string> network,
+        IReadOnlyList<RegistryValue> sourceList)
+    {
+        var kind = isPatch ? MsiSourceListOptions.Patch : MsiSourceListOptions.Product;
+        var source = InstallerQueryService.ReadSourceListProperty(
+            _msi, code, sid, context, kind, MsiInstallProperty.LastUsedSource);
+        var type = InstallerQueryService.ReadSourceListProperty(
+            _msi, code, sid, context, kind, MsiInstallProperty.LastUsedType);
+        if (source.Unreadable || type.Unreadable) return false;
+
+        var folder = source.Value.TrimEnd('\0');
+        var folderType = type.Value.TrimEnd('\0');
+
+        var stored = ValueNamed(sourceList, MsiInstallProperty.LastUsedSource, out var count)?.Text;
+        if (count > 0 && stored is null) return false;
+        if (string.IsNullOrEmpty(stored)) return folder.Length == 0 && folderType.Length == 0;
+
+        var parts = stored.Split(';', 3);
+        if (parts.Length != 3
+            || !string.Equals(parts[0], folderType, StringComparison.Ordinal)
+            || !string.Equals(parts[2], folder, StringComparison.Ordinal)
+            || folder.Length == 0
+            || !string.Equals(folderType, "n", StringComparison.Ordinal))
+            return false;
+
+        foreach (var entry in network)
+            if (string.Equals(entry, folder, StringComparison.Ordinal)) return true;
+
+        return false;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="key"/> holds exactly <paramref name="entries"/>: values
+    /// named 1 to n and nothing else, n being the number of entries, each holding as its
+    /// text the entry at its place. A key that is not there holds an empty list. A key
+    /// that will not read, a gap in the numbering, a value of any other name or of a type
+    /// other than a string, one entry more or fewer, and any other text all answer false.
+    /// The text is compared as stored, entries holding a '%' having already kept the file.
+    /// </summary>
+    private static bool IsTheList(RegistryKeyValues key, IReadOnlyList<string> entries)
+    {
+        if (key.Presence == RegistryKeyPresence.Absent) return entries.Count == 0;
+        if (key.Presence != RegistryKeyPresence.Present || key.Values is null) return false;
+        if (key.Values.Count != entries.Count) return false;
+
+        for (var i = 0; i < entries.Count; i++)
+        {
+            var text = ValueNamed(key.Values, (i + 1).ToString(CultureInfo.InvariantCulture), out var count)?.Text;
+            if (count != 1 || !string.Equals(text, entries[i], StringComparison.Ordinal)) return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Whether the values of the <c>SourceList</c> key, <paramref name="sourceList"/>,
+    /// hold <paramref name="packageName"/>, the API's answer, as their one
+    /// <c>PackageName</c> value: a REG_SZ with that text, compared as text. A value that
+    /// is not there, one holding other text and one of any other type answer false,
+    /// which keeps the file. A REG_EXPAND_SZ is among them even where its text is the
+    /// same, being a value its reader may expand in the reader's own environment, so the
+    /// name Windows Installer looks for need not be the text compared.
+    /// </summary>
+    private static bool HoldsThePackageName(IReadOnlyList<RegistryValue> sourceList, string packageName)
+    {
+        var stored = ValueNamed(sourceList, MsiInstallProperty.PackageName, out var count);
+        return count == 1
+            && stored is { Kind: RegistryValueKind.String } value
+            && string.Equals(value.Text, packageName, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The value named <paramref name="name"/> among <paramref name="values"/>, or null
+    /// where none is, and in <paramref name="count"/> how many values carry that name,
+    /// compared without case as the registry compares value names.
+    /// </summary>
+    private static RegistryValue? ValueNamed(IReadOnlyList<RegistryValue> values, string name, out int count)
+    {
+        RegistryValue? found = null;
+        count = 0;
+        foreach (var value in values)
+        {
+            if (!string.Equals(value.Name, name, StringComparison.OrdinalIgnoreCase)) continue;
+            found = value;
+            count++;
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// The HKLM path this check reads a product's or a patch's <c>SourceList</c> key
+    /// from, in one account and context. Per machine,
+    /// <c>SOFTWARE\Classes\Installer\Products</c> or <c>...\Patches</c>, then the code
+    /// in its packed form, then <c>SourceList</c>; per user and managed, the same below
+    /// <c>SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Managed\&lt;SID&gt;\Installer</c>.
+    /// The network entries are read from its <c>Net</c> key and the URL entries from its
+    /// <c>URL</c> key, each value named by the entry's number from 1. A key not found at
+    /// this path keeps the file.
+    ///
+    /// NULL, WHICH KEEPS THE FILE, for any other context, per machine with an account,
+    /// per user and managed without one, and a code or an account that will not make a
+    /// key name. An account is taken only as 'S-' followed by digits and hyphens, so no
+    /// account names a key outside its own.
+    /// </summary>
+    private static string? SourceListKeyPath(string code, bool isPatch, string? sid, MsiInstallContext context)
+    {
+        var packed = InstallerQueryService.PackRegistryCode(code);
+        if (packed is null) return null;
+
+        var kind = isPatch ? "Patches" : "Products";
+        if (context == MsiInstallContext.Machine && sid is null)
+            return $@"SOFTWARE\Classes\Installer\{kind}\{packed}\SourceList";
+
+        if (context == MsiInstallContext.UserManaged && IsAccount(sid))
+            return $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Managed\{sid}\Installer\{kind}\{packed}\SourceList";
+
+        return null;
+    }
+
+    /// <summary>Whether <paramref name="sid"/> is 'S-' followed by digits and hyphens.</summary>
+    private static bool IsAccount(string? sid)
+    {
+        if (sid is null || sid.Length < 3 || !sid.StartsWith("S-", StringComparison.Ordinal)) return false;
+        for (var i = 2; i < sid.Length; i++)
+            if (!char.IsAsciiDigit(sid[i]) && sid[i] != '-') return false;
+
+        return true;
     }
 
     /// <summary>

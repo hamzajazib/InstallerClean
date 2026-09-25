@@ -42,8 +42,13 @@ namespace InstallerClean.Services;
 /// that names nothing identifiable, that names a file declaring another product, or
 /// that names this file under another spelling. It is kept too while some source
 /// cannot be ruled out: one in the Installer folder itself, one naming this file, and
-/// one that cannot be read. An installation in a per-user-unmanaged context keeps it
-/// as well, its source list not being read.
+/// one that cannot be read. So it is while a source list holds something the check
+/// does not compare, a URL, an entry naming an environment variable, a media package
+/// path or a package name naming a folder, a drive or a variable; while the source
+/// used last is not a network entry on the list; and while the registry key holding
+/// the list does not hold what the API returned for it, package name included, or
+/// holds that name as anything but a REG_SZ. An installation in a per-user-unmanaged
+/// context keeps it as well, its source list not being read.
 ///
 /// A REGISTERED PATCH DOES NOT ON ITS OWN MAKE THIS FILE A COPY OF IT WINDOWS OPENS
 /// EITHER.
@@ -56,8 +61,9 @@ namespace InstallerClean.Services;
 /// file that does not read as the same patch, or that names this file under another
 /// spelling. It is kept too while some source on the patch's list cannot be ruled
 /// out: one in the Installer folder itself, one naming this file, and one that cannot
-/// be read. A registration in a per-user-unmanaged context keeps it as well, the
-/// patch's source list there not being read.
+/// be read, and for everything else a product's source list keeps it for. A
+/// registration in a per-user-unmanaged context keeps it as well, the patch's source
+/// list there not being read.
 ///
 /// A PATCH'S REGISTRATIONS ARE FOUND TWO WAYS, AND THE TWO ARE UNIONED. The
 /// machine-wide patch enumeration lists the registrations it names, each with its
@@ -172,10 +178,15 @@ public enum DeclaredProductOutcome
     /// not read, a source in the Installer folder itself, a source whose package is
     /// this file, and a source that cannot be resolved or whose package will not
     /// identify, and an installation in a per-user-unmanaged context, whose source list
-    /// is not read. In each of them the check cannot see which package that
-    /// installation opens, so this file could be it. A check constructed without its
-    /// two file readers, or screening without the Installer folder to compare against,
-    /// answers this for every installed product, having no way to look.
+    /// is not read. It covers a source list holding a URL, an entry naming an
+    /// environment variable, a media package path or a package name naming a folder, a
+    /// drive or a variable, one whose source used last is not a network entry on it,
+    /// and one whose registry key does not hold what the API returned for it, package
+    /// name included, or holds that name as anything but a REG_SZ. In each of them the
+    /// check cannot see which package that installation opens, so this file could be
+    /// it. A check constructed without its two file readers or its registry reader, or
+    /// screening without the Installer folder to compare against, answers this for
+    /// every installed product, having no way to look.
     ///
     /// WHAT IT DOES NOT ESTABLISH, so no copy may be built on it: that a program
     /// would break without this particular copy.
@@ -187,8 +198,12 @@ public enum DeclaredProductOutcome
     /// installation of that product records a cached package that is present, is a
     /// different file, and itself declares the same product, no installation is in a
     /// per-user-unmanaged context, and no installation's source list points at the
-    /// Installer folder or at this file. The candidate goes on being decided by
-    /// everything else.
+    /// Installer folder or at this file. Every installation's source list is held in
+    /// the registry as the API returns it, with its package name as a REG_SZ, holds
+    /// network entries only, none of them naming an environment variable, names no
+    /// media package path, has a package name naming a file alone, and was last used
+    /// from one of its own network entries or not at all. The candidate goes on being
+    /// decided by everything else.
     ///
     /// Windows Installer opens a product's cached package through the
     /// <c>LocalPackage</c> value recorded for each installation, and its original
@@ -260,9 +275,11 @@ public enum DeclaredProductOutcome
     /// patch that will not read, a source in the Installer folder itself, a source
     /// whose package is this file, and a source that cannot be resolved or whose
     /// package will not identify, and a registration in a per-user-unmanaged context,
-    /// where the patch's source list is not read. A check constructed without its two
-    /// file readers, or screening without the Installer folder to compare against,
-    /// answers this for every registered patch, having no way to look.
+    /// where the patch's source list is not read. It covers the patch's source list
+    /// keeping the file for any of the reasons a product's does at
+    /// <see cref="DeclaredProductInstalled"/>. A check constructed without its two file
+    /// readers or its registry reader, or screening without the Installer folder to
+    /// compare against, answers this for every registered patch, having no way to look.
     ///
     /// A REGISTRATION IS ANY RECORD WINDOWS HOLDS OF THE PATCH AGAINST AN INSTALLATION
     /// OF A PRODUCT, whatever state the patch is in there, so it is wider than
@@ -278,7 +295,9 @@ public enum DeclaredProductOutcome
     /// registration records a cached copy that is present, is a different file, and
     /// itself declares the same patch, no registration is in a per-user-unmanaged
     /// context, and no source list of the patch, in the account and context of any
-    /// registration, points at the Installer folder or at this file.
+    /// registration, points at the Installer folder or at this file. Each of those
+    /// source lists passes what a product's has to at
+    /// <see cref="DeclaredProductCachedAsAnotherFile"/>.
     /// The candidate goes on being decided by everything else.
     ///
     /// EVERY REGISTRATION, NOT ONE. A patch can be registered against several products

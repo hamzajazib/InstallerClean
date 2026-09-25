@@ -3575,6 +3575,40 @@ public sealed class InstallerQueryService : IInstallerQueryService
         return new string(guid);
     }
 
+    /// <summary>
+    /// A braced product or patch code written in the packed form Windows Installer names
+    /// its registry keys with, the inverse of <see cref="UnpackRegistryProductCode"/>, in
+    /// upper case as the installer writes it.
+    ///
+    /// Null for anything that is not a braced GUID, so a key path built from it names no
+    /// key rather than one belonging to something else.
+    /// </summary>
+    internal static string? PackRegistryCode(string code)
+    {
+        if (code.Length != 38 || code[0] != '{' || code[37] != '}') return null;
+        for (var i = 1; i < 37; i++)
+        {
+            if (i is 9 or 14 or 19 or 24)
+            {
+                if (code[i] != '-') return null;
+            }
+            else if (!char.IsAsciiHexDigit(code[i]))
+            {
+                return null;
+            }
+        }
+
+        var text = code.ToUpperInvariant();
+        var packed = new char[32];
+        CopyReversed(text, 1, 8, packed, 0);
+        CopyReversed(text, 10, 4, packed, 8);
+        CopyReversed(text, 15, 4, packed, 12);
+        CopySwappedPairs(text, 20, 4, packed, 16);
+        CopySwappedPairs(text, 25, 12, packed, 20);
+
+        return new string(packed);
+    }
+
     /// <summary>One field of the packed form, which is written least-significant first.</summary>
     private static void CopyReversed(string source, int start, int length, char[] target, int at)
     {

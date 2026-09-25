@@ -108,6 +108,9 @@ public static class MsiSourceListOptions
     /// against URL and removable-media sources.
     /// </summary>
     public const uint Network = 0x00000001;
+
+    /// <summary>MSISOURCETYPE_URL: sources that are URLs.</summary>
+    public const uint Url = 0x00000002;
 }
 
 /// <summary>
@@ -143,6 +146,28 @@ public static class MsiInstallProperty
     /// <c>MsiGetPatchInfoEx</c> not taking it.
     /// </summary>
     public const string PackageName = "PackageName";
+
+    /// <summary>
+    /// The source location Windows Installer used most recently for a product or a
+    /// patch (INSTALLPROPERTY_LASTUSEDSOURCE), which it tries before it searches the
+    /// source list. Read through <c>MsiSourceListGetInfo</c>.
+    /// </summary>
+    public const string LastUsedSource = "LastUsedSource";
+
+    /// <summary>
+    /// What kind of source <see cref="LastUsedSource"/> is
+    /// (INSTALLPROPERTY_LASTUSEDTYPE): "n" a network location, "u" a URL, "m" media, and
+    /// an empty string where there is no last used source. Read through
+    /// <c>MsiSourceListGetInfo</c>.
+    /// </summary>
+    public const string LastUsedType = "LastUsedType";
+
+    /// <summary>
+    /// The path of a product's or a patch's package relative to the root of its
+    /// installation media (INSTALLPROPERTY_MEDIAPACKAGEPATH). Read through
+    /// <c>MsiSourceListGetInfo</c>.
+    /// </summary>
+    public const string MediaPackagePath = "MediaPackagePath";
 
     /// <summary>Patch state: 1=Applied, 2=Superseded, 4=Obsoleted.</summary>
     public const string State = "State";

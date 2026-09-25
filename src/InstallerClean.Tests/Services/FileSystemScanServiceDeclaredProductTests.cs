@@ -175,7 +175,7 @@ public class FileSystemScanServiceDeclaredProductTests
         return new FileSystemScanService(
             QueryReturning(registered), fs, null,
             new[] { $@"{Folder}\a.msi", $@"{Folder}\b.msi" }, null, null,
-            new DeclaredProductCheck(msi, identities, files, fs))
+            new DeclaredProductCheck(msi, identities, files, fs, msi.Registry))
             .ScanAsync();
     }
 
@@ -382,7 +382,7 @@ public class FileSystemScanServiceDeclaredProductTests
         return new FileSystemScanService(
             QueryReturning(registered), fs, null,
             new[] { $@"{Folder}\copy.msp", $@"{Folder}\cached.msp" }, null, null,
-            new DeclaredProductCheck(msi, identities, files, fs))
+            new DeclaredProductCheck(msi, identities, files, fs, msi.Registry))
             .ScanAsync();
     }
 

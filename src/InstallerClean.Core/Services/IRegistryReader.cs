@@ -1,3 +1,5 @@
+using Microsoft.Win32;
+
 namespace InstallerClean.Services;
 
 /// <summary>Registry-read abstraction. All reads target HKLM in the 64-bit (Registry64) view; the keys checked are unwowed.</summary>
@@ -30,7 +32,33 @@ public interface IRegistryReader
     /// answer at all.
     /// </summary>
     RegistryDwordRead LocalMachineDwordValue(string keyPath, string valueName);
+
+    /// <summary>
+    /// Every value of one key: its name, its registry type, and its text where it
+    /// holds a string, read without expanding environment variables. Three-state for
+    /// the reason <see cref="LocalMachineKeyPresence"/> is: a key that is not there is
+    /// an answer, and a key nobody could read is the absence of one.
+    /// </summary>
+    RegistryKeyValues LocalMachineValues(string keyPath);
 }
+
+/// <summary>
+/// One value of a key as <see cref="IRegistryReader.LocalMachineValues"/> reads it.
+/// <see cref="Kind"/> is the value's registry type, which is what tells a REG_SZ from a
+/// REG_EXPAND_SZ holding the same text. <see cref="Text"/> is the value's text,
+/// unexpanded, where it reads as a string, which a REG_SZ and a REG_EXPAND_SZ do, and
+/// null otherwise.
+/// </summary>
+public readonly record struct RegistryValue(string Name, RegistryValueKind Kind, string? Text);
+
+/// <summary>
+/// The values of one key. <see cref="Values"/> is meaningful only when
+/// <see cref="Presence"/> is <see cref="RegistryKeyPresence.Present"/> and is null in
+/// every other state, so a caller that reads the values without the presence cannot
+/// tell a key that is not there from a key nobody could read.
+/// </summary>
+public readonly record struct RegistryKeyValues(
+    RegistryKeyPresence Presence, IReadOnlyList<RegistryValue>? Values = null);
 
 /// <summary>Whether an HKLM subkey is there. See <see cref="IRegistryReader.LocalMachineKeyPresence"/>.</summary>
 public enum RegistryKeyPresence
