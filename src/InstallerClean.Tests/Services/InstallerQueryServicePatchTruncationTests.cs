@@ -390,6 +390,40 @@ public class InstallerQueryServicePatchTruncationTests
     }
 
     [Fact]
+    public void A_listed_product_answering_that_it_is_not_installed_keeps_the_patch()
+    {
+        // The product enumeration listed the second product, and the State read put to
+        // it answers that the product is not installed. That contradicts the listing
+        // rather than answering whether the product holds the patch, so it withholds as
+        // a read that failed does. The answer that is skipped, that the installation
+        // holds no record of the patch, is the one A_patch_no_other_product_holds_is_
+        // still_offered is built on.
+        var msi = TwoProductsTheRegistryCannotSettle();
+        msi.PatchPropertyResult[(Patch, StillApplied, "State")] = UnknownProduct;
+
+        var row = TheSharedPatch(Confirm(msi));
+        Assert.False(row.IsRemovable);
+        Assert.True(row.RemovableWithheld);
+    }
+
+    [Theory]
+    [InlineData(UnknownProduct)]
+    [InlineData(UnknownPatch)]
+    public void An_uninstallable_read_contradicting_the_state_just_read_keeps_the_patch(uint answer)
+    {
+        // The State read has just answered, and not that the second product holds no
+        // record of the patch, so it holds one. The Uninstallable read on the same
+        // pairing then answers that it does not, or that its product is not installed,
+        // and either contradicts the answer before it. Both withhold.
+        var msi = TwoProductsTheRegistryCannotSettle();
+        msi.PatchPropertyResult[(Patch, StillApplied, "Uninstallable")] = answer;
+
+        var row = TheSharedPatch(Confirm(msi));
+        Assert.False(row.IsRemovable);
+        Assert.True(row.RemovableWithheld);
+    }
+
+    [Fact]
     public void A_machine_with_nothing_removable_is_never_asked_anything()
     {
         // The cost guard. This pass scales with products multiplied by removable
@@ -594,6 +628,79 @@ public class InstallerQueryServicePatchTruncationTests
         var row = TheSharedPatch(Confirm(msi));
         Assert.False(row.IsRemovable);
         Assert.False(row.RemovableWithheld);
+    }
+
+    [Fact]
+    public void A_holder_the_machine_wide_enumeration_listed_answering_that_it_holds_no_record_keeps_the_patch()
+    {
+        // The machine-wide patch enumeration lists the second product as holding the
+        // patch, per machine, and the State read put to it in that same context then
+        // answers that it holds no record of the patch. The two answers contradict each
+        // other, so it withholds as a read that failed. The same answer from a product
+        // nothing listed as a holder is skipped, which is
+        // A_declared_target_answering_that_it_holds_no_record_of_the_patch_leaves_the_offer_standing.
+        var msi = new FakeApi();
+        msi.AddProduct(Superseding);
+        msi.HoldPatch(Superseding, Patch, Shared, state: "2", uninstallable: "0");
+        msi.HiddenFromWalk.Add(StillApplied);
+        msi.HoldPatch(StillApplied, Patch, Shared, state: "1", uninstallable: "0");
+        msi.PatchPropertyResult[(Patch, StillApplied, "State")] = UnknownPatch;
+
+        var row = TheSharedPatch(Confirm(msi));
+        Assert.False(row.IsRemovable);
+        Assert.True(row.RemovableWithheld);
+    }
+
+    [Fact]
+    public void A_listed_holder_is_found_whatever_spelling_and_place_the_product_walk_gave_it()
+    {
+        // The product walk returns the second product, and the machine-wide patch
+        // enumeration names the same installation as holding the patch, spelling its
+        // code in lower case. The walk's copy is on the list first and answers that it
+        // holds no record of the patch; it is still a listed holder, so it withholds,
+        // rather than being skipped and leaving the later copy's answer to decide.
+        var lowerCase = StillApplied.ToLowerInvariant();
+        var msi = new FakeApi();
+        msi.AddProduct(Superseding);
+        msi.AddProduct(StillApplied);
+        msi.HoldPatch(Superseding, Patch, Shared, state: "2", uninstallable: "0");
+        msi.HoldPatch(lowerCase, Patch, Shared, state: "1", uninstallable: "0");
+        msi.PatchPropertyResult[(Patch, StillApplied, "State")] = UnknownPatch;
+
+        var row = TheSharedPatch(Confirm(msi));
+        Assert.False(row.IsRemovable);
+        Assert.True(row.RemovableWithheld);
+    }
+
+    /// <summary>
+    /// THE MUST-MISS FOR THE TWO TESTS ABOVE. The second product is named only by the patch
+    /// file's own Template and holds nothing, so no enumeration lists it as holding the
+    /// patch, and its answer that it holds no record of the patch is the ordinary one: it
+    /// is skipped and the offer stands. The read is shown to have been made, so the offer
+    /// standing is the skip and not a pairing that was never asked. A whole scan rather
+    /// than Confirm, for the reason given at
+    /// <see cref="A_declared_target_holding_no_patches_leaves_the_offer_standing"/>.
+    /// </summary>
+    [Fact]
+    public async Task A_declared_target_answering_that_it_holds_no_record_of_the_patch_leaves_the_offer_standing()
+    {
+        var msi = new FakeApi();
+        msi.AddProduct(Superseding);
+        msi.HoldPatch(Superseding, Patch, Shared, state: "2", uninstallable: "0");
+        msi.HiddenFromWalk.Add(StillApplied);
+        msi.PatchPropertyResult[(Patch, StillApplied, "State")] = UnknownPatch;
+
+        var result = await new InstallerQueryService(
+                msi,
+                RegistryWithCleanPatchSets(Superseding, StillApplied),
+                null,
+                Reader(Shared, StillApplied))
+            .GetRegisteredPackagesAsync();
+
+        var row = Assert.Single(result.Packages);
+        Assert.True(row.IsRemovable);
+        Assert.False(row.RemovableWithheld);
+        Assert.Contains((Patch, StillApplied, (string?)null, MsiInstallContext.Machine), msi.KeyedPatchReads);
     }
 
     [Fact]

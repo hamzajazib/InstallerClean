@@ -358,10 +358,14 @@ public sealed class RemovableReverifier : IRemovableReverifier
                     Interop.MsiInstallProperty.Uninstallable);
 
                 // A POSITIVE ZERO IS THE ONLY CLEAN ANSWER, and the scan reads a
-                // zero the same way. A record that is no longer registered is not a
-                // patch that can be rolled back and does not condemn; anything else,
-                // including a read that failed and a value that is absent, does.
-                if (siblingUninstallable.NotRegistered) continue;
+                // zero the same way. Anything else condemns: a read that failed, a
+                // value that is absent, and an answer that the installation holds no
+                // record of the patch or that its product is not installed. The
+                // sibling claims are the pairings the pre-lease re-verify's enumeration
+                // listed moments before the lease was taken (UnderLeaseClaims.From),
+                // and each is read in its own account and context, so either of those
+                // answers contradicts that listing. Where the patch or the installation
+                // has really gone in between, the batch path is held back all the same.
                 if (!siblingUninstallable.Unreadable && siblingUninstallable.Value == "0") continue;
 
                 // Every batch path registered to this product goes, with the cause the

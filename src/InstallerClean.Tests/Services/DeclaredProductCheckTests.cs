@@ -18,10 +18,11 @@ namespace InstallerClean.Tests.Services;
 /// about the direction it fails in. For a package two answers let a file through: a
 /// POSITIVE answer that Windows does not hold the declared product, and every
 /// installation of that product recording a package that is present and is another
-/// file, with no source of it reaching the Installer folder or the file. For a patch
-/// the same two: a POSITIVE answer that Windows holds no registration of the declared
-/// patch, and every registration of it recording a cached copy that is present and is
-/// another file, with no source of the patch reaching the Installer folder or the
+/// file, with none of them per user and unmanaged and no source of it reaching the
+/// Installer folder or the file. For a patch the same two: a POSITIVE answer that
+/// Windows holds no registration of the declared patch, and every registration of it
+/// recording a cached copy that is present and is another file, with none of them per
+/// user and unmanaged and no source of the patch reaching the Installer folder or the
 /// file. Every inability keeps the file.
 ///
 /// THE FAKES THROW ON ANYTHING NO TEST SCRIPTED, which is the point of them rather
@@ -416,6 +417,32 @@ public class DeclaredProductCheckTests
         var f = ACopyBesideTheRecordedPackage();
         f.Msi.Installed(ProductA,
             (null, MsiInstallContext.Machine),
+            (UserSid, MsiInstallContext.UserManaged));
+        f.Msi.RecordsPackage(ProductA, UserSid, MsiInstallContext.UserManaged, UsersPackage);
+        f.Msi.RecordsSources(ProductA, UserSid, MsiInstallContext.UserManaged, SetupName, SetupFolder);
+        f.Packages.Declares(UsersPackage, ProductA);
+        f.Files.Opens(UsersPackage, 3);
+        f.Disk.AddFile(UsersPackage, new MockFileData(new byte[100]));
+
+        var outcome = ScreenTheCopy(f);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome);
+        Assert.Equal(2, f.Msi.PackageReads.Count);
+        Assert.Equal(2, f.Msi.SourceListWalks.Count);
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_an_installation_is_per_user_unmanaged_whatever_its_source_list_holds()
+    {
+        // The copy that is let through above, with the second installation per user and
+        // unmanaged. It records another present package declaring the product, and its
+        // source list, were it read, points only at a folder holding no package. The
+        // source list in that context is not read, whichever account it is in, so the
+        // package that installation opens cannot be ruled out and this copy is kept.
+        const string UsersPackage = @"C:\Windows\Installer\c.msi";
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Installed(ProductA,
+            (null, MsiInstallContext.Machine),
             (UserSid, MsiInstallContext.UserUnmanaged));
         f.Msi.RecordsPackage(ProductA, UserSid, MsiInstallContext.UserUnmanaged, UsersPackage);
         f.Msi.RecordsSources(ProductA, UserSid, MsiInstallContext.UserUnmanaged, SetupName, SetupFolder);
@@ -425,8 +452,12 @@ public class DeclaredProductCheckTests
 
         var outcome = ScreenTheCopy(f);
 
-        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome);
-        Assert.Equal(2, f.Msi.PackageReads.Count);
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome);
+        Assert.True(outcome.Withholds());
+        // The machine's list was read and the user's was not.
+        var machineOnly = new[] { (ProductA, (string?)null, MsiInstallContext.Machine) };
+        Assert.Equal(machineOnly, f.Msi.PackageNameReads);
+        Assert.Equal(machineOnly, f.Msi.SourceListWalks);
     }
 
     [Fact]
@@ -438,8 +469,8 @@ public class DeclaredProductCheckTests
         var f = ACopyBesideTheRecordedPackage();
         f.Msi.Installed(ProductA,
             (null, MsiInstallContext.Machine),
-            (UserSid, MsiInstallContext.UserUnmanaged));
-        f.Msi.RecordsPackage(ProductA, UserSid, MsiInstallContext.UserUnmanaged, "");
+            (UserSid, MsiInstallContext.UserManaged));
+        f.Msi.RecordsPackage(ProductA, UserSid, MsiInstallContext.UserManaged, "");
 
         var outcome = ScreenTheCopy(f);
 
@@ -956,8 +987,8 @@ public class DeclaredProductCheckTests
         // that registration opens cannot be seen and this copy could be it. B is not in
         // the patch's own target list: the machine-wide enumeration is what names it.
         var f = APatchCopyBesideTheRecordedCopy();
-        f.Msi.HoldsPatch(PatchQ, ProductB, UserSid, MsiInstallContext.UserUnmanaged);
-        f.Msi.RecordsPatchPackage(PatchQ, ProductB, UserSid, MsiInstallContext.UserUnmanaged, "");
+        f.Msi.HoldsPatch(PatchQ, ProductB, UserSid, MsiInstallContext.UserManaged);
+        f.Msi.RecordsPatchPackage(PatchQ, ProductB, UserSid, MsiInstallContext.UserManaged, "");
 
         Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
     }
@@ -969,13 +1000,36 @@ public class DeclaredProductCheckTests
         // registrations name one file. Each registration's value is read and the file
         // they name is identified once.
         var f = APatchCopyBesideTheRecordedCopy();
-        f.Msi.HoldsPatch(PatchQ, ProductB, UserSid, MsiInstallContext.UserUnmanaged);
-        f.Msi.RecordsPatchPackage(PatchQ, ProductB, UserSid, MsiInstallContext.UserUnmanaged, RecordedPatch);
-        f.Msi.RecordsPatchSources(PatchQ, UserSid, MsiInstallContext.UserUnmanaged, PatchSetupName, SetupFolder);
+        f.Msi.HoldsPatch(PatchQ, ProductB, UserSid, MsiInstallContext.UserManaged);
+        f.Msi.RecordsPatchPackage(PatchQ, ProductB, UserSid, MsiInstallContext.UserManaged, RecordedPatch);
+        f.Msi.RecordsPatchSources(PatchQ, UserSid, MsiInstallContext.UserManaged, PatchSetupName, SetupFolder);
 
         Assert.Equal(DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile, ScreenThePatchCopy(f));
         Assert.Equal(2, f.Msi.PatchPackageReads.Count);
         Assert.Single(f.Files.Reads, p => p == RecordedPatch);
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_a_registration_is_per_user_unmanaged_whatever_its_source_list_holds()
+    {
+        // The copy that is let through above, with the second registration per user and
+        // unmanaged. It records the same present copy, and the patch's source list there,
+        // were it read, points only at a folder holding no package. The source list in
+        // that context is not read, whichever account it is in, so what that
+        // registration could open cannot be ruled out and this copy is kept.
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.HoldsPatch(PatchQ, ProductB, UserSid, MsiInstallContext.UserUnmanaged);
+        f.Msi.RecordsPatchPackage(PatchQ, ProductB, UserSid, MsiInstallContext.UserUnmanaged, RecordedPatch);
+        f.Msi.RecordsPatchSources(PatchQ, UserSid, MsiInstallContext.UserUnmanaged, PatchSetupName, SetupFolder);
+
+        var outcome = ScreenThePatchCopy(f);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, outcome);
+        Assert.True(outcome.Withholds());
+        // The machine's list was read and the user's was not.
+        var machineOnly = new[] { (PatchQ, (string?)null, MsiInstallContext.Machine) };
+        Assert.Equal(machineOnly, f.Msi.PatchPackageNameReads);
+        Assert.Equal(machineOnly, f.Msi.PatchSourceListWalks);
     }
 
     [Fact]
@@ -989,10 +1043,10 @@ public class DeclaredProductCheckTests
         packages.DeclaresPatch(RecordedPatch, PatchQ, ProductA);
 
         var msi = new ScriptedMsiProducts();
-        msi.Installed(ProductA, (UserSid, MsiInstallContext.UserUnmanaged));
-        msi.HoldsPatch(PatchQ, ProductA, UserSid, MsiInstallContext.UserUnmanaged);
-        msi.RecordsPatchPackage(PatchQ, ProductA, UserSid, MsiInstallContext.UserUnmanaged, RecordedPatch);
-        msi.RecordsPatchSources(PatchQ, UserSid, MsiInstallContext.UserUnmanaged, PatchSetupName, SetupFolder);
+        msi.Installed(ProductA, (UserSid, MsiInstallContext.UserManaged));
+        msi.HoldsPatch(PatchQ, ProductA, UserSid, MsiInstallContext.UserManaged);
+        msi.RecordsPatchPackage(PatchQ, ProductA, UserSid, MsiInstallContext.UserManaged, RecordedPatch);
+        msi.RecordsPatchSources(PatchQ, UserSid, MsiInstallContext.UserManaged, PatchSetupName, SetupFolder);
 
         var files = new ScriptedFileIdentities();
         files.Opens(PatchCopy, 1);
@@ -1007,10 +1061,10 @@ public class DeclaredProductCheckTests
 
         Assert.Equal(DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile, outcome);
         Assert.Equal(
-            new[] { (PatchQ, ProductA, (string?)UserSid, MsiInstallContext.UserUnmanaged) },
+            new[] { (PatchQ, ProductA, (string?)UserSid, MsiInstallContext.UserManaged) },
             msi.PatchPackageReads);
-        Assert.Equal(new[] { (PatchQ, (string?)UserSid, MsiInstallContext.UserUnmanaged) }, msi.PatchPackageNameReads);
-        Assert.Equal(new[] { (PatchQ, (string?)UserSid, MsiInstallContext.UserUnmanaged) }, msi.PatchSourceListWalks);
+        Assert.Equal(new[] { (PatchQ, (string?)UserSid, MsiInstallContext.UserManaged) }, msi.PatchPackageNameReads);
+        Assert.Equal(new[] { (PatchQ, (string?)UserSid, MsiInstallContext.UserManaged) }, msi.PatchSourceListWalks);
     }
 
     // ---- The patch's sources ----
@@ -1172,26 +1226,44 @@ public class DeclaredProductCheckTests
         Assert.Equal(DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile, ScreenThePatchCopy(f));
     }
 
-    [Theory]
-    [InlineData(UserSid, MsiInstallContext.UserManaged)]
-    [InlineData(OtherUserSid, MsiInstallContext.UserUnmanaged)]
-    public void A_patch_copy_is_kept_when_the_source_list_in_another_account_or_context_reaches_the_folder(
-        string sid, MsiInstallContext context)
+    [Fact]
+    public void A_patch_copy_is_kept_when_the_source_list_in_another_account_reaches_the_folder()
     {
-        // Patch Q is registered per machine against product A, for a user against
-        // product B, and once more in the account and context given: the same account in
-        // another context, or another account in the same context. All three record the
-        // same cached copy. The machine's list and the first user's are ruled out; the
-        // third list names a file in the Installer folder, so the copy is kept.
+        // Patch Q is registered per machine against product A, and against product B for
+        // two users, each in the managed per-user context. All three record the same
+        // cached copy. The machine's list and the first user's are ruled out; the second
+        // user's names a file in the Installer folder, so the copy is kept. The list is
+        // read per account, and the first user's answer does not stand for the second's.
         var f = APatchCopyBesideTheRecordedCopy();
-        f.Msi.HoldsPatch(PatchQ, ProductB, UserSid, MsiInstallContext.UserUnmanaged);
-        f.Msi.RecordsPatchPackage(PatchQ, ProductB, UserSid, MsiInstallContext.UserUnmanaged, RecordedPatch);
-        f.Msi.RecordsPatchSources(PatchQ, UserSid, MsiInstallContext.UserUnmanaged, PatchSetupName, SetupFolder);
-        f.Msi.HoldsPatch(PatchQ, ProductB, sid, context);
-        f.Msi.RecordsPatchPackage(PatchQ, ProductB, sid, context, RecordedPatch);
-        f.Msi.RecordsPatchSources(PatchQ, sid, context, "applied.msp", InstallerFolder + @"\");
+        f.Msi.HoldsPatch(PatchQ, ProductB, UserSid, MsiInstallContext.UserManaged);
+        f.Msi.RecordsPatchPackage(PatchQ, ProductB, UserSid, MsiInstallContext.UserManaged, RecordedPatch);
+        f.Msi.RecordsPatchSources(PatchQ, UserSid, MsiInstallContext.UserManaged, PatchSetupName, SetupFolder);
+        f.Msi.HoldsPatch(PatchQ, ProductB, OtherUserSid, MsiInstallContext.UserManaged);
+        f.Msi.RecordsPatchPackage(PatchQ, ProductB, OtherUserSid, MsiInstallContext.UserManaged, RecordedPatch);
+        f.Msi.RecordsPatchSources(PatchQ, OtherUserSid, MsiInstallContext.UserManaged, "applied.msp",
+            InstallerFolder + @"\");
 
         Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+        Assert.Contains((PatchQ, (string?)OtherUserSid, MsiInstallContext.UserManaged), f.Msi.PatchSourceListWalks);
+    }
+
+    [Fact]
+    public void A_patch_copy_is_kept_when_one_account_holds_it_unmanaged_as_well_as_managed()
+    {
+        // Patch Q is registered per machine against product A, and against product B for
+        // one user twice: in the managed per-user context, whose list is read and ruled
+        // out, and then in the unmanaged one. The source lists are told apart by context
+        // as well as by account, so the second registration is not taken as the first's
+        // list already read, and its context keeps the copy.
+        var f = APatchCopyBesideTheRecordedCopy();
+        f.Msi.HoldsPatch(PatchQ, ProductB, UserSid, MsiInstallContext.UserManaged);
+        f.Msi.RecordsPatchPackage(PatchQ, ProductB, UserSid, MsiInstallContext.UserManaged, RecordedPatch);
+        f.Msi.RecordsPatchSources(PatchQ, UserSid, MsiInstallContext.UserManaged, PatchSetupName, SetupFolder);
+        f.Msi.HoldsPatch(PatchQ, ProductB, UserSid, MsiInstallContext.UserUnmanaged);
+        f.Msi.RecordsPatchPackage(PatchQ, ProductB, UserSid, MsiInstallContext.UserUnmanaged, RecordedPatch);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredPatchRegistered, ScreenThePatchCopy(f));
+        Assert.Contains((PatchQ, (string?)UserSid, MsiInstallContext.UserManaged), f.Msi.PatchSourceListWalks);
     }
 
     [Fact]
@@ -1204,18 +1276,18 @@ public class DeclaredProductCheckTests
         var f = APatchCopyBesideTheRecordedCopy();
         f.Msi.HoldsPatch(PatchQ, ProductB, null, MsiInstallContext.Machine);
         f.Msi.RecordsPatchPackage(PatchQ, ProductB, null, MsiInstallContext.Machine, RecordedPatch);
-        f.Msi.HoldsPatch(PatchQ, ProductA, UserSid, MsiInstallContext.UserUnmanaged);
-        f.Msi.RecordsPatchPackage(PatchQ, ProductA, UserSid, MsiInstallContext.UserUnmanaged, RecordedPatch);
-        f.Msi.RecordsPatchSources(PatchQ, UserSid, MsiInstallContext.UserUnmanaged, PatchSetupName, SetupFolder);
-        f.Msi.HoldsPatch(PatchQ, ProductB, UserSid.ToLowerInvariant(), MsiInstallContext.UserUnmanaged);
-        f.Msi.RecordsPatchPackage(PatchQ, ProductB, UserSid.ToLowerInvariant(), MsiInstallContext.UserUnmanaged,
+        f.Msi.HoldsPatch(PatchQ, ProductA, UserSid, MsiInstallContext.UserManaged);
+        f.Msi.RecordsPatchPackage(PatchQ, ProductA, UserSid, MsiInstallContext.UserManaged, RecordedPatch);
+        f.Msi.RecordsPatchSources(PatchQ, UserSid, MsiInstallContext.UserManaged, PatchSetupName, SetupFolder);
+        f.Msi.HoldsPatch(PatchQ, ProductB, UserSid.ToLowerInvariant(), MsiInstallContext.UserManaged);
+        f.Msi.RecordsPatchPackage(PatchQ, ProductB, UserSid.ToLowerInvariant(), MsiInstallContext.UserManaged,
             RecordedPatch);
 
         Assert.Equal(DeclaredProductOutcome.DeclaredPatchCachedAsAnotherFile, ScreenThePatchCopy(f));
         var lists = new[]
         {
             (PatchQ, (string?)null, MsiInstallContext.Machine),
-            (PatchQ, (string?)UserSid, MsiInstallContext.UserUnmanaged),
+            (PatchQ, (string?)UserSid, MsiInstallContext.UserManaged),
         };
         Assert.Equal(lists, f.Msi.PatchPackageNameReads);
         Assert.Equal(lists, f.Msi.PatchSourceListWalks);
@@ -1994,6 +2066,12 @@ internal sealed class ScriptedMsiProducts : IMsiApi
     private readonly Dictionary<(string ProductCode, string? Sid, MsiInstallContext Context), (uint Error, string[] Folders, bool Endless)>
         _sources = new();
 
+    /// <summary>Every product PackageName read this API answered, in order.</summary>
+    public List<(string ProductCode, string? Sid, MsiInstallContext Context)> PackageNameReads { get; } = new();
+
+    /// <summary>Every walk of a product's source list this API started, in order.</summary>
+    public List<(string ProductCode, string? Sid, MsiInstallContext Context)> SourceListWalks { get; } = new();
+
     /// <summary>
     /// The package name and the network source folders one installation records, in
     /// list order.
@@ -2043,6 +2121,7 @@ internal sealed class ScriptedMsiProducts : IMsiApi
                 + $"in {context}, which no test scripted");
 
         if (value is null && property == MsiInstallProperty.LocalPackage) PackageReads.Add((productCode, userSid, context));
+        if (value is null && property == MsiInstallProperty.PackageName) PackageNameReads.Add((productCode, userSid, context));
         if (scripted.Error != MsiError.Success) return scripted.Error;
 
         if (value is not null)
@@ -2114,8 +2193,8 @@ internal sealed class ScriptedMsiProducts : IMsiApi
                 $"the fake was asked for the sources of {kind} {productCodeOrPatchCode} "
                 + $"for {userSid ?? "the machine"} in {context}, which no test scripted");
 
-        if (kind == "patch" && index == 0 && source is null)
-            PatchSourceListWalks.Add((productCodeOrPatchCode, userSid, context));
+        if (index == 0 && source is null)
+            (kind == "patch" ? PatchSourceListWalks : SourceListWalks).Add((productCodeOrPatchCode, userSid, context));
         if (scripted.Error != MsiError.Success) return scripted.Error;
         if (!scripted.Endless && index >= scripted.Folders.Length) return MsiError.NoMoreItems;
 

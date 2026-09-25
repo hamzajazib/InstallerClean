@@ -14,7 +14,9 @@ namespace InstallerClean.Services;
 /// products its Template names, finds the registrations of that patch through the
 /// machine-wide patch enumeration and the keyed patch read, and reads the
 /// <c>LocalPackage</c> each registration records and the patch package the patch's
-/// source list points at in each registration's account and context.
+/// source list points at in each registration's account and context. A source list in
+/// a per-user-unmanaged context is not read, and an installation or registration in
+/// one keeps the file.
 ///
 /// IT COMPOSES THINGS THAT ALREADY EXIST. The reading of each file, package or
 /// patch, is the reader's. The asking is
@@ -259,7 +261,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// and the network sources between them name every file a source can be.
     ///
     /// FALSE, WHICH KEEPS THE FILE, for: no way to compare against the Installer
-    /// folder; a package name or a source list that will not read; an empty package
+    /// folder; a per-user-unmanaged account and context, whose list is not read; a
+    /// package name or a source list that will not read; an empty package
     /// name; a source entry holding a null, one that will not expand and one still
     /// holding a '%' once expanded; a source whose package would be a file directly in
     /// the Installer folder, or where that cannot be established; and a source package
@@ -279,6 +282,16 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         List<FileIdentity> opened)
     {
         if (namesAFileInInstallerFolder is null || _fileIdentities is null) return false;
+
+        // A PER-USER-UNMANAGED SOURCE LIST IS NOT READ, IN ANY ACCOUNT, AND THE COPY IS
+        // KEPT. Microsoft documents that an administrator cannot enumerate another
+        // user's per-user-unmanaged installations, and not what the call answers in their
+        // place, so a list read there with no network source on it cannot be told from a
+        // list that was never read. So no answer from such a list is used, and the copy
+        // is kept whatever the list would say. The account this process runs as is not
+        // compared with the registration's, so its own per-user-unmanaged installations
+        // are kept the same way.
+        if (context == MsiInstallContext.UserUnmanaged) return false;
 
         // A patch's package name is read off its source list, MsiGetPatchInfoEx not
         // taking the property.

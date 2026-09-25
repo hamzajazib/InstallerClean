@@ -376,6 +376,51 @@ public class RemovableReverifierTests
     }
 
     [Fact]
+    public void A_sibling_answering_that_its_product_is_not_installed_holds_the_batch_path_back()
+    {
+        // The batch's own pairing on product one has just been re-read and answered, so
+        // the product is there, and a sibling read on it answering that the product is
+        // not installed contradicts that re-read. It condemns, and it is counted as the
+        // read that did not answer rather than as a claim.
+        const string path = @"C:\Windows\Installer\superseded.msp";
+        var msi = new ScriptedPatchApi();
+        msi.Set(PatchA, ProductOne, state: "2", uninstallable: "0");
+        msi.Set(PatchB, ProductOne, state: "2", uninstallable: "0");
+        msi.AbsentRecord(PatchB, ProductOne, "Uninstallable", code: 1605);
+        var svc = new RemovableReverifier(Substitute.For<IInstallerQueryService>(), msi);
+
+        var recheck = svc.RecheckUnderLease(new UnderLeaseClaims(
+            new[] { Claim(path, PatchA, ProductOne) },
+            new[] { Claim(path, PatchA, ProductOne), Claim(@"C:\Windows\Installer\other.msp", PatchB, ProductOne) }));
+
+        Assert.Equal(new[] { path }, recheck.HeldBack);
+        Assert.Equal(new HeldBackReasons(RecordsUnreadable: 1), recheck.Reasons);
+    }
+
+    [Fact]
+    public void A_sibling_answering_that_the_product_holds_no_record_of_it_holds_the_batch_path_back()
+    {
+        // The sibling pairing was listed by the enumeration the pre-lease re-verify ran
+        // moments before, and under the lease it answers that the product holds no record
+        // of that patch. The two answers contradict each other, so it condemns, counted
+        // as the read that did not answer. The batch's own pairing still passes on its
+        // own answer, so the sibling read is what holds the path back.
+        const string path = @"C:\Windows\Installer\superseded.msp";
+        var msi = new ScriptedPatchApi();
+        msi.Set(PatchA, ProductOne, state: "2", uninstallable: "0");
+        msi.Set(PatchB, ProductOne, state: "2", uninstallable: "0");
+        msi.AbsentRecord(PatchB, ProductOne, "Uninstallable", code: 1647);
+        var svc = new RemovableReverifier(Substitute.For<IInstallerQueryService>(), msi);
+
+        var recheck = svc.RecheckUnderLease(new UnderLeaseClaims(
+            new[] { Claim(path, PatchA, ProductOne) },
+            new[] { Claim(path, PatchA, ProductOne), Claim(@"C:\Windows\Installer\other.msp", PatchB, ProductOne) }));
+
+        Assert.Equal(new[] { path }, recheck.HeldBack);
+        Assert.Equal(new HeldBackReasons(RecordsUnreadable: 1), recheck.Reasons);
+    }
+
+    [Fact]
     public void An_empty_sibling_list_is_a_caller_saying_so_rather_than_an_accident()
     {
         // THIS TEST REPLACED A GUARD AND THE HISTORY IS THE POINT. The two lists first
@@ -705,9 +750,9 @@ public class RemovableReverifierTests
         private const uint MoreData = 234;
         private const uint FunctionFailed = 1627;
         // The two codes MsiGetPatchInfoEx documents for a pairing it cannot find,
-        // and the only two InstallerQueryService reads as an absence rather than a
-        // failure. A test scripting anything else here is scripting the other side
-        // of that allowlist.
+        // and the only two InstallerQueryService marks NotRegistered rather than
+        // leaving as a bare failure; it marks the second PatchNotHeld as well. A test
+        // scripting anything else here is scripting the other side of that allowlist.
         private const uint UnknownProduct = 1605;
         private const uint UnknownPatch = 1647;
 
@@ -728,8 +773,8 @@ public class RemovableReverifierTests
             _failing.Add((patchCode, productCode, property));
 
         /// <summary>
-        /// Answers this property with a documented "no such record" code, which is
-        /// a successful read of an absence and not a failure. Takes the code so a
+        /// Answers this property with a documented "no such record" code rather than
+        /// with a value or an undocumented failure. Takes the code so a
         /// test can pin both members of the allowlist: a product that has gone
         /// (1605) and a patch that is no longer applied to it (1647) come back
         /// differently and mean the same thing here.

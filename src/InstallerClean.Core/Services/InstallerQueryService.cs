@@ -1595,10 +1595,20 @@ public sealed class InstallerQueryService : IInstallerQueryService
                 var state = GetPatchProperty(_msi, patchCode, productCode, userSid, context,
                     MsiInstallProperty.State);
 
-                // Not registered against this product: a positive answer that
-                // this product does not hold the patch, so it says nothing about
-                // the verdict either way.
-                if (state.NotRegistered) continue;
+                // ONLY AN INSTALLATION ANSWERING THAT IT HOLDS NO RECORD OF THE PATCH IS
+                // SKIPPED, AND NOT ONE THE MACHINE-WIDE PATCH ENUMERATION HAS LISTED AS
+                // HOLDING IT. From any other installation that answer is a positive one
+                // that it does not hold the patch, so it says nothing about the verdict
+                // either way. From a listed holder it contradicts the listing, which
+                // named the same product, account and context this read is put in, so
+                // it withholds with every other read that did not answer.
+                //
+                // AN ANSWER THAT THE PRODUCT IS NOT INSTALLED IS NEVER SKIPPED. Every
+                // installation on this list was listed earlier in this scan, by the
+                // product enumeration, the recovery by name, the machine-wide patch
+                // enumeration or the resolve of a declared target, so that answer
+                // contradicts what the scan established, and it withholds too.
+                if (state.PatchNotHeld && !IsListedHolder(named, productCode, userSid, context)) continue;
 
                 if (state.Unreadable)
                 {
@@ -1606,9 +1616,13 @@ public sealed class InstallerQueryService : IInstallerQueryService
                     break;
                 }
 
+                // NOTHING HERE IS SKIPPED. The State read has just answered, and not
+                // that this installation holds no record of the patch, so it holds
+                // one, and an answer now that it does not, or that its product is not
+                // installed, contradicts the one before it. Both are unreadable as
+                // well, and withhold.
                 var uninstallable = GetPatchProperty(_msi, patchCode, productCode, userSid, context,
                     MsiInstallProperty.Uninstallable);
-                if (uninstallable.NotRegistered) continue;
                 if (uninstallable.Unreadable)
                 {
                     Downgrade(claimed, path, withheld: true);
@@ -1625,6 +1639,31 @@ public sealed class InstallerQueryService : IInstallerQueryService
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="listed"/>, the installations the machine-wide patch
+    /// enumeration named as holding one patch, holds the installation of
+    /// <paramref name="productCode"/> in <paramref name="userSid"/> and
+    /// <paramref name="context"/>. Codes and accounts are compared without case, the
+    /// enumerations each handing back their own spelling; the context is compared
+    /// exactly. Null, the enumeration naming no installation for the patch, holds none.
+    /// </summary>
+    private static bool IsListedHolder(
+        List<(string ProductCode, string? Sid, MsiInstallContext Context)>? listed,
+        string productCode,
+        string? userSid,
+        MsiInstallContext context)
+    {
+        if (listed is null) return false;
+
+        foreach (var holder in listed)
+            if (holder.Context == context
+                && string.Equals(holder.ProductCode, productCode, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(holder.Sid, userSid, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+        return false;
     }
 
     /// <summary>
@@ -4115,9 +4154,12 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// among that function's documented returns, and a code added here on how its
     /// name sounds is a guess with a file on the end of it.
     ///
-    /// Only the under-lease re-read asks this. The scan's own consumers of
-    /// <see cref="PropertyRead"/> read <c>Unreadable</c>, which is still set, so
-    /// the direction they fail in is unchanged.
+    /// Only the under-lease re-read of a batch's own pairings asks this, and it holds
+    /// the file back on it. The other consumers of <see cref="PropertyRead"/> read
+    /// <c>Unreadable</c>, which is set for both codes, <c>PatchNotHeld</c>, which
+    /// carries the second alone (<see cref="IsPatchNotHeld"/>), or the value and
+    /// nothing else, so none of them takes an answer that the product is not
+    /// installed as the record being absent.
     /// </summary>
     private static bool IsRecordAbsent(uint error) =>
         error is MsiError.UnknownProduct or MsiError.UnknownPatch;
@@ -4152,12 +4194,12 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// mostly products the machine does not have, so it would withhold on the
     /// ordinary case rather than on a fault.
     ///
-    /// THE SAME CODE IS CLASSIFIED AT FIVE OTHER POINTS IN THIS FILE, THREE OF
+    /// THE SAME CODE IS CLASSIFIED AT SIX OTHER POINTS IN THIS FILE, THREE OF
     /// THEM THE OTHER WAY, AND NOT ONE OF THOSE DISAGREEMENTS IS AN INCONSISTENCY
     /// TO TIDY AWAY. What separates the sites is whether something earlier in the
     /// same run has already established that the product exists, and not whether
-    /// the call names it: three of the five do name a product, and none of them
-    /// lets the scan act on the code as an absence.
+    /// the call names it: four of the six name a product or a patch, and none of
+    /// them lets the scan act on the code as an absence.
     ///
     /// Nothing has established it here, which is what the paragraph above is
     /// about: the question this call puts is whether the machine holds the code
@@ -4176,17 +4218,22 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// scan cannot see. What reading it as an absence would cost is written at
     /// that line.
     ///
-    /// ONE RETURN IS CLASSIFIED TWICE IN ONE EXPRESSION, ON PURPOSE, AT
-    /// <see cref="GetProductProperty"/> AND <see cref="GetPatchProperty"/>.
+    /// ONE RETURN IS CLASSIFIED MORE THAN ONCE IN ONE EXPRESSION, ON PURPOSE, AT
+    /// <see cref="ReadProductProperty"/>, <see cref="GetPatchProperty"/> AND
+    /// <see cref="ReadSourceListProperty"/>, which are the other three points.
     /// <see cref="IsBenignPropertyRead"/> does not carry the code, so the read
     /// is Unreadable and the scan's own consumers withhold on it;
     /// <see cref="IsRecordAbsent"/> does carry it, so the same return is
-    /// NotRegistered as well, which the under-lease re-read alone asks and which
-    /// is a different question: whether a registration has gone since the scan
-    /// read it. The two predicates read as a contradiction until that is known.
-    /// Putting the code on the benign list to settle them would turn a record
-    /// that has gone into a readable empty value, which is the direction that
-    /// costs a file.
+    /// NotRegistered as well, which the under-lease re-read of a batch's own
+    /// pairings alone asks and which is a different question: whether a
+    /// registration has gone since the scan read it. At
+    /// <see cref="GetPatchProperty"/> a third predicate,
+    /// <see cref="IsPatchNotHeld"/>, leaves the code off PatchNotHeld, which is the
+    /// question a caller that has just listed the installation puts: whether that
+    /// installation holds no record of the patch. The predicates read as a
+    /// contradiction until that is known. Putting the code on the benign list to
+    /// settle them would turn a record that has gone into a readable empty value,
+    /// which is the direction that costs a file.
     ///
     /// The meaning is the question's, not the number's.
     /// </summary>

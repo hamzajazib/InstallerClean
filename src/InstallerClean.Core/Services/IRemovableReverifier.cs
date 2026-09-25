@@ -221,9 +221,12 @@ public enum HeldBackReason
     /// TWO MECHANISMS REACH IT and the sentence is a superordinate over both
     /// rather than a convenience: a patch's own State or Uninstallable read
     /// failing during the re-verify's enumeration
-    /// (<see cref="Models.RegisteredPackage.VerdictUnreadable"/>), and the same
-    /// pairing's read failing under the installer lease. Both are a keyed property
-    /// read of the Windows Installer records that did not answer, which is what the
+    /// (<see cref="Models.RegisteredPackage.VerdictUnreadable"/>), and a read under
+    /// the installer lease failing: the same pairing's, or the Uninstallable read of
+    /// a patch on a product the batch's pairings name, where an answer that the
+    /// installation holds no record of the patch or that the product is not installed
+    /// counts as failing too. Each is a keyed property read of the Windows Installer
+    /// records that did not answer with the property asked for, which is what the
     /// sentence says, and the merged count does not distinguish them.
     ///
     /// IT REACHED FOUR UNTIL 3.0.0. The other two were the identity re-check's
