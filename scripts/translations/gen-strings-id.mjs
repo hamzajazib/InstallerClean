@@ -498,7 +498,7 @@ const MAP = {
   'Cli.Help.MoveScheduledNote': `Folder disimpan per pengguna; tugas terjadwal atau SYSTEM: /m JALUR.`,
   'Error.ScanRecordsUnreadable': `InstallerClean tidak bisa membaca cukup banyak catatan Windows Installer untuk memastikan apa yang masih diperlukan: daftar program terpasang kembali tidak lengkap, dan membaca catatan yang sama langsung dari registri juga menemui kesalahan. Sebuah file bisa tampak terisolasi hanya karena catatan yang menyebutkannya termasuk yang tidak terbaca, jadi InstallerClean berhenti. Tidak ada yang dihapus.`,
   'Error.MsiEnumerationNeverEnded': `Windows Installer tidak pernah menandai akhir daftar program terpasang: InstallerClean membaca {2} {3}, lalu menyerah setelah {0} entri (kode kesalahan terakhir {1}). Daftar yang tidak berujung tidak bisa dipercaya, jadi InstallerClean berhenti. Tidak ada yang dihapus.`,
-  'Error.MsiPatchEnumerationNeverEnded': `Windows Installer tidak pernah menandai akhir daftar tambalan sebuah program: InstallerClean membaca {2} {3}, lalu menyerah setelah {0} entri (kode kesalahan terakhir {1}). Daftar yang tidak berujung tidak bisa dipercaya, jadi InstallerClean berhenti. Tidak ada yang dihapus.`,
+  'Error.MsiPatchEnumerationNeverEnded': `Windows Installer tidak pernah menandai akhir daftar patch sebuah program: InstallerClean membaca {2} {3}, lalu menyerah setelah {0} entri (kode kesalahan terakhir {1}). Daftar yang tidak berujung tidak bisa dipercaya, jadi InstallerClean berhenti. Tidak ada yang dihapus.`,
   'UpdateCheck.Status.UpdateAvailable': `Versi {0} tersedia.`,
   'Completion.DonateAsk': `Donasi sekecil apa pun sangat dihargai.`,
   'About.Link.Guide': `Panduan dan FAQ`,

@@ -477,7 +477,7 @@ const MAP = {
   'Cli.WithheldReasons.CandidateIdentity': `  フォルダー内のファイルを識別できなかったため、記録と照合できませんでした。`,
   'Cli.WithheldReasons.DeclaredProductUnestablished': `  ファイルがどのプログラムのものか示さなかったか、Windows がそのプログラムについて応答しませんでした。`,
   'Cli.WithheldReasons.ScreenUnanswered': `  ファイルがどのプログラムのものかを調べたところ、渡されたファイルと合わない答えが返りました。`,
-  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  パッチファイルがどのパッチであるかを示さなかったか、どのプログラム向けであるかを示さなかったか、Windows がそのパッチが適用されているプログラムを完全には示しませんでした。`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  パッチファイルがどのパッチであるかを示さなかったか、どのプログラム向けであるかを示さなかったか、または Windows がそのパッチが適用されているプログラムを完全には示しませんでした。`,
   'Body.PendingReboot.RegistryCheckUnreadable': `InstallerClean は {InstallerFolder} に触れる前に確認する Windows 設定の一つを読み取れなかったため、インストール操作が実行中か再起動待ちかを判断できません。Windows を再起動してから再スキャンしてください。それでも設定を読み取れない場合、この PC は InstallerClean がクリーンアップできる PC ではありません。`,
   'Cli.InstallerLockAccessRefused': `エラー: Windows は InstallerClean に Windows Installer が処理中かどうかを確認する権限を与えなかったため、途中でファイルが必要になる可能性を排除できませんでした。何も削除されていません。`,
   'Cli.MoveCancelledRestoreHint': `元に戻すのは簡単です。{0} から {InstallerFolder} に戻せば、すべて元どおりになります。`,

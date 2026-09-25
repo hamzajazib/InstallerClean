@@ -474,7 +474,7 @@ Ayrıntılar şuraya yazıldı:
   'Cli.WithheldReasons.CandidateIdentity': `  Klasördeki bir dosyanın kimliği belirlenemedi, bu yüzden kayıtlarla eşleştirilemedi.`,
   'Cli.WithheldReasons.DeclaredProductUnestablished': `  Ya bir dosya hangi programa ait olduğunu söylemedi ya da Windows o program hakkında yanıt vermedi.`,
   'Cli.WithheldReasons.ScreenUnanswered': `  Dosyaların hangi programlara ait olduğuna dair bir denetim, kendisine verilen dosyalarla örtüşmeyen yanıtlar verdi.`,
-  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Ya bir yama dosyası hangi yama olduğunu söylemedi ya da hangi programlar için olduğunu söylemedi ya da Windows o yamanın hangi programlarda bulunduğunu eksiksiz söylemedi.`,
+  'Cli.WithheldReasons.DeclaredPatchUnestablished': `  Ya bir yama dosyası hangi yama olduğunu söylemedi, ya hangi programlar için olduğunu söylemedi ya da Windows o yamanın hangi programlara uygulandığını eksiksiz söylemedi.`,
   'Body.PendingReboot.RegistryCheckUnreadable': `InstallerClean, {InstallerFolder} klasörüne dokunmadan önce denetlediği Windows ayarlarından birini okuyamadı, bu yüzden bir yükleyici işleminin sürüp sürmediğini ya da yeniden başlatma beklediğini bilemiyor. Windows'u yeniden başlatın ve yeniden tarayın. Ayar yine okunamıyorsa, burası InstallerClean'in temizleyebileceği bir makine değil.`,
   'Cli.InstallerLockAccessRefused': `Hata: Windows, InstallerClean'e Windows Installer'ın meşgul olup olmadığını denetleme izni vermedi, bu yüzden işlem sürerken bir dosyanın gerekli hale gelmesini dışlayamadı. Hiçbir şey silinmedi.`,
   'Cli.MoveCancelledRestoreHint': `Geri almak kolay. Onları {0} konumundan {InstallerFolder} klasörüne geri taşıyın, her şey eskisi gibi olur.`,

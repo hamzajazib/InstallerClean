@@ -1191,7 +1191,7 @@ InstallerClean sudah berjalan sebagai administrator, jadi menjalankannya lagi de
        walks one program's patches, so 2 counts patches read cleanly and 3 is
        the patch noun. Borrowing the sibling's noun would report a count of
        patches as a count of programs. -->
-  <data name="Error.MsiPatchEnumerationNeverEnded" xml:space="preserve"><value>Windows Installer tidak pernah menandai akhir daftar tambalan sebuah program: InstallerClean membaca {2} {3}, lalu menyerah setelah {0} entri (kode kesalahan terakhir {1}). Daftar yang tidak berujung tidak bisa dipercaya, jadi InstallerClean berhenti. Tidak ada yang dihapus.</value></data>
+  <data name="Error.MsiPatchEnumerationNeverEnded" xml:space="preserve"><value>Windows Installer tidak pernah menandai akhir daftar patch sebuah program: InstallerClean membaca {2} {3}, lalu menyerah setelah {0} entri (kode kesalahan terakhir {1}). Daftar yang tidak berujung tidak bisa dipercaya, jadi InstallerClean berhenti. Tidak ada yang dihapus.</value></data>
   <!-- Shown when what Windows still registers and what is in the cache folder
        cannot be reconciled: a sign the correlation broke, not a real list of
        removable files. "Nearly" and "almost" are what the gate actually

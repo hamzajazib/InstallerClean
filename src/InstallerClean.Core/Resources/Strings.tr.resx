@@ -1733,7 +1733,7 @@ Ayrıntılar şuraya yazıldı:
   <data name="Cli.WithheldReasons.CandidateIdentity" xml:space="preserve"><value>  Klasördeki bir dosyanın kimliği belirlenemedi, bu yüzden kayıtlarla eşleştirilemedi.</value></data>
   <data name="Cli.WithheldReasons.DeclaredProductUnestablished" xml:space="preserve"><value>  Ya bir dosya hangi programa ait olduğunu söylemedi ya da Windows o program hakkında yanıt vermedi.</value></data>
   <data name="Cli.WithheldReasons.ScreenUnanswered" xml:space="preserve"><value>  Dosyaların hangi programlara ait olduğuna dair bir denetim, kendisine verilen dosyalarla örtüşmeyen yanıtlar verdi.</value></data>
-  <data name="Cli.WithheldReasons.DeclaredPatchUnestablished" xml:space="preserve"><value>  Ya bir yama dosyası hangi yama olduğunu söylemedi ya da hangi programlar için olduğunu söylemedi ya da Windows o yamanın hangi programlarda bulunduğunu eksiksiz söylemedi.</value></data>
+  <data name="Cli.WithheldReasons.DeclaredPatchUnestablished" xml:space="preserve"><value>  Ya bir yama dosyası hangi yama olduğunu söylemedi, ya hangi programlar için olduğunu söylemedi ya da Windows o yamanın hangi programlara uygulandığını eksiksiz söylemedi.</value></data>
   <!-- 0 = mode arg, whichever of /s, /d and /m was run: the no-files branch this
        is written from is common to all three, so a fixed mode word here names
        the wrong flag on two runs in three, and a filter for delete runs has to
