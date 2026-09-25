@@ -242,10 +242,8 @@ public record InstallerQueryResult(
 /// missed, so it is a property of the registry's contents rather than of a run.
 ///
 /// Between them these three report, per machine, what proportion of its registry
-/// keys really were residue. That figure used to be guessed at by a tolerance band
-/// on the difference between two product totals, set from one machine and unable
-/// to tell residue from a truncated enumeration; the band is gone and these are
-/// the measurement that replaced the guess.
+/// keys really were residue. The difference between the two product totals cannot
+/// answer that, since it cannot tell residue from a truncated enumeration.
 /// </param>
 /// <param name="InstanceProductCount">
 /// Products that answered a non-zero <c>InstanceType</c>: installed as a second

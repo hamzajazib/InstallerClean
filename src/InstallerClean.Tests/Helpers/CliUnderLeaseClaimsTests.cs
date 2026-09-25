@@ -17,7 +17,7 @@ namespace InstallerClean.Tests.Helpers;
 /// a pass from the last thing standing in front of a permanent delete, without
 /// anything having been asked, and every test stays green.
 ///
-/// THE WINDOW HAS TWO TESTS FOR THIS AND THE COMMAND LINE HAD NONE.
+/// THE WINDOW HAS TWO TESTS FOR THIS AND THESE ARE THE COMMAND LINE'S.
 ///
 /// AND IT IS DELIBERATELY NOT A TEST OF A HELPER. Extracting the call into a named
 /// method and asserting the method does the right thing would pin the method, and the

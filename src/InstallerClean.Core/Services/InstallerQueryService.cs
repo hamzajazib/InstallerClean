@@ -1100,9 +1100,9 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // IsRemovable, and this loop is what takes it off the offer when the scan
         // lost a claim.
         //
-        // One product whose LocalPackage read fails is enough: that product is
-        // counted in withheldProducts, and the loop takes every superseded row off
-        // the offer.
+        // One product whose LocalPackage read fails is enough to fire it: that
+        // product is counted in withheldProducts, and the loop takes every superseded
+        // row off the offer.
         //
         // NOT TO BE CONFUSED WITH THE REFUSAL GATE ABOVE, which weighs the same
         // count and is very much alive; see its own note for why.

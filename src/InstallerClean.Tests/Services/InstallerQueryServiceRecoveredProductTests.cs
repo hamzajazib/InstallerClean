@@ -54,8 +54,9 @@ public class InstallerQueryServiceRecoveredProductTests
         // file on the machine and this one is kept.
         //
         // THE PER-PRODUCT CONDITION IS WHAT KEEPS IT. The per-pairing pass asks this
-        // copy only about this patch, which it answers truthfully without saving the
-        // file; the per-product condition asks about the patch it can uninstall.
+        // copy only about this patch, and its truthful answer does not keep the file;
+        // the per-product condition asks about the patch the copy can uninstall, and
+        // that answer does.
         var row = await Scan(new EstablishedPatchReach());
 
         Assert.False(row.IsRemovable);

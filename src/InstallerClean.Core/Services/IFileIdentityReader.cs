@@ -4,11 +4,11 @@ namespace InstallerClean.Services;
 /// What <see cref="IFileIdentityReader.ReadOutcome"/> established, with the five
 /// ways it can fail kept apart rather than collapsed into one <c>false</c>.
 ///
-/// FOUR OF THE FIVE GIVE UP A WITHHOLDING AND ONE DOES NOT, and that is the only
+/// FOUR OF THE FIVE KEEP FILES BACK AND ONE DOES NOT, and that is the only
 /// distinction anything here draws. A path this reader cannot identify is a path
 /// the scan cannot match to a walked file, so a registration it was asked about
 /// claims nothing through it and the cached file that registration means can be any
-/// candidate in the list, left unclaimed. <see cref="NamesNothing"/> is the
+/// candidate in the list. <see cref="NamesNothing"/> is the
 /// exception and the reason the members are kept apart: a registration whose cached
 /// file has already gone gives up nothing, because there is no file for anything to
 /// have claimed.
@@ -78,8 +78,8 @@ public enum FileIdentityRead
 public static class FileIdentityReadOutcomes
 {
     /// <summary>
-    /// Whether this answer cost the scan a withholding it would otherwise have
-    /// made: the file is there and nothing here can say which file it is.
+    /// Whether this answer keeps files back: the file is there and nothing here can
+    /// say which file it is.
     ///
     /// WRITTEN AS THE COMPLEMENT OF THE TWO SETTLED ANSWERS RATHER THAN AS A LIST
     /// OF THE FOUR, so a member added to the enum later withholds instead of
@@ -120,10 +120,10 @@ public static class FileIdentityReadOutcomes
 /// whatever it was written as, and no list has to be right.
 ///
 /// A FAILED READ IS NOT A NEUTRAL ANSWER. A path that will not open yields no
-/// identity, and the cached file of the registration behind it can be any file in
-/// the folder, left unclaimed. Every outcome above is counted and the four give-ups
-/// are acted on, at
-/// <c>FileSystemScanService.DropCandidatesRegisteredUnderAnotherSpelling</c>.
+/// identity, so the registration behind it claims nothing through this reader and
+/// its cached file can be any file in the folder. Every outcome above is counted at
+/// <c>FileSystemScanService.DropCandidatesRegisteredUnderAnotherSpelling</c>, and
+/// each of the four failures keeps files back.
 ///
 /// A WRONG ANSWER IN HERE CAN ONLY EVER COST AN OFFER: an identity that matches
 /// nothing changes nothing, an identity that matches wrongly keeps a file back, and

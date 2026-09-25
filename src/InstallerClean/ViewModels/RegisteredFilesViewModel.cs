@@ -234,9 +234,7 @@ public partial class RegisteredFilesViewModel : ObservableObject, IDisposable
         // NO CAUSE TRAVELS WITH THESE ROWS AND NONE MAY BE ADDED. More than one
         // condition puts a file here and they are not one thing, so any sentence
         // covering the lot would be false of part of it; see
-        // <see cref="ScanResult.WithheldFiles"/>, which lists them. Merging the two
-        // lists did not overturn that: it removed the one heading that was true of
-        // every row, and nothing has replaced it.
+        // <see cref="ScanResult.WithheldFiles"/>, which lists them.
         //
         // AND THERE IS NO PER-FILE RECORD OF WHICH CAUSE PUT A ROW HERE, on this
         // screen or anywhere else. The opt-in report carries each cause as its own

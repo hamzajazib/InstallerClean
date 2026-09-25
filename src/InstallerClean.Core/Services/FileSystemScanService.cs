@@ -479,16 +479,12 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // WHOLE HALF. Where any registration's recorded path could not be turned into
         // a path at all, or could be but the filesystem would not settle its spelling,
         // that claim is compared in a form that matches nothing the walk produces, so
-        // any candidate in this list can be the cached file it names, left unclaimed.
-        // WHICH ONE cannot be established: the claim did not resolve, and the identity
+        // any candidate in this list can be the cached file it names. WHICH ONE
+        // cannot be established: the claim did not resolve, and the identity
         // match immediately above cannot be relied on to have reached it, since the
         // reasons a path will not resolve are largely the reasons a handle on it will
         // not open. Every candidate is therefore one that claim could have meant, so
         // none of them can be offered.
-        //
-        // THE WHOLE SET, WHICH IS THE COST AND IS NOT AN ARGUMENT AGAINST IT. Holding
-        // a file back is this app working. The alternative is offering a file it
-        // cannot say is spare, and the two are not comparable.
         //
         // IT CAN BE CAUSED BY AN ABSENCE OR BY A PERMISSION. Where the app can detect
         // that one of its own checks did not answer, it offers nothing that scan, and
@@ -1083,9 +1079,9 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// costs one handle per registration and nothing more. Nothing is opened at all
     /// where there are no candidates, or where no registration yielded an identity.
     ///
-    /// A FAILED READ IS A WITHHOLDING GIVEN UP. The cached file of a registration this
-    /// pass could not identify can be any candidate in the list, left unclaimed, so
-    /// both reads are counted and both answers are acted on.
+    /// A FAILED READ KEEPS FILES BACK. The cached file of a registration this pass
+    /// could not identify can be any candidate in the list, so both reads are counted
+    /// and both answers are acted on.
     ///
     /// THE TWO SIDES ACT DIFFERENTLY AND THE ASYMMETRY IS THE WHOLE DESIGN. A
     /// registration nobody could identify might name ANY candidate in the list, and
