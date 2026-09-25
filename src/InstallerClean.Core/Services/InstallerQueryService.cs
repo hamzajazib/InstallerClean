@@ -1100,9 +1100,9 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // IsRemovable, and this loop is what takes it off the offer when the scan
         // lost a claim.
         //
-        // Measured rather than argued: the same machine that offers such a patch
-        // withholds it once one product's LocalPackage read fails, which is this
-        // loop and nothing else.
+        // One product whose LocalPackage read fails is enough: that product is
+        // counted in withheldProducts, and the loop takes every superseded row off
+        // the offer.
         //
         // NOT TO BE CONFUSED WITH THE REFUSAL GATE ABOVE, which weighs the same
         // count and is very much alive; see its own note for why.
@@ -2245,8 +2245,8 @@ public sealed class InstallerQueryService : IInstallerQueryService
     {
         // THE NULL IS TESTED BEFORE ANYTHING IS ATTEMPTED ON THE VALUE, AND IT IS THE
         // ONE ORDERING THAT WORKS. On Windows ExpandEnvironmentVariables TRUNCATES a
-        // value holding an embedded null and does not throw: measured on CI, where
-        // C:\Windows\Installer\bad\0name.msi came back as C:\Windows\Installer\bad,
+        // value holding an embedded null and does not throw:
+        // C:\Windows\Installer\bad\0name.msi comes back as C:\Windows\Installer\bad,
         // cut at the null. Nothing throws, so the catch below never runs, so no
         // refusal is counted, so the withholding never fires. Putting this test after
         // the expansion would run it against a string the null had gone from.
@@ -2263,12 +2263,11 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // test would refuse ordinary paths. A path cannot carry a null, so its
         // presence is refusal by definition: exact, and free.
         //
-        // IT ALSO TAKES A PLATFORM DIFFERENCE OUT OF THE MECHANISM, which is how this
-        // survived. Off Windows the same call returns the value untouched and
-        // GetFullPath then throws, so this one input was refused at a different step
-        // on each platform, and the harness that could reach it was the one that could
-        // not see the fault. A string test behaves the same everywhere, so both
-        // platforms now refuse the value here.
+        // IT ALSO TAKES A PLATFORM DIFFERENCE OUT OF THE MECHANISM. Off Windows the
+        // same call returns the value untouched and GetFullPath then throws, so
+        // without this test the one input would be refused at a different step on
+        // each platform. A string test behaves the same everywhere, so both platforms
+        // refuse the value here.
         if (value.Contains('\0'))
         {
             census.RecordNormalisationRefusal(NormalisationStage.EmbeddedNull);
@@ -2297,9 +2296,8 @@ public sealed class InstallerQueryService : IInstallerQueryService
             // path, and \??\%SystemRoot%\... is not drive-rooted as text, so
             // stripping first leaves the prefix on and hands GetFullPath a string it
             // reads as rooted on whatever drive the process is running from.
-            // Expanding first makes it drive-rooted and the strip then works as it
-            // always did. On a value holding no % this is the identity, so nothing
-            // that reached here before reaches anything different now.
+            // Expanding first makes it drive-rooted, so the strip takes the prefix
+            // off. On a value holding no % the expansion returns the value unchanged.
             var expanded = InstallerCacheHelpers.ExpandRecordedPath(value);
 
             stage = NormalisationStage.PrefixStrip;
@@ -4222,7 +4220,9 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// <see cref="ReadProductProperty"/>, <see cref="GetPatchProperty"/> AND
     /// <see cref="ReadSourceListProperty"/>, which are the other three points.
     /// <see cref="IsBenignPropertyRead"/> does not carry the code, so the read
-    /// is Unreadable and the scan's own consumers withhold on it;
+    /// is Unreadable, and every consumer that decides anything on the read
+    /// withholds on it, the product enumeration's ProductName read being the one
+    /// that only names a row and takes the value alone;
     /// <see cref="IsRecordAbsent"/> does carry it, so the same return is
     /// NotRegistered as well, which the under-lease re-read of a batch's own
     /// pairings alone asks and which is a different question: whether a

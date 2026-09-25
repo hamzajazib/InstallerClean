@@ -14,22 +14,20 @@ namespace InstallerClean.Tests.Services;
 /// machine-wide sweep does not return that second copy; the registry names it, and the
 /// scan recovers it by asking Windows about it directly.
 ///
-/// WHAT WENT WRONG. The scan asked that copy "do you hold this patch, and can it be
-/// uninstalled" and was told, truthfully, that it holds it and it cannot. It never
-/// asked the question that decides the case: does this copy hold anything ELSE that
-/// could be uninstalled and reach back for this file. It works that answer out for
-/// every program on the machine and files it under the program's name, and then never
-/// looked it up for the recovered one, so the file went on the list. Uninstalling that
-/// other patch is the operation measured taking a product back to its unpatched base,
-/// discarding both patches and reporting success.
+/// THE QUESTION THAT DECIDES IT. Asked "do you hold this patch, and can it be
+/// uninstalled", that copy answers, truthfully, that it holds it and it cannot. What
+/// decides the case is a different question: does this copy hold anything ELSE that
+/// could be uninstalled and reach back for this file. The scan works that answer out
+/// for every program on the machine, files it under the program's name and looks it up
+/// for the recovered copy like any other. Uninstalling that other patch takes a product
+/// back to its unpatched base, discarding both patches and reporting success.
 ///
-/// AND WHAT IS KEPT BACK IS THE FILE AND NOT THE SET. A recovered copy is named by the
-/// machine rather than by any one file, so keeping every superseded patch back on such
-/// a machine would cost somebody every file on it for one program's sake. The scan
-/// reads two registry listings it is already taking, and keeps back the files that copy
-/// could actually reach: the patches it holds, and where each of those patches records
-/// its own cached package. Anything it cannot establish keeps everything, and the tests
-/// below that end in "keeps the file" are the ones that hold that line.
+/// AND WHAT IS KEPT BACK IS WHAT THAT COPY COULD REACH. A recovered copy is named by
+/// the machine rather than by any one file. The scan reads two registry listings it is
+/// already taking, and keeps back the files that copy could actually reach: the patches
+/// it holds, and where each of those patches records its own cached package. Anything
+/// it cannot establish keeps everything, and the tests below that end in "keeps the
+/// file" are the ones that hold that line.
 ///
 /// THEY RUN THE WHOLE ENUMERATION rather than the condition on its own, because what is
 /// being asserted is whether a file reaches the offer, and every pass between the
@@ -55,10 +53,9 @@ public class InstallerQueryServiceRecoveredProductTests
         // Nothing establishes what it holds, so it is judged against every cached patch
         // file on the machine and this one is kept.
         //
-        // WITHOUT THE FIX THIS FILE IS OFFERED. The recovered copy reached the
-        // per-pairing pass and never reached the per-product condition, so the only
-        // question ever put to it was one it could answer truthfully without saving the
-        // file.
+        // THE PER-PRODUCT CONDITION IS WHAT KEEPS IT. The per-pairing pass asks this
+        // copy only about this patch, which it answers truthfully without saving the
+        // file; the per-product condition asks about the patch it can uninstall.
         var row = await Scan(new EstablishedPatchReach());
 
         Assert.False(row.IsRemovable);

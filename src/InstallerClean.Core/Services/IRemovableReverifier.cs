@@ -159,18 +159,16 @@ public readonly record struct UnderLeaseClaims(
 /// to have found out: a confirmed positive, an inability, neither, and one that is
 /// not about the file at all.
 ///
-/// NOTHING THE USER READS NAMES ANY OF THEM, WHICH IS A CHANGE FROM 3.0.0 AND IS
-/// WHY THIS COMMENT NO LONGER ARGUES FOR A PARTITION. The screen and stdout carry
-/// one counted sentence naming no cause, on the ground that every file on it was
+/// NOTHING THE USER READS NAMES ANY OF THEM. The screen and stdout carry one
+/// counted sentence naming no cause, on the ground that every file on it was
 /// offered by the scan and not confirmed by the check made immediately before
-/// acting, which is true of all four by construction. These four survive as
-/// COUNTS: they travel in the opt-in result log and are the only place a machine's
-/// causes can still be told apart.
+/// acting, which is true of all four by construction. These four are COUNTS: they
+/// travel in the opt-in result log and are the only place a machine's causes can be
+/// told apart.
 ///
 /// THE FIRST THREE ARE ABOUT THE REGISTRATION THAT NAMES THIS PATH. The fourth is
 /// about the machine and is reached without reading anything about the path, which
-/// is why it could not fold into any of them while each had a sentence, and why it
-/// is still worth counting separately now that none has.
+/// is why it is counted separately.
 /// </summary>
 public enum HeldBackReason
 {
@@ -178,16 +176,15 @@ public enum HeldBackReason
     /// The records were read and a registered product's live claim names the file,
     /// where the scan's own reading left it removable.
     ///
-    /// BOTH LIMBS OF THAT SENTENCE ARE LOAD-BEARING and the first is the one that
-    /// was once missing. A patch row whose State or Uninstallable read failed is
-    /// non-removable too, and it names no claim at all: it is the row being there
-    /// and nothing more. Such a row carries
+    /// BOTH LIMBS OF THAT SENTENCE ARE LOAD-BEARING. A patch row whose State or
+    /// Uninstallable read failed is non-removable too, and it names no claim at all:
+    /// it is the row being there and nothing more. Such a row carries
     /// <see cref="Models.RegisteredPackage.VerdictUnreadable"/> and counts under
     /// <see cref="RecordsUnreadable"/>, so nothing reaches this cause on a read
     /// that did not answer.
     ///
-    /// TWO ROUTES REACH IT and the copy has to hold for both. A patch the scan
-    /// found superseded or obsoleted whose claim now says needed, back at Applied
+    /// TWO ROUTES REACH IT and what is said of it has to hold for both. A patch the
+    /// scan found superseded or obsoleted whose claim now says needed, back at Applied
     /// or still uninstallable and so needed to roll back with; and a candidate the
     /// scan found no claim on at all, which the re-enumeration finds claimed. The
     /// second is the one the name flatters: nothing was reclaimed, because nothing
@@ -204,13 +201,11 @@ public enum HeldBackReason
     /// unreadable record, because the read succeeded.
     ///
     /// It condemns the file rather than releasing it, which is not what the shape
-    /// of the answer suggests and is the measurement this state exists for. The
-    /// absence code means "no such product in the ACCOUNT AND CONTEXT you asked
-    /// in", not "no such product", and the context a claim carries was settled when
-    /// the scan collected it. A pairing that moved context between the scan and the
-    /// click therefore answers absent while its registration is live, so releasing
-    /// on that answer would put a needed file into a permanent delete on the
-    /// strength of a question asked the wrong way round.
+    /// of the answer suggests. The absence code means "no such product in the
+    /// ACCOUNT AND CONTEXT you asked in", not "no such product", and the context a
+    /// claim carries was settled when the scan collected it. A pairing that moved
+    /// context between the scan and the click therefore answers absent while its
+    /// registration is live, which is why this answer keeps the file.
     /// </summary>
     RecordsChanged,
 
@@ -229,12 +224,8 @@ public enum HeldBackReason
     /// records that did not answer with the property asked for, which is what the
     /// sentence says, and the merged count does not distinguish them.
     ///
-    /// IT REACHED FOUR UNTIL 3.0.0. The other two were the identity re-check's
-    /// unaskable state, an account list that would not read and a keyed read
-    /// answering outside its documented set, and they folded in here rather than
-    /// taking a cause of their own. They went with the check. Anything added later
-    /// is held to the same test against the code that builds the set, never against
-    /// this list.
+    /// Anything else that reaches it is held to the same test against the code that
+    /// builds the set, never against this list.
     /// </summary>
     RecordsUnreadable,
 

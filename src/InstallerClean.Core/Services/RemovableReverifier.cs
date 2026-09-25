@@ -213,14 +213,15 @@ public sealed class RemovableReverifier : IRemovableReverifier
     /// every answer is about the record named rather than about the machine, which is
     /// the property an enumeration cannot offer.
     ///
-    /// A KEYED READ COMES BACK IN FOUR SHAPES AND THIS PASS TELLS THREE OF THEM APART.
-    /// They are a value, a positive "there is no such record", a read that failed, and
-    /// an answer that came back empty without having failed. The fourth is not yet told
-    /// from the first: an empty value fails the test for a zero, so it is reported as a
-    /// live claim on the rollback, while the scan reading the identical value calls it
-    /// unestablished, an inability rather than a finding. The path is held back on
-    /// either reading, so what the fourth shape costs is the cause named for it and not
-    /// the file.
+    /// A KEYED READ COMES BACK IN FOUR SHAPES. They are a value, a positive "there is
+    /// no such record", a read that failed, and an answer that came back empty without
+    /// having failed. The batch's own pairings tell the first three apart. The sibling
+    /// reads tell two: a read that failed and an answer that there is no such record
+    /// are both an inability, and any value but a zero is a live claim on the rollback.
+    /// In both halves an empty answer counts as a value that holds the path back. Only
+    /// a clean value lets a path through, a removable reading for the batch's own
+    /// pairings and a zero for a sibling, so what the other shapes decide between is
+    /// the cause counted for the path and not whether it is held back.
     ///
     /// WHAT IS NARROWER HERE IS THE SET AND NOT THE QUESTION, and that residual is the
     /// part to know about. The pairings are the ones the pre-lease enumeration recorded
@@ -292,8 +293,9 @@ public sealed class RemovableReverifier : IRemovableReverifier
             // Absence first. It condemns, so the two tests below would condemn the
             // same file anyway, and they would name the wrong cause doing it: asked
             // after the removable test, an absent record answers that test with an
-            // empty State string and is reported as a reclaim. Right outcome, wrong
-            // sentence, and the sentence is the whole of what the user is told.
+            // empty State string and is counted as a reclaim. The outcome is the same
+            // either way, and the order is what keeps the cause counted in the opt-in
+            // result log true.
             //
             // Unreadable second, so a pairing where one read failed and the other
             // came back absent is reported as the failure it contains. A read that
