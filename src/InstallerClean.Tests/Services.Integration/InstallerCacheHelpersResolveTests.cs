@@ -236,6 +236,153 @@ public class InstallerCacheHelpersResolveTests
                     InstallerCacheRoot.Resolve(root))));
     }
 
+    // ---- Whether a source's package would be a file directly in the Installer folder ----
+
+    [Fact]
+    public void NamesAFileDirectlyInInstallerFolder_answers_true_for_the_root_spelling_without_reading_an_identity()
+    {
+        WithCacheSandbox(root =>
+        {
+            var reader = new ScriptedFileIdentities();
+
+            Assert.True(InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(
+                Path.Combine(root, "c.msi"), InstallerCacheRoot.Resolve(root), reader));
+            Assert.Empty(reader.Reads);
+        });
+    }
+
+    [Fact]
+    public void NamesAFileDirectlyInInstallerFolder_answers_true_for_another_spelling_of_the_root()
+    {
+        // The Installer folder reached through this PC's own admin share resolves to its
+        // UNC spelling. The other folder here stands in for that spelling: the reader says
+        // it opens as the root.
+        WithTwoFolders((root, other) =>
+        {
+            var package = Path.Combine(other, "c.msi");
+            var reader = new ScriptedFileIdentities();
+            reader.Opens(FolderOf(package), 7);
+            reader.Opens(InstallerCacheRoot.Resolve(root).Resolved, 7);
+
+            Assert.True(InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(
+                package, InstallerCacheRoot.Resolve(root), reader));
+        });
+    }
+
+    [Fact]
+    public void NamesAFileDirectlyInInstallerFolder_answers_false_for_another_folder()
+    {
+        WithTwoFolders((root, other) =>
+        {
+            var package = Path.Combine(other, "c.msi");
+            var reader = new ScriptedFileIdentities();
+            reader.Opens(FolderOf(package), 7);
+            reader.Opens(InstallerCacheRoot.Resolve(root).Resolved, 8);
+
+            Assert.False(InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(
+                package, InstallerCacheRoot.Resolve(root), reader));
+        });
+    }
+
+    [Fact]
+    public void NamesAFileDirectlyInInstallerFolder_answers_false_for_a_folder_that_is_not_there()
+    {
+        // The root is there, so a folder that is not cannot be it. The root is never
+        // opened for this answer.
+        WithTwoFolders((root, other) =>
+        {
+            var package = Path.Combine(other, "gone", "c.msi");
+            var reader = new ScriptedFileIdentities();
+            reader.Answers(FolderOf(package), FileIdentityRead.NamesNothing);
+
+            Assert.False(InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(
+                package, InstallerCacheRoot.Resolve(root), reader));
+        });
+    }
+
+    [Theory]
+    [InlineData(FileIdentityRead.OpenRefused)]
+    [InlineData(FileIdentityRead.IdentityUnavailable)]
+    [InlineData(FileIdentityRead.Faulted)]
+    [InlineData(FileIdentityRead.NotAPath)]
+    public void NamesAFileDirectlyInInstallerFolder_answers_null_where_the_folder_will_not_identify(
+        FileIdentityRead outcome)
+    {
+        WithTwoFolders((root, other) =>
+        {
+            var package = Path.Combine(other, "c.msi");
+            var reader = new ScriptedFileIdentities();
+            reader.Answers(FolderOf(package), outcome);
+
+            Assert.Null(InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(
+                package, InstallerCacheRoot.Resolve(root), reader));
+        });
+    }
+
+    [Fact]
+    public void NamesAFileDirectlyInInstallerFolder_answers_null_where_the_root_will_not_identify()
+    {
+        WithTwoFolders((root, other) =>
+        {
+            var package = Path.Combine(other, "c.msi");
+            var reader = new ScriptedFileIdentities();
+            reader.Opens(FolderOf(package), 7);
+            reader.Answers(InstallerCacheRoot.Resolve(root).Resolved, FileIdentityRead.OpenRefused);
+
+            Assert.Null(InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(
+                package, InstallerCacheRoot.Resolve(root), reader));
+        });
+    }
+
+    [Fact]
+    public void NamesAFileDirectlyInInstallerFolder_answers_false_for_a_volume_root_without_reading_an_identity()
+    {
+        // A volume root has no parent, so it is no file in any folder.
+        WithCacheSandbox(root =>
+        {
+            var reader = new ScriptedFileIdentities();
+
+            Assert.False(InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(
+                Path.GetPathRoot(root)!, InstallerCacheRoot.Resolve(root), reader));
+            Assert.Empty(reader.Reads);
+        });
+    }
+
+    [Fact]
+    public void NamesAFileDirectlyInInstallerFolder_reads_two_real_folders_as_two_folders()
+    {
+        // The production reader, which opens a folder as it opens a file.
+        WithTwoFolders((root, other) =>
+            Assert.False(InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(
+                Path.Combine(other, "c.msi"), InstallerCacheRoot.Resolve(root))));
+    }
+
+    /// <summary>
+    /// The folder <see cref="InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder"/>
+    /// opens for <paramref name="path"/>: the parent of its resolved spelling.
+    /// </summary>
+    private static string FolderOf(string path) =>
+        Path.GetDirectoryName(InstallerCacheHelpers.ResolveFinalPath(path))!;
+
+    /// <summary>
+    /// <see cref="WithCacheSandbox"/> with a second real directory beside the root, which
+    /// is not the root.
+    /// </summary>
+    private static void WithTwoFolders(Action<string, string> body) =>
+        WithCacheSandbox(root =>
+        {
+            var other = root + "-other";
+            Directory.CreateDirectory(other);
+            try
+            {
+                body(root, other);
+            }
+            finally
+            {
+                try { Directory.Delete(other, recursive: true); } catch { }
+            }
+        });
+
     /// <summary>
     /// Runs <paramref name="body"/> against a real throwaway directory standing
     /// in for <c>C:\Windows\Installer</c>. Real, not mocked: the containment

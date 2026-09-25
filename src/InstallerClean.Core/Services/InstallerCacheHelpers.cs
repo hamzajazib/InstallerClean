@@ -183,14 +183,45 @@ internal static class InstallerCacheHelpers
     /// substituted drive leaves behind. A path to a file that is not there still
     /// resolves, through the nearest folder that is, so a missing file is compared
     /// like any other.
+    ///
+    /// WHERE THE SPELLINGS DIFFER, THE FOLDER IS COMPARED BY IDENTITY. The Installer
+    /// folder reached through this PC's own admin share,
+    /// <c>\\localhost\C$\Windows\Installer</c> or the same with the computer's name,
+    /// resolves to that UNC spelling and not to the root's, and it is the root all the
+    /// same. So the folder the resolved path sits in and the root are both opened, and
+    /// the same identity answers true and a different one false. A folder that is not
+    /// there answers false, since the root is there. Any other failure to read either
+    /// identity answers null.
     /// </summary>
-    internal static bool? NamesAFileDirectlyInInstallerFolder(string path, InstallerCacheRoot root)
+    /// <param name="identities">
+    /// Identifies the two folders. Null in production, which reads the real filesystem
+    /// as the resolution above does.
+    /// </param>
+    internal static bool? NamesAFileDirectlyInInstallerFolder(
+        string path, InstallerCacheRoot root, IFileIdentityReader? identities = null)
     {
         if (!root.Proven) return null;
-        return ResolveFinalPathOutcome(path, out var resolved) == PathResolution.Resolved
-            ? ResolvesDirectlyInInstallerFolder(resolved, root)
+        if (ResolveFinalPathOutcome(path, out var resolved) != PathResolution.Resolved) return null;
+        if (ResolvesDirectlyInInstallerFolder(resolved, root)) return true;
+
+        // The parent as ResolvesDirectlyInInstallerFolder takes it. A path with no
+        // parent is a volume or a share root, which is no file in any folder.
+        var folder = Path.GetDirectoryName(
+            resolved.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        if (string.IsNullOrEmpty(folder)) return false;
+
+        identities ??= FolderIdentities;
+        var read = identities.ReadOutcome(folder, out var folderIdentity);
+        if (read == FileIdentityRead.NamesNothing) return false;
+        if (read != FileIdentityRead.Read) return null;
+
+        return identities.ReadOutcome(root.Resolved, out var rootIdentity) == FileIdentityRead.Read
+            ? folderIdentity == rootIdentity
             : null;
     }
+
+    /// <summary>The reader <see cref="NamesAFileDirectlyInInstallerFolder"/> uses in production.</summary>
+    private static readonly IFileIdentityReader FolderIdentities = new FileIdentityReader();
 
     /// <summary>
     /// True if <paramref name="path"/> resolves under any of the

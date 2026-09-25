@@ -40,7 +40,9 @@ internal sealed class FileIdentityReader : IFileIdentityReader
             // junction resolves to the package. FILE_FLAG_BACKUP_SEMANTICS is
             // present so a path that turns out to name a directory opens rather
             // than failing; such a path yields an identity that matches no
-            // candidate file and is therefore harmless.
+            // candidate file and is therefore harmless. The Installer-folder test in
+            // InstallerCacheHelpers opens folders through this reader, and without
+            // the flag every folder it asks about answers null.
             using var handle = Kernel32.CreateFile(
                 path,
                 0,
