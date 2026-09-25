@@ -459,7 +459,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// What Windows holds for one declared patch, asked once per patch code and target
     /// list per pass: every registration the machine-wide patch enumeration lists for
     /// the code, unioned with every installation of a named target product that
-    /// answers the keyed patch read with a state.
+    /// answers the keyed patch read with a state or with no value at all.
     ///
     /// THE UNION IS WHY IT IS BOTH. The enumeration names a registration against a
     /// product the patch's Template does not list; the keyed read reaches an
@@ -629,8 +629,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
     /// <summary>
     /// Whether the candidate at <paramref name="candidatePath"/> is a different file
-    /// from every package an installation opens. A candidate whose own identity will
-    /// not read is not shown to be different, so it answers false and is kept.
+    /// from every one in <paramref name="recorded"/>: every package an installation of
+    /// a product opens, or every copy a registration of a patch opens. A candidate
+    /// whose own identity will not read is not shown to be different, so it answers
+    /// false and is kept.
     /// </summary>
     private bool IsNoneOf(string candidatePath, IReadOnlyList<FileIdentity> recorded)
     {

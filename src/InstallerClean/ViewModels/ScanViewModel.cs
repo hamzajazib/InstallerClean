@@ -470,10 +470,11 @@ public partial class ScanViewModel : ObservableObject
             // Off the scan's own reading rather than off the withheld list's length:
             // that list is filled by more than one decision and neither the list nor
             // the wholesale flag says which sentence is true of it. The scan has
-            // nothing to report on a run whose withholding caught nothing, or whose
-            // every held file declares a program Windows still has installed, is under
-            // a day old, or is a copy of a patch Windows holds a registration of, which
-            // is what keeps the line off both machines.
+            // nothing to report on a run whose withholding caught nothing, or on one
+            // whose every held file was kept by the three arms
+            // WithholdingAccount.KeptWithoutNotice names: for a program Windows still
+            // has installed, for being under a day old or for its patch's
+            // registrations. That is what keeps the line off both machines.
             //
             // THE COUNT IS UnestablishedWithheldCount, NOT THE WHOLE LIST, so a file
             // kept for an installed program, for being under a day old or for its

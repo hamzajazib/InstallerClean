@@ -502,11 +502,13 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // a missing file resolves normally and this rule never sees it. What fires here
         // is a value that is not a path, or one the filesystem declined to settle.
         //
-        // THE SUPERSEDED HALF OF THE OFFER IS NOT WITHHELD WITH IT. Those rows are
+        // THE SUPERSEDED HALF OF THE OFFER IS NOT WITHHELD WITH IT. Those rows come
+        // from the registered set rather than from this candidate list. They are
         // judged on products, through registry keys read by product code and patch
-        // code, and each reaches the offer from its own registration rather than by
-        // being matched against the claims, which is the comparison a claim this scan
-        // could not settle leaves in doubt.
+        // code, and every claim the Windows Installer enumeration returns is merged
+        // into that set under its normalised recorded path, so a claim under a
+        // superseded row's path that is not removable keeps that file off the offer,
+        // whichever of the two was read first.
         //
         // AND IT IS NOT WITHHELD WITH THE SECOND-INSTANCE CONDITION EITHER. A second
         // copy is registered under its own product code and is therefore asked by the

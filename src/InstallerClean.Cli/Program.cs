@@ -1032,9 +1032,10 @@ internal static class Program
         // cannot carry is the difference between this machine and a clean one, which
         // is what a number in the 3000 band is for. See CliEventClass.
         //
-        // NOTHING IS REPORTED HERE FOR A RUN WHOSE EVERY HELD FILE DECLARES A PROGRAM
-        // WINDOWS STILL HAS INSTALLED, IS UNDER A DAY OLD, OR IS A COPY OF A PATCH
-        // WINDOWS HOLDS A REGISTRATION OF: HasWithholdingToReport is false for it.
+        // NOTHING IS REPORTED HERE FOR A RUN WHOSE EVERY HELD FILE WAS KEPT FOR A
+        // PROGRAM WINDOWS STILL HAS INSTALLED, FOR BEING UNDER A DAY OLD OR FOR ITS
+        // PATCH'S REGISTRATIONS, the three arms WithholdingAccount.KeptWithoutNotice
+        // names: HasWithholdingToReport is false for it.
         if (scanResult.HasWithholdingToReport)
         {
             // WHICH OF THE TWO SENTENCES, ASKED ONCE AND SPENT BY BOTH THE AUDIT LINE

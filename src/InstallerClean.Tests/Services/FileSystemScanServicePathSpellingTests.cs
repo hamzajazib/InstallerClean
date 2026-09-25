@@ -11,10 +11,10 @@ namespace InstallerClean.Tests.Services;
 ///
 /// THIS IS THE GATE THE WHOLE OFFER RESTS ON. A registration the scan fails to
 /// match does not make its file safe to remove; it makes the file a candidate.
-/// What is left between a candidate and the user is the declared-product screen,
-/// which asks an installation package what it says it belongs to and puts that to
-/// Windows. It runs on installation packages only, and a patch has no second
-/// reader behind this gate. Everything here is about not needing a second chance.
+/// Behind this gate, the declared-product screen asks a cached file, installation
+/// package or patch alike, what it declares itself to be and puts that to Windows,
+/// and the age check reads the file's own times. Everything here is about not
+/// needing a second chance.
 ///
 /// Two mechanisms, pinned separately because they close different things. The
 /// comparer handles case, which is the divergence real machines actually produce.

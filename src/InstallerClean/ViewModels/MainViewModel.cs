@@ -329,9 +329,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // deriving it.
             //
             // A RUN THAT HELD NOTHING BACK IS THE ALL-CLEAR'S, and so is a run whose
-            // every held file declares a program Windows still has installed, is under
-            // a day old, or is a copy of a patch Windows holds a registration of.
-            // HasWithholdingToReport is false for both.
+            // every held file was kept for a program Windows still has installed, for
+            // being under a day old or for its patch's registrations: the three arms
+            // WithholdingAccount.KeptWithoutNotice names. HasWithholdingToReport is
+            // false for both.
             //
             // THE SCREEN COUNTS ONLY UnestablishedWithheldCount, so a run that held
             // some files for an installed program, for being under a day old or for

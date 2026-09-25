@@ -272,10 +272,11 @@ public partial class CompletionViewModel : ObservableObject
     /// This says the app could not establish enough to offer anything, on a machine
     /// whose folder may be full of files nobody has vouched for. The caller chooses
     /// between them from the walk-derived withheld list alone, through
-    /// <see cref="ScanResult.HasWithholdingToReport"/>, and on that list three kinds of
-    /// file are kept without choosing this screen: a file that declares a program
-    /// Windows still holds a record of, a file under a day old, and a patch copy whose
-    /// patch Windows holds a registration of. Any other file on the list chooses it.
+    /// <see cref="ScanResult.HasWithholdingToReport"/>, and on that list a file kept for
+    /// one of three reasons does not choose this screen: for a program Windows still
+    /// holds a record of, for being under a day old or for its patch's registrations,
+    /// the three arms <see cref="WithholdingAccount.KeptWithoutNotice"/> names. Any
+    /// other file on the list chooses it.
     ///
     /// ONE SCREEN WITH TWO BODIES, CHOSEN BY <paramref name="account"/> AND NOT HERE.
     /// The two say what the scan could not establish, and they could not establish
