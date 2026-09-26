@@ -683,9 +683,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
                     // easy to forget. The kept list drives the left-alone count, the
                     // left-alone bytes and the details window, so a row on the offer
                     // that stayed in it would be shown to the user twice and counted
-                    // on both summary lines. v2.3.0 filtered these out of that list
-                    // after the fact; taking the row out here is the same rule at the
-                    // one place that can see both destinations.
+                    // on both summary lines. Taking the row out here applies that rule
+                    // at the one place that can see both destinations.
                     continue;
                 }
 
@@ -702,16 +701,14 @@ public sealed class FileSystemScanService : IFileSystemScanService
             // THE BANNER FIRES WHEN SOMETHING COULD STILL REACH FOR A FILE THAT IS
             // GONE. That is the whole rule, and the split below is how it is computed.
             //
-            // NEITHER BARE AXIS WOULD DO IT, and both were tried. Splitting on the patch
-            // STATE alone says a missing superseded file is benign because Windows has
-            // marked the patch replaced, and that claim was measured false: with the
-            // superseded files gone, uninstalling the superseding patch discarded both
-            // patches and went to the unpatched base, with Windows demonstrably looking
-            // for the absent files. Splitting on the app's own REMOVABLE verdict alone
-            // fires on every missing obsoleted registration, because an obsoleted patch
-            // is not removable for a policy reason rather than a dangerous one. And
-            // that is precisely an alarm at past users about files THIS APP
-            // removed, which is the scenario the whole reversal exists to avoid.
+            // NEITHER BARE AXIS WOULD DO IT. Splitting on the patch STATE alone says a
+            // missing superseded file is benign because Windows has marked the patch
+            // replaced, and that claim is false: with the superseded files gone,
+            // uninstalling the superseding patch discards both patches and goes to the
+            // unpatched base, with Windows looking for the absent files. Splitting on
+            // the app's own REMOVABLE verdict alone fires on every missing obsoleted
+            // registration, because an obsoleted patch is not removable for a policy
+            // reason rather than a dangerous one.
             //
             // So the benign half is the conjunction: the state is superseded or
             // obsoleted, AND the app has POSITIVELY established that nothing on any
@@ -947,33 +944,19 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // has gone wherever it pointed: see the counters' own notes above for why the
         // two must not be the same number.
         //
-        // AND IT DID NOT ASK ABOUT ONE POPULATION UNTIL 3.0.0, the sentence above
-        // notwithstanding. The survivor side counted every in-folder registration
-        // whose file was there, superseded ones included, while the missing side
-        // took only the rows that carried no superseded or obsoleted state, on the
-        // reading that such a file having gone was its expected end state. That
-        // reading is what this release removes, so the exclusion goes with it and
-        // the two sides now measure the same rows. It widens the gate: a machine
-        // whose absent in-folder registrations are mostly superseded patches can
-        // now reach the bound where it could not before. That needs at most two
-        // registered files present in the folder, twenty times as many absent, and
-        // an offer with something in it, which is not a shape a healthy machine
-        // takes.
+        // SUPERSEDED ROWS ARE ON BOTH SIDES. The survivor side counts every
+        // in-folder registration whose file is there, superseded ones included, and
+        // the missing side counts the same rows: a superseded file having gone is
+        // not read as its expected end state. So a machine whose absent in-folder
+        // registrations are mostly superseded patches can reach the bound. That
+        // needs at most two registered files present in the folder, twenty times
+        // as many absent, and an offer with something in it, which is not a shape
+        // a healthy machine takes.
         //
         // Two rather than a round number, because the absolute bound answers the
         // finding and no more; machines with most of their cache missing are
         // real, another tool having emptied the folder being exactly what the
         // missing-from-disk banner is for.
-        //
-        // THE 92-RUN MEASUREMENT NO LONGER DESCRIBES THIS CODE and is recorded
-        // here as history rather than as a receipt. Of the 92 result-log runs
-        // that could reach this gate at all, none would have been refused by
-        // these bounds, taking each run at the worst reading its figures allow;
-        // that was measured against a survivor count including registered files
-        // anywhere on disk and a missing count doing the same, and both now read
-        // the folder only, so neither number it was taken on is the number the
-        // code computes. Nothing published anywhere may cite it for the present
-        // shape.
         //
         // The proportional clause is 19P < M, with P floored at one before it is
         // applied. Unfloored it is 0 < M at P = 0, so one missing row refused the

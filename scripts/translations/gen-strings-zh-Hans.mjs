@@ -249,7 +249,7 @@ const MAP = {
   'Error.ScanFailedTitle': `扫描失败`,
   'Error.InstallerDbEmpty': `Windows Installer 记录返回的内容完全为空：没有任何一个已安装的程序或更新声称拥有缓存的安装文件。在正常工作的电脑上不会出现这种情况（即使是刚装好的 Windows 也会有一些），所以要么记录已损坏，要么无法读取；而一次相信这个结果的扫描，会把 {InstallerFolder} 中的每个文件都错误地判定为孤立。InstallerClean 没有那样做，而是停了下来。没有删除任何内容。`,
   'Error.MsiAccessDenied': `Windows Installer 不允许 InstallerClean 列出已安装的内容。InstallerClean 本来就以管理员身份运行，所以再以管理员身份运行一次也不会有任何改变。没有这份清单，就无法安全地判断哪些缓存文件仍然需要，因此 InstallerClean 停了下来。没有删除任何内容。`,
-  'Error.MsiNonSuccess': `Windows Installer 无法向 InstallerClean 提供一份可读的已安装程序清单：它读取了 {2} {3}，随后连续 {0} 个条目返回时无法读取（最后的错误代码为 {1}）。InstallerClean 没有基于只读到一半的清单继续，而是停了下来。没有删除任何内容。`,
+  'Error.MsiNonSuccess': `Windows Installer 无法向 InstallerClean 提供一份可读的已安装程序清单：它读取了 {1} {2}，随后有一个条目返回时无法读取（错误代码为 {0}）。InstallerClean 没有基于只读到一半的清单继续，而是停了下来。没有删除任何内容。`,
   'Error.InvalidDestinationTitle': `目标无效`,
   'Error.DestinationWriteFailedTitle': `无法使用该备份文件夹`,
   'Error.MoveFailedTitle': `移动失败`,

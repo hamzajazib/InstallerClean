@@ -622,13 +622,14 @@ public sealed class InstallerQueryService : IInstallerQueryService
 
         var (products, unreadableRows) = EnumerateProducts(ct);
 
-        // Installed products this scan could not read in full. A skipped product
-        // row is one product whose claims are wholly missing; a skipped patch
+        // Installed products this scan could not read in full. A skipped patch
         // row, or a LocalPackage value that could not be read, is one product
-        // whose claims are short by at least one. All three leave the same hole,
-        // a claim that never reached the merge, so all three count the product
-        // once. The loop below adds its own; this starts from the rows the
-        // product enumeration itself lost.
+        // whose claims are short by at least one. Both leave the same hole, a
+        // claim that never reached the merge, so both count the product once.
+        // The loop below adds them. It starts from the product rows the walk
+        // passed without reading, which is zero on every walk that returns: the
+        // walk refuses the scan on such a row. Seeding from the walk's own count
+        // keeps a row it ever passed inside this figure.
         var unreadableProducts = unreadableRows;
 
         // Patches whose State or Uninstallable read failed. Decides nothing; see
@@ -734,9 +735,8 @@ public sealed class InstallerQueryService : IInstallerQueryService
             // Every way this one product's records can come back short reaches
             // the same count, and reaches it once. The number the user reads is
             // programs, not failures, so one program with a failed package read
-            // AND two failed patch rows is one program, exactly as a product
-            // whose whole row was skipped is one. Counting failures instead
-            // would inflate the notice without telling anyone more.
+            // AND two failed patch rows is one program. Counting failures
+            // instead would inflate the notice without telling anyone more.
             var recordsShort = false;
 
             var productName = GetProductProperty(productCode, userSid, context, MsiInstallProperty.ProductName).Value;
@@ -780,10 +780,9 @@ public sealed class InstallerQueryService : IInstallerQueryService
             // non-removable, so either still merges a row that says "needed";
             // an unreadable LocalPackage skips the insertion entirely, and the
             // product's "I still have this file" never reaches the merge at all.
-            // That is the same information loss as a skipped enumeration row, so
-            // it is counted the same way and withholds the same class. Without
-            // the count it is worse than a skipped row, because the scan would
-            // report itself complete while short of a claim.
+            // So it is counted in unreadableProducts and withholds the removable
+            // class. Without the count the scan would report itself complete
+            // while short of a claim.
             if (localPackage.Unreadable)
             {
                 recordsShort = true;
@@ -958,18 +957,18 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // whether a product's claim on a cached file exists anywhere at all, and a
         // file no source claims goes to the folder walk's candidates.
         //
-        // A short API enumeration alone is answered by the fallback, because the
-        // paths the lost product would have claimed are still reachable: the
-        // fallback reads the same UserData keys and contributes them as rows, so
-        // the file stays claimed even though its owner went missing from the API's
-        // answer.
+        // A claim the API loop lost is answered by the fallback alone, because the
+        // path it names is still reachable: the fallback reads the same UserData
+        // keys and contributes them as rows, so the file stays claimed even though
+        // the API's read of it failed.
         //
         // With the fallback ALSO failing reads, that is not established: a product
-        // lost from the API whose UserData key was one of the unreadable ones is
-        // claimed by neither source, so the scan stops here. The two failures are
-        // not independent, either: the same corrupt registration that loses an API
-        // row can equally make that product's UserData subtree unreadable, so the
-        // backup is likeliest to be missing exactly the product the primary lost.
+        // whose claim the API lost and whose UserData key was one of the unreadable
+        // ones is claimed by neither source, so the scan stops here. The two
+        // failures are not independent, either: the same corrupt registration that
+        // fails an API read can equally make that product's UserData subtree
+        // unreadable, so the backup is likeliest to be missing exactly the claim
+        // the primary lost.
         // Neither counter can bound what the other lost, so no narrower rule is
         // sound.
         //
@@ -1018,11 +1017,11 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // AND THE GATE ABOVE WEIGHS TWO TERMS, REFUSING WHEN BOTH ARE NON-ZERO,
         // which is worth spelling out beside this because they count different
         // things. fallback.Failures is the registry side's own tally of key reads
-        // that failed. unreadableProducts is what the API said about ITSELF: rows
-        // it returned that this code could not read, and products whose records
-        // came back short inside the loop. An enumeration ending on NoMoreItems
-        // has said nothing about itself and raises neither term, which is why the
-        // products behind a disagreement are named above rather than counted here.
+        // that failed. unreadableProducts is what the API said about ITSELF:
+        // products it returned whose records came back short inside the loop. An
+        // enumeration ending on NoMoreItems has said nothing about itself and
+        // raises neither term, which is why the products behind a disagreement are
+        // named above rather than counted here.
         //
         // What remains here is an OBSERVATION and not an estimate. The fallback reads
         // the same UserData keys the API read and runs after the whole API loop, so a
@@ -1034,12 +1033,12 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // disk rather than through a code, so it does not depend on any key name being
         // a packed GUID this code can read.
         //
-        // A product whose row the API skipped, or whose LocalPackage read failed,
-        // has its registry value claimed by the fallback alone, so it is already
-        // inside unreadableProducts. Subtracting the whole of that count is
-        // deliberately generous (a product short only a patch row contributes no
-        // unclaimed path), which can leave the NUMBER low and cannot leave the
-        // withholding off: whatever it absorbs, unreadableProducts carries.
+        // A product whose LocalPackage read failed has its registry value claimed
+        // by the fallback alone, so it is already inside unreadableProducts.
+        // Subtracting the whole of that count is deliberately generous (a product
+        // short only a patch row contributes no unclaimed path), which can leave
+        // the NUMBER low and cannot leave the withholding off: whatever it absorbs,
+        // unreadableProducts carries.
         //
         // A patch entry names no product, so it can say only that at least one
         // went unreached. It floors the count rather than adding to it.
@@ -1087,15 +1086,14 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // reached the merge, and a patch is cached once and shared across the
         // products that hold it.
         //
-        // Nothing finer is sound. A failed row's product code is undefined (the
-        // API documents its output buffers for ERROR_SUCCESS and ERROR_MORE_DATA
-        // only) and the loop clears the buffer per iteration, so the missing
-        // product's identity is unknowable, and with it the set of patches it
-        // could still be holding. A failed LocalPackage read names its product
-        // but not the path it would have claimed, which is the half that matters:
-        // the lost claim could be on any cached file, so knowing who lost it
-        // narrows nothing. Scan-wide is the finest granularity the information
-        // supports either way.
+        // Nothing finer is sound. A failed patch row names its product and not its
+        // patch (the API documents its output buffers for ERROR_SUCCESS and
+        // ERROR_MORE_DATA only, and the loop clears the buffer per iteration), so
+        // the patch that product could still be holding is unknowable. A failed
+        // LocalPackage read names its product but not the path it would have
+        // claimed, which is the half that matters: the lost claim could be on any
+        // cached file, so knowing who lost it narrows nothing. Scan-wide is the
+        // finest granularity the information supports either way.
         //
         // This loop moves only the removable class, the superseded patches, and only
         // on a scan that lost a claim, found a cached file no product it reached
@@ -1326,21 +1324,20 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// them still holds it. Emptiness here is a machine with nothing removable, never
     /// a mechanism that is not needed.
     ///
-    /// AND EMPTINESS NO LONGER RETURNS AT THE TOP, which is a separate statement
-    /// and the one most likely to be undone by somebody restoring an obvious
-    /// saving. The per-product condition this method hosts is read by the offer
-    /// AND by the missing-file split, and on a machine with nothing to offer the
-    /// split is its only reader. Returning before it left every patch row at the
-    /// type's default, which the split reports, so a missing obsoleted
-    /// registration was named or not according to whether an unrelated program
-    /// happened to hold an offer-eligible patch that day.
+    /// AND AN EMPTY WORK LIST DOES NOT RETURN AT THE TOP, which is a separate
+    /// statement and the one most likely to be undone by somebody restoring an
+    /// obvious saving. The per-product condition this method hosts is read by the
+    /// offer AND by the missing-file split, and on a machine with nothing to offer
+    /// the split is its only reader. A return before it leaves every patch row at
+    /// the type's default, which the split reports, and a missing obsoleted
+    /// registration is then named or not according to whether an unrelated program
+    /// happens to hold an offer-eligible patch that day.
     /// </summary>
     /// <param name="recovered">
     /// Products the enumeration never returned and the registry comparison then
     /// found installed (<see cref="LocateProductsTheEnumerationMissed"/>). They are
     /// asked exactly as enumerated products are, which is the point: a product
-    /// recovered by name can answer for the patches it holds, where a product
-    /// merely inferred from a headcount could only ever have withheld.
+    /// recovered by name can answer for the patches it holds.
     /// </param>
     /// <param name="reach">
     /// What the registry established about which cached files each product's own
@@ -1350,13 +1347,13 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// </param>
     /// <remarks>
     /// INTERNAL RATHER THAN PRIVATE SO ITS TESTS CAN REACH IT, which is the same
-    /// reason <see cref="IsRemovablePatch"/> and <see cref="MergeClaim"/> are.
-    /// Nothing reaches it through the enumeration any more, so a test driving the
-    /// enumeration can no longer exercise it at all, and the alternative to a seam
-    /// was letting the coverage go: preserved-but-untested machinery is preserved
-    /// in name only. There is no production switch that re-grants a removable
-    /// verdict and there must never be one; a flag in a shipped binary that turns
-    /// this class back on is the thing the release exists to prevent.
+    /// reason <see cref="IsRemovablePatch"/> and <see cref="MergeClaim"/> are. The
+    /// patch truncation tests call it directly with a claimed set and its patch
+    /// claims, so their assertions turn on this pass rather than on the enumeration
+    /// that builds its inputs in production.
+    ///
+    /// Nothing re-grants a removable verdict this pass takes away, and nothing may:
+    /// every path a verdict travels after the API loop is downgrade-only.
     /// </remarks>
     internal void ConfirmRemovableAgainstEveryProduct(
         Dictionary<string, RegisteredPackage> claimed,
@@ -1381,31 +1378,26 @@ public sealed class InstallerQueryService : IInstallerQueryService
             if (claimed.TryGetValue(claim.LocalPackagePath, out var row) && row.IsRemovable)
                 toConfirm.Add((claim.LocalPackagePath, claim.PatchCode));
 
-        // AN EMPTY WORK LIST USED TO RETURN HERE, and the guard has moved below the
-        // per-product pass rather than being deleted. Everything from here to that pass
-        // is what the pass needs; everything after it is the per-pairing work, which an
-        // empty list really does make pointless.
+        // THE RETURN FOR AN EMPTY WORK LIST IS BELOW THE PER-PRODUCT PASS, NOT HERE.
+        // Everything from here to that pass is what the pass needs; everything after
+        // it is the per-pairing work, which an empty list really does make pointless.
         //
-        // WHY IT COULD NOT STAY. The pass has two consumers and only one of them is the
-        // offer. The other is the missing-files split, which reads the verdict for rows
-        // whose file has gone, and those two sets are disjoint: a missing file is never
-        // offered. So a machine with nothing to offer is precisely a machine where the
-        // split is the only reader, and returning here left every row at the type's
-        // default of Unestablished, which the split reports.
+        // The pass has two consumers and only one of them is the offer. The other is
+        // the missing-files split, which reads the verdict for rows whose file has
+        // gone, and those two sets are disjoint: a missing file is never offered. So a
+        // machine with nothing to offer is precisely a machine where the split is the
+        // only reader, and a return here would leave every row at the type's default
+        // of Unestablished, which the split reports. Whether a user is warned about a
+        // missing file would then turn on whether some UNRELATED program on the
+        // machine held an offer-eligible superseded patch that day. The class that
+        // moves is an obsoleted patch whose Uninstallable reads a positive zero.
         //
-        // WHAT THAT DID, and it is why this is a fix rather than a tidy. Whether a past
-        // user was warned about a file an earlier release removed turned on whether some
-        // UNRELATED program on the machine happened to hold an offer-eligible superseded
-        // patch that day. Nothing to do with the file, the registration or the risk. The
-        // class it moved is exactly one: an obsoleted patch whose Uninstallable read a
-        // positive zero, which is precisely what every release up to v2.3.0 offered and
-        // removed.
-        //
-        // AND IT IS CHEAPER THAN THE GUARD MADE IT LOOK. The expensive half of this
-        // method is the per-pairing property reads and the patch-file reads, and neither
-        // happens on such a machine: the pairing loop is below the moved guard, and the
-        // pass reads a patch file only for a row that is still removable, of which there
-        // are none. The two patch-set maps are built before this method is called at all.
+        // ON SUCH A MACHINE THE PASS COSTS LITTLE. The expensive half of this method
+        // is the per-pairing property reads and the patch-file reads, and neither
+        // happens on such a machine: the pairing loop is below the return, and the
+        // pass reads a patch file only for a row that is still removable, of which
+        // there are none. The two patch-set maps are built before this method is
+        // called at all.
         // What is left is the machine-wide enumeration below, which reads no file and
         // which every machine that offers anything already pays for on every scan.
         //
@@ -1436,12 +1428,11 @@ public sealed class InstallerQueryService : IInstallerQueryService
 
         // ROUTE B, READ ONCE PER PATH AND SHARED BY BOTH PASSES BELOW. The file names
         // the products it may be applied to, so it answers about a product no
-        // enumeration returned, which is what makes it the cover for route A's
-        // documented blind spot. It was reaching the per-pairing pass alone.
+        // enumeration returned, one route A cannot see among them.
         //
         // MEMOISED BECAUSE THE READS ARE THE EXPENSIVE PART AND THE ANSWER CANNOT
-        // CHANGE WITHIN ONE SCAN. A path named by two patch codes was read twice
-        // before this, once per pairing, and both passes now want the same answer.
+        // CHANGE WITHIN ONE SCAN. A path named by two patch codes would otherwise be
+        // read once per pairing, and both passes want the same answer.
         // The cache is per call and dies with it, so nothing is carried between
         // scans and no staleness is possible.
         //
@@ -1780,41 +1771,31 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// ROUTE B. The product codes a cached patch says in its own Template that it
     /// may be applied to.
     ///
-    /// It is read from the FILE, so it does not care what any enumeration
-    /// returned, which is what makes it the answer to route A's documented blind
-    /// spot.
+    /// It is read from the FILE, so it does not depend on what any enumeration
+    /// returned.
     ///
-    /// ITS OWN LIMIT IS THE OTHER WAY ROUND AND IT IS REAL: it names the products
-    /// the patch MAY TARGET rather than the products that HOLD it. A product
-    /// holding this patch and absent from the Template is invisible to this route,
-    /// and if the machine-wide enumeration's blind spot also hides it and the
-    /// product enumeration never returned it, nothing puts it into the per-product
-    /// condition's set, so its removable patch cannot overturn a clean verdict.
+    /// IT NAMES THE PRODUCTS THE PATCH MAY TARGET, NOT THE PRODUCTS THAT HOLD IT.
+    /// The per-product condition judges a cached patch file against four sets of
+    /// products together: those whose own patch claims name the file, those route A
+    /// names as holding one of its patch codes, those the registry comparison
+    /// recovered by name, less any whose recorded patches were read and name only
+    /// other files, and, for a row still removable, the installed products this route
+    /// reads from the file's Template.
     ///
-    /// AND THERE IS A DOCUMENTED PRODUCER FOR EXACTLY THAT. <c>MsiApplyPatchW</c> with
-    /// <c>INSTALLTYPE_SINGLE_INSTANCE</c>: "the installer applies the patch to the
-    /// product specified by szInstallPackage. In this case, other eligible products
-    /// listed in the patch package are ignored and the szInstallPackage parameter
-    /// contains the null-terminated string representing the product code of the
-    /// instance to patch." A second INSTANCE of a product carries a ProductCode of
-    /// its own, which the patch author had no reason to list. So the holders of a
-    /// patch are NOT guaranteed to be a subset of what its Template names.
+    /// A HOLDER THE TEMPLATE DOES NOT NAME HAS A DOCUMENTED PRODUCER.
+    /// <c>MsiApplyPatchW</c> with <c>INSTALLTYPE_SINGLE_INSTANCE</c>: "the installer
+    /// applies the patch to the product specified by szInstallPackage. In this case,
+    /// other eligible products listed in the patch package are ignored and the
+    /// szInstallPackage parameter contains the null-terminated string representing
+    /// the product code of the instance to patch." A second INSTANCE of a product
+    /// carries a ProductCode of its own, which the patch author had no reason to
+    /// list. So the holders of a patch are NOT guaranteed to be a subset of what its
+    /// Template names.
     ///
-    /// WHAT IS TRUE AND IS WORTH KEEPING. Microsoft documents the Template as
-    /// required and as "a semicolon-delimited list of the product codes that can
-    /// accept the patch", so it is a real list rather than a hint, and a Template
-    /// naming MORE products than hold the patch is harmless here: every extra
-    /// product is added to the judged set, and adding one can only withhold. Only
-    /// the Template naming FEWER opens anything. Read against one machine's whole
-    /// cache, every cached patch carried a well-formed Template, none was empty and
-    /// every registered holder was declared, which says something about how often
-    /// and nothing about whether.
-    ///
-    /// AND NO GUARD HERE COULD ASSERT IT, which is why this is written down rather
-    /// than checked. The only thing to compare a Template against is the set of
-    /// products the machine says hold the patch, and that set is read from the same
-    /// enumerations whose blind spot is the condition being worried about. A check
-    /// would agree with itself on exactly the machine where it needed to disagree.
+    /// Microsoft documents the Template as required and as "a semicolon-delimited
+    /// list of the product codes that can accept the patch", so it is a real list
+    /// rather than a hint. A Template naming MORE products than hold the patch adds
+    /// each extra product to the judged set, and adding one can only withhold.
     /// </summary>
     /// <param name="unreadable">
     /// True where the file did not yield an identity, WHICH INCLUDES A FILE THAT IS
@@ -2307,8 +2288,8 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// gate on the final-path resolution has it wrong. What it does is COUNT, into
     /// <see cref="PathCensus.FlaggedSpellings"/>, and that is separate from
     /// <see cref="PathCensus.ResolverAttempts"/> because the attempts count is the
-    /// number of paths asked about, which with every path asked is no longer also the
-    /// number carrying such a spelling. One counter serving both loses the second,
+    /// number of paths asked about, which with every path asked is not the number
+    /// carrying such a spelling. One counter serving both loses the second,
     /// and a report that stops being able to answer a question reads exactly like a
     /// machine that has nothing to report.
     ///
@@ -2937,24 +2918,22 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// <summary>
     /// Withholds every still-removable path that any product could roll back onto.
     ///
-    /// THE DEFECT THIS CLOSES. A rule reading the SUPERSEDED patch's own removability
-    /// asks the wrong patch: the risk turns on the SUPERSEDING patch's. Uninstalling
-    /// patch C with the superseded patches' cached files present rolls a product back
-    /// one step correctly; with those files missing it goes all the way to the
-    /// unpatched base, discards both patches and reports success, and the log carries
-    /// Windows looking for the absent files by name. So removing a superseded patch's cached file can silently
-    /// cost somebody a security update, in exactly the operation Microsoft always
-    /// named as the reason the file is cached.
+    /// THE PATCH WHOSE REMOVABILITY COUNTS IS THE SUPERSEDING ONE. A rule reading the
+    /// SUPERSEDED patch's own removability asks the wrong patch. Uninstalling patch C
+    /// with the superseded patches' cached files present rolls a product back one
+    /// step correctly; with those files missing it goes all the way to the unpatched
+    /// base, discards both patches and reports success, and the log carries Windows
+    /// looking for the absent files by name. So removing a superseded patch's cached
+    /// file can silently cost somebody a security update, in exactly the operation
+    /// Microsoft always named as the reason the file is cached.
     ///
     /// SO THE CONDITION IS ABOUT THE PRODUCT AND ABOUT EVERY PRODUCT. A superseded
     /// patch is cached once and registered once per product it applies to, and its one
     /// file is shared by all of them, so a rollback on ANY of those products reaches
     /// for it. A condition holding only for the product a loop happened to be standing
-    /// in would offer a file that a second product's removable patch can still need.
-    /// One file was measured carrying four registrations across two products, read on
-    /// or before 2026-08-17. What it establishes is that the shape occurs, which no
-    /// later reading can take back; how many any machine holds today is a different
-    /// question and this figure does not answer it.
+    /// in would offer a file that a second product's removable patch can still need,
+    /// and a cached patch file can carry several registrations across more than one
+    /// product.
     ///
     /// THE PRODUCTS ARE UNIONED TOO, not just the patches. The claims name the
     /// products the enumeration reached; route A names products it never returned;
@@ -2963,23 +2942,19 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// enumeration lost and the registry comparison then recovered by name. A product
     /// any of the four names is a product the condition has to hold for.
     ///
-    /// THE THIRD SOURCE IS THE ONE THAT COVERS ROUTE A'S DOCUMENTED BLIND SPOT, and
-    /// it reached the per-pairing pass first and this condition second. While it was
-    /// missing here, a product that route A cannot see and that carries no claim for
-    /// this path was never put into the set, so its removable patch was never seen,
-    /// and this condition could answer AllNonRemovable for a file that product can
-    /// still reach for. The per-pairing pass below would then ask that product about
-    /// the patch and be told, truthfully, that it holds it and cannot uninstall it,
-    /// which is an answer to a different question.
+    /// THE THIRD SOURCE NAMES A PRODUCT ROUTE A CANNOT SEE AND THAT CARRIES NO CLAIM
+    /// FOR THIS PATH. Do not drop it: without it such a product is not in the set, its
+    /// removable patch is not seen, and this condition can answer AllNonRemovable for
+    /// a file that product can still reach for. The per-pairing pass below asks a
+    /// product whether it holds the patch and can uninstall it, which is a different
+    /// question and does not stand in for this one.
     ///
-    /// THE FOURTH SOURCE IS THE SAME GAP ONE STEP FURTHER OUT, and it stood open while
-    /// the third was being closed. A product the machine-wide enumeration never
-    /// returned and the registry comparison recovered by name has always been handed to
-    /// the per-pairing pass, and was never handed to this condition, so on a machine
-    /// holding the same program twice with a patch applied to the second copy by name,
-    /// the copy that could roll back onto the file was the one product nobody asked.
-    /// The per-pairing pass then asked it whether it held the patch and could uninstall
-    /// it, was told truthfully that it could not, and the file was offered.
+    /// THE FOURTH SOURCE IS A PRODUCT THE MACHINE-WIDE ENUMERATION NEVER RETURNED AND
+    /// THE REGISTRY COMPARISON RECOVERED BY NAME, and it is handed to this condition as
+    /// well as to the per-pairing pass. On a machine holding the same program twice
+    /// with a patch applied to the second copy by name, that copy is the product that
+    /// could roll back onto the file, and the per-pairing pass asking it whether it
+    /// holds the patch answers the other question.
     ///
     /// AND THAT SOURCE IS THE ONE THAT IS NARROWED, which none of the other three is.
     /// The other three name a product BECAUSE of this path: a claim on it, a route A
@@ -2990,10 +2965,9 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// product's own registry records are asked which files it could reach for, and
     /// where anything unestablished puts it back into every path.
     ///
-    /// WHAT IT CANNOT PROMISE, so no copy may say otherwise: the condition is read
-    /// here and re-read at act time, and neither is a statement about the future. A
-    /// patch that is non-removable today can be replaced tomorrow by one that is not.
-    /// That is true of every check this app makes and is not a defect here.
+    /// IT IS NOT A STATEMENT ABOUT THE FUTURE, and no copy may say it is: the
+    /// condition is read here and re-read at act time, and a patch that is
+    /// non-removable today can be replaced tomorrow by one that is not.
     /// </summary>
     private static void JudgeAndWithholdAgainstEveryProductPatchSet(
         Dictionary<string, RegisteredPackage> claimed,
@@ -3179,22 +3153,15 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// NEVER <c>AllPatches</c>, AND THIS IS THE DECISION MOST LIKELY TO BE UNDONE BY
     /// SOMEBODY TIDYING UP. The same key carries an <c>AllPatches</c>
     /// <c>REG_MULTI_SZ</c> that looks like a ready-made list of exactly this. It is
-    /// the EFFECTIVE list and not the registration list: measured against one machine
-    /// while that machine still held superseded patches, it agreed with the subkeys
-    /// on 137 of 138 products and disagreed about exactly one, the only product
-    /// holding superseded patches, by listing the applied patch alone and omitting all
-    /// three superseded ones. So anything built on it silently excludes the exact
+    /// the EFFECTIVE list and not the registration list: for a product holding
+    /// superseded patches it can list the applied patch alone and omit the superseded
+    /// ones its subkeys name. So anything built on it can silently exclude the exact
     /// class this condition exists for.
     ///
-    /// THAT MEASUREMENT CANNOT BE RE-TAKEN AND A FRESH CHECK WILL LOOK LIKE IT
-    /// REFUTES IT. Re-run over the same machine on 2026-08-17, after its superseded
-    /// patches had gone: 148 product keys, 147 carrying a <c>Patches</c> key, 147
-    /// carrying <c>AllPatches</c>, and ZERO disagreements. `measured` Of course there
-    /// were none, because the disagreement is ABOUT superseded patches and the machine
-    /// no longer had any. **A reader who checks this on a machine with no superseded
-    /// patch and finds perfect agreement has not disproved anything**, and the whole
-    /// value of this paragraph is stopping them concluding otherwise. The live guard is
-    /// now a test rather than a machine: see
+    /// A CHECK ON A MACHINE WITH NO SUPERSEDED PATCH CANNOT REFUTE THIS. The
+    /// disagreement is ABOUT superseded patches, so on such a machine the two can agree
+    /// on every product and that agreement disproves nothing. The guard is a test
+    /// rather than a machine: see
     /// <c>ProductPatchSetTests.AllPatches_is_not_read_even_when_it_contradicts_the_subkeys</c>,
     /// which plants the disagreement rather than waiting for one.
     ///
@@ -3523,13 +3490,6 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// tidiness check: the caller turns each of these into a question about a real
     /// machine, and a code invented out of a key name that was never a packed GUID
     /// would be a question about nothing whose answer withholds.
-    ///
-    /// THE TRANSFORM IS MEASURED, NOT DERIVED. Against the 137 product keys of one
-    /// elevated machine (2026-08-08), 136 unpacked to exactly the GUID inside
-    /// their own <c>InstallProperties\UninstallString</c>, none disagreed, and the
-    /// remaining key carried no UninstallString to check against. One machine's
-    /// agreement cannot establish that no other packing exists, which is the
-    /// reason an unparseable name refuses rather than guesses.
     /// </summary>
     internal static string? UnpackRegistryProductCode(string packed)
     {
@@ -3621,49 +3581,34 @@ public sealed class InstallerQueryService : IInstallerQueryService
             : path;
 
     private const int MaxProductIndex = 10_000;
-    private const int MaxConsecutiveNonSuccess = 20;
 
     /// <summary>
-    /// Enumerates every installed product across all contexts. <c>UnreadableRows</c>
-    /// counts the rows this loop had to skip (a non-success return, or a Success
-    /// that wrote no GUID): each one is an installed product whose patches will
-    /// never be enumerated.
-    ///
-    /// IT IS ONE WAY INTO ONE SUMMAND. It reaches <c>unreadableProducts</c>, which
-    /// the API loop also raises per product on an unreadable LocalPackage, on a patch
-    /// enumeration that came
-    /// back incomplete, and on an unreadable LocalPackage under one of that product's
-    /// patches. <see cref="InstallerQueryResult.RecordsIncomplete"/> is built from
-    /// that count plus <c>apiNeverClaimed</c> and <c>unresolvedProducts</c>, and
-    /// <see cref="InstallerQueryResult.UnaccountedProductCount"/> sets out the four
-    /// contributors those three summands carry. Read that note before quoting any of
-    /// this: two of the four are not failures to read at all.
+    /// Enumerates every installed product across all contexts, or refuses the scan.
+    /// The walk reads rows until Windows reports the end of the list, and a row it
+    /// cannot read stops it, the scan then refusing with <c>Error.MsiNonSuccess</c>.
+    /// <c>UnreadableRows</c> counts the rows the walk passed without reading, so it is
+    /// zero on every walk that returns. It seeds <c>unreadableProducts</c> and the
+    /// census carries it as <see cref="EnumerationCensus.SkippedProductRows"/>.
     /// </summary>
     private (List<(string ProductCode, string? UserSid, MsiInstallContext Context)> Products, int UnreadableRows)
         EnumerateProducts(CancellationToken ct)
     {
         var results = new List<(string, string?, MsiInstallContext)>();
         var productCode = new char[Msi.GuidBufferLength];
-        int consecutiveNonSuccess = 0;
         int unreadableRows = 0;
         uint lastError = MsiError.Success;
         bool reachedEnd = false;
 
-        // THE INDEX ADVANCES ON EVERY ITERATION, AND MsiEnumProductsEx DOCUMENTS
-        // THAT IT SHOULD NOT: "The index should be incremented, only if the
-        // previous call has returned ERROR_SUCCESS." Holding the index across a
-        // failed row is unimplementable as stated, because a row that fails
-        // permanently would then be retried for ever, so the advance is the
-        // deliberate reading and not an oversight.
+        // THE INDEX ADVANCES ONLY PAST A ROW THAT READ, which is what
+        // MsiEnumProductsEx documents: "The index should be incremented, only if
+        // the previous call has returned ERROR_SUCCESS." A row that does not read
+        // ends the walk, and the check after the loop refuses the scan on it.
         //
-        // What makes it affordable is that it cannot lose a product silently.
-        // Every arm that advances past a non-Success return also increments
-        // unreadableRows, which reaches unreadableProducts and withholds the
-        // whole removable class for the scan, so a product this loop skips is a
-        // product the scan has already declared it did not read. What the caller
-        // goes looking for by name is a product lost SILENTLY, and this cannot
-        // produce one. Do not "fix" the advance into a retry without replacing
-        // that guarantee first.
+        // Do not turn that stop into a skip. The API documents its output buffers
+        // for ERROR_SUCCESS and ERROR_MORE_DATA only, so a row that did not read
+        // names no product, and a walk that stepped past it would hand the rest of
+        // the scan a list short of a product the walk cannot name. The rows after
+        // it would also be asked for at an index the documentation says not to use.
         for (uint index = 0; index < MaxProductIndex; index++)
         {
             ct.ThrowIfCancellationRequested();
@@ -3685,8 +3630,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
             // null terminator on the Win32 input. On Success the API
             // updates it to the count EXCLUDING the terminator. Pass
             // the full SidBufferLength so any plausible SID fits on
-            // the first call and the MoreData branch below stays as
-            // a safety net.
+            // the first call.
             uint sidLen = SidBufferLength;
 
             var error = _msi.EnumProducts(
@@ -3701,14 +3645,18 @@ public sealed class InstallerQueryService : IInstallerQueryService
 
             if (error == MsiError.MoreData)
             {
-                // Defensive only. Real-world SIDs are ~45 chars and
-                // the first call passes a 256-char buffer, so this
-                // branch isn't exercised in normal use. On MoreData
-                // pcchSid carries the SID length EXCLUDING the
-                // terminator ("not including the terminating NULL
-                // character", MsiEnumProductsExW on pcchSid), and the
-                // documented retry size is that count plus one for the
-                // null the buffer must also hold.
+                // MoreData asks for a larger SID buffer. Real-world SIDs are
+                // ~45 chars and the first call passes 256, so no ordinary SID
+                // needs it. On MoreData pcchSid carries the SID length
+                // EXCLUDING the terminator ("not including the terminating NULL
+                // character", MsiEnumProductsExW on pcchSid), and the documented
+                // retry size is that count plus one for the null the buffer must
+                // also hold.
+                //
+                // Windows can also answer MoreData for a product key whose name
+                // is too long to be a packed product code. No SID buffer helps
+                // there: the retry answers MoreData again, and the row stops the
+                // walk as a row that did not read.
                 sidLen++;
                 sidBuffer = new char[sidLen];
 
@@ -3724,14 +3672,11 @@ public sealed class InstallerQueryService : IInstallerQueryService
             }
 
             // Every classification below sits AFTER the retry so it judges
-            // whichever call actually produced this row's answer. With the
-            // refusal check above the retry, an AccessDenied returned BY the
-            // retry would fall through to the tolerated-failure branch and demote
-            // the row instead of stopping the scan, which is the one return this
-            // loop is not allowed to absorb. The case is near unreachable by
-            // contract, since the retry only runs for a SID longer than 256
-            // characters, so this is the refusal contract being uniform rather
-            // than a failure anybody has met.
+            // whichever call produced this row's answer. With the access check
+            // above the retry, an AccessDenied returned BY the retry would reach
+            // the arm for a row that did not read, and the scan would refuse
+            // saying an entry came back unreadable when Windows had refused
+            // access.
             if (error == MsiError.NoMoreItems)
             {
                 reachedEnd = true;
@@ -3748,22 +3693,16 @@ public sealed class InstallerQueryService : IInstallerQueryService
                 var code = BufferToString(productCode);
                 if (code.Length == 0)
                 {
-                    // A Success return that wrote no product GUID: the
-                    // follow-up GetProductInfo reads would fail quietly and
-                    // drop the product's cached file from the registered set,
-                    // which is the unsafe direction (a needed file then looks
-                    // orphaned). Count it against the tolerance instead of
-                    // adding an empty row.
-                    consecutiveNonSuccess++;
+                    // A Success return that wrote no product code is a row that
+                    // did not read: there is no code to read the product's
+                    // cached package with, so its file would be missing from the
+                    // registered set. It stops the walk like any other such row,
+                    // and the refusal carries the code the call returned, which
+                    // is Success.
                     unreadableRows++;
-                    if (consecutiveNonSuccess >= MaxConsecutiveNonSuccess)
-                        throw new LocalisedInvalidOperationException(
-                            string.Format(Strings.Error_MsiNonSuccess, consecutiveNonSuccess, error,
-                                results.Count, Helpers.DisplayHelpers.PluraliseProduct(results.Count)));
-                    continue;
+                    break;
                 }
 
-                consecutiveNonSuccess = 0;
                 // Clamp sidLen against the buffer length defensively
                 // in case the API ever returns a value larger than the
                 // buffer accepted (which would be a Win32 bug, but
@@ -3777,33 +3716,24 @@ public sealed class InstallerQueryService : IInstallerQueryService
             }
             else
             {
-                // Scattered per-product failures are tolerated on purpose:
-                // this call cannot tell "product has no cached package" from
-                // "product unreadable", so a per-product throw would brick the
-                // scan over a single bad row. ERROR_BAD_CONFIGURATION is a
-                // documented per-row return of MsiEnumProductsEx and the state
-                // is reported in the wild (failed-install residue); how often
-                // is not known, and no claim about it is needed here, because
-                // the tolerance is paid for either way.
-                //
-                // What pays for it is the demotion in GetRegisteredPackagesCore:
-                // a skipped row is safe to skip precisely BECAUSE the removable
-                // class is withheld from the scan that skipped it. The two are
-                // one mechanism. The registry fallback is not the safety net it
-                // reads like: it recovers lost PATHS, never lost VERDICTS. A
-                // fallback row has no State to read, so it can supply a path
-                // this row would have contributed and can never correct a verdict
-                // built without it. FileSystemScanService's correlation gate only
-                // catches a total collapse. Only a long RUN of consecutive
-                // failures (a wholesale enumeration collapse) throws.
-                consecutiveNonSuccess++;
+                // Any other return is a row that did not read,
+                // ERROR_BAD_CONFIGURATION among them, which MsiEnumProductsEx
+                // documents as a per-row return.
                 unreadableRows++;
-                if (consecutiveNonSuccess >= MaxConsecutiveNonSuccess)
-                    throw new LocalisedInvalidOperationException(
-                        string.Format(Strings.Error_MsiNonSuccess, consecutiveNonSuccess, error,
-                            results.Count, Helpers.DisplayHelpers.PluraliseProduct(results.Count)));
+                break;
             }
         }
+
+        // The refusal for a row that did not read. It sits after the loop rather
+        // than in each arm, so an arm that counted a row and carried on is refused
+        // here as well, and the walk cannot return with a row unread. It comes
+        // before the check below because a walk stopped by an unread row has not
+        // reached the end either, and would otherwise be refused under the message
+        // for a list that never ended.
+        if (unreadableRows > 0)
+            throw new LocalisedInvalidOperationException(
+                string.Format(Strings.Error_MsiNonSuccess, lastError,
+                    results.Count, Helpers.DisplayHelpers.PluraliseProduct(results.Count)));
 
         // Hitting the index cap is not a clean end: the enumeration ran out of
         // budget rather than reporting NoMoreItems, so everything past the cap
@@ -3811,12 +3741,10 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // machine (nobody has 10,000 products), but if it ever did it falls to
         // the catastrophic side, so fail loudly rather than truncate silently.
         //
-        // This carries its own message and must not be merged back into the
-        // consecutive-failures one for symmetry. Here the first placeholder is
-        // the budget rather than a failure count, and the second is the last
-        // row's error, which is Success when every row read cleanly and the
-        // list simply never terminated: that string would state two things
-        // that are not true of this condition.
+        // This carries its own message and must not share the one above. Every
+        // row before the cap read, so there is no unreadable entry to report, and
+        // the error code is the last row's, which is Success whenever the list
+        // simply never terminated.
         if (!reachedEnd)
             throw new LocalisedInvalidOperationException(
                 string.Format(Strings.Error_MsiEnumerationNeverEnded, MaxProductIndex, lastError,
@@ -3837,13 +3765,13 @@ public sealed class InstallerQueryService : IInstallerQueryService
     }
 
     private const int MaxPatchIndex = 10_000;
+    private const int MaxConsecutiveNonSuccess = 20;
 
     /// <summary>
     /// Enumerates one product's patches. <c>Incomplete</c> reports that at least
     /// one row was skipped, which costs this product's claim on whatever patch
-    /// the row named, and reaches the same demotion the product loop's skips do:
-    /// the two loops tolerate a bad row identically, so a verdict built through
-    /// either is short the same way.
+    /// the row named. The caller counts the product once in
+    /// <c>unreadableProducts</c>, which withholds the removable class.
     ///
     /// A sustained run of unreadable rows for ONE product ends that product's
     /// enumeration and returns <c>Incomplete</c>, rather than aborting the whole
@@ -3977,20 +3905,18 @@ public sealed class InstallerQueryService : IInstallerQueryService
                 // One product whose patch rows keep coming back unreadable is a
                 // per-product loss, not a scan failure: stop enumerating THIS
                 // product's patches and return Incomplete so the caller records
-                // one unreadable product and carries on. The reason it is safe to
-                // stop rather than abort is the same reason a scattered skip is:
-                // the removable class is withheld scan-wide the moment any product
-                // is short (so no superseded patch is offered on a run that lost a
-                // claim), and the registry fallback claims this product's cached
-                // .msp/.msi files independently of the API (so none looks
-                // orphaned). What that costs is real and deliberate: the
-                // withholding is scan-wide, and on a machine whose registration
-                // keeps refusing one product's patch list every scan, it is the
-                // steady state until the registration itself changes, not a
-                // transient. Declining to name a patch list Windows refuses to
-                // return beats guessing at one. Orphan cleanup is unaffected. A
-                // whole-machine breakdown is a different case and still aborts: the
-                // AccessDenied and never-ended-cap throws stay fatal.
+                // one unreadable product and carries on. Nothing is offered on the
+                // strength of the rows it did not read: the removable class is
+                // withheld scan-wide the moment any product is short (so no
+                // superseded patch is offered on a run that lost a claim), and the
+                // registry fallback claims this product's cached .msp/.msi files
+                // independently of the API (so none looks orphaned). On a machine
+                // whose registration refuses one product's patch list on every
+                // scan, the removable class is withheld on every scan until the
+                // registration changes. Declining to name a patch list Windows
+                // refuses to return beats guessing at one. A whole-machine
+                // breakdown still aborts: the AccessDenied and never-ended-cap
+                // throws stay fatal.
                 if (consecutiveNonSuccess >= MaxConsecutiveNonSuccess)
                 {
                     LogPatchEnumerationAbandoned(productCode, context, userSid, error, index,
@@ -4080,16 +4006,13 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// is still withheld unless every product sharing the patch passes that.
     /// **Nothing may read this alone as permission to remove a file.**
     ///
-    /// SUPERSEDED ONLY, WHICH IS STATE 2 AND NOT <c>2 or 4</c>. Obsoleted patches come
-    /// off the offer for a reason that is not about safety: measured across every
-    /// opt-in report this project had received as at 2026-08-17, obsoleted patches had
-    /// never been seen on any machine at all, so offering them reclaims nothing, and
-    /// nobody has ever manufactured one to test with. The date is part of the claim,
-    /// the corpus being one that grows. A class that buys no space and has never been
-    /// exercised does not belong on a list whose whole claim is certainty. They are
-    /// counted at scan time instead, off the machine rather than off the offer, so the
-    /// question of whether anybody has any gets answered without anything appearing on
-    /// anyone's list.
+    /// SUPERSEDED ONLY, WHICH IS STATE 2 AND NOT <c>2 or 4</c>. Obsoleted patches are
+    /// off the offer for a reason that is not about safety: the class is rare enough
+    /// that offering it would reclaim next to nothing, and a list whose whole claim is
+    /// certainty has no room for a class that buys so little. They are counted at scan
+    /// time instead, off the machine rather than off the offer, so the question of
+    /// whether anybody has any gets answered without anything appearing on anyone's
+    /// list.
     ///
     /// WHAT EACH HALF IS WORTH, because the two are not the same kind of fact. The
     /// State half carries real information: Windows has computed that a later patch
@@ -4101,17 +4024,13 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// says this patch cannot be rolled back, and nothing about whether anything still
     /// reads the file.
     ///
-    /// AND ON ITS OWN THE CONJUNCT ASKS THE WRONG PATCH. Measured against real
-    /// patches it behaves as a vendor filter pointing the wrong way: all 58 patches in
-    /// Office 2010 SP2 declare themselves removable and were refused, and three live
-    /// Adobe patches declared themselves not removable and were offered. The Office
-    /// figure comes from captured data about one product's patch set; the Adobe one is
-    /// one machine's state, read on or before 2026-08-17, and that machine held two
-    /// Adobe patch registrations when its hives were read on 2026-08-18. Neither
-    /// re-reading changes what the pair shows, which is that the declaration tracks
-    /// the vendor rather than the risk. The risk turns
-    /// on whether the patch that SUPERSEDED this one can be uninstalled, which this
-    /// never reads, and that is precisely what the other half was built for.
+    /// AND ON ITS OWN THE CONJUNCT ASKS THE WRONG PATCH. Against real patches it
+    /// behaves as a vendor filter pointing the wrong way: every patch in Office 2010
+    /// SP2 declares itself removable, so the conjunct alone refuses all of them, and
+    /// Adobe patches can declare themselves not removable, so it alone passes them.
+    /// The declaration tracks the vendor rather than the risk. The risk turns on
+    /// whether the patch that SUPERSEDED this one can be uninstalled, which this never
+    /// reads, and that is what the other half reads.
     ///
     /// Both directions fail safe. An unparseable State leaves the parsed value at 0
     /// (not a patch), and only a positively read "0" for Uninstallable clears the
@@ -4129,21 +4048,18 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// ERROR_SUCCESS is a value (or, at zero length, a property present and
     /// empty); ERROR_UNKNOWN_PROPERTY is the answer for a property the record
     /// does not carry, which is what a product or a registered-not-applied patch
-    /// with no cached package gives. A probe of 136 products and 2 patches on
-    /// Windows 10.0.26200 / msi.dll 5.0.26100.7920 (2026-07-18) established that
-    /// the two cases are distinguishable at all: an absent property returned
-    /// 1608 rather than a zero-length success, and a product that could not be
-    /// read returned 87. No product on that machine genuinely lacked a cached
-    /// package, so 1608 was observed for an absent property rather than for a
-    /// real absent LocalPackage; both shapes are on this list, so either reading
-    /// lands on the benign side.
+    /// with no cached package gives. The two cases are distinguishable: an
+    /// absent property answers 1608 rather than a zero-length success, and a
+    /// product that cannot be read answers a real error, 87 among them. Both
+    /// shapes of absence, 1608 and a zero-length success, are on this list, so
+    /// either lands on the benign side.
     ///
     /// The direction matters more than the membership. One machine can show
     /// which codes ARE benign; no machine can enumerate every failure code that
     /// exists, so an unlisted code falls to the unreadable side and withholds.
-    /// Inverting this into a list of known-bad codes reinstates the exact fault
-    /// it closes: the failure nobody has seen yet would read as an absence and
-    /// silently delete a product's claim on a file it still needs.
+    /// Do not invert this into a list of known-bad codes: the failure nobody has
+    /// seen yet would then read as an absence and silently delete a product's
+    /// claim on a file it still needs.
     /// </summary>
     private static bool IsBenignPropertyRead(uint error) =>
         error is MsiError.Success or MsiError.MoreData or MsiError.UnknownProperty;
@@ -4216,8 +4132,9 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// <see cref="EnumerateProducts"/> and
     /// <see cref="EnumeratePatchHoldersAcrossAllProducts"/> both pass a null
     /// product code, so there is no product for the code to be reporting absent
-    /// and it cannot carry this meaning; both are right to treat it as a row or a
-    /// set short by an unknown amount.
+    /// and it cannot carry this meaning. The first reads it as a row that did not
+    /// read and refuses the scan on it; the second reads it as a set short by an
+    /// unknown amount.
     ///
     /// <see cref="EnumeratePatches"/> NAMES A PRODUCT AND IS STILL RIGHT TO TREAT
     /// IT AS A FAILURE. That product came out of the product enumeration moments

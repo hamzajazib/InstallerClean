@@ -1159,21 +1159,21 @@ InstallerClean уже працював від імені адміністрат�
   <data name="Error.ScanFailedTitle" xml:space="preserve"><value>Збій сканування</value></data>
   <data name="Error.InstallerDbEmpty" xml:space="preserve"><value>Записи Windows Installer повернулися цілком порожніми: жодна встановлена програма й жодне оновлення не заявляє прав на кешований файл інсталятора. На робочому комп'ютері такого не буває (навіть у щойно встановленої Windows такі файли є), тож записи або пошкоджено, або їх не вдалося прочитати, і сканування, яке повірило б такій відповіді, помилково визнало б осиротілим кожен файл у {InstallerFolder}. Замість цього InstallerClean зупинився. Нічого не було видалено.</value></data>
   <data name="Error.MsiAccessDenied" xml:space="preserve"><value>Windows Installer не дозволив InstallerClean перелічити встановлене. InstallerClean уже працював від імені адміністратора, тож запуск від імені адміністратора ще раз нічого не змінить. Без цього списку немає безпечного способу визначити, які кешовані файли ще потрібні, тож InstallerClean зупинився. Нічого не було видалено.</value></data>
-  <!-- 0 = consecutive failure count, 1 = last Win32 error code (kept
-       in the message because a sysadmin reading the dialog may want
-       to look it up), 2 = how many programs were read cleanly before
-       the run of failures began, 3 = the noun for that count.
+  <!-- 0 = the Win32 error code the unreadable entry came back with (kept
+       in the message because a sysadmin reading the dialog may want to
+       look it up; it is Success, 0, for an entry that came back as a
+       success naming no program), 1 = how many programs were read before
+       that entry, 2 = the noun for that count.
 
-       2 AND 3 ARE THE PAIR THAT MAKES THIS ACTIONABLE. The failure
-       count is a fixed threshold and reads the same on every machine
-       that reaches it; how far the enumeration got first does not, and
-       that is what somebody helping needs. Reading none and reading two
-       hundred are different situations with different answers, and this
-       count is what tells them apart. Zero is a real value and reads
-       correctly: "it read 0 programs". -->
-  <data name="Error.MsiNonSuccess" xml:space="preserve"><value>Windows Installer не зміг надати InstallerClean читабельний список встановлених програм: він прочитав {2} {3}, а потім {0} записів поспіль повернулися нечитабельними (останній код помилки {1}). Замість того щоб працювати зі списком, прочитаним лише частково, InstallerClean зупинився. Нічого не було видалено.</value></data>
-  <!-- The index cap, which is a different condition from the consecutive
-       failures above and must not borrow that string: the enumeration ran out
+       1 AND 2 ARE THE PAIR THAT MAKES THIS ACTIONABLE. How far the
+       enumeration got before the unreadable entry is what somebody
+       helping needs: reading none and reading two hundred are different
+       situations with different answers, and this count is what tells
+       them apart. Zero is a real value and reads correctly: "it read 0
+       programs". -->
+  <data name="Error.MsiNonSuccess" xml:space="preserve"><value>Windows Installer не зміг надати InstallerClean читабельний список встановлених програм: він прочитав {1} {2}, а потім один запис повернувся нечитабельним (код помилки {0}). Замість того щоб працювати зі списком, прочитаним лише частково, InstallerClean зупинився. Нічого не було видалено.</value></data>
+  <!-- The index cap, which is a different condition from the unreadable
+       entry above and must not borrow that string: the enumeration ran out
        of budget rather than failing, so 0 = the cap reached (not a failure
        count) and 1 = the last row's error code, which here is Success (0) when
        every row read cleanly and the list simply never terminated. 2 = how many
@@ -1181,8 +1181,8 @@ InstallerClean уже працював від імені адміністрат�
 
        The two strings stay separate and carry the same pair for the same
        reason: how far the enumeration got is the fact somebody helping needs,
-       and it is as worth having when the budget runs out as when a run of
-       failures stops the walk. -->
+       and it is as worth having when the budget runs out as when an
+       unreadable entry stops the walk. -->
   <data name="Error.MsiEnumerationNeverEnded" xml:space="preserve"><value>Windows Installer так і не повідомив про кінець списку встановлених програм: InstallerClean прочитав {2} {3}, а потім припинив спроби після {0} записів (останній код помилки {1}). Списку без кінця довіряти не можна, тож InstallerClean зупинився. Нічого не було видалено.</value></data>
   <!-- The patch-loop sibling of Error.MsiEnumerationNeverEnded, same cap
        condition and the same four placeholders.

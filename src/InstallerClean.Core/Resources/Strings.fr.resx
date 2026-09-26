@@ -1159,21 +1159,21 @@ InstallerClean s'exécutait déjà en tant qu'administrateur, le relancer ainsi 
   <data name="Error.ScanFailedTitle" xml:space="preserve"><value>Échec de l'analyse</value></data>
   <data name="Error.InstallerDbEmpty" xml:space="preserve"><value>Les enregistrements de Windows Installer sont revenus complètement vides : pas un seul programme installé ni une seule mise à jour ne revendique de fichier d'installation en cache. Cela n'arrive pas sur une machine qui fonctionne (même une installation neuve de Windows en a), donc soit les enregistrements sont endommagés, soit ils n'ont pas pu être lus, et une analyse qui croirait cette réponse qualifierait à tort d'orphelin chaque fichier de {InstallerFolder}. InstallerClean s'est arrêté à la place. Rien n'a été supprimé.</value></data>
   <data name="Error.MsiAccessDenied" xml:space="preserve"><value>Windows Installer a refusé de laisser InstallerClean lister ce qui est installé. InstallerClean s'exécutait déjà en tant qu'administrateur, le relancer en tant qu'administrateur n'y changera rien. Sans cette liste, il n'y a aucun moyen sûr de savoir quels fichiers en cache servent encore, donc InstallerClean s'est arrêté. Rien n'a été supprimé.</value></data>
-  <!-- 0 = consecutive failure count, 1 = last Win32 error code (kept
-       in the message because a sysadmin reading the dialog may want
-       to look it up), 2 = how many programs were read cleanly before
-       the run of failures began, 3 = the noun for that count.
+  <!-- 0 = the Win32 error code the unreadable entry came back with (kept
+       in the message because a sysadmin reading the dialog may want to
+       look it up; it is Success, 0, for an entry that came back as a
+       success naming no program), 1 = how many programs were read before
+       that entry, 2 = the noun for that count.
 
-       2 AND 3 ARE THE PAIR THAT MAKES THIS ACTIONABLE. The failure
-       count is a fixed threshold and reads the same on every machine
-       that reaches it; how far the enumeration got first does not, and
-       that is what somebody helping needs. Reading none and reading two
-       hundred are different situations with different answers, and this
-       count is what tells them apart. Zero is a real value and reads
-       correctly: "it read 0 programs". -->
-  <data name="Error.MsiNonSuccess" xml:space="preserve"><value>Windows Installer n'a pas pu fournir à InstallerClean une liste lisible des programmes installés : il a lu {2} {3}, puis {0} entrées d'affilée sont revenues illisibles (dernier code d'erreur {1}). Plutôt que de travailler sur une liste lue en partie, InstallerClean s'est arrêté. Rien n'a été supprimé.</value></data>
-  <!-- The index cap, which is a different condition from the consecutive
-       failures above and must not borrow that string: the enumeration ran out
+       1 AND 2 ARE THE PAIR THAT MAKES THIS ACTIONABLE. How far the
+       enumeration got before the unreadable entry is what somebody
+       helping needs: reading none and reading two hundred are different
+       situations with different answers, and this count is what tells
+       them apart. Zero is a real value and reads correctly: "it read 0
+       programs". -->
+  <data name="Error.MsiNonSuccess" xml:space="preserve"><value>Windows Installer n'a pas pu fournir à InstallerClean une liste lisible des programmes installés : il a lu {1} {2}, puis une entrée est revenue illisible (code d'erreur {0}). Plutôt que de travailler sur une liste lue en partie, InstallerClean s'est arrêté. Rien n'a été supprimé.</value></data>
+  <!-- The index cap, which is a different condition from the unreadable
+       entry above and must not borrow that string: the enumeration ran out
        of budget rather than failing, so 0 = the cap reached (not a failure
        count) and 1 = the last row's error code, which here is Success (0) when
        every row read cleanly and the list simply never terminated. 2 = how many
@@ -1181,8 +1181,8 @@ InstallerClean s'exécutait déjà en tant qu'administrateur, le relancer ainsi 
 
        The two strings stay separate and carry the same pair for the same
        reason: how far the enumeration got is the fact somebody helping needs,
-       and it is as worth having when the budget runs out as when a run of
-       failures stops the walk. -->
+       and it is as worth having when the budget runs out as when an
+       unreadable entry stops the walk. -->
   <data name="Error.MsiEnumerationNeverEnded" xml:space="preserve"><value>Windows Installer n'a jamais signalé la fin de la liste des programmes installés : InstallerClean a lu {2} {3}, puis a renoncé après {0} entrées (dernier code d'erreur {1}). Une liste sans fin n'est pas fiable, donc InstallerClean s'est arrêté. Rien n'a été supprimé.</value></data>
   <!-- The patch-loop sibling of Error.MsiEnumerationNeverEnded, same cap
        condition and the same four placeholders.

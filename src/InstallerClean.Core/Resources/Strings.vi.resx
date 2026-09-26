@@ -1159,21 +1159,21 @@ InstallerClean vốn đã chạy với quyền quản trị viên, nên khởi �
   <data name="Error.ScanFailedTitle" xml:space="preserve"><value>Quét thất bại</value></data>
   <data name="Error.InstallerDbEmpty" xml:space="preserve"><value>Các bản ghi Windows Installer trả về hoàn toàn trống: không một chương trình đã cài hay bản cập nhật nào nhận là chủ của một tệp cài đặt trong bộ nhớ đệm. Điều đó không xảy ra trên một máy hoạt động bình thường (ngay cả một bản Windows vừa cài cũng có vài tệp như vậy), nên hoặc các bản ghi đã hỏng, hoặc không đọc được, và một lần quét tin vào câu trả lời này sẽ nhầm lẫn coi mọi tệp trong {InstallerFolder} là bị bỏ lại. Thay vào đó InstallerClean đã dừng. Không có gì bị xóa.</value></data>
   <data name="Error.MsiAccessDenied" xml:space="preserve"><value>Windows Installer không cho phép InstallerClean liệt kê những gì đã được cài. InstallerClean vốn đã chạy với quyền quản trị viên, nên chạy lại với quyền quản trị viên cũng không thay đổi được gì. Không có danh sách đó thì không có cách nào an toàn để biết tệp nào trong bộ nhớ đệm vẫn còn cần, nên InstallerClean đã dừng. Không có gì bị xóa.</value></data>
-  <!-- 0 = consecutive failure count, 1 = last Win32 error code (kept
-       in the message because a sysadmin reading the dialog may want
-       to look it up), 2 = how many programs were read cleanly before
-       the run of failures began, 3 = the noun for that count.
+  <!-- 0 = the Win32 error code the unreadable entry came back with (kept
+       in the message because a sysadmin reading the dialog may want to
+       look it up; it is Success, 0, for an entry that came back as a
+       success naming no program), 1 = how many programs were read before
+       that entry, 2 = the noun for that count.
 
-       2 AND 3 ARE THE PAIR THAT MAKES THIS ACTIONABLE. The failure
-       count is a fixed threshold and reads the same on every machine
-       that reaches it; how far the enumeration got first does not, and
-       that is what somebody helping needs. Reading none and reading two
-       hundred are different situations with different answers, and this
-       count is what tells them apart. Zero is a real value and reads
-       correctly: "it read 0 programs". -->
-  <data name="Error.MsiNonSuccess" xml:space="preserve"><value>Windows Installer không thể đưa cho InstallerClean một danh sách chương trình đã cài đọc được: nó đã đọc {2} {3}, rồi {0} mục liên tiếp trả về không đọc được (mã lỗi cuối {1}). Thay vì làm việc với một danh sách chỉ đọc được một phần, InstallerClean đã dừng. Không có gì bị xóa.</value></data>
-  <!-- The index cap, which is a different condition from the consecutive
-       failures above and must not borrow that string: the enumeration ran out
+       1 AND 2 ARE THE PAIR THAT MAKES THIS ACTIONABLE. How far the
+       enumeration got before the unreadable entry is what somebody
+       helping needs: reading none and reading two hundred are different
+       situations with different answers, and this count is what tells
+       them apart. Zero is a real value and reads correctly: "it read 0
+       programs". -->
+  <data name="Error.MsiNonSuccess" xml:space="preserve"><value>Windows Installer không thể đưa cho InstallerClean một danh sách chương trình đã cài đọc được: nó đã đọc {1} {2}, rồi một mục trả về không đọc được (mã lỗi {0}). Thay vì làm việc với một danh sách chỉ đọc được một phần, InstallerClean đã dừng. Không có gì bị xóa.</value></data>
+  <!-- The index cap, which is a different condition from the unreadable
+       entry above and must not borrow that string: the enumeration ran out
        of budget rather than failing, so 0 = the cap reached (not a failure
        count) and 1 = the last row's error code, which here is Success (0) when
        every row read cleanly and the list simply never terminated. 2 = how many
@@ -1181,8 +1181,8 @@ InstallerClean vốn đã chạy với quyền quản trị viên, nên khởi �
 
        The two strings stay separate and carry the same pair for the same
        reason: how far the enumeration got is the fact somebody helping needs,
-       and it is as worth having when the budget runs out as when a run of
-       failures stops the walk. -->
+       and it is as worth having when the budget runs out as when an
+       unreadable entry stops the walk. -->
   <data name="Error.MsiEnumerationNeverEnded" xml:space="preserve"><value>Windows Installer chưa bao giờ báo hiệu kết thúc danh sách chương trình đã cài: InstallerClean đã đọc {2} {3}, rồi bỏ cuộc sau {0} mục (mã lỗi cuối {1}). Không thể tin một danh sách không có điểm dừng, nên InstallerClean đã dừng. Không có gì bị xóa.</value></data>
   <!-- The patch-loop sibling of Error.MsiEnumerationNeverEnded, same cap
        condition and the same four placeholders.

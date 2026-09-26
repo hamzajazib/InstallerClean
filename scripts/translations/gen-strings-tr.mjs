@@ -255,7 +255,7 @@ const MAP = {
   'Error.ScanFailedTitle': `Tarama başarısız`,
   'Error.InstallerDbEmpty': `Windows Installer kayıtları tamamen boş döndü: tek bir yüklü program ya da güncelleştirme bile önbellekteki bir kurulum dosyasında hak iddia etmiyor. Çalışan bir makinede bu olmaz (yeni kurulmuş bir Windows'ta bile bunlardan vardır), yani kayıtlar ya bozuk ya da okunamadı, ve bu yanıta inanan bir tarama {InstallerFolder} içindeki her dosyayı yanlışlıkla sahipsiz sayardı. InstallerClean bunun yerine durdu. Hiçbir şey kaldırılmadı.`,
   'Error.MsiAccessDenied': `Windows Installer, InstallerClean'in yüklü olanları listelemesine izin vermedi. InstallerClean zaten yönetici olarak çalışıyordu, dolayısıyla onu yeniden yönetici olarak çalıştırmak bir şey değiştirmez. Bu liste olmadan önbellekteki hangi dosyaların hâlâ gerekli olduğunu güvenle söylemenin yolu yok, bu yüzden InstallerClean durdu. Hiçbir şey kaldırılmadı.`,
-  'Error.MsiNonSuccess': `Windows Installer, InstallerClean'e yüklü programların okunabilir bir listesini veremedi: {2} {3} okudu, sonra arka arkaya {0} kayıt okunamaz döndü (son hata kodu {1}). InstallerClean, yalnızca kısmen okunmuş bir listeyle çalışmak yerine durdu. Hiçbir şey kaldırılmadı.`,
+  'Error.MsiNonSuccess': `Windows Installer, InstallerClean'e yüklü programların okunabilir bir listesini veremedi: {1} {2} okudu, sonra bir kayıt okunamaz döndü (hata kodu {0}). InstallerClean, yalnızca kısmen okunmuş bir listeyle çalışmak yerine durdu. Hiçbir şey kaldırılmadı.`,
   'Error.InvalidDestinationTitle': `Geçersiz hedef`,
   'Error.DestinationWriteFailedTitle': `Bu yedek klasörü kullanılamadı`,
   'Error.MoveFailedTitle': `Taşıma başarısız`,

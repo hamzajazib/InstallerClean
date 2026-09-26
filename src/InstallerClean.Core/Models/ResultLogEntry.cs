@@ -621,9 +621,8 @@ public sealed record MachineInfo(
     /// parts being four different facts about a machine. What it means is that the
     /// recorded path could not be turned into a path at all, so the claim is kept in
     /// the raw spelling Windows gave and matches nothing the folder walk produces.
-    /// The cached file it names was OFFERED as unclaimed until 3.0.0 and is now
-    /// withheld with the rest of the walk-derived offer, which is what this figure
-    /// says about the machine it came from.
+    /// The cached file it names is withheld with the rest of the walk-derived offer,
+    /// which is what this figure says about the machine it came from.
     /// </summary>
     public int PathNormalisationRefusedCount =>
         PathNormalisationRefusedAtExpansionCount
@@ -708,25 +707,20 @@ public sealed record MachineInfo(
 /// Total size of the registered files that are really on disk, and
 /// <paramref name="RemovableBytes"/> the same for the files being offered.
 ///
-/// THESE TWO ARE THE STRONGEST FIELDS IN THE SCHEMA and the reason is worth
-/// keeping: the question they answer is whether somebody can tell, before running
-/// anything, that they probably have something to reclaim. Against the reports
-/// received up to this release a COUNT-shaped threshold answered it backwards,
-/// machines with the fewest registered files that did find something having freed
-/// MORE than the larger ones. If the tell exists it is in bytes, and no report had
-/// ever carried them.
+/// THESE TWO ARE THE STRONGEST FIELDS IN THE SCHEMA: the question they answer is
+/// whether somebody can tell, before running anything, that they probably have
+/// something to reclaim. If the tell exists it is in bytes, since a count of
+/// registered files says nothing about how large they are.
 /// </param>
 /// <param name="MissingNeededCount">
 /// The half of <paramref name="MissingFromDiskCount"/> whose absence this scan could
-/// not establish to be harmless. NOT the half carrying no superseded or obsoleted
-/// state, which is what this said and what the axis stopped being in 3.0.0. It is
-/// filled from <see cref="ScanResult.MissingAffectedCount"/>, whose own remarks state
-/// the conjunction in full and are the one place it is written down; a second copy
-/// here would be a third statement of a rule that has already drifted once. The key
-/// name is on the wire and stays; what was wrong was the description of what fills
-/// it. Added BESIDE the total rather than replacing it: the total is read by the
-/// public chart with no version gate, and replacing it would split a live series at
-/// this release. The other half falls out by subtraction.
+/// not establish to be harmless, which is not the same as the half carrying no
+/// superseded or obsoleted state. It is filled from
+/// <see cref="ScanResult.MissingAffectedCount"/>, whose own remarks state the
+/// conjunction in full and are the one place it is written down; a second copy here
+/// would drift from it. It sits BESIDE the total rather than replacing it: the total
+/// is read by the public chart with no version gate, and replacing it would split a
+/// live series. The other half falls out by subtraction.
 ///
 /// THE NAME SAYS "NEEDED", THE COUNT DOES NOT MEAN IT, AND THE WIRE SHAPE IS HELD
 /// ANYWAY. What lands here is an absence this scan could not establish to be
@@ -738,19 +732,19 @@ public sealed record MachineInfo(
 /// every registered patch's cached file whether superseded or not, so the state is one
 /// conjunct of three and settles nothing on its own.
 ///
-/// THE POPULATION MOVED AT THIS RELEASE, SO A SERIES CROSSING IT IS NOT COMPARABLE.
-/// Through v2.3.0 the figure excluded every patch a scan called removable and every one
-/// whose verdict it had withheld; it now excludes only rows meeting that whole
-/// conjunction. Renaming a key is a schema decision with a receiver on the other end
-/// of it, so the key stays and this note is the record.
+/// REPORTS FROM v2.3.0 AND EARLIER COUNT A DIFFERENT POPULATION, SO A SERIES CROSSING
+/// 3.0.0 IS NOT COMPARABLE. Those builds excluded every patch a scan called removable
+/// and every one whose verdict it had withheld; from 3.0.0 only rows meeting that
+/// whole conjunction are excluded. The key keeps its name because a receiver reads
+/// it by that name.
 /// </param>
 /// <param name="WithheldPatchCount">
 /// Superseded files a scan would have offered and did not, on one condition rather
 /// than several: a read established nothing. That covers a scan unable to account for
 /// every installed product, and a product whose patch set could not be established at
-/// all. A real figure again from 3.0.0, having been a literal zero while nothing
-/// registered was offered. Obsoleted files are not in it: they are not withheld, they
-/// are simply not offered, and they have their own count.
+/// all. Reports from builds that offered no registered file carry it as zero.
+/// Obsoleted files are not in it: they are not withheld, they are simply not
+/// offered, and they have their own count.
 ///
 /// A PRODUCT HOLDING A PATCH THAT COULD BE UNINSTALLED AND ROLL BACK ONTO THE FILE IS
 /// NOT IN IT. That row is downgraded with
@@ -762,10 +756,9 @@ public sealed record MachineInfo(
 /// Products whose records came back short. An exact per-product tally.
 /// </param>
 /// <param name="SkippedProductRowCount">
-/// Enumeration rows that could not be read at all. A subset of
-/// <paramref name="UnreadableProductCount"/>, sent because the two answer
-/// different questions about one product: that a claim was lost, and that the row
-/// itself never arrived.
+/// Rows the product walk passed without reading. This code always sends zero: the
+/// walk refuses the scan on a row it cannot read, and a refused scan sends no report.
+/// Counted inside <paramref name="UnreadableProductCount"/> as well.
 /// </param>
 /// <param name="UnclaimedProductFileCount">
 /// Product registrations naming a cached file that is really on the disk and that
@@ -800,14 +793,14 @@ public sealed record MachineInfo(
 ///
 /// THESE ARE THE TALLIES, AND THE FIGURE THE APP DERIVES FROM THEM IS SENT
 /// NOWHERE. That figure is a product estimate floored at one by patch evidence and
-/// biased low by a deliberately generous subtraction, so it is a lower bound and a
-/// field called a count would have asserted an exactness it has not got.
+/// biased low by a deliberately generous subtraction, and it can run high as well,
+/// so a field called a count would assert an exactness it has not got.
 ///
 /// It is reproducible from these plus <paramref name="UnreadableProductCount"/>,
 /// so nothing is lost by sending the tallies instead. The machine object's two
-/// product headcounts are no longer inputs to anything the app derives: their
-/// difference turned out unable to tell a truncated enumeration from ordinary
-/// registry residue, and the products behind it are asked about by name instead.
+/// product headcounts are inputs to nothing the app derives: their difference
+/// cannot tell a truncated enumeration from ordinary registry residue, and the
+/// products behind it are asked about by name instead.
 /// They travel because how far a real machine's registry runs ahead of its
 /// enumeration is a fact only these reports can establish.
 /// </param>
@@ -822,9 +815,9 @@ public sealed record MachineInfo(
 /// <c>ScanResult.RegisteredWithheldCount</c>, is different again and travels as
 /// <paramref name="RegisteredWithheldCount"/> below. Nothing may add any two of them.
 ///
-/// IT IS WHAT THE APP'S OWN WITHHOLDING COSTS A MACHINE, AND NOTHING ELSE ON THE WIRE
-/// ANSWERS THAT. It is the figure that says whether a machine got nothing because its
-/// folder was clean or because the scan could not settle it.
+/// IT IS HOW MUCH THE APP'S OWN WITHHOLDING HOLDS BACK ON A MACHINE, AND NOTHING ELSE
+/// ON THE WIRE ANSWERS THAT. It is the figure that says whether a machine got nothing
+/// because its folder was clean or because the scan could not settle it.
 ///
 /// NO CAUSE TRAVELS WITH THIS FIGURE AND NONE MAY BE ATTACHED TO IT. Four separate
 /// conditions put files on that list and they are different facts about a machine; a
@@ -839,10 +832,10 @@ public sealed record MachineInfo(
 ///
 /// IT IS THE QUESTION A COUNT CANNOT ANSWER, AND BOTH HOSTS ALREADY SHOW IT. The
 /// command line prints it beside the count and the window's nothing-offered screen
-/// carries it, so a person at the machine can see what the withholding cost where
+/// carries it, so a person at the machine can see how much was held back where
 /// these reports could not: forty megabytes and forty gigabytes are the same file
-/// count. This release adds conditions that withhold, and a count alone cannot say
-/// what any of them costs.
+/// count. Several conditions withhold, and a count alone cannot say how much any of
+/// them holds back.
 ///
 /// NO CAUSE TRAVELS WITH IT, on the same rule as the count it belongs to. It is a
 /// long rather than an int because a byte total over a whole cache folder is not

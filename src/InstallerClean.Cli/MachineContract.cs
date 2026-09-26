@@ -110,9 +110,9 @@ internal static class MachineContract
     /// <c>ScanResult.WithheldCount</c> says the same in its own words.
     ///
     /// THE 3000 NOTICE'S COUNT OF INSTALLED PRODUCTS IS AN ESTIMATE. It is assembled
-    /// from four contributors, two of which are inferred from a headcount and from
-    /// unclaimed registry values rather than observed, and the inference can run
-    /// high as well as low (see
+    /// from three contributors, one of which is worked out from unclaimed registry
+    /// values rather than counted product by product, and the figure can run high
+    /// as well as low (see
     /// <see cref="Models.InstallerQueryResult.UnaccountedProductCount"/> for what
     /// each contributes). It is sound to alert on and to trend; it is not a figure
     /// to reconcile against an inventory, and a fleet report presenting it as a

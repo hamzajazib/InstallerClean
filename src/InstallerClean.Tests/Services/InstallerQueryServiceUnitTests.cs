@@ -794,22 +794,7 @@ public class InstallerQueryServiceUnitTests
         Assert.Equal(new HeldBackReasons(RecordsUnreadable: 1), result.Reasons);
     }
 
-    // ---- An empty GUID accepted as success is not added ----
-
-    [Fact]
-    public async Task Empty_product_guid_is_not_added_and_counts_as_non_success()
-    {
-        const string p = @"C:\Windows\Installer\valid.msi";
-        var msi = new FakeMsiApi();
-        msi.AddProduct("");   // Success return, empty code
-        msi.AddProduct("{A}");
-        msi.SetProductProperty("{A}", "LocalPackage", p);
-
-        var result = await Run(msi);
-
-        Assert.DoesNotContain(result.Packages, r => r.LocalPackagePath.Length == 0);
-        Assert.Contains(result.Packages, r => r.LocalPackagePath == p);
-    }
+    // ---- An empty patch GUID accepted as success is not added ----
 
     [Fact]
     public async Task Empty_patch_guid_is_not_added()
@@ -926,30 +911,21 @@ public class InstallerQueryServiceUnitTests
     }
 
     /// <summary>
-    /// A LOST ROW IS COUNTED ONCE, BY THE ONLY THING THAT SAW IT, AND THE REGISTRY'S
+    /// A LOST CLAIM IS COUNTED ONCE, BY THE ONLY THING THAT SAW IT, AND THE REGISTRY'S
     /// OWN TOTAL ADDS NOTHING TO THE ANSWER WHATEVER IT SAYS.
     ///
-    /// THIS TEST USED TO PIN THE ARITHMETIC THAT IS NO LONGER DONE, and the rewrite
-    /// is why rather than a rename. It was called
-    /// <c>A_row_the_enumeration_skipped_is_not_counted_twice</c>, and the double count
-    /// it guarded against was a skipped row landing in two sums at once: the
-    /// enumeration's own admission of loss, and the shortfall of the enumerated total
-    /// against the registry's headcount. That second sum has gone. The question is
-    /// settled by identity now: the codes the registry holds are compared against the
-    /// codes the enumeration returned and each difference is put to Windows as a
-    /// question about that one product, so a truncation is named rather than estimated
-    /// and a leftover key answers "not installed" instead of having to be absorbed by
-    /// a tolerance somebody chose. With the second addend gone the old double count
-    /// cannot happen, and asserting a single figure under a name about counting twice
-    /// would be a test whose body says the opposite of its name.
+    /// The products the registry holds and the enumeration did not return are settled
+    /// by identity: the codes the registry holds are compared against the codes the
+    /// enumeration returned, and each difference is put to Windows as a question about
+    /// that one product, so a truncation is named rather than estimated and a leftover
+    /// key answers "not installed". No shortfall of one product total against another
+    /// is a term of the count.
     ///
-    /// WHAT IS STILL FAILABLE IS THE RULE THAT REPLACED IT, which is what this now
-    /// pins. Four rows really are lost here, so there is a real count to distort, and
-    /// the registry total is walked from agreeing exactly to absurdly ahead. If a
-    /// shortfall against that total is ever readmitted as a term, this goes red on the
-    /// day it happens, and it goes red in the one place where a wrong answer is not
-    /// just a bad number: the count drives the withholding of the whole removable
-    /// class.
+    /// THAT RULE IS WHAT THIS PINS. Four claims really are lost here, so there is a real
+    /// count to distort, and the registry total is walked from agreeing exactly to
+    /// absurdly ahead. If a shortfall against that total is ever admitted as a term,
+    /// this goes red, and it goes red in the one place where a wrong answer is not just
+    /// a bad number: the count drives the withholding of the whole removable class.
     ///
     /// It is deliberately NOT the same claim as
     /// <see cref="A_registry_ahead_of_the_enumeration_counts_nothing_on_the_totals_alone"/>,
@@ -961,17 +937,16 @@ public class InstallerQueryServiceUnitTests
     [InlineData(4)]    // the registry agrees with the enumerated products exactly
     [InlineData(20)]   // sixteen keys the enumeration never mentioned
     [InlineData(500)]  // absurd, and it decides exactly as much: nothing
-    public async Task A_lost_row_is_counted_once_and_the_registry_total_adds_nothing(int registryProducts)
+    public async Task A_lost_claim_is_counted_once_and_the_registry_total_adds_nothing(int registryProducts)
     {
         const string patch = @"C:\Windows\Installer\superseded.msp";
         var msi = new FakeMsiApi();
         for (var i = 0; i < 4; i++)
         {
-            // Success with no product GUID: one row lost, counted once, and
-            // interleaved so the consecutive-failure cap is never approached.
-            msi.AddProduct("");
+            // A product whose cached-package read fails: one claim lost, counted
+            // once.
             msi.AddProduct($"{{P{i}}}");
-            msi.SetProductProperty($"{{P{i}}}", "LocalPackage", $@"C:\Windows\Installer\p{i}.msi");
+            msi.ProductPropertyResult[($"{{P{i}}}", "LocalPackage")] = BadConfiguration;
         }
         msi.AddPatch("{P0}", "{PATCH}", localPackage: patch, state: "2", uninstallable: "0");
 
@@ -1049,13 +1024,13 @@ public class InstallerQueryServiceUnitTests
     [Fact]
     public async Task The_headcount_and_the_observation_are_not_added_together()
     {
-        // Both signals estimate one quantity from opposite sides, so a machine
-        // that trips both has lost thirty-nine products, not seventy-eight. What
-        // the number reaches the user AS is nothing: the notice it gates says only
-        // that something in the records could not be matched up, because this is
-        // an estimate and two of its four terms are absences rather than failed
-        // reads. The command line's Application-channel entry is the one surface
-        // that still prints it.
+        // The registry's forty product keys against the enumeration's one are not
+        // a term, so the figure is the thirty-nine files the registry claims and
+        // the API never mentioned, not seventy-eight. What the number reaches the
+        // user AS is nothing: the notice it gates says only that something in the
+        // records could not be matched up, because this is an estimate and two of
+        // its three terms are not failed reads. The command line's
+        // Application-channel entry is the one surface that still prints it.
         const string patch = @"C:\Windows\Installer\superseded.msp";
 
         var result = await RunAgainstRegistry(OneProductWithASupersededPatch(patch),
@@ -1067,12 +1042,13 @@ public class InstallerQueryServiceUnitTests
     [Fact]
     public async Task A_product_already_counted_unreadable_is_not_counted_again_as_unclaimed()
     {
-        // The double count the subtraction is for: a product whose row the API
-        // skipped has its registry value claimed by the fallback alone, so it
+        // The double count the subtraction is for: a product whose cached-package
+        // read failed has its registry value claimed by the fallback alone, so it
         // shows up in both counts for one loss.
         const string patch = @"C:\Windows\Installer\superseded.msp";
         var msi = OneProductWithASupersededPatch(patch);
-        msi.AddProduct("{B}", result: 1603 /* ERROR_INSTALL_FAILURE */);
+        msi.AddProduct("{B}");
+        msi.ProductPropertyResult[("{B}", "LocalPackage")] = BadConfiguration;
 
         var result = await RunAgainstRegistry(msi, registryProducts: 2, unclaimedProductFiles: 1);
 
@@ -1083,7 +1059,7 @@ public class InstallerQueryServiceUnitTests
     /// <summary>
     /// AND THE OVERLAP THE SUBTRACTION DOES NOT REACH, WHICH IS WHY THE FIGURE IS
     /// AN ESTIMATE RATHER THAN A LOWER BOUND. The test above is the pair it does
-    /// reconcile: a product the enumeration admitted losing, whose registry value
+    /// reconcile: a product whose cached-package read failed, whose registry value
     /// the fallback then claimed alone, nets back to one.
     ///
     /// A subkey whose name is not a packed GUID is in neither of those two terms.
@@ -1191,11 +1167,11 @@ public class InstallerQueryServiceUnitTests
 
     // ---- The index cap ends enumeration loudly, not silently ----
 
-    // The message is asserted, not just the type, because the cap and the
-    // consecutive-failure stop are different conditions that a shared string
-    // describes falsely in both halves: at the cap the count is the budget
-    // rather than a run of failures, and the error code is Success when every
-    // row read cleanly. Asserting the type alone cannot tell the two apart.
+    // The message is asserted, not just the type, because the cap and the stop
+    // on a row that did not read are different conditions that a shared string
+    // would describe falsely: at the cap every row read and the list never
+    // ended, and the error code is Success. Asserting the type alone cannot tell
+    // the two apart.
     [Fact]
     public async Task Product_enumeration_that_never_ends_throws_at_the_cap()
     {
@@ -1231,59 +1207,93 @@ public class InstallerQueryServiceUnitTests
             ex.Message);
     }
 
-    // ---- Scattered per-product failures are tolerated (no throw) ----
+    // ---- A product row that does not read refuses the scan ----
+    //
+    // Each fixture reads a product cleanly before the row that does not, so the
+    // count the message carries is not zero and a walk that stepped past the row
+    // would have a list to return.
 
     [Fact]
-    public async Task Scattered_product_failures_do_not_throw_and_good_products_survive()
+    public async Task A_failed_product_row_refuses_the_scan()
     {
         var msi = new FakeMsiApi();
-        // 30 products, every third fails: never 20 consecutive, so no throw.
-        for (int i = 0; i < 30; i++)
-        {
-            if (i % 3 == 0)
-                msi.AddProduct($"{{bad{i}}}", result: 1603 /* ERROR_INSTALL_FAILURE */);
-            else
-            {
-                msi.AddProduct($"{{ok{i}}}");
-                msi.SetProductProperty($"{{ok{i}}}", "LocalPackage", $@"C:\Windows\Installer\ok{i}.msi");
-            }
-        }
+        msi.AddProduct("{A}");
+        msi.SetProductProperty("{A}", "LocalPackage", @"C:\Windows\Installer\a.msi");
+        msi.AddProduct("{B}", result: 1603 /* ERROR_INSTALL_FAILURE */);
 
-        var result = await Run(msi);
+        var ex = await Assert.ThrowsAsync<LocalisedInvalidOperationException>(() => Run(msi));
 
-        Assert.Equal(20, result.Packages.Count(r => r.LocalPackagePath.StartsWith(@"C:\Windows\Installer\ok")));
+        Assert.Equal(
+            string.Format(Strings.Error_MsiNonSuccess, 1603u, 1, DisplayHelpers.PluraliseProduct(1)),
+            ex.Message);
     }
 
     [Fact]
-    public async Task Twenty_consecutive_product_failures_throw()
+    public async Task A_product_row_that_writes_no_code_refuses_the_scan()
     {
+        // A Success return with no product code is a row that did not read, and
+        // the message carries the code the call returned, which is Success.
         var msi = new FakeMsiApi();
-        for (int i = 0; i < 20; i++)
-            msi.AddProduct($"{{bad{i}}}", result: 1603);
+        msi.AddProduct("{A}");
+        msi.SetProductProperty("{A}", "LocalPackage", @"C:\Windows\Installer\a.msi");
+        msi.AddProduct("");   // Success return, no GUID written
 
-        await Assert.ThrowsAsync<LocalisedInvalidOperationException>(() => Run(msi));
+        var ex = await Assert.ThrowsAsync<LocalisedInvalidOperationException>(() => Run(msi));
+
+        Assert.Equal(
+            string.Format(Strings.Error_MsiNonSuccess, MsiError.Success, 1, DisplayHelpers.PluraliseProduct(1)),
+            ex.Message);
+    }
+
+    [Fact]
+    public async Task A_sid_retry_that_asks_for_more_again_refuses_the_scan()
+    {
+        // The row whose product key name is too long to be a product code: the
+        // first call answers MoreData, the retry with a larger SID buffer answers
+        // MoreData again, and the row did not read.
+        var msi = new FakeMsiApi();
+        msi.AddProduct("{A}");
+        msi.SetProductProperty("{A}", "LocalPackage", @"C:\Windows\Installer\a.msi");
+        msi.AddProduct("{B}");
+        msi.ProductSidRetryResult[1] = MoreData;
+
+        var ex = await Assert.ThrowsAsync<LocalisedInvalidOperationException>(() => Run(msi));
+
+        Assert.Equal(
+            string.Format(Strings.Error_MsiNonSuccess, MoreData, 1, DisplayHelpers.PluraliseProduct(1)),
+            ex.Message);
     }
 
     /// <summary>
-    /// HOW FAR THE ENUMERATION GOT IS NOT THE FAILURE COUNT, AND THE TWO ARE MADE
-    /// DIFFERENT NUMBERS HERE SO THE ASSERTION CAN TELL THEM APART. The stop is a
-    /// fixed run of twenty, so that figure is the same on every machine that reaches
-    /// it and says nothing about any of them. How many products came back cleanly
-    /// first does say something, and reading none is a different situation from
-    /// reading two hundred. Three read then twenty failures separates them; the two
-    /// cap tests above cannot, their fixtures driving both figures to 10,000.
+    /// THE WALK STOPS AT THE FAILED ROW, AND THE COUNT IN THE MESSAGE IS HOW FAR IT
+    /// GOT BEFORE IT. Three products read, then a row that does not, then two more
+    /// that would: the message says three. A walk that stepped past the failed row
+    /// and refused only at the end of the list would say five.
+    ///
+    /// How many products came back cleanly first is what somebody helping needs, and
+    /// reading none is a different situation from reading two hundred. The two cap
+    /// tests above cannot show it, their fixtures driving the count to the cap.
     /// </summary>
     [Fact]
     public async Task The_stop_message_says_how_many_products_were_read_before_it()
     {
         var msi = new FakeMsiApi();
-        for (int i = 0; i < 3; i++) msi.AddProduct($"{{good{i}}}");
-        for (int i = 0; i < 20; i++) msi.AddProduct($"{{bad{i}}}", result: 1603);
+        for (int i = 0; i < 3; i++)
+        {
+            msi.AddProduct($"{{good{i}}}");
+            msi.SetProductProperty($"{{good{i}}}", "LocalPackage", $@"C:\Windows\Installer\good{i}.msi");
+        }
+        msi.AddProduct("{bad}", result: 1603);
+        for (int i = 0; i < 2; i++)
+        {
+            msi.AddProduct($"{{after{i}}}");
+            msi.SetProductProperty($"{{after{i}}}", "LocalPackage", $@"C:\Windows\Installer\after{i}.msi");
+        }
 
         var ex = await Assert.ThrowsAsync<LocalisedInvalidOperationException>(() => Run(msi));
 
         Assert.Equal(
-            string.Format(Strings.Error_MsiNonSuccess, 20, 1603u, 3, DisplayHelpers.PluraliseProduct(3)),
+            string.Format(Strings.Error_MsiNonSuccess, 1603u, 3, DisplayHelpers.PluraliseProduct(3)),
             ex.Message);
     }
 
@@ -1367,12 +1377,13 @@ public class InstallerQueryServiceUnitTests
 
     // ---- An incomplete enumeration withholds the removable class ----
     //
-    // A tolerated skip costs one product's patch claims, and a patch is cached
-    // once and shared across the products holding it, so the product behind a
-    // skipped row may be the one that still has a removable-looking patch
-    // applied. Its identity is unknowable (a failed row's product code is
-    // undefined), so no narrower rule is available than withholding the class.
-    // Each of the four ways a row can be lost reaches the same demotion.
+    // A skipped patch row or an empty patch GUID costs one product a patch
+    // claim, and a patch is cached once and shared across the products holding
+    // it, so the product behind the loss may be the one that still has a
+    // removable-looking patch applied. Which patch it still holds is unknowable
+    // (a failed row's patch code is undefined), so no narrower rule is available
+    // than withholding the class. Each way a claim can be lost reaches the same
+    // demotion.
 
     [Fact]
     public async Task A_clean_enumeration_counts_nothing_unaccounted()
@@ -1390,27 +1401,8 @@ public class InstallerQueryServiceUnitTests
     }
 
     [Fact]
-    public async Task A_skipped_product_row_counts_an_unaccounted_product()
-    {
-        const string dead = @"C:\Windows\Installer\skipped-product.msp";
-        var msi = new FakeMsiApi();
-        msi.AddProduct("{A}");
-        msi.AddPatch("{A}", "{P}", localPackage: dead, state: "2", uninstallable: "0");
-        // Product B is unreadable, so its patches are never enumerated and its
-        // claim on {P} (which may be Applied there) never reaches the merge.
-        msi.AddProduct("{B}", result: 1603 /* ERROR_INSTALL_FAILURE */);
-
-        var result = await Run(msi);
-
-        var row = Assert.Single(result.Packages, r => r.LocalPackagePath == dead);
-        AssertWithheldByADegradedEnumeration(row, expectedState: 2);
-        Assert.Equal(1, result.UnaccountedProductCount);
-    }
-
-    [Fact]
     public async Task A_skipped_patch_row_counts_an_unaccounted_product()
     {
-        // The same corridor reached through a product whose own row read fine:
         // B enumerates, but one of its patch rows fails, so whatever that row
         // named is missing from B's claims.
         const string dead = @"C:\Windows\Installer\skipped-patch.msp";
@@ -1425,21 +1417,6 @@ public class InstallerQueryServiceUnitTests
 
         var row = Assert.Single(result.Packages, r => r.LocalPackagePath == dead);
         AssertWithheldByADegradedEnumeration(row, expectedState: 2);
-        Assert.Equal(1, result.UnaccountedProductCount);
-    }
-
-    [Fact]
-    public async Task An_empty_product_guid_counts_an_unaccounted_product()
-    {
-        const string dead = @"C:\Windows\Installer\empty-product.msp";
-        var msi = new FakeMsiApi();
-        msi.AddProduct("{A}");
-        msi.AddPatch("{A}", "{P}", localPackage: dead, state: "2", uninstallable: "0");
-        msi.AddProduct("");   // Success return, no GUID written: the row is lost
-
-        var result = await Run(msi);
-
-        Assert.False(Assert.Single(result.Packages, r => r.LocalPackagePath == dead).IsRemovable);
         Assert.Equal(1, result.UnaccountedProductCount);
     }
 
@@ -1460,18 +1437,18 @@ public class InstallerQueryServiceUnitTests
     }
 
     [Fact]
-    public async Task Unreadable_products_count_a_lost_product_row_and_a_lost_patch_row_alike()
+    public async Task Unreadable_products_count_a_lost_package_read_and_a_lost_patch_row_alike()
     {
         // Both leave the same hole (a product whose claims are short), so the
         // count the user reads adds them together. A product is counted once
         // however many of its patch rows failed.
         var msi = new FakeMsiApi();
-        msi.AddProduct("{bad}", result: 1603);
+        msi.AddProduct("{bad}");
+        msi.ProductPropertyResult[("{bad}", "LocalPackage")] = BadConfiguration;
         msi.AddProduct("{B}");
         // B's own package, so the run yields a claim. Without one the scan ends
-        // with an empty set and fails as an empty installer database before it
-        // can report a count; that this test passed regardless was the live
-        // registry of whichever machine ran it filling the set.
+        // with an empty set and refuses as an empty installer database before it
+        // can report a count.
         msi.SetProductProperty("{B}", "LocalPackage", @"C:\Windows\Installer\b.msi");
         msi.AddPatch("{B}", "{Q}", localPackage: @"C:\Windows\Installer\q.msp", state: "1", uninstallable: "1");
         msi.AddPatch("{B}", "{R}", localPackage: @"C:\Windows\Installer\r.msp", state: "1", uninstallable: "1");
@@ -1486,34 +1463,36 @@ public class InstallerQueryServiceUnitTests
     [Fact]
     public async Task Withholding_the_removable_class_leaves_orphan_detection_alone()
     {
-        // The bound on what a withholding costs: a withheld scan still carries
-        // every registered path, so the walk still has everything it needs to tell
-        // an orphan from a registered file.
+        // A withheld scan still carries every registered path, so the walk still
+        // has everything it needs to tell an orphan from a registered file.
         const string productPackage = @"C:\Windows\Installer\kept.msi";
         var msi = new FakeMsiApi();
         msi.AddProduct("{A}");
         msi.SetProductProperty("{A}", "LocalPackage", productPackage);
-        msi.AddProduct("{bad}", result: 1603);
+        msi.AddProduct("{bad}");
+        msi.ProductPropertyResult[("{bad}", "LocalPackage")] = BadConfiguration;
 
         var result = await Run(msi);
 
+        // The scan is a withheld one, which is what makes the assertion after it
+        // mean anything.
+        Assert.True(result.RecordsIncomplete);
         Assert.Contains(result.Packages, r => r.LocalPackagePath == productPackage);
     }
 
-    // ---- A failed LocalPackage read loses a claim the same way a lost row does ----
+    // ---- A failed LocalPackage read loses a claim the same way a skipped patch row does ----
     //
     // The other three properties degrade safely when they cannot be read: an
     // unreadable State leaves patchState 0 and an unreadable Uninstallable leans
     // non-removable, so the row still merges as "needed". LocalPackage is the
     // property that CARRIES the claim, so a failed read of it does not degrade
-    // the row, it deletes it. That is the same hole as a skipped enumeration
-    // row, and it reaches the same count and the same withholding.
+    // the row, it deletes it. That is the same hole as a skipped patch row, and
+    // it reaches the same count and the same withholding.
     //
     // What makes the discrimination possible is that a record with no cached
-    // package and a record that cannot be read return different codes. A probe
-    // of 136 products and 2 patches (Windows 10.0.26200, msi.dll 5.0.26100.7920,
-    // 2026-07-18) found an absent property returns ERROR_UNKNOWN_PROPERTY and an
-    // unreadable product returns a real error, never a zero-length success.
+    // package and a record that cannot be read return different codes: an absent
+    // property answers ERROR_UNKNOWN_PROPERTY, and an unreadable product a real
+    // error rather than a zero-length success.
 
     [Fact]
     public async Task A_failed_product_LocalPackage_read_counts_an_unaccounted_product()
@@ -1656,8 +1635,8 @@ public class InstallerQueryServiceUnitTests
 
     // ---- Both sources degraded at once refuses the scan ----
     //
-    // Withholding the removable class answers a short API enumeration because
-    // the registry fallback still contributes the lost product's paths as
+    // Withholding the removable class answers a claim the API loop lost because
+    // the registry fallback still contributes that product's paths as
     // non-removable rows, which is what keeps its cached file out of the orphan
     // list. When the fallback is failing reads of its own that recovery is no
     // longer established, and the scan would offer a file as an orphan on a run
@@ -1669,7 +1648,8 @@ public class InstallerQueryServiceUnitTests
         var msi = new FakeMsiApi();
         msi.AddProduct("{A}");
         msi.SetProductProperty("{A}", "LocalPackage", @"C:\Windows\Installer\a.msi");
-        msi.AddProduct("{B}", result: 1603);
+        msi.AddProduct("{B}");
+        msi.ProductPropertyResult[("{B}", "LocalPackage")] = BadConfiguration;
 
         var ex = await Assert.ThrowsAsync<LocalisedInvalidOperationException>(
             () => Run(msi, fallbackFailures: 1));
@@ -1678,7 +1658,7 @@ public class InstallerQueryServiceUnitTests
     }
 
     [Fact]
-    public async Task A_short_enumeration_with_a_clean_fallback_still_scans()
+    public async Task A_lost_claim_with_a_clean_fallback_still_scans()
     {
         // One source short is the state the withholding was built for, and it
         // must stay a completed scan: refusing here would take orphan cleanup
@@ -1687,7 +1667,8 @@ public class InstallerQueryServiceUnitTests
         var msi = new FakeMsiApi();
         msi.AddProduct("{A}");
         msi.AddPatch("{A}", "{P}", localPackage: dead, state: "2", uninstallable: "0");
-        msi.AddProduct("{B}", result: 1603);
+        msi.AddProduct("{B}");
+        msi.ProductPropertyResult[("{B}", "LocalPackage")] = BadConfiguration;
 
         var result = await Run(msi, fallbackFailures: 0);
 
@@ -2367,13 +2348,11 @@ public class InstallerQueryServiceUnitTests
     [Fact]
     public async Task AccessDenied_from_the_sid_retry_refuses_the_scan()
     {
-        // The refusal check has to cover the retry's return code too, not just
+        // The access check has to cover the retry's return code too, not just
         // the first call's. A refusal coming back from the second call and
-        // falling into the tolerated-failure branch would count and demote the
-        // row, leaving the scan reporting itself as merely short of a record
-        // when Windows had refused it outright. Near unreachable in practice
-        // (the retry only runs for a SID past 256 characters), so this pins the
-        // refusal contract rather than a field failure.
+        // reaching the arm for a row that did not read would refuse the scan
+        // saying an entry came back unreadable, when Windows had refused access.
+        // The exception type is what tells the two refusals apart.
         var msi = new FakeMsiApi();
         msi.AddProduct("{A}");
         msi.ProductSidRetryResult[0] = AccessDenied;
@@ -2444,9 +2423,8 @@ public class InstallerQueryServiceUnitTests
         Assert.Equal(1, result.Census.UnreadableProducts);
         // ZERO skipped rows, and it is not the same number as the one above: a
         // product whose row came back and whose value would not read is still a
-        // product the API returned. It travels separately because the two answer
-        // different questions about the same product, one that a claim was lost
-        // and one that the row itself never arrived.
+        // product the API returned, and a row the walk cannot read refuses the
+        // scan before any census is built.
         Assert.Equal(0, result.Census.SkippedProductRows);
         Assert.Equal(10, result.Census.RegistryProductKeys);
         Assert.Equal(2, result.Census.ProductCount);

@@ -85,12 +85,12 @@ namespace InstallerClean.Models;
 /// withhold that verdict for a claim it lost elsewhere.
 ///
 /// BOTH HALVES OF THAT CONJUNCTION ARE LOAD-BEARING AND THE STATE ALONE IS NOT
-/// ENOUGH. Splitting on the state was tried and the claim it makes was measured
-/// false: with the superseded files gone, uninstalling the superseding patch
-/// discarded both patches and went to the unpatched base, with Windows demonstrably
-/// looking for the absent files. So a superseded row whose product condition could
-/// not be settled is NOT in here; it is in the affected half, and the
-/// missing-files line speaks for it.
+/// ENOUGH. A split on the state alone would call a superseded patch's absence
+/// harmless, and it is not: with the superseded files gone, uninstalling the
+/// superseding patch discards both patches and goes to the unpatched base, with
+/// Windows looking for the absent files. So a superseded row whose product
+/// condition could not be settled is NOT in here; it is in the affected half, and
+/// the missing-files line speaks for it.
 ///
 /// COUNTED APART FROM ITS SIBLING AND NOT SPOKEN. The split is data, kept so a
 /// report can still show the shape of a machine, and no surface states it. It earns
@@ -125,7 +125,7 @@ namespace InstallerClean.Models;
 /// they are simply not offered, and they have their own count. The predicate settles
 /// it: nothing reaches the flag without having
 /// carried IsRemovable, and IsRemovablePatch requires state 2. THAT IS A
-/// USER-FACING CLAIM NOW RATHER THAN AN INTERNAL ONE: both hosts name the class in
+/// USER-FACING CLAIM RATHER THAN AN INTERNAL ONE: both hosts name the class in
 /// as many words (<c>Summary.SupersededHeldBack</c>, <c>Cli.SupersededHeldBack</c>),
 /// so this count and that noun have to agree.
 ///
@@ -139,14 +139,12 @@ namespace InstallerClean.Models;
 ///
 /// THE ON-DISK QUALIFIER IS THE WHOLE DIFFERENCE FROM
 /// <see cref="RegisteredWithheldCount"/> AND IT IS LOAD-BEARING. A row whose file
-/// has already gone cost this run nothing: an absent file could never have been
+/// has already gone held nothing back: an absent file could never have been
 /// offered, the branch that offers a superseded row being gated on its existence.
-/// The two counts were one variable until 3.0.0, so this figure carried those rows
-/// and overstated what the withholding cost, on the one channel that answers what
-/// the app is doing on machines nobody here can see. A cost figure that overstates
-/// invites relaxing the condition it is measuring. The direction of the correction
-/// is downward and only on a machine that has already lost part of its cache; on an
-/// intact one the two counts are equal.
+/// Counting such rows here would overstate how much the withholding holds back, on
+/// the one channel that answers what the app is doing on machines nobody here can
+/// see. The two counts differ only on a machine that has already lost part of its
+/// cache; on an intact one they are equal.
 /// </param>
 /// <param name="Census">
 /// What the enumeration behind this scan measured about itself and about the

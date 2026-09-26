@@ -1159,21 +1159,21 @@ InstallerClean은 이미 관리자 권한으로 실행 중이었으므로 그런
   <data name="Error.ScanFailedTitle" xml:space="preserve"><value>검사 실패</value></data>
   <data name="Error.InstallerDbEmpty" xml:space="preserve"><value>Windows Installer 기록이 완전히 비어서 돌아왔습니다. 설치된 프로그램도, 업데이트도 캐시된 설치 파일을 하나도 요구하지 않습니다. 정상적으로 작동하는 컴퓨터에서는 이런 일이 없으므로(갓 설치한 Windows에도 그런 파일이 있습니다) 기록이 손상되었거나 읽을 수 없었던 것이고, 이 답을 그대로 믿은 검사는 {InstallerFolder}의 모든 파일을 잘못 고립된 것으로 판단했을 것입니다. InstallerClean은 그러지 않고 멈췄습니다. 아무것도 제거되지 않았습니다.</value></data>
   <data name="Error.MsiAccessDenied" xml:space="preserve"><value>Windows Installer가 InstallerClean에게 설치된 항목의 목록 표시를 허용하지 않았습니다. InstallerClean은 이미 관리자 권한으로 실행 중이었으므로 관리자 권한으로 다시 실행해도 달라지는 것이 없습니다. 그 목록이 없으면 캐시된 파일 중 어느 것이 아직 필요한지 안전하게 알아낼 방법이 없으므로 InstallerClean은 멈췄습니다. 아무것도 제거되지 않았습니다.</value></data>
-  <!-- 0 = consecutive failure count, 1 = last Win32 error code (kept
-       in the message because a sysadmin reading the dialog may want
-       to look it up), 2 = how many programs were read cleanly before
-       the run of failures began, 3 = the noun for that count.
+  <!-- 0 = the Win32 error code the unreadable entry came back with (kept
+       in the message because a sysadmin reading the dialog may want to
+       look it up; it is Success, 0, for an entry that came back as a
+       success naming no program), 1 = how many programs were read before
+       that entry, 2 = the noun for that count.
 
-       2 AND 3 ARE THE PAIR THAT MAKES THIS ACTIONABLE. The failure
-       count is a fixed threshold and reads the same on every machine
-       that reaches it; how far the enumeration got first does not, and
-       that is what somebody helping needs. Reading none and reading two
-       hundred are different situations with different answers, and this
-       count is what tells them apart. Zero is a real value and reads
-       correctly: "it read 0 programs". -->
-  <data name="Error.MsiNonSuccess" xml:space="preserve"><value>Windows Installer가 InstallerClean에게 읽을 수 있는 설치된 프로그램 목록을 주지 못했습니다. {2} {3}을(를) 읽은 다음 {0}개 항목이 연속으로 읽을 수 없는 상태로 돌아왔습니다(마지막 오류 코드 {1}). 일부만 읽은 목록으로 작업하는 대신 InstallerClean은 멈췄습니다. 아무것도 제거되지 않았습니다.</value></data>
-  <!-- The index cap, which is a different condition from the consecutive
-       failures above and must not borrow that string: the enumeration ran out
+       1 AND 2 ARE THE PAIR THAT MAKES THIS ACTIONABLE. How far the
+       enumeration got before the unreadable entry is what somebody
+       helping needs: reading none and reading two hundred are different
+       situations with different answers, and this count is what tells
+       them apart. Zero is a real value and reads correctly: "it read 0
+       programs". -->
+  <data name="Error.MsiNonSuccess" xml:space="preserve"><value>Windows Installer가 InstallerClean에게 읽을 수 있는 설치된 프로그램 목록을 주지 못했습니다. {1} {2}을(를) 읽은 다음 항목 하나가 읽을 수 없는 상태로 돌아왔습니다(오류 코드 {0}). 일부만 읽은 목록으로 작업하는 대신 InstallerClean은 멈췄습니다. 아무것도 제거되지 않았습니다.</value></data>
+  <!-- The index cap, which is a different condition from the unreadable
+       entry above and must not borrow that string: the enumeration ran out
        of budget rather than failing, so 0 = the cap reached (not a failure
        count) and 1 = the last row's error code, which here is Success (0) when
        every row read cleanly and the list simply never terminated. 2 = how many
@@ -1181,8 +1181,8 @@ InstallerClean은 이미 관리자 권한으로 실행 중이었으므로 그런
 
        The two strings stay separate and carry the same pair for the same
        reason: how far the enumeration got is the fact somebody helping needs,
-       and it is as worth having when the budget runs out as when a run of
-       failures stops the walk. -->
+       and it is as worth having when the budget runs out as when an
+       unreadable entry stops the walk. -->
   <data name="Error.MsiEnumerationNeverEnded" xml:space="preserve"><value>Windows Installer가 설치된 프로그램 목록의 끝을 끝내 알리지 않았습니다. InstallerClean은 {2} {3}을(를) 읽은 다음 {0}개 항목에서 포기했습니다(마지막 오류 코드 {1}). 끝이 없는 목록은 믿을 수 없으므로 InstallerClean은 멈췄습니다. 아무것도 제거되지 않았습니다.</value></data>
   <!-- The patch-loop sibling of Error.MsiEnumerationNeverEnded, same cap
        condition and the same four placeholders.

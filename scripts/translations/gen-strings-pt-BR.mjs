@@ -309,7 +309,7 @@ const MAP = {
   'Error.ScanFailedTitle': `Falha na análise`,
   'Error.InstallerDbEmpty': `Os registros do Windows Installer voltaram completamente vazios: nenhum programa instalado e nenhuma atualização reivindica um arquivo de instalação em cache. Isso não acontece em uma máquina que funciona (até uma instalação nova do Windows tem alguns), então ou os registros estão danificados ou não puderam ser lidos, e uma análise que acreditasse nessa resposta chamaria erroneamente de órfão cada arquivo em {InstallerFolder}. Em vez disso, o InstallerClean parou. Nada foi removido.`,
   'Error.MsiAccessDenied': `O Windows Installer não deixou o InstallerClean listar o que está instalado. O InstallerClean já estava em execução como administrador, então executá-lo de novo como administrador não muda nada. Sem essa lista não há como saber com segurança quais arquivos em cache ainda são necessários, então o InstallerClean parou. Nada foi removido.`,
-  'Error.MsiNonSuccess': `O Windows Installer não conseguiu dar ao InstallerClean uma lista legível dos programas instalados: ele leu {2} {3} e depois {0} entradas seguidas voltaram ilegíveis (último código de erro {1}). Em vez de trabalhar com uma lista lida pela metade, o InstallerClean parou. Nada foi removido.`,
+  'Error.MsiNonSuccess': `O Windows Installer não conseguiu dar ao InstallerClean uma lista legível dos programas instalados: ele leu {1} {2} e depois uma entrada voltou ilegível (código de erro {0}). Em vez de trabalhar com uma lista lida pela metade, o InstallerClean parou. Nada foi removido.`,
   'Error.InvalidDestinationTitle': `Destino inválido`,
   'Error.DestinationWriteFailedTitle': `Não foi possível usar essa pasta de backup`,
   'Error.MoveFailedTitle': `Falha na movimentação`,

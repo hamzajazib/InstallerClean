@@ -52,9 +52,10 @@ public interface IRemovableReverifier
     /// <summary>
     /// Re-reads the given patch claims and returns the paths the re-read has not
     /// left shown to be removable, for the action services to call ONCE THEY HOLD
-    /// <c>Global\_MSIExecute</c> and before they touch a file. Not "no longer
-    /// removable": one of the three causes is a read that established nothing
-    /// either way, and it keeps the file for want of a verdict rather than on one.
+    /// <c>Global\_MSIExecute</c> and before they touch a file. The paths are not all
+    /// ones whose verdict turned: one of the three causes is a read that established
+    /// nothing either way, and it keeps the file for want of a verdict rather than on
+    /// one.
     ///
     /// It exists because <see cref="ReverifyAsync"/> cannot be the last word. The
     /// hold is taken inside the action service, so every caller runs the full
@@ -65,48 +66,33 @@ public interface IRemovableReverifier
     /// tables are being processed, so the write falls inside the phase the mutex
     /// covers.
     ///
-    /// What is NOT established, and must not be written here as though it were:
-    /// whether an info API can return a registration its own transaction has
-    /// written and not yet committed. That answer decides how WIDE the window
-    /// this closes really was; it does not decide whether the re-read is worth
-    /// taking, which is why this was built without it.
+    /// The re-read does not turn on whether an info API can return a registration
+    /// its own transaction has written and not yet committed: it is taken either
+    /// way.
     ///
     /// Synchronous, and that is a requirement rather than a convenience: the
     /// lease must be released by the thread that took it, so the whole hold is one
     /// unbroken synchronous body with no await in it to hop threads.
     ///
-    /// WHAT IT COVERS, stated narrowly because the difference matters. It re-asks
-    /// about claims that already existed, so it catches a verdict changing on one
-    /// of them, which is the reverting superseded patch the full re-verify is for.
-    /// It cannot see a claim from a product that held none when the claims were
-    /// collected: there is nothing to re-ask about, and only re-walking the whole
-    /// registered set would find it. That case is covered up to the full
-    /// re-verify's own enumeration and no further. Closing it as well would mean
-    /// running that enumeration inside a machine-wide installer lock on every run,
-    /// which is a worse trade than the sliver it buys.
+    /// WHAT IT RE-ASKS. It re-asks about claims that existed when the claims were
+    /// collected, so it catches a verdict changing on one of them, which is the
+    /// reverting superseded patch the full re-verify is for. A product that held no
+    /// claim then gives it nothing to re-ask about, and the full re-verify's own
+    /// enumeration, moments earlier, is what reads such a product. Do not move that
+    /// enumeration inside the hold: it would keep a machine-wide installer lock for
+    /// a whole enumeration on every run.
     /// </summary>
     /// <param name="claims">
     /// The batch's own pairings and the sibling pairings on the products they name, as
     /// one argument. See <see cref="UnderLeaseClaims"/> for why it is one and not two.
     ///
-    /// MEASURED COST, because the ruling that asked for the sibling half forbade
-    /// adopting the narrower question without one. The added reads are the patch
-    /// registrations of the products the batch touches, so they are bounded by the
-    /// batch's own products and never by an enumeration.
-    ///
-    /// THE FIGURE CARRIES THE DATE IT WAS READ, because it is a fact about one
-    /// machine at one moment and not a property of this code. Read out of the
-    /// per-product Patches keys under UserData on 2026-08-18, the machine every other
-    /// figure here came from held THREE patch registrations across two products, one
-    /// product holding two of them and one of those superseded with its Uninstallable
-    /// read as zero. So a batch touching that product adds two keyed reads there. This
-    /// paragraph previously gave an undated two, one per product and none superseded,
-    /// from an earlier reading of the same machine, and nothing in this code changed
-    /// between the two: an update landed and the sentence went stale where it stood.
-    /// The largest single-product figure captured anywhere in this project is 58, from
-    /// Office 2010 SP2. Against any of those, this method already makes two keyed
-    /// reads per claim in the batch, and the pre-lease pass runs a whole enumeration
-    /// moments earlier outside the lease.
+    /// WHAT THE SIBLING HALF COSTS. The added reads are the patch registrations of the
+    /// products the batch touches, so they are bounded by the batch's own products and
+    /// never by an enumeration: a batch touching a product with two patch registrations
+    /// adds two keyed reads there, and one read for each registration on a product
+    /// holding more. Against that, this method already makes two keyed reads per claim
+    /// in the batch, and the pre-lease pass runs a whole enumeration moments earlier
+    /// outside the lease.
     /// </param>
     UnderLeaseRecheck RecheckUnderLease(UnderLeaseClaims claims);
 }
@@ -290,14 +276,13 @@ public readonly record struct HeldBackReasons(
     /// <summary>
     /// This tally with one more file counted against <paramref name="reason"/>.
     ///
-    /// EVERY MEMBER IS NAMED AND THE DEFAULT THROWS, which is a change and is the
-    /// point of it. The default arm used to be <see cref="HeldBackReason.RecordsUnreadable"/>,
-    /// so a cause added to the enum and forgotten here compiled, built green and was
-    /// counted and reported as a read that failed: a file held back under a sentence
-    /// naming a cause that did not occur, with nothing anywhere to see. This project
-    /// has shipped that shape once already, in a rename that would have made every
-    /// delete-failure report unreadable. A member added to the enum now fails at the
-    /// first file that reaches it, loudly, rather than being absorbed.
+    /// EVERY MEMBER IS NAMED AND THE DEFAULT THROWS. Do not give the default arm a
+    /// cause, <see cref="HeldBackReason.RecordsUnreadable"/> least of all: a member
+    /// added to the enum and forgotten here would then compile, build green and be
+    /// counted and reported as that cause, a file held back under a sentence naming a
+    /// cause that did not occur, with nothing anywhere to see. As it is, a member
+    /// added to the enum fails at the first file that reaches it, loudly, rather than
+    /// being absorbed.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">
     /// A cause with no counter, which is a defect in this type and not a machine

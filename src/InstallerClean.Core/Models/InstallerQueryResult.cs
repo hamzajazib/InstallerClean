@@ -19,16 +19,16 @@ namespace InstallerClean.Models;
 /// as the scan summary's kept-patches notice, and the trigger for withholding the
 /// removable class.
 ///
-/// FOUR contributors, and only the first two are failures to read. A product row
-/// the API skipped (identity unknowable, counted one per row); a product whose
-/// rows came back but whose LocalPackage value, or one of whose patch rows, would
-/// not read. Then an absence rather than a failure: a cached file the registry
-/// claims and the API never mentioned, computed NET of the read failures (see the
-/// subtraction at the assembly site), so by construction it counts only products
-/// where nothing failed to read at all. A product meeting more than one
+/// THREE contributors, and only the first is a failure to read: a product whose
+/// row came back but whose LocalPackage value, or one of whose patch rows, would
+/// not read. A product row that would not read refuses the scan instead, so no
+/// result carries one. Then an absence rather than a failure: a cached file the
+/// registry claims and the API never mentioned, computed NET of the read failures
+/// (see the subtraction at the assembly site), so by construction it counts only
+/// products where nothing failed to read at all. A product meeting more than one
 /// contributor counts once.
 ///
-/// The fourth is neither a failure to read nor an absence: a product the registry
+/// The third is neither a failure to read nor an absence: a product the registry
 /// named and this scan could not settle either way, Windows declining to say
 /// whether the code is installed or the key name yielding no code to ask with. Its
 /// opposite number, a registry product confirmed installed and recovered into the
@@ -36,12 +36,10 @@ namespace InstallerClean.Models;
 /// point: a product that can be asked about is asked, and only a product nobody
 /// can get an answer about withholds.
 ///
-/// IT WAS CALLED <c>UnreadableProductCount</c> AND THAT NAME WAS A CAUSE STATED
-/// FOR A MIXED SET, inside the app rather than on a screen: two of its four
-/// contributors are not read failures at all, one being an absence and one an
-/// inability to establish anything either way. Any sentence built on this number is
-/// a sentence about all four, which is why the name now says only that the
-/// enumeration could not account for them. The terms themselves are in
+/// ITS NAME SAYS ONLY THAT THE ENUMERATION COULD NOT ACCOUNT FOR THEM, because two
+/// of its three contributors are not read failures at all, one being an absence and
+/// one an inability to establish anything either way. Any sentence built on this
+/// number is a sentence about all three. The terms themselves are in
 /// <see cref="Census"/>, separately, for anything that needs to say which.
 ///
 /// It is not an exact headcount either, and cannot be made one. It can run under the
@@ -49,10 +47,9 @@ namespace InstallerClean.Models;
 /// biases low. It can run over it as well: a product subkey whose name is not a
 /// packed GUID counts once where nothing could be asked about it, and the file that
 /// key records counts again where the enumeration never claimed it and it is on the
-/// disk, two terms that are added rather than netted against each other. What has
-/// gone is the older route to running over, a difference between two product totals
-/// that a stale registry key inflates: the products behind such a difference are now
-/// asked about by name instead.
+/// disk, two terms that are added rather than netted against each other. A difference
+/// between two product totals, which a stale registry key inflates, is not a term:
+/// the products behind such a difference are asked about by name instead.
 ///
 /// READING HIGH IS THE SAFE DIRECTION, a higher count withholding the removable class
 /// on more machines and never on fewer. So no surface may present this as a count of
@@ -114,17 +111,17 @@ public record InstallerQueryResult(
 /// label, never a path, a name or an identifier.
 /// </summary>
 /// <param name="UnreadableProducts">
-/// Products whose records came back short: a skipped enumeration row, an
-/// unreadable <c>LocalPackage</c> value, or a patch enumeration that did not run
-/// to a clean end. One per product however many of the three it met. An exact
-/// per-product tally with no floor under it, which is what separates it from the
-/// estimate the withholding is otherwise computed from.
+/// Products whose records came back short: an unreadable <c>LocalPackage</c> value,
+/// an unreadable <c>LocalPackage</c> under one of its patches, or a patch
+/// enumeration that did not run to a clean end. One per product however many it
+/// met. An exact per-product tally with no floor under it, which is what separates
+/// it from the estimate the withholding is otherwise computed from.
 /// </param>
 /// <param name="SkippedProductRows">
-/// Enumeration rows the product loop could not read at all, one per row. A subset
-/// of <see cref="UnreadableProducts"/>, which is seeded from it and then grows.
-/// Carried separately because the two answer different questions about one
-/// product: that a claim was lost, and that the row itself never arrived.
+/// Rows the product walk passed without reading, one per row. It is zero on every
+/// scan that produces a result: the walk refuses the scan on a row it cannot read.
+/// <see cref="UnreadableProducts"/> is seeded from it, so a row the walk ever passed
+/// would count there as well.
 /// </param>
 /// <param name="RegistryProductKeys">
 /// Product subkeys the registry fallback walked under <c>UserData</c>. The only
@@ -463,14 +460,14 @@ public readonly record struct EnumerationCensus(
     // that cannot do that.
     //
     // It counts a different thing from UnreadableProducts, which is what the
-    // enumeration said about ITSELF: rows it returned that could not be read,
-    // and products whose records came back short inside the loop. This one is
-    // the fallback failing to read a key at all. The refusal that weighs both
-    // needs each to be above zero, so a machine whose enumeration answers
-    // cleanly while the registry side fails reads leaves that refusal unarmed, and
-    // the count is how the opt-in report records that the reads failed, as
-    // registryKeyReadFailureCount. The crash log writes the first twenty in full,
-    // then each cause not yet seen, and counts the rest in a closing entry.
+    // enumeration said about ITSELF: products it returned whose records came
+    // back short inside the loop. This one is the fallback failing to read a key
+    // at all. The refusal that weighs both needs each to be above zero, so a
+    // machine whose enumeration answers cleanly while the registry side fails
+    // reads leaves that refusal unarmed, and the count is how the opt-in report
+    // records that the reads failed, as registryKeyReadFailureCount. The crash log
+    // writes the first twenty in full, then each cause not yet seen, and counts
+    // the rest in a closing entry.
     int RegistryKeyReadFailures = 0)
 {
     /// <summary>

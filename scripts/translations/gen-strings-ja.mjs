@@ -257,7 +257,7 @@ const MAP = {
   'Error.ScanFailedTitle': `スキャンに失敗しました`,
   'Error.InstallerDbEmpty': `Windows Installer の登録情報が完全に空の状態で返されました。インストール済みのプログラムも更新プログラムも、キャッシュされたインストーラーファイルを一つも要求していません。正常に動作しているコンピューターでは起こらないこと (インストール直後の Windows にも該当するファイルはあります) なので、登録情報が破損しているか、読み取れなかったかのいずれかです。この答えを信じたスキャンは、{InstallerFolder} 内のすべてのファイルを誤って孤立と判定してしまいます。InstallerClean はそうせずに中止しました。何も削除していません。`,
   'Error.MsiAccessDenied': `Windows Installer が InstallerClean にインストール済みの一覧表示を許可しませんでした。InstallerClean はすでに管理者として実行されていたため、管理者として実行し直しても何も変わりません。この一覧がなければ、キャッシュされたどのファイルがまだ必要なのかを安全に判断する方法はないため、InstallerClean は中止しました。何も削除していません。`,
-  'Error.MsiNonSuccess': `Windows Installer は InstallerClean に、読み取り可能なインストール済みプログラムの一覧を渡せませんでした。{2} {3} を読み取ったのち、{0} 件の項目が連続して読み取り不能で返されました (最後のエラーコード{1})。一部しか読めていない一覧を使うのではなく、InstallerClean は中止しました。何も削除していません。`,
+  'Error.MsiNonSuccess': `Windows Installer は InstallerClean に、読み取り可能なインストール済みプログラムの一覧を渡せませんでした。{1} {2} を読み取ったのち、項目が 1 件読み取り不能で返されました (エラーコード{0})。一部しか読めていない一覧を使うのではなく、InstallerClean は中止しました。何も削除していません。`,
   'Error.InvalidDestinationTitle': `無効な移動先`,
   'Error.DestinationWriteFailedTitle': `そのバックアップフォルダーは使えませんでした`,
   'Error.MoveFailedTitle': `移動に失敗しました`,

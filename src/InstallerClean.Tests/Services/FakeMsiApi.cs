@@ -9,18 +9,15 @@ namespace InstallerClean.Tests.Services;
 /// char count (excluding the terminator) and MoreData; the second call
 /// writes the value and returns Success.
 ///
-/// IT SITS IN ITS OWN FILE BECAUSE MORE THAN ONE TEST CLASS NEEDS IT. It was a
-/// private nested class for as long as only the query service's own tests drove
-/// it, and the first test to join the enumeration to the scan that reads its
-/// census could not reach it. Nothing about the fake changed in the move; it is
+/// IT SITS IN ITS OWN FILE BECAUSE MORE THAN ONE TEST CLASS NEEDS IT, among them
+/// the tests joining the enumeration to the scan that reads its census. It is
 /// internal to the test assembly and nothing outside it can see it.
 /// </summary>
 internal sealed class FakeMsiApi : IMsiApi
 {
     // The msi.dll return codes this fake speaks. Held here rather than shared with
-    // the test class that used to own it: the fake is what gives them meaning, and
-    // a file that never touches this API should not have to reach through it for a
-    // number.
+    // a test class: the fake is what gives them meaning, and a file that never
+    // touches this API should not have to reach through it for a number.
     private const uint Success = 0, AccessDenied = 5, MoreData = 234, NoMoreItems = 259;
     private const uint UnknownProperty = 1608, BadConfiguration = 1610;
     private const uint InvalidParameter = 87;
@@ -33,16 +30,12 @@ internal sealed class FakeMsiApi : IMsiApi
 
     /// <summary>
     /// ROUTE A: what the machine-wide patch enumeration returns. That call is the one made
-    /// with NO product code, and until these three members existed no fixture could reach
-    /// it: every other knob here is keyed by a product code, route A passes none, and the
-    /// call fell through to the "this product holds no patches" branch and answered
-    /// NoMoreItems whatever the fixture said. So every test in this suite ran against a
-    /// route A that succeeded and named nothing, and the production behaviour that depends
-    /// on it could not be pinned in either direction.
+    /// with NO product code, and every other knob here is keyed by a product code, so
+    /// these three members are the only way a fixture reaches it.
     ///
     /// A forced return code. Null leaves route A walking <see cref="RouteAHolders"/>, which
-    /// is empty unless a fixture fills it, so the default is exactly what the fake answered
-    /// before and no existing fixture moves.
+    /// is empty unless a fixture fills it, so a fixture that says nothing about route A
+    /// gets one that succeeds and names nothing.
     /// </summary>
     public uint? RouteAResult { get; set; }
 
@@ -97,9 +90,9 @@ internal sealed class FakeMsiApi : IMsiApi
     /// Scripts the SID-buffer retry for one product row, keyed by index: the
     /// first EnumProducts call at that index reports MoreData, and the retry
     /// returns the value given here (Success meaning the row then comes back
-    /// normally). The real API only asks for a bigger buffer for a SID past
-    /// 256 characters, so nothing else in this fake can reach the retry, and
-    /// what the retry RETURNS is the whole subject of the tests using it.
+    /// normally, MoreData the row whose product key name no SID buffer can
+    /// help). Nothing else in this fake can reach the retry, and what the retry
+    /// RETURNS is the whole subject of the tests using it.
     /// </summary>
     public Dictionary<uint, uint> ProductSidRetryResult { get; } = new();
 
@@ -214,9 +207,8 @@ internal sealed class FakeMsiApi : IMsiApi
     {
         targetProductContext = MsiInstallContext.Machine;
         // ROUTE A, WHICH IS THE CALL WITH NO PRODUCT CODE. Everything below this branch is
-        // keyed by a product, so route A used to reach the "no patches for this product"
-        // return and answer NoMoreItems on every fixture. With both members left alone it
-        // still does, which is why nothing already written moves.
+        // keyed by a product, so route A is answered here. With both members left alone it
+        // answers NoMoreItems at once: a route A that succeeds and names nothing.
         if (productCode is null)
         {
             if (RouteAResult is { } forcedRouteA) return forcedRouteA;

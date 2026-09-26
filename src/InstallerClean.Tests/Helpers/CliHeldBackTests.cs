@@ -251,11 +251,11 @@ public class CliHeldBackTests
     [Fact]
     public void The_withheld_notice_states_a_cause_every_contributor_meets()
     {
-        // Four things reach this figure and only two of them are a read that
-        // failed: a product row the API skipped, a product whose records would not
-        // read, a cached file the registry claims and the API never mentioned, and
-        // a product the registry named that this scan could not settle either way,
-        // Windows declining to answer or the key name yielding no code to ask with.
+        // Three things reach this figure and only one of them is a read that
+        // failed: a product whose records would not read, a cached file the
+        // registry claims and the API never mentioned, and a product the registry
+        // named that this scan could not settle either way, Windows declining to
+        // answer or the key name yielding no code to ask with.
         // Composed here exactly as the write site composes it.
         var line = MachineContract.English(
             () => string.Format(Strings.Cli_EventLogScanWithheld, "/s", 3));

@@ -16,12 +16,11 @@ namespace InstallerClean.Services;
 /// A per-candidate re-read of the same question would answer nothing at all for
 /// every orphan while still reporting itself as a re-verification.
 ///
-/// THAT ARGUMENT IS ABOUT THE PATH QUESTION AND THERE IS NO LONGER A SECOND ONE
-/// HERE. A per-candidate identity re-read ran below this until 3.0.0, opening each
-/// surviving candidate and asking Windows about the code the file declares about
-/// itself, and it went with the scan-time pass it duplicated. What re-verifies a
-/// candidate now is this full re-enumeration and the under-lease re-read below it,
-/// both of which ask about registrations rather than about file contents.
+/// THAT ARGUMENT IS ABOUT THE PATH QUESTION, AND IT IS THE ONLY QUESTION HERE.
+/// Nothing in this class opens a candidate or asks Windows about the code a file
+/// declares about itself: what re-verifies a candidate is this full
+/// re-enumeration and the under-lease re-read below it, both of which ask about
+/// registrations rather than about file contents.
 /// </summary>
 public sealed class RemovableReverifier : IRemovableReverifier
 {
@@ -58,15 +57,15 @@ public sealed class RemovableReverifier : IRemovableReverifier
         // appears here as a live claim; a still-superseded patch is IsRemovable and
         // does not appear at all; a true orphan was never registered.
         //
-        // ONE ROW IN TWO CARRIES NO CLAIM AT ALL, and telling them apart is the
-        // whole of what this map is for. A patch whose State or Uninstallable read
-        // failed lands here having established nothing either way: non-removable
-        // for want of a verdict rather than on one, so reporting it as a program
-        // reclaiming the file would name a cause that did not occur. The withheld kind
-        // is the third and occurs again from 3.0.0: a superseded patch whose product's
-        // patch set this run could not establish is non-removable for want of a reading
-        // rather than on one. Both kinds can be in one batch, which is why the cause is
-        // carried per path and not per run.
+        // NOT EVERY ROW HERE CARRIES A CLAIM, and telling them apart is the whole
+        // of what this map is for. A patch whose State or Uninstallable read failed
+        // lands here having established nothing either way: non-removable for want
+        // of a verdict rather than on one, so reporting it as a program reclaiming
+        // the file would name a cause that did not occur. The withheld kind is a
+        // third: a superseded patch whose product's patch set this run could not
+        // establish is non-removable for want of a reading rather than on one. Every
+        // kind can be in one batch, which is why the cause is carried per path and
+        // not per run.
         //
         // A STILL-REMOVABLE SUPERSEDED PATCH IS DELIBERATELY NOT IN THIS MAP, and that
         // is the one entry whose absence is the point. The map is what condemns a
@@ -76,15 +75,12 @@ public sealed class RemovableReverifier : IRemovableReverifier
         // in the map, dropped with a cause, which is exactly the reverting-patch case
         // this whole pass was built for.
         //
-        // THE ROW DECIDES, NOT THE CANDIDATE, AND ONE CASE THEREFORE READS WEAKER
-        // THAN IT COULD. A candidate the scan measured as an orphan, whose path a
-        // patch row names here with its verdict unread, is reported as records that
-        // could not be read, where "a registration names it now" would also have
-        // been true and is the stronger of the two. Keeping the stronger one would
-        // mean deciding the cause from what the SCAN saw, and the scan's own
-        // reading is exactly what this pass exists to distrust. A weaker true
-        // sentence is not the failure here; a stronger one reached by trusting the
-        // reading under test would be.
+        // THE ROW DECIDES THE CAUSE, NOT THE CANDIDATE. A candidate the scan found
+        // to be an orphan, whose path a patch row names here with its verdict
+        // unread, is reported as records that could not be read, although "a
+        // registration names it now" is true of it too. Deciding the cause from
+        // what the SCAN saw would mean trusting the reading this pass exists to
+        // distrust.
         //
         // A dictionary rather than a set because InstallerQueryResult.Packages is
         // one row per claimed path, so there is a single answer to record for each.
@@ -188,13 +184,13 @@ public sealed class RemovableReverifier : IRemovableReverifier
 
     /// <inheritdoc />
     /// <remarks>
-    /// IT HAS REAL WORK AGAIN FROM 3.0.0, having returned at its first guard while
-    /// nothing registered was offered. Its input is both halves the rule needs: the
-    /// claims naming a surviving candidate, and the claims on every product those
-    /// name. A surviving superseded patch is named by every product this scan could
-    /// read a cached path from, and the path that put it in the batch is one of those
-    /// reads, so the first half is non-empty on any batch containing one. This is the
-    /// last check standing in front of a permanent delete.
+    /// IT HAS REAL WORK ON ANY BATCH HOLDING A SUPERSEDED PATCH. Its input is both
+    /// halves the rule needs: the claims naming a surviving candidate, and the claims
+    /// on every product those name. A surviving superseded patch is named by every
+    /// product this scan could read a cached path from, and the path that put it in
+    /// the batch is one of those reads, so the first half is non-empty on any batch
+    /// containing one. This is the last check standing in front of a permanent
+    /// delete.
     ///
     /// IT RE-ASKS BOTH HALVES OF THE RULE THE OFFER RESTS ON. The loop below re-asks
     /// the batch's own pairings, and a path survives it only where every claim on it
@@ -223,38 +219,32 @@ public sealed class RemovableReverifier : IRemovableReverifier
     /// pairings and a zero for a sibling, so what the other shapes decide between is
     /// the cause counted for the path and not whether it is held back.
     ///
-    /// WHAT IS NARROWER HERE IS THE SET AND NOT THE QUESTION, and that residual is the
-    /// part to know about. The pairings are the ones the pre-lease enumeration recorded
-    /// as claims, so a registration it produced no claim for is not re-read here: a
-    /// patch that enumeration got no cached path for, a product it never returned even
-    /// where the machine-wide patch enumeration names it, a product holding none of the
-    /// batch's own patches that only a patch file's declared targets name, and anything
-    /// registered after the claims were collected. The first of those is larger than it
-    /// sounds: the sibling set is built out of the products the surviving claims name,
-    /// so where that pairing would have been a product's only claim on a surviving path
-    /// the whole product drops out of the set, and every other patch registered to it
-    /// goes with it, including one that could have condemned. The scan's own condition
-    /// asks every product any of its sources names, against each product's registered
-    /// patch set as the registry lists it and worsened by what the enumeration read,
-    /// which no list of claims can match. A holder only that pass can see is covered up
-    /// to its enumeration and no further.
+    /// THE SET IT RE-READS IS BUILT FROM THE CLAIMS. The batch's pairings are the ones
+    /// the pre-lease enumeration recorded as claims, and the siblings are the other
+    /// claims on the products those name. A registration that enumeration produced no
+    /// claim for is not re-read here: a patch it got no cached path for, a product it
+    /// never returned even where the machine-wide patch enumeration names it, a
+    /// product holding none of the batch's own patches that only a patch file's
+    /// declared targets name, and anything registered after the claims were
+    /// collected. The sibling set is built out of the products the surviving claims
+    /// name, so a product whose only pairing on a surviving path gave no cached path
+    /// is not in it, and nor is any other patch registered to that product.
     ///
-    /// AND THE NARROWING IS A GAP AND NOT AN EQUIVALENCE. The question is the same and
-    /// the set is smaller, so nothing may write this up as re-running the scan's own
-    /// condition under the lease: a reading that does turns a bounded re-read of the
-    /// claims into a claim about every product on the machine.
+    /// SO THIS IS NOT THE SCAN'S OWN CONDITION RE-RUN UNDER THE LEASE, and nothing may
+    /// describe it as one. That condition asks every product any of its sources names,
+    /// against each product's registered patch set as the registry lists it and
+    /// worsened by what the enumeration read. This puts the same two questions about a
+    /// bounded set of records.
     ///
-    /// SO THE PRE-LEASE PASS IS STILL THE WIDER CHECK AND IS NO LONGER THE ONLY ONE. It
-    /// re-runs the whole enumeration moments earlier and applies that condition at its
-    /// full width, and a path it condemns never arrives here at all. What it cannot do
-    /// is run again inside the hold, and that is what this adds: the same two questions,
-    /// put about a bounded set of records, in the window its own enumeration leaves open.
+    /// THE PRE-LEASE PASS IS THE WIDER CHECK. It re-runs the whole enumeration moments
+    /// earlier and applies that condition at its full width, and a path it condemns
+    /// never arrives here at all. What it cannot do is run again inside the hold, and
+    /// that is what this adds: the same two questions, put about a bounded set of
+    /// records, in the window its own enumeration leaves open.
     ///
-    /// NARROWING THIS BACK TO THE BATCH'S OWN PAIRINGS WAS EXPLICITLY THE FALLBACK
-    /// RATHER THAN THE DESIGN, and the ruling that said so is not spent now the design
-    /// is built: it stands against reversing it, and it required the read cost to be
-    /// measured before anybody adopted the narrower question. The measurement it asked
-    /// for is on this method's parameter in the interface.
+    /// DO NOT NARROW THIS BACK TO THE BATCH'S OWN PAIRINGS. That re-asks half the rule
+    /// the offer rests on and drops the half about other patches. What the sibling
+    /// reads cost is on this method's parameter in the interface.
     /// </remarks>
     public UnderLeaseRecheck RecheckUnderLease(UnderLeaseClaims claims)
     {
