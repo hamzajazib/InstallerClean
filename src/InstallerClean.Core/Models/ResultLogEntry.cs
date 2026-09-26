@@ -43,9 +43,7 @@ public sealed record ResultLogEntry(
     /// point of view, which is why the version did not move for them.
     ///
     /// SCHEMA 4 IS THE FIRST BUMP THAT IS NOT A SHAPE CHANGE FOR ITS OWN SAKE.
-    /// Every safety claim this app makes was measured on one machine, and one
-    /// machine can falsify a universal and can never confirm one, so the payload
-    /// now carries what varies BETWEEN machines: a <c>machine</c> object of shape
+    /// The payload carries what varies BETWEEN machines: a <c>machine</c> object of shape
     /// facts, the three terms behind the withholding rather than the one number
     /// that mixes them, the identity pass's three outcomes, the act-time
     /// re-verify's five, and the byte totals a count-shaped question cannot
@@ -205,10 +203,10 @@ public sealed record AppInfo(string Version, string Language, string WindowsLang
 /// figures do not, and a reader that has to keep a list of which key is which has
 /// been handed the wrong structure.
 ///
-/// The reason any of it is collected: every claim this app makes about what is
-/// safe to remove was measured on one machine, which has short-name creation off,
-/// two patches and a cache of a few hundred files. None of those is known to be
-/// ordinary and one machine cannot make them so.
+/// It is collected because the shape of a machine's installer records varies from
+/// one machine to the next, and only these reports can say how: whether short-name
+/// creation is on, how many patches a machine carries, how large its cache is and
+/// how its registry reads answer.
 /// </summary>
 /// <param name="ShortNameCreation">
 /// Where the machine still generates 8dot3 short names, one of
@@ -227,15 +225,16 @@ public sealed record AppInfo(string Version, string Language, string WindowsLang
 /// a pair anybody can follow without knowing what a stem is.
 /// </param>
 /// <param name="NonStringLocalPackageCount">
-/// Registrations whose cached-path value was there and was not a string. Every
-/// report answering zero is the evidence that reading it as one is safe; a single
-/// report answering otherwise is the evidence that it is not, and one such report
-/// is worth more than any number of the first kind.
+/// Cached-package values, <c>LocalPackage</c> or <c>ManagedLocalPackage</c>, that were
+/// there and were not a string, one per value. Every report answering zero is the
+/// evidence that reading them as one is safe; a single report answering otherwise is
+/// the evidence that it is not, and one such report is worth more than any number of
+/// the first kind.
 /// </param>
 /// <param name="UnreadablePatchStateCount">
 /// Patches whose state could not be read during the scan, one per product-to-patch
-/// pairing. It sizes a known wrong sentence rather than a lost file: both reads
-/// fail towards keeping the file.
+/// pairing. Both reads fail towards keeping the file, so the count says how often a
+/// machine cannot answer the question, and never counts a file lost.
 /// </param>
 /// <param name="UnreadableVerdictPathCount">
 /// The same failures counted once per cached PATH rather than once per pairing.
@@ -263,37 +262,40 @@ public sealed record AppInfo(string Version, string Language, string WindowsLang
 /// </param>
 /// <param name="ProductCount">Installed products the enumeration returned.</param>
 /// <param name="RegistryProductKeyCount">
-/// Installed products the REGISTRY holds, which is the only count of a machine's
-/// products that does not come from the enumeration being measured. It sits here
-/// beside <see cref="ProductCount"/> rather than under the scan because two scans
-/// of one machine agree about it.
+/// Product keys under Windows Installer's <c>UserData</c> key, in every account's
+/// subtree: a count of the machine's products that does not come from the
+/// enumeration, and that also counts a key a failed or partial uninstall left
+/// behind. It sits here beside <see cref="ProductCount"/> rather than under the scan
+/// because two scans of one machine agree about it.
 ///
-/// The pair is the whole of what makes a truncated enumeration visible from
-/// outside, and the app's own rule for reading it absorbs a difference of two
-/// outright plus a fifth proportionally. That band was set from the residue of
-/// one machine. Sending both numbers raw is what lets anybody else's machine say
-/// whether it is the right band.
+/// The app derives nothing from the difference between the two. Each product the
+/// registry names with a code and the enumeration did not return is asked about by
+/// name: one found installed travels as the recovered count, one Windows would not
+/// answer about as the unanswered count, and one not installed in neither. A key whose
+/// name yields no code travels as the unparseable count. The pair travels because
+/// how far a machine's registry runs ahead of its enumeration is a fact only these
+/// reports can establish.
 /// </param>
 /// <param name="PatchClaimCount">
 /// Product-to-patch claims read, one per claim rather than per patch. With
-/// <see cref="ProductCount"/> it gives the ratio that says how patch-heavy a real
-/// machine is, which is the single thing the measured machine is least like.
+/// <see cref="ProductCount"/> it gives the ratio that says how patch-heavy a
+/// machine is.
 /// </param>
 /// <param name="InstanceProductCount">
 /// Products installed as a second instance of themselves under an instance
 /// transform. PRODUCTS, not files, and not a count of anything held back.
 ///
-/// IT TRAVELS BECAUSE NOBODY ANYWHERE KNOWS WHETHER SUCH A MACHINE EXISTS IN THE
-/// FIELD. Every reading this project has is from one machine, where it is zero, and
-/// one machine settles nothing about all of them.
+/// IT TRAVELS BECAUSE HOW OFTEN A MACHINE CARRIES SUCH A PRODUCT is a fact only these
+/// reports can establish.
 ///
 /// THE COUNT DECIDES NOTHING AND THE CONDITION IT FEEDS IS LIVE. What acts is
 /// <see cref="EnumerationCensus.SecondInstanceNotRuledOut"/>, which fires on this
-/// count or on an InstanceType read that failed. It is a withholding leg, so a
-/// machine carrying one of these products has its walk-derived offer withheld
-/// whole; the re-verification pass puts the same question again between the scan
-/// and the click; and the command line prints a line naming it among the reasons a
-/// run could not be certain.
+/// count, on an InstanceType read that failed, or on a product the registry names
+/// that nothing shows was asked. It is a withholding leg, so a machine carrying one
+/// of these products has its walk-derived offer withheld whole; the re-verification
+/// pass puts the same question again between the scan and the click; and the
+/// command line prints a line naming it among the reasons a run could not be
+/// certain.
 ///
 /// A machine fact rather than a run observation, which is what puts it in this
 /// object: two scans of one machine agree about it.
@@ -304,25 +306,25 @@ public sealed record AppInfo(string Version, string Language, string WindowsLang
 ///
 /// IT TRAVELS SO THAT A ZERO ABOVE CANNOT BE READ AS "NO SUCH PRODUCT HERE". A
 /// complete negative is a zero in both, and a zero above with a number here is a
-/// machine that did not answer rather than a machine with none. The completeness of
-/// the walk that asked is carried by the counts already in this object and under
-/// the scan: a product the enumeration never reached was never asked this either.
+/// machine that did not answer rather than a machine with none. A product the
+/// enumeration never returned is asked only once Windows confirms it installed. One
+/// Windows would not answer about travels as the unanswered count and a key whose name
+/// yields no code as the unparseable count, and both arm the same rule.
 /// </param>
 /// <param name="SupersededRegistrationCount">
-/// Registrations Windows reports superseded, counted off the machine rather than off
-/// the offer. A machine fact: two scans of one machine agree about it, where the
-/// scan object's <c>supersededCount</c> answers what a run OFFERED and moves with the
-/// condition.
+/// Cached patch paths whose merged row Windows reports superseded: one per path however
+/// many programs register the patch, whether or not the file is on the disk, counted
+/// off the machine rather than off the offer. The name says registrations and the count
+/// is of paths. A machine fact: two scans of one machine agree about it, where the scan
+/// object's <c>supersededCount</c> answers what a run OFFERED.
 ///
-/// THE TWO DIFFERING IS THE MEASUREMENT NOBODY HAS. The difference is the size of the
-/// class the per-product condition excludes, and no reading of one machine can
-/// establish it.
+/// THE DIFFERENCE BETWEEN THE TWO IS A MIXED SET. Several separate conditions keep a
+/// superseded row off the offer, so no single cause may be stated for it.
 /// </param>
 /// <param name="ObsoletedRegistrationCount">
-/// The same for obsoleted registrations, and for that class this is the only figure
-/// that can ever be non-zero: they are not offered, so nothing derived from the offer
-/// can see them. It exists to answer whether any machine anywhere has one, which no
-/// report has ever shown and nobody has ever manufactured one to test with.
+/// The same for cached patch paths whose merged row reads obsoleted, and for that class
+/// this is the only figure that can ever be non-zero: they are not offered, so nothing
+/// derived from the offer can see them. It answers whether a machine has one.
 /// </param>
 /// <param name="ProductPatchKeyCount">
 /// Products whose registry patch-list key opened, from the listing the per-product
@@ -331,12 +333,12 @@ public sealed record AppInfo(string Version, string Language, string WindowsLang
 /// </param>
 /// <param name="ProductPatchRegistrationCount">
 /// Patch subkeys under those keys, one per (product, patch) registration. With the
-/// count above it is the shape fact the measured machine is least like.
+/// count above it gives how many patches a machine's products carry.
 /// </param>
 /// <param name="ProductsWithRemovablePatchCount">
 /// Products where at least one registered patch positively declared itself removable,
 /// so a rollback there could reach for a superseded patch's cached file. THE FIGURE
-/// THAT SAYS WHAT THE CONDITION COSTS, and one machine cannot answer it.
+/// THAT SAYS ON HOW MANY PRODUCTS THE CONDITION IS ARMED.
 /// </param>
 /// <param name="ProductsWithPatchSetUnestablishedCount">
 /// Products whose patch set could not be established. The other half of the same
@@ -418,14 +420,13 @@ public sealed record AppInfo(string Version, string Language, string WindowsLang
 /// NOT AN OUTCOME AND NOT A FAULT. Every other count in this group says what happened
 /// to a value; this says what the value looked like. A flagged spelling that resolves
 /// is the mechanism working. What a figure above zero says is that this machine holds
-/// the spellings the resolution was built for, which nobody has been able to size from
-/// one machine.
+/// the spellings the resolution exists for.
 /// </param>
 /// <param name="PathNormalisationRefusedAtEmbeddedNullCount">
 /// Of those, refused for carrying an embedded null, which no path can carry. The
 /// member that fires on Windows, and the reason it is asked for separately: the
-/// expansion cuts such a value at the null and returns without throwing, so until
-/// this release the condition happened and every count above it stayed at zero.
+/// expansion cuts such a value at the null and returns without throwing, so this
+/// count, taken before it, is where the condition shows.
 ///
 /// LAST IN THE LIST AND FIRST IN THE METHOD. These are positional parameters and all
 /// four are <c>int</c>, so a member inserted among the others would re-point every
@@ -772,13 +773,12 @@ public sealed record MachineInfo(
 /// </param>
 /// <param name="RecoveredProductCount">
 /// Products the registry named, this enumeration never returned, and a keyed ask
-/// then found installed. THE TRUNCATION, MEASURED, where every other signal about
-/// a short enumeration is an inference from two totals.
+/// then found installed: each one named and confirmed, not inferred from two
+/// totals.
 ///
-/// A non-zero reading anywhere would be the first evidence that a truncated
-/// enumeration happens at all, which is a premise a whole mechanism once rested on
-/// and which nothing has ever confirmed. It withholds nothing: the products behind
-/// it were asked about rather than guessed at.
+/// A non-zero reading is a machine whose enumeration came back short of a product
+/// that is installed. It withholds nothing: the products behind it were asked
+/// about rather than guessed at.
 ///
 /// UNDER THE SCAN AND NOT THE MACHINE because it exists only where a run came back
 /// short, so two scans of one machine need not agree about it.
@@ -786,13 +786,13 @@ public sealed record MachineInfo(
 /// <param name="UnansweredProductCount">
 /// Products the registry named, this enumeration never returned, and Windows would
 /// then not say were installed or not. A question that was put and got no answer,
-/// which withholds, because nothing about an enumeration's completeness follows
-/// from silence.
+/// which holds back every superseded patch and the whole walk-derived offer,
+/// because nothing about an enumeration's completeness follows from silence.
 ///
 /// NOT THE MACHINE OBJECT'S UNPARSEABLE COUNT, and the two may never be added
 /// together under one name outside the withholding total: Windows was never asked
 /// about those, so a sentence about what Windows would not say is false of every
-/// one of them. One figure carried both until this schema separated them.
+/// one of them.
 /// </param>
 /// <param name="UnclaimedPatchFileCount">
 /// The same for patch registrations. A patch entry names no product, so it

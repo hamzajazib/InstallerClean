@@ -103,14 +103,15 @@ public record InstallerQueryResult(
 /// plus the shape facts one enumeration can see, carried separately so a report
 /// never has to state one cause for a quantity built from several.
 ///
-/// EVERY FIELD HERE IS INSTRUMENTATION. Nothing decides a file's fate on any of
-/// them and nothing may start: the classification is settled where it is settled,
-/// and a counter that acquired a consumer would be a second, quieter copy of a
-/// rule that already exists in one place.
+/// THE FIELDS THAT DECIDE ANYTHING ARE READ THROUGH THE TWO PROPERTIES AT THE END,
+/// <see cref="AnyRecordedPathUnestablished"/> and
+/// <see cref="SecondInstanceNotRuledOut"/>, and the rest decide nothing. A count
+/// that gained a consumer anywhere else would be a second, quieter copy of a rule
+/// that already exists in one place.
 ///
-/// They exist because the evidence base for every safety claim this app makes is
-/// one machine, and a single machine can falsify a universal and can never confirm
-/// one. Each is a count or a fixed label, never a path, a name or an identifier.
+/// They travel in the opt-in report because how each one runs across machines is a
+/// fact only reports from many machines can establish. Each is a count or a fixed
+/// label, never a path, a name or an identifier.
 /// </summary>
 /// <param name="UnreadableProducts">
 /// Products whose records came back short: a skipped enumeration row, an
@@ -146,31 +147,32 @@ public record InstallerQueryResult(
 /// claim, and it is reproducible from these plus
 /// <see cref="UnreadableProducts"/>.
 ///
-/// <see cref="UnresolvableProductCount"/> is the arithmetic's one other input and
-/// is not one of these, being neither a headcount nor an observation of the disk:
-/// it is a tally of the questions that got no answer, and it is added to the
-/// derived term rather than weighed against it.
+/// <see cref="UnansweredProductCount"/> and <see cref="UnparseableProductKeyNames"/>
+/// are the arithmetic's other inputs and are not among these, being neither a
+/// headcount nor an observation of the disk: they tally the products that could not
+/// be settled, and they are added to the derived term rather than weighed against
+/// it.
 ///
 /// <see cref="RegistryProductKeys"/> is NOT an input to any of it and still
 /// travels. Nothing is derived from its difference against
-/// <see cref="ProductCount"/>, that difference having turned out unable to tell a
-/// truncated enumeration from ordinary registry residue; the products behind it
-/// are asked about by name instead. How large it runs across real machines is a
+/// <see cref="ProductCount"/>, which cannot tell a truncated enumeration from
+/// ordinary registry residue; the products behind it are asked about by name
+/// instead. How large it runs across real machines is a
 /// fact about machines rather than about this app, and only these reports can
 /// answer it.
 /// </param>
 /// <param name="NonStringLocalPackageValues">
-/// Registrations whose <c>LocalPackage</c> value was present and was not a string.
-/// Answers whether anything in the wild writes that value under a type other than
-/// <c>REG_SZ</c>, which decides whether a string cast is a safe way to read it.
+/// Cached-package values, <c>LocalPackage</c> or <c>ManagedLocalPackage</c>, that
+/// were present and were not a string, one per value. Answers whether anything in the
+/// wild writes those values under a type other than <c>REG_SZ</c>, which decides
+/// whether a string cast is a safe way to read them.
 /// A subset of the fallback's failure count rather than a term beside it.
 /// </param>
 /// <param name="UnreadablePatchStates">
 /// Patch claims whose <c>State</c> or <c>Uninstallable</c> read failed, one per
-/// (patch, product) pairing asked. No file turns on it any more, every
-/// registration being kept; what the number sizes is how often a machine cannot
-/// answer a plain question about its own installer records at all, which is the
-/// one thing these reports can establish and one machine never could.
+/// (patch, product) pairing asked. No file turns on it, a registration whose read
+/// failed being kept; the number says how often a machine cannot answer a plain
+/// question about its own installer records at all.
 /// </param>
 /// <param name="UnreadableVerdictPaths">
 /// Cached paths whose patch state no read established, one per merged row where
@@ -187,8 +189,7 @@ public record InstallerQueryResult(
 /// <param name="ProductCount">
 /// Product rows the API enumeration returned. With
 /// <see cref="PatchClaimCount"/> it gives the patch-to-product ratio, which is
-/// the shape of a machine's cache and the thing a two-patch machine is least
-/// like.
+/// the shape of a machine's cache.
 /// </param>
 /// <param name="PatchClaimCount">
 /// Product-to-patch claims read, one per claim rather than per patch: a patch
@@ -201,17 +202,14 @@ public record InstallerQueryResult(
 /// every claimed path, removable rows included, because the question is about
 /// what the records hold and not about what this run is offering.
 ///
-/// Nine of nine on one machine would say the cache is not named the way that
-/// machine's other measurements assumed. The comparison it is for is against
-/// <see cref="ScanResult.RegisteredPackages"/>'s own count in the same report,
-/// which is why this is a count rather than the boolean the question was first
-/// asked as.
+/// It is read against <see cref="ScanResult.RegisteredPackages"/>'s own count in the
+/// same report: the two equal says no name the records hold for a cached file can be
+/// an 8dot3 short name.
 /// </param>
 /// <param name="RecoveredProductCount">
 /// Products the registry named, the enumeration never returned, and a keyed ask
-/// then found installed. THE TRUNCATION, MEASURED: a count of products identified
-/// individually and confirmed one at a time, where every earlier attempt at this
-/// question inferred it from the difference between two totals.
+/// then found installed: a count of products identified individually and confirmed
+/// one at a time, not inferred from the difference between two totals.
 ///
 /// Zero is the answer on a machine whose enumeration was whole, and it is also
 /// the answer on a machine whose registry holds nothing but residue, so a
@@ -224,6 +222,12 @@ public record InstallerQueryResult(
 /// would then not say were installed or not. A question that was put and got no
 /// answer. Unlike the count above it does withhold, because nothing about the
 /// enumeration's completeness follows from an unanswered question.
+///
+/// IT WITHHOLDS TWICE. The superseded class is withheld, on the same count as every
+/// other product this scan could not account for. And the walk-derived offer is
+/// withheld, through <see cref="SecondInstanceNotRuledOut"/>: a product Windows would
+/// not answer about was never asked its <c>InstanceType</c>, so nothing shows it is
+/// not a second instance of itself.
 /// </param>
 /// <param name="UnparseableProductKeyNames">
 /// Registry product key names that yielded no product code, so there was nothing
@@ -241,6 +245,11 @@ public record InstallerQueryResult(
 /// Counted while walking every product key, not only the ones the enumeration
 /// missed, so it is a property of the registry's contents rather than of a run.
 ///
+/// It withholds on the same two terms as the count above, the walk-derived offer
+/// through <see cref="SecondInstanceNotRuledOut"/> included: a key whose name yields
+/// no code cannot be matched to any product that was asked, so nothing shows the
+/// product it belongs to was asked its <c>InstanceType</c>.
+///
 /// Between them these three report, per machine, what proportion of its registry
 /// keys really were residue. The difference between the two product totals cannot
 /// answer that, since it cannot tell residue from a truncated enumeration.
@@ -256,9 +265,10 @@ public record InstallerQueryResult(
 /// that code out of the file and asks exactly that question.
 ///
 /// What acts on it is <see cref="SecondInstanceNotRuledOut"/>, which reads this
-/// count together with the one below and never on its own. This member is carried
-/// and sent apart, because how often a machine ANSWERS the question and how often
-/// it REFUSES to are different facts.
+/// count together with the one below, and with the two counts of products the
+/// registry names that nothing shows were asked, and never on its own. This member
+/// is carried and sent apart, because how often a machine ANSWERS the question and
+/// how often it REFUSES to are different facts.
 ///
 /// A POSITIVE READING IS THE ONLY THING COUNTED. A value that will not parse is
 /// not a positive, and neither is an absent property, which Microsoft documents as
@@ -308,19 +318,17 @@ public record InstallerQueryResult(
 /// </param>
 /// <param name="ProductPatchRegistrationCount">
 /// Patch subkeys under those keys, one per (product, patch) registration rather
-/// than per patch. With the count above it is the shape fact the measured machine
-/// is least like, holding five.
+/// than per patch. With the count above it gives how many patches a machine's
+/// products carry.
 /// </param>
 /// <param name="ProductsWithRemovablePatchCount">
 /// Products where at least one registered patch positively declared itself
 /// removable, so a rollback on that product could reach for a superseded patch's
 /// cached file.
 ///
-/// IT IS THE FIGURE THAT SAYS WHAT THE CONDITION COSTS, and nothing measured on one
-/// machine can answer it. On the machine every other measurement came from, the only
-/// patch declaring itself removable sits on a Visual C++ redistributable with no
-/// superseded patch to withhold, so the condition costs that machine nothing at all.
-/// Whether that is usual is exactly what these reports exist to find out.
+/// IT IS THE FIGURE THAT SAYS ON HOW MANY PRODUCTS THE CONDITION IS ARMED, and only
+/// reports from many machines can say how it runs. It is not a count of anything held
+/// back: that is decided per cached path, over the products holding it.
 /// </param>
 /// <param name="ProductsWithPatchSetUnestablishedCount">
 /// Products whose patch set could not be established: the key would not open, or a
@@ -328,30 +336,20 @@ public record InstallerQueryResult(
 ///
 /// THE OTHER HALF OF THE SAME QUESTION, and kept apart from it because they are
 /// different findings. One is the condition finding a reason to withhold; this is
-/// the condition unable to look. A machine reading high here is a machine where the
-/// fix is withholding without having established anything, which is safe and is not
-/// the same as safe-and-informed.
+/// the condition unable to look. A machine reading high here is one where the
+/// condition holds patches back without having established anything about them.
 /// </param>
 /// <param name="PathResolverAttemptCount">
-/// Recorded paths this scan put to the final-path resolver, which from 3.0.0 is
-/// EVERY value that got past the embedded-null test and the expansion. Until then it
-/// was only a value carrying a long-path or NT object prefix or an 8dot3 alias, and
-/// the number therefore answered two questions at once: how many were asked, and how
-/// many carried such a spelling. It answers only the first now.
-/// <see cref="PathFlaggedSpellingCount"/> is where the second went, and it went
-/// somewhere rather than being dropped because a report that quietly stops being able
-/// to answer a question reads exactly like a machine with nothing to report.
+/// Recorded paths this scan put to the final-path resolver: EVERY value that got past
+/// the embedded-null test and the expansion. How many of them carried a spelling only
+/// the filesystem can settle is <see cref="PathFlaggedSpellingCount"/>.
 ///
-/// THE FIVE OUTCOME COUNTS BELOW CANNOT BE READ WITHOUT IT. Most machines flag no
-/// path at all, so the resolver is never asked and its five failures all read zero:
-/// identical, on the wire, to a machine that asked and got five clean answers. This
-/// is what tells those two apart, and a receiver reading any of the five without it
-/// is reading a number that cannot mean what it appears to.
-///
-/// IT IS NO LONGER THE ONLY REASON THIS EXISTS, and the sentence saying so has been
-/// taken out rather than qualified. The five below were carried to size a failure
-/// before anything was designed around it; from 3.0.0 they also decide something,
-/// and <see cref="AnyRecordedPathUnestablished"/> is where.
+/// THE FIVE OUTCOME COUNTS BELOW CANNOT BE READ WITHOUT IT. A scan that asked the
+/// resolver nothing reports all five as zero, identical on the wire to a scan that
+/// asked and got clean answers. This is what tells those two apart, and a receiver
+/// reading any of the five without it is reading a number that cannot mean what it
+/// appears to. The five decide something as well, through
+/// <see cref="AnyRecordedPathUnestablished"/>.
 /// </param>
 /// <param name="PathResolverNotAPathCount">
 /// Of those, the ones the resolver refused outright as not a path.
@@ -373,11 +371,8 @@ public record InstallerQueryResult(
 /// THE RESOLVED COUNT IS NOT CARRIED. It is the attempts less these five, and a
 /// stored copy could disagree with its own parts.
 ///
-/// THE FIVE USED TO BE SPLIT INTO TWO ORDINARY MACHINE STATES AND THREE THAT COULD
-/// NOT BE PRODUCED BY AN ABSENCE OR A PERMISSION, and that split has gone from these
-/// notes because nothing reads it any more. It was there to argue that a count over
-/// all five together could not be acted on. All five are now acted on alike, on the
-/// one thing true of every member: the resolver was asked and did not answer.
+/// All five are acted on alike, on the one thing true of every member: the resolver
+/// was asked and did not answer.
 /// </param>
 /// <param name="PathNormalisationRefusedAtExpansionCount">
 /// Recorded values refused while expanding an environment variable.
@@ -412,10 +407,9 @@ public record InstallerQueryResult(
 /// Appending cannot do that.
 ///
 /// IT IS THE MEMBER THAT FIRES ON WINDOWS, which is why it is not folded into the
-/// expansion it precedes. The expansion cuts such a value at the null and returns
-/// without throwing, so before this count existed the condition was invisible on
-/// the platform the application runs on: the report said no path failed while one
-/// had.
+/// expansion it precedes. On Windows the expansion cuts such a value at the null and
+/// returns without throwing, so this count, taken before it, is where the condition
+/// shows.
 /// </param>
 /// <param name="PathFlaggedSpellingCount">
 /// Recorded values carrying a spelling only the filesystem can settle: an 8dot3
@@ -424,8 +418,7 @@ public record InstallerQueryResult(
 /// THE ONLY MEMBER OF THIS GROUP THAT IS NOT AN OUTCOME. Every other count here says
 /// what happened to a value; this says what the value looked like, and it decides
 /// nothing. A machine reporting a figure above zero is one holding the spellings the
-/// resolution was built for, which is a question this project has been trying to
-/// answer from real machines rather than from one.
+/// resolution exists for.
 ///
 /// IT IS NOT A COUNT OF ANYTHING GOING WRONG and must never be reported as one. A
 /// flagged spelling that resolves is a claim correctly settled: the mechanism
@@ -474,9 +467,10 @@ public readonly record struct EnumerationCensus(
     // and products whose records came back short inside the loop. This one is
     // the fallback failing to read a key at all. The refusal that weighs both
     // needs each to be above zero, so a machine whose enumeration answers
-    // cleanly while the registry side fails reads leaves that refusal unarmed,
-    // and the count is the only record that the reads failed. The opt-in report
-    // carries it as registryKeyReadFailureCount.
+    // cleanly while the registry side fails reads leaves that refusal unarmed, and
+    // the count is how the opt-in report records that the reads failed, as
+    // registryKeyReadFailureCount. The crash log writes the first twenty in full,
+    // then each cause not yet seen, and counts the rest in a closing entry.
     int RegistryKeyReadFailures = 0)
 {
     /// <summary>
@@ -484,12 +478,10 @@ public readonly record struct EnumerationCensus(
     /// it: the sum of the four counts above, and the population the withholding
     /// acts on.
     ///
-    /// IT IS A PROPERTY HERE SO THAT THE SUM EXISTS ONCE. The rule that reads it
-    /// lives in another service and used to add the parts itself, which meant a
-    /// member added to the split was a member that rule silently did not act on:
-    /// the build stays green, the counter still reports, and the withholding just
-    /// does not fire for the new cause. That is the failure this release found in
-    /// the embedded-null case, and a hand-rolled sum is how it would arrive again.
+    /// IT IS A PROPERTY HERE SO THAT THE SUM EXISTS ONCE. The rule that reads it lives
+    /// in another service, and a rule adding the parts itself would not act on a member
+    /// added to the split: the build stays green, the counter still reports, and the
+    /// withholding does not fire for the new cause.
     ///
     /// A MIXED SET, SO NOTHING MAY STATE A CAUSE FOR IT. The four are four different
     /// facts about a machine and the only thing true of every member is that the
@@ -533,8 +525,7 @@ public readonly record struct EnumerationCensus(
     /// A rule that named the populations itself would be one edit away from silently
     /// not acting on a population added later: the build stays green, the new counter
     /// still reports, and the withholding simply does not fire for the new cause.
-    /// That is the failure this release found once already, in the count above, and
-    /// it is why the question is asked where the members are declared. Anything added
+    /// That is why the question is asked where the members are declared. Anything added
     /// to this record that means "a recorded path this scan could not settle" belongs
     /// in this expression in the same edit.
     ///
@@ -548,21 +539,25 @@ public readonly record struct EnumerationCensus(
         PathNormalisationRefusedTotal > 0 || PathResolverRefusedTotal > 0;
 
     /// <summary>
-    /// Whether this scan failed to establish that every product it could ask about is
-    /// an ordinary single-instance installation. THE ONE THING THE SECOND-INSTANCE
+    /// Whether this scan failed to establish that every product it knows of is an
+    /// ordinary single-instance installation. THE ONE THING THE SECOND-INSTANCE
     /// WITHHOLDING ASKS, and it is here rather than in the service that acts on it for
     /// the reason <see cref="AnyRecordedPathUnestablished"/> is: a rule that named the
     /// members itself would be one edit away from silently not acting on a member added
     /// later, with a green build and a counter still reporting.
     ///
-    /// THE TWO MEMBERS ARE OPPOSITE FINDINGS AND THE SUPERORDINATE IS EXACT.
-    /// <see cref="InstanceProductCount"/> is a positive answer that a product IS a second
-    /// instance of itself; <see cref="InstanceTypeUnreadableCount"/> is a question that was
-    /// put and not answered. The only thing true of both is the one this property is named
-    /// for: the scan cannot say that no installed product is a second instance of itself.
-    /// Nothing may state a cause over the pair, here or on any surface.
+    /// FOUR MEMBERS, AND THE SUPERORDINATE IS EXACT. <see cref="InstanceProductCount"/>
+    /// is a positive answer that a product IS a second instance of itself.
+    /// <see cref="InstanceTypeUnreadableCount"/> is a question that was put and not
+    /// answered. <see cref="UnansweredProductCount"/> is a product the registry names
+    /// that Windows would not say was installed, so it was never put the question.
+    /// <see cref="UnparseableProductKeyNames"/> is a registry product key whose name
+    /// yields no code, so it cannot be matched to any product that was asked. The only
+    /// thing true of all four is the one this property is named for: the scan cannot say
+    /// that no installed product is a second instance of itself. Nothing may state a
+    /// cause over them, here or on any surface.
     ///
-    /// WHY EITHER WITHHOLDS. A product installed under an instance transform registers
+    /// WHY ANY OF THEM WITHHOLDS. A product installed under an instance transform registers
     /// under a product code the transform produced, while the package cached for it
     /// declares the base code. So <see cref="Services.DeclaredProductCheck"/>, which
     /// reads a product code OUT OF A CACHED FILE and puts it to Windows, can be told
@@ -572,21 +567,28 @@ public readonly record struct EnumerationCensus(
     ///
     /// AND NOT KNOWING WITHHOLDS ON THE SAME TERMS AS KNOWING. A read that failed leaves
     /// the machine in exactly the state the positive reading describes as far as this rule
-    /// can tell, and a rule that acted on the positive alone would be armed by the machines
-    /// that answer and disarmed by the machines that do not.
+    /// can tell, and so does a product the registry names that nothing shows was asked.
+    /// A code Windows would not say was installed is never recovered, so the pass over
+    /// the products the enumeration lost does not ask it; and a key whose name yields no
+    /// code cannot be matched to any product that was asked. A rule that acted on the
+    /// positive alone would be armed by the machines that answer and disarmed by the
+    /// machines that do not.
     ///
-    /// A BOOL RATHER THAN A SUM. The two count different things and adding them would
+    /// A BOOL RATHER THAN A SUM. The four count different things and adding them would
     /// produce a figure that reads as a product count and is not one. The counts are
     /// carried apart for the report, which reads them apart; the rule needs only whether
-    /// either is above zero.
+    /// any of them is above zero.
     ///
-    /// WHAT IT DOES NOT REACH, stated because the boundary is a decision and not an
-    /// oversight. A product that is installed and that this scan could not name at all,
-    /// neither from the enumeration nor from the registry, is never asked and cannot be.
-    /// That is the limit of every question the scan puts rather than of this one, and
-    /// extending the rule to it would make it fire on the possibility that any enumeration
-    /// anywhere is short, which is true of every scan and leaves the rule no floor.
+    /// WHAT IT READS. Every product the enumeration returned, asked one keyed read each;
+    /// every product it lost that a key under <c>UserData</c> names and Windows confirms
+    /// installed, asked the same way; and, through the two counts, every such key that
+    /// names a code Windows would not answer about or carries a name yielding no code.
+    /// Do not widen it to the chance that an enumeration is short: that is true of every
+    /// scan, so the rule would then fire on all of them.
     /// </summary>
     public bool SecondInstanceNotRuledOut =>
-        InstanceProductCount > 0 || InstanceTypeUnreadableCount > 0;
+        InstanceProductCount > 0
+        || InstanceTypeUnreadableCount > 0
+        || UnansweredProductCount > 0
+        || UnparseableProductKeyNames > 0;
 }

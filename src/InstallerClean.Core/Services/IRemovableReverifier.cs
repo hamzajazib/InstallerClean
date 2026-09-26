@@ -232,7 +232,7 @@ public enum HeldBackReason
     /// <summary>
     /// The re-enumeration met a condition under which the scan itself offers no
     /// walk-derived file at all, so a file this batch carries is one the app would
-    /// no longer put on a list.
+    /// not put on a list now.
     ///
     /// IT IS ABOUT THE MACHINE AND NOT ABOUT THE FILE, which is what separates it
     /// from the three above and is why it could not fold into any of them. Those
@@ -245,18 +245,16 @@ public enum HeldBackReason
     /// (<see cref="Models.EnumerationCensus.AnyRecordedPathUnestablished"/> and
     /// <see cref="Models.EnumerationCensus.SecondInstanceNotRuledOut"/>), on the
     /// same rule as the scan's own withholding: a condition added to either is
-    /// acted on here without this file being edited. Two different findings reach
-    /// it today, which is one reason among several that the copy names no cause at
+    /// acted on here without this file being edited. Several different findings
+    /// reach it, which is one reason among several that the copy names no cause at
     /// all.
     ///
-    /// IT DROPS THE WALK-DERIVED HALF OF A BATCH AND NOT THE WHOLE OF IT, which
-    /// matches what the scan does rather than what the removed version did. The
-    /// version taken out in 3.0.0 refused the entire batch, and that was right when
-    /// the whole offer was walk-derived; a superseded registration is offered beside
-    /// it now, and those rows are judged by product code and are not touched by
-    /// either condition, so refusing them here would keep back files the scan would
-    /// still offer on the same machine a moment later. A path no registration names
-    /// is the walk-derived half, and that is the test used.
+    /// IT DROPS THE WALK-DERIVED HALF OF A BATCH AND NOT THE WHOLE OF IT, as the scan
+    /// does. A superseded registration is offered beside the walk-derived files, and
+    /// those rows are judged by product code and are not touched by either condition,
+    /// so dropping them here would keep back files the scan would still offer on the
+    /// same machine a moment later. A path no registration names is the walk-derived
+    /// half, and that is the test used.
     /// </summary>
     OwnershipUnestablished,
 }

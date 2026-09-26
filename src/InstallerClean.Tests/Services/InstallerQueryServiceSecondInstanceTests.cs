@@ -7,21 +7,24 @@ namespace InstallerClean.Tests.Services;
 /// WHICH PRODUCTS GET ASKED WHETHER THEY ARE A SECOND INSTANCE OF THEMSELVES.
 ///
 /// The reading itself is pinned beside the enumeration's own loop, where the spellings
-/// and the failure direction are held. What is here is the OTHER population, and the
-/// reason it needs a file of its own is that it was the population nobody asked: the
-/// property read sits inside the loop over the products the machine-wide enumeration
-/// returned, and a product that enumeration lost is recovered afterwards by name, asked
-/// whether it is installed and asked about every patch it holds, and never asked this.
+/// and the failure direction are held. What is here is the OTHER population: a product
+/// the machine-wide enumeration lost, which is recovered afterwards by name, asked
+/// whether it is installed, asked about every patch it holds, and asked this in its own
+/// account and context.
 ///
-/// THAT IS THE POPULATION MOST LIKELY TO HOLD THE CONDITION, which is what makes the gap
-/// worth closing rather than noting. The machine this whole class of work is about is one
-/// carrying the same program twice, and the sibling file on the recovered-product
-/// condition opens by describing exactly that machine: a copy the sweep does not return
-/// and the registry does.
+/// THAT IS THE POPULATION MOST LIKELY TO HOLD THE CONDITION. The machine this class of
+/// work is about is one carrying the same program twice, and the sibling file on the
+/// recovered-product condition opens by describing exactly that machine: a copy the
+/// sweep does not return and the registry does.
+///
+/// AND THE PRODUCTS NOTHING SHOWS WERE ASKED. A product the registry names that Windows
+/// would not say is installed is never recovered, so it is never put the question, and
+/// a registry key whose name yields no code cannot be matched to any product that was.
+/// The rule reads both counts, and the last two fixtures are those two states.
 ///
 /// READ WHAT EACH FIXTURE SETS UP. Every one of them differs from its neighbour in a
-/// single property reading, so a count that moved for any other reason would show up as
-/// the wrong pair moving together.
+/// single reading, so a count that moved for any other reason would show up as the
+/// wrong pair moving together.
 /// </summary>
 public class InstallerQueryServiceSecondInstanceTests
 {
@@ -29,14 +32,15 @@ public class InstallerQueryServiceSecondInstanceTests
     private const string Recovered = "{BBBBBBBB-0000-0000-0000-00000000000B}";
     private const string EnumeratedFile = @"C:\Windows\Installer\enumerated.msi";
 
+    private const uint AccessDenied = 5;
     private const uint BadConfiguration = 1610;
     private const uint UnknownProperty = 1608;
 
     [Fact]
     public async Task A_recovered_product_that_is_a_second_instance_of_itself_is_counted()
     {
-        // ARM THREE, AND THE WHOLE OF IT. Before this the answer here was zero, because
-        // nothing put the question to a recovered product at all.
+        // A recovered product answering that it is a second instance is counted like an
+        // enumerated one.
         var census = await Scan(recoveredInstanceType: "1");
 
         Assert.Equal(1, census.RecoveredProductCount);
@@ -121,6 +125,39 @@ public class InstallerQueryServiceSecondInstanceTests
         Assert.Equal(1, census.InstanceTypeUnreadableCount);
     }
 
+    [Fact]
+    public async Task A_product_the_registry_names_and_Windows_will_not_answer_about_withholds()
+    {
+        // NEVER ASKED, WHICH IS NOT THE SAME AS ASKED AND ORDINARY. The registry names
+        // the product, the enumeration did not return it, and the keyed question about
+        // it met a row nobody could read, so it was never recovered and never put the
+        // InstanceType question. Nothing shows it is not a second instance of itself,
+        // which is the state the rule is named for.
+        var census = await Scan(recoveredUnaskable: true);
+
+        Assert.Equal(0, census.RecoveredProductCount);
+        Assert.Equal(1, census.UnansweredProductCount);
+        Assert.Equal(0, census.InstanceProductCount);
+        Assert.Equal(0, census.InstanceTypeUnreadableCount);
+        Assert.True(census.SecondInstanceNotRuledOut);
+    }
+
+    [Fact]
+    public async Task A_product_key_whose_name_yields_no_code_withholds()
+    {
+        // The same not-knowing one step earlier. The registry holds a product key and
+        // its name gives no code, so nothing can be asked by it and nothing shows the
+        // product it belongs to was asked. The recovered product beside it answers
+        // ordinary, so this key is the only thing in the fixture able to arm the rule.
+        var census = await Scan(unparseableKeyNames: 1);
+
+        Assert.Equal(1, census.UnparseableProductKeyNames);
+        Assert.Equal(0, census.UnansweredProductCount);
+        Assert.Equal(0, census.InstanceProductCount);
+        Assert.Equal(0, census.InstanceTypeUnreadableCount);
+        Assert.True(census.SecondInstanceNotRuledOut);
+    }
+
     /// <param name="enumeratedInstanceType">
     /// What the product the machine-wide sweep DID return answers. Null leaves the
     /// property unset, which is the ordinary machine.
@@ -133,10 +170,19 @@ public class InstallerQueryServiceSecondInstanceTests
     /// A forced return code out of that read instead, for the two fixtures whose
     /// subject is a read that did not produce a value.
     /// </param>
+    /// <param name="recoveredUnaskable">
+    /// The keyed question about the product the sweep lost meets a row that cannot be
+    /// read, so Windows never says whether it is installed and it is never recovered.
+    /// </param>
+    /// <param name="unparseableKeyNames">
+    /// Registry product keys whose names yield no code, as the fallback reports them.
+    /// </param>
     private static async Task<EnumerationCensus> Scan(
         string? enumeratedInstanceType = null,
         string? recoveredInstanceType = null,
-        uint? recoveredInstanceTypeResult = null)
+        uint? recoveredInstanceTypeResult = null,
+        bool recoveredUnaskable = false,
+        int unparseableKeyNames = 0)
     {
         var msi = new FakeMsiApi();
         msi.AddProduct(Enumerated);
@@ -152,6 +198,8 @@ public class InstallerQueryServiceSecondInstanceTests
             msi.SetProductProperty(Recovered, "InstanceType", recoveredInstanceType);
         if (recoveredInstanceTypeResult is { } forced)
             msi.ProductPropertyResult[(Recovered, "InstanceType")] = forced;
+        if (recoveredUnaskable)
+            msi.KeyedRowResult[(Recovered, 0)] = AccessDenied;
 
         var registryCodes = new[] { Enumerated, Recovered };
         var patchSets = new Dictionary<string, ProductPatchSet>(StringComparer.OrdinalIgnoreCase)
@@ -162,8 +210,9 @@ public class InstallerQueryServiceSecondInstanceTests
 
         var result = await new InstallerQueryService(msi,
                 (_, _) => new InstallerQueryService.FallbackRead(
-                    0, registryCodes.Length,
+                    0, registryCodes.Length + unparseableKeyNames,
                     RegistryProductCodes: registryCodes,
+                    UnparseableProductKeyNames: unparseableKeyNames,
                     ProductPatchSets: patchSets),
                 crashLogSink: null)
             .GetRegisteredPackagesAsync();

@@ -535,7 +535,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // is spelled where the members are declared, and this line only says that a
         // failure on either side withholds.
         //
-        // AND THE THIRD, WHICH IS A POSITIVE FINDING RATHER THAN A FAILURE TO READ.
+        // AND THE THIRD, ARMED BY A POSITIVE FINDING AND BY A FAILURE TO ESTABLISH ONE.
         // What all three share is that something this scan established or could not
         // establish leaves it unable to say which cached files belong to which programs.
         // A product installed as a second instance of itself registers under a code the
@@ -543,9 +543,10 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // and the per-file screen below reads a code out of a file and asks Windows
         // about it. On such a machine that screen can be told there is no record while
         // a live registration still needs the file, and no part of this scan can work
-        // out WHICH cached file belongs to the second copy. So the screen is not run
-        // and nothing walk-derived is offered. The question is asked of the census,
-        // where its two members live, on the same rule as the other two.
+        // out WHICH cached file belongs to the second copy. So where the scan cannot
+        // establish that no product is such a copy, the screen is not run and nothing
+        // walk-derived is offered. The question is asked of the census, where its
+        // members live, on the same rule as the other two.
         //
         // AND IT IS ONE CALL RATHER THAN THREE CONDITIONS SPELLED OUT HERE. A host
         // names which of these held, so the gate and that host read the same
@@ -637,15 +638,16 @@ public sealed class FileSystemScanService : IFileSystemScanService
             }
 
             // THE SCAN-TIME COUNTS, TAKEN OFF THE MACHINE AND NEVER OFF THE OFFER.
-            // Every registration Windows reports superseded or obsoleted is counted
-            // here whatever its removability and whether or not anything is offered,
-            // which is the whole point of them: a count derived from the offer can
-            // only ever see the registrations that passed the removability condition,
-            // so it cannot answer whether a machine HAS any. Obsoleted patches are not
-            // offered at all, so this is the only way that class is ever visible; and
-            // the superseded pair differing from the offer-derived figure is itself
-            // the finding, being the size of the class the condition excludes, which
-            // nobody has measured.
+            // Every cached patch path whose merged row Windows reports superseded or
+            // obsoleted is counted here, one per path however many programs register
+            // the patch, whatever its removability, whether or not its file is on the
+            // disk and whether or not anything is offered. A count derived from the
+            // offer sees only the rows that reached it, so it cannot answer whether a
+            // machine HAS any. Obsoleted patches are not offered at all, so this is
+            // the only way that class is ever visible. The superseded count's
+            // difference from the offered figure is a mixed set, several separate
+            // conditions keeping a row off the offer, so no single cause is stated
+            // for it.
             if (pkg.PatchState == 2) supersededRegistrations++;
             else if (pkg.PatchState == 4) obsoletedRegistrations++;
 

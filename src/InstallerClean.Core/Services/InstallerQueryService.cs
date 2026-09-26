@@ -74,8 +74,10 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// <see cref="GetRegisteredPackagesCore"/> for what it can and cannot say.
     /// </param>
     /// <param name="UnclaimedProductFiles">
-    /// Product entries whose <c>LocalPackage</c> path the API's own loop never
-    /// claimed AND whose file is on the disk. One such entry is one installed
+    /// Product entries with a cached-package path, under either name in
+    /// <see cref="CachedPackageValueNames"/>, that the API's own loop never claimed
+    /// AND whose file is on the disk, counted once per entry however many of its
+    /// values named one. One such entry is one installed
     /// product this enumeration did not reach, observed rather than inferred:
     /// see the cross-check in <see cref="GetRegisteredPackagesCore"/> for why
     /// both halves of that sentence are load-bearing.
@@ -86,8 +88,9 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// product went unreached.
     /// </param>
     /// <param name="NonStringLocalPackageValues">
-    /// Registrations whose <c>LocalPackage</c> value was PRESENT and was not a
-    /// string, so nothing could be read out of it. A SUBSET of
+    /// Cached-package values, under either name in
+    /// <see cref="CachedPackageValueNames"/>, that were PRESENT and were not a
+    /// string, so nothing could be read out of them, one per value. A SUBSET of
     /// <see cref="Failures"/> rather than a term beside it, and the overlap is
     /// deliberate: the degraded-sources gate weighs reads that failed, this one
     /// failed, and narrowing that gate is not an instrumentation change's
@@ -97,9 +100,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// <see cref="Failures"/> is a thrown exception, so the two are separable by
     /// subtraction and neither has to state a cause for the other's members.
     ///
-    /// Nothing writing these keys is obliged to use <c>REG_SZ</c>, and one
-    /// machine's 136 of 136 says what that machine holds and nothing about the
-    /// population.
+    /// Nothing writing these keys is obliged to use <c>REG_SZ</c>.
     /// </param>
     /// <param name="RegistryProductCodes">
     /// The product codes behind <paramref name="ProductKeys"/>, unpacked out of
@@ -139,38 +140,26 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// <param name="ProductPatchKeys">
     /// Products whose <c>Patches</c> key opened. Against
     /// <paramref name="ProductKeys"/> it answers how usual it is for a product to
-    /// carry one at all: one machine reads 138 of 139, and a product with no
-    /// patches has no reason to carry it.
+    /// carry one at all, a product with no patches having no reason to.
     /// </param>
     /// <param name="ProductPatchRegistrations">
     /// Patch subkeys REGISTERED under those keys, one per (product, patch)
     /// registration rather than per patch, and taken off the key listing rather than
     /// off what the read went on to examine. With
-    /// <paramref name="ProductPatchKeys"/> it is the shape fact the measured machine
-    /// is least like: it held five when this was written on 2026-08-17 and three
-    /// when its hives were read on 2026-08-18, with nothing in this code changing in
-    /// between. The figure is dated because it is one machine's state at one moment,
-    /// and an undated one reads as current for ever.
+    /// <paramref name="ProductPatchKeys"/> it gives how many patches a machine's
+    /// products carry.
     ///
     /// THE COUNT IS OF REGISTRATIONS LISTED, NOT OF REGISTRATIONS EXAMINED. The
-    /// per-product read returns at the first patch declaring itself removable. A
-    /// REPORT FROM AN EARLIER SCHEMA CARRIES THE OTHER QUANTITY UNDER THIS NAME: the
+    /// per-product read returns at the first patch declaring itself removable, so the
+    /// two differ on a product with a removable patch and more than one registration.
+    /// A REPORT FROM AN EARLIER SCHEMA CARRIES THE OTHER QUANTITY UNDER THIS NAME: the
     /// two are not comparable and must not be summed, and the envelope's app version
     /// and schema version each separate them.
-    ///
-    /// THE TWO DATED FIGURES ABOVE ARE UNAFFECTED. Read out of that hive on 2026-08-28
-    /// by two readers taking different routes to the same three numbers: 147 products
-    /// carry the key, they hold three patch registrations between them, and one of the
-    /// three declares itself removable, so the loop returns on that product. That
-    /// product holds exactly one registration, so the return costs the count nothing
-    /// there. A DIFFERENCE NEEDS A PRODUCT WITH A REMOVABLE PATCH AND MORE THAN ONE
-    /// REGISTRATION, which that machine does not have.
     /// </param>
     /// <param name="ProductsWithRemovablePatch">
     /// Products where at least one registered patch positively declared itself
-    /// removable. THIS IS THE COUNT THAT SAYS WHETHER THE PER-PRODUCT CONDITION
-    /// WILL WITHHOLD ANYTHING IN THE FIELD, which no measurement of one machine can
-    /// answer.
+    /// removable. THIS IS THE COUNT THAT SAYS ON HOW MANY PRODUCTS THE PER-PRODUCT
+    /// CONDITION IS ARMED.
     /// </param>
     /// <param name="ProductsWithPatchSetUnestablished">
     /// Products whose patch set could not be established at all. The other half of
@@ -230,10 +219,11 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// </param>
     /// <param name="CachedPathsByPatchCode">
     /// Per patch code, the cached paths its own registrations record in
-    /// <c>LocalPackage</c>, or null where no registration of it yielded one. A patch
-    /// registered under two SID subtrees can record two, so it is a set rather than a
-    /// path, and a registration whose value would not read leaves the whole entry
-    /// null.
+    /// <c>LocalPackage</c> or <c>ManagedLocalPackage</c>, or null where any
+    /// registration of it yielded none. A patch registered under two SID subtrees, or
+    /// recording both values, can record two, so it is a set rather than a path, and a
+    /// registration with either value unreadable, or there and empty, leaves the whole
+    /// entry null.
     /// </param>
     internal readonly record struct EstablishedPatchReach(
         IReadOnlyDictionary<string, IReadOnlyCollection<string>?>? PatchCodesByProduct = null,
@@ -259,23 +249,19 @@ public sealed class InstallerQueryService : IInstallerQueryService
         ///
         /// AND THE OTHER HALF IS WHY THE PATH IS ASKED ABOUT TWICE. The codes naming a
         /// path come from the claims, and a claim carries the path one registration
-        /// recorded for one patch code. That is enough while a registration's recorded
-        /// path is its own patch's file, and this file's own notes say twice that a
-        /// corrupt <c>LocalPackage</c> can aim a patch row at a file that is not that
-        /// patch's at all. On such a machine a product could hold the patch whose file
-        /// this really is while the claims name the path under somebody else's code, so
-        /// the codes alone would exclude a product that can reach the file. The second
-        /// question closes that: every patch code this product holds is asked where its
-        /// own cached file is, and a code that records this path, or records nothing,
-        /// judges. So the narrowing rests on the product's OWN registrations rather
-        /// than on another product's claim being right about which file it named.
+        /// recorded for one patch code. A corrupt <c>LocalPackage</c> can aim a patch row
+        /// at a file that is not that patch's, so a product could hold the patch whose
+        /// file this really is while the claims name the path under another code, and
+        /// the codes alone would then exclude a product that can reach the file. The
+        /// second question covers that: every patch code this product holds is asked
+        /// where its own cached file is, and a code that records this path, or records
+        /// nothing, judges. So the narrowing rests on the product's OWN registrations
+        /// rather than on another product's claim being right about which file it
+        /// named.
         ///
-        /// WHAT IT STILL RESTS ON, STATED RATHER THAN BURIED: that a product's own
-        /// registry records say which patches it holds and where their cached files
-        /// are. A machine whose records are complete, open cleanly and are simply WRONG
-        /// about that is one this cannot see, and it is not a new doubt: the same wrong
-        /// records produce the wrong per-product verdict one step later, which the wide
-        /// answer would then be resting on too.
+        /// WHAT IT READS is a product's own registry records of which patches it holds
+        /// and where their cached files are, which are the same records the per-product
+        /// verdict reads one step later.
         /// </summary>
         internal bool MustJudge(
             string productCode, string path, HashSet<string> patchCodesNamingThePath)
@@ -658,7 +644,10 @@ public sealed class InstallerQueryService : IInstallerQueryService
         //
         // FED FROM TWO PLACES AND NOT ONE. The loop below asks every product the
         // enumeration returned; the pass after it asks every product the enumeration
-        // lost and the registry named. A product in neither is a product nothing on
+        // lost that the registry named and Windows confirmed installed. A product the
+        // registry names that nothing shows was asked is counted as unanswered or as
+        // an unparseable key name, and the rule reads those two counts as well. A product
+        // in neither the enumeration nor the registry's product keys is one nothing on
         // this machine can name, which is the limit of the whole scan and not of this
         // rule.
         var instanceProducts = 0;
@@ -826,8 +815,8 @@ public sealed class InstallerQueryService : IInstallerQueryService
                     recordsShort = true;
                 }
                 // AND A PATCH WHOSE PATH READS BENIGNLY EMPTY TAKES NEITHER ARM,
-                // WHICH IS THE ONE MEASURED REASON THE PER-PRODUCT CONDITION UNIONS
-                // THREE SOURCES RATHER THAN TRUSTING THIS LOOP. Present and
+                // WHICH IS WHY THE PER-PRODUCT CONDITION UNIONS THREE SOURCES
+                // RATHER THAN TRUSTING THIS LOOP. Present and
                 // zero-length is not a read failure, so recordsShort stays false and
                 // nothing records the gap; and the whole block below is skipped, so
                 // the pairing contributes no claim, no State read and no verdict to
@@ -846,10 +835,10 @@ public sealed class InstallerQueryService : IInstallerQueryService
 
                     // A read that failed leaves nothing established about the
                     // registration, which no surface may describe as a claim, and the
-                    // count travels beside the flag because nobody knows how often
-                    // either read fails on a machine that is not the one this was
-                    // measured on. It also refuses the removable verdict below, both
-                    // halves of that rule needing a positive answer.
+                    // count travels beside the flag because how often either read
+                    // fails is a fact only the reports can establish. It also refuses
+                    // the removable verdict below, both halves of that rule needing a
+                    // positive answer.
                     var verdictUnreadable = stateRead.Unreadable || uninstallableRead.Unreadable;
                     if (verdictUnreadable) unreadablePatchStates++;
 
@@ -930,20 +919,16 @@ public sealed class InstallerQueryService : IInstallerQueryService
 
         var missed = LocateProductsTheEnumerationMissed(products, fallback.RegistryProductCodes, ct);
 
-        // THE SAME QUESTION, PUT TO THE PRODUCTS THE ENUMERATION LOST. Without this
-        // the second-instance reading covers only the products the enumeration
-        // returned, and a product it lost is recovered by name a few lines above and
-        // asked about everything EXCEPT this: ResolveProductInstances asks whether the
-        // code is installed and walks no list, so it establishes an account and a
-        // context and reads no property at all. That leaves the one population most
-        // likely to hold the condition the one population never asked.
+        // THE SAME QUESTION, PUT TO THE PRODUCTS THE ENUMERATION LOST. A product it
+        // lost is recovered by name above, through ResolveProductInstances, which asks
+        // whether the code is installed and walks no list, so it establishes an account
+        // and a context and reads no property at all. This loop puts the InstanceType
+        // question to each recovered product in that account and context.
         //
-        // ASKED RATHER THAN ASSUMED UNANSWERABLE, and the alternative was real: a
-        // recovered product could have been folded into the unreadable count on the
-        // ground that nothing had asked it. That would empty the offer on exactly the
-        // machines the recovery pass exists to rescue, which is the opposite of what it
-        // is for. Recovery closes a gap by asking, and this is one more question to the
-        // products it recovered.
+        // ASKED RATHER THAN ASSUMED UNANSWERABLE. A recovered product counted as
+        // unreadable instead would empty the offer on exactly the machines the recovery
+        // pass exists to rescue. Recovery closes a gap by asking, and this is one more
+        // question to the products it recovered.
         //
         // IT COSTS ONE KEYED PROPERTY READ PER RECOVERED PRODUCT, on a set that is
         // empty on a machine whose enumeration came back whole, and it fails in the
@@ -966,35 +951,30 @@ public sealed class InstallerQueryService : IInstallerQueryService
         ConfirmRemovableAgainstEveryProduct(claimed, patchClaims, products, missed.Recovered,
             fallback.Reach, fallback.ProductPatchSets, apiPatchSets, ct, unreadPatchFileLog);
 
-        // Both sources degraded at once: refuse the scan outright rather than
-        // report a shorter one.
+        // Both sources degraded at once: the scan is refused outright rather than
+        // reported short.
         //
-        // THIS GATE PROTECTS THE ORPHAN HALF AND IS THE ONE THING IN THIS REGION
-        // THAT KEPT ITS SUBJECT WHEN THE REMOVABLE CLASS WENT. Read it before
-        // concluding that unreadableProducts is now a dead term because the
-        // withholding below cannot fire: what that count answers here is whether a
-        // product's claim on a cached file exists anywhere at all, and a file no
-        // source claims is offered as an ORPHAN.
+        // THIS GATE PROTECTS THE WALK HALF. What unreadableProducts answers here is
+        // whether a product's claim on a cached file exists anywhere at all, and a
+        // file no source claims goes to the folder walk's candidates.
         //
         // A short API enumeration alone is answered by the fallback, because the
         // paths the lost product would have claimed are still reachable: the
         // fallback reads the same UserData keys and contributes them as rows, so
-        // the file stays out of the orphan list even though its owner went missing
-        // from the API's answer.
+        // the file stays claimed even though its owner went missing from the API's
+        // answer.
         //
-        // The moment the fallback is ALSO failing reads, that recovery is no
-        // longer established. A product lost from the API whose UserData key was
-        // one of the unreadable ones is claimed by neither source, and its cached
-        // file is walked, matched against nothing, and offered as an orphan by a
-        // scan whose withholding was bounded to the superseded class and left the
-        // orphan half alone. The two failures are not independent, either: the
-        // same corrupt registration that loses an API row can equally make that
-        // product's UserData subtree unreadable, so the backup is likeliest to
-        // be missing exactly the product the primary lost. Neither counter can
-        // bound what the other lost, so nothing here can be salvaged into a
-        // narrower rule.
+        // With the fallback ALSO failing reads, that is not established: a product
+        // lost from the API whose UserData key was one of the unreadable ones is
+        // claimed by neither source, so the scan stops here. The two failures are
+        // not independent, either: the same corrupt registration that loses an API
+        // row can equally make that product's UserData subtree unreadable, so the
+        // backup is likeliest to be missing exactly the product the primary lost.
+        // Neither counter can bound what the other lost, so no narrower rule is
+        // sound.
         //
-        // On any healthy machine both counters are zero and this is dead code.
+        // On a machine whose records read cleanly both counters are zero and this
+        // does not fire.
         //
         // Keyed on what the API said about itself, never on the cross-check
         // below: this gate REFUSES, and a refusal must rest on a product the
@@ -1005,13 +985,12 @@ public sealed class InstallerQueryService : IInstallerQueryService
             throw new LocalisedInvalidOperationException(Strings.Error_ScanRecordsUnreadable);
 
         // An enumeration that ends EARLY says nothing about itself: a
-        // NoMoreItems at index 3 of 200 sets reachedEnd, leaves unreadableRows
-        // at 0, and the scan reports itself complete while 197 products' patch
-        // claims never reached the merge. The downgrade-only merge is what stops
-        // a patch that is Superseded under one product and Applied under another
-        // being offered, and it can only fire for a product the loop reached, so
-        // a truncation puts a still-needed patch on the removal list under a
-        // scan that believes it is whole.
+        // NoMoreItems at index 3 of 200 sets reachedEnd and leaves unreadableRows
+        // at 0. The downgrade-only merge keeps a patch that is Superseded under one
+        // product and Applied under another off the offer only for a product the
+        // loop reached, so the products a short enumeration did not reach are found
+        // by name wherever the registry names them with a code, and a key whose name
+        // yields no code is counted and withholds.
         //
         // THE QUESTION IS SETTLED BY IDENTITY, ABOVE, AND NOT BY ARITHMETIC HERE.
         // LocateProductsTheEnumerationMissed compares the product codes the
@@ -1023,26 +1002,18 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // installed, or counted in missed.Unresolved because Windows would not
         // say. Only the last of the three withholds anything.
         //
-        // WHY A LEFTOVER KEY NOW PROVES NOTHING. A UserData product key outlives
-        // a failed or partial uninstall, so the registry legitimately holds more
-        // keys than the machine has products, and against a TOTAL that residue is
-        // indistinguishable from a truncation: both read as the registry running
-        // ahead. That is the whole reason a total ever needed a tolerance, and any
-        // tolerance is a guess at how much residue is normal. Asked by name, the
-        // same key answers "not installed", which settles it outright and costs
-        // nothing, because a product that is not there holds no patches. Residue
-        // no longer has to be absorbed, so nothing has to decide how much of it to
-        // absorb.
+        // WHY A LEFTOVER KEY PROVES NOTHING. A UserData product key outlives a
+        // failed or partial uninstall, so the registry legitimately holds more keys
+        // than the machine has products, and against a TOTAL that residue cannot be
+        // told from a truncation: both read as the registry running ahead. Asked by
+        // name, the same key answers "not installed", which settles it outright and
+        // costs nothing, because a product that is not there holds no patches.
         //
-        // AND WHERE THE REGISTRY READ ITSELF FAILS, NOTHING HAS BEEN GIVEN UP.
-        // This is the case to check before concluding an inference was safer than
-        // a measurement, because a headcount looks as though it would survive it.
-        // It does not: ProductKeys is counted from the subkeys the fallback
-        // actually walked, so a fallback that failed reports FEWER keys, which
-        // shrinks the difference against the enumeration rather than widening it.
-        // Two totals taken off a short registry side sit as close together as two
-        // taken off a whole one, and asking by name is no worse placed there, both
-        // working from the codes that side handed over.
+        // AND WHERE THE REGISTRY READ ITSELF FAILS. ProductKeys is counted from the
+        // subkeys the fallback actually walked, so a fallback that failed reports
+        // FEWER keys, and the names asked about are the codes that side handed over.
+        // The failed read is counted in fallback.Failures, which with an unreadable
+        // product refuses the scan at the gate above.
         //
         // AND THE GATE ABOVE WEIGHS TWO TERMS, REFUSING WHEN BOTH ARE NON-ZERO,
         // which is worth spelling out beside this because they count different
@@ -1053,16 +1024,15 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // has said nothing about itself and raises neither term, which is why the
         // products behind a disagreement are named above rather than counted here.
         //
-        // What remains here is an OBSERVATION and not an estimate, which is why it
-        // stays. The fallback reads the same UserData keys the API read and runs
-        // after the whole API loop, so a path it is the FIRST to claim is one no
-        // product the loop reached ever named. Its file being on the disk is the
-        // other half: a residue key whose product is gone but whose LocalPackage
-        // value survives leaves an unclaimed path too, and that population's file
-        // is usually not there. It overlaps the comparison on a machine where both
-        // fire, and the redundancy is worth its cost: this one sees a lost product
-        // through a file on the disk rather than through a code, so it does not
-        // depend on any key name being a packed GUID this code can read.
+        // What remains here is an OBSERVATION and not an estimate. The fallback reads
+        // the same UserData keys the API read and runs after the whole API loop, so a
+        // path it is the FIRST to claim is one no product the loop reached ever named.
+        // Its file being on the disk is the other half: a residue key whose product is
+        // gone but whose cached-package value survives leaves an unclaimed path too,
+        // and that population's file is usually not there. It overlaps the comparison
+        // on a machine where both fire, and sees a lost product through a file on the
+        // disk rather than through a code, so it does not depend on any key name being
+        // a packed GUID this code can read.
         //
         // A product whose row the API skipped, or whose LocalPackage read failed,
         // has its registry value claimed by the fallback alone, so it is already
@@ -1080,7 +1050,9 @@ public sealed class InstallerQueryService : IInstallerQueryService
 
         // Registry products this scan could not settle either way: a code Windows
         // would not answer about, and a key whose name yielded no code to ask
-        // with. Two steps of one state, so one figure.
+        // with. Two steps of one state, so one figure. Nothing shows either was asked
+        // its InstanceType, so both also reach EnumerationCensus.SecondInstanceNotRuledOut,
+        // which reads them apart through the census below.
         var unresolvedProducts = missed.Unresolved + fallback.UnparseableProductKeyNames;
 
         // ADDED rather than weighed against the observation, because the two are
@@ -1125,9 +1097,10 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // narrows nothing. Scan-wide is the finest granularity the information
         // supports either way.
         //
-        // Only the removable class moves, and the cost is bounded by that: this
-        // withholds superseded-patch cleanup, not orphan cleanup, and only on a
-        // scan that lost a row or is short against the registry's own count.
+        // This loop moves only the removable class, the superseded patches, and only
+        // on a scan that lost a claim, found a cached file no product it reached
+        // claimed, or could not settle a product the registry names. The walk half is
+        // decided elsewhere, on conditions of its own.
         //
         // AND IT TOUCHES NOTHING ELSE, WHICH IS A DECISION RATHER THAN THE ABSENCE OF
         // ONE. A second arm here, clearing the unread-file marker on a row something
@@ -1139,30 +1112,26 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // the split reads it for one population: rows whose file has GONE. For those
         // the failed read is the read of the very file whose absence is the subject.
         // Nobody can perform it, on any machine, ever, and it fails identically
-        // whatever removed the file. Clearing it turned that tautology into a reason
-        // to warn, so a run that came up short somewhere ELSE printed an alarm about a
-        // file this scan had positively established nothing could reach for.
+        // whatever removed the file. Clearing it would make that tautology a reason to
+        // warn, and a run that came up short somewhere ELSE would print an alarm about
+        // a file this scan had positively established nothing could reach for.
         //
-        // AND THE COUNT IT FIRED ON DOES NOT NAME THAT ROW'S RISK. Its three terms are
+        // AND THE COUNT THIS LOOP FIRES ON DOES NOT NAME THAT ROW'S RISK. Its terms are
         // a read that failed on a product this loop DID return, a product the registry
-        // saw and the enumeration did not whose own file is present, and a registry key
-        // Windows would not answer about. None of them is "a holder of this patch went
-        // unseen", which is the condition that would bear on this file. The count is a
-        // proxy for a degraded machine and the arm applied it as a per-file verdict.
+        // saw and the enumeration did not whose own file is present, and a product the
+        // registry names that this scan could not settle. None of them is "a holder of
+        // this patch went unseen", which is the condition that would bear on this
+        // file. The count is a sign of a degraded machine, not a per-file verdict.
         //
-        // WHAT ANSWERS THE RESIDUAL IS THE WITHHOLDING ABOVE, AND IT IS UNTOUCHED. The
-        // machine may indeed be short of a product that could roll back onto a cached
-        // patch, and on this run the app therefore removes no superseded patch at all.
-        // That protects every file where protecting one is still possible. The file
-        // already gone is not one of them, and printing a sentence about it is not a
-        // second line of defence.
+        // THE WITHHOLDING ITSELF IS WHAT ANSWERS FOR SUCH A MACHINE: a run that could
+        // not account for a product offers no superseded patch at all. A file already
+        // gone is not kept by printing a sentence about it.
         //
-        // THE SPLIT IS NOT LEFT WITHOUT A ROUTE TO THIS STATE. A run whose machine-wide
-        // patch enumeration did not answer downgrades every removable path with no
-        // marker set (see ConfirmRemovableAgainstEveryProduct), so a missing superseded
-        // row on such a run reaches the split withheld and unmarked and is reported.
-        // That is the run where the app really did fail to establish something about
-        // this patch, rather than the run where something else on the machine failed.
+        // THE SPLIT HAS A ROUTE TO THIS STATE. A run whose machine-wide patch
+        // enumeration did not answer downgrades every removable path with no marker
+        // set (see ConfirmRemovableAgainstEveryProduct), so a missing superseded row on
+        // such a run reaches the split withheld and unmarked and is reported. That run
+        // failed to establish something about the patch itself.
         if (withheldProducts > 0)
             for (var i = 0; i < packages.Count; i++)
                 if (packages[i].IsRemovable)
@@ -1250,12 +1219,9 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// estimated.
     ///
     /// NOT INSTALLED. A UserData key outliving its product, which is the ordinary
-    /// residue of a failed or partial uninstall and the reason a headcount needed a
-    /// tolerance in the first place. It establishes nothing and costs nothing. This
-    /// is where the difference between comparing names and comparing counts is
-    /// worth the most: a count cannot tell this state from the one above, and every
-    /// tolerance band that has ever been written here exists to guess at the
-    /// proportion of them.
+    /// residue of a failed or partial uninstall. It establishes nothing and costs
+    /// nothing. This is where comparing names is worth the most: a count cannot tell
+    /// this state from the one above.
     ///
     /// UNASKABLE. The registry names a product and Windows would not say whether it
     /// is installed. Nothing about the enumeration's completeness can be
@@ -1288,12 +1254,10 @@ public sealed class InstallerQueryService : IInstallerQueryService
         var enumerated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var (code, _, _) in products) enumerated.Add(code);
 
-        // Unbounded by design, and the restraint is deliberate rather than an
-        // oversight: one keyed read per code the enumeration did not return, on a
-        // set already bounded by the machine's own registry keys, which the
-        // fallback has just opened one at a time anyway. Capping it would put back
-        // exactly the kind of unjustified number this comparison exists to remove,
-        // and the cap would fall on the machines with the most to recover.
+        // Unbounded: one keyed read per code the enumeration did not return, on a set
+        // already bounded by the machine's own registry keys, which the fallback has
+        // just opened one at a time anyway. A cap would fall on the machines with the
+        // most to recover.
         var unresolved = 0;
         foreach (var code in registryCodes)
         {
@@ -2071,8 +2035,8 @@ public sealed class InstallerQueryService : IInstallerQueryService
     }
 
     /// <summary>
-    /// Puts a LocalPackage value into the one spelling the folder walk produces,
-    /// before it becomes a claim.
+    /// Puts a recorded cached-package value into the one spelling the folder walk
+    /// produces, before it becomes a claim.
     ///
     /// Orphanhood is decided by string equality between these values and the
     /// paths the walk enumerates, while existence is decided by the filesystem,
@@ -2092,19 +2056,16 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// AN ENVIRONMENT-VARIABLE FORM IS ANOTHER SUCH SPELLING AND IS EXPANDED HERE.
     /// A value spelled <c>%SystemRoot%\Installer\1e038.msi</c> is a claim on a real
     /// cached file, and <see cref="CarriesFlaggedSpelling"/> answers false for a
-    /// <c>%</c>, so without the expansion the value reaches GetFullPath, which
-    /// completes it from the process's working directory and produces a well-formed
-    /// path naming nothing. That claim matches nothing the walk found, and a
-    /// spelling fault leaving a needed file in front of somebody is a worse outcome
-    /// than one that merely mis-files a row.
+    /// <c>%</c>, so the expansion is what keeps such a value from reaching GetFullPath,
+    /// which completes it from the process's working directory into a well-formed path
+    /// naming nothing.
     ///
-    /// AND WITHOUT IT THE BEHAVIOUR WOULD TURN ON A REGISTRY VALUE'S TYPE. .NET
-    /// expands a <c>REG_EXPAND_SZ</c> as part of reading it, so the registry fallback
-    /// copes with that form without anything here deciding to
-    /// (<see cref="TryReadLocalPackage"/>, where it is explicit). A <c>REG_SZ</c>
-    /// value holding the same text is expanded nowhere else, and neither is anything
-    /// the API side returns. Two registrations naming one location, one stored
-    /// expandable and one stored plain, would otherwise get different answers.
+    /// AND IT MAKES THE ANSWER THE SAME WHATEVER THE VALUE'S REGISTRY TYPE. .NET
+    /// expands a <c>REG_EXPAND_SZ</c> as part of reading it
+    /// (<see cref="TryReadLocalPackage"/>). A <c>REG_SZ</c> value holding the same
+    /// text, and anything the API side returns, is expanded here, so two registrations
+    /// naming one location, one stored expandable and one stored plain, get one
+    /// answer.
     ///
     /// WHAT THE EXPANSION DOES TO THE OFFER, ONE LINE PER HALF, because the two
     /// halves reach the list by opposite routes and no one sentence is true of both.
@@ -2124,16 +2085,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// re-verify as every other row on the machine. The expansion settles which file
     /// a registration names and settles nothing about whether that file may go, so a
     /// row it repairs arrives at the offer's conditions unprivileged and is judged
-    /// there. That is the whole argument and there is nothing in it that a later
-    /// release can falsify, because it turns on where a repaired row is judged rather
-    /// than on which classes are offered.
-    ///
-    /// HOW OFTEN THE FORM OCCURS IS NOT WHAT MAKES THE HANDLING RIGHT, so no
-    /// prevalence finding stands behind it and none is needed. What there is is one
-    /// reading: all 296 path values across the three SIDs of one elevated machine
-    /// were plain absolute drive paths, zero containing a <c>%</c> (read 2026-08-16;
-    /// one machine cannot show that the form never occurs, which is the reason for
-    /// handling it rather than waiting to find out).
+    /// there, whichever classes the offer holds.
     ///
     /// AND ONE VALUE IS REFUSED BEFORE THE EXPANSION RUNS AT ALL. A recorded value
     /// carrying an embedded null is never put through it: on Windows that call cuts
@@ -2187,15 +2139,11 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// file is not found where the claim says raises the missing count, which is a
     /// warning rather than an offer.
     ///
-    /// THE COST ARGUMENT THAT KEPT THE ASK NARROW IS SPENT, and this is what
-    /// replaced it. It said a handle per registration was too much to pay. But
-    /// <c>CandidateGuard.CheckSafeToRemove</c> already calls
+    /// THE ASK COSTS A HANDLE PER REGISTRATION, on the smaller side of a cost the
+    /// scan already pays. <c>CandidateGuard.CheckSafeToRemove</c> calls
     /// <see cref="InstallerCacheHelpers.TryResolveFinalPath"/> once per walked
-    /// CANDIDATE, which is the same call and the far larger population: that is why
-    /// the resolver rents its buffer rather than allocating one, a decision taken
-    /// for a folder reaching 800,000 files. Registrations number in the hundreds on
-    /// every machine measured. The ask was being kept off the small side of a cost
-    /// the large side already pays.
+    /// CANDIDATE, which is the same call over the far larger population, and is why
+    /// the resolver rents its buffer rather than allocating one.
     ///
     /// AND IT REPAIRS A CLAIM, WHICH IS WHAT SEPARATES IT FROM THE IDENTITY MATCH
     /// AND IS WHY BOTH EXIST. <c>FileSystemScanService</c> also reconciles a
@@ -2219,27 +2167,14 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// from. Handing the resolver the Win32 spelling is what stops the resolution
     /// answering about a path assembled out of the running process's location.
     ///
-    /// WHAT THIS STILL DOES NOT DO, and what stopped following from it. A flagged
-    /// path the kernel declines to RESOLVE is still kept in the spelling Windows
-    /// gave, and its claim still fails to match anything the walk produces. That much
-    /// is unchanged and cannot be improved here. What does not follow is that its
-    /// file is offered: the refusal is counted, and
+    /// A PATH THE KERNEL DECLINES TO RESOLVE is kept in the spelling Windows gave and
+    /// matches nothing the walk produces, so the refusal is counted and
     /// <c>EnumerationCensus.AnyRecordedPathUnestablished</c> withholds the whole
-    /// walk-derived offer on it, because the app cannot say WHICH candidate the
-    /// unresolved claim meant and so cannot hold back a narrower set.
-    /// (Resolve, not expand: two different operations are in this
-    /// method and the one word was doing for both. The kernel resolving a final
-    /// path is <see cref="InstallerCacheHelpers.TryResolveFinalPath"/>, which
-    /// answers yes or no; expanding an environment variable is the paragraph above,
-    /// which has no failure to report. What it does with a variable the machine has
-    /// never heard of is pinned by a test rather than asserted here, that being a
-    /// property of the platform call and not of this code.)
-    ///
-    /// Measured on one elevated machine (Windows 10.0.26200, 2026-08-03): 138
-    /// registered paths, every one an ordinary drive path, no tilde-and-digit
-    /// anywhere in any of them, and the cache folder had no short name on that
-    /// volume. That says how exposed one machine was, and nothing about whether
-    /// another holds one.
+    /// walk-derived offer on it: nothing says WHICH candidate the unresolved claim
+    /// meant, so no narrower set can be held back. Resolving a final path is
+    /// <see cref="InstallerCacheHelpers.TryResolveFinalPath"/>, which answers yes or
+    /// no; expanding an environment variable has no failure to report, and what it
+    /// does with a variable the machine has never heard of is pinned by a test.
     /// </summary>
     private static string NormaliseLocalPackagePath(string value, PathCensus census)
     {
@@ -2694,7 +2629,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// a File.Exists per unclaimed path and nothing per claimed one, so on a
     /// machine whose enumeration reached every product it runs nowhere.
     /// </summary>
-    private static FallbackRead ReadFallbackSid(
+    internal static FallbackRead ReadFallbackSid(
         Microsoft.Win32.RegistryKey udKey,
         string sidName,
         Dictionary<string, RegisteredPackage> claimed,
@@ -2803,27 +2738,40 @@ public sealed class InstallerQueryService : IInstallerQueryService
                     try
                     {
                         using var ipKey = productsKey.OpenSubKey($@"{prodGuid}\InstallProperties");
-                        if (!TryReadLocalPackage(ipKey, out var localPkg))
+
+                        // Both names are read, and each one present is claimed: see
+                        // CachedPackageValueNames for which installation writes which.
+                        // The product counts once towards the unclaimed files however
+                        // many of its values named one, because that figure is
+                        // weighed against a count of products.
+                        var unclaimedFileHere = false;
+                        foreach (var valueName in CachedPackageValueNames)
                         {
-                            failures++;
-                            // The only way this returns false is a value that was
-                            // there and was not a string, so the two counters move
-                            // together here and nowhere else: everything else
-                            // reaching failures is a thrown exception.
-                            nonStringValues++;
-                            failureLog.Record(UnreadableLocalPackage(), cause: "product-localpackage");
+                            if (!TryReadLocalPackage(ipKey, valueName, out var localPkg))
+                            {
+                                failures++;
+                                // The only way this returns false is a value that was
+                                // there and was not a string, so the two counters move
+                                // together here and nowhere else: everything else
+                                // reaching failures is a thrown exception.
+                                nonStringValues++;
+                                failureLog.Record(UnreadableLocalPackage(valueName),
+                                    cause: $"product-{valueName.ToLowerInvariant()}");
+                            }
+                            else if (!string.IsNullOrEmpty(localPkg))
+                            {
+                                var path = NormaliseLocalPackagePath(localPkg, pathCensus);
+                                // Short-circuited on purpose: the disk is asked about
+                                // only the paths the API left unclaimed, which on a
+                                // whole enumeration is none of them.
+                                if (MergeClaim(claimed, new RegisteredPackage(path, "", ""),
+                                        ClaimSource.RegistryFallback)
+                                    && File.Exists(path))
+                                    unclaimedFileHere = true;
+                            }
                         }
-                        else if (!string.IsNullOrEmpty(localPkg))
-                        {
-                            var path = NormaliseLocalPackagePath(localPkg, pathCensus);
-                            // Short-circuited on purpose: the disk is asked about
-                            // only the paths the API left unclaimed, which on a
-                            // whole enumeration is none of them.
-                            if (MergeClaim(claimed, new RegisteredPackage(path, "", ""),
-                                    ClaimSource.RegistryFallback)
-                                && File.Exists(path))
-                                unclaimedProductFiles++;
-                        }
+
+                        if (unclaimedFileHere) unclaimedProductFiles++;
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     {
@@ -2857,39 +2805,61 @@ public sealed class InstallerQueryService : IInstallerQueryService
                     // unestablished.
                     var patchCode = UnpackRegistryProductCode(patchGuid);
 
-                    // NOT ESTABLISHED UNTIL A PATH IS ACTUALLY READ. Declared here and
-                    // set in one branch below, so every other way through this read,
-                    // the throw included, leaves it saying nothing.
-                    string? recordedPath = null;
+                    // THE PATHS THIS PATCH RECORDS FOR ITSELF, one per value name that
+                    // holds one, which is what lets a recovered product be judged
+                    // against the files its own patches name rather than against every
+                    // cached file. Normalised first, because the consumer compares them
+                    // against a claimed path and those are normalised too.
+                    //
+                    // NOT ESTABLISHED UNLESS EVERY VALUE THAT IS THERE NAMES A PATH. A
+                    // value that would not read may be recording any path, this one
+                    // included, and a value that is there and empty records none, which
+                    // EstablishedPatchReach.MustJudge answers by judging against every
+                    // path. Either leaves the paths saying nothing, whatever the other
+                    // name holds, as a key yielding no path does across account
+                    // subtrees in the merge. The flag starts false and only the end of
+                    // a read that threw nothing sets it, so every other way through,
+                    // the throw included, leaves the paths saying nothing.
+                    var recordedPaths = new List<string>(CachedPackageValueNames.Length);
+                    var pathsEstablished = false;
 
                     try
                     {
                         using var patchKey = patchesKey.OpenSubKey(patchGuid);
-                        if (!TryReadLocalPackage(patchKey, out var localPkg))
+                        var anyValueNamesNoPath = false;
+                        var unclaimedFileHere = false;
+                        foreach (var valueName in CachedPackageValueNames)
                         {
-                            failures++;
-                            nonStringValues++;
-                            failureLog.Record(UnreadableLocalPackage(), cause: "patch-localpackage");
+                            if (!TryReadLocalPackage(patchKey, valueName, out var localPkg))
+                            {
+                                failures++;
+                                nonStringValues++;
+                                anyValueNamesNoPath = true;
+                                failureLog.Record(UnreadableLocalPackage(valueName),
+                                    cause: $"patch-{valueName.ToLowerInvariant()}");
+                            }
+                            else if (localPkg is null)
+                            {
+                                // Not there at all: the key records nothing under this
+                                // name, which leaves the other name's answer standing.
+                            }
+                            else if (localPkg.Length == 0)
+                            {
+                                anyValueNamesNoPath = true;
+                            }
+                            else
+                            {
+                                var path = NormaliseLocalPackagePath(localPkg, pathCensus);
+                                recordedPaths.Add(path);
+                                if (MergeClaim(claimed, new RegisteredPackage(path, "", ""),
+                                        ClaimSource.RegistryFallback)
+                                    && File.Exists(path))
+                                    unclaimedFileHere = true;
+                            }
                         }
-                        else if (!string.IsNullOrEmpty(localPkg))
-                        {
-                            var path = NormaliseLocalPackagePath(localPkg, pathCensus);
-                            // THE PATH THIS PATCH RECORDS FOR ITSELF, which is what
-                            // lets a recovered product be judged against the files its
-                            // own patches name rather than against every cached file.
-                            // Normalised first, because the consumer compares it
-                            // against a claimed path and those are normalised too.
-                            //
-                            // AN ABSENT OR UNREADABLE VALUE DOES NOT REACH THIS LINE
-                            // and leaves the path unestablished, which is the safe
-                            // direction: a patch whose cached path nobody could read
-                            // may be recording any path, this one included.
-                            recordedPath = path;
-                            if (MergeClaim(claimed, new RegisteredPackage(path, "", ""),
-                                    ClaimSource.RegistryFallback)
-                                && File.Exists(path))
-                                unclaimedPatchFiles++;
-                        }
+
+                        if (unclaimedFileHere) unclaimedPatchFiles++;
+                        pathsEstablished = !anyValueNamesNoPath && recordedPaths.Count > 0;
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     {
@@ -2905,7 +2875,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
                     if (patchCode is not null)
                     {
                         IReadOnlyCollection<string>? read =
-                            recordedPath is null ? null : new[] { recordedPath };
+                            pathsEstablished ? recordedPaths : null;
                         cachedPathsByPatchCode[patchCode] =
                             cachedPathsByPatchCode.TryGetValue(patchCode, out var seenPaths)
                                 ? MergeEstablishedNames(seenPaths, read)
@@ -3408,9 +3378,23 @@ public sealed class InstallerQueryService : IInstallerQueryService
     }
 
     /// <summary>
-    /// Reads a LocalPackage value, separating the two ways it can yield nothing,
-    /// because only one of them is a failure and the caller's count is weighed by
-    /// the degraded-sources gate.
+    /// The two values a registration under <c>UserData</c> records its cached package
+    /// in: <c>LocalPackage</c>, and <c>ManagedLocalPackage</c>, which is where a
+    /// per-user managed installation records it, for a product in its
+    /// <c>InstallProperties</c> key and for a patch in the patch's own key. The
+    /// fallback reads both and claims whatever either names, so a cached package is
+    /// claimed whichever context it was installed in.
+    ///
+    /// A NAME LEFT OFF THIS LIST IS A CACHED PACKAGE THE FALLBACK NEVER CLAIMS, and
+    /// nothing counts the omission, because the value is never asked for. A context
+    /// found to record its cached package under a third name is added here.
+    /// </summary>
+    internal static readonly string[] CachedPackageValueNames = ["LocalPackage", "ManagedLocalPackage"];
+
+    /// <summary>
+    /// Reads one of the values in <see cref="CachedPackageValueNames"/>, separating the
+    /// two ways it can yield nothing, because only one of them is a failure and the
+    /// caller's count is weighed by the degraded-sources gate.
     ///
     /// A registration with no such value is an ordinary state: an advertised or
     /// partially removed product carries no cached path and there is nothing to
@@ -3420,9 +3404,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// found nothing to say, which is the one state the gate exists to tell apart
     /// from a healthy machine.
     ///
-    /// Nothing writing these keys is obliged to use REG_SZ. One machine's 136 of
-    /// 136 being REG_SZ says what that machine holds and nothing about what the
-    /// shape can be.
+    /// Nothing writing these keys is obliged to use REG_SZ.
     ///
     /// AND TWO TYPES NEVER REACH THE CAST, which is why the presence test below is
     /// not belt and braces over it. Microsoft documents that
@@ -3437,18 +3419,14 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// names it holds is what separates the two, because the name list is typed
     /// nowhere and carries every value whatever its type.
     ///
-    /// AND IT EXPANDS A <c>REG_EXPAND_SZ</c> VALUE WITHOUT ANYBODY DECIDING TO, which
-    /// is worth stating because it is one half of a behaviour that would otherwise
-    /// turn on a registry value's type rather than on anything in the code. .NET
-    /// expands that type as part of the read, so a registration spelled
-    /// <c>%SystemRoot%\Installer\...</c> and STORED expandable comes back as a usable
-    /// path here, while the same text stored as a plain <c>REG_SZ</c> is a claim on a
-    /// location that does not exist unless something else expands it.
-    /// <c>NormaliseLocalPackagePath</c> is what does, on the main path, so this
-    /// read's expansion is the belt to that brace rather than the only thing standing
-    /// between one storage type and a wrong answer.
+    /// AND IT EXPANDS A <c>REG_EXPAND_SZ</c> VALUE. .NET expands that type as part of
+    /// the read, so a registration spelled <c>%SystemRoot%\Installer\...</c> and STORED
+    /// expandable comes back as a usable path here. The same text stored as a plain
+    /// <c>REG_SZ</c> is expanded by <c>NormaliseLocalPackagePath</c>, on the main path,
+    /// so both storage types reach the claim as the path they name.
     /// </summary>
-    internal static bool TryReadLocalPackage(Microsoft.Win32.RegistryKey? key, out string? path)
+    internal static bool TryReadLocalPackage(
+        Microsoft.Win32.RegistryKey? key, string valueName, out string? path)
     {
         path = null;
 
@@ -3456,13 +3434,11 @@ public sealed class InstallerQueryService : IInstallerQueryService
         if (key is null) return true;
 
         // RegistryValueOptions.None is the option that selects expansion, and it is
-        // passed explicitly rather than left to the default because the expansion is
-        // now part of a documented pair with NormaliseLocalPackagePath and a reader
-        // has to be able to see it. GetValue(name) delegates to this same overload
-        // with this same option, so the call does exactly what it did and only says
-        // so; anyone "simplifying" it back has removed the statement and not the
-        // behaviour.
-        var raw = key.GetValue("LocalPackage", null, Microsoft.Win32.RegistryValueOptions.None);
+        // passed explicitly rather than left to the default so a reader can see the
+        // expansion, which pairs with NormaliseLocalPackagePath. GetValue(name)
+        // delegates to this same overload with this same option, so dropping the
+        // argument changes what the call says and not what it does.
+        var raw = key.GetValue(valueName, null, Microsoft.Win32.RegistryValueOptions.None);
         if (raw is string value)
         {
             path = value;
@@ -3480,7 +3456,7 @@ public sealed class InstallerQueryService : IInstallerQueryService
         // holding nothing.
         foreach (var name in key.GetValueNames())
         {
-            if (string.Equals(name, "LocalPackage", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(name, valueName, StringComparison.OrdinalIgnoreCase))
                 return false;
         }
 
@@ -3488,15 +3464,15 @@ public sealed class InstallerQueryService : IInstallerQueryService
     }
 
     /// <summary>
-    /// The exception carrying an unreadable LocalPackage into the per-item
-    /// failure log. It names no path and no product: the log is read after a
-    /// report of missing registered files, and the app runs elevated, so a
+    /// The exception carrying an unreadable cached-package value into the per-item
+    /// failure log. It names the value and no path and no product: the log is read
+    /// after a report of missing registered files, and the app runs elevated, so a
     /// registry value from another account's subtree is not something to write
     /// down for a diagnosis that does not need it. The cause string at the call
     /// site says which of the two loops raised it.
     /// </summary>
-    private static InvalidDataException UnreadableLocalPackage() =>
-        new("A registered LocalPackage value was present and was not a string.");
+    private static InvalidDataException UnreadableLocalPackage(string valueName) =>
+        new($"A registered {valueName} value was present and was not a string.");
 
     /// <summary>
     /// Whether a claimed path's leaf name has more than eight characters before

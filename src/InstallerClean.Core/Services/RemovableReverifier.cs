@@ -96,20 +96,20 @@ public sealed class RemovableReverifier : IRemovableReverifier
                         ? HeldBackReason.RecordsUnreadable
                         : HeldBackReason.Reclaimed;
 
-        // THE SCAN'S OWN WHOLESALE WITHHOLDING, RE-APPLIED, and until 3.0.0 nothing
-        // re-applied it at all. The scan offers no walk-derived file on a machine
-        // whose recorded paths it could not settle, or one carrying a program
-        // installed twice; this pass ran without ever asking, so a machine that
-        // reached either state between the scan and the click acted on a batch the
-        // scan itself would by then have refused. The condition is asked of the
-        // census where its members live, so a cause added to either question is
-        // re-applied here without this file being edited.
+        // THE SCAN'S OWN WHOLESALE WITHHOLDING, RE-APPLIED. The scan offers no
+        // walk-derived file on a machine whose recorded paths it could not settle, or
+        // where it could not establish that no program is installed twice. This pass
+        // asks both questions again of the enumeration it has just read, and where
+        // either holds it drops every candidate no registration names, which is the
+        // walk-derived half of the batch, and counts each one held back. The
+        // condition is asked of the census where its members live, so a cause added
+        // to either question is re-applied here without this file being edited.
         //
-        // IT COVERS TWO OF THE THREE CONDITIONS AND THAT IS A REAL LIMIT. The third
-        // is a registration whose cached file the identity reader could not identify,
-        // which is established in the scan against a filesystem this pass does not
-        // hold and cannot be reached from an enumeration alone. A machine reaching
-        // THAT state between the scan and the click is still acted on.
+        // IT ASKS THE TWO CONDITIONS AN ENUMERATION ANSWERS. The third, a
+        // registration whose cached file would not identify, is read against the
+        // filesystem in the scan and is not asked here. A condition added to the
+        // scan's withholding that the census does not answer is re-applied here only
+        // once this pass is given its own question for it.
         var ownershipUnestablished =
             query.Census.AnyRecordedPathUnestablished
             || query.Census.SecondInstanceNotRuledOut;
@@ -133,9 +133,9 @@ public sealed class RemovableReverifier : IRemovableReverifier
         {
             // The path's own finding first where there is one, because it is the
             // stronger thing to have found out: a live claim on this file says more
-            // than a fact about the machine. Nothing the user reads names either
-            // since 3.0.0, so what the order decides now is which counter the file
-            // lands in, and the counters are what the opt-in report carries.
+            // than a fact about the machine. Nothing the user reads names either, so
+            // what the order decides is which counter the file lands in, and the
+            // counters are what the opt-in report carries.
             if (nonRemovable.TryGetValue(path, out var reason))
             {
                 dropped.Add(path);

@@ -1688,8 +1688,8 @@ Non è stato possibile scrivere il file crash.log.</value></data>
        do nothing different on one of them than on another.
 
        No leg carries a count. Leg one's two groups can double-count one value, so
-       their sum is a count of refusals and not of paths; leg three's two members are
-       opposite findings and a single number states a cause over the pair; a count on
+       their sum is a count of refusals and not of paths; leg three's members include
+       opposite findings and a single number states a cause over them; a count on
        leg two alone would read as a total. The count and the size of what was held
        back are on the line above. And no line says whether re-running helps, because
        each leg holds members that differ on exactly that. -->

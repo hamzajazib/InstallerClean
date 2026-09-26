@@ -10,12 +10,12 @@ namespace InstallerClean.Tests.Models;
 /// walk-derived offer, and which deliberately do not.
 ///
 /// WHY THIS IS REFLECTIVE. The property is a hand-written expression over two derived
-/// totals, and the census is a positional record of ints that this release has already
-/// grown twice. A population added to the record and forgotten in that expression
-/// compiles, builds green, reports its count to the opt-in report and simply does not
-/// withhold: files offered that the app meant to keep back, with nothing anywhere to
-/// see. Writing the member names out again would leave the next one exactly as
-/// forgettable. Enumerating the constructor is what makes the test notice.
+/// totals, and the census is a positional record of ints that grows. A population added
+/// to the record and forgotten in that expression compiles, builds green, reports its
+/// count to the opt-in report and simply does not withhold: files offered that the app
+/// meant to keep back, with nothing anywhere to see. Writing the member names out again
+/// would leave the next one exactly as forgettable. Enumerating the constructor is what
+/// makes the test notice.
 ///
 /// AND IT IS AN EQUALITY RATHER THAN A SET OF ASSERTIONS, which is the point. A test
 /// that only checked the nine would pass a property that answered true for every
@@ -156,10 +156,12 @@ public class EnumerationCensusTests
     }
 
     /// <summary>
-    /// The census members the second-instance withholding fires on. Two, and they are
-    /// opposite findings rather than two of a kind: one is a product that positively
-    /// answered that it is a second instance of itself, the other a product that was
-    /// asked and would not answer.
+    /// The census members the second-instance withholding fires on. Four, and they are
+    /// not one kind of finding: a product that positively answered that it is a second
+    /// instance of itself, a product that was asked and would not answer, a product the
+    /// registry names that Windows would not say was installed, and a registry product
+    /// key whose name yields no code. Nothing shows either of the last two was asked the
+    /// question.
     ///
     /// <see cref="EnumerationCensus.RecoveredProductCount"/> IS DELIBERATELY ABSENT and
     /// is this list's trap, for the reason the attempts count is the other list's. A
@@ -172,14 +174,16 @@ public class EnumerationCensusTests
     [
         "InstanceProductCount",
         "InstanceTypeUnreadableCount",
+        "UnansweredProductCount",
+        "UnparseableProductKeyNames",
     ];
 
     [Fact]
-    public void Exactly_the_two_second_instance_members_make_a_scan_withhold()
+    public void Exactly_the_four_second_instance_members_make_a_scan_withhold()
     {
         // THE SAME WALK AS ABOVE AND FOR THE SAME REASON. The rule is a hand-written
-        // expression over a positional record of ints that has grown twice already, and
-        // a member added to the record and forgotten in the expression compiles, builds
+        // expression over a positional record of ints that grows, and a member added to
+        // the record and forgotten in the expression compiles, builds
         // green, reports its count and simply does not withhold. Writing the names out
         // again in the property would leave the next one exactly as forgettable.
         //

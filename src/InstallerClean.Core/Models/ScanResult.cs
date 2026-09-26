@@ -236,15 +236,17 @@ namespace InstallerClean.Models;
 /// rule as <see cref="RegisteredTotalBytes"/>.
 /// </param>
 /// <param name="SupersededRegistrationCount">
-/// Every registration Windows reports superseded (2), counted at scan time off the
-/// MACHINE and never off the offer, whatever its removability and whether or not
-/// anything was offered.
+/// Cached patch paths whose merged row Windows reports superseded (2), one per path
+/// however many programs register the patch, counted at scan time off the MACHINE and
+/// never off the offer, whatever its removability, whether or not its file is on the
+/// disk and whether or not anything was offered. The name says registrations and the
+/// count is of paths.
 ///
 /// THE DISTINCTION FROM THE OFFER-DERIVED FIGURE IS THE WHOLE POINT OF IT. A count
-/// taken from the offer can only ever see the registrations that passed the
-/// removability condition, so it cannot answer whether a machine HAS any. The two
-/// differing is itself the finding, being the size of the class the condition
-/// excludes, which nobody has measured.
+/// taken from the offer sees only the rows that reached it, so it cannot answer
+/// whether a machine HAS any. The difference between the two is a mixed set, several
+/// separate conditions keeping a row off the offer, so no single cause is stated for
+/// it.
 /// </param>
 /// <param name="WithheldFiles">
 /// Every candidate this scan declined to offer, in walk order. FOUR DECISIONS PUT A FILE
@@ -309,14 +311,8 @@ namespace InstallerClean.Models;
 /// </param>
 /// <param name="ObsoletedRegistrationCount">
 /// The same for state 4. For this class it is the ONLY figure that can ever be
-/// non-zero, obsoleted patches not being offered at all, so it is the only way the
-/// question of whether anybody has any is ever answered.
-///
-/// WHY THAT QUESTION IS OPEN AT ALL. Across every report this project has received,
-/// obsoleted patches have never been seen on any machine, so offering them would
-/// reclaim nothing; and nobody has ever manufactured one to test with. Counting them
-/// answers the question that was going to be answered by offering them, and puts
-/// nothing on anyone's list.
+/// non-zero, obsoleted patches not being offered at all, so it is how a machine's
+/// having any shows. Counting them puts nothing on anyone's list.
 /// </param>
 /// <param name="WalkOfferWithheldWholesale">
 /// True where this scan emptied its walk-derived offer in one go, rather than judging

@@ -4,14 +4,16 @@ using Microsoft.Win32;
 namespace InstallerClean.Tests.Services.Integration;
 
 /// <summary>
-/// What the registry fallback does with a <c>LocalPackage</c> value it cannot read
-/// as a string.
+/// What the registry fallback does with a cached-package value it cannot read as a
+/// string, under either name a registration records one in: <c>LocalPackage</c>, and
+/// <c>ManagedLocalPackage</c> for a per-user managed installation. Every test here
+/// runs once per name, from <see cref="InstallerQueryService.CachedPackageValueNames"/>.
 ///
 /// AN INTEGRATION TEST BECAUSE THE SUBJECT IS THE FRAMEWORK'S OWN BEHAVIOUR, not
 /// this code's. <c>RegistryKey.GetValue</c> is documented as not supporting
 /// REG_NONE or REG_LINK, returning null for both "instead of the actual value", so
-/// a fake registry cannot exercise the case at all: the whole defect is that a
-/// PRESENT value arrives looking exactly like an absent one. Only a real key
+/// a fake registry cannot exercise the case at all: a PRESENT value of either type
+/// arrives looking exactly like an absent one. Only a real key
 /// holding a real REG_NONE puts the framework in the loop.
 ///
 /// Writes are confined to a GUID-named key under HKCU and removed in a finally, so
@@ -31,22 +33,28 @@ public class LocalPackageValueTypeTests
 {
     private static string TestKeyPath => $@"Software\InstallerCleanTests\{Guid.NewGuid():N}";
 
-    [Fact]
-    public void A_LocalPackage_stored_as_REG_NONE_is_a_failed_read_and_not_an_absence()
+    /// <summary>Every name the fallback reads, one row each.</summary>
+    public static TheoryData<string> ValueNames() =>
+        new(InstallerQueryService.CachedPackageValueNames);
+
+    [Theory]
+    [MemberData(nameof(ValueNames))]
+    public void A_value_stored_as_REG_NONE_is_a_failed_read_and_not_an_absence(string valueName)
     {
         WithTestKey(key =>
         {
-            key.SetValue("LocalPackage", Array.Empty<byte>(), RegistryValueKind.None);
+            key.SetValue(valueName, Array.Empty<byte>(), RegistryValueKind.None);
 
-            var read = InstallerQueryService.TryReadLocalPackage(key, out var path);
+            var read = InstallerQueryService.TryReadLocalPackage(key, valueName, out var path);
 
             Assert.False(read);
             Assert.Null(path);
         });
     }
 
-    [Fact]
-    public void A_key_with_no_LocalPackage_at_all_is_an_absence_and_not_a_failure()
+    [Theory]
+    [MemberData(nameof(ValueNames))]
+    public void A_key_with_no_such_value_at_all_is_an_absence_and_not_a_failure(string valueName)
     {
         // The must-fail control for the test above. Without it, a reader that
         // reported failure for every key would pass that one, and an app that
@@ -56,64 +64,86 @@ public class LocalPackageValueTypeTests
         {
             key.SetValue("SomethingElse", "x", RegistryValueKind.String);
 
-            var read = InstallerQueryService.TryReadLocalPackage(key, out var path);
+            var read = InstallerQueryService.TryReadLocalPackage(key, valueName, out var path);
 
             Assert.True(read);
             Assert.Null(path);
         });
     }
 
-    [Fact]
-    public void An_ordinary_string_value_is_read()
+    [Theory]
+    [MemberData(nameof(ValueNames))]
+    public void An_ordinary_string_value_is_read(string valueName)
     {
         WithTestKey(key =>
         {
-            key.SetValue("LocalPackage", @"C:\Windows\Installer\9f05cba.msi", RegistryValueKind.String);
+            key.SetValue(valueName, @"C:\Windows\Installer\9f05cba.msi", RegistryValueKind.String);
 
-            var read = InstallerQueryService.TryReadLocalPackage(key, out var path);
+            var read = InstallerQueryService.TryReadLocalPackage(key, valueName, out var path);
 
             Assert.True(read);
             Assert.Equal(@"C:\Windows\Installer\9f05cba.msi", path);
         });
     }
 
-    [Fact]
-    public void A_LocalPackage_stored_as_a_number_is_a_failed_read()
+    [Theory]
+    [MemberData(nameof(ValueNames))]
+    public void A_value_stored_as_a_number_is_a_failed_read(string valueName)
     {
-        // The shape the cast already caught before REG_NONE was understood. Kept
-        // so a change that reworked the null handling could not quietly drop it.
+        // The shape the string cast catches, pinned apart from the REG_NONE case so a
+        // change to the null handling cannot quietly drop it.
         WithTestKey(key =>
         {
-            key.SetValue("LocalPackage", 42, RegistryValueKind.DWord);
+            key.SetValue(valueName, 42, RegistryValueKind.DWord);
 
-            var read = InstallerQueryService.TryReadLocalPackage(key, out var path);
+            var read = InstallerQueryService.TryReadLocalPackage(key, valueName, out var path);
 
             Assert.False(read);
             Assert.Null(path);
         });
     }
 
-    [Fact]
-    public void The_value_name_is_matched_without_regard_to_case()
+    [Theory]
+    [MemberData(nameof(ValueNames))]
+    public void The_value_name_is_matched_without_regard_to_case(string valueName)
     {
         // Registry value names are case-insensitive, so a key holding
         // "localpackage" holds a LocalPackage. A case-sensitive presence test
-        // would send this one back down the absence path, which is the exact
-        // defect being fixed, reintroduced by the fix.
+        // would send this one down the absence path.
         WithTestKey(key =>
         {
-            key.SetValue("localpackage", Array.Empty<byte>(), RegistryValueKind.None);
+            key.SetValue(valueName.ToLowerInvariant(), Array.Empty<byte>(), RegistryValueKind.None);
 
-            var read = InstallerQueryService.TryReadLocalPackage(key, out _);
+            var read = InstallerQueryService.TryReadLocalPackage(key, valueName, out _);
 
             Assert.False(read);
         });
     }
 
     [Fact]
-    public void A_null_key_is_an_absence()
+    public void Each_name_answers_for_its_own_value_and_not_the_other()
     {
-        var read = InstallerQueryService.TryReadLocalPackage(null, out var path);
+        // The presence test matches the name it was asked for. A key whose
+        // LocalPackage is present and unreadable holds no ManagedLocalPackage at
+        // all, so asking for the second is an absence; and a readable
+        // ManagedLocalPackage is not handed back as the LocalPackage.
+        WithTestKey(key =>
+        {
+            key.SetValue("LocalPackage", Array.Empty<byte>(), RegistryValueKind.None);
+            key.SetValue("ManagedLocalPackage", @"C:\Windows\Installer\1a2b3c.msi", RegistryValueKind.String);
+
+            Assert.False(InstallerQueryService.TryReadLocalPackage(key, "LocalPackage", out var local));
+            Assert.Null(local);
+            Assert.True(InstallerQueryService.TryReadLocalPackage(key, "ManagedLocalPackage", out var managed));
+            Assert.Equal(@"C:\Windows\Installer\1a2b3c.msi", managed);
+        });
+    }
+
+    [Theory]
+    [MemberData(nameof(ValueNames))]
+    public void A_null_key_is_an_absence(string valueName)
+    {
+        var read = InstallerQueryService.TryReadLocalPackage(null, valueName, out var path);
 
         Assert.True(read);
         Assert.Null(path);
