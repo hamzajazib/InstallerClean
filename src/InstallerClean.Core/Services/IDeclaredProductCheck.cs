@@ -50,15 +50,15 @@ namespace InstallerClean.Services;
 /// <c>InstallSource</c>, the one its package was installed from, counts as a source
 /// whether or not the list still holds it. So it is while a source list holds
 /// something the check does not compare, a URL, an entry naming an environment
-/// variable, a media package path or a package name naming a folder, a drive or a
-/// variable; while the source used last is not a network entry on the list; and while
-/// the registry key holding the list does not hold what the API returned for it,
-/// package name included, or holds that name as anything but a REG_SZ. So it is while
-/// an installation's <c>InstallSource</c> will not read, is held in the registry
-/// otherwise than the API answers it or as anything but a REG_SZ, names an environment
-/// variable, or starts neither with a drive letter, a ':' and a '\' nor with two '\'.
-/// An installation in a per-user-unmanaged context keeps it as well, its source list
-/// not being read.
+/// variable, a media package path or a package name naming a folder, a drive, a
+/// stream or a variable, or holding a null; while the source used last is not a
+/// network entry on the list; and while the registry key holding the list does not
+/// hold what the API returned for it, package name included, or holds that name as
+/// anything but a REG_SZ. So it is while an installation's <c>InstallSource</c> will
+/// not read, is held in the registry otherwise than the API answers it or as
+/// anything but a REG_SZ, names an environment variable, or starts neither with a
+/// drive letter, a ':' and a '\' nor with two '\'. An installation in a
+/// per-user-unmanaged context keeps it as well, its source list not being read.
 ///
 /// A REGISTERED PATCH DOES NOT ON ITS OWN MAKE THIS FILE A COPY OF IT WINDOWS OPENS
 /// EITHER.
@@ -257,7 +257,8 @@ public enum DeclaredProductOutcome
     /// installation in a per-user-unmanaged context, whose source list
     /// is not read. It covers a source list holding a URL, an entry naming an
     /// environment variable, a media package path or a package name naming a folder, a
-    /// drive or a variable, one whose source used last is not a network entry on it,
+    /// drive, a stream or a variable, or holding a null, one whose source used last is not
+    /// a network entry on it,
     /// and one whose registry key does not hold what the API returned for it, package
     /// name included, or holds that name as anything but a REG_SZ. It covers an
     /// <c>InstallSource</c> that is the Installer folder itself, whose package is this

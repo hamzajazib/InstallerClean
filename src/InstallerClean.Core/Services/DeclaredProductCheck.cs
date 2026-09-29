@@ -708,13 +708,13 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// FALSE, WHICH KEEPS THE FILE, for: no way to compare against the Installer folder
     /// or to read the registry; a per-user-unmanaged account and context, whose list is
     /// not read; a package name, a source list or a property of the list that will not
-    /// read; an empty package name, or one holding a '\', a '/', a ':' or a '%'; each
-    /// of the five above; a source entry holding a null; an <c>InstallSource</c> that
-    /// <see cref="InstallSourceOf"/> answers null for; and, for a package read here, one
-    /// that would be a file directly in the Installer folder or where that cannot be
-    /// established, one that exists and will not identify, and one whose read has not
-    /// answered within the time limit (<see cref="ReadSourcePackage"/>). A source package
-    /// that is not there is skipped, being no file.
+    /// read; an empty package name, or one holding a '\', a '/', a ':', a '%' or a null;
+    /// each of the five above; a source entry holding a null; an <c>InstallSource</c>
+    /// that <see cref="InstallSourceOf"/> answers null for; and, for a package read
+    /// here, one that would be a file directly in the Installer folder or where that
+    /// cannot be established, one that exists and will not identify, and one whose read
+    /// has not answered within the time limit (<see cref="ReadSourcePackage"/>). A
+    /// source package that is not there is skipped, being no file.
     /// </summary>
     private bool AddSourcePackages(
         string code,
@@ -749,8 +749,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         // and it keeps the copy. On a media source with no media package path such a name
         // reaches below the root of the volume, and no media source is compared. A package
         // name holding a '%' names a variable, which whoever reads the name may expand in its
-        // own environment, and keeps the copy as well.
-        if (packageName.IndexOfAny(['\\', '/', ':', '%']) >= 0) return false;
+        // own environment, and one holding a null is cut short at the null wherever it is read
+        // as a path. Both keep the copy as well.
+        if (packageName.IndexOfAny(['\\', '/', ':', '%', '\0']) >= 0) return false;
 
         var sources = SourcesOf(code, sid, context, MsiSourceListOptions.Network);
         if (sources is null) return false;
@@ -770,7 +771,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (sourceList.Presence != RegistryKeyPresence.Present || sourceList.Values is null) return false;
 
         // The name the key holds has to be the one the API answered, text for text, so
-        // a '\', a '/', a ':' or a '%' keeps the copy whichever of the two holds it.
+        // a '\', a '/', a ':', a '%' or a null keeps the copy whichever of the two holds it.
         // Loosen that comparison and the stored name needs the character test of its own.
         if (!HoldsThePackageName(sourceList.Values, packageName)) return false;
 
@@ -1756,7 +1757,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// can be a file's path. A file system compares letters outside ASCII without case
     /// through a table of its own, which need not be the one this process has.
     ///
-    /// A PACKAGE NAME REACHING IT HOLDS NO '\', '/', ':' OR '%', <see cref="AddSourcePackages"/>
+    /// A PACKAGE NAME REACHING IT HOLDS NO '\', '/', ':', '%' OR NULL, <see cref="AddSourcePackages"/>
     /// having kept the copy for one that does. Let such a name through and this comparison
     /// has to take in what each of them does to a path.
     /// </summary>

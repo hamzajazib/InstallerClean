@@ -3836,10 +3836,12 @@ public class DeclaredProductCheckTests
     [InlineData(@"C:\Windows\Installer\a.msi")]
     [InlineData(@"sub\..\a.msi")]
     [InlineData("sub/../a.msi")]
-    public void A_package_name_holding_a_colon_or_a_separator_keeps_the_copy_whatever_network_folder_it_is_in(
+    [InlineData("a.msi\0x")]
+    public void A_package_name_holding_a_colon_a_separator_or_a_null_keeps_the_copy_whatever_network_folder_it_is_in(
         string packageName)
     {
-        // A stream of the copy, a rooted path to it, and a relative path ending in its name.
+        // A stream of the copy, a rooted path to it, a relative path ending in its name, and
+        // its name cut short by a null.
         var (f, package) = ACopyBesideASource(NasFolder, packageName);
 
         var outcome = CheckBesideASource(f).Screen([Package(Candidate)], [], default, null, InInstallerFolder)[0];
