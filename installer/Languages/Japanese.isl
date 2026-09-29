@@ -51,9 +51,9 @@ LastErrorMessage=%1.%n%nエラー %2: %3
 SetupFileMissing=セットアップフォルダーにファイル %1 が見つかりません。%n%n問題を修正するか、プログラムの新しいコピーを入手してください。
 SetupFileCorrupt=セットアップファイルが破損しています。%n%nプログラムの新しいコピーを入手してください。
 SetupFileCorruptOrWrongVer=セットアップファイルが破損しているか、このバージョンのセットアッププログラムと互換性がありません。%n%n問題を修正するか、プログラムの新しいコピーを入手してください。
-InvalidParameter=コマンドラインに無効なパラメータが指定されました:%n%n%1
+InvalidParameter=コマンドラインに無効なパラメーターが指定されました:%n%n%1
 SetupAlreadyRunning=セットアップは既に実行中です。
-WindowsVersionNotSupported=このプログラムは、コンピュータにインストールされている Windows のバージョンをサポートしていません。
+WindowsVersionNotSupported=このプログラムは、コンピューターにインストールされている Windows のバージョンをサポートしていません。
 WindowsServicePackRequired=このプログラムには %1 Service Pack %2 以降が必要です。
 NotOnThisPlatform=このプログラムは %1 と互換性がありません。
 OnlyOnThisPlatform=このプログラムには %1 が必要です。
@@ -116,7 +116,7 @@ NewFolderName=新しいフォルダー
 
 ; *** 「ようこそ」ウィザードページ
 WelcomeLabel1=[name] のセットアップ
-WelcomeLabel2=コンピュータに [name/ver] をインストールします。%n%n続行する前に、すべての実行中のアプリケーションを閉じてください。
+WelcomeLabel2=コンピューターに [name/ver] をインストールします。%n%n続行する前に、すべての実行中のアプリケーションを閉じてください。
 
 ; *** 「パスワード」ウィザードページ
 WizardPassword=パスワード
@@ -178,7 +178,7 @@ FullInstallation=完全インストール
 CompactInstallation=コンパクトインストール
 CustomInstallation=カスタムインストール
 NoUninstallWarningTitle=既存のコンポーネント
-NoUninstallWarning=セットアップは以下のコンポーネントが既にコンピュータにインストールされていることを検出しました:%n%n%1%n%nこれらのコンポーネントの選択を解除しても削除されません。%n%n続行しますか？
+NoUninstallWarning=セットアップは以下のコンポーネントが既にコンピューターにインストールされていることを検出しました:%n%n%1%n%nこれらのコンポーネントの選択を解除しても削除されません。%n%n続行しますか？
 ComponentSize1=%1 KB
 ComponentSize2=%1 MB
 ComponentsDiskSpaceGBLabel=現在の選択には少なくとも [gb] GB のディスク領域が必要です。
@@ -202,7 +202,7 @@ NoProgramGroupCheck2=スタートメニューフォルダーを作成しない(&
 
 ; *** 「インストールの準備完了」ウィザードページ
 WizardReady=インストールの準備完了
-ReadyLabel1=コンピュータに [name] をインストールする準備ができました。
+ReadyLabel1=コンピューターに [name] をインストールする準備ができました。
 ReadyLabel2a=インストールを続行するには「インストール」を選択するか、設定を確認・変更するには「戻る」を選択してください。
 ReadyLabel2b=インストールを続行するには「インストール」を選択してください。
 ReadyMemoUserInfo=ユーザー情報:
@@ -236,7 +236,7 @@ ArchiveUnsupportedFormat=このアーカイブ形式はサポートされてい�
 
 ; *** 「インストールの準備」ウィザードページ
 WizardPreparing=インストールの準備
-PreparingDesc=コンピュータへの [name] のインストールを準備しています。
+PreparingDesc=コンピューターへの [name] のインストールを準備しています。
 PreviousInstallNotCompleted=プログラムの以前のインストール/削除が完了していません。%n%nインストールを完了するには、システムを再起動する必要があります。%n%nシステムの再起動後、[name] のセットアップを再度実行してください。
 CannotContinue=セットアップを続行できません。終了するには「キャンセル」を選択してください。
 ApplicationsFound=以下のアプリケーションが、セットアップで更新する必要があるファイルを使用しています。%n%nこれらのアプリケーションを自動的に閉じることを許可することをお勧めします。
@@ -244,11 +244,11 @@ ApplicationsFound2=以下のアプリケーションが、セットアップで�
 CloseApplications=アプリケーションを自動的に閉じる(&A)
 DontCloseApplications=アプリケーションを閉じない(&D)
 ErrorCloseApplications=セットアップはすべてのアプリケーションを自動的に閉じることができませんでした。%n%n続行する前に、セットアップ中に更新する必要があるファイルを使用しているすべてのアプリケーションを閉じることをお勧めします。
-PrepareToInstallNeedsRestart=セットアップはコンピュータを再起動する必要があります。システムの再起動後に [name] のインストールを完了するには、セットアップを再度実行してください。%n%nシステムを再起動しますか？
+PrepareToInstallNeedsRestart=セットアップはコンピューターを再起動する必要があります。システムの再起動後に [name] のインストールを完了するには、セットアップを再度実行してください。%n%nシステムを再起動しますか？
 
 ; *** 「インストール中」ウィザードページ
 WizardInstalling=インストール中
-InstallingLabel=コンピュータへの [name] のインストールが完了するまでお待ちください。
+InstallingLabel=コンピューターへの [name] のインストールが完了するまでお待ちください。
 
 ; *** 「セットアップ完了」ウィザードページ
 FinishedHeadingLabel=[name] のインストールが完了しました
@@ -363,17 +363,17 @@ UninstallDisplayNameMarkCurrentUser=現在のユーザー
 
 ; *** インストール後のエラー
 ErrorOpeningReadme=README ファイルを開く際にエラーが発生しました。
-ErrorRestartingComputer=コンピュータを再起動できません。手動で再起動してください。
+ErrorRestartingComputer=コンピューターを再起動できません。手動で再起動してください。
 
-; *** アンインストーラメッセージ
+; *** アンインストーラーメッセージ
 UninstallNotFound=ファイル "%1" が存在しません。%n%nアンインストールできません。
 UninstallOpenError=ファイル "%1" を開けません。%n%nアンインストールできません
-UninstallUnsupportedVer=アンインストールログファイル "%1" は、このバージョンのアンインストーラでは認識されない形式です。%n%nアンインストールできません
+UninstallUnsupportedVer=アンインストールログファイル "%1" は、このバージョンのアンインストーラーでは認識されない形式です。%n%nアンインストールできません
 UninstallUnknownEntry=アンインストールログに不明なエントリ (%1) が見つかりました
 ConfirmUninstall=%1 とそのすべてのコンポーネントを完全に削除しますか？
 UninstallOnlyOnWin64=このアプリケーションは 64-bit Windows でのみアンインストールできます。
 OnlyAdminCanUninstall=このアプリケーションは管理者権限を持つユーザーのみがアンインストールできます。
-UninstallStatusLabel=%1 がコンピュータから削除されるまでお待ちください。
+UninstallStatusLabel=%1 がコンピューターから削除されるまでお待ちください。
 UninstalledAll=%1 のアンインストールが完了しました。
 UninstalledMost=%1 のアンインストールが完了しました。%n%n一部の項目は削除できませんでした。%n%n手動で削除する必要があります。
 UninstalledAndNeedsRestart=%1 のアンインストールを完了するには、システムを再起動する必要があります。%n%nシステムを再起動しますか？
