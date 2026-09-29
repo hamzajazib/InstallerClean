@@ -992,13 +992,11 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
 
             if (result.InstallerBusy)
             {
-                // A Windows Installer transaction grabbed Global\_MSIExecute in the
-                // sub-millisecond gap between the act-time gate re-check above
-                // passing and the service acquiring the mutex, so the service
-                // refused and touched nothing. Re-run the gate, which now reports
-                // the held mutex, to paint the banner, and report no completed
-                // operation.
-                await _scan.RecheckPendingRebootAsync();
+                // A Windows Installer transaction took Global\_MSIExecute after the
+                // act-time gate re-check above passed and before the service
+                // acquired it, so the service refused and touched nothing. Re-run
+                // the gate to paint the banner, and report no completed operation.
+                await RecheckAfterLockRefusalAsync(deleting: false);
                 OperationProgress = string.Empty;
                 // The service refused at the mutex, before its own
                 // CreateDestinationFolder, so nothing was placed.
@@ -1050,7 +1048,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 _dialogService.ShowWarning(
                     Strings.Error_MoveInstallerLockAccessRefused,
                     Strings.Error_MoveInstallerLockUnavailableTitle);
-                await _scan.RecheckPendingRebootAsync();
+                await RecheckAfterLockRefusalAsync(deleting: false);
                 OperationProgress = string.Empty;
                 if (createdDestination) await RemoveCreatedDestinationAsync(dest);
                 return;
@@ -1352,7 +1350,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // the act-time gate re-check above passed, so the service refused
                 // and touched nothing. Re-run the gate to paint the banner and
                 // report no completed operation.
-                await _scan.RecheckPendingRebootAsync();
+                await RecheckAfterLockRefusalAsync(deleting: true);
                 OperationProgress = string.Empty;
                 return;
             }
@@ -1392,7 +1390,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // was, which is the state the machine is now in.
                 _dialogService.ShowWarning(
                     Strings.Error_InstallerLockAccessRefused, Strings.Error_InstallerLockUnavailableTitle);
-                await _scan.RecheckPendingRebootAsync();
+                await RecheckAfterLockRefusalAsync(deleting: true);
                 OperationProgress = string.Empty;
                 return;
             }
@@ -1652,6 +1650,30 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // nothing depends on the folder being gone.
         }
     });
+
+    /// <summary>
+    /// Re-runs the pending-reboot gate after the service refused at
+    /// Global\_MSIExecute, so a refusal that still stands paints the gate's banner
+    /// and takes both commands out.
+    ///
+    /// The gate throws when a read of Windows Installer's in-progress file fails in
+    /// a way none of its readings names. The service touched nothing, so the throw
+    /// ends here in the failure dialog with no rescan, as it does at the act-time
+    /// re-check, and the caller goes on to its own clean-up, which on a Move removes
+    /// the folder the pre-flight made. In the arms that show the lock dialog first,
+    /// this is a second dialog, and it is the one that reports the failed read.
+    /// </summary>
+    private async Task RecheckAfterLockRefusalAsync(bool deleting)
+    {
+        try
+        {
+            await _scan.RecheckPendingRebootAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowActionFailed(ex, deleting);
+        }
+    }
 
     /// <summary>
     /// The dialog a Move or Delete ends in when it fails in a way none of its own

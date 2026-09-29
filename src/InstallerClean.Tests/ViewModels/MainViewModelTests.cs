@@ -2763,6 +2763,59 @@ public class MainViewModelTests
             Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DeleteAllAsync_a_gate_re_check_that_throws_after_a_lock_refusal_shows_the_failure_dialog_without_a_rescan(
+        bool accessRefused)
+    {
+        // The two arms that re-run the gate after the service refused at the lock.
+        // The re-check throws, as the gate does when a read of Windows Installer's
+        // in-progress file fails in a way none of its readings names. The service
+        // touched nothing, so the counts on screen still describe the folder: the
+        // window shows the failure dialog and does not rescan. A refused lock has
+        // its own dialog first, and the failure dialog follows it.
+        var vm = CreateViewModel();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2));
+        var checks = 0;
+        _rebootService.Check().Returns(_ => ++checks <= 2
+            ? PendingRebootResult.Clean
+            : throw new IOException("marker unreadable"));
+        _deleteService.DeleteFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new DeleteResult(0, Array.Empty<FileOperationError>(),
+                InstallerBusy: !accessRefused, InstallerLockAccessRefused: accessRefused));
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
+
+        await vm.Scan.ScanWithProgressAsync(null);
+
+        await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+
+        _rebootService.Received(3).Check();
+        _dialogService.Received(accessRefused ? 2 : 1).ShowWarning(Arg.Any<string>(), Arg.Any<string>());
+        _dialogService.Received(1).ShowWarning(
+            Arg.Is<string>(s => s.Contains(nameof(IOException))), Strings.Error_DeleteFailedTitle);
+        if (accessRefused)
+        {
+            Received.InOrder(() =>
+            {
+                _dialogService.ShowWarning(
+                    Strings.Error_InstallerLockAccessRefused, Strings.Error_InstallerLockUnavailableTitle);
+                _dialogService.ShowWarning(Arg.Any<string>(), Strings.Error_DeleteFailedTitle);
+            });
+        }
+        await _scanService.Received(1).ScanAsync(
+            Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>());
+        Assert.Equal(2, vm.Scan.OrphanedFileCount);
+        Assert.False(vm.Completion.IsComplete);
+        Assert.False(vm.Cleanup.IsOperating);
+        Assert.Equal(string.Empty, vm.Cleanup.OperationProgress);
+        Assert.True(vm.Cleanup.MoveAllCommand.CanExecute(null));
+        Assert.True(vm.Cleanup.DeleteAllCommand.CanExecute(null));
+    }
+
     [Fact]
     public async Task DeleteAllAsync_lock_unavailable_result_shows_the_dialog_and_leaves_the_gate_alone()
     {

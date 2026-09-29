@@ -99,8 +99,7 @@ public enum PendingRebootReason
     /// not, which is a transaction of several packages between one package and the
     /// next.
     ///
-    /// AFTER THE MEMBERS BEFORE IT rather than beside the InProgress key, so no other
-    /// member's value moves. The gate checks it straight after that key.
+    /// The gate checks it straight after the InProgress key.
     ///
     /// Its sentence is <c>Body.PendingReboot.Other</c> and
     /// <c>Cli.PendingRebootBlocked.Other</c>, which say that Windows Installer has

@@ -1719,8 +1719,8 @@ internal static class Program
     /// and finds it held
     /// (<see cref="Models.MoveResult.InstallerBusy"/> /
     /// <see cref="Models.DeleteResult.InstallerBusy"/>), a Windows Installer
-    /// transaction started in the sub-millisecond race after the gate check passed;
-    /// mapping that to <see cref="PendingRebootReason.MsiExecuteMutexHeld"/> here
+    /// transaction took it after the gate check passed; mapping that to
+    /// <see cref="PendingRebootReason.MsiExecuteMutexHeld"/> here
     /// makes the service-boundary refusal produce the identical machine contract
     /// (stdout line, event-log entry, exit code) a gate block does, so an RMM
     /// consumer cannot tell the two apart. A service refused the rights to open the

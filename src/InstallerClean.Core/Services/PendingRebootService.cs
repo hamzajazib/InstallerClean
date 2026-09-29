@@ -425,9 +425,9 @@ public sealed class PendingRebootService : IPendingRebootService
         }
     }
 
-    // THE THREE PROBE CALLS GO THROUGH THESE AND NOT DIRECTLY, so that Check keeps
-    // the "never throws" contract IPendingRebootService states, exactly as the
-    // registry and mutex reads above are wrapped. A throw out of a volume query is
+    // THE THREE PROBE CALLS GO THROUGH THESE AND NOT DIRECTLY, so that a throw out of
+    // one is answered inside Check rather than leaving it, exactly as the registry
+    // and mutex reads above are wrapped. A throw out of a volume query is
     // that query failing, and a failed query is the app not knowing where an entry
     // points, which is the condition this gate refuses on. Answering "nothing
     // established" is therefore the same answer the call's own failure return gives,

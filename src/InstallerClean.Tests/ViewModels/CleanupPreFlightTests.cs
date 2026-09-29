@@ -468,10 +468,10 @@ public class CleanupPreFlightTests
     [Fact]
     public async Task An_installer_taking_the_lock_at_the_service_removes_the_folder_the_pre_flight_created()
     {
-        // The sub-millisecond race the act-time gate cannot close: the gate
-        // passed, then a transaction took Global\_MSIExecute before the service
-        // acquired it. The service refuses ahead of its own
-        // CreateDestinationFolder, so nothing was placed and the folder goes.
+        // The race the act-time gate cannot close: the gate passed, then a
+        // transaction took Global\_MSIExecute before the service acquired it. The
+        // service refuses ahead of its own CreateDestinationFolder, so nothing was
+        // placed and the folder goes.
         _confirmationService.ConfirmMove(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>())
             .Returns(true);
         _moveService.MoveFilesAsync(
@@ -486,6 +486,65 @@ public class CleanupPreFlightTests
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _directory.Received(1).Delete(_destination);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_gate_re_check_that_throws_after_a_lock_refusal_still_removes_the_folder_the_pre_flight_created(
+        bool accessRefused)
+    {
+        // The two arms that re-run the gate after the service refused at the lock,
+        // with the re-check throwing, as the gate does when a read of Windows
+        // Installer's in-progress file fails in a way none of its readings names.
+        // The service refused ahead of its own CreateDestinationFolder, so the
+        // pre-flight's folder is empty and goes, the failure dialog says what
+        // happened, and nothing moved, so there is no rescan. A refused lock has
+        // its own dialog first, and the failure dialog follows it.
+        var refused = false;
+        _rebootService.Check().Returns(_ => refused
+            ? throw new IOException("marker unreadable")
+            : PendingRebootResult.Clean);
+        _confirmationService.ConfirmMove(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>())
+            .Returns(true);
+        _moveService.MoveFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                refused = true;
+                return new MoveResult(0, Array.Empty<FileOperationError>(),
+                    InstallerBusy: !accessRefused, InstallerLockAccessRefused: accessRefused);
+            });
+
+        var vm = CreateViewModel();
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = _destination;
+
+        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        _directory.Received(1).Delete(_destination);
+        _dialogService.Received(accessRefused ? 2 : 1).ShowWarning(Arg.Any<string>(), Arg.Any<string>());
+        _dialogService.Received(1).ShowWarning(
+            Arg.Is<string>(s => s.Contains(nameof(IOException))),
+            InstallerClean.Resources.Strings.Error_MoveFailedTitle);
+        if (accessRefused)
+        {
+            Received.InOrder(() =>
+            {
+                _dialogService.ShowWarning(
+                    InstallerClean.Resources.Strings.Error_MoveInstallerLockAccessRefused,
+                    InstallerClean.Resources.Strings.Error_MoveInstallerLockUnavailableTitle);
+                _dialogService.ShowWarning(
+                    Arg.Any<string>(), InstallerClean.Resources.Strings.Error_MoveFailedTitle);
+            });
+        }
+        await _scanService.Received(1).ScanAsync(
+            Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>());
+        Assert.False(vm.Cleanup.IsOperating);
+        Assert.Equal(string.Empty, vm.Cleanup.OperationProgress);
+        Assert.True(vm.Cleanup.MoveAllCommand.CanExecute(null));
+        Assert.True(vm.Cleanup.DeleteAllCommand.CanExecute(null));
     }
 
     [Fact]
