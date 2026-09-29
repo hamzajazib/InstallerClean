@@ -259,11 +259,11 @@ jobs:
         if: success() || failure()
         run: node scripts/verify-shipped-artefacts.mjs
 
-      # The setup is the artefact CI could not build: ISCC is the only thing
-      # that reads installer/*.iss, so a typo there, a message missing from one
-      # of the four bundled community .isl files, or an #include that lost its
-      # UTF-8 BOM used to surface for the first time mid-release, on the one
-      # machine that compiles it. The self-contained GUI and CLI publishes above
+      # ISCC is the only thing that reads installer/*.iss, so a typo there, a
+      # message missing from one of the bundled community .isl files, or an
+      # #include that lost its UTF-8 BOM shows up nowhere else. Compiling the
+      # setup here finds it on the push that caused it rather than on the
+      # release machine. The self-contained GUI and CLI publishes above
       # put the exes exactly where the [Files] section looks for them, in the
       # shapes the release script builds, so this compiles the real setup rather
       # than a stub. Repointing either at a different publish directory quietly

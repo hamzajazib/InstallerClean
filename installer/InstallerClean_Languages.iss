@@ -20,7 +20,7 @@ Name: "vietnamese"; MessagesFile: "Languages\Vietnamese.isl"
 Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl"
-Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
+Name: "japanese"; MessagesFile: "Languages\Japanese.isl"
 Name: "chinesesimplified"; MessagesFile: "Languages\ChineseSimplified.isl"
 Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"
 

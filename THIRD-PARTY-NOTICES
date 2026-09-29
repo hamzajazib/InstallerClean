@@ -134,9 +134,10 @@ Inno Setup translation files
 InstallerClean-<version>-setup.exe is built with Inno Setup. Four of its wizard
 languages come from Inno Setup's collection of user-contributed translations at
 https://jrsoftware.org/files/istrans/ and are carried in this repository under
-installer/Languages/; the other twelve come with Inno Setup itself and are not
-files in this repository. All of them are compiled into the setup rather than
-installed with it.
+installer/Languages/. Japanese is carried there too, and is described after the
+four. The other eleven come with Inno Setup itself and are not files in this
+repository. All of them are compiled into the setup rather than installed with
+it.
 
 Each of the four keeps its own header, including its translator's contact
 details. The attributions in them:
@@ -161,3 +162,7 @@ details. The attributions in them:
   Vietnamese.isl
     *** Inno Setup version 6.5.0+ Vietnamese messages ***
     Vietnamese translation by memecoder
+
+installer/Languages/Japanese.isl was written for InstallerClean by coolvitto,
+who also wrote the app's Japanese translation, and was contributed to this
+repository.

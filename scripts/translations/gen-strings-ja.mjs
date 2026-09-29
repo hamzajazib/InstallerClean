@@ -11,22 +11,20 @@
 // Cli.EventLog* keys, which coolvitto translated along with everything else and
 // which the other fourteen omit. They are forced to English at the emit site at
 // runtime (MachineContract.cs), so a translated copy is inert rather than wrong,
-// and keeping his work costs nothing. Japanese has no count plurals, so there
-// are no satellite-only overrides.
+// and keeping coolvitto's work costs nothing. Japanese has no count plurals,
+// so there are no satellite-only overrides.
 //
 // The file is a MIXTURE on purpose and must not be harmonised in either
 // direction: most machine keys stay because they are a contributor's
 // translation, and the named few in STRIPPED below go because they are not.
 // Count that set there rather than trusting a figure here, which goes stale the
-// next time one earns its place. Two ways a key earns it. Some outlived their
-// English: Cli.EventLogDeleteSummary sat here saying the files had been sent to
-// the Recycle Bin after the bin went, and Cli.EventLogScanNoOrphans said
-// "Scan mode" after the entry stopped calling every run a scan. Both are
-// fossils no user can reach and no gate can measure, the still-English gate
-// skipping machine keys by contract and nothing else comparing them. The rest
-// arrived after his PR and sit in English inside a Japanese file; translating
-// them would buy correct Japanese that can never be read. Any machine key that
-// outlives its English or postdates his work joins them.
+// next time one earns its place. A key earns it in one of two ways. Its English
+// no longer says what coolvitto's Japanese for it says, as with
+// Cli.EventLogDeleteSummary and Cli.EventLogScanNoOrphans. Or it postdates
+// coolvitto's PR and would otherwise sit in English inside the Japanese file;
+// translating it would buy correct Japanese nobody reads, since the emit site
+// writes every machine key in English. Any machine key that outlives its
+// English or postdates that PR joins them.
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const dir = 'src/InstallerClean.Core/Resources';
