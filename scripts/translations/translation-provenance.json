@@ -6446,7 +6446,16 @@
       "tr": "f6609b048c2dd142",
       "uk": "f6609b048c2dd142",
       "vi": "f6609b048c2dd142",
-      "zh-Hans": "f6609b048c2dd142"
+      "zh-Hans": "f6609b048c2dd142",
+      "de": "f6609b048c2dd142",
+      "es": "f6609b048c2dd142",
+      "fr": "f6609b048c2dd142",
+      "id": "f6609b048c2dd142",
+      "it": "f6609b048c2dd142",
+      "ja": "f6609b048c2dd142",
+      "ko": "f6609b048c2dd142",
+      "nl": "f6609b048c2dd142",
+      "pt-BR": "f6609b048c2dd142"
     },
     "Body.PendingReboot.RegistryCheckUnreadable": {
       "pl": "7d9a3a0b00af3184",
@@ -6454,7 +6463,16 @@
       "tr": "7d9a3a0b00af3184",
       "uk": "7d9a3a0b00af3184",
       "vi": "7d9a3a0b00af3184",
-      "zh-Hans": "7d9a3a0b00af3184"
+      "zh-Hans": "7d9a3a0b00af3184",
+      "de": "7d9a3a0b00af3184",
+      "es": "7d9a3a0b00af3184",
+      "fr": "7d9a3a0b00af3184",
+      "id": "7d9a3a0b00af3184",
+      "it": "7d9a3a0b00af3184",
+      "ja": "7d9a3a0b00af3184",
+      "ko": "7d9a3a0b00af3184",
+      "nl": "7d9a3a0b00af3184",
+      "pt-BR": "7d9a3a0b00af3184"
     },
     "Cli.PendingRebootBlocked.RegistryCheckUnreadable": {
       "pl": "7e68cb2ebc881ffe",
@@ -6462,7 +6480,16 @@
       "tr": "7e68cb2ebc881ffe",
       "uk": "7e68cb2ebc881ffe",
       "vi": "7e68cb2ebc881ffe",
-      "zh-Hans": "7e68cb2ebc881ffe"
+      "zh-Hans": "7e68cb2ebc881ffe",
+      "de": "7e68cb2ebc881ffe",
+      "es": "7e68cb2ebc881ffe",
+      "fr": "7e68cb2ebc881ffe",
+      "id": "7e68cb2ebc881ffe",
+      "it": "7e68cb2ebc881ffe",
+      "ja": "7e68cb2ebc881ffe",
+      "ko": "7e68cb2ebc881ffe",
+      "nl": "7e68cb2ebc881ffe",
+      "pt-BR": "7e68cb2ebc881ffe"
     },
     "Error.MoveStoppedTitle": {
       "pl": "10cfdc61ab6d46ca",
@@ -6470,7 +6497,16 @@
       "tr": "10cfdc61ab6d46ca",
       "uk": "10cfdc61ab6d46ca",
       "vi": "10cfdc61ab6d46ca",
-      "zh-Hans": "10cfdc61ab6d46ca"
+      "zh-Hans": "10cfdc61ab6d46ca",
+      "de": "10cfdc61ab6d46ca",
+      "es": "10cfdc61ab6d46ca",
+      "fr": "10cfdc61ab6d46ca",
+      "id": "10cfdc61ab6d46ca",
+      "it": "10cfdc61ab6d46ca",
+      "ja": "10cfdc61ab6d46ca",
+      "ko": "10cfdc61ab6d46ca",
+      "nl": "10cfdc61ab6d46ca",
+      "pt-BR": "10cfdc61ab6d46ca"
     },
     "Completion.MoveCancelledRestoreHint": {
       "pl": "9ccdd05a48d00b64",
@@ -6478,7 +6514,16 @@
       "tr": "9ccdd05a48d00b64",
       "uk": "9ccdd05a48d00b64",
       "vi": "9ccdd05a48d00b64",
-      "zh-Hans": "9ccdd05a48d00b64"
+      "zh-Hans": "9ccdd05a48d00b64",
+      "de": "9ccdd05a48d00b64",
+      "es": "9ccdd05a48d00b64",
+      "fr": "9ccdd05a48d00b64",
+      "id": "9ccdd05a48d00b64",
+      "it": "9ccdd05a48d00b64",
+      "ja": "9ccdd05a48d00b64",
+      "ko": "9ccdd05a48d00b64",
+      "nl": "9ccdd05a48d00b64",
+      "pt-BR": "9ccdd05a48d00b64"
     },
     "Cli.MoveCancelledRestoreHint": {
       "pl": "13b883305bd9696c",
@@ -6486,7 +6531,16 @@
       "tr": "13b883305bd9696c",
       "uk": "13b883305bd9696c",
       "vi": "13b883305bd9696c",
-      "zh-Hans": "13b883305bd9696c"
+      "zh-Hans": "13b883305bd9696c",
+      "de": "13b883305bd9696c",
+      "es": "13b883305bd9696c",
+      "fr": "13b883305bd9696c",
+      "id": "13b883305bd9696c",
+      "it": "13b883305bd9696c",
+      "ja": "13b883305bd9696c",
+      "ko": "13b883305bd9696c",
+      "nl": "13b883305bd9696c",
+      "pt-BR": "13b883305bd9696c"
     },
     "Error.InstallerLockAccessRefused": {
       "pl": "ccff057a178fecd6",
@@ -6494,7 +6548,16 @@
       "tr": "ccff057a178fecd6",
       "uk": "ccff057a178fecd6",
       "vi": "ccff057a178fecd6",
-      "zh-Hans": "ccff057a178fecd6"
+      "zh-Hans": "ccff057a178fecd6",
+      "de": "ccff057a178fecd6",
+      "es": "ccff057a178fecd6",
+      "fr": "ccff057a178fecd6",
+      "id": "ccff057a178fecd6",
+      "it": "ccff057a178fecd6",
+      "ja": "ccff057a178fecd6",
+      "ko": "ccff057a178fecd6",
+      "nl": "ccff057a178fecd6",
+      "pt-BR": "ccff057a178fecd6"
     },
     "Error.MoveInstallerLockAccessRefused": {
       "pl": "851d25a0e398c384",
@@ -6502,7 +6565,16 @@
       "tr": "851d25a0e398c384",
       "uk": "851d25a0e398c384",
       "vi": "851d25a0e398c384",
-      "zh-Hans": "851d25a0e398c384"
+      "zh-Hans": "851d25a0e398c384",
+      "de": "851d25a0e398c384",
+      "es": "851d25a0e398c384",
+      "fr": "851d25a0e398c384",
+      "id": "851d25a0e398c384",
+      "it": "851d25a0e398c384",
+      "ja": "851d25a0e398c384",
+      "ko": "851d25a0e398c384",
+      "nl": "851d25a0e398c384",
+      "pt-BR": "851d25a0e398c384"
     },
     "Cli.InstallerLockAccessRefused": {
       "pl": "17afa34662220ace",
@@ -6510,7 +6582,16 @@
       "tr": "17afa34662220ace",
       "uk": "17afa34662220ace",
       "vi": "17afa34662220ace",
-      "zh-Hans": "17afa34662220ace"
+      "zh-Hans": "17afa34662220ace",
+      "de": "17afa34662220ace",
+      "es": "17afa34662220ace",
+      "fr": "17afa34662220ace",
+      "id": "17afa34662220ace",
+      "it": "17afa34662220ace",
+      "ja": "17afa34662220ace",
+      "ko": "17afa34662220ace",
+      "nl": "17afa34662220ace",
+      "pt-BR": "17afa34662220ace"
     },
     "Cli.MoveInstallerLockAccessRefused": {
       "pl": "5a9a0bd63b0f1744",
@@ -6518,7 +6599,16 @@
       "tr": "5a9a0bd63b0f1744",
       "uk": "5a9a0bd63b0f1744",
       "vi": "5a9a0bd63b0f1744",
-      "zh-Hans": "5a9a0bd63b0f1744"
+      "zh-Hans": "5a9a0bd63b0f1744",
+      "de": "5a9a0bd63b0f1744",
+      "es": "5a9a0bd63b0f1744",
+      "fr": "5a9a0bd63b0f1744",
+      "id": "5a9a0bd63b0f1744",
+      "it": "5a9a0bd63b0f1744",
+      "ja": "5a9a0bd63b0f1744",
+      "ko": "5a9a0bd63b0f1744",
+      "nl": "5a9a0bd63b0f1744",
+      "pt-BR": "5a9a0bd63b0f1744"
     },
     "Summary.RegisteredWindow.Missing.Singular": {
       "pl": "19f9fbfd4d5fd205",
@@ -6526,7 +6616,16 @@
       "tr": "19f9fbfd4d5fd205",
       "uk": "19f9fbfd4d5fd205",
       "vi": "19f9fbfd4d5fd205",
-      "zh-Hans": "19f9fbfd4d5fd205"
+      "zh-Hans": "19f9fbfd4d5fd205",
+      "de": "19f9fbfd4d5fd205",
+      "es": "19f9fbfd4d5fd205",
+      "fr": "19f9fbfd4d5fd205",
+      "id": "19f9fbfd4d5fd205",
+      "it": "19f9fbfd4d5fd205",
+      "ja": "19f9fbfd4d5fd205",
+      "ko": "19f9fbfd4d5fd205",
+      "nl": "19f9fbfd4d5fd205",
+      "pt-BR": "19f9fbfd4d5fd205"
     },
     "Summary.RegisteredWindow.Missing.Plural": {
       "pl": "19f9fbfd4d5fd205",
@@ -6534,7 +6633,16 @@
       "tr": "19f9fbfd4d5fd205",
       "uk": "19f9fbfd4d5fd205",
       "vi": "19f9fbfd4d5fd205",
-      "zh-Hans": "19f9fbfd4d5fd205"
+      "zh-Hans": "19f9fbfd4d5fd205",
+      "de": "19f9fbfd4d5fd205",
+      "es": "19f9fbfd4d5fd205",
+      "fr": "19f9fbfd4d5fd205",
+      "id": "19f9fbfd4d5fd205",
+      "it": "19f9fbfd4d5fd205",
+      "ja": "19f9fbfd4d5fd205",
+      "ko": "19f9fbfd4d5fd205",
+      "nl": "19f9fbfd4d5fd205",
+      "pt-BR": "19f9fbfd4d5fd205"
     },
     "UpdateCheck.Failed.Unknown.NoLog": {
       "pl": "bba737db610a8c3c",
@@ -6542,7 +6650,16 @@
       "tr": "bba737db610a8c3c",
       "uk": "bba737db610a8c3c",
       "vi": "bba737db610a8c3c",
-      "zh-Hans": "bba737db610a8c3c"
+      "zh-Hans": "bba737db610a8c3c",
+      "de": "bba737db610a8c3c",
+      "es": "bba737db610a8c3c",
+      "fr": "bba737db610a8c3c",
+      "id": "bba737db610a8c3c",
+      "it": "bba737db610a8c3c",
+      "ja": "bba737db610a8c3c",
+      "ko": "bba737db610a8c3c",
+      "nl": "bba737db610a8c3c",
+      "pt-BR": "bba737db610a8c3c"
     },
     "Summary.RegisteredWindow.Missing.Few": {
       "pl": "19f9fbfd4d5fd205",
