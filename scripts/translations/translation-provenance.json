@@ -5921,126 +5921,126 @@
       "zh-Hans": "66b835786c5f0a5d"
     },
     "Cli.DeletingFiles.One": {
-      "de": "unverified",
-      "es": "unverified",
-      "fr": "unverified",
-      "it": "unverified",
-      "nl": "unverified",
-      "pl": "unverified",
-      "pt-BR": "unverified",
-      "ru": "unverified",
-      "uk": "unverified"
+      "de": "148cfcf5e4553a95",
+      "es": "148cfcf5e4553a95",
+      "fr": "148cfcf5e4553a95",
+      "it": "148cfcf5e4553a95",
+      "nl": "148cfcf5e4553a95",
+      "pl": "148cfcf5e4553a95",
+      "pt-BR": "148cfcf5e4553a95",
+      "ru": "148cfcf5e4553a95",
+      "uk": "148cfcf5e4553a95"
     },
     "Cli.MovingFiles.One": {
-      "de": "unverified",
-      "es": "unverified",
-      "fr": "unverified",
-      "it": "unverified",
-      "nl": "unverified",
-      "pl": "unverified",
-      "pt-BR": "unverified",
-      "ru": "unverified",
-      "uk": "unverified"
+      "de": "ea6224d40987ff75",
+      "es": "ea6224d40987ff75",
+      "fr": "ea6224d40987ff75",
+      "it": "ea6224d40987ff75",
+      "nl": "ea6224d40987ff75",
+      "pl": "ea6224d40987ff75",
+      "pt-BR": "ea6224d40987ff75",
+      "ru": "ea6224d40987ff75",
+      "uk": "ea6224d40987ff75"
     },
     "Cli.DeletedFiles.One": {
-      "es": "unverified",
-      "fr": "unverified",
-      "it": "unverified",
-      "nl": "unverified",
-      "pl": "unverified",
-      "pt-BR": "unverified",
-      "ru": "unverified",
-      "uk": "unverified"
+      "es": "c1a3a5fa2d51b644",
+      "fr": "c1a3a5fa2d51b644",
+      "it": "c1a3a5fa2d51b644",
+      "nl": "c1a3a5fa2d51b644",
+      "pl": "c1a3a5fa2d51b644",
+      "pt-BR": "c1a3a5fa2d51b644",
+      "ru": "c1a3a5fa2d51b644",
+      "uk": "c1a3a5fa2d51b644"
     },
     "Cli.FoundOrphans.One": {
-      "es": "unverified",
-      "fr": "unverified",
-      "it": "unverified",
-      "nl": "unverified",
-      "pl": "unverified",
-      "pt-BR": "unverified",
-      "ru": "unverified",
-      "uk": "unverified"
+      "es": "3d1766c663bf079a",
+      "fr": "3d1766c663bf079a",
+      "it": "3d1766c663bf079a",
+      "nl": "3d1766c663bf079a",
+      "pl": "3d1766c663bf079a",
+      "pt-BR": "3d1766c663bf079a",
+      "ru": "3d1766c663bf079a",
+      "uk": "3d1766c663bf079a"
     },
     "Cli.MovedFiles.One": {
-      "es": "unverified",
-      "fr": "unverified",
-      "it": "unverified",
-      "nl": "unverified",
-      "pl": "unverified",
-      "pt-BR": "unverified",
-      "ru": "unverified",
-      "uk": "unverified"
+      "es": "6c84695df41dcaff",
+      "fr": "6c84695df41dcaff",
+      "it": "6c84695df41dcaff",
+      "nl": "6c84695df41dcaff",
+      "pl": "6c84695df41dcaff",
+      "pt-BR": "6c84695df41dcaff",
+      "ru": "6c84695df41dcaff",
+      "uk": "6c84695df41dcaff"
     },
     "Cli.DeletedFiles.Few": {
-      "pl": "unverified",
-      "uk": "unverified"
+      "pl": "c1a3a5fa2d51b644",
+      "uk": "c1a3a5fa2d51b644"
     },
     "Cli.DeletingFiles.Few": {
-      "pl": "unverified",
-      "uk": "unverified"
+      "pl": "148cfcf5e4553a95",
+      "uk": "148cfcf5e4553a95"
     },
     "Cli.FoundOrphans.Few": {
-      "pl": "unverified",
-      "uk": "unverified"
+      "pl": "3d1766c663bf079a",
+      "uk": "3d1766c663bf079a"
     },
     "Cli.MovedFiles.Few": {
-      "pl": "unverified",
-      "uk": "unverified"
+      "pl": "6c84695df41dcaff",
+      "uk": "6c84695df41dcaff"
     },
     "Cli.MovingFiles.Few": {
-      "pl": "unverified",
-      "uk": "unverified"
+      "pl": "ea6224d40987ff75",
+      "uk": "ea6224d40987ff75"
     },
     "Plural.Error.Few": {
-      "pl": "unverified",
-      "ru": "unverified",
-      "uk": "unverified"
+      "pl": "be4bd56772770471",
+      "ru": "be4bd56772770471",
+      "uk": "be4bd56772770471"
     },
     "Plural.File.Few": {
-      "pl": "unverified",
-      "ru": "unverified",
-      "uk": "unverified"
+      "pl": "3d7db37d08f9140f",
+      "ru": "3d7db37d08f9140f",
+      "uk": "3d7db37d08f9140f"
     },
     "Plural.Package.Few": {
-      "pl": "unverified",
-      "ru": "unverified",
-      "uk": "unverified"
+      "pl": "b28b1ed9821f38c6",
+      "ru": "b28b1ed9821f38c6",
+      "uk": "b28b1ed9821f38c6"
     },
     "Plural.Patch.Few": {
-      "pl": "unverified",
-      "ru": "unverified",
-      "uk": "unverified"
+      "pl": "42ef841dc27fe0b5",
+      "ru": "42ef841dc27fe0b5",
+      "uk": "42ef841dc27fe0b5"
     },
     "Plural.Product.Few": {
-      "pl": "unverified",
-      "ru": "unverified",
-      "uk": "unverified"
+      "pl": "0a3e27b8ca818264",
+      "ru": "0a3e27b8ca818264",
+      "uk": "0a3e27b8ca818264"
     },
     "Summary.MissingFromDisk.OtherPrograms.Few": {
-      "pl": "unverified",
-      "ru": "unverified",
-      "uk": "unverified"
+      "pl": "799ba00220418f66",
+      "ru": "799ba00220418f66",
+      "uk": "799ba00220418f66"
     },
     "Summary.MissingFromDisk.Unnamed.Few": {
-      "pl": "unverified",
-      "ru": "unverified",
-      "uk": "unverified"
+      "pl": "af8a328bb59947f8",
+      "ru": "af8a328bb59947f8",
+      "uk": "af8a328bb59947f8"
     },
     "Summary.OrphanedToCleanUp.Few": {
-      "pl": "unverified",
-      "ru": "unverified",
-      "uk": "unverified"
+      "pl": "4a2fea98e3323a52",
+      "ru": "4a2fea98e3323a52",
+      "uk": "4a2fea98e3323a52"
     },
     "Summary.RegisteredStillUsed.Few": {
-      "pl": "unverified",
-      "ru": "unverified",
-      "uk": "unverified"
+      "pl": "66b6e16c3d6f0bee",
+      "ru": "66b6e16c3d6f0bee",
+      "uk": "66b6e16c3d6f0bee"
     },
     "Summary.RegisteredWindow.Few": {
-      "pl": "unverified",
-      "ru": "unverified",
-      "uk": "unverified"
+      "pl": "b40b0019a45fac60",
+      "ru": "b40b0019a45fac60",
+      "uk": "b40b0019a45fac60"
     },
     "Completion.FailedCount.Few": {
       "ru": "5e5af279a4698f92",
