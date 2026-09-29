@@ -3810,8 +3810,6 @@ public class DeclaredProductCheckTests
         // product C from D:\Setup\c\, where its package opens as a file other than its copy
         // and its cached package. The second copy's package is read first, for the candidate
         // declaring product B, which is not installed.
-        const string ProductC = "{44444444-4444-4444-4444-444444444444}";
-        const string CopyOfC = @"C:\Windows\Installer\c3.msi";
         const string CachedC = @"C:\Windows\Installer\c4.msi";
         const string PackageOfC = @"D:\Setup\c\c2.msi";
         var f = AMarkedSecondCopy();
@@ -3890,6 +3888,161 @@ public class DeclaredProductCheckTests
 
         Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
         Assert.Contains(otherPackage, files.Calls);
+    }
+
+    // ---- The time a root can cost a pass ----
+    //
+    // Reads that answer, slowly, add their time up against the root they are under, and once
+    // the total passes the check's budget no later package under that root is read in the
+    // pass. A read that answers promptly adds nothing. Product C is a third program with a
+    // copy of its own, let through only where its package is read.
+
+    private const string ProductC = "{44444444-4444-4444-4444-444444444444}";
+    private const string CopyOfC = @"C:\Windows\Installer\c3.msi";
+
+    /// <summary>How long a read can take before its time counts, in the tests of the budget.</summary>
+    private static readonly TimeSpan WaitThreshold = TimeSpan.FromMilliseconds(200);
+
+    /// <summary>A read held for longer than <see cref="WaitThreshold"/> and far less than <see cref="HeldFor"/>.</summary>
+    private static readonly TimeSpan SlowRead = TimeSpan.FromMilliseconds(600);
+
+    /// <summary>
+    /// <see cref="TwoProductsBesideAHeldSource"/> with product C installed as well, from
+    /// <paramref name="thirdFolder"/>. <see cref="CopyOfC"/> declares it, its cached package
+    /// is another file, and its package there opens as a third file. The package of product A
+    /// is held for <see cref="HeldFor"/>. Returns the packages of products B and C.
+    /// </summary>
+    private static ((ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+        ScriptedFileIdentities Files, MockFileSystem Disk) F, HeldFileIdentities Held, string OtherPackage, string ThirdPackage)
+        ThreeProductsBesideAHeldSource(string heldFolder, string otherFolder, string thirdFolder)
+    {
+        const string CachedC = @"C:\Windows\Installer\c4.msi";
+        var thirdPackage = thirdFolder + "c2.msi";
+        var (f, held, otherPackage) = TwoProductsBesideAHeldSource(heldFolder, otherFolder);
+        f.Msi.Installed(ProductC);
+        f.Msi.RecordsPackage(ProductC, null, MsiInstallContext.Machine, CachedC);
+        f.Msi.RecordsSources(ProductC, null, MsiInstallContext.Machine, "c2.msi", thirdFolder);
+        f.Packages.Declares(CopyOfC, ProductC);
+        f.Packages.Declares(CachedC, ProductC);
+        f.Files.Opens(CopyOfC, 11);
+        f.Files.Opens(CachedC, 12);
+        f.Files.Opens(thirdPackage, 13);
+        f.Disk.AddFile(CopyOfC, new MockFileData(new byte[100]));
+        f.Disk.AddFile(CachedC, new MockFileData(new byte[100]));
+        return (f, held, otherPackage, thirdPackage);
+    }
+
+    /// <summary>
+    /// A check whose time limit is <see cref="HeldFor"/>, so every held read answers within
+    /// it, counting reads longer than <see cref="WaitThreshold"/> against
+    /// <paramref name="budget"/>.
+    /// </summary>
+    private static DeclaredProductCheck CheckWithABudget(
+        (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+            ScriptedFileIdentities Files, MockFileSystem Disk) f,
+        HeldFileIdentities files,
+        TimeSpan budget) =>
+        new(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
+        {
+            SourceFolderTimeLimit = HeldFor,
+            SourceFolderWaitThreshold = WaitThreshold,
+            SourceFolderWaitBudget = budget,
+            DriveKindOf = FixedDrive,
+            NamesInFolderOf = NameOnly,
+        };
+
+    private static IReadOnlyList<DeclaredProductOutcome> ScreenThreeCandidates(DeclaredProductCheck check) =>
+        check.Screen([Package(Candidate), Package(OtherCandidate), Package(CopyOfC)], [], default, null, InInstallerFolder);
+
+    [Fact]
+    public void Slow_source_packages_on_a_drive_are_all_read_while_their_waits_add_up_to_less_than_the_budget()
+    {
+        var (f, files, otherPackage, thirdPackage) =
+            ThreeProductsBesideAHeldSource(@"D:\Setup\a\", @"D:\Setup\b\", @"D:\Setup\c\");
+        using var _ = files;
+        files.Holds(@"D:\Setup\a\" + CandidateName, SlowRead);
+        files.Holds(otherPackage, SlowRead);
+        files.Holds(thirdPackage, SlowRead);
+
+        var outcomes = ScreenThreeCandidates(CheckWithABudget(f, files, TimeSpan.FromSeconds(5)));
+
+        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
+        Assert.Contains(thirdPackage, files.Calls);
+    }
+
+    [Fact]
+    public void A_drive_whose_slow_reads_add_up_past_the_budget_is_kept_for_the_rest_of_the_pass_without_being_read()
+    {
+        // Two reads of SlowRead pass a budget of one second.
+        var (f, files, otherPackage, thirdPackage) =
+            ThreeProductsBesideAHeldSource(@"D:\Setup\a\", @"D:\Setup\b\", @"D:\Setup\c\");
+        using var _ = files;
+        files.Holds(@"D:\Setup\a\" + CandidateName, SlowRead);
+        files.Holds(otherPackage, SlowRead);
+
+        var outcomes = ScreenThreeCandidates(CheckWithABudget(f, files, TimeSpan.FromSeconds(1)));
+
+        Assert.Equal(
+            new[]
+            {
+                DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile,
+                DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile,
+                DeclaredProductOutcome.DeclaredProductInstalled,
+            },
+            outcomes);
+        Assert.DoesNotContain(thirdPackage, files.Calls);
+    }
+
+    [Fact]
+    public void Two_drives_keep_separate_budgets()
+    {
+        // One slow read on each drive, which together pass the budget and each alone do not.
+        // Product C was installed from the drive read second.
+        var (f, files, otherPackage, thirdPackage) =
+            ThreeProductsBesideAHeldSource(@"D:\Setup\a\", @"E:\Setup\b\", @"E:\Setup\c\");
+        using var _ = files;
+        files.Holds(@"D:\Setup\a\" + CandidateName, SlowRead);
+        files.Holds(otherPackage, SlowRead);
+
+        var outcomes = ScreenThreeCandidates(CheckWithABudget(f, files, TimeSpan.FromSeconds(1)));
+
+        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
+        Assert.Contains(thirdPackage, files.Calls);
+    }
+
+    [Fact]
+    public void A_drive_kept_for_passing_its_budget_in_one_pass_is_read_again_in_the_next()
+    {
+        var (f, files, otherPackage, thirdPackage) =
+            ThreeProductsBesideAHeldSource(@"D:\Setup\a\", @"D:\Setup\b\", @"D:\Setup\c\");
+        using var _ = files;
+        files.Holds(@"D:\Setup\a\" + CandidateName, SlowRead);
+        files.Holds(otherPackage, SlowRead);
+        var check = CheckWithABudget(f, files, TimeSpan.FromSeconds(1));
+
+        ScreenThreeCandidates(check);
+        Assert.DoesNotContain(thirdPackage, files.Calls);
+
+        // The next pass reads product A's package slowly again before product C's.
+        var outcomes = check.Screen([Package(Candidate), Package(CopyOfC)], [], default, null, InInstallerFolder);
+
+        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
+        Assert.Contains(thirdPackage, files.Calls);
+    }
+
+    [Fact]
+    public void Source_packages_that_answer_promptly_cost_their_drive_none_of_its_budget()
+    {
+        // No budget at all, so a single read counted against it would give the drive up.
+        var (f, files, _, thirdPackage) =
+            ThreeProductsBesideAHeldSource(@"D:\Setup\a\", @"D:\Setup\b\", @"D:\Setup\c\");
+        using var held = files;
+        files.Holds(@"D:\Setup\a\" + CandidateName, TimeSpan.Zero);
+
+        var outcomes = ScreenThreeCandidates(CheckWithABudget(f, files, TimeSpan.Zero));
+
+        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
+        Assert.Contains(thirdPackage, files.Calls);
     }
 
     [Fact]

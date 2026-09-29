@@ -891,13 +891,17 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// folder can be on a server that does not answer, or on a drive that does not, and an
     /// open there waits until Windows gives up; the open itself takes no time limit.
     ///
-    /// A ROOT THAT DOES NOT ANSWER COSTS A PASS ONE WAIT. The root, a share, a drive or a path
-    /// of any other form (<see cref="RootOf"/>), is given up for the rest of the pass once a
-    /// read under it has not answered within the limit, or has answered false only after
-    /// waiting longer than <see cref="SourceFolderSlowFailure"/>. Such a read waited on the
-    /// root itself, as one on a server that Windows gives up on does. Every later package
-    /// under a root given up answers false without being read, so no further read is started
-    /// there. A drive whose kind has not answered within the limit is given up the same way
+    /// THE WAITS A ROOT CAN COST A PASS ARE BOUNDED. The root, a share, a drive or a path of
+    /// any other form (<see cref="RootOf"/>), is given up for the rest of the pass once a read
+    /// under it has not answered within the limit, or has answered false only after waiting
+    /// longer than <see cref="SourceFolderSlowFailure"/>: such a read waited on the root
+    /// itself, as one on a server that Windows gives up on does. It is given up as well once
+    /// the reads under it that each took longer than <see cref="SourceFolderWaitThreshold"/>
+    /// add up to more than <see cref="SourceFolderWaitBudget"/> (<see cref="AnswersWithin"/>).
+    /// So a root slow to answer every read is read for as long as that allows and no longer,
+    /// and one that answers slowly once, as a hard disk waking from standby can, goes on being
+    /// read. Every later package under a root given up answers false without being read, so
+    /// no further read is started there. A drive's kind is read under the same rules
     /// (<see cref="KindOf"/>). A read that answers false sooner leaves its root to be read as
     /// usual. Cancelling the pass ends the wait at once.
     /// </summary>
@@ -913,7 +917,6 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (pass.RootsNotAnswering.Contains(root)) return false;
 
         var identities = _fileIdentities!;
-        var waited = Stopwatch.StartNew();
         var answered = AnswersWithin(
             () =>
             {
@@ -929,10 +932,14 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                     _ => (false, null),
                 };
             },
-            pass.CancellationToken,
-            out (bool Settled, FileIdentity? Identity) answer);
+            root,
+            pass,
+            out (bool Settled, FileIdentity? Identity) answer,
+            out var took);
 
-        if (!answered || (!answer.Settled && waited.Elapsed > SourceFolderSlowFailure))
+        if (!answered) return false;
+
+        if (!answer.Settled && took > SourceFolderSlowFailure)
         {
             pass.RootsNotAnswering.Add(root);
             return false;
@@ -943,12 +950,19 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     }
 
     /// <summary>
-    /// Runs <paramref name="read"/> on a thread of its own and waits for it up to
-    /// <see cref="SourceFolderTimeLimit"/>: true with its answer where it answered in time,
-    /// false where it did not. A read that answers after the limit finishes on its own thread
+    /// Runs <paramref name="read"/>, a read under <paramref name="root"/>, on a thread of its
+    /// own and waits for it up to <see cref="SourceFolderTimeLimit"/>: true with its answer
+    /// where it answered in time, false where it did not, and in <paramref name="took"/> how
+    /// long it was waited for. A read that answers after the limit finishes on its own thread
     /// and its answer is not used. Cancelling ends the wait at once.
+    ///
+    /// THE ROOT IS GIVEN UP FOR THE PASS where the read has not answered in time. Where it
+    /// answered after longer than <see cref="SourceFolderWaitThreshold"/>, the time counts
+    /// towards the root's (<see cref="PassAnswers.TimeWaited"/>), and the root is given up
+    /// once that passes <see cref="SourceFolderWaitBudget"/>. The answer that took it past is
+    /// still used.
     /// </summary>
-    private bool AnswersWithin<T>(Func<T> read, CancellationToken cancellationToken, out T value)
+    private bool AnswersWithin<T>(Func<T> read, string root, PassAnswers pass, out T value, out TimeSpan took)
     {
         var answered = new TaskCompletionSource<(T Value, ExceptionDispatchInfo? Fault)>(
             TaskCreationOptions.RunContinuationsAsynchronously);
@@ -973,12 +987,24 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             IsBackground = true,
             Name = "Source package read",
         };
+        var waited = Stopwatch.StartNew();
         reader.Start();
 
-        if (!answered.Task.Wait(SourceFolderTimeLimit, cancellationToken))
+        var inTime = answered.Task.Wait(SourceFolderTimeLimit, pass.CancellationToken);
+        took = waited.Elapsed;
+
+        if (!inTime)
         {
+            pass.RootsNotAnswering.Add(root);
             value = default!;
             return false;
+        }
+
+        if (took > SourceFolderWaitThreshold)
+        {
+            var total = pass.TimeWaited.GetValueOrDefault(root) + took;
+            pass.TimeWaited[root] = total;
+            if (total > SourceFolderWaitBudget) pass.RootsNotAnswering.Add(root);
         }
 
         var (result, fault) = answered.Task.Result;
@@ -1103,21 +1129,18 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <summary>
     /// What <see cref="DriveKindOf"/> answers within the time limit for
     /// <paramref name="drive"/>, a drive letter and its colon, or null where it has not
-    /// answered by then. Asked once per drive per pass. A drive whose kind has not answered
-    /// is given up for the rest of the pass, as a root is once a package read under it has
-    /// not answered (<see cref="ReadSourcePackage"/>), so none of its packages is read.
+    /// answered by then. Asked once per drive per pass, and read as a package under the
+    /// drive is (<see cref="AnswersWithin"/>): a drive whose kind has not answered is given
+    /// up for the rest of the pass, so none of its packages is read, and a slow answer counts
+    /// towards the drive's time as a slow package read does.
     /// </summary>
     private DriveType? KindOf(string drive, PassAnswers pass)
     {
         if (!pass.DriveKinds.TryGetValue(drive, out var kind))
-        {
             pass.DriveKinds[drive] = kind =
-                AnswersWithin(() => DriveKindOf(drive), pass.CancellationToken, out var answered)
+                AnswersWithin(() => DriveKindOf(drive), drive, pass, out var answered, out _)
                     ? answered
                     : null;
-
-            if (kind is null) pass.RootsNotAnswering.Add(drive);
-        }
 
         return kind;
     }
@@ -1154,6 +1177,23 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// that one package will not open is given up with every package under it.
     /// </summary>
     internal TimeSpan SourceFolderSlowFailure { get; init; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// How long a read under a root can take before its time counts towards the root's
+    /// <see cref="SourceFolderWaitBudget"/>, so a read that answers promptly costs its root
+    /// nothing. Raise it and a root that answers every read a little under it costs that at
+    /// every package, without limit.
+    /// </summary>
+    internal TimeSpan SourceFolderWaitThreshold { get; init; } = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// How long, in one pass, the reads under one root that each took longer than
+    /// <see cref="SourceFolderWaitThreshold"/> can add up to before the root is given up for
+    /// the rest of the pass (<see cref="AnswersWithin"/>). Lower it and a root that is slow
+    /// but answering has more of the copies that depend on it kept; raise it and a root slow
+    /// to answer every read costs the pass that much longer.
+    /// </summary>
+    internal TimeSpan SourceFolderWaitBudget { get; init; } = TimeSpan.FromMinutes(1);
 
     /// <summary>
     /// The entries on one installation's source list, network or URL as
@@ -1900,12 +1940,20 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         /// <summary>
         /// Every root given up for this pass, under which no package is read
-        /// (<see cref="ReadSourcePackage"/>): one under which a source package's read has not
-        /// answered within the time limit, or has answered false only after waiting longer than
-        /// <see cref="SourceFolderSlowFailure"/>, and a drive whose kind has not answered within
-        /// the time limit (<see cref="KindOf"/>).
+        /// (<see cref="ReadSourcePackage"/>): one under which a read has not answered within the
+        /// time limit, a package read has answered false only after waiting longer than
+        /// <see cref="SourceFolderSlowFailure"/>, or the slow reads have added up to more than
+        /// <see cref="SourceFolderWaitBudget"/> (<see cref="AnswersWithin"/>). The reads under a
+        /// drive include the one that asks its kind (<see cref="KindOf"/>).
         /// </summary>
         internal HashSet<string> RootsNotAnswering { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// How long the reads under each root that each took longer than
+        /// <see cref="SourceFolderWaitThreshold"/> have taken in this pass, keyed as
+        /// <see cref="RootsNotAnswering"/> is (<see cref="AnswersWithin"/>).
+        /// </summary>
+        internal Dictionary<string, TimeSpan> TimeWaited { get; } = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Each drive's kind, or null where it did not answer within the time limit, once
