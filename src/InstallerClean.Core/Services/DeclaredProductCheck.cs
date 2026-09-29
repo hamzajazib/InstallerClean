@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.IO.Abstractions;
 using System.Runtime.ExceptionServices;
@@ -725,7 +726,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// that <see cref="InstallSourceOf"/> answers null for; and, for a package read
     /// here, one not on a local drive that would be a file directly in the Installer
     /// folder or where that cannot be established, one that exists and will not identify,
-    /// and one whose read has not answered within the time limit
+    /// one whose read has not answered within the time limit, and one under a drive, a share
+    /// or any other root (<see cref="RootOf"/>) given up for the pass
     /// (<see cref="ReadSourcePackage"/>). A source package that is not there is skipped,
     /// being no file.
     /// </summary>
@@ -867,24 +869,37 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// Reads the package at <paramref name="package"/>, a path built from a source folder,
     /// for <see cref="AddSourcePackages"/>, or for <see cref="WithPackagesItCouldBe"/> where
     /// the folder is on the network: true with its identity where it opens, true with null
-    /// where no file is there, and false where the copy is kept.
+    /// where no file is there, and false where the package cannot be ruled out.
     ///
     /// FALSE for a package that exists and will not identify; a read that has not answered
-    /// within <see cref="SourceFolderTimeLimit"/>; and, where
-    /// <paramref name="namesAFileInInstallerFolder"/> is given, a package that would be a
-    /// file directly in the Installer folder, or where that cannot be established. It is
-    /// given for every package but one on a local drive read for a product, which is
-    /// compared by its identity alone (<see cref="AddSourcePackages"/>).
+    /// within <see cref="SourceFolderTimeLimit"/>; a package under a root given up for the
+    /// pass, which is not read; and, where <paramref name="namesAFileInInstallerFolder"/> is
+    /// given, a package that would be a file directly in the Installer folder, or where that
+    /// cannot be established. It is given for every package but one on a local drive, which
+    /// is compared by its identity alone (<see cref="AddSourcePackages"/>).
+    ///
+    /// WHAT FALSE KEEPS IS WHAT THE PACKAGE WAS READ FOR. Read for the installations answering
+    /// for a product code (<see cref="PackagesOpenedBy"/>), it keeps every candidate declaring
+    /// that code. Read for the installations not ruled out as second copies
+    /// (<see cref="PackagesSecondCopiesOpen"/>), it keeps every installation package the
+    /// answer about its own product would let through. Read for one candidate whose name it
+    /// could be (<see cref="WithPackagesItCouldBe"/>), it keeps that candidate. A package on a
+    /// local drive is never left to be read by name (<see cref="ComparedByName"/>), so it is
+    /// read for one of the first two.
     ///
     /// THE READ IS WAITED FOR UP TO THE TIME LIMIT (<see cref="AnswersWithin"/>). A source
-    /// folder can be on a server that does not answer, and an open there waits until
-    /// Windows gives up on the server; the open itself takes no time limit. Once a package
-    /// on a network root, a share or a network drive (<see cref="IsNetworkRoot"/>), has not
-    /// answered within the limit, every later package under that root in the pass answers
-    /// false without being read, so a share that does not answer costs a pass the limit
-    /// once. A package on a local drive that has not answered keeps only its own file, and
-    /// the next package on that drive is read as usual. Cancelling the pass ends the wait
-    /// at once.
+    /// folder can be on a server that does not answer, or on a drive that does not, and an
+    /// open there waits until Windows gives up; the open itself takes no time limit.
+    ///
+    /// A ROOT THAT DOES NOT ANSWER COSTS A PASS ONE WAIT. The root, a share, a drive or a path
+    /// of any other form (<see cref="RootOf"/>), is given up for the rest of the pass once a
+    /// read under it has not answered within the limit, or has answered false only after
+    /// waiting longer than <see cref="SourceFolderSlowFailure"/>. Such a read waited on the
+    /// root itself, as one on a server that Windows gives up on does. Every later package
+    /// under a root given up answers false without being read, so no further read is started
+    /// there. A drive whose kind has not answered within the limit is given up the same way
+    /// (<see cref="KindOf"/>). A read that answers false sooner leaves its root to be read as
+    /// usual. Cancelling the pass ends the wait at once.
     /// </summary>
     private bool ReadSourcePackage(
         string package,
@@ -898,13 +913,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (pass.RootsNotAnswering.Contains(root)) return false;
 
         var identities = _fileIdentities!;
+        var waited = Stopwatch.StartNew();
         var answered = AnswersWithin(
             () =>
             {
-                // Where this is asked, a package that would be a file directly in the
-                // Installer folder keeps what it is read for: read for a product
-                // (AddSourcePackages), every candidate that product's packages are compared
-                // with; read for one candidate (WithPackagesItCouldBe), that one.
+                // Where the test is given, a package that would be a file directly in the
+                // Installer folder, or where that is not established, cannot be ruled out.
                 if (namesAFileInInstallerFolder is not null && namesAFileInInstallerFolder(package) is not false)
                     return (false, null);
 
@@ -918,9 +932,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             pass.CancellationToken,
             out (bool Settled, FileIdentity? Identity) answer);
 
-        if (!answered)
+        if (!answered || (!answer.Settled && waited.Elapsed > SourceFolderSlowFailure))
         {
-            if (IsNetworkRoot(root, pass)) pass.RootsNotAnswering.Add(root);
+            pass.RootsNotAnswering.Add(root);
             return false;
         }
 
@@ -1000,15 +1014,6 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     }
 
     /// <summary>
-    /// Whether <paramref name="root"/>, from <see cref="RootOf"/>, is on the network: a
-    /// share, or a drive letter that is not a local drive (<see cref="IsLocalDrive"/>). A
-    /// drive whose kind does not answer within the time limit counts as a network drive.
-    /// Any other root counts as local here.
-    /// </summary>
-    private bool IsNetworkRoot(string root, PassAnswers pass) =>
-        root.StartsWith(@"\\", StringComparison.Ordinal) || (IsDriveLetter(root) && !IsLocalDrive(root, pass));
-
-    /// <summary>
     /// Whether <paramref name="root"/>, from <see cref="RootOf"/>, is a drive letter that
     /// Windows reports as a local drive: fixed, removable, an optical drive or a RAM disk
     /// (<see cref="KindOf"/>). A drive whose kind does not answer within the time limit is
@@ -1028,9 +1033,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// A FOLDER ON THE NETWORK IS A SHARE OR A NETWORK DRIVE. A share is known by its
     /// spelling, <c>\\server\share</c> in any form <see cref="RootOf"/> reads. A drive letter
     /// is on the network where Windows reports it as a network drive
-    /// (<see cref="KindOf"/>); one it reports as anything else, or whose kind does not
-    /// answer within the time limit, is read for every candidate, and so is a path of any
-    /// other form.
+    /// (<see cref="KindOf"/>); one it reports as anything else is read for every candidate,
+    /// and so is a path of any other form. A drive whose kind does not answer within the
+    /// time limit is given up for the pass, and its packages are kept without being read.
     /// </summary>
     private bool ComparedByName(string package, IRegistryReader registry, PassAnswers pass)
     {
@@ -1098,15 +1103,21 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <summary>
     /// What <see cref="DriveKindOf"/> answers within the time limit for
     /// <paramref name="drive"/>, a drive letter and its colon, or null where it has not
-    /// answered by then. Asked once per drive per pass.
+    /// answered by then. Asked once per drive per pass. A drive whose kind has not answered
+    /// is given up for the rest of the pass, as a root is once a package read under it has
+    /// not answered (<see cref="ReadSourcePackage"/>), so none of its packages is read.
     /// </summary>
     private DriveType? KindOf(string drive, PassAnswers pass)
     {
         if (!pass.DriveKinds.TryGetValue(drive, out var kind))
+        {
             pass.DriveKinds[drive] = kind =
                 AnswersWithin(() => DriveKindOf(drive), pass.CancellationToken, out var answered)
                     ? answered
                     : null;
+
+            if (kind is null) pass.RootsNotAnswering.Add(drive);
+        }
 
         return kind;
     }
@@ -1127,9 +1138,22 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
     /// <summary>
     /// How long <see cref="ReadSourcePackage"/> waits for one source folder's package to
-    /// answer before the copy is kept.
+    /// answer, and <see cref="KindOf"/> for a drive's kind, before the root is given up for
+    /// the pass and what depended on it kept. Shorten it and a drive or a server that is
+    /// only slow to answer, a hard disk waking from standby among them, has every copy that
+    /// depends on it kept in the pass it is slow in. Lengthen it and a root that does not
+    /// answer at all costs each pass that much longer.
     /// </summary>
-    internal TimeSpan SourceFolderTimeLimit { get; init; } = TimeSpan.FromSeconds(5);
+    internal TimeSpan SourceFolderTimeLimit { get; init; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// How long a source folder's package read can take to answer false before its root is
+    /// given up for the pass as well (<see cref="ReadSourcePackage"/>). Raise it and a
+    /// server that Windows gives up on sooner is left to be read again, so every later
+    /// package under it can wait as long. Lower it and a root that is only slow to answer
+    /// that one package will not open is given up with every package under it.
+    /// </summary>
+    internal TimeSpan SourceFolderSlowFailure { get; init; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
     /// The entries on one installation's source list, network or URL as
@@ -1875,8 +1899,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         }
 
         /// <summary>
-        /// Every root, a share or a network drive, under which a source package's read has
-        /// not answered within the time limit in this pass (<see cref="ReadSourcePackage"/>).
+        /// Every root given up for this pass, under which no package is read
+        /// (<see cref="ReadSourcePackage"/>): one under which a source package's read has not
+        /// answered within the time limit, or has answered false only after waiting longer than
+        /// <see cref="SourceFolderSlowFailure"/>, and a drive whose kind has not answered within
+        /// the time limit (<see cref="KindOf"/>).
         /// </summary>
         internal HashSet<string> RootsNotAnswering { get; } = new(StringComparer.OrdinalIgnoreCase);
 

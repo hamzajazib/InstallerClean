@@ -3545,10 +3545,12 @@ public class DeclaredProductCheckTests
     // A source folder can be on a server that does not answer, where an open waits until
     // Windows gives up on it. The check waits for each source package's read up to its
     // time limit, and a read that has not answered by then keeps the copy as a read that
-    // failed does. Each test holds a read back for longer than the limit, and the answer
-    // it gives once released is the one that lets the copy through. A package on a share
-    // carries the name of the candidate it is read for, a package of another name there
-    // not being read for it (the tests after these).
+    // failed does. A drive or a share where one read has not answered, or has answered
+    // false only after a long wait, is not read again in the pass. Each test holds a read
+    // back for longer than the limit, and the answer it gives once released is the one that
+    // lets the copy through. A package on a share carries the name of the candidate it is
+    // read for, a package of another name there not being read for it (the tests after
+    // these).
 
     /// <summary>The time limit the tests below give the check.</summary>
     private static readonly TimeSpan ShortLimit = TimeSpan.FromMilliseconds(100);
@@ -3701,6 +3703,30 @@ public class DeclaredProductCheckTests
             { SourceFolderTimeLimit = ShortLimit, DriveKindOf = driveKind, NamesInFolderOf = NameOnly }
             .Screen([Package(Candidate), Package(OtherCandidate)], [], default, null, InInstallerFolder);
 
+    /// <summary>How long a read can take to answer false before its root is given up, in the tests of a slow answer.</summary>
+    private static readonly TimeSpan SlowFailure = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>A read held for longer than <see cref="SlowFailure"/> and far less than <see cref="HeldFor"/>.</summary>
+    private static readonly TimeSpan SlowAnswer = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// <see cref="ScreenBothCandidates"/> with the time limit at <see cref="HeldFor"/>, so a
+    /// held read answers within it, and a read answering false after <see cref="SlowFailure"/>
+    /// giving its root up.
+    /// </summary>
+    private static IReadOnlyList<DeclaredProductOutcome> ScreenBothCandidatesAnsweringSlowly(
+        (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+            ScriptedFileIdentities Files, MockFileSystem Disk) f,
+        HeldFileIdentities files) =>
+        new DeclaredProductCheck(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
+            {
+                SourceFolderTimeLimit = HeldFor,
+                SourceFolderSlowFailure = SlowFailure,
+                DriveKindOf = FixedDrive,
+                NamesInFolderOf = NameOnly,
+            }
+            .Screen([Package(Candidate), Package(OtherCandidate)], [], default, null, InInstallerFolder);
+
     [Theory]
     [InlineData(@"\\nas\share\b\", false)]
     [InlineData(@"\\NAS\SHARE\b\", false)]
@@ -3722,23 +3748,148 @@ public class DeclaredProductCheckTests
         Assert.Equal(read, files.Calls.Contains(otherPackage));
     }
 
-    [Fact]
-    public void A_local_drive_whose_source_package_has_not_answered_still_has_its_next_source_package_read()
+    [Theory]
+    [InlineData(DriveType.Fixed)]
+    [InlineData(DriveType.Removable)]
+    [InlineData(DriveType.CDRom)]
+    [InlineData(DriveType.Ram)]
+    public void A_source_package_under_a_local_drive_that_has_not_answered_is_kept_for_the_rest_of_the_pass_without_being_read(
+        DriveType driveKind)
     {
+        // The second program's folder is on the same drive, its letter in lower case.
         var asked = new ConcurrentQueue<string>();
-        var (f, files, otherPackage) = TwoProductsBesideAHeldSource(@"D:\Setup\a\", @"D:\Setup\b\");
+        var (f, files, otherPackage) = TwoProductsBesideAHeldSource(@"D:\Setup\a\", @"d:\Setup\b\");
         using var _ = files;
 
         var outcomes = ScreenBothCandidates(f, files, drive =>
         {
             asked.Enqueue(drive);
-            return DriveType.Fixed;
+            return driveKind;
         });
 
-        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcomes[0]);
-        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcomes[1]);
-        Assert.Contains(otherPackage, files.Calls);
+        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
+        Assert.DoesNotContain(otherPackage, files.Calls);
         Assert.Equal(new[] { "D:" }, asked);
+    }
+
+    [Fact]
+    public void A_source_package_on_another_drive_is_read_as_usual_after_a_drive_has_not_answered()
+    {
+        var (f, files, otherPackage) = TwoProductsBesideAHeldSource(@"D:\Setup\a\", @"E:\Setup\b\");
+        using var _ = files;
+
+        var outcomes = ScreenBothCandidates(f, files, FixedDrive);
+
+        Assert.Equal(
+            new[] { DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile },
+            outcomes);
+        Assert.Contains(otherPackage, files.Calls);
+    }
+
+    [Fact]
+    public void A_local_drive_kept_for_the_rest_of_one_pass_is_read_again_in_the_next()
+    {
+        var (f, files, otherPackage) = TwoProductsBesideAHeldSource(@"D:\Setup\a\", @"D:\Setup\b\");
+        using var _ = files;
+        var check = new DeclaredProductCheck(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
+            { SourceFolderTimeLimit = ShortLimit, DriveKindOf = FixedDrive, NamesInFolderOf = NameOnly };
+
+        check.Screen([Package(Candidate), Package(OtherCandidate)], [], default, null, InInstallerFolder);
+        Assert.DoesNotContain(otherPackage, files.Calls);
+
+        var outcome = check.Screen([Package(OtherCandidate)], [], default, null, InInstallerFolder)[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome);
+        Assert.Contains(otherPackage, files.Calls);
+    }
+
+    [Fact]
+    public void A_drive_that_has_not_answered_for_a_second_copy_is_not_read_for_a_program_later_in_the_pass()
+    {
+        // The second copy was installed from D:\Setup\, where its package is held, and
+        // product C from D:\Setup\c\, where its package opens as a file other than its copy
+        // and its cached package. The second copy's package is read first, for the candidate
+        // declaring product B, which is not installed.
+        const string ProductC = "{44444444-4444-4444-4444-444444444444}";
+        const string CopyOfC = @"C:\Windows\Installer\c3.msi";
+        const string CachedC = @"C:\Windows\Installer\c4.msi";
+        const string PackageOfC = @"D:\Setup\c\c2.msi";
+        var f = AMarkedSecondCopy();
+        f.Msi.Installed(ProductC);
+        f.Msi.RecordsPackage(ProductC, null, MsiInstallContext.Machine, CachedC);
+        f.Msi.RecordsSources(ProductC, null, MsiInstallContext.Machine, "c2.msi", @"D:\Setup\c\");
+        f.Packages.Declares(CopyOfC, ProductC);
+        f.Packages.Declares(CachedC, ProductC);
+        f.Files.Opens(CopyOfC, 11);
+        f.Files.Opens(CachedC, 12);
+        f.Files.Opens(PackageOfC, 13);
+        f.Disk.AddFile(CopyOfC, new MockFileData(new byte[100]));
+        f.Disk.AddFile(CachedC, new MockFileData(new byte[100]));
+        using var files = new HeldFileIdentities(f.Files);
+        files.Holds(SetupPackage, HeldFor);
+
+        var outcomes = new DeclaredProductCheck(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
+            { SourceFolderTimeLimit = ShortLimit, DriveKindOf = FixedDrive, NamesInFolderOf = NameOnly }
+            .Screen([Package(OtherCandidate), Package(CopyOfC)], f.Listed, default, null, InInstallerFolder);
+
+        Assert.Equal(
+            new[] { DeclaredProductOutcome.SecondCopyUnestablished, DeclaredProductOutcome.DeclaredProductInstalled },
+            outcomes);
+        Assert.Single(files.Started, read => read == SetupPackage);
+        Assert.DoesNotContain(PackageOfC, files.Calls);
+    }
+
+    [Theory]
+    [InlineData(@"D:\Setup\a\", @"D:\Setup\b\")]
+    [InlineData(@"\\nas\share\a\", @"\\nas\share\b\")]
+    public void A_root_whose_source_package_is_refused_only_after_a_long_wait_is_kept_for_the_rest_of_the_pass_without_being_read(
+        string heldFolder, string otherFolder)
+    {
+        // The held package answers, within the time limit, that it will not open.
+        var (f, files, otherPackage) = TwoProductsBesideAHeldSource(heldFolder, otherFolder);
+        using var _ = files;
+        f.Files.Answers(heldFolder + CandidateName, FileIdentityRead.OpenRefused);
+        files.Holds(heldFolder + CandidateName, SlowAnswer);
+
+        var outcomes = ScreenBothCandidatesAnsweringSlowly(f, files);
+
+        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
+        Assert.DoesNotContain(otherPackage, files.Calls);
+    }
+
+    [Theory]
+    [InlineData(@"D:\Setup\a\", @"D:\Setup\b\")]
+    [InlineData(@"\\nas\share\a\", @"\\nas\share\b\")]
+    public void A_root_whose_source_package_is_refused_at_once_still_has_its_next_source_package_read(
+        string heldFolder, string otherFolder)
+    {
+        var (f, files, otherPackage) = TwoProductsBesideAHeldSource(heldFolder, otherFolder);
+        using var _ = files;
+        f.Files.Answers(heldFolder + CandidateName, FileIdentityRead.OpenRefused);
+        files.Holds(heldFolder + CandidateName, TimeSpan.Zero);
+
+        var outcomes = ScreenBothCandidatesAnsweringSlowly(f, files);
+
+        Assert.Equal(
+            new[] { DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile },
+            outcomes);
+        Assert.Contains(otherPackage, files.Calls);
+    }
+
+    [Theory]
+    [InlineData(@"D:\Setup\a\", @"D:\Setup\b\")]
+    [InlineData(@"\\nas\share\a\", @"\\nas\share\b\")]
+    public void A_root_whose_source_package_opens_after_a_long_wait_still_has_its_next_source_package_read(
+        string heldFolder, string otherFolder)
+    {
+        var (f, files, otherPackage) = TwoProductsBesideAHeldSource(heldFolder, otherFolder);
+        using var _ = files;
+        files.Holds(heldFolder + CandidateName, SlowAnswer);
+
+        var outcomes = ScreenBothCandidatesAnsweringSlowly(f, files);
+
+        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
+        Assert.Contains(otherPackage, files.Calls);
     }
 
     [Fact]
@@ -3754,20 +3905,23 @@ public class DeclaredProductCheckTests
     }
 
     [Fact]
-    public void A_drive_whose_kind_does_not_answer_within_the_time_limit_is_kept_like_a_network_drive()
+    public void A_drive_whose_kind_does_not_answer_within_the_time_limit_is_kept_for_the_rest_of_the_pass_without_being_read()
     {
         using var released = new ManualResetEventSlim();
-        var (f, files, otherPackage) = TwoProductsBesideAHeldSource(@"Z:\Setup\a\", @"Z:\Setup\b\");
-        using var _ = files;
+        var asked = new ConcurrentQueue<string>();
+        var (f, files, _) = TwoProductsBesideAHeldSource(@"Z:\Setup\a\", @"Z:\Setup\b\");
+        using var held = files;
 
-        var outcomes = ScreenBothCandidates(f, files, _ =>
+        var outcomes = ScreenBothCandidates(f, files, drive =>
         {
+            asked.Enqueue(drive);
             released.Wait(HeldFor);
             return DriveType.Fixed;
         });
 
         Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
-        Assert.DoesNotContain(otherPackage, files.Calls);
+        Assert.DoesNotContain(files.Calls, read => read.StartsWith(@"Z:\", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(new[] { "Z:" }, asked);
         released.Set();
     }
 
@@ -3979,33 +4133,6 @@ public class DeclaredProductCheckTests
         Assert.DoesNotContain(folder + "c.msi", f.Files.Reads);
     }
 
-    [Fact]
-    public void Every_copy_is_kept_when_a_package_on_a_drive_whose_kind_does_not_answer_is_in_the_Installer_folder()
-    {
-        using var released = new ManualResetEventSlim();
-        var f = ACopyBesideTheRecordedPackage();
-        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, "c.msi", @"Z:\");
-        AddSecondCandidate(f);
-        f.Files.Opens(@"Z:\c.msi", 5);
-
-        var outcomes = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
-            {
-                SourceFolderTimeLimit = ShortLimit,
-                DriveKindOf = _ =>
-                {
-                    released.Wait(HeldFor);
-                    return DriveType.Fixed;
-                },
-                NamesInFolderOf = NameOnly,
-            }
-            .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null,
-                path => path.StartsWith(@"Z:\", StringComparison.OrdinalIgnoreCase) ? true : InInstallerFolder(path));
-
-        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
-        Assert.DoesNotContain(@"Z:\c.msi", f.Files.Reads);
-        released.Set();
-    }
-
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -4126,29 +4253,6 @@ public class DeclaredProductCheckTests
 
         Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome);
         Assert.Contains(package, f.Files.Reads);
-    }
-
-    [Fact]
-    public void A_package_on_a_drive_whose_kind_does_not_answer_within_the_time_limit_is_read_whatever_its_name()
-    {
-        using var released = new ManualResetEventSlim();
-        var (f, package) = ACopyBesideASource(@"Z:\apps\", SetupName);
-
-        var outcome = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
-            {
-                SourceFolderTimeLimit = ShortLimit,
-                DriveKindOf = _ =>
-                {
-                    released.Wait(HeldFor);
-                    return DriveType.Network;
-                },
-                NamesInFolderOf = NameOnly,
-            }
-            .Screen([Package(Candidate)], [], default, null, InInstallerFolder)[0];
-
-        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome);
-        Assert.Contains(package, f.Files.Reads);
-        released.Set();
     }
 
     [Theory]
