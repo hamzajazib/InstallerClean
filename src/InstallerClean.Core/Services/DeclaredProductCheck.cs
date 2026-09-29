@@ -355,10 +355,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// installation's packages can fail to be seen reaches it: a <c>LocalPackage</c> read
     /// that failed or came back empty, a value that names nothing, names a folder, will not
     /// open to an identity, or names a file that yields no product code; any source
-    /// <see cref="AddSourcePackages"/> cannot rule out, a per-user-unmanaged context and a
-    /// source in the Installer folder among them; and a check built without its file
-    /// readers, having no way to look. One such installation is enough, because any
-    /// candidate could be the package it opens.
+    /// <see cref="AddSourcePackages"/> cannot rule out, a per-user-unmanaged context among
+    /// them; and a check built without its file readers, having no way to look. One such
+    /// installation is enough, because any candidate could be the package it opens.
     ///
     /// EACH INSTALLATION IS READ BY THE CODE IT IS REGISTERED UNDER, in its own account
     /// and context, and its cached package is not required to declare that code.
@@ -705,16 +704,25 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// through a network path to this PC or to another network path
     /// (<see cref="RemoteLinksCanBeFollowed"/>).
     ///
+    /// A PACKAGE ON A LOCAL DRIVE IS COMPARED BY ITS IDENTITY ALONE, in the Installer folder
+    /// as in any other folder (<see cref="IsLocalDrive"/>). The identity read follows a link,
+    /// a short name or another spelling of the folder to the file the path opens, so the
+    /// candidate that opens as that file is the one kept, and every other copy of the
+    /// product goes on to the rest of the check. A package read here on any other root is
+    /// first put to the Installer-folder test, and one that would be a file directly in the
+    /// Installer folder keeps every copy.
+    ///
     /// FALSE, WHICH KEEPS THE FILE, for: no way to compare against the Installer folder
     /// or to read the registry; a per-user-unmanaged account and context, whose list is
     /// not read; a package name, a source list or a property of the list that will not
     /// read; an empty package name, or one holding a '\', a '/', a ':', a '%' or a null;
     /// each of the five above; a source entry holding a null; an <c>InstallSource</c>
     /// that <see cref="InstallSourceOf"/> answers null for; and, for a package read
-    /// here, one that would be a file directly in the Installer folder or where that
-    /// cannot be established, one that exists and will not identify, and one whose read
-    /// has not answered within the time limit (<see cref="ReadSourcePackage"/>). A
-    /// source package that is not there is skipped, being no file.
+    /// here, one not on a local drive that would be a file directly in the Installer
+    /// folder or where that cannot be established, one that exists and will not identify,
+    /// and one whose read has not answered within the time limit
+    /// (<see cref="ReadSourcePackage"/>). A source package that is not there is skipped,
+    /// being no file.
     /// </summary>
     private bool AddSourcePackages(
         string code,
@@ -802,7 +810,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                 continue;
             }
 
-            if (!ReadSourcePackage(package, pass, namesAFileInInstallerFolder, out var identity)) return false;
+            var inInstallerFolder = IsLocalDrive(RootOf(package), pass) ? null : namesAFileInInstallerFolder;
+            if (!ReadSourcePackage(package, pass, inInstallerFolder, out var identity)) return false;
             if (identity is { } read) opened.Add(read);
         }
 
@@ -854,9 +863,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// the folder is on the network: true with its identity where it opens, true with null
     /// where no file is there, and false where the copy is kept.
     ///
-    /// FALSE for a package that would be a file directly in the Installer folder, or where
-    /// that cannot be established; a package that exists and will not identify; and a read
-    /// that has not answered within <see cref="SourceFolderTimeLimit"/>.
+    /// FALSE for a package that exists and will not identify; a read that has not answered
+    /// within <see cref="SourceFolderTimeLimit"/>; and, where
+    /// <paramref name="namesAFileInInstallerFolder"/> is given, a package that would be a
+    /// file directly in the Installer folder, or where that cannot be established. It is
+    /// given for every package but one on a local drive read for a product, which is
+    /// compared by its identity alone (<see cref="AddSourcePackages"/>).
     ///
     /// THE READ IS WAITED FOR UP TO THE TIME LIMIT (<see cref="AnswersWithin"/>). A source
     /// folder can be on a server that does not answer, and an open there waits until
@@ -871,7 +883,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     private bool ReadSourcePackage(
         string package,
         PassAnswers pass,
-        Func<string, bool?> namesAFileInInstallerFolder,
+        Func<string, bool?>? namesAFileInInstallerFolder,
         out FileIdentity? identity)
     {
         identity = null;
@@ -883,11 +895,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var answered = AnswersWithin(
             () =>
             {
-                // A source in the Installer folder keeps what it is read for. Read for a
-                // product (AddSourcePackages), it keeps every copy of the product, not only
-                // the one it names: the folder it was installed from is the cache itself.
-                // Read for one candidate (WithPackagesItCouldBe), it keeps that one.
-                if (namesAFileInInstallerFolder(package) is not false) return (false, null);
+                // Where this is asked, a package that would be a file directly in the
+                // Installer folder keeps what it is read for: read for a product
+                // (AddSourcePackages), every candidate that product's packages are compared
+                // with; read for one candidate (WithPackagesItCouldBe), that one.
+                if (namesAFileInInstallerFolder is not null && namesAFileInInstallerFolder(package) is not false)
+                    return (false, null);
 
                 return identities.ReadOutcome(package, out var read) switch
                 {
@@ -982,19 +995,22 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
     /// <summary>
     /// Whether <paramref name="root"/>, from <see cref="RootOf"/>, is on the network: a
-    /// share, or a drive letter that Windows does not report as a local drive, one it
-    /// reports as fixed, removable, an optical drive or a RAM disk (<see cref="KindOf"/>).
-    /// A drive whose kind does not answer within the time limit counts as a network drive.
-    /// Any other root counts as local.
+    /// share, or a drive letter that is not a local drive (<see cref="IsLocalDrive"/>). A
+    /// drive whose kind does not answer within the time limit counts as a network drive.
+    /// Any other root counts as local here.
     /// </summary>
-    private bool IsNetworkRoot(string root, PassAnswers pass)
-    {
-        if (root.StartsWith(@"\\", StringComparison.Ordinal)) return true;
-        if (!IsDriveLetter(root)) return false;
+    private bool IsNetworkRoot(string root, PassAnswers pass) =>
+        root.StartsWith(@"\\", StringComparison.Ordinal) || (IsDriveLetter(root) && !IsLocalDrive(root, pass));
 
-        return KindOf(root, pass)
-            is not (DriveType.Fixed or DriveType.Removable or DriveType.CDRom or DriveType.Ram);
-    }
+    /// <summary>
+    /// Whether <paramref name="root"/>, from <see cref="RootOf"/>, is a drive letter that
+    /// Windows reports as a local drive: fixed, removable, an optical drive or a RAM disk
+    /// (<see cref="KindOf"/>). A drive whose kind does not answer within the time limit is
+    /// not, and neither is a root of any other form.
+    /// </summary>
+    private bool IsLocalDrive(string root, PassAnswers pass) =>
+        IsDriveLetter(root)
+        && KindOf(root, pass) is DriveType.Fixed or DriveType.Removable or DriveType.CDRom or DriveType.Ram;
 
     /// <summary>
     /// Whether the package at <paramref name="package"/> is left to be read for each

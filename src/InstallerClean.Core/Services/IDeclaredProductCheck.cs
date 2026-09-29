@@ -251,26 +251,26 @@ public enum DeclaredProductOutcome
     /// read, one naming a folder or a file that is absent or cannot be identified,
     /// one naming a file that declares another product, and one naming this very
     /// file under another spelling. It covers a source list or package name that will
-    /// not read, a source in the Installer folder itself, a source whose package is
-    /// this file, and a source that cannot be resolved, whose package will not identify
-    /// or whose package does not answer within the check's time limit, and an
-    /// installation in a per-user-unmanaged context, whose source list
+    /// not read, a source whose package is this file, will not identify or does not
+    /// answer within the check's time limit, a source not on a local drive that is the
+    /// Installer folder itself or cannot be resolved, and an installation in a
+    /// per-user-unmanaged context, whose source list
     /// is not read. It covers a source list holding a URL, an entry naming an
     /// environment variable, a media package path or a package name naming a folder, a
     /// drive, a stream or a variable, or holding a null, one whose source used last is not
     /// a network entry on it,
     /// and one whose registry key does not hold what the API returned for it, package
     /// name included, or holds that name as anything but a REG_SZ. It covers an
-    /// <c>InstallSource</c> that is the Installer folder itself, whose package is this
-    /// file, will not identify or does not answer within the time limit, that will not
-    /// read, that the registry holds otherwise
+    /// <c>InstallSource</c> whose package is this file, will not identify or does not
+    /// answer within the time limit, one not on a local drive that is the Installer folder
+    /// itself, and one that will not read, that the registry holds otherwise
     /// than the API answers it or as anything but a REG_SZ, that names an environment
     /// variable, or that starts neither with a drive letter, a ':' and a '\' nor with two
     /// '\'. A source or an <c>InstallSource</c> in a folder on the network covers this
     /// only where its package name could be this file's name or short name, or where
     /// Windows is set to follow a symbolic link reached through a network path to this PC
-    /// or to another network path. In each of them the check cannot see which package
-    /// that installation opens, so this file could be it. A check constructed without its
+    /// or to another network path. In each of them this file is, or could be, the package
+    /// that installation opens. A check constructed without its
     /// two file readers or its registry reader, or screening without the Installer folder
     /// to compare against, answers this for every installed product, having no way to
     /// look.

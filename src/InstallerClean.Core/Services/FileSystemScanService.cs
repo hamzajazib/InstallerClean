@@ -1387,10 +1387,10 @@ public sealed class FileSystemScanService : IFileSystemScanService
                     IsMilestone: false, Position: reached, Total: total));
         }
 
-        // The folder a product's source list is compared against is the root this run
-        // resolved, the one every candidate was judged against, and the installations
-        // every answer about a product is held against are the ones this run's
-        // enumeration listed.
+        // The Installer folder the screen compares a source's package against is the
+        // root this run resolved, the one every candidate was judged against, and the
+        // installations every answer about a product is held against are the ones this
+        // run's enumeration listed.
         var outcomes = _declaredProducts.Screen(
             candidates, installations, cancellationToken, recordRefusal,
             path => InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(path, cacheRoot),

@@ -24,12 +24,10 @@ namespace InstallerClean.Tests.Services;
 /// POSITIVE answer that Windows does not hold the declared product, and every
 /// installation of that product recording a package that is present and is another
 /// file, with none of them per user and unmanaged and no source of it reaching the
-/// Installer folder or the file. For a patch the same two: a POSITIVE answer that
-/// Windows holds no registration of the declared patch, and every registration of it
-/// recording a cached copy that is present and is another file, with none of them per
-/// user and unmanaged and no source of the patch reaching the Installer folder or the
-/// file. Either way, every source list read has to be held in the registry as the API
-/// returns it and hold no URL. Every inability keeps the file.
+/// file. Every source list read has to be held in the registry as the API returns it and
+/// hold no URL. For a patch the same two: a POSITIVE answer that Windows holds no
+/// registration of the declared patch, and every registration of it recording a cached
+/// copy that is present and is another file. Every inability keeps the file.
 ///
 /// THE FAKES THROW ON ANYTHING NO TEST SCRIPTED, which is the point of them rather
 /// than strictness. A fake answering an unscripted question with a plausible default
@@ -661,12 +659,100 @@ public class DeclaredProductCheckTests
     // the fixture above, which lets the copy through, with one thing changed.
 
     [Fact]
-    public void A_copy_is_kept_when_its_product_was_installed_from_the_Installer_folder()
+    public void A_source_in_the_Installer_folder_keeps_the_copy_it_opens_as_and_lets_another_copy_through()
+    {
+        // Product A installed from c.msi in the Installer folder, which is the second copy.
+        // The first copy is another file and goes on to the rest of the check. The
+        // Installer-folder test is not asked about a package on a local drive.
+        var asked = new List<string>();
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, "c.msi", InstallerFolder + @"\");
+        AddSecondCandidate(f);
+
+        var outcomes = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+            .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null, path =>
+            {
+                asked.Add(path);
+                return InInstallerFolder(path);
+            });
+
+        Assert.Equal(
+            new[] { DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, DeclaredProductOutcome.DeclaredProductInstalled },
+            outcomes);
+        Assert.Empty(asked);
+    }
+
+    [Theory]
+    [InlineData(@"C:\WINDOWS\Installer\", "a.msi")]
+    [InlineData(@"C:\WINDOWS\INSTAL~1\", "a.msi")]
+    [InlineData(@"\\?\C:\Windows\Installer\", "a.msi")]
+    [InlineData(@"C:\Windows\Installer\", "A~1.MSI")]
+    [InlineData(@"C:\Windows\Installer\", "c.msi")]
+    [InlineData(@"D:\Linked\", "a.msi")]
+    [InlineData(@"D:\Setup\", "c.msi")]
+    public void A_package_on_a_local_drive_that_opens_as_the_copy_keeps_it_however_its_folder_and_name_are_spelled(
+        string folder, string packageName)
+    {
+        // The Installer folder in capitals, by its short name and through the long-path
+        // prefix; the copy by its short name; a name in the Installer folder that opens as
+        // the copy through a link; a folder elsewhere linked to the Installer folder; and a
+        // file elsewhere linked to the copy. The Installer-folder test answers that each
+        // package is in it, and the file the package opens as decides.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, packageName, folder);
+        f.Files.Opens(folder + packageName, 1);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f, _ => true));
+        Assert.Contains(folder + packageName, f.Files.Reads);
+    }
+
+    [Fact]
+    public void A_source_in_the_Installer_folder_holding_no_file_by_its_package_name_keeps_no_copy()
     {
         var f = ACopyBesideTheRecordedPackage();
         f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, "c.msi", InstallerFolder + @"\");
+        f.Files.Answers(InstallerFolder + @"\c.msi", FileIdentityRead.NamesNothing);
 
-        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+    }
+
+    [Theory]
+    [InlineData(FileIdentityRead.OpenRefused)]
+    [InlineData(FileIdentityRead.IdentityUnavailable)]
+    [InlineData(FileIdentityRead.Faulted)]
+    [InlineData(FileIdentityRead.NotAPath)]
+    public void Every_copy_is_kept_when_the_package_in_the_Installer_folder_its_product_was_installed_from_will_not_identify(
+        FileIdentityRead outcome)
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, "c.msi", InstallerFolder + @"\");
+        AddSecondCandidate(f);
+        f.Files.Answers(SecondCandidate, outcome);
+
+        var outcomes = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+            .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null, InInstallerFolder);
+
+        Assert.All(outcomes, o => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, o));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    [InlineData(null)]
+    public void A_package_on_a_local_drive_is_compared_by_its_identity_whatever_the_Installer_folder_test_would_answer(
+        bool? answer)
+    {
+        var asked = new List<string>();
+        var f = ACopyBesideTheRecordedPackage();
+
+        var outcome = ScreenTheCopy(f, path =>
+        {
+            asked.Add(path);
+            return answer;
+        });
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome);
+        Assert.Empty(asked);
     }
 
     [Fact]
@@ -677,14 +763,6 @@ public class DeclaredProductCheckTests
         f.Files.Opens(SetupPackage, 1);
 
         Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
-    }
-
-    [Fact]
-    public void A_copy_is_kept_when_whether_a_source_is_in_the_Installer_folder_is_not_established()
-    {
-        var f = ACopyBesideTheRecordedPackage();
-
-        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f, _ => null));
     }
 
     [Fact]
@@ -809,23 +887,24 @@ public class DeclaredProductCheckTests
     }
 
     [Fact]
-    public void A_copy_is_kept_when_the_second_source_on_its_list_is_the_Installer_folder()
+    public void A_second_source_in_the_Installer_folder_keeps_the_copy_it_opens_as_and_lets_another_copy_through()
     {
-        // The first source holds no package, so the list's first entry alone would let
-        // the copy through. The second is the Installer folder.
-        var asked = new List<string>();
+        // The first source holds no package, so the list's first entry alone would let both
+        // copies through. The second is the Installer folder, whose package is the second
+        // copy.
         var f = ACopyBesideTheRecordedPackage();
-        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, SetupName,
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, "c.msi",
             SetupFolder, InstallerFolder + @"\");
+        f.Files.Answers(SetupFolder + "c.msi", FileIdentityRead.NamesNothing);
+        AddSecondCandidate(f);
 
-        var outcome = ScreenTheCopy(f, path =>
-        {
-            asked.Add(path);
-            return InInstallerFolder(path);
-        });
+        var outcomes = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+            .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null, InInstallerFolder);
 
-        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome);
-        Assert.Contains(InstallerFolder + @"\" + SetupName, asked);
+        Assert.Equal(
+            new[] { DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, DeclaredProductOutcome.DeclaredProductInstalled },
+            outcomes);
+        Assert.Contains(SetupFolder + "c.msi", f.Files.Reads);
     }
 
     [Fact]
@@ -1408,20 +1487,23 @@ public class DeclaredProductCheckTests
     private const string OtherPackage = @"D:\Other\setup.msi";
 
     [Fact]
-    public void A_copy_is_kept_when_the_folder_its_product_was_installed_from_is_the_Installer_folder()
+    public void The_Installer_folder_as_the_folder_its_product_was_installed_from_keeps_the_copy_it_opens_as()
     {
-        var asked = new List<string>();
+        // The package there is setup.msi, a second copy of product A; the first copy is
+        // another file.
+        const string Named = @"C:\Windows\Installer\setup.msi";
         var f = ACopyBesideTheRecordedPackage();
         f.Msi.RecordsInstallSource(ProductA, null, MsiInstallContext.Machine, InstallerFolder + @"\");
+        f.Packages.Declares(Named, ProductA);
+        f.Files.Opens(Named, 5);
+        f.Disk.AddFile(Named, new MockFileData(new byte[100]));
 
-        var outcome = ScreenTheCopy(f, path =>
-        {
-            asked.Add(path);
-            return InInstallerFolder(path);
-        });
+        var outcomes = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+            .Screen([Package(Candidate), Package(Named)], [], default, null, InInstallerFolder);
 
-        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome);
-        Assert.Contains(InstallerFolder + @"\" + SetupName, asked);
+        Assert.Equal(
+            new[] { DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, DeclaredProductOutcome.DeclaredProductInstalled },
+            outcomes);
     }
 
     [Fact]
@@ -2834,12 +2916,12 @@ public class DeclaredProductCheckTests
     [Fact]
     public void A_second_copy_in_any_context_is_asked_about_its_sources_by_the_code_it_is_registered_under()
     {
-        // A per-machine second copy installed from a file in the Installer folder. Its
-        // source list is read, by its own code, and names that folder, so the candidate is
-        // kept. The fake answers no read of product A, so a source read by the declared
-        // code fails the test rather than passing it.
+        // A per-machine second copy installed from the candidate, in the Installer folder.
+        // Its source list is read, by its own code, and its package there is the candidate,
+        // so the candidate is kept. The fake answers no read of product A, so a source read
+        // by the declared code fails the test rather than passing it.
         var f = ACopyBesideASecondCopy(MsiInstallContext.Machine);
-        f.Msi.RecordsSources(SecondCopy, null, MsiInstallContext.Machine, "setup.msi", InstallerFolder + @"\");
+        f.Msi.RecordsSources(SecondCopy, null, MsiInstallContext.Machine, "a.msi", InstallerFolder + @"\");
 
         var outcome = ScreenBesideTheSecondCopy(f)[0];
 
@@ -3234,15 +3316,27 @@ public class DeclaredProductCheckTests
     }
 
     [Fact]
-    public void Every_installation_package_is_kept_beside_a_second_copy_installed_from_the_Installer_folder()
+    public void A_second_copy_installed_from_the_Installer_folder_keeps_the_installation_package_it_opens_as()
     {
+        // Installed from c.msi in the Installer folder, a third candidate. The other two are
+        // other files and keep the answers their own codes gave.
+        const string Named = @"C:\Windows\Installer\c.msi";
         var f = AMarkedSecondCopy();
         f.Msi.RecordsSources(SecondCopy, null, MsiInstallContext.Machine, "c.msi", InstallerFolder + @"\");
+        f.Packages.Declares(Named, ProductA);
+        f.Files.Opens(Named, 5);
+        f.Disk.AddFile(Named, new MockFileData(new byte[100]));
 
-        var outcomes = ScreenBesideTheSecondCopy(f, [Package(Candidate), Package(OtherCandidate)]);
+        var outcomes = ScreenBesideTheSecondCopy(f, [Package(Candidate), Package(OtherCandidate), Package(Named)]);
 
-        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, outcome));
-        Assert.All(outcomes, outcome => Assert.True(outcome.Withholds()));
+        Assert.Equal(
+            new[]
+            {
+                DeclaredProductOutcome.DeclaredProductNotInstalled,
+                DeclaredProductOutcome.DeclaredProductNotInstalled,
+                DeclaredProductOutcome.DeclaredProductInstalled,
+            },
+            outcomes);
     }
 
     [Fact]
@@ -3369,7 +3463,8 @@ public class DeclaredProductCheckTests
         var f = AMarkedSecondCopy();
         f.Msi.Installed(ProductA);
         f.Msi.RecordsPackage(ProductA, null, MsiInstallContext.Machine, string.Empty);
-        f.Msi.RecordsSources(SecondCopy, null, MsiInstallContext.Machine, "c.msi", InstallerFolder + @"\");
+        f.Msi.RecordsSources(SecondCopy, null, MsiInstallContext.Machine, SetupName, OtherFolder);
+        f.Files.Answers(OtherPackage, FileIdentityRead.OpenRefused);
 
         var outcome = ScreenBesideTheSecondCopy(f)[0];
 
@@ -3380,10 +3475,11 @@ public class DeclaredProductCheckTests
     public void A_candidate_its_own_product_would_let_through_is_kept_where_a_second_copys_packages_cannot_be_seen()
     {
         // The other half of the test above: product A caches another file, which alone
-        // lets the candidate through.
+        // lets the candidate through. The second copy's source package will not identify.
         var f = AMarkedSecondCopy();
         AlsoInstallProductA(f);
-        f.Msi.RecordsSources(SecondCopy, null, MsiInstallContext.Machine, "c.msi", InstallerFolder + @"\");
+        f.Msi.RecordsSources(SecondCopy, null, MsiInstallContext.Machine, SetupName, OtherFolder);
+        f.Files.Answers(OtherPackage, FileIdentityRead.OpenRefused);
 
         var outcome = ScreenBesideTheSecondCopy(f)[0];
 
@@ -3398,7 +3494,8 @@ public class DeclaredProductCheckTests
         var f = AMarkedSecondCopy();
         AlsoInstallProductA(f);
         f.Files.Opens(Recorded, 1);
-        f.Msi.RecordsSources(SecondCopy, null, MsiInstallContext.Machine, "c.msi", InstallerFolder + @"\");
+        f.Msi.RecordsSources(SecondCopy, null, MsiInstallContext.Machine, SetupName, OtherFolder);
+        f.Files.Answers(OtherPackage, FileIdentityRead.OpenRefused);
 
         var outcome = ScreenBesideTheSecondCopy(f)[0];
 
@@ -3829,6 +3926,84 @@ public class DeclaredProductCheckTests
             new[] { DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, DeclaredProductOutcome.DeclaredProductInstalled },
             outcomes);
         Assert.Equal(new[] { AdminShare + "c.msi" }, asked);
+    }
+
+    [Theory]
+    [InlineData(@"\\localhost\C$\Windows\Installer\", DriveType.Fixed, true)]
+    [InlineData(@"Z:\", DriveType.Network, true)]
+    [InlineData(@"Z:\", DriveType.Unknown, false)]
+    [InlineData(@"Z:\", DriveType.NoRootDirectory, false)]
+    [InlineData(@"\\?\GLOBALROOT\Device\Mup\localhost\C$\Windows\Installer\", DriveType.Fixed, false)]
+    public void Every_copy_is_kept_when_a_package_read_for_every_copy_and_not_on_a_local_drive_is_in_the_Installer_folder(
+        string folder, DriveType driveKind, bool remoteLinksFollowed)
+    {
+        // A share onto the Installer folder, and a network drive, while Windows may follow a
+        // link reached through a network path; a drive Windows reports as neither local nor on
+        // the network; and a path through the network redirector's device. Each package is read
+        // for every copy, is in the Installer folder as the scan's test answers, and opens as
+        // the second copy. The first copy is kept as well, and the package is not opened.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, "c.msi", folder);
+        AddSecondCandidate(f);
+        f.Files.Opens(folder + "c.msi", 5);
+        if (remoteLinksFollowed)
+            f.Msi.Registry.HoldsLinkSetting(ScriptedSourceListRegistry.LinkSettingsKey,
+                ScriptedSourceListRegistry.RemoteToLocal, new RegistryDwordRead(RegistryDwordState.Read, 1));
+
+        var outcomes = CheckBesideASource(f, driveKind).Screen(
+            [Package(Candidate), Package(SecondCandidate)], [], default, null,
+            path => path.StartsWith(folder, StringComparison.OrdinalIgnoreCase) ? true : InInstallerFolder(path));
+
+        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
+        Assert.DoesNotContain(folder + "c.msi", f.Files.Reads);
+    }
+
+    [Fact]
+    public void Every_copy_is_kept_when_a_package_on_a_drive_whose_kind_does_not_answer_is_in_the_Installer_folder()
+    {
+        using var released = new ManualResetEventSlim();
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, "c.msi", @"Z:\");
+        AddSecondCandidate(f);
+        f.Files.Opens(@"Z:\c.msi", 5);
+
+        var outcomes = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+            {
+                SourceFolderTimeLimit = ShortLimit,
+                DriveKindOf = _ =>
+                {
+                    released.Wait(HeldFor);
+                    return DriveType.Fixed;
+                },
+                NamesInFolderOf = NameOnly,
+            }
+            .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null,
+                path => path.StartsWith(@"Z:\", StringComparison.OrdinalIgnoreCase) ? true : InInstallerFolder(path));
+
+        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
+        Assert.DoesNotContain(@"Z:\c.msi", f.Files.Reads);
+        released.Set();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_copy_is_kept_when_whether_a_package_on_the_network_is_in_the_Installer_folder_is_not_established(
+        bool remoteLinksFollowed)
+    {
+        // The package is read for this copy by its name, or for every copy while Windows may
+        // follow a link reached through a network path. It would open as another file.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, CandidateName, ShareFolder);
+        f.Files.Opens(SharePackage, 9);
+        if (remoteLinksFollowed)
+            f.Msi.Registry.HoldsLinkSetting(ScriptedSourceListRegistry.LinkSettingsKey,
+                ScriptedSourceListRegistry.RemoteToLocal, new RegistryDwordRead(RegistryDwordState.Read, 1));
+
+        var outcome = CheckBesideASource(f).Screen([Package(Candidate)], [], default, null, _ => null)[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome);
+        Assert.DoesNotContain(SharePackage, f.Files.Reads);
     }
 
     [Theory]

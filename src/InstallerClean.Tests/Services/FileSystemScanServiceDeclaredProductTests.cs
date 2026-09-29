@@ -68,9 +68,9 @@ public class FileSystemScanServiceDeclaredProductTests
         // it is never a candidate. a.msi declares product A and no record names it.
         // The screen reads the package A records, finds a present file that is not
         // a.msi and declares product A, finds A's source outside the Installer folder
-        // with no package there, and lets a.msi through; the two tests below scan the
-        // same two files and keep a.msi, one when what A records cannot be seen and one
-        // when A was installed from the Installer folder.
+        // with no package there, and lets a.msi through; the tests below scan the same
+        // two files and keep a.msi when A was installed from a.msi itself in the
+        // Installer folder and when what A records cannot be seen.
         var identities = new ScriptedPackageIdentities();
         identities.Declares($@"{Folder}\a.msi", ProductA);
         identities.Declares($@"{Folder}\b.msi", ProductA);
@@ -93,12 +93,36 @@ public class FileSystemScanServiceDeclaredProductTests
     }
 
     [Fact]
-    public async Task A_copy_whose_program_was_installed_from_the_Installer_folder_is_kept_by_the_same_screen()
+    public async Task A_copy_its_program_was_installed_from_in_the_Installer_folder_is_kept_by_the_same_screen()
     {
-        // The scan above with product A's source in the Installer folder. The screen
-        // compares a source against the Installer folder only through what the scan
-        // hands it, which is the folder the scan resolved for the run, so a.msi is
-        // kept here and offered above only if the scan hands it that.
+        // The scan above with product A installed from a.msi itself, in the Installer
+        // folder. The package there opens as a.msi, so a.msi is kept.
+        var identities = new ScriptedPackageIdentities();
+        identities.Declares($@"{Folder}\a.msi", ProductA);
+        identities.Declares($@"{Folder}\b.msi", ProductA);
+
+        var msi = new ScriptedMsiProducts();
+        msi.Installed(ProductA);
+        msi.RecordsPackage(ProductA, null, MsiInstallContext.Machine, $@"{Folder}\b.msi");
+        msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, "a.msi", $@"{Folder}\");
+
+        var files = new ScriptedFileIdentities();
+        files.Opens($@"{Folder}\a.msi", 1);
+        files.Opens($@"{Folder}\b.msi", 2);
+
+        var result = await ScanWithRecordedPackage(msi, identities, files);
+
+        Assert.Empty(result.RemovableFiles);
+        var kept = Assert.Single(result.WithheldFiles!);
+        Assert.Equal($@"{Folder}\a.msi", kept.FullPath);
+        Assert.Equal(1, result.WithheldBy.DeclaredProductInstalledCount);
+    }
+
+    [Fact]
+    public async Task Another_copy_of_a_program_installed_from_the_Installer_folder_is_offered_by_the_same_screen()
+    {
+        // The scan above with product A installed from c.msi, which is no longer in the
+        // Installer folder. a.msi is another file, so it is offered.
         var identities = new ScriptedPackageIdentities();
         identities.Declares($@"{Folder}\a.msi", ProductA);
         identities.Declares($@"{Folder}\b.msi", ProductA);
@@ -111,13 +135,43 @@ public class FileSystemScanServiceDeclaredProductTests
         var files = new ScriptedFileIdentities();
         files.Opens($@"{Folder}\a.msi", 1);
         files.Opens($@"{Folder}\b.msi", 2);
+        files.Answers($@"{Folder}\c.msi", FileIdentityRead.NamesNothing);
 
         var result = await ScanWithRecordedPackage(msi, identities, files);
+
+        var offered = Assert.Single(result.RemovableFiles);
+        Assert.Equal($@"{Folder}\a.msi", offered.FullPath);
+        Assert.Empty(result.WithheldFiles!);
+    }
+
+    [Fact]
+    public async Task The_screen_is_handed_an_Installer_folder_test_that_answers_for_the_folder_the_scan_resolved()
+    {
+        // Product A installed from c.msi in the Installer folder, reached here as a network
+        // drive, and a.msi's folder entry not read, so the package there could be a.msi by
+        // its short name and is read for it. The package names nothing, so a.msi is kept
+        // only because the scan's test does not answer that c.msi is outside the folder.
+        var identities = new ScriptedPackageIdentities();
+        identities.Declares($@"{Folder}\a.msi", ProductA);
+        identities.Declares($@"{Folder}\b.msi", ProductA);
+
+        var msi = new ScriptedMsiProducts();
+        msi.Installed(ProductA);
+        msi.RecordsPackage(ProductA, null, MsiInstallContext.Machine, $@"{Folder}\b.msi");
+        msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, "c.msi", $@"{Folder}\");
+
+        var files = new ScriptedFileIdentities();
+        files.Opens($@"{Folder}\a.msi", 1);
+        files.Opens($@"{Folder}\b.msi", 2);
+        files.Answers($@"{Folder}\c.msi", FileIdentityRead.NamesNothing);
+
+        var result = await ScanWithRecordedPackage(msi, identities, files, DriveType.Network, _ => null);
 
         Assert.Empty(result.RemovableFiles);
         var kept = Assert.Single(result.WithheldFiles!);
         Assert.Equal($@"{Folder}\a.msi", kept.FullPath);
         Assert.Equal(1, result.WithheldBy.DeclaredProductInstalledCount);
+        Assert.DoesNotContain($@"{Folder}\c.msi", files.Reads);
     }
 
     [Fact]
@@ -195,12 +249,16 @@ public class FileSystemScanServiceDeclaredProductTests
     /// <summary>
     /// A scan of a folder holding a.msi and b.msi, where b.msi is registered to
     /// product A and a.msi is not registered, with the screen given both file
-    /// readers.
+    /// readers. Every drive letter answers <paramref name="driveKind"/>, and each
+    /// candidate's folder entry holds what <paramref name="namesInFolder"/> gives, or its
+    /// name alone.
     /// </summary>
     private static Task<ScanResult> ScanWithRecordedPackage(
         ScriptedMsiProducts msi,
         ScriptedPackageIdentities identities,
-        ScriptedFileIdentities files)
+        ScriptedFileIdentities files,
+        DriveType driveKind = DriveType.Fixed,
+        Func<string, IReadOnlyList<string>?>? namesInFolder = null)
     {
         var fs = FolderHolding($@"{Folder}\a.msi", $@"{Folder}\b.msi");
         var registered = new[] { new RegisteredPackage($@"{Folder}\b.msi", "Product A", ProductA) };
@@ -210,8 +268,8 @@ public class FileSystemScanServiceDeclaredProductTests
             new[] { $@"{Folder}\a.msi", $@"{Folder}\b.msi" }, null, null,
             new DeclaredProductCheck(msi, identities, files, fs, msi.Registry)
                 {
-                    DriveKindOf = _ => DriveType.Fixed,
-                    NamesInFolderOf = path => [path[(path.LastIndexOf('\\') + 1)..]],
+                    DriveKindOf = _ => driveKind,
+                    NamesInFolderOf = namesInFolder ?? (path => [path[(path.LastIndexOf('\\') + 1)..]]),
                 })
             .ScanAsync();
     }
