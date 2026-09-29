@@ -256,7 +256,8 @@ public enum DeclaredProductOutcome
     /// Installer folder itself or cannot be resolved, and an installation in a
     /// per-user-unmanaged context, whose source list
     /// is not read. It covers a source list holding a URL, an entry naming an
-    /// environment variable, a media package path or a package name naming a folder, a
+    /// environment variable or starting neither with a drive letter, a ':' and a '\' nor
+    /// with two '\', a media package path or a package name naming a folder, a
     /// drive, a stream or a variable, or holding a null, one whose source used last is not
     /// a network entry on it,
     /// and one whose registry key does not hold what the API returned for it, package

@@ -958,6 +958,27 @@ public class DeclaredProductCheckTests
     }
 
     [Theory]
+    [InlineData(@"..\Installer\")]
+    [InlineData(@"Other\")]
+    [InlineData(@"D:Other\")]
+    [InlineData(@"\Other\")]
+    [InlineData("D:/Other/")]
+    [InlineData("file:///D:/Other/")]
+    public void A_copy_is_kept_when_a_source_entry_starts_neither_with_a_drive_letter_a_colon_and_a_backslash_nor_with_two_backslashes(
+        string entry)
+    {
+        // Each is the list's second entry and names no package the file reader knows of, so
+        // only its form keeps the copy, and no package on the list is read.
+        var package = (entry.EndsWith('\\') ? entry : entry + @"\") + SetupName;
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, SetupName, SetupFolder, entry);
+        f.Files.Answers(package, FileIdentityRead.NamesNothing);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+        Assert.DoesNotContain(SetupPackage, f.Files.Reads);
+    }
+
+    [Theory]
     [InlineData(@"Windows\Installer\setup.msi")]
     [InlineData("../setup.msi")]
     [InlineData("C:setup.msi")]

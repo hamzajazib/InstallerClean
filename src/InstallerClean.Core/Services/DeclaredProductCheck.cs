@@ -679,6 +679,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// - AN ENTRY NAMING AN ENVIRONMENT VARIABLE, one holding a '%'. Whoever reads the
     ///   entry may expand the variable in its own environment, so the folder Windows
     ///   Installer looks in need not be the text compared.
+    /// - AN ENTRY STARTING NEITHER WITH A DRIVE LETTER, A ':' AND A '\' NOR WITH TWO '\'
+    ///   (<see cref="IsOnADriveOrAShare"/>). Only those two forms are compared. A relative
+    ///   path is read against the working folder of whoever reads it, and Windows
+    ///   Installer's service need not have this process's, so the folder Windows Installer
+    ///   looks in need not be the one compared.
     /// - A LIST THE REGISTRY HOLDS DIFFERENTLY. The list the API returns is compared
     ///   with the key it is held in (<see cref="SourceListKeyPath"/>), entry by entry
     ///   (<see cref="IsTheList"/>), so an entry the API does not return, past a gap in
@@ -716,7 +721,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// or to read the registry; a per-user-unmanaged account and context, whose list is
     /// not read; a package name, a source list or a property of the list that will not
     /// read; an empty package name, or one holding a '\', a '/', a ':', a '%' or a null;
-    /// each of the five above; a source entry holding a null; an <c>InstallSource</c>
+    /// each of the six above; a source entry holding a null; an <c>InstallSource</c>
     /// that <see cref="InstallSourceOf"/> answers null for; and, for a package read
     /// here, one not on a local drive that would be a file directly in the Installer
     /// folder or where that cannot be established, one that exists and will not identify,
@@ -768,9 +773,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (urls is null || urls.Count > 0) return false;
 
         // An entry naming an environment variable keeps the copy, and so does one holding
-        // a null, which would cut the entry short wherever it is read as a path.
+        // a null, which would cut the entry short wherever it is read as a path, and one of
+        // a form this check does not compare.
         foreach (var entry in sources)
-            if (entry.Contains('%') || entry.Contains('\0')) return false;
+            if (entry.Contains('%') || entry.Contains('\0') || !IsOnADriveOrAShare(entry)) return false;
 
         var path = SourceListKeyPath(code, sid, context);
         if (path is null) return false;
@@ -1282,9 +1288,17 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (folder.Length == 0) return folder;
         if (folder.Contains('%') || folder.Contains('\0')) return null;
 
-        var onADrive = folder.Length >= 3 && char.IsAsciiLetter(folder[0]) && folder[1] == ':' && folder[2] == '\\';
-        return onADrive || folder.StartsWith(@"\\", StringComparison.Ordinal) ? folder : null;
+        return IsOnADriveOrAShare(folder) ? folder : null;
     }
+
+    /// <summary>
+    /// Whether <paramref name="folder"/> starts with a drive letter, a ':' and a '\', or
+    /// with two '\': the two forms of folder this check compares, on a source list and as
+    /// an <c>InstallSource</c> alike.
+    /// </summary>
+    private static bool IsOnADriveOrAShare(string folder) =>
+        (folder.Length >= 3 && char.IsAsciiLetter(folder[0]) && folder[1] == ':' && folder[2] == '\\')
+        || folder.StartsWith(@"\\", StringComparison.Ordinal);
 
     /// <summary>
     /// Whether <paramref name="key"/> holds exactly <paramref name="entries"/>: values
