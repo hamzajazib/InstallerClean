@@ -5354,9 +5354,10 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// <paramref name="code"/> is.
     ///
     /// STATIC AND SHARED RATHER THAN COPIED, for the reason
-    /// <see cref="ReadProductProperty"/> is: <see cref="DeclaredProductCheck"/> reads a
-    /// patch's package name through it, and which returns count as an absence rather
-    /// than a failed read is decided here once.
+    /// <see cref="ReadProductProperty"/> is: <see cref="DeclaredProductCheck"/> reads the
+    /// source used last, its type and the media package path of a product's source list
+    /// through it, and which returns count as an absence rather than a failed read is
+    /// decided here once.
     /// </summary>
     internal static PropertyRead ReadSourceListProperty(
         IMsiApi msi,

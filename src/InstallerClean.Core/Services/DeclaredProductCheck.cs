@@ -29,13 +29,11 @@ namespace InstallerClean.Services;
 /// For each candidate patch it reads the patch's own code and the products its Template
 /// names, finds the registrations of that patch through the machine-wide patch
 /// enumeration and the keyed patch read, and reads the <c>LocalPackage</c> each
-/// registration records and the patch package the patch's source list points at in
-/// each registration's account and context. A source list in a per-user-unmanaged
-/// context is not read, and an installation or registration in one keeps the file.
-/// Every source list it does read is read twice, through the API and from the registry
-/// key that holds it, and a list the two do not agree on keeps the file. Every
-/// <c>InstallSource</c> it reads is read the same two ways, and one the two do not
-/// agree on keeps the file too.
+/// registration records. A product's source list in a per-user-unmanaged context is
+/// not read, and an installation in one keeps the file. Every source list it does read
+/// is read twice, through the API and from the registry key that holds it, and a list
+/// the two do not agree on keeps the file. Every <c>InstallSource</c> it reads is read
+/// the same two ways, and one the two do not agree on keeps the file too.
 ///
 /// IT COMPOSES THINGS THAT ALREADY EXIST. The reading of each file, package or
 /// patch, is the reader's. The asking is
@@ -154,7 +152,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             // installations of a product.
             if (candidate.IsPatch)
             {
-                outcomes[i] = ScreenPatch(candidate.FullPath, pass, recordRefusal, namesAFileInInstallerFolder);
+                outcomes[i] = ScreenPatch(candidate.FullPath, pass, recordRefusal);
                 continue;
             }
 
@@ -402,7 +400,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         opened.Add(recorded);
 
-        return AddSourcePackages(installation.ProductCode, isPatch: false, installation.UserSid, context, pass,
+        return AddSourcePackages(installation.ProductCode, installation.UserSid, context, pass,
             namesAFileInInstallerFolder, opened);
     }
 
@@ -625,8 +623,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
             identities.Add(recorded);
 
-            if (!AddSourcePackages(
-                    registeredCode, isPatch: false, sid, context, pass, namesAFileInInstallerFolder, identities))
+            if (!AddSourcePackages(registeredCode, sid, context, pass, namesAFileInInstallerFolder, identities))
                 return null;
         }
 
@@ -635,22 +632,20 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
     /// <summary>
     /// Adds to <paramref name="opened"/> the identity of the original package at each
-    /// folder on one network source list, a product's for one installation or a
-    /// patch's in one account and context, and answers false where those sources
-    /// cannot be ruled out.
+    /// folder one installation of a product has as a source, and answers false where
+    /// those sources cannot be ruled out.
     ///
     /// WHAT IT COMPARES, AND WHAT KEEPS THE COPY INSTEAD. When Windows Installer needs a
     /// product's original package rather than its cached copy, a repair among other
     /// things, it tries the source it used last and then the sources on the product's
     /// source list, network folders, media and URLs, looking in each for the file named
-    /// by <c>PackageName</c>. A patch has a source list and a package name of its own,
-    /// and this reads them as it reads a product's. The folders compared are the network
-    /// sources and, for a product, the folder the installation records as its
-    /// <c>InstallSource</c>, the one its package was installed from. Windows Installer
-    /// puts that folder on the list when it installs the product, and the list can
-    /// change afterwards, so the folder is compared whether or not the list still holds
-    /// it (<see cref="InstallSourceOf"/>). Everything else on the list is read to decide
-    /// whether the copy is kept, and it is kept for any of these:
+    /// by <c>PackageName</c>. The folders compared are the network sources and the
+    /// folder the installation records as its <c>InstallSource</c>, the one its package
+    /// was installed from. Windows Installer puts that folder on the list when it
+    /// installs the product, and the list can change afterwards, so the folder is
+    /// compared whether or not the list still holds it (<see cref="InstallSourceOf"/>).
+    /// Everything else on the list is read to decide whether the copy is kept, and it is
+    /// kept for any of these:
     /// - A URL ENTRY, WHATEVER ITS SCHEME. A web address can name this PC as well as any
     ///   other. No URL is compared, and one on the list keeps the copy.
     /// - AN ENTRY NAMING AN ENVIRONMENT VARIABLE, one holding a '%'. Whoever reads the
@@ -673,21 +668,15 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// or to read the registry; a per-user-unmanaged account and context, whose list is
     /// not read; a package name, a source list or a property of the list that will not
     /// read; an empty package name, or one holding a '\', a '/', a ':' or a '%'; each
-    /// of the five above; a source entry holding a null; a product's
-    /// <c>InstallSource</c> that <see cref="InstallSourceOf"/> answers null for; a source
-    /// whose package would be a file directly in the Installer folder, or where that
-    /// cannot be established; a source package that exists and will not identify; and a
-    /// source package whose read has not answered within the time limit
-    /// (<see cref="ReadSourcePackage"/>). A source package that is not there is skipped,
-    /// being no file.
+    /// of the five above; a source entry holding a null; an <c>InstallSource</c> that
+    /// <see cref="InstallSourceOf"/> answers null for; a source whose package would be a
+    /// file directly in the Installer folder, or where that cannot be established; a
+    /// source package that exists and will not identify; and a source package whose read
+    /// has not answered within the time limit (<see cref="ReadSourcePackage"/>). A source
+    /// package that is not there is skipped, being no file.
     /// </summary>
-    /// <param name="isPatch">
-    /// Whether <paramref name="code"/> is a patch code rather than a product code. The
-    /// source-list calls are told which.
-    /// </param>
     private bool AddSourcePackages(
         string code,
-        bool isPatch,
         string? sid,
         MsiInstallContext context,
         PassAnswers pass,
@@ -702,17 +691,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         // place, so a list read there with no network source on it cannot be told from a
         // list that was never read. So no answer from such a list is used, and the copy
         // is kept whatever the list would say. The account this process runs as is not
-        // compared with the registration's, so its own per-user-unmanaged installations
+        // compared with the installation's, so its own per-user-unmanaged installations
         // are kept the same way.
         if (context == MsiInstallContext.UserUnmanaged) return false;
 
-        // A patch's package name is read off its source list, MsiGetPatchInfoEx not
-        // taking the property.
-        var name = isPatch
-            ? InstallerQueryService.ReadSourceListProperty(
-                _msi, code, sid, context, MsiSourceListOptions.Patch, MsiInstallProperty.PackageName)
-            : InstallerQueryService.ReadProductProperty(
-                _msi, code, sid, context, MsiInstallProperty.PackageName);
+        var name = InstallerQueryService.ReadProductProperty(
+            _msi, code, sid, context, MsiInstallProperty.PackageName);
         if (name.Unreadable) return false;
 
         var packageName = name.Value.TrimEnd('\0');
@@ -725,10 +709,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         // the name may expand in its own environment, and keeps the copy as well.
         if (packageName.IndexOfAny(['\\', '/', ':', '%']) >= 0) return false;
 
-        var sources = SourcesOf(code, isPatch, sid, context, MsiSourceListOptions.Network);
+        var sources = SourcesOf(code, sid, context, MsiSourceListOptions.Network);
         if (sources is null) return false;
 
-        var urls = SourcesOf(code, isPatch, sid, context, MsiSourceListOptions.Url);
+        var urls = SourcesOf(code, sid, context, MsiSourceListOptions.Url);
         if (urls is null || urls.Count > 0) return false;
 
         // An entry naming an environment variable keeps the copy, and so does one holding
@@ -736,7 +720,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         foreach (var entry in sources)
             if (entry.Contains('%') || entry.Contains('\0')) return false;
 
-        var path = SourceListKeyPath(code, isPatch, sid, context);
+        var path = SourceListKeyPath(code, sid, context);
         if (path is null) return false;
 
         var sourceList = _registry.LocalMachineValues(path);
@@ -749,20 +733,18 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         if (!IsTheList(_registry.LocalMachineValues(path + @"\Net"), sources)
             || !IsTheList(_registry.LocalMachineValues(path + @"\URL"), urls)
-            || !NamesNoMediaPackagePath(code, isPatch, sid, context, _registry.LocalMachineValues(path + @"\Media"))
-            || !SourceUsedLastIsOnTheList(code, isPatch, sid, context, sources, sourceList.Values))
+            || !NamesNoMediaPackagePath(code, sid, context, _registry.LocalMachineValues(path + @"\Media"))
+            || !SourceUsedLastIsOnTheList(code, sid, context, sources, sourceList.Values))
             return false;
 
-        // A product's InstallSource joins the folders compared, unless it is already one
-        // of the network entries. It is read for a product only.
+        // The InstallSource joins the folders compared, unless it is already one of the
+        // network entries.
+        var installSource = InstallSourceOf(_registry, code, sid, context);
+        if (installSource is null) return false;
+
         var folders = sources;
-        if (!isPatch)
-        {
-            var installSource = InstallSourceOf(_registry, code, sid, context);
-            if (installSource is null) return false;
-            if (installSource.Length > 0 && !sources.Contains(installSource, StringComparer.Ordinal))
-                folders = [.. sources, installSource];
-        }
+        if (installSource.Length > 0 && !sources.Contains(installSource, StringComparer.Ordinal))
+            folders = [.. sources, installSource];
 
         foreach (var folder in folders)
         {
@@ -810,9 +792,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var answered = AnswersWithin(
             () =>
             {
-                // A source in the Installer folder keeps every copy of the product or the
-                // patch, not only the one it names: the folder it was installed or applied
-                // from is the cache itself.
+                // A source in the Installer folder keeps every copy of the product, not
+                // only the one it names: the folder it was installed from is the cache
+                // itself.
                 if (namesAFileInInstallerFolder(package) is not false) return (false, null);
 
                 return identities.ReadOutcome(package, out var read) switch
@@ -936,9 +918,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     internal TimeSpan SourceFolderTimeLimit { get; init; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
-    /// The entries on one source list, network or URL as <paramref name="sourceType"/>
-    /// says, of a product or a patch as <paramref name="isPatch"/> says, in the order
-    /// Windows lists them, or null where the list did not read to its end.
+    /// The entries on one installation's source list, network or URL as
+    /// <paramref name="sourceType"/> says, in the order Windows lists them, or null where
+    /// the list did not read to its end.
     ///
     /// ONE CALL PER ENTRY, WITH THE BUFFER. Windows keeps the position of the walk
     /// between calls. A call at index 0 starts the walk again, a call at the position
@@ -955,10 +937,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// without ending, since what lies beyond it is unread. The index moves on only
     /// after a success, so no entry is passed over.
     /// </summary>
-    private IReadOnlyList<string>? SourcesOf(
-        string code, bool isPatch, string? sid, MsiInstallContext context, uint sourceType)
+    private IReadOnlyList<string>? SourcesOf(string code, string? sid, MsiInstallContext context, uint sourceType)
     {
-        var options = (isPatch ? MsiSourceListOptions.Patch : MsiSourceListOptions.Product) | sourceType;
+        var options = MsiSourceListOptions.Product | sourceType;
         var sources = new List<string>();
         var buffer = new char[SourceBufferLength];
 
@@ -982,19 +963,17 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     }
 
     /// <summary>
-    /// Whether neither the API nor the registry gives a product's or a patch's list a
+    /// Whether neither the API nor the registry gives an installation's source list a
     /// media package path: the API's answer for
     /// <see cref="MsiInstallProperty.MediaPackagePath"/> and the <c>MediaPackage</c>
     /// value of the list's <c>Media</c> key, <paramref name="media"/>. A key that is not
     /// there names none. A read of the property that fails, a key that will not read and
     /// a value of a type other than a string all answer false, which keeps the file.
     /// </summary>
-    private bool NamesNoMediaPackagePath(
-        string code, bool isPatch, string? sid, MsiInstallContext context, RegistryKeyValues media)
+    private bool NamesNoMediaPackagePath(string code, string? sid, MsiInstallContext context, RegistryKeyValues media)
     {
-        var kind = isPatch ? MsiSourceListOptions.Patch : MsiSourceListOptions.Product;
         var answered = InstallerQueryService.ReadSourceListProperty(
-            _msi, code, sid, context, kind, MsiInstallProperty.MediaPackagePath);
+            _msi, code, sid, context, MsiSourceListOptions.Product, MsiInstallProperty.MediaPackagePath);
         if (answered.Unreadable || answered.Value.TrimEnd('\0').Length > 0) return false;
 
         if (media.Presence == RegistryKeyPresence.Absent) return true;
@@ -1005,10 +984,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     }
 
     /// <summary>
-    /// Whether the source Windows Installer used last for a product or a patch, in one
-    /// account and context, is one of <paramref name="network"/>, compared as text, so
-    /// that the folder it tries first is one of the folders compared; and whether the
-    /// registry holds it as the API answers it.
+    /// Whether the source Windows Installer used last for one installation of a product
+    /// is one of <paramref name="network"/>, compared as text, so that the folder it
+    /// tries first is one of the folders compared; and whether the registry holds it as
+    /// the API answers it.
     ///
     /// THE REGISTRY HOLDS IT AS ONE VALUE of the <c>SourceList</c> key,
     /// <paramref name="sourceList"/>: the source's type, its index on the list and its
@@ -1023,17 +1002,15 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// </summary>
     private bool SourceUsedLastIsOnTheList(
         string code,
-        bool isPatch,
         string? sid,
         MsiInstallContext context,
         IReadOnlyList<string> network,
         IReadOnlyList<RegistryValue> sourceList)
     {
-        var kind = isPatch ? MsiSourceListOptions.Patch : MsiSourceListOptions.Product;
         var source = InstallerQueryService.ReadSourceListProperty(
-            _msi, code, sid, context, kind, MsiInstallProperty.LastUsedSource);
+            _msi, code, sid, context, MsiSourceListOptions.Product, MsiInstallProperty.LastUsedSource);
         var type = InstallerQueryService.ReadSourceListProperty(
-            _msi, code, sid, context, kind, MsiInstallProperty.LastUsedType);
+            _msi, code, sid, context, MsiSourceListOptions.Product, MsiInstallProperty.LastUsedType);
         if (source.Unreadable || type.Unreadable) return false;
 
         var folder = source.Value.TrimEnd('\0');
@@ -1161,10 +1138,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     }
 
     /// <summary>
-    /// The HKLM path this check reads a product's or a patch's <c>SourceList</c> key
-    /// from, in one account and context. Per machine,
-    /// <c>SOFTWARE\Classes\Installer\Products</c> or <c>...\Patches</c>, then the code
-    /// in its packed form, then <c>SourceList</c>; per user and managed, the same below
+    /// The HKLM path this check reads a product's <c>SourceList</c> key from, in one
+    /// account and context. Per machine, <c>SOFTWARE\Classes\Installer\Products</c>, then
+    /// the code in its packed form, then <c>SourceList</c>; per user and managed, the
+    /// same below
     /// <c>SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Managed\&lt;SID&gt;\Installer</c>.
     /// The network entries are read from its <c>Net</c> key and the URL entries from its
     /// <c>URL</c> key, each value named by the entry's number from 1. A key not found at
@@ -1175,17 +1152,16 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// key name. An account is taken only as 'S-' followed by digits and hyphens, so no
     /// account names a key outside its own.
     /// </summary>
-    private static string? SourceListKeyPath(string code, bool isPatch, string? sid, MsiInstallContext context)
+    private static string? SourceListKeyPath(string code, string? sid, MsiInstallContext context)
     {
         var packed = InstallerQueryService.PackRegistryCode(code);
         if (packed is null) return null;
 
-        var kind = isPatch ? "Patches" : "Products";
         if (context == MsiInstallContext.Machine && sid is null)
-            return $@"SOFTWARE\Classes\Installer\{kind}\{packed}\SourceList";
+            return $@"SOFTWARE\Classes\Installer\Products\{packed}\SourceList";
 
         if (context == MsiInstallContext.UserManaged && InstallerQueryService.IsAccount(sid))
-            return $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Managed\{sid}\Installer\{kind}\{packed}\SourceList";
+            return $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Managed\{sid}\Installer\Products\{packed}\SourceList";
 
         return null;
     }
@@ -1230,14 +1206,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
     /// <summary>
     /// The verdict for one patch copy: whether Windows holds a registration of the patch
-    /// it declares, and if so whether this file is shown to be a different file from
-    /// every copy each registration opens, cached or original.
+    /// it declares, and if so whether this file is shown to be a different file from the
+    /// cached copy every registration records.
     /// </summary>
-    private DeclaredProductOutcome ScreenPatch(
-        string path,
-        PassAnswers pass,
-        Action<Exception, string>? recordRefusal,
-        Func<string, bool?>? namesAFileInInstallerFolder)
+    private DeclaredProductOutcome ScreenPatch(string path, PassAnswers pass, Action<Exception, string>? recordRefusal)
     {
         var identity = _identityReader.Read(path, isPatch: true, out var detail);
 
@@ -1275,12 +1247,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var key = code + "|" + string.Join(";", targets);
         if (!pass.Patches.TryGetValue(key, out var answer))
         {
-            answer = AskAboutPatch(code, targets, pass, namesAFileInInstallerFolder);
+            answer = AskAboutPatch(code, targets, pass);
             pass.Patches[key] = answer;
         }
 
         // As for a product: the registrations are shared by every copy declaring the
-        // patch, and whether the copies they open are OTHER files is asked per file.
+        // patch, and whether the copies they record are OTHER files is asked per file.
         return answer.Outcome == DeclaredProductOutcome.DeclaredPatchRegistered
             && answer.RecordedPackages is { } recorded
                 ? CompareWithRecorded(path, recorded,
@@ -1310,11 +1282,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// is walked once per pass, so where it fails, every patch copy the pass asks about
     /// is kept.
     /// </summary>
-    private DeclarationAnswer AskAboutPatch(
-        string code,
-        IReadOnlyList<string> targets,
-        PassAnswers pass,
-        Func<string, bool?>? namesAFileInInstallerFolder)
+    private DeclarationAnswer AskAboutPatch(string code, IReadOnlyList<string> targets, PassAnswers pass)
     {
         var holders = pass.PatchHolders;
         if (holders is null)
@@ -1359,13 +1327,13 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                     return new DeclarationAnswer(DeclaredProductOutcome.DeclaredPatchUnestablished, null);
         }
 
-        // WHERE A REGISTRATION FOUND SO FAR OPENS A COPY THAT CANNOT BE SEEN, EVERY COPY
+        // WHERE A REGISTRATION FOUND SO FAR RECORDS A COPY THAT CANNOT BE SEEN, EVERY COPY
         // OF THE PATCH IS ALREADY KEPT, and the reads below could only add registrations,
         // so they are not made.
         IReadOnlyList<FileIdentity>? copies = null;
         if (registrations.Count > 0)
         {
-            copies = CopiesOpenedBy(code, registrations, pass, namesAFileInInstallerFolder);
+            copies = CopiesRecordedBy(code, registrations);
             if (copies is null)
                 return new DeclarationAnswer(DeclaredProductOutcome.DeclaredPatchRegistered, null);
         }
@@ -1394,8 +1362,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (registrations.Count == found)
             return new DeclarationAnswer(DeclaredProductOutcome.DeclaredPatchRegistered, copies);
 
-        var more = CopiesOpenedBy(
-            code, registrations.GetRange(found, registrations.Count - found), pass, namesAFileInInstallerFolder);
+        var more = CopiesRecordedBy(code, registrations.GetRange(found, registrations.Count - found));
         return new DeclarationAnswer(
             DeclaredProductOutcome.DeclaredPatchRegistered,
             more is null ? null : [.. copies ?? [], .. more]);
@@ -1424,18 +1391,19 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     }
 
     /// <summary>
-    /// The identity of every file a registration of <paramref name="code"/> opens as the
-    /// patch: the cached copy each registration records, and the patch package at each
-    /// folder on the patch's source list in each registration's account and context.
-    /// Null where any of them cannot be seen.
+    /// The identity of the cached copy every registration of <paramref name="code"/>
+    /// records, or null where any of them cannot be seen.
     ///
     /// NULL IS THE ANSWER THAT KEEPS THE FILE, as it is for
     /// <see cref="PackagesOpenedBy"/>, and every way a registration's copy can fail to
     /// be seen reaches it: a <c>LocalPackage</c> read that failed or came back empty, a
     /// value that names nothing, names a folder, will not open to an identity, or names
-    /// a file that does not read as patch <paramref name="code"/>; and any source the
-    /// check cannot rule out, which <see cref="AddSourcePackages"/> sets out. One such
-    /// registration is enough, because its copy is the one this candidate could be.
+    /// a file that does not read as patch <paramref name="code"/>. One such registration
+    /// is enough, because its copy is the one this candidate could be.
+    ///
+    /// NO SOURCE LIST OF THE PATCH IS READ, for the reason
+    /// <see cref="IDeclaredProductCheck"/> gives: a registration whose cached copy is not
+    /// there already keeps the file.
     ///
     /// A READ ANSWERING THAT THE PATCH IS NOT THERE KEEPS THE FILE LIKE ANY OTHER
     /// FAILED READ. Every registration here was named by one of the two routes moments
@@ -1444,23 +1412,14 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     ///
     /// Several registrations can record one copy, so each path is looked at once.
     /// </summary>
-    private IReadOnlyList<FileIdentity>? CopiesOpenedBy(
+    private IReadOnlyList<FileIdentity>? CopiesRecordedBy(
         string code,
-        IReadOnlyList<(string ProductCode, string? Sid, MsiInstallContext Context)> registrations,
-        PassAnswers pass,
-        Func<string, bool?>? namesAFileInInstallerFolder)
+        IReadOnlyList<(string ProductCode, string? Sid, MsiInstallContext Context)> registrations)
     {
         if (_fileIdentities is null || _fileSystem is null) return null;
 
         var identities = new List<FileIdentity>(registrations.Count);
         var looked = new Dictionary<string, FileIdentity>(StringComparer.Ordinal);
-
-        // ONE SOURCE LIST PER ACCOUNT AND CONTEXT, NOT ONE PER REGISTRATION. The
-        // source-list calls take the patch code with an account and a context and no
-        // product, so a patch registered against several products in one account has
-        // one list there, read the first time a registration in it is reached. Accounts
-        // are compared without case, as IsListed compares them.
-        var sourceListsRead = new HashSet<(string? Sid, MsiInstallContext Context)>();
 
         foreach (var (productCode, sid, context) in registrations)
         {
@@ -1494,10 +1453,6 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             }
 
             identities.Add(recorded);
-
-            if (sourceListsRead.Add((sid?.ToUpperInvariant(), context))
-                && !AddSourcePackages(code, isPatch: true, sid, context, pass, namesAFileInInstallerFolder, identities))
-                return null;
         }
 
         return identities;
@@ -1506,7 +1461,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <summary>
     /// The verdict for the candidate at <paramref name="candidatePath"/> against every
     /// file in <paramref name="recorded"/>: every package an installation of a product
-    /// opens, or every copy a registration of a patch opens.
+    /// opens, or the cached copy every registration of a patch records.
     /// <paramref name="differentFromEvery"/> where the candidate is shown to be a
     /// different file from all of them, and <paramref name="matched"/> where it opens as
     /// one of them.
@@ -1538,8 +1493,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <param name="Outcome">The verdict the declared code alone gives.</param>
     /// <param name="RecordedPackages">
     /// For an installed product, the identity of every file an installation opens as
-    /// its package; for a registered patch, the identity of every file a registration
-    /// opens as the patch. Null where any of them could not be seen, and null for every
+    /// its package; for a registered patch, the identity of the cached copy every
+    /// registration records. Null where any of them could not be seen, and null for every
     /// other verdict.
     /// </param>
     private readonly record struct DeclarationAnswer(

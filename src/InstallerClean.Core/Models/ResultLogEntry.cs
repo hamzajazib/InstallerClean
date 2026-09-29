@@ -941,8 +941,8 @@ public sealed record MachineInfo(
 /// <param name="WithheldDeclaredPatchRegisteredCount">
 /// Patch copies the declared-product screen kept back because Windows holds a
 /// registration of the patch each declares, and for at least one registration the screen
-/// could not show that every copy of the patch it opens, cached or original at a source,
-/// is a different file: <c>ScanResult.WithheldBy.DeclaredPatchRegisteredCount</c>.
+/// could not show that the cached copy it records is a different file:
+/// <c>ScanResult.WithheldBy.DeclaredPatchRegisteredCount</c>.
 /// Neither host's held-back sentence counts them, as with
 /// <paramref name="WithheldDeclaredProductInstalledCount"/>.
 /// </param>
