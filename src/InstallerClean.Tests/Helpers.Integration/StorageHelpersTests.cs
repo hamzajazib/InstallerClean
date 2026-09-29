@@ -1,5 +1,8 @@
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using InstallerClean.Helpers;
+using InstallerClean.Interop.Native;
 
 namespace InstallerClean.Tests.Helpers.Integration;
 
@@ -84,6 +87,68 @@ public class StorageHelpersTests
             File.Delete(file);
         }
     }
+
+    /// <summary>
+    /// The names a file's folder entry holds, read through the real WIN32_FIND_DATA, against
+    /// the short name GetShortPathName answers for the same file. The file's name is not in
+    /// the 8.3 form, so on a volume that makes short names it has one of its own and the
+    /// entry gives both back, the same whichever of the two the path spells; on a volume
+    /// that makes none, the entry gives the name alone. A path naming nothing answers null.
+    /// </summary>
+    [Fact]
+    public void GetNamesInFolder_reads_a_files_name_and_short_name_from_its_folder_entry()
+    {
+        const string Name = "InstallerClean folder entry test.msi";
+        var folder = Path.Combine(Path.GetTempPath(), $"ic-names-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(folder);
+        var file = Path.Combine(folder, Name);
+        File.WriteAllBytes(file, []);
+
+        try
+        {
+            var shortPath = ShortPathOf(file);
+            var shortName = shortPath[(shortPath.LastIndexOf('\\') + 1)..];
+            string[] expected = shortName == Name ? [Name] : [Name, shortName];
+
+            Assert.Equal(expected, StorageHelpers.GetNamesInFolder(file));
+            Assert.Equal(expected, StorageHelpers.GetNamesInFolder(Path.Combine(folder, shortName)));
+            Assert.Null(StorageHelpers.GetNamesInFolder(Path.Combine(folder, "not there.msi")));
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// WIN32_FIND_DATAW as the API writes it: a DWORD, three FILETIMEs and four DWORDs, then
+    /// the name's 260 characters at byte 44 and the short name's 14 at byte 564, 592 bytes in
+    /// all. A name read from any other offset is another part of the entry.
+    /// </summary>
+    [Fact]
+    public void The_folder_entry_is_laid_out_as_FindFirstFile_writes_it()
+    {
+        var entry = default(Kernel32.WIN32_FIND_DATA);
+        ref var start = ref Unsafe.As<Kernel32.WIN32_FIND_DATA, byte>(ref entry);
+
+        Assert.Equal(592, Unsafe.SizeOf<Kernel32.WIN32_FIND_DATA>());
+        Assert.Equal(44, (int)Unsafe.ByteOffset(
+            ref start, ref Unsafe.As<Kernel32.FileNameBuffer, byte>(ref entry.cFileName)));
+        Assert.Equal(564, (int)Unsafe.ByteOffset(
+            ref start, ref Unsafe.As<Kernel32.AlternateFileNameBuffer, byte>(ref entry.cAlternateFileName)));
+    }
+
+    /// <summary>The path GetShortPathName answers for <paramref name="path"/>.</summary>
+    private static string ShortPathOf(string path)
+    {
+        var buffer = new char[1024];
+        var length = GetShortPathName(path, buffer, (uint)buffer.Length);
+        Assert.InRange(length, 1u, (uint)buffer.Length - 1);
+        return new string(buffer, 0, (int)length);
+    }
+
+    [DllImport("kernel32.dll", EntryPoint = "GetShortPathNameW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern uint GetShortPathName(string lpszLongPath, [Out] char[] lpszShortPath, uint cchBuffer);
 
     [Fact]
     public void GetAvailableFreeSpace_returns_positive_for_current_drive()

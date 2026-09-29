@@ -42,7 +42,11 @@ namespace InstallerClean.Services;
 /// that names this file under another spelling. It is kept too while some source
 /// cannot be ruled out: one in the Installer folder itself, one naming this file, one
 /// that cannot be read, and one whose package does not answer within the check's time
-/// limit. The folder an installation records as its
+/// limit. A source in a folder on the network, a share or a network drive, is one of
+/// those only for a file whose name or short name its package name could be, since
+/// Windows Installer looks in a source folder for that name alone. While Windows is set
+/// to follow a symbolic link reached through a network path to this PC or to another
+/// network path, it is one for every file. The folder an installation records as its
 /// <c>InstallSource</c>, the one its package was installed from, counts as a source
 /// whether or not the list still holds it. So it is while a source list holds
 /// something the check does not compare, a URL, an entry naming an environment
@@ -106,7 +110,8 @@ namespace InstallerClean.Services;
 /// let through is compared by file identity with the packages each such installation
 /// opens, its cached package and the packages its sources name, and one it opens as is
 /// kept. Where those packages cannot all be seen, every such installation package is
-/// kept.
+/// kept, a package in a folder on the network that cannot be seen keeping only a file
+/// whose name it could be.
 ///
 /// IT ONLY EVER WITHHOLDS. No answer it can give puts a file on the list, clears
 /// one another gate kept, or weakens anything upstream: a candidate it lets
@@ -260,10 +265,14 @@ public enum DeclaredProductOutcome
     /// read, that the registry holds otherwise
     /// than the API answers it or as anything but a REG_SZ, that names an environment
     /// variable, or that starts neither with a drive letter, a ':' and a '\' nor with two
-    /// '\'. In each of them the check cannot see which package that installation opens,
-    /// so this file could be it. A check constructed without its two file readers or its
-    /// registry reader, or screening without the Installer folder to compare against,
-    /// answers this for every installed product, having no way to look.
+    /// '\'. A source or an <c>InstallSource</c> in a folder on the network covers this
+    /// only where its package name could be this file's name or short name, or where
+    /// Windows is set to follow a symbolic link reached through a network path to this PC
+    /// or to another network path. In each of them the check cannot see which package
+    /// that installation opens, so this file could be it. A check constructed without its
+    /// two file readers or its registry reader, or screening without the Installer folder
+    /// to compare against, answers this for every installed product, having no way to
+    /// look.
     ///
     /// Where every package was seen and this file's own identity does not read, the
     /// answer is <see cref="CandidateIdentityUnestablished"/> instead.
@@ -276,19 +285,20 @@ public enum DeclaredProductOutcome
     /// <summary>
     /// Windows still holds a record of the product this file declares, or of an
     /// installation whose cached package declares it, every such installation records a
-    /// cached package that is present, is a different file, and itself declares the same
-    /// product, no installation is in a
-    /// per-user-unmanaged context, and no installation's source list or
-    /// <c>InstallSource</c> points at the Installer folder or at this file. Every
-    /// installation's source list is held in the registry as the API returns it, with
-    /// its package name as a REG_SZ, and so is its <c>InstallSource</c> where there is
-    /// one, which starts with a drive letter, a ':' and a '\', or with two '\'. Every
-    /// source list holds network entries only, none of them naming an environment
-    /// variable, names no media package path, has a package name naming a file alone,
-    /// and was last used from one of its own network entries or not at all. Every
-    /// installation the caller could not rule out as a second copy opens packages the
-    /// check saw, and this file is a different file from all of them too. The candidate
-    /// goes on being decided by everything else.
+    /// cached package that is present, is a different file, and itself declares the
+    /// same product, no installation is in a per-user-unmanaged context, and no
+    /// installation's source list or <c>InstallSource</c> points at the Installer
+    /// folder or at this file, a source in a folder on the network counting only where
+    /// its package name could be this file's name. Every installation's source list is
+    /// held in the registry as the API returns it, with its package name as a REG_SZ,
+    /// and so is its <c>InstallSource</c> where there is one, which starts with a drive
+    /// letter, a ':' and a '\', or with two '\'. Every source list holds network
+    /// entries only, none of them naming an environment variable, names no media
+    /// package path, has a package name naming a file alone, and was last used from one
+    /// of its own network entries or not at all. Every installation the caller could
+    /// not rule out as a second copy opens packages the check saw, and this file is a
+    /// different file from all of them too. The candidate goes on being decided by
+    /// everything else.
     ///
     /// Windows Installer opens a product's cached package through the
     /// <c>LocalPackage</c> value recorded for each installation, and its original
@@ -394,13 +404,14 @@ public enum DeclaredProductOutcome
     /// <summary>
     /// Windows holds a record of the product this installation package declares, or a
     /// registration of the patch this patch copy declares, the check saw every package
-    /// or copy each installation or registration opens, and this file's own identity
-    /// did not read, so it could not be compared with any of them. Kept back.
+    /// or copy each installation or registration opens that this file could be, and this
+    /// file's own identity did not read, so it could not be compared with any of them.
+    /// Kept back.
     ///
-    /// IT IS ABOUT THE FILE AND NOT ABOUT THE RECORDS. Everything the records name was
-    /// read and identified; what the comparison lacks is this file's own volume and
-    /// file ID. So both halves give this one verdict, and the scan counts it with the
-    /// files the identity comparison could not identify.
+    /// IT IS ABOUT THE FILE AND NOT ABOUT THE RECORDS. Everything the records name that
+    /// this file could be was read and identified; what the comparison lacks is this
+    /// file's own volume and file ID. So both halves give this one verdict, and the scan
+    /// counts it with the files the identity comparison could not identify.
     ///
     /// A FILE GONE BY THE TIME ITS IDENTITY IS READ IS GIVEN IT TOO. It declared its
     /// product or patch earlier in the same pass, and nothing at its path shows it to be
@@ -419,7 +430,9 @@ public enum DeclaredProductOutcome
     /// could be a second copy of a program installed under an instance transform, whose
     /// packages need not declare any code this file could be linked to it by, so any
     /// installation package could be one it opens. So every candidate the answer would
-    /// let through is given this verdict, on the same pass, whatever it declares.
+    /// let through is given this verdict, on the same pass, whatever it declares. A
+    /// package in a folder on the network that cannot be seen gives it only to a file
+    /// whose name that package's name could be.
     ///
     /// Where a single installation's packages cannot all be seen it covers what
     /// <see cref="DeclaredProductInstalled"/> covers for one: a cached package that is

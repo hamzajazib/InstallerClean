@@ -254,6 +254,49 @@ internal static class StorageHelpers
     }
 
     /// <summary>
+    /// The names the folder's entry for the file at <paramref name="path"/> holds: its
+    /// name, and its 8.3 short name where it has one other than that name. Null where
+    /// Windows does not answer.
+    /// </summary>
+    /// <remarks>
+    /// A SHORT NAME NEED NOT CARRY A '~'. One given by hand can be any name the 8.3 form
+    /// allows, SETUP.MSI among them, so it is read from the entry
+    /// (<see cref="Kernel32.FindFirstFile"/>).
+    /// </remarks>
+    internal static IReadOnlyList<string>? GetNamesInFolder(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return null;
+
+        try
+        {
+            var search = Kernel32.FindFirstFile(path, out var entry);
+            if (search == InvalidHandle) return null;
+            Kernel32.FindClose(search);
+
+            ReadOnlySpan<char> nameBuffer = entry.cFileName;
+            ReadOnlySpan<char> shortNameBuffer = entry.cAlternateFileName;
+            var name = NullTerminated(nameBuffer);
+            var shortName = NullTerminated(shortNameBuffer);
+            if (name.Length == 0) return null;
+
+            return shortName.Length == 0 ? [name] : [name, shortName];
+        }
+        catch
+        {
+            return null;
+        }
+
+        static string NullTerminated(ReadOnlySpan<char> buffer)
+        {
+            var end = buffer.IndexOf('\0');
+            return new string(end < 0 ? buffer : buffer[..end]);
+        }
+    }
+
+    /// <summary>FindFirstFile's failure return.</summary>
+    private static readonly IntPtr InvalidHandle = new(-1);
+
+    /// <summary>
     /// Returns the number of bytes available to the current user at
     /// <paramref name="path"/>, or null if the space cannot be
     /// determined. Handles local drives, UNC shares and mapped drives

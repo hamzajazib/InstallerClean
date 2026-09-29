@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO.Abstractions;
 using System.Runtime.ExceptionServices;
+using System.Text;
 using InstallerClean.Helpers;
 using InstallerClean.Interop;
 using InstallerClean.Models;
@@ -15,7 +16,9 @@ namespace InstallerClean.Services;
 /// enumeration the patch-target route uses, and for an installed product reads the
 /// <c>LocalPackage</c> each installation records, the package each one's source list
 /// points at and the package in the folder each one records as its
-/// <c>InstallSource</c>. Every answer about a product is held against the installations
+/// <c>InstallSource</c>. A package in a folder on the network is read only for a
+/// candidate whose name it could be (<see cref="AddSourcePackages"/>). Every answer
+/// about a product is held against the installations
 /// the caller's own enumeration listed, and one leaving out any of them keeps the file.
 /// The cached package of each of those installations is read too, and a candidate is
 /// also put to every installation whose cached package declares the candidate's code
@@ -245,9 +248,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (installations.Count == 0)
             return new DeclarationAnswer(DeclaredProductOutcome.DeclaredProductNotInstalled, null);
 
+        var packages = PackagesOpenedBy(code, installations, pass, namesAFileInInstallerFolder);
         return new DeclarationAnswer(
-            DeclaredProductOutcome.DeclaredProductInstalled,
-            PackagesOpenedBy(code, installations, pass, namesAFileInInstallerFolder));
+            DeclaredProductOutcome.DeclaredProductInstalled, packages?.Identities, packages?.ByName);
     }
 
     /// <summary>
@@ -275,6 +278,14 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// (<see cref="LinksOf"/>), every candidate the answer lets through is
     /// <see cref="DeclaredProductOutcome.SecondCopyUnestablished"/>.
     ///
+    /// A PACKAGE IN A FOLDER ON THE NETWORK IS READ HERE, FOR THIS CANDIDATE, and only
+    /// where its package name could be this candidate's name
+    /// (<see cref="WithPackagesItCouldBe"/>). One that cannot be ruled out keeps this
+    /// candidate, with the verdict a package read for every candidate gives them all:
+    /// <see cref="DeclaredProductOutcome.DeclaredProductInstalled"/> among its own
+    /// product's packages, and
+    /// <see cref="DeclaredProductOutcome.SecondCopyUnestablished"/> among a second copy's.
+    ///
     /// THE CANDIDATE'S IDENTITY IS READ ONCE, against its own product's packages and the
     /// second copies' together, where both can be seen. A candidate whose product is not
     /// installed and which no such installation stands beside is let through without its
@@ -287,12 +298,18 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         Func<string, bool?>? namesAFileInInstallerFolder,
         Action<Exception, string>? recordRefusal)
     {
+        var candidate = new CandidateNames(candidatePath, NamesInFolderOf);
+
         IReadOnlyList<FileIdentity> recorded;
         DeclaredProductOutcome letThrough;
         switch (answer.Outcome)
         {
             case DeclaredProductOutcome.DeclaredProductInstalled when answer.RecordedPackages is { } packages:
-                recorded = packages;
+                if (WithPackagesItCouldBe(candidate, packages, answer.ByName ?? [], pass, namesAFileInInstallerFolder)
+                    is not { } own)
+                    return DeclaredProductOutcome.DeclaredProductInstalled;
+
+                recorded = own;
                 letThrough = DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile;
                 break;
             case DeclaredProductOutcome.DeclaredProductNotInstalled:
@@ -303,16 +320,18 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                 return answer.Outcome;
         }
 
-        IReadOnlyList<FileIdentity>? secondCopies = LinksOf(pass, recordRefusal).UnreadPackageNotRuledOut
-            ? null
-            : PackagesSecondCopiesOpen(pass, namesAFileInInstallerFolder);
+        IReadOnlyList<FileIdentity>? secondCopies =
+            !LinksOf(pass, recordRefusal).UnreadPackageNotRuledOut
+            && PackagesSecondCopiesOpen(pass, namesAFileInInstallerFolder) is { } second
+                ? WithPackagesItCouldBe(candidate, second.Identities, second.ByName, pass, namesAFileInInstallerFolder)
+                : null;
 
         if (secondCopies is null)
         {
-            var own = recorded.Count == 0
+            var verdict = recorded.Count == 0
                 ? letThrough
                 : CompareWithRecorded(candidatePath, recorded, letThrough, DeclaredProductOutcome.DeclaredProductInstalled);
-            return own.Withholds() ? own : DeclaredProductOutcome.SecondCopyUnestablished;
+            return verdict.Withholds() ? verdict : DeclaredProductOutcome.SecondCopyUnestablished;
         }
 
         IReadOnlyList<FileIdentity> opened = secondCopies.Count == 0 ? recorded : [.. recorded, .. secondCopies];
@@ -325,10 +344,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// The identity of every package opened by an installation the caller listed and
     /// could not rule out as a second copy of a program
     /// (<see cref="ListedInstallation.SecondCopyNotRuledOut"/>): the cached package each
-    /// records, and the original package at each folder its sources name. Empty where no
-    /// such installation is listed, and null where any of those packages cannot be seen.
-    /// Read once per pass, the first time a candidate the answer lets through is put to
-    /// them, and kept for every candidate after it.
+    /// records, and the original package at each folder its sources name, a package in a
+    /// folder on the network being left to be read for each candidate whose name it could
+    /// be (<see cref="OpenedPackages.ByName"/>). Empty where no such installation is
+    /// listed, and null where any package read here cannot be seen. Read once per pass,
+    /// the first time a candidate the answer lets through is put to them, and kept for
+    /// every candidate after it.
     ///
     /// NULL IS THE ANSWER THAT KEEPS EVERY CANDIDATE, and every way such an
     /// installation's packages can fail to be seen reaches it: a <c>LocalPackage</c> read
@@ -342,41 +363,45 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// EACH INSTALLATION IS READ BY THE CODE IT IS REGISTERED UNDER, in its own account
     /// and context, and its cached package is not required to declare that code.
     /// </summary>
-    private IReadOnlyList<FileIdentity>? PackagesSecondCopiesOpen(
+    private OpenedPackages? PackagesSecondCopiesOpen(
         PassAnswers pass, Func<string, bool?>? namesAFileInInstallerFolder)
     {
         if (pass.SecondCopiesRead) return pass.SecondCopies;
 
         List<FileIdentity>? identities = [];
+        List<NetworkPackage> byName = [];
         foreach (var installation in pass.Installations)
         {
             pass.CancellationToken.ThrowIfCancellationRequested();
             if (!installation.SecondCopyNotRuledOut) continue;
 
-            if (!AddSecondCopyPackages(installation, pass, namesAFileInInstallerFolder, identities))
+            if (!AddSecondCopyPackages(installation, pass, namesAFileInInstallerFolder, identities, byName))
             {
                 identities = null;
                 break;
             }
         }
 
-        pass.SecondCopies = identities;
+        pass.SecondCopies = identities is null ? null : new OpenedPackages(identities, byName);
         pass.SecondCopiesRead = true;
-        return identities;
+        return pass.SecondCopies;
     }
 
     /// <summary>
     /// Adds to <paramref name="opened"/> the identity of the cached package one
     /// installation records and of the package at each folder its sources name, and
-    /// answers false where any of them cannot be seen. The cached package has to be a
-    /// file that is there, that identifies, and that yields a product code: a value naming
-    /// anything else shows nothing about which package the installation opens.
+    /// answers false where any of them cannot be seen. A package in a folder on the
+    /// network goes into <paramref name="byName"/> instead (<see cref="AddSourcePackages"/>).
+    /// The cached package has to be a file that is there, that identifies, and that
+    /// yields a product code: a value naming anything else shows nothing about which
+    /// package the installation opens.
     /// </summary>
     private bool AddSecondCopyPackages(
         ListedInstallation installation,
         PassAnswers pass,
         Func<string, bool?>? namesAFileInInstallerFolder,
-        List<FileIdentity> opened)
+        List<FileIdentity> opened,
+        List<NetworkPackage> byName)
     {
         if (_fileIdentities is null || _fileSystem is null) return false;
 
@@ -401,7 +426,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         opened.Add(recorded);
 
         return AddSourcePackages(installation.ProductCode, installation.UserSid, context, pass,
-            namesAFileInInstallerFolder, opened);
+            namesAFileInInstallerFolder, opened, byName);
     }
 
     /// <summary>
@@ -569,8 +594,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <summary>
     /// The identity of every file the installations answering for <paramref name="code"/>
     /// open as their package: the cached package each installation records, and the
-    /// original package at each folder on its source list that holds one. Null where
-    /// any of them cannot be seen.
+    /// original package at each folder on its source list that holds one, a package in a
+    /// folder on the network being left to be read for each candidate whose name it could
+    /// be (<see cref="OpenedPackages.ByName"/>). Null where any package read here cannot
+    /// be seen.
     ///
     /// EACH INSTALLATION IS READ BY THE CODE IT IS REGISTERED UNDER, which for a second
     /// copy is not <paramref name="code"/>, and its cached package has to declare
@@ -584,7 +611,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// sets out. One such installation is enough, because its package is the one this
     /// candidate could be.
     /// </summary>
-    private IReadOnlyList<FileIdentity>? PackagesOpenedBy(
+    private OpenedPackages? PackagesOpenedBy(
         string code,
         IReadOnlyList<(string RegisteredCode, string? Sid, MsiInstallContext Context)> installations,
         PassAnswers pass,
@@ -593,6 +620,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (_fileIdentities is null || _fileSystem is null) return null;
 
         var identities = new List<FileIdentity>(installations.Count);
+        var byName = new List<NetworkPackage>();
         foreach (var (registeredCode, sid, context) in installations)
         {
             var read = InstallerQueryService.ReadProductProperty(
@@ -623,17 +651,18 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
             identities.Add(recorded);
 
-            if (!AddSourcePackages(registeredCode, sid, context, pass, namesAFileInInstallerFolder, identities))
+            if (!AddSourcePackages(registeredCode, sid, context, pass, namesAFileInInstallerFolder, identities, byName))
                 return null;
         }
 
-        return identities;
+        return new OpenedPackages(identities, byName);
     }
 
     /// <summary>
     /// Adds to <paramref name="opened"/> the identity of the original package at each
     /// folder one installation of a product has as a source, and answers false where
-    /// those sources cannot be ruled out.
+    /// those sources cannot be ruled out. A package in a folder on the network is not
+    /// read here and goes into <paramref name="byName"/> (<see cref="ComparedByName"/>).
     ///
     /// WHAT IT COMPARES, AND WHAT KEEPS THE COPY INSTEAD. When Windows Installer needs a
     /// product's original package rather than its cached copy, a repair among other
@@ -664,16 +693,28 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     ///   (<see cref="NamesNoMediaPackagePath"/>). No media source is compared, and a list
     ///   naming a path on one keeps the copy.
     ///
+    /// A PACKAGE IN A FOLDER ON THE NETWORK IS READ ONLY FOR A CANDIDATE WHOSE NAME IT
+    /// COULD BE (<see cref="WithPackagesItCouldBe"/>). Windows Installer looks in each
+    /// source folder for the file named by <c>PackageName</c> and for no other. A folder on
+    /// the network can be this PC's Installer folder reached through a share, and the file
+    /// found there by that name is the one with that name or that short name
+    /// (<see cref="CandidateNames.CouldBe"/>). A package in a local folder is read here for
+    /// every candidate whatever its name, since a symbolic link there, which Windows
+    /// follows by default, can carry the package's name and point at any file. So is a
+    /// package on the network while Windows is set to follow a symbolic link reached
+    /// through a network path to this PC or to another network path
+    /// (<see cref="RemoteLinksCanBeFollowed"/>).
+    ///
     /// FALSE, WHICH KEEPS THE FILE, for: no way to compare against the Installer folder
     /// or to read the registry; a per-user-unmanaged account and context, whose list is
     /// not read; a package name, a source list or a property of the list that will not
     /// read; an empty package name, or one holding a '\', a '/', a ':' or a '%'; each
     /// of the five above; a source entry holding a null; an <c>InstallSource</c> that
-    /// <see cref="InstallSourceOf"/> answers null for; a source whose package would be a
-    /// file directly in the Installer folder, or where that cannot be established; a
-    /// source package that exists and will not identify; and a source package whose read
-    /// has not answered within the time limit (<see cref="ReadSourcePackage"/>). A source
-    /// package that is not there is skipped, being no file.
+    /// <see cref="InstallSourceOf"/> answers null for; and, for a package read here, one
+    /// that would be a file directly in the Installer folder or where that cannot be
+    /// established, one that exists and will not identify, and one whose read has not
+    /// answered within the time limit (<see cref="ReadSourcePackage"/>). A source package
+    /// that is not there is skipped, being no file.
     /// </summary>
     private bool AddSourcePackages(
         string code,
@@ -681,7 +722,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         MsiInstallContext context,
         PassAnswers pass,
         Func<string, bool?>? namesAFileInInstallerFolder,
-        List<FileIdentity> opened)
+        List<FileIdentity> opened,
+        List<NetworkPackage> byName)
     {
         if (namesAFileInInstallerFolder is null || _fileIdentities is null || _registry is null) return false;
 
@@ -702,11 +744,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var packageName = name.Value.TrimEnd('\0');
         if (packageName.Length == 0) return false;
 
-        // A package name holding a '\', a '/' or a ':' names a folder or a drive as well
-        // as a file. Such a name keeps the copy, since with no media package path a media
-        // source's package is that name below the root of its volume, and no media source
-        // is compared. A package name holding a '%' names a variable, which whoever reads
-        // the name may expand in its own environment, and keeps the copy as well.
+        // A package name holding a '\', a '/' or a ':' names a folder, a drive or a stream
+        // as well as a file, so the file it opens need not be the one its last part spells,
+        // and it keeps the copy. On a media source with no media package path such a name
+        // reaches below the root of the volume, and no media source is compared. A package
+        // name holding a '%' names a variable, which whoever reads the name may expand in its
+        // own environment, and keeps the copy as well.
         if (packageName.IndexOfAny(['\\', '/', ':', '%']) >= 0) return false;
 
         var sources = SourcesOf(code, sid, context, MsiSourceListOptions.Network);
@@ -752,6 +795,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             // separator is the host's.
             var package = folder.EndsWith('\\') ? folder + packageName : folder + '\\' + packageName;
 
+            if (ComparedByName(package, _registry, pass))
+            {
+                byName.Add(new NetworkPackage(package, packageName));
+                continue;
+            }
+
             if (!ReadSourcePackage(package, pass, namesAFileInInstallerFolder, out var identity)) return false;
             if (identity is { } read) opened.Add(read);
         }
@@ -760,9 +809,49 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     }
 
     /// <summary>
+    /// <paramref name="identities"/>, the packages an installation opens that were read for
+    /// every candidate, with the identity of each package in <paramref name="byName"/> this
+    /// candidate could be by its name (<see cref="CandidateNames.CouldBe"/>); null where one
+    /// of those cannot be ruled out, which keeps the candidate. A package it could not be by
+    /// its name is not read for it.
+    ///
+    /// Each package is read once per pass (<see cref="ReadSourcePackage"/>), and its answer is
+    /// kept for every candidate after it.
+    /// </summary>
+    private IReadOnlyList<FileIdentity>? WithPackagesItCouldBe(
+        CandidateNames candidate,
+        IReadOnlyList<FileIdentity> identities,
+        IReadOnlyList<NetworkPackage> byName,
+        PassAnswers pass,
+        Func<string, bool?>? namesAFileInInstallerFolder)
+    {
+        if (byName.Count == 0) return identities;
+        if (namesAFileInInstallerFolder is null) return null;
+
+        List<FileIdentity>? opened = null;
+        foreach (var package in byName)
+        {
+            pass.CancellationToken.ThrowIfCancellationRequested();
+            if (!candidate.CouldBe(package.Name)) continue;
+
+            if (!pass.NetworkPackageReads.TryGetValue(package.Path, out var read))
+            {
+                var settled = ReadSourcePackage(package.Path, pass, namesAFileInInstallerFolder, out var identity);
+                pass.NetworkPackageReads[package.Path] = read = (settled, identity);
+            }
+
+            if (!read.Settled) return null;
+            if (read.Identity is { } found) (opened ??= [.. identities]).Add(found);
+        }
+
+        return opened ?? identities;
+    }
+
+    /// <summary>
     /// Reads the package at <paramref name="package"/>, a path built from a source folder,
-    /// for <see cref="AddSourcePackages"/>: true with its identity where it opens, true with
-    /// null where no file is there, and false where the copy is kept.
+    /// for <see cref="AddSourcePackages"/>, or for <see cref="WithPackagesItCouldBe"/> where
+    /// the folder is on the network: true with its identity where it opens, true with null
+    /// where no file is there, and false where the copy is kept.
     ///
     /// FALSE for a package that would be a file directly in the Installer folder, or where
     /// that cannot be established; a package that exists and will not identify; and a read
@@ -772,10 +861,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// folder can be on a server that does not answer, and an open there waits until
     /// Windows gives up on the server; the open itself takes no time limit. Once a package
     /// on a network root, a share or a network drive (<see cref="IsNetworkRoot"/>), has not
-    /// answered within the limit, every later package under that root in the pass is kept
-    /// without being read, so a share that does not answer costs a pass the limit once. A
-    /// package on a local drive that has not answered keeps only its own file, and the next
-    /// package on that drive is read as usual. Cancelling the pass ends the wait at once.
+    /// answered within the limit, every later package under that root in the pass answers
+    /// false without being read, so a share that does not answer costs a pass the limit
+    /// once. A package on a local drive that has not answered keeps only its own file, and
+    /// the next package on that drive is read as usual. Cancelling the pass ends the wait
+    /// at once.
     /// </summary>
     private bool ReadSourcePackage(
         string package,
@@ -792,9 +882,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var answered = AnswersWithin(
             () =>
             {
-                // A source in the Installer folder keeps every copy of the product, not
-                // only the one it names: the folder it was installed from is the cache
-                // itself.
+                // A source in the Installer folder keeps what it is read for. Read for a
+                // product (AddSourcePackages), it keeps every copy of the product, not only
+                // the one it names: the folder it was installed from is the cache itself.
+                // Read for one candidate (WithPackagesItCouldBe), it keeps that one.
                 if (namesAFileInInstallerFolder(package) is not false) return (false, null);
 
                 return identities.ReadOutcome(package, out var read) switch
@@ -809,7 +900,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         if (!answered)
         {
-            if (IsNetworkRoot(root, pass.CancellationToken)) pass.RootsNotAnswering.Add(root);
+            if (IsNetworkRoot(root, pass)) pass.RootsNotAnswering.Add(root);
             return false;
         }
 
@@ -890,26 +981,126 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
     /// <summary>
     /// Whether <paramref name="root"/>, from <see cref="RootOf"/>, is on the network: a
-    /// share, or a drive letter that Windows does not report as a local drive
-    /// (<see cref="DriveLetterIsLocal"/>). A drive whose kind does not answer within the time
-    /// limit counts as a network drive. Any other root counts as local.
+    /// share, or a drive letter that Windows does not report as a local drive, one it
+    /// reports as fixed, removable, an optical drive or a RAM disk (<see cref="KindOf"/>).
+    /// A drive whose kind does not answer within the time limit counts as a network drive.
+    /// Any other root counts as local.
     /// </summary>
-    private bool IsNetworkRoot(string root, CancellationToken cancellationToken)
+    private bool IsNetworkRoot(string root, PassAnswers pass)
     {
         if (root.StartsWith(@"\\", StringComparison.Ordinal)) return true;
-        if (root.Length != 2 || root[1] != ':') return false;
+        if (!IsDriveLetter(root)) return false;
 
-        return !AnswersWithin(() => DriveLetterIsLocal(root), cancellationToken, out var local) || !local;
+        return KindOf(root, pass)
+            is not (DriveType.Fixed or DriveType.Removable or DriveType.CDRom or DriveType.Ram);
     }
 
     /// <summary>
-    /// Whether the drive letter <c>X:</c> given is a local drive: one Windows reports as
-    /// fixed, removable, an optical drive or a RAM disk. A network drive, and a drive whose
-    /// kind Windows does not report, answer false.
+    /// Whether the package at <paramref name="package"/> is left to be read for each
+    /// candidate whose name it could be (<see cref="WithPackagesItCouldBe"/>): whether it
+    /// is in a folder on the network, and Windows is set to follow no symbolic link
+    /// reached through a network path to this PC or to another network path
+    /// (<see cref="RemoteLinksCanBeFollowed"/>).
+    ///
+    /// A FOLDER ON THE NETWORK IS A SHARE OR A NETWORK DRIVE. A share is known by its
+    /// spelling, <c>\\server\share</c> in any form <see cref="RootOf"/> reads. A drive letter
+    /// is on the network where Windows reports it as a network drive
+    /// (<see cref="KindOf"/>); one it reports as anything else, or whose kind does not
+    /// answer within the time limit, is read for every candidate, and so is a path of any
+    /// other form.
     /// </summary>
-    internal Func<string, bool> DriveLetterIsLocal { get; init; } = drive =>
-        StorageHelpers.GetDriveKind(drive + @"\")
-            is DriveType.Fixed or DriveType.Removable or DriveType.CDRom or DriveType.Ram;
+    private bool ComparedByName(string package, IRegistryReader registry, PassAnswers pass)
+    {
+        var root = RootOf(package);
+        var onTheNetwork = root.StartsWith(@"\\", StringComparison.Ordinal)
+            || (IsDriveLetter(root) && KindOf(root, pass) == DriveType.Network);
+
+        return onTheNetwork && !RemoteLinksCanBeFollowed(registry, pass);
+    }
+
+    /// <summary>
+    /// Whether Windows may follow a symbolic link reached through a network path to a
+    /// target on this PC or on another network path: whether
+    /// <c>SymlinkRemoteToLocalEvaluation</c> or <c>SymlinkRemoteToRemoteEvaluation</c>
+    /// turns either on, in this PC's own setting or in the policy that sets it
+    /// (<see cref="LinkEvaluationKeys"/>). A value that is not there, and one holding 0,
+    /// turn nothing on. Any other number, a value of another type and one that will not
+    /// read all answer true. Read once per pass.
+    ///
+    /// WHILE IT ANSWERS TRUE, A PACKAGE ON THE NETWORK IS READ FOR EVERY CANDIDATE. A
+    /// symbolic link on a share can carry a program's package name and point at a file in
+    /// this PC's Installer folder, and where Windows follows it, that file is the package
+    /// whatever its own name.
+    /// </summary>
+    private static bool RemoteLinksCanBeFollowed(IRegistryReader registry, PassAnswers pass)
+    {
+        return pass.RemoteLinksFollowed ??= AnyTurnedOn();
+
+        bool AnyTurnedOn()
+        {
+            foreach (var key in LinkEvaluationKeys)
+                foreach (var value in RemoteLinkEvaluationValues)
+                {
+                    var setting = registry.LocalMachineDwordValue(key, value);
+                    if (setting.State == RegistryDwordState.Absent) continue;
+                    if (setting is { State: RegistryDwordState.Read, Value: 0 }) continue;
+                    return true;
+                }
+
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// The keys <see cref="RemoteLinksCanBeFollowed"/> reads: this PC's own setting, and
+    /// the policy "Selectively allow the evaluation of a symbolic link", which holds the
+    /// same values under the policies key.
+    /// </summary>
+    private static readonly string[] LinkEvaluationKeys =
+    [
+        @"SYSTEM\CurrentControlSet\Control\FileSystem",
+        @"SOFTWARE\Policies\Microsoft\Windows\Filesystems\NTFS",
+    ];
+
+    /// <summary>
+    /// The two values that turn on following a symbolic link reached through a network
+    /// path: to a target on this PC, and to a target on another network path.
+    /// </summary>
+    private static readonly string[] RemoteLinkEvaluationValues =
+        ["SymlinkRemoteToLocalEvaluation", "SymlinkRemoteToRemoteEvaluation"];
+
+    /// <summary>Whether <paramref name="root"/>, from <see cref="RootOf"/>, is a drive letter and its colon.</summary>
+    private static bool IsDriveLetter(string root) => root.Length == 2 && root[1] == ':';
+
+    /// <summary>
+    /// What <see cref="DriveKindOf"/> answers within the time limit for
+    /// <paramref name="drive"/>, a drive letter and its colon, or null where it has not
+    /// answered by then. Asked once per drive per pass.
+    /// </summary>
+    private DriveType? KindOf(string drive, PassAnswers pass)
+    {
+        if (!pass.DriveKinds.TryGetValue(drive, out var kind))
+            pass.DriveKinds[drive] = kind =
+                AnswersWithin(() => DriveKindOf(drive), pass.CancellationToken, out var answered)
+                    ? answered
+                    : null;
+
+        return kind;
+    }
+
+    /// <summary>
+    /// The kind of drive the drive letter <c>X:</c> given is, as Windows reports it to this
+    /// process.
+    /// </summary>
+    internal Func<string, DriveType> DriveKindOf { get; init; } = drive =>
+        StorageHelpers.GetDriveKind(drive + @"\");
+
+    /// <summary>
+    /// The names the folder's entry for a candidate's path holds: its name, and its 8.3
+    /// short name where it has one of its own (<see cref="StorageHelpers.GetNamesInFolder"/>).
+    /// Null where Windows does not answer.
+    /// </summary>
+    internal Func<string, IReadOnlyList<string>?> NamesInFolderOf { get; init; } = StorageHelpers.GetNamesInFolder;
 
     /// <summary>
     /// How long <see cref="ReadSourcePackage"/> waits for one source folder's package to
@@ -1497,9 +1688,86 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// registration records. Null where any of them could not be seen, and null for every
     /// other verdict.
     /// </param>
+    /// <param name="ByName">
+    /// Beside <paramref name="RecordedPackages"/> for an installed product, every package in
+    /// a folder on the network an installation opens, read only for a candidate whose name
+    /// it could be (<see cref="OpenedPackages.ByName"/>). Null for every other verdict.
+    /// </param>
     private readonly record struct DeclarationAnswer(
         DeclaredProductOutcome Outcome,
-        IReadOnlyList<FileIdentity>? RecordedPackages);
+        IReadOnlyList<FileIdentity>? RecordedPackages,
+        IReadOnlyList<NetworkPackage>? ByName = null);
+
+    /// <param name="Identities">The identity of every package read for every candidate.</param>
+    /// <param name="ByName">
+    /// Every package in a folder on the network, read only for a candidate whose name it
+    /// could be (<see cref="WithPackagesItCouldBe"/>).
+    /// </param>
+    private sealed record OpenedPackages(IReadOnlyList<FileIdentity> Identities, IReadOnlyList<NetworkPackage> ByName);
+
+    /// <param name="Path">The path Windows Installer opens: the source folder and the package name.</param>
+    /// <param name="Name">The package name.</param>
+    private readonly record struct NetworkPackage(string Path, string Name);
+
+    /// <summary>
+    /// The names one candidate has, for comparing with a package name: the last component
+    /// of its path, and the names its folder's entry holds for it
+    /// (<see cref="NamesInFolderOf"/>), read the first time a package name is not the first.
+    /// </summary>
+    private sealed class CandidateNames(string path, Func<string, IReadOnlyList<string>?> namesInFolderOf)
+    {
+        private IReadOnlyList<string>? _inFolder;
+        private bool _inFolderRead;
+
+        /// <summary>
+        /// Whether a package named <paramref name="packageName"/> could be this candidate by
+        /// its name: whether that name and one of the candidate's could name one file
+        /// (<see cref="CouldNameOneFile"/>). Where the folder's entry does not read, the
+        /// candidate could have any short name, so every package name could be one of its.
+        /// </summary>
+        internal bool CouldBe(string packageName)
+        {
+            if (CouldNameOneFile(packageName, path[(path.LastIndexOfAny(['\\', '/']) + 1)..])) return true;
+
+            if (!_inFolderRead)
+            {
+                _inFolder = namesInFolderOf(path);
+                _inFolderRead = true;
+            }
+
+            if (_inFolder is null) return true;
+
+            foreach (var name in _inFolder)
+                if (CouldNameOneFile(packageName, name)) return true;
+
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Whether two names could name one file in one folder, as Windows reads the last
+    /// component of a path. Trailing dots and spaces are taken off both first, as Windows
+    /// takes them off a path's last component, and the two are then one name where they are
+    /// equal with ASCII letters compared without case.
+    ///
+    /// A NAME EMPTY ONCE THAT IS DONE COULD NAME ANY FILE, and so could a name holding any
+    /// character outside ASCII. A name of dots alone, '.' and '..' among them, can stand for
+    /// the source's own folder or the one above it rather than for a file in it, and either
+    /// can be a file's path. A file system compares letters outside ASCII without case
+    /// through a table of its own, which need not be the one this process has.
+    ///
+    /// A PACKAGE NAME REACHING IT HOLDS NO '\', '/', ':' OR '%', <see cref="AddSourcePackages"/>
+    /// having kept the copy for one that does. Let such a name through and this comparison
+    /// has to take in what each of them does to a path.
+    /// </summary>
+    private static bool CouldNameOneFile(string first, string second)
+    {
+        var a = first.AsSpan().TrimEnd(". ");
+        var b = second.AsSpan().TrimEnd(". ");
+        if (a.IsEmpty || b.IsEmpty || !Ascii.IsValid(a) || !Ascii.IsValid(b)) return true;
+
+        return Ascii.EqualsIgnoreCase(a, b);
+    }
 
     /// <param name="ByDeclaredCode">
     /// Every listed installation registered under a code other than the one its cached
@@ -1545,9 +1813,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         /// <summary>
         /// The packages opened by the installations not ruled out as second copies, or
-        /// null where they could not all be seen, once <see cref="SecondCopiesRead"/>.
+        /// null where those read for every candidate could not all be seen, once
+        /// <see cref="SecondCopiesRead"/>.
         /// </summary>
-        internal IReadOnlyList<FileIdentity>? SecondCopies { get; set; }
+        internal OpenedPackages? SecondCopies { get; set; }
 
         /// <summary>Whether <see cref="SecondCopies"/> has been read for this pass.</summary>
         internal bool SecondCopiesRead { get; set; }
@@ -1579,6 +1848,26 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// not answered within the time limit in this pass (<see cref="ReadSourcePackage"/>).
         /// </summary>
         internal HashSet<string> RootsNotAnswering { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Each drive's kind, or null where it did not answer within the time limit, once
+        /// asked (<see cref="KindOf"/>). Keyed by the drive letter and its colon, without
+        /// case.
+        /// </summary>
+        internal Dictionary<string, DriveType?> DriveKinds { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Whether Windows may follow a symbolic link reached through a network path, once
+        /// read (<see cref="RemoteLinksCanBeFollowed"/>).
+        /// </summary>
+        internal bool? RemoteLinksFollowed { get; set; }
+
+        /// <summary>
+        /// Each package on the network read for a candidate, keyed by its path, with what
+        /// <see cref="ReadSourcePackage"/> answered.
+        /// </summary>
+        internal Dictionary<string, (bool Settled, FileIdentity? Identity)> NetworkPackageReads { get; } =
+            new(StringComparer.Ordinal);
 
         /// <summary>Each declared patch's answer, keyed by patch code and target list.</summary>
         internal Dictionary<string, DeclarationAnswer> Patches { get; } = new(StringComparer.Ordinal);

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 using Microsoft.Win32.SafeHandles;
@@ -197,6 +198,63 @@ internal static partial class Kernel32
         string lpDeviceName,
         [MarshalUsing(CountElementName = nameof(ucchMax))] char[] lpTargetPath,
         uint ucchMax);
+
+    /// <summary>
+    /// Opens a search of the folder <paramref name="lpFileName"/> is in and writes the
+    /// first entry it matches into <paramref name="lpFindFileData"/>. Given a path with
+    /// no wildcard, that is the entry of the file the path names, found by its name or
+    /// by its short name. Returns INVALID_HANDLE_VALUE on failure; the handle must be
+    /// closed with <see cref="FindClose"/>.
+    ///
+    /// The entry holds the name and the short name the file system keeps for it.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "FindFirstFileW", SetLastError = true,
+                   StringMarshalling = StringMarshalling.Utf16)]
+    public static partial IntPtr FindFirstFile(string lpFileName, out WIN32_FIND_DATA lpFindFileData);
+
+    /// <summary>Closes a search opened by <see cref="FindFirstFile"/>.</summary>
+    [LibraryImport(Library, EntryPoint = "FindClose", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool FindClose(IntPtr hFindFile);
+
+    /// <summary>
+    /// One folder entry as <see cref="FindFirstFile"/> writes it: the file's name in
+    /// <see cref="cFileName"/> and, where the file has an 8.3 short name other than that
+    /// name, the short name in <see cref="cAlternateFileName"/>, which is empty
+    /// otherwise. Each is null-terminated inside its buffer.
+    ///
+    /// The two names are inline arrays of the sizes the API declares, 260 and 14
+    /// characters, which keeps the struct blittable under the assembly's disabled
+    /// runtime marshalling and byte-for-byte the WIN32_FIND_DATAW the API writes.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct WIN32_FIND_DATA
+    {
+        public uint dwFileAttributes;
+        public FILETIME ftCreationTime;
+        public FILETIME ftLastAccessTime;
+        public FILETIME ftLastWriteTime;
+        public uint nFileSizeHigh;
+        public uint nFileSizeLow;
+        public uint dwReserved0;
+        public uint dwReserved1;
+        public FileNameBuffer cFileName;
+        public AlternateFileNameBuffer cAlternateFileName;
+    }
+
+    /// <summary>The 260 characters of <see cref="WIN32_FIND_DATA.cFileName"/>.</summary>
+    [InlineArray(260)]
+    public struct FileNameBuffer
+    {
+        private char _first;
+    }
+
+    /// <summary>The 14 characters of <see cref="WIN32_FIND_DATA.cAlternateFileName"/>.</summary>
+    [InlineArray(14)]
+    public struct AlternateFileNameBuffer
+    {
+        private char _first;
+    }
 
     /// <summary>
     /// Whether the volume mounted at <paramref name="lpRootPathName"/> is fixed,

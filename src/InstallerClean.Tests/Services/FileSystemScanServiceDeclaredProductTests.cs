@@ -208,7 +208,11 @@ public class FileSystemScanServiceDeclaredProductTests
         return new FileSystemScanService(
             QueryReturning(registered), fs, null,
             new[] { $@"{Folder}\a.msi", $@"{Folder}\b.msi" }, null, null,
-            new DeclaredProductCheck(msi, identities, files, fs, msi.Registry))
+            new DeclaredProductCheck(msi, identities, files, fs, msi.Registry)
+                {
+                    DriveKindOf = _ => DriveType.Fixed,
+                    NamesInFolderOf = path => [path[(path.LastIndexOf('\\') + 1)..]],
+                })
             .ScanAsync();
     }
 
@@ -446,7 +450,11 @@ public class FileSystemScanServiceDeclaredProductTests
         return new FileSystemScanService(
             QueryReturning(registered), fs, null,
             new[] { $@"{Folder}\copy.msp", $@"{Folder}\cached.msp" }, null, null,
-            new DeclaredProductCheck(msi, identities, files, fs, msi.Registry))
+            new DeclaredProductCheck(msi, identities, files, fs, msi.Registry)
+                {
+                    DriveKindOf = _ => DriveType.Fixed,
+                    NamesInFolderOf = path => [path[(path.LastIndexOf('\\') + 1)..]],
+                })
             .ScanAsync();
     }
 
