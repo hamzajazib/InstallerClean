@@ -112,7 +112,7 @@ japanese.WelcomeLabel1=InstallerClean セットアップへようこそ
 japanese.WelcomeLabel2=InstallerClean をお使いのコンピューターにインストールします。
 japanese.FinishedHeadingLabel=セットアップ完了
 japanese.FinishedLabel=InstallerClean がお使いのコンピューターにインストールされました。
-japanese.ClickFinish=「完了」をクリックするとセットアップを終了します。
+japanese.ClickFinish=セットアップを終了するには「完了」を選択してください。
 
 chinesesimplified.WelcomeLabel1=欢迎使用 InstallerClean 安装程序
 chinesesimplified.WelcomeLabel2=这将在您的计算机上安装 InstallerClean。
@@ -171,8 +171,8 @@ russian.UninstallAppRunningError=InstallerClean по-прежнему запущ
 ukrainian.SetupAppRunningError=InstallerClean все ще працює, тому встановлення не може бути продовжено.%n%nЦе може бути вікно програми або фоновий процес, запущений із командного рядка чи запланованим завданням. Закрийте вікно або завершіть процеси InstallerClean.exe та installerclean-cli.exe у Диспетчері завдань, потім натисніть «OK», щоб продовжити, або «Скасувати», щоб вийти.
 ukrainian.UninstallAppRunningError=InstallerClean все ще працює, тому його не можна видалити.%n%nЦе може бути вікно програми або фоновий процес, запущений із командного рядка чи запланованим завданням. Закрийте вікно або завершіть процеси InstallerClean.exe та installerclean-cli.exe у Диспетчері завдань, потім натисніть «OK», щоб продовжити, або «Скасувати», щоб вийти.
 
-japanese.SetupAppRunningError=InstallerClean がまだ実行中のため、セットアップを続行できません。%n%nアプリのウィンドウのほか、コマンドラインやスケジュールされたタスクによるバックグラウンド処理の可能性もあります。ウィンドウを閉じるか、タスク マネージャーで InstallerClean.exe と installerclean-cli.exe を終了してから、[OK] をクリックして続行するか、[キャンセル] をクリックして終了してください。
-japanese.UninstallAppRunningError=InstallerClean がまだ実行中のため、アンインストールできません。%n%nアプリのウィンドウのほか、コマンドラインやスケジュールされたタスクによるバックグラウンド処理の可能性もあります。ウィンドウを閉じるか、タスク マネージャーで InstallerClean.exe と installerclean-cli.exe を終了してから、[OK] をクリックして続行するか、[キャンセル] をクリックして終了してください。
+japanese.SetupAppRunningError=InstallerClean がまだ実行中のため、セットアップを続行できません。%n%nアプリのウィンドウのほか、コマンドラインやスケジュールされたタスクによるバックグラウンド処理の可能性もあります。ウィンドウを閉じるか、タスク マネージャーで InstallerClean.exe と installerclean-cli.exe を終了してから、「OK」を選択して続行するか、「キャンセル」を選択して終了してください。
+japanese.UninstallAppRunningError=InstallerClean がまだ実行中のため、アンインストールできません。%n%nアプリのウィンドウのほか、コマンドラインやスケジュールされたタスクによるバックグラウンド処理の可能性もあります。ウィンドウを閉じるか、タスク マネージャーで InstallerClean.exe と installerclean-cli.exe を終了してから、「OK」を選択して続行するか、「キャンセル」を選択して終了してください。
 
 chinesesimplified.SetupAppRunningError=InstallerClean 仍在运行，因此安装无法继续。%n%n这可能是应用程序窗口，也可能是在后台运行的命令行或计划任务进程。请关闭该窗口，或在任务管理器中结束 InstallerClean.exe 和 installerclean-cli.exe，然后点击“确定”继续，或点击“取消”退出。
 chinesesimplified.UninstallAppRunningError=InstallerClean 仍在运行，因此无法卸载。%n%n这可能是应用程序窗口，也可能是在后台运行的命令行或计划任务进程。请关闭该窗口，或在任务管理器中结束 InstallerClean.exe 和 installerclean-cli.exe，然后点击“确定”继续，或点击“取消”退出。
