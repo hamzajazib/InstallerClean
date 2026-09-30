@@ -32,34 +32,33 @@ namespace InstallerClean.Services;
 ///
 /// AN INSTALLED PRODUCT DOES NOT ON ITS OWN MAKE THIS FILE THE ONE IT USES. Windows
 /// Installer opens a product's cached package through the <c>LocalPackage</c> value
-/// recorded for each installation of it, and its original package, when it needs
-/// that rather than the cached copy, by looking for the package name in the folders
-/// on the product's source list. The folder can hold further copies that declare the
-/// same product code while nothing in either place names them, and those are not a
-/// package any installation of the product opens. So the file is kept while some
-/// installation's package cannot be seen: a value that is empty, that will not read,
-/// that names nothing identifiable, that names a file declaring another product, or
-/// that names this file under another spelling. It is kept too while some source
-/// cannot be ruled out: one in the Installer folder itself, one naming this file, one
-/// that cannot be read, one whose package does not answer within the check's time
-/// limit, and one on a drive or share the pass has stopped reading because a read there
-/// answered too slowly or not at all. A source in a folder on the network, a share or a
-/// network drive, is one of those only for a file whose name or short name its package
-/// name could be, since Windows Installer looks in a source folder for that name alone.
-/// While Windows is set
-/// to follow a symbolic link reached through a network path to this PC or to another
-/// network path, it is one for every file. The folder an installation records as its
-/// <c>InstallSource</c>, the one its package was installed from, counts as a source
-/// whether or not the list still holds it. So it is while a source list holds
-/// something the check does not compare, a URL, an entry naming an environment
-/// variable, a media package path or a package name naming a folder, a drive, a
-/// stream or a variable, or holding a null; while the source used last is not a
-/// network entry on the list; and while the registry key holding the list does not
-/// hold what the API returned for it, package name included, or holds that name as
-/// anything but a REG_SZ. So it is while an installation's <c>InstallSource</c> will
-/// not read, is held in the registry otherwise than the API answers it or as
-/// anything but a REG_SZ, names an environment variable, or starts neither with a
-/// drive letter, a ':' and a '\' nor with two '\'. An installation in a
+/// recorded for each installation of it, and its original package, when it needs that
+/// rather than the cached copy, by looking for the package name in the folders on the
+/// product's source list. The folder can hold further copies that declare the same
+/// product code while nothing in either place names them, and those are not a package
+/// any installation of the product opens. So the file is kept while some installation's
+/// package cannot be seen: a value that is empty, that will not read, that names
+/// nothing identifiable, that names a file declaring another product, or that names
+/// this file under another spelling. It is kept too while some source cannot be ruled
+/// out: one in the Installer folder itself, one naming this file, one that cannot be
+/// read, one whose package does not answer within the check's time limit, and one on a
+/// drive or share the pass has stopped reading because a read there did not answer
+/// within that limit or failed only after a long wait. A source in a folder on the
+/// network, a share or a network drive, is one of those only for a file whose name or
+/// short name its package name could be, since Windows Installer looks in a source
+/// folder for that name alone. While Windows is set to follow a symbolic link reached
+/// through a network path to this PC or to another network path, it is one for every
+/// file. The folder an installation records as its <c>InstallSource</c>, the one its
+/// package was installed from, counts as a source whether or not the list still holds
+/// it. So it is while a source list holds something the check does not compare, a URL,
+/// an entry naming an environment variable, a media package path or a package name
+/// naming a folder, a drive, a stream or a variable, or holding a null; while the
+/// source used last is not a network entry on the list; and while the registry key
+/// holding the list does not hold what the API returned for it, package name included,
+/// or holds that name as anything but a REG_SZ. So it is while an installation's
+/// <c>InstallSource</c> will not read, is held in the registry otherwise than the API
+/// answers it or as anything but a REG_SZ, names an environment variable, or starts
+/// neither with a drive letter, a ':' and a '\' nor with two '\'. An installation in a
 /// per-user-unmanaged context keeps it as well, its source list not being read.
 ///
 /// A REGISTERED PATCH DOES NOT ON ITS OWN MAKE THIS FILE A COPY OF IT WINDOWS OPENS
@@ -257,36 +256,34 @@ public enum DeclaredProductOutcome
     /// a different file; or an installation the caller could not rule out as a second copy
     /// of a program opens this file as its package. Kept back.
     ///
-    /// That covers a recorded <c>LocalPackage</c> value that is empty or will not
-    /// read, one naming a folder or a file that is absent or cannot be identified,
-    /// one naming a file that declares another product, and one naming this very
-    /// file under another spelling. It covers a source list or package name that will
-    /// not read, a source whose package is this file, will not identify or does not
-    /// answer within the check's time limit, a source on a drive or share the check has
-    /// stopped reading for the pass because a read there answered too slowly or not at
-    /// all, a source not on a local drive that is the Installer folder itself or cannot be
-    /// resolved, and an installation in a per-user-unmanaged context, whose source list is
-    /// not read. It covers a source list holding a URL, an entry naming an
-    /// environment variable or starting neither with a drive letter, a ':' and a '\' nor
-    /// with two '\', a media package path or a package name naming a folder, a
-    /// drive, a stream or a variable, or holding a null, one whose source used last is not
-    /// a network entry on it,
-    /// and one whose registry key does not hold what the API returned for it, package
-    /// name included, or holds that name as anything but a REG_SZ. It covers an
+    /// That covers a recorded <c>LocalPackage</c> value that is empty or will not read, one
+    /// naming a folder or a file that is absent or cannot be identified, one naming a file
+    /// that declares another product, and one naming this very file under another spelling.
+    /// It covers a source list or package name that will not read, a source whose package
+    /// is this file, will not identify or does not answer within the check's time limit, a
+    /// source on a drive or share the check has stopped reading for the pass because a read
+    /// there did not answer within that limit or failed only after a long wait, a source
+    /// not on a local drive that is the Installer folder itself or cannot be resolved, and
+    /// an installation in a per-user-unmanaged context, whose source list is not read. It
+    /// covers a source list holding a URL, an entry naming an environment variable or
+    /// starting neither with a drive letter, a ':' and a '\' nor with two '\', a media
+    /// package path or a package name naming a folder, a drive, a stream or a variable, or
+    /// holding a null, one whose source used last is not a network entry on it, and one
+    /// whose registry key does not hold what the API returned for it, package name
+    /// included, or holds that name as anything but a REG_SZ. It covers an
     /// <c>InstallSource</c> whose package is this file, will not identify or does not
-    /// answer within the time limit, one on a drive or share the check has stopped
-    /// reading, one not on a local drive that is the Installer folder
-    /// itself, and one that will not read, that the registry holds otherwise
-    /// than the API answers it or as anything but a REG_SZ, that names an environment
-    /// variable, or that starts neither with a drive letter, a ':' and a '\' nor with two
-    /// '\'. A source or an <c>InstallSource</c> in a folder on the network covers this
-    /// only where its package name could be this file's name or short name, or where
-    /// Windows is set to follow a symbolic link reached through a network path to this PC
-    /// or to another network path. In each of them this file is, or could be, the package
-    /// that installation opens. A check constructed without its
-    /// two file readers or its registry reader, or screening without the Installer folder
-    /// to compare against, answers this for every installed product, having no way to
-    /// look.
+    /// answer within the time limit, one on a drive or share the check has stopped reading,
+    /// one not on a local drive that is the Installer folder itself, and one that will not
+    /// read, that the registry holds otherwise than the API answers it or as anything but a
+    /// REG_SZ, that names an environment variable, or that starts neither with a drive
+    /// letter, a ':' and a '\' nor with two '\'. A source or an <c>InstallSource</c> in a
+    /// folder on the network covers this only where its package name could be this file's
+    /// name or short name, or where Windows is set to follow a symbolic link reached
+    /// through a network path to this PC or to another network path. In each of them this
+    /// file is, or could be, the package that installation opens. A check constructed
+    /// without its two file readers or its registry reader, or screening without the
+    /// Installer folder to compare against, answers this for every installed product,
+    /// having no way to look.
     ///
     /// Where every package was seen and this file's own identity does not read, the
     /// answer is <see cref="CandidateIdentityUnestablished"/> instead.
