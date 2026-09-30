@@ -1912,17 +1912,18 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// A reporter for the check before a Move or Delete and the rescan after one, which
     /// shows a wait they report on a source folder (<see cref="ScanProgressUpdate.IsWait"/>)
     /// in the heading, the line a screen reader speaks, and puts the heading back when the
-    /// wait ends. Nothing else they report is shown: the overlay counts the batch. Once
-    /// Cancel is pressed a wait is not shown or put back, so "Cancelling..." stays in front
-    /// of the reader. Made on the dispatcher, so what it is told arrives there.
+    /// wait ends. Nothing else they report is shown, the overlay counting the batch, and
+    /// nothing else crosses to the dispatcher (<see cref="WaitsOnly"/>). Once Cancel is
+    /// pressed a wait is not shown or put back, so "Cancelling..." stays in front of the
+    /// reader. Made on the dispatcher, so a wait it is told arrives there.
     /// </summary>
     private IProgress<ScanProgressUpdate> WaitsInTheHeading()
     {
         var heading = new WaitLine(() => OperationProgress, line => OperationProgress = line);
-        return new Progress<ScanProgressUpdate>(update =>
+        return new WaitsOnly(new Progress<ScanProgressUpdate>(wait =>
         {
-            if (update.IsWait && !IsCancellationRequested) heading.Show(update);
-        });
+            if (!IsCancellationRequested) heading.Show(wait);
+        }));
     }
 
     private void OnOperationProgressUpdate(OperationProgress p)

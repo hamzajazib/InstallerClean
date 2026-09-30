@@ -636,6 +636,51 @@ public class CleanupPreFlightTests
     }
 
     [Fact]
+    public async Task Only_a_wait_the_check_before_a_Move_reports_reaches_the_heading()
+    {
+        // The check reports a milestone and a ticker update, as a scan does, and then one
+        // wait on drive D: and its end. Every line the heading takes is kept. The check
+        // answers once the wait and its end have both been seen there, which is after the
+        // two updates reported before them have had their turn.
+        const string Milestone = "a milestone the check reported";
+        const string Ticker = "a ticker update the check reported";
+        var waitLine = InstallerClean.Helpers.DisplayHelpers.WaitingFor("D:");
+        var headings = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        MainViewModel? vm = null;
+        _confirmationService.ConfirmMove(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>())
+            .Returns(true);
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
+            .Returns(async ci =>
+            {
+                var progress = (IProgress<ScanProgressUpdate>)ci[2]!;
+                progress.Report(new ScanProgressUpdate(Milestone));
+                progress.Report(new ScanProgressUpdate(Ticker, IsMilestone: false, Position: 1, Total: 2));
+                progress.Report(ScanProgressUpdate.Waiting("D:"));
+                await WaitUntil(() => vm!.Cleanup.OperationProgress == waitLine);
+                progress.Report(ScanProgressUpdate.Waiting(null));
+                await WaitUntil(() => vm!.Cleanup.OperationProgress != waitLine);
+                return new ReverifyResult(
+                    Array.Empty<string>(), (IReadOnlyList<string>)ci[0]!,
+                    new HeldBackReasons(Reclaimed: ((IReadOnlyList<string>)ci[0]!).Count));
+            });
+
+        vm = CreateViewModel();
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = _destination;
+        vm.Cleanup.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(CleanupViewModel.OperationProgress))
+                headings.Enqueue(vm.Cleanup.OperationProgress);
+        };
+
+        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        Assert.Contains(waitLine, headings);
+        Assert.DoesNotContain(Milestone, headings);
+        Assert.DoesNotContain(Ticker, headings);
+    }
+
+    [Fact]
     public async Task A_batch_the_under_lease_re_read_empties_removes_the_folder_too()
     {
         // The service is careful to return before creating its destination, so a
