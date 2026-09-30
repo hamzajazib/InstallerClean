@@ -233,11 +233,9 @@ public partial class ScanViewModel : ObservableObject
             DisplayHelpers.FormatCount(OrphanedFileCount));
 
     /// <summary>
-    /// True when the last scan found files to clean up. The main window's
-    /// action zone (the backup folder, Move and Delete) hangs off this: with
-    /// nothing found there is nothing for it to act on, and a greyed-out pair
-    /// of buttons under copy that tells the user to press them reads as a
-    /// broken app rather than a clean machine.
+    /// True when the last scan found files to clean up. Move, Delete and the
+    /// Details button beside the unneeded count are enabled only while this
+    /// holds, and the window's pending-install lead shows only while it holds.
     /// </summary>
     public bool HasOrphans => HasScanned && OrphanedFileCount > 0;
 

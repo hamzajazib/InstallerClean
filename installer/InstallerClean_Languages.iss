@@ -2,10 +2,9 @@
 ; InstallerClean.iss so the main script stays on install logic and each added
 ; language touches only this file. Pulled in with #include.
 ;
-; This file MUST keep its UTF-8 BOM. #include reads it as its own file, and it
-; carries non-ASCII overrides for many languages (CJK, Cyrillic, accented
-; Latin); without the BOM, Inno Setup 6 reads it in the system ANSI codepage
-; and those characters garble.
+; This file keeps its UTF-8 BOM. It carries non-ASCII overrides for many
+; languages (CJK, Cyrillic, accented Latin), and the BOM marks it as UTF-8 to
+; the compiler.
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "indonesian"; MessagesFile: "Languages\Indonesian.isl"
@@ -28,7 +27,8 @@ Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"
 ; the language-name prefix. They must live here, NOT in [CustomMessages]:
 ; [CustomMessages] entries are only reachable via {cm:Name} and would not
 ; override the wizard's own text. Each language's .isl supplies the rest of
-; the wizard.
+; the wizard. The Welcome lines show only if the welcome page is turned on,
+; and InstallerClean.iss leaves it off, which is Inno's default.
 [Messages]
 english.WelcomeLabel1=Welcome to InstallerClean setup
 english.WelcomeLabel2=This will install InstallerClean on your computer.
