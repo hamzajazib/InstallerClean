@@ -188,13 +188,21 @@ public interface IDeclaredProductCheck
     /// screen, once for each candidate in order, so the last call carries the length of
     /// the list. Handed in by the scan, which turns it into the progress it reports.
     /// </param>
+    /// <param name="waitingOn">
+    /// Told the drive or share a read of a source folder is waiting on, once that read
+    /// has waited about a second without answering, and told null when the wait ends,
+    /// whether the read answered or its drive or share was given up. The end of a wait
+    /// that cancelling the pass ends is not told. Handed in by the scan and by the check
+    /// before a Move or Delete, which show the wait while it lasts.
+    /// </param>
     IReadOnlyList<DeclaredProductOutcome> Screen(
         IReadOnlyList<OrphanedFile> candidates,
         IReadOnlyList<ListedInstallation> installations,
         CancellationToken cancellationToken = default,
         Action<Exception, string>? recordRefusal = null,
         Func<string, bool?>? namesAFileInInstallerFolder = null,
-        Action<int>? candidateReached = null);
+        Action<int>? candidateReached = null,
+        Action<string?>? waitingOn = null);
 }
 
 /// <summary>

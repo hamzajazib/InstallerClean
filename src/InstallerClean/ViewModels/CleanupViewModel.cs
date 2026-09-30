@@ -894,7 +894,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             ReverifyResult reverify;
             try
             {
-                reverify = await _reverifier.ReverifyAsync(filePaths, _operationCts!.Token);
+                reverify = await _reverifier.ReverifyAsync(filePaths, _operationCts!.Token, WaitsInTheHeading());
             }
             catch (OperationCanceledException)
             {
@@ -1307,7 +1307,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             ReverifyResult reverify;
             try
             {
-                reverify = await _reverifier.ReverifyAsync(ctx.FilePaths, _operationCts.Token);
+                reverify = await _reverifier.ReverifyAsync(ctx.FilePaths, _operationCts.Token, WaitsInTheHeading());
             }
             catch (OperationCanceledException)
             {
@@ -1893,7 +1893,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         OperationProgress = Strings.Status_Scanning;
         try
         {
-            await _scan.RefreshAsync(cts.Token);
+            await _scan.RefreshAsync(cts.Token, WaitsInTheHeading());
         }
         finally
         {
@@ -1906,6 +1906,23 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 cts.Dispose();
             }
         }
+    }
+
+    /// <summary>
+    /// A reporter for the check before a Move or Delete and the rescan after one, which
+    /// shows a wait they report on a source folder (<see cref="ScanProgressUpdate.IsWait"/>)
+    /// in the heading, the line a screen reader speaks, and puts the heading back when the
+    /// wait ends. Nothing else they report is shown: the overlay counts the batch. Once
+    /// Cancel is pressed a wait is not shown or put back, so "Cancelling..." stays in front
+    /// of the reader. Made on the dispatcher, so what it is told arrives there.
+    /// </summary>
+    private IProgress<ScanProgressUpdate> WaitsInTheHeading()
+    {
+        var heading = new WaitLine(() => OperationProgress, line => OperationProgress = line);
+        return new Progress<ScanProgressUpdate>(update =>
+        {
+            if (update.IsWait && !IsCancellationRequested) heading.Show(update);
+        });
     }
 
     private void OnOperationProgressUpdate(OperationProgress p)

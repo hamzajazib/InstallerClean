@@ -94,7 +94,8 @@ public sealed class RemovableReverifier : IRemovableReverifier
 
     public async Task<ReverifyResult> ReverifyAsync(
         IReadOnlyList<string> candidatePaths,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IProgress<ScanProgressUpdate>? progress = null)
     {
         if (candidatePaths.Count == 0)
             return new ReverifyResult(candidatePaths, Array.Empty<string>());
@@ -172,7 +173,7 @@ public sealed class RemovableReverifier : IRemovableReverifier
             else if (!claimedPaths.Contains(path) && walkSeen.Add(path)) walkDerived.Add(path);
         }
 
-        HoldWalkDerivedFilesTheScanWouldHold(walkDerived, query, clock, held, cancellationToken);
+        HoldWalkDerivedFilesTheScanWouldHold(walkDerived, query, clock, held, cancellationToken, progress);
 
         // In the order the batch was handed over, so the two lists read as the batch
         // does.
@@ -267,7 +268,8 @@ public sealed class RemovableReverifier : IRemovableReverifier
         InstallerQueryResult query,
         DateTimeOffset clock,
         Dictionary<string, HeldBackReason> held,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IProgress<ScanProgressUpdate>? progress)
     {
         if (walkDerived.Count == 0) return;
 
@@ -313,7 +315,7 @@ public sealed class RemovableReverifier : IRemovableReverifier
             standing = Keep(standing, held, _ => HeldBackReason.OwnershipUnestablished);
 
         if (_declaredProducts is not null && cacheRoot is not null && standing.Count > 0)
-            standing = ScreenByWhatTheyDeclare(standing, held, cacheRoot, query.Installations, cancellationToken);
+            standing = ScreenByWhatTheyDeclare(standing, held, cacheRoot, query.Installations, cancellationToken, progress);
 
         if (_fileTimes is not null && standing.Count > 0)
             _ = Keep(standing, held, path =>
@@ -337,13 +339,17 @@ public sealed class RemovableReverifier : IRemovableReverifier
     /// <see cref="HeldBackReason.OwnershipUnestablished"/>, being a finding about another
     /// installation on the machine and not about the file. Every other verdict that
     /// withholds is held as <see cref="HeldBackReason.FileNotConfirmed"/>.
+    ///
+    /// A wait the screen makes on a source folder is reported through
+    /// <paramref name="progress"/> as it starts and as it ends, as the scan reports its own.
     /// </summary>
     private List<string> ScreenByWhatTheyDeclare(
         List<string> standing,
         Dictionary<string, HeldBackReason> held,
         InstallerCacheRoot cacheRoot,
         IReadOnlyList<ListedInstallation> installations,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IProgress<ScanProgressUpdate>? progress)
     {
         var files = standing
             .Select(path => new OrphanedFile(
@@ -362,7 +368,8 @@ public sealed class RemovableReverifier : IRemovableReverifier
         {
             var outcomes = _declaredProducts!.Screen(
                 files, installations, cancellationToken, (ex, cause) => refusalLog.Record(ex, cause),
-                path => InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(path, cacheRoot));
+                path => InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(path, cacheRoot),
+                waitingOn: root => progress?.Report(ScanProgressUpdate.Waiting(root)));
 
             if (outcomes.Count != files.Count)
             {

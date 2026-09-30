@@ -1,5 +1,6 @@
 using System.Globalization;
 using InstallerClean.Helpers;
+using InstallerClean.Resources;
 
 namespace InstallerClean.Tests.Helpers;
 
@@ -277,6 +278,18 @@ public class DisplayHelpersTests
             var _ = DisplayHelpers.FormatSize(1_073_741_824);
         }
     }
+
+    [Theory]
+    [InlineData("D:")]
+    [InlineData("z:")]
+    public void A_wait_on_a_drive_names_it_as_a_drive(string root) =>
+        Assert.Equal(string.Format(Strings.Status_WaitingForDrive, root), DisplayHelpers.WaitingFor(root));
+
+    [Theory]
+    [InlineData(@"\\fileserver\apps")]
+    [InlineData(@"GLOBALROOT\Device\Mup\fileserver\apps\setup.msi")]
+    public void A_wait_on_a_share_or_any_other_path_names_it_as_it_is_spelled(string root) =>
+        Assert.Equal(string.Format(Strings.Status_WaitingForPath, root), DisplayHelpers.WaitingFor(root));
 
     private static readonly CultureInfo British = CultureInfo.GetCultureInfo("en-GB");
 

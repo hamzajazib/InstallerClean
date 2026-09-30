@@ -59,7 +59,8 @@ internal sealed class FakeReclaimingReverifier : IRemovableReverifier
 
     public Task<ReverifyResult> ReverifyAsync(
         IReadOnlyList<string> candidatePaths,
-        CancellationToken cancellationToken = default) =>
+        CancellationToken cancellationToken = default,
+        IProgress<ScanProgressUpdate>? progress = null) =>
         throw new NotSupportedException("This fake stands in for the under-lease half only.");
 
     public UnderLeaseRecheck RecheckUnderLease(UnderLeaseClaims claims)

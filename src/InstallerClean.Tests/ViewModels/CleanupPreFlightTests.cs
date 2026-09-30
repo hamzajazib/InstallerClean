@@ -53,7 +53,7 @@ public class CleanupPreFlightTests
         // default it Clean so the act-time pending-reboot re-check proceeds.
         _rebootService.Check().Returns(PendingRebootResult.Clean);
         // No-op re-verify: everything survives, nothing dropped.
-        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns(ci => new ReverifyResult((IReadOnlyList<string>)ci[0]!, Array.Empty<string>()));
         // MockFileSystem's Path is a working implementation; a bare substitute
         // would return null from Combine and GetRandomFileName.
@@ -581,7 +581,7 @@ public class CleanupPreFlightTests
         // folder the pre-flight made has nothing in it.
         _confirmationService.ConfirmMove(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>())
             .Returns(true);
-        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns(ci => new ReverifyResult(
                 Array.Empty<string>(), (IReadOnlyList<string>)ci[0]!,
                 new HeldBackReasons(Reclaimed: ((IReadOnlyList<string>)ci[0]!).Count)));
@@ -596,6 +596,43 @@ public class CleanupPreFlightTests
         await _moveService.DidNotReceive().MoveFilesAsync(
             Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
             Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task A_wait_the_check_before_a_Move_reports_takes_the_heading_and_gives_it_back()
+    {
+        // The check reports one wait on drive D: and its end. Nothing survives it, so the
+        // batch never runs. The heading is read inside the check, once each report has
+        // reached it.
+        var waitLine = InstallerClean.Helpers.DisplayHelpers.WaitingFor("D:");
+        string? duringWait = null;
+        string? afterWait = null;
+        MainViewModel? vm = null;
+        _confirmationService.ConfirmMove(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>())
+            .Returns(true);
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
+            .Returns(async ci =>
+            {
+                var progress = (IProgress<ScanProgressUpdate>)ci[2]!;
+                progress.Report(ScanProgressUpdate.Waiting("D:"));
+                await WaitUntil(() => vm!.Cleanup.OperationProgress == waitLine);
+                duringWait = vm!.Cleanup.OperationProgress;
+                progress.Report(ScanProgressUpdate.Waiting(null));
+                await WaitUntil(() => vm.Cleanup.OperationProgress != waitLine);
+                afterWait = vm.Cleanup.OperationProgress;
+                return new ReverifyResult(
+                    Array.Empty<string>(), (IReadOnlyList<string>)ci[0]!,
+                    new HeldBackReasons(Reclaimed: ((IReadOnlyList<string>)ci[0]!).Count));
+            });
+
+        vm = CreateViewModel();
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = _destination;
+
+        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        Assert.Equal(waitLine, duringWait);
+        Assert.Equal(InstallerClean.Resources.Strings.Status_Moving, afterWait);
     }
 
     [Fact]
@@ -630,7 +667,7 @@ public class CleanupPreFlightTests
         // from it abandons the move with the folder still empty.
         _confirmationService.ConfirmMove(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>())
             .Returns(true);
-        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns<ReverifyResult>(_ => throw new LocalisedInvalidOperationException("boom"));
 
         var vm = CreateViewModel();

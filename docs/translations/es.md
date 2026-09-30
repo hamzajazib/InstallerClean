@@ -94,6 +94,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Matching files against installed programs... | Comparando los archivos con los programas instalados... |
 | {0} of {1} | {0} de {1} |
 | Checking remaining files... | Comprobando los archivos restantes... |
+| Waiting for drive {0} to respond... | Esperando a que responda la unidad {0}... |
+| Waiting for {0} to respond... | Esperando a que responda {0}... |
 | Scan complete ({0}) | Análisis completado ({0}) |
 | Found {0} {1} you can safely delete. | Se encontraron {0} {1} que puedes eliminar sin riesgo. |
 | Preparing destination folder... | Preparando la carpeta de destino... |

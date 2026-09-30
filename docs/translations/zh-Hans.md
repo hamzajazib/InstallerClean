@@ -94,6 +94,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Matching files against installed programs... | 正在比对文件与已安装的程序… |
 | {0} of {1} | {1} 个中的 {0} 个 |
 | Checking remaining files... | 正在检查其余文件… |
+| Waiting for drive {0} to respond... | 正在等待驱动器 {0} 响应… |
+| Waiting for {0} to respond... | 正在等待 {0} 响应… |
 | Scan complete ({0}) | 扫描完成（{0}） |
 | Found {0} {1} you can safely delete. | 找到 {0} 个{1}，可安全删除。 |
 | Preparing destination folder... | 正在准备目标文件夹… |

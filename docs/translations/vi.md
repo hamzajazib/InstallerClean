@@ -94,6 +94,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Matching files against installed programs... | Đang đối chiếu các tệp với các chương trình đã cài... |
 | {0} of {1} | {0}/{1} |
 | Checking remaining files... | Đang kiểm tra các tệp còn lại... |
+| Waiting for drive {0} to respond... | Đang chờ ổ đĩa {0} phản hồi... |
+| Waiting for {0} to respond... | Đang chờ {0} phản hồi... |
 | Scan complete ({0}) | Quét xong ({0}) |
 | Found {0} {1} you can safely delete. | Đã tìm thấy {0} {1} bạn có thể xóa an toàn. |
 | Preparing destination folder... | Đang chuẩn bị thư mục đích... |

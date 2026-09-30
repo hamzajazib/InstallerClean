@@ -500,6 +500,8 @@ const MAP = {
   'Body.RescanNotFinished.Why': `El análisis que se ejecuta después de Mover o Eliminar no terminó, así que no hay ninguna lista que mostrar. Pulsa Volver a analizar para analizar {InstallerFolder} otra vez.`,
   'Body.RescanNotFinished.Recorded': `Lo que lo detuvo queda registrado en {0}.`,
   'Status.MatchingCount': `{0} de {1}`,
+  'Status.WaitingForDrive': `Esperando a que responda la unidad {0}...`,
+  'Status.WaitingForPath': `Esperando a que responda {0}...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

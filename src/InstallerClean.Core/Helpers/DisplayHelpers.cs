@@ -114,6 +114,16 @@ internal static class DisplayHelpers
     internal static string FormatCount(int count) =>
         count.ToString("N0", Localisation.FormatCulture);
 
+    /// <summary>
+    /// The line saying the app is waiting for <paramref name="root"/> to answer, a root as
+    /// the check on the installers in source folders takes it: a drive letter and its colon
+    /// is named as a drive, and a share, or a path of any other form, as it is spelled.
+    /// </summary>
+    internal static string WaitingFor(string root) =>
+        root.Length == 2 && root[1] == ':'
+            ? string.Format(Strings.Status_WaitingForDrive, root)
+            : string.Format(Strings.Status_WaitingForPath, root);
+
     internal static string FormatElapsed(TimeSpan elapsed) =>
         elapsed.TotalSeconds < 1
             ? string.Format(Localisation.FormatCulture, Strings.Display_Elapsed_Ms, elapsed.TotalMilliseconds)

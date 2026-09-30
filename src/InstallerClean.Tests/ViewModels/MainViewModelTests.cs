@@ -51,7 +51,7 @@ public class MainViewModelTests
         // Default the act-time re-verify to a no-op: every candidate survives and
         // nothing is dropped, so a Move/Delete acts on the full scanned set.
         // Tests covering the re-verify override this to drop entries or to throw.
-        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns(ci => new ReverifyResult((IReadOnlyList<string>)ci[0]!, Array.Empty<string>()));
 
         return new MainViewModel(
@@ -1726,7 +1726,7 @@ public class MainViewModelTests
         _dialogService.Received(1).ShowWarning(
             Arg.Is<string>(s => s.Contains(nameof(IOException))), Strings.Error_MoveFailedTitle);
         await _reverifier.DidNotReceive().ReverifyAsync(
-            Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
+            Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>());
         await _moveService.DidNotReceive().MoveFilesAsync(
             Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
             Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
@@ -1759,7 +1759,7 @@ public class MainViewModelTests
         _dialogService.Received(1).ShowWarning(
             Arg.Is<string>(s => s.Contains(nameof(IOException))), Strings.Error_DeleteFailedTitle);
         await _reverifier.DidNotReceive().ReverifyAsync(
-            Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
+            Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>());
         await _deleteService.DidNotReceive().DeleteFilesAsync(
             Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
             Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
@@ -1897,7 +1897,7 @@ public class MainViewModelTests
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(new ScanResult(orphans, Array.Empty<RegisteredPackage>(), 0));
         // A program needs b.msi again since the scan, so the re-verify drops it.
-        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns(new ReverifyResult(
                 new[] { @"C:\Windows\Installer\a.msi", @"C:\Windows\Installer\c.msi" },
                 new[] { @"C:\Windows\Installer\b.msi" },
@@ -1952,7 +1952,7 @@ public class MainViewModelTests
         };
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(new ScanResult(orphans, Array.Empty<RegisteredPackage>(), 0));
-        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns(ci =>
             {
                 samples.DuringReverify = vm.Cleanup.IsOperationProgressIndeterminate;
@@ -2017,7 +2017,7 @@ public class MainViewModelTests
         var vm = CreateViewModel();
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(ScanResultWithOrphans(2));
-        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .ThrowsAsync(new LocalisedInvalidOperationException(Strings.Error_InstallerDbEmpty));
         _confirmationService.ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
@@ -2042,7 +2042,7 @@ public class MainViewModelTests
         var vm = CreateViewModel();
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(ScanResultWithOrphans(2));
-        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .ThrowsAsync(new LocalisedInvalidOperationException(Strings.Error_InstallerDbEmpty));
         _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
 
@@ -2073,7 +2073,7 @@ public class MainViewModelTests
         };
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(new ScanResult(orphans, Array.Empty<RegisteredPackage>(), 0));
-        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns(new ReverifyResult(
                 Array.Empty<string>(),
                 new[] { @"C:\Windows\Installer\a.msi", @"C:\Windows\Installer\b.msi" },
@@ -2108,7 +2108,7 @@ public class MainViewModelTests
         };
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(new ScanResult(orphans, Array.Empty<RegisteredPackage>(), 0));
-        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns(new ReverifyResult(
                 Array.Empty<string>(),
                 new[] { @"C:\Windows\Installer\a.msp" },
@@ -2140,7 +2140,7 @@ public class MainViewModelTests
         };
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(new ScanResult(orphans, Array.Empty<RegisteredPackage>(), 0));
-        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns(new ReverifyResult(
                 new[] { @"C:\Windows\Installer\b.msi" },
                 new[] { @"C:\Windows\Installer\a.msp" },
@@ -2173,7 +2173,7 @@ public class MainViewModelTests
         };
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(new ScanResult(orphans, Array.Empty<RegisteredPackage>(), 0));
-        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns(new ReverifyResult(
                 new[] { @"C:\Windows\Installer\x.msi" },
                 new[] { @"C:\Windows\Installer\y.msi" },
@@ -2218,7 +2218,7 @@ public class MainViewModelTests
         // The sibling half is the wire D7 added, and a wire that is not asserted is
         // a wire that can quietly come loose.
         var siblings = new[] { Claim(@"C:\Windows\Installer\a.msp"), Claim(@"C:\Windows\Installer\sibling.msp") };
-        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns(new ReverifyResult(
                 new[] { @"C:\Windows\Installer\a.msp" }, Array.Empty<string>(),
                 SurvivingPatchClaims: claims,
@@ -2257,7 +2257,7 @@ public class MainViewModelTests
         // a wire that can quietly come loose: the batch would then be re-checked
         // against the narrower question with nothing to say so.
         var siblings = new[] { Claim(@"C:\Windows\Installer\x.msp"), Claim(@"C:\Windows\Installer\sibling.msp") };
-        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns(new ReverifyResult(
                 new[] { @"C:\Windows\Installer\x.msp" }, Array.Empty<string>(),
                 SurvivingPatchClaims: claims,
@@ -2666,7 +2666,7 @@ public class MainViewModelTests
         };
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(new ScanResult(orphans, Array.Empty<RegisteredPackage>(), 0));
-        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns(new ReverifyResult(
                 new[] { @"C:\Windows\Installer\a.msi", @"C:\Windows\Installer\b.msp" },
                 new[] { @"C:\Windows\Installer\c.msp" },
@@ -3506,7 +3506,7 @@ public class MainViewModelTests
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
         await _reverifier.DidNotReceive().ReverifyAsync(
-            Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>());
+            Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>());
         await _deleteService.DidNotReceive().DeleteFilesAsync(
             Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
             Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());

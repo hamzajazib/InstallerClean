@@ -94,6 +94,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Matching files against installed programs... | 파일을 설치된 프로그램과 대조하는 중... |
 | {0} of {1} | {1}개 중 {0}개 |
 | Checking remaining files... | 나머지 파일을 확인하는 중... |
+| Waiting for drive {0} to respond... | 드라이브 {0}의 응답을 기다리는 중... |
+| Waiting for {0} to respond... | {0}의 응답을 기다리는 중... |
 | Scan complete ({0}) | 검사 완료 ({0}) |
 | Found {0} {1} you can safely delete. | 안전하게 삭제할 수 있는 {1} {0}개를 찾았습니다. |
 | Preparing destination folder... | 대상 폴더를 준비하는 중... |

@@ -53,6 +53,15 @@ internal sealed class ThrottledScanProgress : IProgress<ScanProgressUpdate>
             return;
         }
 
+        // A wait's two updates pass whatever the interval says and leave the clock
+        // alone. They come one pair to a wait, and the second is what takes the first
+        // off the screen, so dropping it would leave a wait shown that is over.
+        if (value.IsWait)
+        {
+            _inner.Report(value);
+            return;
+        }
+
         if (Admits(value)) _inner.Report(value);
     }
 

@@ -33,9 +33,16 @@ public interface IRemovableReverifier
     /// without querying. Propagates any exception the enumeration raises: an
     /// inability to re-verify stops the batch rather than passing it.
     /// </summary>
+    /// <param name="progress">
+    /// Told each wait the declared-product screen makes on a source folder, as the scan
+    /// tells its own (<see cref="ScanProgressUpdate.IsWait"/>): a line naming what it is
+    /// waiting for once a read has waited about a second, and an empty one when that wait
+    /// ends. Nothing else is reported through it.
+    /// </param>
     Task<ReverifyResult> ReverifyAsync(
         IReadOnlyList<string> candidatePaths,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        IProgress<ScanProgressUpdate>? progress = null);
 
     /// <summary>
     /// Re-reads the given patch claims and returns the paths the re-read has not

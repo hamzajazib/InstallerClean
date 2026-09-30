@@ -581,6 +581,8 @@ const MAP = {
   'Body.RescanNotFinished.Why': `Der Scan, der nach „Verschieben“ oder „Löschen“ läuft, wurde nicht abgeschlossen, deshalb kann keine Liste angezeigt werden. Klicke auf „Neu scannen“, um {InstallerFolder} erneut zu scannen.`,
   'Body.RescanNotFinished.Recorded': `Was ihn gestoppt hat, ist in {0} festgehalten.`,
   'Status.MatchingCount': `{0} von {1}`,
+  'Status.WaitingForDrive': `Warten auf eine Antwort von Laufwerk {0}...`,
+  'Status.WaitingForPath': `Warten auf eine Antwort von {0}...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

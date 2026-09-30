@@ -4,6 +4,7 @@ using InstallerClean.Models;
 using InstallerClean.Resources;
 using InstallerClean.Services;
 using InstallerClean.Tests.Services;
+using NSubstitute;
 
 namespace InstallerClean.Tests.Helpers;
 
@@ -299,6 +300,53 @@ public class ScanProgressAgainstTheScanTests
         Assert.Equal(new[] { Line(1), Line(2), Line(3) }, screening.Select(u => u.Message));
         Assert.Equal(new[] { 1, 2, 3 }, screening.Select(u => u.Position));
         Assert.All(screening, u => Assert.Equal(3, u.Total));
+    }
+
+    [Fact]
+    public async Task A_wait_the_screen_reports_reaches_the_host_as_a_wait_and_its_end_and_moves_no_milestone()
+    {
+        // The screen tells of one wait, on drive D:, while it judges the file it was handed.
+        string[] files = { @"C:\Windows\Installer\1.msi", @"C:\Windows\Installer\a.msi" };
+        var collected = new Collected();
+        var query = new InstallerQueryService(
+            MachineWith(2),
+            (_, _) => new InstallerQueryService.FallbackRead(0, 0),
+            crashLogSink: null);
+        var screen = Substitute.For<IDeclaredProductCheck>();
+        screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
+                Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(), Arg.Any<Func<string, bool?>?>(),
+                Arg.Any<Action<int>?>(), Arg.Any<Action<string?>?>())
+            .Returns(call =>
+            {
+                var waitingOn = call.ArgAt<Action<string?>?>(6);
+                waitingOn?.Invoke("D:");
+                waitingOn?.Invoke(null);
+                return call.ArgAt<IReadOnlyList<OrphanedFile>>(0)
+                    .Select(_ => DeclaredProductOutcome.DeclaredProductNotInstalled)
+                    .ToList();
+            });
+
+        await new FileSystemScanService(query, new FileSystem(), null, files, null, null, screen)
+            .ScanAsync(collected);
+
+        var waits = collected.Updates.Where(u => u.IsWait).ToList();
+        Assert.Equal(new[] { DisplayHelpers.WaitingFor("D:"), string.Empty }, waits.Select(u => u.Message));
+        Assert.All(waits, u => Assert.False(u.IsMilestone));
+        Assert.Equal(6, collected.Updates.Count(u => u.IsMilestone));
+    }
+
+    [Fact]
+    public void A_wait_update_is_no_milestone_and_the_one_ending_it_is_empty()
+    {
+        var starts = ScanProgressUpdate.Waiting(@"\\fileserver\apps");
+        var ends = ScanProgressUpdate.Waiting(null);
+
+        Assert.True(starts.IsWait);
+        Assert.False(starts.IsMilestone);
+        Assert.Equal(DisplayHelpers.WaitingFor(@"\\fileserver\apps"), starts.Message);
+        Assert.True(ends.IsWait);
+        Assert.False(ends.IsMilestone);
+        Assert.Empty(ends.Message);
     }
 
     /// <summary>

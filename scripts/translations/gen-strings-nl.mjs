@@ -547,6 +547,8 @@ const MAP = {
   'Body.RescanNotFinished.Why': `De scan die na Verplaatsen of Verwijderen draait, is niet afgerond, dus er is geen lijst om te tonen. Klik op Opnieuw scannen om {InstallerFolder} opnieuw te scannen.`,
   'Body.RescanNotFinished.Recorded': `Wat de scan heeft gestopt, is vastgelegd in {0}.`,
   'Status.MatchingCount': `{0} van {1}`,
+  'Status.WaitingForDrive': `Wachten tot schijf {0} reageert...`,
+  'Status.WaitingForPath': `Wachten tot {0} reageert...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -1,3 +1,5 @@
+using InstallerClean.Models;
+
 namespace InstallerClean.Services;
 
 /// <summary>
@@ -33,7 +35,8 @@ internal sealed class NullRemovableReverifier : IRemovableReverifier
 
     public Task<ReverifyResult> ReverifyAsync(
         IReadOnlyList<string> candidatePaths,
-        CancellationToken cancellationToken = default) =>
+        CancellationToken cancellationToken = default,
+        IProgress<ScanProgressUpdate>? progress = null) =>
         throw new NotSupportedException(
             "The no-op reverifier cannot re-verify a batch. Something resolved this in place of RemovableReverifier.");
 

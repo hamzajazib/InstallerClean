@@ -586,6 +586,8 @@ const MAP = {
   'Body.RescanNotFinished.Why': `Сканування, яке виконується після «Перемістити» або «Видалити», не завершилося, тож немає списку, який можна показати. Натисніть «Повторити сканування», щоб знову просканувати {InstallerFolder}.`,
   'Body.RescanNotFinished.Recorded': `Причину зупинки записано до {0}.`,
   'Status.MatchingCount': `{0} з {1}`,
+  'Status.WaitingForDrive': `Очікування відповіді від диска {0}...`,
+  'Status.WaitingForPath': `Очікування відповіді від {0}...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

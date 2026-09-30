@@ -605,6 +605,8 @@ const MAP = {
   'Body.RescanNotFinished.Why': `Skanowanie uruchamiane po operacji Przenieś lub Usuń nie zakończyło się, więc nie ma listy do pokazania. Naciśnij przycisk Skanuj ponownie, aby jeszcze raz przeskanować {InstallerFolder}.`,
   'Body.RescanNotFinished.Recorded': `Przyczyna zatrzymania jest zapisana w {0}.`,
   'Status.MatchingCount': `{0}/{1}`,
+  'Status.WaitingForDrive': `Oczekiwanie na odpowiedź dysku {0}...`,
+  'Status.WaitingForPath': `Oczekiwanie na odpowiedź od {0}...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -94,6 +94,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Matching files against installed programs... | Dosyalar yüklü programlarla eşleştiriliyor... |
 | {0} of {1} | {1} içinden {0} |
 | Checking remaining files... | Kalan dosyalar denetleniyor... |
+| Waiting for drive {0} to respond... | {0} sürücüsünden yanıt bekleniyor... |
+| Waiting for {0} to respond... | {0} konumundan yanıt bekleniyor... |
 | Scan complete ({0}) | Tarama tamamlandı ({0}) |
 | Found {0} {1} you can safely delete. | Güvenle silebileceğiniz {0} {1} bulundu. |
 | Preparing destination folder... | Hedef klasör hazırlanıyor... |

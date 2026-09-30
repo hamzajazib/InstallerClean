@@ -566,6 +566,8 @@ const MAP = {
   'Body.RescanNotFinished.Why': `Lần quét chạy sau Chuyển hoặc Xóa đã không hoàn tất, nên không có danh sách nào để hiển thị. Nhấn Quét lại để quét {InstallerFolder} một lần nữa.`,
   'Body.RescanNotFinished.Recorded': `Nguyên nhân dừng quét được ghi lại trong {0}.`,
   'Status.MatchingCount': `{0}/{1}`,
+  'Status.WaitingForDrive': `Đang chờ ổ đĩa {0} phản hồi...`,
+  'Status.WaitingForPath': `Đang chờ {0} phản hồi...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

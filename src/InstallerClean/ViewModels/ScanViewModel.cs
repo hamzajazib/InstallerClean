@@ -205,6 +205,7 @@ public partial class ScanViewModel : ObservableObject
         _rebootService = rebootService;
         _dialogService = dialogService;
         _isExternallyBlocked = isExternallyBlocked ?? (() => false);
+        _statusWait = new WaitLine(() => ScanProgress, line => ScanProgress = line);
     }
 
     /// <summary>
@@ -556,6 +557,7 @@ public partial class ScanViewModel : ObservableObject
         // cancel leaves the window as it was before the click, whichever state
         // that was.
         LastScanWasCancelled = false;
+        _statusWait.Forget();
         ScanProgress = Strings.Status_StartingScan;
         ScanTicker = string.Empty;
         var sw = Stopwatch.StartNew();
@@ -631,8 +633,18 @@ public partial class ScanViewModel : ObservableObject
     /// </summary>
     private void ApplyProgressUpdate(ScanProgressUpdate update)
     {
+        // A wait takes the announced status text and gives it back when it ends, leaving
+        // the ticker as it was. Once Cancel is pressed a wait is neither shown nor put
+        // back, so "Cancelling..." stays in front of the reader.
+        if (update.IsWait)
+        {
+            if (_scanCts?.IsCancellationRequested != true) _statusWait.Show(update);
+            return;
+        }
+
         if (update.IsMilestone)
         {
+            _statusWait.Forget();
             ScanProgress = update.Message;
             ScanTicker = string.Empty;
         }
@@ -641,6 +653,9 @@ public partial class ScanViewModel : ObservableObject
             ScanTicker = update.Message;
         }
     }
+
+    /// <summary>The waits the scan reports, shown on <see cref="ScanProgress"/>.</summary>
+    private readonly WaitLine _statusWait;
 
     [RelayCommand]
     private void CancelScan()
@@ -750,14 +765,19 @@ public partial class ScanViewModel : ObservableObject
     /// tally and is unaffected. The window says the scan did not finish, in
     /// <see cref="UnfinishedRefreshMessage"/>.
     /// </summary>
-    public async Task RefreshAsync(CancellationToken cancellationToken = default)
+    /// <param name="progress">
+    /// Told what the scan reports, for a caller that shows its waits on source folders
+    /// (<see cref="ScanProgressUpdate.IsWait"/>) behind its own overlay.
+    /// </param>
+    public async Task RefreshAsync(
+        CancellationToken cancellationToken = default, IProgress<ScanProgressUpdate>? progress = null)
     {
         LastScanWasCancelled = false;
         LastScanError = string.Empty;
         UnfinishedRefreshMessage = string.Empty;
         try
         {
-            await RunScanCoreAsync(null, cancellationToken);
+            await RunScanCoreAsync(progress, cancellationToken);
             ScanCompleted?.Invoke(this, EventArgs.Empty);
         }
         catch (OperationCanceledException)

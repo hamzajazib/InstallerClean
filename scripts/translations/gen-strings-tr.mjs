@@ -492,6 +492,8 @@ Ayrıntılar şuraya yazıldı:
   'Body.RescanNotFinished.Why': `Taşı veya Sil'den sonra çalışan tarama tamamlanmadı, bu yüzden gösterilecek bir liste yok. {InstallerFolder} klasörünü yeniden taramak için Yeniden tara'ya basın.`,
   'Body.RescanNotFinished.Recorded': `Taramayı durduran neden {0} içine kaydedildi.`,
   'Status.MatchingCount': `{1} içinden {0}`,
+  'Status.WaitingForDrive': `{0} sürücüsünden yanıt bekleniyor...`,
+  'Status.WaitingForPath': `{0} konumundan yanıt bekleniyor...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

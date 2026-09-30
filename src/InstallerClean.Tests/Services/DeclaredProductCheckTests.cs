@@ -4045,6 +4045,120 @@ public class DeclaredProductCheckTests
         Assert.Contains(thirdPackage, files.Calls);
     }
 
+    // ---- What the check tells its caller while a read waits ----
+    //
+    // A read still waiting once it has taken longer than the check's threshold is told to
+    // the caller with the root it is under, and null is told when the wait ends, whether
+    // the read answered or the root was given up. A read that answers sooner is told
+    // nothing. The caller is told on the thread the pass runs on.
+
+    /// <summary>
+    /// The check over two programs, A's package held as the test says, with its threshold at
+    /// <see cref="WaitThreshold"/> and its time limit at <paramref name="limit"/>, telling
+    /// <paramref name="told"/> each wait.
+    /// </summary>
+    private static IReadOnlyList<DeclaredProductOutcome> ScreenTellingWaits(
+        (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+            ScriptedFileIdentities Files, MockFileSystem Disk) f,
+        HeldFileIdentities files,
+        TimeSpan limit,
+        List<string?> told,
+        CancellationToken cancellationToken = default) =>
+        new DeclaredProductCheck(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
+            {
+                SourceFolderTimeLimit = limit,
+                SourceFolderWaitThreshold = WaitThreshold,
+                DriveKindOf = FixedDrive,
+                NamesInFolderOf = NameOnly,
+            }
+            .Screen([Package(Candidate), Package(OtherCandidate)], [], cancellationToken, null, InInstallerFolder,
+                waitingOn: told.Add);
+
+    [Theory]
+    [InlineData(@"D:\Setup\a\", @"D:\Setup\b\", "D:")]
+    [InlineData(@"\\nas\share\a\", @"\\nas\share\b\", @"\\nas\share")]
+    public void A_read_that_waits_past_the_threshold_is_told_with_its_root_and_then_its_end(
+        string heldFolder, string otherFolder, string root)
+    {
+        var (f, files, _) = TwoProductsBesideAHeldSource(heldFolder, otherFolder);
+        using var held = files;
+        files.Holds(heldFolder + CandidateName, SlowRead);
+        var told = new List<string?>();
+
+        var outcomes = ScreenTellingWaits(f, files, HeldFor, told);
+
+        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
+        Assert.Equal(new[] { root, null }, told);
+    }
+
+    [Fact]
+    public void A_read_that_answers_within_the_threshold_is_not_told()
+    {
+        var (f, files, _) = TwoProductsBesideAHeldSource(@"D:\Setup\a\", @"D:\Setup\b\");
+        using var held = files;
+        files.Holds(@"D:\Setup\a\" + CandidateName, TimeSpan.Zero);
+        var told = new List<string?>();
+
+        ScreenTellingWaits(f, files, HeldFor, told);
+
+        Assert.Empty(told);
+    }
+
+    [Fact]
+    public void A_read_that_does_not_answer_is_told_and_its_end_is_told_when_its_drive_is_given_up()
+    {
+        // The limit is past the threshold and well short of the hold. The second program's
+        // package is under the drive given up, so it is not read and nothing more is told.
+        var (f, files, otherPackage) = TwoProductsBesideAHeldSource(@"D:\Setup\a\", @"D:\Setup\b\");
+        using var held = files;
+        var told = new List<string?>();
+
+        var outcomes = ScreenTellingWaits(f, files, SlowRead, told);
+
+        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
+        Assert.Equal(new[] { "D:", null }, told);
+        Assert.DoesNotContain(otherPackage, files.Calls);
+    }
+
+    [Fact]
+    public void A_wait_that_cancelling_ends_is_told_and_its_end_is_not()
+    {
+        var (f, files, _) = TwoProductsBesideAHeldSource(@"D:\Setup\a\", @"D:\Setup\b\");
+        using var held = files;
+        var told = new List<string?>();
+        using var cts = new CancellationTokenSource(SlowRead);
+
+        Assert.ThrowsAny<OperationCanceledException>(
+            () => ScreenTellingWaits(f, files, TimeSpan.FromMinutes(1), told, cts.Token));
+
+        Assert.Equal(new[] { "D:" }, told);
+    }
+
+    [Fact]
+    public void A_wait_for_a_drive_to_say_what_kind_it_is_is_told_like_a_read_of_a_package()
+    {
+        var (f, files, _) = TwoProductsBesideAHeldSource(@"Z:\Setup\a\", @"Z:\Setup\b\");
+        using var held = files;
+        files.Holds(@"Z:\Setup\a\" + CandidateName, TimeSpan.Zero);
+        var told = new List<string?>();
+
+        new DeclaredProductCheck(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
+            {
+                SourceFolderTimeLimit = HeldFor,
+                SourceFolderWaitThreshold = WaitThreshold,
+                DriveKindOf = _ =>
+                {
+                    Thread.Sleep(SlowRead);
+                    return DriveType.Fixed;
+                },
+                NamesInFolderOf = NameOnly,
+            }
+            .Screen([Package(Candidate), Package(OtherCandidate)], [], default, null, InInstallerFolder,
+                waitingOn: told.Add);
+
+        Assert.Equal(new[] { "Z:", null }, told);
+    }
+
     [Fact]
     public void A_drive_Windows_reports_as_a_network_drive_is_kept_for_the_rest_of_the_pass_like_a_share()
     {

@@ -559,6 +559,14 @@
        installed program's records name are read, and Windows is asked about
        the program or update each one says it belongs to. -->
   <data name="Status.CheckingRemaining" xml:space="preserve"><value>残りのファイルをチェック中...</value></data>
+  <!-- Shown while the app has waited a second or more for the drive or share holding a
+       folder a program was installed from: in the scan in place of the step above, and
+       when Move or Delete is clicked in place of the heading. 0 = a drive letter and its
+       colon, e.g. "D:" -->
+  <data name="Status.WaitingForDrive" xml:space="preserve"><value>ドライブ {0} の応答を待機中...</value></data>
+  <!-- As Status.WaitingForDrive, for a folder that is not on a drive letter.
+       0 = a network share such as "\\fileserver\apps", or another path -->
+  <data name="Status.WaitingForPath" xml:space="preserve"><value>{0} の応答を待機中...</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>スキャン完了 ({0})</value></data>
   <!-- 0 = file count, 1 = pluralised noun ("file"/"files") -->

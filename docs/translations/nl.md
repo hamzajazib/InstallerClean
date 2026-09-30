@@ -94,6 +94,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Matching files against installed programs... | Bestanden vergelijken met de geïnstalleerde programma's... |
 | {0} of {1} | {0} van {1} |
 | Checking remaining files... | Overige bestanden controleren... |
+| Waiting for drive {0} to respond... | Wachten tot schijf {0} reageert... |
+| Waiting for {0} to respond... | Wachten tot {0} reageert... |
 | Scan complete ({0}) | Scan voltooid ({0}) |
 | Found {0} {1} you can safely delete. | Je kunt {0} {1} veilig verwijderen. |
 | Preparing destination folder... | Doelmap voorbereiden... |

@@ -493,6 +493,8 @@ const MAP = {
   'Body.RescanNotFinished.Why': `移動または削除の後に行うスキャンが完了しなかったため、表示できる一覧がありません。「再スキャン」を押して、{InstallerFolder} をもう一度スキャンしてください。`,
   'Body.RescanNotFinished.Recorded': `中断した原因は {0} に記録されています。`,
   'Status.MatchingCount': `{1} 個中 {0} 個`,
+  'Status.WaitingForDrive': `ドライブ {0} の応答を待機中...`,
+  'Status.WaitingForPath': `{0} の応答を待機中...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

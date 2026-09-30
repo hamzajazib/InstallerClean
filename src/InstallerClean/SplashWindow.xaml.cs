@@ -26,11 +26,15 @@ public partial class SplashWindow : Window
     // otherwise write a phase message over the line saying the app is stopping.
     private bool _cancelling;
 
+    // The waits the scan reports, shown on the step text.
+    private readonly WaitLine _stepWait;
+
     public event EventHandler? CancelRequested;
 
     public SplashWindow()
     {
         InitializeComponent();
+        _stepWait = new WaitLine(() => StepText.Text, line => StepText.Text = line);
         VersionText.Text = DisplayHelpers.GetVersionString();
 
         // The 480 x 320 box is the 100% design. The card sizes its height to
@@ -60,8 +64,18 @@ public partial class SplashWindow : Window
     {
         if (_cancelling) return;
 
+        // A wait takes the step text, which is the live region, and gives it back when
+        // it ends. It is no step of the scan, so the bar and the ticker stay where they
+        // are.
+        if (update.IsWait)
+        {
+            _stepWait.Show(update);
+            return;
+        }
+
         if (update.IsMilestone)
         {
+            _stepWait.Forget();
             UpdateStep(update.Message, _fill.AtMilestone());
             return;
         }

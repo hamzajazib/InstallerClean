@@ -451,6 +451,8 @@ public static class Strings
     public static string Status_ScanningCache => Get("Status.ScanningCache");
     public static string Status_ScanStopped => Get("Status.ScanStopped");
     public static string Status_StartingScan => Get("Status.StartingScan");
+    public static string Status_WaitingForDrive => Get("Status.WaitingForDrive");
+    public static string Status_WaitingForPath => Get("Status.WaitingForPath");
     public static string Summary_MissingFromDisk_OtherPrograms_Plural => Get("Summary.MissingFromDisk.OtherPrograms.Plural");
     public static string Summary_MissingFromDisk_OtherPrograms_Singular => Get("Summary.MissingFromDisk.OtherPrograms.Singular");
     public static string Summary_MissingFromDisk_Plural => Get("Summary.MissingFromDisk.Plural");

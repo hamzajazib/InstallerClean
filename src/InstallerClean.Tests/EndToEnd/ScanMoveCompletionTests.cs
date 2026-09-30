@@ -44,7 +44,7 @@ public class ScanMoveCompletionTests
         // Clean gate and a no-op re-verify, so the act-time re-checks proceed and
         // a Move/Delete acts on the full set.
         _rebootService.Check().Returns(PendingRebootResult.Clean);
-        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns(ci => new ReverifyResult((IReadOnlyList<string>)ci[0]!, Array.Empty<string>()));
         return new MainViewModel(
             _scanService, _moveService, _deleteService,

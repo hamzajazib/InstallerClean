@@ -1390,11 +1390,13 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // The Installer folder the screen compares a source's package against is the
         // root this run resolved, the one every candidate was judged against, and the
         // installations every answer about a product is held against are the ones this
-        // run's enumeration listed.
+        // run's enumeration listed. A wait on a source folder is reported as it starts
+        // and as it ends, so the host can say what the scan is waiting for.
         var outcomes = _declaredProducts.Screen(
             candidates, installations, cancellationToken, recordRefusal,
             path => InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(path, cacheRoot),
-            Reached);
+            Reached,
+            root => progress?.Report(ScanProgressUpdate.Waiting(root)));
 
         // A screen that answered a different number of candidates than it was
         // given has not answered about these files, and reading it positionally

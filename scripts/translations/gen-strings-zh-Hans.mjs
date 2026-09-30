@@ -473,6 +473,8 @@ const MAP = {
   'Body.RescanNotFinished.Why': `移动或删除之后运行的扫描没有完成，因此没有可显示的列表。点击“重新扫描”，再次扫描 {InstallerFolder}。`,
   'Body.RescanNotFinished.Recorded': `停止的原因已记录在 {0} 中。`,
   'Status.MatchingCount': `{1} 个中的 {0} 个`,
+  'Status.WaitingForDrive': `正在等待驱动器 {0} 响应…`,
+  'Status.WaitingForPath': `正在等待 {0} 响应…`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

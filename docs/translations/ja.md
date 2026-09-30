@@ -94,6 +94,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Matching files against installed programs... | ファイルとインストール済みプログラムを照合中... |
 | {0} of {1} | {1} 個中 {0} 個 |
 | Checking remaining files... | 残りのファイルをチェック中... |
+| Waiting for drive {0} to respond... | ドライブ {0} の応答を待機中... |
+| Waiting for {0} to respond... | {0} の応答を待機中... |
 | Scan complete ({0}) | スキャン完了 ({0}) |
 | Found {0} {1} you can safely delete. | 安全に削除できる {0} 個の {1} が見つかりました。 |
 | Preparing destination folder... | 移動先フォルダーを準備中... |

@@ -123,7 +123,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         CancellationToken cancellationToken = default,
         Action<Exception, string>? recordRefusal = null,
         Func<string, bool?>? namesAFileInInstallerFolder = null,
-        Action<int>? candidateReached = null)
+        Action<int>? candidateReached = null,
+        Action<string?>? waitingOn = null)
     {
         var outcomes = new DeclaredProductOutcome[candidates.Count];
 
@@ -142,7 +143,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         // by both halves, for the same reason and with the same lifetime, and the
         // installations the caller's enumeration listed, which every answer about a
         // product is held against.
-        var pass = new PassAnswers(_msi, installations, cancellationToken);
+        var pass = new PassAnswers(_msi, installations, cancellationToken, waitingOn);
 
         for (var i = 0; i < candidates.Count; i++)
         {
@@ -961,6 +962,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// towards the root's (<see cref="PassAnswers.TimeWaited"/>), and the root is given up
     /// once that passes <see cref="SourceFolderWaitBudget"/>. The answer that took it past is
     /// still used.
+    ///
+    /// A READ STILL WAITING AFTER <see cref="SourceFolderWaitThreshold"/> IS TOLD TO THE PASS'S
+    /// CALLER (<see cref="PassAnswers.WaitingOn"/>), with the root, and null is told when the
+    /// wait ends, answered or not. A wait that cancelling ends is not told null: whoever shows
+    /// the wait is already showing the cancel.
     /// </summary>
     private bool AnswersWithin<T>(Func<T> read, string root, PassAnswers pass, out T value, out TimeSpan took)
     {
@@ -990,7 +996,15 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var waited = Stopwatch.StartNew();
         reader.Start();
 
-        var inTime = answered.Task.Wait(SourceFolderTimeLimit, pass.CancellationToken);
+        var notice = SourceFolderWaitThreshold < SourceFolderTimeLimit ? SourceFolderWaitThreshold : SourceFolderTimeLimit;
+        var inTime = answered.Task.Wait(notice, pass.CancellationToken);
+        if (!inTime)
+        {
+            pass.WaitingOn?.Invoke(root);
+            inTime = answered.Task.Wait(SourceFolderTimeLimit - notice, pass.CancellationToken);
+            pass.WaitingOn?.Invoke(null);
+        }
+
         took = waited.Elapsed;
 
         if (!inTime)
@@ -1179,10 +1193,13 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     internal TimeSpan SourceFolderSlowFailure { get; init; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
-    /// How long a read under a root can take before its time counts towards the root's
-    /// <see cref="SourceFolderWaitBudget"/>, so a read that answers promptly costs its root
-    /// nothing. Raise it and a root that answers every read a little under it costs that at
-    /// every package, without limit.
+    /// How long a read under a root can take before it is a wait: the pass's caller is told
+    /// what it is waiting on, and its time counts towards the root's
+    /// <see cref="SourceFolderWaitBudget"/> (<see cref="AnswersWithin"/>). So a read that
+    /// answers promptly is never shown and costs its root nothing. Raise it and a root that
+    /// answers every read a little under it costs that at every package, without limit and
+    /// with nothing said; lower it and a read that is only not instant flashes a line on
+    /// screen.
     /// </summary>
     internal TimeSpan SourceFolderWaitThreshold { get; init; } = TimeSpan.FromSeconds(1);
 
@@ -1892,16 +1909,26 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         private bool _holdersRead;
 
         internal PassAnswers(
-            IMsiApi msi, IReadOnlyList<ListedInstallation> installations, CancellationToken cancellationToken)
+            IMsiApi msi,
+            IReadOnlyList<ListedInstallation> installations,
+            CancellationToken cancellationToken,
+            Action<string?>? waitingOn)
         {
             _msi = msi;
             _listed = InstallerQueryService.InstallationsByCode(
                 installations.Select(i => (i.ProductCode, i.UserSid, (MsiInstallContext)i.Context)));
             Installations = installations;
             CancellationToken = cancellationToken;
+            WaitingOn = waitingOn;
         }
 
         internal CancellationToken CancellationToken { get; }
+
+        /// <summary>
+        /// Told the root a read is waiting on, and null when that wait ends
+        /// (<see cref="AnswersWithin"/>).
+        /// </summary>
+        internal Action<string?>? WaitingOn { get; }
 
         /// <summary>The pass's links, once the first declared code has been asked about.</summary>
         internal InstallationLinks? Links { get; set; }
