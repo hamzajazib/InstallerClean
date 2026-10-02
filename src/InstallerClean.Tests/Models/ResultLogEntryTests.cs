@@ -508,12 +508,15 @@ public class ResultLogEntryTests
     }
 
     /// <summary>
-    /// Drives and shares given up keeping files, one or more by each route, so a count read
-    /// off the wrong route or the wrong position fails: two by
+    /// Drives and shares given up keeping files, a different number by each route, so a count
+    /// read off the wrong route or the wrong position fails, and so does a pair of routes
+    /// swapped: one by <see cref="SourceRootGiveUpRoute.StoppedWaiting"/>, two by
     /// <see cref="SourceRootGiveUpRoute.NoAnswer"/>, three by
-    /// <see cref="SourceRootGiveUpRoute.ReadsAddUp"/>, one by each of the others. Beside them,
-    /// one given up keeping nothing, which no count takes in. Each files count is a different
-    /// power of two, so a sum names exactly which roots it took in.
+    /// <see cref="SourceRootGiveUpRoute.SlowFailure"/>, four by
+    /// <see cref="SourceRootGiveUpRoute.FailedReadsAddUp"/> and five by
+    /// <see cref="SourceRootGiveUpRoute.ReadsAddUp"/>. Beside them, one given up keeping
+    /// nothing, which no count takes in. Each files count is a different power of two, so a sum
+    /// names exactly which roots it took in.
     /// </summary>
     private static IReadOnlyList<SourceRootGivenUp> GivenUpByEveryRoute() =>
     [
@@ -521,10 +524,17 @@ public class ResultLogEntryTests
         new(@"\\nas\apps", SourceRootGiveUpRoute.NoAnswer, 2),
         new("E:", SourceRootGiveUpRoute.NoAnswer, 4),
         new("F:", SourceRootGiveUpRoute.SlowFailure, 8),
-        new(@"\\nas\media", SourceRootGiveUpRoute.FailedReadsAddUp, 16),
-        new("G:", SourceRootGiveUpRoute.ReadsAddUp, 32),
-        new("H:", SourceRootGiveUpRoute.ReadsAddUp, 64),
-        new("I:", SourceRootGiveUpRoute.ReadsAddUp, 128),
+        new(@"\\nas\media", SourceRootGiveUpRoute.SlowFailure, 16),
+        new("G:", SourceRootGiveUpRoute.SlowFailure, 32),
+        new("H:", SourceRootGiveUpRoute.FailedReadsAddUp, 64),
+        new(@"\\nas\backup", SourceRootGiveUpRoute.FailedReadsAddUp, 128),
+        new("I:", SourceRootGiveUpRoute.FailedReadsAddUp, 256),
+        new("K:", SourceRootGiveUpRoute.FailedReadsAddUp, 512),
+        new("L:", SourceRootGiveUpRoute.ReadsAddUp, 1024),
+        new(@"\\nas\games", SourceRootGiveUpRoute.ReadsAddUp, 2048),
+        new("M:", SourceRootGiveUpRoute.ReadsAddUp, 4096),
+        new("N:", SourceRootGiveUpRoute.ReadsAddUp, 8192),
+        new("O:", SourceRootGiveUpRoute.ReadsAddUp, 16384),
         new("J:", SourceRootGiveUpRoute.NoAnswer, 0),
     ];
 
@@ -553,8 +563,8 @@ public class ResultLogEntryTests
 
         var info = ScanInfo.From(scan, 10);
 
-        Assert.Equal([1, 2, 1, 1, 3], GivenUpByRoute(info));
-        Assert.Equal(255, info.FilesKeptForSourcesGivenUpCount);
+        Assert.Equal([1, 2, 3, 4, 5], GivenUpByRoute(info));
+        Assert.Equal(32767, info.FilesKeptForSourcesGivenUpCount);
         Assert.Equal(9, info.SourceWaitsShownCount);
 
         // Counts only: no name travels.
@@ -585,8 +595,8 @@ public class ResultLogEntryTests
             new DeleteResult(0, Array.Empty<FileOperationError>()),
             bytesFreed: 0, durationMs: 0, check: check);
 
-        Assert.Equal([1, 2, 1, 1, 3], GivenUpByRoute(op));
-        Assert.Equal(255, op.FilesKeptForSourcesGivenUpCount);
+        Assert.Equal([1, 2, 3, 4, 5], GivenUpByRoute(op));
+        Assert.Equal(32767, op.FilesKeptForSourcesGivenUpCount);
         Assert.Equal(9, op.SourceWaitsShownCount);
     }
 
@@ -602,8 +612,8 @@ public class ResultLogEntryTests
             bytesFreed: 0, durationMs: 0,
             moveDestinationKind: MoveDestinationKinds.SameDrive, check: check);
 
-        Assert.Equal([1, 2, 1, 1, 3], GivenUpByRoute(op));
-        Assert.Equal(255, op.FilesKeptForSourcesGivenUpCount);
+        Assert.Equal([1, 2, 3, 4, 5], GivenUpByRoute(op));
+        Assert.Equal(32767, op.FilesKeptForSourcesGivenUpCount);
         Assert.Equal(9, op.SourceWaitsShownCount);
     }
 
