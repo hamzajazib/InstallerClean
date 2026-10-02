@@ -3894,9 +3894,9 @@ public class DeclaredProductCheckTests
 
     // ---- A root that answers slowly ----
     //
-    // A read that answers within the time limit leaves its root to be read, whatever time
-    // it took. So every package under a root slow to answer each read is read, one after
-    // another, and each wait is told to the caller.
+    // A read that opens its package within the time limit leaves its root to be read,
+    // whatever time it took. So every package under a root slow to answer each read is read,
+    // one after another, and each wait is told to the caller.
 
     /// <summary>How long a read can take before the check tells its caller it is waiting, in the tests below.</summary>
     private static readonly TimeSpan WaitThreshold = TimeSpan.FromMilliseconds(200);
@@ -3911,16 +3911,26 @@ public class DeclaredProductCheckTests
     private static readonly TimeSpan ReadOnTheClock = TimeSpan.FromSeconds(25);
 
     /// <summary>
-    /// <paramref name="count"/> programs, each installed once per machine from a folder of its
-    /// own under <paramref name="folder"/>, and each with a copy in the Installer folder
-    /// beside its cached package. A program's package carries the name of its copy and opens
-    /// as a third file, so the copy is let through only where that package is read. Returns
-    /// the copies and the packages, in the order of the programs.
+    /// <paramref name="count"/> programs, each installed from a folder of its own under
+    /// <paramref name="folder"/> (<see cref="ProgramsInstalledFromFoldersUnder(IReadOnlyList{string})"/>).
     /// </summary>
     private static ((ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
         ScriptedFileIdentities Files, MockFileSystem Disk) F, string[] Copies, string[] SourcePackages)
-        ProgramsInstalledFromFoldersUnder(string folder, int count)
+        ProgramsInstalledFromFoldersUnder(string folder, int count) =>
+        ProgramsInstalledFromFoldersUnder([.. Enumerable.Repeat(folder, count)]);
+
+    /// <summary>
+    /// One program for each of <paramref name="folders"/>, installed once per machine from a
+    /// folder of its own under that one, and each with a copy in the Installer folder beside
+    /// its cached package. A program's package carries the name of its copy and opens as a
+    /// third file, so the copy is let through only where that package is read. Returns the
+    /// copies and the packages, in the order of the programs.
+    /// </summary>
+    private static ((ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+        ScriptedFileIdentities Files, MockFileSystem Disk) F, string[] Copies, string[] SourcePackages)
+        ProgramsInstalledFromFoldersUnder(IReadOnlyList<string> folders)
     {
+        var count = folders.Count;
         var packages = new ScriptedPackageIdentities();
         var msi = new ScriptedMsiProducts();
         var files = new ScriptedFileIdentities();
@@ -3934,7 +3944,7 @@ public class DeclaredProductCheckTests
             var name = $"p{n}.msi";
             var copy = $@"C:\Windows\Installer\{name}";
             var cached = $@"C:\Windows\Installer\cached{n}.msi";
-            var programFolder = $@"{folder}p{n}\";
+            var programFolder = $@"{folders[n]}p{n}\";
             copies[n] = copy;
             sourcePackages[n] = programFolder + name;
 
@@ -3982,6 +3992,125 @@ public class DeclaredProductCheckTests
         Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
         Assert.Equal(sourcePackages, files.Started);
         Assert.Equal(Enumerable.Repeat(new[] { root, null }, Programs).SelectMany(wait => wait), told);
+    }
+
+    // ---- A root whose reads fail after a wait ----
+    //
+    // A package read that answers false after longer than the check's threshold adds the
+    // time it took to its root's total, and once that passes the check's budget no later
+    // package under the root is read in the pass. Every read here answers at once and takes
+    // the time the test gives it on the check's clock alone, so the tests run on the check's
+    // own threshold, slow-failure bar and budget.
+
+    /// <summary>
+    /// How long a refused source package read takes on the check's clock in the tests below:
+    /// longer than the check's own threshold and shorter than its own slow-failure bar.
+    /// </summary>
+    private static readonly TimeSpan FailedReadOnTheClock = TimeSpan.FromSeconds(3);
+
+    /// <summary>
+    /// The programs <see cref="ProgramsInstalledFromFoldersUnder(IReadOnlyList{string})"/>
+    /// builds for <paramref name="folders"/>, every one of their packages refusing at once to
+    /// open, and each read of one moving the returned clock on by <paramref name="each"/>.
+    /// </summary>
+    private static ((ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+        ScriptedFileIdentities Files, MockFileSystem Disk) F, HeldFileIdentities Files, SteppedClock Clock,
+        string[] Copies, string[] SourcePackages)
+        ProgramsWhosePackagesAreRefused(IReadOnlyList<string> folders, TimeSpan each)
+    {
+        var (f, copies, sourcePackages) = ProgramsInstalledFromFoldersUnder(folders);
+        var files = new HeldFileIdentities(f.Files);
+        foreach (var package in sourcePackages)
+        {
+            f.Files.Answers(package, FileIdentityRead.OpenRefused);
+            files.Holds(package, TimeSpan.Zero);
+        }
+
+        var clock = new SteppedClock();
+        files.TakesOnTheClock(clock, each);
+        return (f, files, clock, copies, sourcePackages);
+    }
+
+    /// <summary>
+    /// The check timing its reads on <paramref name="clock"/>, with its own time limit,
+    /// threshold, slow-failure bar and budget.
+    /// </summary>
+    private static DeclaredProductCheck CheckOnTheClock(
+        (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+            ScriptedFileIdentities Files, MockFileSystem Disk) f,
+        HeldFileIdentities files,
+        SteppedClock clock) =>
+        new(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
+            { Clock = clock, DriveKindOf = FixedDrive, NamesInFolderOf = NameOnly };
+
+    private static IReadOnlyList<DeclaredProductOutcome> ScreenEvery(DeclaredProductCheck check, IEnumerable<string> copies) =>
+        check.Screen([.. copies.Select(Package)], [], default, null, InInstallerFolder);
+
+    [Theory]
+    [InlineData(@"D:\Setup\")]
+    [InlineData(@"\\nas\share\")]
+    public void A_root_whose_refused_reads_add_up_past_a_minute_is_kept_for_the_rest_of_the_pass_without_being_read(
+        string folder)
+    {
+        // Twenty reads of three seconds come to a minute, which is not past it. The
+        // twenty-first takes the root past, and no package under it is read after that.
+        const int Programs = 24, Reads = 21;
+        var (f, files, clock, copies, sourcePackages) =
+            ProgramsWhosePackagesAreRefused([.. Enumerable.Repeat(folder, Programs)], FailedReadOnTheClock);
+        using var _ = files;
+
+        var outcomes = ScreenEvery(CheckOnTheClock(f, files, clock), copies);
+
+        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
+        Assert.Equal(sourcePackages[..Reads], files.Started);
+    }
+
+    [Theory]
+    [InlineData(@"D:\Setup\")]
+    [InlineData(@"\\nas\share\")]
+    public void Refused_reads_that_are_not_waits_cost_their_root_nothing_however_many_there_are(string folder)
+    {
+        // Each read takes half a second, under the check's threshold, and the hundred and
+        // thirty come to sixty-five seconds.
+        const int Programs = 130;
+        var (f, files, clock, copies, sourcePackages) =
+            ProgramsWhosePackagesAreRefused([.. Enumerable.Repeat(folder, Programs)], TimeSpan.FromMilliseconds(500));
+        using var _ = files;
+
+        var outcomes = ScreenEvery(CheckOnTheClock(f, files, clock), copies);
+
+        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
+        Assert.Equal(sourcePackages, files.Started);
+    }
+
+    [Fact]
+    public void Two_roots_add_up_their_refused_reads_apart()
+    {
+        // D: is given up at its twenty-first read. E:'s twenty reads come to a minute, which
+        // is not past it, and the total for D: and E: together is.
+        string[] folders = [.. Enumerable.Repeat(@"D:\Setup\", 24), .. Enumerable.Repeat(@"E:\Setup\", 20)];
+        var (f, files, clock, copies, sourcePackages) = ProgramsWhosePackagesAreRefused(folders, FailedReadOnTheClock);
+        using var _ = files;
+
+        ScreenEvery(CheckOnTheClock(f, files, clock), copies);
+
+        Assert.Equal(sourcePackages[..21].Concat(sourcePackages[24..]), files.Started);
+    }
+
+    [Fact]
+    public void A_root_given_up_for_its_refused_reads_in_one_pass_is_read_again_in_the_next()
+    {
+        var (f, files, clock, copies, sourcePackages) =
+            ProgramsWhosePackagesAreRefused([.. Enumerable.Repeat(@"D:\Setup\", 24)], FailedReadOnTheClock);
+        using var _ = files;
+        var check = CheckOnTheClock(f, files, clock);
+
+        ScreenEvery(check, copies);
+        Assert.Equal(sourcePackages[..21], files.Started);
+
+        ScreenEvery(check, copies[21..]);
+
+        Assert.Equal(sourcePackages, files.Started);
     }
 
     // ---- What the check tells its caller while a read waits ----

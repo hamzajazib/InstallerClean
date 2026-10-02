@@ -43,7 +43,8 @@ namespace InstallerClean.Services;
 /// out: one in the Installer folder itself, one naming this file, one that cannot be
 /// read, one whose package does not answer within the check's time limit, and one on a
 /// drive or share the pass has stopped reading because a read there did not answer
-/// within that limit or failed only after a long wait. A source in a folder on the
+/// within that limit or failed only after a long wait, or because the waits of the reads
+/// that failed there added up to more than the check allows. A source in a folder on the
 /// network, a share or a network drive, is one of those only for a file whose name or
 /// short name its package name could be, since Windows Installer looks in a source
 /// folder for that name alone. While Windows is set to follow a symbolic link reached
@@ -206,7 +207,8 @@ public interface IDeclaredProductCheck
 
 /// <summary>
 /// What the screen settled about one candidate. Some verdicts keep the file and the
-/// rest let it through, and <see cref="Withholds"/> is the only place that says which.
+/// rest let it through, and <see cref="DeclaredProductOutcomes.Withholds"/> is the only
+/// place that says which.
 /// </summary>
 public enum DeclaredProductOutcome
 {
@@ -261,10 +263,11 @@ public enum DeclaredProductOutcome
     /// that declares another product, and one naming this very file under another spelling.
     /// It covers a source list or package name that will not read, a source whose package
     /// is this file, will not identify or does not answer within the check's time limit, a
-    /// source on a drive or share the check has stopped reading for the pass because a read
-    /// there did not answer within that limit or failed only after a long wait, a source
-    /// not on a local drive that is the Installer folder itself or cannot be resolved, and
-    /// an installation in a per-user-unmanaged context, whose source list is not read. It
+    /// source on a drive or share the check has stopped reading for the pass (a read there
+    /// did not answer within that limit or failed only after a long wait, or the waits of the
+    /// reads that failed there added up to more than the check allows), a source not on a
+    /// local drive that is the Installer folder itself or cannot be resolved, and an
+    /// installation in a per-user-unmanaged context, whose source list is not read. It
     /// covers a source list holding a URL, an entry naming an environment variable or
     /// starting neither with a drive letter, a ':' and a '\' nor with two '\', a media
     /// package path or a package name naming a folder, a drive, a stream or a variable, or
