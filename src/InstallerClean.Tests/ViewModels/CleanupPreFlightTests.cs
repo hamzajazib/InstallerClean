@@ -635,36 +635,67 @@ public class CleanupPreFlightTests
         Assert.Equal(InstallerClean.Resources.Strings.Status_Moving, afterWait);
     }
 
-    [Fact]
-    public async Task Only_a_wait_the_check_before_a_Move_reports_reaches_the_heading()
+    /// <summary>
+    /// Stands in for the window's dispatcher. Keeps, in order, every scan update posted to it,
+    /// and runs each posted callback one at a time, in order, on the thread pool with itself
+    /// current, so a reporter the operation goes on to make is made on it too. A posted
+    /// callback that throws is kept as well.
+    /// </summary>
+    private sealed class DispatcherStandIn : SynchronizationContext
     {
-        // The check reports a milestone and a ticker update, as a scan does, and then one
-        // wait on drive D: and its end. Every line the heading takes is kept. The check
-        // answers once the wait and its end have both been seen there, which is after the
-        // two updates reported before them have had their turn.
-        const string Milestone = "a milestone the check reported";
-        const string Ticker = "a ticker update the check reported";
-        var waitLine = InstallerClean.Helpers.DisplayHelpers.WaitingFor("D:");
+        private readonly object _gate = new();
+        private Task _last = Task.CompletedTask;
+
+        public System.Collections.Concurrent.ConcurrentQueue<ScanProgressUpdate> Posted { get; } = new();
+
+        public System.Collections.Concurrent.ConcurrentQueue<Exception> Thrown { get; } = new();
+
+        public override void Post(SendOrPostCallback d, object? state)
+        {
+            if (state is ScanProgressUpdate update) Posted.Enqueue(update);
+            lock (_gate)
+                _last = _last.ContinueWith(_ => Run(d, state), TaskScheduler.Default);
+        }
+
+        private void Run(SendOrPostCallback d, object? state)
+        {
+            var before = Current;
+            SetSynchronizationContext(this);
+            try
+            {
+                d(state);
+            }
+            catch (Exception ex)
+            {
+                Thrown.Enqueue(ex);
+            }
+            finally
+            {
+                SetSynchronizationContext(before);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Only_a_wait_the_scan_after_a_Move_reports_crosses_to_the_window_and_takes_the_heading()
+    {
+        // The scan after the Move reports a milestone and a ticker update, as a scan does,
+        // and then one wait on drive D: and its end. The Move runs on a stand-in for the
+        // window's dispatcher, which keeps every scan update posted to it.
+        const string Milestone = "a milestone the scan reported";
+        const string Ticker = "a ticker update the scan reported";
+        var wait = ScanProgressUpdate.Waiting("D:");
+        var end = ScanProgressUpdate.Waiting(null);
         var headings = new System.Collections.Concurrent.ConcurrentQueue<string>();
-        MainViewModel? vm = null;
+        var dispatcher = new DispatcherStandIn();
         _confirmationService.ConfirmMove(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>())
             .Returns(true);
-        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
-            .Returns(async ci =>
-            {
-                var progress = (IProgress<ScanProgressUpdate>)ci[2]!;
-                progress.Report(new ScanProgressUpdate(Milestone));
-                progress.Report(new ScanProgressUpdate(Ticker, IsMilestone: false, Position: 1, Total: 2));
-                progress.Report(ScanProgressUpdate.Waiting("D:"));
-                await WaitUntil(() => vm!.Cleanup.OperationProgress == waitLine);
-                progress.Report(ScanProgressUpdate.Waiting(null));
-                await WaitUntil(() => vm!.Cleanup.OperationProgress != waitLine);
-                return new ReverifyResult(
-                    Array.Empty<string>(), (IReadOnlyList<string>)ci[0]!,
-                    new HeldBackReasons(Reclaimed: ((IReadOnlyList<string>)ci[0]!).Count));
-            });
+        _moveService.MoveFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new MoveResult(1, Array.Empty<FileOperationError>()));
 
-        vm = CreateViewModel();
+        var vm = CreateViewModel();
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
         vm.Cleanup.PropertyChanged += (_, e) =>
@@ -672,10 +703,33 @@ public class CleanupPreFlightTests
             if (e.PropertyName == nameof(CleanupViewModel.OperationProgress))
                 headings.Enqueue(vm.Cleanup.OperationProgress);
         };
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ci =>
+            {
+                var progress = (IProgress<ScanProgressUpdate>)ci[0]!;
+                progress.Report(new ScanProgressUpdate(Milestone));
+                progress.Report(new ScanProgressUpdate(Ticker, IsMilestone: false, Position: 1, Total: 2));
+                progress.Report(wait);
+                progress.Report(end);
+                return new ScanResult(new List<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0);
+            });
 
-        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+        Task move;
+        var before = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(dispatcher);
+        try
+        {
+            move = vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(before);
+        }
+        await move;
 
-        Assert.Contains(waitLine, headings);
+        Assert.Equal(new[] { wait, end }, dispatcher.Posted);
+        Assert.Empty(dispatcher.Thrown);
+        Assert.Contains(wait.Message, headings);
         Assert.DoesNotContain(Milestone, headings);
         Assert.DoesNotContain(Ticker, headings);
     }
