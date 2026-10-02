@@ -900,11 +900,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// there. A drive whose kind has not answered within the limit is given up the same way
     /// (<see cref="KindOf"/>).
     ///
-    /// READS THAT FAIL AFTER A WAIT ADD UP. A read that answers false after longer than
-    /// <see cref="SourceFolderWaitThreshold"/>, and no longer than
-    /// <see cref="SourceFolderSlowFailure"/>, adds the time it took to its root's total
-    /// (<see cref="PassAnswers.TimeFailing"/>), and the root is given up the same way once
-    /// that total passes <see cref="SourceFolderFailedWaitBudget"/>.
+    /// READS THAT FAIL ADD UP. A read that answers false within
+    /// <see cref="SourceFolderSlowFailure"/> adds the time it took to its root's total
+    /// (<see cref="PassAnswers.TimeFailing"/>), however short, and the root is given up the
+    /// same way once that total passes <see cref="SourceFolderFailedWaitBudget"/>. A read
+    /// that fails at once adds next to nothing, so the total is the time actually spent on
+    /// reads that failed.
     ///
     /// A ROOT THAT ANSWERS IS READ FOR THE WHOLE PASS, HOWEVER SLOWLY IT ANSWERS. A read that
     /// opens its package within the limit, or finds no file there, leaves its root to be read
@@ -946,14 +947,14 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         if (!answered) return false;
 
-        if (!answer.Settled && took > SourceFolderSlowFailure)
+        if (!answer.Settled)
         {
-            pass.RootsNotAnswering.Add(root);
-            return false;
-        }
+            if (took > SourceFolderSlowFailure)
+            {
+                pass.RootsNotAnswering.Add(root);
+                return false;
+            }
 
-        if (!answer.Settled && took > SourceFolderWaitThreshold)
-        {
             var failing = pass.TimeFailing.GetValueOrDefault(root) + took;
             pass.TimeFailing[root] = failing;
             if (failing > SourceFolderFailedWaitBudget) pass.RootsNotAnswering.Add(root);
@@ -1191,44 +1192,38 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// How long a source folder's package read can take to answer false before its root is
     /// given up for the pass as well (<see cref="ReadSourcePackage"/>). Raise it and a
     /// server that Windows gives up on sooner is left to be read again, so later packages
-    /// under it can wait as long, until those waits add up to
+    /// under it can wait as long, until the reads that failed there add up to
     /// <see cref="SourceFolderFailedWaitBudget"/>. Lower it and a root that is only slow to
     /// answer that one package will not open is given up with every package under it.
     /// </summary>
     internal TimeSpan SourceFolderSlowFailure { get; init; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
-    /// How long, in one pass, the package reads under one root that each answered false
-    /// after longer than <see cref="SourceFolderWaitThreshold"/> can add up to before the
-    /// root is given up for the rest of the pass (<see cref="ReadSourcePackage"/>). A read
-    /// that opens its package, or finds no file there, adds nothing, however long it took.
-    /// Lower it and a root whose reads fail after a wait is given up sooner, so a copy that
+    /// How long, in one pass, the package reads under one root that each answered false can
+    /// add up to before the root is given up for the rest of the pass
+    /// (<see cref="ReadSourcePackage"/>). Every such read adds the time it took, however
+    /// short. A read that opens its package, or finds no file there, adds nothing, however
+    /// long it took. Lower it and a root whose reads fail is given up sooner, so a copy that
     /// depends on a later package there that would have opened is kept; raise it and such a
     /// root costs each pass that much longer.
     /// </summary>
     internal TimeSpan SourceFolderFailedWaitBudget { get; init; } = TimeSpan.FromMinutes(1);
 
     /// <summary>
-    /// How long a read under a root can take before it is a wait: the pass's caller is told
-    /// what it is waiting on (<see cref="AnswersWithin"/>), and a package read that then
-    /// answers false adds its time towards its root's
-    /// <see cref="SourceFolderFailedWaitBudget"/> (<see cref="ReadSourcePackage"/>). So a
-    /// read that answers promptly is never shown and costs its root nothing. A read is
-    /// waited for up to <see cref="SourceFolderTimeLimit"/> whatever this is. Raise it and a
-    /// read waits that much longer before the caller is told, and a root whose reads each
-    /// fail a little sooner than this is read for the whole pass; lower it and a read that is
-    /// only not instant flashes a line on screen, and a quicker failure counts towards its
-    /// root's budget.
+    /// How long a read under a root can take before it is a wait, and the pass's caller is
+    /// told what it is waiting on (<see cref="AnswersWithin"/>). So a read that answers
+    /// promptly is never shown. A read is waited for up to <see cref="SourceFolderTimeLimit"/>
+    /// whatever this is. Raise it and a read waits that much longer before the caller is
+    /// told; lower it and a read that is only not instant flashes a line on screen.
     /// </summary>
     internal TimeSpan SourceFolderWaitThreshold { get; init; } = TimeSpan.FromSeconds(1);
 
     /// <summary>
     /// The clock <see cref="AnswersWithin"/> times each read on. A package read that answers
     /// false after longer than <see cref="SourceFolderSlowFailure"/> on this clock gives its
-    /// root up, and one that answers false after longer than
-    /// <see cref="SourceFolderWaitThreshold"/> on it adds that time towards
-    /// <see cref="SourceFolderFailedWaitBudget"/> (<see cref="ReadSourcePackage"/>). The
-    /// waits themselves are timed by the thread that waits, whatever this clock says.
+    /// root up, and one that answers false sooner adds the time it took on this clock
+    /// towards <see cref="SourceFolderFailedWaitBudget"/> (<see cref="ReadSourcePackage"/>).
+    /// The waits themselves are timed by the thread that waits, whatever this clock says.
     /// </summary>
     internal TimeProvider Clock { get; init; } = TimeProvider.System;
 
@@ -1990,15 +1985,14 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// (<see cref="ReadSourcePackage"/>): one under which a read has not answered within the
         /// time limit (<see cref="AnswersWithin"/>), one under which a package read has
         /// answered false only after waiting longer than <see cref="SourceFolderSlowFailure"/>,
-        /// and one whose package reads that answered false after a wait have taken longer than
+        /// and one whose package reads that answered false have taken longer than
         /// <see cref="SourceFolderFailedWaitBudget"/> between them (<see cref="TimeFailing"/>).
         /// The reads under a drive include the one that asks its kind (<see cref="KindOf"/>).
         /// </summary>
         internal HashSet<string> RootsNotAnswering { get; } = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
-        /// How long the package reads under each root that answered false after longer than
-        /// <see cref="SourceFolderWaitThreshold"/>, and no longer than
+        /// How long the package reads under each root that answered false, each within
         /// <see cref="SourceFolderSlowFailure"/>, have taken in this pass, keyed as
         /// <see cref="RootsNotAnswering"/> is (<see cref="ReadSourcePackage"/>).
         /// </summary>

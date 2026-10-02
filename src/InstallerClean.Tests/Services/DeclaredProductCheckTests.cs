@@ -3994,19 +3994,19 @@ public class DeclaredProductCheckTests
         Assert.Equal(Enumerable.Repeat(new[] { root, null }, Programs).SelectMany(wait => wait), told);
     }
 
-    // ---- A root whose reads fail after a wait ----
+    // ---- A root whose reads fail ----
     //
-    // A package read that answers false after longer than the check's threshold adds the
-    // time it took to its root's total, and once that passes the check's budget no later
-    // package under the root is read in the pass. Every read here answers at once and takes
-    // the time the test gives it on the check's clock alone, so the tests run on the check's
-    // own threshold, slow-failure bar and budget.
+    // A package read that answers false adds the time it took to its root's total, however
+    // short, and once that passes the check's budget no later package under the root is read
+    // in the pass. A read that finds no file there adds nothing. Every read here answers at
+    // once and takes the time the test gives it on the check's clock alone, so the tests run
+    // on the check's own slow-failure bar and budget.
 
     /// <summary>
-    /// How long a refused source package read takes on the check's clock in the tests below:
-    /// longer than the check's own threshold and shorter than its own slow-failure bar.
+    /// How long a source package read that does not open takes on the check's clock in the
+    /// tests below: shorter than the check's own slow-failure bar.
     /// </summary>
-    private static readonly TimeSpan FailedReadOnTheClock = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan UnopenedReadOnTheClock = TimeSpan.FromSeconds(3);
 
     /// <summary>
     /// The programs <see cref="ProgramsInstalledFromFoldersUnder(IReadOnlyList{string})"/>
@@ -4016,13 +4016,25 @@ public class DeclaredProductCheckTests
     private static ((ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
         ScriptedFileIdentities Files, MockFileSystem Disk) F, HeldFileIdentities Files, SteppedClock Clock,
         string[] Copies, string[] SourcePackages)
-        ProgramsWhosePackagesAreRefused(IReadOnlyList<string> folders, TimeSpan each)
+        ProgramsWhosePackagesAreRefused(IReadOnlyList<string> folders, TimeSpan each) =>
+        ProgramsWhosePackagesAnswer(folders, FileIdentityRead.OpenRefused, each);
+
+    /// <summary>
+    /// The programs <see cref="ProgramsInstalledFromFoldersUnder(IReadOnlyList{string})"/>
+    /// builds for <paramref name="folders"/>, every one of their packages answering
+    /// <paramref name="answer"/> at once, and each read of one moving the returned clock on
+    /// by <paramref name="each"/>.
+    /// </summary>
+    private static ((ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+        ScriptedFileIdentities Files, MockFileSystem Disk) F, HeldFileIdentities Files, SteppedClock Clock,
+        string[] Copies, string[] SourcePackages)
+        ProgramsWhosePackagesAnswer(IReadOnlyList<string> folders, FileIdentityRead answer, TimeSpan each)
     {
         var (f, copies, sourcePackages) = ProgramsInstalledFromFoldersUnder(folders);
         var files = new HeldFileIdentities(f.Files);
         foreach (var package in sourcePackages)
         {
-            f.Files.Answers(package, FileIdentityRead.OpenRefused);
+            f.Files.Answers(package, answer);
             files.Holds(package, TimeSpan.Zero);
         }
 
@@ -4056,7 +4068,7 @@ public class DeclaredProductCheckTests
         // twenty-first takes the root past, and no package under it is read after that.
         const int Programs = 24, Reads = 21;
         var (f, files, clock, copies, sourcePackages) =
-            ProgramsWhosePackagesAreRefused([.. Enumerable.Repeat(folder, Programs)], FailedReadOnTheClock);
+            ProgramsWhosePackagesAreRefused([.. Enumerable.Repeat(folder, Programs)], UnopenedReadOnTheClock);
         using var _ = files;
 
         var outcomes = ScreenEvery(CheckOnTheClock(f, files, clock), copies);
@@ -4068,11 +4080,12 @@ public class DeclaredProductCheckTests
     [Theory]
     [InlineData(@"D:\Setup\")]
     [InlineData(@"\\nas\share\")]
-    public void Refused_reads_that_are_not_waits_cost_their_root_nothing_however_many_there_are(string folder)
+    public void Refused_reads_too_quick_to_be_waits_add_up_the_same_way(string folder)
     {
-        // Each read takes half a second, under the check's threshold, and the hundred and
-        // thirty come to sixty-five seconds.
-        const int Programs = 130;
+        // Each read takes half a second on the check's clock, less than its threshold for a
+        // wait. A hundred and twenty come to a minute, which is not past it, and the hundred
+        // and twenty-first takes the root past.
+        const int Programs = 130, Reads = 121;
         var (f, files, clock, copies, sourcePackages) =
             ProgramsWhosePackagesAreRefused([.. Enumerable.Repeat(folder, Programs)], TimeSpan.FromMilliseconds(500));
         using var _ = files;
@@ -4080,6 +4093,24 @@ public class DeclaredProductCheckTests
         var outcomes = ScreenEvery(CheckOnTheClock(f, files, clock), copies);
 
         Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
+        Assert.Equal(sourcePackages[..Reads], files.Started);
+    }
+
+    [Theory]
+    [InlineData(@"D:\Setup\")]
+    [InlineData(@"\\nas\share\")]
+    public void Reads_that_find_no_file_cost_their_root_nothing_however_long_they_take(string folder)
+    {
+        // Each read finds no package and takes three seconds, and the twenty-four come to
+        // seventy-two seconds.
+        const int Programs = 24;
+        var (f, files, clock, copies, sourcePackages) = ProgramsWhosePackagesAnswer(
+            [.. Enumerable.Repeat(folder, Programs)], FileIdentityRead.NamesNothing, UnopenedReadOnTheClock);
+        using var _ = files;
+
+        var outcomes = ScreenEvery(CheckOnTheClock(f, files, clock), copies);
+
+        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
         Assert.Equal(sourcePackages, files.Started);
     }
 
@@ -4089,7 +4120,7 @@ public class DeclaredProductCheckTests
         // D: is given up at its twenty-first read. E:'s twenty reads come to a minute, which
         // is not past it, and the total for D: and E: together is.
         string[] folders = [.. Enumerable.Repeat(@"D:\Setup\", 24), .. Enumerable.Repeat(@"E:\Setup\", 20)];
-        var (f, files, clock, copies, sourcePackages) = ProgramsWhosePackagesAreRefused(folders, FailedReadOnTheClock);
+        var (f, files, clock, copies, sourcePackages) = ProgramsWhosePackagesAreRefused(folders, UnopenedReadOnTheClock);
         using var _ = files;
 
         ScreenEvery(CheckOnTheClock(f, files, clock), copies);
@@ -4101,7 +4132,7 @@ public class DeclaredProductCheckTests
     public void A_root_given_up_for_its_refused_reads_in_one_pass_is_read_again_in_the_next()
     {
         var (f, files, clock, copies, sourcePackages) =
-            ProgramsWhosePackagesAreRefused([.. Enumerable.Repeat(@"D:\Setup\", 24)], FailedReadOnTheClock);
+            ProgramsWhosePackagesAreRefused([.. Enumerable.Repeat(@"D:\Setup\", 24)], UnopenedReadOnTheClock);
         using var _ = files;
         var check = CheckOnTheClock(f, files, clock);
 
