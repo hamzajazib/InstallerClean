@@ -274,14 +274,23 @@ jobs:
         run: node scripts/verify-shipped-artefacts.mjs
 
       # ISCC is the only thing that reads installer/*.iss, so a typo there shows
-      # up nowhere else, and the compiler's warning for a message missing from
-      # one of the bundled community .isl files is in this step's log. Compiling
-      # the setup here finds a typo on the push that caused it rather than on
-      # the release machine. The self-contained GUI and CLI publishes above
-      # put the exes exactly where the [Files] section looks for them, in the
-      # shapes the release script builds, so this compiles the real setup rather
-      # than a stub. Repointing either at a different publish directory quietly
-      # turns it back into one.
+      # up nowhere else. Compiling the setup here finds it on the push that
+      # caused it rather than on the release machine. The self-contained GUI
+      # and CLI publishes above put the exes exactly where the [Files] section
+      # looks for them, in the shapes the release script builds, so this
+      # compiles the real setup rather than a stub. Repointing either at a
+      # different publish directory quietly turns it back into one.
+      #
+      # The compile step fails on any warning ISCC prints, as well as on a
+      # failed compile. A message missing from one language's .isl is a warning
+      # and no more: the compile goes on, and that language's wizard shows the
+      # text from another language in its place, English for a [Messages] entry
+      # and the first language that defines it for a [CustomMessages] one. ISCC
+      # prints each warning at the end of the compile as a line starting
+      # "Warning: ", and writes no such line under /Q or /Qp, so either option
+      # on the command line below lets a missing message through. Setting
+      # MissingMessagesWarning=no in the script's [Setup] section does the same
+      # for a [Messages] entry, by turning that warning off at the source.
       #
       # The version is pinned for the same reason the runner is: an Inno release
       # must not redden an unrelated push. 6.7.1 is the compiler that built the
@@ -304,7 +313,15 @@ jobs:
           $version = ([xml](Get-Content Directory.Build.props)).Project.PropertyGroup.Version |
                      Where-Object { $_ } | Select-Object -First 1
           if (-not $version) { throw "Could not read <Version> from Directory.Build.props." }
-          & $iscc "/DAppVersion=$version" installer\InstallerClean.iss
+          & $iscc "/DAppVersion=$version" installer\InstallerClean.iss | Tee-Object -Variable compileOutput
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $warnings = @($compileOutput | Where-Object { $_ -like 'Warning: *' })
+          if ($warnings.Count -gt 0) {
+            ''
+            'ISCC printed these warnings, and any warning fails this step:'
+            $warnings
+            exit 1
+          }
 
       # The seven language gates run last, and each runs even when one before it
       # has failed. Every one is named below, because a gate left out of the list
