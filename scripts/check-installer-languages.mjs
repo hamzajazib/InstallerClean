@@ -74,7 +74,7 @@ const cultures = new Set([
   ...[...arrayMatch[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]),
 ]);
 
-// --- installer file (strip the UTF-8 BOM the #include requires; readFileSync
+// --- installer file (strip a UTF-8 BOM where the file has one; readFileSync
 // leaves it as a leading U+FEFF that would otherwise glue onto "[Languages]") ---
 const raw = readFileSync(ISS, 'utf8');
 const issText = raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;

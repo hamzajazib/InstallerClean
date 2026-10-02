@@ -2,9 +2,9 @@
 ; InstallerClean.iss so the main script stays on install logic and each added
 ; language touches only this file. Pulled in with #include.
 ;
-; This file keeps its UTF-8 BOM. It carries non-ASCII overrides for many
-; languages (CJK, Cyrillic, accented Latin), and the BOM marks it as UTF-8 to
-; the compiler.
+; Save it as UTF-8. It carries non-ASCII overrides for many languages (CJK,
+; Cyrillic, accented Latin), and a Unicode file pulled in with #include must be
+; UTF-8, with or without a BOM.
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "indonesian"; MessagesFile: "Languages\Indonesian.isl"

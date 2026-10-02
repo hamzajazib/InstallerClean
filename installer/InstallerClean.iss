@@ -134,7 +134,7 @@ SignedUninstallerDir={#UninstallerSignatureDir}
 
 ; Language, message and custom-message definitions live in their own file so the
 ; main script stays on install logic; each added language touches only that file.
-; It keeps a UTF-8 BOM (it carries accented strings); see its header.
+; It is UTF-8 (it carries text in many languages); see its header.
 #include "InstallerClean_Languages.iss"
 
 [Files]
