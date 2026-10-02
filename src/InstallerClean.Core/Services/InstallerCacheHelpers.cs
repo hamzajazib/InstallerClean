@@ -41,9 +41,9 @@ internal enum PathResolution
     Resolved,
 
     /// <summary>
-    /// <see cref="Path.GetFullPath(string)"/> refused the string outright: an
-    /// embedded null, a device name, or a length past the API's limit. The value
-    /// names nothing that can be looked for and cannot be improved.
+    /// <see cref="Path.GetFullPath(string)"/> refused the string outright: one of
+    /// nothing but spaces, an embedded null, or a length past the API's limit. The
+    /// value names nothing that can be looked for and cannot be improved.
     /// </summary>
     NotAPath,
 
@@ -331,14 +331,24 @@ internal static class InstallerCacheHelpers
 
     /// <summary>
     /// <see cref="TryResolveFinalPath"/> with its single <c>false</c> separated
-    /// into the five distinct failures behind it. The resolution itself is here;
-    /// the bool form above is this call with the answer narrowed, so the two
-    /// cannot drift apart and no caller has to be trusted to keep them in step.
+    /// into the five distinct failures behind it. The bool form above is this call
+    /// with the answer narrowed, so the two cannot drift apart and no caller has to
+    /// be trusted to keep them in step.
     ///
     /// WHY THE FIVE ARE WORTH SEPARATING is <see cref="PathResolution"/>'s own
     /// note: two of them are ordinary machine states and three cannot be produced
     /// by absence or by a permission, so a count over all five together says
     /// nothing anybody could act on.
+    ///
+    /// IT DOES NOT THROW. A path <see cref="Path.GetFullPath(string)"/> refuses
+    /// answers <see cref="PathResolution.NotAPath"/>, the walk up to an existing
+    /// ancestor asks <see cref="File.Exists(string)"/> and
+    /// <see cref="Directory.Exists(string)"/>, which answer false rather than throw,
+    /// and anything thrown from the open onwards answers
+    /// <see cref="PathResolution.Faulted"/>. Keep it that way:
+    /// <c>InstallerQueryService.NormaliseLocalPackagePath</c> counts a throw from this
+    /// call as a refusal of its prefix step, which the opt-in report describes as a
+    /// count no missing file, missing drive or permission produces.
     /// </summary>
     internal static PathResolution ResolveFinalPathOutcome(string path, out string resolved) =>
         ResolveFinalPathOutcome(path, out resolved, Win32FinalPathKernel.Instance);

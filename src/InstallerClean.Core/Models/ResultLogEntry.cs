@@ -413,7 +413,7 @@ public sealed record AppInfo(string Version, string Language, string WindowsLang
 /// </param>
 /// <param name="PathNormalisationRefusedAtFullPathCount">
 /// Recorded values this scan could not turn into a path, refused by the full-path call:
-/// a device name, a length past the API's limit.
+/// one of nothing but spaces, a length past the API's limit.
 /// </param>
 /// <param name="PathFlaggedSpellingCount">
 /// Recorded values carrying a spelling only the filesystem can settle: an 8dot3 alias,
@@ -624,10 +624,10 @@ public sealed record MachineInfo(
     /// parts being four different facts about a machine. What it means is that the
     /// recorded path could not be turned into a path at all, so the claim is kept in
     /// the raw spelling Windows gave and matches nothing the folder walk produces.
-    /// The four steps it counts read nothing on disk, so no missing file, missing drive
-    /// or permission produces it. The cached file it names is withheld with the rest of
-    /// the walk-derived offer, which is what this figure says about the machine it came
-    /// from.
+    /// None of the four steps it counts refuses a value for anything it finds on disk,
+    /// so no missing file, missing drive or permission produces it. The cached file it
+    /// names is withheld with the rest of the walk-derived offer, which is what this
+    /// figure says about the machine it came from.
     /// </summary>
     public int PathNormalisationRefusedCount =>
         PathNormalisationRefusedAtExpansionCount

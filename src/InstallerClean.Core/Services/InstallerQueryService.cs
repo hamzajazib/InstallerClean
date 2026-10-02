@@ -3021,6 +3021,12 @@ public sealed class InstallerQueryService : IInstallerQueryService
             // anything was asked. It separates a scan that read no registrations from
             // one whose every registration resolved.
             census.RecordResolverAttempt();
+
+            // THE RESOLVER ANSWERS EVERY FAILURE AS ONE OF ITS OWN OUTCOMES AND DOES NOT
+            // THROW, as its summary sets out, so what it finds on disk is counted with
+            // its outcomes and never reaches the catch below. The prefix-strip step is
+            // still the one marked here, so a throw from the resolver would be counted as
+            // a refusal of that step.
             var outcome = InstallerCacheHelpers.ResolveFinalPathOutcome(
                 ToWin32Prefix(stripped), out var resolved);
             census.RecordResolution(outcome);
@@ -3039,8 +3045,8 @@ public sealed class InstallerQueryService : IInstallerQueryService
         }
         catch
         {
-            // A value GetFullPath refuses (a device name, a length past the API's
-            // limit) is kept exactly as Windows returned it. It cannot be improved,
+            // A value GetFullPath refuses (one of nothing but spaces, a length past the
+            // API's limit) is kept exactly as Windows returned it. It cannot be improved,
             // and dropping the claim would turn an unreadable spelling into an
             // orphaned file. An embedded null is not one of them and is refused
             // above instead, because on Windows it never reaches this call: the

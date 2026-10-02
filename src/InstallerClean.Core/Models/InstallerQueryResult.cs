@@ -406,8 +406,8 @@ public record InstallerQueryResult(
 /// The same, refused while taking a prefix off or preparing the resolver's ask.
 /// </param>
 /// <param name="PathNormalisationRefusedAtFullPathCount">
-/// The same, refused by <c>GetFullPath</c>: a device name, a length past the API's
-/// limit.
+/// The same, refused by <c>GetFullPath</c>: one of nothing but spaces, a length past
+/// the API's limit.
 /// </param>
 /// <param name="PathNormalisationRefusedAtEmbeddedNullCount">
 /// The same, refused for carrying an embedded null, which no path can carry.
