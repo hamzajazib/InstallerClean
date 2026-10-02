@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 using System.IO.Abstractions;
 using System.Runtime.ExceptionServices;
@@ -993,7 +992,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             IsBackground = true,
             Name = "Source package read",
         };
-        var waited = Stopwatch.StartNew();
+        var started = Clock.GetTimestamp();
         reader.Start();
 
         var notice = SourceFolderWaitThreshold < SourceFolderTimeLimit ? SourceFolderWaitThreshold : SourceFolderTimeLimit;
@@ -1005,7 +1004,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             pass.WaitingOn?.Invoke(null);
         }
 
-        took = waited.Elapsed;
+        took = Clock.GetElapsedTime(started);
 
         if (!inTime)
         {
@@ -1191,6 +1190,14 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// nothing said; lower it and a read that is only not instant flashes a line on screen.
     /// </summary>
     internal TimeSpan SourceFolderWaitThreshold { get; init; } = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// The clock <see cref="AnswersWithin"/> times each read on. A read that answers false
+    /// after longer than <see cref="SourceFolderSlowFailure"/> on this clock gives its root
+    /// up (<see cref="ReadSourcePackage"/>). The waits themselves are timed by the thread
+    /// that waits, whatever this clock says.
+    /// </summary>
+    internal TimeProvider Clock { get; init; } = TimeProvider.System;
 
     /// <summary>
     /// The entries on one installation's source list, network or URL as

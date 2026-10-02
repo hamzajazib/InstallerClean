@@ -3905,6 +3905,12 @@ public class DeclaredProductCheckTests
     private static readonly TimeSpan SlowRead = TimeSpan.FromMilliseconds(600);
 
     /// <summary>
+    /// How long a source package read takes on the check's clock in the test below, a little
+    /// under the default time limit.
+    /// </summary>
+    private static readonly TimeSpan ReadOnTheClock = TimeSpan.FromSeconds(25);
+
+    /// <summary>
     /// <paramref name="count"/> programs, each installed once per machine from a folder of its
     /// own under <paramref name="folder"/>, and each with a copy in the Installer folder
     /// beside its cached package. A program's package carries the name of its copy and opens
@@ -3953,16 +3959,21 @@ public class DeclaredProductCheckTests
     public void Every_source_package_under_a_root_slow_to_answer_each_read_is_read_and_each_wait_is_told(
         string folder, string root)
     {
+        // Each read is held for SlowRead, so it is a wait the caller is told of, and takes
+        // ReadOnTheClock on the clock the check times reads by, so the six come to two and a
+        // half minutes. The time limit is the check's own.
         const int Programs = 6;
         var (f, copies, sourcePackages) = ProgramsInstalledFromFoldersUnder(folder, Programs);
         using var files = new HeldFileIdentities(f.Files);
         foreach (var package in sourcePackages) files.Holds(package, SlowRead);
+        var clock = new SteppedClock();
+        files.TakesOnTheClock(clock, ReadOnTheClock);
         var told = new List<string?>();
 
         var outcomes = new DeclaredProductCheck(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
             {
-                SourceFolderTimeLimit = HeldFor,
                 SourceFolderWaitThreshold = WaitThreshold,
+                Clock = clock,
                 DriveKindOf = FixedDrive,
                 NamesInFolderOf = NameOnly,
             }
@@ -5447,6 +5458,7 @@ internal sealed class HeldFileIdentities(ScriptedFileIdentities answers) : IFile
 {
     private readonly ConcurrentDictionary<string, TimeSpan> _holds = new(StringComparer.OrdinalIgnoreCase);
     private readonly ManualResetEventSlim _released = new();
+    private (SteppedClock Clock, TimeSpan Each)? _onTheClock;
 
     /// <summary>Every path a read was started for, held or not, in order.</summary>
     public ConcurrentQueue<string> Calls { get; } = new();
@@ -5457,12 +5469,16 @@ internal sealed class HeldFileIdentities(ScriptedFileIdentities answers) : IFile
     /// <summary>A read of <paramref name="path"/> answers after <paramref name="hold"/>, or on release.</summary>
     public void Holds(string path, TimeSpan hold) => _holds[path] = hold;
 
+    /// <summary>Every held read moves <paramref name="clock"/> on by <paramref name="each"/> as it starts.</summary>
+    public void TakesOnTheClock(SteppedClock clock, TimeSpan each) => _onTheClock = (clock, each);
+
     public FileIdentityRead ReadOutcome(string path, out FileIdentity identity)
     {
         Calls.Enqueue(path);
         if (_holds.TryGetValue(path, out var hold))
         {
             Started.Enqueue(path);
+            if (_onTheClock is { } onTheClock) onTheClock.Clock.Advance(onTheClock.Each);
             _released.Wait(hold);
         }
 
@@ -5470,6 +5486,22 @@ internal sealed class HeldFileIdentities(ScriptedFileIdentities answers) : IFile
     }
 
     public void Dispose() => _released.Set();
+}
+
+/// <summary>
+/// A clock that stands still until a test moves it on, for a check that reads how long a
+/// read took off <see cref="DeclaredProductCheck.Clock"/>.
+/// </summary>
+internal sealed class SteppedClock : TimeProvider
+{
+    private long _ticks;
+
+    public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+    public override long GetTimestamp() => Interlocked.Read(ref _ticks);
+
+    /// <summary>Moves the clock on by <paramref name="by"/>.</summary>
+    public void Advance(TimeSpan by) => Interlocked.Add(ref _ticks, by.Ticks);
 }
 
 /// <summary>
