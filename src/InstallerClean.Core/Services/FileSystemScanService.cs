@@ -334,9 +334,10 @@ public sealed class FileSystemScanService : IFileSystemScanService
         var registrationIdentityReads = default(FileIdentityReadTally);
         var candidateIdentityReads = default(FileIdentityReadTally);
 
-        // And the drives and shares the declared-product screen gives up, which the result
-        // built after the block below carries.
+        // And the drives and shares the declared-product screen gives up, and the waits it
+        // makes, which the result built after the block below carries.
         IReadOnlyList<SourceRootGivenUp> sourceRootsGivenUp = [];
+        var sourceWaitCount = 0;
 
         // The closing entry is owed on every exit, not just the clean one: a
         // cancel and the correlation gate both leave through here, and the gate
@@ -631,7 +632,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // bar by the milestones divides it the same way on every machine.
         progress?.Report(new ScanProgressUpdate(Strings.Status_CheckingRemaining));
 
-        sourceRootsGivenUp = WithholdCandidatesByWhatTheyDeclare(
+        (sourceRootsGivenUp, sourceWaitCount) = WithholdCandidatesByWhatTheyDeclare(
             unclaimedByPath, withheld, withheldBy, cacheRoot, query.Installations, cancellationToken,
             (ex, cause) => refusalLog.Record(ex, cause), progress);
 
@@ -1091,7 +1092,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
             supersededContained.RefusedCount,
             supersededContained.UnestablishedCount,
             supersededContainedBytes,
-            sourceRootsGivenUp);
+            sourceRootsGivenUp,
+            sourceWaitCount);
     }
 
     /// <summary>
@@ -1369,9 +1371,11 @@ public sealed class FileSystemScanService : IFileSystemScanService
     ///
     /// It returns every drive or share the screen gave up
     /// (<see cref="DeclaredProductScreening.RootsGivenUp"/>), and none where it handed the
-    /// screen nothing or did not use its answer.
+    /// screen nothing or did not use its answer, and how many waits the screen made
+    /// (<see cref="DeclaredProductScreening.WaitCount"/>), whether or not its answer was used,
+    /// a host showing the waits having shown each of them.
     /// </summary>
-    private IReadOnlyList<SourceRootGivenUp> WithholdCandidatesByWhatTheyDeclare(
+    private (IReadOnlyList<SourceRootGivenUp> RootsGivenUp, int WaitCount) WithholdCandidatesByWhatTheyDeclare(
         List<OrphanedFile> candidates,
         List<OrphanedFile> withheld,
         WithholdingSplitTally withheldBy,
@@ -1381,7 +1385,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         Action<Exception, string>? recordRefusal = null,
         IProgress<ScanProgressUpdate>? progress = null)
     {
-        if (_declaredProducts is null || candidates.Count == 0) return [];
+        if (_declaredProducts is null || candidates.Count == 0) return ([], 0);
 
         // Reported on the same stride rule as the matching count, and the last candidate
         // whatever the stride, so the position ends on the total.
@@ -1414,12 +1418,13 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // would attach one file's verdict to another. Every candidate is kept
         // rather than none, which is the direction this whole pass fails in. The drives
         // and shares it says it gave up are not carried either, its answer not being used.
+        // Its waits are, each having been reported whatever it answered.
         if (outcomes.Count != candidates.Count)
         {
             withheld.AddRange(candidates);
             withheldBy.ScreenUnanswered(candidates.Count);
             candidates.Clear();
-            return [];
+            return ([], screening.WaitCount);
         }
 
         // Partitioned forward into a second list rather than removed in place from
@@ -1443,7 +1448,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
 
         candidates.Clear();
         candidates.AddRange(survivors);
-        return screening.RootsGivenUp;
+        return (screening.RootsGivenUp, screening.WaitCount);
     }
 
     /// <summary>

@@ -402,6 +402,12 @@ namespace InstallerClean.Models;
 /// <see cref="WithheldFiles"/> and counted there under the screen's own verdict, so its
 /// counts are never added to the split's.
 /// </param>
+/// <param name="SourceWaitCount">
+/// How many waits the declared-product screen made in this scan, each a read still waiting
+/// after about a second, for which a host showing the waits put its waiting line up
+/// (<see cref="Services.DeclaredProductScreening.WaitCount"/>). Counted whether or not the
+/// scan used the screen's answer, and nought where the screen did not run.
+/// </param>
 public record ScanResult(
     IReadOnlyList<OrphanedFile> RemovableFiles,
     IReadOnlyList<RegisteredPackage> RegisteredPackages,
@@ -431,7 +437,8 @@ public record ScanResult(
     int SupersededContainmentRefusedCount = 0,
     int SupersededContainmentUnestablishedCount = 0,
     long SupersededContainmentBytes = 0,
-    IReadOnlyList<SourceRootGivenUp>? SourceRootsGivenUp = null)
+    IReadOnlyList<SourceRootGivenUp>? SourceRootsGivenUp = null,
+    int SourceWaitCount = 0)
 {
     /// <summary>Never null: a result built without the list reads as one that gave nothing up.</summary>
     public IReadOnlyList<SourceRootGivenUp> SourceRootsGivenUp { get; init; }

@@ -40,7 +40,17 @@ public class ResultLogEntryTests
         HeldBackRecordsChanged: 0,
         HeldBackRecordsUnreadable: 0,
         HeldBackOwnershipUnestablished: 0,
-        HeldBackFileNotConfirmed: 0);
+        HeldBackFileNotConfirmed: 0,
+        SourcesGivenUpStoppedCount: 0,
+        SourcesGivenUpNoAnswerCount: 0,
+        SourcesGivenUpSlowFailureCount: 0,
+        SourcesGivenUpFailedReadsCount: 0,
+        SourcesGivenUpReadTimeCount: 0,
+        FilesKeptForSourcesGivenUpCount: 0,
+        SourceWaitsShownCount: 0);
+
+    /// <summary>A check made when Move or Delete is clicked that held back by <paramref name="reasons"/>.</summary>
+    private static ReverifyResult Check(HeldBackReasons reasons = default) => new([], [], reasons);
 
     private static ScanInfo SampleScan() => new(
         DurationMs: 100,
@@ -80,7 +90,14 @@ public class ResultLogEntryTests
         RecoveredEnumeratedInstallationCount: 0,
         UnattributedPatchFileCount: 0,
         SupersededScanWideWithheldCount: 0,
-        WithheldSecondCopyUnestablishedCount: 0);
+        WithheldSecondCopyUnestablishedCount: 0,
+        SourcesGivenUpStoppedCount: 0,
+        SourcesGivenUpNoAnswerCount: 0,
+        SourcesGivenUpSlowFailureCount: 0,
+        SourcesGivenUpFailedReadsCount: 0,
+        SourcesGivenUpReadTimeCount: 0,
+        FilesKeptForSourcesGivenUpCount: 0,
+        SourceWaitsShownCount: 0);
 
     private static MachineInfo SampleMachine() => new(
         ShortNameCreation: ShortNameCreationLabels.NoVolumes,
@@ -303,6 +320,14 @@ public class ResultLogEntryTests
                 // whose cached package does not say what it declares and whose own record
                 // does not show an ordinary installation.
                 "withheldSecondCopyUnestablishedCount",
+                // The drives and shares the declared-product screen gave up and kept a file
+                // at, one count for each way it gives one up in the order the routes are
+                // declared, the files it kept at them, a part of the withheld list counted in
+                // the split above and never added to it, and the waits it made.
+                "sourcesGivenUpStoppedCount", "sourcesGivenUpNoAnswerCount",
+                "sourcesGivenUpSlowFailureCount", "sourcesGivenUpFailedReadsCount",
+                "sourcesGivenUpReadTimeCount", "filesKeptForSourcesGivenUpCount",
+                "sourceWaitsShownCount",
             ],
             root.GetProperty("scan").EnumerateObject().Select(p => p.Name));
 
@@ -319,6 +344,12 @@ public class ResultLogEntryTests
                 // Schema 5's, and a fifth kind: a check the scan makes on the file
                 // itself, made again just before acting.
                 "heldBackFileNotConfirmed",
+                // The scan's keys of the same names, for the check made when Move or
+                // Delete is clicked. Its files count is a part of the held-back causes above.
+                "sourcesGivenUpStoppedCount", "sourcesGivenUpNoAnswerCount",
+                "sourcesGivenUpSlowFailureCount", "sourcesGivenUpFailedReadsCount",
+                "sourcesGivenUpReadTimeCount", "filesKeptForSourcesGivenUpCount",
+                "sourceWaitsShownCount",
             ],
             root.GetProperty("operation").EnumerateObject().Select(p => p.Name));
     }
@@ -439,7 +470,7 @@ public class ResultLogEntryTests
 
         var op = OperationInfo.FromDelete(
             new DeleteResult(0, Array.Empty<FileOperationError>()),
-            bytesFreed: 0, durationMs: 0, heldBack: reasons);
+            bytesFreed: 0, durationMs: 0, check: Check(reasons));
 
         Assert.Equal(1, op.HeldBackReclaimed);
         Assert.Equal(2, op.HeldBackRecordsChanged);
@@ -467,13 +498,167 @@ public class ResultLogEntryTests
         var op = OperationInfo.FromMove(
             new MoveResult(0, Array.Empty<FileOperationError>()),
             bytesFreed: 0, durationMs: 0,
-            moveDestinationKind: MoveDestinationKinds.SameDrive, heldBack: reasons);
+            moveDestinationKind: MoveDestinationKinds.SameDrive, check: Check(reasons));
 
         Assert.Equal(1, op.HeldBackReclaimed);
         Assert.Equal(2, op.HeldBackRecordsChanged);
         Assert.Equal(3, op.HeldBackRecordsUnreadable);
         Assert.Equal(4, op.HeldBackOwnershipUnestablished);
         Assert.Equal(5, op.HeldBackFileNotConfirmed);
+    }
+
+    /// <summary>
+    /// Drives and shares given up keeping files, one or more by each route, so a count read
+    /// off the wrong route or the wrong position fails: two by
+    /// <see cref="SourceRootGiveUpRoute.NoAnswer"/>, three by
+    /// <see cref="SourceRootGiveUpRoute.ReadsAddUp"/>, one by each of the others. Beside them,
+    /// one given up keeping nothing, which no count takes in. Each files count is a different
+    /// power of two, so a sum names exactly which roots it took in.
+    /// </summary>
+    private static IReadOnlyList<SourceRootGivenUp> GivenUpByEveryRoute() =>
+    [
+        new("D:", SourceRootGiveUpRoute.StoppedWaiting, 1),
+        new(@"\\nas\apps", SourceRootGiveUpRoute.NoAnswer, 2),
+        new("E:", SourceRootGiveUpRoute.NoAnswer, 4),
+        new("F:", SourceRootGiveUpRoute.SlowFailure, 8),
+        new(@"\\nas\media", SourceRootGiveUpRoute.FailedReadsAddUp, 16),
+        new("G:", SourceRootGiveUpRoute.ReadsAddUp, 32),
+        new("H:", SourceRootGiveUpRoute.ReadsAddUp, 64),
+        new("I:", SourceRootGiveUpRoute.ReadsAddUp, 128),
+        new("J:", SourceRootGiveUpRoute.NoAnswer, 0),
+    ];
+
+    private static int[] GivenUpByRoute(ScanInfo info) =>
+    [
+        info.SourcesGivenUpStoppedCount, info.SourcesGivenUpNoAnswerCount,
+        info.SourcesGivenUpSlowFailureCount, info.SourcesGivenUpFailedReadsCount,
+        info.SourcesGivenUpReadTimeCount,
+    ];
+
+    private static int[] GivenUpByRoute(OperationInfo op) =>
+    [
+        op.SourcesGivenUpStoppedCount, op.SourcesGivenUpNoAnswerCount,
+        op.SourcesGivenUpSlowFailureCount, op.SourcesGivenUpFailedReadsCount,
+        op.SourcesGivenUpReadTimeCount,
+    ];
+
+    [Fact]
+    public void The_drives_and_shares_a_scan_gave_up_and_kept_files_at_are_counted_by_route()
+    {
+        // A drive or share given up keeping nothing is in no count and adds no files, and the
+        // files kept at the rest are summed.
+        var scan = new ScanResult(
+            Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
+            SourceRootsGivenUp: GivenUpByEveryRoute(), SourceWaitCount: 9);
+
+        var info = ScanInfo.From(scan, 10);
+
+        Assert.Equal([1, 2, 1, 1, 3], GivenUpByRoute(info));
+        Assert.Equal(255, info.FilesKeptForSourcesGivenUpCount);
+        Assert.Equal(9, info.SourceWaitsShownCount);
+
+        // Counts only: no name travels.
+        var json = JsonSerializer.Serialize(info, JsonOptions);
+        Assert.DoesNotContain("nas", json);
+        Assert.DoesNotContain("D:", json);
+    }
+
+    [Fact]
+    public void A_scan_that_waited_and_gave_nothing_up_still_counts_its_waits()
+    {
+        var scan = new ScanResult(
+            Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0, SourceWaitCount: 4);
+
+        var info = ScanInfo.From(scan, 10);
+
+        Assert.Equal([0, 0, 0, 0, 0], GivenUpByRoute(info));
+        Assert.Equal(0, info.FilesKeptForSourcesGivenUpCount);
+        Assert.Equal(4, info.SourceWaitsShownCount);
+    }
+
+    [Fact]
+    public void The_check_s_drives_and_shares_given_up_reach_the_operation_block_of_a_Delete()
+    {
+        var check = new ReverifyResult([], [], SourceRootsGivenUp: GivenUpByEveryRoute(), SourceWaitCount: 9);
+
+        var op = OperationInfo.FromDelete(
+            new DeleteResult(0, Array.Empty<FileOperationError>()),
+            bytesFreed: 0, durationMs: 0, check: check);
+
+        Assert.Equal([1, 2, 1, 1, 3], GivenUpByRoute(op));
+        Assert.Equal(255, op.FilesKeptForSourcesGivenUpCount);
+        Assert.Equal(9, op.SourceWaitsShownCount);
+    }
+
+    [Fact]
+    public void The_check_s_drives_and_shares_given_up_reach_the_operation_block_of_a_Move()
+    {
+        // FromMove passes them on through its own argument list, written apart from
+        // FromDelete's, so each is held to the mapping by a test of its own.
+        var check = new ReverifyResult([], [], SourceRootsGivenUp: GivenUpByEveryRoute(), SourceWaitCount: 9);
+
+        var op = OperationInfo.FromMove(
+            new MoveResult(0, Array.Empty<FileOperationError>()),
+            bytesFreed: 0, durationMs: 0,
+            moveDestinationKind: MoveDestinationKinds.SameDrive, check: check);
+
+        Assert.Equal([1, 2, 1, 1, 3], GivenUpByRoute(op));
+        Assert.Equal(255, op.FilesKeptForSourcesGivenUpCount);
+        Assert.Equal(9, op.SourceWaitsShownCount);
+    }
+
+    [Fact]
+    public void A_report_s_scan_and_operation_blocks_each_count_their_own_pass()
+    {
+        // The scan and the check made when Move or Delete is clicked give up their own
+        // drives and shares, so each block carries its own pass and not the other's.
+        var scan = new ScanResult(
+            Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
+            SourceRootsGivenUp: [new("D:", SourceRootGiveUpRoute.SlowFailure, 3)], SourceWaitCount: 2);
+        var check = new ReverifyResult([], [],
+            SourceRootsGivenUp: [new("E:", SourceRootGiveUpRoute.StoppedWaiting, 5)], SourceWaitCount: 7);
+
+        var entry = ResultLogEntry.ForDelete(
+            scan, 100, new DeleteResult(1, Array.Empty<FileOperationError>()), 10, 20, check);
+
+        Assert.Equal([0, 0, 1, 0, 0], GivenUpByRoute(entry.Scan));
+        Assert.Equal(3, entry.Scan.FilesKeptForSourcesGivenUpCount);
+        Assert.Equal(2, entry.Scan.SourceWaitsShownCount);
+        Assert.Equal([1, 0, 0, 0, 0], GivenUpByRoute(entry.Operation));
+        Assert.Equal(5, entry.Operation.FilesKeptForSourcesGivenUpCount);
+        Assert.Equal(7, entry.Operation.SourceWaitsShownCount);
+    }
+
+    [Fact]
+    public void Every_give_up_route_is_counted_by_its_own_key_in_the_order_the_routes_are_declared()
+    {
+        // THE ENUM, WALKED. A route added to it without a key of its own fails here rather
+        // than in the field, and the keys stay in the order the routes are declared, which is
+        // the order a root given up more than one way takes the first of.
+        var routes = Enum.GetValues<SourceRootGiveUpRoute>();
+        var keys = GivenUpByRoute(SampleScan()).Length;
+        Assert.Equal(keys, routes.Length);
+
+        for (var i = 0; i < routes.Length; i++)
+        {
+            var scan = new ScanResult(
+                Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
+                SourceRootsGivenUp: [new("D:", routes[i], 1)]);
+
+            var expected = new int[keys];
+            expected[i] = 1;
+            Assert.Equal(expected, GivenUpByRoute(ScanInfo.From(scan, 0)));
+        }
+    }
+
+    [Fact]
+    public void A_give_up_route_with_no_count_fails_rather_than_going_uncounted()
+    {
+        var scan = new ScanResult(
+            Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
+            SourceRootsGivenUp: [new("D:", (SourceRootGiveUpRoute)99, 1)]);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => ScanInfo.From(scan, 0));
     }
 
     [Fact]
@@ -625,7 +810,7 @@ public class ResultLogEntryTests
         var op = OperationInfo.FromMove(new MoveResult(0, errors),
             bytesFreed: 0, durationMs: 0,
             moveDestinationKind: MoveDestinationKinds.DifferentFixedDrive,
-            heldBack: default);
+            check: Check());
 
         var inUse = Assert.Single(op.Errors, b => b.Category == "FileInUse");
         Assert.Equal(2, inUse.Count);
@@ -642,7 +827,7 @@ public class ResultLogEntryTests
         var errors = new List<FileOperationError> { new MissingSourceFile(@"C:\Windows\Installer\gone.msi") };
 
         var op = OperationInfo.FromDelete(new DeleteResult(0, errors),
-            bytesFreed: 0, durationMs: 0, heldBack: default);
+            bytesFreed: 0, durationMs: 0, check: Check());
 
         var bucket = Assert.Single(op.Errors);
         Assert.Equal("MissingSourceFile", bucket.Category);
@@ -673,6 +858,11 @@ public class ResultLogEntryTests
         Assert.Equal(0, op.HeldBackRecordsUnreadable);
         Assert.Equal(0, op.HeldBackOwnershipUnestablished);
         Assert.Equal(0, op.HeldBackFileNotConfirmed);
+
+        // And no check gave up a drive or share or made anybody wait.
+        Assert.Equal([0, 0, 0, 0, 0], GivenUpByRoute(op));
+        Assert.Equal(0, op.FilesKeptForSourcesGivenUpCount);
+        Assert.Equal(0, op.SourceWaitsShownCount);
     }
 
     [Fact]
@@ -692,7 +882,7 @@ public class ResultLogEntryTests
 
         var op = OperationInfo.FromDelete(new DeleteResult(0, errors),
             bytesFreed: 0, durationMs: 0,
-            heldBack: new HeldBackReasons(Reclaimed: 3));
+            check: Check(new HeldBackReasons(Reclaimed: 3)));
 
         Assert.Equal(OperationOutcomes.Failed, op.Outcome);
         Assert.Equal(0, op.FilesProcessed);
@@ -711,7 +901,7 @@ public class ResultLogEntryTests
         // reached by the CLI and must not invent a failure from two zeroes.)
         var op = OperationInfo.FromMove(new MoveResult(0, Array.Empty<FileOperationError>()),
             bytesFreed: 0, durationMs: 0,
-            moveDestinationKind: MoveDestinationKinds.SameDrive, heldBack: default);
+            moveDestinationKind: MoveDestinationKinds.SameDrive, check: Check());
 
         Assert.Equal(OperationOutcomes.Complete, op.Outcome);
         Assert.Equal(0, op.FilesProcessed);
@@ -724,7 +914,7 @@ public class ResultLogEntryTests
         var errors = new List<FileOperationError> { new FileInUse(@"C:\Windows\Installer\a.msi") };
 
         var op = OperationInfo.FromDelete(new DeleteResult(1, errors),
-            bytesFreed: 1024, durationMs: 0, heldBack: default);
+            bytesFreed: 1024, durationMs: 0, check: Check());
 
         Assert.Equal(OperationOutcomes.Partial, op.Outcome);
     }
@@ -744,7 +934,7 @@ public class ResultLogEntryTests
                 .Select(i => (FileOperationError)new FileInUse($@"C:\Windows\Installer\{i}.msi"))
                 .ToList();
             var outcome = OperationInfo.FromDelete(new DeleteResult(processed, errors),
-                bytesFreed: 0, durationMs: 0, heldBack: default).Outcome;
+                bytesFreed: 0, durationMs: 0, check: Check()).Outcome;
             var cli = CliContract.ClassifyFileOperation(processed, failed);
 
             var expected = cli.ExitCode switch

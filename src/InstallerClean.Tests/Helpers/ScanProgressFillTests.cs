@@ -326,7 +326,8 @@ public class ScanProgressAgainstTheScanTests
                     call.ArgAt<IReadOnlyList<OrphanedFile>>(0)
                         .Select(_ => DeclaredProductOutcome.DeclaredProductNotInstalled)
                         .ToList(),
-                    []);
+                    [],
+                    WaitCount: 1);
             });
 
         await new FileSystemScanService(query, new FileSystem(), null, files, null, null, screen)

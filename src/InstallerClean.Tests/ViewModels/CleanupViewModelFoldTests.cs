@@ -5,8 +5,9 @@ using InstallerClean.ViewModels;
 namespace InstallerClean.Tests.ViewModels;
 
 /// <summary>
-/// What the fold does to the two claim lists it carries, which is a different
-/// question from what it does to the two path lists.
+/// What the fold does to what it carries besides the two path lists: the two claim
+/// lists, and the drives and shares the check gave up with the waits it made, which
+/// are each a different question from what it does to the path lists.
 /// </summary>
 /// <remarks>
 /// THE FOLD IS THE ONE PLACE IN THE APP THAT BUILDS A ReverifyResult OUT OF
@@ -86,6 +87,28 @@ public class CleanupViewModelFoldTests
 
         Assert.Empty(after.SurvivingPatchClaims);
         Assert.Empty(after.SiblingPatchClaims);
+    }
+
+    [Fact]
+    public void The_fold_carries_the_drives_and_shares_given_up_and_the_waits_through()
+    {
+        // They are the check's, made before the under-lease re-read, and the report reads
+        // them off the folded result, so a rebuild that dropped them would send nought.
+        var givenUp = new[]
+        {
+            new SourceRootGivenUp(@"\\nas\apps", SourceRootGiveUpRoute.NoAnswer, 2),
+            new SourceRootGivenUp("E:", SourceRootGiveUpRoute.StoppedWaiting, 0),
+        };
+        var before = new ReverifyResult(
+            new[] { Held, Kept }, Array.Empty<string>(),
+            SourceRootsGivenUp: givenUp, SourceWaitCount: 3);
+
+        var after = CleanupViewModel.FoldHeldBack(
+            before, new[] { Held }, new HeldBackReasons(Reclaimed: 1));
+
+        Assert.Equal(givenUp, after.SourceRootsGivenUp);
+        Assert.Equal(new[] { givenUp[0] }, after.SourceRootsGivenUpKeepingFiles);
+        Assert.Equal(3, after.SourceWaitCount);
     }
 
     [Fact]

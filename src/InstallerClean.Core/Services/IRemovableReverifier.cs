@@ -387,13 +387,20 @@ public record UnderLeaseRecheck(
 /// <see cref="HeldBackReason.OwnershipUnestablished"/>. The check gives up its own drives
 /// and shares, whatever the scan before it gave up.
 /// </param>
+/// <param name="SourceWaitCount">
+/// How many waits the declared-product screen made in this check, each a read still waiting
+/// after about a second, for which a host showing the waits put its waiting line up
+/// (<see cref="DeclaredProductScreening.WaitCount"/>). Counted whether or not the check used
+/// the screen's answer, and nought where the screen did not run.
+/// </param>
 public record ReverifyResult(
     IReadOnlyList<string> Surviving,
     IReadOnlyList<string> Dropped,
     HeldBackReasons Reasons = default,
     IReadOnlyList<PatchClaim>? SurvivingPatchClaims = null,
     IReadOnlyList<PatchClaim>? SiblingPatchClaims = null,
-    IReadOnlyList<SourceRootGivenUp>? SourceRootsGivenUp = null)
+    IReadOnlyList<SourceRootGivenUp>? SourceRootsGivenUp = null,
+    int SourceWaitCount = 0)
 {
     /// <summary>Never null: an absent list reads as nothing to re-read rather than as a fault.</summary>
     public IReadOnlyList<PatchClaim> SurvivingPatchClaims { get; init; }
@@ -413,4 +420,13 @@ public record ReverifyResult(
     /// <summary>Never null: an absent list reads as a check that gave nothing up.</summary>
     public IReadOnlyList<SourceRootGivenUp> SourceRootsGivenUp { get; init; }
         = SourceRootsGivenUp ?? Array.Empty<SourceRootGivenUp>();
+
+    /// <summary>
+    /// The drives and shares in <see cref="SourceRootsGivenUp"/> at which the screen kept at
+    /// least one file, in the order it gave them up, as
+    /// <see cref="ScanResult.SourceRootsGivenUpKeepingFiles"/> is for a scan: a root given up
+    /// with no file kept at it changed nothing the check decided.
+    /// </summary>
+    public IReadOnlyList<SourceRootGivenUp> SourceRootsGivenUpKeepingFiles =>
+        SourceRootsGivenUp.Where(root => root.FilesKept > 0).ToList();
 }

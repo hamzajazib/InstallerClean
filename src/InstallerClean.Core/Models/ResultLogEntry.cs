@@ -71,7 +71,11 @@ public sealed record ResultLogEntry(
     /// account or context the enumeration did not list them in, and the count of patch
     /// registrations naming a cached file that the scan could not match to a program it
     /// asks about; and under <c>operation</c> a fifth
-    /// held-back cause, <c>heldBackFileNotConfirmed</c>. Under <c>app</c> it adds
+    /// held-back cause, <c>heldBackFileNotConfirmed</c>. Under both <c>scan</c> and
+    /// <c>operation</c> it adds the drives and shares the declared-product screen gave up and
+    /// kept a file at, one count for each way it gives one up, the files it kept at them and
+    /// the waits it made: the scan's under <c>scan</c>, and under <c>operation</c> those of
+    /// the check made when Move or Delete is clicked. Under <c>app</c> it adds
     /// <c>windowsLanguage</c>, the Windows display language with no country, AND
     /// <c>app.language</c> CHANGES WHAT IT MEANS AT 5: it is the language the app was
     /// showing, one of the languages it ships, where schema 4 carries the UI culture's
@@ -111,14 +115,14 @@ public sealed record ResultLogEntry(
         long bytesFreed,
         long operationDurationMs,
         string moveDestinationKind,
-        HeldBackReasons heldBack) =>
+        ReverifyResult check) =>
         new(
             CurrentSchemaVersion,
             AppInfo.Current(),
             ResolveOs(),
             MachineInfo.From(scan),
             ScanInfo.From(scan, scanDurationMs),
-            OperationInfo.FromMove(move, bytesFreed, operationDurationMs, moveDestinationKind, heldBack));
+            OperationInfo.FromMove(move, bytesFreed, operationDurationMs, moveDestinationKind, check));
 
     public static ResultLogEntry ForDelete(
         ScanResult scan,
@@ -126,14 +130,14 @@ public sealed record ResultLogEntry(
         DeleteResult delete,
         long bytesFreed,
         long operationDurationMs,
-        HeldBackReasons heldBack) =>
+        ReverifyResult check) =>
         new(
             CurrentSchemaVersion,
             AppInfo.Current(),
             ResolveOs(),
             MachineInfo.From(scan),
             ScanInfo.From(scan, scanDurationMs),
-            OperationInfo.FromDelete(delete, bytesFreed, operationDurationMs, heldBack));
+            OperationInfo.FromDelete(delete, bytesFreed, operationDurationMs, check));
 
     private static string ResolveOs()
     {
@@ -1052,6 +1056,53 @@ public sealed record MachineInfo(
 /// is about the product a file declares; this is about another installation on the
 /// machine.
 /// </param>
+/// <param name="SourcesGivenUpStoppedCount">
+/// Drives or shares, or paths of another form, that the declared-product screen gave up in
+/// this scan and kept at least one file at, where the person stopped waiting for it
+/// (<see cref="SourceRootGiveUpRoute.StoppedWaiting"/>). The first of the counts, one for
+/// each way the screen gives one up, read off
+/// <see cref="ScanResult.SourceRootsGivenUpKeepingFiles"/>. A drive or share given up with
+/// no file kept at it is in none of them, having changed nothing the scan decided.
+///
+/// COUNTS ONLY. No drive's or share's name travels in this report.
+/// </param>
+/// <param name="SourcesGivenUpNoAnswerCount">
+/// The same, where a read there did not answer within the screen's time limit
+/// (<see cref="SourceRootGiveUpRoute.NoAnswer"/>).
+/// </param>
+/// <param name="SourcesGivenUpSlowFailureCount">
+/// The same, where a package read there answered false only after a long wait
+/// (<see cref="SourceRootGiveUpRoute.SlowFailure"/>).
+/// </param>
+/// <param name="SourcesGivenUpFailedReadsCount">
+/// The same, where the package reads there that answered false took more time between them
+/// than the screen allows (<see cref="SourceRootGiveUpRoute.FailedReadsAddUp"/>).
+/// </param>
+/// <param name="SourcesGivenUpReadTimeCount">
+/// The same, where all the reads there took more time between them than the screen allows
+/// one drive or share, whatever each answered (<see cref="SourceRootGiveUpRoute.ReadsAddUp"/>).
+///
+/// EACH DRIVE OR SHARE IS IN ONE OF THEM. Where the read that gave it up met more than one
+/// way, it takes the one <see cref="SourceRootGiveUpRoute"/> declares first, which is the
+/// order of these keys, so their sum is how many drives and shares the scan gave up and kept
+/// a file at. The sum is not sent.
+/// </param>
+/// <param name="FilesKeptForSourcesGivenUpCount">
+/// Files the screen kept in this scan whose check stopped at a read it refused for a drive
+/// or share it gave up (<see cref="SourceRootGivenUp.FilesKept"/>, which says which reads
+/// those are), summed over the drives and shares the counts above count. A check stops at
+/// the first thing that keeps its file, so this says where the check stopped, never that the
+/// drive or share alone kept the file.
+///
+/// A COUNT OF FILES ON THE WITHHELD LIST, NEVER AN ARM OF ITS SPLIT AND NEVER ADDED TO IT.
+/// Every file it counts is counted in the split under the screen's own verdict.
+/// </param>
+/// <param name="SourceWaitsShownCount">
+/// How many waits the screen made in this scan, each a read still waiting after about a
+/// second, for which a host showing the waits put its waiting line up
+/// (<see cref="ScanResult.SourceWaitCount"/>). Every wait is counted, whether or not its
+/// drive or share was then given up.
+/// </param>
 public sealed record ScanInfo(
     long DurationMs,
     int RegisteredCount,
@@ -1090,7 +1141,14 @@ public sealed record ScanInfo(
     int RecoveredEnumeratedInstallationCount,
     int UnattributedPatchFileCount,
     int SupersededScanWideWithheldCount,
-    int WithheldSecondCopyUnestablishedCount)
+    int WithheldSecondCopyUnestablishedCount,
+    int SourcesGivenUpStoppedCount,
+    int SourcesGivenUpNoAnswerCount,
+    int SourcesGivenUpSlowFailureCount,
+    int SourcesGivenUpFailedReadsCount,
+    int SourcesGivenUpReadTimeCount,
+    int FilesKeptForSourcesGivenUpCount,
+    int SourceWaitsShownCount)
 {
     public static ScanInfo From(ScanResult scan, long durationMs)
     {
@@ -1106,6 +1164,7 @@ public sealed record ScanInfo(
         // that can ever be non-zero, which is the whole reason it was added.
         var obsoletedCount = scan.RemovableFiles.Count(f => f.IsObsoleted);
         var supersededCount = scan.RemovableFiles.Count(f => f.IsRemovablePatch) - obsoletedCount;
+        var givenUp = SourcesGivenUpCounts.Of(scan);
         return new(
             durationMs,
             scan.RegisteredPackages.Count,
@@ -1170,7 +1229,16 @@ public sealed record ScanInfo(
             scan.SupersededScanWideWithheldCount,
             // The twelfth arm of the split of the withheld count, appended here rather
             // than beside the other eleven for the reason they were.
-            scan.WithheldBy.SecondCopyUnestablishedCount);
+            scan.WithheldBy.SecondCopyUnestablishedCount,
+            // The drives and shares the screen gave up and kept a file at, by route, the
+            // files it kept at them and its waits. Part of no total above.
+            givenUp.Stopped,
+            givenUp.NoAnswer,
+            givenUp.SlowFailure,
+            givenUp.FailedReads,
+            givenUp.ReadTime,
+            givenUp.FilesKept,
+            givenUp.WaitsShown);
     }
 }
 
@@ -1207,6 +1275,16 @@ public sealed record ScanInfo(
 /// would reject every report from that release, so it could never be required at all
 /// and a machine could stop sending it with nothing to see. Receiver deployed first,
 /// client second.
+///
+/// THE KEYS AFTER THE CAUSES ARE <see cref="ScanInfo"/>'S KEYS OF THE SAME NAMES, FOR THE
+/// CHECK MADE WHEN MOVE OR DELETE IS CLICKED: the drives and shares its declared-product
+/// screen gave up and kept a file at, by route, the files it kept at them and the waits it
+/// made (<see cref="ReverifyResult.SourceRootsGivenUpKeepingFiles"/>,
+/// <see cref="ReverifyResult.SourceWaitCount"/>), each read as the scan's is. The check
+/// gives up its own drives and shares, whatever the scan before it gave up. Every file the
+/// files count takes in is held back as <see cref="HeldBackFileNotConfirmed"/> or
+/// <see cref="HeldBackOwnershipUnestablished"/> and counted there, so it is a part of those
+/// two and never added to them. All of them are nought on a scan-only report.
 /// </summary>
 public sealed record OperationInfo(
     string Kind,
@@ -1221,15 +1299,32 @@ public sealed record OperationInfo(
     int HeldBackRecordsChanged,
     int HeldBackRecordsUnreadable,
     int HeldBackOwnershipUnestablished,
-    int HeldBackFileNotConfirmed)
+    int HeldBackFileNotConfirmed,
+    int SourcesGivenUpStoppedCount,
+    int SourcesGivenUpNoAnswerCount,
+    int SourcesGivenUpSlowFailureCount,
+    int SourcesGivenUpFailedReadsCount,
+    int SourcesGivenUpReadTimeCount,
+    int FilesKeptForSourcesGivenUpCount,
+    int SourceWaitsShownCount)
 {
+    // Every held-back cause and every give-up count nought, no check having run.
     public static OperationInfo ScanOnly() =>
         new(OperationKinds.Scan, OperationOutcomes.NoFiles, 0, 0, 0, 0,
-            Array.Empty<ErrorBucket>(), null, 0, 0, 0, 0, 0);
+            Array.Empty<ErrorBucket>(), null, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0);
 
+    /// <summary>
+    /// The operation block of a Move. <paramref name="check"/> is the result of the check made
+    /// when Move was clicked, with what the re-read under the installer lock held back added to
+    /// it.
+    /// </summary>
     public static OperationInfo FromMove(MoveResult result, long bytesFreed, long durationMs,
-        string moveDestinationKind, HeldBackReasons heldBack) =>
-        new(
+        string moveDestinationKind, ReverifyResult check)
+    {
+        var heldBack = check.Reasons;
+        var givenUp = SourcesGivenUpCounts.Of(check);
+        return new(
             OperationKinds.Move,
             ClassifyOutcome(result.MovedCount, result.Errors.Count),
             durationMs,
@@ -1242,11 +1337,26 @@ public sealed record OperationInfo(
             heldBack.RecordsChanged,
             heldBack.RecordsUnreadable,
             heldBack.OwnershipUnestablished,
-            heldBack.FileNotConfirmed);
+            heldBack.FileNotConfirmed,
+            givenUp.Stopped,
+            givenUp.NoAnswer,
+            givenUp.SlowFailure,
+            givenUp.FailedReads,
+            givenUp.ReadTime,
+            givenUp.FilesKept,
+            givenUp.WaitsShown);
+    }
 
+    /// <summary>
+    /// The operation block of a Delete, <paramref name="check"/> being as
+    /// <see cref="FromMove"/> takes it.
+    /// </summary>
     public static OperationInfo FromDelete(DeleteResult result, long bytesFreed, long durationMs,
-        HeldBackReasons heldBack) =>
-        new(
+        ReverifyResult check)
+    {
+        var heldBack = check.Reasons;
+        var givenUp = SourcesGivenUpCounts.Of(check);
+        return new(
             OperationKinds.Delete,
             ClassifyOutcome(result.DeletedCount, result.Errors.Count),
             durationMs,
@@ -1259,7 +1369,15 @@ public sealed record OperationInfo(
             heldBack.RecordsChanged,
             heldBack.RecordsUnreadable,
             heldBack.OwnershipUnestablished,
-            heldBack.FileNotConfirmed);
+            heldBack.FileNotConfirmed,
+            givenUp.Stopped,
+            givenUp.NoAnswer,
+            givenUp.SlowFailure,
+            givenUp.FailedReads,
+            givenUp.ReadTime,
+            givenUp.FilesKept,
+            givenUp.WaitsShown);
+    }
 
     /// <summary>
     /// The outcome label, decided from the two counts the finished batch
@@ -1296,6 +1414,65 @@ public sealed record OperationInfo(
 }
 
 /// <summary>
+/// The drives and shares one pass of the declared-product screen gave up and kept a file at,
+/// counted by the route each was given up by, with the files kept at them and the waits the
+/// pass made: the counts <see cref="ScanInfo"/> and <see cref="OperationInfo"/> each end with,
+/// read for both off one expression.
+/// </summary>
+internal readonly record struct SourcesGivenUpCounts(
+    int Stopped,
+    int NoAnswer,
+    int SlowFailure,
+    int FailedReads,
+    int ReadTime,
+    int FilesKept,
+    int WaitsShown)
+{
+    /// <summary>The counts for a scan.</summary>
+    internal static SourcesGivenUpCounts Of(ScanResult scan) =>
+        Count(scan.SourceRootsGivenUpKeepingFiles, scan.SourceWaitCount);
+
+    /// <summary>The counts for the check made when Move or Delete is clicked.</summary>
+    internal static SourcesGivenUpCounts Of(ReverifyResult check) =>
+        Count(check.SourceRootsGivenUpKeepingFiles, check.SourceWaitCount);
+
+    /// <summary>
+    /// Counts each root in <paramref name="keepingFiles"/> under its route, and adds up the
+    /// files kept at them.
+    ///
+    /// A ROUTE WITH NO COUNT HERE THROWS, so the first report meeting it fails rather than
+    /// sending counts that add up to less than the drives and shares the pass gave up.
+    /// A member added to <see cref="SourceRootGiveUpRoute"/> gains a count here, and a key in
+    /// both report blocks, in the same edit.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// A root given up by a route with no count, which is a defect in this type and not a
+    /// machine state.
+    /// </exception>
+    private static SourcesGivenUpCounts Count(IReadOnlyList<SourceRootGivenUp> keepingFiles, int waits)
+    {
+        var counts = new SourcesGivenUpCounts(0, 0, 0, 0, 0, 0, waits);
+        foreach (var root in keepingFiles)
+        {
+            counts = root.Route switch
+            {
+                SourceRootGiveUpRoute.StoppedWaiting => counts with { Stopped = counts.Stopped + 1 },
+                SourceRootGiveUpRoute.NoAnswer => counts with { NoAnswer = counts.NoAnswer + 1 },
+                SourceRootGiveUpRoute.SlowFailure => counts with { SlowFailure = counts.SlowFailure + 1 },
+                SourceRootGiveUpRoute.FailedReadsAddUp => counts with { FailedReads = counts.FailedReads + 1 },
+                SourceRootGiveUpRoute.ReadsAddUp => counts with { ReadTime = counts.ReadTime + 1 },
+                _ => throw new ArgumentOutOfRangeException(nameof(keepingFiles), root.Route,
+                    "A give-up route with no count. Add it to SourcesGivenUpCounts, and a key for it to "
+                    + "both blocks of the opt-in report, in the same edit as the enum member."),
+            };
+            counts = counts with { FilesKept = counts.FilesKept + root.FilesKept };
+        }
+
+        return counts;
+    }
+}
+
+/// <summary>
 /// One error category in a result-log operation: the category name and how
 /// many files fell into it, and nothing else. The category name is the error
 /// record's type name, so it is a value the receiver allowlists.
@@ -1325,9 +1502,3 @@ public static class MoveDestinationKinds
     public const string UncShare = "uncShare";
     public const string Unknown = "unknown";
 }
-
-// PendingRebootLabels lived here and went with schema 4's pendingReboot field.
-// It labelled a state for the payload alone, and the payload dropped the field
-// because a move or a delete is GATED on that state and so can only ever report
-// it clean, leaving a scan-only run as the sole place it could vary, where it
-// never had. The banner keeps its own separate property and is untouched.

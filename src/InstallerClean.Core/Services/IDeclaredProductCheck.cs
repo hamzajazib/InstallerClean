@@ -223,9 +223,17 @@ public interface IDeclaredProductCheck
 /// <paramref name="Outcomes"/> keep their file at it (<see cref="SourceRootGivenUp"/>).
 /// Empty where the pass gave none up.
 /// </param>
+/// <param name="WaitCount">
+/// How many waits the pass made: reads still waiting, with neither an answer nor a stop,
+/// after <see cref="DeclaredProductCheck.SourceFolderWaitThreshold"/>, each told to the
+/// caller through <see cref="IDeclaredProductCheck.Screen"/>'s <c>waitingOn</c>. A host
+/// showing the waits puts its waiting line up once for each. The pass makes one read at a
+/// time, so no two of them overlap.
+/// </param>
 public sealed record DeclaredProductScreening(
     IReadOnlyList<DeclaredProductOutcome> Outcomes,
-    IReadOnlyList<SourceRootGivenUp> RootsGivenUp);
+    IReadOnlyList<SourceRootGivenUp> RootsGivenUp,
+    int WaitCount);
 
 /// <summary>
 /// What the screen settled about one candidate. Some verdicts keep the file and the

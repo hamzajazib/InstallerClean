@@ -64,7 +64,8 @@ public class RemovableReverifierWalkDerivedTests
                         ? DeclaredProductOutcome.DeclaredProductInstalled
                         : DeclaredProductOutcome.DeclaredProductNotInstalled)
                     .ToList(),
-                []));
+                [],
+                WaitCount: 0));
         return screen;
     }
 
@@ -131,7 +132,8 @@ public class RemovableReverifierWalkDerivedTests
                     call.ArgAt<IReadOnlyList<OrphanedFile>>(0)
                         .Select(_ => DeclaredProductOutcome.DeclaredProductNotInstalled)
                         .ToList(),
-                    []);
+                    [],
+                    WaitCount: 1);
             });
         var reported = new List<ScanProgressUpdate>();
 
@@ -142,6 +144,7 @@ public class RemovableReverifierWalkDerivedTests
         Assert.Equal(
             new[] { ScanProgressUpdate.Waiting(onTheShare), ScanProgressUpdate.Waiting(null) },
             reported);
+        Assert.Equal(1, result.SourceWaitCount);
     }
 
     /// <summary>Collects what it is told on the thread that tells it.</summary>
@@ -197,7 +200,8 @@ public class RemovableReverifierWalkDerivedTests
                         _ => DeclaredProductOutcome.DeclaredProductNotInstalled,
                     })
                     .ToList(),
-                []));
+                [],
+                WaitCount: 0));
 
         var result = await Reverifier(Query(Live(registered)), ids, screen, OldTimes(spare))
             .ReverifyAsync(new[] { besideTheCopy, installed, spare });
@@ -207,26 +211,31 @@ public class RemovableReverifierWalkDerivedTests
     }
 
     [Fact]
-    public async Task The_drives_and_shares_the_screen_gives_up_come_back_with_the_check()
+    public async Task The_drives_and_shares_the_screen_gives_up_and_its_waits_come_back_with_the_check()
     {
         // The screen keeps the one file it is handed, at a share it gave up, and the check
-        // holds that file under the screen's cause.
+        // holds that file under the screen's cause. A drive it gave up keeping nothing comes
+        // back too, and is not among those keeping files.
         const string kept = Folder + @"\kept.msi";
         const string registered = Folder + @"\registered.msi";
         var ids = new ScriptedFileIdentities();
         ids.Opens(registered, 1);
         ids.Opens(kept, 2);
         var givenUp = new SourceRootGivenUp(@"\\nas\apps", SourceRootGiveUpRoute.SlowFailure, 1);
+        var keptNothing = new SourceRootGivenUp("E:", SourceRootGiveUpRoute.StoppedWaiting, 0);
         var screen = Substitute.For<IDeclaredProductCheck>();
         screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
                 Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(), Arg.Any<Func<string, bool?>?>(),
                 Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>())
-            .Returns(new DeclaredProductScreening([DeclaredProductOutcome.DeclaredProductInstalled], [givenUp]));
+            .Returns(new DeclaredProductScreening(
+                [DeclaredProductOutcome.DeclaredProductInstalled], [givenUp, keptNothing], WaitCount: 2));
 
         var result = await Reverifier(Query(Live(registered)), ids, screen, OldTimes(kept))
             .ReverifyAsync(new[] { kept });
 
-        Assert.Equal(new[] { givenUp }, result.SourceRootsGivenUp);
+        Assert.Equal(new[] { givenUp, keptNothing }, result.SourceRootsGivenUp);
+        Assert.Equal(new[] { givenUp }, result.SourceRootsGivenUpKeepingFiles);
+        Assert.Equal(2, result.SourceWaitCount);
         Assert.Equal(new HeldBackReasons(FileNotConfirmed: 1), result.Reasons);
     }
 
@@ -281,7 +290,7 @@ public class RemovableReverifierWalkDerivedTests
         screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
                 Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(), Arg.Any<Func<string, bool?>?>(),
                 Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>())
-            .Returns(new DeclaredProductScreening([DeclaredProductOutcome.DeclaredProductNotInstalled], []));
+            .Returns(new DeclaredProductScreening([DeclaredProductOutcome.DeclaredProductNotInstalled], [], WaitCount: 0));
 
         var result = await Reverifier(Query(Live(registered)), ids, screen, OldTimes(a, b))
             .ReverifyAsync(new[] { a, b });

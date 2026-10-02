@@ -1136,11 +1136,12 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                     result, movedBytes,
                     operationTimer.ElapsedMilliseconds,
                     destinationKind,
-                    // The folded tally, so the under-lease re-read's own kept-back
+                    // The folded result, so the under-lease re-read's own kept-back
                     // files are counted with the pre-act ones rather than lost:
                     // the two producers keep back DIFFERENT files and the report
-                    // owes an account of both.
-                    reverify.Reasons);
+                    // owes an account of both. The drives and shares given up and the
+                    // waits are the pre-act check's, which the fold carries through.
+                    reverify);
                 if (await _resultLogService.WriteAsync(entry).ConfigureAwait(true))
                     _completion.MarkResultLogReady();
             }
@@ -1469,7 +1470,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                     ctx.PreOpScan, ctx.PreOpDurationMs,
                     result, deletedBytes,
                     operationTimer.ElapsedMilliseconds,
-                    reverify.Reasons);
+                    // Folded, as on the Move path.
+                    reverify);
                 if (await _resultLogService.WriteAsync(entry).ConfigureAwait(true))
                     _completion.MarkResultLogReady();
             }

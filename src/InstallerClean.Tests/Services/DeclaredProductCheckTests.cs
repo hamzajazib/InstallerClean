@@ -3971,7 +3971,7 @@ public class DeclaredProductCheckTests
     [Theory]
     [InlineData(@"D:\Setup\", "D:")]
     [InlineData(@"\\nas\share\", @"\\nas\share")]
-    public void Every_source_package_under_a_root_slow_to_answer_each_read_is_read_within_its_budget_and_each_wait_is_told(
+    public void Every_source_package_under_a_root_slow_to_answer_each_read_is_read_within_its_budget_and_each_wait_is_told_and_counted(
         string folder, string root)
     {
         // Each read is held for SlowRead, so it is a wait the caller is told of, and takes
@@ -3986,18 +3986,19 @@ public class DeclaredProductCheckTests
         files.TakesOnTheClock(clock, ReadOnTheClock);
         var told = new List<string?>();
 
-        var outcomes = new DeclaredProductCheck(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
+        var screening = new DeclaredProductCheck(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
             {
                 SourceFolderWaitThreshold = WaitThreshold,
                 Clock = clock,
                 DriveKindOf = FixedDrive,
                 NamesInFolderOf = NameOnly,
             }
-            .Screen([.. copies.Select(Package)], [], default, null, InInstallerFolder, waitingOn: wait => told.Add(wait?.Root)).Outcomes;
+            .Screen([.. copies.Select(Package)], [], default, null, InInstallerFolder, waitingOn: wait => told.Add(wait?.Root));
 
-        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
+        Assert.All(screening.Outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
         Assert.Equal(sourcePackages, files.Started);
         Assert.Equal(Enumerable.Repeat(new[] { root, null }, Programs).SelectMany(wait => wait), told);
+        Assert.Equal(Programs, screening.WaitCount);
     }
 
     // ---- A root whose reads fail ----
@@ -4296,14 +4297,15 @@ public class DeclaredProductCheckTests
     // A read still waiting once it has taken longer than the check's threshold is told to
     // the caller with the root it is under, and null is told when the wait ends, whether
     // the read answered or the root was given up. A read that answers sooner is told
-    // nothing. The caller is told on the thread the pass runs on.
+    // nothing. The caller is told on the thread the pass runs on, and the pass counts each
+    // wait it tells (DeclaredProductScreening.WaitCount).
 
     /// <summary>
     /// The check over two programs, A's package held as the test says, with its threshold at
     /// <see cref="WaitThreshold"/> and its time limit at <paramref name="limit"/>, telling
     /// <paramref name="told"/> each wait.
     /// </summary>
-    private static IReadOnlyList<DeclaredProductOutcome> ScreenTellingWaits(
+    private static DeclaredProductScreening ScreenTellingWaits(
         (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
             ScriptedFileIdentities Files, MockFileSystem Disk) f,
         HeldFileIdentities files,
@@ -4318,12 +4320,12 @@ public class DeclaredProductCheckTests
                 NamesInFolderOf = NameOnly,
             }
             .Screen([Package(Candidate), Package(OtherCandidate)], [], cancellationToken, null, InInstallerFolder,
-                waitingOn: wait => told.Add(wait?.Root)).Outcomes;
+                waitingOn: wait => told.Add(wait?.Root));
 
     [Theory]
     [InlineData(@"D:\Setup\a\", @"D:\Setup\b\", "D:")]
     [InlineData(@"\\nas\share\a\", @"\\nas\share\b\", @"\\nas\share")]
-    public void A_read_that_waits_past_the_threshold_is_told_with_its_root_and_then_its_end(
+    public void A_read_that_waits_past_the_threshold_is_told_with_its_root_and_then_its_end_and_counted(
         string heldFolder, string otherFolder, string root)
     {
         var (f, files, _) = TwoProductsBesideAHeldSource(heldFolder, otherFolder);
@@ -4331,23 +4333,25 @@ public class DeclaredProductCheckTests
         files.Holds(heldFolder + CandidateName, SlowRead);
         var told = new List<string?>();
 
-        var outcomes = ScreenTellingWaits(f, files, HeldFor, told);
+        var screening = ScreenTellingWaits(f, files, HeldFor, told);
 
-        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
+        Assert.All(screening.Outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
         Assert.Equal(new[] { root, null }, told);
+        Assert.Equal(1, screening.WaitCount);
     }
 
     [Fact]
-    public void A_read_that_answers_within_the_threshold_is_not_told()
+    public void A_read_that_answers_within_the_threshold_is_not_told_or_counted()
     {
         var (f, files, _) = TwoProductsBesideAHeldSource(@"D:\Setup\a\", @"D:\Setup\b\");
         using var held = files;
         files.Holds(@"D:\Setup\a\" + CandidateName, TimeSpan.Zero);
         var told = new List<string?>();
 
-        ScreenTellingWaits(f, files, HeldFor, told);
+        var screening = ScreenTellingWaits(f, files, HeldFor, told);
 
         Assert.Empty(told);
+        Assert.Equal(0, screening.WaitCount);
     }
 
     [Fact]
@@ -4359,10 +4363,11 @@ public class DeclaredProductCheckTests
         using var held = files;
         var told = new List<string?>();
 
-        var outcomes = ScreenTellingWaits(f, files, SlowRead, told);
+        var screening = ScreenTellingWaits(f, files, SlowRead, told);
 
-        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
+        Assert.All(screening.Outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
         Assert.Equal(new[] { "D:", null }, told);
+        Assert.Equal(1, screening.WaitCount);
         Assert.DoesNotContain(otherPackage, files.Calls);
     }
 
@@ -4515,6 +4520,10 @@ public class DeclaredProductCheckTests
         Assert.Equal(new[] { root, null }, told);
         Assert.DoesNotContain(otherPackage, files.Calls);
         Assert.Equal([new(root, SourceRootGiveUpRoute.StoppedWaiting, 2)], GivenUp(screening));
+
+        // The wait stopped was still told, so it counts, and the read not started after it
+        // makes none.
+        Assert.Equal(1, screening.WaitCount);
     }
 
     [Fact]

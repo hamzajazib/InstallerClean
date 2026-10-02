@@ -211,7 +211,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             if (givenUp is not null && outcomes[i].Withholds()) pass.CountKept(givenUp);
         }
 
-        return new DeclaredProductScreening(outcomes, pass.GivenUp());
+        return new DeclaredProductScreening(outcomes, pass.GivenUp(), pass.WaitCount);
     }
 
     /// <summary>
@@ -1115,6 +1115,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var ended = EndsWithin(notice);
         if (!ended && !stopped.IsCompleted)
         {
+            pass.WaitCount++;
             pass.WaitingOn?.Invoke(new SourceFolderWait(root, () => pass.Stop(root)));
             ended = EndsWithin(SourceFolderTimeLimit - notice);
             pass.WaitingOn?.Invoke(null);
@@ -2082,6 +2083,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// ends (<see cref="AnswersWithin"/>).
         /// </summary>
         internal Action<SourceFolderWait?>? WaitingOn { get; }
+
+        /// <summary>
+        /// How many waits the pass has made, each told to <see cref="WaitingOn"/> where one is
+        /// set (<see cref="AnswersWithin"/>, <see cref="DeclaredProductScreening.WaitCount"/>).
+        /// </summary>
+        internal int WaitCount { get; set; }
 
         /// <summary>
         /// For each root the pass has read under or been told to stop waiting for, a task
