@@ -1717,15 +1717,15 @@ internal static class Program
     /// Shared by the pre-act gate check and the action services' own boundary
     /// refusal. When a Move or Delete service acquires <c>Global\_MSIExecute</c>
     /// and finds it held
-    /// (<see cref="Models.MoveResult.InstallerBusy"/> /
-    /// <see cref="Models.DeleteResult.InstallerBusy"/>), a Windows Installer
+    /// (<see cref="MoveResult.InstallerBusy"/> /
+    /// <see cref="DeleteResult.InstallerBusy"/>), a Windows Installer
     /// transaction took it after the gate check passed; mapping that to
     /// <see cref="PendingRebootReason.MsiExecuteMutexHeld"/> here
     /// makes the service-boundary refusal produce the identical machine contract
     /// (stdout line, event-log entry, exit code) a gate block does, so an RMM
     /// consumer cannot tell the two apart. A service refused the rights to open the
-    /// object (<see cref="Models.MoveResult.InstallerLockAccessRefused"/> /
-    /// <see cref="Models.DeleteResult.InstallerLockAccessRefused"/>) maps to
+    /// object (<see cref="MoveResult.InstallerLockAccessRefused"/> /
+    /// <see cref="DeleteResult.InstallerLockAccessRefused"/>) maps to
     /// <see cref="PendingRebootReason.MsiExecuteMutexAccessRefused"/> on the same
     /// terms, so one refusal carries one sentence and one exit code wherever it is
     /// met.

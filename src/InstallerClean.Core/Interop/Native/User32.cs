@@ -33,8 +33,8 @@ internal static partial class User32
 
     /// <summary>
     /// HWND of the foreground window across the desktop, or zero if no
-    /// window has activation. Called from
-    /// <see cref="Helpers.WindowChromeExtensions.SuppressFocusVisualOnDeactivation"/>
+    /// window has activation. Called from the app's
+    /// <c>WindowChromeExtensions.SuppressFocusVisualOnDeactivation</c>
     /// to gate focus-visual suppression on whether activation went to a
     /// window in another process: the call reads only the foreground
     /// HWND, never window text or a keystroke buffer.

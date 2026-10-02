@@ -201,9 +201,10 @@ internal static class DisplayHelpers
     /// singular one at twenty-one files in two more.
     ///
     /// <see cref="Grammatical"/> is "what form does this noun take after this
-    /// numeral". That is CLDR, it varies by language, and <see cref="CategoryFor"/>
-    /// answers it. <see cref="Cardinality"/> is "is this exactly one", which decides
-    /// between "this file" and "these files" and is n == 1 in every language there is.
+    /// numeral". That is CLDR, it varies by language, and
+    /// <see cref="CategoryFor(CultureInfo, int)"/> answers it. <see cref="Cardinality"/>
+    /// is "is this exactly one", which decides between "this file" and "these files"
+    /// and is n == 1 in every language there is.
     ///
     /// THE LINE BETWEEN THEM IS WHETHER THE ONE-FORM CARRIES THE NUMBER. A one-form
     /// with a {0} in it shows the reader a numeral and must agree with it, so it is
@@ -354,9 +355,9 @@ internal static class DisplayHelpers
     /// COSMETIC. That is the culture the machine is running under, or the one the user
     /// picked; the TEXT comes from whichever satellite the ResourceManager's fallback
     /// chain actually reached, and on a culture with no satellite that is the English
-    /// neutral. <see cref="CategoryFor"/> switches on a two-letter code, so taking the
-    /// rule from the requested culture would apply one language's arm to a sentence
-    /// written in another.
+    /// neutral. <see cref="CategoryFor(CultureInfo, int)"/> switches on a two-letter
+    /// code, so taking the rule from the requested culture would apply one language's
+    /// arm to a sentence written in another.
     ///
     /// TWO FAMILIES SIT ON THAT LINE. Traditional Chinese (zh-TW, zh-HK, zh-MO,
     /// zh-Hant and bare zh) reaches no satellite and displays English while its code
@@ -397,8 +398,8 @@ internal static class DisplayHelpers
     /// THE RULE IS TAKEN FROM THE LANGUAGE THE SENTENCE IS COMING FROM, which is
     /// <see cref="DisplayedLanguage"/> and not the culture the user is running under.
     /// The two part company on any culture the app has no satellite for whose own
-    /// two-letter code <see cref="CategoryFor"/> nonetheless has an arm for, and the
-    /// resx and the rule then answer about different languages.
+    /// two-letter code <see cref="CategoryFor(CultureInfo, int)"/> nonetheless has an
+    /// arm for, and the resx and the rule then answer about different languages.
     /// </summary>
     internal static string Pluralise(int count, string singular, string plural, string keyPrefix) =>
         CategoryFor(DisplayedLanguage, count, QuestionFor(keyPrefix)) switch

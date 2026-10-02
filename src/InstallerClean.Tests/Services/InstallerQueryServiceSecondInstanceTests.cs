@@ -198,6 +198,19 @@ public class InstallerQueryServiceSecondInstanceTests
             result.Installations.Select(i => (i.ProductCode, i.SecondCopyNotRuledOut)));
     }
 
+    /// <summary>
+    /// The census of <see cref="Enumerate"/>, the enumerated product's read answering
+    /// as it is scripted.
+    /// </summary>
+    private static async Task<EnumerationCensus> Scan(
+        string? enumeratedInstanceType = null,
+        string? recoveredInstanceType = null,
+        uint? recoveredInstanceTypeResult = null,
+        bool recoveredUnaskable = false,
+        int unparseableKeyNames = 0) =>
+        (await Enumerate(enumeratedInstanceType, null, recoveredInstanceType, recoveredInstanceTypeResult,
+            recoveredUnaskable, unparseableKeyNames)).Census;
+
     /// <param name="enumeratedInstanceType">
     /// What the product the machine-wide sweep DID return answers. Null leaves the
     /// property unset, which is the ordinary machine.
@@ -220,15 +233,6 @@ public class InstallerQueryServiceSecondInstanceTests
     /// <param name="unparseableKeyNames">
     /// Registry product keys whose names yield no code, as the fallback reports them.
     /// </param>
-    private static async Task<EnumerationCensus> Scan(
-        string? enumeratedInstanceType = null,
-        string? recoveredInstanceType = null,
-        uint? recoveredInstanceTypeResult = null,
-        bool recoveredUnaskable = false,
-        int unparseableKeyNames = 0) =>
-        (await Enumerate(enumeratedInstanceType, null, recoveredInstanceType, recoveredInstanceTypeResult,
-            recoveredUnaskable, unparseableKeyNames)).Census;
-
     private static async Task<InstallerQueryResult> Enumerate(
         string? enumeratedInstanceType = null,
         uint? enumeratedInstanceTypeResult = null,

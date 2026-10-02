@@ -397,34 +397,23 @@ public sealed record AppInfo(string Version, string Language, string WindowsLang
 /// figure folding them together.
 /// See <see cref="PathResolverRefusedCount"/>.
 /// </param>
-/// <param name="PathNormalisationRefusedCount">
-/// Recorded values this scan could not turn into a path at all, whatever refused them.
-/// The sum of the four below, computed from them at the one place they are read, so
-/// the total and its parts cannot come apart.
-///
-/// WHAT IT MEANS, and it is the figure this group exists for: such a claim is kept in
-/// the raw spelling Windows gave and matches nothing the folder walk produces, so the
-/// cached file it names sits in the folder unclaimed. It cannot be produced by a
-/// missing file, a missing drive or a permission, and the resolver's own total can.
-/// The two are separate populations for that reason and are never added.
-///
-/// AND THE APPLICATION ACTS ON IT. Above zero, the scan withholds its whole
-/// walk-derived offer rather than name a file it cannot say is spare. So this number
-/// is not only a measurement: it says whether that machine's offer was held back.
-/// </param>
 /// <param name="PathNormalisationRefusedAtExpansionCount">
-/// Of those, refused while expanding an environment variable.
+/// Recorded values this scan could not turn into a path at all, refused while expanding
+/// an environment variable. It and the three refusal counts below add up to
+/// <see cref="PathNormalisationRefusedCount"/>.
 ///
 /// THE FOUR ARE ONE POPULATION SPLIT BY CAUSE AND MUST NOT BE DESCRIBED AS ONE. A
 /// sentence naming any single cause is false of the other three members; the only
-/// thing true of every member is the superordinate above.
+/// thing true of every member is that the recorded value could not be turned into a
+/// path.
 /// </param>
 /// <param name="PathNormalisationRefusedAtPrefixStripCount">
-/// Of those, refused while taking a prefix off or preparing the resolver's ask.
+/// Recorded values this scan could not turn into a path, refused while taking a prefix
+/// off or preparing the resolver's ask.
 /// </param>
 /// <param name="PathNormalisationRefusedAtFullPathCount">
-/// Of those, refused by the full-path call: a device name, a length past the API's
-/// limit.
+/// Recorded values this scan could not turn into a path, refused by the full-path call:
+/// a device name, a length past the API's limit.
 /// </param>
 /// <param name="PathFlaggedSpellingCount">
 /// Recorded values carrying a spelling only the filesystem can settle: an 8dot3 alias,
@@ -436,10 +425,11 @@ public sealed record AppInfo(string Version, string Language, string WindowsLang
 /// the spellings the resolution exists for.
 /// </param>
 /// <param name="PathNormalisationRefusedAtEmbeddedNullCount">
-/// Of those, refused for carrying an embedded null, which no path can carry. The
-/// member that fires on Windows, and the reason it is asked for separately: the
-/// expansion cuts such a value at the null and returns without throwing, so this
-/// count, taken before it, is where the condition shows.
+/// Recorded values this scan could not turn into a path, refused for carrying an
+/// embedded null, which no path can carry. The member that fires on Windows, and the
+/// reason it is asked for separately: the expansion cuts such a value at the null and
+/// returns without throwing, so this count, taken before it, is where the condition
+/// shows.
 ///
 /// LAST IN THE LIST AND FIRST IN THE METHOD. These are positional parameters and all
 /// four are <c>int</c>, so a member inserted among the others would re-point every
@@ -634,8 +624,10 @@ public sealed record MachineInfo(
     /// parts being four different facts about a machine. What it means is that the
     /// recorded path could not be turned into a path at all, so the claim is kept in
     /// the raw spelling Windows gave and matches nothing the folder walk produces.
-    /// The cached file it names is withheld with the rest of the walk-derived offer,
-    /// which is what this figure says about the machine it came from.
+    /// The four steps it counts read nothing on disk, so no missing file, missing drive
+    /// or permission produces it. The cached file it names is withheld with the rest of
+    /// the walk-derived offer, which is what this figure says about the machine it came
+    /// from.
     /// </summary>
     public int PathNormalisationRefusedCount =>
         PathNormalisationRefusedAtExpansionCount

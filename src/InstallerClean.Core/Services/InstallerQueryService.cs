@@ -2936,12 +2936,12 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// spells the file it names, so the refusal is counted and
     /// <c>EnumerationCensus.AnyRecordedPathUnestablished</c> withholds the whole
     /// walk-derived offer and every superseded row on it: nothing says WHICH file the
-    /// unresolved claim meant, so no narrower set can be held back. Resolving a final
-    /// path is <see cref="InstallerCacheHelpers.ResolveFinalPathOutcome"/>, which names
-    /// the outcome it reached. The catch counts an exception from the expansion, the
-    /// prefix strip or GetFullPath against the step it was thrown in. A variable that is
-    /// not set in this process's environment is left in the value as written, '%' signs
-    /// and all.
+    /// unresolved claim meant, so no narrower set can be held back. A final path is
+    /// resolved by <see cref="InstallerCacheHelpers.ResolveFinalPathOutcome(string, out string)"/>,
+    /// which names the outcome it reached. The catch counts an exception from the
+    /// expansion, the prefix strip or GetFullPath against the step it was thrown in. A
+    /// variable that is not set in this process's environment is left in the value as
+    /// written, '%' signs and all.
     /// </summary>
     private static string NormaliseLocalPackagePath(string value, PathCensus census)
     {
@@ -3008,9 +3008,6 @@ public sealed class InstallerQueryService : IInstallerQueryService
             // a prefix it cannot root is folded into an ordinary-looking path,
             // and a trigger that has been normalised away cannot be tested for.
             //
-            // Only a proven expansion is taken. A false return means the kernel
-            // never expanded this path, so its out value is the same string by
-            // another route and using it would dress a guess as an answer.
             // COUNTED BEFORE THE ASK AND NOT GATING IT. The two spellings announce
             // themselves in the string, and this scan decides nothing: the resolver
             // below is put every recorded path whatever the scan says, so a reader
@@ -3021,14 +3018,16 @@ public sealed class InstallerQueryService : IInstallerQueryService
 
             // COUNTED WHETHER IT ANSWERS OR NOT, which is the whole use of the
             // number: the five failures below are meaningless without how many times
-            // anything was asked. That mattered most when most machines never asked
-            // at all; it still separates a scan that read no registrations from one
-            // whose every registration resolved.
+            // anything was asked. It separates a scan that read no registrations from
+            // one whose every registration resolved.
             census.RecordResolverAttempt();
             var outcome = InstallerCacheHelpers.ResolveFinalPathOutcome(
                 ToWin32Prefix(stripped), out var resolved);
             census.RecordResolution(outcome);
 
+            // Only a resolved outcome's path is taken. On any other, the out value is
+            // not a path the filesystem proved, and using it would dress a guess as an
+            // answer.
             if (outcome == PathResolution.Resolved) return resolved;
 
             // ONLY A CLAIM THE RESOLVER REFUSED REACHES THIS, and the refusal has

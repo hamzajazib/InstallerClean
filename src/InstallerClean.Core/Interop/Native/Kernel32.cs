@@ -91,8 +91,8 @@ internal static partial class Kernel32
     /// validated as a remote drive that exists, which the current user can
     /// access." That is a round trip, and on a share that is not answering it
     /// is an SMB timeout, so no caller may make this call on the dispatcher.
-    /// <see cref="StorageHelpers.IsRemotePath"/> is what keeps the shapes that
-    /// can do it away from here.
+    /// <see cref="Helpers.StorageHelpers.IsRemotePath"/> is what keeps the
+    /// shapes that can do it away from here.
     ///
     /// <c>CountElementName</c> and not <c>ConstantElementCount</c>, which is the
     /// opposite of the rule the <c>MsiEnum*</c> buffers follow and is right for

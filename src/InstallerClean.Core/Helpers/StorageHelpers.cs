@@ -319,8 +319,8 @@ internal static class StorageHelpers
     }
 
     /// <summary>
-    /// What an attribute read established about <paramref name="path"/> in
-    /// <see cref="CheckReparsePoint"/>. Three states, not two, because
+    /// What the attribute read in <see cref="CheckReparsePoint"/> established about
+    /// the path it was given. Three states, not two, because
     /// "attributes say it is an ordinary file" and "the attributes could not be
     /// read" are opposite facts to a safety gate and a bool collapses them.
     /// </summary>
