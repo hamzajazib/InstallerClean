@@ -104,11 +104,10 @@ public partial class ScanViewModel : ObservableObject
     /// Ticker line under the scan overlay's milestone text: a count of the
     /// folder's files as the scan lists them, the name of each installed
     /// program as it asks Windows about it, then a count of the files as
-    /// it matches them. Display-only: the bound TextBlock carries no
-    /// LiveSetting because the ticker updates once per program and many
-    /// times while the files are counted, which can run to hundreds of
-    /// updates in a few seconds, and a live region would queue an
-    /// announcement for every one of them.
+    /// it matches them. Display-only: the window never reads it out, because
+    /// the ticker updates once per program and many times while the files
+    /// are counted, which can run to hundreds of updates in a few seconds,
+    /// and reading each would queue speech far faster than it can be spoken.
     /// </summary>
     [ObservableProperty] private string _scanTicker = string.Empty;
 

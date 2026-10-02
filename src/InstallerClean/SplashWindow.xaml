@@ -58,10 +58,10 @@
                          Minimum="0" Maximum="100" Value="0"
                          Height="12" Margin="48,0"
                          AutomationProperties.Name="{loc:Translate Automation.StartupScanProgress}"/>
-            <!-- Step text. LiveSetting=Polite announces the splash's
-                 step transitions to Narrator: without it, the
-                 cancellation message and the per-step "Asking Windows
-                 about installed software..." progress go unread.
+            <!-- Step text, a polite live region that code-behind reads out
+                 each time it writes it, so a screen reader hears the steps
+                 ("Asking Windows about installed software..."), each wait and
+                 the cancellation message.
 
                  It wraps, centred, inside the card: a wait can name a
                  share too long for one line. The margin keeps a wrapped
@@ -112,10 +112,10 @@
             <!-- Ticker: a count of the folder's files as the scan lists
                  them, the name of each installed program as it asks
                  Windows about it, then a count of the files as it matches
-                 them. Display-only; no LiveSetting, because it updates once
-                 per program and many times while the files are counted, and
-                 a live region would queue one announcement per update. The
-                 step text above stays the announced line. -->
+                 them. Display-only and never read out, because it updates
+                 once per program and many times while the files are counted,
+                 and reading each update would queue speech far faster than it
+                 is spoken. The step text above is the line read out. -->
             <TextBlock Grid.Row="11"
                        x:Name="ProductTicker"
                        Foreground="{StaticResource Text.Dim}"

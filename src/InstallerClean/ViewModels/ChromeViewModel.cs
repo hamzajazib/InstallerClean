@@ -268,15 +268,16 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     {
         // Flag before text, and load-bearing. Each assignment's raise runs
         // MainWindow.OnChromePropertyChanged synchronously, and that handler
-        // queues one live-region announcement per line that has just become
-        // visible. Setting the flag first makes the link's line the only one
-        // that qualifies. Text first would pass the plain line's "shown"
-        // test on the automatic path (empty text, no link yet) and queue a
-        // second announcement against a line that the flag then collapses,
-        // so a screen reader would be handed a line that is gone by the time
-        // it speaks. What makes either safe is that the raises are queued at
-        // Background priority rather than made from the setter: by the time
-        // they run, both assignments and the bindings behind them are done.
+        // queues a live-region announcement for the link as it appears and for
+        // the plain line whenever its text changes while it shows. Setting the
+        // flag first makes the link's line the only one that qualifies. Text
+        // first would pass the plain line's "shown" test on the automatic path
+        // (empty text, no link yet) and queue a second announcement against a
+        // line that the flag then collapses, so a screen reader would be handed
+        // a line that is gone by the time it speaks. What makes either safe is
+        // that the raises are queued at Background priority rather than made
+        // from the setter: by the time they run, both assignments and the
+        // bindings behind them are done.
         HasUpdateLink = true;
         UpdateStatusText = string.Format(
             Strings.UpdateCheck_Status_UpdateAvailable, available.LatestVersion);

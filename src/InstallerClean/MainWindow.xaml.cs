@@ -2,7 +2,6 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Automation;
-using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
@@ -19,11 +18,23 @@ namespace InstallerClean;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _vm;
+    private readonly LiveRegionRaises _liveRegions;
+
+    /// <summary>
+    /// Whether the pending-reboot line, and the line for files missing from disk, have
+    /// appeared since they were last read out, and wait to be read at the next point the
+    /// main window is in front: straight after a scan's headline where no card is up, as a
+    /// card is closed, or as the Move or Delete card goes where no card follows it. See
+    /// <see cref="OnScanPropertyChanged"/>, which sets them.
+    /// </summary>
+    private bool _pendingRebootToAnnounce;
+    private bool _missingFromDiskToAnnounce;
 
     public MainWindow(MainViewModel viewModel)
     {
         InitializeComponent();
         DataContext = _vm = viewModel;
+        _liveRegions = new LiveRegionRaises(Dispatcher);
         // Each child VM raises its own PropertyChanged stream. Listen
         // on all three so the window can move keyboard focus to the
         // most-relevant Cancel button as overlays appear.
@@ -50,6 +61,13 @@ public partial class MainWindow : Window
         // KeyboardNavigation.TabNavigation="Cycle" keeps it there)
         // rather than starting on a main-window button behind the
         // overlay.
+        //
+        // The startup scan's two warnings appeared before this window existed, so they
+        // are marked to be read here: on closing the card where the scan ended on one,
+        // otherwise around the headline the replay below reads. A startup scan that was
+        // cancelled or failed has no result, so neither shows.
+        _pendingRebootToAnnounce = _vm.Scan.HasPendingReboot;
+        _missingFromDiskToAnnounce = _vm.Scan.HasMissingFromDisk;
         if (_vm.Completion.IsComplete)
         {
             // The summary has no Text binding, hosting inlines composed in
@@ -85,12 +103,8 @@ public partial class MainWindow : Window
             // Cancelled at the splash: there is no scan to announce, and the
             // scanning overlay this window normally re-announces the cancel from
             // was never up inside its lifetime. Say why the window is empty.
-            // Background, below the focus move queued above, so the focus
-            // announcement does not cancel this polite one (see
-            // AnnounceLiveRegions for the priority contract).
             if (!_vm.Scan.HasScanned && _vm.Scan.LastScanWasCancelled)
-                Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
-                    ScanResultAnnouncer.Text = Strings.Status_ScanCancelled);
+                Announce(Strings.Status_ScanCancelled);
 
             // A failed startup scan opens the window with the tailored error in the
             // intro instead of exiting. A newly shown window speaks only its title
@@ -100,8 +114,7 @@ public partial class MainWindow : Window
             // and a word joiner there would only ever reach a speech engine. The
             // same split TranslateExtension makes for an automation property.
             if (!_vm.Scan.HasScanned && _vm.Scan.HasScanError)
-                Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
-                    ScanResultAnnouncer.Text = _vm.Scan.LastScanError);
+                Announce(_vm.Scan.LastScanError);
         }
 
         // Chrome state is replayed for the same reason the states above are. The
@@ -112,21 +125,11 @@ public partial class MainWindow : Window
         // its binding either way, so a sighted user reads it and a screen-reader
         // user is told nothing at all. Conditions mirror
         // OnChromePropertyChanged's, so a check that resolved with nothing to say
-        // stays silent; Background priority, below the focus moves queued above,
-        // for the reason AnnounceLiveRegions gives.
+        // stays silent.
         if (_vm.Chrome.HasUpdateLink)
-        {
             AnnounceLiveRegions(UpdateLinkText);
-        }
-        else
-        {
-            // Seeding the field, not just announcing: leaving it false while the
-            // line is up would let the next text change re-announce a line that
-            // was never revealed inside this window's lifetime.
-            _updateStatusLineShown = _vm.Chrome.UpdateStatusText.Length > 0;
-            if (_updateStatusLineShown)
-                AnnounceLiveRegions(UpdateStatusLineText);
-        }
+        else if (_vm.Chrome.UpdateStatusText.Length > 0)
+            AnnounceLiveRegions(UpdateStatusLineText);
 
         // Both forms of the completion card's donate button sit at the card's
         // right edge, so their tooltips line up right edges rather than left.
@@ -258,27 +261,26 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Announces the headline result of a user-visible scan that found
-    /// files ("12 unneeded files to clean up (3.2 GB)"), and after it the line
-    /// naming any drive or share the scan carried on without. A scan that
-    /// offered nothing announces through the completion card instead, and the
-    /// silent post-operation refresh must stay silent because the
-    /// completion outcome is about to speak. Writing the announcer's
-    /// text is itself what fires the UIA bridge's text-change
-    /// announcement; an explicit raise on top would queue the same line
-    /// twice.
+    /// Reads out what a scan the user can see has put on the main window, in the
+    /// order it is drawn: the pending-reboot line where it has just appeared, the
+    /// headline ("12 unneeded files to clean up (3.2 GB)"), the line naming any
+    /// drive or share the scan carried on without, and the line for files missing
+    /// from disk where it has just appeared. A scan that offered nothing announces
+    /// through the completion card instead, and the silent post-operation refresh
+    /// must stay silent because the completion outcome is about to speak. In both
+    /// the two warnings stay marked, and are read as the card is closed, or as the
+    /// Move or Delete card goes where no card follows it.
     ///
-    /// THE LINE NAMING THE DRIVES AND SHARES TAKES AN EXPLICIT RAISE, as the
-    /// window's lines revealed from Collapsed do, queued after the headline's at
-    /// the same priority so it is spoken second, as it is drawn. It is raised
-    /// after every scan whose result carries it rather than only when it first
-    /// appears, so a Re-scan that meets the same drive again says so. The
-    /// window's constructor replays this method for the startup scan, so that
-    /// scan's line is spoken too.
+    /// The headline, and the line naming the drives and shares, are read after every
+    /// scan that shows them rather than only when they change, so a Re-scan that
+    /// finds the same files, or meets the same drive again, says so. The two
+    /// warnings are read when they appear and not again while they stay as they are.
+    /// The window's constructor replays this method for the startup scan, so that
+    /// scan's lines are read too.
     /// </summary>
     private void OnScanCompleted(object? sender, EventArgs e)
     {
-        if (_vm.Cleanup.IsOperating || _vm.Completion.IsComplete || _vm.Scan.OrphanedFileCount == 0)
+        if (_vm.Cleanup.IsOperating || _vm.Completion.IsComplete)
         {
             // Clear any prior found-files headline so scan-mode / Inspect
             // navigation cannot land on a stale "N unneeded files to clean
@@ -289,19 +291,45 @@ public partial class MainWindow : Window
             ScanResultAnnouncer.Text = string.Empty;
             return;
         }
-        // Clear synchronously before the Background re-set so a manual
-        // Re-scan that finds the SAME files still re-announces: a live region
-        // raises no event when assigned the text it already holds, so without
-        // the clear a re-scan with an unchanged count would speak nothing and
-        // the user, who deliberately asked to scan again, would hear only the
-        // window. Clear-then-set guarantees a text change either way; the
-        // empty value speaks nothing, the headline that follows speaks once.
-        ScanResultAnnouncer.Text = string.Empty;
-        Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
-            ScanResultAnnouncer.Text = string.Format(Strings.Automation_ScanResultAnnouncement,
+
+        if (TakeMark(ref _pendingRebootToAnnounce))
+            AnnounceLiveRegion(PendingRebootBannerText, () => _vm.Scan.HasPendingReboot);
+        if (_vm.Scan.OrphanedFileCount == 0)
+        {
+            ScanResultAnnouncer.Text = string.Empty;
+        }
+        else
+        {
+            Announce(string.Format(Strings.Automation_ScanResultAnnouncement,
                 _vm.Scan.OrphanedSummaryText, _vm.Scan.OrphanedSizeDisplay));
-        if (_vm.Scan.HasSourcesGivenUp)
-            AnnounceLiveRegions(SourcesGivenUpText);
+            if (_vm.Scan.HasSourcesGivenUp)
+                AnnounceLiveRegions(SourcesGivenUpText);
+        }
+        if (TakeMark(ref _missingFromDiskToAnnounce))
+            AnnounceLiveRegion(MissingFromDiskBannerText, () => _vm.Scan.HasMissingFromDisk);
+    }
+
+    /// <summary>
+    /// Reads out the two warnings still marked from the last scan, pending-reboot
+    /// first as it is drawn, at a point where the main window is in front again with
+    /// no headline to put them around: a card closing, or the Move or Delete card
+    /// going with no card after it. A warning gone by the time its raise runs is not
+    /// read.
+    /// </summary>
+    private void AnnounceMarkedWarnings()
+    {
+        if (TakeMark(ref _pendingRebootToAnnounce))
+            AnnounceLiveRegion(PendingRebootBannerText, () => _vm.Scan.HasPendingReboot);
+        if (TakeMark(ref _missingFromDiskToAnnounce))
+            AnnounceLiveRegion(MissingFromDiskBannerText, () => _vm.Scan.HasMissingFromDisk);
+    }
+
+    /// <summary>Returns <paramref name="mark"/> and clears it, so a warning is read once.</summary>
+    private static bool TakeMark(ref bool mark)
+    {
+        var taken = mark;
+        mark = false;
+        return taken;
     }
 
     /// <summary>
@@ -309,19 +337,28 @@ public partial class MainWindow : Window
     /// did not finish. That scan ends behind the operating overlay, so nothing is
     /// announced as the window changes, and once the overlay or the summary card
     /// has gone, focus lands on Re-scan, which a screen reader announces by name
-    /// alone. Queued at Background, below that focus move, for the reason
-    /// <see cref="AnnounceLiveRegions"/> gives, and cleared first as
-    /// <see cref="OnScanCompleted"/> clears it, so the line is spoken even where
-    /// the announcer already holds it. The message goes in as the view model
-    /// holds it: the announcer is never drawn, so it takes no break characters.
+    /// alone. Read after that focus move, for the reason <see cref="LiveRegionRaises"/>
+    /// gives. The message goes in as the view model holds it: the announcer is never
+    /// drawn, so it takes no break characters.
     /// </summary>
     private void AnnounceUnfinishedRefresh()
     {
         if (!_vm.Scan.HasUnfinishedRefresh) return;
-        ScanResultAnnouncer.Text = string.Empty;
-        Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
-            ScanResultAnnouncer.Text = _vm.Scan.UnfinishedRefreshMessage);
+        Announce(_vm.Scan.UnfinishedRefreshMessage);
     }
+
+    /// <summary>
+    /// Puts <paramref name="line"/> on the invisible announcer and reads it out, in one
+    /// callback at Background priority, after any focus move queued with it (see
+    /// <see cref="LiveRegionRaises"/>). It is read whether or not the announcer already
+    /// held the same words.
+    /// </summary>
+    private void Announce(string line) =>
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
+        {
+            ScanResultAnnouncer.Text = line;
+            LiveRegionRaises.Raise(ScanResultAnnouncer);
+        });
 
     private void OnCompletionPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -335,11 +372,7 @@ public partial class MainWindow : Window
         {
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () => CompletionCloseButton.Focus());
             // Focus lands on Done, so without an explicit raise a screen
-            // reader announces only the button and never the outcome. The
-            // heading, summary and restore lines are plain TextBlocks
-            // revealed from Visibility=Collapsed, which the WPF UIA
-            // bridge does not re-announce on its own (the same gap the
-            // banners work around).
+            // reader announces only the button and never the outcome.
             AnnounceCompletionOutcome();
         }
 
@@ -350,6 +383,12 @@ public partial class MainWindow : Window
             // than letting it drop to the window root.
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () => RescanButton.Focus());
             AnnounceUnfinishedRefresh();
+            // A warning the card's scan put up is read now, after the card. Where the
+            // Move or Delete card is closed before the operation has let go, the
+            // operating overlay is still up, and the warnings wait for it to go
+            // (OnCleanupPropertyChanged).
+            if (!_vm.Cleanup.IsOperating)
+                AnnounceMarkedWarnings();
         }
 
         // The Send-summary button collapses the moment the user consents
@@ -369,15 +408,10 @@ public partial class MainWindow : Window
             });
         }
 
-        // ResultLogStatusMessage transitions empty -> non-empty on the
-        // first "Sending..." reveal. WPF's UIA bridge does not re-fire
-        // LiveRegionChanged for the Visibility=Collapsed→Visible
-        // DataTrigger that gates the TextBlock, so without an explicit
-        // raise the SR stays silent precisely when the user has just
-        // consented to a network call and wants confirmation. Later
-        // text changes (Sending -> Sent / Failed) fire LiveRegionChanged
-        // through the bridge normally because the TextBlock is already
-        // in the rendered tree by then.
+        // Each status the result-log line takes is read out: "Sending..." as the
+        // line appears, which is when the user has just consented to a network
+        // call and wants confirmation, then the outcome that replaces it. Focus
+        // stays on Done throughout, so nothing else reads them.
         if (e.PropertyName == nameof(CompletionViewModel.ResultLogStatusMessage)
             && !string.IsNullOrEmpty(_vm.Completion.ResultLogStatusMessage))
         {
@@ -386,23 +420,12 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Whether the plain update-status line is in the rendered tree. The UIA
-    /// bridge announces a text change inside an already-rendered subtree by
-    /// itself but never a Collapsed-to-Visible reveal, so the reveal is the
-    /// one transition the window has to raise, and raising the rest as well
-    /// would speak them twice.
-    /// </summary>
-    private bool _updateStatusLineShown;
-
-    /// <summary>
-    /// Both halves of the update status line start life Collapsed, and each
-    /// appears by a DataTrigger rather than by its text changing, which is
-    /// the reveal the UIA bridge does not announce (the same gap the
-    /// pending-reboot banner and the result-log status line each carry an
-    /// explicit raise for). Both halves need it, for opposite reasons: the
-    /// automatic check's find lands unprompted with focus wherever the user
-    /// left it, and the manual check's "Checking..." is the answer to a click
-    /// the user is actively waiting on, which without it goes unspoken.
+    /// Reads out the update status line, in whichever of its two halves shows. The
+    /// link is read as it appears: the automatic check's find lands unprompted with
+    /// focus wherever the user left it. The plain line is read each time its text
+    /// changes while it shows, because each of its texts answers a click the user is
+    /// waiting on: "Checking..." as the manual check starts, then "Up to date.".
+    /// Its clearing after the cooldown collapses it and reads nothing.
     /// </summary>
     private void OnChromePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -412,14 +435,11 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (e.PropertyName != nameof(ChromeViewModel.UpdateStatusText)) return;
-
         // Mirrors the plain line's own visibility triggers: it shows when
         // there is text and no link to show instead.
-        var shown = !_vm.Chrome.HasUpdateLink && _vm.Chrome.UpdateStatusText.Length > 0;
-        if (shown && !_updateStatusLineShown)
+        if (e.PropertyName == nameof(ChromeViewModel.UpdateStatusText)
+            && !_vm.Chrome.HasUpdateLink && _vm.Chrome.UpdateStatusText.Length > 0)
             AnnounceLiveRegions(UpdateStatusLineText);
-        _updateStatusLineShown = shown;
     }
 
     /// <summary>
@@ -554,6 +574,10 @@ public partial class MainWindow : Window
                     // with no list: a cancel before the first file, or a failure
                     // reported in a dialog, followed by a scan that did not finish.
                     AnnounceUnfinishedRefresh();
+                    // And a warning the scan after the batch put up, or the
+                    // pending-reboot re-check after Windows Installer's lock was
+                    // refused, is read here, with no card to wait for.
+                    AnnounceMarkedWarnings();
                 }
             });
         }
@@ -561,14 +585,36 @@ public partial class MainWindow : Window
         if (e.PropertyName == nameof(CleanupViewModel.IsOperating) && _vm.Cleanup.IsOperating)
         {
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () => OperationCancelButton.Focus());
-            // The heading is already bound when IsOperating flips (the
-            // view-model assigns it first) and the UIA bridge does not
-            // announce a Collapsed-to-Visible reveal, so without this
-            // raise the first thing spoken about an operation is a bare
-            // file count.
-            AnnounceLiveRegions(OperationHeadingText);
+            // Read as the card appears, after the focus move to Cancel, so an
+            // operation is first named by its heading and not by a bare file count.
+            AnnounceOperationHeading();
         }
+
+        // Every later heading is read as it is written: a wait on a drive or share,
+        // the heading put back when the wait ends, "Cancelling..." and the scan after
+        // the batch. The heading is blank only as the card goes.
+        if (e.PropertyName == nameof(CleanupViewModel.OperationProgress)
+            && _vm.Cleanup.OperationProgress.Length > 0 && OperatingCardInFront())
+            AnnounceOperationHeading();
+
+        // The count of files done, first file, each tenth of the batch and last file
+        // (CleanupViewModel.OperationProgressAnnouncement), read as it is written.
+        if (e.PropertyName == nameof(CleanupViewModel.OperationProgressAnnouncement)
+            && _vm.Cleanup.OperationProgressAnnouncement.Length > 0 && OperatingCardInFront())
+            AnnounceLiveRegion(OperationProgressAnnouncementText, () =>
+                OperatingCardInFront() && _vm.Cleanup.ShowOperationProgressDetail
+                && _vm.Cleanup.OperationProgressAnnouncement.Length > 0);
     }
+
+    /// <summary>
+    /// Whether the Move or Delete card is up with no finished card over it, which is
+    /// when its heading and count are read.
+    /// </summary>
+    private bool OperatingCardInFront() => _vm.Cleanup.IsOperating && !_vm.Completion.IsComplete;
+
+    private void AnnounceOperationHeading() =>
+        AnnounceLiveRegion(OperationHeadingText, () =>
+            OperatingCardInFront() && _vm.Cleanup.OperationProgress.Length > 0);
 
     /// <summary>
     /// Moves the keyboard focus from a card's stop-waiting button, as the button goes, to
@@ -596,7 +642,19 @@ public partial class MainWindow : Window
             ScanResultAnnouncer.Text = string.Empty;
 
         if (e.PropertyName == nameof(ScanViewModel.IsScanning) && _vm.Scan.IsScanning)
+        {
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () => ScanCancelButton.Focus());
+            // Read as the card appears, after the focus move to Cancel.
+            AnnounceScanProgress();
+        }
+
+        // Every later line is read as it is written while the scan runs: each step,
+        // a wait on a drive or share, the step put back when the wait ends, and
+        // "Cancelling...". The line written once the scan has ended goes with the card
+        // and is not read; a cancelled scan says so on the announcer below.
+        if (e.PropertyName == nameof(ScanViewModel.ScanProgress)
+            && _vm.Scan.IsScanning && _vm.Scan.IsScanInFlight)
+            AnnounceScanProgress();
 
         if (e.PropertyName == nameof(ScanViewModel.CanStopWaiting) && !_vm.Scan.CanStopWaiting)
             HandFocusToCancel(ScanStopWaitingButton, ScanCancelButton);
@@ -614,49 +672,46 @@ public partial class MainWindow : Window
                     FocusResultsDefault();
             });
 
-            // The cancelled-scan outcome ("Scan cancelled.") is set on the
-            // overlay's status line as the overlay collapses, in the same
-            // dispatcher frame as the focus move above; the focus move's own
-            // name announcement cancels that pending polite speech, so it
-            // goes unspoken. Re-announce it on the persistent announcer at
-            // Background, below the Input focus, so it survives. Only on a
-            // user cancel, and not when an all-clear overlay will speak its
-            // own outcome.
+            // The cancelled-scan outcome ("Scan cancelled.") is written to the
+            // card's line as the card goes, so it is read on the persistent
+            // announcer instead, after the focus move above. Only on a user
+            // cancel, and not when an all-clear overlay will speak its own
+            // outcome.
             if (_vm.Scan.LastScanWasCancelled && !_vm.Completion.IsComplete)
-                Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
-                    ScanResultAnnouncer.Text = Strings.Status_ScanCancelled);
+                Announce(Strings.Status_ScanCancelled);
         }
 
-        // WPF's UIA bridge does not re-fire LiveRegionChanged for a
-        // Visibility=Collapsed→Visible transition; the bridge only
-        // announces text changes inside an already-rendered subtree, so
-        // a banner's appearance needs an explicit raise. Skipped while an
-        // operation or its completion overlay owns the foreground: the
-        // post-operation silent refresh can flip a banner while it sits
-        // behind the overlay, and its paragraph of text would queue ahead
-        // of the completion outcome; the banner stays on screen for
-        // scan-mode reading once the overlay dismisses.
-        if (_vm.Cleanup.IsOperating || _vm.Completion.IsComplete)
-            return;
         // THE PENDING-REBOOT WARNING AND THE WARNING FOR FILES MISSING FROM DISK ARE
-        // RAISED HERE. Each arrives by a Collapsed-to-Visible transition, which is the
-        // transition the bridge does not announce on its own, so a line with a live
-        // setting and no raise is marked for speech and never spoken. The window's other
-        // live regions are raised on that same reveal, each at the point the window makes
-        // it. The rest carry no raise because the bridge announces a text change on its
-        // own once the element is in the rendered tree.
+        // MARKED HERE AND READ WHERE THEY FALL IN WITH WHAT ELSE IS SPOKEN. A scan sets
+        // both before its headline exists and, on a Re-scan ending on a card, before the
+        // card is up, so each is marked as it appears and read in drawn order around the
+        // headline (OnScanCompleted), or after the card, or as the Move or Delete card
+        // goes with no card after it (AnnounceMarkedWarnings). A warning that goes before
+        // then is unmarked. Each is marked on a change of value only, so a Re-scan that
+        // finds a warning as it was reads nothing more, and one whose count of missing
+        // files changes reads the line again.
         //
-        // These branches are listed top to bottom as the lines are drawn, and that is
-        // for whoever reads them next rather than for the reader of the screen: one
-        // PropertyChanged carries one name, so at most one arm runs per call and their
-        // order decides nothing. What a screen reader hears them in is the order
-        // ScanViewModel assigns the values behind them, each assignment queueing its
-        // raise behind the last.
-        if (e.PropertyName == nameof(ScanViewModel.HasPendingReboot) && _vm.Scan.HasPendingReboot)
-            AnnounceLiveRegions(PendingRebootBannerText);
-        if (e.PropertyName == nameof(ScanViewModel.HasMissingFromDisk) && _vm.Scan.HasMissingFromDisk)
-            AnnounceLiveRegions(MissingFromDiskBannerText);
+        // The pending-reboot re-check made at a Move or Delete click runs with no card
+        // up and no headline to follow, so the line it puts up is read at once.
+        if (e.PropertyName == nameof(ScanViewModel.HasMissingFromDisk))
+            _missingFromDiskToAnnounce = _vm.Scan.HasMissingFromDisk;
+        if (e.PropertyName == nameof(ScanViewModel.HasPendingReboot))
+        {
+            if (!_vm.Scan.HasPendingReboot)
+                _pendingRebootToAnnounce = false;
+            else if (_vm.Scan.IsScanInFlight || _vm.Cleanup.IsOperating || _vm.Completion.IsComplete)
+                _pendingRebootToAnnounce = true;
+            else
+                AnnounceLiveRegions(PendingRebootBannerText);
+        }
     }
+
+    /// <summary>
+    /// Reads the scanning card's line, unless the card has gone by the time the raise
+    /// runs.
+    /// </summary>
+    private void AnnounceScanProgress() =>
+        AnnounceLiveRegion(ScanProgressText, () => _vm.Scan.IsScanning);
 
     // Routes focus to the move-destination field, the entry point of the Move
     // workflow, for the results-shown state that appears with no overlay (the
@@ -681,39 +736,31 @@ public partial class MainWindow : Window
 
 
     /// <summary>
-    /// Queues LiveRegionChanged raises for <paramref name="elements"/> at
-    /// Background priority. The priority is the contract: dispatcher
-    /// priorities are serviced highest value first, and Loaded (6)
-    /// outranks Input (5), so a raise queued at Loaded lands BEFORE a
-    /// focus move queued at Input, and the focus announcement then
-    /// cancels the queued polite speech (NVDA documents
-    /// cancel-on-focus; Narrator behaves the same in practice, which is
-    /// how the completion outcome went unheard). Background (4) sits
-    /// below Input, so the raises follow every focus event queued in the
-    /// same drain and a polite item speaks once the focus announcement
-    /// finishes. Background still runs after data binding and render, so
-    /// the peers carry the final text. The plain update status line is the
-    /// one assertive caller, so it cuts in rather than waiting its turn; why
-    /// that is acceptable there is on the element itself, in MainWindow.xaml.
+    /// Reads out <paramref name="elements"/> in the order given, each after any focus
+    /// move queued with it (see <see cref="LiveRegionRaises"/> for the priority). The
+    /// plain update status line is the one assertive caller, so it cuts in rather than
+    /// waiting its turn; why that is acceptable there is on the element itself, in
+    /// MainWindow.xaml.
     /// </summary>
     private void AnnounceLiveRegions(params FrameworkElement[] elements)
     {
-        Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
-        {
-            foreach (var element in elements)
-                RaiseLiveRegionChanged(element);
-        });
+        foreach (var element in elements)
+            _liveRegions.Queue(element);
     }
 
-    // Every zone of the card that states an outcome, in visual order. The
-    // failure count and the kept-back count are in the list because they are
-    // assigned once, before IsComplete reveals the overlay, and never touched
-    // again: unlike the progress lines, which are rewritten repeatedly and so
-    // announce themselves eventually, a region that is written once before its
-    // element exists has no second chance. Without them a blind user finished a
-    // run and was never told that four files had failed. Both are empty on a
-    // clean run, which collapses the element and speaks nothing, the same no-op
-    // the other three already rely on.
+    /// <summary>
+    /// Reads out <paramref name="element"/>, unless <paramref name="stillShown"/> answers
+    /// false when the raise runs.
+    /// </summary>
+    private void AnnounceLiveRegion(FrameworkElement element, Func<bool> stillShown) =>
+        _liveRegions.Queue(element, stillShown);
+
+    // Every zone of the card that states an outcome, in visual order. Each is
+    // assigned before IsComplete reveals the overlay and is not touched while it
+    // is up, so this one raise is the only time it is read. The failure count and
+    // the kept-back count are empty on a clean run, which collapses the element,
+    // and so are the summary, the restore line and the skipped line on the cards
+    // that carry none.
     //
     // The per-file error list stays unraised, and that is a separate decision:
     // it is a list to read at leisure rather than an outcome, and it is reached
@@ -809,12 +856,6 @@ public partial class MainWindow : Window
             CompletionSummaryText.Inlines.Add(
                 new Run(InstallerPathText.AllowFolderBreaksInAnyPath(lines[i].TrimEnd('\r'))));
         }
-    }
-
-    private static void RaiseLiveRegionChanged(FrameworkElement element)
-    {
-        var peer = UIElementAutomationPeer.FromElement(element) ?? UIElementAutomationPeer.CreatePeerForElement(element);
-        peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
     }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)

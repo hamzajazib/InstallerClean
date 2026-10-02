@@ -210,9 +210,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Throttled copy of <see cref="OperationProgressDetail"/> for the
     /// screen-reader live region: updated on the first file, the last
-    /// file and each time the batch crosses a tenth, never per file. A
-    /// live region announces every text change, and per-file changes
-    /// queue speech far faster than it can be spoken.
+    /// file and each time the batch crosses a tenth, never per file. The
+    /// window reads the line out each time it changes, and per-file changes
+    /// would queue speech far faster than it can be spoken.
     /// </summary>
     [ObservableProperty] private string _operationProgressAnnouncement = string.Empty;
 

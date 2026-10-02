@@ -35,11 +35,15 @@ public partial class SplashWindow : Window
     private SourceFolderWait? _waitTakingTheLine;
     private SourceFolderWait? _waitShown;
 
+    // Reads the step text out each time it is written (ShowStep).
+    private readonly LiveRegionRaises _liveRegions;
+
     public event EventHandler? CancelRequested;
 
     public SplashWindow()
     {
         InitializeComponent();
+        _liveRegions = new LiveRegionRaises(Dispatcher);
         ShowStep(Strings.Status_Scanning);
         _stepWait = new WaitLine(() => AutomationProperties.GetName(StepText), ShowStep);
         VersionText.Text = DisplayHelpers.GetVersionString();
@@ -120,6 +124,11 @@ public partial class SplashWindow : Window
     // TextBlock with a name set speaks the name and not its text, so a write straight to
     // Text would leave the name on the line before. The name is set before the text, so
     // anything reading the name as the text changes reads the new line.
+    //
+    // Each line is read out once the splash is on screen, after the focus moves to Cancel
+    // as it opens (LiveRegionRaises), so a screen reader hears every step, each wait and
+    // its end, "Cancelling..." and "Done.". The line written as the window is built, before
+    // it shows, is not; the first step after Show is.
     private void ShowStep(string line)
     {
         _waitShown = _waitTakingTheLine;
@@ -127,6 +136,8 @@ public partial class SplashWindow : Window
         AutomationProperties.SetName(
             StepText, _waitShown is null ? line : DisplayHelpers.WaitingLineWithStopKey(line));
         StepText.Text = InstallerPathText.AllowFolderBreaksInAnyPath(line);
+        if (IsVisible)
+            _liveRegions.Queue(StepText, () => IsVisible);
     }
 
     // Shows the stop-waiting button and the line under it while the step text names a
