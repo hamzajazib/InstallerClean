@@ -8,7 +8,9 @@ namespace InstallerClean.Tests.Helpers;
 /// scan is waiting for, which names a share, a drive or a path wherever each
 /// language's word order puts it, and in the folder a Move sends files to, a path
 /// on its own. A share's leading pair is joined, and each backslash inside the path
-/// takes a break opportunity after it.
+/// takes a break opportunity after it. The converter on the main window's two lines
+/// that can show a wait first gives the crash log's path the treatment the intro line
+/// gives it. The scanning card's line can show that path.
 ///
 /// Pure string work. Where WPF's line breaker then breaks is for the running app.
 /// </summary>
@@ -131,6 +133,24 @@ public class InstallerPathTextAnyPathTests
         Assert.Equal(
             @"Waiting for \" + WordJoiner + @"\nas\" + ZeroWidthSpace + "apps to respond...",
             Assert.IsType<string>(result));
+    }
+
+    [Fact]
+    public void Converter_gives_a_crash_log_path_the_treatment_the_intro_line_gives_it()
+    {
+        // The scanning card's line shows a failed Re-scan's diagnosis, which names the
+        // crash log, while the error box is open over it.
+        var line = $"Scan failed (IOException). Details in {CrashLog.LogPath}.";
+
+        var result = Assert.IsType<string>(new AnyPathTextConverter().Convert(
+            line, typeof(string), null, CultureInfo.InvariantCulture));
+
+        // Compared as strings, for the reason the test above gives.
+        Assert.Equal(InstallerPathText.ForDrawing(line), result);
+
+        // The drive seam takes the joiner, which the third treatment on its own does not
+        // give it.
+        Assert.Equal(WordJoiner, result[result.IndexOf(':') + 1]);
     }
 
     [Fact]

@@ -536,10 +536,13 @@ public partial class ScanViewModel : ObservableObject
         var crash = CrashLog.TryWrite(ex);
         var typeName = ex.GetType().Name;
         // THE PATH GOES IN RAW AND THE BREAK OPPORTUNITIES ARE ADDED WHERE IT IS
-        // DRAWN, by InstallerPathTextConverter. This string reaches two surfaces: the
-        // intro line, which is laid out, and the scan announcer, which is never drawn
-        // and takes it unbound. Inserting them here would hand a speech engine
-        // invisible format characters for a layout that does not exist.
+        // DRAWN. This string reaches four surfaces: the intro line, through
+        // InstallerPathTextConverter; on a Re-scan, the error box's body, through
+        // InstallerPathText.ForDrawing, and the scanning card's line under that box,
+        // through AnyPathTextConverter, which gives the path the same treatment; and
+        // the scan announcer, which is never drawn and takes it unbound. Inserting
+        // them here would hand a speech engine invisible format characters for a
+        // layout that does not exist.
         var message = crash.Written
             ? string.Format(Strings.Status_ScanFailedDetails, typeName, crash.Path)
             : string.Format(Strings.Status_ScanFailedDetails_NoLog, typeName);

@@ -65,10 +65,10 @@ namespace InstallerClean.Helpers;
 /// drawn: <c>TranslateExtension</c> for everything XAML resolves,
 /// <see cref="InstallerPathTextConverter"/> for the main window's bound body lines,
 /// and by hand in the completion overlay's summary builder and the message
-/// dialog's body. The third treatment is applied by
-/// <see cref="AnyPathTextConverter"/>, by <c>SplashWindow</c>'s step line, and to
-/// the destination by the Move confirmation and the finished card's summary. A
-/// drawn string keeps its joiners even where it is also the spoken one, a
+/// dialog's body. <see cref="AnyPathTextConverter"/> applies all three, the third
+/// after the other two. The third alone is applied by <c>SplashWindow</c>'s step
+/// line, and to the destination by the Move confirmation and the finished card's
+/// summary. A drawn string keeps its joiners even where it is also the spoken one, a
 /// TextBlock's automation peer reporting its Text as its name, except on the
 /// lines showing a wait: each sets its screen-reader name to the line as
 /// composed, so what a path in it takes reaches the layout and not the speech.
@@ -212,10 +212,10 @@ internal static class InstallerPathText
     /// scan diagnoses name both.
     ///
     /// EVERY SURFACE THAT CAN DRAW A CRASH-LOG PATH CALLS THIS RATHER THAN COMPOSING
-    /// THE PAIR ITSELF, and there are two: the converter below and the message
-    /// dialog's body. When they each composed their own, a change to the first left
-    /// the second behind. The other drawn surfaces call <see cref="KeepWhole"/>
-    /// directly and are right to, no log path reaching them.
+    /// THE PAIR ITSELF, and there are three: the two converters below and the message
+    /// dialog's body. A surface composing the pair for itself is one a change here
+    /// does not reach. No log path reaches the other drawn surfaces, which call
+    /// <see cref="KeepWhole"/> or <see cref="AllowFolderBreaksInAnyPath"/> directly.
     /// </summary>
     public static string ForDrawing(string? text) =>
         AllowFolderBreaksInLogPath(KeepWhole(text));
@@ -233,7 +233,9 @@ internal static class InstallerPathText
     /// <c>\\server</c> and <c>\\server\share</c> can break before <c>share</c>. A
     /// backslash opening a path, at the start of the line or after a space, takes no
     /// break after it either. A line naming no path comes back unchanged, and so does a
-    /// line this has already been through.
+    /// line this has already been through. A backslash with a joiner or a zero-width
+    /// space beside it takes no break opportunity, so a path <see cref="ForDrawing"/>
+    /// has treated keeps that treatment.
     /// </summary>
     public static string AllowFolderBreaksInAnyPath(string? text)
     {
@@ -257,8 +259,9 @@ internal static class InstallerPathText
         return built.ToString();
     }
 
-    // A backslash takes a break after it only with one of these on each side: any
-    // character but a backslash, a break character this class adds, or white space.
+    // A backslash takes a break after it only where the character on each side of it is
+    // spelled in a path: neither a backslash, nor a break character this class adds, nor
+    // white space.
     private static bool IsSpelledInAPath(char c) =>
         c is not ('\\' or ZeroWidthSpace or WordJoiner) && !char.IsWhiteSpace(c);
 }
@@ -284,15 +287,19 @@ internal sealed class InstallerPathTextConverter : IValueConverter
 }
 
 /// <summary>
-/// <see cref="InstallerPathText.AllowFolderBreaksInAnyPath"/> for a binding. The
+/// <see cref="InstallerPathText.ForDrawing"/> and then
+/// <see cref="InstallerPathText.AllowFolderBreaksInAnyPath"/>, for a binding. The
 /// consumers are the main window's two lines that can show what a scan is waiting
 /// for: the scanning card's progress line and the heading over a Move or Delete.
-/// Each binds its screen-reader name to the same value without this converter.
+/// On a failed Re-scan the scanning card's line, left up under the error box, shows
+/// the diagnosis naming the crash log's path, and draws that path as the intro line
+/// does. Each line binds its screen-reader name to the same value without this
+/// converter.
 /// </summary>
 internal sealed class AnyPathTextConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => InstallerPathText.AllowFolderBreaksInAnyPath(value as string);
+        => InstallerPathText.AllowFolderBreaksInAnyPath(InstallerPathText.ForDrawing(value as string));
 
     // One-way only, for the reason the converter above gives.
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
