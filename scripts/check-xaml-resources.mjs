@@ -170,6 +170,8 @@ const RESOURCE_TYPES = new Map([
   ['{clr-namespace:System;assembly=mscorlib}Double', ['Double']],
   ['{clr-namespace:InstallerClean.Helpers}InstallerPathTextConverter',
     ['InstallerPathTextConverter', 'IValueConverter']],
+  ['{clr-namespace:InstallerClean.Helpers}AnyPathTextConverter',
+    ['AnyPathTextConverter', 'IValueConverter']],
 ]);
 
 // The declared type of every property in this app that is filled from a

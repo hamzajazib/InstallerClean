@@ -34,7 +34,8 @@ public partial class SplashWindow : Window
     public SplashWindow()
     {
         InitializeComponent();
-        _stepWait = new WaitLine(() => StepText.Text, line => StepText.Text = line);
+        ShowStep(Strings.Status_Scanning);
+        _stepWait = new WaitLine(() => AutomationProperties.GetName(StepText), ShowStep);
         VersionText.Text = DisplayHelpers.GetVersionString();
 
         // The 480 x 320 box is the 100% design. The card sizes its height to
@@ -46,8 +47,8 @@ public partial class SplashWindow : Window
         // version against the card's edge. MaxHeight caps growth at the work
         // area. The splash opens before any other window exists, so the clamp
         // resolves against the primary monitor's work area (the helper's null
-        // fallback). Width is assigned rather than sized to content: the
-        // content fits 480 in every language.
+        // fallback). Width is assigned rather than sized to content, and the
+        // step text wraps inside it, as a wait naming a long share needs.
         var factor = AccessibilitySettings.Current.TextScaleFactor;
         Width = Math.Min(480 * factor, DetailWindowSizing.WorkAreaWidthLimit(null));
         MinHeight = Math.Min(320 * factor, DetailWindowSizing.WorkAreaHeightLimit(null));
@@ -88,12 +89,24 @@ public partial class SplashWindow : Window
 
     public void UpdateStep(string message, double progressPercent, TimeSpan? ease = null)
     {
-        StepText.Text = message;
+        ShowStep(message);
         // A milestone closes the phase the ticker was narrating; clear
         // it so the last product name does not sit stale beside the next
         // phase's message.
         ProductTicker.Text = string.Empty;
         AnimateProgress(progressPercent, ease);
+    }
+
+    // Every write to the step text comes through here. The text drawn takes break
+    // opportunities inside a path the line names, as a wait on a share does
+    // (InstallerPathText.AllowFolderBreaksInAnyPath), and the name a screen reader
+    // speaks is the line as composed. A TextBlock with a name set speaks the name
+    // and not its text, so a write straight to Text would leave the name on the
+    // line before.
+    private void ShowStep(string line)
+    {
+        StepText.Text = InstallerPathText.AllowFolderBreaksInAnyPath(line);
+        AutomationProperties.SetName(StepText, line);
     }
 
     private void AnimateProgress(double progressPercent, TimeSpan? ease = null)
@@ -144,7 +157,7 @@ public partial class SplashWindow : Window
         // user only, and the wait here sits inside an MSI API call and can be
         // the longest in the app.
         AutomationProperties.SetHelpText(CancelButton, Strings.Tooltip_CancellingPending);
-        StepText.Text = Strings.Status_Cancelling;
+        ShowStep(Strings.Status_Cancelling);
         ProductTicker.Text = string.Empty;
 
         // The length of this wait is set by where the scan happens to be, so the

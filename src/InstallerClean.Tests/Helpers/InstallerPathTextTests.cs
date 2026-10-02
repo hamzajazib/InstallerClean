@@ -114,7 +114,10 @@ public class InstallerPathTextTests
 
         var result = converter.Convert(Path, typeof(string), null, CultureInfo.InvariantCulture);
 
-        Assert.Equal(BoundPath, result);
+        // Compared as a string: handed an object, Assert.Equal falls back to
+        // string.CompareTo, a cultural comparison, which skips the joiners as if
+        // they were not there.
+        Assert.Equal(BoundPath, Assert.IsType<string>(result));
     }
 
     [Fact]

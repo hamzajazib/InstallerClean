@@ -7,8 +7,8 @@ using InstallerClean.Services;
 namespace InstallerClean.Helpers;
 
 /// <summary>
-/// Two opposite treatments of a path as the text goes to a control, and both are
-/// about where a line is allowed to break.
+/// Three treatments of a path as the text goes to a control, all about where a
+/// line is allowed to break.
 ///
 /// The installer cache folder's path is held whole, its punctuation seams bound
 /// with U+2060 WORD JOINER. Wrapped in a paragraph, the path broke after the
@@ -21,6 +21,11 @@ namespace InstallerClean.Helpers;
 /// Its drive seam still takes the joiner, that being the one break UAX #14 allows
 /// inside a path. <see cref="ForDrawing"/> applies the pair, because a sentence can
 /// name either path and the scan diagnoses name both.
+///
+/// The line saying what a scan is waiting for gets the third,
+/// <see cref="AllowFolderBreaksInAnyPath"/>. The share, drive or path it names is
+/// not known here, and each language puts it where its grammar wants it, so the
+/// path is found by its backslashes rather than matched.
 ///
 /// Why here rather than in the strings: this is presentation, and every resx
 /// value in sixteen languages stays exactly as the translators wrote it. It
@@ -66,16 +71,21 @@ namespace InstallerClean.Helpers;
 /// arise: that path has no break opportunity inside the path to suppress.
 ///
 /// Applied wherever this project turns a resource string into text that gets
-/// drawn: <c>TranslateExtension</c> for everything XAML resolves, the converter
-/// below for the main window's bound body lines, and by hand in the completion
-/// overlay's summary builder and the message dialog's body. A drawn string
-/// keeps its joiners even where it is also the spoken one, a TextBlock's
-/// automation peer reporting its Text as its name. A string that is only ever
-/// spoken does not get them, having no layout to protect and nothing to hand a
-/// speech engine but invisible format characters: the message dialog's title
-/// and the main window's invisible scan announcer are the two hand-written
-/// sites on that side of the line, and <c>TranslateExtension</c> draws that
-/// same line for every automation property XAML resolves.
+/// drawn: <c>TranslateExtension</c> for everything XAML resolves,
+/// <see cref="InstallerPathTextConverter"/> for the main window's bound body lines,
+/// and by hand in the completion overlay's summary builder and the message
+/// dialog's body. The third treatment is applied by
+/// <see cref="AnyPathTextConverter"/> and by <c>SplashWindow</c>'s step line. A
+/// drawn string keeps its joiners even where it is also the spoken one, a
+/// TextBlock's automation peer reporting its Text as its name, except on the
+/// lines showing a wait: each sets its screen-reader name to the line as
+/// composed, so what a path in it takes reaches the layout and not the speech.
+/// A string that is only ever spoken does not get them, having no layout to
+/// protect and nothing to hand a speech engine but invisible format characters:
+/// the message dialog's title and the main window's invisible scan announcer are
+/// the two hand-written sites on that side of the line, and
+/// <c>TranslateExtension</c> draws that same line for every automation property
+/// XAML resolves.
 /// </summary>
 internal static class InstallerPathText
 {
@@ -217,6 +227,47 @@ internal static class InstallerPathText
     /// </summary>
     public static string ForDrawing(string? text) =>
         AllowFolderBreaksInLogPath(KeepWhole(text));
+
+    /// <summary>
+    /// Returns <paramref name="text"/> with a break opportunity after each backslash
+    /// inside a path it names, and a word joiner between two backslashes, wherever in
+    /// the line the path sits. The line saying what a scan is waiting for takes it,
+    /// naming a share, a drive or a path where each language's word order puts it.
+    ///
+    /// A share's name opens with two backslashes. Unicode's line-breaking rules allow a
+    /// break between two backslashes, and the joiner is there to refuse it; neither of
+    /// the pair takes a break after it, so nothing here offers a break inside
+    /// <c>\\server</c> and <c>\\server\share</c> can break before <c>share</c>. A
+    /// backslash opening a path, at the start of the line or after a space, takes no
+    /// break after it either. A line naming no path comes back unchanged, and so does a
+    /// line this has already been through.
+    /// </summary>
+    public static string AllowFolderBreaksInAnyPath(string? text)
+    {
+        if (string.IsNullOrEmpty(text) || !text.Contains('\\'))
+            return text ?? string.Empty;
+
+        var built = new StringBuilder(text.Length + 8);
+        for (int i = 0; i < text.Length; i++)
+        {
+            built.Append(text[i]);
+            if (text[i] != '\\' || i + 1 == text.Length)
+                continue;
+
+            var next = text[i + 1];
+            if (next == '\\')
+                built.Append(WordJoiner);
+            else if (i > 0 && IsSpelledInAPath(text[i - 1]) && IsSpelledInAPath(next))
+                built.Append(ZeroWidthSpace);
+        }
+
+        return built.ToString();
+    }
+
+    // A backslash takes a break after it only with one of these on each side: any
+    // character but a backslash, a break character this class adds, or white space.
+    private static bool IsSpelledInAPath(char c) =>
+        c is not ('\\' or ZeroWidthSpace or WordJoiner) && !char.IsWhiteSpace(c);
 }
 
 /// <summary>
@@ -235,6 +286,22 @@ internal sealed class InstallerPathTextConverter : IValueConverter
 
     // One-way only: the joiners are for the screen, and putting them back into
     // a view model would be a data change rather than a rendering one.
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>
+/// <see cref="InstallerPathText.AllowFolderBreaksInAnyPath"/> for a binding. The
+/// consumers are the main window's two lines that can show what a scan is waiting
+/// for: the scanning card's progress line and the heading over a Move or Delete.
+/// Each binds its screen-reader name to the same value without this converter.
+/// </summary>
+internal sealed class AnyPathTextConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => InstallerPathText.AllowFolderBreaksInAnyPath(value as string);
+
+    // One-way only, for the reason the converter above gives.
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();
 }

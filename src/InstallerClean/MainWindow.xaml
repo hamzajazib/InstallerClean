@@ -22,6 +22,7 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <a11y:InstallerPathTextConverter x:Key="KeepInstallerPathWhole"/>
+        <a11y:AnyPathTextConverter x:Key="BreakPathsAtFolders"/>
     </Window.Resources>
 
     <Grid x:Name="RootLayout">
@@ -643,9 +644,14 @@
                 <StackPanel>
                     <ProgressBar IsIndeterminate="True" Width="240" Height="8" Margin="{StaticResource GapBottom.Md}"
                                  AutomationProperties.Name="{loc:Translate Automation.ScanningProgress}"/>
-                    <TextBlock Text="{Binding Scan.ScanProgress}" Foreground="{StaticResource Text.Heading}"
+                    <!-- The text drawn takes break opportunities inside a path
+                         the line names, as a wait on a share does; the name a
+                         screen reader speaks is the line as composed. -->
+                    <TextBlock Text="{Binding Scan.ScanProgress, Converter={StaticResource BreakPathsAtFolders}}"
+                               Foreground="{StaticResource Text.Heading}"
                                FontSize="{DynamicResource Type.Heading.Sm}" TextWrapping="Wrap" TextAlignment="Center"
                                Margin="{StaticResource GapBottom.Sm}"
+                               AutomationProperties.Name="{Binding Scan.ScanProgress}"
                                AutomationProperties.LiveSetting="Polite"/>
                     <!-- Ticker: a count of the folder's files as the scan
                          lists them, the name of each installed program as it
@@ -674,9 +680,12 @@
               KeyboardNavigation.TabNavigation="Cycle"
               KeyboardNavigation.ControlTabNavigation="Cycle">
             <chrome:DecorativeBorder Background="{StaticResource Surface.Overlay}"/>
+            <!-- The card takes its width from its content, up to the scanning
+                 card's width. A longer heading, as a wait naming a long share
+                 is, wraps inside that rather than widening the card. -->
             <Border Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.Pill}"
                     BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}"
-                    Padding="28,22" MinWidth="260"
+                    Padding="28,22" MinWidth="260" MaxWidth="{a11y:TextScaled 480}"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel>
                     <!-- Code-behind raises LiveRegionChanged on this heading when
@@ -687,11 +696,18 @@
                          the only path that speaks. Assigned after the reveal, the
                          text change also fires the bridge once the heading's peer
                          exists from an earlier operation, and the heading is
-                         spoken twice. -->
+                         spoken twice.
+
+                         The text drawn takes break opportunities inside a path the
+                         heading names, as a wait on a share does; the name a
+                         screen reader speaks is the heading as composed. -->
                     <TextBlock x:Name="OperationHeadingText"
-                               Text="{Binding Cleanup.OperationProgress}" Foreground="{StaticResource Text.Heading}"
+                               Text="{Binding Cleanup.OperationProgress, Converter={StaticResource BreakPathsAtFolders}}"
+                               Foreground="{StaticResource Text.Heading}"
                                FontSize="{DynamicResource Type.Heading.Sm}" FontWeight="SemiBold"
-                               HorizontalAlignment="Center" Margin="{StaticResource GapBottom.Lg}"
+                               HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
+                               Margin="{StaticResource GapBottom.Lg}"
+                               AutomationProperties.Name="{Binding Cleanup.OperationProgress}"
                                AutomationProperties.LiveSetting="Polite"/>
                     <!-- Indeterminate from the re-verify before a batch until its
                          first file, and for the rescan after a batch, where there

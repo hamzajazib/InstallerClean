@@ -59,13 +59,20 @@
             <!-- Step text. LiveSetting=Polite announces the splash's
                  step transitions to Narrator: without it, the
                  cancellation message and the per-step "Asking Windows
-                 about installed software..." progress go unread. -->
+                 about installed software..." progress go unread.
+
+                 It wraps, centred, inside the card: a wait can name a
+                 share too long for one line. The margin keeps a wrapped
+                 line off the card's edges. Code-behind sets the text and
+                 the name a screen reader speaks, together. -->
             <TextBlock Grid.Row="7"
                        x:Name="StepText"
-                       Text="{loc:Translate Status.Scanning}"
                        Foreground="{StaticResource Text.Body}"
                        FontSize="{DynamicResource Type.Body}"
                        HorizontalAlignment="Center"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center"
+                       Margin="16,0"
                        AutomationProperties.LiveSetting="Polite"/>
 
             <!-- Ticker: a count of the folder's files as the scan lists
