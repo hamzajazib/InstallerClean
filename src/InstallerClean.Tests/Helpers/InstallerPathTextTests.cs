@@ -13,10 +13,10 @@ namespace InstallerClean.Tests.Helpers;
 /// <see cref="InstallerPathText"/> itself.
 ///
 /// The word joiner is referenced as <c>(char)0x2060</c> throughout, never as a
-/// literal character and never as an escape inside a string, for the reason
-/// <see cref="CompositionParsingTests"/> gives: a literal is invisible on screen
-/// and survives no round trip through a tool that normalises whitespace, and an
-/// escape inside a string is exactly the mistake that once shipped.
+/// literal character and never as an escape inside a string. A literal is
+/// invisible on screen and survives no round trip through a tool that normalises
+/// whitespace, and an escape inside a string is one character only when it is
+/// written exactly: <c>"\\u2060"</c> is a backslash and five letters.
 /// </summary>
 public class InstallerPathTextTests
 {

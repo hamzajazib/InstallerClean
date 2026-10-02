@@ -727,17 +727,18 @@ public partial class MainWindow : Window
         var destination = _vm.Completion.SummaryDestination;
         CompletionSummaryText.Inlines.Clear();
 
-        // The split point and the path-wrap-point insertion are both pure string
-        // work, extracted to Core so a test can pin them (the shipped zero-width
-        // escape bug lived here and had no test); this method only turns the
-        // result into WPF inlines. See CompositionParsing.
+        // The split point (CompositionParsing.SplitAtSubstring) and the
+        // destination's break opportunities
+        // (InstallerPathText.AllowFolderBreaksInAnyPath) are pure string work
+        // with tests of their own; this method only turns the result into WPF
+        // inlines.
         if (CompositionParsing.SplitAtSubstring(raw, destination) is not { } split)
         {
             AddTextWithLineBreaks(raw);
             return;
         }
 
-        var wrappedDestination = CompositionParsing.InsertPathWrapPoints(destination);
+        var wrappedDestination = InstallerPathText.AllowFolderBreaksInAnyPath(destination);
 
         if (split.Prefix.Length > 0) AddTextWithLineBreaks(split.Prefix);
         CompletionSummaryText.Inlines.Add(new LineBreak());

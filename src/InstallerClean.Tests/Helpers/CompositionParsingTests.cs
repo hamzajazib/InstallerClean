@@ -3,60 +3,11 @@ using InstallerClean.Helpers;
 namespace InstallerClean.Tests.Helpers;
 
 /// <summary>
-/// The parsing behind the four windows' inline-composition builders, extracted
-/// out of the <c>Window</c> constructors so it has a seam to test against. With
-/// the parsing inlined there was nowhere to assert from, which is how an escape
-/// that produced six literal characters instead of one zero-width space shipped
-/// unnoticed.
-///
-/// The zero-width space is referenced as <c>(char)0x200B</c> throughout, never
-/// as a literal character and never as an escape inside a string. A literal is
-/// invisible on screen and survives no round trip through a tool that trims or
-/// normalises whitespace; an escape is exactly what went wrong in the code
-/// under test. A numeric char constant can fail neither way.
+/// The parsing behind the windows' inline-composition builders, extracted out of
+/// the <c>Window</c> constructors so it has a seam to test against.
 /// </summary>
 public class CompositionParsingTests
 {
-    private const char Zws = (char)0x200B;
-
-    [Fact]
-    public void InsertPathWrapPoints_puts_a_zero_width_space_after_every_backslash()
-    {
-        var result = CompositionParsing.InsertPathWrapPoints(@"C:\Windows\Installer");
-
-        Assert.Equal("C:\\" + Zws + "Windows\\" + Zws + "Installer", result);
-    }
-
-    [Fact]
-    public void InsertPathWrapPoints_inserts_the_character_not_the_text_of_the_escape()
-    {
-        // The shipped bug: in a regular string literal "\\u200B" is not an escape
-        // at all, it is a backslash followed by the five ordinary characters
-        // u200B. So every wrap point inserted six visible characters into the
-        // path instead of one invisible one. The wrap point has to be the U+200B
-        // character itself, which is why the literal text "u200B" is asserted
-        // against below.
-        var result = CompositionParsing.InsertPathWrapPoints(@"D:\Backup");
-
-        Assert.Contains(Zws, result);
-        Assert.DoesNotContain("u200B", result);
-        Assert.Equal("D:\\" + Zws + "Backup", result);
-    }
-
-    [Fact]
-    public void InsertPathWrapPoints_wraps_a_UNC_path_at_every_backslash()
-    {
-        var result = CompositionParsing.InsertPathWrapPoints(@"\\server\share");
-
-        Assert.Equal("\\" + Zws + "\\" + Zws + "server\\" + Zws + "share", result);
-    }
-
-    [Fact]
-    public void InsertPathWrapPoints_leaves_a_backslash_free_string_untouched()
-    {
-        Assert.Equal("no backslashes here", CompositionParsing.InsertPathWrapPoints("no backslashes here"));
-    }
-
     [Fact]
     public void SplitAtSubstring_splits_around_the_substring_and_trims_the_prefix()
     {

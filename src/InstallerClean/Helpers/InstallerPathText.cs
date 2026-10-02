@@ -11,9 +11,9 @@ namespace InstallerClean.Helpers;
 /// line is allowed to break.
 ///
 /// The installer cache folder's path is held whole, its punctuation seams bound
-/// with U+2060 WORD JOINER. Wrapped in a paragraph, the path broke after the
-/// drive's <c>C:</c> and carried on <c>\Windows\Installer</c> on the next line,
-/// which reads as two things rather than one.
+/// with U+2060 WORD JOINER. The joiners keep a wrapped path from breaking after
+/// the drive's <c>C:</c> and carrying on <c>\Windows\Installer</c> on the next
+/// line, which reads as two things rather than one.
 ///
 /// The crash log's path gets the reverse, U+200B at its folder boundaries so that
 /// it breaks there rather than wherever it lands. That one runs through a user
@@ -22,10 +22,11 @@ namespace InstallerClean.Helpers;
 /// inside a path. <see cref="ForDrawing"/> applies the pair, because a sentence can
 /// name either path and the scan diagnoses name both.
 ///
-/// The line saying what a scan is waiting for gets the third,
-/// <see cref="AllowFolderBreaksInAnyPath"/>. The share, drive or path it names is
-/// not known here, and each language puts it where its grammar wants it, so the
-/// path is found by its backslashes rather than matched.
+/// The line saying what a scan is waiting for, and the folder a Move sends files
+/// to, get the third, <see cref="AllowFolderBreaksInAnyPath"/>. Neither path is
+/// known here: a waiting line's share, drive or path sits where each language's
+/// grammar puts it, and a destination is whatever folder was chosen. So the path
+/// is found by its backslashes rather than matched.
 ///
 /// Why here rather than in the strings: this is presentation, and every resx
 /// value in sixteen languages stays exactly as the translators wrote it. It
@@ -53,9 +54,8 @@ namespace InstallerClean.Helpers;
 /// the next line, leaving room at the end of the line above for the <c>C:</c> a
 /// breaker following the table alone would have put there. The break
 /// opportunity existed and was declined, which is LB11 (no break either side of
-/// U+2060) being honoured. The app already relied on the neighbouring class ZW,
-/// since <c>CompositionParsing.InsertPathWrapPoints</c> adds U+200B to make a
-/// long destination path break at its folders.
+/// U+2060) being honoured. The app relies on the neighbouring class ZW as well,
+/// adding U+200B to make a long path break at its folders.
 ///
 /// No source reading could have settled that, and the same reading settles the
 /// question it raises. WPF formats every line with <c>LineFlags.None</c>
@@ -75,7 +75,8 @@ namespace InstallerClean.Helpers;
 /// <see cref="InstallerPathTextConverter"/> for the main window's bound body lines,
 /// and by hand in the completion overlay's summary builder and the message
 /// dialog's body. The third treatment is applied by
-/// <see cref="AnyPathTextConverter"/> and by <c>SplashWindow</c>'s step line. A
+/// <see cref="AnyPathTextConverter"/>, by <c>SplashWindow</c>'s step line, and to
+/// the destination by the Move confirmation and the finished card's summary. A
 /// drawn string keeps its joiners even where it is also the spoken one, a
 /// TextBlock's automation peer reporting its Text as its name, except on the
 /// lines showing a wait: each sets its screen-reader name to the line as
@@ -103,8 +104,7 @@ internal static class InstallerPathText
     private const char ZeroWidthSpace = '\u200B';
 
     // Spelled as an escape rather than typed, so it is visible in the editor
-    // and in a diff, and cannot be flattened to a plain space by tooling. The
-    // same reason InsertPathWrapPoints spells its zero-width space out.
+    // and in a diff, and cannot be flattened to a plain space by tooling.
     private const char WordJoiner = '\u2060';
 
     /// <summary>
@@ -120,9 +120,10 @@ internal static class InstallerPathText
     /// observed happening. Without it a narrow pane can still leave <c>C:</c> alone
     /// at the end of a line.
     ///
-    /// <c>CompositionParsing.InsertPathWrapPoints</c> does the backslash half for
-    /// the destination path in two windows that build their text in code-behind.
-    /// This is the same idea at the binding, where it can also close the drive seam.
+    /// <see cref="AllowFolderBreaksInAnyPath"/> does the backslash half for a path
+    /// it finds by its backslashes rather than matches, a waiting line's share and
+    /// a Move's destination. This one matches its path, and so can also close the
+    /// drive seam.
     /// </summary>
     public static string AllowFolderBreaksInLogPath(string? text) =>
         AllowFolderBreaksIn(text, LogPath);
@@ -232,7 +233,8 @@ internal static class InstallerPathText
     /// Returns <paramref name="text"/> with a break opportunity after each backslash
     /// inside a path it names, and a word joiner between two backslashes, wherever in
     /// the line the path sits. The line saying what a scan is waiting for takes it,
-    /// naming a share, a drive or a path where each language's word order puts it.
+    /// naming a share, a drive or a path where each language's word order puts it,
+    /// and so does the folder a Move sends files to, which is a path on its own.
     ///
     /// A share's name opens with two backslashes. Unicode's line-breaking rules allow a
     /// break between two backslashes, and the joiner is there to refuse it; neither of

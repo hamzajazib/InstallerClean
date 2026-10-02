@@ -3,31 +3,14 @@ namespace InstallerClean.Helpers;
 /// <summary>
 /// The string parsing behind the WPF windows' inline-composition builders: the
 /// splitting that turns one formatted sentence into the prefix / body / suffix
-/// segments a window renders as separate <c>Run</c>s, and the wrap-point
-/// insertion that lets a long destination path break at a folder boundary.
+/// segments a window renders as separate <c>Run</c>s.
 ///
 /// The window code-behind keeps the WPF inline construction (<c>Run</c>,
 /// <c>LineBreak</c>, <c>Hyperlink</c>); the decisions about WHERE a sentence
-/// splits and WHAT the wrapped path looks like live here, in Core, so they can be
-/// exercised by a unit test with no UI thread. That is the point of the
-/// extraction: the shipped destination-wrap bug (<c>Replace("\\", "\\u200B")</c>,
-/// where escaping the backslash left the following six characters as ordinary
-/// text, so a path read as D:\u200BBackup on screen) sat in a <c>Window</c>'s
-/// code-behind, where no test without a UI thread could reach it.
+/// splits live here, in Core, so a unit test reaches them with no UI thread.
 /// </summary>
 public static class CompositionParsing
 {
-    /// <summary>
-    /// Inserts a zero-width space (U+200B) after every backslash so a long path
-    /// wraps at a folder boundary (after <c>...\Installer\</c>, not inside a
-    /// folder name) instead of overflowing the card. The zero-width space is
-    /// spelled with the C# unicode escape rather than a literal character, which
-    /// would be invisible in the editor and in a diff and is liable to be
-    /// flattened to a plain space by tooling.
-    /// </summary>
-    public static string InsertPathWrapPoints(string path) =>
-        path.Replace("\\", "\\\u200B");
-
     /// <summary>
     /// Splits <paramref name="raw"/> at the first occurrence of
     /// <paramref name="substring"/>, returning the text before it (trailing

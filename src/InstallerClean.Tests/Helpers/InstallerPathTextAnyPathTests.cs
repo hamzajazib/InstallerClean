@@ -4,10 +4,11 @@ using InstallerClean.Helpers;
 namespace InstallerClean.Tests.Helpers;
 
 /// <summary>
-/// A path in a line that does not say where the path sits: the line saying what a
+/// A path found by its backslashes rather than matched: in the line saying what a
 /// scan is waiting for, which names a share, a drive or a path wherever each
-/// language's word order puts it. A share's leading pair is joined, and each
-/// backslash inside the path takes a break opportunity after it.
+/// language's word order puts it, and in the folder a Move sends files to, a path
+/// on its own. A share's leading pair is joined, and each backslash inside the path
+/// takes a break opportunity after it.
 ///
 /// Pure string work. Where WPF's line breaker then breaks is for the running app.
 /// </summary>
@@ -62,6 +63,32 @@ public class InstallerPathTextAnyPathTests
         Assert.Equal(
             @"Waiting for \Packages\" + ZeroWidthSpace + "setup.msi to respond...",
             Treat(@"Waiting for \Packages\setup.msi to respond..."));
+    }
+
+    [Fact]
+    public void A_destination_on_a_drive_breaks_after_each_folder()
+    {
+        Assert.Equal(
+            @"D:\" + ZeroWidthSpace + @"Backup\" + ZeroWidthSpace + "InstallerClean",
+            Treat(@"D:\Backup\InstallerClean"));
+    }
+
+    [Fact]
+    public void A_destination_on_a_share_keeps_its_leading_pair_together()
+    {
+        Assert.Equal(
+            @"\" + WordJoiner + @"\server\" + ZeroWidthSpace + @"share\" + ZeroWidthSpace + "InstallerClean",
+            Treat(@"\\server\share\InstallerClean"));
+    }
+
+    [Fact]
+    public void The_break_is_the_character_and_not_the_text_of_its_escape()
+    {
+        var result = Treat(@"D:\Backup");
+
+        Assert.Contains(ZeroWidthSpace, result);
+        Assert.DoesNotContain("u200B", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(@"D:\Backup", new string(result.Where(c => c != ZeroWidthSpace).ToArray()));
     }
 
     [Theory]

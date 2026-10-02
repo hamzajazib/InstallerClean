@@ -22,10 +22,10 @@ public partial class ConfirmMoveWindow : Window
             Strings.Confirm_MoveDestination_Singular,
             Strings.Confirm_MoveDestination_Plural,
             "Confirm.MoveDestination");
-        // Insert a zero-width space after every backslash so a long path wraps at
-        // a folder boundary (after ...\Installer\, not inside a folder name). The
-        // insertion is in Core (CompositionParsing) so a test guards the escape.
-        DestinationText.Text = CompositionParsing.InsertPathWrapPoints(destination);
+        // A long path breaks after a backslash inside it, at a folder boundary
+        // rather than inside a folder name, and not between the two backslashes a
+        // share's name opens with (InstallerPathText.AllowFolderBreaksInAnyPath).
+        DestinationText.Text = InstallerPathText.AllowFolderBreaksInAnyPath(destination);
 
         // A same-drive move is a rename: it frees nothing until the user deletes
         // the parked copies themselves. This is the only moment the app knows
@@ -48,7 +48,7 @@ public partial class ConfirmMoveWindow : Window
         // that is not even a tab stop until it overflows, so there was no
         // route to it either. Label then value, the order the card reads, so
         // the join holds in every language. The raw path, not the wrapped
-        // DestinationText, whose zero-width spaces are for the line breaker.
+        // DestinationText, whose break characters are for the line breaker.
         var destinationLine = DestinationLabel.Text + " " + destination;
         Title = sameDrive
             ? MessageText.Text + " " + destinationLine + " " + Strings.Confirm_MoveSameDrive
