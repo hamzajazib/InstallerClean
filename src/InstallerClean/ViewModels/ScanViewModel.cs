@@ -235,7 +235,8 @@ public partial class ScanViewModel : ObservableObject
     /// <summary>
     /// True when the last scan found files to clean up. Move, Delete and the
     /// Details button beside the unneeded count are enabled only while this
-    /// holds, and the window's pending-install lead shows only while it holds.
+    /// holds, and the window's pending-reboot lead
+    /// (<see cref="Strings.Body_PendingReboot_Lead"/>) shows only while it holds.
     /// </summary>
     public bool HasOrphans => HasScanned && OrphanedFileCount > 0;
 

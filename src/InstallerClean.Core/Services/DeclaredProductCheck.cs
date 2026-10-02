@@ -1186,8 +1186,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <summary>
     /// How long a read under a root can take before it is a wait, and the pass's caller is
     /// told what it is waiting on (<see cref="AnswersWithin"/>). So a read that answers
-    /// promptly is never shown. Raise it and a read is waited for that much longer with
-    /// nothing said; lower it and a read that is only not instant flashes a line on screen.
+    /// promptly is never shown. A read is waited for up to <see cref="SourceFolderTimeLimit"/>
+    /// whatever this is. Raise it and a read waits that much longer before the caller is
+    /// told; lower it and a read that is only not instant flashes a line on screen.
     /// </summary>
     internal TimeSpan SourceFolderWaitThreshold { get; init; } = TimeSpan.FromSeconds(1);
 
