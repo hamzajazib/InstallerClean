@@ -33,42 +33,33 @@ namespace InstallerClean.Helpers;
 /// also puts the transform out of the CLI's reach by construction. Some of the
 /// strings naming the folder are console output, one of them machine-read, and
 /// an invisible character in a console line is a liability with no upside; the
-/// CLI takes its
-/// strings from the generated <c>Strings</c> class in Core and never comes past
-/// this project's boundary.
+/// CLI takes its strings from the generated <c>Strings</c> class in Core and
+/// never comes past this project's boundary.
 ///
-/// Every seam a break can fall at, not just the one that was observed to break.
-/// Unicode's line-breaking algorithm (UAX #14) allows exactly one break inside
-/// the path, between the <c>:</c> (class IS) and the <c>\</c> (class PR, the
-/// backslash sharing a code point with the yen sign), everything else being
-/// letter to letter or covered by LB24; the reported break was at that exact
-/// point, which says WPF's breaker follows a current table rather than an
-/// approximation. Binding both sides of each backslash as well costs three more
-/// invisible characters and makes the path safe against a table that differs
-/// anywhere else. <see cref="AppendBound"/> has the seam list, and why the
-/// drive letter's own colon is left out of it.
+/// Every seam a break can fall at is bound. Unicode's line-breaking algorithm
+/// (UAX #14) allows exactly one break inside the path, between the <c>:</c>
+/// (class IS) and the <c>\</c> (class PR, the backslash sharing a code point with
+/// the yen sign), everything else being letter to letter or covered by LB24, and
+/// WPF's line breaker offers that break. Binding both sides of each backslash as
+/// well costs three more invisible characters and makes the path safe against a
+/// table that differs anywhere else. <see cref="AppendBound"/> has the seam list,
+/// and why the drive letter's own colon is left out of it.
 ///
-/// VERIFIED, and it is the whole mechanism: WPF honours class WJ. Observed in
-/// the running app in Dutch, where the paragraph carrying the path breaks
-/// immediately BEFORE <c>C:\Windows\Installer</c> and takes the whole path onto
-/// the next line, leaving room at the end of the line above for the <c>C:</c> a
-/// breaker following the table alone would have put there. The break
-/// opportunity existed and was declined, which is LB11 (no break either side of
-/// U+2060) being honoured. The app relies on the neighbouring class ZW as well,
-/// adding U+200B to make a long path break at its folders.
+/// WPF honours class WJ: no break either side of U+2060 (LB11). So a paragraph
+/// that runs out of room at the path breaks before <c>C:\Windows\Installer</c>
+/// and carries the whole path onto the next line, rather than leaving <c>C:</c>
+/// at the end of the line above. The app relies on WPF honouring class ZW as
+/// well, adding U+200B to make a long path break at its folders.
 ///
-/// No source reading could have settled that, and the same reading settles the
-/// question it raises. WPF formats every line with <c>LineFlags.None</c>
-/// (TextFormatterImp) and takes the breaking classes themselves from an
-/// unmanaged LineServices callback with no managed counterpart, so the table is
-/// out of reach. But it is also not language-tagged: the two culture-flavoured
-/// break knobs WPF declares, BreakClassWide and BreakClassStrict, are never
-/// set, and the one culture-sensitive break input it does supply is the
-/// hyphenator, which needs IsHyphenationEnabled. So the tag
-/// <c>App.OnStartup</c> puts on every element cannot move a break either way,
-/// and what was seen under one language holds under all sixteen. Where a
-/// TextBlock takes WPF's simple-text fast path instead, the question does not
-/// arise: that path has no break opportunity inside the path to suppress.
+/// WPF's line breaking is not language-tagged. Its breaking classes come from an
+/// unmanaged LineServices callback; of the line flags it declares, the two
+/// culture-flavoured ones, BreakClassWide and BreakClassStrict, are never set,
+/// TextFormatterImp formatting a line with <c>LineFlags.None</c>; and the one
+/// culture-sensitive break input it supplies is the hyphenator, which needs
+/// IsHyphenationEnabled. So the language tag <c>App.OnStartup</c> puts on every
+/// element cannot move a break, and a break falls the same way under all sixteen
+/// languages. A TextBlock on WPF's simple-text fast path has no break opportunity
+/// inside the path to suppress.
 ///
 /// Applied wherever this project turns a resource string into text that gets
 /// drawn: <c>TranslateExtension</c> for everything XAML resolves,
