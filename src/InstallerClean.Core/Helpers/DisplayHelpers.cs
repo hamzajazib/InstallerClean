@@ -117,12 +117,13 @@ internal static class DisplayHelpers
     /// <summary>
     /// The line saying the app is waiting for <paramref name="root"/> to answer, a root as
     /// the check on the installers in source folders takes it: a drive letter and its colon
-    /// is named as a drive, and a share, or a path of any other form, as it is spelled.
+    /// is named as a drive, and a share, or a path of any other form, as it is spelled
+    /// (<see cref="SourceRootName"/>).
     /// </summary>
     internal static string WaitingFor(string root) =>
         IsDriveRoot(root)
-            ? string.Format(Strings.Status_WaitingForDrive, root)
-            : string.Format(Strings.Status_WaitingForPath, root);
+            ? string.Format(Strings.Status_WaitingForDrive, SourceRootName(root))
+            : string.Format(Strings.Status_WaitingForPath, SourceRootName(root));
 
     /// <summary>
     /// The name a screen reader speaks for the button that stops the wait on
@@ -132,8 +133,19 @@ internal static class DisplayHelpers
     /// </summary>
     internal static string StopWaitingFor(string root) =>
         IsDriveRoot(root)
-            ? string.Format(Strings.Automation_StopWaitingForDrive, root)
-            : string.Format(Strings.Automation_StopWaitingForPath, root);
+            ? string.Format(Strings.Automation_StopWaitingForDrive, SourceRootName(root))
+            : string.Format(Strings.Automation_StopWaitingForPath, SourceRootName(root));
+
+    /// <summary>
+    /// <paramref name="root"/> as every line naming a drive or share writes it: a drive
+    /// letter in capitals with its colon, whatever case the records spell it in, and a
+    /// share or a path of any other form exactly as it is spelled.
+    ///
+    /// THE CAPITAL IS THE INVARIANT ONE. Upper-casing in the language the app shows would
+    /// turn "i:" into "İ:" under Turkish, which names no drive.
+    /// </summary>
+    internal static string SourceRootName(string root) =>
+        IsDriveRoot(root) ? char.ToUpperInvariant(root[0]) + ":" : root;
 
     /// <summary>
     /// What a screen reader speaks for a waiting <paramref name="line"/> while the button that
@@ -174,7 +186,7 @@ internal static class DisplayHelpers
     /// Whether <paramref name="root"/>, a root as the check on the installers in source
     /// folders takes it, is a drive letter and its colon.
     /// </summary>
-    private static bool IsDriveRoot(string root) => root.Length == 2 && root[1] == ':';
+    internal static bool IsDriveRoot(string root) => root.Length == 2 && root[1] == ':';
 
     internal static string FormatElapsed(TimeSpan elapsed) =>
         elapsed.TotalSeconds < 1

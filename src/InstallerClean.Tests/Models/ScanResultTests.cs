@@ -61,6 +61,60 @@ public class ScanResultTests
 
         Assert.Empty(result.SourceRootsGivenUp);
         Assert.Empty(result.SourceRootsGivenUpKeepingFiles);
+        Assert.False(result.HasSourceRootsGivenUpKeepingFiles);
+        Assert.True(result.IsAllClear);
+    }
+
+    [Fact]
+    public void A_drive_given_up_keeping_a_file_takes_the_all_clear_away_where_the_held_back_count_does_not()
+    {
+        // The file is kept for a program Windows still has installed, an arm the count
+        // leaves out, so the count says nothing was held back and the drive is what says
+        // the scan did not finish checking.
+        var result = new ScanResult(
+            RemovableFiles: [],
+            RegisteredPackages: [],
+            RegisteredTotalBytes: 0,
+            WithheldFiles: [File("a.msi", 1024)],
+            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1),
+            WithheldDeclaredProductInstalledBytes: 1024,
+            SourceRootsGivenUp: [new("D:", SourceRootGiveUpRoute.StoppedWaiting, 1)]);
+
+        Assert.False(result.HasUnsettledHeldBack);
+        Assert.True(result.HasSourceRootsGivenUpKeepingFiles);
+        Assert.False(result.IsAllClear);
+    }
+
+    [Fact]
+    public void A_drive_given_up_with_nothing_kept_there_leaves_the_all_clear()
+    {
+        var result = new ScanResult(
+            RemovableFiles: [],
+            RegisteredPackages: [],
+            RegisteredTotalBytes: 0,
+            SourceRootsGivenUp:
+            [
+                new("D:", SourceRootGiveUpRoute.ReadsAddUp, 0),
+                new(@"\\nas\apps", SourceRootGiveUpRoute.StoppedWaiting, 0),
+            ]);
+
+        Assert.False(result.HasSourceRootsGivenUpKeepingFiles);
+        Assert.True(result.IsAllClear);
+    }
+
+    [Fact]
+    public void A_file_held_back_takes_the_all_clear_away_with_no_drive_given_up()
+    {
+        var result = new ScanResult(
+            RemovableFiles: [],
+            RegisteredPackages: [],
+            RegisteredTotalBytes: 0,
+            WithheldFiles: [File("a.msi", 1024)],
+            WithheldBy: new WithholdingSplit(DeclaredProductUnestablishedCount: 1));
+
+        Assert.True(result.HasUnsettledHeldBack);
+        Assert.False(result.HasSourceRootsGivenUpKeepingFiles);
+        Assert.False(result.IsAllClear);
     }
 
     [Fact]

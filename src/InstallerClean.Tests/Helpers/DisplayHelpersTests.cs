@@ -280,10 +280,10 @@ public class DisplayHelpersTests
     }
 
     [Theory]
-    [InlineData("D:")]
-    [InlineData("z:")]
-    public void A_wait_on_a_drive_names_it_as_a_drive(string root) =>
-        Assert.Equal(string.Format(Strings.Status_WaitingForDrive, root), DisplayHelpers.WaitingFor(root));
+    [InlineData("D:", "D:")]
+    [InlineData("z:", "Z:")]
+    public void A_wait_on_a_drive_names_it_as_a_drive_in_capitals(string root, string named) =>
+        Assert.Equal(string.Format(Strings.Status_WaitingForDrive, named), DisplayHelpers.WaitingFor(root));
 
     [Theory]
     [InlineData(@"\\fileserver\apps")]
@@ -292,10 +292,31 @@ public class DisplayHelpersTests
         Assert.Equal(string.Format(Strings.Status_WaitingForPath, root), DisplayHelpers.WaitingFor(root));
 
     [Theory]
-    [InlineData("D:")]
-    [InlineData("z:")]
-    public void The_button_that_stops_a_wait_on_a_drive_names_it_as_a_drive(string root) =>
-        Assert.Equal(string.Format(Strings.Automation_StopWaitingForDrive, root), DisplayHelpers.StopWaitingFor(root));
+    [InlineData("D:", "D:")]
+    [InlineData("z:", "Z:")]
+    public void The_button_that_stops_a_wait_on_a_drive_names_it_as_a_drive_in_capitals(string root, string named) =>
+        Assert.Equal(string.Format(Strings.Automation_StopWaitingForDrive, named), DisplayHelpers.StopWaitingFor(root));
+
+    [Fact]
+    public void A_drive_letter_takes_the_capital_that_names_the_drive_under_Turkish_too()
+    {
+        // Turkish upper-cases a dotted i to a dotted capital, which names no drive, so
+        // the line and the button stay with the capital every drive letter is written in.
+        var turkish = CultureInfo.GetCultureInfo("tr-TR");
+        using var culture = new CultureScope(turkish);
+        using var scope = new LocalisationScope(turkish, turkish);
+
+        Assert.Equal("I:", DisplayHelpers.SourceRootName("i:"));
+        Assert.Equal(string.Format(Strings.Status_WaitingForDrive, "I:"), DisplayHelpers.WaitingFor("i:"));
+        Assert.Equal(string.Format(Strings.Automation_StopWaitingForDrive, "I:"), DisplayHelpers.StopWaitingFor("i:"));
+    }
+
+    [Theory]
+    [InlineData(@"\\fileserver\apps")]
+    [InlineData(@"GLOBALROOT\Device\Mup\fileserver\apps\setup.msi")]
+    [InlineData("d")]
+    public void A_share_or_any_other_path_is_named_as_it_is_spelled(string root) =>
+        Assert.Equal(root, DisplayHelpers.SourceRootName(root));
 
     [Theory]
     [InlineData(@"\\fileserver\apps")]

@@ -122,6 +122,9 @@
        language that separates list items with something other than a comma, or
        that wants no space after it, says so here. -->
   <data name="Display.ListSeparator" xml:space="preserve"><value>, </value></data>
+  <!-- A drive standing on its own in a list, as Summary.SourcesGivenUp names each drive
+       inside its brackets. 0 = a drive letter and its colon in capitals, e.g. "D:" -->
+  <data name="Display.DriveName" xml:space="preserve"><value>drive {0}</value></data>
   <!-- What ends the heading and separates it from the body when a dialog composes
        the single line a screen reader announces as it opens. A resx value and not a
        hard-coded ". " for the same reason as the separator above: the stop is not the
@@ -997,6 +1000,29 @@ Para reponerlo, necesitas el instalador de la versión que ya tienes. Consíguel
   <data name="Summary.MissingFromDisk.OtherPrograms.Plural" xml:space="preserve"><value>{0} programas más</value></data>
   <data name="Summary.MissingFromDisk.Unnamed.Singular" xml:space="preserve"><value>{0} archivo sin ningún programa nombrado en los registros</value></data>
   <data name="Summary.MissingFromDisk.Unnamed.Plural" xml:space="preserve"><value>{0} archivos sin ningún programa nombrado en los registros</value></data>
+  <!-- The line naming a drive that a scan, or the check made when Move or Delete is
+       clicked, gave up on while files still had to be checked against it. It goes under
+       the main window's left-alone line, as the body of the finished card where a scan
+       offered nothing, and under the held-back line on the card after a Move or Delete.
+       The app gives a drive up when somebody presses Action.StopWaiting, when it does
+       not answer, or when its reads take too long, and "carried on without" is true of
+       each. The drive is named inside the sentence, so a language that declines the noun
+       after "without" declines it here. "Left alone" is worded as in
+       Window.Registered.Title, and "Re-scan" is Action.Rescan's label without its
+       access-key marker. 0 = a drive letter and its colon in capitals, e.g. "D:" -->
+  <data name="Summary.SourceGivenUp.Drive" xml:space="preserve"><value>InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan.</value></data>
+  <!-- As Summary.SourceGivenUp.Drive, for a folder that is not on a drive letter, named
+       as it is spelled. 0 = a network share such as "\\fileserver\apps", or another
+       path -->
+  <data name="Summary.SourceGivenUp.Path" xml:space="preserve"><value>InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan.</value></data>
+  <!-- As Summary.SourceGivenUp.Drive, where more than one drive or share was given up.
+       0 = the list of them in the order they were given up, each drive as
+       Display.DriveName and each share or path as it is spelled, joined with
+       Display.ListSeparator, e.g. "drive D:, \\nas\installers". The list stands in
+       brackets, so its separators cannot be read as the sentence's own punctuation, and
+       it carries no "and", which a list joined in code cannot place in every
+       language. -->
+  <data name="Summary.SourcesGivenUp" xml:space="preserve"><value>InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan.</value></data>
   <!-- 0 = current file count, 1 = total count, 2 = pluralised noun. -->
   <data name="Summary.OperationFiles" xml:space="preserve"><value>{0} de {1} {2}</value></data>
   <!-- Orphaned-window footer summary. 0 = file count, 1 = pluralised

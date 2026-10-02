@@ -15,7 +15,8 @@ namespace InstallerClean.ViewModels;
 /// that coordinate them:
 ///
 ///   - A scan completing with no orphans pushes the completion overlay:
-///     the all-clear, or the screen saying what the scan held back.
+///     the all-clear, or the screen saying what the scan held back or
+///     carried on without.
 ///   - The Scan command, behind Re-scan and F5, is refused while a Move
 ///     or a Delete is in flight and while the completion overlay is up.
 ///   - A report sent successfully is saved to settings, so the Send
@@ -322,10 +323,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // TWO SCREENS, and which one is shown turns on a fact the lists cannot
             // carry. An empty offer means EITHER that the scan held nothing back, or
             // held back only files the declared-product-installed and
-            // declared-patch-registered arms kept, which gets the all-clear, OR that it
-            // held back any other file, a superseded patch included, which gets the
-            // screen saying so. Telling the second machine there is nothing to clean up
-            // in its Installer folder is a claim about that disk the scan never made.
+            // declared-patch-registered arms kept and gave up no drive or share keeping
+            // one, which gets the all-clear, OR that it held back any other file, a
+            // superseded patch included, or carried on without a drive or share and left
+            // a file alone because of it, which gets the screen saying so. Telling the
+            // second machine there is nothing to clean up in its Installer folder is a
+            // claim about that disk the scan never made.
             //
             // THE READING IS THE SCAN'S AND THIS HOST DOES NOT PARTITION ANYTHING TO
             // GET IT, which is the constraint on anything that replaces these lines.
@@ -341,8 +344,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // patch's registrations, together with the superseded patches the scan held
             // back. A file under a day old, a file whose age could not be established and
             // a file the containment check refused or could not answer for are in it.
-            // HasUnsettledHeldBack is that count above zero, and the all-clear is the
-            // machine's where it is not.
+            // HasUnsettledHeldBack is that count above zero. ScanResult.IsAllClear adds
+            // the drives and shares given up, a file kept at one of them being outside
+            // that count where its own program is installed, and the all-clear is the
+            // machine's only where it says so.
+            //
+            // THE LINE NAMING THOSE DRIVES AND SHARES IS THE ONE THE MAIN WINDOW SHOWS
+            // UNDER THE LEFT-ALONE LINE, handed over as it stands, so the card and the
+            // window behind it name them in the same words.
 
             // THE RECEIPT SPENDS THE COUNT THE MAIN WINDOW IS ALREADY SHOWING rather
             // than recounting the scan result here, so the overlay and the line behind
@@ -360,18 +369,19 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // offer it, so a receipt leaving it out would understate what was
             // examined, which is the whole of what the receipt is for: an elapsed time
             // on its own reads as though nothing had happened.
-            if (result.HasUnsettledHeldBack)
+            if (result.IsAllClear)
+            {
+                Completion.ShowAllClear(Scan.RegisteredFileCount, Scan.LastScanDurationMs);
+            }
+            else
             {
                 Completion.ShowNothingOffered(
                     result.UnsettledHeldBackIsWholesale,
                     result.UnsettledHeldBackCount,
                     result.UnsettledHeldBackBytes,
                     Scan.RegisteredFileCount,
-                    Scan.LastScanDurationMs);
-            }
-            else
-            {
-                Completion.ShowAllClear(Scan.RegisteredFileCount, Scan.LastScanDurationMs);
+                    Scan.LastScanDurationMs,
+                    Scan.SourcesGivenUpText);
             }
 
             // Either lock (the flag a successful send saved in an earlier

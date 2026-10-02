@@ -454,6 +454,13 @@ public record ScanResult(
         SourceRootsGivenUp.Where(root => root.FilesKept > 0).ToList();
 
     /// <summary>
+    /// Whether <see cref="SourceRootsGivenUpKeepingFiles"/> names anything: the scan gave up
+    /// a drive or share and kept at least one file because of it. Read off
+    /// <see cref="SourceRootsGivenUp"/> directly, so asking builds no list.
+    /// </summary>
+    public bool HasSourceRootsGivenUpKeepingFiles => SourceRootsGivenUp.Any(root => root.FilesKept > 0);
+
+    /// <summary>
     /// Every registration naming a file that is not on disk, the sum of the two
     /// sub-counts.
     ///
@@ -720,10 +727,25 @@ public record ScanResult(
 
     /// <summary>
     /// Whether the window's finished screen, on a run that offered nothing, speaks of
-    /// files held back rather than giving the all-clear: true wherever
-    /// <see cref="UnsettledHeldBackCount"/> is above zero.
+    /// files held back: true wherever <see cref="UnsettledHeldBackCount"/> is above zero.
+    /// It is one of the two things that keep the all-clear off that screen
+    /// (<see cref="IsAllClear"/>).
     /// </summary>
     public bool HasUnsettledHeldBack => UnsettledHeldBackCount > 0;
+
+    /// <summary>
+    /// Whether the window's finished screen, on a run that offered nothing, gives the
+    /// all-clear: nothing held back that <see cref="UnsettledHeldBackCount"/> counts, and
+    /// no drive or share given up with a file kept because of it
+    /// (<see cref="HasSourceRootsGivenUpKeepingFiles"/>). Every other such run gets the
+    /// screen saying what the scan held back or carried on without.
+    ///
+    /// A FILE KEPT AT A DRIVE OR SHARE GIVEN UP NEED NOT BE IN THAT COUNT. One whose own
+    /// program's packages could not all be read is kept as declaring a program Windows
+    /// still has installed, an arm the count leaves out, so this reads the drives and
+    /// shares given up beside the count rather than the count alone.
+    /// </summary>
+    public bool IsAllClear => !HasUnsettledHeldBack && !HasSourceRootsGivenUpKeepingFiles;
 
     /// <summary>
     /// Whether the wholesale arm accounts for every file

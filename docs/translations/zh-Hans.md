@@ -200,6 +200,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} other programs | 另外 {0} 个程序 |
 | {0} file with no program named in the records | {0} 个在记录中没有标明程序的文件 |
 | {0} files with no program named in the records | {0} 个在记录中没有标明程序的文件 |
+| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
+| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
+| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. |
 | {0} of {1} {2} | {1} 个{2}中的 {0} 个 |
 | {0} unneeded {1} ({2}) | {0} 个不需要的{1}（{2}） |
 | {0} file left alone ({1}) | {0} 个文件原样保留（{1}） |
@@ -438,6 +441,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | 简体中文 |
 | --- | --- |
 | ,  | 、 |
+| drive {0} | drive {0} |
 | .  | 。 |
 | {0} TB | {0} TB |
 | {0} GB | {0} GB |

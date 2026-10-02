@@ -477,7 +477,7 @@ public class CompletionViewModelTests
 
         vm.ShowNothingOffered(
             wholesale: true, heldBackCount: 3, heldBackBytes: 3072,
-            scannedFileCount: 5, scanDurationMs: 10);
+            scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
 
         Assert.True(vm.IsComplete);
         Assert.False(vm.HeadingIsWarning);
@@ -522,7 +522,7 @@ public class CompletionViewModelTests
 
         vm.ShowNothingOffered(
             wholesale: true, heldBackCount: 1, heldBackBytes: 1024,
-            scannedFileCount: 5, scanDurationMs: 10);
+            scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
 
         Assert.Equal(
             string.Format(
@@ -553,7 +553,7 @@ public class CompletionViewModelTests
         allClear.ShowAllClear(scannedFileCount: 5, scanDurationMs: 10);
         nothingOffered.ShowNothingOffered(
             wholesale: true, heldBackCount: 3, heldBackBytes: 3072,
-            scannedFileCount: 5, scanDurationMs: 10);
+            scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
 
         Assert.NotEqual(allClear.Heading, nothingOffered.Heading);
         Assert.NotEqual(allClear.Summary, nothingOffered.Summary);
@@ -576,10 +576,10 @@ public class CompletionViewModelTests
 
         wholesale.ShowNothingOffered(
             wholesale: true, heldBackCount: 3, heldBackBytes: 3072,
-            scannedFileCount: 5, scanDurationMs: 10);
+            scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
         perFile.ShowNothingOffered(
             wholesale: false, heldBackCount: 3, heldBackBytes: 3072,
-            scannedFileCount: 5, scanDurationMs: 10);
+            scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
 
         Assert.NotEqual(wholesale.Summary, perFile.Summary);
         // Everything else about the screen IS shared, which is what makes the body the
@@ -598,7 +598,7 @@ public class CompletionViewModelTests
 
         vm.ShowNothingOffered(
             wholesale: false, heldBackCount: 3, heldBackBytes: 3072,
-            scannedFileCount: 5, scanDurationMs: 10);
+            scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
 
         Assert.Equal(
             string.Format(
@@ -793,5 +793,116 @@ public class CompletionViewModelTests
         vm.ShowAllClear(scannedFileCount: 5, scanDurationMs: 10);
 
         Assert.False(vm.ShowDonateLabel);
+    }
+
+    // The line naming the drives and shares carried on without. On the nothing-offered
+    // card it follows the body, or is the body; on every card after a Move or Delete it
+    // follows the held-back count on a line of its own.
+
+    private const string DriveDLine =
+        "InstallerClean carried on without drive D: and left alone any file still to be checked against it. "
+        + "Once it's responding normally, Re-scan.";
+
+    private static IReadOnlyList<SourceRootGivenUp> DriveD(int filesKept) =>
+        [new SourceRootGivenUp("d:", SourceRootGiveUpRoute.StoppedWaiting, filesKept)];
+
+    [Fact]
+    public void The_nothing_offered_screen_with_nothing_held_back_has_the_line_as_its_whole_body()
+    {
+        // The scan held back nothing the count counts, so there is no sentence to put
+        // the line under: a file kept for an installed program at a drive given up is
+        // outside that count, and the line is everything the card has to say about it.
+        var vm = new CompletionViewModel();
+
+        vm.ShowNothingOffered(
+            wholesale: false, heldBackCount: 0, heldBackBytes: 0,
+            scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: DriveDLine);
+
+        Assert.Equal(Strings.Completion_NothingOffered, vm.Heading);
+        Assert.Equal(DriveDLine, vm.Summary);
+        Assert.Equal("Scanned 5 files in less than a second", vm.Restore);
+        Assert.True(vm.IsComplete);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void The_nothing_offered_screen_puts_the_line_under_the_held_back_sentence(bool wholesale)
+    {
+        var vm = new CompletionViewModel();
+        var withoutLine = new CompletionViewModel();
+
+        vm.ShowNothingOffered(
+            wholesale, heldBackCount: 3, heldBackBytes: 3072,
+            scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: DriveDLine);
+        withoutLine.ShowNothingOffered(
+            wholesale, heldBackCount: 3, heldBackBytes: 3072,
+            scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
+
+        Assert.Equal(new[] { withoutLine.Summary, DriveDLine }, vm.Summary.Split(Environment.NewLine));
+        Assert.DoesNotContain(Environment.NewLine, withoutLine.Summary, System.StringComparison.Ordinal);
+    }
+
+    public enum Card { Move, MoveStopped, Delete, MoveCancelled, DeleteCancelled, AllSkipped }
+
+    // Each card a Move or Delete can end on, shown with the check's result, and the text
+    // that card draws the check's lines in: Summary on the card where the check kept every
+    // file, Skipped on the rest.
+    private static string CheckLinesOn(Card card, ReverifyResult reverify)
+    {
+        var vm = new CompletionViewModel();
+        switch (card)
+        {
+            case Card.Move:
+                vm.ShowMoveSummary(2, 4096, @"E:\Backup", [], MoveSpaceOutcome.FreedSpace, reverify);
+                return vm.Skipped;
+            case Card.MoveStopped:
+                vm.ShowMoveStoppedSummary(2, 4096, @"E:\Backup", [], MoveSpaceOutcome.FreedSpace, reverify);
+                return vm.Skipped;
+            case Card.Delete:
+                vm.ShowDeleteSummary(2, 4096, [], reverify);
+                return vm.Skipped;
+            case Card.MoveCancelled:
+                vm.ShowMoveCancelledSummary(1, 2, 2048, @"E:\Backup", [], MoveSpaceOutcome.FreedSpace, reverify);
+                return vm.Skipped;
+            case Card.DeleteCancelled:
+                vm.ShowDeleteCancelledSummary(1, 2, 2048, [], reverify);
+                return vm.Skipped;
+            default:
+                vm.ShowReverifyAllSkipped(reverify, deleting: false);
+                return vm.Summary;
+        }
+    }
+
+    [Theory]
+    [InlineData(Card.Move)]
+    [InlineData(Card.MoveStopped)]
+    [InlineData(Card.Delete)]
+    [InlineData(Card.MoveCancelled)]
+    [InlineData(Card.DeleteCancelled)]
+    [InlineData(Card.AllSkipped)]
+    public void Every_card_after_a_Move_or_Delete_names_the_drive_the_check_carried_on_without(Card card)
+    {
+        var reverify = new ReverifyResult([], ["a.msi", "b.msi", "c.msi"],
+            new HeldBackReasons(FileNotConfirmed: 2, Reclaimed: 1), SourceRootsGivenUp: DriveD(2));
+
+        Assert.Equal(new[] { Line(3), DriveDLine }, CheckLinesOn(card, reverify).Split(Environment.NewLine));
+    }
+
+    [Theory]
+    [InlineData(Card.Move)]
+    [InlineData(Card.MoveStopped)]
+    [InlineData(Card.Delete)]
+    [InlineData(Card.MoveCancelled)]
+    [InlineData(Card.DeleteCancelled)]
+    [InlineData(Card.AllSkipped)]
+    public void A_drive_the_check_gave_up_with_no_file_kept_there_is_not_named(Card card)
+    {
+        // Given up after its last read was used, so nothing the check decided turned on
+        // it, and the card says only what the check held back.
+        var reverify = new ReverifyResult([], ["a.msi"],
+            new HeldBackReasons(Reclaimed: 1), SourceRootsGivenUp: DriveD(0));
+
+        Assert.Equal(Line(1), CheckLinesOn(card, reverify));
     }
 }

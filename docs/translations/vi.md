@@ -200,6 +200,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} other programs | {0} chương trình khác |
 | {0} file with no program named in the records | {0} tệp không có chương trình nào được nêu tên trong bản ghi |
 | {0} files with no program named in the records | {0} tệp không có chương trình nào được nêu tên trong bản ghi |
+| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
+| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
+| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. |
 | {0} of {1} {2} | {0}/{1} {2} |
 | {0} unneeded {1} ({2}) | {0} {1} không cần thiết ({2}) |
 | {0} file left alone ({1}) | {0} tệp được để nguyên ({1}) |
@@ -438,6 +441,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Tiếng Việt |
 | --- | --- |
 | ,  | ,  |
+| drive {0} | drive {0} |
 | .  | .  |
 | {0} TB | {0} TB |
 | {0} GB | {0} GB |

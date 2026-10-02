@@ -200,6 +200,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} other programs | ещё {0} программ |
 | {0} file with no program named in the records | {0} файл, для которого в записях не названа программа |
 | {0} files with no program named in the records | {0} файлов, для которых в записях не названа программа |
+| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
+| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
+| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. |
 | {0} of {1} {2} | {0}/{1} {2} |
 | {0} unneeded {1} ({2}) | {0} {1} для очистки ({2}) |
 | {0} file left alone ({1}) | {0} файл оставлен без изменений ({1}) |
@@ -438,6 +441,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Русский |
 | --- | --- |
 | ,  | ,  |
+| drive {0} | drive {0} |
 | .  | .  |
 | {0} TB | {0} ТБ |
 | {0} GB | {0} ГБ |

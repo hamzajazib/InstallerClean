@@ -592,6 +592,10 @@ const MAP = {
   'Automation.StopWaitingForPath': `Carry on without it, {0}`,
   'Status.StopWaitingLeavesAlone': `Any file still to be checked against it will be left alone.`,
   'Automation.WaitingLineWithStopKey': `{0} Press Alt+{1} to carry on without it. {2}`,
+  'Summary.SourceGivenUp.Drive': `InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan.`,
+  'Summary.SourceGivenUp.Path': `InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan.`,
+  'Summary.SourcesGivenUp': `InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan.`,
+  'Display.DriveName': `drive {0}`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

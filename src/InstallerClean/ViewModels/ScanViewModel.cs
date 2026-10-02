@@ -11,8 +11,8 @@ namespace InstallerClean.ViewModels;
 /// <summary>
 /// Scanning slice of the main window's state. Owns the scan command,
 /// the displayed registered/orphaned counts, the pending-reboot
-/// warning, the missing-from-disk warning and a reference to the last
-/// scan result.
+/// warning, the missing-from-disk warning, the line naming the drives and
+/// shares given up and a reference to the last scan result.
 ///
 /// Other slices (CleanupViewModel, ChromeViewModel) read
 /// <see cref="LastScanResult"/> rather than calling the scan service
@@ -219,6 +219,22 @@ public partial class ScanViewModel : ObservableObject
     private string _missingFromDiskPrograms = string.Empty;
 
     /// <summary>
+    /// The line naming the drives and shares this scan gave up on while files still had
+    /// to be checked against them (<see cref="SourcesGivenUpReport.WindowLine"/>), shown
+    /// under the left-alone line, whose count takes those files in. Empty where the scan
+    /// gave none up keeping a file, which collapses the line.
+    ///
+    /// THE FINISHED CARD SPENDS THIS SAME TEXT where the scan offered nothing, so the card
+    /// and the line behind it name the same drives and shares in the same words.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSourcesGivenUp))]
+    private string _sourcesGivenUpText = string.Empty;
+
+    /// <summary>Whether <see cref="SourcesGivenUpText"/> has a line to show.</summary>
+    public bool HasSourcesGivenUp => SourcesGivenUpText.Length > 0;
+
+    /// <summary>
     /// The result the main window is showing, from the most recent scan that
     /// completed. Null until the first scan completes, and null again after a scan
     /// that stops or fails and after the user cancels the scan that follows a Move
@@ -374,6 +390,7 @@ public partial class ScanViewModel : ObservableObject
             // scan does.
             var missingPrograms = MissingFilesReport.Inline(
                 MissingFilesReport.Products(result.RegisteredPackages));
+            var sourcesGivenUp = SourcesGivenUpReport.WindowLine(result.SourceRootsGivenUpKeepingFiles);
 
             PendingRebootResult = pendingRebootResult;
             LastScanResult = result;
@@ -389,6 +406,7 @@ public partial class ScanViewModel : ObservableObject
             // a public chart reads it with no version gate.
             MissingFromDiskCount = result.MissingAffectedCount;
             MissingFromDiskPrograms = missingPrograms;
+            SourcesGivenUpText = sourcesGivenUp;
             HasScanned = true;
         }
         finally
@@ -502,9 +520,10 @@ public partial class ScanViewModel : ObservableObject
     /// <summary>
     /// Takes the last result off the view model, at each ending
     /// <see cref="HasScanned"/> lists. Everything the main window draws from a
-    /// result goes with it: both counts, the missing-files line and the
-    /// pending-reboot banner. So do the commands that act on one, Move and Delete
-    /// having no files to act on and the Details windows no list to open.
+    /// result goes with it: both counts, the missing-files line, the line naming
+    /// the drives and shares given up and the pending-reboot banner. So do the
+    /// commands that act on one, Move and Delete having no files to act on and
+    /// the Details windows no list to open.
     ///
     /// <see cref="LastScanResult"/> goes first and <see cref="HasScanned"/> last.
     /// The result raises nothing when it changes, and the Details commands re-ask
@@ -520,6 +539,7 @@ public partial class ScanViewModel : ObservableObject
         OrphanedSizeDisplay = string.Empty;
         MissingFromDiskCount = 0;
         MissingFromDiskPrograms = string.Empty;
+        SourcesGivenUpText = string.Empty;
         PendingRebootResult = null;
         HasScanned = false;
     }

@@ -224,6 +224,12 @@ const QUOTES_A_LABEL = [
 const QUOTES_A_LABEL_ONCE_TRANSLATED = [
   // An entry here is a pair whose containment cannot be checked until the
   // translation lands. It moves up into rule 3 when it does.
+  //
+  // The line naming a drive or share the app carried on without ends by saying
+  // which button to press once it responds normally.
+  { sentence: 'Summary.SourceGivenUp.Drive', label: 'Action.Rescan' },
+  { sentence: 'Summary.SourceGivenUp.Path', label: 'Action.Rescan' },
+  { sentence: 'Summary.SourcesGivenUp', label: 'Action.Rescan' },
 ];
 
 // ---------------------------------------------------------------------------

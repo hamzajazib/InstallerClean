@@ -259,15 +259,22 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// Announces the headline result of a user-visible scan that found
-    /// files ("12 unneeded files to clean up (3.2 GB)"). The all-clear
-    /// path announces through the completion overlay instead, and the
+    /// files ("12 unneeded files to clean up (3.2 GB)"), and after it the line
+    /// naming any drive or share the scan carried on without. A scan that
+    /// offered nothing announces through the completion card instead, and the
     /// silent post-operation refresh must stay silent because the
     /// completion outcome is about to speak. Writing the announcer's
     /// text is itself what fires the UIA bridge's text-change
     /// announcement; an explicit raise on top would queue the same line
-    /// twice. A repeat scan with identical counts sets an equal string,
-    /// which raises no event and stays unannounced; the "Scan complete"
-    /// milestone still speaks then.
+    /// twice.
+    ///
+    /// THE LINE NAMING THE DRIVES AND SHARES TAKES AN EXPLICIT RAISE, as the
+    /// window's lines revealed from Collapsed do, queued after the headline's at
+    /// the same priority so it is spoken second, as it is drawn. It is raised
+    /// after every scan whose result carries it rather than only when it first
+    /// appears, so a Re-scan that meets the same drive again says so. The
+    /// window's constructor replays this method for the startup scan, so that
+    /// scan's line is spoken too.
     /// </summary>
     private void OnScanCompleted(object? sender, EventArgs e)
     {
@@ -293,6 +300,8 @@ public partial class MainWindow : Window
         Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
             ScanResultAnnouncer.Text = string.Format(Strings.Automation_ScanResultAnnouncement,
                 _vm.Scan.OrphanedSummaryText, _vm.Scan.OrphanedSizeDisplay));
+        if (_vm.Scan.HasSourcesGivenUp)
+            AnnounceLiveRegions(SourcesGivenUpText);
     }
 
     /// <summary>
@@ -719,22 +728,23 @@ public partial class MainWindow : Window
     /// onto its own line at the exact point it substitutes into the formatted
     /// sentence, whatever word order the target language uses (mirrors
     /// ConfirmMoveWindow's destination-on-its-own-line treatment). A value with
-    /// no destination (the all-clear receipt, either delete summary) renders
-    /// verbatim. Locating the raw substring rather than a bracket-delimited
-    /// marker, which is how the windows that carry a link mark one, is
-    /// deliberate: the destination is a user-chosen folder path that could
-    /// itself contain a literal '[' or ']'.
+    /// no destination (the all-clear's line, the nothing-offered card's body, either
+    /// delete summary) keeps its words as they are, taking only the breaks
+    /// <see cref="AddTextWithLineBreaks"/> gives it. Locating the raw substring
+    /// rather than a bracket-delimited marker, which is how the windows that carry a
+    /// link mark one, is deliberate: the destination is a user-chosen folder path
+    /// that could itself contain a literal '[' or ']'.
     ///
-    /// The summary can be more than one line: the overlay shown when the act-time
-    /// re-check held the WHOLE batch back puts the held-back sentence here, and the
-    /// destination line below is forced onto its own. Every Run therefore goes
+    /// The summary can be more than one line. The overlay shown when the act-time
+    /// re-check held the WHOLE batch back puts the held-back sentence here, with the
+    /// line naming any drive or share that check carried on without under it; the
+    /// nothing-offered card puts its body here with the scan's line of that kind; and
+    /// the destination line below is forced onto its own. Every Run therefore goes
     /// through <see cref="AddTextWithLineBreaks"/> rather than straight into
     /// Inlines, so the breaks are ones this method made rather than ones a text
     /// formatter is trusted to find.
     ///
-    /// A value with no newline yields exactly one Run and no break, so the one-line
-    /// held-back sentence on the all-skipped overlay passes through the splitting
-    /// unchanged.
+    /// A value with no newline yields exactly one Run and no break.
     /// </summary>
     private void BuildCompletionSummaryLine()
     {
@@ -746,6 +756,12 @@ public partial class MainWindow : Window
         var raw = InstallerPathText.KeepWhole(_vm.Completion.Summary);
         var destination = _vm.Completion.SummaryDestination;
         CompletionSummaryText.Inlines.Clear();
+
+        // THE SPOKEN NAME IS THE SUMMARY AS THE VIEW MODEL HOLDS IT, set here so every
+        // build sets it, the startup card's replay included. Every Run below is cut from
+        // that same text and the method adds only breaks, so the name carries every word
+        // the card draws and none of the characters that exist only for line breaking.
+        AutomationProperties.SetName(CompletionSummaryText, _vm.Completion.Summary);
 
         // The split point (CompositionParsing.SplitAtSubstring) and the
         // destination's break opportunities
@@ -768,7 +784,11 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// Appends <paramref name="text"/> to the summary's inlines, turning each
-    /// newline in it into an explicit <see cref="LineBreak"/>.
+    /// newline in it into an explicit <see cref="LineBreak"/>, and giving a path in
+    /// each line, such as a share the scan carried on without or the folder a
+    /// cancelled Move names mid-sentence, a break opportunity at each of its folders
+    /// (<see cref="InstallerPathText.AllowFolderBreaksInAnyPath"/>). The installer
+    /// folder, already held whole by the caller, keeps that treatment.
     ///
     /// A TextBlock breaks a line on a newline inside its Text property, but this
     /// TextBlock has no Text binding at all: it is composed from Runs so the
@@ -786,7 +806,8 @@ public partial class MainWindow : Window
         for (var i = 0; i < lines.Length; i++)
         {
             if (i > 0) CompletionSummaryText.Inlines.Add(new LineBreak());
-            CompletionSummaryText.Inlines.Add(new Run(lines[i].TrimEnd('\r')));
+            CompletionSummaryText.Inlines.Add(
+                new Run(InstallerPathText.AllowFolderBreaksInAnyPath(lines[i].TrimEnd('\r'))));
         }
     }
 

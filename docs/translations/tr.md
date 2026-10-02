@@ -200,6 +200,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} other programs | {0} program daha |
 | {0} file with no program named in the records | kayıtlarda hiçbir program adı geçmeyen {0} dosya |
 | {0} files with no program named in the records | kayıtlarda hiçbir program adı geçmeyen {0} dosya |
+| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
+| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
+| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. |
 | {0} of {1} {2} | {1} {2} içinden {0} |
 | {0} unneeded {1} ({2}) | {0} gereksiz {1} ({2}) |
 | {0} file left alone ({1}) | {0} dosya olduğu gibi bırakıldı ({1}) |
@@ -438,6 +441,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Türkçe |
 | --- | --- |
 | ,  | ,  |
+| drive {0} | drive {0} |
 | .  | .  |
 | {0} TB | {0} TB |
 | {0} GB | {0} GB |

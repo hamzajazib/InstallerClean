@@ -312,6 +312,7 @@ public static class Strings
     public static string ConfirmSendResultLog_Reassurance => Get("ConfirmSendResultLog.Reassurance");
     public static string ConfirmSendResultLog_Title => Get("ConfirmSendResultLog.Title");
     public static string CrashLog_PrivacyHeader => Get("CrashLog.PrivacyHeader");
+    public static string Display_DriveName => Get("Display.DriveName");
     public static string Display_ElapsedLong_LessThanASecond => Get("Display.ElapsedLong.LessThanASecond");
     public static string Display_ElapsedLong_Seconds => Get("Display.ElapsedLong.Seconds");
     public static string Display_Elapsed_Ms => Get("Display.Elapsed.Ms");
@@ -474,6 +475,9 @@ public static class Strings
     public static string Summary_RegisteredWindow_Missing_Singular => Get("Summary.RegisteredWindow.Missing.Singular");
     public static string Summary_RegisteredWindow_Plural => Get("Summary.RegisteredWindow.Plural");
     public static string Summary_RegisteredWindow_Singular => Get("Summary.RegisteredWindow.Singular");
+    public static string Summary_SourceGivenUp_Drive => Get("Summary.SourceGivenUp.Drive");
+    public static string Summary_SourceGivenUp_Path => Get("Summary.SourceGivenUp.Path");
+    public static string Summary_SourcesGivenUp => Get("Summary.SourcesGivenUp");
     public static string Tooltip_BuyMeACuppa_About => Get("Tooltip.BuyMeACuppa.About");
     public static string Tooltip_CancellingPending => Get("Tooltip.CancellingPending");
     public static string Tooltip_ChangeLanguage => Get("Tooltip.ChangeLanguage");

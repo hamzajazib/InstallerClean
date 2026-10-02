@@ -22,11 +22,12 @@ namespace InstallerClean.Helpers;
 /// inside a path. <see cref="ForDrawing"/> applies the pair, because a sentence can
 /// name either path and the scan diagnoses name both.
 ///
-/// The line saying what a scan is waiting for, and the folder a Move sends files
-/// to, get the third, <see cref="AllowFolderBreaksInAnyPath"/>. Neither path is
-/// known here: a waiting line's share, drive or path sits where each language's
-/// grammar puts it, and a destination is whatever folder was chosen. So the path
-/// is found by its backslashes rather than matched.
+/// The line saying what a scan is waiting for, the line naming a drive or share
+/// the app carried on without, and the folder a Move sends files to, get the
+/// third, <see cref="AllowFolderBreaksInAnyPath"/>. None of those paths is known
+/// here: a share, drive or path in either line sits where each language's grammar
+/// puts it, and a destination is whatever folder was chosen. So the path is found
+/// by its backslashes rather than matched.
 ///
 /// Why here rather than in the strings: this is presentation, and every resx
 /// value in sixteen languages stays exactly as the translators wrote it. It
@@ -67,11 +68,13 @@ namespace InstallerClean.Helpers;
 /// and by hand in the completion overlay's summary builder and the message
 /// dialog's body. <see cref="AnyPathTextConverter"/> applies all three, the third
 /// after the other two. The third alone is applied by <c>SplashWindow</c>'s step
-/// line, and to the destination by the Move confirmation and the finished card's
-/// summary. A drawn string keeps its joiners even where it is also the spoken one, a
-/// TextBlock's automation peer reporting its Text as its name, except on the
-/// lines showing a wait: each sets its screen-reader name to the line as
-/// composed, so what a path in it takes reaches the layout and not the speech.
+/// line, to the destination by the Move confirmation, and to every line of the
+/// finished card's summary. A drawn string keeps its joiners even where it is also
+/// the spoken one, a TextBlock's automation peer reporting its Text as its name,
+/// except on the lines showing a wait, the lines naming a drive or share carried on
+/// without and the finished card's summary: each sets its screen-reader name to the
+/// text as composed, so what a path in it takes reaches the layout and not the
+/// speech.
 /// A string that is only ever spoken does not get them, having no layout to
 /// protect and nothing to hand a speech engine but invisible format characters:
 /// the message dialog's title and the main window's invisible scan announcer are
@@ -224,8 +227,9 @@ internal static class InstallerPathText
     /// Returns <paramref name="text"/> with a break opportunity after each backslash
     /// inside a path it names, and a word joiner between two backslashes, wherever in
     /// the line the path sits. The line saying what a scan is waiting for takes it,
-    /// naming a share, a drive or a path where each language's word order puts it,
-    /// and so does the folder a Move sends files to, which is a path on its own.
+    /// naming a share, a drive or a path where each language's word order puts it, as
+    /// does the line naming a drive or share the app carried on without, and so does
+    /// the folder a Move sends files to, which is a path on its own.
     ///
     /// A share's name opens with two backslashes. Unicode's line-breaking rules allow a
     /// break between two backslashes, and the joiner is there to refuse it; neither of
@@ -290,11 +294,12 @@ internal sealed class InstallerPathTextConverter : IValueConverter
 /// <see cref="InstallerPathText.ForDrawing"/> and then
 /// <see cref="InstallerPathText.AllowFolderBreaksInAnyPath"/>, for a binding. The
 /// consumers are the main window's two lines that can show what a scan is waiting
-/// for: the scanning card's progress line and the heading over a Move or Delete.
-/// On a failed Re-scan the scanning card's line, left up under the error box, shows
-/// the diagnosis naming the crash log's path, and draws that path as the intro line
-/// does. Each line binds its screen-reader name to the same value without this
-/// converter.
+/// for, the scanning card's progress line and the heading over a Move or Delete, and
+/// its two lines that can name a drive or share the app carried on without, the one
+/// under the left-alone count and the finished card's held-back line. On a failed
+/// Re-scan the scanning card's line, left up under the error box, shows the diagnosis
+/// naming the crash log's path, and draws that path as the intro line does. Each line
+/// binds its screen-reader name to the same value without this converter.
 /// </summary>
 internal sealed class AnyPathTextConverter : IValueConverter
 {

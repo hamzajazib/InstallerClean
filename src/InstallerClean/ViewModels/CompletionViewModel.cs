@@ -251,17 +251,19 @@ public partial class CompletionViewModel : ObservableObject
     /// The second empty-offer screen, for a run that offered nothing and held back files
     /// it could not establish are unneeded: files from the folder walk, whether a rule
     /// about the RECORDS kept them all in one go or each was judged and kept, and
-    /// superseded patches.
+    /// superseded patches. A run that carried on without a drive or share, and left a
+    /// file alone because of it, gets this screen too.
     ///
     /// TWO FINDINGS BOTH END WITH AN EMPTY OFFER AND THEY ARE OPPOSITE THINGS TO TELL
     /// SOMEBODY. <see cref="ShowAllClear"/> says the folder holds nothing to remove.
     /// This says the app could not establish enough to offer the files it counts, on a
     /// machine whose folder may be full of files nobody has vouched for. The caller
-    /// chooses between them through <see cref="ScanResult.HasUnsettledHeldBack"/>, and a
-    /// file kept because Windows holds a record of the program or patch it declares
-    /// does not choose this screen. Every other file held back chooses it, a file under
-    /// a day old, a file the containment check refused or could not answer for and a
-    /// superseded patch included.
+    /// chooses between them through <see cref="ScanResult.IsAllClear"/>. A file kept
+    /// because Windows holds a record of the program or patch it declares does not
+    /// choose this screen, except where its check stopped at a drive or share the scan
+    /// gave up. Every other file held back chooses it, a file under a day old, a file the
+    /// containment check refused or could not answer for and a superseded patch
+    /// included.
     ///
     /// ONE SCREEN WITH TWO BODIES, CHOSEN BY <paramref name="wholesale"/> AND NOT HERE.
     /// The two say what the scan could not establish, and they could not establish
@@ -310,40 +312,28 @@ public partial class CompletionViewModel : ObservableObject
     /// numbers answer different questions about one machine and neither is a share of
     /// the other.
     /// </param>
+    /// <param name="sourcesGivenUp">
+    /// The line naming the drives and shares the scan carried on without, as the main
+    /// window shows it (<see cref="ScanViewModel.SourcesGivenUpText"/>), or empty. It
+    /// follows the body on a line of its own, and where
+    /// <paramref name="heldBackCount"/> is nought it is the whole body.
+    ///
+    /// THE BODY'S COUNT NEED NOT TAKE IN THE FILES THIS LINE SPEAKS OF. A file kept
+    /// because its own program's packages could not all be read is kept as declaring a
+    /// program Windows still has installed, which the count leaves out. The line counts
+    /// nothing and says those files were left alone, which is true of every one of them.
+    /// </param>
     public void ShowNothingOffered(
         bool wholesale, int heldBackCount, long heldBackBytes,
-        int scannedFileCount, long scanDurationMs)
+        int scannedFileCount, long scanDurationMs, string sourcesGivenUp)
     {
         HeadingIsWarning = false;
         Heading = Strings.Completion_NothingOffered;
         FailedCount = string.Empty;
         SummaryDestination = string.Empty;
-        // The one-form names the size and not the numeral ("the one file"), so it
-        // spends {2} and leaves {0} and {1} unused. All three arguments are passed on
-        // either branch so the two forms cannot disagree about which index is which.
-        //
-        // THE NOUN GOES IN AS AN ARGUMENT RATHER THAN STANDING IN THE VALUE, because a
-        // noun spelled into the value cannot agree with the numeral beside it: Russian
-        // and Ukrainian read "21 файлов" where the language wants "21 файл". Pluralise
-        // picks the sentence and PluraliseFile picks the noun, and they answer two
-        // different questions, so both are needed here. See the key's own note in
-        // Strings.resx for which language puts the slot where.
-        var perFile = !wholesale;
-        Summary = string.Format(
-            DisplayHelpers.Pluralise(
-                heldBackCount,
-                perFile
-                    ? Strings.Completion_NothingOfferedPerFileBody_Singular
-                    : Strings.Completion_NothingOfferedBody_Singular,
-                perFile
-                    ? Strings.Completion_NothingOfferedPerFileBody_Plural
-                    : Strings.Completion_NothingOfferedBody_Plural,
-                perFile
-                    ? "Completion.NothingOfferedPerFileBody"
-                    : "Completion.NothingOfferedBody"),
-            DisplayHelpers.FormatCount(heldBackCount),
-            DisplayHelpers.PluraliseFile(heldBackCount),
-            DisplayHelpers.FormatSize(heldBackBytes));
+        Summary = JoinLines(
+            heldBackCount == 0 ? string.Empty : NothingOfferedBody(wholesale, heldBackCount, heldBackBytes),
+            sourcesGivenUp);
         Restore = string.Format(
             Strings.Completion_NothingToCleanUpReceipt,
             DisplayHelpers.FormatCount(scannedFileCount),
@@ -361,27 +351,79 @@ public partial class CompletionViewModel : ObservableObject
     }
 
     /// <summary>
-    /// The held-back line for a completion overlay, or empty when the act-time
-    /// re-verify held nothing back. Shown alongside the Move or Delete summary so
-    /// the totals add up: acted on + held back = what the user selected, and that
-    /// is the whole of what the line is for.
+    /// The nothing-offered screen's sentence counting the files held back, chosen by
+    /// <paramref name="wholesale"/> on the terms <see cref="ShowNothingOffered"/> sets out.
+    /// </summary>
+    private static string NothingOfferedBody(bool wholesale, int heldBackCount, long heldBackBytes)
+    {
+        // The one-form names the size and not the numeral ("the one file"), so it
+        // spends {2} and leaves {0} and {1} unused. All three arguments are passed on
+        // either branch so the two forms cannot disagree about which index is which.
+        //
+        // THE NOUN GOES IN AS AN ARGUMENT RATHER THAN STANDING IN THE VALUE, because a
+        // noun spelled into the value cannot agree with the numeral beside it: Russian
+        // and Ukrainian read "21 файлов" where the language wants "21 файл". Pluralise
+        // picks the sentence and PluraliseFile picks the noun, and they answer two
+        // different questions, so both are needed here. See the key's own note in
+        // Strings.resx for which language puts the slot where.
+        var perFile = !wholesale;
+        return string.Format(
+            DisplayHelpers.Pluralise(
+                heldBackCount,
+                perFile
+                    ? Strings.Completion_NothingOfferedPerFileBody_Singular
+                    : Strings.Completion_NothingOfferedBody_Singular,
+                perFile
+                    ? Strings.Completion_NothingOfferedPerFileBody_Plural
+                    : Strings.Completion_NothingOfferedBody_Plural,
+                perFile
+                    ? "Completion.NothingOfferedPerFileBody"
+                    : "Completion.NothingOfferedBody"),
+            DisplayHelpers.FormatCount(heldBackCount),
+            DisplayHelpers.PluraliseFile(heldBackCount),
+            DisplayHelpers.FormatSize(heldBackBytes));
+    }
+
+    /// <summary>
+    /// The held-back line for a completion overlay, followed on a line of its own by the
+    /// line naming the drives and shares the check carried on without, or empty when the
+    /// check made just before acting held nothing back. Shown alongside the Move or Delete
+    /// summary so the totals add up: acted on + held back = what the user selected, and
+    /// that is the whole of what the count is for.
     ///
-    /// ONE SENTENCE, NAMING NO CAUSE, AND IT IS CORE'S
+    /// THE COUNT IS ONE SENTENCE, NAMING NO CAUSE, AND IT IS CORE'S
     /// (<see cref="HeldBackReport.Line"/>) because the command line prints the same
     /// one and the two hosts must not answer differently for one machine state.
     /// The sentence is not chosen for the batch: every file on the line was offered
     /// by the scan and not confirmed by the check made immediately before acting,
-    /// which is true of all four causes by construction. The causes are carried as
-    /// counts on
-    /// <see cref="HeldBackReasons"/> and in the opt-in result log.
+    /// which is true of every cause by construction. The causes are carried as
+    /// counts on <see cref="HeldBackReasons"/> and in the opt-in result log.
     ///
-    /// Nothing left to join, so it is read by a wrapping TextBlock as it comes. The
-    /// all-skipped overlay routes it through <see cref="Summary"/> instead, whose
-    /// inlines are composed in the window's code-behind; that path splits on
-    /// newlines and one sentence yields one Run and no break.
+    /// THE SECOND LINE NAMES THE DRIVES AND SHARES THE CHECK STOPPED AT AND COUNTS NO FILE
+    /// (<see cref="SourcesGivenUpReport.WindowLine"/>). Every file it speaks of is among
+    /// those the count above it counts, and the count's own sentence still names no
+    /// cause.
+    ///
+    /// The two lines are joined with a newline, which a wrapping TextBlock draws as a
+    /// line break. The all-skipped overlay routes them through <see cref="Summary"/>
+    /// instead, whose inlines are composed in the window's code-behind, and that path
+    /// turns each newline into an explicit break.
     /// </summary>
     private static string SkippedText(ReverifyResult? reverify) =>
-        reverify is null ? string.Empty : HeldBackReport.Line(reverify.Reasons);
+        reverify is null
+            ? string.Empty
+            : JoinLines(
+                HeldBackReport.Line(reverify.Reasons),
+                SourcesGivenUpReport.WindowLine(reverify.SourceRootsGivenUpKeepingFiles));
+
+    /// <summary>
+    /// <paramref name="first"/> and <paramref name="second"/> on lines of their own, leaving
+    /// out whichever is empty, so a card never draws a blank line.
+    /// </summary>
+    private static string JoinLines(string first, string second) =>
+        first.Length == 0 ? second
+        : second.Length == 0 ? first
+        : first + Environment.NewLine + second;
 
     /// <summary>
     /// The failure count line for a completion overlay, or empty when nothing
@@ -674,8 +716,9 @@ public partial class CompletionViewModel : ObservableObject
     /// <summary>
     /// Shows the completion overlay when the act-time re-verify kept EVERY
     /// candidate back, so nothing was moved or deleted. No freed-size heading
-    /// (nothing was freed); the summary IS the "N kept in place" message, and it
-    /// names the same reason the per-operation line would have.
+    /// (nothing was freed); the summary IS <see cref="SkippedText"/>, the held-back
+    /// count and any line naming a drive or share the check carried on without, as the
+    /// other cards carry them under their own summary.
     /// <paramref name="deleting"/> picks the heading, on the same rule as
     /// <see cref="FailedCountText"/>: this screen only ever follows one of the two
     /// buttons, so it says which one.

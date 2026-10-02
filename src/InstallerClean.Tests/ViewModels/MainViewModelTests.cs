@@ -404,6 +404,119 @@ public class MainViewModelTests
         Assert.NotEqual(Strings.Completion_NothingOffered, vm.Completion.Heading);
     }
 
+    private const string DriveDLine =
+        "InstallerClean carried on without drive D: and left alone any file still to be checked against it. "
+        + "Once it's responding normally, Re-scan.";
+
+    [Fact]
+    public async Task Files_kept_for_an_installed_program_at_a_drive_given_up_get_the_screen_naming_the_drive()
+    {
+        // The same withholding as the all-clear above, except that the check of these
+        // files stopped at a drive the scan gave up, so nobody compared them with the
+        // packages their program opens. The held-back count leaves them out, as it
+        // leaves out every file kept for an installed program, so the line naming the
+        // drive is the whole body.
+        var vm = CreateViewModel();
+        var withheld = new List<OrphanedFile>
+        {
+            new(@"C:\Windows\Installer\a.msi", 1024, false, false, false, Orphaned),
+            new(@"C:\Windows\Installer\b.msi", 2048, false, false, false, Orphaned),
+        };
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(new ScanResult(
+                Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
+                WithheldFiles: withheld,
+                WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 2),
+                WithheldDeclaredProductInstalledBytes: 3072,
+                SourceRootsGivenUp: [new("d:", SourceRootGiveUpRoute.StoppedWaiting, 2)]));
+
+        await vm.Scan.ScanWithProgressAsync(null);
+
+        Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
+        Assert.Equal(DriveDLine, vm.Completion.Summary);
+        Assert.Equal(DriveDLine, vm.Scan.SourcesGivenUpText);
+        Assert.True(vm.Scan.HasSourcesGivenUp);
+    }
+
+    [Fact]
+    public async Task A_drive_given_up_with_no_file_kept_there_leaves_the_all_clear()
+    {
+        // Given up after its last read was used: nothing the scan decided turned on it,
+        // so the folder is as clean as the all-clear says and nothing names the drive.
+        var vm = CreateViewModel();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(new ScanResult(
+                Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
+                SourceRootsGivenUp: [new("D:", SourceRootGiveUpRoute.ReadsAddUp, 0)]));
+
+        await vm.Scan.ScanWithProgressAsync(null);
+
+        Assert.Equal(Strings.Completion_AllClean, vm.Completion.Heading);
+        Assert.Equal(string.Empty, vm.Scan.SourcesGivenUpText);
+        Assert.False(vm.Scan.HasSourcesGivenUp);
+    }
+
+    [Fact]
+    public async Task Files_held_back_beside_a_drive_given_up_get_the_held_back_sentence_then_the_line()
+    {
+        var vm = CreateViewModel();
+        var withheld = new List<OrphanedFile>
+        {
+            new(@"C:\Windows\Installer\a.msi", 1024, false, false, false, Orphaned),
+            new(@"C:\Windows\Installer\b.msi", 2048, false, false, false, Orphaned),
+        };
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(new ScanResult(
+                Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
+                WithheldFiles: withheld,
+                WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1, SecondCopyUnestablishedCount: 1),
+                WithheldDeclaredProductInstalledBytes: 1024,
+                SourceRootsGivenUp: [new("D:", SourceRootGiveUpRoute.NoAnswer, 2)]));
+
+        await vm.Scan.ScanWithProgressAsync(null);
+
+        Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
+        Assert.Equal(
+            new[]
+            {
+                string.Format(
+                    Strings.Completion_NothingOfferedPerFileBody_Singular,
+                    1, DisplayHelpers.PluraliseFile(1), DisplayHelpers.FormatSize(2048)),
+                DriveDLine,
+            },
+            vm.Completion.Summary.Split(Environment.NewLine));
+    }
+
+    [Fact]
+    public async Task A_scan_that_found_files_shows_the_line_on_the_window_and_a_failed_one_takes_it_away()
+    {
+        // No card where files are offered: the line stands under the left-alone count
+        // for as long as that result is on screen, and goes with the result.
+        var vm = CreateViewModel();
+        var found = ScanResultWithOrphans(2) with
+        {
+            SourceRootsGivenUp = [new(@"\\nas\installers", SourceRootGiveUpRoute.SlowFailure, 1)],
+        };
+        var calls = 0;
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(_ => calls++ == 0
+                ? Task.FromResult(found)
+                : Task.FromException<ScanResult>(new UnauthorizedAccessException("denied")));
+
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+
+        Assert.False(vm.Completion.IsComplete);
+        Assert.Equal(
+            @"InstallerClean carried on without \\nas\installers and left alone any file still to be checked against it. "
+            + "Once it's responding normally, Re-scan.",
+            vm.Scan.SourcesGivenUpText);
+
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+
+        Assert.Equal(string.Empty, vm.Scan.SourcesGivenUpText);
+        Assert.False(vm.Scan.HasSourcesGivenUp);
+    }
+
     [Fact]
     public async Task Patch_copies_kept_for_their_patch_s_registrations_get_the_all_clear()
     {
