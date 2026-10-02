@@ -3905,8 +3905,10 @@ public class DeclaredProductCheckTests
     private static readonly TimeSpan SlowRead = TimeSpan.FromMilliseconds(600);
 
     /// <summary>
-    /// How long a source package read takes on the check's clock in the test below, a little
-    /// under the default time limit.
+    /// How long a source package read takes on the check's clock in the test below: longer than
+    /// the check's own slow-failure bar, and long enough that the test's six reads come to more
+    /// than its budget. Neither applies to a read that opens. The time limit is waited out in
+    /// real time by the thread that waits, so this clock does not bring a read any nearer to it.
     /// </summary>
     private static readonly TimeSpan ReadOnTheClock = TimeSpan.FromSeconds(25);
 
