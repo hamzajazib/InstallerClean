@@ -334,6 +334,10 @@ public sealed class FileSystemScanService : IFileSystemScanService
         var registrationIdentityReads = default(FileIdentityReadTally);
         var candidateIdentityReads = default(FileIdentityReadTally);
 
+        // And the drives and shares the declared-product screen gives up, which the result
+        // built after the block below carries.
+        IReadOnlyList<SourceRootGivenUp> sourceRootsGivenUp = [];
+
         // The closing entry is owed on every exit, not just the clean one: a
         // cancel and the correlation gate both leave through here, and the gate
         // in particular fires on exactly the kind of broken machine that makes
@@ -627,7 +631,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // bar by the milestones divides it the same way on every machine.
         progress?.Report(new ScanProgressUpdate(Strings.Status_CheckingRemaining));
 
-        WithholdCandidatesByWhatTheyDeclare(
+        sourceRootsGivenUp = WithholdCandidatesByWhatTheyDeclare(
             unclaimedByPath, withheld, withheldBy, cacheRoot, query.Installations, cancellationToken,
             (ex, cause) => refusalLog.Record(ex, cause), progress);
 
@@ -1086,7 +1090,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
             withheldCostBytes,
             supersededContained.RefusedCount,
             supersededContained.UnestablishedCount,
-            supersededContainedBytes);
+            supersededContainedBytes,
+            sourceRootsGivenUp);
     }
 
     /// <summary>
@@ -1361,8 +1366,12 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// the split instead, as the command line's reason lines speak it, and the line
     /// for an unestablished verdict is written as alternatives rather than as one
     /// cause.
+    ///
+    /// It returns every drive or share the screen gave up
+    /// (<see cref="DeclaredProductScreening.RootsGivenUp"/>), and none where it handed the
+    /// screen nothing or did not use its answer.
     /// </summary>
-    private void WithholdCandidatesByWhatTheyDeclare(
+    private IReadOnlyList<SourceRootGivenUp> WithholdCandidatesByWhatTheyDeclare(
         List<OrphanedFile> candidates,
         List<OrphanedFile> withheld,
         WithholdingSplitTally withheldBy,
@@ -1372,7 +1381,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         Action<Exception, string>? recordRefusal = null,
         IProgress<ScanProgressUpdate>? progress = null)
     {
-        if (_declaredProducts is null || candidates.Count == 0) return;
+        if (_declaredProducts is null || candidates.Count == 0) return [];
 
         // Reported on the same stride rule as the matching count, and the last candidate
         // whatever the stride, so the position ends on the total.
@@ -1392,22 +1401,24 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // installations every answer about a product is held against are the ones this
         // run's enumeration listed. A wait on a source folder is reported as it starts
         // and as it ends, so the host can say what the scan is waiting for.
-        var outcomes = _declaredProducts.Screen(
+        var screening = _declaredProducts.Screen(
             candidates, installations, cancellationToken, recordRefusal,
             path => InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(path, cacheRoot),
             Reached,
             root => progress?.Report(ScanProgressUpdate.Waiting(root)));
+        var outcomes = screening.Outcomes;
 
         // A screen that answered a different number of candidates than it was
         // given has not answered about these files, and reading it positionally
         // would attach one file's verdict to another. Every candidate is kept
-        // rather than none, which is the direction this whole pass fails in.
+        // rather than none, which is the direction this whole pass fails in. The drives
+        // and shares it says it gave up are not carried either, its answer not being used.
         if (outcomes.Count != candidates.Count)
         {
             withheld.AddRange(candidates);
             withheldBy.ScreenUnanswered(candidates.Count);
             candidates.Clear();
-            return;
+            return [];
         }
 
         // Partitioned forward into a second list rather than removed in place from
@@ -1431,6 +1442,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
 
         candidates.Clear();
         candidates.AddRange(survivors);
+        return screening.RootsGivenUp;
     }
 
     /// <summary>

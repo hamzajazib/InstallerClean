@@ -173,7 +173,8 @@ public sealed class RemovableReverifier : IRemovableReverifier
             else if (!claimedPaths.Contains(path) && walkSeen.Add(path)) walkDerived.Add(path);
         }
 
-        HoldWalkDerivedFilesTheScanWouldHold(walkDerived, query, clock, held, cancellationToken, progress);
+        var sourceRootsGivenUp =
+            HoldWalkDerivedFilesTheScanWouldHold(walkDerived, query, clock, held, cancellationToken, progress);
 
         // In the order the batch was handed over, so the two lists read as the batch
         // does.
@@ -235,7 +236,7 @@ public sealed class RemovableReverifier : IRemovableReverifier
             .ToList();
 
         return new ReverifyResult(surviving.AsReadOnly(), dropped.AsReadOnly(), reasons,
-            survivingClaims.AsReadOnly(), siblingClaims.AsReadOnly());
+            survivingClaims.AsReadOnly(), siblingClaims.AsReadOnly(), sourceRootsGivenUp);
     }
 
     /// <summary>
@@ -262,8 +263,11 @@ public sealed class RemovableReverifier : IRemovableReverifier
     /// WHERE A LEG FIRES, EVERY FILE STILL STANDING IS HELD, as in the scan: each is
     /// already kept on a fact about the machine, and the last two steps have nothing left
     /// to run on.
+    ///
+    /// It returns every drive or share the declared-product screen gave up, and none where
+    /// the screen did not run.
     /// </summary>
-    private void HoldWalkDerivedFilesTheScanWouldHold(
+    private IReadOnlyList<SourceRootGivenUp> HoldWalkDerivedFilesTheScanWouldHold(
         List<string> walkDerived,
         InstallerQueryResult query,
         DateTimeOffset clock,
@@ -271,7 +275,8 @@ public sealed class RemovableReverifier : IRemovableReverifier
         CancellationToken cancellationToken,
         IProgress<ScanProgressUpdate>? progress)
     {
-        if (walkDerived.Count == 0) return;
+        IReadOnlyList<SourceRootGivenUp> givenUp = [];
+        if (walkDerived.Count == 0) return givenUp;
 
         var standing = walkDerived;
         var opensFiles = _fileIds is not null || _declaredProducts is not null || _fileTimes is not null;
@@ -315,7 +320,8 @@ public sealed class RemovableReverifier : IRemovableReverifier
             standing = Keep(standing, held, _ => HeldBackReason.OwnershipUnestablished);
 
         if (_declaredProducts is not null && cacheRoot is not null && standing.Count > 0)
-            standing = ScreenByWhatTheyDeclare(standing, held, cacheRoot, query.Installations, cancellationToken, progress);
+            standing = ScreenByWhatTheyDeclare(
+                standing, held, cacheRoot, query.Installations, cancellationToken, progress, out givenUp);
 
         if (_fileTimes is not null && standing.Count > 0)
             _ = Keep(standing, held, path =>
@@ -326,6 +332,8 @@ public sealed class RemovableReverifier : IRemovableReverifier
                     ? null
                     : HeldBackReason.FileNotConfirmed;
             });
+
+        return givenUp;
     }
 
     /// <summary>
@@ -341,7 +349,10 @@ public sealed class RemovableReverifier : IRemovableReverifier
     /// withholds is held as <see cref="HeldBackReason.FileNotConfirmed"/>.
     ///
     /// A wait the screen makes on a source folder is reported through
-    /// <paramref name="progress"/> as it starts and as it ends, as the scan reports its own.
+    /// <paramref name="progress"/> as it starts and as it ends, as the scan reports its own,
+    /// and every drive or share it gives up comes back in <paramref name="givenUp"/>
+    /// (<see cref="DeclaredProductScreening.RootsGivenUp"/>), none where its answer is not
+    /// used.
     /// </summary>
     private List<string> ScreenByWhatTheyDeclare(
         List<string> standing,
@@ -349,8 +360,10 @@ public sealed class RemovableReverifier : IRemovableReverifier
         InstallerCacheRoot cacheRoot,
         IReadOnlyList<ListedInstallation> installations,
         CancellationToken cancellationToken,
-        IProgress<ScanProgressUpdate>? progress)
+        IProgress<ScanProgressUpdate>? progress,
+        out IReadOnlyList<SourceRootGivenUp> givenUp)
     {
+        givenUp = [];
         var files = standing
             .Select(path => new OrphanedFile(
                 FullPath: path,
@@ -366,10 +379,11 @@ public sealed class RemovableReverifier : IRemovableReverifier
             + "back from the batch and nothing else about it is kept.");
         try
         {
-            var outcomes = _declaredProducts!.Screen(
+            var screening = _declaredProducts!.Screen(
                 files, installations, cancellationToken, (ex, cause) => refusalLog.Record(ex, cause),
                 path => InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(path, cacheRoot),
                 waitingOn: root => progress?.Report(ScanProgressUpdate.Waiting(root)));
+            var outcomes = screening.Outcomes;
 
             if (outcomes.Count != files.Count)
             {
@@ -377,6 +391,7 @@ public sealed class RemovableReverifier : IRemovableReverifier
                 return new List<string>();
             }
 
+            givenUp = screening.RootsGivenUp;
             var index = 0;
             return Keep(standing, held, _ => outcomes[index++] switch
             {

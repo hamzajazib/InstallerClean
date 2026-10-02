@@ -391,6 +391,17 @@ namespace InstallerClean.Models;
 /// The size of the files the two counts above count. <see cref="SupersededHeldBackBytes"/>
 /// adds it to <see cref="SupersededWithheldBytes"/>.
 /// </param>
+/// <param name="SourceRootsGivenUp">
+/// Every drive or share, or path of another form, the declared-product screen stopped
+/// reading in this scan, with the route it was given up by and how many files the screen
+/// kept at it (<see cref="Services.DeclaredProductScreening.RootsGivenUp"/>). Empty where it gave none
+/// up, and where the screen did not run or its answer was not used.
+/// <see cref="SourceRootsGivenUpKeepingFiles"/> is the part of it a host speaks of.
+///
+/// IT IS NOT AN ARM OF <see cref="WithheldBy"/>. Every file it counts is on
+/// <see cref="WithheldFiles"/> and counted there under the screen's own verdict, so its
+/// counts are never added to the split's.
+/// </param>
 public record ScanResult(
     IReadOnlyList<OrphanedFile> RemovableFiles,
     IReadOnlyList<RegisteredPackage> RegisteredPackages,
@@ -419,8 +430,22 @@ public record ScanResult(
     long SupersededWithheldBytes = 0,
     int SupersededContainmentRefusedCount = 0,
     int SupersededContainmentUnestablishedCount = 0,
-    long SupersededContainmentBytes = 0)
+    long SupersededContainmentBytes = 0,
+    IReadOnlyList<SourceRootGivenUp>? SourceRootsGivenUp = null)
 {
+    /// <summary>Never null: a result built without the list reads as one that gave nothing up.</summary>
+    public IReadOnlyList<SourceRootGivenUp> SourceRootsGivenUp { get; init; }
+        = SourceRootsGivenUp ?? Array.Empty<SourceRootGivenUp>();
+
+    /// <summary>
+    /// The drives and shares in <see cref="SourceRootsGivenUp"/> at which the screen kept at
+    /// least one file, in the order it gave them up. A host saying that the scan gave up a
+    /// drive or share names these and no others: a root given up with no file kept at it
+    /// changed nothing the scan decided.
+    /// </summary>
+    public IReadOnlyList<SourceRootGivenUp> SourceRootsGivenUpKeepingFiles =>
+        SourceRootsGivenUp.Where(root => root.FilesKept > 0).ToList();
+
     /// <summary>
     /// Every registration naming a file that is not on disk, the sum of the two
     /// sub-counts.

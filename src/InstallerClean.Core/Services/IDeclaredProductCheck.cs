@@ -140,8 +140,8 @@ namespace InstallerClean.Services;
 public interface IDeclaredProductCheck
 {
     /// <summary>
-    /// Screens one scan's provisional candidates, in order, returning a verdict
-    /// for each: entry <c>i</c> answers candidate <c>i</c> of the list passed in.
+    /// Screens one scan's provisional candidates, in order, returning a verdict for each
+    /// and every drive or share the pass gave up (<see cref="DeclaredProductScreening"/>).
     ///
     /// The whole pass is one call so that everything per-scan lives inside it.
     /// Several cached packages of one product declare one product code, so a
@@ -197,7 +197,7 @@ public interface IDeclaredProductCheck
     /// that cancelling the pass ends is not told. Handed in by the scan and by the check
     /// before a Move or Delete, which show the wait while it lasts.
     /// </param>
-    IReadOnlyList<DeclaredProductOutcome> Screen(
+    DeclaredProductScreening Screen(
         IReadOnlyList<OrphanedFile> candidates,
         IReadOnlyList<ListedInstallation> installations,
         CancellationToken cancellationToken = default,
@@ -206,6 +206,23 @@ public interface IDeclaredProductCheck
         Action<int>? candidateReached = null,
         Action<string?>? waitingOn = null);
 }
+
+/// <summary>
+/// What one pass of <see cref="IDeclaredProductCheck.Screen"/> settled.
+/// </summary>
+/// <param name="Outcomes">
+/// A verdict for each candidate: entry <c>i</c> answers candidate <c>i</c> of the list the
+/// pass was handed.
+/// </param>
+/// <param name="RootsGivenUp">
+/// Every drive or share, or path of another form, the pass stopped reading, once each and
+/// in the order it gave them up, with the route each was given up by and how many of
+/// <paramref name="Outcomes"/> keep their file at it (<see cref="SourceRootGivenUp"/>).
+/// Empty where the pass gave none up.
+/// </param>
+public sealed record DeclaredProductScreening(
+    IReadOnlyList<DeclaredProductOutcome> Outcomes,
+    IReadOnlyList<SourceRootGivenUp> RootsGivenUp);
 
 /// <summary>
 /// What the screen settled about one candidate. Some verdicts keep the file and the

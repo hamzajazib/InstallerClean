@@ -377,12 +377,22 @@ public record UnderLeaseRecheck(
 /// claim, not per path, because a patch applied to several products is claimed
 /// by each of them and any one of those verdicts can move on its own.
 /// </param>
+/// <param name="SourceRootsGivenUp">
+/// Every drive or share, or path of another form, the declared-product screen stopped
+/// reading in this check, with the route it was given up by and how many files the screen
+/// kept at it (<see cref="DeclaredProductScreening.RootsGivenUp"/>). Each file it counts is in
+/// <see cref="Dropped"/> and counted in <see cref="Reasons"/>, as
+/// <see cref="HeldBackReason.FileNotConfirmed"/> or
+/// <see cref="HeldBackReason.OwnershipUnestablished"/>. The check gives up its own drives
+/// and shares, whatever the scan before it gave up.
+/// </param>
 public record ReverifyResult(
     IReadOnlyList<string> Surviving,
     IReadOnlyList<string> Dropped,
     HeldBackReasons Reasons = default,
     IReadOnlyList<PatchClaim>? SurvivingPatchClaims = null,
-    IReadOnlyList<PatchClaim>? SiblingPatchClaims = null)
+    IReadOnlyList<PatchClaim>? SiblingPatchClaims = null,
+    IReadOnlyList<SourceRootGivenUp>? SourceRootsGivenUp = null)
 {
     /// <summary>Never null: an absent list reads as nothing to re-read rather than as a fault.</summary>
     public IReadOnlyList<PatchClaim> SurvivingPatchClaims { get; init; }
@@ -398,4 +408,8 @@ public record ReverifyResult(
     /// </summary>
     public IReadOnlyList<PatchClaim> SiblingPatchClaims { get; init; }
         = SiblingPatchClaims ?? Array.Empty<PatchClaim>();
+
+    /// <summary>Never null: an absent list reads as a check that gave nothing up.</summary>
+    public IReadOnlyList<SourceRootGivenUp> SourceRootsGivenUp { get; init; }
+        = SourceRootsGivenUp ?? Array.Empty<SourceRootGivenUp>();
 }

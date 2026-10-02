@@ -321,9 +321,11 @@ public class ScanProgressAgainstTheScanTests
                 var waitingOn = call.ArgAt<Action<string?>?>(6);
                 waitingOn?.Invoke("D:");
                 waitingOn?.Invoke(null);
-                return call.ArgAt<IReadOnlyList<OrphanedFile>>(0)
-                    .Select(_ => DeclaredProductOutcome.DeclaredProductNotInstalled)
-                    .ToList();
+                return new DeclaredProductScreening(
+                    call.ArgAt<IReadOnlyList<OrphanedFile>>(0)
+                        .Select(_ => DeclaredProductOutcome.DeclaredProductNotInstalled)
+                        .ToList(),
+                    []);
             });
 
         await new FileSystemScanService(query, new FileSystem(), null, files, null, null, screen)

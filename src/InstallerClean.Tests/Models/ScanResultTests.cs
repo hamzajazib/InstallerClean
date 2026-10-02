@@ -36,6 +36,34 @@ public class ScanResultTests
     }
 
     [Fact]
+    public void A_host_speaks_of_the_drives_and_shares_given_up_with_a_file_kept_there_in_the_order_given_up()
+    {
+        var result = new ScanResult(
+            RemovableFiles: [],
+            RegisteredPackages: [],
+            RegisteredTotalBytes: 0,
+            SourceRootsGivenUp:
+            [
+                new(@"\\nas\apps", SourceRootGiveUpRoute.NoAnswer, 2),
+                new("D:", SourceRootGiveUpRoute.ReadsAddUp, 0),
+                new("E:", SourceRootGiveUpRoute.SlowFailure, 1),
+            ]);
+
+        Assert.Equal(
+            [new(@"\\nas\apps", SourceRootGiveUpRoute.NoAnswer, 2), new("E:", SourceRootGiveUpRoute.SlowFailure, 1)],
+            result.SourceRootsGivenUpKeepingFiles);
+    }
+
+    [Fact]
+    public void A_result_built_without_the_drives_and_shares_given_up_reads_as_one_that_gave_none_up()
+    {
+        var result = new ScanResult([], [], 0);
+
+        Assert.Empty(result.SourceRootsGivenUp);
+        Assert.Empty(result.SourceRootsGivenUpKeepingFiles);
+    }
+
+    [Fact]
     public void A_scan_that_withheld_nothing_totals_zero_rather_than_throwing()
     {
         // The list is optional on the record and half the suite's fixtures leave it

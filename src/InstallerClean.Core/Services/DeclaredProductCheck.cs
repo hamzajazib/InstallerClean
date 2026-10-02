@@ -116,7 +116,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     internal bool KnowsTheRunningAccount => _runningAccount is not null;
 
     /// <inheritdoc />
-    public IReadOnlyList<DeclaredProductOutcome> Screen(
+    public DeclaredProductScreening Screen(
         IReadOnlyList<OrphanedFile> candidates,
         IReadOnlyList<ListedInstallation> installations,
         CancellationToken cancellationToken = default,
@@ -202,10 +202,15 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             // The product-level answer is shared by every candidate declaring the
             // code; whether the recorded packages are OTHER files is a question about
             // this candidate, so it is asked per file.
-            outcomes[i] = Settle(candidate.FullPath, answer, pass, namesAFileInInstallerFolder, recordRefusal);
+            outcomes[i] = Settle(
+                candidate.FullPath, answer, pass, namesAFileInInstallerFolder, recordRefusal, out var givenUp);
+
+            // A file kept where its check stopped at a read refused for a root given up
+            // counts towards that root. A patch reads no source folder, so it never does.
+            if (givenUp is not null && outcomes[i].Withholds()) pass.CountKept(givenUp);
         }
 
-        return outcomes;
+        return new DeclaredProductScreening(outcomes, pass.GivenUp());
     }
 
     /// <summary>
@@ -249,9 +254,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (installations.Count == 0)
             return new DeclarationAnswer(DeclaredProductOutcome.DeclaredProductNotInstalled, null);
 
-        var packages = PackagesOpenedBy(code, installations, pass, namesAFileInInstallerFolder);
+        var packages = PackagesOpenedBy(code, installations, pass, namesAFileInInstallerFolder, out var givenUp);
         return new DeclarationAnswer(
-            DeclaredProductOutcome.DeclaredProductInstalled, packages?.Identities, packages?.ByName);
+            DeclaredProductOutcome.DeclaredProductInstalled, packages?.Identities, packages?.ByName, givenUp);
     }
 
     /// <summary>
@@ -291,14 +296,21 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// second copies' together, where both can be seen. A candidate whose product is not
     /// installed and which no such installation stands beside is let through without its
     /// identity being read, having nothing to be compared with.
+    ///
+    /// <paramref name="givenUp"/> is the root whose give-up refused the read the verdict
+    /// stopped at (<see cref="ReadSourcePackage"/>), and null for every other verdict, among
+    /// them that of a candidate its own comparison keeps while the second copies' packages
+    /// cannot be seen.
     /// </summary>
     private DeclaredProductOutcome Settle(
         string candidatePath,
         DeclarationAnswer answer,
         PassAnswers pass,
         Func<string, bool?>? namesAFileInInstallerFolder,
-        Action<Exception, string>? recordRefusal)
+        Action<Exception, string>? recordRefusal,
+        out string? givenUp)
     {
+        givenUp = null;
         var candidate = new CandidateNames(candidatePath, NamesInFolderOf);
 
         IReadOnlyList<FileIdentity> recorded;
@@ -306,7 +318,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         switch (answer.Outcome)
         {
             case DeclaredProductOutcome.DeclaredProductInstalled when answer.RecordedPackages is { } packages:
-                if (WithPackagesItCouldBe(candidate, packages, answer.ByName ?? [], pass, namesAFileInInstallerFolder)
+                if (WithPackagesItCouldBe(
+                        candidate, packages, answer.ByName ?? [], pass, namesAFileInInstallerFolder, out givenUp)
                     is not { } own)
                     return DeclaredProductOutcome.DeclaredProductInstalled;
 
@@ -318,21 +331,26 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                 letThrough = DeclaredProductOutcome.DeclaredProductNotInstalled;
                 break;
             default:
+                givenUp = answer.GivenUp;
                 return answer.Outcome;
         }
 
-        IReadOnlyList<FileIdentity>? secondCopies =
-            !LinksOf(pass, recordRefusal).UnreadPackageNotRuledOut
-            && PackagesSecondCopiesOpen(pass, namesAFileInInstallerFolder) is { } second
-                ? WithPackagesItCouldBe(candidate, second.Identities, second.ByName, pass, namesAFileInInstallerFolder)
-                : null;
+        IReadOnlyList<FileIdentity>? secondCopies = null;
+        string? secondCopiesGivenUp = null;
+        if (!LinksOf(pass, recordRefusal).UnreadPackageNotRuledOut
+            && PackagesSecondCopiesOpen(pass, namesAFileInInstallerFolder, out secondCopiesGivenUp) is { } second)
+            secondCopies = WithPackagesItCouldBe(
+                candidate, second.Identities, second.ByName, pass, namesAFileInInstallerFolder, out secondCopiesGivenUp);
 
         if (secondCopies is null)
         {
             var verdict = recorded.Count == 0
                 ? letThrough
                 : CompareWithRecorded(candidatePath, recorded, letThrough, DeclaredProductOutcome.DeclaredProductInstalled);
-            return verdict.Withholds() ? verdict : DeclaredProductOutcome.SecondCopyUnestablished;
+            if (verdict.Withholds()) return verdict;
+
+            givenUp = secondCopiesGivenUp;
+            return DeclaredProductOutcome.SecondCopyUnestablished;
         }
 
         IReadOnlyList<FileIdentity> opened = secondCopies.Count == 0 ? recorded : [.. recorded, .. secondCopies];
@@ -362,12 +380,21 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     ///
     /// EACH INSTALLATION IS READ BY THE CODE IT IS REGISTERED UNDER, in its own account
     /// and context, and its cached package is not required to declare that code.
+    ///
+    /// <paramref name="givenUp"/> is the root whose give-up refused the read that made it
+    /// null (<see cref="ReadSourcePackage"/>), kept for the pass with the answer, and null
+    /// otherwise.
     /// </summary>
     private OpenedPackages? PackagesSecondCopiesOpen(
-        PassAnswers pass, Func<string, bool?>? namesAFileInInstallerFolder)
+        PassAnswers pass, Func<string, bool?>? namesAFileInInstallerFolder, out string? givenUp)
     {
-        if (pass.SecondCopiesRead) return pass.SecondCopies;
+        if (pass.SecondCopiesRead)
+        {
+            givenUp = pass.SecondCopiesGivenUp;
+            return pass.SecondCopies;
+        }
 
+        givenUp = null;
         List<FileIdentity>? identities = [];
         List<NetworkPackage> byName = [];
         foreach (var installation in pass.Installations)
@@ -375,7 +402,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             pass.CancellationToken.ThrowIfCancellationRequested();
             if (!installation.SecondCopyNotRuledOut) continue;
 
-            if (!AddSecondCopyPackages(installation, pass, namesAFileInInstallerFolder, identities, byName))
+            if (!AddSecondCopyPackages(installation, pass, namesAFileInInstallerFolder, identities, byName, out givenUp))
             {
                 identities = null;
                 break;
@@ -383,6 +410,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         }
 
         pass.SecondCopies = identities is null ? null : new OpenedPackages(identities, byName);
+        pass.SecondCopiesGivenUp = givenUp;
         pass.SecondCopiesRead = true;
         return pass.SecondCopies;
     }
@@ -394,15 +422,18 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// network goes into <paramref name="byName"/> instead (<see cref="AddSourcePackages"/>).
     /// The cached package has to be a file that is there, that identifies, and that
     /// yields a product code: a value naming anything else shows nothing about which
-    /// package the installation opens.
+    /// package the installation opens. <paramref name="givenUp"/> is as
+    /// <see cref="AddSourcePackages"/> gives it.
     /// </summary>
     private bool AddSecondCopyPackages(
         ListedInstallation installation,
         PassAnswers pass,
         Func<string, bool?>? namesAFileInInstallerFolder,
         List<FileIdentity> opened,
-        List<NetworkPackage> byName)
+        List<NetworkPackage> byName,
+        out string? givenUp)
     {
+        givenUp = null;
         if (_fileIdentities is null || _fileSystem is null) return false;
 
         var context = (MsiInstallContext)installation.Context;
@@ -426,7 +457,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         opened.Add(recorded);
 
         return AddSourcePackages(installation.ProductCode, installation.UserSid, context, pass,
-            namesAFileInInstallerFolder, opened, byName);
+            namesAFileInInstallerFolder, opened, byName, out givenUp);
     }
 
     /// <summary>
@@ -609,14 +640,17 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// identity, or names a file that does not declare <paramref name="code"/>; and
     /// any source the check cannot rule out, which <see cref="AddSourcePackages"/>
     /// sets out. One such installation is enough, because its package is the one this
-    /// candidate could be.
+    /// candidate could be. <paramref name="givenUp"/> is the root whose give-up refused the
+    /// read that made it null (<see cref="ReadSourcePackage"/>), and null otherwise.
     /// </summary>
     private OpenedPackages? PackagesOpenedBy(
         string code,
         IReadOnlyList<(string RegisteredCode, string? Sid, MsiInstallContext Context)> installations,
         PassAnswers pass,
-        Func<string, bool?>? namesAFileInInstallerFolder)
+        Func<string, bool?>? namesAFileInInstallerFolder,
+        out string? givenUp)
     {
+        givenUp = null;
         if (_fileIdentities is null || _fileSystem is null) return null;
 
         var identities = new List<FileIdentity>(installations.Count);
@@ -651,7 +685,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
             identities.Add(recorded);
 
-            if (!AddSourcePackages(registeredCode, sid, context, pass, namesAFileInInstallerFolder, identities, byName))
+            if (!AddSourcePackages(
+                    registeredCode, sid, context, pass, namesAFileInInstallerFolder, identities, byName, out givenUp))
                 return null;
         }
 
@@ -730,6 +765,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// or any other root (<see cref="RootOf"/>) given up for the pass
     /// (<see cref="ReadSourcePackage"/>). A source package that is not there is skipped,
     /// being no file.
+    ///
+    /// Where false is a package read refused for a root given up for the pass,
+    /// <paramref name="givenUp"/> is that root (<see cref="ReadSourcePackage"/>); for every
+    /// other answer it is null.
     /// </summary>
     private bool AddSourcePackages(
         string code,
@@ -738,8 +777,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         PassAnswers pass,
         Func<string, bool?>? namesAFileInInstallerFolder,
         List<FileIdentity> opened,
-        List<NetworkPackage> byName)
+        List<NetworkPackage> byName,
+        out string? givenUp)
     {
+        givenUp = null;
         if (namesAFileInInstallerFolder is null || _fileIdentities is null || _registry is null) return false;
 
         // A PER-USER-UNMANAGED SOURCE LIST IS NOT READ, IN ANY ACCOUNT, AND THE COPY IS
@@ -819,7 +860,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             }
 
             var inInstallerFolder = IsLocalDrive(RootOf(package), pass) ? null : namesAFileInInstallerFolder;
-            if (!ReadSourcePackage(package, pass, inInstallerFolder, out var identity)) return false;
+            if (!ReadSourcePackage(package, pass, inInstallerFolder, out var identity, out givenUp)) return false;
             if (identity is { } read) opened.Add(read);
         }
 
@@ -834,15 +875,19 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// its name is not read for it.
     ///
     /// Each package is read once per pass (<see cref="ReadSourcePackage"/>), and its answer is
-    /// kept for every candidate after it.
+    /// kept for every candidate after it, with the root, where there is one, whose give-up
+    /// refused it: <paramref name="givenUp"/> where that answer makes this null, and null
+    /// otherwise.
     /// </summary>
     private IReadOnlyList<FileIdentity>? WithPackagesItCouldBe(
         CandidateNames candidate,
         IReadOnlyList<FileIdentity> identities,
         IReadOnlyList<NetworkPackage> byName,
         PassAnswers pass,
-        Func<string, bool?>? namesAFileInInstallerFolder)
+        Func<string, bool?>? namesAFileInInstallerFolder,
+        out string? givenUp)
     {
+        givenUp = null;
         if (byName.Count == 0) return identities;
         if (namesAFileInInstallerFolder is null) return null;
 
@@ -854,11 +899,17 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
             if (!pass.NetworkPackageReads.TryGetValue(package.Path, out var read))
             {
-                var settled = ReadSourcePackage(package.Path, pass, namesAFileInInstallerFolder, out var identity);
-                pass.NetworkPackageReads[package.Path] = read = (settled, identity);
+                var settled = ReadSourcePackage(
+                    package.Path, pass, namesAFileInInstallerFolder, out var identity, out var refusedFor);
+                pass.NetworkPackageReads[package.Path] = read = (settled, identity, refusedFor);
             }
 
-            if (!read.Settled) return null;
+            if (!read.Settled)
+            {
+                givenUp = read.GivenUp;
+                return null;
+            }
+
             if (read.Identity is { } found) (opened ??= [.. identities]).Add(found);
         }
 
@@ -914,17 +965,30 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// adds to this total and not to the first, so a drive or a share slow to answer every
     /// read has its packages read one after another until those reads add up past the budget,
     /// and each wait is told to the pass's caller. Cancelling the pass ends the wait at once.
+    ///
+    /// WHERE FALSE COMES FROM THE ROOT BEING GIVEN UP, <paramref name="givenUp"/> IS THE ROOT:
+    /// for a package under a root already given up, a read that has not answered within the
+    /// time limit, and a read that answered false only after waiting longer than
+    /// <see cref="SourceFolderSlowFailure"/>, which waited on the root itself. For every other
+    /// answer it is null. A read that answers false sooner gave its own answer, and so did the
+    /// read that takes its root's reads past either total.
     /// </summary>
     private bool ReadSourcePackage(
         string package,
         PassAnswers pass,
         Func<string, bool?>? namesAFileInInstallerFolder,
-        out FileIdentity? identity)
+        out FileIdentity? identity,
+        out string? givenUp)
     {
         identity = null;
+        givenUp = null;
 
         var root = RootOf(package);
-        if (pass.RootsGivenUp.Contains(root)) return false;
+        if (pass.IsGivenUp(root))
+        {
+            givenUp = root;
+            return false;
+        }
 
         var identities = _fileIdentities!;
         var answered = AnswersWithin(
@@ -947,19 +1011,24 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             out (bool Settled, FileIdentity? Identity) answer,
             out var took);
 
-        if (!answered) return false;
+        if (!answered)
+        {
+            givenUp = root;
+            return false;
+        }
 
         if (!answer.Settled)
         {
             if (took > SourceFolderSlowFailure)
             {
-                pass.RootsGivenUp.Add(root);
+                pass.GiveUp(root, SourceRootGiveUpRoute.SlowFailure);
+                givenUp = root;
                 return false;
             }
 
             var failing = pass.TimeFailing.GetValueOrDefault(root) + took;
             pass.TimeFailing[root] = failing;
-            if (failing > SourceFolderFailedWaitBudget) pass.RootsGivenUp.Add(root);
+            if (failing > SourceFolderFailedWaitBudget) pass.GiveUp(root, SourceRootGiveUpRoute.FailedReadsAddUp);
         }
 
         identity = answer.Identity;
@@ -973,12 +1042,13 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// long it was waited for. A read that answers after the limit finishes on its own thread
     /// and its answer is not used. Cancelling ends the wait at once.
     ///
-    /// THE ROOT IS GIVEN UP FOR THE PASS (<see cref="PassAnswers.RootsGivenUp"/>) where the
-    /// read has not answered in time, and where the reads under the root in this pass, this
-    /// one among them, have taken longer than <see cref="SourceFolderReadBudget"/> between
-    /// them, whatever each answered (<see cref="PassAnswers.TimeReading"/>). The answer of a
-    /// read that took its root past the budget is still used. What a package read answered,
-    /// and how long it took, can also give its root up in <see cref="ReadSourcePackage"/>.
+    /// THE ROOT IS GIVEN UP FOR THE PASS (<see cref="PassAnswers.GiveUp"/>) where the read has
+    /// not answered in time, and where the reads under the root in this pass, this one among
+    /// them, have taken longer than <see cref="SourceFolderReadBudget"/> between them, whatever
+    /// each answered (<see cref="PassAnswers.TimeReading"/>). The answer of a read that took its
+    /// root past the budget is still used. What a package read answered, and how long it took,
+    /// can also give its root up in <see cref="ReadSourcePackage"/>, by a route that outranks
+    /// the budget's.
     ///
     /// A READ STILL WAITING AFTER <see cref="SourceFolderWaitThreshold"/> IS TOLD TO THE PASS'S
     /// CALLER (<see cref="PassAnswers.WaitingOn"/>), with the root, and null is told when the
@@ -1026,7 +1096,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         var reading = pass.TimeReading.GetValueOrDefault(root) + took;
         pass.TimeReading[root] = reading;
-        if (!inTime || reading > SourceFolderReadBudget) pass.RootsGivenUp.Add(root);
+        if (!inTime) pass.GiveUp(root, SourceRootGiveUpRoute.NoAnswer);
+        if (reading > SourceFolderReadBudget) pass.GiveUp(root, SourceRootGiveUpRoute.ReadsAddUp);
 
         if (!inTime)
         {
@@ -1843,10 +1914,16 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// a folder on the network an installation opens, read only for a candidate whose name
     /// it could be (<see cref="OpenedPackages.ByName"/>). Null for every other verdict.
     /// </param>
+    /// <param name="GivenUp">
+    /// For an installed product whose <paramref name="RecordedPackages"/> is null because a
+    /// package read was refused for a root given up for the pass, that root
+    /// (<see cref="PackagesOpenedBy"/>). Null for every other answer.
+    /// </param>
     private readonly record struct DeclarationAnswer(
         DeclaredProductOutcome Outcome,
         IReadOnlyList<FileIdentity>? RecordedPackages,
-        IReadOnlyList<NetworkPackage>? ByName = null);
+        IReadOnlyList<NetworkPackage>? ByName = null,
+        string? GivenUp = null);
 
     /// <param name="Identities">The identity of every package read for every candidate.</param>
     /// <param name="ByName">
@@ -1981,6 +2058,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// <summary>Whether <see cref="SecondCopies"/> has been read for this pass.</summary>
         internal bool SecondCopiesRead { get; set; }
 
+        /// <summary>
+        /// The root whose give-up refused the read that left <see cref="SecondCopies"/> null,
+        /// and null otherwise (<see cref="PackagesSecondCopiesOpen"/>).
+        /// </summary>
+        internal string? SecondCopiesGivenUp { get; set; }
+
         /// <summary>Every installation the caller's enumeration listed.</summary>
         internal IReadOnlyList<ListedInstallation> Installations { get; }
 
@@ -2003,30 +2086,68 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             return read;
         }
 
+        /// <summary>Every root given up for this pass, keyed by root without case.</summary>
+        private readonly Dictionary<string, RootGivenUp> _givenUp = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>The same roots, in the order the pass gave them up.</summary>
+        private readonly List<RootGivenUp> _givenUpInOrder = [];
+
         /// <summary>
-        /// Every root given up for this pass, under which no package is read
-        /// (<see cref="ReadSourcePackage"/>): one under which a read has not answered within the
-        /// time limit (<see cref="AnswersWithin"/>), one under which a package read has
-        /// answered false only after waiting longer than <see cref="SourceFolderSlowFailure"/>,
-        /// one whose package reads that answered false have taken longer than
+        /// Whether <paramref name="root"/> is given up for this pass, so that no package under
+        /// it is read (<see cref="ReadSourcePackage"/>).
+        /// </summary>
+        internal bool IsGivenUp(string root) => _givenUp.ContainsKey(root);
+
+        /// <summary>
+        /// Gives <paramref name="root"/> up for the rest of the pass, by
+        /// <paramref name="route"/>: a root under which a read has not answered within the time
+        /// limit (<see cref="AnswersWithin"/>), one under which a package read has answered
+        /// false only after waiting longer than <see cref="SourceFolderSlowFailure"/>, one whose
+        /// package reads that answered false have taken longer than
         /// <see cref="SourceFolderFailedWaitBudget"/> between them (<see cref="TimeFailing"/>),
         /// and one whose reads have taken longer than <see cref="SourceFolderReadBudget"/>
         /// between them, whatever each answered (<see cref="TimeReading"/>). The reads under a
         /// drive include the one that asks its kind (<see cref="KindOf"/>).
+        ///
+        /// A ROOT GIVEN UP AGAIN TAKES WHICHEVER OF ITS ROUTES IS DECLARED FIRST IN
+        /// <see cref="SourceRootGiveUpRoute"/>, so a read meeting more than one condition gives
+        /// its root the first of them, whatever order they are checked in. The spelling kept is
+        /// the one it was first given up under.
         /// </summary>
-        internal HashSet<string> RootsGivenUp { get; } = new(StringComparer.OrdinalIgnoreCase);
+        internal void GiveUp(string root, SourceRootGiveUpRoute route)
+        {
+            if (_givenUp.TryGetValue(root, out var given))
+            {
+                if (route < given.Route) given.Route = route;
+                return;
+            }
+
+            given = new RootGivenUp(root, route);
+            _givenUp[root] = given;
+            _givenUpInOrder.Add(given);
+        }
+
+        /// <summary>
+        /// Counts one more candidate kept where its check stopped at a read refused for
+        /// <paramref name="root"/>, a root given up for this pass (<see cref="Screen"/>).
+        /// </summary>
+        internal void CountKept(string root) => _givenUp[root].FilesKept++;
+
+        /// <summary>Every root given up for this pass, in the order it gave them up.</summary>
+        internal IReadOnlyList<SourceRootGivenUp> GivenUp() =>
+            _givenUpInOrder.Select(given => new SourceRootGivenUp(given.Root, given.Route, given.FilesKept)).ToList();
 
         /// <summary>
         /// How long the package reads under each root that answered false, each within
-        /// <see cref="SourceFolderSlowFailure"/>, have taken in this pass, keyed as
-        /// <see cref="RootsGivenUp"/> is (<see cref="ReadSourcePackage"/>).
+        /// <see cref="SourceFolderSlowFailure"/>, have taken in this pass, keyed by root without
+        /// case (<see cref="ReadSourcePackage"/>).
         /// </summary>
         internal Dictionary<string, TimeSpan> TimeFailing { get; } = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// How long all the reads under each root have taken in this pass, whatever each
-        /// answered, the read asking a drive its kind among them, keyed as
-        /// <see cref="RootsGivenUp"/> is (<see cref="AnswersWithin"/>).
+        /// answered, the read asking a drive its kind among them, keyed by root without case
+        /// (<see cref="AnswersWithin"/>).
         /// </summary>
         internal Dictionary<string, TimeSpan> TimeReading { get; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -2045,9 +2166,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         /// <summary>
         /// Each package on the network read for a candidate, keyed by its path, with what
-        /// <see cref="ReadSourcePackage"/> answered.
+        /// <see cref="ReadSourcePackage"/> answered and the root whose give-up refused it,
+        /// where one did.
         /// </summary>
-        internal Dictionary<string, (bool Settled, FileIdentity? Identity)> NetworkPackageReads { get; } =
+        internal Dictionary<string, (bool Settled, FileIdentity? Identity, string? GivenUp)> NetworkPackageReads { get; } =
             new(StringComparer.Ordinal);
 
         /// <summary>Each declared patch's answer, keyed by patch code and target list.</summary>
@@ -2096,6 +2218,16 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
                 return _holders;
             }
+        }
+
+        /// <summary>One root given up for the pass, as <see cref="GiveUp"/> and <see cref="CountKept"/> leave it.</summary>
+        private sealed class RootGivenUp(string root, SourceRootGiveUpRoute route)
+        {
+            internal string Root { get; } = root;
+
+            internal SourceRootGiveUpRoute Route { get; set; } = route;
+
+            internal int FilesKept { get; set; }
         }
     }
 }

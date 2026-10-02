@@ -129,7 +129,7 @@ public class WithholdingSplitTests
         screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
                 Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(),
                 Arg.Any<Func<string, bool?>?>(), Arg.Any<Action<int>?>(), Arg.Any<Action<string?>?>())
-            .Returns(new[] { DeclaredProductOutcome.DeclaredProductNotInstalled });
+            .Returns(new DeclaredProductScreening([DeclaredProductOutcome.DeclaredProductNotInstalled], []));
 
         var result = await Scan(
             walked: new[] { $@"{Folder}\a.msi", $@"{Folder}\b.msi", $@"{Folder}\c.msi" },
@@ -140,6 +140,54 @@ public class WithholdingSplitTests
         Assert.Equal(0, result.WithheldBy.DeclaredProductInstalledCount);
         Assert.Equal(0, result.WithheldBy.DeclaredProductUnestablishedCount);
         AssertPartitions(result);
+    }
+
+    /// <summary>
+    /// A screen that keeps every file it is handed as one whose program is installed, and
+    /// reports a share given up with as many files kept at it as it was handed, answering
+    /// about <paramref name="answered"/> files where that is given.
+    /// </summary>
+    private static IDeclaredProductCheck ScreenGivingUpAShare(int? answered = null)
+    {
+        var screen = Substitute.For<IDeclaredProductCheck>();
+        screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
+                Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(),
+                Arg.Any<Func<string, bool?>?>(), Arg.Any<Action<int>?>(), Arg.Any<Action<string?>?>())
+            .Returns(call =>
+            {
+                var handed = call.ArgAt<IReadOnlyList<OrphanedFile>>(0).Count;
+                return new DeclaredProductScreening(
+                    [.. Enumerable.Repeat(DeclaredProductOutcome.DeclaredProductInstalled, answered ?? handed)],
+                    [new SourceRootGivenUp(@"\\nas\apps", SourceRootGiveUpRoute.NoAnswer, handed)]);
+            });
+        return screen;
+    }
+
+    [Fact]
+    public async Task The_drives_and_shares_the_screen_gave_up_travel_on_the_result_beside_the_split()
+    {
+        // The files kept at the share are counted under the screen's own verdict, so the list
+        // adds nothing to the split.
+        var result = await Scan(
+            walked: new[] { $@"{Folder}\a.msi", $@"{Folder}\b.msi" },
+            registered: Array.Empty<string>(),
+            screen: ScreenGivingUpAShare());
+
+        Assert.Equal([new SourceRootGivenUp(@"\\nas\apps", SourceRootGiveUpRoute.NoAnswer, 2)], result.SourceRootsGivenUp);
+        Assert.Equal(2, result.WithheldBy.DeclaredProductInstalledCount);
+        AssertPartitions(result);
+    }
+
+    [Fact]
+    public async Task A_screen_that_answered_about_a_different_number_of_files_gives_up_nothing_the_result_carries()
+    {
+        var result = await Scan(
+            walked: new[] { $@"{Folder}\a.msi", $@"{Folder}\b.msi" },
+            registered: Array.Empty<string>(),
+            screen: ScreenGivingUpAShare(answered: 1));
+
+        Assert.Equal(2, result.WithheldBy.ScreenUnansweredCount);
+        Assert.Empty(result.SourceRootsGivenUp);
     }
 
     [Fact]

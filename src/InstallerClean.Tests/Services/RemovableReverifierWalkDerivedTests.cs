@@ -58,11 +58,13 @@ public class RemovableReverifierWalkDerivedTests
         screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
                 Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(), Arg.Any<Func<string, bool?>?>(),
                 Arg.Any<Action<int>?>(), Arg.Any<Action<string?>?>())
-            .Returns(call => call.ArgAt<IReadOnlyList<OrphanedFile>>(0)
-                .Select(f => kept.Contains(f.FullPath, StringComparer.OrdinalIgnoreCase)
-                    ? DeclaredProductOutcome.DeclaredProductInstalled
-                    : DeclaredProductOutcome.DeclaredProductNotInstalled)
-                .ToList());
+            .Returns(call => new DeclaredProductScreening(
+                call.ArgAt<IReadOnlyList<OrphanedFile>>(0)
+                    .Select(f => kept.Contains(f.FullPath, StringComparer.OrdinalIgnoreCase)
+                        ? DeclaredProductOutcome.DeclaredProductInstalled
+                        : DeclaredProductOutcome.DeclaredProductNotInstalled)
+                    .ToList(),
+                []));
         return screen;
     }
 
@@ -124,9 +126,11 @@ public class RemovableReverifierWalkDerivedTests
                 var waitingOn = call.ArgAt<Action<string?>?>(6);
                 waitingOn?.Invoke(@"\\fileserver\apps");
                 waitingOn?.Invoke(null);
-                return call.ArgAt<IReadOnlyList<OrphanedFile>>(0)
-                    .Select(_ => DeclaredProductOutcome.DeclaredProductNotInstalled)
-                    .ToList();
+                return new DeclaredProductScreening(
+                    call.ArgAt<IReadOnlyList<OrphanedFile>>(0)
+                        .Select(_ => DeclaredProductOutcome.DeclaredProductNotInstalled)
+                        .ToList(),
+                    []);
             });
         var reported = new List<ScanProgressUpdate>();
 
@@ -183,20 +187,46 @@ public class RemovableReverifierWalkDerivedTests
         screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
                 Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(), Arg.Any<Func<string, bool?>?>(),
                 Arg.Any<Action<int>?>(), Arg.Any<Action<string?>?>())
-            .Returns(call => call.ArgAt<IReadOnlyList<OrphanedFile>>(0)
-                .Select(f => f.FullPath switch
-                {
-                    besideTheCopy => DeclaredProductOutcome.SecondCopyUnestablished,
-                    installed => DeclaredProductOutcome.DeclaredProductInstalled,
-                    _ => DeclaredProductOutcome.DeclaredProductNotInstalled,
-                })
-                .ToList());
+            .Returns(call => new DeclaredProductScreening(
+                call.ArgAt<IReadOnlyList<OrphanedFile>>(0)
+                    .Select(f => f.FullPath switch
+                    {
+                        besideTheCopy => DeclaredProductOutcome.SecondCopyUnestablished,
+                        installed => DeclaredProductOutcome.DeclaredProductInstalled,
+                        _ => DeclaredProductOutcome.DeclaredProductNotInstalled,
+                    })
+                    .ToList(),
+                []));
 
         var result = await Reverifier(Query(Live(registered)), ids, screen, OldTimes(spare))
             .ReverifyAsync(new[] { besideTheCopy, installed, spare });
 
         Assert.Equal(new[] { spare }, result.Surviving);
         Assert.Equal(new HeldBackReasons(OwnershipUnestablished: 1, FileNotConfirmed: 1), result.Reasons);
+    }
+
+    [Fact]
+    public async Task The_drives_and_shares_the_screen_gives_up_come_back_with_the_check()
+    {
+        // The screen keeps the one file it is handed, at a share it gave up, and the check
+        // holds that file under the screen's cause.
+        const string kept = Folder + @"\kept.msi";
+        const string registered = Folder + @"\registered.msi";
+        var ids = new ScriptedFileIdentities();
+        ids.Opens(registered, 1);
+        ids.Opens(kept, 2);
+        var givenUp = new SourceRootGivenUp(@"\\nas\apps", SourceRootGiveUpRoute.SlowFailure, 1);
+        var screen = Substitute.For<IDeclaredProductCheck>();
+        screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
+                Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(), Arg.Any<Func<string, bool?>?>(),
+                Arg.Any<Action<int>?>(), Arg.Any<Action<string?>?>())
+            .Returns(new DeclaredProductScreening([DeclaredProductOutcome.DeclaredProductInstalled], [givenUp]));
+
+        var result = await Reverifier(Query(Live(registered)), ids, screen, OldTimes(kept))
+            .ReverifyAsync(new[] { kept });
+
+        Assert.Equal(new[] { givenUp }, result.SourceRootsGivenUp);
+        Assert.Equal(new HeldBackReasons(FileNotConfirmed: 1), result.Reasons);
     }
 
     [Fact]
@@ -250,7 +280,7 @@ public class RemovableReverifierWalkDerivedTests
         screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
                 Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(), Arg.Any<Func<string, bool?>?>(),
                 Arg.Any<Action<int>?>(), Arg.Any<Action<string?>?>())
-            .Returns(new[] { DeclaredProductOutcome.DeclaredProductNotInstalled });
+            .Returns(new DeclaredProductScreening([DeclaredProductOutcome.DeclaredProductNotInstalled], []));
 
         var result = await Reverifier(Query(Live(registered)), ids, screen, OldTimes(a, b))
             .ReverifyAsync(new[] { a, b });
