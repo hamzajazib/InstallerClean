@@ -677,7 +677,7 @@ public class CleanupPreFlightTests
     }
 
     [Fact]
-    public async Task Only_a_wait_the_scan_after_a_Move_reports_crosses_to_the_window_and_takes_the_heading()
+    public async Task Only_a_wait_the_scan_after_a_Move_reports_crosses_to_the_window_and_takes_the_heading_and_gives_it_back()
     {
         // The scan after the Move reports a milestone and a ticker update, as a scan does,
         // and then one wait on drive D: and its end. The Move runs on a stand-in for the
@@ -730,6 +730,9 @@ public class CleanupPreFlightTests
         Assert.Equal(new[] { wait, end }, dispatcher.Posted);
         Assert.Empty(dispatcher.Thrown);
         Assert.Contains(wait.Message, headings);
+        Assert.Equal(
+            InstallerClean.Resources.Strings.Status_Scanning,
+            headings.SkipWhile(heading => heading != wait.Message).Skip(1).FirstOrDefault());
         Assert.DoesNotContain(Milestone, headings);
         Assert.DoesNotContain(Ticker, headings);
     }
