@@ -18,7 +18,7 @@
 //      a language means teaching this guard the pairing.
 //   3. Every installer language carries its full set of per-language override
 //      keys in [Messages] and [CustomMessages]. A language added to [Languages]
-//      but left without its welcome/finished/app-running/uninstall/launch strings
+//      but left without its finished/app-running/uninstall/launch strings
 //      would otherwise fall back to Inno's English mid-wizard.
 //
 // Run from the repo root: node scripts/check-installer-languages.mjs
@@ -54,8 +54,8 @@ const INNO_TO_CULTURE = {
 // [CustomMessages], the same set for all of them. A language missing any would
 // drop to Inno's own English for that line.
 const REQUIRED_MESSAGE_KEYS = [
-  'WelcomeLabel1', 'WelcomeLabel2', 'FinishedHeadingLabel', 'FinishedLabel',
-  'ClickFinish', 'SetupAppRunningError', 'UninstallAppRunningError',
+  'FinishedHeadingLabel', 'FinishedLabel', 'ClickFinish',
+  'SetupAppRunningError', 'UninstallAppRunningError',
 ];
 const REQUIRED_CUSTOM_KEYS = ['UninstallApp', 'LaunchApp'];
 
