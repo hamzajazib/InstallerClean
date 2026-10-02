@@ -42,25 +42,27 @@ namespace InstallerClean.Services;
 /// this file under another spelling. It is kept too while some source cannot be ruled
 /// out: one in the Installer folder itself, one naming this file, one that cannot be
 /// read, one whose package does not answer within the check's time limit, and one on a
-/// drive or share the pass has stopped reading because a read there did not answer
-/// within that limit or failed only after a long wait, or because the reads that failed
-/// there took more time between them than the check allows. A source in a folder on the
-/// network, a share or a network drive, is one of those only for a file whose name or
-/// short name its package name could be, since Windows Installer looks in a source
-/// folder for that name alone. While Windows is set to follow a symbolic link reached
-/// through a network path to this PC or to another network path, it is one for every
-/// file. The folder an installation records as its <c>InstallSource</c>, the one its
-/// package was installed from, counts as a source whether or not the list still holds
-/// it. So it is while a source list holds something the check does not compare, a URL,
-/// an entry naming an environment variable, a media package path or a package name
-/// naming a folder, a drive, a stream or a variable, or holding a null; while the
-/// source used last is not a network entry on the list; and while the registry key
-/// holding the list does not hold what the API returned for it, package name included,
-/// or holds that name as anything but a REG_SZ. So it is while an installation's
-/// <c>InstallSource</c> will not read, is held in the registry otherwise than the API
-/// answers it or as anything but a REG_SZ, names an environment variable, or starts
-/// neither with a drive letter, a ':' and a '\' nor with two '\'. An installation in a
-/// per-user-unmanaged context keeps it as well, its source list not being read.
+/// drive or share the pass has stopped reading: because a read there did not answer
+/// within that limit or failed only after a long wait, because the reads that failed
+/// there took more time between them than the check allows, or because all the reads
+/// there took more time between them than the check allows one drive or share, whatever
+/// each answered. A source in a folder on the network, a share or a network drive, is
+/// one of those only for a file whose name or short name its package name could be,
+/// since Windows Installer looks in a source folder for that name alone. While Windows
+/// is set to follow a symbolic link reached through a network path to this PC or to
+/// another network path, it is one for every file. The folder an installation records
+/// as its <c>InstallSource</c>, the one its package was installed from, counts as a
+/// source whether or not the list still holds it. So it is while a source list holds
+/// something the check does not compare, a URL, an entry naming an environment
+/// variable, a media package path or a package name naming a folder, a drive, a stream
+/// or a variable, or holding a null; while the source used last is not a network entry
+/// on the list; and while the registry key holding the list does not hold what the API
+/// returned for it, package name included, or holds that name as anything but a REG_SZ.
+/// So it is while an installation's <c>InstallSource</c> will not read, is held in the
+/// registry otherwise than the API answers it or as anything but a REG_SZ, names an
+/// environment variable, or starts neither with a drive letter, a ':' and a '\' nor
+/// with two '\'. An installation in a per-user-unmanaged context keeps it as well, its
+/// source list not being read.
 ///
 /// A REGISTERED PATCH DOES NOT ON ITS OWN MAKE THIS FILE A COPY OF IT WINDOWS OPENS
 /// EITHER.
@@ -264,16 +266,17 @@ public enum DeclaredProductOutcome
     /// It covers a source list or package name that will not read, a source whose package
     /// is this file, will not identify or does not answer within the check's time limit, a
     /// source on a drive or share the check has stopped reading for the pass (a read there
-    /// did not answer within that limit or failed only after a long wait, or the reads that
-    /// failed there took more time between them than the check allows), a source not on a
-    /// local drive that is the Installer folder itself or cannot be resolved, and an
-    /// installation in a per-user-unmanaged context, whose source list is not read. It
-    /// covers a source list holding a URL, an entry naming an environment variable or
-    /// starting neither with a drive letter, a ':' and a '\' nor with two '\', a media
-    /// package path or a package name naming a folder, a drive, a stream or a variable, or
-    /// holding a null, one whose source used last is not a network entry on it, and one
-    /// whose registry key does not hold what the API returned for it, package name
-    /// included, or holds that name as anything but a REG_SZ. It covers an
+    /// did not answer within that limit or failed only after a long wait, the reads that
+    /// failed there took more time between them than the check allows, or all the reads
+    /// there took more time between them than the check allows one drive or share, whatever
+    /// each answered), a source not on a local drive that is the Installer folder itself or
+    /// cannot be resolved, and an installation in a per-user-unmanaged context, whose
+    /// source list is not read. It covers a source list holding a URL, an entry naming an
+    /// environment variable or starting neither with a drive letter, a ':' and a '\' nor
+    /// with two '\', a media package path or a package name naming a folder, a drive, a
+    /// stream or a variable, or holding a null, one whose source used last is not a network
+    /// entry on it, and one whose registry key does not hold what the API returned for it,
+    /// package name included, or holds that name as anything but a REG_SZ. It covers an
     /// <c>InstallSource</c> whose package is this file, will not identify or does not
     /// answer within the time limit, one on a drive or share the check has stopped reading,
     /// one not on a local drive that is the Installer folder itself, and one that will not

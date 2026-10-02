@@ -3894,9 +3894,10 @@ public class DeclaredProductCheckTests
 
     // ---- A root that answers slowly ----
     //
-    // A read that opens its package within the time limit leaves its root to be read,
-    // whatever time it took. So every package under a root slow to answer each read is read,
-    // one after another, and each wait is told to the caller.
+    // A read that opens its package within the time limit leaves its root to be read until
+    // the reads under it add up past the check's budget for one root. So every package under
+    // a root slow to answer each read is read, one after another, until then, and each wait
+    // is told to the caller.
 
     /// <summary>How long a read can take before the check tells its caller it is waiting, in the tests below.</summary>
     private static readonly TimeSpan WaitThreshold = TimeSpan.FromMilliseconds(200);
@@ -3905,10 +3906,12 @@ public class DeclaredProductCheckTests
     private static readonly TimeSpan SlowRead = TimeSpan.FromMilliseconds(600);
 
     /// <summary>
-    /// How long a source package read takes on the check's clock in the test below: longer than
-    /// the check's own slow-failure bar, and long enough that the test's six reads come to more
-    /// than its budget. Neither applies to a read that opens. The time limit is waited out in
-    /// real time by the thread that waits, so this clock does not bring a read any nearer to it.
+    /// How long a source package read takes on the check's clock in the tests below: longer than
+    /// the check's own slow-failure bar, and long enough that six reads come to more than its
+    /// budget for reads that fail. Neither applies to a read that opens. Twelve reads come to its
+    /// budget for every read under one root, which is not past it. The time limit is waited out
+    /// in real time by the thread that waits, so this clock does not bring a read any nearer to
+    /// it.
     /// </summary>
     private static readonly TimeSpan ReadOnTheClock = TimeSpan.FromSeconds(25);
 
@@ -3968,12 +3971,13 @@ public class DeclaredProductCheckTests
     [Theory]
     [InlineData(@"D:\Setup\", "D:")]
     [InlineData(@"\\nas\share\", @"\\nas\share")]
-    public void Every_source_package_under_a_root_slow_to_answer_each_read_is_read_and_each_wait_is_told(
+    public void Every_source_package_under_a_root_slow_to_answer_each_read_is_read_within_its_budget_and_each_wait_is_told(
         string folder, string root)
     {
         // Each read is held for SlowRead, so it is a wait the caller is told of, and takes
         // ReadOnTheClock on the clock the check times reads by, so the six come to two and a
-        // half minutes. The time limit is the check's own.
+        // half minutes, within the check's budget for one root. The time limit is the check's
+        // own.
         const int Programs = 6;
         var (f, copies, sourcePackages) = ProgramsInstalledFromFoldersUnder(folder, Programs);
         using var files = new HeldFileIdentities(f.Files);
@@ -3998,11 +4002,11 @@ public class DeclaredProductCheckTests
 
     // ---- A root whose reads fail ----
     //
-    // A package read that answers false adds the time it took to its root's total, however
-    // short, and once that passes the check's budget no later package under the root is read
-    // in the pass. A read that finds no file there adds nothing. Every read here answers at
-    // once and takes the time the test gives it on the check's clock alone, so the tests run
-    // on the check's own slow-failure bar and budget.
+    // A package read that answers false adds the time it took to its root's total of reads
+    // that fail, however short, and once that passes the check's budget for them no later
+    // package under the root is read in the pass. A read that finds no file there adds nothing
+    // to it. Every read here answers at once and takes the time the test gives it on the
+    // check's clock alone, so the tests run on the check's own slow-failure bar and budgets.
 
     /// <summary>
     /// How long a source package read that does not open takes on the check's clock in the
@@ -4022,23 +4026,32 @@ public class DeclaredProductCheckTests
         ProgramsWhosePackagesAnswer(folders, FileIdentityRead.OpenRefused, each);
 
     /// <summary>
-    /// The programs <see cref="ProgramsInstalledFromFoldersUnder(IReadOnlyList{string})"/>
-    /// builds for <paramref name="folders"/>, every one of their packages answering
-    /// <paramref name="answer"/> at once, and each read of one moving the returned clock on
-    /// by <paramref name="each"/>.
+    /// <see cref="ProgramsWhosePackagesOpen"/>, every one of the packages answering
+    /// <paramref name="answer"/> instead.
     /// </summary>
     private static ((ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
         ScriptedFileIdentities Files, MockFileSystem Disk) F, HeldFileIdentities Files, SteppedClock Clock,
         string[] Copies, string[] SourcePackages)
         ProgramsWhosePackagesAnswer(IReadOnlyList<string> folders, FileIdentityRead answer, TimeSpan each)
     {
+        var programs = ProgramsWhosePackagesOpen(folders, each);
+        foreach (var package in programs.SourcePackages) programs.F.Files.Answers(package, answer);
+        return programs;
+    }
+
+    /// <summary>
+    /// The programs <see cref="ProgramsInstalledFromFoldersUnder(IReadOnlyList{string})"/>
+    /// builds for <paramref name="folders"/>, every one of their packages opening at once, and
+    /// each read of one moving the returned clock on by <paramref name="each"/>.
+    /// </summary>
+    private static ((ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+        ScriptedFileIdentities Files, MockFileSystem Disk) F, HeldFileIdentities Files, SteppedClock Clock,
+        string[] Copies, string[] SourcePackages)
+        ProgramsWhosePackagesOpen(IReadOnlyList<string> folders, TimeSpan each)
+    {
         var (f, copies, sourcePackages) = ProgramsInstalledFromFoldersUnder(folders);
         var files = new HeldFileIdentities(f.Files);
-        foreach (var package in sourcePackages)
-        {
-            f.Files.Answers(package, answer);
-            files.Holds(package, TimeSpan.Zero);
-        }
+        foreach (var package in sourcePackages) files.Holds(package, TimeSpan.Zero);
 
         var clock = new SteppedClock();
         files.TakesOnTheClock(clock, each);
@@ -4047,7 +4060,7 @@ public class DeclaredProductCheckTests
 
     /// <summary>
     /// The check timing its reads on <paramref name="clock"/>, with its own time limit,
-    /// threshold, slow-failure bar and budget.
+    /// threshold, slow-failure bar and budgets.
     /// </summary>
     private static DeclaredProductCheck CheckOnTheClock(
         (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
@@ -4101,10 +4114,11 @@ public class DeclaredProductCheckTests
     [Theory]
     [InlineData(@"D:\Setup\")]
     [InlineData(@"\\nas\share\")]
-    public void Reads_that_find_no_file_cost_their_root_nothing_however_long_they_take(string folder)
+    public void Reads_that_find_no_file_do_not_count_towards_the_budget_for_reads_that_fail(string folder)
     {
         // Each read finds no package and takes three seconds, and the twenty-four come to
-        // seventy-two seconds.
+        // seventy-two seconds, past the budget for reads that fail and within the one for every
+        // read.
         const int Programs = 24;
         var (f, files, clock, copies, sourcePackages) = ProgramsWhosePackagesAnswer(
             [.. Enumerable.Repeat(folder, Programs)], FileIdentityRead.NamesNothing, UnopenedReadOnTheClock);
@@ -4144,6 +4158,137 @@ public class DeclaredProductCheckTests
         ScreenEvery(check, copies[21..]);
 
         Assert.Equal(sourcePackages, files.Started);
+    }
+
+    // ---- A root whose reads add up ----
+    //
+    // Every read under a root adds the time it took to a second total, whatever it answered
+    // and however short, the read asking a drive its kind among them, and once that passes the
+    // check's budget for one root no later package under the root is read in the pass. The
+    // read that takes the total past still has its answer used. Every read here answers at
+    // once and takes the time the test gives it on the check's clock alone, so the tests run on
+    // the check's own budgets.
+
+    [Theory]
+    [InlineData(@"D:\Setup\")]
+    [InlineData(@"\\nas\share\")]
+    public void A_root_whose_reads_add_up_past_five_minutes_is_kept_for_the_rest_of_the_pass_without_being_read(
+        string folder)
+    {
+        // Every package opens. Twelve reads of twenty-five seconds come to five minutes, which
+        // is not past it. The thirteenth takes the root past and its copy is still let through,
+        // and no package under the root is read after it.
+        const int Programs = 16, Reads = 13;
+        var (f, files, clock, copies, sourcePackages) =
+            ProgramsWhosePackagesOpen([.. Enumerable.Repeat(folder, Programs)], ReadOnTheClock);
+        using var _ = files;
+
+        var outcomes = ScreenEvery(CheckOnTheClock(f, files, clock), copies);
+
+        Assert.Equal(sourcePackages[..Reads], files.Started);
+        Assert.All(outcomes.Take(Reads),
+            outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
+        Assert.All(outcomes.Skip(Reads), outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
+    }
+
+    [Theory]
+    [InlineData(@"D:\Setup\")]
+    [InlineData(@"\\nas\share\")]
+    public void Reads_too_quick_to_be_waits_add_up_towards_five_minutes_the_same_way(string folder)
+    {
+        // Each read opens its package and takes half a second on the check's clock, less than
+        // its threshold for a wait. Six hundred come to five minutes, which is not past it, and
+        // the six hundred and first takes the root past.
+        const int Programs = 610, Reads = 601;
+        var (f, files, clock, copies, sourcePackages) =
+            ProgramsWhosePackagesOpen([.. Enumerable.Repeat(folder, Programs)], TimeSpan.FromMilliseconds(500));
+        using var _ = files;
+
+        var outcomes = ScreenEvery(CheckOnTheClock(f, files, clock), copies);
+
+        Assert.Equal(sourcePackages[..Reads], files.Started);
+        Assert.All(outcomes.Skip(Reads), outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
+    }
+
+    [Theory]
+    [InlineData(@"D:\Setup\")]
+    [InlineData(@"\\nas\share\")]
+    public void Reads_that_fail_or_find_no_file_add_up_towards_five_minutes_too(string folder)
+    {
+        // Every read takes four seconds. The first fourteen packages refuse to open, fifty-six
+        // seconds in all, which is within the budget for reads that fail, and the rest are not
+        // there. Seventy-five reads come to five minutes, which is not past it, and the
+        // seventy-sixth takes the root past.
+        const int Programs = 100, Refused = 14, Reads = 76;
+        var (f, files, clock, copies, sourcePackages) = ProgramsWhosePackagesAnswer(
+            [.. Enumerable.Repeat(folder, Programs)], FileIdentityRead.NamesNothing, TimeSpan.FromSeconds(4));
+        using var _ = files;
+        foreach (var package in sourcePackages[..Refused]) f.Files.Answers(package, FileIdentityRead.OpenRefused);
+
+        var outcomes = ScreenEvery(CheckOnTheClock(f, files, clock), copies);
+
+        Assert.Equal(sourcePackages[..Reads], files.Started);
+        Assert.All(outcomes.Take(Refused), outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
+        Assert.All(outcomes.Take(Reads).Skip(Refused),
+            outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
+        Assert.All(outcomes.Skip(Reads), outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
+    }
+
+    [Fact]
+    public void The_read_asking_a_drive_its_kind_counts_towards_five_minutes_with_the_package_reads()
+    {
+        // The drive takes twenty-five seconds on the check's clock to say what kind it is, as
+        // each package read does. With eleven package reads that comes to five minutes, and the
+        // twelfth takes the drive past.
+        const int Programs = 16, Reads = 12;
+        var (f, files, clock, copies, sourcePackages) =
+            ProgramsWhosePackagesOpen([.. Enumerable.Repeat(@"D:\Setup\", Programs)], ReadOnTheClock);
+        using var _ = files;
+        var check = new DeclaredProductCheck(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
+            {
+                Clock = clock,
+                DriveKindOf = _ =>
+                {
+                    clock.Advance(ReadOnTheClock);
+                    return DriveType.Fixed;
+                },
+                NamesInFolderOf = NameOnly,
+            };
+
+        ScreenEvery(check, copies);
+
+        Assert.Equal(sourcePackages[..Reads], files.Started);
+    }
+
+    [Fact]
+    public void Two_roots_add_up_their_reads_apart()
+    {
+        // D: is given up at its thirteenth read. E:'s twelve reads come to five minutes, which
+        // is not past it, and the total for D: and E: together is.
+        string[] folders = [.. Enumerable.Repeat(@"D:\Setup\", 16), .. Enumerable.Repeat(@"E:\Setup\", 12)];
+        var (f, files, clock, copies, sourcePackages) = ProgramsWhosePackagesOpen(folders, ReadOnTheClock);
+        using var _ = files;
+
+        ScreenEvery(CheckOnTheClock(f, files, clock), copies);
+
+        Assert.Equal(sourcePackages[..13].Concat(sourcePackages[16..]), files.Started);
+    }
+
+    [Fact]
+    public void A_root_given_up_for_the_time_its_reads_took_in_one_pass_is_read_again_in_the_next()
+    {
+        var (f, files, clock, copies, sourcePackages) =
+            ProgramsWhosePackagesOpen([.. Enumerable.Repeat(@"D:\Setup\", 16)], ReadOnTheClock);
+        using var _ = files;
+        var check = CheckOnTheClock(f, files, clock);
+
+        ScreenEvery(check, copies);
+        Assert.Equal(sourcePackages[..13], files.Started);
+
+        var outcomes = ScreenEvery(check, copies[13..]);
+
+        Assert.Equal(sourcePackages, files.Started);
+        Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
     }
 
     // ---- What the check tells its caller while a read waits ----
