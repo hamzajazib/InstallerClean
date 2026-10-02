@@ -22,7 +22,7 @@ public class WaitsOnlyTests
     {
         var told = new Told();
         var waits = new WaitsOnly(told);
-        var wait = ScanProgressUpdate.Waiting("D:");
+        var wait = ScanProgressUpdate.Waiting(new SourceFolderWait("D:", () => { }));
         var end = ScanProgressUpdate.Waiting(null);
 
         waits.Report(wait);

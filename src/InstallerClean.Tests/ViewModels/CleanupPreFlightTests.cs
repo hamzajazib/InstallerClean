@@ -614,7 +614,7 @@ public class CleanupPreFlightTests
             .Returns(async ci =>
             {
                 var progress = (IProgress<ScanProgressUpdate>)ci[2]!;
-                progress.Report(ScanProgressUpdate.Waiting("D:"));
+                progress.Report(ScanProgressUpdate.Waiting(new SourceFolderWait("D:", () => { })));
                 await WaitUntil(() => vm!.Cleanup.OperationProgress == waitLine);
                 duringWait = vm!.Cleanup.OperationProgress;
                 progress.Report(ScanProgressUpdate.Waiting(null));
@@ -684,7 +684,7 @@ public class CleanupPreFlightTests
         // window's dispatcher, which keeps every scan update posted to it.
         const string Milestone = "a milestone the scan reported";
         const string Ticker = "a ticker update the scan reported";
-        var wait = ScanProgressUpdate.Waiting("D:");
+        var wait = ScanProgressUpdate.Waiting(new SourceFolderWait("D:", () => { }));
         var end = ScanProgressUpdate.Waiting(null);
         var headings = new System.Collections.Concurrent.ConcurrentQueue<string>();
         var dispatcher = new DispatcherStandIn();

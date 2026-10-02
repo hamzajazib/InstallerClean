@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.IO.Abstractions;
 using System.Runtime.ExceptionServices;
@@ -123,7 +124,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         Action<Exception, string>? recordRefusal = null,
         Func<string, bool?>? namesAFileInInstallerFolder = null,
         Action<int>? candidateReached = null,
-        Action<string?>? waitingOn = null)
+        Action<SourceFolderWait?>? waitingOn = null)
     {
         var outcomes = new DeclaredProductOutcome[candidates.Count];
 
@@ -949,7 +950,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// root itself, as one on a server that Windows gives up on does. Every later package
     /// under a root given up answers false without being read, so no further read is started
     /// there. A drive whose kind has not answered within the limit is given up the same way
-    /// (<see cref="KindOf"/>).
+    /// (<see cref="KindOf"/>), and so is a root the pass's caller has stopped waiting for
+    /// (<see cref="PassAnswers.Stop"/>).
     ///
     /// READS THAT FAIL ADD UP. A read that answers false within
     /// <see cref="SourceFolderSlowFailure"/> adds the time it took to its root's total of
@@ -964,14 +966,16 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// (<see cref="AnswersWithin"/>). A read that opens its package, or finds no file there,
     /// adds to this total and not to the first, so a drive or a share slow to answer every
     /// read has its packages read one after another until those reads add up past the budget,
-    /// and each wait is told to the pass's caller. Cancelling the pass ends the wait at once.
+    /// and each wait is told to the pass's caller, which can stop waiting for the root.
+    /// Cancelling the pass ends the wait at once.
     ///
     /// WHERE FALSE COMES FROM THE ROOT BEING GIVEN UP, <paramref name="givenUp"/> IS THE ROOT:
     /// for a package under a root already given up, a read that has not answered within the
-    /// time limit, and a read that answered false only after waiting longer than
-    /// <see cref="SourceFolderSlowFailure"/>, which waited on the root itself. For every other
-    /// answer it is null. A read that answers false sooner gave its own answer, and so did the
-    /// read that takes its root's reads past either total.
+    /// time limit, a read the caller's stop refused or ended before it answered, and a read
+    /// that answered false only after waiting longer than <see cref="SourceFolderSlowFailure"/>,
+    /// which waited on the root itself. For every other answer it is null. A read that answers
+    /// false sooner gave its own answer, and so did the read that takes its root's reads past
+    /// either total.
     /// </summary>
     private bool ReadSourcePackage(
         string package,
@@ -1042,21 +1046,38 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// long it was waited for. A read that answers after the limit finishes on its own thread
     /// and its answer is not used. Cancelling ends the wait at once.
     ///
-    /// THE ROOT IS GIVEN UP FOR THE PASS (<see cref="PassAnswers.GiveUp"/>) where the read has
-    /// not answered in time, and where the reads under the root in this pass, this one among
-    /// them, have taken longer than <see cref="SourceFolderReadBudget"/> between them, whatever
-    /// each answered (<see cref="PassAnswers.TimeReading"/>). The answer of a read that took its
-    /// root past the budget is still used. What a package read answered, and how long it took,
-    /// can also give its root up in <see cref="ReadSourcePackage"/>, by a route that outranks
-    /// the budget's.
+    /// THE ROOT IS GIVEN UP FOR THE PASS (<see cref="PassAnswers.GiveUp"/>) where the caller has
+    /// stopped waiting for it, where the read has not answered in time, and where the reads
+    /// under the root in this pass, this one among them, have taken longer than
+    /// <see cref="SourceFolderReadBudget"/> between them, whatever each answered
+    /// (<see cref="PassAnswers.TimeReading"/>). The answer of a read that took its root past the
+    /// budget is still used. What a package read answered, and how long it took, can also give
+    /// its root up in <see cref="ReadSourcePackage"/>, by a route that outranks the budget's.
     ///
     /// A READ STILL WAITING AFTER <see cref="SourceFolderWaitThreshold"/> IS TOLD TO THE PASS'S
-    /// CALLER (<see cref="PassAnswers.WaitingOn"/>), with the root, and null is told when the
-    /// wait ends, answered or not. A wait that cancelling ends is not told null: whoever shows
-    /// the wait is already showing the cancel.
+    /// CALLER (<see cref="PassAnswers.WaitingOn"/>), as a <see cref="SourceFolderWait"/> naming
+    /// the root, and null is told when the wait ends, answered or not. A wait that cancelling
+    /// ends is not told null: whoever shows the wait is already showing the cancel.
+    ///
+    /// THE CALLER CAN STOP WAITING FOR THE ROOT (<see cref="PassAnswers.Stop"/>), through that
+    /// wait or any other it was told of under the root in this pass, and the root is then given
+    /// up for the pass by the stop's own route, which outranks every other the read meets
+    /// (<see cref="SourceRootGiveUpRoute.StoppedWaiting"/>). A read waiting there ends at once,
+    /// and its answer is used only where it has already come in. No read is started there after
+    /// the stop, and a read the stop ends within the threshold is not told.
     /// </summary>
     private bool AnswersWithin<T>(Func<T> read, string root, PassAnswers pass, out T value, out TimeSpan took)
     {
+        value = default!;
+        took = TimeSpan.Zero;
+
+        var stopped = pass.Stopped(root);
+        if (stopped.IsCompleted)
+        {
+            pass.GiveUp(stopped.Result, SourceRootGiveUpRoute.StoppedWaiting);
+            return false;
+        }
+
         var answered = new TaskCompletionSource<(T Value, ExceptionDispatchInfo? Fault)>(
             TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -1083,33 +1104,50 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var started = Clock.GetTimestamp();
         reader.Start();
 
+        // True where the read answers, or the caller stops waiting for the root, within the
+        // timeout. Cancelling the pass throws out of the wait, so the end of a wait it ends is
+        // not told.
+        Task[] answerOrStop = [answered.Task, stopped];
+        bool EndsWithin(TimeSpan timeout) =>
+            Task.WaitAny(answerOrStop, WholeMilliseconds(timeout), pass.CancellationToken) >= 0;
+
         var notice = SourceFolderWaitThreshold < SourceFolderTimeLimit ? SourceFolderWaitThreshold : SourceFolderTimeLimit;
-        var inTime = answered.Task.Wait(notice, pass.CancellationToken);
-        if (!inTime)
+        var ended = EndsWithin(notice);
+        if (!ended && !stopped.IsCompleted)
         {
-            pass.WaitingOn?.Invoke(root);
-            inTime = answered.Task.Wait(SourceFolderTimeLimit - notice, pass.CancellationToken);
+            pass.WaitingOn?.Invoke(new SourceFolderWait(root, () => pass.Stop(root)));
+            ended = EndsWithin(SourceFolderTimeLimit - notice);
             pass.WaitingOn?.Invoke(null);
         }
+
+        // Where the answer and the stop have both come in, the answer is used.
+        var inTime = ended && answered.Task.IsCompleted;
 
         took = Clock.GetElapsedTime(started);
 
         var reading = pass.TimeReading.GetValueOrDefault(root) + took;
         pass.TimeReading[root] = reading;
+
+        // A read the stop ended has not answered either, and the stop's route outranks the
+        // time limit's (PassAnswers.GiveUp).
+        if (stopped.IsCompleted) pass.GiveUp(stopped.Result, SourceRootGiveUpRoute.StoppedWaiting);
         if (!inTime) pass.GiveUp(root, SourceRootGiveUpRoute.NoAnswer);
         if (reading > SourceFolderReadBudget) pass.GiveUp(root, SourceRootGiveUpRoute.ReadsAddUp);
 
-        if (!inTime)
-        {
-            value = default!;
-            return false;
-        }
+        if (!inTime) return false;
 
         var (result, fault) = answered.Task.Result;
         fault?.Throw();
         value = result;
         return true;
     }
+
+    /// <summary>
+    /// <paramref name="timeout"/> in whole milliseconds, the unit
+    /// <see cref="Task.WaitAny(Task[], int, CancellationToken)"/> takes, held between nought and
+    /// the longest wait that can be given.
+    /// </summary>
+    private static int WholeMilliseconds(TimeSpan timeout) => (int)Math.Clamp(timeout.TotalMilliseconds, 0, int.MaxValue);
 
     /// <summary>
     /// The part of <paramref name="path"/> a server or a drive answers for: <c>\\server\share</c>
@@ -2027,7 +2065,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             IMsiApi msi,
             IReadOnlyList<ListedInstallation> installations,
             CancellationToken cancellationToken,
-            Action<string?>? waitingOn)
+            Action<SourceFolderWait?>? waitingOn)
         {
             _msi = msi;
             _listed = InstallerQueryService.InstallationsByCode(
@@ -2040,10 +2078,39 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         internal CancellationToken CancellationToken { get; }
 
         /// <summary>
-        /// Told the root a read is waiting on, and null when that wait ends
-        /// (<see cref="AnswersWithin"/>).
+        /// Told each wait a read makes, naming the root it is under, and null when that wait
+        /// ends (<see cref="AnswersWithin"/>).
         /// </summary>
-        internal Action<string?>? WaitingOn { get; }
+        internal Action<SourceFolderWait?>? WaitingOn { get; }
+
+        /// <summary>
+        /// For each root the pass has read under or been told to stop waiting for, a task
+        /// completed once the caller stops waiting for it, with the root as the caller spelled
+        /// it, keyed by root without case. A stop comes from the caller's thread and is looked
+        /// for on the pass's, so this is the concurrent kind.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, TaskCompletionSource<string>> _stops =
+            new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Stops waiting for <paramref name="root"/> for the rest of the pass, from any thread
+        /// (<see cref="SourceFolderWait.StopWaiting"/>): a wait there ends at once, and the read
+        /// that sees the stop gives the root up (<see cref="AnswersWithin"/>), under the
+        /// spelling of the wait the caller stopped. A second stop is the same as the first.
+        /// </summary>
+        internal void Stop(string root) => StopOf(root).TrySetResult(root);
+
+        /// <summary>
+        /// The task <see cref="Stop"/> completes for <paramref name="root"/>, with the root as
+        /// the first stop spelled it.
+        /// </summary>
+        internal Task<string> Stopped(string root) => StopOf(root).Task;
+
+        // Made to run its continuations asynchronously, so code that continues from a stop runs
+        // on the thread pool and not on the caller's thread, which completes it. The pass waits
+        // on it with Task.WaitAny, which the runtime wakes from the caller's thread all the same.
+        private TaskCompletionSource<string> StopOf(string root) =>
+            _stops.GetOrAdd(root, _ => new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously));
 
         /// <summary>The pass's links, once the first declared code has been asked about.</summary>
         internal InstallationLinks? Links { get; set; }
@@ -2105,14 +2172,19 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// false only after waiting longer than <see cref="SourceFolderSlowFailure"/>, one whose
         /// package reads that answered false have taken longer than
         /// <see cref="SourceFolderFailedWaitBudget"/> between them (<see cref="TimeFailing"/>),
-        /// and one whose reads have taken longer than <see cref="SourceFolderReadBudget"/>
-        /// between them, whatever each answered (<see cref="TimeReading"/>). The reads under a
-        /// drive include the one that asks its kind (<see cref="KindOf"/>).
+        /// one whose reads have taken longer than <see cref="SourceFolderReadBudget"/> between
+        /// them, whatever each answered (<see cref="TimeReading"/>), and one the caller has
+        /// stopped waiting for (<see cref="Stop"/>). The reads under a drive include the one
+        /// that asks its kind (<see cref="KindOf"/>).
         ///
         /// A ROOT GIVEN UP AGAIN TAKES WHICHEVER OF ITS ROUTES IS DECLARED FIRST IN
         /// <see cref="SourceRootGiveUpRoute"/>, so a read meeting more than one condition gives
         /// its root the first of them, whatever order they are checked in. The spelling kept is
-        /// the one it was first given up under.
+        /// the one it was first given up under, which for a root the caller stopped waiting for
+        /// is the spelling of the wait it stopped (<see cref="Stop"/>).
+        ///
+        /// It runs on the pass's thread alone. A stop made on the caller's thread gives its root
+        /// up here through the read that sees it (<see cref="AnswersWithin"/>).
         /// </summary>
         internal void GiveUp(string root, SourceRootGiveUpRoute route)
         {

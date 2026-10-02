@@ -36,8 +36,9 @@ public interface IRemovableReverifier
     /// <param name="progress">
     /// Told each wait the declared-product screen makes on a source folder, as the scan
     /// tells its own (<see cref="ScanProgressUpdate.IsWait"/>): a line naming what it is
-    /// waiting for once a read has waited about a second, and an empty one when that wait
-    /// ends. Nothing else is reported through it.
+    /// waiting for once a read has waited about a second, carrying the wait the caller can
+    /// stop (<see cref="ScanProgressUpdate.Wait"/>), and an empty one when that wait ends.
+    /// Nothing else is reported through it.
     /// </param>
     Task<ReverifyResult> ReverifyAsync(
         IReadOnlyList<string> candidatePaths,

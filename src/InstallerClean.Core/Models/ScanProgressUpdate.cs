@@ -30,19 +30,25 @@ namespace InstallerClean.Models;
 /// not count either as a milestone, so a bar divided by the milestones is divided the
 /// same way on a machine that waits as on one that does not. A wait update carries no
 /// position, and there is one pair for each wait.
+///
+/// The line carries the wait itself, <see cref="Wait"/>, through which the host can stop
+/// waiting for that drive or share (<see cref="SourceFolderWait.StopWaiting"/>). The empty
+/// one carries none.
 /// </summary>
 public sealed record ScanProgressUpdate(
     string Message,
     bool IsMilestone = true,
     int Position = 0,
     int Total = 0,
-    bool IsWait = false)
+    bool IsWait = false,
+    SourceFolderWait? Wait = null)
 {
     /// <summary>
-    /// The update saying the scan is waiting for <paramref name="root"/>, a drive letter
-    /// and its colon, a share, or a path of another form, or, for null, that the wait
-    /// has ended.
+    /// The update naming <paramref name="wait"/>, a wait on a drive letter and its colon, a
+    /// share, or a path of another form, or, for null, the update saying that the wait has
+    /// ended.
     /// </summary>
-    internal static ScanProgressUpdate Waiting(string? root) =>
-        new(root is null ? string.Empty : DisplayHelpers.WaitingFor(root), IsMilestone: false, IsWait: true);
+    internal static ScanProgressUpdate Waiting(SourceFolderWait? wait) =>
+        new(wait is null ? string.Empty : DisplayHelpers.WaitingFor(wait.Root),
+            IsMilestone: false, IsWait: true, Wait: wait);
 }

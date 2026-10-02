@@ -17,12 +17,15 @@ public class WaitLineTests
         return (new WaitLine(() => line, text => line = text), () => line);
     }
 
+    private static ScanProgressUpdate WaitOn(string root) =>
+        ScanProgressUpdate.Waiting(new SourceFolderWait(root, () => { }));
+
     [Fact]
     public void A_wait_takes_the_line_and_its_end_puts_the_line_back()
     {
         var (wait, line) = OnALine();
 
-        wait.Show(ScanProgressUpdate.Waiting("D:"));
+        wait.Show(WaitOn("D:"));
         Assert.Equal(DisplayHelpers.WaitingFor("D:"), line());
 
         wait.Show(ScanProgressUpdate.Waiting(null));
@@ -34,8 +37,8 @@ public class WaitLineTests
     {
         var (wait, line) = OnALine();
 
-        wait.Show(ScanProgressUpdate.Waiting("D:"));
-        wait.Show(ScanProgressUpdate.Waiting(@"\\fileserver\apps"));
+        wait.Show(WaitOn("D:"));
+        wait.Show(WaitOn(@"\\fileserver\apps"));
         Assert.Equal(DisplayHelpers.WaitingFor(@"\\fileserver\apps"), line());
 
         wait.Show(ScanProgressUpdate.Waiting(null));
@@ -58,7 +61,7 @@ public class WaitLineTests
         var line = Before;
         var wait = new WaitLine(() => line, text => line = text);
 
-        wait.Show(ScanProgressUpdate.Waiting("D:"));
+        wait.Show(WaitOn("D:"));
         wait.Forget();
         line = "Scan cancelled.";
         wait.Show(ScanProgressUpdate.Waiting(null));

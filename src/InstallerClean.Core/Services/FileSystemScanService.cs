@@ -1400,12 +1400,13 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // root this run resolved, the one every candidate was judged against, and the
         // installations every answer about a product is held against are the ones this
         // run's enumeration listed. A wait on a source folder is reported as it starts
-        // and as it ends, so the host can say what the scan is waiting for.
+        // and as it ends, so the host can say what the scan is waiting for and offer to
+        // stop waiting for it.
         var screening = _declaredProducts.Screen(
             candidates, installations, cancellationToken, recordRefusal,
             path => InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(path, cacheRoot),
             Reached,
-            root => progress?.Report(ScanProgressUpdate.Waiting(root)));
+            wait => progress?.Report(ScanProgressUpdate.Waiting(wait)));
         var outcomes = screening.Outcomes;
 
         // A screen that answered a different number of candidates than it was

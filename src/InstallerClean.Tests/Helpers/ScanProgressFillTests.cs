@@ -307,6 +307,7 @@ public class ScanProgressAgainstTheScanTests
     {
         // The screen tells of one wait, on drive D:, while it judges the file it was handed.
         string[] files = { @"C:\Windows\Installer\1.msi", @"C:\Windows\Installer\a.msi" };
+        var onD = new SourceFolderWait("D:", () => { });
         var collected = new Collected();
         var query = new InstallerQueryService(
             MachineWith(2),
@@ -315,11 +316,11 @@ public class ScanProgressAgainstTheScanTests
         var screen = Substitute.For<IDeclaredProductCheck>();
         screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
                 Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(), Arg.Any<Func<string, bool?>?>(),
-                Arg.Any<Action<int>?>(), Arg.Any<Action<string?>?>())
+                Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>())
             .Returns(call =>
             {
-                var waitingOn = call.ArgAt<Action<string?>?>(6);
-                waitingOn?.Invoke("D:");
+                var waitingOn = call.ArgAt<Action<SourceFolderWait?>?>(6);
+                waitingOn?.Invoke(onD);
                 waitingOn?.Invoke(null);
                 return new DeclaredProductScreening(
                     call.ArgAt<IReadOnlyList<OrphanedFile>>(0)
@@ -333,22 +334,26 @@ public class ScanProgressAgainstTheScanTests
 
         var waits = collected.Updates.Where(u => u.IsWait).ToList();
         Assert.Equal(new[] { DisplayHelpers.WaitingFor("D:"), string.Empty }, waits.Select(u => u.Message));
+        Assert.Equal(new[] { onD, null }, waits.Select(u => u.Wait));
         Assert.All(waits, u => Assert.False(u.IsMilestone));
         Assert.Equal(6, collected.Updates.Count(u => u.IsMilestone));
     }
 
     [Fact]
-    public void A_wait_update_is_no_milestone_and_the_one_ending_it_is_empty()
+    public void A_wait_update_is_no_milestone_and_carries_its_wait_and_the_one_ending_it_is_empty()
     {
-        var starts = ScanProgressUpdate.Waiting(@"\\fileserver\apps");
+        var onTheShare = new SourceFolderWait(@"\\fileserver\apps", () => { });
+        var starts = ScanProgressUpdate.Waiting(onTheShare);
         var ends = ScanProgressUpdate.Waiting(null);
 
         Assert.True(starts.IsWait);
         Assert.False(starts.IsMilestone);
         Assert.Equal(DisplayHelpers.WaitingFor(@"\\fileserver\apps"), starts.Message);
+        Assert.Same(onTheShare, starts.Wait);
         Assert.True(ends.IsWait);
         Assert.False(ends.IsMilestone);
         Assert.Empty(ends.Message);
+        Assert.Null(ends.Wait);
     }
 
     /// <summary>

@@ -57,7 +57,7 @@ public class RemovableReverifierWalkDerivedTests
         var screen = Substitute.For<IDeclaredProductCheck>();
         screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
                 Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(), Arg.Any<Func<string, bool?>?>(),
-                Arg.Any<Action<int>?>(), Arg.Any<Action<string?>?>())
+                Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>())
             .Returns(call => new DeclaredProductScreening(
                 call.ArgAt<IReadOnlyList<OrphanedFile>>(0)
                     .Select(f => kept.Contains(f.FullPath, StringComparer.OrdinalIgnoreCase)
@@ -117,14 +117,15 @@ public class RemovableReverifierWalkDerivedTests
         var ids = new ScriptedFileIdentities();
         ids.Opens(registered, 1);
         ids.Opens(orphan, 2);
+        var onTheShare = new SourceFolderWait(@"\\fileserver\apps", () => { });
         var screen = Screen();
         screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
                 Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(), Arg.Any<Func<string, bool?>?>(),
-                Arg.Any<Action<int>?>(), Arg.Any<Action<string?>?>())
+                Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>())
             .Returns(call =>
             {
-                var waitingOn = call.ArgAt<Action<string?>?>(6);
-                waitingOn?.Invoke(@"\\fileserver\apps");
+                var waitingOn = call.ArgAt<Action<SourceFolderWait?>?>(6);
+                waitingOn?.Invoke(onTheShare);
                 waitingOn?.Invoke(null);
                 return new DeclaredProductScreening(
                     call.ArgAt<IReadOnlyList<OrphanedFile>>(0)
@@ -139,7 +140,7 @@ public class RemovableReverifierWalkDerivedTests
 
         Assert.Equal(new[] { orphan }, result.Surviving);
         Assert.Equal(
-            new[] { ScanProgressUpdate.Waiting(@"\\fileserver\apps"), ScanProgressUpdate.Waiting(null) },
+            new[] { ScanProgressUpdate.Waiting(onTheShare), ScanProgressUpdate.Waiting(null) },
             reported);
     }
 
@@ -186,7 +187,7 @@ public class RemovableReverifierWalkDerivedTests
         var screen = Substitute.For<IDeclaredProductCheck>();
         screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
                 Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(), Arg.Any<Func<string, bool?>?>(),
-                Arg.Any<Action<int>?>(), Arg.Any<Action<string?>?>())
+                Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>())
             .Returns(call => new DeclaredProductScreening(
                 call.ArgAt<IReadOnlyList<OrphanedFile>>(0)
                     .Select(f => f.FullPath switch
@@ -219,7 +220,7 @@ public class RemovableReverifierWalkDerivedTests
         var screen = Substitute.For<IDeclaredProductCheck>();
         screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
                 Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(), Arg.Any<Func<string, bool?>?>(),
-                Arg.Any<Action<int>?>(), Arg.Any<Action<string?>?>())
+                Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>())
             .Returns(new DeclaredProductScreening([DeclaredProductOutcome.DeclaredProductInstalled], [givenUp]));
 
         var result = await Reverifier(Query(Live(registered)), ids, screen, OldTimes(kept))
@@ -279,7 +280,7 @@ public class RemovableReverifierWalkDerivedTests
         var screen = Substitute.For<IDeclaredProductCheck>();
         screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
                 Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(), Arg.Any<Func<string, bool?>?>(),
-                Arg.Any<Action<int>?>(), Arg.Any<Action<string?>?>())
+                Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>())
             .Returns(new DeclaredProductScreening([DeclaredProductOutcome.DeclaredProductNotInstalled], []));
 
         var result = await Reverifier(Query(Live(registered)), ids, screen, OldTimes(a, b))

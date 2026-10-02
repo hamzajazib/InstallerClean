@@ -38,11 +38,14 @@ public class ThrottledScanProgressTests
         var passed = new List<ScanProgressUpdate>();
         var throttle = new ThrottledScanProgress(new Collect(passed), AnHour);
 
-        throttle.Report(Ticker(1));
-        throttle.Report(ScanProgressUpdate.Waiting("D:"));
-        throttle.Report(ScanProgressUpdate.Waiting(null));
+        var wait = ScanProgressUpdate.Waiting(new SourceFolderWait("D:", () => { }));
+        var end = ScanProgressUpdate.Waiting(null);
 
-        Assert.Equal(new[] { Ticker(1), ScanProgressUpdate.Waiting("D:"), ScanProgressUpdate.Waiting(null) }, passed);
+        throttle.Report(Ticker(1));
+        throttle.Report(wait);
+        throttle.Report(end);
+
+        Assert.Equal(new[] { Ticker(1), wait, end }, passed);
     }
 
     [Fact]
@@ -53,7 +56,7 @@ public class ThrottledScanProgressTests
         var throttle = new ThrottledScanProgress(new Collect(passed), AnHour);
 
         throttle.Report(Ticker(1));
-        throttle.Report(ScanProgressUpdate.Waiting("D:"));
+        throttle.Report(ScanProgressUpdate.Waiting(new SourceFolderWait("D:", () => { })));
         throttle.Report(ScanProgressUpdate.Waiting(null));
         throttle.Report(Ticker(2));
 

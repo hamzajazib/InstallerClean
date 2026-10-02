@@ -3993,7 +3993,7 @@ public class DeclaredProductCheckTests
                 DriveKindOf = FixedDrive,
                 NamesInFolderOf = NameOnly,
             }
-            .Screen([.. copies.Select(Package)], [], default, null, InInstallerFolder, waitingOn: told.Add).Outcomes;
+            .Screen([.. copies.Select(Package)], [], default, null, InInstallerFolder, waitingOn: wait => told.Add(wait?.Root)).Outcomes;
 
         Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
         Assert.Equal(sourcePackages, files.Started);
@@ -4318,7 +4318,7 @@ public class DeclaredProductCheckTests
                 NamesInFolderOf = NameOnly,
             }
             .Screen([Package(Candidate), Package(OtherCandidate)], [], cancellationToken, null, InInstallerFolder,
-                waitingOn: told.Add).Outcomes;
+                waitingOn: wait => told.Add(wait?.Root)).Outcomes;
 
     [Theory]
     [InlineData(@"D:\Setup\a\", @"D:\Setup\b\", "D:")]
@@ -4400,7 +4400,7 @@ public class DeclaredProductCheckTests
                 NamesInFolderOf = NameOnly,
             }
             .Screen([Package(Candidate), Package(OtherCandidate)], [], default, null, InInstallerFolder,
-                waitingOn: told.Add);
+                waitingOn: wait => told.Add(wait?.Root));
 
         Assert.Equal(new[] { "Z:", null }, told);
     }
@@ -4455,14 +4455,357 @@ public class DeclaredProductCheckTests
         Assert.Equal(2, files.Started.Count(read => read == SharePackage));
     }
 
+    // ---- Stopping a wait ----
+    //
+    // The caller can stop waiting for the drive or share of a wait it was told of. A wait
+    // there in progress ends at once. The root is then given up for the rest of the pass, as
+    // it is where a read has not answered within the time limit: what depended on the read is
+    // kept, and no later read under the root is started in the pass. A read that has answered
+    // keeps its answer. Each pass has its own stops, and a stop does not change what cancelling
+    // does. The root is listed with the others the pass gave up, as stopped, in the spelling of
+    // the wait the caller stopped, and every file kept where its check stopped at a read the
+    // stop refused or ended before it answered counts towards it. The time limit here is a
+    // minute and each read is held for at most HeldFor, so a pass ending sooner than that has
+    // had its wait stopped.
+
+    /// <summary>
+    /// The check over two programs, A's package held as the test says, with its threshold at
+    /// <see cref="WaitThreshold"/> and its time limit at a minute, telling
+    /// <paramref name="waitingOn"/> each wait and <paramref name="candidateReached"/> each
+    /// candidate reached.
+    /// </summary>
+    private static DeclaredProductScreening ScreenStoppingWaits(
+        (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+            ScriptedFileIdentities Files, MockFileSystem Disk) f,
+        HeldFileIdentities files,
+        Action<SourceFolderWait?> waitingOn,
+        Action<int>? candidateReached = null) =>
+        new DeclaredProductCheck(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
+            {
+                SourceFolderTimeLimit = TimeSpan.FromMinutes(1),
+                SourceFolderWaitThreshold = WaitThreshold,
+                DriveKindOf = FixedDrive,
+                NamesInFolderOf = NameOnly,
+            }
+            .Screen([Package(Candidate), Package(OtherCandidate)], [], default, null, InInstallerFolder,
+                candidateReached, waitingOn);
+
+    [Theory]
+    [InlineData(@"D:\Setup\a\", @"d:\Setup\b\", "D:")]
+    [InlineData(@"\\nas\share\a\", @"\\NAS\SHARE\b\", @"\\nas\share")]
+    public void A_wait_stopped_as_it_is_told_ends_at_once_and_its_root_is_kept_for_the_rest_of_the_pass_without_being_read(
+        string heldFolder, string otherFolder, string root)
+    {
+        // The stop is made inside the call telling the wait, on the pass's own thread, before
+        // the wait it names has begun. The second program's folder is under the same root,
+        // spelled in another case.
+        var (f, files, otherPackage) = TwoProductsBesideAHeldSource(heldFolder, otherFolder);
+        using var held = files;
+        var told = new List<string?>();
+
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var screening = ScreenStoppingWaits(f, files, wait =>
+        {
+            told.Add(wait?.Root);
+            wait?.StopWaiting();
+        });
+
+        Assert.True(clock.Elapsed < HeldFor, $"the screen took {clock.Elapsed}");
+        Assert.All(screening.Outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
+        Assert.Equal(new[] { root, null }, told);
+        Assert.DoesNotContain(otherPackage, files.Calls);
+        Assert.Equal([new(root, SourceRootGiveUpRoute.StoppedWaiting, 2)], GivenUp(screening));
+    }
+
+    [Fact]
+    public async Task A_wait_stopped_from_another_thread_ends_at_once()
+    {
+        // The caller is handed the wait on the pass's thread and stops it from a thread of its
+        // own a moment later, as a window does, once the wait has begun.
+        var (f, files, otherPackage) = TwoProductsBesideAHeldSource(@"D:\Setup\a\", @"D:\Setup\b\");
+        using var held = files;
+        var told = new List<string?>();
+        Task? stopping = null;
+
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var screening = ScreenStoppingWaits(f, files, wait =>
+        {
+            told.Add(wait?.Root);
+            if (wait is not null)
+                stopping = Task.Run(async () =>
+                {
+                    await Task.Delay(WaitThreshold);
+                    wait.StopWaiting();
+                });
+        });
+
+        Assert.True(clock.Elapsed < HeldFor, $"the screen took {clock.Elapsed}");
+        Assert.NotNull(stopping);
+        await stopping;
+        Assert.All(screening.Outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
+        Assert.Equal(new[] { "D:", null }, told);
+        Assert.DoesNotContain(otherPackage, files.Calls);
+        Assert.Equal([new("D:", SourceRootGiveUpRoute.StoppedWaiting, 2)], GivenUp(screening));
+    }
+
+    [Fact]
+    public void A_stop_gives_up_only_the_root_it_names()
+    {
+        // The second program's folder is on another drive, so its package is read and its copy
+        // let through.
+        var (f, files, otherPackage) = TwoProductsBesideAHeldSource(@"D:\Setup\a\", @"E:\Setup\b\");
+        using var held = files;
+
+        var screening = ScreenStoppingWaits(f, files, wait => wait?.StopWaiting());
+
+        Assert.Equal(
+            new[] { DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile },
+            screening.Outcomes);
+        Assert.Contains(otherPackage, files.Calls);
+        Assert.Equal([new("D:", SourceRootGiveUpRoute.StoppedWaiting, 1)], GivenUp(screening));
+    }
+
+    [Fact]
+    public void Every_installation_package_is_kept_beside_a_second_copy_whose_source_the_caller_stopped_waiting_for()
+    {
+        // The second copy's package is in a local folder, so it is read for every candidate.
+        var f = AMarkedSecondCopy();
+        f.Files.Opens(SetupPackage, 9);
+        using var files = new HeldFileIdentities(f.Files);
+        files.Holds(SetupPackage, HeldFor);
+
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var screening = new DeclaredProductCheck(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
+            {
+                SourceFolderTimeLimit = TimeSpan.FromMinutes(1),
+                SourceFolderWaitThreshold = WaitThreshold,
+                DriveKindOf = FixedDrive,
+                NamesInFolderOf = NameOnly,
+            }
+            .Screen([Package(Candidate), Package(OtherCandidate)], f.Listed, default, null, InInstallerFolder,
+                waitingOn: wait => wait?.StopWaiting());
+
+        Assert.True(clock.Elapsed < HeldFor, $"the screen took {clock.Elapsed}");
+        Assert.All(screening.Outcomes, outcome => Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, outcome));
+        Assert.Single(files.Started, read => read == SetupPackage);
+        Assert.Equal([new("D:", SourceRootGiveUpRoute.StoppedWaiting, 2)], GivenUp(screening));
+    }
+
+    [Fact]
+    public void A_wait_for_a_drive_to_say_what_kind_it_is_can_be_stopped_and_nothing_under_the_drive_is_read()
+    {
+        using var released = new ManualResetEventSlim();
+        var (f, files, _) = TwoProductsBesideAHeldSource(@"Z:\Setup\a\", @"Z:\Setup\b\");
+        using var held = files;
+        var told = new List<string?>();
+
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var screening = new DeclaredProductCheck(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
+            {
+                SourceFolderTimeLimit = TimeSpan.FromMinutes(1),
+                SourceFolderWaitThreshold = WaitThreshold,
+                DriveKindOf = _ =>
+                {
+                    released.Wait(HeldFor);
+                    return DriveType.Fixed;
+                },
+                NamesInFolderOf = NameOnly,
+            }
+            .Screen([Package(Candidate), Package(OtherCandidate)], [], default, null, InInstallerFolder,
+                waitingOn: wait =>
+                {
+                    told.Add(wait?.Root);
+                    wait?.StopWaiting();
+                });
+
+        Assert.True(clock.Elapsed < HeldFor, $"the screen took {clock.Elapsed}");
+        Assert.All(screening.Outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome));
+        Assert.Equal(new[] { "Z:", null }, told);
+        Assert.DoesNotContain(files.Calls, read => read.StartsWith(@"Z:\", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal([new("Z:", SourceRootGiveUpRoute.StoppedWaiting, 2)], GivenUp(screening));
+        released.Set();
+    }
+
+    [Fact]
+    public void A_stop_made_as_a_wait_ends_leaves_the_read_its_answer_and_keeps_its_root_for_the_rest_of_the_pass()
+    {
+        // A's package answers after a wait. The stop is made in the call telling the wait's
+        // end, once the read has answered, with the wait the caller was handed as it began.
+        // A's copy is let through on that answer, so only B's copy counts towards the root.
+        var (f, files, otherPackage) = TwoProductsBesideAHeldSource(@"D:\Setup\a\", @"D:\Setup\b\");
+        using var held = files;
+        files.Holds(@"D:\Setup\a\" + CandidateName, SlowRead);
+        SourceFolderWait? shown = null;
+        var told = new List<string?>();
+
+        var screening = ScreenStoppingWaits(f, files, wait =>
+        {
+            told.Add(wait?.Root);
+            if (wait is null) shown?.StopWaiting();
+            else shown = wait;
+        });
+
+        Assert.Equal(
+            new[] { DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, DeclaredProductOutcome.DeclaredProductInstalled },
+            screening.Outcomes);
+        Assert.Equal(new[] { "D:", null }, told);
+        Assert.DoesNotContain(otherPackage, files.Calls);
+        Assert.Equal([new("D:", SourceRootGiveUpRoute.StoppedWaiting, 1)], GivenUp(screening));
+    }
+
+    [Theory]
+    [InlineData(true, 1000, 500, 60_000, 300_000, false, SourceRootGiveUpRoute.SlowFailure, 2)]
+    [InlineData(true, 1000, 500, 60_000, 300_000, true, SourceRootGiveUpRoute.StoppedWaiting, 2)]
+    [InlineData(true, 600, 5_000, 200, 300_000, false, SourceRootGiveUpRoute.FailedReadsAddUp, 1)]
+    [InlineData(true, 600, 5_000, 200, 300_000, true, SourceRootGiveUpRoute.StoppedWaiting, 1)]
+    [InlineData(false, 600, 5_000, 60_000, 200, false, SourceRootGiveUpRoute.ReadsAddUp, 1)]
+    [InlineData(false, 600, 5_000, 60_000, 200, true, SourceRootGiveUpRoute.StoppedWaiting, 1)]
+    public void A_root_whose_read_saw_the_stop_is_listed_as_stopped_whatever_else_that_read_met(
+        bool refused, int heldMs, int slowFailureMs, int failedBudgetMs, int readBudgetMs, bool stop,
+        SourceRootGiveUpRoute route, int kept)
+    {
+        // A's package is held past the threshold and answers within the limit: refused after a
+        // second, past the slow-failure bar, so A's copy counts too; refused sooner, taking the
+        // failed reads past their budget; or opening, taking all the reads past theirs. A row
+        // with no stop shows the route the read meets on its own. A row with one makes it in
+        // the call telling the wait's end, once the read has answered. B's copy is not read.
+        var (f, files, otherPackage) = TwoProductsBesideAHeldSource(@"D:\Setup\a\", @"D:\Setup\b\");
+        using var held = files;
+        if (refused) f.Files.Answers(@"D:\Setup\a\" + CandidateName, FileIdentityRead.OpenRefused);
+        files.Holds(@"D:\Setup\a\" + CandidateName, TimeSpan.FromMilliseconds(heldMs));
+        SourceFolderWait? shown = null;
+
+        var screening = new DeclaredProductCheck(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
+            {
+                SourceFolderTimeLimit = HeldFor,
+                SourceFolderWaitThreshold = WaitThreshold,
+                SourceFolderSlowFailure = TimeSpan.FromMilliseconds(slowFailureMs),
+                SourceFolderFailedWaitBudget = TimeSpan.FromMilliseconds(failedBudgetMs),
+                SourceFolderReadBudget = TimeSpan.FromMilliseconds(readBudgetMs),
+                DriveKindOf = FixedDrive,
+                NamesInFolderOf = NameOnly,
+            }
+            .Screen([Package(Candidate), Package(OtherCandidate)], [], default, null, InInstallerFolder,
+                waitingOn: wait =>
+                {
+                    if (wait is not null) shown = wait;
+                    else if (stop) shown?.StopWaiting();
+                });
+
+        Assert.NotNull(shown);
+        Assert.DoesNotContain(otherPackage, files.Calls);
+        Assert.Equal([new("D:", route, kept)], GivenUp(screening));
+    }
+
+    [Fact]
+    public void A_stop_made_between_reads_keeps_the_next_read_under_its_root_from_starting()
+    {
+        // A's package answers after a wait. The stop is made, with the wait the caller was
+        // handed for it, as the pass reaches the second candidate, before B's package is read.
+        // B's folder spells the drive in lower case, and the root is listed as the wait the
+        // caller stopped spelled it.
+        var (f, files, otherPackage) = TwoProductsBesideAHeldSource(@"D:\Setup\a\", @"d:\Setup\b\");
+        using var held = files;
+        files.Holds(@"D:\Setup\a\" + CandidateName, SlowRead);
+        SourceFolderWait? shown = null;
+        var told = new List<string?>();
+
+        var screening = ScreenStoppingWaits(f, files,
+            wait =>
+            {
+                told.Add(wait?.Root);
+                shown ??= wait;
+            },
+            reached =>
+            {
+                if (reached == 2) shown!.StopWaiting();
+            });
+
+        Assert.Equal(
+            new[] { DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, DeclaredProductOutcome.DeclaredProductInstalled },
+            screening.Outcomes);
+        Assert.Equal(new[] { "D:", null }, told);
+        Assert.DoesNotContain(otherPackage, files.Calls);
+        Assert.Equal([new("D:", SourceRootGiveUpRoute.StoppedWaiting, 1)], GivenUp(screening));
+    }
+
+    [Fact]
+    public void A_stop_made_as_a_later_read_under_its_root_starts_ends_that_read_at_once_and_tells_nothing_of_it()
+    {
+        // Both packages are under D: and each is held past the threshold, a second here. The
+        // stop is made, with the wait the caller was handed for A's read, as B's read starts,
+        // so it lands inside B's threshold, and B's read is timed from its start.
+        var threshold = TimeSpan.FromSeconds(1);
+        var (f, files, otherPackage) = TwoProductsBesideAHeldSource(@"D:\Setup\a\", @"D:\Setup\b\");
+        using var held = files;
+        files.Holds(@"D:\Setup\a\" + CandidateName, threshold + SlowRead);
+        files.Holds(otherPackage, HeldFor);
+        SourceFolderWait? shown = null;
+        System.Diagnostics.Stopwatch? sinceBStarted = null;
+        files.OnStart(otherPackage, () =>
+        {
+            sinceBStarted = System.Diagnostics.Stopwatch.StartNew();
+            shown!.StopWaiting();
+        });
+        var told = new List<string?>();
+
+        var screening = new DeclaredProductCheck(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
+            {
+                SourceFolderTimeLimit = TimeSpan.FromMinutes(1),
+                SourceFolderWaitThreshold = threshold,
+                DriveKindOf = FixedDrive,
+                NamesInFolderOf = NameOnly,
+            }
+            .Screen([Package(Candidate), Package(OtherCandidate)], [], default, null, InInstallerFolder,
+                waitingOn: wait =>
+                {
+                    told.Add(wait?.Root);
+                    shown ??= wait;
+                });
+
+        Assert.NotNull(sinceBStarted);
+        Assert.True(sinceBStarted.Elapsed < threshold / 2, $"B's read went on for {sinceBStarted.Elapsed} after it started");
+        Assert.Equal(
+            new[] { DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, DeclaredProductOutcome.DeclaredProductInstalled },
+            screening.Outcomes);
+        Assert.Equal(new[] { "D:", null }, told);
+        Assert.Equal([new("D:", SourceRootGiveUpRoute.StoppedWaiting, 1)], GivenUp(screening));
+    }
+
+    [Fact]
+    public void A_stop_made_once_its_pass_has_ended_changes_nothing_in_the_next()
+    {
+        var (f, files, otherPackage) = TwoProductsBesideAHeldSource(@"D:\Setup\a\", @"D:\Setup\b\");
+        using var held = files;
+        files.Holds(@"D:\Setup\a\" + CandidateName, SlowRead);
+        var check = new DeclaredProductCheck(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
+            {
+                SourceFolderTimeLimit = HeldFor,
+                SourceFolderWaitThreshold = WaitThreshold,
+                DriveKindOf = FixedDrive,
+                NamesInFolderOf = NameOnly,
+            };
+        SourceFolderWait? shown = null;
+
+        check.Screen([Package(Candidate)], [], default, null, InInstallerFolder, waitingOn: wait => shown ??= wait);
+        Assert.NotNull(shown);
+        shown.StopWaiting();
+        var screening = check.Screen([Package(Candidate), Package(OtherCandidate)], [], default, null, InInstallerFolder);
+
+        Assert.All(screening.Outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
+        Assert.Contains(otherPackage, files.Calls);
+        Assert.Empty(screening.RootsGivenUp);
+    }
+
     // ---- The drives and shares a pass gives up ----
     //
     // Every root the pass gives up comes back once, in the order it was given up, with how it
     // came to be and how many files the pass kept at it: files whose check stopped at a read
-    // the pass refused for the root, because the root had been given up, the read did not
-    // answer within the time limit, or the read answered false only after a long wait. A read
-    // whose own answer was used counts nothing, and neither does a file its own comparison
-    // keeps.
+    // the pass refused for the root, because the root had been given up, the caller's stop
+    // refused it or ended it before it answered, the read did not answer within the time
+    // limit, or the read answered false only after a long wait. A read whose own answer was
+    // used counts nothing, and neither does a file its own comparison keeps. The tests of a
+    // root the caller stopped waiting for are under "Stopping a wait".
 
     /// <summary>The roots a screening gave up, for comparing with what a test expects.</summary>
     private static SourceRootGivenUp[] GivenUp(DeclaredProductScreening screening) => [.. screening.RootsGivenUp];
@@ -6054,6 +6397,7 @@ internal sealed class ScriptedFileIdentities : IFileIdentityReader
 internal sealed class HeldFileIdentities(ScriptedFileIdentities answers) : IFileIdentityReader, IDisposable
 {
     private readonly ConcurrentDictionary<string, TimeSpan> _holds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, Action> _onStart = new(StringComparer.OrdinalIgnoreCase);
     private readonly ManualResetEventSlim _released = new();
     private (SteppedClock Clock, TimeSpan Each)? _onTheClock;
 
@@ -6069,9 +6413,13 @@ internal sealed class HeldFileIdentities(ScriptedFileIdentities answers) : IFile
     /// <summary>Every held read moves <paramref name="clock"/> on by <paramref name="each"/> as it starts.</summary>
     public void TakesOnTheClock(SteppedClock clock, TimeSpan each) => _onTheClock = (clock, each);
 
+    /// <summary>A read of <paramref name="path"/> runs <paramref name="action"/> as it starts, on the read's own thread.</summary>
+    public void OnStart(string path, Action action) => _onStart[path] = action;
+
     public FileIdentityRead ReadOutcome(string path, out FileIdentity identity)
     {
         Calls.Enqueue(path);
+        if (_onStart.TryGetValue(path, out var onStart)) onStart();
         if (_holds.TryGetValue(path, out var hold))
         {
             Started.Enqueue(path);
