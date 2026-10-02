@@ -203,6 +203,20 @@ jobs:
         if: success() || failure()
         run: dotnet test src/InstallerClean.Tests/ -p:RestoreLockedMode=true
 
+      # A build reports a broken reference in a documentation comment only when
+      # it writes the documentation file, which no project here asks for. This
+      # build asks for it and fails on every documentation warning except the
+      # three that ask for more documentation: CS1591, CS1573 and CS1712. It
+      # fails on CS1570 and CS1587 as well as on the reference warnings, because
+      # the compiler resolves no reference inside a comment that is badly formed
+      # or is not on a member, so a broken reference there shows up only as one
+      # of those two. --no-incremental makes the compiler run whatever was built
+      # before this step: an incremental build skips the compiler for a project
+      # whose outputs are current, and a skipped compile reports nothing.
+      - name: Check documentation comments
+        if: success() || failure()
+        run: dotnet build src/InstallerClean.sln --no-incremental -p:RestoreLockedMode=true -p:GenerateDocumentationFile=true -warnaserror:CS0419,CS1570,CS1571,CS1572,CS1574,CS1580,CS1581,CS1584,CS1587,CS1589,CS1590,CS1592,CS1658,CS1710,CS1711,CS1723,CS1734,CS1735,CS8018 -nowarn:CS1591,CS1573,CS1712
+
       # Everything from here to the setup compile depends on the BUILD having
       # succeeded, not on the tests having passed, and a red test run is precisely
       # when somebody wants to know that the downloads still publish and that the
