@@ -35,6 +35,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Select all | Zaznacz wszystko |
 | _Browse... | Prze_glądaj... |
 | _Cancel | _Anuluj |
+| Carry on _without it | Carry on _without it |
 | Check for _updates | Sprawdź _aktualizacje |
 | _Close | _Zamknij |
 | _Delete permanently | Usuń _trwale |
@@ -96,6 +97,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Checking remaining files... | Sprawdzanie pozostałych plików... |
 | Waiting for drive {0} to respond... | Oczekiwanie na odpowiedź dysku {0}... |
 | Waiting for {0} to respond... | Oczekiwanie na odpowiedź od {0}... |
+| Any file still to be checked against it will be left alone. | Any file still to be checked against it will be left alone. |
 | Scan complete ({0}) | Skanowanie zakończone ({0}) |
 | Found {0} {1} you can safely delete. | Znaleziono {0} {1} do bezpiecznego usunięcia. |
 | Preparing destination folder... | Przygotowywanie folderu docelowego... |
@@ -359,6 +361,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Cancel operation | Anuluj operację |
 | Cancel scan | Anuluj skanowanie |
 | Cancel startup scan | Anuluj skanowanie startowe |
+| Carry on without it, drive {0} | Carry on without it, drive {0} |
+| Carry on without it, {0} | Carry on without it, {0} |
 | Close | Zamknij |
 | Close window | Zamknij okno |
 | Close result and return to main window | Zamknij wynik i wróć do okna głównego |
@@ -397,6 +401,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | Pliki, których nie udało się przetworzyć |
 | Explains this folder, and how to recover a file, in the README | Wyjaśnia ten folder i sposób odzyskania pliku w README |
+| {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
 | Report preview | Podgląd raportu |
 | Change language | Zmień język |
 | The program will restart. | Program zostanie ponownie uruchomiony. |

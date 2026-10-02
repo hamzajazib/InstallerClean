@@ -35,6 +35,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Select all | Chọn tất cả |
 | _Browse... | _Duyệt... |
 | _Cancel | _Hủy |
+| Carry on _without it | Carry on _without it |
 | Check for _updates | _Kiểm tra cập nhật |
 | _Close | Đón_g |
 | _Delete permanently | _Xóa vĩnh viễn |
@@ -96,6 +97,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Checking remaining files... | Đang kiểm tra các tệp còn lại... |
 | Waiting for drive {0} to respond... | Đang chờ ổ đĩa {0} phản hồi... |
 | Waiting for {0} to respond... | Đang chờ {0} phản hồi... |
+| Any file still to be checked against it will be left alone. | Any file still to be checked against it will be left alone. |
 | Scan complete ({0}) | Quét xong ({0}) |
 | Found {0} {1} you can safely delete. | Đã tìm thấy {0} {1} bạn có thể xóa an toàn. |
 | Preparing destination folder... | Đang chuẩn bị thư mục đích... |
@@ -359,6 +361,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Cancel operation | Hủy thao tác |
 | Cancel scan | Hủy quét |
 | Cancel startup scan | Hủy quét khi khởi động |
+| Carry on without it, drive {0} | Carry on without it, drive {0} |
+| Carry on without it, {0} | Carry on without it, {0} |
 | Close | Đóng |
 | Close window | Đóng cửa sổ |
 | Close result and return to main window | Đóng kết quả và quay lại cửa sổ chính |
@@ -397,6 +401,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | Các tệp không thể xử lý |
 | Explains this folder, and how to recover a file, in the README | Giải thích thư mục này, và cách khôi phục một tệp, trong README |
+| {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
 | Report preview | Xem trước báo cáo |
 | Change language | Thay đổi ngôn ngữ |
 | The program will restart. | Chương trình sẽ khởi động lại. |

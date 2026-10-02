@@ -35,6 +35,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Select all | すべて選択 |
 | _Browse... | 参照(_B)... |
 | _Cancel | キャンセル(_C) |
+| Carry on _without it | Carry on _without it |
 | Check for _updates | 更新の確認(_U) |
 | _Close | 閉じる(_C) |
 | _Delete permanently | 完全に削除(_D) |
@@ -96,6 +97,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Checking remaining files... | 残りのファイルをチェック中... |
 | Waiting for drive {0} to respond... | ドライブ {0} の応答を待機中... |
 | Waiting for {0} to respond... | {0} の応答を待機中... |
+| Any file still to be checked against it will be left alone. | Any file still to be checked against it will be left alone. |
 | Scan complete ({0}) | スキャン完了 ({0}) |
 | Found {0} {1} you can safely delete. | 安全に削除できる {0} 個の {1} が見つかりました。 |
 | Preparing destination folder... | 移動先フォルダーを準備中... |
@@ -359,6 +361,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Cancel operation | 操作をキャンセル |
 | Cancel scan | スキャンをキャンセル |
 | Cancel startup scan | 起動時スキャンをキャンセル |
+| Carry on without it, drive {0} | Carry on without it, drive {0} |
+| Carry on without it, {0} | Carry on without it, {0} |
 | Close | 閉じる |
 | Close window | ウィンドウを閉じる |
 | Close result and return to main window | 結果を閉じてメインウィンドウに戻る |
@@ -397,6 +401,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | 処理できなかったファイル |
 | Explains this folder, and how to recover a file, in the README | このフォルダーとファイルの回復方法を README で説明しています |
+| {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
 | Report preview | レポートのプレビュー |
 | Change language | 言語を変更 |
 | The program will restart. | プログラムが再起動します。 |

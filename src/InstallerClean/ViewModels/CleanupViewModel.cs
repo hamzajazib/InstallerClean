@@ -132,11 +132,60 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     [NotifyCanExecuteChangedFor(nameof(MoveAllCommand))]
     [NotifyCanExecuteChangedFor(nameof(DeleteAllCommand))]
     private bool _isOperationInFlight;
-    [ObservableProperty] private string _operationProgress = string.Empty;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(OperationProgressName))]
+    private string _operationProgress = string.Empty;
     [ObservableProperty] private int _operationCurrentFile;
     [ObservableProperty] private int _operationTotalFiles;
     [ObservableProperty] private string _operationCurrentFileName = string.Empty;
     [ObservableProperty] private double _operationProgressPercent;
+
+    /// <summary>
+    /// What a screen reader speaks for <see cref="OperationProgress"/>: the heading itself,
+    /// and while it is a wait the card's button can stop, the heading followed by the key
+    /// that presses the button and what that leaves alone
+    /// (<see cref="DisplayHelpers.WaitingLineWithStopKey"/>).
+    /// </summary>
+    public string OperationProgressName =>
+        WaitShown is null ? OperationProgress : DisplayHelpers.WaitingLineWithStopKey(OperationProgress);
+
+    /// <summary>
+    /// The wait <see cref="OperationProgress"/> names while it is a waiting line, and null
+    /// for every other heading. Only the write putting the wait's own line up sets it
+    /// (<see cref="OnOperationProgressChanged"/>), so the heading, the button under it and
+    /// the name a screen reader speaks change in one step, and any other write to the
+    /// heading takes the button away.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanStopWaiting))]
+    [NotifyPropertyChangedFor(nameof(StopWaitingName))]
+    [NotifyPropertyChangedFor(nameof(OperationProgressName))]
+    [NotifyCanExecuteChangedFor(nameof(StopWaitingCommand))]
+    private SourceFolderWait? _waitShown;
+
+    /// <summary>The wait whose line <see cref="WaitsInTheHeading"/> is writing, and null at any other time.</summary>
+    private SourceFolderWait? _waitTakingTheLine;
+
+    // Runs after the heading is stored and before the change is raised, so the button and
+    // the spoken name already match the new heading when anything hears of it.
+    partial void OnOperationProgressChanged(string value) => WaitShown = _waitTakingTheLine;
+
+    /// <summary>Whether the card shows the button that stops the wait the heading names.</summary>
+    public bool CanStopWaiting => WaitShown is not null;
+
+    /// <summary>
+    /// The name a screen reader speaks for that button, naming the drive or share
+    /// (<see cref="DisplayHelpers.StopWaitingFor"/>), and empty while there is no button.
+    /// </summary>
+    public string StopWaitingName => WaitShown is { } wait ? DisplayHelpers.StopWaitingFor(wait.Root) : string.Empty;
+
+    /// <summary>
+    /// Gives up on the drive or share the heading names for the rest of the check made
+    /// before the batch, or of the scan after it. The check or the scan ends the wait at
+    /// once and tells its end, which puts the heading back and takes the button away.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanStopWaiting))]
+    private void StopWaiting() => WaitShown?.StopWaiting();
 
     /// <summary>
     /// True while the overlay is up over work that reports no per-file
@@ -1913,8 +1962,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// <summary>
     /// A reporter for the check before a Move or Delete and the rescan after one, which
     /// shows a wait they report on a source folder (<see cref="ScanProgressUpdate.IsWait"/>)
-    /// in the heading, the line a screen reader speaks, and puts the heading back when the
-    /// wait ends. The check reports nothing but waits
+    /// in the heading, the line a screen reader speaks, with the button that stops it
+    /// (<see cref="WaitShown"/>), and puts the heading back when the wait ends, which takes
+    /// the button away. The check reports nothing but waits
     /// (<see cref="IRemovableReverifier.ReverifyAsync"/>). The rescan's milestones and its
     /// ticker stop at <see cref="WaitsOnly"/> on the thread that reports them, so none of
     /// them is shown or crosses to the dispatcher. Once Cancel is pressed a wait is not
@@ -1924,9 +1974,18 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     private IProgress<ScanProgressUpdate> WaitsInTheHeading()
     {
         var heading = new WaitLine(() => OperationProgress, line => OperationProgress = line);
-        return new WaitsOnly(new Progress<ScanProgressUpdate>(wait =>
+        return new WaitsOnly(new Progress<ScanProgressUpdate>(update =>
         {
-            if (!IsCancellationRequested) heading.Show(wait);
+            if (IsCancellationRequested) return;
+            _waitTakingTheLine = update.Wait;
+            try
+            {
+                heading.Show(update);
+            }
+            finally
+            {
+                _waitTakingTheLine = null;
+            }
         }));
     }
 

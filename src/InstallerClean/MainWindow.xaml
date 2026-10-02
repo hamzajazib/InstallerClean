@@ -646,13 +646,42 @@
                                  AutomationProperties.Name="{loc:Translate Automation.ScanningProgress}"/>
                     <!-- The text drawn takes break opportunities inside a path
                          the line names, as a wait on a share does; the name a
-                         screen reader speaks is the line as composed. -->
+                         screen reader speaks is the line as composed, followed,
+                         while the stop-waiting button shows, by its key and what
+                         it leaves alone.
+
+                         The 4 under it and the 4 over the ticker keep the 8
+                         between the two that the scale gives, while the button and
+                         its line, which take no space when collapsed, sit 4 under
+                         this line when they show. -->
                     <TextBlock Text="{Binding Scan.ScanProgress, Converter={StaticResource BreakPathsAtFolders}}"
                                Foreground="{StaticResource Text.Heading}"
                                FontSize="{DynamicResource Type.Heading.Sm}" TextWrapping="Wrap" TextAlignment="Center"
-                               Margin="{StaticResource GapBottom.Sm}"
-                               AutomationProperties.Name="{Binding Scan.ScanProgress}"
+                               Margin="0,0,0,4"
+                               AutomationProperties.Name="{Binding Scan.ScanProgressName}"
                                AutomationProperties.LiveSetting="Polite"/>
+                    <!-- Shown only while the line above names a wait. It gives up
+                         on that drive or share and the scan carries on; Cancel
+                         below still ends the scan. It never takes the focus itself,
+                         and code-behind hands the focus to Cancel if it has it as
+                         it goes. -->
+                    <Button x:Name="ScanStopWaitingButton" Style="{StaticResource GhostPill}"
+                            Content="{loc:Translate Action.StopWaiting}" Command="{Binding Scan.StopWaitingCommand}"
+                            MinHeight="28" Padding="16,0" FontSize="{DynamicResource Type.Body}"
+                            HorizontalAlignment="Center"
+                            FocusVisualStyle="{StaticResource SmallPillFocusVisual}"
+                            Visibility="{Binding Scan.CanStopWaiting, Converter={StaticResource BoolToVis}}"
+                            AutomationProperties.Name="{Binding Scan.StopWaitingName}"
+                            AutomationProperties.HelpText="{loc:Translate Status.StopWaitingLeavesAlone}"/>
+                    <!-- What the button leaves alone, shown with it, in the ticker's
+                         colour and size. No LiveSetting: the line's spoken name
+                         carries the same sentence while the button shows. -->
+                    <TextBlock x:Name="ScanStopWaitingLeavesAlone"
+                               Text="{loc:Translate Status.StopWaitingLeavesAlone}"
+                               Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Caption}"
+                               TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center"
+                               Margin="0,2,0,4"
+                               Visibility="{Binding Scan.CanStopWaiting, Converter={StaticResource BoolToVis}}"/>
                     <!-- Ticker: a count of the folder's files as the scan
                          lists them, the name of each installed program as it
                          asks Windows about it, then a count of the files as it
@@ -663,7 +692,7 @@
                          stays the announced one. -->
                     <TextBlock Text="{Binding Scan.ScanTicker}"
                                Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Caption}"
-                               HorizontalAlignment="Center" Margin="{StaticResource GapBottom.Lg}"
+                               HorizontalAlignment="Center" Margin="0,4,0,16"
                                TextTrimming="CharacterEllipsis" MaxWidth="{a11y:TextScaled 240}"/>
                     <Button x:Name="ScanCancelButton" Style="{StaticResource GhostPill}"
                             Content="{loc:Translate Action.Cancel}" Command="{Binding Scan.CancelScanCommand}"
@@ -700,15 +729,44 @@
 
                          The text drawn takes break opportunities inside a path the
                          heading names, as a wait on a share does; the name a
-                         screen reader speaks is the heading as composed. -->
+                         screen reader speaks is the heading as composed, followed,
+                         while the stop-waiting button shows, by its key and what it
+                         leaves alone.
+
+                         The 4 under it and the 12 over the bar keep the 16 between
+                         the two that the scale gives, while the button and its line,
+                         which take no space when collapsed, sit 4 under the heading
+                         when they show. -->
                     <TextBlock x:Name="OperationHeadingText"
                                Text="{Binding Cleanup.OperationProgress, Converter={StaticResource BreakPathsAtFolders}}"
                                Foreground="{StaticResource Text.Heading}"
                                FontSize="{DynamicResource Type.Heading.Sm}" FontWeight="SemiBold"
                                HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
-                               Margin="{StaticResource GapBottom.Lg}"
-                               AutomationProperties.Name="{Binding Cleanup.OperationProgress}"
+                               Margin="0,0,0,4"
+                               AutomationProperties.Name="{Binding Cleanup.OperationProgressName}"
                                AutomationProperties.LiveSetting="Polite"/>
+                    <!-- Shown only while the heading names a wait. It gives up on
+                         that drive or share and the check, or the scan after the
+                         files have gone, carries on; Cancel below still ends it. It
+                         never takes the focus itself, and code-behind hands the
+                         focus to Cancel if it has it as it goes. -->
+                    <Button x:Name="OperationStopWaitingButton" Style="{StaticResource GhostPill}"
+                            Content="{loc:Translate Action.StopWaiting}" Command="{Binding Cleanup.StopWaitingCommand}"
+                            MinHeight="28" Padding="16,0" FontSize="{DynamicResource Type.Body}"
+                            HorizontalAlignment="Center"
+                            FocusVisualStyle="{StaticResource SmallPillFocusVisual}"
+                            Visibility="{Binding Cleanup.CanStopWaiting, Converter={StaticResource BoolToVis}}"
+                            AutomationProperties.Name="{Binding Cleanup.StopWaitingName}"
+                            AutomationProperties.HelpText="{loc:Translate Status.StopWaitingLeavesAlone}"/>
+                    <!-- What the button leaves alone, shown with it. No LiveSetting:
+                         the heading's spoken name carries the same sentence while the
+                         button shows. -->
+                    <TextBlock x:Name="OperationStopWaitingLeavesAlone"
+                               Text="{loc:Translate Status.StopWaitingLeavesAlone}"
+                               Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Caption}"
+                               TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center"
+                               Margin="0,2,0,0"
+                               Visibility="{Binding Cleanup.CanStopWaiting, Converter={StaticResource BoolToVis}}"/>
                     <!-- Indeterminate from the re-verify before a batch until its
                          first file, and for the rescan after a batch, where there
                          is no per-file progress to report: before the batch a
@@ -720,7 +778,7 @@
                     <ProgressBar Value="{Binding Cleanup.OperationProgressPercent}"
                                  IsIndeterminate="{Binding Cleanup.IsOperationProgressIndeterminate}"
                                  Minimum="0" Maximum="100"
-                                 Width="200" Height="8" Margin="{StaticResource GapBottom.Sm}"
+                                 Width="200" Height="8" Margin="0,12,0,8"
                                  AutomationProperties.Name="{loc:Translate Automation.OperationProgress}"/>
                     <!-- The 0,0,0,2 here and the 0,4,0,0 on the filename below sit
                          off the 8/12/16/24 spacing scale on purpose: they tighten

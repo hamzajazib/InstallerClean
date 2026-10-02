@@ -35,6 +35,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Select all | Tümünü seç |
 | _Browse... | _Göz at... |
 | _Cancel | _İptal |
+| Carry on _without it | Carry on _without it |
 | Check for _updates | Güncelleştirmeleri _denetle |
 | _Close | _Kapat |
 | _Delete permanently | _Kalıcı olarak sil |
@@ -96,6 +97,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Checking remaining files... | Kalan dosyalar denetleniyor... |
 | Waiting for drive {0} to respond... | {0} sürücüsünden yanıt bekleniyor... |
 | Waiting for {0} to respond... | {0} konumundan yanıt bekleniyor... |
+| Any file still to be checked against it will be left alone. | Any file still to be checked against it will be left alone. |
 | Scan complete ({0}) | Tarama tamamlandı ({0}) |
 | Found {0} {1} you can safely delete. | Güvenle silebileceğiniz {0} {1} bulundu. |
 | Preparing destination folder... | Hedef klasör hazırlanıyor... |
@@ -359,6 +361,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Cancel operation | İşlemi iptal et |
 | Cancel scan | Taramayı iptal et |
 | Cancel startup scan | Başlangıç taramasını iptal et |
+| Carry on without it, drive {0} | Carry on without it, drive {0} |
+| Carry on without it, {0} | Carry on without it, {0} |
 | Close | Kapat |
 | Close window | Pencereyi kapat |
 | Close result and return to main window | Sonucu kapat ve ana pencereye dön |
@@ -397,6 +401,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | İşlenemeyen dosyalar |
 | Explains this folder, and how to recover a file, in the README | Bu klasörü açıklar ve bir dosyanın nasıl kurtarılacağını README'de anlatır |
+| {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
 | Report preview | Rapor önizlemesi |
 | Change language | Dili değiştir |
 | The program will restart. | Program yeniden başlatılacak. |

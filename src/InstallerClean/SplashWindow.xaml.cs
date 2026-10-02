@@ -29,6 +29,12 @@ public partial class SplashWindow : Window
     // The waits the scan reports, shown on the step text.
     private readonly WaitLine _stepWait;
 
+    // The wait whose line is being written to the step text, and the wait the step text
+    // shows, with the button that stops it. Only the write putting a wait's own line up
+    // sets the second (ShowStep), so every other line written there takes the button away.
+    private SourceFolderWait? _waitTakingTheLine;
+    private SourceFolderWait? _waitShown;
+
     public event EventHandler? CancelRequested;
 
     public SplashWindow()
@@ -70,7 +76,16 @@ public partial class SplashWindow : Window
         // are.
         if (update.IsWait)
         {
-            _stepWait.Show(update);
+            _waitTakingTheLine = update.Wait;
+            try
+            {
+                _stepWait.Show(update);
+            }
+            finally
+            {
+                _waitTakingTheLine = null;
+            }
+
             return;
         }
 
@@ -100,14 +115,41 @@ public partial class SplashWindow : Window
     // Every write to the step text comes through here. The text drawn takes break
     // opportunities inside a path the line names, as a wait on a share does
     // (InstallerPathText.AllowFolderBreaksInAnyPath), and the name a screen reader
-    // speaks is the line as composed. A TextBlock with a name set speaks the name
-    // and not its text, so a write straight to Text would leave the name on the
-    // line before.
+    // speaks is the line as composed, followed, while the stop-waiting button shows, by
+    // its key and what it leaves alone (DisplayHelpers.WaitingLineWithStopKey). A
+    // TextBlock with a name set speaks the name and not its text, so a write straight to
+    // Text would leave the name on the line before. The name is set before the text, so
+    // anything reading the name as the text changes reads the new line.
     private void ShowStep(string line)
     {
+        _waitShown = _waitTakingTheLine;
+        ShowStopWaiting();
+        AutomationProperties.SetName(
+            StepText, _waitShown is null ? line : DisplayHelpers.WaitingLineWithStopKey(line));
         StepText.Text = InstallerPathText.AllowFolderBreaksInAnyPath(line);
-        AutomationProperties.SetName(StepText, line);
     }
+
+    // Shows the stop-waiting button and the line under it while the step text names a
+    // wait, and takes both away otherwise. A button that has the keyboard focus as it
+    // goes hands it to Cancel first, so the focus does not fall to the window; where
+    // Cancel has already been pressed and is disabled, the focus goes where WPF puts it.
+    private void ShowStopWaiting()
+    {
+        var shown = _waitShown is not null;
+        if (!shown && StopWaitingButton.IsKeyboardFocused && CancelButton.IsEnabled)
+            CancelButton.Focus();
+
+        var visibility = shown ? Visibility.Visible : Visibility.Collapsed;
+        StopWaitingButton.Visibility = visibility;
+        StopWaitingLeavesAlone.Visibility = visibility;
+        if (_waitShown is { } named)
+            AutomationProperties.SetName(StopWaitingButton, DisplayHelpers.StopWaitingFor(named.Root));
+    }
+
+    // Gives up on the drive or share the step text names for the rest of the startup
+    // scan. The scan ends the wait at once and tells its end, which puts the step text
+    // back and takes the button away.
+    private void StopWaitingClick(object sender, RoutedEventArgs e) => _waitShown?.StopWaiting();
 
     private void AnimateProgress(double progressPercent, TimeSpan? ease = null)
     {

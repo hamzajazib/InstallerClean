@@ -84,6 +84,7 @@ public static class Strings
     public static string Action_SelectAll => Get("Action.SelectAll");
     public static string Action_SendResultLog => Get("Action.SendResultLog");
     public static string Action_SendResultLogConfirm => Get("Action.SendResultLogConfirm");
+    public static string Action_StopWaiting => Get("Action.StopWaiting");
     public static string Automation_About_Guide_HelpText => Get("Automation.About.Guide.HelpText");
     public static string Automation_About_ReportProblem_HelpText => Get("Automation.About.ReportProblem.HelpText");
     public static string Automation_AutoUpdateCheck_HelpText => Get("Automation.AutoUpdateCheck.HelpText");
@@ -126,11 +127,14 @@ public static class Strings
     public static string Automation_SortStatus_Ascending => Get("Automation.SortStatus.Ascending");
     public static string Automation_SortStatus_Descending => Get("Automation.SortStatus.Descending");
     public static string Automation_StartupScanProgress => Get("Automation.StartupScanProgress");
+    public static string Automation_StopWaitingForDrive => Get("Automation.StopWaitingForDrive");
+    public static string Automation_StopWaitingForPath => Get("Automation.StopWaitingForPath");
     public static string Automation_UpdateAvailable_HelpText => Get("Automation.UpdateAvailable.HelpText");
     public static string Automation_ViewOrphanedFiles => Get("Automation.ViewOrphanedFiles");
     public static string Automation_ViewOrphanedFiles_HelpText => Get("Automation.ViewOrphanedFiles.HelpText");
     public static string Automation_ViewRegisteredFiles => Get("Automation.ViewRegisteredFiles");
     public static string Automation_ViewRegisteredFiles_HelpText => Get("Automation.ViewRegisteredFiles.HelpText");
+    public static string Automation_WaitingLineWithStopKey => Get("Automation.WaitingLineWithStopKey");
     public static string Body_MainExplanation_Action => Get("Body.MainExplanation.Action");
     public static string Body_MainExplanation_Lead => Get("Body.MainExplanation.Lead");
     public static string Body_MainExplanation_Why => Get("Body.MainExplanation.Why");
@@ -451,6 +455,7 @@ public static class Strings
     public static string Status_ScanningCache => Get("Status.ScanningCache");
     public static string Status_ScanStopped => Get("Status.ScanStopped");
     public static string Status_StartingScan => Get("Status.StartingScan");
+    public static string Status_StopWaitingLeavesAlone => Get("Status.StopWaitingLeavesAlone");
     public static string Status_WaitingForDrive => Get("Status.WaitingForDrive");
     public static string Status_WaitingForPath => Get("Status.WaitingForPath");
     public static string Summary_MissingFromDisk_OtherPrograms_Plural => Get("Summary.MissingFromDisk.OtherPrograms.Plural");

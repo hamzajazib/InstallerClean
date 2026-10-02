@@ -25,6 +25,8 @@
                 <RowDefinition Height="Auto"/>  <!-- progress bar -->
                 <RowDefinition Height="8"/>     <!-- gap -->
                 <RowDefinition Height="Auto"/>  <!-- step text -->
+                <RowDefinition Height="Auto"/>  <!-- stop-waiting button -->
+                <RowDefinition Height="Auto"/>  <!-- what it leaves alone -->
                 <!-- 4, off the 8/12/16/24 scale: ties the ticker to the
                      step line as one block, the way the operating
                      overlay pairs its count and filename lines. -->
@@ -75,6 +77,38 @@
                        Margin="16,0"
                        AutomationProperties.LiveSetting="Polite"/>
 
+            <!-- Shown only while the step text names a wait, and gone with the
+                 next line written there (code-behind). It gives up on that
+                 drive or share and the scan carries on. It sits 4 under the
+                 step text, as on the two cards in the main window, and never
+                 takes the focus itself. Its spoken name, naming the drive or
+                 share, is set from code-behind with the wait. -->
+            <Button Grid.Row="8"
+                    x:Name="StopWaitingButton"
+                    Content="{loc:Translate Action.StopWaiting}"
+                    Click="StopWaitingClick"
+                    Style="{StaticResource SmallGhostPill}"
+                    Padding="16,0"
+                    Margin="0,4,0,0"
+                    HorizontalAlignment="Center"
+                    Visibility="Collapsed"
+                    AutomationProperties.HelpText="{loc:Translate Status.StopWaitingLeavesAlone}"/>
+
+            <!-- What the button leaves alone, shown with it, in the ticker's
+                 colour and size. It wraps inside the card as the step text
+                 does. No LiveSetting: the step text's spoken name carries the
+                 same sentence while the button shows. -->
+            <TextBlock Grid.Row="9"
+                       x:Name="StopWaitingLeavesAlone"
+                       Text="{loc:Translate Status.StopWaitingLeavesAlone}"
+                       Foreground="{StaticResource Text.Dim}"
+                       FontSize="{DynamicResource Type.Caption}"
+                       HorizontalAlignment="Center"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center"
+                       Margin="16,2,16,0"
+                       Visibility="Collapsed"/>
+
             <!-- Ticker: a count of the folder's files as the scan lists
                  them, the name of each installed program as it asks
                  Windows about it, then a count of the files as it matches
@@ -82,7 +116,7 @@
                  per program and many times while the files are counted, and
                  a live region would queue one announcement per update. The
                  step text above stays the announced line. -->
-            <TextBlock Grid.Row="9"
+            <TextBlock Grid.Row="11"
                        x:Name="ProductTicker"
                        Foreground="{StaticResource Text.Dim}"
                        FontSize="{DynamicResource Type.Caption}"
@@ -91,7 +125,7 @@
                        MaxWidth="{a11y:TextScaled 360}"/>
 
             <!-- Cancel button -->
-            <Button Grid.Row="11"
+            <Button Grid.Row="13"
                     x:Name="CancelButton"
                     Content="{loc:Translate Action.Cancel}"
                     Click="CancelClick"
@@ -102,7 +136,7 @@
                     AutomationProperties.Name="{loc:Translate Automation.CancelStartupScan}"/>
 
             <!-- Version (bottom right, overlaid) -->
-            <TextBlock Grid.Row="12"
+            <TextBlock Grid.Row="14"
                        x:Name="VersionText"
                        Foreground="{StaticResource Text.Dim}"
                        FontSize="{DynamicResource Type.Caption}"

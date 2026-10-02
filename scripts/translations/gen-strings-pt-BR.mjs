@@ -570,6 +570,11 @@ const MAP = {
   'Status.MatchingCount': `{0} de {1}`,
   'Status.WaitingForDrive': `Aguardando a unidade {0} responder...`,
   'Status.WaitingForPath': `Aguardando {0} responder...`,
+  'Action.StopWaiting': `Carry on _without it`,
+  'Automation.StopWaitingForDrive': `Carry on without it, drive {0}`,
+  'Automation.StopWaitingForPath': `Carry on without it, {0}`,
+  'Status.StopWaitingLeavesAlone': `Any file still to be checked against it will be left alone.`,
+  'Automation.WaitingLineWithStopKey': `{0} Press Alt+{1} to carry on without it. {2}`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

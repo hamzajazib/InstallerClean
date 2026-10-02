@@ -498,6 +498,11 @@ const MAP = {
   'Status.MatchingCount': `{0} di {1}`,
   'Status.WaitingForDrive': `In attesa che l'unità {0} risponda...`,
   'Status.WaitingForPath': `In attesa che {0} risponda...`,
+  'Action.StopWaiting': `Carry on _without it`,
+  'Automation.StopWaitingForDrive': `Carry on without it, drive {0}`,
+  'Automation.StopWaitingForPath': `Carry on without it, {0}`,
+  'Status.StopWaitingLeavesAlone': `Any file still to be checked against it will be left alone.`,
+  'Automation.WaitingLineWithStopKey': `{0} Press Alt+{1} to carry on without it. {2}`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -486,6 +486,11 @@ const MAP = {
   'Status.MatchingCount': `{0}/{1}`,
   'Status.WaitingForDrive': `Ожидание ответа от диска {0}...`,
   'Status.WaitingForPath': `Ожидание ответа от {0}...`,
+  'Action.StopWaiting': `Carry on _without it`,
+  'Automation.StopWaitingForDrive': `Carry on without it, drive {0}`,
+  'Automation.StopWaitingForPath': `Carry on without it, {0}`,
+  'Status.StopWaitingLeavesAlone': `Any file still to be checked against it will be left alone.`,
+  'Automation.WaitingLineWithStopKey': `{0} Press Alt+{1} to carry on without it. {2}`,
 };
 
 // Russian CLDR-category overrides beyond the neutral one/other split. They do NOT

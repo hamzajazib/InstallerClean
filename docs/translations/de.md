@@ -35,6 +35,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Select all | Alles auswählen |
 | _Browse... | _Durchsuchen... |
 | _Cancel | _Abbrechen |
+| Carry on _without it | Carry on _without it |
 | Check for _updates | Nach _Updates suchen |
 | _Close | _Schließen |
 | _Delete permanently | Endgültig _löschen |
@@ -96,6 +97,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Checking remaining files... | Übrige Dateien werden geprüft... |
 | Waiting for drive {0} to respond... | Warten auf eine Antwort von Laufwerk {0}... |
 | Waiting for {0} to respond... | Warten auf eine Antwort von {0}... |
+| Any file still to be checked against it will be left alone. | Any file still to be checked against it will be left alone. |
 | Scan complete ({0}) | Scan abgeschlossen ({0}) |
 | Found {0} {1} you can safely delete. | {0} {1} gefunden, die du bedenkenlos löschen kannst. |
 | Preparing destination folder... | Zielordner wird vorbereitet... |
@@ -359,6 +361,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Cancel operation | Vorgang abbrechen |
 | Cancel scan | Scan abbrechen |
 | Cancel startup scan | Start-Scan abbrechen |
+| Carry on without it, drive {0} | Carry on without it, drive {0} |
+| Carry on without it, {0} | Carry on without it, {0} |
 | Close | Schließen |
 | Close window | Fenster schließen |
 | Close result and return to main window | Ergebnis schließen und zum Hauptfenster zurückkehren |
@@ -397,6 +401,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | Dateien, die nicht verarbeitet werden konnten |
 | Explains this folder, and how to recover a file, in the README | Erklärt diesen Ordner, und wie sich eine Datei wiederherstellen lässt, im README |
+| {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
 | Report preview | Vorschau des Berichts |
 | Change language | Sprache ändern |
 | The program will restart. | Das Programm wird neu gestartet. |

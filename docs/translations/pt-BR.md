@@ -35,6 +35,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Select all | Selecionar tudo |
 | _Browse... | _Procurar... |
 | _Cancel | _Cancelar |
+| Carry on _without it | Carry on _without it |
 | Check for _updates | Verificar _atualizações |
 | _Close | _Fechar |
 | _Delete permanently | _Excluir permanentemente |
@@ -96,6 +97,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Checking remaining files... | Verificando os arquivos restantes... |
 | Waiting for drive {0} to respond... | Aguardando a unidade {0} responder... |
 | Waiting for {0} to respond... | Aguardando {0} responder... |
+| Any file still to be checked against it will be left alone. | Any file still to be checked against it will be left alone. |
 | Scan complete ({0}) | Análise concluída ({0}) |
 | Found {0} {1} you can safely delete. | Encontrados {0} {1} que você pode excluir com segurança. |
 | Preparing destination folder... | Preparando a pasta de destino... |
@@ -359,6 +361,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Cancel operation | Cancelar a operação |
 | Cancel scan | Cancelar a análise |
 | Cancel startup scan | Cancelar a análise inicial |
+| Carry on without it, drive {0} | Carry on without it, drive {0} |
+| Carry on without it, {0} | Carry on without it, {0} |
 | Close | Fechar |
 | Close window | Fechar a janela |
 | Close result and return to main window | Fechar o resultado e voltar para a janela principal |
@@ -397,6 +401,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | Arquivos que não puderam ser processados |
 | Explains this folder, and how to recover a file, in the README | Explica esta pasta, e como recuperar um arquivo, no README |
+| {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
 | Report preview | Visualização do relatório |
 | Change language | Alterar idioma |
 | The program will restart. | O programa será reiniciado. |

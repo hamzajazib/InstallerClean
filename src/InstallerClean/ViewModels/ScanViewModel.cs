@@ -49,7 +49,56 @@ public partial class ScanViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(ScanCommand))]
     private bool _isScanInFlight;
 
-    [ObservableProperty] private string _scanProgress = string.Empty;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ScanProgressName))]
+    private string _scanProgress = string.Empty;
+
+    /// <summary>
+    /// What a screen reader speaks for <see cref="ScanProgress"/>: the line itself, and
+    /// while it is a wait the scanning card's button can stop, the line followed by the key
+    /// that presses the button and what that leaves alone
+    /// (<see cref="DisplayHelpers.WaitingLineWithStopKey"/>).
+    /// </summary>
+    public string ScanProgressName =>
+        WaitShown is null ? ScanProgress : DisplayHelpers.WaitingLineWithStopKey(ScanProgress);
+
+    /// <summary>
+    /// The wait <see cref="ScanProgress"/> names while it is a waiting line, and null for
+    /// every other line. Only the write putting the wait's own line up sets it
+    /// (<see cref="OnScanProgressChanged"/>), so the line, the button under it and the name
+    /// a screen reader speaks change in one step, and any other write to the line takes the
+    /// button away.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanStopWaiting))]
+    [NotifyPropertyChangedFor(nameof(StopWaitingName))]
+    [NotifyPropertyChangedFor(nameof(ScanProgressName))]
+    [NotifyCanExecuteChangedFor(nameof(StopWaitingCommand))]
+    private SourceFolderWait? _waitShown;
+
+    /// <summary>The wait whose line <see cref="ShowWait"/> is writing, and null at any other time.</summary>
+    private SourceFolderWait? _waitTakingTheLine;
+
+    // Runs after the line is stored and before the change is raised, so the button and
+    // the spoken name already match the new line when anything hears of it.
+    partial void OnScanProgressChanged(string value) => WaitShown = _waitTakingTheLine;
+
+    /// <summary>Whether the scanning card shows the button that stops the wait the line names.</summary>
+    public bool CanStopWaiting => WaitShown is not null;
+
+    /// <summary>
+    /// The name a screen reader speaks for that button, naming the drive or share
+    /// (<see cref="DisplayHelpers.StopWaitingFor"/>), and empty while there is no button.
+    /// </summary>
+    public string StopWaitingName => WaitShown is { } wait ? DisplayHelpers.StopWaitingFor(wait.Root) : string.Empty;
+
+    /// <summary>
+    /// Gives up on the drive or share the line names for the rest of this scan. The scan
+    /// ends the wait at once and tells its end, which puts the line back and takes the
+    /// button away.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanStopWaiting))]
+    private void StopWaiting() => WaitShown?.StopWaiting();
 
     /// <summary>
     /// Ticker line under the scan overlay's milestone text: a count of the
@@ -640,7 +689,7 @@ public partial class ScanViewModel : ObservableObject
         // back, so "Cancelling..." stays in front of the reader.
         if (update.IsWait)
         {
-            if (_scanCts?.IsCancellationRequested != true) _statusWait.Show(update);
+            if (_scanCts?.IsCancellationRequested != true) ShowWait(update);
             return;
         }
 
@@ -658,6 +707,23 @@ public partial class ScanViewModel : ObservableObject
 
     /// <summary>The waits the scan reports, shown on <see cref="ScanProgress"/>.</summary>
     private readonly WaitLine _statusWait;
+
+    /// <summary>
+    /// Shows <paramref name="update"/> on <see cref="ScanProgress"/>, the wait it carries
+    /// going up with its line, and the end of a wait taking the line and its button back.
+    /// </summary>
+    private void ShowWait(ScanProgressUpdate update)
+    {
+        _waitTakingTheLine = update.Wait;
+        try
+        {
+            _statusWait.Show(update);
+        }
+        finally
+        {
+            _waitTakingTheLine = null;
+        }
+    }
 
     [RelayCommand]
     private void CancelScan()

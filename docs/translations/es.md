@@ -35,6 +35,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Select all | Seleccionar todo |
 | _Browse... | E_xaminar... |
 | _Cancel | _Cancelar |
+| Carry on _without it | Carry on _without it |
 | Check for _updates | _Buscar actualizaciones |
 | _Close | _Cerrar |
 | _Delete permanently | _Eliminar definitivamente |
@@ -96,6 +97,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Checking remaining files... | Comprobando los archivos restantes... |
 | Waiting for drive {0} to respond... | Esperando a que responda la unidad {0}... |
 | Waiting for {0} to respond... | Esperando a que responda {0}... |
+| Any file still to be checked against it will be left alone. | Any file still to be checked against it will be left alone. |
 | Scan complete ({0}) | Análisis completado ({0}) |
 | Found {0} {1} you can safely delete. | Se encontraron {0} {1} que puedes eliminar sin riesgo. |
 | Preparing destination folder... | Preparando la carpeta de destino... |
@@ -359,6 +361,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Cancel operation | Cancelar la operación |
 | Cancel scan | Cancelar el análisis |
 | Cancel startup scan | Cancelar el análisis de inicio |
+| Carry on without it, drive {0} | Carry on without it, drive {0} |
+| Carry on without it, {0} | Carry on without it, {0} |
 | Close | Cerrar |
 | Close window | Cerrar la ventana |
 | Close result and return to main window | Cerrar el resultado y volver a la ventana principal |
@@ -397,6 +401,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | Archivos que no se pudieron procesar |
 | Explains this folder, and how to recover a file, in the README | Explica esta carpeta, y cómo recuperar un archivo, en el README |
+| {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
 | Report preview | Vista previa del informe |
 | Change language | Cambiar el idioma |
 | The program will restart. | El programa se reiniciará. |

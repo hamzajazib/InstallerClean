@@ -291,6 +291,77 @@ public class DisplayHelpersTests
     public void A_wait_on_a_share_or_any_other_path_names_it_as_it_is_spelled(string root) =>
         Assert.Equal(string.Format(Strings.Status_WaitingForPath, root), DisplayHelpers.WaitingFor(root));
 
+    [Theory]
+    [InlineData("D:")]
+    [InlineData("z:")]
+    public void The_button_that_stops_a_wait_on_a_drive_names_it_as_a_drive(string root) =>
+        Assert.Equal(string.Format(Strings.Automation_StopWaitingForDrive, root), DisplayHelpers.StopWaitingFor(root));
+
+    [Theory]
+    [InlineData(@"\\fileserver\apps")]
+    [InlineData(@"GLOBALROOT\Device\Mup\fileserver\apps\setup.msi")]
+    public void The_button_that_stops_a_wait_on_a_share_or_any_other_path_names_it_as_it_is_spelled(string root) =>
+        Assert.Equal(string.Format(Strings.Automation_StopWaitingForPath, root), DisplayHelpers.StopWaitingFor(root));
+
+    [Theory]
+    [InlineData("_Cancel", 'C')]
+    [InlineData("Carry on _without it", 'W')]
+    [InlineData("\u5f85\u6a5f\u3092\u505c\u6b62(_S)", 'S')]
+    [InlineData("Save__as _file", 'F')]
+    [InlineData("Save__as", null)]
+    [InlineData("No key", null)]
+    [InlineData("Ends with_", null)]
+    public void A_label_s_access_key_is_the_letter_after_its_first_single_underscore(string label, char? key)
+    {
+        using var scope = new LocalisationScope(British, British);
+
+        Assert.Equal(key, DisplayHelpers.AccessKeyOf(label));
+    }
+
+    [Fact]
+    public void An_access_key_is_named_in_the_case_the_language_shown_names_it()
+    {
+        using var scope = new LocalisationScope(CultureInfo.GetCultureInfo("tr"), British);
+
+        Assert.Equal('\u0130', DisplayHelpers.AccessKeyOf("Onsuz _ilerle"));
+    }
+
+    [Fact]
+    public void A_waiting_line_is_spoken_with_the_key_that_carries_on_without_its_drive_and_what_that_leaves_alone()
+    {
+        using var scope = new LocalisationScope(British, British);
+
+        Assert.Equal(
+            "Waiting for drive D: to respond... Press Alt+W to carry on without it. "
+            + "Any file still to be checked against it will be left alone.",
+            DisplayHelpers.WaitingLineWithStopKey(DisplayHelpers.WaitingFor("D:")));
+    }
+
+    public static TheoryData<string> EveryCulture()
+    {
+        var data = new TheoryData<string>();
+        foreach (var name in SupportedLanguages.CultureNames) data.Add(name);
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryCulture))]
+    public void Every_language_s_spoken_waiting_line_names_the_key_its_button_carries(string cultureName)
+    {
+        // The spoken line can only name a key the label marks, so a translation of the
+        // button without one would leave a screen reader with no key to tell of.
+        var culture = CultureInfo.GetCultureInfo(cultureName);
+        using var scope = new LocalisationScope(culture, culture);
+        var line = DisplayHelpers.WaitingFor("D:");
+
+        var key = DisplayHelpers.AccessKeyOf(Strings.Action_StopWaiting);
+        var spoken = DisplayHelpers.WaitingLineWithStopKey(line);
+
+        Assert.NotNull(key);
+        Assert.StartsWith(line, spoken, StringComparison.Ordinal);
+        Assert.Contains(key.Value.ToString(), spoken[line.Length..], StringComparison.Ordinal);
+    }
+
     private static readonly CultureInfo British = CultureInfo.GetCultureInfo("en-GB");
 
     private sealed class CultureScope : IDisposable

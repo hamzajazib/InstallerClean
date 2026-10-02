@@ -95,6 +95,17 @@ const ELABORATES_A_LABEL = [
   { label: 'Action.Details', name: 'Automation.ViewRegisteredFiles' },
 ];
 
+// The same rule for a name built in code rather than resolved in the XAML. The
+// stop-waiting button's spoken name names the drive or share the line above it is
+// waiting for, so it is composed with that root (DisplayHelpers.StopWaitingFor) and
+// bound, and rule 2 below, which reads the XAML, cannot see it. Each name owes
+// containment in every language, as above, and is held to being read from the app's
+// C# and to naming no control in the XAML, where the lists above would own it.
+const ELABORATES_A_LABEL_IN_CODE = [
+  { label: 'Action.StopWaiting', name: 'Automation.StopWaitingForDrive' },
+  { label: 'Action.StopWaiting', name: 'Automation.StopWaitingForPath' },
+];
+
 // A control whose automation name resolves to THE SAME KEY as the visible
 // heading that labels it, through AutomationProperties.LabeledBy pointing at
 // that heading plus an explicit Name resolving to the heading's own key.
@@ -600,6 +611,23 @@ for (const file of [...rawAllowed.keys()].sort())
     stale.push(`${file} is allowed a direct ResourceManager read in this file and makes `
       + 'none: renamed, moved or routed through a door since. Drop its entry.');
 
+// A name ELABORATES_A_LABEL_IN_CODE declares is built in the app's own C#: read there
+// through its typed accessor, outside the tests, which would otherwise keep a name
+// the app no longer speaks looking used.
+const appCode = csFiles
+  .filter((file) => !file.startsWith('src/InstallerClean.Tests/'))
+  .map((file) => codeOnly(readFileSync(file, 'utf8')))
+  .join('\n');
+for (const { name } of ELABORATES_A_LABEL_IN_CODE) {
+  const accessor = `Strings.${name.replaceAll('.', '_')}`;
+  if (!new RegExp(`\\b${accessor.replaceAll('.', '\\.')}\\b`).test(appCode))
+    stale.push(`${name} is in ELABORATES_A_LABEL_IN_CODE and the app's C# never reads ${accessor}: `
+      + 'renamed, removed, or moved into the XAML. Update the list.');
+  if (namedInXaml.has(name))
+    stale.push(`${name} is in ELABORATES_A_LABEL_IN_CODE and names a control in the XAML, where `
+      + 'the lists above classify it. Move it there.');
+}
+
 // Rules 7 and 8 fault the XAML and the C#, where neither a resx nor a generator
 // is in reach of the fix. The closing footer sends a reader to the generator for
 // a language, so it belongs to the per-language rules alone; each source-shape
@@ -611,6 +639,7 @@ const neutral = values(`${RESX_DIR}/Strings.resx`);
 const declaredKeys = [
   ...MUST_AGREE.flatMap((p) => [p.label, p.name]),
   ...ELABORATES_A_LABEL.flatMap((p) => [p.label, p.name]),
+  ...ELABORATES_A_LABEL_IN_CODE.flatMap((p) => [p.label, p.name]),
   ...QUOTES_A_LABEL.flatMap((p) => [p.sentence, p.label]),
   ...MUST_NOT_NAME.map((p) => p.key),
   ...GITHUB_SPOKEN, ...GITHUB_DRAWN,
@@ -705,7 +734,7 @@ for (const lang of LANGS) {
       failures.push(`${label} shows "${drawn}" but ${name} speaks "${spoken}"`);
   }
 
-  for (const { label, name } of ELABORATES_A_LABEL) {
+  for (const { label, name } of [...ELABORATES_A_LABEL, ...ELABORATES_A_LABEL_IN_CODE]) {
     const drawn = read(label), spoken = read(name);
     if (drawn === null || spoken === null) continue;
     if (!compare(spoken, lang).includes(compare(drawn, lang)))
@@ -870,7 +899,8 @@ if (problems.length) {
 }
 
 console.log(`\nCross-key rules OK: ${LANGS.length} languages, ${MUST_AGREE.length} label/name pairs `
-  + `and ${ELABORATES_A_LABEL.length} measured by containment, `
+  + `and ${ELABORATES_A_LABEL.length + ELABORATES_A_LABEL_IN_CODE.length} measured by containment `
+  + `(${ELABORATES_A_LABEL_IN_CODE.length} of them built in code), `
   + `${tokenKeys.size} keys carrying ${FOLDER_TOKEN}, ${linkKeys.size} carrying a [link phrase], `
   + `${namedInXaml.size} automation names classified (${NAME_IS_THE_LABEL.size} by key identity), `
   + `${csFiles.length} C# files read through Strings bar ${rawAllowed.size} allowed direct.`);

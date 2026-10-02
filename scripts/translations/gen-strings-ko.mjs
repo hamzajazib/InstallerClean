@@ -565,6 +565,11 @@ const MAP = {
   'Status.MatchingCount': `{1}개 중 {0}개`,
   'Status.WaitingForDrive': `드라이브 {0}의 응답을 기다리는 중...`,
   'Status.WaitingForPath': `{0}의 응답을 기다리는 중...`,
+  'Action.StopWaiting': `Carry on _without it`,
+  'Automation.StopWaitingForDrive': `Carry on without it, drive {0}`,
+  'Automation.StopWaitingForPath': `Carry on without it, {0}`,
+  'Status.StopWaitingLeavesAlone': `Any file still to be checked against it will be left alone.`,
+  'Automation.WaitingLineWithStopKey': `{0} Press Alt+{1} to carry on without it. {2}`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

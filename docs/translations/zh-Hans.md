@@ -35,6 +35,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Select all | 全选 |
 | _Browse... | 浏览(_B)… |
 | _Cancel | 取消(_C) |
+| Carry on _without it | Carry on _without it |
 | Check for _updates | 检查更新(_U) |
 | _Close | 关闭(_C) |
 | _Delete permanently | 永久删除(_D) |
@@ -96,6 +97,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Checking remaining files... | 正在检查其余文件… |
 | Waiting for drive {0} to respond... | 正在等待驱动器 {0} 响应… |
 | Waiting for {0} to respond... | 正在等待 {0} 响应… |
+| Any file still to be checked against it will be left alone. | Any file still to be checked against it will be left alone. |
 | Scan complete ({0}) | 扫描完成（{0}） |
 | Found {0} {1} you can safely delete. | 找到 {0} 个{1}，可安全删除。 |
 | Preparing destination folder... | 正在准备目标文件夹… |
@@ -359,6 +361,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Cancel operation | 取消操作 |
 | Cancel scan | 取消扫描 |
 | Cancel startup scan | 取消启动扫描 |
+| Carry on without it, drive {0} | Carry on without it, drive {0} |
+| Carry on without it, {0} | Carry on without it, {0} |
 | Close | 关闭 |
 | Close window | 关闭窗口 |
 | Close result and return to main window | 关闭结果并返回主窗口 |
@@ -397,6 +401,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | 无法处理的文件 |
 | Explains this folder, and how to recover a file, in the README | 在 README 中解释了这个文件夹，以及如何恢复文件 |
+| {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
 | Report preview | 报告预览 |
 | Change language | 更改语言 |
 | The program will restart. | 程序会重启。 |

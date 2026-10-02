@@ -506,6 +506,9 @@ public partial class MainWindow : Window
 
     private void OnCleanupPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(CleanupViewModel.CanStopWaiting) && !_vm.Cleanup.CanStopWaiting)
+            HandFocusToCancel(OperationStopWaitingButton, OperationCancelButton);
+
         if (e.PropertyName == nameof(CleanupViewModel.IsOperating) && !_vm.Cleanup.IsOperating
             && _closeHeldForOperation)
         {
@@ -558,6 +561,20 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Moves the keyboard focus from a card's stop-waiting button, as the button goes, to
+    /// that card's Cancel. Here and not posted: WPF answers a focused element going hidden
+    /// with a focus check posted at Input priority, which finds Cancel focused and leaves it,
+    /// where a move posted after it would run once the focus had already fallen to the
+    /// window. A Cancel already pressed is disabled and takes no focus, so the focus goes
+    /// where WPF puts it, as it does when Cancel goes dead under the focus.
+    /// </summary>
+    private static void HandFocusToCancel(Button stopWaiting, Button cancel)
+    {
+        if (stopWaiting.IsKeyboardFocused && cancel.IsEnabled)
+            cancel.Focus();
+    }
+
     private void OnScanPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         // When the scan view model drops its result, the list goes from the
@@ -571,6 +588,9 @@ public partial class MainWindow : Window
 
         if (e.PropertyName == nameof(ScanViewModel.IsScanning) && _vm.Scan.IsScanning)
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () => ScanCancelButton.Focus());
+
+        if (e.PropertyName == nameof(ScanViewModel.CanStopWaiting) && !_vm.Scan.CanStopWaiting)
+            HandFocusToCancel(ScanStopWaitingButton, ScanCancelButton);
 
         if (e.PropertyName == nameof(ScanViewModel.IsScanning) && !_vm.Scan.IsScanning)
         {

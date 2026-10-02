@@ -635,47 +635,6 @@ public class CleanupPreFlightTests
         Assert.Equal(InstallerClean.Resources.Strings.Status_Moving, afterWait);
     }
 
-    /// <summary>
-    /// Stands in for the window's dispatcher. Keeps, in order, every scan update posted to it,
-    /// and runs each posted callback one at a time, in order, on the thread pool with itself
-    /// current, so a reporter the operation goes on to make is made on it too. A posted
-    /// callback that throws is kept as well.
-    /// </summary>
-    private sealed class DispatcherStandIn : SynchronizationContext
-    {
-        private readonly object _gate = new();
-        private Task _last = Task.CompletedTask;
-
-        public System.Collections.Concurrent.ConcurrentQueue<ScanProgressUpdate> Posted { get; } = new();
-
-        public System.Collections.Concurrent.ConcurrentQueue<Exception> Thrown { get; } = new();
-
-        public override void Post(SendOrPostCallback d, object? state)
-        {
-            if (state is ScanProgressUpdate update) Posted.Enqueue(update);
-            lock (_gate)
-                _last = _last.ContinueWith(_ => Run(d, state), TaskScheduler.Default);
-        }
-
-        private void Run(SendOrPostCallback d, object? state)
-        {
-            var before = Current;
-            SetSynchronizationContext(this);
-            try
-            {
-                d(state);
-            }
-            catch (Exception ex)
-            {
-                Thrown.Enqueue(ex);
-            }
-            finally
-            {
-                SetSynchronizationContext(before);
-            }
-        }
-    }
-
     [Fact]
     public async Task Only_a_wait_the_scan_after_a_Move_reports_crosses_to_the_window_and_takes_the_heading_and_gives_it_back()
     {

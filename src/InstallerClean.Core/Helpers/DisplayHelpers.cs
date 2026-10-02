@@ -120,9 +120,61 @@ internal static class DisplayHelpers
     /// is named as a drive, and a share, or a path of any other form, as it is spelled.
     /// </summary>
     internal static string WaitingFor(string root) =>
-        root.Length == 2 && root[1] == ':'
+        IsDriveRoot(root)
             ? string.Format(Strings.Status_WaitingForDrive, root)
             : string.Format(Strings.Status_WaitingForPath, root);
+
+    /// <summary>
+    /// The name a screen reader speaks for the button that stops the wait on
+    /// <paramref name="root"/>: the button's own words with the drive or share after them,
+    /// a drive being told from a share or other path by the same test as
+    /// <see cref="WaitingFor"/>, so the line and the button name it the same way.
+    /// </summary>
+    internal static string StopWaitingFor(string root) =>
+        IsDriveRoot(root)
+            ? string.Format(Strings.Automation_StopWaitingForDrive, root)
+            : string.Format(Strings.Automation_StopWaitingForPath, root);
+
+    /// <summary>
+    /// What a screen reader speaks for a waiting <paramref name="line"/> while the button that
+    /// stops the wait is on screen: the line as drawn, then the key that presses the button
+    /// and what pressing it leaves alone. The key is read from the button's label in the
+    /// language the app is showing (<see cref="AccessKeyOf"/>), so the sentence names the key
+    /// that label carries. A label carrying no key leaves the line as it is.
+    /// </summary>
+    internal static string WaitingLineWithStopKey(string line) =>
+        AccessKeyOf(Strings.Action_StopWaiting) is { } key
+            ? string.Format(Strings.Automation_WaitingLineWithStopKey, line, key, Strings.Status_StopWaitingLeavesAlone)
+            : line;
+
+    /// <summary>
+    /// The access key <paramref name="label"/> gives its control, as WPF reads it: the
+    /// character after the first underscore that is not doubled, a doubled underscore
+    /// being a literal one. Upper case in the language the app is showing, as a key is
+    /// named. Null where the label marks none.
+    /// </summary>
+    internal static char? AccessKeyOf(string label)
+    {
+        for (var i = 0; i < label.Length - 1; i++)
+        {
+            if (label[i] != '_') continue;
+            if (label[i + 1] == '_')
+            {
+                i++;
+                continue;
+            }
+
+            return char.ToUpper(label[i + 1], Localisation.UiCulture);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="root"/>, a root as the check on the installers in source
+    /// folders takes it, is a drive letter and its colon.
+    /// </summary>
+    private static bool IsDriveRoot(string root) => root.Length == 2 && root[1] == ':';
 
     internal static string FormatElapsed(TimeSpan elapsed) =>
         elapsed.TotalSeconds < 1

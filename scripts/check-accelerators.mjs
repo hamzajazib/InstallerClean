@@ -21,8 +21,8 @@
 // manufacture clashes (Italian and Polish both put Alt+A on Cancel and on Check
 // for updates) and cost real accelerators to fix something that cannot fire.
 //
-// A window carrying one access key cannot clash, so the message, splash and two
-// details windows are not listed.
+// A window carrying one access key cannot clash, so the message and two details
+// windows are not listed.
 //
 // Run from the repo root: node scripts/check-accelerators.mjs
 import { readFileSync, existsSync } from 'node:fs';
@@ -49,8 +49,16 @@ const SETS = {
   'MainWindow-pendingReboot': ['Action.Details', 'Action.Browse', 'Action.Rescan',
     'Action.About', 'Action.CheckForUpdates'],
   // Overlays. The bar behind each is disabled, so each set is only its own
-  // controls; the scanning and operating overlays carry Cancel alone.
+  // controls. The scanning and operating overlays carry Cancel, and while a line
+  // on them names a drive or share the app is waiting for, the button that stops
+  // that wait.
+  'MainWindow-scanning': ['Action.Cancel', 'Action.StopWaiting'],
+  'MainWindow-operating': ['Action.Cancel', 'Action.StopWaiting'],
   'MainWindow-completion': ['Action.Done', 'Action.SendResultLog', 'Action.Donate'],
+
+  // The window the startup scan runs in: Cancel, and the same stop-waiting button
+  // while its step line names a wait.
+  'Splash': ['Action.Cancel', 'Action.StopWaiting'],
 
   'About': ['About.AutoUpdateCheck', 'Action.Licence', 'Action.LeaveStarOnGitHub',
     'Action.BuyMeACuppa', 'Action.Close'],

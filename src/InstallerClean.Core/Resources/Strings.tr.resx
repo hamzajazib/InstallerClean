@@ -144,6 +144,16 @@
   <data name="Action.SelectAll" xml:space="preserve"><value>Tümünü seç</value></data>
   <data name="Action.Browse" xml:space="preserve"><value>_Göz at...</value></data>
   <data name="Action.Cancel" xml:space="preserve"><value>_İptal</value></data>
+  <!-- The button under the line saying the app is waiting for a drive or share
+       (Status.WaitingForDrive, Status.WaitingForPath), shown only while that wait
+       lasts. It gives up on that one drive or share for the rest of the scan, or of
+       the check made when Move or Delete is clicked, and everything else carries on;
+       Action.Cancel, shown with it, ends the whole scan or check. "It" is the drive
+       or share the line names. Its access key has to differ from Action.Cancel's, as
+       both are on screen at once. Automation.StopWaitingForDrive and
+       Automation.StopWaitingForPath have to contain these words, and
+       Automation.WaitingLineWithStopKey speaks its key. -->
+  <data name="Action.StopWaiting" xml:space="preserve"><value>Carry on _without it</value></data>
   <data name="Action.CheckForUpdates" xml:space="preserve"><value>Güncelleştirmeleri _denetle</value></data>
   <data name="Action.Close" xml:space="preserve"><value>_Kapat</value></data>
   <!-- The label on both delete surfaces: the main window's button and the
@@ -211,6 +221,14 @@
   <data name="Automation.CancelOperation" xml:space="preserve"><value>İşlemi iptal et</value></data>
   <data name="Automation.CancelScan" xml:space="preserve"><value>Taramayı iptal et</value></data>
   <data name="Automation.CancelStartupScan" xml:space="preserve"><value>Başlangıç taramasını iptal et</value></data>
+  <!-- The spoken name of Action.StopWaiting's button, naming the drive it gives up
+       on. It has to contain Action.StopWaiting's words, without the access-key
+       marker, so speech input reaches the button by what it says on screen.
+       0 = a drive letter and its colon, e.g. "D:" -->
+  <data name="Automation.StopWaitingForDrive" xml:space="preserve"><value>Carry on without it, drive {0}</value></data>
+  <!-- As Automation.StopWaitingForDrive, for a folder that is not on a drive letter.
+       0 = a network share such as "\\fileserver\apps", or another path -->
+  <data name="Automation.StopWaitingForPath" xml:space="preserve"><value>Carry on without it, {0}</value></data>
   <data name="Automation.Close" xml:space="preserve"><value>Kapat</value></data>
   <data name="Automation.CloseWindow" xml:space="preserve"><value>Pencereyi kapat</value></data>
   <data name="Automation.CloseResult" xml:space="preserve"><value>Sonucu kapat ve ana pencereye dön</value></data>
@@ -567,6 +585,18 @@ Geri koymak için, halihazırda sahip olduğunuz sürümün kurulum programına 
   <!-- As Status.WaitingForDrive, for a folder that is not on a drive letter.
        0 = a network share such as "\\fileserver\apps", or another path -->
   <data name="Status.WaitingForPath" xml:space="preserve"><value>{0} konumundan yanıt bekleniyor...</value></data>
+  <!-- The line under Action.StopWaiting's button, shown while the button is: what
+       giving up on the drive or share costs. A file already checked against it keeps
+       its answer; every file still to be checked against it is left alone rather than
+       offered. "It" is the drive or share the waiting line names, and "left alone" is
+       worded as in Window.Registered.Title. -->
+  <data name="Status.StopWaitingLeavesAlone" xml:space="preserve"><value>Any file still to be checked against it will be left alone.</value></data>
+  <!-- What a screen reader says for the waiting line while Action.StopWaiting's
+       button shows; nothing on screen changes. 0 = the waiting line as drawn
+       (Status.WaitingForDrive or Status.WaitingForPath), 1 = the access key of
+       Action.StopWaiting, read from that label at run time, 2 =
+       Status.StopWaitingLeavesAlone. -->
+  <data name="Automation.WaitingLineWithStopKey" xml:space="preserve"><value>{0} Press Alt+{1} to carry on without it. {2}</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>Tarama tamamlandı ({0})</value></data>
   <!-- 0 = file count, 1 = pluralised noun ("file"/"files") -->
