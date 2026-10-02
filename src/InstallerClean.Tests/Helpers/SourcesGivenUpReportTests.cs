@@ -15,16 +15,19 @@ public class SourcesGivenUpReportTests
     private const string Tail =
         " and left alone any file still to be checked against it. Once it's responding normally, Re-scan.";
 
+    private const string CommandLineTail =
+        " and left alone any file still to be checked against it. Once it's responding normally, run the command again.";
+
     private static SourceRootGivenUp Root(string root) => new(root, SourceRootGiveUpRoute.NoAnswer, 1);
 
     [Fact]
     public void Nothing_given_up_produces_no_line()
     {
-        // Each host tests the line for emptiness to decide whether it appears at all,
-        // and a pass that gave nothing up is the commonest pass by far.
+        // Each host tests the line for emptiness to decide whether it appears at all.
         using var scope = new LocalisationScope(British);
 
         Assert.Equal(string.Empty, SourcesGivenUpReport.WindowLine([]));
+        Assert.Equal(string.Empty, SourcesGivenUpReport.CommandLine([]));
     }
 
     [Theory]
@@ -93,6 +96,55 @@ public class SourcesGivenUpReportTests
         {
             CultureInfo.CurrentCulture = previous;
         }
+    }
+
+    [Theory]
+    [InlineData("D:", "InstallerClean stopped waiting for drive D:" + CommandLineTail)]
+    [InlineData("d:", "InstallerClean stopped waiting for drive D:" + CommandLineTail)]
+    [InlineData(@"\\nas\installers", @"InstallerClean stopped waiting for \\nas\installers" + CommandLineTail)]
+    [InlineData(@"GLOBALROOT\Device\Mup\nas\installers", @"InstallerClean stopped waiting for GLOBALROOT\Device\Mup\nas\installers" + CommandLineTail)]
+    public void The_command_line_names_one_drive_or_share_inside_its_own_sentence(string root, string line)
+    {
+        using var scope = new LocalisationScope(British);
+
+        Assert.Equal(line, SourcesGivenUpReport.CommandLine([Root(root)]));
+    }
+
+    [Fact]
+    public void The_command_line_takes_its_own_drive_and_path_forms()
+    {
+        // Against the command line's keys, so neither host can borrow the other's words:
+        // the window's lines end on Re-scan, a button the command line has not got.
+        using var scope = new LocalisationScope(British);
+
+        Assert.Equal(string.Format(Strings.Cli_SourceGivenUp_Drive, "E:"),
+            SourcesGivenUpReport.CommandLine([Root("e:")]));
+        Assert.Equal(string.Format(Strings.Cli_SourceGivenUp_Path, @"\\nas\installers"),
+            SourcesGivenUpReport.CommandLine([Root(@"\\nas\installers")]));
+    }
+
+    [Fact]
+    public void The_command_line_lists_more_than_one_in_brackets_in_the_order_given_up()
+    {
+        using var scope = new LocalisationScope(British);
+
+        Assert.Equal(
+            @"InstallerClean stopped waiting for more than one drive or share (drive D:, \\nas\installers, drive E:) "
+            + "and left alone any file still to be checked against one of them. "
+            + "Once they're responding normally, run the command again.",
+            SourcesGivenUpReport.CommandLine([Root("d:"), Root(@"\\nas\installers"), Root("E:")]));
+    }
+
+    [Fact]
+    public void The_list_names_each_drive_with_its_word_and_each_share_as_spelled()
+    {
+        // The command line's Application-log entries name the drives and shares through
+        // this same list, so it is pinned on its own as well as inside the sentences.
+        using var scope = new LocalisationScope(British);
+
+        Assert.Equal(@"drive D:, \\nas\installers",
+            SourcesGivenUpReport.ListOf([Root("d:"), Root(@"\\nas\installers")]));
+        Assert.Equal("drive E:", SourcesGivenUpReport.ListOf([Root("e:")]));
     }
 
     private static readonly CultureInfo British = CultureInfo.GetCultureInfo("en-GB");

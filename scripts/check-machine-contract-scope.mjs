@@ -48,6 +48,9 @@ const BUILDERS = [
   'PendingRebootEventLogLine',
   'MoveDestinationInsideInstallerEventLogLine',
   'PendingRebootEventLogReason',
+  'AdminRightsNeededEventLogLine',
+  'SourcesGivenUpEventLogLine',
+  'SourcesGivenUpNoticeEventLogLine',
 ];
 const RAW_VALUE = 'Strings\\.Cli_EventLog[A-Za-z0-9_]*';
 const SCOPES = ['MachineContract.English', 'MachineContract.WriteEventLog'];

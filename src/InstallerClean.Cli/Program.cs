@@ -331,8 +331,7 @@ internal static class Program
     /// Takes the tally and not the path list, though every caller holds both. The
     /// tally already answers how many files there are, so a second argument here
     /// would be one that has to agree with it and could stop doing so. A run that
-    /// held nothing back prints nothing, which is the commonest run by far and the
-    /// reason a count of zero must never reach a sentence.
+    /// held nothing back prints nothing, so a count of zero never reaches a sentence.
     ///
     /// Deliberately not a machine-read line. The Application-channel summary
     /// already carries what the run did in English, and an RMM reads that.
@@ -342,6 +341,97 @@ internal static class Program
         var line = HeldBackReport.Line(reasons);
         if (line.Length > 0) Console.WriteLine(line);
     }
+
+    /// <summary>
+    /// Prints the line naming the drives and shares one pass stopped waiting for while
+    /// files still had to be checked against them, in the operator's language, from
+    /// <see cref="SourcesGivenUpReport.CommandLine"/>, which the window's line shares its
+    /// forms with. A pass that gave none up prints nothing.
+    ///
+    /// CALLED FOR THE SCAN AND FOR THE CHECK MADE BEFORE ACTING, each with its own pass's
+    /// list. The two are separate waits and can be on different drives, so a run whose
+    /// scan and check each gave one up prints the line twice, each true of its own pass.
+    ///
+    /// Deliberately not a machine-read line. <see cref="NoteSourcesGivenUp"/> writes the
+    /// same pass to the Application channel in English, and an RMM reads that.
+    /// </summary>
+    internal static void ReportSourcesGivenUp(IReadOnlyList<SourceRootGivenUp> roots)
+    {
+        var line = SourcesGivenUpReport.CommandLine(roots);
+        if (line.Length > 0) Console.WriteLine(line);
+    }
+
+    /// <summary>
+    /// Writes Event ID 3004 for one pass that stopped waiting for drives or shares while
+    /// files still had to be checked against them, and nothing for a pass that gave none
+    /// up. <paramref name="duringTheCheck"/> says which pass it was: the scan, or the check
+    /// made before a Move or Delete acts.
+    /// </summary>
+    private static void NoteSourcesGivenUp(
+        string arg, IReadOnlyList<SourceRootGivenUp> roots, bool duringTheCheck)
+    {
+        if (roots.Count == 0) return;
+        MachineContract.WriteEventLog(CliEventClass.SourcesGivenUpNotice,
+            () => SourcesGivenUpNoticeEventLogLine(arg, roots, duringTheCheck));
+    }
+
+    /// <summary>
+    /// The outcome line, Event ID 1000, for a scan that offered nothing, had no other
+    /// withholding to report, and stopped waiting for the drives and shares in
+    /// <paramref name="roots"/> while files still had to be checked against them. It
+    /// counts the drives and shares and the files left alone because of them; the 3004
+    /// notice beside it names them.
+    /// </summary>
+    /// <remarks>
+    /// Built outside the en-GB scope, like <see cref="AbortedMoveEventLogLine"/>: the
+    /// caller wraps it, so the line renders English in production and in the ambient
+    /// culture anywhere else.
+    /// </remarks>
+    internal static string SourcesGivenUpEventLogLine(string arg, IReadOnlyList<SourceRootGivenUp> roots)
+    {
+        var files = FilesKept(roots);
+        return string.Format(
+            DisplayHelpers.Pluralise(roots.Count,
+                Strings.Cli_EventLogSourcesGivenUp_Singular,
+                Strings.Cli_EventLogSourcesGivenUp_Plural,
+                "Cli.EventLogSourcesGivenUp"),
+            arg, roots.Count, files, DisplayHelpers.PluraliseFile(files));
+    }
+
+    /// <summary>
+    /// The Event ID 3004 line for one pass: how many drives and shares it stopped waiting
+    /// for, their names as the console's list names them, which pass it was, and how many
+    /// files it left alone because of them.
+    /// </summary>
+    /// <remarks>
+    /// Built outside the en-GB scope, like <see cref="AbortedMoveEventLogLine"/>: the
+    /// caller wraps it, so the names' separator and the word for a drive render English in
+    /// production and in the ambient culture anywhere else.
+    /// </remarks>
+    internal static string SourcesGivenUpNoticeEventLogLine(
+        string arg, IReadOnlyList<SourceRootGivenUp> roots, bool duringTheCheck)
+    {
+        var files = FilesKept(roots);
+        var template = duringTheCheck
+            ? DisplayHelpers.Pluralise(roots.Count,
+                Strings.Cli_EventLogSourcesGivenUpCheckNotice_Singular,
+                Strings.Cli_EventLogSourcesGivenUpCheckNotice_Plural,
+                "Cli.EventLogSourcesGivenUpCheckNotice")
+            : DisplayHelpers.Pluralise(roots.Count,
+                Strings.Cli_EventLogSourcesGivenUpScanNotice_Singular,
+                Strings.Cli_EventLogSourcesGivenUpScanNotice_Plural,
+                "Cli.EventLogSourcesGivenUpScanNotice");
+        return string.Format(template,
+            arg, roots.Count, SourcesGivenUpReport.ListOf(roots), files, DisplayHelpers.PluraliseFile(files));
+    }
+
+    /// <summary>
+    /// How many files one pass left alone at the drives and shares in
+    /// <paramref name="roots"/>. A file is counted at one root only, the one whose give-up
+    /// stopped its check, so the sum counts each file once.
+    /// </summary>
+    private static int FilesKept(IReadOnlyList<SourceRootGivenUp> roots) =>
+        roots.Sum(root => root.FilesKept);
 
     /// <summary>
     /// Prints the one stdout audit line saying the Application channel was
@@ -429,11 +519,12 @@ internal static class Program
             var count = scanResult.RemovableFiles.Count;
             var totalBytes = scanResult.RemovableFiles.Sum(f => f.SizeBytes);
             var size = DisplayHelpers.FormatSize(totalBytes);
+            // Read once: the property builds its list afresh on every read.
+            var sourcesGivenUp = scanResult.SourceRootsGivenUpKeepingFiles;
             // A clean machine gets one line, not a count of zero and a size of
-            // zero followed by a second line saying the same thing. It is the
-            // commonest output this tool produces, and somebody reading a
-            // scheduled task's log wants the state of the machine rather than
-            // the tool's intention towards it.
+            // zero followed by a second line saying the same thing: somebody
+            // reading a scheduled task's log wants the state of the machine
+            // rather than the tool's intention towards it.
             // THREE OUTCOMES WHERE NOTHING IS OFFERED, AND WHICH ONE IS THE SCAN
             // RESULT'S ANSWER RATHER THAN THIS HOST'S. An empty offer has three
             // meanings: the folder holds nothing this scan can offer, or holds only
@@ -444,6 +535,15 @@ internal static class Program
             // is printed for the first machine only, and the two withholding
             // sentences say different things that are each false of the other's
             // machine.
+            //
+            // AND THE FIRST MACHINE GETS IT ONLY WHERE THE SCAN STOPPED WAITING FOR NO
+            // DRIVE OR SHARE WHILE FILES STILL HAD TO BE CHECKED AGAINST IT. Where it did,
+            // the files it left alone are ones it never established to be needed or
+            // unneeded, so the clean line would be a claim about them the scan never made.
+            // Nothing is printed here for that machine: the line naming the drives and
+            // shares, which ReportScanSignals prints next, stands in its place. Such a
+            // file can be kept for a program Windows still has installed, which is why the
+            // withholding reading alone does not answer this.
             //
             // THE HOST DOES NOT PARTITION ANYTHING TO GET HERE. Deciding it here would
             // mean reading a split the scan owns, and a host that infers one decision's
@@ -476,21 +576,22 @@ internal static class Program
             // scan says is worth reporting.
             var wholesale = scanResult.Withholding == WithholdingAccount.WholeWalkOffer;
 
-            Console.WriteLine(count > 0
-                ? string.Format(
+            if (count > 0)
+                Console.WriteLine(string.Format(
                     DisplayHelpers.Pluralise(count, Strings.Cli_FoundOrphans, "Cli.FoundOrphans"),
-                    DisplayHelpers.FormatCount(count), DisplayHelpers.PluraliseFile(count), size)
-                : !scanResult.HasWithholdingToReport
-                    ? Strings.Cli_FoundNoOrphans
-                    : wholesale
-                        ? HeldBackLine(
-                            Strings.Cli_NothingOffered_Singular,
-                            Strings.Cli_NothingOffered_Plural, "Cli.NothingOffered")
-                        : HeldBackLine(
-                            Strings.Cli_NothingOfferedPerFile_Singular,
-                            Strings.Cli_NothingOfferedPerFile_Plural, "Cli.NothingOfferedPerFile"));
+                    DisplayHelpers.FormatCount(count), DisplayHelpers.PluraliseFile(count), size));
+            else if (scanResult.HasWithholdingToReport)
+                Console.WriteLine(wholesale
+                    ? HeldBackLine(
+                        Strings.Cli_NothingOffered_Singular,
+                        Strings.Cli_NothingOffered_Plural, "Cli.NothingOffered")
+                    : HeldBackLine(
+                        Strings.Cli_NothingOfferedPerFile_Singular,
+                        Strings.Cli_NothingOfferedPerFile_Plural, "Cli.NothingOfferedPerFile"));
+            else if (sourcesGivenUp.Count == 0)
+                Console.WriteLine(Strings.Cli_FoundNoOrphans);
 
-            ReportScanSignals(arg, scanResult);
+            ReportScanSignals(arg, scanResult, sourcesGivenUp);
 
             if (count == 0)
             {
@@ -498,20 +599,26 @@ internal static class Program
                 // tool watching the Application channel is not told a machine is
                 // clean when the scan could not judge it.
                 //
-                // ONE EVENT CLASS FOR BOTH. The run did its job either way, so both
-                // belong in the outcome band, and a monitoring tool tells the two
-                // apart by the message rather than by the number. A second Event ID
-                // for the withholding would be a change to the machine contract. The
-                // message has to differ: the clean line over a machine the scan
-                // could not judge is the statement this branch exists to stop.
+                // ONE EVENT CLASS FOR ALL OF THEM. The run did its job on each of these
+                // machines, so each entry belongs in the outcome band, and the notice
+                // beside it in the 3000 band is what tells a machine the scan could not
+                // judge from a clean one by number. The message has to differ: the clean
+                // line over a machine the scan could not judge is the statement this
+                // branch exists to stop.
+                //
+                // A WITHHOLDING TO REPORT TAKES ITS OWN MESSAGE EVEN WHERE A DRIVE OR
+                // SHARE WAS GIVEN UP TOO: it counts the files held back, and the notice
+                // ReportScanSignals has already written names the drives and shares.
                 MachineContract.WriteEventLog(CliEventClass.Ok,
-                    () => !scanResult.HasWithholdingToReport
-                        ? string.Format(Strings.Cli_EventLogScanNoOrphans, arg)
-                        : string.Format(
+                    () => scanResult.HasWithholdingToReport
+                        ? string.Format(
                             wholesale
                                 ? Strings.Cli_EventLogNothingOffered
                                 : Strings.Cli_EventLogNothingOfferedPerFile,
-                            arg, withheldCount, DisplayHelpers.PluraliseFile(withheldCount)));
+                            arg, withheldCount, DisplayHelpers.PluraliseFile(withheldCount))
+                        : sourcesGivenUp.Count > 0
+                            ? SourcesGivenUpEventLogLine(arg, sourcesGivenUp)
+                            : string.Format(Strings.Cli_EventLogScanNoOrphans, arg));
                 return ExitOk;
             }
 
@@ -566,6 +673,19 @@ internal static class Program
             var reverifier = services.GetRequiredService<IRemovableReverifier>();
             var reverify = await reverifier.ReverifyAsync(
                 scanResult.RemovableFiles.Select(f => f.FullPath).ToList(), token);
+
+            // THE DRIVES AND SHARES THIS CHECK STOPPED WAITING FOR WHILE FILES STILL HAD TO
+            // BE CHECKED AGAINST THEM, read once. The action services' own re-read gives
+            // none up, so this list is everything the run gives up after the scan.
+            //
+            // ITS NOTICE IS WRITTEN HERE, AHEAD OF EVERY RETURN THE RUN CAN TAKE FROM NOW
+            // ON, as ReportScanSignals writes the scan's ahead of every return after the
+            // scan. A run the action then refuses still left those files alone, so the
+            // notice is true of it. The console line waits for the held-back line below
+            // and is silent wherever that line is.
+            var checkSourcesGivenUp = reverify.SourceRootsGivenUpKeepingFiles;
+            NoteSourcesGivenUp(arg, checkSourcesGivenUp, duringTheCheck: true);
+
             var survivingSet = new HashSet<string>(reverify.Surviving, StringComparer.OrdinalIgnoreCase);
             var survivingFiles = scanResult.RemovableFiles
                 .Where(f => survivingSet.Contains(f.FullPath)).ToList();
@@ -692,8 +812,14 @@ internal static class Program
                 // files back and is then cancelled would say nothing at all about
                 // them if this line sat any later. The window reports them on
                 // both paths.
+                //
+                // THE LINE NAMING THE DRIVES AND SHARES THE CHECK STOPPED WAITING FOR
+                // FOLLOWS IT, for the same two reasons: the files it speaks of were
+                // held back by that check, so it reads under the count of them, and it
+                // goes ahead of the cancel re-entry with it.
                 heldBack += result.HeldBackReasons;
                 ReportHeldBack(heldBack);
+                ReportSourcesGivenUp(checkSourcesGivenUp);
                 // Held-back files were never touched, so they leave the tally the
                 // same way the errors below do. Without this they would be counted
                 // as freed bytes, the byte sum discounting errors alone.
@@ -822,6 +948,7 @@ internal static class Program
                 // Application-log line an RMM audits.
                 heldBack += ex.Partial.HeldBackReasons;
                 ReportHeldBack(heldBack);
+                ReportSourcesGivenUp(checkSourcesGivenUp);
                 if (ex.Partial.HeldBack.Count > 0)
                 {
                     survivingFiles = FoldHeldBack(survivingFiles, ex.Partial.HeldBack);
@@ -846,11 +973,13 @@ internal static class Program
             if (moveResult.InstallerLockUnavailable)
                 return EmitInstallerLockUnavailable(arg);
 
-            // The run's one held-back line. See the /d branch for why the two
-            // producers' tallies are added and printed here rather than one each,
-            // and for why this comes ahead of the cancel re-entry.
+            // The run's one held-back line, and the check's line naming the drives
+            // and shares under it. See the /d branch for why the two producers'
+            // tallies are added and printed here rather than one each, and for why
+            // both come ahead of the cancel re-entry.
             heldBack += moveResult.HeldBackReasons;
             ReportHeldBack(heldBack);
+            ReportSourcesGivenUp(checkSourcesGivenUp);
             if (moveResult.HeldBack.Count > 0)
             {
                 survivingFiles = FoldHeldBack(survivingFiles, moveResult.HeldBack);
@@ -995,8 +1124,11 @@ internal static class Program
 
     /// <summary>
     /// Reports the scan-level conditions that are facts about the machine rather
-    /// than about this run: an offer withheld and the conditions behind it,
-    /// superseded files kept back, records the scan could not fully read, and
+    /// than about this run: an offer withheld and the conditions behind it, the
+    /// drives and shares the scan stopped waiting for while files still had to be
+    /// checked against them (<paramref name="sourcesGivenUp"/>, the scan's
+    /// <see cref="ScanResult.SourceRootsGivenUpKeepingFiles"/> as the caller read
+    /// it), superseded files kept back, records the scan could not fully read, and
     /// registrations naming a file that is not there.
     ///
     /// THE SURFACE IS PER CONDITION AND NOT ONE RULE OVER ALL OF THEM. Some reach
@@ -1014,7 +1146,8 @@ internal static class Program
     /// <see cref="ResolveAndValidateMoveDestination"/> come before the scan, so
     /// there is nothing to report by the time they take it.
     /// </remarks>
-    private static void ReportScanSignals(string arg, ScanResult scanResult)
+    private static void ReportScanSignals(
+        string arg, ScanResult scanResult, IReadOnlyList<SourceRootGivenUp> sourcesGivenUp)
     {
         // FILES THE FOLDER WALK FOUND WERE HELD BACK, IN ONE GO OR ONE AT A TIME. An
         // audit line for every machine that meets it, and on stdout a lead, a header and
@@ -1111,6 +1244,16 @@ internal static class Program
             }
         }
 
+        // THE DRIVES AND SHARES THE SCAN STOPPED WAITING FOR WHILE FILES STILL HAD TO BE
+        // CHECKED AGAINST THEM, on stdout and as Event ID 3004. After the held-back lines
+        // above, which also speak of files the scan left alone, and ahead of the
+        // superseded line, so where the scan has nothing else to report it is the first
+        // line after the scanning one, standing where the clean line would have been. The
+        // window draws its own line under its left-alone count and above its missing-files
+        // line, which is this order.
+        ReportSourcesGivenUp(sourcesGivenUp);
+        NoteSourcesGivenUp(arg, sourcesGivenUp, duringTheCheck: false);
+
         // SUPERSEDED FILES HELD BACK, printed wherever the count this line carries is
         // above zero. The count is SupersededHeldBackCount, the same superseded files the
         // window's finished screen counts: those whose removable verdict was taken away
@@ -1151,8 +1294,8 @@ internal static class Program
         //
         // THEY ARE NOT TWO VIEWS OF ONE QUANTITY. This counts entries or files, the
         // trigger for ONE of the several routes into the count above. A machine can meet
-        // either condition without the other, and the commonest is meeting this one with
-        // no superseded file to hold back.
+        // either condition without the other: this one with no superseded file to hold
+        // back, or the count above with nothing this one counts.
         //
         // The count does not appear in the human line and does appear here, for an RMM
         // to hang a filter on. The program entries are the figure where there are any,

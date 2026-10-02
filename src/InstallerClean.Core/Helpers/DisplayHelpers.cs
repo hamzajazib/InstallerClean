@@ -316,6 +316,8 @@ internal static class DisplayHelpers
         "Cli.DeletedFiles" or "Cli.DeletingFiles" or "Cli.EventLogMissingFromDisk"
             or "Cli.EventLogScanWithheld" or "Cli.EventLogScanWithheldPatchFiles"
             or "Cli.EventLogSupersededHeldBack"
+            or "Cli.EventLogSourcesGivenUp" or "Cli.EventLogSourcesGivenUpScanNotice"
+            or "Cli.EventLogSourcesGivenUpCheckNotice"
             or "Cli.FoundOrphans"
             or "Cli.MissingFromDisk" or "Cli.MovedFiles" or "Cli.MovingFiles"
             or "Completion.FailedCount" or "Completion.FailedCountDelete"

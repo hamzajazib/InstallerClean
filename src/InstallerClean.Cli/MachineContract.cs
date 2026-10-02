@@ -89,7 +89,12 @@ internal static class MachineContract
     /// installed here and offered nothing it walked, or it could not establish that
     /// particular files it found are unneeded. 3003: superseded files were held back,
     /// with their count, whatever the reason and whether or not anything was offered
-    /// beside them. A notice never replaces the summary and never stands
+    /// beside them. 3004: the scan, or the check made before a Move or Delete, stopped
+    /// waiting for drives or shares while files still had to be checked against them and
+    /// left those files alone; the entry names them, says which of the two it was, and
+    /// counts the files, so a run whose scan and check each gave one up writes two. The
+    /// check's is written as soon as the check returns, so a run refused after it
+    /// carries it too. A notice never replaces the summary and never stands
     /// in for one, so counting runs means counting the summary bands, and each
     /// repeats for as long as its own condition holds, so a machine can emit one on
     /// every run for weeks.
@@ -97,8 +102,9 @@ internal static class MachineContract
     /// "NEVER THE RUN'S OUTCOME" IS ABOUT COUNTING RUNS AND IS NOT THE OTHER SENSE
     /// OF THE SAME WORDS. <see cref="CliContract.EntryTypeFor"/> separates a
     /// standing property of the machine from a run that fell short of its job, and
-    /// on that question 3001 is the standing property while 3000, 3002 and 3003 are
-    /// about the run, which is why 3001 is Information and the other three are Warning.
+    /// on that question 3001 is the standing property while 3000, 3002, 3003 and 3004
+    /// are about the run, which is why 3001 is Information and the other four are
+    /// Warning.
     /// Nothing here contradicts that: this paragraph says only that a notice is not
     /// the run's SUMMARY entry, which is what a consumer counting runs is asking.
     /// Two questions, near-identical wording, and the sense that travels between

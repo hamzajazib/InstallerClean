@@ -504,6 +504,9 @@ const MAP = {
   'Summary.SourceGivenUp.Path': `InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan.`,
   'Summary.SourcesGivenUp': `InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan.`,
   'Display.DriveName': `drive {0}`,
+  'Cli.SourceGivenUp.Drive': `InstallerClean stopped waiting for drive {0} and left alone any file still to be checked against it. Once it's responding normally, run the command again.`,
+  'Cli.SourceGivenUp.Path': `InstallerClean stopped waiting for {0} and left alone any file still to be checked against it. Once it's responding normally, run the command again.`,
+  'Cli.SourcesGivenUp': `InstallerClean stopped waiting for more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, run the command again.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,
@@ -593,6 +596,13 @@ const STRIPPED = new Set([
   'Cli.EventLogPendingRebootBlocked',
   // A machine Cli key that postdates the PR, by the rule in the header.
   'Cli.EventLogAdminRightsNeeded',
+  // Six more machine Cli keys that postdate the PR, by the same rule.
+  'Cli.EventLogSourcesGivenUp.Singular',
+  'Cli.EventLogSourcesGivenUp.Plural',
+  'Cli.EventLogSourcesGivenUpScanNotice.Singular',
+  'Cli.EventLogSourcesGivenUpScanNotice.Plural',
+  'Cli.EventLogSourcesGivenUpCheckNotice.Singular',
+  'Cli.EventLogSourcesGivenUpCheckNotice.Plural',
 ]);
 let stripped = 0;
 text = text.replace(/[^\S\n]*<data name="(Cli\.[^"]*)"[\s\S]*?<\/data>\n?/g,

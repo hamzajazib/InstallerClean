@@ -143,7 +143,7 @@ internal static class CliExitCode
 /// English-only by deliberate design).
 ///
 /// The first four are outcome classes, one of which is a run's single summary
-/// entry; the last two are notices. What a consumer may rely on about the two
+/// entry; the rest are notices. What a consumer may rely on about the two kinds
 /// together is stated once, on the CLI host's MachineContract.WriteEventLog.
 /// </summary>
 internal enum CliEventClass
@@ -223,6 +223,20 @@ internal enum CliEventClass
     /// findings reach the count and no sentence naming one is true of the others.
     /// </summary>
     ScanSupersededHeldBackNotice,
+
+    /// <summary>
+    /// Notice: the scan, or the check made before a Move or Delete, stopped waiting for
+    /// one or more drives or shares while files still had to be checked against them, and
+    /// left those files alone. The entry names the drives and shares, says which of the two
+    /// passes it was, and counts the files. Raised where the pass's
+    /// <c>SourceRootsGivenUpKeepingFiles</c> is not empty, so a drive or share given up
+    /// with no file kept at it raises nothing. A run whose scan and check each gave one up
+    /// writes it twice, once per pass.
+    ///
+    /// WARNING, on the rule at <see cref="CliContract.EntryTypeFor"/>: that pass left files
+    /// it had not finished checking, so the run fell short of its job by those files.
+    /// </summary>
+    SourcesGivenUpNotice,
 }
 
 /// <summary>The exit code and Event-log class chosen for a finished file operation.</summary>
@@ -334,6 +348,7 @@ internal static class CliContract
         CliEventClass.ScanMissingFilesNotice => 3001,
         CliEventClass.ScanNothingOfferedNotice => 3002,
         CliEventClass.ScanSupersededHeldBackNotice => 3003,
+        CliEventClass.SourcesGivenUpNotice => 3004,
         _ => 0,
     };
 
@@ -352,7 +367,8 @@ internal static class CliContract
     /// empty, and it will be empty again on the next run only for as long as the
     /// condition holds rather than for as long as some files are absent. The
     /// superseded-files notice is Warning on the same reading: that run's offer was
-    /// short of files it held back. The
+    /// short of files it held back. So is the notice for the drives and shares a pass
+    /// stopped waiting for: that pass left files it had not finished checking. The
     /// missing-files notice is the one that is not about the run:
     /// it is true whether or not the run worked and repeats for as long as the
     /// files are gone, so at Warning a machine with nothing wrong with it posts

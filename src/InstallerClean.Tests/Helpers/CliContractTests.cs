@@ -226,6 +226,7 @@ public class CliContractTests
         Assert.Equal(3001, CliContract.EventIdFor(CliEventClass.ScanMissingFilesNotice));
         Assert.Equal(3002, CliContract.EventIdFor(CliEventClass.ScanNothingOfferedNotice));
         Assert.Equal(3003, CliContract.EventIdFor(CliEventClass.ScanSupersededHeldBackNotice));
+        Assert.Equal(3004, CliContract.EventIdFor(CliEventClass.SourcesGivenUpNotice));
     }
 
     [Fact]
@@ -244,6 +245,7 @@ public class CliContractTests
         Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.ScanMissingFilesNotice), outcomes);
         Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.ScanNothingOfferedNotice), outcomes);
         Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.ScanSupersededHeldBackNotice), outcomes);
+        Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.SourcesGivenUpNotice), outcomes);
     }
 
     [Fact]
@@ -307,5 +309,14 @@ public class CliContractTests
         // moment the condition does.
         Assert.Equal(EventLogEntryType.Warning,
             CliContract.EntryTypeFor(CliEventClass.ScanNothingOfferedNotice));
+    }
+
+    [Fact]
+    public void EntryType_the_drives_and_shares_given_up_notice_is_warning()
+    {
+        // On the run's side of the split: the pass that wrote it left files it had not
+        // finished checking, and it stops the moment the drive or share answers.
+        Assert.Equal(EventLogEntryType.Warning,
+            CliContract.EntryTypeFor(CliEventClass.SourcesGivenUpNotice));
     }
 }

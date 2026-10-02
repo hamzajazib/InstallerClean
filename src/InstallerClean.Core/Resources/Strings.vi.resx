@@ -1601,13 +1601,12 @@ Hãy chạy lại InstallerClean với tư cách quản trị viên.</value></da
   <data name="Cli.GenericError.NoLog" xml:space="preserve"><value>Lỗi: sự cố không mong đợi ({0}). Không ghi được nhật ký sự cố.</value></data>
   <data name="Cli.ScanningInstaller" xml:space="preserve"><value>Đang quét {InstallerFolder}...</value></data>
   <!-- 0 = file count, 1 = pluralised noun, 2 = size display. Never reached with
-       a count of zero: that run prints Cli.FoundNoOrphans instead, so this one
-       does not have to read sensibly at "0 ... (0 B)". -->
+       a count of zero: that run prints another line instead, so this one does not
+       have to read sensibly at "0 ... (0 B)". -->
   <data name="Cli.FoundOrphans" xml:space="preserve"><value>Đã tìm thấy {0} {1} không cần thiết để dọn ({2}).</value></data>
-  <!-- The whole of what a clean machine prints after the scanning line, and the
-       commonest output this tool produces. It states what was found rather than
-       what the tool intends to do about it, which is the question somebody
-       reading a scheduled task's log ran the scan to ask. -->
+  <!-- The whole of what a clean machine prints after the scanning line. It states
+       what was found rather than what the tool intends to do about it, which is the
+       question somebody reading a scheduled task's log ran the scan to ask. -->
   <data name="Cli.FoundNoOrphans" xml:space="preserve"><value>Không tìm thấy tệp không cần thiết nào.</value></data>
   <!-- The THIRD outcome, and the line above is why it has to exist: "Found no
        unneeded files" is a statement about the folder, and on this machine the
@@ -1774,18 +1773,17 @@ Hãy chạy lại InstallerClean với tư cách quản trị viên.</value></da
        Windows holds is a different subject, and not one a reader of this log
        can act on. -->
   <!-- The audit line for the outcome above, so the Application channel splits the
-       same three ways stdout does and a monitoring tool is not told a machine is
-       clean when the scan could not judge it.
+       same ways stdout does and a monitoring tool is not told a machine is clean
+       when the scan could not judge it.
 
        0 = mode arg, whichever of /s, /d and /m was run, as in the entry above:
        the no-files branch is common to all three. 1 = files held back,
        2 = pluralised "file"/"files".
 
-       IT SHARES EVENT ID 1000 WITH THE ENTRY ABOVE, which is a real limit and is
-       recorded rather than designed around: the run did its job, so it belongs in
-       the outcome band, and a tool that needs to tell this machine from a clean
-       one has to read the message. Splitting the band would put a new ID on the
-       wire, which is a contract change and not this line's to make.
+       IT SHARES EVENT ID 1000 WITH THE ENTRY ABOVE: the run did its job, so it
+       belongs in the outcome band. The notice written beside it at 3002,
+       Cli.EventLogNothingOfferedNotice, is what tells this machine from a clean one
+       by number.
 
        "No action taken" rather than a phrase of its own: Cli.EventLogScanFound
        already ends that way, so a filter watching this channel meets one phrase
@@ -1821,10 +1819,9 @@ Hãy chạy lại InstallerClean với tư cách quản trị viên.</value></da
 
        AND IT TAKES THE PLURALISED NOUN RATHER THAN A HARDCODED "files", so it reads
        "1 file" at a count of one and is correct at every other. THE SIBLING ABOVE
-       DOES THE SAME, AND THIS NOTE SAID THE TWO PART COMPANY THERE:
-       Cli.EventLogNothingOffered spends {2} as well and Program.cs passes it
-       DisplayHelpers.PluraliseFile on the same count. The unpluralised line on this
-       channel is Cli.EventLogScanWithheld, a different key answering a different
+       DOES THE SAME: Cli.EventLogNothingOffered spends {2} as well and Program.cs
+       passes it DisplayHelpers.PluraliseFile on the same count. The unpluralised line
+       on this channel is Cli.EventLogScanWithheld, a different key answering a different
        question: its count is of records rather than files, and it matches the
        always-plural "errors:" header the same audience scrapes, so its grammar is
        the price of holding one shape.
@@ -1844,18 +1841,6 @@ Hãy chạy lại InstallerClean với tư cách quản trị viên.</value></da
        the same log a band apart, so a word here naming a share of them would describe
        one machine two ways. Same three arguments, same order, and it names no folder,
        which is the rule on this channel and is stated above. -->
-  <!-- Retired and unread; see the note at Completion.InstanceRefusal. The command line's
-       half of the second-instance pair. It said "a second instance" where the window
-       said "a second copy of itself": this audience knows the term and that one does
-       not, and the split was deliberate. -->
-  <!-- Retired and unread with the two above. The act-time refusal. It could tell nobody
-       to press anything, this surface having no button, so it ends "Run it again." where
-       the window's Completion.InstanceRefusal ends "Re-scan to check again." -->
-  <!-- Retired and unread with the three above. The act-time audit line. It did NOT
-       reuse Cli.EventLogNothingOfferedInstance, whose "nothing offered" would have been
-       false here: those files were offered and the run then refused to act on them. "No
-       action taken" is the vocabulary Cli.EventLogScanFound still ends with, so a filter
-       watching the Application channel met one phrase rather than two. -->
   <!-- 0 = mode arg ("/s"), 1 = file count, 2 = pluralised noun, 3 = size display -->
   <!-- 0 = how many files, 1 = the programs they belong to
        (MissingFilesReport.Inline, the same phrase the window builds).
@@ -1936,6 +1921,56 @@ Hãy chạy lại InstallerClean với tư cách quản trị viên.</value></da
        condition Cli.SupersededHeldBack is printed on and carrying the same count, so a
        run whose console nobody reads still records that superseded files were held
        back. It names no cause, for the reason that line names none. -->
+  <!-- The command line's line naming a drive that the scan, or the check made before a
+       Move or Delete, stopped waiting for while files still had to be checked against
+       it. The scan's is printed after its own lines about the files it held back, and
+       where it offered nothing and has nothing else to report it is printed in place of
+       Cli.FoundNoOrphans. The check's is printed after the held-back line. The command
+       line shows no wait, and the app stops waiting for a drive there when it does not
+       answer or when its reads take too long, so "stopped waiting for" is true of each.
+       It ends by saying to run the command again, as Cli.DestinationChangedMidBatch
+       does, where the window's Summary.SourceGivenUp.Drive says Re-scan. The drive is
+       named inside the sentence, so a language that declines the noun after "for"
+       declines it here. "Left alone" is worded as in Summary.SourceGivenUp.Drive.
+       0 = a drive letter and its colon in capitals, e.g. "D:" -->
+  <data name="Cli.SourceGivenUp.Drive" xml:space="preserve"><value>InstallerClean stopped waiting for drive {0} and left alone any file still to be checked against it. Once it's responding normally, run the command again.</value></data>
+  <!-- As Cli.SourceGivenUp.Drive, for a folder that is not on a drive letter, named as
+       it is spelled. 0 = a network share such as "\\fileserver\apps", or another path -->
+  <data name="Cli.SourceGivenUp.Path" xml:space="preserve"><value>InstallerClean stopped waiting for {0} and left alone any file still to be checked against it. Once it's responding normally, run the command again.</value></data>
+  <!-- As Cli.SourceGivenUp.Drive, where more than one drive or share was given up.
+       0 = the list of them in the order they were given up, each drive as
+       Display.DriveName and each share or path as it is spelled, joined with
+       Display.ListSeparator, e.g. "drive D:, \\nas\installers". The list stands in
+       brackets and carries no "and", as in Summary.SourcesGivenUp. -->
+  <data name="Cli.SourcesGivenUp" xml:space="preserve"><value>InstallerClean stopped waiting for more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, run the command again.</value></data>
+  <!-- The outcome entry, Event ID 1000, for a scan that offered nothing, has no other
+       withholding to report, and stopped waiting for a drive or share while files still
+       had to be checked against it. It is written in place of Cli.EventLogScanNoOrphans,
+       which says the folder holds no unneeded files: the scan never established that of
+       the files it left alone. The notice beside it,
+       Cli.EventLogSourcesGivenUpScanNotice at 3004, names the drives and shares.
+
+       0 = mode arg, whichever of /s, /d and /m was run, as in Cli.EventLogScanNoOrphans:
+       the no-files branch is common to all three. 1 = how many drives and shares, and
+       the form is chosen by it. 2 = how many files were left alone because of them,
+       3 = pluralised "file"/"files". "No action taken" ends it as it ends
+       Cli.EventLogScanFound and Cli.EventLogNothingOffered, so a filter watching this
+       channel meets one phrase. Machine-read and forced English at the emit site. -->
+  <!-- Event ID 3004, a notice beside the run's summary, written wherever the scan
+       stopped waiting for a drive or share while files still had to be checked against
+       it, whatever else the run did. Cli.EventLogSourcesGivenUpCheckNotice is the same
+       notice for the check made before a Move or Delete.
+
+       0 = mode arg, 1 = how many drives and shares, and the form is chosen by it.
+       2 = their names in the order they were given up, each drive as Display.DriveName
+       and each share or path as it is spelled, joined with Display.ListSeparator, e.g.
+       "drive D:, \\nas\installers". 3 = how many files were left alone because of
+       them, 4 = pluralised "file"/"files". Machine-read and forced English at the emit
+       site. -->
+  <!-- As Cli.EventLogSourcesGivenUpScanNotice, at the same Event ID 3004, for the check
+       made before a Move or Delete acts. It is written as soon as that check returns, so
+       a run that is refused after it still carries it. Same five arguments, same
+       order. -->
   <!-- 0 = mode arg, 1 = program entries in Windows Installer's records the scan could
        not check. A notice beside the run's summary, not a summary itself (Event ID 3000;
        see MachineContract). The numeral stays in the singular too: a machine surface
@@ -1960,10 +1995,9 @@ Hãy chạy lại InstallerClean với tư cách quản trị viên.</value></da
        program, several NAME files and affect several. A consumer selects on the
        Event ID rather than on the words, so the two forms cost it nothing.
 
-       IT SAYS NOTHING ABOUT WHAT REMOVED THEM AND MUST NOT: every tool that
-       deletes from this folder leaves the same record, this one included up to
-       v2.3.0, and the entry sitting in a log beside this tool's name is a reason
-       for care rather than a licence. -->
+       IT SAYS NOTHING ABOUT WHAT REMOVED THEM AND MUST NOT: any tool that deletes
+       from this folder can leave the same record, and the entry sitting in a log
+       beside this tool's name is a reason for care rather than a licence. -->
   <!-- 0 = file count, 1 = pluralised noun "file"/"files". Never printed at a
        count of zero (see Program.cs), so it does not have to read sensibly
        there. It says "unneeded" for the same reason Cli.DeletedFiles below
@@ -2218,11 +2252,10 @@ Hãy chạy lại InstallerClean với tư cách quản trị viên.</value></da
        touches nothing anything needs is an adjective inside two of the six
        usage rows, which is not the same as saying it. -->
   <data name="Cli.Help.Summary" xml:space="preserve"><value>Bỏ các tệp .msi và .msp trong bộ đệm mà không chương trình đã cài nào cần.</value></data>
-  <!-- Running it from an ordinary prompt is the commonest way to get this wrong.
-       There Windows refuses to start a process that requires administrator, so
-       nothing of this program runs and the help is where it is said. A process
-       started without the rights anyway is refused by the tool itself, with
-       Cli.AdminRightsNeeded. -->
+  <!-- From an ordinary prompt, Windows refuses to start a process that requires
+       administrator, so nothing of this program runs and the help is where it is
+       said. A process started without the rights anyway is refused by the tool
+       itself, with Cli.AdminRightsNeeded. -->
   <data name="Cli.Help.Elevation" xml:space="preserve"><value>Cần dấu nhắc quản trị viên; nếu không sẽ không quét.</value></data>
   <data name="Cli.Help.Usage" xml:space="preserve"><value>Cách dùng:</value></data>
   <data name="Cli.Help.Help" xml:space="preserve"><value>  installerclean-cli --help        Hiển thị trợ giúp (cũng nhận /?, -h)</value></data>

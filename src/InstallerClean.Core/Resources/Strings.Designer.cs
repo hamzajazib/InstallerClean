@@ -202,6 +202,12 @@ public static class Strings
     public static string Cli_EventLogScanWithheldPatchFiles_Singular => Get("Cli.EventLogScanWithheldPatchFiles.Singular");
     public static string Cli_EventLogScanWithheld_Plural => Get("Cli.EventLogScanWithheld.Plural");
     public static string Cli_EventLogScanWithheld_Singular => Get("Cli.EventLogScanWithheld.Singular");
+    public static string Cli_EventLogSourcesGivenUpCheckNotice_Plural => Get("Cli.EventLogSourcesGivenUpCheckNotice.Plural");
+    public static string Cli_EventLogSourcesGivenUpCheckNotice_Singular => Get("Cli.EventLogSourcesGivenUpCheckNotice.Singular");
+    public static string Cli_EventLogSourcesGivenUp_Plural => Get("Cli.EventLogSourcesGivenUp.Plural");
+    public static string Cli_EventLogSourcesGivenUpScanNotice_Plural => Get("Cli.EventLogSourcesGivenUpScanNotice.Plural");
+    public static string Cli_EventLogSourcesGivenUpScanNotice_Singular => Get("Cli.EventLogSourcesGivenUpScanNotice.Singular");
+    public static string Cli_EventLogSourcesGivenUp_Singular => Get("Cli.EventLogSourcesGivenUp.Singular");
     public static string Cli_EventLogSupersededHeldBack_Plural => Get("Cli.EventLogSupersededHeldBack.Plural");
     public static string Cli_EventLogSupersededHeldBack_Singular => Get("Cli.EventLogSupersededHeldBack.Singular");
     public static string Cli_EventLogUnavailable => Get("Cli.EventLogUnavailable");
@@ -259,6 +265,9 @@ public static class Strings
     public static string Cli_PendingRebootBlocked_PendingRenameUnresolved => Get("Cli.PendingRebootBlocked.PendingRenameUnresolved");
     public static string Cli_PendingRebootBlocked_RegistryCheckUnreadable => Get("Cli.PendingRebootBlocked.RegistryCheckUnreadable");
     public static string Cli_ScanningInstaller => Get("Cli.ScanningInstaller");
+    public static string Cli_SourceGivenUp_Drive => Get("Cli.SourceGivenUp.Drive");
+    public static string Cli_SourceGivenUp_Path => Get("Cli.SourceGivenUp.Path");
+    public static string Cli_SourcesGivenUp => Get("Cli.SourcesGivenUp");
     public static string Cli_SupersededHeldBack_Plural => Get("Cli.SupersededHeldBack.Plural");
     public static string Cli_SupersededHeldBack_Singular => Get("Cli.SupersededHeldBack.Singular");
     public static string Cli_TooManyArguments => Get("Cli.TooManyArguments");
