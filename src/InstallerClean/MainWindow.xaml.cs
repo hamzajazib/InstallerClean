@@ -877,22 +877,10 @@ public partial class MainWindow : Window
         if (e.Key != Key.Escape)
             return;
 
-        if (_vm.Cleanup.IsOperating && _vm.Cleanup.CancelOperationCommand.CanExecute(null))
-        {
-            _vm.Cleanup.CancelOperationCommand.Execute(null);
+        // MainViewModel.HandleEscape picks the overlay that takes it. Esc on an idle
+        // top-level window must not close the app, so nothing here takes it either.
+        if (_vm.HandleEscape())
             e.Handled = true;
-        }
-        else if (_vm.Scan.IsScanning && _vm.Scan.CancelScanCommand.CanExecute(null))
-        {
-            _vm.Scan.CancelScanCommand.Execute(null);
-            e.Handled = true;
-        }
-        else if (_vm.Completion.IsComplete && _vm.Completion.DismissCommand.CanExecute(null))
-        {
-            _vm.Completion.DismissCommand.Execute(null);
-            e.Handled = true;
-        }
-        // No else branch: Esc on an idle top-level window must not close the app.
     }
 
     private void MinimizeClick(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;

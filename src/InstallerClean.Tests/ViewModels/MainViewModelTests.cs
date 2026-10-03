@@ -1206,6 +1206,70 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public async Task Esc_closes_the_finished_card_while_the_Delete_behind_it_is_still_finishing()
+    {
+        var vm = CreateViewModel();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(1));
+        _deleteService.DeleteFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new DeleteResult(1, Array.Empty<FileOperationError>()));
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
+
+        // Esc is pressed from inside the report write, which the Delete awaits after
+        // putting its card up and before it lets go: the moment both overlays are up.
+        bool cardUp = false, operating = false, taken = false, cancelRequested = true;
+        _resultLogService.WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                cardUp = vm.Completion.IsComplete;
+                operating = vm.Cleanup.IsOperating;
+                taken = vm.HandleEscape();
+                cancelRequested = vm.Cleanup.IsCancellationRequested;
+                return Task.FromResult(true);
+            });
+
+        await vm.Scan.ScanWithProgressAsync(null);
+        await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+
+        // The fixture reached the moment it is for.
+        Assert.True(cardUp);
+        Assert.True(operating);
+        // The card took the Esc and the finished Delete was not asked to stop.
+        Assert.True(taken);
+        Assert.False(cancelRequested);
+        Assert.False(vm.Completion.IsComplete);
+    }
+
+    [Fact]
+    public async Task Esc_asks_a_running_Delete_to_stop_where_no_card_is_up()
+    {
+        var vm = CreateViewModel();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2));
+        bool cardUp = true, taken = false, cancelRequested = false;
+        _deleteService.DeleteFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                cardUp = vm.Completion.IsComplete;
+                taken = vm.HandleEscape();
+                cancelRequested = vm.Cleanup.IsCancellationRequested;
+                return new DeleteResult(0, Array.Empty<FileOperationError>(), Cancelled: true);
+            });
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
+
+        await vm.Scan.ScanWithProgressAsync(null);
+        await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+
+        Assert.False(cardUp);
+        Assert.True(taken);
+        Assert.True(cancelRequested);
+    }
+
+    [Fact]
     public async Task MoveAllAsync_happy_path_moves_files_and_shows_completion()
     {
         var vm = CreateViewModel();

@@ -19,6 +19,7 @@ namespace InstallerClean.ViewModels;
 ///     carried on without.
 ///   - The Scan command, behind Re-scan and F5, is refused while a Move
 ///     or a Delete is in flight and while the completion overlay is up.
+///   - Esc goes to the overlay in front (<see cref="HandleEscape"/>).
 ///   - A report sent successfully is saved to settings, so the Send
 ///     button stays hidden in later sessions.
 ///
@@ -102,8 +103,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         // Drive IsMainContentInteractive off the three overlay states.
         // The caption buttons themselves remain IsEnabled=true, but the
         // scanning and operating overlays span all three grid rows so
-        // their dim Border absorbs clicks on the title bar. Esc is
-        // wired through MainWindow.OnPreviewKeyDown for each overlay,
+        // their dim Border absorbs clicks on the title bar. Esc reaches
+        // the overlays through MainWindow.OnPreviewKeyDown and HandleEscape,
         // and Alt+F4 reaches the window's normal SC_CLOSE path through
         // WM_SYSCOMMAND (only SC_MAXIMIZE is intercepted).
         Scan.PropertyChanged += OnChildPropertyChanged;
@@ -151,6 +152,35 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// finish-the-current-file flag, and a read-only scan needs no such hold.
     /// </summary>
     public bool IsBusy => Scan.IsScanInFlight || Cleanup.IsOperationInFlight;
+
+    /// <summary>
+    /// What Esc does on the main window: the overlay in front takes it, and the return
+    /// says whether one did. An idle window takes none.
+    ///
+    /// THE FINISHED CARD COMES FIRST, because it is the one in front. A Move or a Delete
+    /// puts its card up before the operation has let go, so for that moment the card and
+    /// the operating overlay are both up, and the card is drawn over it. Then a running
+    /// Move or Delete, whose Esc is Cancel, and then a scan.
+    /// </summary>
+    public bool HandleEscape()
+    {
+        if (Completion.IsComplete && Completion.DismissCommand.CanExecute(null))
+        {
+            Completion.DismissCommand.Execute(null);
+            return true;
+        }
+        if (Cleanup.IsOperating && Cleanup.CancelOperationCommand.CanExecute(null))
+        {
+            Cleanup.CancelOperationCommand.Execute(null);
+            return true;
+        }
+        if (Scan.IsScanning && Scan.CancelScanCommand.CanExecute(null))
+        {
+            Scan.CancelScanCommand.Execute(null);
+            return true;
+        }
+        return false;
+    }
 
     /// <summary>
     /// The main window's opening line. The intro is the only thing that tells the
