@@ -154,9 +154,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// for every other heading. The write putting a wait's own line up sets it to that wait,
     /// and the write putting back the heading the wait took sets it to null, whatever either
     /// says (<see cref="WriteWaitLine"/>). Where the heading changes, it is set before the
-    /// change is raised (<see cref="OnOperationProgressChanged"/>), so the heading, the button
-    /// under it and the name a screen reader speaks change in one step, and any other write
-    /// that changes the heading takes the button away.
+    /// change is raised (<see cref="OnOperationProgressChanged(string)"/>), so the heading,
+    /// the button under it and the name a screen reader speaks change in one step, and any
+    /// other write that changes the heading takes the button away.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanStopWaiting))]

@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Reflection;
 using InstallerClean.Resources;
+using InstallerClean.Services;
 
 namespace InstallerClean.Helpers;
 
@@ -121,7 +122,7 @@ internal static class DisplayHelpers
     /// (<see cref="SourceRootName"/>).
     /// </summary>
     internal static string WaitingFor(string root) =>
-        IsDriveRoot(root)
+        DeclaredProductCheck.IsDriveLetter(root)
             ? string.Format(Strings.Status_WaitingForDrive, SourceRootName(root))
             : string.Format(Strings.Status_WaitingForPath, SourceRootName(root));
 
@@ -132,20 +133,21 @@ internal static class DisplayHelpers
     /// <see cref="WaitingFor"/>, so the line and the button name it the same way.
     /// </summary>
     internal static string StopWaitingFor(string root) =>
-        IsDriveRoot(root)
+        DeclaredProductCheck.IsDriveLetter(root)
             ? string.Format(Strings.Automation_StopWaitingForDrive, SourceRootName(root))
             : string.Format(Strings.Automation_StopWaitingForPath, SourceRootName(root));
 
     /// <summary>
     /// <paramref name="root"/> as every line naming a drive or share writes it: a drive
     /// letter in capitals with its colon, whatever case the records spell it in, and a
-    /// share or a path of any other form exactly as it is spelled.
+    /// share or a path of any other form exactly as it is spelled. A drive is told from the
+    /// rest by the check's own test (<see cref="DeclaredProductCheck.IsDriveLetter"/>).
     ///
     /// THE CAPITAL IS THE INVARIANT ONE. Upper-casing in the language the app shows would
     /// turn "i:" into "İ:" under Turkish, which names no drive.
     /// </summary>
     internal static string SourceRootName(string root) =>
-        IsDriveRoot(root) ? char.ToUpperInvariant(root[0]) + ":" : root;
+        DeclaredProductCheck.IsDriveLetter(root) ? char.ToUpperInvariant(root[0]) + ":" : root;
 
     /// <summary>
     /// What a screen reader speaks for a waiting <paramref name="line"/> while the button that
@@ -181,12 +183,6 @@ internal static class DisplayHelpers
 
         return null;
     }
-
-    /// <summary>
-    /// Whether <paramref name="root"/>, a root as the check on the installers in source
-    /// folders takes it, is a drive letter and its colon.
-    /// </summary>
-    internal static bool IsDriveRoot(string root) => root.Length == 2 && root[1] == ':';
 
     internal static string FormatElapsed(TimeSpan elapsed) =>
         elapsed.TotalSeconds < 1

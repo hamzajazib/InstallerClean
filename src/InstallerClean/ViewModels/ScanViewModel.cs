@@ -67,9 +67,9 @@ public partial class ScanViewModel : ObservableObject
     /// every other line. The write putting a wait's own line up sets it to that wait, and the
     /// write putting back the line the wait took sets it to null, whatever either line says
     /// (<see cref="WriteWaitLine"/>). Where the line changes, it is set before the change is
-    /// raised (<see cref="OnScanProgressChanged"/>), so the line, the button under it and the
-    /// name a screen reader speaks change in one step, and any other write that changes the
-    /// line takes the button away.
+    /// raised (<see cref="OnScanProgressChanged(string)"/>), so the line, the button under it
+    /// and the name a screen reader speaks change in one step, and any other write that
+    /// changes the line takes the button away.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanStopWaiting))]

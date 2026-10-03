@@ -25,7 +25,23 @@ namespace InstallerClean.Models;
 /// or see the caller's stop as its answer comes in, and give the root up, and where no read
 /// is made there after, nothing was refused there.
 /// </param>
-public sealed record SourceRootGivenUp(string Root, SourceRootGiveUpRoute Route, int FilesKept);
+public sealed record SourceRootGivenUp(string Root, SourceRootGiveUpRoute Route, int FilesKept)
+{
+    /// <summary>
+    /// Whether the pass kept at least one file at <see cref="Root"/>. A root given up with no
+    /// file kept at it changed nothing the pass decided, so a host saying that a scan or a
+    /// check gave up a drive or share names only the roots this is true of
+    /// (<see cref="KeepingFiles"/>).
+    /// </summary>
+    internal bool KeptAnyFile => FilesKept > 0;
+
+    /// <summary>
+    /// The roots in <paramref name="roots"/> at which files were kept (<see cref="KeptAnyFile"/>),
+    /// in the order given.
+    /// </summary>
+    internal static IReadOnlyList<SourceRootGivenUp> KeepingFiles(IReadOnlyList<SourceRootGivenUp> roots) =>
+        roots.Where(root => root.KeptAnyFile).ToList();
+}
 
 /// <summary>
 /// How the declared-product check came to give a drive or share up for the rest of a pass.

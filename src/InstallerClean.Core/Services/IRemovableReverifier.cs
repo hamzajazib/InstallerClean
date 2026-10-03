@@ -428,5 +428,5 @@ public record ReverifyResult(
     /// with no file kept at it changed nothing the check decided.
     /// </summary>
     public IReadOnlyList<SourceRootGivenUp> SourceRootsGivenUpKeepingFiles =>
-        SourceRootsGivenUp.Where(root => root.FilesKept > 0).ToList();
+        SourceRootGivenUp.KeepingFiles(SourceRootsGivenUp);
 }

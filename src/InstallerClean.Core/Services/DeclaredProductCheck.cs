@@ -951,7 +951,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// under a root given up answers false without being read, so no further read is started
     /// there. A drive whose kind has not answered within the limit is given up the same way
     /// (<see cref="KindOf"/>), and so is a root the pass's caller has stopped waiting for
-    /// (<see cref="PassAnswers.Stop"/>).
+    /// (<see cref="PassAnswers.StopFor"/>).
     ///
     /// READS THAT FAIL ADD UP. A read that answers false within
     /// <see cref="SourceFolderSlowFailure"/> adds the time it took to its root's total of
@@ -1059,7 +1059,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// the root, and null is told when the wait ends, answered or not. A wait that cancelling
     /// ends is not told null: whoever shows the wait is already showing the cancel.
     ///
-    /// THE CALLER CAN STOP WAITING FOR THE ROOT (<see cref="PassAnswers.Stop"/>), through that
+    /// THE CALLER CAN STOP WAITING FOR THE ROOT (<see cref="PassAnswers.StopFor"/>), through that
     /// wait or any other it was told of under the root in this pass, and the root is then given
     /// up for the pass by the stop's own route, which outranks every other the read meets
     /// (<see cref="SourceRootGiveUpRoute.StoppedWaiting"/>). A read waiting there ends at once,
@@ -1116,7 +1116,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (!ended && !stopped.IsCompleted)
         {
             pass.WaitCount++;
-            pass.WaitingOn?.Invoke(new SourceFolderWait(root, () => pass.Stop(root)));
+            pass.WaitingOn?.Invoke(new SourceFolderWait(root, pass.StopFor(root)));
             ended = EndsWithin(SourceFolderTimeLimit - notice);
             pass.WaitingOn?.Invoke(null);
         }
@@ -1175,6 +1175,15 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         return path.Length >= 2 && char.IsAsciiLetter(path[0]) && path[1] == ':' ? path[..2] : path;
     }
+
+    /// <summary>
+    /// Whether <paramref name="root"/>, from <see cref="RootOf"/>, is a drive letter and its colon.
+    /// The lines naming a drive or share the check waited for or gave up tell a drive from a
+    /// share or a path of another form by this same test
+    /// (<see cref="Helpers.DisplayHelpers.SourceRootName"/>), so a change here changes what they
+    /// call a drive as well as which roots the check asks the kind of (<see cref="KindOf"/>).
+    /// </summary>
+    internal static bool IsDriveLetter(string root) => root.Length == 2 && root[1] == ':';
 
     /// <summary>
     /// Whether <paramref name="root"/>, from <see cref="RootOf"/>, is a drive letter that
@@ -1259,9 +1268,6 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// </summary>
     private static readonly string[] RemoteLinkEvaluationValues =
         ["SymlinkRemoteToLocalEvaluation", "SymlinkRemoteToRemoteEvaluation"];
-
-    /// <summary>Whether <paramref name="root"/>, from <see cref="RootOf"/>, is a drive letter and its colon.</summary>
-    private static bool IsDriveLetter(string root) => root.Length == 2 && root[1] == ':';
 
     /// <summary>
     /// What <see cref="DriveKindOf"/> answers within the time limit for
@@ -2100,16 +2106,23 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
-        /// Stops waiting for <paramref name="root"/> for the rest of the pass, from any thread
-        /// (<see cref="SourceFolderWait.StopWaiting"/>): a wait there ends at once, and the read
-        /// that sees the stop gives the root up (<see cref="AnswersWithin"/>), under the
+        /// An action that stops waiting for <paramref name="root"/> for the rest of the pass, from
+        /// any thread (<see cref="SourceFolderWait.StopWaiting"/>): a wait there ends at once, and
+        /// the read that sees the stop gives the root up (<see cref="AnswersWithin"/>), under the
         /// spelling of the wait the caller stopped. A second stop is the same as the first.
+        ///
+        /// The action holds that root's stop and that spelling and nothing else, so a window still
+        /// holding the wait after the pass has ended does not keep the pass alive.
         /// </summary>
-        internal void Stop(string root) => StopOf(root).TrySetResult(root);
+        internal Action StopFor(string root)
+        {
+            var stop = StopOf(root);
+            return () => stop.TrySetResult(root);
+        }
 
         /// <summary>
-        /// The task <see cref="Stop"/> completes for <paramref name="root"/>, with the root as
-        /// the first stop spelled it.
+        /// The task the action from <see cref="StopFor"/> completes for <paramref name="root"/>,
+        /// with the root as the first stop spelled it.
         /// </summary>
         internal Task<string> Stopped(string root) => StopOf(root).Task;
 
@@ -2181,14 +2194,14 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// <see cref="SourceFolderFailedWaitBudget"/> between them (<see cref="TimeFailing"/>),
         /// one whose reads have taken longer than <see cref="SourceFolderReadBudget"/> between
         /// them, whatever each answered (<see cref="TimeReading"/>), and one the caller has
-        /// stopped waiting for (<see cref="Stop"/>). The reads under a drive include the one
+        /// stopped waiting for (<see cref="StopFor"/>). The reads under a drive include the one
         /// that asks its kind (<see cref="KindOf"/>).
         ///
         /// A ROOT GIVEN UP AGAIN TAKES WHICHEVER OF ITS ROUTES IS DECLARED FIRST IN
         /// <see cref="SourceRootGiveUpRoute"/>, so a read meeting more than one condition gives
         /// its root the first of them, whatever order they are checked in. The spelling kept is
         /// the one it was first given up under, which for a root the caller stopped waiting for
-        /// is the spelling of the wait it stopped (<see cref="Stop"/>).
+        /// is the spelling of the wait it stopped (<see cref="StopFor"/>).
         ///
         /// It runs on the pass's thread alone. A stop made on the caller's thread gives its root
         /// up here through the read that sees it (<see cref="AnswersWithin"/>).

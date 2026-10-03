@@ -1,5 +1,6 @@
 using InstallerClean.Models;
 using InstallerClean.Resources;
+using InstallerClean.Services;
 
 namespace InstallerClean.Helpers;
 
@@ -47,7 +48,7 @@ internal static class SourcesGivenUpReport
     /// </summary>
     internal static string ListOf(IReadOnlyList<SourceRootGivenUp> roots) =>
         string.Join(Strings.Display_ListSeparator, roots.Select(given =>
-            DisplayHelpers.IsDriveRoot(given.Root)
+            DeclaredProductCheck.IsDriveLetter(given.Root)
                 ? string.Format(Strings.Display_DriveName, DisplayHelpers.SourceRootName(given.Root))
                 : given.Root));
 
@@ -68,7 +69,7 @@ internal static class SourcesGivenUpReport
         if (roots.Count == 1)
         {
             var root = roots[0].Root;
-            return string.Format(DisplayHelpers.IsDriveRoot(root) ? drive : path,
+            return string.Format(DeclaredProductCheck.IsDriveLetter(root) ? drive : path,
                 DisplayHelpers.SourceRootName(root));
         }
 

@@ -451,14 +451,14 @@ public record ScanResult(
     /// changed nothing the scan decided.
     /// </summary>
     public IReadOnlyList<SourceRootGivenUp> SourceRootsGivenUpKeepingFiles =>
-        SourceRootsGivenUp.Where(root => root.FilesKept > 0).ToList();
+        SourceRootGivenUp.KeepingFiles(SourceRootsGivenUp);
 
     /// <summary>
     /// Whether <see cref="SourceRootsGivenUpKeepingFiles"/> names anything: the scan gave up
     /// a drive or share and kept at least one file because of it. Read off
     /// <see cref="SourceRootsGivenUp"/> directly, so asking builds no list.
     /// </summary>
-    public bool HasSourceRootsGivenUpKeepingFiles => SourceRootsGivenUp.Any(root => root.FilesKept > 0);
+    public bool HasSourceRootsGivenUpKeepingFiles => SourceRootsGivenUp.Any(root => root.KeptAnyFile);
 
     /// <summary>
     /// Every registration naming a file that is not on disk, the sum of the two
