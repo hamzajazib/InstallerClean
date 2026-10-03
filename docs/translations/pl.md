@@ -38,11 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | Carry on _without it |
 | Check for _updates | Sprawdź _aktualizacje |
 | _Close | _Zamknij |
+| _Close without donating | _Close without donating |
 | _Delete permanently | Usuń _trwale |
 | _Done | _Gotowe |
 | Details | Szczegóły |
 | _Donate | _Wesprzyj |
-| Donate | Wesprzyj |
+| Donate $5 | Donate $5 |
 | Leave a _star on GitHub | Zostaw _gwiazdkę na GitHubie |
 | Apache 2.0 licence | Licencja Apache 2.0 |
 | _Move | _Przenieś |
@@ -343,6 +344,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | Każde, nawet drobne, wsparcie jest bardzo mile widziane. |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | Zażądano anulowania. InstallerClean czeka, aż bieżący krok dojdzie do punktu, w którym może się zatrzymać. Przy intensywnych operacjach wejścia/wyjścia lub zapytaniu do bazy danych MSI może to potrwać kilka sekund. |
 | Close | Zamknij |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | Gwiazdka pomaga innym znaleźć InstallerClean. |
 | Minimise | Minimalizuj |
 | Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | Twoja decyzja, ale będzie miło. Wysyła anonimowe podsumowanie, które po prostu daje mi znać, czy działa i ile miejsca ludzie zwalniają. Na następnym ekranie zobaczysz, co zostanie wysłane, zanim potwierdzisz. |
@@ -360,7 +362,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | --- | --- |
 | Donate | Wesprzyj |
 | Donate | Wesprzyj |
-| Donate | Wesprzyj |
+| Donate $5 | Donate $5 |
 | Cancel operation | Anuluj operację |
 | Cancel scan | Anuluj skanowanie |
 | Cancel startup scan | Anuluj skanowanie startowe |

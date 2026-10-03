@@ -38,11 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | Carry on _without it |
 | Check for _updates | Güncelleştirmeleri _denetle |
 | _Close | _Kapat |
+| _Close without donating | _Close without donating |
 | _Delete permanently | _Kalıcı olarak sil |
 | _Done | _Tamam |
 | Details | Ayrıntılar |
 | _Donate | _Bağış yap |
-| Donate | Bağış yap |
+| Donate $5 | Donate $5 |
 | Leave a _star on GitHub | GitHub'da _yıldız bırak |
 | Apache 2.0 licence | Apache 2.0 lisansı |
 | _Move | _Taşı |
@@ -343,6 +344,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | Küçük de olsa her bağış çok makbule geçer. |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | İptal istendi. InstallerClean, geçerli adımın durabileceği bir noktaya gelmesini bekliyor. Yoğun G/Ç sırasında ya da bir MSI veritabanı çağrısında bu birkaç saniye sürebilir. |
 | Close | Kapat |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | Bir yıldız, başkalarının InstallerClean'i bulmasına yardımcı olur. |
 | Minimise | Simge durumuna küçült |
 | Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | Size kalmış ama makbule geçer. Yalnızca uygulamanın çalışıp çalışmadığını ve insanların ne kadar yer açtığını bana bildiren anonim bir özet gönderir. Sonraki ekran, onaylamadan önce ne gönderileceğini görmenizi sağlar. |
@@ -360,7 +362,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | --- | --- |
 | Donate | Bağış yap |
 | Donate | Bağış yap |
-| Donate | Bağış yap |
+| Donate $5 | Donate $5 |
 | Cancel operation | İşlemi iptal et |
 | Cancel scan | Taramayı iptal et |
 | Cancel startup scan | Başlangıç taramasını iptal et |

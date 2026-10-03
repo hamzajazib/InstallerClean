@@ -76,7 +76,7 @@ public partial class MainWindow : Window
             // never fired for this pre-construction completion (the startup
             // all-clear set during the splash).
             BuildCompletionSummaryLine();
-            Dispatcher.BeginInvoke(DispatcherPriority.Input, () => CompletionCloseButton.Focus());
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, () => CompletionDismissButton().Focus());
             // The overlay was never revealed inside this window's lifetime
             // (the startup all-clear is set during the splash, before
             // construction), so the PropertyChanged raise path never runs
@@ -131,12 +131,13 @@ public partial class MainWindow : Window
         else if (_vm.Chrome.UpdateStatusText.Length > 0)
             AnnounceLiveRegions(UpdateStatusLineText);
 
-        // Both forms of the completion card's donate button sit at the card's
-        // right edge, so their tooltips line up right edges rather than left.
+        // The completion card's heart sits at the card's right edge, so its
+        // tooltip lines up right edges rather than left. Donate $5 is centred
+        // on the card, and its tooltip is centred over it.
         CompletionDonateToolTip.CustomPopupPlacementCallback = TooltipPlacement.KeptInsideWindow(
             CompletionDonateToolTip, this, ToolTipAnchor.Right, ToolTipEdgeMargin);
-        CompletionDonateLabelToolTip.CustomPopupPlacementCallback = TooltipPlacement.KeptInsideWindow(
-            CompletionDonateLabelToolTip, this, ToolTipAnchor.Right, ToolTipEdgeMargin);
+        CompletionDonateFiveToolTip.CustomPopupPlacementCallback = TooltipPlacement.KeptInsideWindow(
+            CompletionDonateFiveToolTip, this, ToolTipAnchor.Centre, ToolTipEdgeMargin);
 
         // Width is explicit, the designed 828 (the content column's 780
         // MaxWidth plus the content margins) multiplied by the
@@ -370,15 +371,17 @@ public partial class MainWindow : Window
 
         if (e.PropertyName == nameof(CompletionViewModel.IsComplete) && _vm.Completion.IsComplete)
         {
-            Dispatcher.BeginInvoke(DispatcherPriority.Input, () => CompletionCloseButton.Focus());
-            // Focus lands on Done, so without an explicit raise a screen
-            // reader announces only the button and never the outcome.
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, () => CompletionDismissButton().Focus());
+            // Focus lands on the button that closes the card, so without an
+            // explicit raise a screen reader announces only the button and never
+            // the outcome.
             AnnounceCompletionOutcome();
         }
 
         if (e.PropertyName == nameof(CompletionViewModel.IsComplete) && !_vm.Completion.IsComplete)
         {
-            // Overlay dismissed (Done / Esc / click-dim). The focused button is
+            // Overlay dismissed (Done, Close without donating, Donate $5, Esc or a
+            // click on the dim margin). The focused button is
             // gone, so move focus to a sensible non-destructive control rather
             // than letting it drop to the window root.
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () => RescanButton.Focus());
@@ -395,8 +398,8 @@ public partial class MainWindow : Window
         // (the modal closes and IsSendingResultLog hides it) or the
         // silent no-log-to-send path hides it; WPF's focus restore after
         // the confirm modal then has no target and keyboard focus drops
-        // to the window root. Done is the landing that keeps the user
-        // inside the overlay. Dismissal paths are excluded because they
+        // to the window root. The button that closes the card is the landing
+        // that keeps the user inside the overlay. Dismissal paths are excluded because they
         // clear IsComplete before the visibility recomputes.
         if (e.PropertyName == nameof(CompletionViewModel.IsSendResultLogVisible)
             && !_vm.Completion.IsSendResultLogVisible && _vm.Completion.IsComplete)
@@ -404,14 +407,15 @@ public partial class MainWindow : Window
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
             {
                 if (_vm.Completion.IsComplete)
-                    CompletionCloseButton.Focus();
+                    CompletionDismissButton().Focus();
             });
         }
 
         // Each status the result-log line takes is read out: "Sending..." as the
         // line appears, which is when the user has just consented to a network
         // call and wants confirmation, then the outcome that replaces it. Focus
-        // stays on Done throughout, so nothing else reads them.
+        // stays on the button that closes the card throughout, so nothing else
+        // reads them.
         if (e.PropertyName == nameof(CompletionViewModel.ResultLogStatusMessage)
             && !string.IsNullOrEmpty(_vm.Completion.ResultLogStatusMessage))
         {
@@ -755,6 +759,16 @@ public partial class MainWindow : Window
     /// </summary>
     private void AnnounceLiveRegion(FrameworkElement element, Func<bool> stillShown) =>
         _liveRegions.Queue(element, stillShown);
+
+    /// <summary>
+    /// The completion card's button that closes it: Close without donating on the
+    /// card carrying Donate $5, Done on every other. Read when focus is placed, so
+    /// <see cref="CompletionViewModel.AsksForDonation"/> has to be settled before
+    /// <see cref="CompletionViewModel.IsComplete"/> reveals the card, as every Show*
+    /// method settles it.
+    /// </summary>
+    private Button CompletionDismissButton() =>
+        _vm.Completion.AsksForDonation ? CompletionCloseWithoutDonatingButton : CompletionCloseButton;
 
     // Every zone of the card that states an outcome, in visual order. Each is
     // assigned before IsComplete reveals the overlay and is not touched while it

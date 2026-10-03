@@ -159,6 +159,12 @@
   <data name="Action.StopWaiting" xml:space="preserve"><value>Carry on _without it</value></data>
   <data name="Action.CheckForUpdates" xml:space="preserve"><value>업데이트 확인(_U)</value></data>
   <data name="Action.Close" xml:space="preserve"><value>닫기(_C)</value></data>
+  <!-- The quieter button under Action.Donate on the completion card after a Move or
+       Delete that moved or deleted files. It closes the card and returns to the main
+       window, as Action.Done does on every other card, and like Done it has the
+       focus and answers Enter when the card appears. Its access key is the only one
+       on that card. -->
+  <data name="Action.CloseWithoutDonating" xml:space="preserve"><value>_Close without donating</value></data>
   <!-- The label on both delete surfaces: the main window's button and the
        confirmation dialog's. It says "permanently" because Delete here does
        not mean what Delete means elsewhere in Windows, and the label is the
@@ -172,11 +178,13 @@
   <data name="Action.Done" xml:space="preserve"><value>완료(_D)</value></data>
   <data name="Action.Details" xml:space="preserve"><value>세부 정보</value></data>
   <data name="Action.BuyMeACuppa" xml:space="preserve"><value>후원(_D)</value></data>
-  <!-- The label on the completion card's donate button, which carries the word
-       where the run moved or deleted files and is the wordless heart otherwise.
-       It takes no access key. The button shows this text as written, so an
-       underscore here would appear on screen rather than become one. -->
-  <data name="Action.Donate" xml:space="preserve"><value>후원</value></data>
+  <!-- The label on the large donate button on the completion card after a Move or
+       Delete that moved or deleted files, where it and Action.CloseWithoutDonating
+       stand in place of Done. The amount is in US dollars, written the way the
+       language writes a dollar amount. It takes no access key. The button shows
+       this text as written, so an underscore here would appear on screen rather
+       than become one. -->
+  <data name="Action.Donate" xml:space="preserve"><value>Donate $5</value></data>
   <data name="Action.LeaveStarOnGitHub" xml:space="preserve"><value>GitHub에 별 남기기(_S)</value></data>
   <data name="Action.Licence" xml:space="preserve"><value>Apache 2.0 라이선스</value></data>
   <data name="Action.Move" xml:space="preserve"><value>이동(_M)</value></data>
@@ -220,7 +228,7 @@
   <!-- The spoken name of that same button. Its content is a heart beside a
        label rather than a string, so WPF derives no name from it and this is
        the name; it says what the button says on screen. -->
-  <data name="Automation.Donate" xml:space="preserve"><value>후원</value></data>
+  <data name="Automation.Donate" xml:space="preserve"><value>Donate $5</value></data>
   <data name="Automation.CancelOperation" xml:space="preserve"><value>작업 취소</value></data>
   <data name="Automation.CancelScan" xml:space="preserve"><value>검사 취소</value></data>
   <data name="Automation.CancelStartupScan" xml:space="preserve"><value>시작 검사 취소</value></data>
@@ -365,6 +373,10 @@
   </data>
   <data name="Tooltip.CancellingPending" xml:space="preserve"><value>취소가 요청되었습니다. InstallerClean이 현재 단계가 멈출 수 있는 지점에 이를 때까지 기다리고 있습니다. I/O가 많거나 MSI 데이터베이스를 호출하는 동안에는 몇 초 걸릴 수 있습니다.</value></data>
   <data name="Tooltip.Close" xml:space="preserve"><value>닫기</value></data>
+  <data name="Tooltip.Donate" xml:space="preserve">
+    <value>I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.</value>
+    <comment>Tooltip and screen-reader help on Action.Donate's button. The space before each hyphen is a no-break space, so a narrow tooltip never starts a line with the hyphen; a translation punctuates the aside the way its own language does.</comment>
+  </data>
   <data name="Tooltip.LeaveStarOnGitHub.About" xml:space="preserve">
     <value>별 하나가 다른 사람들이 InstallerClean을 찾는 데 도움이 됩니다.</value>
     <comment>Tooltip and screen-reader help on the About window's star pill. The button it hangs on already names GitHub (Action.LeaveStarOnGitHub, "Leave a star on GitHub"), so naming it again here says the same word twice in one glance; keep the tooltip to what the star does. "It" is InstallerClean, which most languages will want to say outright.</comment>
@@ -947,7 +959,7 @@
   <data name="Completion.PermanentDeleteSummary.Plural" xml:space="preserve"><value>{1} {0}개 영구 삭제됨</value></data>
   <data name="Completion.DonateAsk" xml:space="preserve">
     <value>적은 금액의 후원도 정말 감사합니다.</value>
-    <comment>Tooltip and screen-reader help on the completion screen's donate button, which every completion carries, including a scan that found nothing to clean up. It is the only text on that button where the run moved or deleted nothing, and where it did the button reads Donate and this sentence sits behind it. Keep it plain, with no word putting the reader under an obligation.</comment>
+    <comment>Tooltip and screen-reader help on the completion screen's wordless donate heart, which stands on every card except the one after a Move or Delete that moved or deleted files, including a scan that found nothing to clean up. It is the only text on that button. Keep it plain, with no word putting the reader under an obligation.</comment>
   </data>
 
   <!-- Summaries -->

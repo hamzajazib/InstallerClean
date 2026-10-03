@@ -38,11 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | Carry on _without it |
 | Check for _updates | 更新の確認(_U) |
 | _Close | 閉じる(_C) |
+| _Close without donating | _Close without donating |
 | _Delete permanently | 完全に削除(_D) |
 | _Done | 完了(_D) |
 | Details | 詳細 |
 | _Donate | 寄付(_D) |
-| Donate | 寄付 |
+| Donate $5 | Donate $5 |
 | Leave a _star on GitHub | GitHubでスターを付ける(_S) |
 | Apache 2.0 licence | Apache 2.0 ライセンス |
 | _Move | 移動(_M) |
@@ -343,6 +344,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | どんな少額のご寄付でもありがたく思います。 |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | キャンセルが要求されました。InstallerClean は現在のステップが停止可能なポイントに達するのを待っています。大量の I/O または MSI データベース呼び出し中は数秒かかることがあります。 |
 | Close | 閉じる |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | スターを付けると、InstallerClean を見つけてもらいやすくなります。 |
 | Minimise | 最小化 |
 | Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | 任意ですが、歓迎します。匿名の要約を送信するもので、正常に動作しているか、どれだけの容量が解放されているかを知るためのものです。次の画面で送信前に送信内容を確認できます。 |
@@ -360,7 +362,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | --- | --- |
 | Donate | 寄付 |
 | Donate | 寄付 |
-| Donate | 寄付 |
+| Donate $5 | Donate $5 |
 | Cancel operation | 操作をキャンセル |
 | Cancel scan | スキャンをキャンセル |
 | Cancel startup scan | 起動時スキャンをキャンセル |

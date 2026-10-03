@@ -38,11 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | Carry on _without it |
 | Check for _updates | Перевірити о_новлення |
 | _Close | _Закрити |
+| _Close without donating | _Close without donating |
 | _Delete permanently | _Видалити назавжди |
 | _Done | _Готово |
 | Details | Деталі |
 | _Donate | _Підтримати |
-| Donate | Підтримати |
+| Donate $5 | Donate $5 |
 | Leave a _star on GitHub | Лишити зірку на _GitHub |
 | Apache 2.0 licence | Ліцензія Apache 2.0 |
 | _Move | Пере_містити |
@@ -343,6 +344,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | Будь-яка, навіть невелика, підтримка дуже цінна. |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | Скасування запитано. InstallerClean чекає, доки поточний крок дійде до точки зупинки. Це може тривати кілька секунд під час інтенсивного вводу-виводу чи звернення до бази даних MSI. |
 | Close | Закрити |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | Зірка допомагає іншим знайти InstallerClean. |
 | Minimise | Згорнути |
 | Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | На ваш розсуд, але буду вдячний. Надсилає анонімний підсумок, який лише дає мені знати, чи працює програма і скільки місця люди звільняють. На наступному екрані ви побачите, що буде надіслано, перш ніж підтвердити. |
@@ -360,7 +362,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | --- | --- |
 | Donate | Підтримати |
 | Donate | Підтримати |
-| Donate | Підтримати |
+| Donate $5 | Donate $5 |
 | Cancel operation | Скасувати операцію |
 | Cancel scan | Скасувати сканування |
 | Cancel startup scan | Скасувати сканування під час запуску |

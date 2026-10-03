@@ -129,7 +129,7 @@ const MAP = {
   'Action.Done': `_Selesai`,
   'Action.Details': `Detail`,
   'Action.BuyMeACuppa': `_Donasi`,
-  'Action.Donate': `Donasi`,
+  'Action.Donate': `Donate \$5`,
   'Action.LeaveStarOnGitHub': `Beri _bintang di GitHub`,
   'Action.Licence': `Lisensi Apache 2.0`,
   'Action.Move': `_Pindahkan`,
@@ -142,7 +142,7 @@ const MAP = {
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa': `Donasi`,
   'Automation.BuyMeACuppa.About': `Donasi`,
-  'Automation.Donate': `Donasi`,
+  'Automation.Donate': `Donate \$5`,
   // The three Cancel names name the button and then say which one, the shape
   // Automation.ViewOrphanedFiles and its sibling already take, rather than the
   // verb batalkan: WCAG 2.5.3 (Label in Name) asks that a control's spoken name
@@ -599,6 +599,8 @@ const MAP = {
   'Cli.SourceGivenUp.Drive': `InstallerClean stopped waiting for drive {0} and left alone any file still to be checked against it. Once it's responding normally, run the command again.`,
   'Cli.SourceGivenUp.Path': `InstallerClean stopped waiting for {0} and left alone any file still to be checked against it. Once it's responding normally, run the command again.`,
   'Cli.SourcesGivenUp': `InstallerClean stopped waiting for more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, run the command again.`,
+  'Action.CloseWithoutDonating': `_Close without donating`,
+  'Tooltip.Donate': `I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -38,11 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | Carry on _without it |
 | Check for _updates | Controleren op _updates |
 | _Close | _Sluiten |
+| _Close without donating | _Close without donating |
 | _Delete permanently | _Definitief verwijderen |
 | _Done | _Klaar |
 | Details | Details |
 | _Donate | _Doneren |
-| Donate | Doneren |
+| Donate $5 | Donate $5 |
 | Leave a _star on GitHub | Geef een s_ter op GitHub |
 | Apache 2.0 licence | Apache 2.0-licentie |
 | _Move | Ver_plaatsen |
@@ -343,6 +344,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | Elke kleine donatie wordt zeer gewaardeerd. |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | Annulering aangevraagd. InstallerClean wacht tot de huidige stap een stoppunt bereikt. Dit kan enkele seconden duren bij zware I/O of een aanroep naar de MSI-database. |
 | Close | Sluiten |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | Een ster helpt anderen het te vinden. |
 | Minimise | Minimaliseren |
 | Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | Dat is aan jou, maar ik zou het op prijs stellen. Er wordt een anonieme samenvatting verstuurd die me alleen laat weten of het werkt en hoeveel ruimte mensen vrijmaken. Op het volgende scherm kun je zien wat er wordt verstuurd voordat je het bevestigt. |
@@ -360,7 +362,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | --- | --- |
 | Donate | Doneren |
 | Donate | Doneren |
-| Donate | Doneren |
+| Donate $5 | Donate $5 |
 | Cancel operation | Bewerking annuleren |
 | Cancel scan | Scan annuleren |
 | Cancel startup scan | Opstartscan annuleren |

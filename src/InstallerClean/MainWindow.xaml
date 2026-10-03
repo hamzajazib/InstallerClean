@@ -1104,19 +1104,79 @@
                     </StackPanel>
                     </ScrollViewer>
 
-                    <!-- Closes the result overlay, NOT the app: exiting
-                         from here would trap the user with no way to
-                         re-scan or open About. Focused on overlay show so a
-                         keyboard user lands on the dismiss action with a
-                         visible ring; Enter follows from IsDefault and Esc
-                         from the window's own key handler, so neither needs
-                         the focus. -->
-                    <Button x:Name="CompletionCloseButton" Grid.Row="3" Style="{StaticResource AccentPill}"
-                            Content="{loc:Translate Action.Done}" Command="{Binding Completion.DismissCommand}"
-                            IsDefault="True"
-                            HorizontalAlignment="Center" MinWidth="120"
-                            Margin="{StaticResource GapBottom.Sm}"
-                            AutomationProperties.HelpText="{loc:Translate Automation.CloseResult}"/>
+                    <!-- The card's buttons. Done on every card but one, and on
+                         that one, the card after a Move or Delete that moved or
+                         deleted files, "Donate $5" over "Close without
+                         donating". Exactly one of Done and Close without
+                         donating is ever on screen.
+
+                         Both close the result overlay, NOT the app: exiting
+                         from here would trap the user with no way to re-scan
+                         or open About. Whichever is showing is focused on
+                         overlay show, so a keyboard user lands on the dismiss
+                         action with a visible ring; Enter follows from
+                         IsDefault and Esc from the window's own key handler,
+                         so neither needs the focus. Donate $5 is neither
+                         focused nor the default and takes no access key:
+                         Enter closes the card on every card, and Alt+D, Done's
+                         key, does nothing on the card without Done. -->
+                    <StackPanel Grid.Row="3" HorizontalAlignment="Center">
+                        <Button x:Name="CompletionCloseButton"
+                                Content="{loc:Translate Action.Done}" Command="{Binding Completion.DismissCommand}"
+                                IsDefault="True"
+                                HorizontalAlignment="Center" MinWidth="120"
+                                Margin="{StaticResource GapBottom.Sm}"
+                                AutomationProperties.HelpText="{loc:Translate Automation.CloseResult}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource AccentPill}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Completion.AsksForDonation}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <!-- Larger than Done. Hover text
+                             is invisible to a screen reader, which is why the
+                             same sentence is also the HelpText. A TextBlock
+                             rather than an AccessText: the label takes no access
+                             key, so an underscore reaching this string is shown
+                             as written. -->
+                        <Button x:Name="CompletionDonateButton" Style="{StaticResource AccentPill}"
+                                Visibility="{Binding Completion.AsksForDonation, Converter={StaticResource BoolToVis}}"
+                                Command="{Binding Completion.DonateCommand}"
+                                HorizontalAlignment="Center"
+                                MinHeight="48" Padding="40,10"
+                                Margin="{StaticResource GapBottom.Sm}"
+                                ToolTipService.InitialShowDelay="0"
+                                AutomationProperties.Name="{loc:Translate Automation.Donate}"
+                                AutomationProperties.HelpText="{loc:Translate Tooltip.Donate}">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon.Heart}"
+                                      Fill="{StaticResource Decoration.Heart}" Stretch="Uniform"
+                                      Width="{a11y:TextScaled 14}" Height="{a11y:TextScaled 14}"
+                                      VerticalAlignment="Center" Margin="{StaticResource GapRight.Icon}"/>
+                                <TextBlock Text="{loc:Translate Action.Donate}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Button.ToolTip>
+                                <ToolTip x:Name="CompletionDonateFiveToolTip"
+                                         Style="{StaticResource AccentTooltip}"
+                                         Content="{loc:Translate Tooltip.Donate}"
+                                         Placement="Custom"/>
+                            </Button.ToolTip>
+                        </Button>
+
+                        <Button x:Name="CompletionCloseWithoutDonatingButton" Style="{StaticResource SmallGhostPill}"
+                                Visibility="{Binding Completion.AsksForDonation, Converter={StaticResource BoolToVis}}"
+                                Content="{loc:Translate Action.CloseWithoutDonating}"
+                                Command="{Binding Completion.DismissCommand}"
+                                IsDefault="True"
+                                HorizontalAlignment="Center" Padding="12,0"
+                                Margin="{StaticResource GapBottom.Sm}"
+                                AutomationProperties.HelpText="{loc:Translate Automation.CloseResult}"/>
+                    </StackPanel>
 
                     <!-- Send-result-log button. Two locks hide it, and they
                          are deliberately asymmetric: the session lock closes
@@ -1143,8 +1203,8 @@
                          or a localised failure reason. Empty (and so
                          collapsed) at every other moment. A polite live
                          region that code-behind reads out each time it
-                         changes, because focus stays on Done and nothing
-                         else would read the silent-skip and post-POST
+                         changes, because focus stays on the button that
+                         closes the card and nothing else would read the silent-skip and post-POST
                          status copy to users on Narrator/NVDA/JAWS. -->
                     <TextBlock x:Name="ResultLogStatusText" Grid.Row="5"
                                Text="{Binding Completion.ResultLogStatusMessage}"
@@ -1166,22 +1226,20 @@
                         </TextBlock.Style>
                     </TextBlock>
 
-                    <!-- The donate ask, in two forms, of which exactly one is
-                         ever on screen. Both sit at the right of the card's
-                         last row and nothing else is drawn in it: the send
-                         status line above is centred text that can run nearly
-                         the card's full width, and either form beside it would
-                         be drawn over its longer translations.
-
-                         This is the wordless one. It stands on any card whose
-                         run moved or deleted nothing, which includes the
+                    <!-- The wordless donate heart. It stands on every card
+                         except the one carrying Donate $5, which includes the
                          all-clear, the card raised where the app could not
-                         establish enough to offer anything, and the two where
-                         every file failed.
+                         establish enough to offer anything, the two where every
+                         file failed and the card after a Move the app stopped.
+                         It sits at the right of the card's last row and nothing
+                         else is drawn in it: the send status line above is
+                         centred text that can run nearly the card's full width,
+                         and the heart beside it would be drawn over its longer
+                         translations.
 
-                         Both forms are declared after everything else so the
-                         ask is the final stop in the overlay's Tab cycle: the
-                         named actions the user came for are reached first, and
+                         It is declared after everything else so the ask is the
+                         final stop in the overlay's Tab cycle: the named
+                         actions the user came for are reached first, and
                          nothing in the card carries an explicit TabIndex, so
                          declaration order is the order.
 
@@ -1198,7 +1256,7 @@
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource SmallGhostPill}">
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Completion.ShowDonateLabel}" Value="True">
+                                    <DataTrigger Binding="{Binding Completion.AsksForDonation}" Value="True">
                                         <Setter Property="Visibility" Value="Collapsed"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -1255,43 +1313,6 @@
                         </Path>
                         <Button.ToolTip>
                             <ToolTip x:Name="CompletionDonateToolTip"
-                                     Style="{StaticResource AccentTooltip}"
-                                     Content="{loc:Translate Completion.DonateAsk}"
-                                     Placement="Custom"/>
-                        </Button.ToolTip>
-                    </Button>
-
-                    <!-- The same ask with the word on it, on a card whose run
-                         moved or deleted files. It and the wordless heart above
-                         are never on screen together, so the card carries one
-                         donate control and one tab stop wherever it lands.
-
-                         Right rather than centred: centred under the card's
-                         buttons it would read as one more thing to do, and this
-                         is not one of the app's actions. Right is where the
-                         wordless heart sits on every other card.
-
-                         A TextBlock rather than an AccessText: the label takes
-                         no access key, so an underscore reaching this string is
-                         shown as written rather than turned into one that could
-                         land on Done's. -->
-                    <Button Grid.Row="6" Style="{StaticResource SmallGhostPill}"
-                            HorizontalAlignment="Right"
-                            Margin="{StaticResource GapTop.Lg}"
-                            Visibility="{Binding Completion.ShowDonateLabel, Converter={StaticResource BoolToVis}}"
-                            Command="{Binding Chrome.DonateCommand}"
-                            ToolTipService.InitialShowDelay="0"
-                            AutomationProperties.Name="{loc:Translate Automation.Donate}"
-                            AutomationProperties.HelpText="{loc:Translate Completion.DonateAsk}">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Data="{StaticResource Icon.Heart}"
-                                  Fill="{StaticResource Decoration.Heart}" Stretch="Uniform"
-                                  Width="{a11y:TextScaled 12}" Height="{a11y:TextScaled 12}"
-                                  VerticalAlignment="Center" Margin="{StaticResource GapRight.Icon}"/>
-                            <TextBlock Text="{loc:Translate Action.Donate}" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <Button.ToolTip>
-                            <ToolTip x:Name="CompletionDonateLabelToolTip"
                                      Style="{StaticResource AccentTooltip}"
                                      Content="{loc:Translate Completion.DonateAsk}"
                                      Placement="Custom"/>

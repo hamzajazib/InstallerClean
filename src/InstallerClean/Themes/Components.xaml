@@ -356,7 +356,8 @@
 
     <!-- The 28px small ghost pill: wordless icon buttons sitting inside
          busy rows (the bottom-bar language globe, the completion card's
-         donate heart) and the splash Cancel. BasedOn GhostPill so the
+         donate heart), the splash Cancel and the completion card's Close
+         without donating. BasedOn GhostPill so the
          look stays the ghost's; what changes is the tighter geometry
          and, with it, the ring: Radius.SmallPillFocus's derivation pins
          the 28px height to its 16 ring, so the height and the focus

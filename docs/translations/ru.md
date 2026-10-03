@@ -38,11 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | Carry on _without it |
 | Check for _updates | Проверить о_бновления |
 | _Close | _Закрыть |
+| _Close without donating | _Close without donating |
 | _Delete permanently | _Удалить безвозвратно |
 | _Done | _Готово |
 | Details | Подробности |
 | _Donate | _Поддержать |
-| Donate | Поддержать |
+| Donate $5 | Donate $5 |
 | Leave a _star on GitHub | Поставить з_везду на GitHub |
 | Apache 2.0 licence | Лицензия Apache 2.0 |
 | _Move | _Переместить |
@@ -343,6 +344,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | Любая, даже небольшая, поддержка очень ценна. |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | Запрошена отмена. InstallerClean ждёт, когда текущий шаг дойдёт до точки остановки. Это может занять несколько секунд при интенсивном вводе-выводе или обращении к базе данных MSI. |
 | Close | Закрыть |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | Звезда помогает другим найти InstallerClean. |
 | Minimise | Свернуть |
 | Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | На ваше усмотрение, но будет приятно. Отправляет анонимную сводку, которая просто даёт мне знать, работает ли приложение и сколько места люди освобождают. На следующем экране вы увидите, что именно будет отправлено, прежде чем подтвердить. |
@@ -360,7 +362,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | --- | --- |
 | Donate | Поддержать |
 | Donate | Поддержать |
-| Donate | Поддержать |
+| Donate $5 | Donate $5 |
 | Cancel operation | Отмена операции |
 | Cancel scan | Отмена сканирования |
 | Cancel startup scan | Отмена сканирования при запуске |

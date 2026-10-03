@@ -38,11 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | Carry on _without it |
 | Check for _updates | 업데이트 확인(_U) |
 | _Close | 닫기(_C) |
+| _Close without donating | _Close without donating |
 | _Delete permanently | 영구 삭제(_D) |
 | _Done | 완료(_D) |
 | Details | 세부 정보 |
 | _Donate | 후원(_D) |
-| Donate | 후원 |
+| Donate $5 | Donate $5 |
 | Leave a _star on GitHub | GitHub에 별 남기기(_S) |
 | Apache 2.0 licence | Apache 2.0 라이선스 |
 | _Move | 이동(_M) |
@@ -343,6 +344,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | 적은 금액의 후원도 정말 감사합니다. |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | 취소가 요청되었습니다. InstallerClean이 현재 단계가 멈출 수 있는 지점에 이를 때까지 기다리고 있습니다. I/O가 많거나 MSI 데이터베이스를 호출하는 동안에는 몇 초 걸릴 수 있습니다. |
 | Close | 닫기 |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | 별 하나가 다른 사람들이 InstallerClean을 찾는 데 도움이 됩니다. |
 | Minimise | 최소화 |
 | Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | 보내실지는 자유지만 보내 주시면 정말 감사합니다. 익명 요약을 전송하며, 이는 프로그램이 잘 작동하는지와 사람들이 공간을 얼마나 확보하고 있는지 제가 알 수 있게 해 줍니다. 다음 화면에서 확인 전에 보낼 내용을 미리 볼 수 있습니다. |
@@ -360,7 +362,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | --- | --- |
 | Donate | 후원 |
 | Donate | 후원 |
-| Donate | 후원 |
+| Donate $5 | Donate $5 |
 | Cancel operation | 작업 취소 |
 | Cancel scan | 검사 취소 |
 | Cancel startup scan | 시작 검사 취소 |

@@ -123,21 +123,20 @@ public partial class CompletionViewModel : ObservableObject
     private bool _lastResultFreedNothing;
 
     /// <summary>
-    /// Puts the word "Donate" on the completion card's donate button. True
-    /// only where the operation shifted files, so the label follows work done:
-    /// an all-clear, a run the re-verify held back entirely, a run every file
-    /// errored on, and a Move or Delete that reached no file all leave it
-    /// false. Those cards carry the wordless heart in the corner instead, so
-    /// every card has the ask and only an earned one spells it out. It
-    /// measures the bytes the run moved or deleted, NOT whether the disk got
-    /// any emptier, so a same-drive Move earns the label on the strength of
-    /// having done what the user asked while its heading still says "moved"
-    /// rather than "freed". Set from the bytes argument in each Show* method
-    /// rather than derived from <see cref="LastResultFreedNothing"/>, which
-    /// happens to agree today but answers a different question (it picks the
-    /// send-report tooltip's wording) and is free to diverge.
+    /// Puts "Donate $5" and "Close without donating" on the completion card in
+    /// place of Done and the wordless heart. True where a Move or Delete moved
+    /// or deleted files, a run the user cancelled part-way included. An
+    /// all-clear, a run the re-verify held back entirely, a run every file
+    /// errored on, a Move or Delete that reached no file and a Move the app
+    /// stopped itself all leave it false, and those cards keep Done and the
+    /// heart. It measures the bytes the run moved or deleted, NOT whether the
+    /// disk got any emptier, so a same-drive Move sets it while its heading
+    /// says "moved" rather than "freed". Set from the bytes argument in each
+    /// Show* method rather than derived from <see cref="LastResultFreedNothing"/>,
+    /// which agrees with it on most cards but answers a different question (it
+    /// picks the send-report tooltip's wording) and is free to diverge.
     /// </summary>
-    [ObservableProperty] private bool _showDonateLabel;
+    [ObservableProperty] private bool _asksForDonation;
 
     private readonly bool _alreadySentBeforeThisSession;
     private bool _resultLogSentThisSession;
@@ -194,6 +193,7 @@ public partial class CompletionViewModel : ObservableObject
 
     private readonly IResultLogService? _resultLogService;
     private readonly IConfirmationService? _confirmationService;
+    private readonly IWindowService? _windowService;
 
     /// <summary>
     /// <paramref name="resultLogService"/> reads and sends the report
@@ -201,17 +201,20 @@ public partial class CompletionViewModel : ObservableObject
     /// shows the modal that lets the user see exactly what would be
     /// sent before pressing Send. <paramref name="hasSentBefore"/> is
     /// the persisted lifetime flag (<see cref="AppSettings.HasSentResultLog"/>)
-    /// read once at construction. All services are optional so unit
-    /// tests can construct a bare view-model.
+    /// read once at construction. <paramref name="windowService"/> opens the
+    /// donate page. All services are optional so unit tests can construct a
+    /// bare view-model.
     /// </summary>
     public CompletionViewModel(
         IResultLogService? resultLogService = null,
         IConfirmationService? confirmationService = null,
-        bool hasSentBefore = false)
+        bool hasSentBefore = false,
+        IWindowService? windowService = null)
     {
         _resultLogService = resultLogService;
         _confirmationService = confirmationService;
         _alreadySentBeforeThisSession = hasSentBefore;
+        _windowService = windowService;
     }
 
     /// <summary>Shows the "All clean" state after a scan finds no orphans.
@@ -243,7 +246,7 @@ public partial class CompletionViewModel : ObservableObject
         Skipped = string.Empty;
         ResultLogStatusMessage = string.Empty;
         LastResultFreedNothing = true;
-        ShowDonateLabel = false;
+        AsksForDonation = false;
         IsComplete = true;
     }
 
@@ -346,7 +349,7 @@ public partial class CompletionViewModel : ObservableObject
         // please-send-anyway form. This cohort is the one the aggregate most needs
         // and the one least likely to press it.
         LastResultFreedNothing = true;
-        ShowDonateLabel = false;
+        AsksForDonation = false;
         IsComplete = true;
     }
 
@@ -554,7 +557,8 @@ public partial class CompletionViewModel : ObservableObject
         Skipped = SkippedText(reverify);
         ResultLogStatusMessage = string.Empty;
         LastResultFreedNothing = movedBytes <= 0;
-        ShowDonateLabel = movedBytes > 0;
+        // The card after a Move the app stopped keeps Done and the heart.
+        AsksForDonation = movedBytes > 0 && !stopped;
         IsComplete = true;
     }
 
@@ -595,7 +599,7 @@ public partial class CompletionViewModel : ObservableObject
         Skipped = SkippedText(reverify);
         ResultLogStatusMessage = string.Empty;
         LastResultFreedNothing = deletedBytes <= 0;
-        ShowDonateLabel = deletedBytes > 0;
+        AsksForDonation = deletedBytes > 0;
         IsComplete = true;
     }
 
@@ -670,7 +674,7 @@ public partial class CompletionViewModel : ObservableObject
         Skipped = SkippedText(reverify);
         ResultLogStatusMessage = string.Empty;
         LastResultFreedNothing = movedBytes <= 0;
-        ShowDonateLabel = movedBytes > 0;
+        AsksForDonation = movedBytes > 0;
         IsComplete = true;
     }
 
@@ -709,7 +713,7 @@ public partial class CompletionViewModel : ObservableObject
         Skipped = SkippedText(reverify);
         ResultLogStatusMessage = string.Empty;
         LastResultFreedNothing = deletedBytes <= 0;
-        ShowDonateLabel = deletedBytes > 0;
+        AsksForDonation = deletedBytes > 0;
         IsComplete = true;
     }
 
@@ -757,7 +761,7 @@ public partial class CompletionViewModel : ObservableObject
         Skipped = string.Empty;
         ResultLogStatusMessage = string.Empty;
         LastResultFreedNothing = true;
-        ShowDonateLabel = false;
+        AsksForDonation = false;
         IsComplete = true;
     }
 
@@ -873,6 +877,17 @@ public partial class CompletionViewModel : ObservableObject
         {
             _sendInFlight = false;
         }
+    }
+
+    /// <summary>
+    /// The card's "Donate $5" button: opens the donate page in the browser and
+    /// closes the card, which returns the user to the main window as Done does.
+    /// </summary>
+    [RelayCommand]
+    private void Donate()
+    {
+        _windowService?.OpenUrl(SupportLink.Url);
+        Dismiss();
     }
 
     [RelayCommand]

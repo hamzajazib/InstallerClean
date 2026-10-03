@@ -271,7 +271,6 @@
     <Thickness x:Key="GapBottom.Xl">0,0,0,24</Thickness>
 
     <Thickness x:Key="GapTop.Sm">0,8,0,0</Thickness>
-    <Thickness x:Key="GapTop.Lg">0,16,0,0</Thickness>
 
     <Thickness x:Key="GapRight.Sm">0,0,8,0</Thickness>
     <!-- Icon-after-text spacing: 6 sits below the 8/12/16/24 scale on

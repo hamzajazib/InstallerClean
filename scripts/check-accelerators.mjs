@@ -54,7 +54,10 @@ const SETS = {
   // that wait.
   'MainWindow-scanning': ['Action.Cancel', 'Action.StopWaiting'],
   'MainWindow-operating': ['Action.Cancel', 'Action.StopWaiting'],
-  'MainWindow-completion': ['Action.Done', 'Action.SendResultLog', 'Action.Donate'],
+  // The completion card carries Done, or, after a Move or Delete that moved or
+  // deleted files, Donate $5 over Close without donating. Never all three.
+  'MainWindow-completion': ['Action.Done', 'Action.SendResultLog'],
+  'MainWindow-completionDonate': ['Action.Donate', 'Action.CloseWithoutDonating', 'Action.SendResultLog'],
 
   // The window the startup scan runs in: Cancel, and the same stop-waiting button
   // while its step line names a wait.

@@ -69,6 +69,7 @@ public static class Strings
     public static string Action_Cancel => Get("Action.Cancel");
     public static string Action_CheckForUpdates => Get("Action.CheckForUpdates");
     public static string Action_Close => Get("Action.Close");
+    public static string Action_CloseWithoutDonating => Get("Action.CloseWithoutDonating");
     public static string Action_Copy => Get("Action.Copy");
     public static string Action_Cut => Get("Action.Cut");
     public static string Action_DeletePermanently => Get("Action.DeletePermanently");
@@ -492,6 +493,7 @@ public static class Strings
     public static string Tooltip_ChangeLanguage => Get("Tooltip.ChangeLanguage");
     public static string Tooltip_Close => Get("Tooltip.Close");
     public static string Tooltip_Delete => Get("Tooltip.Delete");
+    public static string Tooltip_Donate => Get("Tooltip.Donate");
     public static string Tooltip_LeaveStarOnGitHub_About => Get("Tooltip.LeaveStarOnGitHub.About");
     public static string Tooltip_Minimise => Get("Tooltip.Minimise");
     public static string Tooltip_Move => Get("Tooltip.Move");

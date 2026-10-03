@@ -19,6 +19,12 @@ internal enum ToolTipAnchor
     /// and a control at the right of a window wants it.
     /// </summary>
     Right,
+
+    /// <summary>
+    /// Its centre over the control's. No mode in PlacementMode does this
+    /// either, and a control centred in its window wants it.
+    /// </summary>
+    Centre,
 }
 
 /// <summary>
@@ -78,9 +84,12 @@ internal static class TooltipPlacement
         ToolTip toolTip, Window window, ToolTipAnchor anchor, double margin) =>
         (popupSize, targetSize, offset) =>
         {
-            var preferred = anchor == ToolTipAnchor.Right
-                ? targetSize.Width - popupSize.Width
-                : offset.X;
+            var preferred = anchor switch
+            {
+                ToolTipAnchor.Right => targetSize.Width - popupSize.Width,
+                ToolTipAnchor.Centre => (targetSize.Width - popupSize.Width) / 2,
+                _ => offset.X,
+            };
 
             // A control outside the window's tree cannot be transformed into
             // it. It never is while the window is up, and the anchor alone

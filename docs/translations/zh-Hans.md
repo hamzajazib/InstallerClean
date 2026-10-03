@@ -38,11 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | Carry on _without it |
 | Check for _updates | 检查更新(_U) |
 | _Close | 关闭(_C) |
+| _Close without donating | _Close without donating |
 | _Delete permanently | 永久删除(_D) |
 | _Done | 完成(_D) |
 | Details | 详情 |
 | _Donate | 捐赠(_D) |
-| Donate | 捐赠 |
+| Donate $5 | Donate $5 |
 | Leave a _star on GitHub | 在 GitHub 上点个星(_S) |
 | Apache 2.0 licence | Apache 2.0 许可证 |
 | _Move | 移动(_M) |
@@ -343,6 +344,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | 任何小额捐赠都非常感谢。 |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | 已请求取消。InstallerClean 正在等待当前步骤到达一个可以停下来的位置。在大量 I/O 操作或 MSI 数据库调用期间，这可能需要几秒钟。 |
 | Close | 关闭 |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | 点个星有助于更多人发现 InstallerClean。 |
 | Minimise | 最小化 |
 | Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | 由您决定，但非常感谢。会发送一份匿名摘要，只是让我知道它是否正常工作，以及大家释放了多少空间。下一个界面会让您在确认前先看到将要发送的内容。 |
@@ -360,7 +362,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | --- | --- |
 | Donate | 捐赠 |
 | Donate | 捐赠 |
-| Donate | 捐赠 |
+| Donate $5 | Donate $5 |
 | Cancel operation | 取消操作 |
 | Cancel scan | 取消扫描 |
 | Cancel startup scan | 取消启动扫描 |

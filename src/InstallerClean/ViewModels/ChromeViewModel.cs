@@ -358,8 +358,8 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ShowAbout() => _windowService.ShowAbout();
 
-    // Bound to the heart on the completion card, which is the app's only
-    // donate control outside the About window's own pill.
+    // Bound to the wordless heart on the completion card. The card's "Donate $5"
+    // button goes through CompletionViewModel, which closes the card as well.
     [RelayCommand]
     private void Donate() => _windowService.OpenUrl(SupportLink.Url);
 

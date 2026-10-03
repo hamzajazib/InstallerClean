@@ -82,7 +82,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Completion = new CompletionViewModel(
             resultLogService: resultLogService,
             confirmationService: confirmationService,
-            hasSentBefore: _hasSentResultLogBefore);
+            hasSentBefore: _hasSentResultLogBefore,
+            windowService: windowService);
         Cleanup = new CleanupViewModel(
             moveService, deleteService, settingsService,
             dialogService, confirmationService, fileSystem,

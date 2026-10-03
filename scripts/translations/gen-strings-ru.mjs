@@ -104,7 +104,7 @@ const MAP = {
   'Action.Done': `_Готово`,
   'Action.Details': `Подробности`,
   'Action.BuyMeACuppa': `_Поддержать`,
-  'Action.Donate': `Поддержать`,
+  'Action.Donate': `Donate \$5`,
   'Action.LeaveStarOnGitHub': `Поставить з_везду на GitHub`,
   'Action.Licence': `Лицензия Apache 2.0`,
   'Action.Move': `_Переместить`,
@@ -119,7 +119,7 @@ const MAP = {
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa': `Поддержать`,
   'Automation.BuyMeACuppa.About': `Поддержать`,
-  'Automation.Donate': `Поддержать`,
+  'Automation.Donate': `Donate \$5`,
   // The three Cancel names are built on the noun Отмена rather than the verb
   // Отменить, which share only a root: WCAG 2.5.3 (Label in Name) asks that a
   // control's spoken name contain the word drawn on it, so speech input can
@@ -495,6 +495,8 @@ const MAP = {
   'Summary.SourceGivenUp.Path': `InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan.`,
   'Summary.SourcesGivenUp': `InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan.`,
   'Display.DriveName': `drive {0}`,
+  'Action.CloseWithoutDonating': `_Close without donating`,
+  'Tooltip.Donate': `I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.`,
 };
 
 // Russian CLDR-category overrides beyond the neutral one/other split. They do NOT

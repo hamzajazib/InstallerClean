@@ -38,11 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | Carry on _without it |
 | Check for _updates | _Kiểm tra cập nhật |
 | _Close | Đón_g |
+| _Close without donating | _Close without donating |
 | _Delete permanently | _Xóa vĩnh viễn |
 | _Done | _Xong |
 | Details | Chi tiết |
 | _Donate | Ủng _hộ |
-| Donate | Ủng hộ |
+| Donate $5 | Donate $5 |
 | Leave a _star on GitHub | Gắn _sao trên GitHub |
 | Apache 2.0 licence | Giấy phép Apache 2.0 |
 | _Move | _Chuyển |
@@ -343,6 +344,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | Mọi đóng góp dù nhỏ đều rất được trân trọng. |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | Đã yêu cầu hủy. InstallerClean đang chờ bước hiện tại tới điểm dừng. Việc này có thể mất vài giây khi I/O nặng hoặc khi đang gọi cơ sở dữ liệu MSI. |
 | Close | Đóng |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | Một ngôi sao giúp người khác tìm thấy InstallerClean. |
 | Minimise | Thu nhỏ |
 | Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | Tùy bạn, nhưng rất được trân trọng. Gửi một bản tóm tắt ẩn danh chỉ để cho tôi biết nó có hoạt động không và mọi người đang giải phóng được bao nhiêu dung lượng. Màn hình tiếp theo cho bạn xem những gì sẽ được gửi trước khi bạn xác nhận. |
@@ -360,7 +362,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | --- | --- |
 | Donate | Ủng hộ |
 | Donate | Ủng hộ |
-| Donate | Ủng hộ |
+| Donate $5 | Donate $5 |
 | Cancel operation | Hủy thao tác |
 | Cancel scan | Hủy quét |
 | Cancel startup scan | Hủy quét khi khởi động |

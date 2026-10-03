@@ -38,11 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | Carry on _without it |
 | Check for _updates | Periksa pem_baruan |
 | _Close | _Tutup |
+| _Close without donating | _Close without donating |
 | _Delete permanently | _Hapus permanen |
 | _Done | _Selesai |
 | Details | Detail |
 | _Donate | _Donasi |
-| Donate | Donasi |
+| Donate $5 | Donate $5 |
 | Leave a _star on GitHub | Beri _bintang di GitHub |
 | Apache 2.0 licence | Lisensi Apache 2.0 |
 | _Move | _Pindahkan |
@@ -343,6 +344,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | Donasi sekecil apa pun sangat dihargai. |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | Pembatalan diminta. InstallerClean sedang menunggu langkah yang berjalan mencapai titik berhenti. Ini bisa memakan waktu beberapa detik saat I/O berat atau panggilan basis data MSI. |
 | Close | Tutup |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | Bintang membantu orang lain menemukan InstallerClean. |
 | Minimise | Kecilkan |
 | Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | Terserah Anda, tapi sangat dihargai. Mengirim ringkasan anonim yang sekadar memberi tahu saya apakah aplikasi berfungsi dan berapa banyak ruang yang dikosongkan orang-orang. Layar berikutnya memperlihatkan apa yang akan dikirim sebelum Anda mengonfirmasi. |
@@ -360,7 +362,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | --- | --- |
 | Donate | Donasi |
 | Donate | Donasi |
-| Donate | Donasi |
+| Donate $5 | Donate $5 |
 | Cancel operation | Batal, operasi |
 | Cancel scan | Batal, pemindaian |
 | Cancel startup scan | Batal, pemindaian awal |

@@ -145,7 +145,7 @@ const MAP = {
   'Action.Done': `_Terminé`,
   'Action.Details': `Détails`,
   'Action.BuyMeACuppa': `Faire un _don`,
-  'Action.Donate': `Faire un don`,
+  'Action.Donate': `Donate \$5`,
   'Action.LeaveStarOnGitHub': `_Laisser une étoile sur GitHub`,
   'Action.Licence': `Licence Apache 2.0`,
   'Action.Move': `_Déplacer`,
@@ -158,7 +158,7 @@ const MAP = {
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa': `Faire un don`,
   'Automation.BuyMeACuppa.About': `Faire un don`,
-  'Automation.Donate': `Faire un don`,
+  'Automation.Donate': `Donate \$5`,
   'Automation.CancelOperation': `Annuler l'opération`,
   'Automation.CancelScan': `Annuler l'analyse`,
   'Automation.CancelStartupScan': `Annuler l'analyse de démarrage`,
@@ -601,6 +601,8 @@ const MAP = {
   'Cli.SourceGivenUp.Drive': `InstallerClean stopped waiting for drive {0} and left alone any file still to be checked against it. Once it's responding normally, run the command again.`,
   'Cli.SourceGivenUp.Path': `InstallerClean stopped waiting for {0} and left alone any file still to be checked against it. Once it's responding normally, run the command again.`,
   'Cli.SourcesGivenUp': `InstallerClean stopped waiting for more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, run the command again.`,
+  'Action.CloseWithoutDonating': `_Close without donating`,
+  'Tooltip.Donate': `I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,
