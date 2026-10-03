@@ -25,25 +25,22 @@ namespace InstallerClean.Helpers;
 /// </summary>
 internal sealed class LiveRegionRaises(Dispatcher dispatcher)
 {
-    /// <summary>The elements with a raise queued that has not yet run.</summary>
-    private readonly HashSet<UIElement> _queued = [];
+    /// <summary>
+    /// The raises queued and not yet run, each posted to the dispatcher at Background priority
+    /// (<see cref="PendingRaises{TElement}"/>).
+    /// </summary>
+    private readonly PendingRaises<UIElement> _pending =
+        new(run => dispatcher.BeginInvoke(DispatcherPriority.Background, run), Raise);
 
     /// <summary>
     /// Queues a raise for <paramref name="element"/>. Where one is already queued for it and
-    /// has not run, this adds nothing, the one raise reading the line as it then stands.
-    /// <paramref name="stillShown"/>, where given, is asked when the raise runs, and false
-    /// drops it: a line whose card has gone by then is not read.
+    /// has not run, this adds no second raise, the one raise reading the line as it then
+    /// stands. <paramref name="stillShown"/>, where given, joins the tests that raise is made
+    /// under, which are asked when it runs, and one answering false drops it: a line whose card
+    /// has gone by then is not read.
     /// </summary>
-    internal void Queue(UIElement element, Func<bool>? stillShown = null)
-    {
-        if (!_queued.Add(element)) return;
-        dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
-        {
-            _queued.Remove(element);
-            if (stillShown is null || stillShown())
-                Raise(element);
-        });
-    }
+    internal void Queue(UIElement element, Func<bool>? stillShown = null) =>
+        _pending.Queue(element, stillShown);
 
     /// <summary>Raises the event for <paramref name="element"/> now.</summary>
     internal static void Raise(UIElement element)

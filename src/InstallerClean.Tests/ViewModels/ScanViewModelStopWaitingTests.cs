@@ -10,9 +10,10 @@ namespace InstallerClean.Tests.ViewModels;
 
 /// <summary>
 /// The button on the scanning card that gives up on the drive or share a waiting line
-/// names. It goes up with the wait's own line and goes with the next write to that line,
-/// whatever writes it, and the name a screen reader speaks for the line changes with it in
-/// the same step. Each scan here is a Re-scan started on a stand-in for the window's
+/// names. It goes up with the wait's own line and goes with the wait's end or the next write
+/// that changes the line, whatever writes it, whether or not the wait's line or its end
+/// changes the text, and the name a screen reader speaks for the line changes with it in the
+/// same step. Each scan here is a Re-scan started on a stand-in for the window's
 /// dispatcher, so the card's progress reaches the view model there, one report at a time and
 /// in order, as it does in the window. The scan service runs on the thread pool and reports
 /// the steps a test gives it, each step returning once the card has applied what it reported.
@@ -252,5 +253,81 @@ public class ScanViewModelStopWaitingTests
         var at = changes.IndexOf(full);
         Assert.Equal([Milestone, full, Milestone], changes.Skip(at - 1).Take(3));
         Assert.Contains((WaitLine("D:"), true), buttonWhenTheLineChanged);
+    }
+
+    [Fact]
+    public async Task A_second_wait_whose_line_reads_the_same_as_the_first_s_takes_the_button()
+    {
+        // Two waits on one drive with no end between them write the same line twice, so the
+        // second write leaves the text as it was. The button stops the second.
+        var vm = NewViewModel();
+        int firstStops = 0, secondStops = 0;
+        var first = new SourceFolderWait("D:", () => Interlocked.Increment(ref firstStops));
+        var second = new SourceFolderWait("D:", () => Interlocked.Increment(ref secondStops));
+        bool? onTheSecond = null;
+        ScanReports(
+            (p, _) => ShowAsync(p, new ScanProgressUpdate(Milestone)),
+            (p, _) => ShowAsync(p, ScanProgressUpdate.Waiting(first)),
+            async (p, _) =>
+            {
+                await ShowAsync(p, ScanProgressUpdate.Waiting(second));
+                onTheSecond = vm.ScanProgress == WaitLine("D:") && ReferenceEquals(vm.WaitShown, second);
+                await _dispatcher.RunAsync(() => vm.StopWaitingCommand.Execute(null));
+                await ShowAsync(p, ScanProgressUpdate.Waiting(null));
+            });
+
+        await RescanAsync(vm);
+
+        Assert.True(onTheSecond);
+        Assert.Equal((0, 1), (firstStops, secondStops));
+    }
+
+    [Fact]
+    public async Task A_wait_and_its_end_move_the_button_where_the_line_reads_the_same_throughout()
+    {
+        // A step worded as the waiting line itself, so neither the wait nor its end changes
+        // the text on the line.
+        var vm = NewViewModel();
+        var wait = new SourceFolderWait("D:", () => { });
+        bool? upWithTheWait = null, goneWithItsEnd = null;
+        ScanReports(
+            (p, _) => ShowAsync(p, new ScanProgressUpdate(WaitLine("D:"))),
+            async (p, _) =>
+            {
+                await ShowAsync(p, ScanProgressUpdate.Waiting(wait));
+                upWithTheWait = ReferenceEquals(vm.WaitShown, wait) && vm.StopWaitingCommand.CanExecute(null)
+                    && vm.ScanProgressName == DisplayHelpers.WaitingLineWithStopKey(WaitLine("D:"));
+            },
+            async (p, _) =>
+            {
+                await ShowAsync(p, ScanProgressUpdate.Waiting(null));
+                goneWithItsEnd = vm.WaitShown is null && !vm.StopWaitingCommand.CanExecute(null)
+                    && vm.ScanProgress == WaitLine("D:") && vm.ScanProgressName == WaitLine("D:");
+            });
+
+        await RescanAsync(vm);
+
+        Assert.True(upWithTheWait);
+        Assert.True(goneWithItsEnd);
+    }
+
+    [Fact]
+    public async Task A_wait_and_its_end_each_move_the_button_once()
+    {
+        // Every change the button is raised with, from the scan's first line to its last.
+        var vm = NewViewModel();
+        var moves = new ConcurrentQueue<bool>();
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ScanViewModel.CanStopWaiting)) moves.Enqueue(vm.CanStopWaiting);
+        };
+        ScanReports(
+            (p, _) => ShowAsync(p, new ScanProgressUpdate(Milestone)),
+            (p, _) => ShowAsync(p, ScanProgressUpdate.Waiting(new SourceFolderWait("D:", () => { }))),
+            (p, _) => ShowAsync(p, ScanProgressUpdate.Waiting(null)));
+
+        await RescanAsync(vm);
+
+        Assert.Equal([true, false], moves);
     }
 }

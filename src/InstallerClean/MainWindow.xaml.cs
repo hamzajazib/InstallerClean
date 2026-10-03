@@ -692,7 +692,8 @@ public partial class MainWindow : Window
         // files changes reads the line again.
         //
         // The pending-reboot re-check made at a Move or Delete click runs with no card
-        // up and no headline to follow, so the line it puts up is read at once.
+        // up and no headline to follow, so the line it puts up is read at once, where it
+        // still shows when the raise runs.
         if (e.PropertyName == nameof(ScanViewModel.HasMissingFromDisk))
             _missingFromDiskToAnnounce = _vm.Scan.HasMissingFromDisk;
         if (e.PropertyName == nameof(ScanViewModel.HasPendingReboot))
@@ -702,7 +703,7 @@ public partial class MainWindow : Window
             else if (_vm.Scan.IsScanInFlight || _vm.Cleanup.IsOperating || _vm.Completion.IsComplete)
                 _pendingRebootToAnnounce = true;
             else
-                AnnounceLiveRegions(PendingRebootBannerText);
+                AnnounceLiveRegion(PendingRebootBannerText, () => _vm.Scan.HasPendingReboot);
         }
     }
 

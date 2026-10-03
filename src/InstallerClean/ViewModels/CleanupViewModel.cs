@@ -151,10 +151,12 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// The wait <see cref="OperationProgress"/> names while it is a waiting line, and null
-    /// for every other heading. Only the write putting the wait's own line up sets it
-    /// (<see cref="OnOperationProgressChanged"/>), so the heading, the button under it and
-    /// the name a screen reader speaks change in one step, and any other write to the
-    /// heading takes the button away.
+    /// for every other heading. The write putting a wait's own line up sets it to that wait,
+    /// and the write putting back the heading the wait took sets it to null, whatever either
+    /// says (<see cref="WriteWaitLine"/>). Where the heading changes, it is set before the
+    /// change is raised (<see cref="OnOperationProgressChanged"/>), so the heading, the button
+    /// under it and the name a screen reader speaks change in one step, and any other write
+    /// that changes the heading takes the button away.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanStopWaiting))]
@@ -1973,7 +1975,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// </summary>
     private IProgress<ScanProgressUpdate> WaitsInTheHeading()
     {
-        var heading = new WaitLine(() => OperationProgress, line => OperationProgress = line);
+        var heading = new WaitLine(() => OperationProgress, WriteWaitLine);
         return new WaitsOnly(new Progress<ScanProgressUpdate>(update =>
         {
             if (IsCancellationRequested) return;
@@ -1987,6 +1989,19 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 _waitTakingTheLine = null;
             }
         }));
+    }
+
+    /// <summary>
+    /// Writes <paramref name="line"/>, a wait's line going up or the heading it took going
+    /// back, to <see cref="OperationProgress"/>, and sets <see cref="WaitShown"/> to the wait
+    /// taking the heading, or to null for the heading going back. Set here as well as on the
+    /// heading's change, so a line that reads the same as the one it replaces still moves the
+    /// button.
+    /// </summary>
+    private void WriteWaitLine(string line)
+    {
+        OperationProgress = line;
+        WaitShown = _waitTakingTheLine;
     }
 
     private void OnOperationProgressUpdate(OperationProgress p)

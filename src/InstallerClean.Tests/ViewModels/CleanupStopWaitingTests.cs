@@ -13,8 +13,9 @@ namespace InstallerClean.Tests.ViewModels;
 /// <summary>
 /// The button on the Move or Delete card that gives up on the drive or share a waiting
 /// heading names, during the check made before the batch and during the scan after it. It
-/// goes up with the wait's own line and goes with the next write to the heading, whatever
-/// writes it, and the name a screen reader speaks for the heading changes with it in the same
+/// goes up with the wait's own line and goes with the wait's end or the next write that
+/// changes the heading, whatever writes it, whether or not the wait's line or its end changes
+/// the text, and the name a screen reader speaks for the heading changes with it in the same
 /// step. Each Move here is started on a stand-in for the window's dispatcher, so the card's
 /// reporters are made there and the waits reach the view model there, one at a time and in
 /// order, as they do in the window. The check and the scan run on the thread pool and report
@@ -293,5 +294,82 @@ public class CleanupStopWaitingTests
         var at = changes.IndexOf(full);
         Assert.Equal([Strings.Status_Moving, full, Strings.Status_Moving], changes.Skip(at - 1).Take(3));
         Assert.Contains((WaitLine("D:"), true), buttonWhenTheHeadingChanged);
+    }
+
+    [Fact]
+    public async Task A_second_wait_whose_heading_reads_the_same_as_the_first_s_takes_the_button()
+    {
+        // Two waits on one drive with no end between them write the same heading twice, so
+        // the second write leaves the text as it was. The button stops the second.
+        var vm = await ScannedViewModelAsync();
+        int firstStops = 0, secondStops = 0;
+        var first = new SourceFolderWait("D:", () => Interlocked.Increment(ref firstStops));
+        var second = new SourceFolderWait("D:", () => Interlocked.Increment(ref secondStops));
+        bool? onTheSecond = null;
+        CheckReports(
+            (p, _) => ShowAsync(p, ScanProgressUpdate.Waiting(first)),
+            async (p, _) =>
+            {
+                await ShowAsync(p, ScanProgressUpdate.Waiting(second));
+                onTheSecond = vm.Cleanup.OperationProgress == WaitLine("D:")
+                    && ReferenceEquals(vm.Cleanup.WaitShown, second);
+                await _dispatcher.RunAsync(() => vm.Cleanup.StopWaitingCommand.Execute(null));
+                await ShowAsync(p, ScanProgressUpdate.Waiting(null));
+            });
+
+        await MoveAsync(vm);
+
+        Assert.True(onTheSecond);
+        Assert.Equal((0, 1), (firstStops, secondStops));
+    }
+
+    [Fact]
+    public async Task A_wait_and_its_end_move_the_button_where_the_heading_reads_the_same_throughout()
+    {
+        // The heading is written with the waiting line's own words before the wait, so
+        // neither the wait nor its end changes the text on it.
+        var vm = await ScannedViewModelAsync();
+        var wait = new SourceFolderWait("D:", () => { });
+        bool? upWithTheWait = null, goneWithItsEnd = null;
+        CheckReports(
+            async (p, _) =>
+            {
+                await _dispatcher.RunAsync(() => vm.Cleanup.OperationProgress = WaitLine("D:"));
+                await ShowAsync(p, ScanProgressUpdate.Waiting(wait));
+                var c = vm.Cleanup;
+                upWithTheWait = ReferenceEquals(c.WaitShown, wait) && c.StopWaitingCommand.CanExecute(null)
+                    && c.OperationProgressName == DisplayHelpers.WaitingLineWithStopKey(WaitLine("D:"));
+            },
+            async (p, _) =>
+            {
+                await ShowAsync(p, ScanProgressUpdate.Waiting(null));
+                var c = vm.Cleanup;
+                goneWithItsEnd = c.WaitShown is null && !c.StopWaitingCommand.CanExecute(null)
+                    && c.OperationProgress == WaitLine("D:") && c.OperationProgressName == WaitLine("D:");
+            });
+
+        await MoveAsync(vm);
+
+        Assert.True(upWithTheWait);
+        Assert.True(goneWithItsEnd);
+    }
+
+    [Fact]
+    public async Task A_wait_and_its_end_each_move_the_button_once()
+    {
+        // Every change the button is raised with, from the Move's first heading to its last.
+        var vm = await ScannedViewModelAsync();
+        var moves = new ConcurrentQueue<bool>();
+        vm.Cleanup.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(CleanupViewModel.CanStopWaiting)) moves.Enqueue(vm.Cleanup.CanStopWaiting);
+        };
+        CheckReports(
+            (p, _) => ShowAsync(p, ScanProgressUpdate.Waiting(new SourceFolderWait("D:", () => { }))),
+            (p, _) => ShowAsync(p, ScanProgressUpdate.Waiting(null)));
+
+        await MoveAsync(vm);
+
+        Assert.Equal([true, false], moves);
     }
 }

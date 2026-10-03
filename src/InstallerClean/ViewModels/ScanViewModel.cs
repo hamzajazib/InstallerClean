@@ -64,10 +64,12 @@ public partial class ScanViewModel : ObservableObject
 
     /// <summary>
     /// The wait <see cref="ScanProgress"/> names while it is a waiting line, and null for
-    /// every other line. Only the write putting the wait's own line up sets it
-    /// (<see cref="OnScanProgressChanged"/>), so the line, the button under it and the name
-    /// a screen reader speaks change in one step, and any other write to the line takes the
-    /// button away.
+    /// every other line. The write putting a wait's own line up sets it to that wait, and the
+    /// write putting back the line the wait took sets it to null, whatever either line says
+    /// (<see cref="WriteWaitLine"/>). Where the line changes, it is set before the change is
+    /// raised (<see cref="OnScanProgressChanged"/>), so the line, the button under it and the
+    /// name a screen reader speaks change in one step, and any other write that changes the
+    /// line takes the button away.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanStopWaiting))]
@@ -269,7 +271,7 @@ public partial class ScanViewModel : ObservableObject
         _rebootService = rebootService;
         _dialogService = dialogService;
         _isExternallyBlocked = isExternallyBlocked ?? (() => false);
-        _statusWait = new WaitLine(() => ScanProgress, line => ScanProgress = line);
+        _statusWait = new WaitLine(() => ScanProgress, WriteWaitLine);
     }
 
     /// <summary>
@@ -742,6 +744,18 @@ public partial class ScanViewModel : ObservableObject
         {
             _waitTakingTheLine = null;
         }
+    }
+
+    /// <summary>
+    /// Writes <paramref name="line"/>, a wait's line going up or the line it took going back,
+    /// to <see cref="ScanProgress"/>, and sets <see cref="WaitShown"/> to the wait taking the
+    /// line, or to null for the line going back. Set here as well as on the line's change, so
+    /// a line that reads the same as the one it replaces still moves the button.
+    /// </summary>
+    private void WriteWaitLine(string line)
+    {
+        ScanProgress = line;
+        WaitShown = _waitTakingTheLine;
     }
 
     [RelayCommand]
