@@ -43,7 +43,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | _Done | _Fertig |
 | Details | Details |
 | _Donate | S_penden |
-| Donate $5 | Donate $5 |
+| _Donate $5 | _Donate $5 |
+| Donate | Spenden |
 | Leave a _star on GitHub | Einen Stern auf _GitHub hinterlassen |
 | Apache 2.0 licence | Apache-2.0-Lizenz |
 | _Move | _Verschieben |
@@ -361,8 +362,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Deutsch |
 | --- | --- |
 | Donate | Spenden |
-| Donate | Spenden |
 | Donate $5 | Donate $5 |
+| Donate | Spenden |
 | Cancel operation | Vorgang abbrechen |
 | Cancel scan | Scan abbrechen |
 | Cancel startup scan | Start-Scan abbrechen |

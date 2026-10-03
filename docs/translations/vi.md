@@ -43,7 +43,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | _Done | _Xong |
 | Details | Chi tiết |
 | _Donate | Ủng _hộ |
-| Donate $5 | Donate $5 |
+| _Donate $5 | _Donate $5 |
+| Donate | Ủng hộ |
 | Leave a _star on GitHub | Gắn _sao trên GitHub |
 | Apache 2.0 licence | Giấy phép Apache 2.0 |
 | _Move | _Chuyển |
@@ -361,8 +362,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Tiếng Việt |
 | --- | --- |
 | Donate | Ủng hộ |
-| Donate | Ủng hộ |
 | Donate $5 | Donate $5 |
+| Donate | Ủng hộ |
 | Cancel operation | Hủy thao tác |
 | Cancel scan | Hủy quét |
 | Cancel startup scan | Hủy quét khi khởi động |

@@ -727,7 +727,7 @@ public class CompletionViewModelTests
 
     // The card's two sets of buttons. After a Move or Delete that moved or
     // deleted files it carries "Donate $5" over "Close without donating"; every
-    // other card carries Done and the wordless heart.
+    // other card carries Done and the small Donate under it.
 
     [Fact]
     public void A_delete_that_freed_bytes_asks_for_a_donation()
@@ -740,7 +740,7 @@ public class CompletionViewModelTests
     }
 
     [Fact]
-    public void A_delete_that_freed_nothing_keeps_done_and_the_heart()
+    public void A_delete_that_freed_nothing_keeps_done()
     {
         var vm = new CompletionViewModel();
 
@@ -768,7 +768,7 @@ public class CompletionViewModelTests
     }
 
     [Fact]
-    public void A_move_the_app_stopped_keeps_done_and_the_heart_though_files_moved()
+    public void A_move_the_app_stopped_keeps_done_though_files_moved()
     {
         // Files reached the backup folder before the stop, so the bytes alone would
         // ask. The stopped flag is what keeps this card on Done.
@@ -832,7 +832,7 @@ public class CompletionViewModelTests
     }
 
     [Fact]
-    public void A_run_the_reverify_held_back_entirely_keeps_done_and_the_heart()
+    public void A_run_the_reverify_held_back_entirely_keeps_done()
     {
         // Nothing was moved, so the card keeps Done, even though the screen is
         // green and the check ahead of the batch did its job.
@@ -845,7 +845,7 @@ public class CompletionViewModelTests
     }
 
     [Fact]
-    public void An_all_clear_puts_done_and_the_heart_back()
+    public void An_all_clear_puts_done_back()
     {
         // The view-model instance is reused across operations, so a flag left on
         // by the Delete would follow the user onto the all-clear that the

@@ -104,7 +104,8 @@ const MAP = {
   'Action.Done': `_Готово`,
   'Action.Details': `Подробности`,
   'Action.BuyMeACuppa': `_Поддержать`,
-  'Action.Donate': `Donate \$5`,
+  'Action.Donate': `_Donate \$5`,
+  'Action.DonateSmall': `Поддержать`,
   'Action.LeaveStarOnGitHub': `Поставить з_везду на GitHub`,
   'Action.Licence': `Лицензия Apache 2.0`,
   'Action.Move': `_Переместить`,
@@ -117,9 +118,9 @@ const MAP = {
   'Action.SendResultLogConfirm': `От_править`,
 
   // Automation names (screen reader / accessibility)
-  'Automation.BuyMeACuppa': `Поддержать`,
   'Automation.BuyMeACuppa.About': `Поддержать`,
   'Automation.Donate': `Donate \$5`,
+  'Automation.DonateSmall': `Поддержать`,
   // The three Cancel names are built on the noun Отмена rather than the verb
   // Отменить, which share only a root: WCAG 2.5.3 (Label in Name) asks that a
   // control's spoken name contain the word drawn on it, so speech input can

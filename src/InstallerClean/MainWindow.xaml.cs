@@ -131,11 +131,10 @@ public partial class MainWindow : Window
         else if (_vm.Chrome.UpdateStatusText.Length > 0)
             AnnounceLiveRegions(UpdateStatusLineText);
 
-        // The completion card's heart sits at the card's right edge, so its
-        // tooltip lines up right edges rather than left. Donate $5 is centred
-        // on the card, and its tooltip is centred over it.
+        // Both of the completion card's donate buttons are centred on the card,
+        // and each tooltip is centred over its button.
         CompletionDonateToolTip.CustomPopupPlacementCallback = TooltipPlacement.KeptInsideWindow(
-            CompletionDonateToolTip, this, ToolTipAnchor.Right, ToolTipEdgeMargin);
+            CompletionDonateToolTip, this, ToolTipAnchor.Centre, ToolTipEdgeMargin);
         CompletionDonateFiveToolTip.CustomPopupPlacementCallback = TooltipPlacement.KeptInsideWindow(
             CompletionDonateFiveToolTip, this, ToolTipAnchor.Centre, ToolTipEdgeMargin);
 

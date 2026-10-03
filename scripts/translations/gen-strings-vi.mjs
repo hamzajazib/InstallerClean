@@ -120,7 +120,8 @@ const MAP = {
   'Action.Done': `_Xong`,
   'Action.Details': `Chi tiết`,
   'Action.BuyMeACuppa': `Ủng _hộ`,
-  'Action.Donate': `Donate \$5`,
+  'Action.Donate': `_Donate \$5`,
+  'Action.DonateSmall': `Ủng hộ`,
   'Action.LeaveStarOnGitHub': `Gắn _sao trên GitHub`,
   'Action.Licence': `Giấy phép Apache 2.0`,
   'Action.Move': `_Chuyển`,
@@ -131,9 +132,9 @@ const MAP = {
   'Action.SendResultLogConfirm': `_Gửi`,
 
   // Automation names (screen reader / accessibility)
-  'Automation.BuyMeACuppa': `Ủng hộ`,
   'Automation.BuyMeACuppa.About': `Ủng hộ`,
   'Automation.Donate': `Donate \$5`,
+  'Automation.DonateSmall': `Ủng hộ`,
   'Automation.CancelOperation': `Hủy thao tác`,
   'Automation.CancelScan': `Hủy quét`,
   'Automation.CancelStartupScan': `Hủy quét khi khởi động`,

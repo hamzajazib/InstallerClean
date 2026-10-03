@@ -162,8 +162,8 @@
   <!-- The quieter button under Action.Donate on the completion card after a Move or
        Delete that moved or deleted files. It closes the card and returns to the main
        window, as Action.Done does on every other card, and like Done it has the
-       focus and answers Enter when the card appears. Its access key is the only one
-       on that card. -->
+       focus and answers Enter when the card appears. Its access key must differ
+       from Action.Donate's, the two being on that card together. -->
   <data name="Action.CloseWithoutDonating" xml:space="preserve"><value>_Close without donating</value></data>
   <!-- The label on both delete surfaces: the main window's button and the
        confirmation dialog's. It says "permanently" because Delete here does
@@ -181,10 +181,14 @@
   <!-- The label on the large donate button on the completion card after a Move or
        Delete that moved or deleted files, where it and Action.CloseWithoutDonating
        stand in place of Done. The amount is in US dollars, written the way the
-       language writes a dollar amount. It takes no access key. The button shows
-       this text as written, so an underscore here would appear on screen rather
-       than become one. -->
-  <data name="Action.Donate" xml:space="preserve"><value>Donate $5</value></data>
+       language writes a dollar amount. Its access key must differ from
+       Action.CloseWithoutDonating's, the two being on that card together. -->
+  <data name="Action.Donate" xml:space="preserve"><value>_Donate $5</value></data>
+  <!-- The label on the small donate button under Done, on every completion card
+       that carries Done. It takes no access key: Done is on screen beside it. The
+       button shows this text as written, so an underscore here would appear on
+       screen rather than become one. -->
+  <data name="Action.DonateSmall" xml:space="preserve"><value>寄付</value></data>
   <data name="Action.LeaveStarOnGitHub" xml:space="preserve"><value>GitHubでスターを付ける(_S)</value></data>
   <data name="Action.Licence" xml:space="preserve"><value>Apache 2.0 ライセンス</value></data>
   <data name="Action.Move" xml:space="preserve"><value>移動(_M)</value></data>
@@ -216,19 +220,19 @@
   </data>
 
   <!-- Automation names (screen reader / accessibility) -->
-  <data name="Automation.BuyMeACuppa" xml:space="preserve"><value>寄付</value></data>
   <!-- The About window's own star and donate buttons. The value says what the
        button says on screen: a window name in the spoken value would be an
        internal note read out to somebody who can only be in that window to hear
-       it. The unsuffixed Automation.BuyMeACuppa names the completion screen's
-       heart, which carries no label of its own, while this one restates the
-       button beside it and moves with it. They hold the same English and are
-       free to differ in any language. -->
+       it. -->
   <data name="Automation.BuyMeACuppa.About" xml:space="preserve"><value>寄付</value></data>
-  <!-- The spoken name of that same button. Its content is a heart beside a
-       label rather than a string, so WPF derives no name from it and this is
-       the name; it says what the button says on screen. -->
+  <!-- The spoken name of the button Action.Donate labels. Its content is a heart
+       beside a label rather than a string, so WPF derives no name from it and
+       this is the name; it says what the button says on screen, without the
+       access-key marker. -->
   <data name="Automation.Donate" xml:space="preserve"><value>Donate $5</value></data>
+  <!-- The spoken name of the button Action.DonateSmall labels, for the same
+       reason as Automation.Donate's. -->
+  <data name="Automation.DonateSmall" xml:space="preserve"><value>寄付</value></data>
   <data name="Automation.CancelOperation" xml:space="preserve"><value>操作をキャンセル</value></data>
   <data name="Automation.CancelScan" xml:space="preserve"><value>スキャンをキャンセル</value></data>
   <data name="Automation.CancelStartupScan" xml:space="preserve"><value>起動時スキャンをキャンセル</value></data>
@@ -959,7 +963,7 @@
   <data name="Completion.PermanentDeleteSummary.Plural" xml:space="preserve"><value>{0} 個の {1} を完全に削除しました</value></data>
   <data name="Completion.DonateAsk" xml:space="preserve">
     <value>どんな少額のご寄付でもありがたく思います。</value>
-    <comment>Tooltip and screen-reader help on the completion screen's wordless donate heart, which stands on every card except the one after a Move or Delete that moved or deleted files, including a scan that found nothing to clean up. It is the only text on that button. Keep it plain, with no word putting the reader under an obligation.</comment>
+    <comment>Tooltip and screen-reader help on the small donate button under Done (Action.DonateSmall), which stands on every completion card that carries Done, including a scan that found nothing to clean up. Keep it plain, with no word putting the reader under an obligation.</comment>
   </data>
 
   <!-- Summaries -->

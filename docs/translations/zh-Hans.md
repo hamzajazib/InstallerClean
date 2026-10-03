@@ -43,7 +43,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | _Done | 完成(_D) |
 | Details | 详情 |
 | _Donate | 捐赠(_D) |
-| Donate $5 | Donate $5 |
+| _Donate $5 | _Donate $5 |
+| Donate | 捐赠 |
 | Leave a _star on GitHub | 在 GitHub 上点个星(_S) |
 | Apache 2.0 licence | Apache 2.0 许可证 |
 | _Move | 移动(_M) |
@@ -361,8 +362,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | 简体中文 |
 | --- | --- |
 | Donate | 捐赠 |
-| Donate | 捐赠 |
 | Donate $5 | Donate $5 |
+| Donate | 捐赠 |
 | Cancel operation | 取消操作 |
 | Cancel scan | 取消扫描 |
 | Cancel startup scan | 取消启动扫描 |

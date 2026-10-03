@@ -354,10 +354,9 @@
         </Setter>
     </Style>
 
-    <!-- The 28px small ghost pill: wordless icon buttons sitting inside
-         busy rows (the bottom-bar language globe, the completion card's
-         donate heart), the splash Cancel and the completion card's Close
-         without donating. BasedOn GhostPill so the
+    <!-- The 28px small ghost pill: the bottom-bar language globe, a
+         wordless icon button in a busy row, the splash Cancel, and the
+         completion card's small Donate and Close without donating. BasedOn GhostPill so the
          look stays the ghost's; what changes is the tighter geometry
          and, with it, the ring: Radius.SmallPillFocus's derivation pins
          the 28px height to its 16 ring, so the height and the focus
@@ -1078,14 +1077,14 @@
                          it is drawn over an accent pill: fill on fill, the two
                          indigos are the same colour and the tooltip reads as
                          part of the button under it rather than as something
-                         on top. The completion heart's is the one that
-                         reliably crosses one: it opens flush above the heart,
-                         across the Done button.
+                         on top. The completion card's small Donate's is the
+                         one that reliably crosses one: it opens flush above
+                         that button, across Done.
 
-                         One brush has to serve three consumers on two
-                         surfaces, and only the completion heart's tooltip
-                         opens over a card; the About window's star and donate
-                         pills sit straight on the lighter window background.
+                         One brush has to serve four consumers on two surfaces:
+                         the completion card's two donate tooltips open over the
+                         card, and the About window's star and donate pills sit
+                         straight on the lighter window background.
                          So the constraint is a single brush dark enough to
                          read against the accent fill and quiet enough on
                          every dark surface a tooltip can open over. The card

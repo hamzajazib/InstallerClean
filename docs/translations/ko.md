@@ -43,7 +43,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | _Done | 완료(_D) |
 | Details | 세부 정보 |
 | _Donate | 후원(_D) |
-| Donate $5 | Donate $5 |
+| _Donate $5 | _Donate $5 |
+| Donate | 후원 |
 | Leave a _star on GitHub | GitHub에 별 남기기(_S) |
 | Apache 2.0 licence | Apache 2.0 라이선스 |
 | _Move | 이동(_M) |
@@ -361,8 +362,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | 한국어 |
 | --- | --- |
 | Donate | 후원 |
-| Donate | 후원 |
 | Donate $5 | Donate $5 |
+| Donate | 후원 |
 | Cancel operation | 작업 취소 |
 | Cancel scan | 검사 취소 |
 | Cancel startup scan | 시작 검사 취소 |

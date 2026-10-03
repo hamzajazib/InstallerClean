@@ -1,9 +1,9 @@
 namespace InstallerClean.Helpers;
 
 /// <summary>
-/// The page the app's donate controls open: the heart on the card shown at the
-/// end of a run, the card's "Donate $5" button, and the pill in the About
-/// window.
+/// The page the app's donate controls open: the two donate buttons on the card
+/// shown at the end of a run, "Donate $5" and the small Donate under Done, and
+/// the pill in the About window.
 ///
 /// One constant, read by all three, because the address moves. Written out
 /// twice, the second copy goes stale on the day the first one changes, and a

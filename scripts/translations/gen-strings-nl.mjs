@@ -150,7 +150,8 @@ const MAP = {
   'Action.Done': `_Klaar`,
   'Action.Details': `Details`,
   'Action.BuyMeACuppa': `_Doneren`,
-  'Action.Donate': `Donate \$5`,
+  'Action.Donate': `_Donate \$5`,
+  'Action.DonateSmall': `Doneren`,
   'Action.LeaveStarOnGitHub': `Geef een s_ter op GitHub`,
   'Action.Licence': `Apache 2.0-licentie`,
   'Action.Move': `Ver_plaatsen`,
@@ -164,9 +165,9 @@ const MAP = {
   'About.AutoUpdateCheck': `Automatisch controleren op updates`,
 
   // Automation names (screen reader / accessibility)
-  'Automation.BuyMeACuppa': `Doneren`,
   'Automation.BuyMeACuppa.About': `Doneren`,
   'Automation.Donate': `Donate \$5`,
+  'Automation.DonateSmall': `Doneren`,
   'Automation.CancelOperation': `Bewerking annuleren`,
   'Automation.CancelScan': `Scan annuleren`,
   'Automation.CancelStartupScan': `Opstartscan annuleren`,

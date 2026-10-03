@@ -43,7 +43,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | _Done | _Selesai |
 | Details | Detail |
 | _Donate | _Donasi |
-| Donate $5 | Donate $5 |
+| _Donate $5 | _Donate $5 |
+| Donate | Donasi |
 | Leave a _star on GitHub | Beri _bintang di GitHub |
 | Apache 2.0 licence | Lisensi Apache 2.0 |
 | _Move | _Pindahkan |
@@ -361,8 +362,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Bahasa Indonesia |
 | --- | --- |
 | Donate | Donasi |
-| Donate | Donasi |
 | Donate $5 | Donate $5 |
+| Donate | Donasi |
 | Cancel operation | Batal, operasi |
 | Cancel scan | Batal, pemindaian |
 | Cancel startup scan | Batal, pemindaian awal |

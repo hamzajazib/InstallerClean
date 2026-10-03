@@ -117,7 +117,8 @@ const MAP = {
   'Action.Done': `완료(_D)`,
   'Action.Details': `세부 정보`,
   'Action.BuyMeACuppa': `후원(_D)`,
-  'Action.Donate': `Donate \$5`,
+  'Action.Donate': `_Donate \$5`,
+  'Action.DonateSmall': `후원`,
   'Action.LeaveStarOnGitHub': `GitHub에 별 남기기(_S)`,
   'Action.Licence': `Apache 2.0 라이선스`,
   'Action.Move': `이동(_M)`,
@@ -128,9 +129,9 @@ const MAP = {
   'Action.SendResultLogConfirm': `보내기(_S)`,
 
   // Automation names (screen reader / accessibility)
-  'Automation.BuyMeACuppa': `후원`,
   'Automation.BuyMeACuppa.About': `후원`,
   'Automation.Donate': `Donate \$5`,
+  'Automation.DonateSmall': `후원`,
   'Automation.CancelOperation': `작업 취소`,
   'Automation.CancelScan': `검사 취소`,
   'Automation.CancelStartupScan': `시작 검사 취소`,

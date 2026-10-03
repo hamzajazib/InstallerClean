@@ -168,8 +168,8 @@
             <!-- Both asks carry their own tooltip as HelpText. Hover text
                  reaches no screen reader, so the reason for the ask (what a
                  star is for, that a donation is welcome) was on screen and
-                 nowhere else; the completion overlay's donate heart already
-                 pairs the two this way. Same key, so they cannot drift. -->
+                 nowhere else; the completion card's donate buttons already
+                 pair the two this way. Same key, so they cannot drift. -->
             <WrapPanel Grid.Column="0" Margin="-12,0,0,-6">
                 <Button Style="{StaticResource CompactGhostPill}"
                         Click="StarClick" AutomationProperties.Name="{loc:Translate Automation.LeaveStarOnGitHub.About}"

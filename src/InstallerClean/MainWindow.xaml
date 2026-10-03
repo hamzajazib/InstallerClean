@@ -548,13 +548,12 @@
                     ToolTip="{loc:Translate Tooltip.ChangeLanguage}">
                 <!-- The globe is the whole button, so it is what carries the OS
                      text size here: SmallGhostPill's 28 is a minimum height and
-                     a wordless button has no label to push past it, which left
-                     this and the completion heart the two smallest targets in
-                     the app at exactly the scale where everything else had
-                     doubled. The stroke stays 2: Shape applies Stretch to the
-                     geometry and the pen after it, so the outline holds its
-                     weight as the circle grows, which is what a line drawing
-                     wants. -->
+                     a wordless button has no label to push past it, so without
+                     the scaling it would be the smallest target in the app at
+                     exactly the scale where everything else has doubled. The
+                     stroke stays 2: Shape applies Stretch to the geometry and
+                     the pen after it, so the outline holds its weight as the
+                     circle grows, which is what a line drawing wants. -->
                 <Path Data="M2 12 a10 10 0 1 0 20 0 a10 10 0 1 0 -20 0 M12 2 a4.2 10 0 1 0 0 20 a4.2 10 0 1 0 0 -20 M2 12 h20"
                       Stroke="{StaticResource Text.Muted}" StrokeThickness="2" Fill="{x:Null}"
                       Width="{a11y:TextScaled 18}" Height="{a11y:TextScaled 18}" Stretch="Uniform"/>
@@ -912,7 +911,6 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <!-- Icon -->
@@ -1104,22 +1102,24 @@
                     </StackPanel>
                     </ScrollViewer>
 
-                    <!-- The card's buttons. Done on every card but one, and on
-                         that one, the card after a Move or Delete that moved or
-                         deleted files, "Donate $5" over "Close without
-                         donating". Exactly one of Done and Close without
-                         donating is ever on screen.
+                    <!-- The card's buttons. Done with a small Donate under it on
+                         every card but one, and on that one, the card after a
+                         Move or Delete that moved or deleted files, "Donate $5"
+                         over "Close without donating". Exactly one of Done and
+                         Close without donating is ever on screen, and one of
+                         the two donate buttons.
 
-                         Both close the result overlay, NOT the app: exiting
-                         from here would trap the user with no way to re-scan
-                         or open About. Whichever is showing is focused on
-                         overlay show, so a keyboard user lands on the dismiss
-                         action with a visible ring; Enter follows from
-                         IsDefault and Esc from the window's own key handler,
-                         so neither needs the focus. Donate $5 is neither
-                         focused nor the default and takes no access key:
-                         Enter closes the card on every card, and Alt+D, Done's
-                         key, does nothing on the card without Done. -->
+                         Done and Close without donating close the result
+                         overlay, NOT the app: exiting from here would trap the
+                         user with no way to re-scan or open About. Whichever is
+                         showing is focused on overlay show, so a keyboard user
+                         lands on the dismiss action with a visible ring; Enter
+                         follows from IsDefault and Esc from the window's own key
+                         handler, so neither needs the focus. Neither donate
+                         button is focused or the default, so Enter closes the
+                         card on every card. Alt+D is Done on the cards that
+                         carry it and Donate $5 on the one that does not, and the
+                         small Donate takes no access key. -->
                     <StackPanel Grid.Row="3" HorizontalAlignment="Center">
                         <Button x:Name="CompletionCloseButton"
                                 Content="{loc:Translate Action.Done}" Command="{Binding Completion.DismissCommand}"
@@ -1138,12 +1138,46 @@
                             </Button.Style>
                         </Button>
 
-                        <!-- Larger than Done. Hover text
-                             is invisible to a screen reader, which is why the
-                             same sentence is also the HelpText. A TextBlock
-                             rather than an AccessText: the label takes no access
-                             key, so an underscore reaching this string is shown
-                             as written. -->
+                        <!-- Under Done, on every card that carries it. It opens
+                             the donate page and leaves the card up. Hover text is
+                             invisible to a screen reader, which is why the same
+                             sentence is also the HelpText. A TextBlock rather than
+                             an AccessText: the label takes no access key, Done
+                             being beside it, so an underscore reaching this string
+                             is shown as written. -->
+                        <Button Command="{Binding Chrome.DonateCommand}"
+                                HorizontalAlignment="Center" Padding="12,0"
+                                Margin="{StaticResource GapBottom.Sm}"
+                                ToolTipService.InitialShowDelay="0"
+                                AutomationProperties.Name="{loc:Translate Automation.DonateSmall}"
+                                AutomationProperties.HelpText="{loc:Translate Completion.DonateAsk}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource SmallGhostPill}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Completion.AsksForDonation}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource Icon.Heart}"
+                                      Fill="{StaticResource Decoration.Heart}" Stretch="Uniform"
+                                      Width="{a11y:TextScaled 12}" Height="{a11y:TextScaled 12}"
+                                      VerticalAlignment="Center" Margin="{StaticResource GapRight.Icon}"/>
+                                <TextBlock Text="{loc:Translate Action.DonateSmall}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Button.ToolTip>
+                                <ToolTip x:Name="CompletionDonateToolTip"
+                                         Style="{StaticResource AccentTooltip}"
+                                         Content="{loc:Translate Completion.DonateAsk}"
+                                         Placement="Custom"/>
+                            </Button.ToolTip>
+                        </Button>
+
+                        <!-- Larger than Done. Hover text is invisible to a screen
+                             reader, which is why the same sentence is also the
+                             HelpText. -->
                         <Button x:Name="CompletionDonateButton" Style="{StaticResource AccentPill}"
                                 Visibility="{Binding Completion.AsksForDonation, Converter={StaticResource BoolToVis}}"
                                 Command="{Binding Completion.DonateCommand}"
@@ -1158,7 +1192,7 @@
                                       Fill="{StaticResource Decoration.Heart}" Stretch="Uniform"
                                       Width="{a11y:TextScaled 14}" Height="{a11y:TextScaled 14}"
                                       VerticalAlignment="Center" Margin="{StaticResource GapRight.Icon}"/>
-                                <TextBlock Text="{loc:Translate Action.Donate}" VerticalAlignment="Center"/>
+                                <AccessText Text="{loc:Translate Action.Donate}" VerticalAlignment="Center"/>
                             </StackPanel>
                             <Button.ToolTip>
                                 <ToolTip x:Name="CompletionDonateFiveToolTip"
@@ -1225,99 +1259,6 @@
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
-
-                    <!-- The wordless donate heart. It stands on every card
-                         except the one carrying Donate $5, which includes the
-                         all-clear, the card raised where the app could not
-                         establish enough to offer anything, the two where every
-                         file failed and the card after a Move the app stopped.
-                         It sits at the right of the card's last row and nothing
-                         else is drawn in it: the send status line above is
-                         centred text that can run nearly the card's full width,
-                         and the heart beside it would be drawn over its longer
-                         translations.
-
-                         It is declared after everything else so the ask is the
-                         final stop in the overlay's Tab cycle: the named
-                         actions the user came for are reached first, and
-                         nothing in the card carries an explicit TabIndex, so
-                         declaration order is the order.
-
-                         Hover text is invisible to a screen reader, which is
-                         why the same sentence is also the HelpText; the Name
-                         says what the control does and the HelpText carries
-                         the ask. -->
-                    <Button Grid.Row="6"
-                            HorizontalAlignment="Right"
-                            Command="{Binding Chrome.DonateCommand}"
-                            ToolTipService.InitialShowDelay="0"
-                            AutomationProperties.Name="{loc:Translate Automation.BuyMeACuppa}"
-                            AutomationProperties.HelpText="{loc:Translate Completion.DonateAsk}">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource SmallGhostPill}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Completion.AsksForDonation}" Value="True">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                        <!-- Scaled for the reason the language globe is: the
-                             heart is all this button has, so without it the ask
-                             shrinks against everything around it. -->
-                        <Path Data="{StaticResource Icon.Heart}"
-                              Fill="{StaticResource Decoration.Heart}" Stretch="Uniform"
-                              Width="{a11y:TextScaled 18}" Height="{a11y:TextScaled 18}"
-                              RenderTransformOrigin="0.5,0.5">
-                            <Path.RenderTransform>
-                                <ScaleTransform ScaleX="1" ScaleY="1"/>
-                            </Path.RenderTransform>
-                            <Path.Style>
-                                <Style TargetType="Path">
-                                    <Style.Triggers>
-                                        <!-- Hover grow honours "show animations": the scale
-                                             plays only while ReduceMotion is false, so an
-                                             animation-off user gets a static icon. IsMouseOver
-                                             and the live setting gate it together, and a
-                                             runtime toggle re-evaluates because ReduceMotion
-                                             raises PropertyChanged. -->
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
-                                                <Condition Binding="{Binding Source={x:Static a11y:AccessibilitySettings.Current}, Path=ReduceMotion}" Value="False"/>
-                                            </MultiDataTrigger.Conditions>
-                                            <MultiDataTrigger.EnterActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
-                                                                         To="1.2" Duration="0:0:0.15"/>
-                                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
-                                                                         To="1.2" Duration="0:0:0.15"/>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </MultiDataTrigger.EnterActions>
-                                            <MultiDataTrigger.ExitActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
-                                                                         To="1.0" Duration="0:0:0.15"/>
-                                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
-                                                                         To="1.0" Duration="0:0:0.15"/>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </MultiDataTrigger.ExitActions>
-                                        </MultiDataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Path.Style>
-                        </Path>
-                        <Button.ToolTip>
-                            <ToolTip x:Name="CompletionDonateToolTip"
-                                     Style="{StaticResource AccentTooltip}"
-                                     Content="{loc:Translate Completion.DonateAsk}"
-                                     Placement="Custom"/>
-                        </Button.ToolTip>
-                    </Button>
 
                 </Grid>
             </Border>

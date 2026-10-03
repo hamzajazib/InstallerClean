@@ -43,7 +43,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | _Done | _Klaar |
 | Details | Details |
 | _Donate | _Doneren |
-| Donate $5 | Donate $5 |
+| _Donate $5 | _Donate $5 |
+| Donate | Doneren |
 | Leave a _star on GitHub | Geef een s_ter op GitHub |
 | Apache 2.0 licence | Apache 2.0-licentie |
 | _Move | Ver_plaatsen |
@@ -361,8 +362,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Nederlands |
 | --- | --- |
 | Donate | Doneren |
-| Donate | Doneren |
 | Donate $5 | Donate $5 |
+| Donate | Doneren |
 | Cancel operation | Bewerking annuleren |
 | Cancel scan | Scan annuleren |
 | Cancel startup scan | Opstartscan annuleren |

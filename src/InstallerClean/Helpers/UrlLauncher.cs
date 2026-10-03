@@ -20,7 +20,7 @@ internal static class UrlLauncher
     /// is up to ten seconds of a window that cannot repaint, which Windows
     /// relabels "(Not Responding)" after five. It is quick while the shell is
     /// healthy and slow exactly when it is not, and the links it serves are
-    /// the donate heart, the update link, the About window's links and every
+    /// the donate buttons, the update link, the About window's links and every
     /// README link the app renders inside a sentence: the moments the app is
     /// asking to be trusted.
     /// </summary>

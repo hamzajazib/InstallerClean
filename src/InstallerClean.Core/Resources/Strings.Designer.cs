@@ -75,6 +75,7 @@ public static class Strings
     public static string Action_DeletePermanently => Get("Action.DeletePermanently");
     public static string Action_Details => Get("Action.Details");
     public static string Action_Donate => Get("Action.Donate");
+    public static string Action_DonateSmall => Get("Action.DonateSmall");
     public static string Action_Done => Get("Action.Done");
     public static string Action_LeaveStarOnGitHub => Get("Action.LeaveStarOnGitHub");
     public static string Action_Licence => Get("Action.Licence");
@@ -90,7 +91,6 @@ public static class Strings
     public static string Automation_About_ReportProblem_HelpText => Get("Automation.About.ReportProblem.HelpText");
     public static string Automation_AutoUpdateCheck_HelpText => Get("Automation.AutoUpdateCheck.HelpText");
     public static string Automation_BackupFolder => Get("Automation.BackupFolder");
-    public static string Automation_BuyMeACuppa => Get("Automation.BuyMeACuppa");
     public static string Automation_BuyMeACuppa_About => Get("Automation.BuyMeACuppa.About");
     public static string Automation_CancelOperation => Get("Automation.CancelOperation");
     public static string Automation_CancelScan => Get("Automation.CancelScan");
@@ -107,6 +107,7 @@ public static class Strings
     public static string Automation_ConfirmMove => Get("Automation.ConfirmMove");
     public static string Automation_ConfirmSendResultLog => Get("Automation.ConfirmSendResultLog");
     public static string Automation_Donate => Get("Automation.Donate");
+    public static string Automation_DonateSmall => Get("Automation.DonateSmall");
     public static string Automation_LeaveStarOnGitHub_About => Get("Automation.LeaveStarOnGitHub.About");
     public static string Automation_Licence_HelpText => Get("Automation.Licence.HelpText");
     public static string Automation_Minimise => Get("Automation.Minimise");

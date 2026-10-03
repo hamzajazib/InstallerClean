@@ -43,7 +43,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | _Done | _Tamam |
 | Details | Ayrıntılar |
 | _Donate | _Bağış yap |
-| Donate $5 | Donate $5 |
+| _Donate $5 | _Donate $5 |
+| Donate | Bağış yap |
 | Leave a _star on GitHub | GitHub'da _yıldız bırak |
 | Apache 2.0 licence | Apache 2.0 lisansı |
 | _Move | _Taşı |
@@ -361,8 +362,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Türkçe |
 | --- | --- |
 | Donate | Bağış yap |
-| Donate | Bağış yap |
 | Donate $5 | Donate $5 |
+| Donate | Bağış yap |
 | Cancel operation | İşlemi iptal et |
 | Cancel scan | Taramayı iptal et |
 | Cancel startup scan | Başlangıç taramasını iptal et |

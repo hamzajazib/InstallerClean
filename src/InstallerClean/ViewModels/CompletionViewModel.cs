@@ -124,12 +124,12 @@ public partial class CompletionViewModel : ObservableObject
 
     /// <summary>
     /// Puts "Donate $5" and "Close without donating" on the completion card in
-    /// place of Done and the wordless heart. True where a Move or Delete moved
+    /// place of Done and the small Donate under it. True where a Move or Delete moved
     /// or deleted files, a run the user cancelled part-way included. An
     /// all-clear, a run the re-verify held back entirely, a run every file
     /// errored on, a Move or Delete that reached no file and a Move the app
     /// stopped itself all leave it false, and those cards keep Done and the
-    /// heart. It measures the bytes the run moved or deleted, NOT whether the
+    /// small Donate. It measures the bytes the run moved or deleted, NOT whether the
     /// disk got any emptier, so a same-drive Move sets it while its heading
     /// says "moved" rather than "freed". Set from the bytes argument in each
     /// Show* method rather than derived from <see cref="LastResultFreedNothing"/>,
@@ -557,7 +557,7 @@ public partial class CompletionViewModel : ObservableObject
         Skipped = SkippedText(reverify);
         ResultLogStatusMessage = string.Empty;
         LastResultFreedNothing = movedBytes <= 0;
-        // The card after a Move the app stopped keeps Done and the heart.
+        // The card after a Move the app stopped keeps Done.
         AsksForDonation = movedBytes > 0 && !stopped;
         IsComplete = true;
     }

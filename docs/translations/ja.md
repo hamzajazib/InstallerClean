@@ -43,7 +43,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | _Done | 完了(_D) |
 | Details | 詳細 |
 | _Donate | 寄付(_D) |
-| Donate $5 | Donate $5 |
+| _Donate $5 | _Donate $5 |
+| Donate | 寄付 |
 | Leave a _star on GitHub | GitHubでスターを付ける(_S) |
 | Apache 2.0 licence | Apache 2.0 ライセンス |
 | _Move | 移動(_M) |
@@ -361,8 +362,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | 日本語 |
 | --- | --- |
 | Donate | 寄付 |
-| Donate | 寄付 |
 | Donate $5 | Donate $5 |
+| Donate | 寄付 |
 | Cancel operation | 操作をキャンセル |
 | Cancel scan | スキャンをキャンセル |
 | Cancel startup scan | 起動時スキャンをキャンセル |

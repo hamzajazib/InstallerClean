@@ -43,7 +43,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | _Done | _Готово |
 | Details | Деталі |
 | _Donate | _Підтримати |
-| Donate $5 | Donate $5 |
+| _Donate $5 | _Donate $5 |
+| Donate | Підтримати |
 | Leave a _star on GitHub | Лишити зірку на _GitHub |
 | Apache 2.0 licence | Ліцензія Apache 2.0 |
 | _Move | Пере_містити |
@@ -361,8 +362,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Українська |
 | --- | --- |
 | Donate | Підтримати |
-| Donate | Підтримати |
 | Donate $5 | Donate $5 |
+| Donate | Підтримати |
 | Cancel operation | Скасувати операцію |
 | Cancel scan | Скасувати сканування |
 | Cancel startup scan | Скасувати сканування під час запуску |

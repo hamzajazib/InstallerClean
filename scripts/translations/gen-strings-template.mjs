@@ -179,7 +179,7 @@ const MAP = {
   'Action.Done': `_Done`,
   'Action.Details': `Details`,
   'Action.BuyMeACuppa': `_Donate`,
-  'Action.Donate': `Donate \$5`,
+  'Action.Donate': `_Donate \$5`,
   'Action.LeaveStarOnGitHub': `Leave a _star on GitHub`,
   'Action.Licence': `Apache 2.0 licence`,
   'Action.Move': `_Move`,
@@ -193,7 +193,6 @@ const MAP = {
   'About.AutoUpdateCheck': `Check for updates automatically`,
 
   // Automation names (screen reader / accessibility)
-  'Automation.BuyMeACuppa': `Donate`,
   'Automation.BuyMeACuppa.About': `Donate`,
   'Automation.Donate': `Donate \$5`,
   'Automation.CancelOperation': `Cancel operation`,
@@ -652,6 +651,8 @@ const MAP = {
   'Cli.SourcesGivenUp': `InstallerClean stopped waiting for more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, run the command again.`,
   'Action.CloseWithoutDonating': `_Close without donating`,
   'Tooltip.Donate': `I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.`,
+  'Action.DonateSmall': `Donate`,
+  'Automation.DonateSmall': `Donate`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

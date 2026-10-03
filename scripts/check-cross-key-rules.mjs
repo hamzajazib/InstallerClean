@@ -42,6 +42,7 @@ const MUST_AGREE = [
   // to derive a name from and the override IS the label.
   { label: 'Action.BuyMeACuppa', name: 'Automation.BuyMeACuppa.About' },
   { label: 'Action.Donate', name: 'Automation.Donate' },
+  { label: 'Action.DonateSmall', name: 'Automation.DonateSmall' },
   { label: 'Action.LeaveStarOnGitHub', name: 'Automation.LeaveStarOnGitHub.About' },
   // Content is a plain string, so the override only restates what WPF derives.
   // It can still drift per language, which is the whole point.
@@ -132,7 +133,6 @@ const NAME_IS_THE_LABEL = new Set([]);
 // Nothing visible to agree with: an icon-only button, a scroll region, a
 // progress bar. The name is the control's only text.
 const NO_VISIBLE_LABEL = new Set([
-  'Automation.BuyMeACuppa',
   'Automation.ChangeLanguage',
   'Automation.Close',
   'Automation.CloseWindow',

@@ -846,23 +846,6 @@
       "vi": "04fd6c4d82cdb2ee",
       "zh-Hans": "04fd6c4d82cdb2ee"
     },
-    "Automation.BuyMeACuppa": {
-      "de": "c91ee0f2799df915",
-      "es": "c91ee0f2799df915",
-      "fr": "c91ee0f2799df915",
-      "id": "c91ee0f2799df915",
-      "it": "c91ee0f2799df915",
-      "ja": "c91ee0f2799df915",
-      "ko": "c91ee0f2799df915",
-      "nl": "c91ee0f2799df915",
-      "pl": "c91ee0f2799df915",
-      "pt-BR": "c91ee0f2799df915",
-      "ru": "c91ee0f2799df915",
-      "tr": "c91ee0f2799df915",
-      "uk": "c91ee0f2799df915",
-      "vi": "c91ee0f2799df915",
-      "zh-Hans": "c91ee0f2799df915"
-    },
     "Automation.BuyMeACuppa.About": {
       "de": "c91ee0f2799df915",
       "es": "c91ee0f2799df915",
@@ -6987,6 +6970,40 @@
       "uk": "8670b7c62c3564e9",
       "vi": "8670b7c62c3564e9",
       "zh-Hans": "8670b7c62c3564e9"
+    },
+    "Action.DonateSmall": {
+      "de": "c91ee0f2799df915",
+      "es": "c91ee0f2799df915",
+      "fr": "c91ee0f2799df915",
+      "id": "c91ee0f2799df915",
+      "it": "c91ee0f2799df915",
+      "ja": "c91ee0f2799df915",
+      "ko": "c91ee0f2799df915",
+      "nl": "c91ee0f2799df915",
+      "pl": "c91ee0f2799df915",
+      "pt-BR": "c91ee0f2799df915",
+      "ru": "c91ee0f2799df915",
+      "tr": "c91ee0f2799df915",
+      "uk": "c91ee0f2799df915",
+      "vi": "c91ee0f2799df915",
+      "zh-Hans": "c91ee0f2799df915"
+    },
+    "Automation.DonateSmall": {
+      "de": "c91ee0f2799df915",
+      "es": "c91ee0f2799df915",
+      "fr": "c91ee0f2799df915",
+      "id": "c91ee0f2799df915",
+      "it": "c91ee0f2799df915",
+      "ja": "c91ee0f2799df915",
+      "ko": "c91ee0f2799df915",
+      "nl": "c91ee0f2799df915",
+      "pl": "c91ee0f2799df915",
+      "pt-BR": "c91ee0f2799df915",
+      "ru": "c91ee0f2799df915",
+      "tr": "c91ee0f2799df915",
+      "uk": "c91ee0f2799df915",
+      "vi": "c91ee0f2799df915",
+      "zh-Hans": "c91ee0f2799df915"
     }
   }
 }
