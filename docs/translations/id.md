@@ -513,6 +513,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | Memindahkan {0} {1} yang tidak diperlukan ke {2}... |
 | Moved {0} unneeded {1}. | {0} {1} yang tidak diperlukan telah dipindahkan. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Pastikan program Anda masih bisa diperbarui dan dicopot seperti biasa, lalu hapus {0}. |
+| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean is free. If it helped, please donate $5: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Mudah untuk dibatalkan. Pindahkan kembali dari {0} ke {InstallerFolder} dan semuanya akan kembali seperti semula. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean tidak bisa lagi memastikan folder cadangan, jadi berhenti. Periksa {0}, lalu jalankan perintahnya lagi. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Proses InstallerClean lain memegang kunci instans-tunggal (GUI atau proses CLI lain). Kode keluar 75 (sementara); aman untuk dicoba lagi nanti. |

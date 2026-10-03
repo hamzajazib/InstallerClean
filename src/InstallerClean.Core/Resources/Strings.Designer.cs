@@ -168,6 +168,7 @@ public static class Strings
     public static string Cli_DeletedFiles => Get("Cli.DeletedFiles");
     public static string Cli_DeletingFiles => Get("Cli.DeletingFiles");
     public static string Cli_DestinationChangedMidBatch => Get("Cli.DestinationChangedMidBatch");
+    public static string Cli_DonateAsk => Get("Cli.DonateAsk");
     public static string Cli_EventLogAdminRightsNeeded => Get("Cli.EventLogAdminRightsNeeded");
     public static string Cli_EventLogBadArguments => Get("Cli.EventLogBadArguments");
     public static string Cli_EventLogCancelledNoWork => Get("Cli.EventLogCancelledNoWork");

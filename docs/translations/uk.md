@@ -513,6 +513,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | Триває переміщення до {2}: {0} непотрібних {1}... |
 | Moved {0} unneeded {1}. | Переміщено {0} непотрібних {1}. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Переконайтеся, що ваші програми досі оновлюються та видаляються як звичайно, а потім видаліть {0}. |
+| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean is free. If it helped, please donate $5: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Це легко скасувати. Перемістіть їх з {0} назад до {InstallerFolder}, і все повернеться як було. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean більше не зміг підтвердити папку резервних копій і зупинився. Перевірте {0}, потім запустіть команду ще раз. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Інший процес InstallerClean утримує блокування єдиного екземпляра (графічний інтерфейс чи інший запуск CLI). Вихід 75 (тимчасовий); можна безпечно повторити пізніше. |

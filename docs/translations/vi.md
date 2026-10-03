@@ -513,6 +513,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | Đang chuyển {0} {1} không cần thiết tới {2}... |
 | Moved {0} unneeded {1}. | Đã chuyển {0} {1} không cần thiết. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Hãy kiểm tra xem các chương trình của bạn vẫn cập nhật và gỡ cài đặt bình thường, rồi xóa {0}. |
+| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean is free. If it helped, please donate $5: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Hoàn tác rất đơn giản. Hãy chuyển chúng từ {0} trở lại {InstallerFolder} và mọi thứ sẽ như cũ. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean không còn xác nhận được thư mục sao lưu, nên đã dừng lại. Hãy kiểm tra {0}, rồi chạy lại lệnh. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Một tiến trình InstallerClean khác đang giữ khóa một-thực-thể (GUI hoặc một lần chạy CLI khác). Mã thoát 75 (tạm thời); có thể thử lại sau. |

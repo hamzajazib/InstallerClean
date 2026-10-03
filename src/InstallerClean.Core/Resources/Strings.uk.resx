@@ -2159,6 +2159,11 @@ InstallerClean уже працював від імені адміністрат�
        event-log twin, which are about whether the move can start. There is
        nothing here for a same-drive form to correct. -->
   <data name="Cli.MoveRestoreHint" xml:space="preserve"><value>Переконайтеся, що ваші програми досі оновлюються та видаляються як звичайно, а потім видаліть {0}.</value></data>
+  <!-- The last line of a Delete that deleted files or a Move that moved files, after
+       a blank line, printed only to a console somebody is watching and never to the
+       Application log. 0 = the donation page's address, printed as written. The
+       amount is in US dollars, written the way the language writes a dollar amount. -->
+  <data name="Cli.DonateAsk" xml:space="preserve"><value>InstallerClean is free. If it helped, please donate $5: {0}</value></data>
   <!-- The line a cancelled Move prints instead of the one above, where the window's
        card carries Completion.MoveCancelledRestoreHint. A run that went the distance
        leaves the reader deciding when to delete the backup; a run somebody stopped

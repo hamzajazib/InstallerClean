@@ -513,6 +513,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | Moviendo {0} {1} innecesarios a {2}... |
 | Moved {0} unneeded {1}. | Se movieron {0} {1} innecesarios. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Comprueba que tus programas siguen actualizándose y desinstalándose con normalidad, y luego elimina {0}. |
+| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean is free. If it helped, please donate $5: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Deshacerlo es sencillo. Muévelos de vuelta desde {0} a {InstallerFolder} y todo quedará como estaba. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean ya no pudo confirmar la carpeta de copia de seguridad, así que se detuvo. Comprueba {0} y vuelve a ejecutar el comando. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Otro proceso de InstallerClean mantiene el bloqueo de instancia única (la GUI u otra ejecución de la CLI). Código de salida 75 (transitorio); es seguro reintentar más tarde. |

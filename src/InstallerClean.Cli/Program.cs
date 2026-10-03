@@ -468,10 +468,17 @@ internal static class Program
     /// still holds it, and skipping the disposal of its own would leak every singleton
     /// in the graph on the ordinary path.
     /// </param>
+    /// <param name="consoleWatched">
+    /// Whether the donate line prints, or null for <see cref="ConsoleIsWatched"/>. Null
+    /// on every production path. A test passes its own answer, standard output being
+    /// redirected under a test runner.
+    /// </param>
     internal static async Task<int> RunWorkAsync(
         string arg, CliInvocation invocation, CancellationToken token,
-        IServiceProvider? servicesOverride = null)
+        IServiceProvider? servicesOverride = null, Func<bool>? consoleWatched = null)
     {
+        consoleWatched ??= ConsoleIsWatched;
+
         // What a cancelled batch had actually committed, read by the OCE catch to
         // write its EventLog summary and to pick ExitPartial over ExitCancelled.
         // Taken from the service's own DeletedCount / MovedCount, never from the
@@ -868,6 +875,11 @@ internal static class Program
                     token.ThrowIfCancellationRequested();
                 }
 
+                // After the cancel re-entry, so a cancelled run never prints it: there
+                // the undo, or the cancellation itself, stays the last line.
+                if (result.DeletedCount > 0 && !result.Cancelled)
+                    AskForDonation(consoleWatched);
+
                 // Bytes-recovered figure excludes the per-file error
                 // list. Reporting the scan total on a partial failure
                 // would overstate the freed-space figure for every run
@@ -1034,6 +1046,11 @@ internal static class Program
                 token.ThrowIfCancellationRequested();
             }
 
+            // See the /d branch. The stopped Move returns through ReportAbortedMove
+            // above and never reaches this.
+            if (moveResult.MovedCount > 0 && !moveResult.Cancelled)
+                AskForDonation(consoleWatched);
+
             // Same per-file error exclusion as the /d branch.
             long actualMovedBytes = moveResult.Errors.Count == 0
                 ? totalBytes
@@ -1120,6 +1137,29 @@ internal static class Program
             // HardError audit entry, ExitError, and never ex.Message.
             return ReportUnexpectedError(arg, ex);
         }
+    }
+
+    /// <summary>
+    /// Whether a person can be watching this console: standard output is not
+    /// redirected to a file or another program, and the process runs in an
+    /// interactive window station, which is what <see cref="Environment.UserInteractive"/>
+    /// reports.
+    /// </summary>
+    internal static bool ConsoleIsWatched() =>
+        !Console.IsOutputRedirected && Environment.UserInteractive;
+
+    /// <summary>
+    /// The donate line, after a blank line, on standard output only and only where
+    /// <paramref name="consoleWatched"/> answers true. Never written to the
+    /// Application log, and nothing about the run's outcome or exit code depends on
+    /// it.
+    /// </summary>
+    private static void AskForDonation(Func<bool> consoleWatched)
+    {
+        if (!consoleWatched())
+            return;
+        Console.WriteLine();
+        Console.WriteLine(string.Format(Strings.Cli_DonateAsk, SupportLink.KoFiUrl));
     }
 
     /// <summary>

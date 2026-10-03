@@ -661,6 +661,7 @@ const CLI = {
   'Cli.SourceGivenUp.Drive': `InstallerClean stopped waiting for drive {0} and left alone any file still to be checked against it. Once it's responding normally, run the command again.`,
   'Cli.SourceGivenUp.Path': `InstallerClean stopped waiting for {0} and left alone any file still to be checked against it. Once it's responding normally, run the command again.`,
   'Cli.SourcesGivenUp': `InstallerClean stopped waiting for more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, run the command again.`,
+  'Cli.DonateAsk': `InstallerClean is free. If it helped, please donate \$5: {0}`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

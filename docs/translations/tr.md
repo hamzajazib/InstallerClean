@@ -513,6 +513,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | {0} gereksiz {1} şuraya taşınıyor: {2}... |
 | Moved {0} unneeded {1}. | {0} gereksiz {1} taşındı. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Programlarınızın hâlâ normal şekilde güncellendiğini ve kaldırıldığını doğrulayın, sonra {0} klasörünü silin. |
+| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean is free. If it helped, please donate $5: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Geri almak kolay. Onları {0} konumundan {InstallerFolder} klasörüne geri taşıyın, her şey eskisi gibi olur. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean yedek klasörünü artık doğrulayamadı, bu yüzden durdu. {0} konumunu denetleyin, sonra komutu yeniden çalıştırın. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Başka bir InstallerClean işlemi tek örnek kilidini tutuyor (GUI ya da başka bir CLI çalıştırması). Çıkış 75 (geçici); daha sonra yeniden denemek güvenli. |

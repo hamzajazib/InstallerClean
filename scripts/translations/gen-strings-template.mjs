@@ -653,6 +653,7 @@ const MAP = {
   'Tooltip.Donate': `I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.`,
   'Action.DonateSmall': `Donate`,
   'Automation.DonateSmall': `Donate`,
+  'Cli.DonateAsk': `InstallerClean is free. If it helped, please donate \$5: {0}`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,
