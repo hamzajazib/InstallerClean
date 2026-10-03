@@ -11,17 +11,17 @@ using NSubstitute;
 namespace InstallerClean.Tests.ViewModels;
 
 /// <summary>
-/// The button on the Move or Delete card that gives up on the drive or share a waiting
-/// heading names, during the check made before the batch and during the scan after it. It
-/// goes up with the wait's own line and goes with the wait's end or the next write that
-/// changes the heading, whatever writes it, whether or not the wait's line or its end changes
-/// the text, and the name a screen reader speaks for the heading changes with it in the same
-/// step. Each Move here is started on a stand-in for the window's dispatcher, so the card's
-/// reporters are made there and the waits reach the view model there, one at a time and in
-/// order, as they do in the window. The check and the scan run on the thread pool and report
-/// the steps a test gives them, each step returning once the card has applied what it
-/// reported. The filesystem is substituted as in <see cref="CleanupPreFlightTests"/>, so the
-/// check before the Move is reached.
+/// The button on the Move or Delete card that gives up on the drive or share a waiting heading
+/// names, during the check made before the batch and during the scan after it. It goes up with
+/// the wait's own line and goes with the wait's end or any other write to the heading,
+/// whatever writes it, whether or not any of these writes changes the text, and the name a
+/// screen reader speaks for the heading changes with it in the same step. Each Move here is
+/// started on a stand-in for the window's dispatcher, so the card's reporters are made there
+/// and the waits reach the view model there, one at a time and in order, as they do in the
+/// window. The check and the scan run on the thread pool and report the steps a test gives
+/// them, each step returning once the card has applied what it reported. The filesystem is
+/// substituted as in <see cref="CleanupPreFlightTests"/>, so the check before the Move is
+/// reached.
 /// </summary>
 public class CleanupStopWaitingTests
 {
@@ -352,6 +352,43 @@ public class CleanupStopWaitingTests
 
         Assert.True(upWithTheWait);
         Assert.True(goneWithItsEnd);
+    }
+
+    [Fact]
+    public async Task A_heading_worded_as_the_waiting_line_takes_the_button_away_and_raises_only_the_button()
+    {
+        // A write to the heading during the wait, other than the wait's own, that reads as
+        // the waiting line, so the text does not change. The button goes with it.
+        var vm = await ScannedViewModelAsync();
+        var raised = new List<string?>();
+        var buttonChecks = 0;
+        void Raised(object? _, System.ComponentModel.PropertyChangedEventArgs e) => raised.Add(e.PropertyName);
+        void ButtonChecked(object? _, EventArgs e) => buttonChecks++;
+        bool? goneWithTheWrite = null;
+        CheckReports(async (p, _) =>
+        {
+            await ShowAsync(p, ScanProgressUpdate.Waiting(new SourceFolderWait("D:", () => { })));
+            await _dispatcher.RunAsync(() =>
+            {
+                var c = vm.Cleanup;
+                c.PropertyChanged += Raised;
+                c.StopWaitingCommand.CanExecuteChanged += ButtonChecked;
+                c.OperationProgress = WaitLine("D:");
+                c.PropertyChanged -= Raised;
+                c.StopWaitingCommand.CanExecuteChanged -= ButtonChecked;
+                goneWithTheWrite = c.WaitShown is null && !c.StopWaitingCommand.CanExecute(null)
+                    && c.OperationProgress == WaitLine("D:") && c.OperationProgressName == WaitLine("D:");
+            });
+        });
+
+        await MoveAsync(vm);
+
+        Assert.True(goneWithTheWrite);
+        Assert.Equal(
+            [nameof(CleanupViewModel.WaitShown), nameof(CleanupViewModel.CanStopWaiting),
+                nameof(CleanupViewModel.StopWaitingName), nameof(CleanupViewModel.OperationProgressName)],
+            raised);
+        Assert.Equal(1, buttonChecks);
     }
 
     [Fact]

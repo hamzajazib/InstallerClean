@@ -1,6 +1,7 @@
 using System.Globalization;
 using InstallerClean.Helpers;
 using InstallerClean.Resources;
+using InstallerClean.Services;
 
 namespace InstallerClean.Tests.Helpers;
 
@@ -317,6 +318,17 @@ public class DisplayHelpersTests
     [InlineData("d")]
     public void A_share_or_any_other_path_is_named_as_it_is_spelled(string root) =>
         Assert.Equal(root, DisplayHelpers.SourceRootName(root));
+
+    [Theory]
+    [InlineData("1:")]
+    [InlineData("é:")]
+    public void A_root_of_two_characters_with_no_ASCII_letter_before_its_colon_is_named_as_a_path(string root)
+    {
+        Assert.False(DeclaredProductCheck.IsDriveLetter(root));
+        Assert.Equal(root, DisplayHelpers.SourceRootName(root));
+        Assert.Equal(string.Format(Strings.Status_WaitingForPath, root), DisplayHelpers.WaitingFor(root));
+        Assert.Equal(string.Format(Strings.Automation_StopWaitingForPath, root), DisplayHelpers.StopWaitingFor(root));
+    }
 
     [Theory]
     [InlineData(@"\\fileserver\apps")]

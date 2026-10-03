@@ -49,9 +49,35 @@ public partial class ScanViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(ScanCommand))]
     private bool _isScanInFlight;
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ScanProgressName))]
     private string _scanProgress = string.Empty;
+
+    /// <summary>
+    /// The line on the scanning card that a screen reader reads out
+    /// (<see cref="ScanProgressName"/>). Every write sets <see cref="WaitShown"/> to the wait
+    /// whose line <see cref="ShowWait"/> is writing, which is null for every other write,
+    /// whether or not the line changes. Where it changes, the button is set after the line
+    /// is stored and before the change is raised, so the line, the button under it and the
+    /// name a screen reader speaks change in one step.
+    /// </summary>
+    public string ScanProgress
+    {
+        get => _scanProgress;
+        set
+        {
+            if (EqualityComparer<string>.Default.Equals(_scanProgress, value))
+            {
+                WaitShown = _waitTakingTheLine;
+                return;
+            }
+
+            OnPropertyChanging();
+            OnPropertyChanging(nameof(ScanProgressName));
+            _scanProgress = value;
+            WaitShown = _waitTakingTheLine;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ScanProgressName));
+        }
+    }
 
     /// <summary>
     /// What a screen reader speaks for <see cref="ScanProgress"/>: the line itself, and
@@ -64,12 +90,9 @@ public partial class ScanViewModel : ObservableObject
 
     /// <summary>
     /// The wait <see cref="ScanProgress"/> names while it is a waiting line, and null for
-    /// every other line. The write putting a wait's own line up sets it to that wait, and the
-    /// write putting back the line the wait took sets it to null, whatever either line says
-    /// (<see cref="WriteWaitLine"/>). Where the line changes, it is set before the change is
-    /// raised (<see cref="OnScanProgressChanged(string)"/>), so the line, the button under it
-    /// and the name a screen reader speaks change in one step, and any other write that
-    /// changes the line takes the button away.
+    /// every other line. Every write to the line sets it: the write putting a wait's own line
+    /// up sets it to that wait, and every other write sets it to null, the write putting back
+    /// the line the wait took among them, whatever any of them says.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanStopWaiting))]
@@ -80,10 +103,6 @@ public partial class ScanViewModel : ObservableObject
 
     /// <summary>The wait whose line <see cref="ShowWait"/> is writing, and null at any other time.</summary>
     private SourceFolderWait? _waitTakingTheLine;
-
-    // Runs after the line is stored and before the change is raised, so the button and
-    // the spoken name already match the new line when anything hears of it.
-    partial void OnScanProgressChanged(string value) => WaitShown = _waitTakingTheLine;
 
     /// <summary>Whether the scanning card shows the button that stops the wait the line names.</summary>
     public bool CanStopWaiting => WaitShown is not null;
@@ -271,7 +290,7 @@ public partial class ScanViewModel : ObservableObject
         _rebootService = rebootService;
         _dialogService = dialogService;
         _isExternallyBlocked = isExternallyBlocked ?? (() => false);
-        _statusWait = new WaitLine(() => ScanProgress, WriteWaitLine);
+        _statusWait = new WaitLine(() => ScanProgress, line => ScanProgress = line);
     }
 
     /// <summary>
@@ -744,18 +763,6 @@ public partial class ScanViewModel : ObservableObject
         {
             _waitTakingTheLine = null;
         }
-    }
-
-    /// <summary>
-    /// Writes <paramref name="line"/>, a wait's line going up or the line it took going back,
-    /// to <see cref="ScanProgress"/>, and sets <see cref="WaitShown"/> to the wait taking the
-    /// line, or to null for the line going back. Set here as well as on the line's change, so
-    /// a line that reads the same as the one it replaces still moves the button.
-    /// </summary>
-    private void WriteWaitLine(string line)
-    {
-        ScanProgress = line;
-        WaitShown = _waitTakingTheLine;
     }
 
     [RelayCommand]

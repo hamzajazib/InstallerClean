@@ -132,9 +132,36 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     [NotifyCanExecuteChangedFor(nameof(MoveAllCommand))]
     [NotifyCanExecuteChangedFor(nameof(DeleteAllCommand))]
     private bool _isOperationInFlight;
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(OperationProgressName))]
     private string _operationProgress = string.Empty;
+
+    /// <summary>
+    /// The heading on the Move or Delete card, which a screen reader reads out
+    /// (<see cref="OperationProgressName"/>). Every write sets <see cref="WaitShown"/> to the
+    /// wait whose line <see cref="WaitsInTheHeading"/> is writing, which is null for every
+    /// other write, whether or not the heading changes. Where it changes, the button is set
+    /// after the heading is stored and before the change is raised, so the heading, the
+    /// button under it and the name a screen reader speaks change in one step.
+    /// </summary>
+    public string OperationProgress
+    {
+        get => _operationProgress;
+        set
+        {
+            if (EqualityComparer<string>.Default.Equals(_operationProgress, value))
+            {
+                WaitShown = _waitTakingTheLine;
+                return;
+            }
+
+            OnPropertyChanging();
+            OnPropertyChanging(nameof(OperationProgressName));
+            _operationProgress = value;
+            WaitShown = _waitTakingTheLine;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(OperationProgressName));
+        }
+    }
+
     [ObservableProperty] private int _operationCurrentFile;
     [ObservableProperty] private int _operationTotalFiles;
     [ObservableProperty] private string _operationCurrentFileName = string.Empty;
@@ -151,12 +178,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// The wait <see cref="OperationProgress"/> names while it is a waiting line, and null
-    /// for every other heading. The write putting a wait's own line up sets it to that wait,
-    /// and the write putting back the heading the wait took sets it to null, whatever either
-    /// says (<see cref="WriteWaitLine"/>). Where the heading changes, it is set before the
-    /// change is raised (<see cref="OnOperationProgressChanged(string)"/>), so the heading,
-    /// the button under it and the name a screen reader speaks change in one step, and any
-    /// other write that changes the heading takes the button away.
+    /// for every other heading. Every write to the heading sets it: the write putting a
+    /// wait's own line up sets it to that wait, and every other write sets it to null, the
+    /// write putting back the heading the wait took among them, whatever any of them says.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanStopWaiting))]
@@ -167,10 +191,6 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
 
     /// <summary>The wait whose line <see cref="WaitsInTheHeading"/> is writing, and null at any other time.</summary>
     private SourceFolderWait? _waitTakingTheLine;
-
-    // Runs after the heading is stored and before the change is raised, so the button and
-    // the spoken name already match the new heading when anything hears of it.
-    partial void OnOperationProgressChanged(string value) => WaitShown = _waitTakingTheLine;
 
     /// <summary>Whether the card shows the button that stops the wait the heading names.</summary>
     public bool CanStopWaiting => WaitShown is not null;
@@ -1975,7 +1995,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// </summary>
     private IProgress<ScanProgressUpdate> WaitsInTheHeading()
     {
-        var heading = new WaitLine(() => OperationProgress, WriteWaitLine);
+        var heading = new WaitLine(() => OperationProgress, line => OperationProgress = line);
         return new WaitsOnly(new Progress<ScanProgressUpdate>(update =>
         {
             if (IsCancellationRequested) return;
@@ -1989,19 +2009,6 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 _waitTakingTheLine = null;
             }
         }));
-    }
-
-    /// <summary>
-    /// Writes <paramref name="line"/>, a wait's line going up or the heading it took going
-    /// back, to <see cref="OperationProgress"/>, and sets <see cref="WaitShown"/> to the wait
-    /// taking the heading, or to null for the heading going back. Set here as well as on the
-    /// heading's change, so a line that reads the same as the one it replaces still moves the
-    /// button.
-    /// </summary>
-    private void WriteWaitLine(string line)
-    {
-        OperationProgress = line;
-        WaitShown = _waitTakingTheLine;
     }
 
     private void OnOperationProgressUpdate(OperationProgress p)

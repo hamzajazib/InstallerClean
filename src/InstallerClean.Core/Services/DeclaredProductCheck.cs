@@ -1183,7 +1183,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// (<see cref="Helpers.DisplayHelpers.SourceRootName"/>), so a change here changes what they
     /// call a drive as well as which roots the check asks the kind of (<see cref="KindOf"/>).
     /// </summary>
-    internal static bool IsDriveLetter(string root) => root.Length == 2 && root[1] == ':';
+    internal static bool IsDriveLetter(string root) =>
+        root.Length == 2 && char.IsAsciiLetter(root[0]) && root[1] == ':';
 
     /// <summary>
     /// Whether <paramref name="root"/>, from <see cref="RootOf"/>, is a drive letter that

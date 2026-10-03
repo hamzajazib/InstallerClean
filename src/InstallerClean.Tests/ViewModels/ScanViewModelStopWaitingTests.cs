@@ -9,14 +9,14 @@ using NSubstitute;
 namespace InstallerClean.Tests.ViewModels;
 
 /// <summary>
-/// The button on the scanning card that gives up on the drive or share a waiting line
-/// names. It goes up with the wait's own line and goes with the wait's end or the next write
-/// that changes the line, whatever writes it, whether or not the wait's line or its end
-/// changes the text, and the name a screen reader speaks for the line changes with it in the
-/// same step. Each scan here is a Re-scan started on a stand-in for the window's
-/// dispatcher, so the card's progress reaches the view model there, one report at a time and
-/// in order, as it does in the window. The scan service runs on the thread pool and reports
-/// the steps a test gives it, each step returning once the card has applied what it reported.
+/// The button on the scanning card that gives up on the drive or share a waiting line names.
+/// It goes up with the wait's own line and goes with the wait's end or any other write to the
+/// line, whatever writes it, whether or not any of these writes changes the text, and the name
+/// a screen reader speaks for the line changes with it in the same step. Each scan here is a
+/// Re-scan started on a stand-in for the window's dispatcher, so the card's progress reaches
+/// the view model there, one report at a time and in order, as it does in the window. The scan
+/// service runs on the thread pool and reports the steps a test gives it, each step returning
+/// once the card has applied what it reported.
 /// </summary>
 public class ScanViewModelStopWaitingTests
 {
@@ -169,6 +169,53 @@ public class ScanViewModelStopWaitingTests
 
         Assert.True(goneWithTheStep);
         Assert.Equal(NextStep, afterTheEnd);
+    }
+
+    [Fact]
+    public async Task A_step_worded_as_the_waiting_line_takes_the_button_away_and_raises_only_the_button()
+    {
+        // The step arrives while the wait is on the line and reads as that line, so the text
+        // does not change. The button goes with it and the wait's end then leaves the step.
+        // The scan's own timer can raise IsScanning at any point here, so it is left out of
+        // the changes recorded.
+        var vm = NewViewModel();
+        var raised = new ConcurrentQueue<string?>();
+        var buttonChecks = 0;
+        void Raised(object? _, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(ScanViewModel.IsScanning)) raised.Enqueue(e.PropertyName);
+        }
+        void ButtonChecked(object? _, EventArgs e) => Interlocked.Increment(ref buttonChecks);
+        bool? goneWithTheStep = null;
+        (string Line, bool Button)? afterTheEnd = null;
+        ScanReports(
+            (p, _) => ShowAsync(p, new ScanProgressUpdate(Milestone)),
+            (p, _) => ShowAsync(p, ScanProgressUpdate.Waiting(new SourceFolderWait("D:", () => { }))),
+            async (p, _) =>
+            {
+                vm.PropertyChanged += Raised;
+                vm.StopWaitingCommand.CanExecuteChanged += ButtonChecked;
+                await ShowAsync(p, new ScanProgressUpdate(WaitLine("D:")));
+                vm.PropertyChanged -= Raised;
+                vm.StopWaitingCommand.CanExecuteChanged -= ButtonChecked;
+                goneWithTheStep = vm.WaitShown is null && !vm.StopWaitingCommand.CanExecute(null)
+                    && vm.ScanProgress == WaitLine("D:") && vm.ScanProgressName == WaitLine("D:");
+            },
+            async (p, _) =>
+            {
+                await ShowAsync(p, ScanProgressUpdate.Waiting(null));
+                afterTheEnd = (vm.ScanProgress, vm.CanStopWaiting);
+            });
+
+        await RescanAsync(vm);
+
+        Assert.True(goneWithTheStep);
+        Assert.Equal(
+            [nameof(ScanViewModel.WaitShown), nameof(ScanViewModel.CanStopWaiting),
+                nameof(ScanViewModel.StopWaitingName), nameof(ScanViewModel.ScanProgressName)],
+            raised);
+        Assert.Equal(1, buttonChecks);
+        Assert.Equal((WaitLine("D:"), false), afterTheEnd);
     }
 
     [Fact]
