@@ -593,15 +593,21 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         if (chosen is not null) MoveDestination = chosen;
     }
 
-    private bool CanCancelOperation() => IsOperating && !IsCancellationRequested;
+    // Live while the operation holds a source to cancel: through the Move's
+    // probe, the re-verify and the batch, and through the rescan after the
+    // batch, which installs one of its own (RefreshAfterBatchAsync).
+    // Everything else an operation does with the overlay up, a refusal's
+    // dialog and gate re-check, a failure dialog or the wait for the report,
+    // stops for nothing, so Cancel and Esc are out of use there.
+    private bool CanCancelOperation() => IsOperating && !IsCancellationRequested && _operationCts is not null;
 
     [RelayCommand(CanExecute = nameof(CanCancelOperation))]
     private void CancelOperation()
     {
         IsCancellationRequested = true;
-        // Races the finally block that disposes _operationCts;
-        // ObjectDisposedException here means the operation finished
-        // before the click reached the dispatcher.
+        // Every holder nulls the field before it disposes the source, so on
+        // the dispatcher this finds a live source or none. The catch is for a
+        // call from another thread landing between the two.
         try { _operationCts?.Cancel(); }
         catch (ObjectDisposedException) { }
         // The move/delete loop only repaints OperationProgress on its
@@ -970,6 +976,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             }
             catch (Exception ex)
             {
+                // Nothing is left running on the operation's source, so it goes
+                // before the clean-up and the dialog.
+                ReleaseOperationSource();
                 var failure = _scan.DescribeScanFailure(ex);
                 OperationProgress = string.Empty;
                 // The re-verify runs before the batch, so nothing was placed.
@@ -1005,8 +1014,21 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             MoveResult result;
             try
             {
-                result = await _moveService.MoveFilesAsync(survivingPaths, dest,
-                    UnderLeaseClaims.From(reverify), progress, _operationCts!.Token);
+                try
+                {
+                    result = await _moveService.MoveFilesAsync(survivingPaths, dest,
+                        UnderLeaseClaims.From(reverify), progress, _operationCts!.Token);
+                }
+                finally
+                {
+                    // The batch is the last step on the operation's source, so it
+                    // goes here, ahead of every arm below: the arms that stop for
+                    // nothing have no Cancel. On the arms that rescan, this and the
+                    // rescan's install run in one dispatcher pass, so the button
+                    // is live again before WPF re-checks the keyboard focus, and
+                    // keeps it.
+                    ReleaseOperationSource();
+                }
             }
             catch (MoveAbortedException ex)
             {
@@ -1388,6 +1410,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             }
             catch (Exception ex)
             {
+                // As on the Move path, the source goes before the dialog.
+                ReleaseOperationSource();
                 var failure = _scan.DescribeScanFailure(ex);
                 OperationProgress = string.Empty;
                 if (failure.IsError)
@@ -1414,8 +1438,18 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             var survivingBytes = survivingFiles.Sum(f => f.SizeBytes);
 
             var progress = new Progress<OperationProgress>(OnOperationProgressUpdate);
-            var result = await _deleteService.DeleteFilesAsync(
-                survivingPaths, UnderLeaseClaims.From(reverify), progress, _operationCts.Token);
+            DeleteResult result;
+            try
+            {
+                result = await _deleteService.DeleteFilesAsync(
+                    survivingPaths, UnderLeaseClaims.From(reverify), progress, _operationCts.Token);
+            }
+            finally
+            {
+                // The last step on the operation's source, released as on the
+                // Move path.
+                ReleaseOperationSource();
+            }
 
             if (result.InstallerBusy)
             {
@@ -1862,11 +1896,11 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// path of a Move or a Delete calls this, including the pre-flight's early
     /// returns, so the operation's state is torn down in one place.
     ///
-    /// <see cref="RefreshAfterBatchAsync"/> is the one caller that hands
-    /// over a source of its own: it disposes the operation's and installs a
-    /// fresh one for the rescan, then clears it again, so on every path that
-    /// runs it this finds the field already null and the flags are all it
-    /// clears.
+    /// On every path past the batch this finds the field already null and the
+    /// flags are all it clears: the batch lets go of the operation's source as
+    /// it returns, a re-verify that fails lets go of it before its dialog, and
+    /// <see cref="RefreshAfterBatchAsync"/> lets go of the one it installs as it
+    /// returns (<see cref="ReleaseOperationSource"/>).
     ///
     /// Order matters on two fronts: the null happens before Dispose so a
     /// concurrent CancelOperationCommand reading the field sees no CTS
@@ -1874,16 +1908,14 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// first so a still-running worker on the Dispose-during-shutdown
     /// path observes OperationCanceledException at its next
     /// ThrowIfCancellationRequested rather than ObjectDisposedException.
-    /// Cancel on a completed CTS (the success-path callers below) is a
-    /// no-op.
     ///
     /// The flag is cleared here rather than in each operation's finally
-    /// because the Move pre-flight has four early returns that never reach
-    /// one (cancelled probe, failed probe, not enough space, declined
-    /// confirmation). A Cancel clicked during the probe left the flag set
-    /// on those paths, and CanCancelOperation reads !IsCancellationRequested,
-    /// so the Cancel button and Esc stayed dead for the whole of the next
-    /// operation.
+    /// because the Move pre-flight and the gate re-check before either batch
+    /// return early without reaching one: a cancelled or failed probe, a
+    /// destination refused, not enough space, a declined confirmation, a gate
+    /// that blocks or throws. CanCancelOperation reads !IsCancellationRequested,
+    /// so clearing it here is what leaves Cancel and Esc live for the next
+    /// operation after a Cancel pressed during the probe.
     /// </summary>
     private void DisposeOperationCts()
     {
@@ -1893,6 +1925,22 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         cts?.Dispose();
         IsCancellationRequested = false;
         IsOperationInFlight = false;
+    }
+
+    /// <summary>
+    /// Lets go of the operation's cancellation source once nothing is left
+    /// running on it, which takes Cancel and Esc out of use
+    /// (<see cref="CanCancelOperation"/>) until <see cref="RefreshAfterBatchAsync"/>
+    /// installs a source for the rescan. The field is nulled before the dispose,
+    /// as in <see cref="DisposeOperationCts"/>, and the button is told, because it
+    /// reads the predicate again only when CanExecuteChanged is raised.
+    /// </summary>
+    private void ReleaseOperationSource()
+    {
+        var cts = _operationCts;
+        _operationCts = null;
+        cts?.Dispose();
+        CancelOperationCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>
@@ -1914,26 +1962,28 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// the scan's, so a finished delete's overlay says it is scanning rather than
     /// "Deleting..." over "71 of 71" while a scan runs behind it.
     ///
-    /// It cannot reuse the operation's own token, and that is why arming the
-    /// Cancel button is not simply a matter of passing the token the caller
-    /// already holds. On the cancel paths it is cancelled by definition and would
-    /// abandon the refresh at its first checkpoint, leaving the window with no
-    /// list at all; on the unforeseen-failure path the caller's finally cancels it
-    /// moments later, which does the same thing from mid-walk;
-    /// and on a success path a Cancel pressed as the last file finished leaves a
-    /// cancelled token behind a batch that reports itself complete. Nor can the
-    /// refresh run without a token: this is a full folder walk plus a full API
+    /// It runs on a source of its own, never the operation's token, and that is
+    /// why arming the Cancel button is not simply a matter of passing the token
+    /// the caller already holds. On the cancel paths that token is cancelled by
+    /// definition and would abandon the refresh at its first checkpoint, leaving
+    /// the window with no list at all; and on a success path a Cancel pressed as
+    /// the last file finished leaves a cancelled token behind a batch that
+    /// reports itself complete. Nor can the refresh run without a token: this
+    /// is a full folder walk plus a full API
     /// enumeration on a folder that can hold millions of files, and the user is
     /// watching an overlay that has stopped saying anything. Held behind
     /// a greyed Cancel button with nothing advancing, that wait is the shape
     /// people report as a hang.
     ///
-    /// So the button is re-armed rather than left dead: clearing
-    /// IsCancellationRequested is what re-enables it (IsOperating is still true
-    /// here, and the overlay's own finally clears both). A second Cancel then
-    /// stops the refresh too, and the window drops the list from before the
-    /// batch rather than showing it, as it does when the refresh fails
-    /// (<see cref="ScanViewModel.RefreshAsync"/>).
+    /// So the button is re-armed rather than left dead: the fresh source and a
+    /// cleared IsCancellationRequested are what re-enable it
+    /// (<see cref="CanCancelOperation"/>; IsOperating is still true here, and the
+    /// overlay's own finally clears it). A second Cancel then stops the refresh
+    /// too, and the window drops the list from before the batch rather than
+    /// showing it, as it does when the refresh fails
+    /// (<see cref="ScanViewModel.RefreshAsync"/>). As the refresh returns it lets
+    /// go of its source, and the button goes out of use again for whatever the
+    /// caller does next.
     ///
     /// The overlay's numbers go with the heading. They belong to a batch that is
     /// over and the rescan reports no progress of its own, so left in place they
@@ -1954,18 +2004,18 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         // another, both of them claims about progress nothing here can measure.
         IsOperationProgressIndeterminate = true;
 
-        // The operation's own source is finished with, and this is the one path
-        // that takes the field away from DisposeOperationCts before it runs, so
-        // it is disposed here rather than by the teardown. No Cancel first:
-        // nothing still running holds the token, and it is either cancelled
-        // already or about to be by the caller's finally.
-        var finished = _operationCts;
-        _operationCts = null;
-        finished?.Dispose();
+        // The operation's source goes here where the batch has not already let
+        // go of it: a re-verify that held every file back, or was cancelled,
+        // comes straight here. No Cancel first: nothing still running holds
+        // the token.
+        ReleaseOperationSource();
 
         var cts = new CancellationTokenSource();
         _operationCts = cts;
         IsCancellationRequested = false;
+        // Told as well as cleared: on a batch nobody cancelled the flag is
+        // already clear, and clearing it again raises nothing.
+        CancelOperationCommand.NotifyCanExecuteChanged();
         OperationProgress = Strings.Status_Scanning;
         try
         {
@@ -1973,14 +2023,12 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         }
         finally
         {
-            // Cleared here rather than left to the caller's finally so a second
-            // Cancel arriving after the refresh returns cannot cancel a source
-            // the next operation is about to install.
+            // Let go of as the rescan returns, because what the caller does
+            // next, the card, a dialog or the wait for the report, stops for
+            // nothing. Only this refresh's own source, which the view model's
+            // Dispose can have taken first.
             if (ReferenceEquals(_operationCts, cts))
-            {
-                _operationCts = null;
-                cts.Dispose();
-            }
+                ReleaseOperationSource();
         }
     }
 

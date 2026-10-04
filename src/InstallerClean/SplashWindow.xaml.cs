@@ -106,6 +106,15 @@ public partial class SplashWindow : Window
         AnimateProgress(_fill.AtTicker(update.Position, update.Total));
     }
 
+    // The startup scan has finished, so Cancel has nothing left to stop: it goes out
+    // of use, and Esc with it, a disabled IsCancel button taking no access key. The
+    // step says "Done." and the bar eases to full over the time the splash has left.
+    public void ShowScanFinished(TimeSpan ease)
+    {
+        CancelButton.IsEnabled = false;
+        UpdateStep(Strings.Status_Done, 100, ease);
+    }
+
     public void UpdateStep(string message, double progressPercent, TimeSpan? ease = null)
     {
         ShowStep(message);
@@ -143,7 +152,8 @@ public partial class SplashWindow : Window
     // Shows the stop-waiting button and the line under it while the step text names a
     // wait, and takes both away otherwise. A button that has the keyboard focus as it
     // goes hands it to Cancel first, so the focus does not fall to the window; where
-    // Cancel has already been pressed and is disabled, the focus goes where WPF puts it.
+    // Cancel is out of use, pressed already or the scan over, the focus goes where WPF
+    // puts it.
     private void ShowStopWaiting()
     {
         var shown = _waitShown is not null;

@@ -209,8 +209,8 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// True once a close has been requested during a Move or a Delete: the
-    /// close is held, the operation cancelled, and the window closed for real
-    /// when the operation lets go.
+    /// close is held, the operation cancelled where its Cancel is live, and the
+    /// window closed for real when the operation lets go.
     /// </summary>
     private bool _closeHeldForOperation;
 
@@ -650,8 +650,9 @@ public partial class MainWindow : Window
     /// that card's Cancel. Here and not posted: WPF answers a focused element going hidden
     /// with a focus check posted at Input priority, which finds Cancel focused and leaves it,
     /// where a move posted after it would run once the focus had already fallen to the
-    /// window. A Cancel already pressed is disabled and takes no focus, so the focus goes
-    /// where WPF puts it, as it does when Cancel goes dead under the focus.
+    /// window. A Cancel out of use, pressed already or with nothing left to stop, takes no
+    /// focus, so the focus goes where WPF puts it, as it does when Cancel goes out of use
+    /// under the focus.
     /// </summary>
     private static void HandFocusToCancel(Button stopWaiting, Button cancel)
     {

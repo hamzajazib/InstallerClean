@@ -1829,6 +1829,177 @@ public class MainViewModelTests
         Assert.False(vm.Cleanup.IsOperationProgressIndeterminate);
     }
 
+    /// <summary>
+    /// What the overlay's Cancel button shows: the answer CanExecute gave when
+    /// CanExecuteChanged was last raised, which is the only time the button asks.
+    /// Null where nothing has been raised since this was made.
+    /// </summary>
+    private sealed class CancelButtonState
+    {
+        public CancelButtonState(CleanupViewModel cleanup) =>
+            cleanup.CancelOperationCommand.CanExecuteChanged += (_, _) =>
+                Live = cleanup.CancelOperationCommand.CanExecute(null);
+
+        public bool? Live { get; private set; }
+    }
+
+    [Fact]
+    public async Task Cancel_is_live_through_the_rescan_after_a_Delete_and_out_of_use_through_the_wait_for_the_report()
+    {
+        // A PC's first Delete, with the start check still reading as the card is about
+        // to go up, so the overlay waits on it with the batch and the rescan over.
+        var vm = FirstRunAllClear();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2));
+        _deleteService.DeleteFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new DeleteResult(2, Array.Empty<FileOperationError>()));
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
+        await vm.Scan.ScanWithProgressAsync(null);
+
+        var button = new CancelButtonState(vm.Cleanup);
+        bool? liveInRescan = null;
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                liveInRescan = button.Live;
+                return EmptyScanResult();
+            });
+        var answer = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        bool? operating = null, canCancel = null, liveInWait = null, escTaken = null;
+        string? heading = null;
+        _earlierRunCheck.ShowsAnEarlierRunWithinAsync(Arg.Any<TimeSpan>()).Returns(_ =>
+        {
+            operating = vm.Cleanup.IsOperating;
+            canCancel = vm.Cleanup.CancelOperationCommand.CanExecute(null);
+            liveInWait = button.Live;
+            escTaken = vm.HandleEscape();
+            heading = vm.Cleanup.OperationProgress;
+            return answer.Task;
+        });
+
+        var delete = vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+        answer.SetResult(false);
+        await delete;
+
+        // The rescan can be stopped, and the button says so.
+        Assert.True(liveInRescan);
+        // The wait for the report cannot, so the button is out of use and Esc goes
+        // nowhere, with the overlay still up and its heading the scan's.
+        Assert.True(operating);
+        Assert.False(canCancel);
+        Assert.False(liveInWait);
+        Assert.False(escTaken);
+        Assert.Equal(Strings.Status_Scanning, heading);
+        Assert.True(vm.Completion.IsComplete);
+        Assert.True(vm.Completion.OffersReport);
+    }
+
+    [Fact]
+    public async Task Cancel_and_Esc_are_out_of_use_while_a_Delete_refused_at_the_installer_lock_re_checks_the_gate()
+    {
+        var vm = CreateViewModel();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2));
+        _deleteService.DeleteFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new DeleteResult(0, Array.Empty<FileOperationError>(), InstallerBusy: true));
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
+        await vm.Scan.ScanWithProgressAsync(null);
+
+        var button = new CancelButtonState(vm.Cleanup);
+        bool? operating = null, canCancel = null, live = null, escTaken = null;
+        var checks = 0;
+        // The gate at the moment of action, then the re-check after the refusal.
+        _rebootService.Check().Returns(_ =>
+        {
+            if (++checks == 1) return PendingRebootResult.Clean;
+            operating = vm.Cleanup.IsOperating;
+            canCancel = vm.Cleanup.CancelOperationCommand.CanExecute(null);
+            live = button.Live;
+            escTaken = vm.HandleEscape();
+            return PendingRebootResult.Block(PendingRebootReason.MsiExecuteMutexHeld);
+        });
+
+        await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, checks);
+        Assert.True(operating);
+        Assert.False(canCancel);
+        Assert.False(live);
+        Assert.False(escTaken);
+    }
+
+    [Fact]
+    public async Task Cancel_is_out_of_use_while_a_Move_refused_at_the_installer_lock_shows_its_dialog()
+    {
+        var vm = CreateViewModel();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2));
+        _moveService.MoveFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new MoveResult(0, Array.Empty<FileOperationError>(), InstallerLockAccessRefused: true));
+        _confirmationService.ConfirmMove(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = Path.Combine(Path.GetTempPath(), "ic-test-lock-refused-cancel");
+
+        var button = new CancelButtonState(vm.Cleanup);
+        bool? operating = null, canCancel = null, live = null;
+        _dialogService
+            .When(d => d.ShowWarning(Strings.Error_MoveInstallerLockAccessRefused, Arg.Any<string>()))
+            .Do(_ =>
+            {
+                operating = vm.Cleanup.IsOperating;
+                canCancel = vm.Cleanup.CancelOperationCommand.CanExecute(null);
+                live = button.Live;
+            });
+
+        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        Assert.True(operating);
+        Assert.False(canCancel);
+        Assert.False(live);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Cancel_is_out_of_use_while_a_re_verify_that_failed_shows_its_dialog(bool deleting)
+    {
+        var vm = CreateViewModel();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2));
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
+            .ThrowsAsync(new LocalisedInvalidOperationException(Strings.Error_InstallerDbEmpty));
+        _confirmationService.ConfirmMove(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = Path.Combine(Path.GetTempPath(), "ic-test-reverify-throw-cancel");
+
+        var button = new CancelButtonState(vm.Cleanup);
+        bool? operating = null, canCancel = null, live = null;
+        _dialogService
+            .When(d => d.ShowError(Arg.Any<string>(), Strings.Error_StoppedTitle))
+            .Do(_ =>
+            {
+                operating = vm.Cleanup.IsOperating;
+                canCancel = vm.Cleanup.CancelOperationCommand.CanExecute(null);
+                live = button.Live;
+            });
+
+        if (deleting) await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+        else await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        Assert.True(operating);
+        Assert.False(canCancel);
+        Assert.False(live);
+    }
+
     [Fact]
     public async Task MoveAllAsync_reboot_gate_flipping_blocked_at_action_time_refuses_and_paints_the_banner()
     {

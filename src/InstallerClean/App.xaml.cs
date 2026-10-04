@@ -389,9 +389,9 @@ public partial class App : Application
             // The splash is held open for its own minimum however little the scan
             // costs, so that a scan finishing in a fraction of a second still
             // leaves a window somebody can read. The closing step below is eased
-            // over the time the window has left rather than over the bar's own
-            // step, so the last of the fill arrives as the window goes instead of
-            // being cut off by it.
+            // over the time the window has left, what remains of the minimum plus
+            // the close, rather than over the bar's own step, so the last of the
+            // fill arrives as the window goes instead of being cut off by it.
             var splashFloor = TimeSpan.FromMilliseconds(800);
             var splashClose = TimeSpan.FromMilliseconds(200);
 
@@ -403,10 +403,10 @@ public partial class App : Application
             var splashProgress = new ThrottledScanProgress(
                 new Progress<ScanProgressUpdate>(splash.OnScanProgress));
             var cancelled = false;
+            var sinceScanStart = Stopwatch.StartNew();
             try
             {
-                var scanTask = viewModel.Scan.ScanWithProgressAsync(splashProgress, startupCts.Token);
-                await Task.WhenAll(scanTask, Task.Delay(splashFloor, startupCts.Token));
+                await viewModel.Scan.ScanWithProgressAsync(splashProgress, startupCts.Token);
             }
             catch (OperationCanceledException)
             {
@@ -422,12 +422,20 @@ public partial class App : Application
             // the window after it is settled means the card is either up as the window
             // is constructed, which replays it, or not coming; the wait is the check's
             // own bound at most.
-            await viewModel.ScanCardDecided;
-
-            if (!cancelled)
+            //
+            // Once the scan has finished, Cancel has nothing left to stop, so the splash
+            // takes it out of use and says "Done." at once, and the wait for the card runs
+            // beside the rest of the minimum and the close.
+            if (cancelled)
             {
-                splash.UpdateStep(Strings.Status_Done, 100, splashClose);
-                await Task.Delay(splashClose);
+                await viewModel.ScanCardDecided;
+            }
+            else
+            {
+                var floorLeft = splashFloor - sinceScanStart.Elapsed;
+                var ease = (floorLeft > TimeSpan.Zero ? floorLeft : TimeSpan.Zero) + splashClose;
+                splash.ShowScanFinished(ease);
+                await Task.WhenAll(viewModel.ScanCardDecided, Task.Delay(ease));
             }
 
             var window = new MainWindow(viewModel);
