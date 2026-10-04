@@ -184,9 +184,12 @@ jobs:
         run: node scripts/check-machine-contract-scope.mjs
 
       # A Debug build reads switches a developer sets on their own PC, and a Release
-      # build must not contain them. Code inside #if DEBUG is not compiled into one, so
-      # each switch's name has to appear under src/ only there. The check also fails
-      # where the name is not found at all, so a renamed switch cannot pass it unread.
+      # build must not contain them. This fails where a switch's name, or a read of
+      # the environment the script does not list, sits outside #if DEBUG; where a
+      # project file, a response file or a workflow defines DEBUG outside the Debug
+      # configuration; and where a publish in release.yml names a configuration other
+      # than Release. It prints every name, read and definition it finds, and stops
+      # where a switch's own name or read is not found.
       - name: Check the Debug-only switches stay out of Release builds
         if: success() || failure()
         run: node scripts/check-debug-only-switches.mjs
