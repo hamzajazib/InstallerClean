@@ -214,9 +214,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} other programs | jeszcze {0} programów |
 | {0} file with no program named in the records | {0} plik, dla którego rekordy nie wskazują programu |
 | {0} files with no program named in the records | {0} plików, dla których rekordy nie wskazują programu |
-| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
-| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
-| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. |
+| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean kontynuował bez dysku {0} i pozostawił bez zmian każdy plik, który trzeba było jeszcze z nim porównać. Gdy dysk znów zacznie normalnie odpowiadać, naciśnij przycisk Skanuj ponownie. |
+| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean kontynuował bez {0} i pozostawił bez zmian każdy plik, którego sprawdzenie jeszcze od tego zależało. Gdy dostęp znów zacznie działać normalnie, naciśnij przycisk Skanuj ponownie. |
+| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean kontynuował bez kilku dysków lub udziałów ({0}) i pozostawił bez zmian każdy plik, który trzeba było jeszcze porównać z jednym z nich. Gdy znów zaczną normalnie odpowiadać, naciśnij przycisk Skanuj ponownie. |
 | {0} of {1} {2} | {0}/{1} {2} |
 | {0} unneeded {1} ({2}) | {0} {1} do wyczyszczenia ({2}) |
 | {0} file left alone ({1}) | {0} plik pozostawiony bez zmian ({1}) |
@@ -443,7 +443,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Polski |
 | --- | --- |
 | ,  | ,  |
-| drive {0} | drive {0} |
+| drive {0} | dysk {0} |
 | .  | .  |
 | {0} TB | {0} TB |
 | {0} GB | {0} GB |

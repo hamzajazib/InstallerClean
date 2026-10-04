@@ -214,9 +214,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} other programs | {0} altri programmi |
 | {0} file with no program named in the records | {0} file senza alcun programma nominato nei record |
 | {0} files with no program named in the records | {0} file senza alcun programma nominato nei record |
-| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
-| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
-| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. |
+| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean è andato avanti senza l'unità {0} e ha lasciato stare ogni file ancora da confrontare con essa. Quando torna a rispondere normalmente, premi Ripeti scansione. |
+| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean è andato avanti senza {0} e ha lasciato stare ogni file ancora da confrontare con ciò che vi si trova. Quando torna a rispondere normalmente, premi Ripeti scansione. |
+| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean è andato avanti senza più di un'unità o condivisione ({0}) e ha lasciato stare ogni file ancora da confrontare con una di esse. Quando tornano a rispondere normalmente, premi Ripeti scansione. |
 | {0} of {1} {2} | {0} di {1} {2} |
 | {0} unneeded {1} ({2}) | {0} {1} da eliminare ({2}) |
 | {0} file left alone ({1}) | {0} file lasciato stare ({1}) |
@@ -443,7 +443,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Italiano |
 | --- | --- |
 | ,  | ,  |
-| drive {0} | drive {0} |
+| drive {0} | unità {0} |
 | .  | .  |
 | {0} TB | {0} TB |
 | {0} GB | {0} GB |

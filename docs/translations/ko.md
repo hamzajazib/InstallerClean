@@ -214,9 +214,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} other programs | 다른 프로그램 {0}개 |
 | {0} file with no program named in the records | 기록에 프로그램 이름이 없는 파일 {0}개 |
 | {0} files with no program named in the records | 기록에 프로그램 이름이 없는 파일 {0}개 |
-| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
-| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
-| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. |
+| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean이 드라이브 {0} 없이 계속 진행했으며, 아직 이것과 대조해야 했던 파일은 모두 그대로 두었습니다. 정상적으로 응답하게 되면 다시 검사를 누르세요. |
+| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean이 {0} 없이 계속 진행했으며, 아직 이것과 대조해야 했던 파일은 모두 그대로 두었습니다. 정상적으로 응답하게 되면 다시 검사를 누르세요. |
+| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean이 여러 드라이브 또는 공유 ({0}) 없이 계속 진행했으며, 아직 그중 하나와 대조해야 했던 파일은 모두 그대로 두었습니다. 정상적으로 응답하게 되면 다시 검사를 누르세요. |
 | {0} of {1} {2} | {2} {1}개 중 {0}개 |
 | {0} unneeded {1} ({2}) | 불필요한 {1} {0}개 ({2}) |
 | {0} file left alone ({1}) | 파일 {0}개 그대로 둠 ({1}) |
@@ -443,7 +443,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | 한국어 |
 | --- | --- |
 | ,  | ,  |
-| drive {0} | drive {0} |
+| drive {0} | 드라이브 {0} |
 | .  | .  |
 | {0} TB | {0} TB |
 | {0} GB | {0} GB |

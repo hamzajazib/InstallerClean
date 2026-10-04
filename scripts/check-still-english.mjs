@@ -128,7 +128,7 @@ const ALSO_KEEP = {
   de: ['Section.Registered.Patches', 'Field.Patches', 'Automation.Section.Patches', 'Action.Details', 'Version.Display', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
   es: ['Plural.Error.Singular', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
   fr: ['Field.Application', 'Version.Display', 'Display.ListSeparator', 'Display.SentenceSeparator', ...ELAPSED_UNITS],
-  id: ['Plural.File.Singular', 'Plural.Patch.Singular', 'Field.File', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
+  id: ['Plural.File.Singular', 'Plural.Patch.Singular', 'Field.File', 'Display.ListSeparator', 'Display.SentenceSeparator', 'Display.DriveName', ...UNITS],
   it: ['Field.File', 'Plural.File.Singular', 'Plural.Patch.Singular', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
   ja: [...UNITS],
   ko: ['Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],

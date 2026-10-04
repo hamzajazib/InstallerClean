@@ -177,6 +177,11 @@ const QUOTES_A_LABEL = [
   // A batch that stopped because the backup folder would no longer resolve says
   // which button starts the scan again.
   { sentence: 'Error.DestinationChangedMidBatch', label: 'Action.Rescan' },
+  // The line naming a drive or share the app carried on without ends by saying
+  // which button to press once it responds normally.
+  { sentence: 'Summary.SourceGivenUp.Drive', label: 'Action.Rescan' },
+  { sentence: 'Summary.SourceGivenUp.Path', label: 'Action.Rescan' },
+  { sentence: 'Summary.SourcesGivenUp', label: 'Action.Rescan' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -200,13 +205,7 @@ const QUOTES_A_LABEL = [
 // Either leg holds a slot out; a slot neither holds is checked. Every slot held
 // out is printed with the leg that held it, and an entry no language holds out any
 // more fails the run as something to move up into rule 3.
-const QUOTES_A_LABEL_ONCE_TRANSLATED = [
-  // The line naming a drive or share the app carried on without ends by saying
-  // which button to press once it responds normally.
-  { sentence: 'Summary.SourceGivenUp.Drive', label: 'Action.Rescan' },
-  { sentence: 'Summary.SourceGivenUp.Path', label: 'Action.Rescan' },
-  { sentence: 'Summary.SourcesGivenUp', label: 'Action.Rescan' },
-];
+const QUOTES_A_LABEL_ONCE_TRANSLATED = [];
 
 // ---------------------------------------------------------------------------
 // Rule 4. A string must not repeat a word the control it hangs on already says.

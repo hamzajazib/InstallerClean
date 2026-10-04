@@ -214,9 +214,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} other programs | {0} weitere Programme |
 | {0} file with no program named in the records | {0} Datei, zu der die Einträge kein Programm nennen |
 | {0} files with no program named in the records | {0} Dateien, zu denen die Einträge kein Programm nennen |
-| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
-| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
-| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. |
+| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean hat ohne Laufwerk {0} weitergemacht und jede Datei unangetastet gelassen, die noch damit abgeglichen werden musste. Sobald es wieder normal reagiert, klicke auf „Neu scannen“. |
+| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean hat ohne {0} weitergemacht und jede Datei unangetastet gelassen, die noch damit abgeglichen werden musste. Sobald der Zugriff darauf wieder normal funktioniert, klicke auf „Neu scannen“. |
+| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean hat ohne mehrere Laufwerke oder Freigaben ({0}) weitergemacht und jede Datei unangetastet gelassen, die noch mit einem davon abgeglichen werden musste. Sobald sie wieder normal reagieren, klicke auf „Neu scannen“. |
 | {0} of {1} {2} | {0} von {1} {2} |
 | {0} unneeded {1} ({2}) | {0} nicht benötigte {1} ({2}) |
 | {0} file left alone ({1}) | {0} Datei unangetastet ({1}) |
@@ -443,7 +443,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Deutsch |
 | --- | --- |
 | ,  | ,  |
-| drive {0} | drive {0} |
+| drive {0} | Laufwerk {0} |
 | .  | .  |
 | {0} TB | {0} TB |
 | {0} GB | {0} GB |

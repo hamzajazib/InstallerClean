@@ -76,6 +76,10 @@ const ALSO_KEEP = [
   'Display.Size.B',            // {0} B
   'Display.Elapsed.Ms',        // {0:F0}ms
   'Display.Elapsed.S',         // {0:F1}s
+  // A drive standing on its own in a list, "drive {0}". Indonesian names a drive
+  // with the same word as English, as Status.WaitingForDrive and
+  // Automation.StopWaitingForDrive do.
+  'Display.DriveName',         // drive {0}
 ];
 
 const MAP = {
@@ -581,9 +585,9 @@ const MAP = {
   'Automation.StopWaitingForPath': `Lanjutkan tanpa menunggu, {0}`,
   'Status.StopWaitingLeavesAlone': `Setiap file yang masih harus diperiksa terhadapnya akan dibiarkan apa adanya.`,
   'Automation.WaitingLineWithStopKey': `{0} Tekan Alt+{1} untuk melanjutkan tanpa menunggu. {2}`,
-  'Summary.SourceGivenUp.Drive': `InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan.`,
-  'Summary.SourceGivenUp.Path': `InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan.`,
-  'Summary.SourcesGivenUp': `InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan.`,
+  'Summary.SourceGivenUp.Drive': `InstallerClean melanjutkan tanpa drive {0} dan membiarkan apa adanya setiap file yang masih harus diperiksa terhadapnya. Setelah drive itu kembali merespons dengan normal, tekan Pindai ulang.`,
+  'Summary.SourceGivenUp.Path': `InstallerClean melanjutkan tanpa {0} dan membiarkan apa adanya setiap file yang masih harus diperiksa terhadapnya. Setelah lokasi itu kembali merespons dengan normal, tekan Pindai ulang.`,
+  'Summary.SourcesGivenUp': `InstallerClean melanjutkan tanpa lebih dari satu drive atau berbagi jaringan ({0}) dan membiarkan apa adanya setiap file yang masih harus diperiksa terhadap salah satunya. Setelah semuanya kembali merespons dengan normal, tekan Pindai ulang.`,
   'Display.DriveName': `drive {0}`,
   'Cli.SourceGivenUp.Drive': `InstallerClean stopped waiting for drive {0} and left alone any file still to be checked against it. Once it's responding normally, run the command again.`,
   'Cli.SourceGivenUp.Path': `InstallerClean stopped waiting for {0} and left alone any file still to be checked against it. Once it's responding normally, run the command again.`,

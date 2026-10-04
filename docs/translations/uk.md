@@ -214,9 +214,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} other programs | ще {0} програм |
 | {0} file with no program named in the records | {0} файл, для якого в записах не названо програми |
 | {0} files with no program named in the records | {0} файлів, для яких у записах не названо програми |
-| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
-| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
-| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. |
+| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean продовжив роботу без диска {0} і залишив без змін усі файли, які ще треба було звірити з ним. Коли він знову відповідатиме нормально, натисніть «Повторити сканування». |
+| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean продовжив роботу без {0} і залишив без змін усі файли, які ще треба було звірити з тим, що там є. Коли доступ знову стане нормальним, натисніть «Повторити сканування». |
+| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean продовжив роботу без кількох дисків або мережевих ресурсів ({0}) і залишив без змін усі файли, які ще треба було звірити з одним із них. Коли вони знову відповідатимуть нормально, натисніть «Повторити сканування». |
 | {0} of {1} {2} | {0} з {1} {2} |
 | {0} unneeded {1} ({2}) | {0} {1} для очищення ({2}) |
 | {0} file left alone ({1}) | {0} файл залишено без змін ({1}) |
@@ -443,7 +443,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Українська |
 | --- | --- |
 | ,  | ,  |
-| drive {0} | drive {0} |
+| drive {0} | диск {0} |
 | .  | .  |
 | {0} TB | {0} ТБ |
 | {0} GB | {0} ГБ |

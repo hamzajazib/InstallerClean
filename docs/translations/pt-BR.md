@@ -214,9 +214,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} other programs | {0} outros programas |
 | {0} file with no program named in the records | {0} arquivo sem nenhum programa nomeado nos registros |
 | {0} files with no program named in the records | {0} arquivos sem nenhum programa nomeado nos registros |
-| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
-| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
-| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. |
+| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | O InstallerClean continuou sem a unidade {0} e deixou de lado qualquer arquivo que ainda precisava ser conferido com ela. Quando ela voltar a responder normalmente, clique em Reanalisar. |
+| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | O InstallerClean continuou sem {0} e deixou de lado qualquer arquivo que ainda precisava ser conferido com o que há lá. Quando o acesso voltar ao normal, clique em Reanalisar. |
+| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | O InstallerClean continuou sem mais de uma unidade ou compartilhamento ({0}) e deixou de lado qualquer arquivo que ainda precisava ser conferido com algum deles. Quando voltarem a responder normalmente, clique em Reanalisar. |
 | {0} of {1} {2} | {0} de {1} {2} |
 | {0} unneeded {1} ({2}) | {0} {1} para limpar ({2}) |
 | {0} file left alone ({1}) | {0} arquivo deixado de lado ({1}) |
@@ -443,7 +443,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Português (Brasil) |
 | --- | --- |
 | ,  | ,  |
-| drive {0} | drive {0} |
+| drive {0} | unidade {0} |
 | .  | .  |
 | {0} TB | {0} TB |
 | {0} GB | {0} GB |

@@ -214,9 +214,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} other programs | {0} program daha |
 | {0} file with no program named in the records | kayıtlarda hiçbir program adı geçmeyen {0} dosya |
 | {0} files with no program named in the records | kayıtlarda hiçbir program adı geçmeyen {0} dosya |
-| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
-| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
-| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. |
+| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean {0} sürücüsü olmadan devam etti ve hâlâ onunla karşılaştırılması gereken her dosyayı olduğu gibi bıraktı. Yeniden normal yanıt vermeye başladığında Yeniden tara'ya basın. |
+| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean {0} konumu olmadan devam etti ve hâlâ onunla karşılaştırılması gereken her dosyayı olduğu gibi bıraktı. Yeniden normal yanıt vermeye başladığında Yeniden tara'ya basın. |
+| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean birden fazla sürücü veya paylaşım ({0}) olmadan devam etti ve hâlâ bunlardan biriyle karşılaştırılması gereken her dosyayı olduğu gibi bıraktı. Yeniden normal yanıt vermeye başladıklarında Yeniden tara'ya basın. |
 | {0} of {1} {2} | {1} {2} içinden {0} |
 | {0} unneeded {1} ({2}) | {0} gereksiz {1} ({2}) |
 | {0} file left alone ({1}) | {0} dosya olduğu gibi bırakıldı ({1}) |
@@ -443,7 +443,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Türkçe |
 | --- | --- |
 | ,  | ,  |
-| drive {0} | drive {0} |
+| drive {0} | {0} sürücüsü |
 | .  | .  |
 | {0} TB | {0} TB |
 | {0} GB | {0} GB |

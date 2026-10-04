@@ -214,9 +214,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} other programs | {0} andere programma's |
 | {0} file with no program named in the records | {0} bestand waarbij de records geen programma noemen |
 | {0} files with no program named in the records | {0} bestanden waarbij de records geen programma noemen |
-| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
-| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. |
-| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. |
+| InstallerClean carried on without drive {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean is doorgegaan zonder schijf {0} en heeft elk bestand dat er nog mee vergeleken moest worden, ongemoeid gelaten. Klik op Opnieuw scannen zodra de schijf weer normaal reageert. |
+| InstallerClean carried on without {0} and left alone any file still to be checked against it. Once it's responding normally, Re-scan. | InstallerClean is doorgegaan zonder {0} en heeft elk bestand dat er nog mee vergeleken moest worden, ongemoeid gelaten. Klik op Opnieuw scannen zodra de toegang weer normaal werkt. |
+| InstallerClean carried on without more than one drive or share ({0}) and left alone any file still to be checked against one of them. Once they're responding normally, Re-scan. | InstallerClean is doorgegaan zonder meer dan één schijf of share ({0}) en heeft elk bestand dat nog met een daarvan vergeleken moest worden, ongemoeid gelaten. Klik op Opnieuw scannen zodra ze weer normaal reageren. |
 | {0} of {1} {2} | {0} van {1} {2} |
 | {0} unneeded {1} ({2}) | {0} {1} om op te ruimen ({2}) |
 | {0} file left alone ({1}) | {0} bestand ongemoeid gelaten ({1}) |
@@ -443,7 +443,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Nederlands |
 | --- | --- |
 | ,  | ,  |
-| drive {0} | drive {0} |
+| drive {0} | schijf {0} |
 | .  | .  |
 | {0} TB | {0} TB |
 | {0} GB | {0} GB |
