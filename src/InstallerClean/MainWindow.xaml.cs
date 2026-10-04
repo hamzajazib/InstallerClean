@@ -613,7 +613,9 @@ public partial class MainWindow : Window
 
         // Every later heading is read as it is written: a wait on a drive or share,
         // the heading put back when the wait ends, "Cancelling..." and the scan after
-        // the batch. The heading is blank only as the card goes.
+        // the batch. A blank heading is not read: the heading is blank as the card
+        // goes, behind a dialog the operation ends in, and while a finished batch
+        // waits to put up its card.
         if (e.PropertyName == nameof(CleanupViewModel.OperationProgress)
             && _vm.Cleanup.OperationProgress.Length > 0 && OperatingCardInFront())
             AnnounceOperationHeading();

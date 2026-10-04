@@ -1126,6 +1126,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // the warning, the card appears, and its focus move and its
                 // announcement run with nothing over them. The card's own priorities
                 // are what order those two against each other, in the window.
+                //
+                // The heading goes first: nothing it names runs behind the dialog.
+                OperationProgress = string.Empty;
                 _dialogService.ShowWarning(ex.Message, Strings.Error_MoveStoppedTitle);
                 if (ex.Partial.MovedCount > 0 || ex.Partial.Errors.Count > 0)
                 {
@@ -1139,7 +1142,6 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                         ex.Destination, ex.Partial.Errors, ClassifySpaceOutcome(destinationKind),
                         FoldHeldBack(reverify, ex.Partial.HeldBack, ex.Partial.HeldBackReasons));
                 }
-                OperationProgress = string.Empty;
                 return;
             }
 
@@ -1149,8 +1151,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // act-time gate re-check above passed and before the service
                 // acquired it, so the service refused and touched nothing. Re-run
                 // the gate to paint the banner, and report no completed operation.
-                await RecheckAfterLockRefusalAsync(deleting: false);
+                // The heading goes first on this arm and the two after it, which end
+                // in the re-check or a dialog with nothing the heading names running.
                 OperationProgress = string.Empty;
+                await RecheckAfterLockRefusalAsync(deleting: false);
                 // The service refused at the mutex, before its own
                 // CreateDestinationFolder, so nothing was placed.
                 if (createdDestination) await RemoveCreatedDestinationAsync(dest);
@@ -1174,10 +1178,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // CreateDestinationFolder, so nothing it did needs undoing, and
                 // what does is the folder THIS pre-flight made, which would
                 // otherwise be left empty behind a batch that never ran.
+                OperationProgress = string.Empty;
                 _dialogService.ShowWarning(
                     Strings.Error_MoveInstallerLockUnavailable,
                     Strings.Error_MoveInstallerLockUnavailableTitle);
-                OperationProgress = string.Empty;
                 if (createdDestination) await RemoveCreatedDestinationAsync(dest);
                 return;
             }
@@ -1198,11 +1202,11 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // rather than offering buttons that will refuse the next click the
                 // same way. A refusal that has already gone leaves the window as it
                 // was, which is the state the machine is now in.
+                OperationProgress = string.Empty;
                 _dialogService.ShowWarning(
                     Strings.Error_MoveInstallerLockAccessRefused,
                     Strings.Error_MoveInstallerLockUnavailableTitle);
                 await RecheckAfterLockRefusalAsync(deleting: false);
-                OperationProgress = string.Empty;
                 if (createdDestination) await RemoveCreatedDestinationAsync(dest);
                 return;
             }
@@ -1277,7 +1281,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             await RefreshAfterBatchAsync();
 
             // The box goes on before the card is revealed, and the report is written
-            // once the card is up, on the PC's first run only.
+            // once the card is up, on the PC's first run only. The heading goes
+            // before the wait for the start check, as nothing it names is still
+            // running.
+            OperationProgress = string.Empty;
             var carriesReport = await TakeReportForCardAsync(movedCount);
             _completion.ShowMoveSummary(movedCount, movedBytes, movedDest, result.Errors,
                 ClassifySpaceOutcome(destinationKind), reverify);
@@ -1329,8 +1336,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // the operation those guards exist to prevent. The service's
             // fully-qualified check is not among them: the window refuses a
             // relative destination above, before the batch is handed over.
-            _dialogService.ShowWarning(ex.Message, Strings.Error_InvalidDestinationTitle);
             OperationProgress = string.Empty;
+            _dialogService.ShowWarning(ex.Message, Strings.Error_InvalidDestinationTitle);
         }
         catch (LocalisedAccessException ex)
         {
@@ -1340,9 +1347,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // loop starts, so no file has moved and the counts on screen are
             // still correct. That same ordering is why the created folder can
             // be removed here: nothing was placed in it.
+            OperationProgress = string.Empty;
             if (createdDestination) await RemoveCreatedDestinationAsync(dest);
             _dialogService.ShowWarning(ex.Message, Strings.Error_DestinationWriteFailedTitle);
-            OperationProgress = string.Empty;
         }
         catch (Exception ex)
         {
@@ -1517,9 +1524,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // A Windows Installer transaction grabbed Global\_MSIExecute after
                 // the act-time gate re-check above passed, so the service refused
                 // and touched nothing. Re-run the gate to paint the banner and
-                // report no completed operation.
-                await RecheckAfterLockRefusalAsync(deleting: true);
+                // report no completed operation. The heading goes first here and on
+                // the two arms after it, as on the Move path.
                 OperationProgress = string.Empty;
+                await RecheckAfterLockRefusalAsync(deleting: true);
                 return;
             }
 
@@ -1534,9 +1542,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // come back clean and leave a refusal with no reason on screen. A
                 // dialog carries the reason instead. The service's own acquire has
                 // the detail.
+                OperationProgress = string.Empty;
                 _dialogService.ShowWarning(
                     Strings.Error_InstallerLockUnavailable, Strings.Error_InstallerLockUnavailableTitle);
-                OperationProgress = string.Empty;
                 return;
             }
 
@@ -1556,10 +1564,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // rather than offering buttons that will refuse the next click the
                 // same way. A refusal that has already gone leaves the window as it
                 // was, which is the state the machine is now in.
+                OperationProgress = string.Empty;
                 _dialogService.ShowWarning(
                     Strings.Error_InstallerLockAccessRefused, Strings.Error_InstallerLockUnavailableTitle);
                 await RecheckAfterLockRefusalAsync(deleting: true);
-                OperationProgress = string.Empty;
                 return;
             }
 
@@ -1628,7 +1636,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // scan's.
             await RefreshAfterBatchAsync();
 
-            // As on the Move path: the box before the card, the report after it.
+            // As on the Move path: the heading off, the box before the card, the
+            // report after it.
+            OperationProgress = string.Empty;
             var carriesReport = await TakeReportForCardAsync(deletedCount);
             _completion.ShowDeleteSummary(deletedCount, deletedBytes, result.Errors, reverify);
 

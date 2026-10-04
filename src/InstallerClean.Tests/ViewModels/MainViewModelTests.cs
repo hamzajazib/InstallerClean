@@ -1886,12 +1886,12 @@ public class MainViewModelTests
         // The rescan can be stopped, and the button says so.
         Assert.True(liveInRescan);
         // The wait for the report cannot, so the button is out of use and Esc goes
-        // nowhere, with the overlay still up and its heading the scan's.
+        // nowhere, with the overlay still up and naming nothing, the scan being over.
         Assert.True(operating);
         Assert.False(canCancel);
         Assert.False(liveInWait);
         Assert.False(escTaken);
-        Assert.Equal(Strings.Status_Scanning, heading);
+        Assert.Equal(string.Empty, heading);
         Assert.True(vm.Completion.IsComplete);
         Assert.True(vm.Completion.OffersReport);
     }
@@ -2111,6 +2111,91 @@ public class MainViewModelTests
         Assert.False(vm.Completion.OffersReport);
         await _resultLogService.DidNotReceive().WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
         _firstRunMark.Received(1).Set();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task The_overlay_names_nothing_while_a_finished_Move_or_Delete_waits_to_put_up_its_card(bool deleting)
+    {
+        // The PC's first run, with the start check still reading once the rescan is over.
+        var vm = FirstRunAllClear();
+        TwoFileBatch(_ => { }, done: 2, errored: 0, cancelled: false);
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = Path.Combine(Path.GetTempPath(), "ic-test-heading-in-the-report-wait");
+        string? heading = null;
+        _earlierRunCheck.ShowsAnEarlierRunWithinAsync(Arg.Any<TimeSpan>()).Returns(_ =>
+        {
+            heading = vm.Cleanup.OperationProgress;
+            return Task.FromResult(false);
+        });
+
+        await RunBatch(vm, deleting);
+
+        Assert.Equal(string.Empty, heading);
+        Assert.True(vm.Completion.OffersReport);
+    }
+
+    public static TheoryData<string> ArmsEndingInADialogOrTheGateReCheck => new()
+    {
+        "Move busy", "Move unavailable", "Move access refused", "Move stopped",
+        "Move destination refused", "Move destination unwritable",
+        "Delete busy", "Delete unavailable", "Delete access refused",
+    };
+
+    [Theory]
+    [MemberData(nameof(ArmsEndingInADialogOrTheGateReCheck))]
+    public async Task The_overlay_names_nothing_behind_a_dialog_or_the_gate_re_check_a_Move_or_Delete_ends_in(
+        string arm)
+    {
+        var vm = CreateViewModel();
+        TwoFileBatch(_ => { }, done: 0, errored: 0, cancelled: false);
+        var deleting = arm.StartsWith("Delete");
+        var result = arm[(arm.IndexOf(' ') + 1)..];
+        var expected = result == "access refused" ? 2 : 1;
+        Exception? thrown = result switch
+        {
+            "stopped" => new MoveAbortedException("stopped", new MoveResult(1, Array.Empty<FileOperationError>()),
+                @"D:\Kept", MoveAbortReason.ResolvesElsewhere),
+            "destination refused" => new LocalisedInvalidOperationException("refused"),
+            "destination unwritable" => new LocalisedAccessException("unwritable"),
+            _ => null,
+        };
+        var refusal = new MoveResult(0, Array.Empty<FileOperationError>(),
+            InstallerBusy: result == "busy",
+            InstallerLockUnavailable: result == "unavailable",
+            InstallerLockAccessRefused: result == "access refused");
+        _moveService.MoveFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(_ => thrown is null ? Task.FromResult(refusal) : Task.FromException<MoveResult>(thrown));
+        _deleteService.DeleteFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new DeleteResult(0, Array.Empty<FileOperationError>(),
+                InstallerBusy: result == "busy",
+                InstallerLockUnavailable: result == "unavailable",
+                InstallerLockAccessRefused: result == "access refused"));
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = Path.Combine(Path.GetTempPath(), "ic-test-heading-behind-a-dialog");
+
+        // The heading as each dialog shows and as each re-check of the gate runs with
+        // the overlay up. The re-check made at the click runs before the overlay does,
+        // and a scan's own read of the gate is not a re-check.
+        var headings = new List<string>();
+        _dialogService.When(d => d.ShowWarning(Arg.Any<string>(), Arg.Any<string>()))
+            .Do(_ => headings.Add(vm.Cleanup.OperationProgress));
+        _rebootService.Check().Returns(_ =>
+        {
+            if (vm.Cleanup.IsOperating && !vm.Scan.IsScanInFlight)
+                headings.Add(vm.Cleanup.OperationProgress);
+            return PendingRebootResult.Clean;
+        });
+
+        await RunBatch(vm, deleting);
+
+        Assert.Equal(expected, headings.Count);
+        Assert.All(headings, heading => Assert.Equal(string.Empty, heading));
     }
 
     [Fact]
