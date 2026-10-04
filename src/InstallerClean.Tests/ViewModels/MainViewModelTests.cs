@@ -2158,6 +2158,40 @@ public class MainViewModelTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task A_start_check_that_fails_after_a_close_goes_to_the_crash_log(bool deleting)
+    {
+        // The PC's first run. The close lands as the start check is asked, and the check
+        // fails, which its contract says it never does.
+        var vm = FirstRunAllClear();
+        TwoFileBatch(_ => { }, done: 2, errored: 0, cancelled: false);
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = Path.Combine(Path.GetTempPath(), "ic-test-start-check-fails-after-a-close");
+        // The crash log is the user's own, shared with every run, so the marker is new to
+        // this run and is looked for only in what the run appends to the log.
+        var marker = $"start check failed {Guid.NewGuid()}";
+        var logBefore = CrashLogText();
+        _earlierRunCheck.ShowsAnEarlierRunWithinAsync(Arg.Any<TimeSpan>()).Returns(_ =>
+        {
+            vm.Cleanup.RequestClose();
+            return Task.FromException<bool>(new InvalidOperationException(marker));
+        });
+
+        await RunBatch(vm, deleting);
+
+        var logAfter = CrashLogText();
+        // A log that rotated during the run starts again, and all of it is this run's.
+        var appended = logAfter.StartsWith(logBefore, StringComparison.Ordinal)
+            ? logAfter[logBefore.Length..]
+            : logAfter;
+        Assert.Contains(marker, appended);
+        Assert.False(vm.Completion.OffersReport);
+        await _resultLogService.DidNotReceive().WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
+        _firstRunMark.Received(1).Set();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task The_overlay_names_nothing_while_a_finished_Move_or_Delete_waits_to_put_up_its_card(bool deleting)
     {
         // The PC's first run, with the start check still reading once the rescan is over.

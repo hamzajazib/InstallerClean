@@ -657,9 +657,12 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// the start check, and no report box, the card it would sit on going with the
     /// window unseen.
     /// </summary>
-    public bool CloseRequested { get; private set; }
+    public bool CloseRequested => _closeRequested.Task.IsCompleted;
 
-    /// <summary>Completes as <see cref="RequestClose"/> is first called, so a wait can end on it.</summary>
+    /// <summary>
+    /// Completes as <see cref="RequestClose"/> is first called, so a wait can end on it.
+    /// <see cref="CloseRequested"/> reads it.
+    /// </summary>
     private readonly TaskCompletionSource _closeRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>
@@ -671,9 +674,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// </summary>
     public void RequestClose()
     {
-        if (CloseRequested) return;
-        CloseRequested = true;
-        _closeRequested.TrySetResult();
+        if (!_closeRequested.TrySetResult()) return;
         // Neither CancelOperation nor its command's Execute asks CanCancelOperation,
         // so the test is made here.
         if (CanCancelOperation()) CancelOperation();
@@ -1722,6 +1723,11 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             var reportFree = _completion.ReportIsFreeAsync();
             await Task.WhenAny(reportFree, _closeRequested.Task);
             if (!CloseRequested) return await reportFree && _completion.TakeReport();
+            // Left behind as the window closes, and observed all the same, so a
+            // failure in it reaches the crash log.
+            _ = reportFree.ContinueWith(t => CrashLog.TryWrite(t.Exception!), CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
         }
         if (actedOn > 0) _completion.RecordFirstRun();
         return false;
