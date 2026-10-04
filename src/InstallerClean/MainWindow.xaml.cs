@@ -942,13 +942,10 @@ public partial class MainWindow : Window
     // This map does NOT decide which languages the menu offers. That comes from
     // SupportedLanguages.CultureNames, the same list the app validates a saved
     // language preference against, so the menu cannot fall out of step with
-    // what ships: a seventeenth language added there appears here whether or
-    // not anybody remembers this map, and the consequence of forgetting is a
-    // framework-cased name rather than a language the user cannot select. It
-    // was two hand-maintained lists that had to agree, with nothing checking
-    // that they did, and the failure was invisible: on a machine whose OS
-    // language was the new one the menu opened with no tick anywhere and
-    // keyboard focus on nothing.
+    // what ships: a language added there appears in the menu, under the
+    // framework's NativeName while it has no entry here. CI fails until it has
+    // one, because scripts/check-font-coverage.mjs checks each name against
+    // the family its language is drawn in.
     private static readonly Dictionary<string, string> Endonyms = new(StringComparer.OrdinalIgnoreCase)
     {
         ["id"] = "Bahasa Indonesia",

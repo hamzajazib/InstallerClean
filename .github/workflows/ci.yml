@@ -154,6 +154,16 @@ jobs:
         if: success() || failure()
         run: node scripts/check-xaml-font.mjs
 
+      # A character missing from the font a language is drawn in is drawn from
+      # the next font in its list, in another typeface, and a bundled font with
+      # other vertical metrics changes the height of every line drawn in it.
+      # Nothing fails when either happens: the window opens with a word or a
+      # line that does not match the rest. The fonts for Chinese, Japanese and
+      # Korean are read from this runner's Windows Fonts folder.
+      - name: Check every language's text is in the font it is drawn in
+        if: success() || failure()
+        run: node scripts/check-font-coverage.mjs
+
       # A production caller may pass the action services an empty set of claims and
       # the compiler cannot see it: the argument is required, so passing the wrong
       # value satisfies it. The under-lease re-read then returns a pass at its first

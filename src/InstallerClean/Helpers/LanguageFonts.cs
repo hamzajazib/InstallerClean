@@ -27,6 +27,13 @@ namespace InstallerClean.Helpers;
 /// interface face rather than on whichever face the system's font fallback
 /// picks for its script.
 /// </para>
+///
+/// <para>
+/// scripts/check-font-coverage.mjs reads the lists here and in Tokens.xaml and
+/// fails CI where a language's text or its name in the language menu has a
+/// character missing from any face of its first family, or where a bundled
+/// face sets another line height or baseline.
+/// </para>
 /// </summary>
 public static class LanguageFonts
 {
