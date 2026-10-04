@@ -67,7 +67,7 @@
 import { closeSync, openSync, readdirSync, readFileSync, readSync, statSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import { readCSharp } from './csharp-source.mjs';
-import { sourceFiles } from './source-files.mjs';
+import { lineIndex, sourceFiles } from './source-files.mjs';
 
 const TOKENS = 'src/InstallerClean/Themes/Tokens.xaml';
 const LANGUAGE_FONTS = 'src/InstallerClean/Helpers/LanguageFonts.cs';
@@ -197,7 +197,7 @@ for (const file of sourceFiles(APP_DIR, '.cs')) {
   }
   const drawn = [...csString(m[1]) + csString(m[2])].filter((c) => !/\s/u.test(c));
   for (const c of drawn) arrows.add(c);
-  arrowSources.push(`${file}:${text.slice(0, m.index).split('\n').length} ${drawn.join(' ')}`);
+  arrowSources.push(`${file}:${lineIndex(text)(m.index)} ${drawn.join(' ')}`);
 }
 if (arrowSources.length === 0) fail(`no C# file under ${APP_DIR} sorts by ListSortDirection, so the sort arrows were not read`);
 

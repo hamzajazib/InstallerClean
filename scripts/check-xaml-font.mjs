@@ -40,12 +40,13 @@
 // XML and C# comments are blanked before anything is matched, newlines kept, so
 // a reported line number is the line on disk and a tag quoted in prose is not
 // read as markup. C# is read through csharp-source.mjs, and a file it cannot follow
-// to its end stops the run (exit 2).
+// to its end stops the run (exit 2), as does a XAML file holding a comment, a
+// declaration or a tag that does not close.
 //
 // Run from the repo root: node scripts/check-xaml-font.mjs
 import { readFileSync } from 'node:fs';
 import { readCSharp } from './csharp-source.mjs';
-import { sourceFiles } from './source-files.mjs';
+import { lineIndex, sourceFiles } from './source-files.mjs';
 
 const SRC = 'src';
 const FONT = '{DynamicResource Type.FontFamily}';
@@ -67,16 +68,25 @@ const csCode = (file) => {
   }
 };
 
-const lineAt = (s, i) => s.slice(0, i).split('\n').length;
+const refuseMarkup = (file, line, what) => {
+  console.error(`check-xaml-font: ${file}:${line}: ${what}.`);
+  console.error('Refusing to report on a file whose markup cannot be read to its end.');
+  process.exit(2);
+};
 
 // Tags in document order, quotes respected, so a '>' inside an attribute value
-// does not end the tag. Processing instructions are skipped.
-function tags(text) {
+// does not end the tag. A processing instruction or a declaration is skipped. One
+// with no '>' after it, or a tag with none, stops the run: the comments are blanked
+// before this reads the text, so a '<!--' still here is a comment that does not close.
+function tags(file, text, lineAt) {
   const out = [];
   let i = 0;
   while ((i = text.indexOf('<', i)) !== -1) {
     if (text[i + 1] === '?' || text[i + 1] === '!') {
-      i = text.indexOf('>', i) + 1;
+      const end = text.indexOf('>', i);
+      if (end === -1)
+        refuseMarkup(file, lineAt(i), text.startsWith('<!--', i) ? 'a comment does not close' : 'a declaration does not close');
+      i = end + 1;
       continue;
     }
     let j = i + 1;
@@ -88,6 +98,7 @@ function tags(text) {
       } else if (c === '"' || c === "'") quote = c;
       else if (c === '>') break;
     }
+    if (j === text.length) refuseMarkup(file, lineAt(i), 'a tag does not close');
     const raw = text.slice(i, j + 1);
     const m = raw.match(/^<(\/?)([\w:.]+)/);
     if (m) {
@@ -96,7 +107,7 @@ function tags(text) {
         closing: m[1] === '/',
         selfClosing: raw.endsWith('/>'),
         raw,
-        line: lineAt(text, i),
+        line: lineAt(i),
       });
     }
     i = j + 1;
@@ -142,15 +153,16 @@ const popupElements = []; // { file, line, name, style }
 
 for (const file of xamlFiles) {
   const text = stripXmlComments(readFileSync(file, 'utf8'));
+  const lineAt = lineIndex(text);
 
   for (const m of text.matchAll(/\{(StaticResource|DynamicResource)\s+Type\.FontFamily\s*\}/g)) {
-    const line = lineAt(text, m.index);
+    const line = lineAt(m.index);
     matched.tokenRefs.push(`${file}:${line} ${m[1]}`);
     if (m[1] === 'StaticResource') {
       problems.push(`${file}:${line}: names Type.FontFamily through StaticResource, which cannot see the family App.OnStartup writes; expected ${FONT}`);
     }
   }
-  const all = tags(text);
+  const all = tags(file, text, lineAt);
   const root = all.find((t) => !t.closing);
   if (!root) {
     problems.push(`${file}: no root element found`);
@@ -254,11 +266,12 @@ const simpleToFull = new Map();
 const csTexts = [];
 for (const file of csFiles) {
   const text = csCode(file);
-  csTexts.push([file, text]);
+  const lineAt = lineIndex(text);
+  csTexts.push([file, text, lineAt]);
   const ns = text.match(/^\s*namespace\s+([\w.]+)/m)?.[1] ?? '';
   for (const m of text.matchAll(/\bclass\s+(\w+)(?:<[^>]*>)?\s*:\s*([\w.]+)/g)) {
     const full = ns ? `${ns}.${m[1]}` : m[1];
-    bases.set(full, { base: m[2].replace(/^System\.Windows\./, ''), file, line: lineAt(text, m.index) });
+    bases.set(full, { base: m[2].replace(/^System\.Windows\./, ''), file, line: lineAt(m.index) });
     if (!simpleToFull.has(m[1])) simpleToFull.set(m[1], []);
     simpleToFull.get(m[1]).push(full);
   }
@@ -282,16 +295,16 @@ for (const [full, entry] of bases) {
   }
 }
 
-for (const [file, text] of csTexts) {
+for (const [file, text, lineAt] of csTexts) {
   for (const m of text.matchAll(/\bnew\s+(?:System\.Windows\.)?Window\s*[({]/g)) {
-    problems.push(`${file}:${lineAt(text, m.index)}: constructs a Window in C#, which has no root tag to carry the font`);
+    problems.push(`${file}:${lineAt(m.index)}: constructs a Window in C#, which has no root tag to carry the font`);
   }
 
   // A Style set in C#. In an object initializer the type being built is read
   // from the nearest unclosed `new T {` before it; anywhere else the target
   // cannot be read, so it fails.
   for (const m of text.matchAll(/(?<![\w.])(\w+\.)?Style\s*=(?!=)/g)) {
-    const line = lineAt(text, m.index);
+    const line = lineAt(m.index);
     if (m[1]) {
       problems.push(`${file}:${line}: sets ${m[0].replace(/\s*=$/, '')} outside an object initializer, where this check cannot read the type being styled`);
       continue;

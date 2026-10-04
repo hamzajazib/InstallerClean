@@ -26,7 +26,7 @@
 //   node scripts/check-machine-contract-scope.mjs
 import { readFileSync } from 'node:fs';
 import { argumentSpan, readCSharp } from './csharp-source.mjs';
-import { sourceFiles } from './source-files.mjs';
+import { lineIndex, sourceFiles } from './source-files.mjs';
 
 const TESTS = 'src/InstallerClean.Tests';
 
@@ -58,7 +58,7 @@ for (const file of sourceFiles(TESTS, '.cs')) {
     refusals.push(`${file}: cannot be read to its end (${e.message})`);
     continue;
   }
-  const lineOf = (at) => code.slice(0, at).split('\n').length;
+  const lineOf = lineIndex(code);
 
   const spans = [];
   for (const scope of SCOPES) {

@@ -26,7 +26,7 @@
 //   node scripts/check-under-lease-claims.mjs
 import { readFileSync } from 'node:fs';
 import { argumentSpan, readCSharp } from './csharp-source.mjs';
-import { sourceFiles } from './source-files.mjs';
+import { lineIndex, sourceFiles } from './source-files.mjs';
 
 const ROOT = 'src';
 const TESTS = `${ROOT}/InstallerClean.Tests/`;
@@ -49,10 +49,11 @@ for (const file of sourceFiles(ROOT, '.cs').filter((f) => !f.startsWith(TESTS)))
     refusals.push(`${file}: cannot be read to its end (${e.message})`);
     continue;
   }
+  const lineAt = lineIndex(code);
   for (const method of METHODS) {
     const re = new RegExp(`\\.${method}\\s*\\(`, 'g');
     for (const m of code.matchAll(re)) {
-      const line = code.slice(0, m.index).split('\n').length;
+      const line = lineAt(m.index);
       const span = argumentSpan(code, code.indexOf('(', m.index));
       if (span === null) {
         refusals.push(`${file}:${line} a call to ${method} whose argument list does not close`);

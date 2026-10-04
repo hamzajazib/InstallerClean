@@ -124,7 +124,7 @@
 // Run from the repo root: node scripts/check-xaml-resources.mjs
 import { readFileSync } from 'node:fs';
 import { readCSharp } from './csharp-source.mjs';
-import { sourceFiles } from './source-files.mjs';
+import { lineIndex, sourceFiles } from './source-files.mjs';
 
 const SRC = 'src';
 const APP_XAML = `${SRC}/InstallerClean/App.xaml`;
@@ -274,12 +274,6 @@ const ATTR = /([\w:.\-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
 const TYPE_KEYED = /\{\s*(?:Static|Dynamic)Resource\s+\{\s*x:Type\s+[^{}]*\}\s*\}/g;
 const RESOURCE = /\{\s*(Static|Dynamic)Resource\s+([^}\s]+)\s*\}/g;
 
-const lineCounter = (text) => (offset) => {
-  let n = 1;
-  for (let i = 0; i < offset; i++) if (text[i] === '\n') n++;
-  return n;
-};
-
 // The prefix-to-namespace map for one file. Declarations sit on the root element
 // in every file here, but any element may carry one, so all of them are read. A
 // prefix bound twice to different namespaces would make every lookup under it
@@ -362,7 +356,7 @@ const resolveSource = (fromFile, src) => {
 
 for (const [file, text] of xaml) {
   const ns = namespaces(file, text);
-  const lineAt = lineCounter(text);
+  const lineAt = lineIndex(text);
   const stack = [];
   for (const tag of text.matchAll(TAG)) {
     const element = tag[2];

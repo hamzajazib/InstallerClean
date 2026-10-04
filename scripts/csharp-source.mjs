@@ -34,6 +34,7 @@
 // text ends first. It counts every '(' and ')' it meets, so it is given bare, where a
 // bracket inside a string or a comment is already a space; given code, a bracket inside
 // a string would close the call early or keep it open.
+import { lineIndex } from './source-files.mjs';
 
 const isSpace = (c) => c === ' ' || c === '\t' || c === '\r' || c === '\f' || c === '\v' || c === '\uFEFF';
 
@@ -60,7 +61,7 @@ export function readCSharp(source) {
   const comments = source.replace(/[^\n]/g, ' ').split('');
   const directives = new Map();
 
-  const lineAt = (at) => source.slice(0, at).split('\n').length;
+  const lineAt = lineIndex(source);
   const refuse = (at, what) => { throw new Error(`line ${lineAt(at)}: ${what}`); };
   const toComment = (from, to) => {
     for (let k = from; k < to; k++) {

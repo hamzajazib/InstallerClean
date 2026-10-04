@@ -53,7 +53,7 @@
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { readCSharp } from './csharp-source.mjs';
-import { sourceFiles } from './source-files.mjs';
+import { lineIndex, sourceFiles } from './source-files.mjs';
 
 // Each switch, the constant holding its name, and the folder its read must be found in.
 const SWITCHES = [
@@ -110,7 +110,6 @@ const RELEASE_WORKFLOW = '.github/workflows/release.yml';
 const failures = [];
 const refusals = [];
 
-const lineOf = (text, at) => text.slice(0, at).split('\n').length;
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // --- C# under src/ ------------------------------------------------------------------
@@ -146,7 +145,8 @@ for (const file of sourceFiles('src', '.cs').sort()) {
   try {
     const read = readCSharp(source);
     const lineCount = source.split('\n').length;
-    files.push({ file, ...read, inside: debugLines(read.directives, lineCount) });
+    // One index serves code and comments, which keep every newline where the source has it.
+    files.push({ file, ...read, lineAt: lineIndex(source), inside: debugLines(read.directives, lineCount) });
   } catch (e) {
     refusals.push(`${file}: cannot be read to its end (${e.message})`);
   }
@@ -158,16 +158,16 @@ const shipped = files.filter((f) => !f.file.startsWith(TESTS));
 for (const { name, home } of SWITCHES) {
   console.log(`${name}:`);
   let foundAtHome = false;
-  for (const { file, code, comments, inside } of files) {
+  for (const { file, code, comments, lineAt, inside } of files) {
     const re = new RegExp(`\\b${escape(name)}\\b`, 'g');
     for (const m of code.matchAll(re)) {
-      const line = lineOf(code, m.index);
+      const line = lineAt(m.index);
       console.log(`  ${file}:${line}  ${inside[line] ? 'inside #if DEBUG' : 'OUTSIDE #if DEBUG'}`);
       if (!inside[line]) failures.push(`${file}:${line} names ${name} outside #if DEBUG`);
       else if (file.startsWith(home)) foundAtHome = true;
     }
     for (const m of comments.matchAll(re))
-      console.log(`  ${file}:${lineOf(comments, m.index)}  comment`);
+      console.log(`  ${file}:${lineAt(m.index)}  comment`);
   }
   if (!foundAtHome) refusals.push(`${name} is not found in code inside #if DEBUG under ${home}`);
 }
@@ -181,7 +181,7 @@ for (const { file } of shipped) {
 }
 const allowedUsed = new Map(ALLOWED.map((a) => [a, 0]));
 const ownRead = new Map(SWITCHES.map((s) => [s, 0]));
-for (const { file, code, comments, inside } of shipped) {
+for (const { file, code, comments, lineAt, inside } of shipped) {
   const codeLines = code.split('\n');
   for (const m of code.matchAll(READ)) {
     let name = m[0].replace(/\s+/g, '');
@@ -197,7 +197,7 @@ for (const { file, code, comments, inside } of shipped) {
         name = `Environment.${member[1]}`;
       }
     }
-    const line = lineOf(code, m.index);
+    const line = lineAt(m.index);
     const at = `  ${file}:${line}  ${name}`;
     if (NAMES_NO_VARIABLE.has(name)) {
       console.log(`${at}  names no variable: ${NAMES_NO_VARIABLE.get(name)}`);
@@ -275,6 +275,7 @@ const isDebugCondition = (condition) => {
 
 // Every DEBUG in an MSBuild XML file, each with whether a Debug condition encloses it.
 const debugInXml = (path, xml) => {
+  const lineOf = lineIndex(xml);
   const found = [];
   const stack = [];
   // A match in the raw text is placed on its own line; one an entity spells out is
@@ -284,7 +285,7 @@ const debugInXml = (path, xml) => {
     const decoded = [...decode(text).matchAll(/\bDEBUG\b/g)].length;
     while (raw.length < decoded) raw.push(at);
     for (const offset of raw)
-      found.push({ line: lineOf(xml, offset), where, conditioned: stack.some((e) => e.debug) });
+      found.push({ line: lineOf(offset), where, conditioned: stack.some((e) => e.debug) });
   };
   let i = 0;
   while (i < xml.length) {
@@ -294,23 +295,23 @@ const debugInXml = (path, xml) => {
     if (lt === -1) break;
     if (xml.startsWith('<!--', lt)) {
       const end = xml.indexOf('-->', lt);
-      if (end === -1) throw new Error(`line ${lineOf(xml, lt)}: a comment does not close`);
+      if (end === -1) throw new Error(`line ${lineOf(lt)}: a comment does not close`);
       for (const m of xml.slice(lt, end).matchAll(/\bDEBUG\b/g))
-        found.push({ line: lineOf(xml, lt + m.index), where: 'comment' });
+        found.push({ line: lineOf(lt + m.index), where: 'comment' });
       i = end + 3;
       continue;
     }
     if (xml.startsWith('<![CDATA[', lt)) {
       const end = xml.indexOf(']]>', lt);
-      if (end === -1) throw new Error(`line ${lineOf(xml, lt)}: a CDATA section does not close`);
+      if (end === -1) throw new Error(`line ${lineOf(lt)}: a CDATA section does not close`);
       for (const m of xml.slice(lt, end).matchAll(/\bDEBUG\b/g))
-        found.push({ line: lineOf(xml, lt + m.index), where: 'text', conditioned: stack.some((e) => e.debug) });
+        found.push({ line: lineOf(lt + m.index), where: 'text', conditioned: stack.some((e) => e.debug) });
       i = end + 3;
       continue;
     }
     if (xml.startsWith('<?', lt) || xml.startsWith('<!', lt)) {
       const end = xml.indexOf('>', lt);
-      if (end === -1) throw new Error(`line ${lineOf(xml, lt)}: a declaration does not close`);
+      if (end === -1) throw new Error(`line ${lineOf(lt)}: a declaration does not close`);
       i = end + 1;
       continue;
     }
@@ -322,24 +323,25 @@ const debugInXml = (path, xml) => {
       else if (xml[j] === '"' || xml[j] === "'") quote = xml[j];
       j++;
     }
-    if (j >= xml.length) throw new Error(`line ${lineOf(xml, lt)}: a tag does not close`);
+    if (j >= xml.length) throw new Error(`line ${lineOf(lt)}: a tag does not close`);
     const tag = xml.slice(lt + 1, j);
     i = j + 1;
     if (tag.startsWith('/')) {
-      if (!stack.length) throw new Error(`line ${lineOf(xml, lt)}: a closing tag with nothing open`);
+      if (!stack.length) throw new Error(`line ${lineOf(lt)}: a closing tag with nothing open`);
       stack.pop();
       continue;
     }
     const selfClosing = tag.endsWith('/');
+    // Each value is placed where its text starts, after the opening quote.
     const attributes = [...tag.matchAll(/([\w:.-]+)\s*=\s*("([^"]*)"|'([^']*)')/g)]
-      .map((m) => ({ name: m[1], value: m[3] ?? m[4], at: lt + 1 + m.index }));
+      .map((m) => ({ name: m[1], value: m[3] ?? m[4], at: lt + 1 + m.index + m[0].length - m[2].length + 1 }));
     const condition = attributes.find((a) => a.name.toLowerCase() === 'condition');
-    stack.push({ debug: condition ? isDebugCondition(decode(condition.value)) : false });
+    stack.push({ debug: condition ? isDebugCondition(decode(condition.value)) : false, line: lineOf(lt) });
     for (const a of attributes)
       if (a !== condition) note(a.value, a.at, `attribute ${a.name}`);
     if (selfClosing) stack.pop();
   }
-  if (stack.length) throw new Error('the file ends with an element open');
+  if (stack.length) throw new Error(`line ${stack[stack.length - 1].line}: an element opened here does not close`);
   return found;
 };
 
