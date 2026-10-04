@@ -7,8 +7,9 @@
 //               character literals and everything else stay as written.
 //   bare        code with the text inside every string and character literal replaced
 //               by spaces as well, the quotes kept. An interpolation hole is code and
-//               stays; its format text is string text and goes. A bracket in bare is a
-//               bracket of the code.
+//               stays; its format text is string text and goes. A hole keeps one
+//               brace at each end, in a raw string as in any other. A bracket or a
+//               brace in bare is one of the code.
 //   comments    the comment characters, everything else a space.
 //   directives  a Map from line number to the text of each preprocessor line, its
 //               comment cut off.
@@ -204,8 +205,12 @@ export function readCSharp(source) {
       if (top.dollars && c === '{') {
         let run = 0;
         while (source[i + run] === '{') run++;
-        if (run >= top.dollars) stack.push({ kind: 'code', hole: true, braces: 0, brackets: 0 });
-        else literal(i, i + run);
+        // A run long enough opens a hole. Bare keeps only the run's last brace, so the
+        // hole has one brace at each end, as in a string with one $.
+        if (run >= top.dollars) {
+          literal(i, i + run - 1);
+          stack.push({ kind: 'code', hole: true, braces: 0, brackets: 0 });
+        } else literal(i, i + run);
         i += run;
         continue;
       }
