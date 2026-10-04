@@ -188,8 +188,9 @@ public class EarlierRunCheckTests
     }
 
     [Fact]
-    public async Task A_check_still_reading_when_the_bound_passes_answers_yes_and_sets_the_mark()
+    public async Task A_check_still_reading_when_the_bound_passes_answers_yes_for_the_rest_of_the_start()
     {
+        // The read finds no earlier run once it is let go, so its own finding is no.
         using var release = new ManualResetEventSlim(false);
         _commandLine.Read().Returns(_ =>
         {
@@ -198,18 +199,31 @@ public class EarlierRunCheckTests
         });
         var check = Check();
 
+        Task<bool> read;
         try
         {
             Assert.True(await check.ShowsAnEarlierRunWithinAsync(TimeSpan.FromMilliseconds(100)));
             _mark.Received(1).Set();
+
+            // A later card asks with the read still held, and is answered without a bound
+            // of its own to sit out.
+            var later = check.ShowsAnEarlierRunWithinAsync(TimeSpan.FromSeconds(30));
+            Assert.Same(later, await Task.WhenAny(later, Task.Delay(TimeSpan.FromSeconds(5))));
+            Assert.True(await later);
+
+            // The check's own task still waits for the read, which is what the saved
+            // report's retry waits on before it reads settings.
+            read = check.ShowsAnEarlierRunAsync();
+            Assert.False(read.IsCompleted);
         }
         finally
         {
             release.Set();
         }
 
-        // The read the bound gave up on still finishes with its own answer.
-        Assert.False(await check.ShowsAnEarlierRunAsync());
+        // The read finishes, and its task carries the start's answer rather than its own.
+        Assert.True(await read);
+        _mark.Received(1).Set();
     }
 
 #if DEBUG

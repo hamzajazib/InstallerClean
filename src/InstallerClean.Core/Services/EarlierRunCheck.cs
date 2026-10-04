@@ -26,6 +26,15 @@ internal sealed class EarlierRunCheck : IEarlierRunCheck
     private readonly IResultLogService _resultLog;
     private readonly ICommandLineRunRecord _commandLine;
     private readonly bool _skipApplicationLog;
+
+    /// <summary>
+    /// The answer for this start, settled once, by whichever comes first: the check's
+    /// own finding, or a bound passing in <see cref="ShowsAnEarlierRunWithinAsync"/>.
+    /// </summary>
+    private readonly TaskCompletionSource<bool> _settled =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>The check itself, which completes with the settled answer once it has finished reading.</summary>
     private readonly Lazy<Task<bool>> _answer;
 
     public EarlierRunCheck(
@@ -43,7 +52,11 @@ internal sealed class EarlierRunCheck : IEarlierRunCheck
         _resultLog = resultLog;
         _commandLine = commandLine;
         _skipApplicationLog = skipApplicationLog;
-        _answer = new Lazy<Task<bool>>(() => Task.Run(Check));
+        _answer = new Lazy<Task<bool>>(() => Task.Run(async () =>
+        {
+            _settled.TrySetResult(Check());
+            return await _settled.Task.ConfigureAwait(false);
+        }));
     }
 
     private static bool SkipsApplicationLog()
@@ -59,16 +72,22 @@ internal sealed class EarlierRunCheck : IEarlierRunCheck
 
     public async Task<bool> ShowsAnEarlierRunWithinAsync(TimeSpan bound)
     {
-        var answer = ShowsAnEarlierRunAsync();
+        _ = ShowsAnEarlierRunAsync();
         using var stopWaiting = new CancellationTokenSource();
-        var finished = await Task.WhenAny(answer, Task.Delay(bound, stopWaiting.Token)).ConfigureAwait(false);
-        if (finished == answer)
+        var finished = await Task.WhenAny(_settled.Task, Task.Delay(bound, stopWaiting.Token)).ConfigureAwait(false);
+        if (finished == _settled.Task)
         {
             stopWaiting.Cancel();
-            return await answer.ConfigureAwait(false);
         }
-        _mark.Set();
-        return true;
+        else if (_settled.TrySetResult(true))
+        {
+            // The bound passed before the check answered. Yes is the answer from here on,
+            // and the check's own finding, when it comes, changes nothing.
+            _mark.Set();
+        }
+        // Where the check answered between the bound passing and the line above, its
+        // finding is the answer.
+        return await _settled.Task.ConfigureAwait(false);
     }
 
     private bool Check()
