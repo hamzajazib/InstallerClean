@@ -1302,7 +1302,19 @@
     <!-- Context menu and menu item. Padding/CornerRadius literals
          here are per-control tunings, not spacing-token decisions:
          the Spacing scale is uniform and does not capture the
-         asymmetric (12,6) padding menu rows want. -->
+         asymmetric (12,6) padding menu rows want.
+
+         WPF limits a menu's height to the screen it opens on, so the
+         rows sit in a ScrollViewer. A menu that fits shows no
+         scrollbar. One that does not, such as the language menu at a
+         large Windows text size, scrolls a row at a time: the wheel
+         and the app's thin scrollbar move it, and a row given keyboard
+         focus is brought into view. The arrow keys stay with the
+         menu, because a ScrollViewer leaves them to a templated parent
+         that handles scrolling, as ContextMenu does. The StackPanel is
+         the ScrollViewer's direct content, which is what makes it the
+         scrolling panel and the scroll go by rows. Focusable is off so
+         a click on the scrollbar leaves focus on the menu's rows. -->
 
     <Style TargetType="ContextMenu">
         <Setter Property="FontFamily" Value="{DynamicResource Type.FontFamily}"/>
@@ -1320,7 +1332,12 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="{StaticResource Radius.Chip}"
                             Padding="{TemplateBinding Padding}">
-                        <StackPanel IsItemsHost="True"/>
+                        <ScrollViewer Focusable="False"
+                                      CanContentScroll="True"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel IsItemsHost="True"/>
+                        </ScrollViewer>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
