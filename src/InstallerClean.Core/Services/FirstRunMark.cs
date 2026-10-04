@@ -71,10 +71,10 @@ internal sealed class FirstRunMark : IFirstRunMark
             // Nothing is thrown from here. The command line sets the mark after its
             // files have gone and before it writes the run's summary entry, and a throw
             // would reach its catch-all and write a failure entry in that one's place.
-            // It also sets it inside that catch-all, where a throw would put this
-            // failure in the entry in place of the one being reported. The window's
-            // start check sets it inside the task its answer comes back in, which a
-            // throw would fault.
+            // It also sets it as a service's own failure passes through on its way to
+            // that catch-all (Program.HandOverBatchAsync), where a throw would take that
+            // failure's place in the entry. The window's start check sets it inside the
+            // task its answer comes back in, which a throw would fault.
             CrashLog.TryWrite(ex);
         }
     }

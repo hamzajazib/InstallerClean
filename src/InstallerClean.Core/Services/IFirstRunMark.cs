@@ -8,8 +8,9 @@ namespace InstallerClean.Services;
 /// The window sets it as the PC's first card that writes a report takes the report box
 /// (<c>CompletionViewModel.TakeReport</c>), whatever that card shows. It also sets it
 /// where a Move or a Delete writes no report: a cancelled or stopped run that moved or
-/// deleted a file, and any failure in the Move or Delete that none of the window's own
-/// arms foresaw, how far that run got being unknown. The window's start check
+/// deleted a file, a finished run that did after the window was asked to close, and any
+/// failure in the Move or Delete that none of the window's own arms foresaw, how far
+/// that run got being unknown. The window's start check
 /// (<see cref="IEarlierRunCheck"/>) sets it where it finds an earlier run, and where it
 /// has not answered within the time a card waits for it.
 ///
