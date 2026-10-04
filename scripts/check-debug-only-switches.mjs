@@ -14,12 +14,19 @@
 // being compiled. The name has to be found in code inside the branch under the switch's
 // home folder, so a switch renamed in the code and not here stops the run.
 //
-// THE READS. The identifiers that read the process's environment, matched in the code
-// of the shipped projects (everything under src/ but the tests), strings included, so a
-// P/Invoke entry point and a nameof count: GetEnvironmentVariable(s) and
-// GetEnvironmentStrings, ExpandEnvironmentVariables and ExpandEnvironmentStrings, and
-// ntdll's RtlQueryEnvironmentVariable and RtlExpandEnvironmentStrings, with their A and
-// W forms. One outside the branch fails unless ALLOWED names it by file and line text;
+// THE READS. Anything in the code of the shipped projects (everything under src/ but
+// the tests), strings included, that names the environment: an identifier holding
+// "environ" in any case, so a P/Invoke entry point, a reflection name, a registry path
+// and a nameof count. With them, the reads whose names do not say so: the C runtime's
+// getenv, _wgetenv, getenv_s, _wgetenv_s, _dupenv_s and _wdupenv_s, the generic host
+// builders, Path.GetTempPath and GetTempFileName, Registry.GetValue, and
+// RegistryValueOptions.None, the option that expands the %NAME% in a registry value. A
+// write (SetEnvironmentVariable, _putenv) counts as a read and is printed as a write.
+// NAMES_NO_VARIABLE lists, by exact text, what holds the word and names no environment
+// variable, such as Environment.NewLine. Anything else holding it is a read, a message
+// in a string that says "environment" among them, until NAMES_NO_VARIABLE or ALLOWED
+// names it. In Environment.GetEnvironmentVariable the read is the member, so the line
+// holds one. One outside the branch fails unless ALLOWED names it by file and line text;
 // each entry admits one read and stops the run where it finds none. The switch's own
 // read, the line under its home holding its constant, has to be found inside the branch.
 //
@@ -65,9 +72,37 @@ const ALLOWED = [
     text: 'Environment.ExpandEnvironmentVariables(value);',
     what: 'ExpandRecordedPath, expanding the cached-package path Windows Installer recorded',
   },
+  {
+    file: 'src/InstallerClean.Core/Services/InstallerQueryService.cs',
+    text: 'var raw = key.GetValue(valueName, null, Microsoft.Win32.RegistryValueOptions.None);',
+    what: 'TryReadLocalPackage, expanding the LocalPackage path Windows Installer recorded',
+  },
 ];
 
-const READ = /\b(?:Get|Expand|RtlQuery|RtlExpand)Environment\w*\b/g;
+// What holds the word and names no environment variable, by its text with the spaces
+// taken out. Environment.X is the class System.Environment and its member.
+const NAMES_NO_VARIABLE = new Map([
+  ['Environment.CurrentManagedThreadId', 'the managed thread'],
+  ['Environment.GetFolderPath', 'a known folder'],
+  ['Environment.NewLine', 'the line ending'],
+  ['Environment.OSVersion', 'the version of Windows'],
+  ['Environment.ProcessId', 'the process'],
+  ['Environment.ProcessPath', 'the executable'],
+  ['Environment.SpecialFolder', 'the known folders'],
+  ['Environment.UserInteractive', 'the window station'],
+  ['DoNotExpandEnvironmentNames', 'the registry option that leaves a %NAME% as written'],
+  ['EnvironmentVariableTarget', 'the store a read or a write looks in, named beside the call'],
+]);
+
+const READ = new RegExp([
+  String.raw`\b\w*environ\w*`,
+  String.raw`\b(?:_?w?getenv(?:_s)?|_?w?dupenv_s|_?w?putenv(?:_s)?)\b`,
+  String.raw`\b(?:CreateDefaultBuilder|CreateApplicationBuilder|CreateSlimBuilder|HostApplicationBuilder|WebApplication)\b`,
+  String.raw`\b(?:GetTempPath|GetTempFileName)\w*`,
+  String.raw`\bRegistry\s*\.\s*GetValue\b`,
+  String.raw`\bRegistryValueOptions\s*\.\s*None\b`,
+].join('|'), 'gi');
+const WRITE = /^(?:Rtl)?Set\w*Environment|putenv/i;
 const TESTS = 'src/InstallerClean.Tests/';
 const SHIPPED = ['InstallerClean', 'InstallerClean.Cli', 'InstallerClean.Core'];
 const RELEASE_WORKFLOW = '.github/workflows/release.yml';
@@ -160,28 +195,46 @@ const ownRead = new Map(SWITCHES.map((s) => [s, 0]));
 for (const { file, code, comments, inside } of shipped) {
   const codeLines = code.split('\n');
   for (const m of code.matchAll(READ)) {
+    let name = m[0].replace(/\s+/g, '');
+    // The class itself, written bare or as System.Environment, takes its member's name.
+    // Where the member names the environment too, it is the match that counts.
+    if (m[0] === 'Environment') {
+      const before = code.slice(Math.max(0, m.index - 80), m.index);
+      const member = /^\s*\.\s*(\w+)/.exec(code.slice(m.index + m[0].length));
+      const qualified = !/\.\s*$/.test(before)
+        || /(?:^|[^\w.])(?:global\s*::\s*)?System\s*\.\s*$/.test(before);
+      if (qualified && member) {
+        if (/environ/i.test(member[1])) continue;
+        name = `Environment.${member[1]}`;
+      }
+    }
     const line = lineOf(code, m.index);
+    const at = `  ${file}:${line}  ${name}`;
+    if (NAMES_NO_VARIABLE.has(name)) {
+      console.log(`${at}  names no variable: ${NAMES_NO_VARIABLE.get(name)}`);
+      continue;
+    }
+    const kind = WRITE.test(name) ? 'write' : 'read';
     const text = codeLines[line - 1].trim();
-    const at = `  ${file}:${line}  ${m[0]}`;
     const own = SWITCHES.find((s) => file.startsWith(s.home)
       && new RegExp(`\\b${escape(s.constant)}\\b`).test(text));
     if (inside[line]) {
       if (own) ownRead.set(own, ownRead.get(own) + 1);
-      console.log(`${at}  inside #if DEBUG${own ? `, the read of ${own.name}` : ''}`);
+      console.log(`${at}  ${kind} inside #if DEBUG${own ? `, the read of ${own.name}` : ''}`);
       continue;
     }
     const entry = ALLOWED.find((a) => a.file === file && a.text === text);
     if (entry && allowedUsed.get(entry) === 0) {
       allowedUsed.set(entry, 1);
-      console.log(`${at}  allowed: ${entry.what}`);
+      console.log(`${at}  ${kind} allowed: ${entry.what}`);
       continue;
     }
-    console.log(`${at}  OUTSIDE #if DEBUG`);
-    failures.push(`${file}:${line} reads the environment (${m[0]}) outside #if DEBUG`
+    console.log(`${at}  ${kind} OUTSIDE #if DEBUG`);
+    failures.push(`${file}:${line} ${kind === 'write' ? 'writes' : 'reads'} the environment (${name}) outside #if DEBUG`
       + (entry ? ', a second read on a line ALLOWED admits once' : ''));
   }
-  for (const m of comments.matchAll(READ))
-    console.log(`  ${file}:${lineOf(comments, m.index)}  ${m[0]}  comment`);
+  const mentions = [...comments.matchAll(READ)].length;
+  if (mentions) console.log(`  ${file}  ${mentions} in comments`);
 }
 console.log('Files read, by project: '
   + [...perProject].map(([p, n]) => `${p} ${n}`).join(', '));
