@@ -119,7 +119,7 @@ Le conseil habituel confond deux choses différentes. Supprimer des fichiers au 
 </p>
 
 <p>
-  <img src="docs/screenshots/fr/04-details-registered.webp" alt="Fenêtre des fichiers laissés de côté listant les programmes installés, avec les détails que le paquet sélectionné porte sur lui-même" width="900"><br>
+  <img src="docs/screenshots/fr/04-details-left-alone.webp" alt="Fenêtre des fichiers laissés de côté listant les programmes installés, avec les détails que le paquet sélectionné porte sur lui-même" width="900"><br>
   <em>Détails des fichiers laissés de côté : le programme auquel Windows dit que chacun appartient, et ce que le fichier dit de lui-même.</em>
   <br><br>
 </p>

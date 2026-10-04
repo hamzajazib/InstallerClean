@@ -119,7 +119,7 @@ O conselho padrão confunde duas coisas diferentes. Apagar arquivos a esmo tira 
 </p>
 
 <p>
-  <img src="docs/screenshots/pt/04-details-registered.webp" alt="Janela de arquivos deixados de lado listando os programas instalados, com os detalhes que o pacote selecionado carrega sobre si mesmo" width="900"><br>
+  <img src="docs/screenshots/pt/04-details-left-alone.webp" alt="Janela de arquivos deixados de lado listando os programas instalados, com os detalhes que o pacote selecionado carrega sobre si mesmo" width="900"><br>
   <em>Detalhes dos arquivos deixados de lado: o programa a que o Windows diz que cada um pertence e o que o arquivo diz sobre si mesmo.</em>
   <br><br>
 </p>

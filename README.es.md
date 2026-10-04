@@ -119,7 +119,7 @@ El consejo habitual confunde dos cosas distintas. Borrar archivos al azar te dej
 </p>
 
 <p>
-  <img src="docs/screenshots/es/04-details-registered.webp" alt="Ventana «Archivos que se han dejado en paz» con los programas instalados y los detalles que el paquete seleccionado lleva sobre sí mismo" width="900"><br>
+  <img src="docs/screenshots/es/04-details-left-alone.webp" alt="Ventana «Archivos que se han dejado en paz» con los programas instalados y los detalles que el paquete seleccionado lleva sobre sí mismo" width="900"><br>
   <em>Detalle de los archivos dejados en paz: el programa al que Windows dice que pertenece cada uno, y lo que el archivo dice de sí mismo.</em>
   <br><br>
 </p>

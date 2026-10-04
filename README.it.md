@@ -119,7 +119,7 @@ Il consiglio abituale confonde due cose diverse. Eliminare file a caso ti impedi
 </p>
 
 <p>
-  <img src="docs/screenshots/it/04-details-registered.webp" alt="Finestra «File lasciati stare» con l'elenco dei programmi installati e i dettagli che il pacchetto selezionato porta su di sé" width="900"><br>
+  <img src="docs/screenshots/it/04-details-left-alone.webp" alt="Finestra «File lasciati stare» con l'elenco dei programmi installati e i dettagli che il pacchetto selezionato porta su di sé" width="900"><br>
   <em>Dettagli dei file lasciati stare: il programma a cui Windows dice che ciascuno appartiene, e quello che il file dice di sé.</em>
   <br><br>
 </p>

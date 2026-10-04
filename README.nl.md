@@ -119,7 +119,7 @@ Het standaardadvies haalt twee dingen door elkaar. Lukraak bestanden verwijderen
 </p>
 
 <p>
-  <img src="docs/screenshots/nl/04-details-registered.webp" alt="Het venster Ongemoeid gelaten bestanden, met de geïnstalleerde programma's op een rij en de details die het geselecteerde pakket over zichzelf draagt" width="900"><br>
+  <img src="docs/screenshots/nl/04-details-left-alone.webp" alt="Het venster Ongemoeid gelaten bestanden, met de geïnstalleerde programma's op een rij en de details die het geselecteerde pakket over zichzelf draagt" width="900"><br>
   <em>Details van de bestanden die ongemoeid zijn gelaten: het programma waar Windows zegt dat elk bestand bij hoort, en wat het bestand over zichzelf zegt.</em>
   <br><br>
 </p>

@@ -119,7 +119,7 @@ Lời khuyên thường gặp lẫn lộn hai chuyện khác nhau. Xóa tệp m�
 </p>
 
 <p>
-  <img src="docs/screenshots/vi/04-details-registered.webp" alt="Cửa sổ “Tệp được để nguyên” liệt kê các chương trình đã cài, kèm những chi tiết mà gói được chọn tự nói về mình" width="900"><br>
+  <img src="docs/screenshots/vi/04-details-left-alone.webp" alt="Cửa sổ “Tệp được để nguyên” liệt kê các chương trình đã cài, kèm những chi tiết mà gói được chọn tự nói về mình" width="900"><br>
   <em>Chi tiết những tệp được để nguyên: chương trình mà Windows nói mỗi tệp thuộc về, và những gì tệp đó nói về chính nó.</em>
   <br><br>
 </p>

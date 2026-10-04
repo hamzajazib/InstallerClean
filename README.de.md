@@ -119,7 +119,7 @@ Der übliche Rat wirft zwei verschiedene Dinge durcheinander. Wahllos Dateien zu
 </p>
 
 <p>
-  <img src="docs/screenshots/de/04-details-registered.webp" alt="Das Fenster „Unangetastete Dateien“ mit den installierten Programmen und den Angaben, die das ausgewählte Paket über sich selbst trägt" width="900"><br>
+  <img src="docs/screenshots/de/04-details-left-alone.webp" alt="Das Fenster „Unangetastete Dateien“ mit den installierten Programmen und den Angaben, die das ausgewählte Paket über sich selbst trägt" width="900"><br>
   <em>Details zu den unangetasteten Dateien: das Programm, zu dem jede laut Windows gehört, und was die Datei über sich selbst sagt.</em>
   <br><br>
 </p>

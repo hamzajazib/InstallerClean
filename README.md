@@ -121,7 +121,7 @@ The standard advice confuses two different things. Deleting files at random stop
 </p>
 
 <p>
-  <img src="docs/screenshots/en/04-details-registered.webp" alt="Files left alone window listing the installed programs, with the details the selected package carries about itself" width="900"><br>
+  <img src="docs/screenshots/en/04-details-left-alone.webp" alt="Files left alone window listing the installed programs, with the details the selected package carries about itself" width="900"><br>
   <em>Details of the files left alone: the program Windows says each one belongs to, and what the file says about itself.</em>
   <br><br>
 </p>

@@ -119,7 +119,7 @@
 </p>
 
 <p>
-  <img src="docs/screenshots/ko/04-details-registered.webp" alt="그대로 둔 파일 창에 설치된 프로그램이 나열되어 있고, 선택한 패키지가 스스로 밝히는 세부 정보가 함께 보임" width="900"><br>
+  <img src="docs/screenshots/ko/04-details-left-alone.webp" alt="그대로 둔 파일 창에 설치된 프로그램이 나열되어 있고, 선택한 패키지가 스스로 밝히는 세부 정보가 함께 보임" width="900"><br>
   <em>그대로 둔 파일의 세부 정보. Windows가 각 파일의 주인이라고 말하는 프로그램과, 그 파일이 스스로 밝히는 내용.</em>
   <br><br>
 </p>

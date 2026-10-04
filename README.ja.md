@@ -119,7 +119,7 @@
 </p>
 
 <p>
-  <img src="docs/screenshots/ja/04-details-registered.webp" alt="「そのままにしたファイル」ウィンドウ。インストール済みのプログラムを一覧し、選択したパッケージが自身について持っている詳細を示している" width="900"><br>
+  <img src="docs/screenshots/ja/04-details-left-alone.webp" alt="「そのままにしたファイル」ウィンドウ。インストール済みのプログラムを一覧し、選択したパッケージが自身について持っている詳細を示している" width="900"><br>
   <em>そのままにしたファイルの詳細。それぞれが Windows のいうどのプログラムのものなのかと、そのファイル自身が名乗っている内容です。</em>
   <br><br>
 </p>

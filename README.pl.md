@@ -119,7 +119,7 @@ Standardowa porada myli dwie różne rzeczy. Usuwanie plików na chybił trafił
 </p>
 
 <p>
-  <img src="docs/screenshots/pl/04-details-registered.webp" alt="Okno „Pliki pozostawione bez zmian” z listą zainstalowanych programów i szczegółami, jakie wybrany pakiet podaje o sobie" width="900"><br>
+  <img src="docs/screenshots/pl/04-details-left-alone.webp" alt="Okno „Pliki pozostawione bez zmian” z listą zainstalowanych programów i szczegółami, jakie wybrany pakiet podaje o sobie" width="900"><br>
   <em>Szczegóły plików pozostawionych bez zmian: program, do którego według Windows należy każdy z nich, i to, co plik mówi sam o sobie.</em>
   <br><br>
 </p>

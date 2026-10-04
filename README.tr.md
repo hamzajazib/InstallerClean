@@ -119,7 +119,7 @@ Sıradan tavsiyeler iki ayrı şeyi birbirine karıştırır. Dosyaları gelişi
 </p>
 
 <p>
-  <img src="docs/screenshots/tr/04-details-registered.webp" alt="Kurulu programları listeleyen, seçili paketin kendisi hakkında taşıdığı ayrıntıları gösteren “Olduğu gibi bırakılan dosyalar” penceresi" width="900"><br>
+  <img src="docs/screenshots/tr/04-details-left-alone.webp" alt="Kurulu programları listeleyen, seçili paketin kendisi hakkında taşıdığı ayrıntıları gösteren “Olduğu gibi bırakılan dosyalar” penceresi" width="900"><br>
   <em>Olduğu gibi bırakılan dosyaların ayrıntıları: Windows'un her birinin hangi programa ait olduğunu söylediği bilgi ve dosyanın kendisi hakkında söyledikleri.</em>
   <br><br>
 </p>

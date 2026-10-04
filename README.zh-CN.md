@@ -119,7 +119,7 @@
 </p>
 
 <p>
-  <img src="docs/screenshots/zh/04-details-registered.webp" alt="“原样保留的文件”窗口，列出已安装的程序，并显示所选程序包自己带着的详情" width="900"><br>
+  <img src="docs/screenshots/zh/04-details-left-alone.webp" alt="“原样保留的文件”窗口，列出已安装的程序，并显示所选程序包自己带着的详情" width="900"><br>
   <em>原样保留的那些文件的详情：Windows 说每一个属于哪个程序，以及文件自己是怎么说的。</em>
   <br><br>
 </p>

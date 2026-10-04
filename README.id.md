@@ -119,7 +119,7 @@ Nasihat standar mencampuradukkan dua hal yang berbeda. Menghapus file secara sem
 </p>
 
 <p>
-  <img src="docs/screenshots/id/04-details-registered.webp" alt="Jendela file yang dibiarkan apa adanya, mendaftar program yang terpasang, dengan detail yang dibawa paket terpilih tentang dirinya sendiri" width="900"><br>
+  <img src="docs/screenshots/id/04-details-left-alone.webp" alt="Jendela file yang dibiarkan apa adanya, mendaftar program yang terpasang, dengan detail yang dibawa paket terpilih tentang dirinya sendiri" width="900"><br>
   <em>Detail file yang dibiarkan apa adanya: program yang menurut Windows memiliki tiap file, dan apa yang dikatakan file itu tentang dirinya sendiri.</em>
   <br><br>
 </p>
