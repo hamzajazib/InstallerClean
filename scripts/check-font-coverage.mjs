@@ -68,6 +68,7 @@ import { closeSync, openSync, readdirSync, readFileSync, readSync, statSync } fr
 import { join, sep } from 'node:path';
 import { readCSharp } from './csharp-source.mjs';
 import { lineIndex, sourceFiles } from './source-files.mjs';
+import { blankXmlComments } from './xml-source.mjs';
 
 const TOKENS = 'src/InstallerClean/Themes/Tokens.xaml';
 const LANGUAGE_FONTS = 'src/InstallerClean/Helpers/LanguageFonts.cs';
@@ -125,8 +126,17 @@ const csCode = (file) => {
     process.exit(2);
   }
 };
-const blank = (m) => m.replace(/[^\n]/g, ' ');
-const stripXmlComments = (s) => s.replace(/<!--[\s\S]*?-->/g, blank);
+// XAML or resx with its comments blanked, through xml-source.mjs. A comment that does
+// not close stops the run (exit 2).
+const readXml = (file) => {
+  const text = read(file);
+  try {
+    return blankXmlComments(text);
+  } catch (e) {
+    console.error(`\ncheck-font-coverage: ${file} cannot be read to its end (${e.message})`);
+    process.exit(2);
+  }
+};
 
 // A C# regular string literal, quotes included, to the string it holds.
 const csString = (literal) =>
@@ -143,7 +153,7 @@ const xmlText = (s) =>
 const need = (match, file, what) => match ?? fail(`${file}: cannot find ${what}`);
 const STRING = /"(?:\\.|[^"\\])*"/g;
 
-const tokensXaml = stripXmlComments(read(TOKENS));
+const tokensXaml = readXml(TOKENS);
 const themeList = xmlText(need(
   tokensXaml.match(/<FontFamily\s+x:Key="Type\.FontFamily"\s*>([^<]*)<\/FontFamily>/),
   TOKENS, '<FontFamily x:Key="Type.FontFamily">')[1]);
@@ -504,7 +514,7 @@ const montserrat = resolveList(montserratList, CODE_BASE, `${LANGUAGE_FONTS} Mon
 
 const resxFile = (culture) => `${RESX_DIR}/Strings${culture === neutral ? '' : `.${culture}`}.resx`;
 function resxValues(culture) {
-  const text = stripXmlComments(read(resxFile(culture)));
+  const text = readXml(resxFile(culture));
   const values = new Map();
   for (const m of text.matchAll(/<data\s+([^>]*)>([\s\S]*?)<\/data>/g)) {
     const name = m[1].match(/\bname="([^"]*)"/)?.[1];

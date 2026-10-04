@@ -116,8 +116,8 @@
 // never resolves one. Themes/Primitives.xaml explains the type-matching rule
 // using "{StaticResource X}" in prose, which without stripping is a reference to
 // a key named X that nothing defines, i.e. an instant false failure. C# is read
-// through csharp-source.mjs, and a file it cannot follow to its end stops the run
-// (exit 2).
+// through csharp-source.mjs and XAML through xml-source.mjs, and a file either
+// cannot follow to its end stops the run (exit 2).
 //
 // bin/ and obj/ are excluded because build output mirrors source.
 //
@@ -125,6 +125,7 @@
 import { readFileSync } from 'node:fs';
 import { readCSharp } from './csharp-source.mjs';
 import { lineIndex, sourceFiles } from './source-files.mjs';
+import { blankXmlComments } from './xml-source.mjs';
 
 const SRC = 'src';
 const APP_XAML = `${SRC}/InstallerClean/App.xaml`;
@@ -244,7 +245,16 @@ const blank = (m) => m.replace(/[^\n]/g, ' ');
 // rather than as the fault it is describing.
 const article = (t) => (/^[aeiou]/i.test(t) ? 'an' : 'a');
 
-const stripXmlComments = (s) => s.replace(/<!--[\s\S]*?-->/g, blank);
+// XAML with its comments blanked.
+const xamlText = (file) => {
+  try {
+    return blankXmlComments(readFileSync(file, 'utf8'));
+  } catch (e) {
+    console.error(`FAILED: ${file} cannot be read to its end (${e.message}).`);
+    console.error('Refusing to report on a file whose markup cannot be told from its comments.');
+    process.exit(2);
+  }
+};
 // C# with its comments taken out, string literals left in place.
 const csCode = (file) => {
   try {
@@ -261,7 +271,7 @@ const csCode = (file) => {
 const xamlFiles = sourceFiles(SRC, '.xaml');
 const csFiles = sourceFiles(SRC, '.cs').filter((f) => !f.endsWith('Strings.Designer.cs'));
 
-const xaml = xamlFiles.map((f) => [f, stripXmlComments(readFileSync(f, 'utf8'))]);
+const xaml = xamlFiles.map((f) => [f, xamlText(f)]);
 const cs = csFiles.map((f) => [f, csCode(f)]);
 
 // --- the XAML walk -----------------------------------------------------------

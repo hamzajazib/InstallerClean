@@ -32,6 +32,7 @@
 //   node scripts/verify-shipped-artefacts.mjs [artefact-dir ...]
 // With no arguments it reads the three directories a release publishes.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { blankXmlComments } from './xml-source.mjs';
 
 const RESOURCE_DIR = 'src/InstallerClean.Core/Resources';
 
@@ -240,13 +241,13 @@ const readManifests = (bytes) => {
   return { manifests: found };
 };
 
-// XML comments go first. Each manifest explains the level in a comment beside
-// it, and those comments name both the level required and the one it must not
-// become, so a reader that matched the raw text would find either spelling
-// whatever the element says. check-elevation-manifest.mjs guards the source
-// files the same way.
+// XML comments go first, through xml-source.mjs, which throws on one that does not
+// close. Each manifest explains the level in a comment beside it, and those comments
+// name both the level required and the one it must not become, so a reader that
+// matched the raw text would find either spelling whatever the element says.
+// check-elevation-manifest.mjs guards the source files the same way.
 const levelsIn = (xml) => {
-  const declared = xml.replace(/<!--[\s\S]*?-->/g, '');
+  const declared = blankXmlComments(xml);
   const tags = [...declared.matchAll(/<requestedExecutionLevel\b[^>]*?\blevel="([^"]*)"/g)];
   return [...new Set(tags.map((m) => m[1]))];
 };
@@ -285,10 +286,18 @@ for (const dir of artefacts) {
 
   const embedded = manifestsIn(bytes);
   let level = 'none';
+  let asked = null;
   if (embedded.error) {
     problems.push(`${exe.path}: ${embedded.error}`);
   } else {
-    const asked = [...new Set(embedded.manifests.flatMap(levelsIn))];
+    // The line is in the manifest resource the build embedded, not in a file on disk.
+    try {
+      asked = [...new Set(embedded.manifests.flatMap(levelsIn))];
+    } catch (e) {
+      problems.push(`${exe.path}: the embedded manifest, ${e.message}`);
+    }
+  }
+  if (asked) {
     if (asked.length) level = asked.join(' and ');
     if (asked.length === 0) {
       problems.push(`${exe.path}: no requestedExecutionLevel in the embedded manifest`);

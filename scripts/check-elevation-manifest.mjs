@@ -21,13 +21,15 @@
 // case: the command-line tool runs unattended from scheduled tasks, where a
 // silent change of meaning has nobody watching it.
 //
-// XML COMMENTS ARE STRIPPED BEFORE ANYTHING IS MATCHED. Both manifests explain
-// the level in a comment beside it, and those comments name both this level and
-// the one it must not become, so a check reading the raw file would find either
-// spelling whatever the element says.
+// XML COMMENTS ARE BLANKED BEFORE ANYTHING IS MATCHED, through xml-source.mjs. Both
+// manifests explain the level in a comment beside it, and those comments name both
+// this level and the one it must not become, so a check reading the raw file would
+// find either spelling whatever the element says. A comment that does not close is
+// reported with its line, the rest of that file being unreadable as markup.
 //
 // Run from the repo root: node scripts/check-elevation-manifest.mjs
 import { readFileSync } from 'node:fs';
+import { blankXmlComments } from './xml-source.mjs';
 
 const REQUIRED = 'requireAdministrator';
 
@@ -45,14 +47,19 @@ const read = (p) => {
   }
 };
 
-// Non-greedy so a file with several comments loses each of them rather than
-// everything between the first opener and the last closer.
-const withoutComments = (xml) => xml.replace(/<!--[\s\S]*?-->/g, '');
-
 const problems = [];
+// A manifest whose comments cannot be told from its markup, kept apart from the
+// problems with the level, since the fix for it is a different one.
+const unreadable = [];
 
 for (const path of MANIFESTS) {
-  const xml = withoutComments(read(path));
+  let xml;
+  try {
+    xml = blankXmlComments(read(path));
+  } catch (e) {
+    unreadable.push(`${path}: ${e.message}`);
+    continue;
+  }
 
   const tags = xml.match(/<requestedExecutionLevel\b[^>]*>/g) ?? [];
 
@@ -75,6 +82,14 @@ for (const path of MANIFESTS) {
   }
 }
 
+if (unreadable.length) {
+  console.error('check-elevation-manifest: a manifest cannot be read to its end.\n');
+  for (const u of unreadable) console.error(`  ${u}`);
+  console.error("\nFix: close the comment with '-->'. Everything after an unclosed '<!--' is");
+  console.error('part of the comment, so the level this check holds cannot be read.');
+  if (problems.length) console.error('');
+}
+
 if (problems.length) {
   console.error('check-elevation-manifest: both hosts must ask for administrator.\n');
   for (const p of problems) console.error(`  ${p}`);
@@ -82,7 +97,8 @@ if (problems.length) {
   console.error('element in each manifest. The scan reads a per-user product it is not');
   console.error('entitled to see as a product that is not installed, so the level decides');
   console.error('what the scan concludes, not merely whether a later write succeeds.');
-  process.exit(1);
 }
+
+if (unreadable.length || problems.length) process.exit(1);
 
 console.log(`check-elevation-manifest: OK (${MANIFESTS.length} manifests, level="${REQUIRED}")`);

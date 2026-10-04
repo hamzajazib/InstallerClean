@@ -39,14 +39,15 @@
 //
 // XML and C# comments are blanked before anything is matched, newlines kept, so
 // a reported line number is the line on disk and a tag quoted in prose is not
-// read as markup. C# is read through csharp-source.mjs, and a file it cannot follow
-// to its end stops the run (exit 2), as does a XAML file holding a comment, a
-// declaration or a tag that does not close.
+// read as markup. C# is read through csharp-source.mjs and XAML through
+// xml-source.mjs, and a file either cannot follow to its end stops the run (exit
+// 2), as does a XAML file holding a declaration or a tag that does not close.
 //
 // Run from the repo root: node scripts/check-xaml-font.mjs
 import { readFileSync } from 'node:fs';
 import { readCSharp } from './csharp-source.mjs';
 import { lineIndex, sourceFiles } from './source-files.mjs';
+import { blankXmlComments } from './xml-source.mjs';
 
 const SRC = 'src';
 const FONT = '{DynamicResource Type.FontFamily}';
@@ -55,8 +56,16 @@ const POPUPS = ['ToolTip', 'ContextMenu'];
 // ResourceDictionary's styles are checked where they target a popup.
 const NON_DRAWING_ROOTS = new Set(['Application', 'ResourceDictionary']);
 
-const blank = (m) => m.replace(/[^\n]/g, ' ');
-const stripXmlComments = (s) => s.replace(/<!--[\s\S]*?-->/g, blank);
+// XAML with its comments blanked.
+const xamlText = (file) => {
+  try {
+    return blankXmlComments(readFileSync(file, 'utf8'));
+  } catch (e) {
+    console.error(`check-xaml-font: ${file} cannot be read to its end (${e.message}).`);
+    console.error('Refusing to report on a file whose markup cannot be told from its comments.');
+    process.exit(2);
+  }
+};
 // C# with its comments taken out, string literals left in place.
 const csCode = (file) => {
   try {
@@ -76,16 +85,14 @@ const refuseMarkup = (file, line, what) => {
 
 // Tags in document order, quotes respected, so a '>' inside an attribute value
 // does not end the tag. A processing instruction or a declaration is skipped. One
-// with no '>' after it, or a tag with none, stops the run: the comments are blanked
-// before this reads the text, so a '<!--' still here is a comment that does not close.
+// with no '>' after it, or a tag with none, stops the run.
 function tags(file, text, lineAt) {
   const out = [];
   let i = 0;
   while ((i = text.indexOf('<', i)) !== -1) {
     if (text[i + 1] === '?' || text[i + 1] === '!') {
       const end = text.indexOf('>', i);
-      if (end === -1)
-        refuseMarkup(file, lineAt(i), text.startsWith('<!--', i) ? 'a comment does not close' : 'a declaration does not close');
+      if (end === -1) refuseMarkup(file, lineAt(i), 'a declaration does not close');
       i = end + 1;
       continue;
     }
@@ -152,7 +159,7 @@ const popupStyles = []; // { file, line, target, key, basedOn, setsFont, fontVal
 const popupElements = []; // { file, line, name, style }
 
 for (const file of xamlFiles) {
-  const text = stripXmlComments(readFileSync(file, 'utf8'));
+  const text = xamlText(file);
   const lineAt = lineIndex(text);
 
   for (const m of text.matchAll(/\{(StaticResource|DynamicResource)\s+Type\.FontFamily\s*\}/g)) {
