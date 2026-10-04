@@ -2027,9 +2027,49 @@ public class MainViewModelTests
         // offers files the batch has already acted on.
         Assert.False(vm.Scan.HasScanned);
         Assert.Null(vm.Scan.LastScanResult);
+        AssertTheWindowSaysTheScanAfterTheBatchDidNotFinish(vm);
         Assert.False(vm.Cleanup.IsOperating);
         // A file went, so this was the PC's first run.
         _firstRunMark.Received(1).Set();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_close_during_a_Move_or_Delete_after_a_cancelled_rescan_reports_no_scan_cancelled(bool deleting)
+    {
+        var vm = CreateViewModel();
+        TwoFileBatch(_ => vm.Cleanup.RequestClose(), done: 1, errored: 0, cancelled: true);
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = Path.Combine(Path.GetTempPath(), "ic-test-close-after-a-cancelled-rescan");
+        // A Re-scan the user cancels keeps the list, with the cancel still recorded.
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ci =>
+            {
+                vm.Scan.CancelScanCommand.Execute(null);
+                ci.Arg<CancellationToken>().ThrowIfCancellationRequested();
+                return ScanResultWithOrphans(2);
+            });
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+        Assert.True(vm.Scan.HasScanned);
+        Assert.True(vm.Scan.LastScanWasCancelled);
+
+        await RunBatch(vm, deleting);
+
+        Assert.False(vm.Scan.HasScanned);
+        AssertTheWindowSaysTheScanAfterTheBatchDidNotFinish(vm);
+    }
+
+    /// <summary>
+    /// What the window says where the scan after a Move or Delete did not run because
+    /// the window is closing: that scan did not finish, and no scan was cancelled.
+    /// </summary>
+    private static void AssertTheWindowSaysTheScanAfterTheBatchDidNotFinish(MainViewModel vm)
+    {
+        Assert.False(vm.Scan.LastScanWasCancelled);
+        Assert.Equal(Strings.Body_RescanNotFinished_Lead, vm.IntroLead);
+        Assert.Equal(Strings.Body_RescanNotFinished_Why, vm.IntroDetail);
+        Assert.Equal(string.Empty, vm.IntroNotice);
     }
 
     [Theory]
@@ -2053,6 +2093,7 @@ public class MainViewModelTests
         // and nothing is written, sent or left waiting to go.
         Assert.True(vm.Completion.IsComplete);
         Assert.False(vm.Completion.OffersReport);
+        AssertTheWindowSaysTheScanAfterTheBatchDidNotFinish(vm);
         await _earlierRunCheck.DidNotReceive().ShowsAnEarlierRunWithinAsync(Arg.Any<TimeSpan>());
         await _resultLogService.DidNotReceive().WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
         await _resultLogService.DidNotReceive().SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
@@ -2078,6 +2119,7 @@ public class MainViewModelTests
         // Every file is where it was, so the PC's first report is still to come.
         Assert.True(vm.Completion.IsComplete);
         Assert.False(vm.Completion.OffersReport);
+        AssertTheWindowSaysTheScanAfterTheBatchDidNotFinish(vm);
         await _resultLogService.DidNotReceive().WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
         _firstRunMark.DidNotReceive().Set();
     }

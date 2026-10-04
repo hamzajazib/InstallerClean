@@ -2086,7 +2086,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     ///
     /// Where the window has been asked to close (<see cref="CloseRequested"/>), no
     /// scan runs and no source is installed. The list from before the batch is
-    /// dropped all the same, and the window closes as the operation ends.
+    /// dropped all the same (<see cref="ScanViewModel.DropResultWithoutRescan"/>),
+    /// and the window closes as the operation ends.
     /// </summary>
     private async Task RefreshAfterBatchAsync()
     {
@@ -2110,11 +2111,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         if (CloseRequested)
         {
             // The window is closing, so no scan runs and the overlay keeps its
-            // heading. The list from before the batch is dropped as a rescan that
-            // is cancelled drops it, so nothing is left on the window to act on
-            // while the close waits its turn on the dispatcher. A token cancelled
-            // from the start means the scan reads nothing (RunScanCoreAsync).
-            await _scan.RefreshAsync(new CancellationToken(canceled: true));
+            // heading. The list from before the batch is dropped all the same, so
+            // nothing is left on the window to act on while the close waits its
+            // turn on the dispatcher.
+            _scan.DropResultWithoutRescan();
             return;
         }
 

@@ -135,9 +135,11 @@ public partial class ScanViewModel : ObservableObject
     /// <summary>
     /// True while the view model holds the result of a scan that completed. False
     /// before the first one, which is a state the user reaches by cancelling the
-    /// startup scan, and false again after a scan that stops or fails, and after
-    /// the user cancels the scan that follows a Move or Delete. The main window has
-    /// to say so rather than paint a zeroed scan result, or an earlier one.
+    /// startup scan, and false again after a scan that stops or fails, after the
+    /// user cancels the scan that follows a Move or Delete, and where that scan does
+    /// not run because the window is closing (<see cref="DropResultWithoutRescan"/>).
+    /// The main window has to say so rather than paint a zeroed scan result, or an
+    /// earlier one.
     ///
     /// A Re-scan the user cancels leaves it as it was. An earlier result stays on
     /// screen: that scan completed, and nothing has acted on its result since.
@@ -354,10 +356,6 @@ public partial class ScanViewModel : ObservableObject
     /// </summary>
     private async Task RunScanCoreAsync(IProgress<ScanProgressUpdate>? progress, CancellationToken cancellationToken = default)
     {
-        // A token already cancelled ends the scan here, before the scan service
-        // opens the Installer folder, and the caller's cancel arm takes it.
-        cancellationToken.ThrowIfCancellationRequested();
-
         // Set before the first await, so it is already true when the caller's
         // command returns to the dispatcher: every scan entry point routes
         // through here, so this is the one place the gate can be complete.
@@ -453,7 +451,8 @@ public partial class ScanViewModel : ObservableObject
     /// scanning overlay collapses to re-announce "Scan cancelled." past the
     /// focus move that would otherwise swallow it, and the main window's
     /// states with no result read it to say why there is nothing on screen.
-    /// Reset at the start of every scan.
+    /// Reset at the start of every scan, and where the scan after a Move or Delete
+    /// does not run (<see cref="DropResultWithoutRescan"/>).
     ///
     /// Observable, not a plain property: the startup scan is the one that gets
     /// cancelled in practice, and it sets this without ever setting
@@ -512,10 +511,11 @@ public partial class ScanViewModel : ObservableObject
 
     /// <summary>
     /// What the main window says in place of a list when the scan after a Move or
-    /// Delete ended without a result: stopped, failed or cancelled. Empty
-    /// otherwise. That scan clears it as it starts and sets it if it ends without
-    /// a result, a Re-scan that completes or fails clears it, and a Re-scan the
-    /// user cancels leaves it where it was, with the rest of the window.
+    /// Delete ended without a result: stopped, failed or cancelled, or did not run
+    /// because the window is closing. Empty otherwise. That scan clears it as it
+    /// starts and sets it if it ends without a result, a Re-scan that completes or
+    /// fails clears it, and a Re-scan the user cancels leaves it where it was, with
+    /// the rest of the window.
     ///
     /// It is its own message rather than the failure's, which is what
     /// <see cref="LastScanError"/> carries after the other two scans. The account a
@@ -566,6 +566,21 @@ public partial class ScanViewModel : ObservableObject
         SourcesGivenUpText = string.Empty;
         PendingRebootResult = null;
         HasScanned = false;
+    }
+
+    /// <summary>
+    /// Takes the result off the view model where the scan after a Move or Delete does
+    /// not run, because the window is closing. The result goes as it goes when that
+    /// scan ends without one (<see cref="RefreshAsync"/>), and the window says that
+    /// scan did not finish. Nothing failed, so the message names no crash log, and no
+    /// scan is reported cancelled: <see cref="LastScanWasCancelled"/> is cleared, as a
+    /// Re-scan the user cancelled earlier leaves it set over the list it kept.
+    /// </summary>
+    public void DropResultWithoutRescan()
+    {
+        LastScanWasCancelled = false;
+        UnfinishedRefreshMessage = Strings.Body_RescanNotFinished_Why;
+        DropResult();
     }
 
     /// <summary>
