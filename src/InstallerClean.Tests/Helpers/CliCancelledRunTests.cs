@@ -268,6 +268,7 @@ public class CliCancelledRunTests
             .AddSingleton(delete ?? Substitute.For<IDeleteFilesService>())
             .AddSingleton(move ?? Substitute.For<IMoveFilesService>())
             .AddSingleton(Substitute.For<ISettingsService>())
+            .AddSingleton(Substitute.For<IFirstRunMark>())
             .BuildServiceProvider();
     }
 }

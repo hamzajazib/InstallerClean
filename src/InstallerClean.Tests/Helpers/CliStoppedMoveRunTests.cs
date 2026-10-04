@@ -140,6 +140,7 @@ public class CliStoppedMoveRunTests
             .AddSingleton(Substitute.For<IDeleteFilesService>())
             .AddSingleton(move)
             .AddSingleton(Substitute.For<ISettingsService>())
+            .AddSingleton(Substitute.For<IFirstRunMark>())
             .BuildServiceProvider();
     }
 

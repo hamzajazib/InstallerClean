@@ -299,6 +299,7 @@ public class CliHeldBackBesideAnOfferTests
             .AddSingleton(deleter)
             .AddSingleton(Substitute.For<IMoveFilesService>())
             .AddSingleton(Substitute.For<ISettingsService>())
+            .AddSingleton(Substitute.For<IFirstRunMark>())
             .BuildServiceProvider();
 
         var original = Console.Out;

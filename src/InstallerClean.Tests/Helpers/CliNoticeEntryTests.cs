@@ -139,6 +139,7 @@ public class CliNoticeEntryTests
             .AddSingleton(Substitute.For<IDeleteFilesService>())
             .AddSingleton(Substitute.For<IMoveFilesService>())
             .AddSingleton(Substitute.For<ISettingsService>())
+            .AddSingleton(Substitute.For<IFirstRunMark>())
             .BuildServiceProvider();
 
         // Console.SetOut and the recorder are process-global; the assembly disables test

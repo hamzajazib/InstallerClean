@@ -1,0 +1,305 @@
+using InstallerClean.Cli;
+using InstallerClean.Helpers;
+using InstallerClean.Models;
+using InstallerClean.Services;
+using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
+
+namespace InstallerClean.Tests.Helpers;
+
+/// <summary>
+/// The command line sets the PC's first-run mark after a Delete that deleted a file and
+/// a Move that moved one, the cancelled and the stopped runs included, and leaves it
+/// alone after a scan and after a run that moved or deleted nothing. Driven through the
+/// real work method with substitute services; the mark is a substitute too, so nothing
+/// is written to the registry.
+///
+/// EVERY RUN THAT LEAVES THE MARK ALONE HAS A TWIN HERE THAT SETS IT, built from the same
+/// fixtures with one thing changed: the count the service hands back, the files the
+/// check before acting keeps, or, for the scan, the command.
+/// </summary>
+public class CliFirstRunMarkTests
+{
+    /// <summary>
+    /// Temp is fully qualified on either host and outside both forbidden sets, so the
+    /// destination gates pass it. Nothing is created: the move service is a substitute.
+    /// </summary>
+    private static readonly string Destination =
+        Path.Combine(Path.GetTempPath(), "installerclean-cli-first-run-test");
+
+    private const string File1 = @"C:\Windows\Installer\a.msi";
+    private const string File2 = @"C:\Windows\Installer\b.msp";
+
+    private static readonly PatchClaim SurvivingA =
+        new(File1, "{AAAA1111-0000-0000-0000-000000000001}", "{PPPP1111-0000-0000-0000-000000000001}", null, 2);
+    private static readonly PatchClaim SurvivingB =
+        new(File2, "{AAAA1111-0000-0000-0000-000000000002}", "{PPPP1111-0000-0000-0000-000000000001}", null, 2);
+
+    [Fact]
+    public async Task A_delete_that_deleted_files_sets_the_mark()
+    {
+        var mark = Substitute.For<IFirstRunMark>();
+
+        var exitCode = await Run("/d", null, Services(mark, delete: Delete(new DeleteResult(2, NoErrors))));
+
+        Assert.Equal(CliExitCode.Ok, exitCode);
+        mark.Received(1).Set();
+    }
+
+    [Fact]
+    public async Task A_delete_in_which_every_file_failed_leaves_the_mark()
+    {
+        var mark = Substitute.For<IFirstRunMark>();
+        var failed = new DeleteResult(0, new FileOperationError[] { new UnknownError(File1), new UnknownError(File2) });
+
+        var exitCode = await Run("/d", null, Services(mark, delete: Delete(failed)));
+
+        Assert.Equal(CliExitCode.Error, exitCode);
+        mark.DidNotReceive().Set();
+    }
+
+    [Fact]
+    public async Task A_delete_where_the_check_before_it_took_every_file_back_leaves_the_mark()
+    {
+        var mark = Substitute.For<IFirstRunMark>();
+        var delete = Delete(new DeleteResult(2, NoErrors));
+        var reverifier = Substitute.For<IRemovableReverifier>();
+        reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(new ReverifyResult(Array.Empty<string>(), new[] { File1, File2 }));
+
+        var exitCode = await Run("/d", null, Services(mark, delete: delete, reverifier: reverifier));
+
+        Assert.Equal(CliExitCode.Ok, exitCode);
+        // The run finished without asking the service, so the count it went on is nought.
+        await delete.DidNotReceive().DeleteFilesAsync(
+            Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+            Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
+        mark.DidNotReceive().Set();
+    }
+
+    [Fact]
+    public async Task A_cancelled_delete_that_deleted_a_file_sets_the_mark()
+    {
+        using var cts = new CancellationTokenSource();
+        var mark = Substitute.For<IFirstRunMark>();
+        var delete = Substitute.For<IDeleteFilesService>();
+        delete.DeleteFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                cts.Cancel();
+                return new DeleteResult(1, NoErrors, Cancelled: true);
+            });
+
+        var exitCode = await Run("/d", null, Services(mark, delete: delete), cts.Token);
+
+        Assert.Equal(CliExitCode.Partial, exitCode);
+        mark.Received(1).Set();
+    }
+
+    [Fact]
+    public async Task A_delete_cancelled_before_its_first_file_leaves_the_mark()
+    {
+        using var cts = new CancellationTokenSource();
+        var mark = Substitute.For<IFirstRunMark>();
+        var delete = Substitute.For<IDeleteFilesService>();
+        delete.DeleteFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                cts.Cancel();
+                return new DeleteResult(0, NoErrors, Cancelled: true);
+            });
+
+        var exitCode = await Run("/d", null, Services(mark, delete: delete), cts.Token);
+
+        Assert.Equal(CliExitCode.Cancelled, exitCode);
+        mark.DidNotReceive().Set();
+    }
+
+    [Fact]
+    public async Task A_move_that_moved_files_sets_the_mark()
+    {
+        var mark = Substitute.For<IFirstRunMark>();
+
+        var exitCode = await Run("/m", Destination, Services(mark, move: Move(new MoveResult(2, NoErrors))));
+
+        Assert.Equal(CliExitCode.Ok, exitCode);
+        mark.Received(1).Set();
+    }
+
+    [Fact]
+    public async Task A_move_in_which_every_file_failed_leaves_the_mark()
+    {
+        var mark = Substitute.For<IFirstRunMark>();
+        var failed = new MoveResult(0, new FileOperationError[] { new UnknownError(File1), new UnknownError(File2) });
+
+        var exitCode = await Run("/m", Destination, Services(mark, move: Move(failed)));
+
+        Assert.Equal(CliExitCode.Error, exitCode);
+        mark.DidNotReceive().Set();
+    }
+
+    [Fact]
+    public async Task A_cancelled_move_that_moved_a_file_sets_the_mark()
+    {
+        using var cts = new CancellationTokenSource();
+        var mark = Substitute.For<IFirstRunMark>();
+        var move = Substitute.For<IMoveFilesService>();
+        move.MoveFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>(),
+                Arg.Any<UnderLeaseClaims>(), Arg.Any<IProgress<OperationProgress>?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                cts.Cancel();
+                return new MoveResult(1, NoErrors, Cancelled: true);
+            });
+
+        var exitCode = await Run("/m", Destination, Services(mark, move: move), cts.Token);
+
+        Assert.Equal(CliExitCode.Partial, exitCode);
+        mark.Received(1).Set();
+    }
+
+    [Fact]
+    public async Task A_move_the_app_stopped_after_moving_a_file_sets_the_mark()
+    {
+        var mark = Substitute.For<IFirstRunMark>();
+
+        var exitCode = await Run("/m", Destination, Services(mark, move: StoppedMove(moved: 1)));
+
+        Assert.Equal(CliExitCode.Partial, exitCode);
+        mark.Received(1).Set();
+    }
+
+    [Fact]
+    public async Task A_move_the_app_stopped_before_moving_a_file_leaves_the_mark()
+    {
+        var mark = Substitute.For<IFirstRunMark>();
+
+        var exitCode = await Run("/m", Destination, Services(mark, move: StoppedMove(moved: 0)));
+
+        Assert.Equal(CliExitCode.Error, exitCode);
+        mark.DidNotReceive().Set();
+    }
+
+    [Fact]
+    public async Task A_scan_leaves_the_mark()
+    {
+        var mark = Substitute.For<IFirstRunMark>();
+
+        var exitCode = await Run("/s", null, Services(mark));
+
+        // The scan offered both files and listed them, which is as far as /s goes.
+        Assert.Equal(CliExitCode.Ok, exitCode);
+        mark.DidNotReceive().Set();
+    }
+
+    // ---- fixtures ----
+
+    private static readonly FileOperationError[] NoErrors = Array.Empty<FileOperationError>();
+
+    private static IDeleteFilesService Delete(DeleteResult result)
+    {
+        var delete = Substitute.For<IDeleteFilesService>();
+        delete.DeleteFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(result);
+        return delete;
+    }
+
+    private static IMoveFilesService Move(MoveResult result)
+    {
+        var move = Substitute.For<IMoveFilesService>();
+        move.MoveFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>(),
+                Arg.Any<UnderLeaseClaims>(), Arg.Any<IProgress<OperationProgress>?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(result);
+        return move;
+    }
+
+    /// <summary>A Move one of the service's destination guards stopped part way.</summary>
+    private static IMoveFilesService StoppedMove(int moved)
+    {
+        var move = Substitute.For<IMoveFilesService>();
+        move.MoveFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>(),
+                Arg.Any<UnderLeaseClaims>(), Arg.Any<IProgress<OperationProgress>?>(),
+                Arg.Any<CancellationToken>())
+            .Returns<MoveResult>(_ => throw new MoveAbortedException(
+                "stopped", new MoveResult(moved, NoErrors),
+                Destination, MoveAbortReason.ResolvesElsewhere));
+        return move;
+    }
+
+    private static async Task<int> Run(
+        string arg, string? destination, IServiceProvider services, CancellationToken token = default)
+    {
+        var command = arg switch
+        {
+            "/s" => CliCommand.ScanOnly,
+            "/m" => CliCommand.Move,
+            _ => CliCommand.Delete,
+        };
+        // Standard output is swapped for a buffer so the run's lines stay out of the test
+        // runner's own output; nothing here reads them.
+        var original = Console.Out;
+        using var buffer = new StringWriter();
+        try
+        {
+            Console.SetOut(buffer);
+            return await Program.RunWorkAsync(
+                arg, new CliInvocation(command, null, destination), token, services, () => false);
+        }
+        finally
+        {
+            Console.SetOut(original);
+        }
+    }
+
+    /// <summary>
+    /// The services the work path resolves. The scan offers two files, the
+    /// pending-reboot gate is clean and, unless a test passes its own, the check
+    /// before acting keeps both, so the run reaches whichever service the test scripted.
+    /// </summary>
+    private static IServiceProvider Services(
+        IFirstRunMark mark, IDeleteFilesService? delete = null, IMoveFilesService? move = null,
+        IRemovableReverifier? reverifier = null)
+    {
+        var scan = Substitute.For<IFileSystemScanService>();
+        scan.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(new ScanResult(
+                new[]
+                {
+                    new OrphanedFile(File1, 100, IsPatch: false, IsRemovablePatch: false,
+                        IsObsoleted: false, Reason: "unclaimed"),
+                    new OrphanedFile(File2, 200, IsPatch: true, IsRemovablePatch: true,
+                        IsObsoleted: false, Reason: "superseded"),
+                },
+                Array.Empty<RegisteredPackage>(),
+                RegisteredTotalBytes: 0));
+
+        var reboot = Substitute.For<IPendingRebootService>();
+        reboot.Check().Returns(PendingRebootResult.Clean);
+
+        if (reverifier is null)
+        {
+            reverifier = Substitute.For<IRemovableReverifier>();
+            reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+                .Returns(new ReverifyResult(
+                    new[] { File1, File2 },
+                    Array.Empty<string>(),
+                    SurvivingPatchClaims: new[] { SurvivingA, SurvivingB },
+                    SiblingPatchClaims: Array.Empty<PatchClaim>()));
+        }
+
+        return new ServiceCollection()
+            .AddSingleton(scan)
+            .AddSingleton(reboot)
+            .AddSingleton(reverifier)
+            .AddSingleton(delete ?? Substitute.For<IDeleteFilesService>())
+            .AddSingleton(move ?? Substitute.For<IMoveFilesService>())
+            .AddSingleton(Substitute.For<ISettingsService>())
+            .AddSingleton(mark)
+            .BuildServiceProvider();
+    }
+}

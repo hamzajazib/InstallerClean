@@ -240,6 +240,7 @@ public class CliPendingRebootOutcomeTests
             .AddSingleton(delete)
             .AddSingleton(move)
             .AddSingleton(Substitute.For<ISettingsService>())
+            .AddSingleton(Substitute.For<IFirstRunMark>())
             .BuildServiceProvider();
 
         var invocation = arg == "/m"

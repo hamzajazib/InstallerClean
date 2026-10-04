@@ -56,6 +56,10 @@ AppMutex=Global\InstallerClean_SingleInstance
 ; to remove it: Event Viewer resolves an entry's description through its
 ; source, so deleting the source turns every audit entry the CLI has already
 ; written into "the description for Event ID ... cannot be found".
+; The first-run mark, the value FirstRunRecorded under
+; HKLM\SOFTWARE\NoFaff\InstallerClean, survives too, and no [Registry] or
+; [UninstallDelete] entry should be added for it: removed, it would make a
+; reinstall read as the PC's first run.
 AppPublisher={#MyCompany}
 AppPublisherURL={#MyRepoUrl}
 AppSupportURL={#MyRepoUrl}/discussions

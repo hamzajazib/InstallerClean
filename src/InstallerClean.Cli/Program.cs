@@ -785,6 +785,10 @@ internal static class Program
                         filePaths, UnderLeaseClaims.From(reverify),
                         progress: progress, cancellationToken: token);
 
+                // First thing after the service answers, so a Delete cancelled part way
+                // sets the mark before the cancel re-entry below leaves this method.
+                RecordFirstRun(services, result.DeletedCount);
+
                 // A Windows Installer transaction grabbed Global\_MSIExecute in the
                 // race after the gate check passed, so the service refused and
                 // touched nothing. Report it identically to a pre-act gate block.
@@ -944,6 +948,8 @@ internal static class Program
             }
             catch (MoveAbortedException ex)
             {
+                RecordFirstRun(services, ex.Partial.MovedCount);
+
                 // Caught at the call site rather than at the method's own arms,
                 // where survivingFiles and moveDest are out of scope, which is
                 // also where the window catches its copy. Without this the base
@@ -968,6 +974,9 @@ internal static class Program
                 }
                 return ReportAbortedMove(arg, ex, moveDest, count, survivingFiles);
             }
+
+            // As in the /d branch: ahead of the cancel re-entry.
+            RecordFirstRun(services, moveResult.MovedCount);
 
             // Global\_MSIExecute found held at the service boundary: same outcome
             // as a gate block.
@@ -1160,6 +1169,19 @@ internal static class Program
             return;
         Console.WriteLine();
         Console.WriteLine(string.Format(Strings.Cli_DonateAsk, SupportLink.KoFiUrl));
+    }
+
+    /// <summary>
+    /// Sets the PC's first-run mark (<see cref="IFirstRunMark"/>) where
+    /// <paramref name="filesActedOn"/> is above nought. Called with the service's own
+    /// count of files moved or deleted at each place a count comes back: a Delete's
+    /// result, a Move's result and a stopped Move's partial result. A scan, and a run
+    /// that moved or deleted nothing, leave the mark as it was.
+    /// </summary>
+    private static void RecordFirstRun(IServiceProvider services, int filesActedOn)
+    {
+        if (filesActedOn > 0)
+            services.GetRequiredService<IFirstRunMark>().Set();
     }
 
     /// <summary>

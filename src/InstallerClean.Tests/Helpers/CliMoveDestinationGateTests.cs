@@ -264,6 +264,7 @@ public class CliMoveDestinationGateTests
             .AddSingleton(move)
             .AddSingleton(Substitute.For<IDeleteFilesService>())
             .AddSingleton(Substitute.For<ISettingsService>())
+            .AddSingleton(Substitute.For<IFirstRunMark>())
             .BuildServiceProvider();
 
         return (services, scan, move);

@@ -453,6 +453,7 @@ public class CliNothingOfferedTests
             .AddSingleton(Substitute.For<IDeleteFilesService>())
             .AddSingleton(Substitute.For<IMoveFilesService>())
             .AddSingleton(Substitute.For<ISettingsService>())
+            .AddSingleton(Substitute.For<IFirstRunMark>())
             .BuildServiceProvider();
 
         var original = Console.Out;
