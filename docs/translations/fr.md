@@ -35,7 +35,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Select all | Sélectionner tout |
 | _Browse... | _Parcourir... |
 | _Cancel | _Annuler |
-| Carry on _without it | Carry on _without it |
+| Carry on _without it | Continuer _sans attendre |
 | Check for _updates | Rechercher des _mises à jour |
 | _Close | _Fermer |
 | _Close without donating | _Close without donating |
@@ -97,7 +97,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Checking remaining files... | Vérification des fichiers restants... |
 | Waiting for drive {0} to respond... | En attente de la réponse du lecteur {0}... |
 | Waiting for {0} to respond... | En attente de la réponse de {0}... |
-| Any file still to be checked against it will be left alone. | Any file still to be checked against it will be left alone. |
+| Any file still to be checked against it will be left alone. | Tout fichier qui reste à vérifier par rapport à ce qui s'y trouve sera laissé de côté. |
 | Scan complete ({0}) | Analyse terminée ({0}) |
 | Found {0} {1} you can safely delete. | {0} {1} à supprimer sans risque. |
 | Preparing destination folder... | Préparation du dossier de destination... |
@@ -366,8 +366,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Cancel operation | Annuler l'opération |
 | Cancel scan | Annuler l'analyse |
 | Cancel startup scan | Annuler l'analyse de démarrage |
-| Carry on without it, drive {0} | Carry on without it, drive {0} |
-| Carry on without it, {0} | Carry on without it, {0} |
+| Carry on without it, drive {0} | Continuer sans attendre, lecteur {0} |
+| Carry on without it, {0} | Continuer sans attendre, {0} |
 | Close | Fermer |
 | Close window | Fermer la fenêtre |
 | Close result and return to main window | Fermer le résultat et revenir à la fenêtre principale |
@@ -405,7 +405,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | Fichiers qui n'ont pas pu être traités |
 | Explains this folder, and how to recover a file, in the README | Explique ce dossier, et comment récupérer un fichier, dans le README |
-| {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
+| {0} Press Alt+{1} to carry on without it. {2} | {0} Appuyez sur Alt+{1} pour continuer sans attendre. {2} |
 | What the report holds | What the report holds |
 | What the report holds | What the report holds |
 | Change language | Changer la langue |

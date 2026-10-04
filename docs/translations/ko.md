@@ -35,7 +35,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Select all | 모두 선택 |
 | _Browse... | 찾아보기(_B)... |
 | _Cancel | 취소(_C) |
-| Carry on _without it | Carry on _without it |
+| Carry on _without it | 기다리지 않고 계속(_W) |
 | Check for _updates | 업데이트 확인(_U) |
 | _Close | 닫기(_C) |
 | _Close without donating | _Close without donating |
@@ -97,7 +97,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Checking remaining files... | 나머지 파일을 확인하는 중... |
 | Waiting for drive {0} to respond... | 드라이브 {0}의 응답을 기다리는 중... |
 | Waiting for {0} to respond... | {0}의 응답을 기다리는 중... |
-| Any file still to be checked against it will be left alone. | Any file still to be checked against it will be left alone. |
+| Any file still to be checked against it will be left alone. | 아직 이것과 대조해야 하는 파일은 모두 그대로 둡니다. |
 | Scan complete ({0}) | 검사 완료 ({0}) |
 | Found {0} {1} you can safely delete. | 안전하게 삭제할 수 있는 {1} {0}개를 찾았습니다. |
 | Preparing destination folder... | 대상 폴더를 준비하는 중... |
@@ -366,8 +366,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Cancel operation | 작업 취소 |
 | Cancel scan | 검사 취소 |
 | Cancel startup scan | 시작 검사 취소 |
-| Carry on without it, drive {0} | Carry on without it, drive {0} |
-| Carry on without it, {0} | Carry on without it, {0} |
+| Carry on without it, drive {0} | 기다리지 않고 계속, 드라이브 {0} |
+| Carry on without it, {0} | 기다리지 않고 계속, {0} |
 | Close | 닫기 |
 | Close window | 창 닫기 |
 | Close result and return to main window | 결과를 닫고 메인 창으로 돌아가기 |
@@ -405,7 +405,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | 처리할 수 없는 파일 |
 | Explains this folder, and how to recover a file, in the README | 이 폴더에 대한 설명과 파일 복구 방법을 README에서 안내 |
-| {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
+| {0} Press Alt+{1} to carry on without it. {2} | {0} Alt+{1} 키를 누르면 기다리지 않고 계속합니다. {2} |
 | What the report holds | What the report holds |
 | What the report holds | What the report holds |
 | Change language | 언어 변경 |

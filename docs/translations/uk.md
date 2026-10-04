@@ -35,7 +35,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Select all | Виділити все |
 | _Browse... | _Огляд... |
 | _Cancel | _Скасувати |
-| Carry on _without it | Carry on _without it |
+| Carry on _without it | Продовжити _без очікування |
 | Check for _updates | Перевірити о_новлення |
 | _Close | _Закрити |
 | _Close without donating | _Close without donating |
@@ -97,7 +97,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Checking remaining files... | Перевірка решти файлів... |
 | Waiting for drive {0} to respond... | Очікування відповіді від диска {0}... |
 | Waiting for {0} to respond... | Очікування відповіді від {0}... |
-| Any file still to be checked against it will be left alone. | Any file still to be checked against it will be left alone. |
+| Any file still to be checked against it will be left alone. | Будь-який файл, який ще треба звірити з тим, що там є, буде залишено без змін. |
 | Scan complete ({0}) | Сканування завершено ({0}) |
 | Found {0} {1} you can safely delete. | Знайдено {0} {1} для безпечного видалення. |
 | Preparing destination folder... | Підготовка папки призначення... |
@@ -366,8 +366,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Cancel operation | Скасувати операцію |
 | Cancel scan | Скасувати сканування |
 | Cancel startup scan | Скасувати сканування під час запуску |
-| Carry on without it, drive {0} | Carry on without it, drive {0} |
-| Carry on without it, {0} | Carry on without it, {0} |
+| Carry on without it, drive {0} | Продовжити без очікування, диск {0} |
+| Carry on without it, {0} | Продовжити без очікування, {0} |
 | Close | Закрити |
 | Close window | Закрити вікно |
 | Close result and return to main window | Закрити результат і повернутися до головного вікна |
@@ -405,7 +405,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | Файли, які не вдалося обробити |
 | Explains this folder, and how to recover a file, in the README | Пояснює цю папку і як відновити файл, у README |
-| {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
+| {0} Press Alt+{1} to carry on without it. {2} | {0} Натисніть Alt+{1}, щоб продовжити без очікування. {2} |
 | What the report holds | What the report holds |
 | What the report holds | What the report holds |
 | Change language | Змінити мову |

@@ -35,7 +35,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Select all | Alles selecteren |
 | _Browse... | _Bladeren... |
 | _Cancel | _Annuleren |
-| Carry on _without it | Carry on _without it |
+| Carry on _without it | Doorgaan _zonder te wachten |
 | Check for _updates | Controleren op _updates |
 | _Close | _Sluiten |
 | _Close without donating | _Close without donating |
@@ -97,7 +97,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Checking remaining files... | Overige bestanden controleren... |
 | Waiting for drive {0} to respond... | Wachten tot schijf {0} reageert... |
 | Waiting for {0} to respond... | Wachten tot {0} reageert... |
-| Any file still to be checked against it will be left alone. | Any file still to be checked against it will be left alone. |
+| Any file still to be checked against it will be left alone. | Elk bestand dat er nog mee vergeleken moet worden, wordt ongemoeid gelaten. |
 | Scan complete ({0}) | Scan voltooid ({0}) |
 | Found {0} {1} you can safely delete. | Je kunt {0} {1} veilig verwijderen. |
 | Preparing destination folder... | Doelmap voorbereiden... |
@@ -366,8 +366,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Cancel operation | Bewerking annuleren |
 | Cancel scan | Scan annuleren |
 | Cancel startup scan | Opstartscan annuleren |
-| Carry on without it, drive {0} | Carry on without it, drive {0} |
-| Carry on without it, {0} | Carry on without it, {0} |
+| Carry on without it, drive {0} | Doorgaan zonder te wachten, schijf {0} |
+| Carry on without it, {0} | Doorgaan zonder te wachten, {0} |
 | Close | Sluiten |
 | Close window | Venster sluiten |
 | Close result and return to main window | Resultaat sluiten en terug naar het hoofdvenster |
@@ -405,7 +405,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | Bestanden die niet konden worden verwerkt |
 | Explains this folder, and how to recover a file, in the README | Legt uit wat deze map is en hoe je een bestand terugzet, in het README-bestand |
-| {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
+| {0} Press Alt+{1} to carry on without it. {2} | {0} Druk op Alt+{1} om door te gaan zonder te wachten. {2} |
 | What the report holds | What the report holds |
 | What the report holds | What the report holds |
 | Change language | Taal wijzigen |

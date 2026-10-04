@@ -35,7 +35,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Select all | Seleziona tutto |
 | _Browse... | S_foglia... |
 | _Cancel | _Annulla |
-| Carry on _without it | Carry on _without it |
+| Carry on _without it | Continua _senza attendere |
 | Check for _updates | Controlla _aggiornamenti |
 | _Close | _Chiudi |
 | _Close without donating | _Close without donating |
@@ -97,7 +97,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Checking remaining files... | Controllo file rimanenti... |
 | Waiting for drive {0} to respond... | In attesa che l'unità {0} risponda... |
 | Waiting for {0} to respond... | In attesa che {0} risponda... |
-| Any file still to be checked against it will be left alone. | Any file still to be checked against it will be left alone. |
+| Any file still to be checked against it will be left alone. | Ogni file ancora da confrontare con ciò che vi si trova verrà lasciato stare. |
 | Scan complete ({0}) | Scansione completata ({0}) |
 | Found {0} {1} you can safely delete. | {0} {1} che puoi eliminare in sicurezza. |
 | Preparing destination folder... | Preparazione cartella destinazione... |
@@ -366,8 +366,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Cancel operation | Annulla operazione |
 | Cancel scan | Annulla scansione |
 | Cancel startup scan | Annulla scansione all'avvio |
-| Carry on without it, drive {0} | Carry on without it, drive {0} |
-| Carry on without it, {0} | Carry on without it, {0} |
+| Carry on without it, drive {0} | Continua senza attendere, unità {0} |
+| Carry on without it, {0} | Continua senza attendere, {0} |
 | Close | Chiudi |
 | Close window | Chiudi finestra |
 | Close result and return to main window | Chiudi finestra risultato e torna alla finestra principale |
@@ -405,7 +405,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | File che non è stato possibile elaborare |
 | Explains this folder, and how to recover a file, in the README | Spiega questa cartella, e come recuperare un file, nel README |
-| {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
+| {0} Press Alt+{1} to carry on without it. {2} | {0} Premi Alt+{1} per continuare senza attendere. {2} |
 | What the report holds | What the report holds |
 | What the report holds | What the report holds |
 | Change language | Cambia lingua |

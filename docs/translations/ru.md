@@ -35,7 +35,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Select all | Выделить всё |
 | _Browse... | _Обзор... |
 | _Cancel | _Отмена |
-| Carry on _without it | Carry on _without it |
+| Carry on _without it | Продолжить _без ожидания |
 | Check for _updates | Проверить о_бновления |
 | _Close | _Закрыть |
 | _Close without donating | _Close without donating |
@@ -97,7 +97,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Checking remaining files... | Проверка остальных файлов... |
 | Waiting for drive {0} to respond... | Ожидание ответа от диска {0}... |
 | Waiting for {0} to respond... | Ожидание ответа от {0}... |
-| Any file still to be checked against it will be left alone. | Any file still to be checked against it will be left alone. |
+| Any file still to be checked against it will be left alone. | Любой файл, который ещё нужно сверить с тем, что там находится, будет оставлен без изменений. |
 | Scan complete ({0}) | Сканирование завершено ({0}) |
 | Found {0} {1} you can safely delete. | Найдено {0} {1} для безопасного удаления. |
 | Preparing destination folder... | Подготовка папки назначения... |
@@ -366,8 +366,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Cancel operation | Отмена операции |
 | Cancel scan | Отмена сканирования |
 | Cancel startup scan | Отмена сканирования при запуске |
-| Carry on without it, drive {0} | Carry on without it, drive {0} |
-| Carry on without it, {0} | Carry on without it, {0} |
+| Carry on without it, drive {0} | Продолжить без ожидания, диск {0} |
+| Carry on without it, {0} | Продолжить без ожидания, {0} |
 | Close | Закрыть |
 | Close window | Закрыть окно |
 | Close result and return to main window | Закрыть результат и вернуться в главное окно |
@@ -405,7 +405,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | Файлы, которые не удалось обработать |
 | Explains this folder, and how to recover a file, in the README | Объясняет эту папку и то, как восстановить файл, в README |
-| {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
+| {0} Press Alt+{1} to carry on without it. {2} | {0} Нажмите Alt+{1}, чтобы продолжить без ожидания. {2} |
 | What the report holds | What the report holds |
 | What the report holds | What the report holds |
 | Change language | Изменить язык |

@@ -154,7 +154,7 @@
        both are on screen at once. Automation.StopWaitingForDrive and
        Automation.StopWaitingForPath have to contain these words, and
        Automation.WaitingLineWithStopKey speaks its key. -->
-  <data name="Action.StopWaiting" xml:space="preserve"><value>Carry on _without it</value></data>
+  <data name="Action.StopWaiting" xml:space="preserve"><value>Tiếp tục mà _không chờ</value></data>
   <data name="Action.CheckForUpdates" xml:space="preserve"><value>_Kiểm tra cập nhật</value></data>
   <data name="Action.Close" xml:space="preserve"><value>Đón_g</value></data>
   <!-- The quieter button under Action.Donate on the completion card after a Move or
@@ -236,10 +236,10 @@
        on. It has to contain Action.StopWaiting's words, without the access-key
        marker, so speech input reaches the button by what it says on screen.
        0 = a drive letter and its colon, e.g. "D:" -->
-  <data name="Automation.StopWaitingForDrive" xml:space="preserve"><value>Carry on without it, drive {0}</value></data>
+  <data name="Automation.StopWaitingForDrive" xml:space="preserve"><value>Tiếp tục mà không chờ, ổ đĩa {0}</value></data>
   <!-- As Automation.StopWaitingForDrive, for a folder that is not on a drive letter.
        0 = a network share such as "\\fileserver\apps", or another path -->
-  <data name="Automation.StopWaitingForPath" xml:space="preserve"><value>Carry on without it, {0}</value></data>
+  <data name="Automation.StopWaitingForPath" xml:space="preserve"><value>Tiếp tục mà không chờ, {0}</value></data>
   <data name="Automation.Close" xml:space="preserve"><value>Đóng</value></data>
   <data name="Automation.CloseWindow" xml:space="preserve"><value>Đóng cửa sổ</value></data>
   <data name="Automation.CloseResult" xml:space="preserve"><value>Đóng kết quả và quay lại cửa sổ chính</value></data>
@@ -602,13 +602,13 @@
        its answer; every file still to be checked against it is left alone rather than
        offered. "It" is the drive or share the waiting line names, and "left alone" is
        worded as in Window.Registered.Title. -->
-  <data name="Status.StopWaitingLeavesAlone" xml:space="preserve"><value>Any file still to be checked against it will be left alone.</value></data>
+  <data name="Status.StopWaitingLeavesAlone" xml:space="preserve"><value>Mọi tệp còn cần đối chiếu với nó sẽ được để nguyên.</value></data>
   <!-- What a screen reader says for the waiting line while Action.StopWaiting's
        button shows; nothing on screen changes. 0 = the waiting line as drawn
        (Status.WaitingForDrive or Status.WaitingForPath), 1 = the access key of
        Action.StopWaiting, read from that label at run time, 2 =
        Status.StopWaitingLeavesAlone. -->
-  <data name="Automation.WaitingLineWithStopKey" xml:space="preserve"><value>{0} Press Alt+{1} to carry on without it. {2}</value></data>
+  <data name="Automation.WaitingLineWithStopKey" xml:space="preserve"><value>{0} Nhấn Alt+{1} để tiếp tục mà không chờ. {2}</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>Quét xong ({0})</value></data>
   <!-- 0 = file count, 1 = pluralised noun ("file"/"files") -->

@@ -35,7 +35,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Select all | Pilih semua |
 | _Browse... | Te_lusuri... |
 | _Cancel | _Batal |
-| Carry on _without it | Carry on _without it |
+| Carry on _without it | Lanjutkan _tanpa menunggu |
 | Check for _updates | Periksa pem_baruan |
 | _Close | _Tutup |
 | _Close without donating | _Close without donating |
@@ -97,7 +97,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Checking remaining files... | Memeriksa file yang tersisa... |
 | Waiting for drive {0} to respond... | Menunggu drive {0} merespons... |
 | Waiting for {0} to respond... | Menunggu {0} merespons... |
-| Any file still to be checked against it will be left alone. | Any file still to be checked against it will be left alone. |
+| Any file still to be checked against it will be left alone. | Setiap file yang masih harus diperiksa terhadapnya akan dibiarkan apa adanya. |
 | Scan complete ({0}) | Pemindaian selesai ({0}) |
 | Found {0} {1} you can safely delete. | Ditemukan {0} {1} yang aman Anda hapus. |
 | Preparing destination folder... | Menyiapkan folder tujuan... |
@@ -366,8 +366,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Cancel operation | Batal, operasi |
 | Cancel scan | Batal, pemindaian |
 | Cancel startup scan | Batal, pemindaian awal |
-| Carry on without it, drive {0} | Carry on without it, drive {0} |
-| Carry on without it, {0} | Carry on without it, {0} |
+| Carry on without it, drive {0} | Lanjutkan tanpa menunggu, drive {0} |
+| Carry on without it, {0} | Lanjutkan tanpa menunggu, {0} |
 | Close | Tutup |
 | Close window | Tutup jendela |
 | Close result and return to main window | Tutup hasil dan kembali ke jendela utama |
@@ -405,7 +405,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | File yang tidak dapat diproses |
 | Explains this folder, and how to recover a file, in the README | Menjelaskan folder ini, dan cara memulihkan file, di README |
-| {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
+| {0} Press Alt+{1} to carry on without it. {2} | {0} Tekan Alt+{1} untuk melanjutkan tanpa menunggu. {2} |
 | What the report holds | What the report holds |
 | What the report holds | What the report holds |
 | Change language | Ganti bahasa |
