@@ -5,8 +5,8 @@
 // against the button it names, a word a string must not repeat, how github is cased
 // for the surface it is on, the folder token and the link phrase a translation has
 // to keep, a window title the code overwrites, and a resource read that goes round
-// Strings. Exit 2 where a resx file's entries cannot all be parsed or a C# file
-// cannot be read to its end.
+// Strings. Exit 2 where Strings.resx cannot be read, a resx file's entries cannot all
+// be parsed or a C# file cannot be read to its end.
 //
 // Run from the repo root: node scripts/check-cross-key-rules.mjs
 import { readFileSync, existsSync } from 'node:fs';
@@ -373,7 +373,13 @@ const parseControl = (file, xml, parsed) => {
 // path in its message: a failure here is about one file and the reader needs to
 // be told which.
 const values = (path) => {
-  const xml = readFileSync(path, 'utf8');
+  let xml;
+  try {
+    xml = readFileSync(path, 'utf8');
+  } catch (e) {
+    console.error(`${path} cannot be read (${e.code ?? e.message}). Refusing to report on it.`);
+    process.exit(2);
+  }
   const map = new Map();
   const re = /<data\s+name="([^"]+)"[^>]*>\s*<value>([\s\S]*?)<\/value>/g;
   let m;
@@ -417,11 +423,12 @@ const wording = (value) => {
 // comparison asks neither string to change.
 const compare = (value, lang) => wording(value).replace(/\s+/g, '').toLocaleLowerCase(lang);
 
-// C# with its comments taken out, string literals left in place. A file that cannot be
-// read to its end stops the run.
-const codeOnly = (file) => {
+// A C# file through csharp-source.mjs: its code, with the comments taken out and the
+// string literals left in place, and its bare, with the string text taken out as well.
+// A file that cannot be read to its end stops the run.
+const readCode = (file) => {
   try {
-    return readCSharp(readFileSync(file, 'utf8')).code;
+    return readCSharp(readFileSync(file, 'utf8'));
   } catch (e) {
     console.error(`${file}: cannot be read to its end (${e.message}). Refusing to report on it.`);
     process.exit(2);
@@ -438,11 +445,12 @@ const stale = [];
 // XAML, and claim none the XAML no longer has. Run before the per-language
 // work, because a stale list is a fact about this file rather than about any
 // language.
-const xamlFiles = sourceFiles(GUI, '.xaml');
+// Each XAML file is read once, here, for Rules 2 and 7.
+const xamlText = new Map(sourceFiles(GUI, '.xaml').map((file) => [file, readFileSync(file, 'utf8')]));
+const xamlFiles = [...xamlText.keys()];
 const namedInXaml = new Set();
 const visibleTextInXaml = {};
-for (const file of xamlFiles) {
-  const xaml = readFileSync(file, 'utf8');
+for (const [file, xaml] of xamlText) {
   for (const m of xaml.matchAll(/AutomationProperties\.Name="\{loc:Translate ([A-Za-z0-9._]+)\}"/g))
     namedInXaml.add(m[1]);
   for (const m of xaml.matchAll(/Text="\{loc:Translate ([A-Za-z0-9._]+)\}"/g))
@@ -456,7 +464,7 @@ for (const file of xamlFiles) {
 for (const key of [...NAME_IS_THE_LABEL].sort()) {
   const drawnIn = Object.entries(visibleTextInXaml)
     .filter(([, keys]) => keys.has(key)).map(([file]) => file);
-  const namedIn = xamlFiles.filter((file) => readFileSync(file, 'utf8')
+  const namedIn = xamlFiles.filter((file) => xamlText.get(file)
     .includes(`AutomationProperties.Name="{loc:Translate ${key}}"`));
   if (!namedIn.length)
     stale.push(`${key} is in NAME_IS_THE_LABEL and names no control in the XAML. `
@@ -482,26 +490,33 @@ for (const key of [...classified].sort())
     stale.push(`${key} is classified in this file but names no control in the XAML. `
       + 'Renamed, removed, or moved to code-behind: update the lists above.');
 
+// Each C# file is read once, here, for Rules 7 and 8. Compared with the paths written
+// by hand in RAW_READ_ALLOWED, which sourceFiles writes the same way, with forward
+// slashes.
+const csFiles = sourceFiles('src', '.cs');
+const csRead = new Map(csFiles.map((file) => [file, readCode(file)]));
+
 // --- Rule 7, once: source shape, not language.
+// The code-behind is searched in its bare, so a Title in a comment or on a line
+// inside a string is not an assignment. On Windows a code-behind spelled in a
+// different case from its XAML exists without being a key in csRead, so it is read
+// on its own.
 for (const file of xamlFiles) {
-  const xaml = readFileSync(file, 'utf8');
-  const title = xaml.match(/\bTitle="\{loc:Translate ([A-Za-z0-9._]+)\}"/);
+  const title = xamlText.get(file).match(/\bTitle="\{loc:Translate ([A-Za-z0-9._]+)\}"/);
   if (!title) continue;
   const codeBehind = `${file}.cs`;
-  if (!existsSync(codeBehind)) continue;
-  if (/^\s*(this\.)?Title\s*=[^=]/m.test(readFileSync(codeBehind, 'utf8')))
+  const read = csRead.get(codeBehind) ?? (existsSync(codeBehind) ? readCode(codeBehind) : null);
+  if (!read) continue;
+  if (/^\s*(this\.)?Title\s*=[^=]/m.test(read.bare))
     problems.push(`${file} resolves Title from ${title[1]} and ${file}.cs assigns over it, `
       + 'so the resx value never reaches a user in any language. Drop the XAML attribute; '
       + 'drop the key too unless something else shows it.');
 }
 
 // --- Rule 8, once: source shape, not language.
-// Compared with the paths written by hand in RAW_READ_ALLOWED, which sourceFiles
-// writes the same way, with forward slashes.
-const csFiles = sourceFiles('src', '.cs');
 const rawAllowed = new Map(RAW_READ_ALLOWED.map((e) => [e.file, e.reason]));
 const rawReaders = new Set(
-  csFiles.filter((f) => RAW_READ.test(codeOnly(f))),
+  csFiles.filter((f) => RAW_READ.test(csRead.get(f).code)),
 );
 for (const file of [...rawReaders].sort())
   if (!rawAllowed.has(file))
@@ -520,7 +535,7 @@ for (const file of [...rawAllowed.keys()].sort())
 // the app no longer speaks looking used.
 const appCode = csFiles
   .filter((file) => !file.startsWith('src/InstallerClean.Tests/'))
-  .map((file) => codeOnly(file))
+  .map((file) => csRead.get(file).code)
   .join('\n');
 for (const { name } of ELABORATES_A_LABEL_IN_CODE) {
   const accessor = `Strings.${name.replaceAll('.', '_')}`;
@@ -619,7 +634,8 @@ for (const lang of LANGS) {
     problems.push(`${lang}: ${path} is missing.`);
     continue;
   }
-  const map = values(path);
+  // en-GB is the neutral, already read.
+  const map = lang === 'en-GB' ? neutral : values(path);
   const failures = [];
 
   // A satellite short of a key is check-resx-parity's finding, not this one.
