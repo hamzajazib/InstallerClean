@@ -705,9 +705,8 @@ public partial class ScanViewModel : ObservableObject
         }
         finally
         {
-            // Capture, null, dispose: a concurrent CancelScanCommand
-            // reading _scanCts after the null sees no CTS and no-ops.
-            // Mirrors CleanupViewModel.DisposeOperationCts.
+            // Capture, take off, dispose: a CancelScanCommand reading
+            // _scanCts afterwards finds no source to cancel.
             var local = _scanCts;
             _scanCts = null;
             local?.Dispose();

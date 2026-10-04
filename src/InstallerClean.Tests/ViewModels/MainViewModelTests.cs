@@ -1896,6 +1896,69 @@ public class MainViewModelTests
         Assert.True(vm.Completion.OffersReport);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Cancel_is_live_through_the_rescan_after_a_Move_or_Delete_that_was_cancelled(bool deleting)
+    {
+        var vm = CreateViewModel();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2));
+        _confirmationService.ConfirmMove(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = Path.Combine(Path.GetTempPath(), "ic-test-cancelled-batch-rescan");
+
+        var button = new CancelButtonState(vm.Cleanup);
+        bool? liveInBatch = null, liveAfterPress = null, liveInRescan = null;
+        void PressDuringTheBatch()
+        {
+            liveInBatch = button.Live;
+            vm.Cleanup.CancelOperationCommand.Execute(null);
+            liveAfterPress = button.Live;
+        }
+        _moveService.MoveFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                PressDuringTheBatch();
+                return new MoveResult(1, Array.Empty<FileOperationError>(), Cancelled: true);
+            });
+        _deleteService.DeleteFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                PressDuringTheBatch();
+                return new DeleteResult(1, Array.Empty<FileOperationError>(), Cancelled: true);
+            });
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                liveInRescan = button.Live;
+                return EmptyScanResult();
+            });
+        bool? liveAtTheCard = null;
+        vm.Completion.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(CompletionViewModel.IsComplete) && vm.Completion.IsComplete)
+                liveAtTheCard = button.Live;
+        };
+
+        if (deleting) await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+        else await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        // The press puts the button out of use for the rest of the batch, the
+        // rescan after it, which the press did not stop, brings it back, and the
+        // card that follows the rescan has nothing left for it to stop.
+        Assert.True(liveInBatch);
+        Assert.False(liveAfterPress);
+        Assert.True(liveInRescan);
+        Assert.False(liveAtTheCard);
+    }
+
     [Fact]
     public async Task Cancel_and_Esc_are_out_of_use_while_a_Delete_refused_at_the_installer_lock_re_checks_the_gate()
     {

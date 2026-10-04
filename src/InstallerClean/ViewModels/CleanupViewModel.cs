@@ -49,7 +49,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// </remarks>
     private readonly Func<string, bool?> _resolveIsOnCacheVolume;
 
-    private CancellationTokenSource? _operationCts;
+    /// <summary>Read and written only through <see cref="OperationSource"/>.</summary>
+    private CancellationTokenSource? _operationSource;
     private CancellationTokenSource? _moveDestinationSaveCts;
     private CancellationTokenSource? _destinationVolumeCts;
     private AppSettings _settings;
@@ -123,7 +124,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// timeout, and on the dispatcher that freezes the window), and while it is
     /// awaited the message loop pumps with no overlay up. Without this flag
     /// Delete is still clickable in that window, and a Delete started during a
-    /// Move pre-flight would overwrite <see cref="_operationCts"/> while the
+    /// Move pre-flight would overwrite <see cref="OperationSource"/> while the
     /// Move was still using it, leaving the Move's Cancel button wired to the
     /// Delete's token.
     /// </summary>
@@ -241,9 +242,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     private int _lastAnnouncedDecile = -1;
 
     /// <summary>
-    /// True between a Cancel click and the worker's next
-    /// CancellationToken checkpoint. Gates the overlay Cancel button's
-    /// IsEnabled binding and the disabled-state tooltip.
+    /// True from a Cancel press until the rescan after the batch starts or the
+    /// operation ends. Takes the overlay's Cancel out of use
+    /// (<see cref="CanCancelOperation"/>) and puts the tooltip on it that says a
+    /// cancel is under way.
     /// </summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CancelOperationCommand))]
@@ -296,7 +298,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _scan.PropertyChanged -= _scanHandler;
-        DisposeOperationCts();
+        EndOperation();
         var saveCts = _moveDestinationSaveCts;
         _moveDestinationSaveCts = null;
         saveCts?.Cancel();
@@ -593,22 +595,51 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         if (chosen is not null) MoveDestination = chosen;
     }
 
+    /// <summary>
+    /// The source a Cancel press cancels. A Move or Delete installs one as it starts
+    /// and the rescan after its batch installs its own; each is let go of once nothing
+    /// is left running on it, and the end of the operation takes off whatever is left.
+    /// Each change of it tells the Cancel button, which asks
+    /// <see cref="CanCancelOperation"/> again only when CanExecuteChanged is raised, so
+    /// the button follows the source whatever else changes with it. Setting the value
+    /// it already holds tells nobody.
+    ///
+    /// In the app it is set on the dispatcher only: the button answers
+    /// CanExecuteChanged on the thread that raises it, and WPF refuses a control being
+    /// changed from any other thread.
+    ///
+    /// Written by hand and private. The generated observable form is public, which
+    /// would put the source within reach of every binding.
+    /// </summary>
+    private CancellationTokenSource? OperationSource
+    {
+        get => _operationSource;
+        set
+        {
+            if (ReferenceEquals(_operationSource, value)) return;
+            _operationSource = value;
+            CancelOperationCommand.NotifyCanExecuteChanged();
+        }
+    }
+
     // Live while the operation holds a source to cancel: through the Move's
     // probe, the re-verify and the batch, and through the rescan after the
     // batch, which installs one of its own (RefreshAfterBatchAsync).
     // Everything else an operation does with the overlay up, a refusal's
     // dialog and gate re-check, a failure dialog or the wait for the report,
     // stops for nothing, so Cancel and Esc are out of use there.
-    private bool CanCancelOperation() => IsOperating && !IsCancellationRequested && _operationCts is not null;
+    private bool CanCancelOperation() => IsOperating && !IsCancellationRequested && OperationSource is not null;
 
     [RelayCommand(CanExecute = nameof(CanCancelOperation))]
     private void CancelOperation()
     {
         IsCancellationRequested = true;
-        // Every holder nulls the field before it disposes the source, so on
-        // the dispatcher this finds a live source or none. The catch is for a
-        // call from another thread landing between the two.
-        try { _operationCts?.Cancel(); }
+        // Every holder takes the source off before it disposes it, so in the app,
+        // where all of them run on the dispatcher as this does, this finds a live
+        // source or none. Where this read and a holder run on different threads,
+        // the source can be disposed between the read and the Cancel, and the
+        // catch keeps that from throwing.
+        try { OperationSource?.Cancel(); }
         catch (ObjectDisposedException) { }
         // The move/delete loop only repaints OperationProgress on its
         // next iteration. Without a synchronous write the overlay holds
@@ -667,16 +698,16 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         // Each of them resolves or queries a path through Win32, so each can
         // stall for the SMB timeout on a mapped drive or a UNC share that has
         // gone away, and any of them on the dispatcher freezes the window.
-        // The CTS is created first so the overlay's Cancel button can
-        // interrupt the wait. The probe goes through IFileSystem so
+        // The operation's source is installed first so the overlay's Cancel
+        // button can interrupt the wait. The probe goes through IFileSystem so
         // MockFileSystem-backed tests don't hit real disk; the gates and the
         // free-space query deliberately do not (a mock must not be able to
         // talk its way past a safety check).
         //
         // Nothing here touches view-model state: the verdict comes back as a
         // record and is applied below, on the dispatcher.
-        _operationCts = new CancellationTokenSource();
-        var probeToken = _operationCts.Token;
+        OperationSource = new CancellationTokenSource();
+        var probeToken = OperationSource.Token;
         IsOperationInFlight = true;
         // Captured rather than carried back on DestinationPreFlight, because
         // the two catch arms below need it just as much as the returns do and
@@ -775,7 +806,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         {
             IsOperating = false;
             OperationProgress = string.Empty;
-            DisposeOperationCts();
+            EndOperation();
             if (createdDestination) await RemoveCreatedDestinationAsync(dest);
             return;
         }
@@ -785,7 +816,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             OperationProgress = string.Empty;
             // ex.Message stays out of the dialog: path-leak risk under elevation.
             var crash = CrashLog.TryWrite(ex);
-            DisposeOperationCts();
+            EndOperation();
             if (createdDestination) await RemoveCreatedDestinationAsync(dest);
             _dialogService.ShowWarning(
                 DescribeWriteFailure(dest, ex, crash.Path, crash.Written),
@@ -797,7 +828,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
 
         if (preFlight.InsideInstallerCache)
         {
-            DisposeOperationCts();
+            EndOperation();
             _dialogService.ShowWarning(
                 Strings.Error_DestinationInsideInstaller,
                 Strings.Error_InvalidDestinationTitle);
@@ -806,7 +837,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
 
         if (preFlight.InsideSystemFolder)
         {
-            DisposeOperationCts();
+            EndOperation();
             _dialogService.ShowWarning(
                 string.Format(Strings.Error_DestinationInSystemFolder, dest),
                 Strings.Error_InvalidDestinationTitle);
@@ -866,8 +897,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         if (MoveSpaceCheck.RefusalFreeSpace(dest, totalBytes, preFlight.AvailableFreeSpace)
             is long free)
         {
-            // Pre-flight CTS no longer needed; dispose before returning.
-            DisposeOperationCts();
+            // The Move goes no further, so the operation ends here.
+            EndOperation();
             OperationProgress = string.Empty;
             if (createdDestination) await RemoveCreatedDestinationAsync(dest);
             _dialogService.ShowWarning(
@@ -891,9 +922,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         if (!_confirmationService.ConfirmMove(count, sizeDisplay, dest,
                 destinationKind == MoveDestinationKinds.SameDrive))
         {
-            // User cancelled at the confirmation dialog. The pre-flight
-            // CTS is no longer needed; dispose it before returning.
-            DisposeOperationCts();
+            // User cancelled at the confirmation dialog, so the operation ends
+            // here.
+            EndOperation();
             OperationProgress = string.Empty;
             if (createdDestination) await RemoveCreatedDestinationAsync(dest);
             return;
@@ -920,7 +951,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            DisposeOperationCts();
+            EndOperation();
             OperationProgress = string.Empty;
             if (createdDestination) await RemoveCreatedDestinationAsync(dest);
             ShowActionFailed(ex, deleting: false);
@@ -928,7 +959,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         }
         if (blocked)
         {
-            DisposeOperationCts();
+            EndOperation();
             OperationProgress = string.Empty;
             if (createdDestination) await RemoveCreatedDestinationAsync(dest);
             return;
@@ -968,7 +999,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             ReverifyResult reverify;
             try
             {
-                reverify = await _reverifier.ReverifyAsync(filePaths, _operationCts!.Token, WaitsInTheHeading());
+                reverify = await _reverifier.ReverifyAsync(filePaths, OperationSource!.Token, WaitsInTheHeading());
             }
             catch (OperationCanceledException)
             {
@@ -1007,9 +1038,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             var survivingPaths = survivingFiles.Select(f => f.FullPath).ToList();
             var survivingBytes = survivingFiles.Sum(f => f.SizeBytes);
 
-            // _operationCts was created in the pre-flight block above; reuse it
-            // through the move so a single Cancel signal covers the pre-flight, the
-            // re-verify and the move loop.
+            // The source installed for the pre-flight above runs on through the
+            // move, so a single Cancel covers the pre-flight, the re-verify and the
+            // move loop.
             var progress = new Progress<OperationProgress>(OnOperationProgressUpdate);
             MoveResult result;
             try
@@ -1017,7 +1048,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 try
                 {
                     result = await _moveService.MoveFilesAsync(survivingPaths, dest,
-                        UnderLeaseClaims.From(reverify), progress, _operationCts!.Token);
+                        UnderLeaseClaims.From(reverify), progress, OperationSource!.Token);
                 }
                 finally
                 {
@@ -1302,8 +1333,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         }
         finally
         {
-            // DisposeOperationCts also clears IsCancellationRequested.
-            DisposeOperationCts();
+            // EndOperation also clears IsCancellationRequested.
+            EndOperation();
             IsOperating = false;
             OperationProgressPercent = 0;
             // Stale-state reset: a cancel-then-rerun cycle would otherwise
@@ -1355,7 +1386,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// </summary>
     private async Task RunDeleteAsync(DeleteContext ctx)
     {
-        _operationCts = new CancellationTokenSource();
+        OperationSource = new CancellationTokenSource();
         IsOperationInFlight = true;
 
         // Re-check the pending-reboot gate at the moment of action: a
@@ -1370,14 +1401,14 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            DisposeOperationCts();
+            EndOperation();
             OperationProgress = string.Empty;
             ShowActionFailed(ex, deleting: true);
             return;
         }
         if (blocked)
         {
-            DisposeOperationCts();
+            EndOperation();
             OperationProgress = string.Empty;
             return;
         }
@@ -1402,7 +1433,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             ReverifyResult reverify;
             try
             {
-                reverify = await _reverifier.ReverifyAsync(ctx.FilePaths, _operationCts.Token, WaitsInTheHeading());
+                reverify = await _reverifier.ReverifyAsync(ctx.FilePaths, OperationSource.Token, WaitsInTheHeading());
             }
             catch (OperationCanceledException)
             {
@@ -1442,7 +1473,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             try
             {
                 result = await _deleteService.DeleteFilesAsync(
-                    survivingPaths, UnderLeaseClaims.From(reverify), progress, _operationCts.Token);
+                    survivingPaths, UnderLeaseClaims.From(reverify), progress, OperationSource.Token);
             }
             finally
             {
@@ -1611,8 +1642,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         }
         finally
         {
-            // DisposeOperationCts also clears IsCancellationRequested.
-            DisposeOperationCts();
+            // EndOperation also clears IsCancellationRequested.
+            EndOperation();
             IsOperating = false;
             OperationProgressPercent = 0;
             // Stale-state reset: a cancel-then-rerun cycle would otherwise
@@ -1890,24 +1921,24 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(OperationProgressDetail));
 
     /// <summary>
-    /// Ends the current operation: cancel-then-null-then-dispose
-    /// <see cref="_operationCts"/>, then clear <see cref="IsCancellationRequested"/>
-    /// (that CTS's UI mirror) and <see cref="IsOperationInFlight"/>. Every exit
-    /// path of a Move or a Delete calls this, including the pre-flight's early
-    /// returns, so the operation's state is torn down in one place.
+    /// Ends the current operation: takes <see cref="OperationSource"/> off, cancels
+    /// it and disposes it, then clears <see cref="IsCancellationRequested"/> (that
+    /// source's UI mirror) and <see cref="IsOperationInFlight"/>. Every exit path of
+    /// a Move or a Delete calls this, including the pre-flight's early returns, so
+    /// the operation's state is torn down in one place.
     ///
-    /// On every path past the batch this finds the field already null and the
-    /// flags are all it clears: the batch lets go of the operation's source as
-    /// it returns, a re-verify that fails lets go of it before its dialog, and
+    /// On every path past the batch this finds no source left and the flags are
+    /// all it clears: the batch lets go of the operation's source as it returns, a
+    /// re-verify that fails lets go of it before its dialog, and
     /// <see cref="RefreshAfterBatchAsync"/> lets go of the one it installs as it
     /// returns (<see cref="ReleaseOperationSource"/>).
     ///
-    /// Order matters on two fronts: the null happens before Dispose so a
-    /// concurrent CancelOperationCommand reading the field sees no CTS
-    /// and no-ops instead of racing the dispose; the Cancel happens
-    /// first so a still-running worker on the Dispose-during-shutdown
-    /// path observes OperationCanceledException at its next
-    /// ThrowIfCancellationRequested rather than ObjectDisposedException.
+    /// Order matters on two fronts: the source is taken off before it is disposed,
+    /// so nothing reading it afterwards, a Cancel press among them, finds a
+    /// disposed source; and it is cancelled before it is disposed, so a
+    /// still-running worker on the Dispose-during-shutdown path observes
+    /// OperationCanceledException at its next ThrowIfCancellationRequested rather
+    /// than ObjectDisposedException.
     ///
     /// The flag is cleared here rather than in each operation's finally
     /// because the Move pre-flight and the gate re-check before either batch
@@ -1917,10 +1948,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// so clearing it here is what leaves Cancel and Esc live for the next
     /// operation after a Cancel pressed during the probe.
     /// </summary>
-    private void DisposeOperationCts()
+    private void EndOperation()
     {
-        var cts = _operationCts;
-        _operationCts = null;
+        var cts = OperationSource;
+        OperationSource = null;
         cts?.Cancel();
         cts?.Dispose();
         IsCancellationRequested = false;
@@ -1931,16 +1962,15 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// Lets go of the operation's cancellation source once nothing is left
     /// running on it, which takes Cancel and Esc out of use
     /// (<see cref="CanCancelOperation"/>) until <see cref="RefreshAfterBatchAsync"/>
-    /// installs a source for the rescan. The field is nulled before the dispose,
-    /// as in <see cref="DisposeOperationCts"/>, and the button is told, because it
-    /// reads the predicate again only when CanExecuteChanged is raised.
+    /// installs a source for the rescan. The source is taken off before it is
+    /// disposed, as in <see cref="EndOperation"/>, and taking it off is what
+    /// tells the button (<see cref="OperationSource"/>).
     /// </summary>
     private void ReleaseOperationSource()
     {
-        var cts = _operationCts;
-        _operationCts = null;
+        var cts = OperationSource;
+        OperationSource = null;
         cts?.Dispose();
-        CancelOperationCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>
@@ -2010,12 +2040,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         // the token.
         ReleaseOperationSource();
 
-        var cts = new CancellationTokenSource();
-        _operationCts = cts;
         IsCancellationRequested = false;
-        // Told as well as cleared: on a batch nobody cancelled the flag is
-        // already clear, and clearing it again raises nothing.
-        CancelOperationCommand.NotifyCanExecuteChanged();
+        var cts = new CancellationTokenSource();
+        OperationSource = cts;
         OperationProgress = Strings.Status_Scanning;
         try
         {
@@ -2027,7 +2054,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // next, the card, a dialog or the wait for the report, stops for
             // nothing. Only this refresh's own source, which the view model's
             // Dispose can have taken first.
-            if (ReferenceEquals(_operationCts, cts))
+            if (ReferenceEquals(OperationSource, cts))
                 ReleaseOperationSource();
         }
     }
