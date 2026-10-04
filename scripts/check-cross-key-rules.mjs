@@ -138,11 +138,13 @@ const NO_VISIBLE_LABEL = new Set([
   'Automation.CloseWindow',
   'Automation.Minimise',
   'Automation.OperationProgress',
+  'Automation.ReportInfo',
   'Automation.ScanningProgress',
   'Automation.StartupScanProgress',
   'Automation.Scroll.DialogBody',
   'Automation.Scroll.FileDetails',
   'Automation.Scroll.ProductDetails',
+  'Automation.Scroll.ReportContents',
   'Automation.Scroll.ResultDetails',
   'Automation.Scroll.ScanResults',
 ]);

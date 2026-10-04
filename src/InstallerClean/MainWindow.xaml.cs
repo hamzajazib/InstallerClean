@@ -7,6 +7,8 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using InstallerClean.Helpers;
 using InstallerClean.Resources;
@@ -44,6 +46,8 @@ public partial class MainWindow : Window
         _vm.Chrome.PropertyChanged += OnChromePropertyChanged;
         _vm.Scan.ScanCompleted += OnScanCompleted;
         PreviewKeyDown += OnPreviewKeyDown;
+        PreviewMouseDown += OnPreviewMouseDownOverReportPanel;
+        PreviewGotKeyboardFocus += OnPreviewGotKeyboardFocusOverReportPanel;
         Closing += OnClosing;
         Closed += OnClosed;
         // The pair exists only for the update button's focus restore; see
@@ -137,6 +141,14 @@ public partial class MainWindow : Window
             CompletionDonateToolTip, this, ToolTipAnchor.Centre, ToolTipEdgeMargin);
         CompletionDonateFiveToolTip.CustomPopupPlacementCallback = TooltipPlacement.KeptInsideWindow(
             CompletionDonateFiveToolTip, this, ToolTipAnchor.Centre, ToolTipEdgeMargin);
+
+        // The panel the report box's "i" opens. Its words are fixed for the life of
+        // the window, a language change relaunching the app, so they are composed
+        // once here, and its place is taken again whenever the card or the window
+        // around it changes size.
+        _reportPanelSpokenText = BuildReportPanel();
+        CompletionOverlay.SizeChanged += OnReportPanelSurroundsSizeChanged;
+        CompletionCard.SizeChanged += OnReportPanelSurroundsSizeChanged;
 
         // Width is explicit, the designed 828 (the content column's 780
         // MaxWidth plus the content margins) multiplied by the
@@ -252,6 +264,10 @@ public partial class MainWindow : Window
         _vm.Chrome.PropertyChanged -= OnChromePropertyChanged;
         _vm.Scan.ScanCompleted -= OnScanCompleted;
         PreviewKeyDown -= OnPreviewKeyDown;
+        PreviewMouseDown -= OnPreviewMouseDownOverReportPanel;
+        PreviewGotKeyboardFocus -= OnPreviewGotKeyboardFocusOverReportPanel;
+        CompletionOverlay.SizeChanged -= OnReportPanelSurroundsSizeChanged;
+        CompletionCard.SizeChanged -= OnReportPanelSurroundsSizeChanged;
         Deactivated -= OnDeactivatedDuringUpdateCheck;
         Activated -= OnActivatedDuringUpdateCheck;
         AccessibilitySettings.Current.PropertyChanged -= OnAccessibilitySettingsChanged;
@@ -393,18 +409,42 @@ public partial class MainWindow : Window
                 AnnounceMarkedWarnings();
         }
 
-        // The box leaves a card still up where its report could not be written. Focus
-        // on it would drop to the window root with it, so it moves to the button that
-        // closes the card, which keeps the user inside the card.
+        // The box leaves a card still up where its report could not be written, and
+        // the "i" and its panel go with it. Focus on any of them would drop to the
+        // window root, so it moves to the button that closes the card, which keeps the
+        // user inside the card. WPF moves focus off a hidden element on a later pass,
+        // so it is still where it was when this runs.
         if (e.PropertyName == nameof(CompletionViewModel.OffersReport)
             && !_vm.Completion.OffersReport && _vm.Completion.IsComplete
-            && CompletionReportBox.IsKeyboardFocusWithin)
+            && (CompletionReportLine.IsKeyboardFocusWithin || ReportPanel.IsKeyboardFocusWithin))
         {
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
             {
                 if (_vm.Completion.IsComplete)
                     CompletionDismissButton().Focus();
             });
+        }
+
+        if (e.PropertyName == nameof(CompletionViewModel.ReportPanelOpen))
+        {
+            if (_vm.Completion.ReportPanelOpen)
+            {
+                PlaceReportPanel();
+                WobbleReportPanel();
+                // Focus stays on the "i", so the panel's words are read out rather
+                // than reached.
+                Announce(_reportPanelSpokenText);
+            }
+            else if (_vm.Completion.OffersReport && ReportPanel.IsKeyboardFocusWithin)
+            {
+                // Closed with focus inside it, by Esc on its link: focus goes back to
+                // the "i" that opened it rather than dropping to the window root.
+                Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+                {
+                    if (_vm.Completion.OffersReport)
+                        ReportInfoButton.Focus();
+                });
+            }
         }
     }
 
@@ -1092,11 +1132,212 @@ public partial class MainWindow : Window
         return IntPtr.Zero;
     }
 
+    // The panel's distance from the window's edges, and from the top of the report
+    // line it sits above.
+    private const double ReportPanelEdgeMargin = 12;
+    private const double ReportPanelGap = 12;
+
+    /// <summary>
+    /// The panel's words as one line for the screen reader: the opening sentence, each
+    /// line of the list, then the closing line, the list's lines ended the way the
+    /// displayed language ends a sentence.
+    /// </summary>
+    private readonly string _reportPanelSpokenText;
+
+    /// <summary>
+    /// The lines of the panel's list, one for each kind of thing the report carries, in
+    /// the order they are shown.
+    /// </summary>
+    private static string[] ReportPanelLines =>
+    [
+        Strings.Completion_ReportPanel_Freed,
+        Strings.Completion_ReportPanel_Destination,
+        Strings.Completion_ReportPanel_Durations,
+        Strings.Completion_ReportPanel_InstallerFiles,
+        Strings.Completion_ReportPanel_LeftAlone,
+        Strings.Completion_ReportPanel_Waits,
+        Strings.Completion_ReportPanel_Records,
+        Strings.Completion_ReportPanel_ShortNames,
+        Strings.Completion_ReportPanel_Windows,
+        Strings.Completion_ReportPanel_AppVersion,
+        Strings.Completion_ReportPanel_Errors,
+    ];
+
+    /// <summary>
+    /// Fills the panel: the opening sentence with the chart's name as a link, the list,
+    /// and the closing line, which its XAML binds. Returns the panel's words as one line
+    /// for the screen reader, made from the same strings, so what is read and what is
+    /// drawn cannot drift apart.
+    /// </summary>
+    private string BuildReportPanel()
+    {
+        var lines = ReportPanelLines;
+        ReportPanelList.ItemsSource = lines;
+        var separator = Strings.Display_SentenceSeparator;
+        return BuildReportPanelIntro() + " " + string.Join(separator, lines) + separator
+            + Strings.Completion_ReportPanel_Closing;
+    }
+
+    /// <summary>
+    /// Composes the panel's opening sentence from
+    /// <see cref="Strings.Completion_ReportPanel_Intro"/>, the phrase in <c>[ ]</c>
+    /// becoming a link to the chart of results in the README in the displayed language:
+    /// a Run before it, the Hyperlink, and a Run after it. The link opens through
+    /// <see cref="UrlLauncher"/>, so this elevated process does not start the browser as
+    /// Administrator. Returns the sentence as plain text, brackets removed.
+    /// </summary>
+    private string BuildReportPanelIntro()
+    {
+        var raw = Strings.Completion_ReportPanel_Intro;
+        ReportPanelIntroText.Inlines.Clear();
+
+        // Where the sentence splits around its link is pure string work in Core (see
+        // CompositionParsing); this method only builds inlines.
+        if (CompositionParsing.SplitAtBracketedPhrase(raw) is not { } split)
+        {
+            ReportPanelIntroText.Inlines.Add(new Run(raw));
+            return raw;
+        }
+
+        var plain = split.Prefix + split.LinkText + split.Suffix;
+
+        var link = new Hyperlink(new Run(split.LinkText))
+        {
+            NavigateUri = new Uri(ReadmeLinks.For("reports-stats", Localisation.UiCulture)),
+            Style = (Style)FindResource("SubtleLink"),
+        };
+        link.Click += ReportPanelLink_Click;
+        // The link's words alone ("this chart") say nothing on their own; the whole
+        // sentence, already in the displayed language, does.
+        AutomationProperties.SetName(link, plain);
+
+        if (split.Prefix.Length > 0) ReportPanelIntroText.Inlines.Add(new Run(split.Prefix));
+        ReportPanelIntroText.Inlines.Add(link);
+        if (split.Suffix.Length > 0) ReportPanelIntroText.Inlines.Add(new Run(split.Suffix));
+
+        return plain;
+    }
+
+    private void ReportPanelLink_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Hyperlink link && link.NavigateUri is not null)
+            UrlLauncher.OpenUrl(link.NavigateUri.AbsoluteUri);
+    }
+
+    /// <summary>
+    /// Sets the panel's bottom margin so its bottom edge sits <see cref="ReportPanelGap"/>
+    /// above the top of the report line. Its other margins keep it
+    /// <see cref="ReportPanelEdgeMargin"/> inside the window, and the overlay's grid
+    /// measures it inside all four, so where the room above the line is shorter than
+    /// the panel its text scrolls rather than running off the window.
+    /// </summary>
+    private void PlaceReportPanel()
+    {
+        if (!CompletionReportLine.IsVisible) return;
+        var lineTop = CompletionReportLine.TranslatePoint(new Point(0, 0), CompletionOverlay).Y;
+        var bottom = Math.Max(ReportPanelEdgeMargin, CompletionOverlay.ActualHeight - lineTop + ReportPanelGap);
+        ReportPanel.Margin = new Thickness(ReportPanelEdgeMargin, ReportPanelEdgeMargin, ReportPanelEdgeMargin, bottom);
+    }
+
+    private void OnReportPanelSurroundsSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (_vm.Completion.ReportPanelOpen)
+            PlaceReportPanel();
+    }
+
+    /// <summary>
+    /// The panel's half-second wobble as it opens: it drops in from 8 above while
+    /// fading in over the first third, dips 4 below, and settles, tilting 2 degrees one
+    /// way and the other on the way. Each step eases as a CSS "ease" does. Where the
+    /// Windows "show animations" setting is off, the panel simply appears.
+    /// </summary>
+    private void WobbleReportPanel()
+    {
+        var tilt = new RotateTransform();
+        var drop = new TranslateTransform();
+        // Tilted first and then moved, so the tilt turns about the panel's own centre.
+        ReportPanel.RenderTransform = new TransformGroup { Children = { tilt, drop } };
+
+        if (AccessibilitySettings.Current.ReduceMotion)
+        {
+            ReportPanel.BeginAnimation(OpacityProperty, null);
+            return;
+        }
+
+        drop.BeginAnimation(TranslateTransform.YProperty, WobbleSteps(-8, 0, 4, 0));
+        tilt.BeginAnimation(RotateTransform.AngleProperty, WobbleSteps(2, -2, 2, 0));
+        ReportPanel.BeginAnimation(OpacityProperty, WobbleSteps(0, 1, 1, 1));
+    }
+
+    private static readonly TimeSpan WobbleLength = TimeSpan.FromSeconds(0.5);
+
+    // CSS's "ease" timing function, which a CSS animation applies to each step between
+    // keyframes.
+    private static readonly KeySpline CssEase = new(0.25, 0.1, 0.25, 1);
+
+    /// <summary>
+    /// An animation through four values a third of <see cref="WobbleLength"/> apart,
+    /// starting from the first.
+    /// </summary>
+    private static DoubleAnimationUsingKeyFrames WobbleSteps(double start, double third, double twoThirds, double end)
+    {
+        var steps = new DoubleAnimationUsingKeyFrames { Duration = WobbleLength };
+        steps.KeyFrames.Add(new DiscreteDoubleKeyFrame(start, KeyTime.FromPercent(0)));
+        steps.KeyFrames.Add(new SplineDoubleKeyFrame(third, KeyTime.FromPercent(1.0 / 3), CssEase));
+        steps.KeyFrames.Add(new SplineDoubleKeyFrame(twoThirds, KeyTime.FromPercent(2.0 / 3), CssEase));
+        steps.KeyFrames.Add(new SplineDoubleKeyFrame(end, KeyTime.FromPercent(1), CssEase));
+        return steps;
+    }
+
+    /// <summary>
+    /// A click anywhere in the window but the panel and the "i" closes the panel and
+    /// does nothing else, so it does not also tick the box, press a button or close the
+    /// card. Taken on the way down, before any control under it sees the click. A click
+    /// on the "i" is left to the "i", which closes the panel itself.
+    /// </summary>
+    private void OnPreviewMouseDownOverReportPanel(object sender, MouseButtonEventArgs e)
+    {
+        if (!_vm.Completion.ReportPanelOpen) return;
+        if (e.OriginalSource is DependencyObject source && IsInReportPanelOrItsButton(source)) return;
+        _vm.Completion.ReportPanelOpen = false;
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// Focus moving to a control elsewhere in the window closes the panel. Focus leaving
+    /// the window does not, as when the chart's link opens the browser, and it comes back
+    /// to where it was when the window is active again.
+    /// </summary>
+    private void OnPreviewGotKeyboardFocusOverReportPanel(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (!_vm.Completion.ReportPanelOpen) return;
+        if (e.NewFocus is not DependencyObject focus || ReferenceEquals(focus, this)) return;
+        if (IsInReportPanelOrItsButton(focus)) return;
+        _vm.Completion.ReportPanelOpen = false;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="element"/> is the panel, the "i", or anything inside
+    /// either, the Runs and the link in the panel's text included, which are not visuals
+    /// and are walked up through the logical tree.
+    /// </summary>
+    private bool IsInReportPanelOrItsButton(DependencyObject element)
+    {
+        for (var node = element; node is not null;
+             node = node is Visual ? VisualTreeHelper.GetParent(node) : LogicalTreeHelper.GetParent(node))
+        {
+            if (ReferenceEquals(node, ReportPanel) || ReferenceEquals(node, ReportInfoButton))
+                return true;
+        }
+        return false;
+    }
+
     /// <summary>
     /// Click-outside-to-dismiss for the result overlay. Routed via
     /// the dim Border's MouseLeftButtonDown so only a click on the
     /// dim margin triggers it; clicks on the inner content card are
-    /// absorbed by their own hit-testing.
+    /// absorbed by their own hit-testing. While the report panel is
+    /// open the window takes the click first and closes only the panel.
     /// </summary>
     private void CompletionDimAreaClick(object sender, MouseButtonEventArgs e)
     {

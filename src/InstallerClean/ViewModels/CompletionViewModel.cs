@@ -135,6 +135,19 @@ public partial class CompletionViewModel : ObservableObject
     [ObservableProperty] private bool _sendsReport;
 
     /// <summary>
+    /// Whether the panel saying what the report holds is open, the panel the small
+    /// "i" beside the box opens and closes. It closes whenever the box leaves the card,
+    /// which every close of the card does, so it is never open without the box. No
+    /// Show* method touches it.
+    /// </summary>
+    [ObservableProperty] private bool _reportPanelOpen;
+
+    partial void OnOffersReportChanged(bool value)
+    {
+        if (!value) ReportPanelOpen = false;
+    }
+
+    /// <summary>
     /// How long the PC's first card waits for the window's start check to answer
     /// before it is revealed. Where the bound passes first the check answers that
     /// the PC has had its first run, and sets the mark.

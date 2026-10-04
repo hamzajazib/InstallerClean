@@ -893,7 +893,7 @@
                        Cursor="Arrow"/>
             <!-- Card width scales with the OS text size so the copy keeps
                  its line length instead of wrapping into a tall sliver. -->
-            <Border Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.Pill}"
+            <Border x:Name="CompletionCard" Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.Pill}"
                     BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}"
                     Padding="36,32" MinWidth="{a11y:TextScaled 340}" MaxWidth="{a11y:TextScaled 520}"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -1212,33 +1212,107 @@
                     </StackPanel>
 
                     <!-- The report box, on the PC's first finished card only and
-                         collapsed on every other. Whatever it says as the card
-                         closes is what happens. Under the buttons, so Tab reaches
-                         it after them and the focus placed on the button that
-                         closes the card is unchanged; Enter still closes the
-                         card with the box focused, a CheckBox not taking Enter,
-                         and Space ticks it. The implicit CheckBox style with the
-                         muted caption text of the card's lesser lines; set
-                         through a style rather than as attributes, so the style's
-                         own hover brightening still applies. LiveSetting because
-                         the window reads it out after the outcome lines when the
-                         card is revealed. -->
-                    <CheckBox x:Name="CompletionReportBox" Grid.Row="4"
-                              Content="{loc:Translate Completion.SendReport}"
-                              IsChecked="{Binding Completion.SendsReport}"
-                              Visibility="{Binding Completion.OffersReport, Converter={StaticResource BoolToVis}}"
-                              HorizontalAlignment="Center"
-                              Margin="{StaticResource GapTop.Sm}"
-                              AutomationProperties.LiveSetting="Polite">
-                        <CheckBox.Style>
-                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
-                                <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
-                                <Setter Property="FontSize" Value="{DynamicResource Type.Caption}"/>
-                            </Style>
-                        </CheckBox.Style>
-                    </CheckBox>
+                         collapsed on every other, with the small "i" beside it that
+                         opens the panel saying what the report holds. Whatever the box
+                         says as the card closes is what happens. Under the buttons, so
+                         Tab reaches the box and then the "i" after them, and the focus
+                         placed on the button that closes the card is unchanged; Enter
+                         still closes the card with the box focused, a CheckBox not
+                         taking Enter, and Space ticks it. Enter and Space on the "i"
+                         open and close the panel, a ToggleButton taking both. The box
+                         takes the implicit CheckBox style with the muted caption text
+                         of the card's lesser lines, set through a style rather than as
+                         attributes, so the style's own hover brightening still applies.
+                         LiveSetting because the window reads the box out after the
+                         outcome lines when the card is revealed. Ticked, the box draws no
+                         hairline, its accent fill being its edge, so it does not draw the
+                         eye; unticked, it keeps the hairline an empty box needs to be
+                         seen. The "i" has no tooltip: it is clicked. -->
+                    <StackPanel x:Name="CompletionReportLine" Grid.Row="4" Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                Margin="{StaticResource GapTop.Sm}"
+                                Visibility="{Binding Completion.OffersReport, Converter={StaticResource BoolToVis}}">
+                        <CheckBox x:Name="CompletionReportBox"
+                                  Content="{loc:Translate Completion.SendReport}"
+                                  IsChecked="{Binding Completion.SendsReport}"
+                                  VerticalAlignment="Center"
+                                  AutomationProperties.LiveSetting="Polite">
+                            <CheckBox.Style>
+                                <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+                                    <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+                                    <Setter Property="FontSize" Value="{DynamicResource Type.Caption}"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter Property="BorderBrush" Value="Transparent"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </CheckBox.Style>
+                        </CheckBox>
+                        <chrome:DisclosureButton x:Name="ReportInfoButton"
+                                                 Style="{StaticResource InfoButton}"
+                                                 IsChecked="{Binding Completion.ReportPanelOpen}"
+                                                 VerticalAlignment="Center"
+                                                 Margin="{StaticResource GapLeft.Sm}"
+                                                 AutomationProperties.Name="{loc:Translate Automation.ReportInfo}"/>
+                    </StackPanel>
 
                 </Grid>
+            </Border>
+
+            <!-- The panel the "i" beside the report box opens, saying what the
+                 report holds. In the overlay, after the card and drawn over it,
+                 rather than in a popup, so it stays on the window and Tab reaches
+                 its link straight after the "i". The window sets its bottom margin
+                 to sit it just above the report line (PlaceReportPanel); the other
+                 margins keep it inside the window, and the text scrolls where the
+                 room above the line is shorter than it. The background is solid,
+                 so a click on the panel never reaches the controls under it. -->
+            <Border x:Name="ReportPanel"
+                    Visibility="{Binding Completion.ReportPanelOpen, Converter={StaticResource BoolToVis}}"
+                    Background="{StaticResource Surface.Sidebar}"
+                    BorderBrush="{StaticResource Action.Standard.Background}"
+                    BorderThickness="{StaticResource BorderThickness.Hairline}"
+                    CornerRadius="{StaticResource Radius.Panel}"
+                    Padding="16,12,16,14"
+                    MaxWidth="{a11y:TextScaled 600}"
+                    HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                    Margin="12"
+                    RenderTransformOrigin="0.5,0.5">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              Style="{StaticResource BodyScrollRegion}"
+                              AutomationProperties.Name="{loc:Translate Automation.Scroll.ReportContents}">
+                    <StackPanel>
+                        <!-- Inlines composed in code-behind (BuildReportPanelIntro),
+                             the chart's name being a link inside the sentence. -->
+                        <TextBlock x:Name="ReportPanelIntroText"
+                                   Foreground="{StaticResource Text.Body}" FontSize="{DynamicResource Type.Body}"
+                                   TextWrapping="Wrap" Margin="0,0,0,6"/>
+                        <!-- One line per kind of thing the report carries, filled from
+                             code-behind (ReportPanelLines). BulletDecorator sets each dot
+                             against the first line of its text, however it wraps. -->
+                        <ItemsControl x:Name="ReportPanelList" Focusable="False" IsTabStop="False"
+                                      Margin="0,0,0,8">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <BulletDecorator Margin="0,1">
+                                        <BulletDecorator.Bullet>
+                                            <Ellipse Width="{a11y:TextScaled 4}" Height="{a11y:TextScaled 4}"
+                                                     Fill="{StaticResource Text.Dim}"/>
+                                        </BulletDecorator.Bullet>
+                                        <TextBlock Text="{Binding}" Margin="{StaticResource GapLeft.Sm}"
+                                                   Foreground="{StaticResource Text.Body}" FontSize="{DynamicResource Type.Body}"
+                                                   TextWrapping="Wrap"/>
+                                    </BulletDecorator>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="{loc:Translate Completion.ReportPanel.Closing}"
+                                   Foreground="{StaticResource Text.Body}" FontSize="{DynamicResource Type.Body}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </ScrollViewer>
             </Border>
         </Grid>
     </Grid>

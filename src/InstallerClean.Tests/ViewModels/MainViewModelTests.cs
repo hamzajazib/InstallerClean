@@ -3367,6 +3367,102 @@ public class MainViewModelTests
         await _resultLogService.Received(1).SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
+    // The panel the "i" beside the box opens, saying what the report holds. Opened here
+    // by setting ReportPanelOpen, as the "i"'s two-way binding does.
+
+    [Fact]
+    public async Task The_report_panel_starts_closed_on_the_card_that_carries_the_box()
+    {
+        var vm = FirstRunAllClear();
+
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+
+        Assert.True(vm.Completion.OffersReport);
+        Assert.False(vm.Completion.ReportPanelOpen);
+    }
+
+    [Fact]
+    public async Task Esc_closes_the_report_panel_and_leaves_the_card_and_the_box_as_they_are()
+    {
+        var vm = FirstRunAllClear();
+        _resultLogService.SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(ResultLogSendOutcome.Sent);
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+        vm.Completion.ReportPanelOpen = true;
+
+        Assert.True(vm.HandleEscape());
+
+        Assert.False(vm.Completion.ReportPanelOpen);
+        Assert.True(vm.Completion.IsComplete);
+        Assert.True(vm.Completion.OffersReport);
+        Assert.True(vm.Completion.SendsReport);
+        await vm.Completion.ReportWork;
+        await _resultLogService.DidNotReceive().SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+
+        // The next Esc is the card's, and closing it sends the report as usual.
+        Assert.True(vm.HandleEscape());
+        Assert.False(vm.Completion.IsComplete);
+        vm.Dispose();
+        await _resultLogService.Received(1).SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    public static TheoryData<string> WaysToCloseTheCardWithThePanelOpen => new() { "Done", "Donate", "Window" };
+
+    [Theory]
+    [MemberData(nameof(WaysToCloseTheCardWithThePanelOpen))]
+    public async Task Closing_the_card_closes_the_report_panel_with_it(string way)
+    {
+        var vm = FirstRunAllClear();
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+        Assert.True(vm.Completion.OffersReport);
+        vm.Completion.ReportPanelOpen = true;
+
+        switch (way)
+        {
+            case "Done": vm.Completion.DismissCommand.Execute(null); break;
+            case "Donate": vm.Completion.DonateCommand.Execute(null); break;
+            case "Window": vm.Dispose(); break;
+        }
+
+        Assert.False(vm.Completion.ReportPanelOpen);
+        Assert.False(vm.Completion.OffersReport);
+        if (way != "Window") vm.Dispose();
+    }
+
+    [Fact]
+    public async Task A_report_that_could_not_be_written_closes_the_report_panel_with_the_box()
+    {
+        var vm = FirstRunAllClear();
+        var write = new TaskCompletionSource<bool>();
+        var writeStarted = new TaskCompletionSource();
+        _resultLogService.WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                writeStarted.TrySetResult();
+                return write.Task;
+            });
+        var scan = vm.Scan.ScanCommand.ExecuteAsync(null);
+        await writeStarted.Task;
+        vm.Completion.ReportPanelOpen = true;
+        // The card's write runs behind the scan rather than inside it, so the box going
+        // is waited for rather than the scan.
+        var boxGone = new TaskCompletionSource();
+        vm.Completion.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(CompletionViewModel.OffersReport) && !vm.Completion.OffersReport)
+                boxGone.TrySetResult();
+        };
+
+        write.SetResult(false);
+        await scan;
+        await boxGone.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.True(vm.Completion.IsComplete);
+        Assert.False(vm.Completion.OffersReport);
+        Assert.False(vm.Completion.ReportPanelOpen);
+        vm.Dispose();
+    }
+
     [Theory]
     [InlineData(true, true, false, true)]
     [InlineData(true, false, false, false)]

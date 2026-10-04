@@ -110,6 +110,7 @@ public static class Strings
     public static string Automation_Minimise => Get("Automation.Minimise");
     public static string Automation_OperationProgress => Get("Automation.OperationProgress");
     public static string Automation_RegisteredMissingSeeAlso => Get("Automation.RegisteredMissingSeeAlso");
+    public static string Automation_ReportInfo => Get("Automation.ReportInfo");
     public static string Automation_RescanInstaller => Get("Automation.RescanInstaller");
     public static string Automation_SayThanks => Get("Automation.SayThanks");
     public static string Automation_ScanningProgress => Get("Automation.ScanningProgress");
@@ -117,6 +118,7 @@ public static class Strings
     public static string Automation_Scroll_DialogBody => Get("Automation.Scroll.DialogBody");
     public static string Automation_Scroll_FileDetails => Get("Automation.Scroll.FileDetails");
     public static string Automation_Scroll_ProductDetails => Get("Automation.Scroll.ProductDetails");
+    public static string Automation_Scroll_ReportContents => Get("Automation.Scroll.ReportContents");
     public static string Automation_Scroll_ResultDetails => Get("Automation.Scroll.ResultDetails");
     public static string Automation_Scroll_ScanResults => Get("Automation.Scroll.ScanResults");
     public static string Automation_Section_BackupFolder => Get("Automation.Section.BackupFolder");
@@ -308,6 +310,19 @@ public static class Strings
     public static string Completion_PermanentDeleteCancelledSummary => Get("Completion.PermanentDeleteCancelledSummary");
     public static string Completion_PermanentDeleteSummary_Plural => Get("Completion.PermanentDeleteSummary.Plural");
     public static string Completion_PermanentDeleteSummary_Singular => Get("Completion.PermanentDeleteSummary.Singular");
+    public static string Completion_ReportPanel_AppVersion => Get("Completion.ReportPanel.AppVersion");
+    public static string Completion_ReportPanel_Closing => Get("Completion.ReportPanel.Closing");
+    public static string Completion_ReportPanel_Destination => Get("Completion.ReportPanel.Destination");
+    public static string Completion_ReportPanel_Durations => Get("Completion.ReportPanel.Durations");
+    public static string Completion_ReportPanel_Errors => Get("Completion.ReportPanel.Errors");
+    public static string Completion_ReportPanel_Freed => Get("Completion.ReportPanel.Freed");
+    public static string Completion_ReportPanel_InstallerFiles => Get("Completion.ReportPanel.InstallerFiles");
+    public static string Completion_ReportPanel_Intro => Get("Completion.ReportPanel.Intro");
+    public static string Completion_ReportPanel_LeftAlone => Get("Completion.ReportPanel.LeftAlone");
+    public static string Completion_ReportPanel_Records => Get("Completion.ReportPanel.Records");
+    public static string Completion_ReportPanel_ShortNames => Get("Completion.ReportPanel.ShortNames");
+    public static string Completion_ReportPanel_Waits => Get("Completion.ReportPanel.Waits");
+    public static string Completion_ReportPanel_Windows => Get("Completion.ReportPanel.Windows");
     public static string Completion_ReverifyIdentityClaimed => Get("Completion.ReverifyIdentityClaimed");
     public static string Completion_ReverifyIdentityUnreadable => Get("Completion.ReverifyIdentityUnreadable");
     public static string Completion_SendReport => Get("Completion.SendReport");

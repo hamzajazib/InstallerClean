@@ -197,6 +197,7 @@ const PROPERTY_TYPES = new Map([
   ['Color', 'Color'],
   ['FontFamily', 'FontFamily'],
   ['FontSize', 'Double'],
+  ['StrokeThickness', 'Double'],
   ['BasedOn', 'Style'],
   ['FocusVisualStyle', 'Style'],
   ['HeaderContainerStyle', 'Style'],

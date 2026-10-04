@@ -962,6 +962,66 @@ Per rimetterlo, ti serve il programma di installazione della versione che hai gi
     <value>Send _anonymous report</value>
     <comment>The checkbox on the first completion card the PC shows, whatever kind of card it is. Ticked, the report goes as the card closes. The underscore marks the access key (Alt+A in English), which must not clash with the card's buttons: Action.Done, Action.DonateSmall, Action.Donate and Action.CloseWithoutDonating.</comment>
   </data>
+  <data name="Completion.ReportPanel.Intro" xml:space="preserve">
+    <value>The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs:</value>
+    <comment>The opening of the panel the small &quot;i&quot; beside Completion.SendReport opens, saying what the report holds. The eleven Completion.ReportPanel.* lines follow it as a bulleted list, then Completion.ReportPanel.Closing. The phrase in [ ] is a link to the chart of results in the README: keep exactly one pair of brackets, around the words that name the chart. &quot;Me&quot; is the app's author.</comment>
+  </data>
+  <data name="Completion.ReportPanel.Freed" xml:space="preserve">
+    <value>How much space was freed, and how many files were moved or deleted</value>
+    <comment>Bullet 1 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
+  </data>
+  <data name="Completion.ReportPanel.Destination" xml:space="preserve">
+    <value>Whether a Move went to the same drive, another drive, a removable drive or a network share</value>
+    <comment>Bullet 2 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
+  </data>
+  <data name="Completion.ReportPanel.Durations" xml:space="preserve">
+    <value>How long the scan and the Move or Delete took</value>
+    <comment>Bullet 3 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
+  </data>
+  <data name="Completion.ReportPanel.InstallerFiles" xml:space="preserve">
+    <value>How many installer files there are of each kind, and how much space they take</value>
+    <comment>Bullet 4 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
+  </data>
+  <data name="Completion.ReportPanel.LeftAlone" xml:space="preserve">
+    <value>How many files were left alone, and why</value>
+    <comment>Bullet 5 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
+  </data>
+  <data name="Completion.ReportPanel.Waits" xml:space="preserve">
+    <value>How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for</value>
+    <comment>Bullet 6 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
+  </data>
+  <data name="Completion.ReportPanel.Records" xml:space="preserve">
+    <value>How many programs and patches Windows has a record of</value>
+    <comment>Bullet 7 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
+  </data>
+  <data name="Completion.ReportPanel.ShortNames" xml:space="preserve">
+    <value>Whether Windows still makes old-style short file names</value>
+    <comment>Bullet 8 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
+  </data>
+  <data name="Completion.ReportPanel.Windows" xml:space="preserve">
+    <value>Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to</value>
+    <comment>Bullet 9 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
+  </data>
+  <data name="Completion.ReportPanel.AppVersion" xml:space="preserve">
+    <value>InstallerClean's version and the language it was showing</value>
+    <comment>Bullet 10 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
+  </data>
+  <data name="Completion.ReportPanel.Errors" xml:space="preserve">
+    <value>Counts of anything that went wrong</value>
+    <comment>Bullet 11 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
+  </data>
+  <data name="Completion.ReportPanel.Closing" xml:space="preserve">
+    <value>All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address.</value>
+    <comment>The closing line of the panel opened from the small &quot;i&quot; beside Completion.SendReport, under the eleven bullets. &quot;I&quot; is the app's author.</comment>
+  </data>
+  <data name="Automation.ReportInfo" xml:space="preserve">
+    <value>What the report holds</value>
+    <comment>Screen-reader name of the small &quot;i&quot; button beside Completion.SendReport, which opens a panel saying what the report holds. The button shows only the letter i, so this is its whole name.</comment>
+  </data>
+  <data name="Automation.Scroll.ReportContents" xml:space="preserve">
+    <value>What the report holds</value>
+    <comment>Screen-reader name of the scrolling region of the panel opened from the small &quot;i&quot; beside Completion.SendReport. Same words as Automation.ReportInfo, the button that opens it.</comment>
+  </data>
 
   <!-- Summaries -->
   <!-- 0 = file count. Singular / plural pairs picked at the call

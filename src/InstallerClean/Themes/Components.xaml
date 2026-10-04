@@ -437,6 +437,9 @@
         <Setter Property="FontFamily" Value="{StaticResource Type.FontFamily}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="FocusVisualStyle" Value="{StaticResource FlatTextBoxFocusVisual}"/>
+        <!-- The box's hairline, read by the template through BorderBrush, so a
+             checkbox's own style can change it without a template of its own. -->
+        <Setter Property="BorderBrush" Value="{StaticResource Border.Control}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
@@ -445,7 +448,7 @@
                                 Width="{a11y:TextScaled 18}" Height="{a11y:TextScaled 18}"
                                 CornerRadius="{StaticResource Radius.Chip}"
                                 Background="{StaticResource Action.Standard.Background}"
-                                BorderBrush="{StaticResource Border.Control}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{StaticResource BorderThickness.Hairline}"
                                 Margin="{StaticResource GapRight.Sm}"
                                 VerticalAlignment="Center"
@@ -506,6 +509,58 @@
                              on the whole control, box and label together. -->
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Root" Property="Opacity" Value="0.5"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The small round "i" beside the finished card's report box, which opens
+         and closes the panel saying what the report holds. A 16 px ring with
+         the letter drawn inside it, both in the dim text colour, brightening
+         to body text while the panel is open or the pointer is over it. The
+         Grid's transparent fill makes the whole circle clickable, not only
+         the ring and the letter. Its focus ring is round, being drawn round
+         a round control. -->
+    <Style x:Key="InfoButtonFocusVisual">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Ellipse Stroke="{DynamicResource Text.Body}"
+                             StrokeThickness="{StaticResource StrokeThickness.Focus}"
+                             Margin="-2"
+                             SnapsToDevicePixels="True"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="InfoButton" TargetType="ToggleButton">
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource InfoButtonFocusVisual}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Grid Width="{a11y:TextScaled 16}" Height="{a11y:TextScaled 16}" Background="Transparent">
+                        <Ellipse x:Name="Ring"
+                                 Stroke="{StaticResource Text.Dim}"
+                                 StrokeThickness="{StaticResource StrokeThickness.Hairline}"
+                                 SnapsToDevicePixels="True"/>
+                        <Path x:Name="Glyph"
+                              Data="{StaticResource Icon.Info}"
+                              Fill="{StaticResource Text.Dim}" Stretch="Uniform"
+                              Height="{a11y:TextScaled 8}"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Ring" Property="Stroke" Value="{StaticResource Text.Body}"/>
+                            <Setter TargetName="Glyph" Property="Fill" Value="{StaticResource Text.Body}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Ring" Property="Stroke" Value="{StaticResource Text.Body}"/>
+                            <Setter TargetName="Glyph" Property="Fill" Value="{StaticResource Text.Body}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

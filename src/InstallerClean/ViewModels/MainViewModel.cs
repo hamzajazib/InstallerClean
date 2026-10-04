@@ -142,13 +142,22 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// What Esc does on the main window: the overlay in front takes it, and the return
     /// says whether one did. An idle window takes none.
     ///
-    /// THE FINISHED CARD COMES FIRST, because it is the one in front. A Move or a Delete
+    /// The panel saying what the report holds comes before everything, being drawn over
+    /// the card it belongs to: Esc closes it and leaves the card up, and the next Esc
+    /// closes the card.
+    ///
+    /// THE FINISHED CARD COMES NEXT, because it is the one in front. A Move or a Delete
     /// puts its card up before the operation has let go, so for that moment the card and
     /// the operating overlay are both up, and the card is drawn over it. Then a running
     /// Move or Delete, whose Esc is Cancel, and then a scan.
     /// </summary>
     public bool HandleEscape()
     {
+        if (Completion.ReportPanelOpen)
+        {
+            Completion.ReportPanelOpen = false;
+            return true;
+        }
         if (Completion.IsComplete && Completion.DismissCommand.CanExecute(null))
         {
             Completion.DismissCommand.Execute(null);

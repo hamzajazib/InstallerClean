@@ -65,11 +65,13 @@ public class CompletionScreenResetTests
     }
 
     /// <summary>
-    /// The two observable properties a <c>Show*</c> method is right not to touch.
-    /// They are the report box rather than the card's outcome: both are set by
-    /// <see cref="CompletionViewModel.TakeReport"/> before the Show* method that
+    /// The three observable properties a <c>Show*</c> method is right not to touch.
+    /// They are the report box rather than the card's outcome. The first two are set
+    /// by <see cref="CompletionViewModel.TakeReport"/> before the Show* method that
     /// reveals the PC's first card, and cleared as that card closes, so a screen
-    /// method setting either would take the box off the one card that carries it.
+    /// method setting either would take the box off the one card that carries it. The
+    /// third is the panel the box's "i" opens, which only the "i" opens and which
+    /// closes as the box leaves the card.
     ///
     /// Named rather than discovered because nothing in the type tells them apart, and
     /// <c>nameof</c> rather than a string so a rename cannot leave a dead exclusion
@@ -79,6 +81,7 @@ public class CompletionScreenResetTests
     {
         nameof(CompletionViewModel.OffersReport),
         nameof(CompletionViewModel.SendsReport),
+        nameof(CompletionViewModel.ReportPanelOpen),
     };
 
     /// <summary>

@@ -53,6 +53,7 @@ public class LinkPhraseCompositionTests
     private static readonly string[] KnownLinkKeys =
     {
         "Body.RegisteredMissingFromDisk.SeeAlso", // the registered-files window
+        "Completion.ReportPanel.Intro",           // the panel the report box's "i" opens
     };
 
     /// <summary>
