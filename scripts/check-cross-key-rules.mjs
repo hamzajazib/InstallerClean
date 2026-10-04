@@ -4,16 +4,18 @@
 // numbered below: a control's spoken name against its visible label, a sentence
 // against the button it names, a word a string must not repeat, how github is cased
 // for the surface it is on, the folder token and the link phrase a translation has
-// to keep, a window title the code overwrites, and a resource read that goes round
-// Strings. Exit 2 where Strings.resx cannot be read, a resx file's entries cannot all
-// be parsed or a C# file cannot be read to its end.
+// to keep, a window title written in code as well as in XAML, and a resource read
+// that goes round Strings. Exit 2 where Strings.resx cannot be read, a resx file's
+// entries cannot all be parsed, a C# file cannot be read to its end, or a XAML file
+// cannot be read or has a comment that does not close.
 //
 // Run from the repo root: node scripts/check-cross-key-rules.mjs
 import { readFileSync, existsSync } from 'node:fs';
 import { standsInFor } from './plural-overrides.mjs';
 import { readLedger, englishFor, recordedFreshness } from './translation-ledger.mjs';
-import { readCSharp } from './csharp-source.mjs';
-import { sourceFiles } from './source-files.mjs';
+import { readCSharp, argumentSpan } from './csharp-source.mjs';
+import { sourceFiles, lineIndex } from './source-files.mjs';
+import { blankXmlComments } from './xml-source.mjs';
 
 const RESX_DIR = 'src/InstallerClean.Core/Resources';
 const GUI = 'src/InstallerClean';
@@ -269,15 +271,22 @@ const bracketCounts = (value) => ({
 });
 
 // ---------------------------------------------------------------------------
-// Rule 7. A window title resolved in XAML is not overwritten before first use.
+// Rule 7. A window title resolved in XAML is never written in code.
 //
 // Every dialog here is ShowInTaskbar=False under custom chrome, so Title is
 // never painted and exists only for the announcement a screen reader makes when
-// the window opens. A dialog that composes its title in the constructor (the
-// heading and the question, not a category) must not also resolve one in XAML:
-// that attribute would be the key's only consumer and it is overwritten before
-// the window can show. check-dead-resx-keys does not report it, the key being
-// referenced and the reference dead.
+// the window opens. A window takes its title from one key in XAML or composes it
+// in code (the heading and the question, not a category), never both. A write in
+// code replaces the value the XAML resolved, and one made before the window shows
+// leaves the key referenced and never read, which check-dead-resx-keys does not
+// report.
+//
+// A write is an assignment by any operator, a SetValue, SetCurrentValue,
+// SetBinding or ClearValue on TitleProperty, the same through BindingOperations,
+// or a Title set in an object initializer. A receiver typed as Window can hold any
+// window, so a write through one counts against every window whose XAML resolves
+// Title, as does one on an object made by new() with no type written. A Title not
+// read as a declaration or as another object's member is a write.
 
 // ---------------------------------------------------------------------------
 // Rule 8. A resx value reaches a user through Strings and nothing else.
@@ -435,6 +444,24 @@ const readCode = (file) => {
   }
 };
 
+// A XAML file with every comment blanked, so markup inside a comment is not read as
+// markup. A file that cannot be read, or whose comment does not close, stops the run.
+const readXaml = (file) => {
+  let text;
+  try {
+    text = readFileSync(file, 'utf8');
+  } catch (e) {
+    console.error(`${file} cannot be read (${e.code ?? e.message}). Refusing to report on it.`);
+    process.exit(2);
+  }
+  try {
+    return blankXmlComments(text);
+  } catch (e) {
+    console.error(`${file}: ${e.message}. Refusing to report on it.`);
+    process.exit(2);
+  }
+};
+
 const problems = [];
 // Kept apart from the findings below and reported first: a declaration this file
 // makes about a key or a control that no longer exists says nothing about any
@@ -445,8 +472,8 @@ const stale = [];
 // XAML, and claim none the XAML no longer has. Run before the per-language
 // work, because a stale list is a fact about this file rather than about any
 // language.
-// Each XAML file is read once, here, for Rules 2 and 7.
-const xamlText = new Map(sourceFiles(GUI, '.xaml').map((file) => [file, readFileSync(file, 'utf8')]));
+// Each XAML file is read once, here, for Rules 2 and 7, with its comments blanked.
+const xamlText = new Map(sourceFiles(GUI, '.xaml').map((file) => [file, readXaml(file)]));
 const xamlFiles = [...xamlText.keys()];
 const namedInXaml = new Set();
 const visibleTextInXaml = {};
@@ -497,20 +524,340 @@ const csFiles = sourceFiles('src', '.cs');
 const csRead = new Map(csFiles.map((file) => [file, readCode(file)]));
 
 // --- Rule 7, once: source shape, not language.
-// The code-behind is searched in its bare, so a Title in a comment or on a line
-// inside a string is not an assignment. On Windows a code-behind spelled in a
-// different case from its XAML exists without being a key in csRead, so it is read
-// on its own.
-for (const file of xamlFiles) {
-  const title = xamlText.get(file).match(/\bTitle="\{loc:Translate ([A-Za-z0-9._]+)\}"/);
+// The windows whose XAML resolves Title, by the class each XAML declares, and every C#
+// file of the app searched in its bare, so a Title in a comment or a string is not a
+// write. The test project does not ship, and the other projects cannot name a window.
+const titledWindows = new Map();
+for (const [file, xaml] of xamlText) {
+  const title = xaml.match(/\bTitle="\{loc:Translate ([A-Za-z0-9._]+)\}"/);
   if (!title) continue;
-  const codeBehind = `${file}.cs`;
-  const read = csRead.get(codeBehind) ?? (existsSync(codeBehind) ? readCode(codeBehind) : null);
-  if (!read) continue;
-  if (/^\s*(this\.)?Title\s*=[^=]/m.test(read.bare))
-    problems.push(`${file} resolves Title from ${title[1]} and ${file}.cs assigns over it, `
-      + 'so the resx value never reaches a user in any language. Drop the XAML attribute; '
-      + 'drop the key too unless something else shows it.');
+  const declared = xaml.match(/\bx:Class="(?:[A-Za-z_][\w.]*\.)?([A-Za-z_]\w*)"/);
+  if (!declared) {
+    problems.push(`${file} resolves Title from ${title[1]} and declares no x:Class, so this `
+      + 'check cannot tell which class to look for writes to its title. Give the window its x:Class.');
+    continue;
+  }
+  titledWindows.set(declared[1], { xaml: file, key: title[1] });
+}
+
+const ID = '@?[A-Za-z_]\\w*';
+const QUALIFIED = '(?:[A-Za-z_]\\w*\\s*\\.\\s*)*[A-Za-z_]\\w*';
+// Every assignment operator. ==, !=, <=, >= and => are not among them.
+const ASSIGN = '(?:>>>|>>|<<|\\?\\?|[-+*/%&|^])?=(?![=>])';
+const TYPE_KEYWORDS = new Set(['bool', 'byte', 'sbyte', 'char', 'decimal', 'double', 'float', 'int',
+  'uint', 'nint', 'nuint', 'long', 'ulong', 'short', 'ushort', 'object', 'string', 'var', 'dynamic']);
+const KEYWORDS = new Set(['abstract', 'as', 'base', 'break', 'case', 'catch', 'checked', 'class',
+  'const', 'continue', 'default', 'delegate', 'do', 'else', 'enum', 'event', 'explicit', 'extern',
+  'false', 'finally', 'fixed', 'for', 'foreach', 'goto', 'if', 'implicit', 'in', 'interface',
+  'internal', 'is', 'lock', 'namespace', 'new', 'null', 'operator', 'out', 'override', 'params',
+  'private', 'protected', 'public', 'readonly', 'ref', 'return', 'sealed', 'sizeof', 'stackalloc',
+  'static', 'struct', 'switch', 'this', 'throw', 'true', 'try', 'typeof', 'unchecked', 'unsafe',
+  'using', 'virtual', 'void', 'volatile', 'while', 'await', 'yield', 'when', 'and', 'or', 'not',
+  'with', 'init', 'required', 'scoped', 'file', 'record', 'async', 'partial', 'get', 'set']);
+const MODIFIERS = new Set(['public', 'private', 'protected', 'internal', 'static', 'readonly',
+  'const', 'new', 'override', 'virtual', 'sealed', 'abstract', 'extern', 'unsafe', 'volatile',
+  'required', 'partial', 'ref', 'scoped', 'fixed', 'async', 'file']);
+const OPENERS = '([{';
+const CLOSERS = ')]}';
+const isWord = (c) => c !== undefined && /[\w@]/.test(c);
+
+// Brackets in bare are the code's own, so they pair up.
+const openerOf = (bare, close) => {
+  let depth = 0;
+  for (let i = close; i >= 0; i--) {
+    if (CLOSERS.includes(bare[i])) depth++;
+    else if (OPENERS.includes(bare[i]) && --depth === 0) return i;
+  }
+  return -1;
+};
+const enclosingOpener = (bare, at) => {
+  let depth = 0;
+  for (let i = at - 1; i >= 0; i--) {
+    if (CLOSERS.includes(bare[i])) depth++;
+    else if (OPENERS.includes(bare[i])) {
+      if (depth === 0) return i;
+      depth--;
+    }
+  }
+  return -1;
+};
+const backOverSpace = (bare, i) => {
+  while (i >= 0 && /\s/.test(bare[i])) i--;
+  return i;
+};
+const wordEndingAt = (bare, i) => {
+  let j = i;
+  while (j >= 0 && isWord(bare[j])) j--;
+  return { word: bare.slice(j + 1, i + 1).replace(/^@/, ''), start: j + 1 };
+};
+// The arguments of a call, split at the commas of its own level.
+const callArguments = (bare, open) => {
+  const span = argumentSpan(bare, open);
+  if (!span) return null;
+  const args = [];
+  let depth = 0;
+  let from = span[0];
+  for (let i = span[0]; i < span[1]; i++) {
+    if (OPENERS.includes(bare[i])) depth++;
+    else if (CLOSERS.includes(bare[i])) depth--;
+    else if (bare[i] === ',' && depth === 0) {
+      args.push(bare.slice(from, i).trim());
+      from = i + 1;
+    }
+  }
+  args.push(bare.slice(from, span[1]).trim());
+  return args;
+};
+const namesTitleProperty = (arg) => new RegExp(`^(?:${QUALIFIED}\\s*\\.\\s*)?TitleProperty$`).test(arg ?? '');
+
+// A declaration context: where a member, a local or a parameter can begin.
+const declarationContextBefore = (bare, start) => {
+  const i = backOverSpace(bare, start - 1);
+  if (i < 0 || ';{}](,'.includes(bare[i])) return true;
+  if (!isWord(bare[i])) return false;
+  return MODIFIERS.has(wordEndingAt(bare, i).word);
+};
+// Whether the text ending just before `at` is a type standing where a declaration
+// begins, which makes a Title after it a declared name rather than a write.
+const declaresTitle = (bare, at) => {
+  let i = backOverSpace(bare, at - 1);
+  if (i < 0) return false;
+  if (bare[i] === '?') {
+    i--;
+    if (i < 0 || !(isWord(bare[i]) || '>])'.includes(bare[i]))) return false;
+  }
+  // A qualified type: walk back from its last name over Namespace.Type.
+  const qualifiedStart = (from) => {
+    let start = from;
+    for (let j = backOverSpace(bare, start - 1); j >= 0 && bare[j] === '.';) {
+      const k = backOverSpace(bare, j - 1);
+      if (!isWord(bare[k])) break;
+      start = wordEndingAt(bare, k).start;
+      j = backOverSpace(bare, start - 1);
+    }
+    return start;
+  };
+  let start;
+  if (isWord(bare[i])) {
+    const { word, start: s } = wordEndingAt(bare, i);
+    if (KEYWORDS.has(word) && !TYPE_KEYWORDS.has(word)) return false;
+    start = qualifiedStart(s);
+  } else if (bare[i] === '>') {
+    let depth = 0;
+    let j = i;
+    for (; j >= 0; j--) {
+      if (bare[j] === '>') depth++;
+      else if (bare[j] === '<' && --depth === 0) break;
+      else if (';{}='.includes(bare[j])) return false;
+    }
+    const k = backOverSpace(bare, j - 1);
+    if (j < 0 || !isWord(bare[k])) return false;
+    start = qualifiedStart(wordEndingAt(bare, k).start);
+  } else if (bare[i] === ']') {
+    // An array type: its rank brackets hold nothing but commas, after an element type.
+    const open = openerOf(bare, i);
+    if (open < 0 || !/^[\s,]*$/.test(bare.slice(open + 1, i))) return false;
+    return declaresTitle(bare, open);
+  } else if (bare[i] === ')') {
+    // A tuple type, which stands where a declaration begins; `if (...) Title = x` does not.
+    start = openerOf(bare, i);
+    if (start < 0) return false;
+  } else return false;
+  return declarationContextBefore(bare, start);
+};
+
+// What a receiver expression is: windows it names, every titled window when it is typed
+// as Window, or null for anything else.
+const everyWindow = (what) => ({ any: true, what });
+const typeReach = (type) => {
+  const name = type.replace(/\s/g, '').replace(/\?$/, '').split('.').pop();
+  if (name === 'Window') return everyWindow('a receiver typed as Window');
+  if (titledWindows.has(name)) return { classes: [name] };
+  return null;
+};
+const segmentsOf = (expr) => {
+  const out = [];
+  let depth = 0;
+  let from = 0;
+  for (let i = 0; i < expr.length; i++) {
+    if (OPENERS.includes(expr[i])) depth++;
+    else if (CLOSERS.includes(expr[i])) depth--;
+    else if (expr[i] === '.' && depth === 0) {
+      out.push(expr.slice(from, i).replace(/[?!]\s*$/, '').trim());
+      from = i + 1;
+    }
+  }
+  out.push(expr.slice(from).replace(/!\s*$/, '').trim());
+  return out;
+};
+const reach = (expr, names, own) => {
+  expr = expr.trim().replace(/!$/, '').trim();
+  if (!expr) return null;
+  let m = expr.match(new RegExp(`^new\\s+(${QUALIFIED})\\s*(?:<[^<>]*>)?\\s*[({]`));
+  if (m) return typeReach(m[1]);
+  if (expr[0] === '(' && expr.endsWith(')') && openerOf(expr, expr.length - 1) === 0) {
+    const inner = expr.slice(1, -1).trim();
+    return reach(inner, names, own);
+  }
+  m = expr.match(new RegExp(`^\\(\\s*(${QUALIFIED}\\s*\\??)\\s*\\)\\s*\\S`));
+  if (m) return typeReach(m[1]);
+  m = expr.match(new RegExp(`\\bas\\s+(${QUALIFIED}\\s*\\??)$`));
+  if (m) return typeReach(m[1]);
+  const segments = segmentsOf(expr).map((s) => s.replace(/^@/, ''));
+  const last = segments[segments.length - 1];
+  if (/^(?:MainWindow|Owner)$/.test(last) || /^GetWindow\s*\(/.test(last)
+    || /^(?:Windows|OwnedWindows)\s*\[/.test(last))
+    return everyWindow('a receiver typed as Window');
+  if (segments.length === 1 && /^(?:this|base)$/.test(last)) return own.length ? { classes: own } : null;
+  if (segments.length === 1 || (segments.length === 2 && segments[0] === 'this'))
+    return names.get(last) ?? null;
+  return null;
+};
+// The receiver written before the '.' or '?.' at `dot`.
+const receiverBefore = (bare, dot) => {
+  let i = backOverSpace(bare, dot - 1);
+  if (bare[i] === '?' || bare[i] === '!') i = backOverSpace(bare, i - 1);
+  const end = i + 1;
+  let start = end;
+  for (;;) {
+    if (i >= 0 && ')]'.includes(bare[i])) {
+      const open = openerOf(bare, i);
+      if (open < 0) break;
+      start = open;
+      i = backOverSpace(bare, open - 1);
+      if (isWord(bare[i])) {
+        start = wordEndingAt(bare, i).start;
+        i = backOverSpace(bare, start - 1);
+      }
+    } else if (isWord(bare[i])) {
+      start = wordEndingAt(bare, i).start;
+      i = backOverSpace(bare, start - 1);
+    } else break;
+    if (bare[i] === '.') {
+      i = backOverSpace(bare, i - 1);
+      if (bare[i] === '?' || bare[i] === '!') i = backOverSpace(bare, i - 1);
+      continue;
+    }
+    break;
+  }
+  if (isWord(bare[i]) && wordEndingAt(bare, i).word === 'new') start = wordEndingAt(bare, i).start;
+  return bare.slice(start, end);
+};
+// The type an object initializer opened at `brace` builds, read from what stands before
+// it: windows, every window for new() with no type written, null for any other type, or
+// 'block' where the brace is not an object initializer.
+const initializerReach = (bare, brace, names, own) => {
+  let i = backOverSpace(bare, brace - 1);
+  let called = false;
+  if (bare[i] === ')') {
+    const open = openerOf(bare, i);
+    if (open < 0) return 'block';
+    i = backOverSpace(bare, open - 1);
+    called = true;
+  }
+  const before = bare.slice(Math.max(0, i - 400), i + 1);
+  if (/\bnew$/.test(before)) {
+    if (!called) return null;
+    const head = before.replace(/\bnew$/, '');
+    let m = head.match(new RegExp(`(?:^|[^\\w.@])(${QUALIFIED}\\s*\\??)\\s+(${ID})\\s*=\\s*$`));
+    if (m && !KEYWORDS.has(m[1].trim())) return typeReach(m[1]);
+    m = head.match(new RegExp(`(?:^|[^\\w.@])(?:this\\s*\\.\\s*)?(${ID})\\s*=\\s*$`));
+    if (m && names.has(m[1].replace(/^@/, ''))) return names.get(m[1].replace(/^@/, ''));
+    return everyWindow('an object made by new() with no type written');
+  }
+  if (/\bwith$/.test(before)) return null;
+  const m = before.match(new RegExp(`\\bnew\\s+(${QUALIFIED})\\s*(?:<[^<>]*>)?\\s*\\??$`));
+  if (m) return typeReach(m[1]);
+  return 'block';
+};
+// An attribute's '[' stands where a declaration begins; an indexer's follows an expression.
+const insideAttribute = (bare, open) => {
+  const outer = enclosingOpener(bare, open);
+  if (outer < 0 || bare[outer] !== '[') return false;
+  const i = backOverSpace(bare, outer - 1);
+  return i < 0 || ';{}]'.includes(bare[i]);
+};
+
+const titleWrites = [];
+for (const file of csFiles.filter((f) => f.startsWith(`${GUI}/`))) {
+  if (!titledWindows.size) break;
+  const { bare } = csRead.get(file);
+  const lineAt = lineIndex(bare);
+  const own = [...titledWindows.keys()].filter((c) => new RegExp(`\\bclass\\s+${c}\\b`).test(bare));
+  const found = (at, target) => { if (target) titleWrites.push({ file, line: lineAt(at), target }); };
+
+  // Names this file declares or assigns as a titled window or as a Window.
+  const names = new Map();
+  for (const type of [...titledWindows.keys(), 'Window'])
+    for (const m of bare.matchAll(new RegExp(
+      `(?<![\\w.@])(?:[A-Za-z_]\\w*\\s*\\.\\s*)*${type}\\s*\\??\\s+(${ID})\\s*(?=[=;,){]|\\bin\\b)`, 'g')))
+      if (!KEYWORDS.has(m[1].replace(/^@/, ''))) names.set(m[1].replace(/^@/, ''), typeReach(type));
+  for (let pass = 0; pass < 3; pass++)
+    for (const m of bare.matchAll(new RegExp(`(?<![\\w.@])(?:this\\s*\\.\\s*)?(${ID})\\s*=(?![=>])`, 'g'))) {
+      const name = m[1].replace(/^@/, '');
+      if (names.has(name)) continue;
+      let depth = 0;
+      let end = m.index + m[0].length;
+      for (; end < bare.length; end++) {
+        if (OPENERS.includes(bare[end])) depth++;
+        else if (CLOSERS.includes(bare[end])) { if (depth-- === 0) break; }
+        else if ((bare[end] === ';' || bare[end] === ',') && depth === 0) break;
+      }
+      const target = reach(bare.slice(m.index + m[0].length, end), names, own);
+      if (target) names.set(name, target);
+    }
+
+  // R.Title op, R?.Title op.
+  for (const m of bare.matchAll(new RegExp(`(?:\\?\\s*)?\\.\\s*@?Title\\s*${ASSIGN}`, 'g')))
+    found(m.index, reach(receiverBefore(bare, m.index), names, own));
+  // R.SetValue(TitleProperty, ...) and its kin, with a receiver or without one.
+  for (const m of bare.matchAll(/(?<![\w@])(SetValue|SetCurrentValue|SetBinding|ClearValue)\s*\(/g)) {
+    const args = callArguments(bare, m.index + m[0].length - 1);
+    if (!args || !namesTitleProperty(args[0])) continue;
+    const i = backOverSpace(bare, m.index - 1);
+    if (bare[i] === '.') found(m.index, reach(receiverBefore(bare, i), names, own));
+    else found(m.index, own.length ? { classes: own } : null);
+  }
+  for (const m of bare.matchAll(/\bBindingOperations\s*\.\s*(?:SetBinding|ClearBinding)\s*\(/g)) {
+    const args = callArguments(bare, m.index + m[0].length - 1);
+    if (args && namesTitleProperty(args[1])) found(m.index, reach(args[0], names, own));
+  }
+  // Title op with no receiver: this object's own title, a member set in an object
+  // initializer, or a declared name.
+  for (const m of bare.matchAll(new RegExp(`(?<![\\w.@])@?Title\\s*${ASSIGN}`, 'g'))) {
+    if (declaresTitle(bare, m.index)) continue;
+    const open = enclosingOpener(bare, m.index);
+    if (open >= 0 && bare[open] === '(' && insideAttribute(bare, open)) continue;
+    if (open >= 0 && bare[open] === '{') {
+      const built = initializerReach(bare, open, names, own);
+      if (built !== 'block') {
+        found(m.index, built);
+        continue;
+      }
+    }
+    found(m.index, own.length ? { classes: own } : null);
+  }
+}
+
+const seenWrites = new Set();
+for (const { file, line, target } of titleWrites) {
+  const where = `${file}:${line}`;
+  if (target.any) {
+    if (seenWrites.has(where)) continue;
+    seenWrites.add(where);
+    problems.push(`${where} writes the Title of ${target.what}, which can be any of the windows `
+      + `whose XAML resolves Title (${[...titledWindows.keys()].join(', ')}). Type it as the window's `
+      + 'class, or move the write into the window.');
+    continue;
+  }
+  for (const window of target.classes) {
+    if (seenWrites.has(`${where} ${window}`)) continue;
+    seenWrites.add(`${where} ${window}`);
+    const { xaml, key } = titledWindows.get(window);
+    problems.push(`${xaml} resolves Title from ${key} and ${where} writes it, so the window's title `
+      + 'has two sources. Compose the whole title in code and drop the XAML attribute, and the key '
+      + 'too unless something else shows it; or leave the title to the XAML.');
+  }
 }
 
 // --- Rule 8, once: source shape, not language.
