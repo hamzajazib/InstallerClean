@@ -13,7 +13,7 @@
 // THE ROOTS ARE WINDOWS AND POPUPS, and each has its own rule.
 //
 //   A window. Every XAML file whose root element is Window sets
-//   FontFamily="{StaticResource Type.FontFamily}" on that root tag. An implicit
+//   FontFamily="{DynamicResource Type.FontFamily}" on that root tag. An implicit
 //   Window style cannot do it: an implicit style matches its exact type, and
 //   every window in the app is a class derived from Window. A window built in C# alone has
 //   no root tag to read, so every C# class derived from Window, directly or
@@ -40,7 +40,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, sep } from 'node:path';
 
 const SRC = 'src';
-const FONT = '{StaticResource Type.FontFamily}';
+const FONT = '{DynamicResource Type.FontFamily}';
 const POPUPS = ['ToolTip', 'ContextMenu'];
 // Roots that draw nothing themselves: Application hosts resources, and a
 // ResourceDictionary's styles are checked where they target a popup.

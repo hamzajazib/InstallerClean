@@ -11,7 +11,7 @@
         MinWidth="700" MinHeight="500"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        FontFamily="{StaticResource Type.FontFamily}"
+        FontFamily="{DynamicResource Type.FontFamily}"
         Background="{StaticResource Surface.Sidebar}"
         Loaded="Window_Loaded">
 

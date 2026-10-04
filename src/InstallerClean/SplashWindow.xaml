@@ -9,7 +9,7 @@
         SizeToContent="Height"
         WindowStyle="None"
         AllowsTransparency="True"
-        FontFamily="{StaticResource Type.FontFamily}"
+        FontFamily="{DynamicResource Type.FontFamily}"
         Background="Transparent"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"

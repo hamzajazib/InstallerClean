@@ -31,7 +31,7 @@
 
          This implicit style covers a TextBlock under any other root. -->
     <Style TargetType="TextBlock">
-        <Setter Property="FontFamily" Value="{StaticResource Type.FontFamily}"/>
+        <Setter Property="FontFamily" Value="{DynamicResource Type.FontFamily}"/>
     </Style>
 
     <!-- Selectable text. A read-only TextBox styled to look like a
@@ -43,7 +43,7 @@
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="FontFamily" Value="{StaticResource Type.FontFamily}"/>
+        <Setter Property="FontFamily" Value="{DynamicResource Type.FontFamily}"/>
         <!-- IsTabStop=True so keyboard-only users can Tab onto a value
              and Ctrl+C it. Consumers that genuinely shouldn't be in
              the tab order set IsTabStop="False" at the site. -->
@@ -442,7 +442,7 @@
     <Style TargetType="CheckBox">
         <Setter Property="Foreground" Value="{StaticResource Text.Body}"/>
         <Setter Property="FontSize" Value="{DynamicResource Type.Body}"/>
-        <Setter Property="FontFamily" Value="{StaticResource Type.FontFamily}"/>
+        <Setter Property="FontFamily" Value="{DynamicResource Type.FontFamily}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="FocusVisualStyle" Value="{StaticResource FlatTextBoxFocusVisual}"/>
         <!-- The box's hairline, read by the template through BorderBrush, so a
@@ -1125,7 +1125,7 @@
          ToolTip style below is the default for everything else. -->
 
     <Style x:Key="AccentTooltip" TargetType="ToolTip">
-        <Setter Property="FontFamily" Value="{StaticResource Type.FontFamily}"/>
+        <Setter Property="FontFamily" Value="{DynamicResource Type.FontFamily}"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <!-- Wrap width scales with the OS text size; a fixed cap
@@ -1176,7 +1176,7 @@
     <!-- Default ToolTip for attribute-syntax ToolTip="..." usages. Dark
          card surface, hairline border, body text. -->
     <Style TargetType="ToolTip">
-        <Setter Property="FontFamily" Value="{StaticResource Type.FontFamily}"/>
+        <Setter Property="FontFamily" Value="{DynamicResource Type.FontFamily}"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="HasDropShadow" Value="False"/>
@@ -1305,7 +1305,7 @@
          asymmetric (12,6) padding menu rows want. -->
 
     <Style TargetType="ContextMenu">
-        <Setter Property="FontFamily" Value="{StaticResource Type.FontFamily}"/>
+        <Setter Property="FontFamily" Value="{DynamicResource Type.FontFamily}"/>
         <Setter Property="Background" Value="{StaticResource Surface.Sidebar}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Action.Standard.Background}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness.Hairline}"/>
