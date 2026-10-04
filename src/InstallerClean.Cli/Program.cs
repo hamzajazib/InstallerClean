@@ -322,11 +322,10 @@ internal static class Program
     /// CALLED ONCE PER RUN, ON A TALLY THE CALLER HAS ALREADY FOLDED. Both the
     /// pre-act re-verify and the action services' under-lease re-read hold files
     /// back, and which side of the installer mutex a file was condemned on is a
-    /// fact about how the check is built rather than about the file. They were
-    /// reported separately until the four cause-specific sentences became one, at
-    /// which point two printings stopped reading as two findings and started
-    /// reading as a repeat. ADD THE TALLIES AND CALL THIS ONCE; a second call in
-    /// one run is the fault rather than the wording.
+    /// fact about how the check is built rather than about the file. The sentence
+    /// names no cause, so two printings in one run read as one finding repeated
+    /// rather than as two. ADD THE TALLIES AND CALL THIS ONCE; a second call in one
+    /// run is the fault rather than the wording.
     ///
     /// Takes the tally and not the path list, though every caller holds both. The
     /// tally already answers how many files there are, so a second argument here
@@ -493,6 +492,14 @@ internal static class Program
         // committedCount is: moveDest is declared inside it and the catch cannot
         // see it. Empty on every other path, which is what gates the line.
         string cancelledMoveDestination = string.Empty;
+        // The PC's first-run mark while a batch is with the Delete or Move service and
+        // its count of files has not come back, and null everywhere else. The last
+        // catch below sets it: a failure only that catch takes, met while the service
+        // held the batch, can come after files have gone, and its Application-log entry
+        // names no count for the window's start check to read. The mark is hoisted
+        // rather than the services, because ownedServices is disposed before any catch
+        // below runs.
+        IFirstRunMark? markForAnUncountedBatch = null;
 
         try
         {
@@ -779,6 +786,7 @@ internal static class Program
                 // would otherwise create and probe its destination for an empty
                 // batch). The summary path below still fires with 0, exit Ok, so the
                 // one-summary-per-run event-log contract holds.
+                markForAnUncountedBatch = services.GetRequiredService<IFirstRunMark>();
                 var result = filePaths.Count == 0
                     ? new DeleteResult(0, Array.Empty<FileOperationError>())
                     : await deleteService.DeleteFilesAsync(
@@ -787,6 +795,7 @@ internal static class Program
 
                 // First thing after the service answers, so a Delete cancelled part way
                 // sets the mark before the cancel re-entry below leaves this method.
+                markForAnUncountedBatch = null;
                 RecordFirstRun(services, result.DeletedCount);
 
                 // A Windows Installer transaction grabbed Global\_MSIExecute in the
@@ -938,6 +947,7 @@ internal static class Program
             // destination-folder create + probe) when nothing survived the
             // re-verify; synthesize the empty result so the summary path still fires
             // with 0 and exit Ok.
+            markForAnUncountedBatch = services.GetRequiredService<IFirstRunMark>();
             MoveResult moveResult;
             try
             {
@@ -948,6 +958,7 @@ internal static class Program
             }
             catch (MoveAbortedException ex)
             {
+                markForAnUncountedBatch = null;
                 RecordFirstRun(services, ex.Partial.MovedCount);
 
                 // Caught at the call site rather than at the method's own arms,
@@ -976,6 +987,7 @@ internal static class Program
             }
 
             // As in the /d branch: ahead of the cancel re-entry.
+            markForAnUncountedBatch = null;
             RecordFirstRun(services, moveResult.MovedCount);
 
             // Global\_MSIExecute found held at the service boundary: same outcome
@@ -1144,6 +1156,10 @@ internal static class Program
             // last-resort handler so a work-loop crash and a pre-flight crash
             // (Main's guard routes here too) report identically: crash.log, one
             // HardError audit entry, ExitError, and never ex.Message.
+            //
+            // Where the service held a batch when this was thrown, the PC's first run is
+            // recorded before the failure is reported (markForAnUncountedBatch).
+            markForAnUncountedBatch?.Set();
             return ReportUnexpectedError(arg, ex);
         }
     }
@@ -1175,8 +1191,10 @@ internal static class Program
     /// Sets the PC's first-run mark (<see cref="IFirstRunMark"/>) where
     /// <paramref name="filesActedOn"/> is above nought. Called with the service's own
     /// count of files moved or deleted at each place a count comes back: a Delete's
-    /// result, a Move's result and a stopped Move's partial result. A scan, and a run
-    /// that moved or deleted nothing, leave the mark as it was.
+    /// result, a Move's result and a stopped Move's partial result. A batch whose count
+    /// never comes back, the service failing with an exception only the last catch in
+    /// <see cref="RunWorkAsync"/> takes, has the mark set in that catch instead. A scan,
+    /// and a run whose count came back at nought, leave the mark as it was.
     /// </summary>
     private static void RecordFirstRun(IServiceProvider services, int filesActedOn)
     {

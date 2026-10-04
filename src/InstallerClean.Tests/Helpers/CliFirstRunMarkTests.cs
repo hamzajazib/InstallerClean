@@ -9,17 +9,22 @@ namespace InstallerClean.Tests.Helpers;
 
 /// <summary>
 /// The command line sets the PC's first-run mark after a Delete that deleted a file and
-/// a Move that moved one, the cancelled and the stopped runs included, and leaves it
-/// alone after a scan and after a run that moved or deleted nothing. Driven through the
-/// real work method with substitute services; the mark is a substitute too, so nothing
-/// is written to the registry.
+/// a Move that moved one, the cancelled and the stopped runs included, and where the
+/// service fails with an unforeseen exception before its count comes back. It leaves the
+/// mark alone after a scan, after a run that moved or deleted nothing, and after a
+/// failure met before any batch was handed over. Driven through the real work method with
+/// substitute services; the mark is a substitute too, so nothing is written to the
+/// registry.
 ///
 /// EACH TEST ALSO READS THE RUN'S OWN APPLICATION-LOG ENTRIES BACK through the window's
-/// reader, which has to count them exactly where the run set the mark.
+/// reader, which has to count them exactly where the run set the mark, with one
+/// exception: a batch whose count never came back sets the mark while its entry, the
+/// failure line, names no count.
 ///
 /// EVERY RUN THAT LEAVES THE MARK ALONE HAS A TWIN HERE THAT SETS IT, built from the same
 /// fixtures with one thing changed: the count the service hands back, the files the
-/// check before acting keeps, or, for the scan, the command.
+/// check before acting keeps, the step the failure is met in, or, for the scan, the
+/// command.
 /// </summary>
 public class CliFirstRunMarkTests
 {
@@ -197,6 +202,61 @@ public class CliFirstRunMarkTests
     }
 
     [Fact]
+    public async Task A_delete_whose_service_fails_before_its_count_comes_back_sets_the_mark()
+    {
+        var mark = Substitute.For<IFirstRunMark>();
+        var delete = Substitute.For<IDeleteFilesService>();
+        delete.DeleteFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns<DeleteResult>(_ => throw new InvalidOperationException("planted"));
+
+        var exitCode = await Run("/d", null, Services(mark, delete: delete));
+
+        Assert.Equal(CliExitCode.Error, exitCode);
+        mark.Received(1).Set();
+        // The run's entry is the failure line, which names no count.
+        AssertTheLogRecordsIt(actedOnFiles: false);
+    }
+
+    [Fact]
+    public async Task A_move_whose_service_fails_before_its_count_comes_back_sets_the_mark()
+    {
+        var mark = Substitute.For<IFirstRunMark>();
+        var move = Substitute.For<IMoveFilesService>();
+        move.MoveFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>(),
+                Arg.Any<UnderLeaseClaims>(), Arg.Any<IProgress<OperationProgress>?>(),
+                Arg.Any<CancellationToken>())
+            .Returns<MoveResult>(_ => throw new InvalidOperationException("planted"));
+
+        var exitCode = await Run("/m", Destination, Services(mark, move: move));
+
+        Assert.Equal(CliExitCode.Error, exitCode);
+        mark.Received(1).Set();
+        // The run's entry is the failure line, which names no count.
+        AssertTheLogRecordsIt(actedOnFiles: false);
+    }
+
+    [Fact]
+    public async Task A_delete_that_fails_in_the_check_before_acting_leaves_the_mark()
+    {
+        // The same failure, met one step earlier, before the batch is handed over.
+        var mark = Substitute.For<IFirstRunMark>();
+        var delete = Delete(new DeleteResult(2, NoErrors));
+        var reverifier = Substitute.For<IRemovableReverifier>();
+        reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns<ReverifyResult>(_ => throw new InvalidOperationException("planted"));
+
+        var exitCode = await Run("/d", null, Services(mark, delete: delete, reverifier: reverifier));
+
+        Assert.Equal(CliExitCode.Error, exitCode);
+        await delete.DidNotReceive().DeleteFilesAsync(
+            Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+            Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
+        mark.DidNotReceive().Set();
+        AssertTheLogRecordsIt(actedOnFiles: false);
+    }
+
+    [Fact]
     public async Task A_scan_leaves_the_mark()
     {
         var mark = Substitute.For<IFirstRunMark>();
@@ -213,10 +273,10 @@ public class CliFirstRunMarkTests
 
     /// <summary>
     /// The window's start check reads the command line's entries back from the log
-    /// (<see cref="CommandLineRunRecord"/>), so it has to count a run's entries exactly
-    /// where that run set the mark, and an entry it counts has to carry an Event ID its
-    /// query asks the log for. The entries are the ones this run wrote, as the recorder
-    /// took them.
+    /// (<see cref="CommandLineRunRecord"/>), so it has to count a run's entries where
+    /// the run's service counted a file moved or deleted and nowhere else, and an entry
+    /// it counts has to carry an Event ID its query asks the log for. The entries are
+    /// the ones this run wrote, as the recorder took them.
     /// </summary>
     private static void AssertTheLogRecordsIt(bool actedOnFiles)
     {
