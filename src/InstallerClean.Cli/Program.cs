@@ -1074,7 +1074,7 @@ internal static class Program
                     DisplayHelpers.PluraliseError(moveResult.Errors.Count)));
             return moveOutcome.ExitCode;
         }
-        catch (OperationCanceledException)
+        catch (Exception ex) when (Classify(ex) == WorkFailure.Cancelled)
         {
             Console.WriteLine(Strings.Cli_Cancelled);
             // The undo, after the cancellation and not before it: the reader is told
@@ -1105,35 +1105,21 @@ internal static class Program
                 () => string.Format(Strings.Cli_EventLogCancelledNoWork, arg));
             return ExitCancelled;
         }
-        catch (LocalisedAccessException ex)
+        catch (Exception ex) when (Classify(ex) == WorkFailure.Localised)
         {
-            // LocalisedAccessException is the contract: services that
-            // raise it have built the Message from a resx string with
-            // user-controlled template args only, so echoing under
-            // elevation is safe and distinguishes "MSI enumerator
-            // access denied" from "cannot write the destination
-            // folder". BCL-raised UnauthorizedAccessException from
-            // deep in the framework can carry cross-profile paths and
-            // falls through to the generic catch below.
+            // LocalisedAccessException and LocalisedInvalidOperationException
+            // are the contract: services that raise them have built the
+            // Message from a resx string with user-controlled template args
+            // only, so echoing under elevation is safe and distinguishes "MSI
+            // enumerator access denied" from "cannot write the destination
+            // folder". BCL-raised UnauthorizedAccessException from deep in the
+            // framework can carry cross-profile paths and falls through to the
+            // generic catch below.
             Console.WriteLine(ex.Message);
             // The template is forced English (the RMM grep anchor "{0} mode
-            // failed:"); ex.Message is a LocalisedAccessException/
-            // LocalisedInvalidOperationException message, already built in the
-            // OS language and safe to echo, so the reason rides into the audit
-            // line localised (the same sentence printed to stdout above).
-            MachineContract.WriteEventLog(CliEventClass.HardError,
-                () => string.Format(Strings.Cli_EventLogValidationFailed, arg, ex.Message));
-            return ExitError;
-        }
-        catch (LocalisedInvalidOperationException ex)
-        {
-            // Same safe-to-echo contract as LocalisedAccessException.
-            Console.WriteLine(ex.Message);
-            // The template is forced English (the RMM grep anchor "{0} mode
-            // failed:"); ex.Message is a LocalisedAccessException/
-            // LocalisedInvalidOperationException message, already built in the
-            // OS language and safe to echo, so the reason rides into the audit
-            // line localised (the same sentence printed to stdout above).
+            // failed:"); ex.Message is already built in the OS language and
+            // safe to echo, so the reason rides into the audit line localised
+            // (the same sentence printed to stdout above).
             MachineContract.WriteEventLog(CliEventClass.HardError,
                 () => string.Format(Strings.Cli_EventLogValidationFailed, arg, ex.Message));
             return ExitError;
@@ -1172,21 +1158,49 @@ internal static class Program
     }
 
     /// <summary>
+    /// The three ways <see cref="RunWorkAsync"/> reports a failure, as <see cref="Classify"/>
+    /// sorts them.
+    /// </summary>
+    private enum WorkFailure { Cancelled, Localised, Unforeseen }
+
+    /// <summary>
+    /// Which of <see cref="RunWorkAsync"/>'s catches reports a failure: a cancellation; a
+    /// localised exception, whose message the app built from its own strings and which is
+    /// safe to echo; or anything else, which the last catch reports without its message.
+    /// <see cref="HandOverBatchAsync{TResult}"/> reads the same answer to decide whether a
+    /// failed batch sets the first-run mark, so moving a type from one answer to another
+    /// changes both at once.
+    ///
+    /// It names LocalisedAccessException and never its base type,
+    /// UnauthorizedAccessException, which the framework raises with messages that can
+    /// carry a path out of another user's profile. It is a type test and nothing more:
+    /// the catches run it as an exception filter, ahead of the finally blocks between
+    /// the throw and the catch, so it must not log, write or read a service.
+    /// </summary>
+    private static WorkFailure Classify(Exception ex) => ex switch
+    {
+        OperationCanceledException => WorkFailure.Cancelled,
+        LocalisedAccessException or LocalisedInvalidOperationException => WorkFailure.Localised,
+        _ => WorkFailure.Unforeseen,
+    };
+
+    /// <summary>
     /// Hands one batch to the Delete or Move service and records the PC's first run
     /// (<see cref="IFirstRunMark"/>) from how the batch ends. Where the service's own
     /// count of files moved or deleted (<paramref name="actedOn"/>) is above nought, the
     /// mark is set as the batch returns, ahead of everything the caller does with the
     /// result, the cancel re-entry among them. Where the service fails with an exception
-    /// none of <see cref="RunWorkAsync"/>'s named catches reports, the mark is set before
-    /// the failure goes on: how far that batch got is not known, and the failure line it
-    /// ends in names no count for the window's start check to read.
+    /// <see cref="Classify"/> calls unforeseen, which <see cref="RunWorkAsync"/> reports
+    /// through its last catch, the mark is set before the failure goes on: how far that
+    /// batch got is not known, and the failure line it ends in names no count for the
+    /// window's start check to read.
     ///
-    /// A cancellation and the app's own refusals leave the mark to the caller. The
-    /// services raise a cancellation, and every refusal but one, before any file is acted
-    /// on. The one raised part way, a stopped Move (MoveAbortedException), carries the
-    /// count of files it had moved, which its catch records. The filter names the types
-    /// RunWorkAsync catches by name ahead of its last catch, so a type given a named
-    /// catch there, being one a service raises before acting, belongs in the filter too.
+    /// A cancellation and a localised exception leave the mark to the caller. The
+    /// services raise a cancellation, and every localised exception but one, before any
+    /// file is acted on. The one raised part way, a stopped Move (MoveAbortedException),
+    /// carries the count of files it had moved, which its catch records. Any other
+    /// localised exception a service raises part way needs the same, because it passes
+    /// this filter without setting the mark.
     /// </summary>
     private static async Task<TResult> HandOverBatchAsync<TResult>(
         IFirstRunMark mark, Func<Task<TResult>> batch, Func<TResult, int> actedOn)
@@ -1196,9 +1210,7 @@ internal static class Program
         {
             result = await batch();
         }
-        catch (Exception ex) when (ex is not (OperationCanceledException
-                                       or LocalisedAccessException
-                                       or LocalisedInvalidOperationException))
+        catch (Exception ex) when (Classify(ex) == WorkFailure.Unforeseen)
         {
             mark.Set();
             throw;

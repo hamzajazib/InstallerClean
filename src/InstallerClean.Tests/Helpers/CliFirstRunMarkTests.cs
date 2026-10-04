@@ -202,14 +202,27 @@ public class CliFirstRunMarkTests
         AssertTheLogRecordsIt(actedOnFiles: false);
     }
 
-    [Fact]
-    public async Task A_delete_whose_service_fails_before_its_count_comes_back_sets_the_mark()
+    /// <summary>
+    /// Failures no named catch reports, among them the base types of the app's own
+    /// refusals, raised the way the framework raises them.
+    /// </summary>
+    public static TheoryData<string> UnforeseenFailures => new() { "invalid operation", "access refused" };
+
+    private static Exception Unforeseen(string failure) => failure switch
+    {
+        "invalid operation" => new InvalidOperationException("planted"),
+        _ => new UnauthorizedAccessException("planted"),
+    };
+
+    [Theory]
+    [MemberData(nameof(UnforeseenFailures))]
+    public async Task A_delete_whose_service_fails_before_its_count_comes_back_sets_the_mark(string failure)
     {
         var mark = Substitute.For<IFirstRunMark>();
         var delete = Substitute.For<IDeleteFilesService>();
         delete.DeleteFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
                 Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
-            .Returns<DeleteResult>(_ => throw new InvalidOperationException("planted"));
+            .Returns<DeleteResult>(_ => throw Unforeseen(failure));
 
         var exitCode = await Run("/d", null, Services(mark, delete: delete));
 
@@ -219,15 +232,16 @@ public class CliFirstRunMarkTests
         AssertTheLogRecordsIt(actedOnFiles: false);
     }
 
-    [Fact]
-    public async Task A_move_whose_service_fails_before_its_count_comes_back_sets_the_mark()
+    [Theory]
+    [MemberData(nameof(UnforeseenFailures))]
+    public async Task A_move_whose_service_fails_before_its_count_comes_back_sets_the_mark(string failure)
     {
         var mark = Substitute.For<IFirstRunMark>();
         var move = Substitute.For<IMoveFilesService>();
         move.MoveFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>(),
                 Arg.Any<UnderLeaseClaims>(), Arg.Any<IProgress<OperationProgress>?>(),
                 Arg.Any<CancellationToken>())
-            .Returns<MoveResult>(_ => throw new InvalidOperationException("planted"));
+            .Returns<MoveResult>(_ => throw Unforeseen(failure));
 
         var exitCode = await Run("/m", Destination, Services(mark, move: move));
 
