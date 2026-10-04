@@ -3,8 +3,8 @@ using InstallerClean.Services;
 namespace InstallerClean.Tests.Services;
 
 /// <summary>
-/// <see cref="CommandLineRunRecord.ActedOnFiles"/> on lines written out in full: both
-/// spellings of each of the four lines that record a run which moved or deleted files,
+/// <see cref="CommandLineRunRecord.ActedOnFiles"/> on lines written out in full: every
+/// spelling of each of the four lines that record a run which moved or deleted files,
 /// and the lines beside them that do not. The lines the command line writes today are
 /// also read back from real runs, in <c>CliFirstRunMarkTests</c>.
 /// </summary>
@@ -22,6 +22,8 @@ public class CommandLineRunRecordTests
     [InlineData("/d mode interrupted by Ctrl+C: 3 of 9 files processed before cancellation. See progress output for the per-file detail.")]
     [InlineData("/m mode interrupted by Ctrl+C: 1 of 9 files processed before cancellation. See progress output for the per-file detail.")]
     [InlineData("/d mode: 10 of 10 files deleted permanently, 1.0 GB recovered, 0 errors.")]
+    [InlineData("Delete mode (/d): 4 of 4 file(s) sent to the Recycle Bin, 1.2 GB recovered, 0 error(s).")]
+    [InlineData(@"Move mode (/m): 3 of 5 file(s) moved to D:\Backup, 900 MB relocated, 2 error(s).")]
     public void A_line_recording_files_moved_or_deleted_counts(string entry)
     {
         Assert.True(CommandLineRunRecord.ActedOnFiles(entry));
@@ -34,6 +36,8 @@ public class CommandLineRunRecordTests
     [InlineData(@"/m mode: 0 of 2 files moved to D:\Backup, 0 B relocated, 2 errors.")]
     [InlineData(@"/m mode stopped: could no longer confirm the destination. 0 of 2 files had already moved to E:\Elsewhere, 0 B relocated, 0 errors.")]
     [InlineData("/d mode cancelled at the console: 0 of 2 files processed before cancellation. See progress output for the per-file detail.")]
+    [InlineData("Delete mode (/d): 0 of 4 file(s) sent to the Recycle Bin, 1.2 GB recovered, 4 error(s).")]
+    [InlineData(@"Move mode (/m): 0 of 5 file(s) moved to D:\Backup, 900 MB relocated, 5 error(s).")]
     public void A_line_recording_no_file_moved_or_deleted_does_not_count(string entry)
     {
         Assert.False(CommandLineRunRecord.ActedOnFiles(entry));
@@ -42,6 +46,9 @@ public class CommandLineRunRecordTests
     [Theory]
     [InlineData("Scan mode (/s): 81 unneeded files found, 4.42 GB. No action taken.")]
     [InlineData("Scan mode (/s): no orphaned files. Installer database has 87 registered package(s).")]
+    [InlineData("Scan mode (/d): no orphaned files. Installer database has 87 registered package(s).")]
+    [InlineData("Move mode (/m) aborted: no destination specified.")]
+    [InlineData(@"Move mode (/m) aborted: destination C:\Windows\Installer\x is inside C:\Windows\Installer.")]
     [InlineData("/s mode: no unneeded files.")]
     [InlineData("/d mode: no unneeded files.")]
     [InlineData("/d mode: nothing could be offered. InstallerClean could not establish that any of the cached files it found are unneeded, so it has held back 12 files. No action taken.")]
