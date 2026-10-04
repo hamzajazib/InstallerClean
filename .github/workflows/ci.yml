@@ -174,11 +174,10 @@ jobs:
         run: node scripts/check-under-lease-claims.mjs
 
       # An Application-channel value is machine-read and is built in en-GB at the
-      # write site, whatever the machine's language. A test that composes one
-      # outside that scope reads it in the language the host is running, so the
-      # value under assertion is not the value the channel carries. The bare form
-      # is always available and always compiles; this fails on the day one is
-      # written. Its own output names two things it does not cover.
+      # write site, whatever the machine's language. This fails where a test
+      # composes one outside MachineContract.English or MachineContract.WriteEventLog,
+      # where it takes the language the test runs in. It prints every reference it
+      # finds, in scope or not.
       - name: Check the tests compose machine-contract values in scope
         if: success() || failure()
         run: node scripts/check-machine-contract-scope.mjs
