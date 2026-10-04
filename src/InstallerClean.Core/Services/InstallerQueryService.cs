@@ -527,9 +527,10 @@ public sealed class InstallerQueryService : IInstallerQueryService
         /// <c>Task.Run</c> starts. Work split across threads needs a census for each part,
         /// folded with <see cref="Add"/> on one thread afterwards.
         ///
-        /// In a Debug build, which is where the suite runs, this throws when a census is
-        /// touched from any other thread, so a change that breaks the rule fails a test.
-        /// A Release build compiles the call out.
+        /// In a Debug build, which is where the suite runs, this throws when a count is
+        /// changed on any other thread, by an increment or by <see cref="Add"/>, so a
+        /// change that breaks the rule fails a test. A Release build compiles the call
+        /// out.
         /// </summary>
         [System.Diagnostics.Conditional("DEBUG")]
         private void AssertOwningThread()
