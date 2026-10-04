@@ -11,8 +11,9 @@ namespace InstallerClean.Tests.Helpers;
 /// The command line sets the PC's first-run mark after a Delete that deleted a file and
 /// a Move that moved one, the cancelled and the stopped runs included, and where the
 /// service fails with an unforeseen exception before its count comes back. It leaves the
-/// mark alone after a scan, after a run that moved or deleted nothing, and after a
-/// failure met before any batch was handed over. Driven through the real work method with
+/// mark alone after a scan, after a run that moved or deleted nothing, after a refusal
+/// or a cancellation the service raises before its first file, and after a failure met
+/// before any batch was handed over. Driven through the real work method with
 /// substitute services; the mark is a substitute too, so nothing is written to the
 /// registry.
 ///
@@ -23,8 +24,8 @@ namespace InstallerClean.Tests.Helpers;
 ///
 /// EVERY RUN THAT LEAVES THE MARK ALONE HAS A TWIN HERE THAT SETS IT, built from the same
 /// fixtures with one thing changed: the count the service hands back, the files the
-/// check before acting keeps, the step the failure is met in, or, for the scan, the
-/// command.
+/// check before acting keeps, the step the failure is met in, the kind of failure the
+/// service raises, or, for the scan, the command.
 /// </summary>
 public class CliFirstRunMarkTests
 {
@@ -233,6 +234,43 @@ public class CliFirstRunMarkTests
         Assert.Equal(CliExitCode.Error, exitCode);
         mark.Received(1).Set();
         // The run's entry is the failure line, which names no count.
+        AssertTheLogRecordsIt(actedOnFiles: false);
+    }
+
+    public static TheoryData<string, string> RefusalsBeforeTheFirstFile => new()
+    {
+        { "/m", "refused" }, { "/m", "unwritable" }, { "/m", "cancelled" }, { "/m", "task cancelled" },
+        { "/d", "refused" }, { "/d", "unwritable" }, { "/d", "cancelled" }, { "/d", "task cancelled" },
+    };
+
+    [Theory]
+    [MemberData(nameof(RefusalsBeforeTheFirstFile))]
+    public async Task A_batch_the_service_refuses_or_cancels_before_its_first_file_leaves_the_mark(
+        string arg, string refusal)
+    {
+        // The app's own refusals and a cancellation, which the services raise ahead of
+        // any file. Their twins are the unforeseen failures above, which set the mark.
+        Exception thrown = refusal switch
+        {
+            "refused" => new LocalisedInvalidOperationException("refused"),
+            "unwritable" => new LocalisedAccessException("unwritable"),
+            "cancelled" => new OperationCanceledException(),
+            _ => new TaskCanceledException(),
+        };
+        var mark = Substitute.For<IFirstRunMark>();
+        var delete = Substitute.For<IDeleteFilesService>();
+        delete.DeleteFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns<DeleteResult>(_ => throw thrown);
+        var move = Substitute.For<IMoveFilesService>();
+        move.MoveFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>(),
+                Arg.Any<UnderLeaseClaims>(), Arg.Any<IProgress<OperationProgress>?>(),
+                Arg.Any<CancellationToken>())
+            .Returns<MoveResult>(_ => throw thrown);
+
+        await Run(arg, arg == "/m" ? Destination : null, Services(mark, delete: delete, move: move));
+
+        mark.DidNotReceive().Set();
         AssertTheLogRecordsIt(actedOnFiles: false);
     }
 

@@ -492,14 +492,6 @@ internal static class Program
         // committedCount is: moveDest is declared inside it and the catch cannot
         // see it. Empty on every other path, which is what gates the line.
         string cancelledMoveDestination = string.Empty;
-        // The PC's first-run mark while a batch is with the Delete or Move service and
-        // its count of files has not come back, and null everywhere else. The last
-        // catch below sets it: a failure only that catch takes, met while the service
-        // held the batch, can come after files have gone, and its Application-log entry
-        // names no count for the window's start check to read. The mark is hoisted
-        // rather than the services, because ownedServices is disposed before any catch
-        // below runs.
-        IFirstRunMark? markForAnUncountedBatch = null;
 
         try
         {
@@ -768,6 +760,10 @@ internal static class Program
                 }
             });
 
+            // Set where a batch moves or deletes a file, or ends where how far it got is
+            // not known (HandOverBatchAsync).
+            var firstRunMark = services.GetRequiredService<IFirstRunMark>();
+
             if (arg == "/d")
             {
                 var deleteService = services.GetRequiredService<IDeleteFilesService>();
@@ -786,17 +782,13 @@ internal static class Program
                 // would otherwise create and probe its destination for an empty
                 // batch). The summary path below still fires with 0, exit Ok, so the
                 // one-summary-per-run event-log contract holds.
-                markForAnUncountedBatch = services.GetRequiredService<IFirstRunMark>();
-                var result = filePaths.Count == 0
-                    ? new DeleteResult(0, Array.Empty<FileOperationError>())
-                    : await deleteService.DeleteFilesAsync(
-                        filePaths, UnderLeaseClaims.From(reverify),
-                        progress: progress, cancellationToken: token);
-
-                // First thing after the service answers, so a Delete cancelled part way
-                // sets the mark before the cancel re-entry below leaves this method.
-                markForAnUncountedBatch = null;
-                RecordFirstRun(services, result.DeletedCount);
+                var result = await HandOverBatchAsync(firstRunMark,
+                    () => filePaths.Count == 0
+                        ? Task.FromResult(new DeleteResult(0, Array.Empty<FileOperationError>()))
+                        : deleteService.DeleteFilesAsync(
+                            filePaths, UnderLeaseClaims.From(reverify),
+                            progress: progress, cancellationToken: token),
+                    r => r.DeletedCount);
 
                 // A Windows Installer transaction grabbed Global\_MSIExecute in the
                 // race after the gate check passed, so the service refused and
@@ -947,19 +939,19 @@ internal static class Program
             // destination-folder create + probe) when nothing survived the
             // re-verify; synthesize the empty result so the summary path still fires
             // with 0 and exit Ok.
-            markForAnUncountedBatch = services.GetRequiredService<IFirstRunMark>();
             MoveResult moveResult;
             try
             {
-                moveResult = filePaths.Count == 0
-                    ? new MoveResult(0, Array.Empty<FileOperationError>())
-                    : await moveService.MoveFilesAsync(filePaths, moveDest,
-                        UnderLeaseClaims.From(reverify), progress, token);
+                moveResult = await HandOverBatchAsync(firstRunMark,
+                    () => filePaths.Count == 0
+                        ? Task.FromResult(new MoveResult(0, Array.Empty<FileOperationError>()))
+                        : moveService.MoveFilesAsync(filePaths, moveDest,
+                            UnderLeaseClaims.From(reverify), progress, token),
+                    r => r.MovedCount);
             }
             catch (MoveAbortedException ex)
             {
-                markForAnUncountedBatch = null;
-                RecordFirstRun(services, ex.Partial.MovedCount);
+                RecordFirstRun(firstRunMark, ex.Partial.MovedCount);
 
                 // Caught at the call site rather than at the method's own arms,
                 // where survivingFiles and moveDest are out of scope, which is
@@ -985,10 +977,6 @@ internal static class Program
                 }
                 return ReportAbortedMove(arg, ex, moveDest, count, survivingFiles);
             }
-
-            // As in the /d branch: ahead of the cancel re-entry.
-            markForAnUncountedBatch = null;
-            RecordFirstRun(services, moveResult.MovedCount);
 
             // Global\_MSIExecute found held at the service boundary: same outcome
             // as a gate block.
@@ -1156,10 +1144,6 @@ internal static class Program
             // last-resort handler so a work-loop crash and a pre-flight crash
             // (Main's guard routes here too) report identically: crash.log, one
             // HardError audit entry, ExitError, and never ex.Message.
-            //
-            // Where the service held a batch when this was thrown, the PC's first run is
-            // recorded before the failure is reported (markForAnUncountedBatch).
-            markForAnUncountedBatch?.Set();
             return ReportUnexpectedError(arg, ex);
         }
     }
@@ -1188,18 +1172,51 @@ internal static class Program
     }
 
     /// <summary>
-    /// Sets the PC's first-run mark (<see cref="IFirstRunMark"/>) where
-    /// <paramref name="filesActedOn"/> is above nought. Called with the service's own
-    /// count of files moved or deleted at each place a count comes back: a Delete's
-    /// result, a Move's result and a stopped Move's partial result. A batch whose count
-    /// never comes back, the service failing with an exception only the last catch in
-    /// <see cref="RunWorkAsync"/> takes, has the mark set in that catch instead. A scan,
-    /// and a run whose count came back at nought, leave the mark as it was.
+    /// Hands one batch to the Delete or Move service and records the PC's first run
+    /// (<see cref="IFirstRunMark"/>) from how the batch ends. Where the service's own
+    /// count of files moved or deleted (<paramref name="actedOn"/>) is above nought, the
+    /// mark is set as the batch returns, ahead of everything the caller does with the
+    /// result, the cancel re-entry among them. Where the service fails with an exception
+    /// none of <see cref="RunWorkAsync"/>'s named catches reports, the mark is set before
+    /// the failure goes on: how far that batch got is not known, and the failure line it
+    /// ends in names no count for the window's start check to read.
+    ///
+    /// A cancellation and the app's own refusals leave the mark to the caller. The
+    /// services raise a cancellation, and every refusal but one, before any file is acted
+    /// on. The one raised part way, a stopped Move (MoveAbortedException), carries the
+    /// count of files it had moved, which its catch records. The filter names the types
+    /// RunWorkAsync catches by name ahead of its last catch, so a type given a named
+    /// catch there, being one a service raises before acting, belongs in the filter too.
     /// </summary>
-    private static void RecordFirstRun(IServiceProvider services, int filesActedOn)
+    private static async Task<TResult> HandOverBatchAsync<TResult>(
+        IFirstRunMark mark, Func<Task<TResult>> batch, Func<TResult, int> actedOn)
+    {
+        TResult result;
+        try
+        {
+            result = await batch();
+        }
+        catch (Exception ex) when (ex is not (OperationCanceledException
+                                       or LocalisedAccessException
+                                       or LocalisedInvalidOperationException))
+        {
+            mark.Set();
+            throw;
+        }
+        RecordFirstRun(mark, actedOn(result));
+        return result;
+    }
+
+    /// <summary>
+    /// Sets the PC's first-run mark where <paramref name="filesActedOn"/>, the service's
+    /// own count of files moved or deleted, is above nought: a Delete's or a Move's
+    /// result (<see cref="HandOverBatchAsync{TResult}"/>), and a stopped Move's partial result. A
+    /// scan, and a run whose count came back at nought, leave the mark as it was.
+    /// </summary>
+    private static void RecordFirstRun(IFirstRunMark mark, int filesActedOn)
     {
         if (filesActedOn > 0)
-            services.GetRequiredService<IFirstRunMark>().Set();
+            mark.Set();
     }
 
     /// <summary>
