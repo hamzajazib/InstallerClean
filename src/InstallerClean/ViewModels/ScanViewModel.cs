@@ -354,6 +354,10 @@ public partial class ScanViewModel : ObservableObject
     /// </summary>
     private async Task RunScanCoreAsync(IProgress<ScanProgressUpdate>? progress, CancellationToken cancellationToken = default)
     {
+        // A token already cancelled ends the scan here, before the scan service
+        // opens the Installer folder, and the caller's cancel arm takes it.
+        cancellationToken.ThrowIfCancellationRequested();
+
         // Set before the first await, so it is already true when the caller's
         // command returns to the dispatcher: every scan entry point routes
         // through here, so this is the one place the gate can be complete.

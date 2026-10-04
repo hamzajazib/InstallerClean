@@ -649,6 +649,36 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         OperationProgress = Strings.Status_Cancelling;
     }
 
+    /// <summary>
+    /// True once the window has been asked to close while a Move or Delete runs
+    /// (<see cref="RequestClose"/>). The window holds that close and takes it when
+    /// <see cref="IsOperating"/> goes false. From then on the operation finishes
+    /// without what only an open window needs: no rescan after the batch, no wait for
+    /// the start check, and no report box, the card it would sit on going with the
+    /// window unseen.
+    /// </summary>
+    public bool CloseRequested { get; private set; }
+
+    /// <summary>Completes as <see cref="RequestClose"/> is first called, so a wait can end on it.</summary>
+    private readonly TaskCompletionSource _closeRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>
+    /// The window's close, asked for while a Move or Delete runs: records it and
+    /// cancels the operation where Cancel is live. Cancel is out of use where the
+    /// user has already pressed it or where what is running stops for nothing. The
+    /// close then cancels nothing, and that step finishes. Called on the dispatcher,
+    /// as Cancel is. A second call does nothing.
+    /// </summary>
+    public void RequestClose()
+    {
+        if (CloseRequested) return;
+        CloseRequested = true;
+        _closeRequested.TrySetResult();
+        // Neither CancelOperation nor its command's Execute asks CanCancelOperation,
+        // so the test is made here.
+        if (CanCancelOperation()) CancelOperation();
+    }
+
     [RelayCommand(CanExecute = nameof(CanMove))]
     private async Task MoveAllAsync()
     {
@@ -1248,7 +1278,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
 
             // The box goes on before the card is revealed, and the report is written
             // once the card is up, on the PC's first run only.
-            var carriesReport = await _completion.ReportIsFreeAsync() && _completion.TakeReport();
+            var carriesReport = await TakeReportForCardAsync(movedCount);
             _completion.ShowMoveSummary(movedCount, movedBytes, movedDest, result.Errors,
                 ClassifySpaceOutcome(destinationKind), reverify);
 
@@ -1599,7 +1629,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             await RefreshAfterBatchAsync();
 
             // As on the Move path: the box before the card, the report after it.
-            var carriesReport = await _completion.ReportIsFreeAsync() && _completion.TakeReport();
+            var carriesReport = await TakeReportForCardAsync(deletedCount);
             _completion.ShowDeleteSummary(deletedCount, deletedBytes, result.Errors, reverify);
 
             if (carriesReport)
@@ -1662,6 +1692,29 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // reset clears it on each of them.
             IsOperationProgressIndeterminate = false;
         }
+    }
+
+    /// <summary>
+    /// Whether the card a finished Move or Delete is about to reveal carries the
+    /// report, taking it where it does (<see cref="CompletionViewModel.TakeReport"/>).
+    /// <paramref name="actedOn"/> is how many files the batch moved or deleted.
+    ///
+    /// Where the window has been asked to close (<see cref="CloseRequested"/>), the
+    /// card goes with the window unseen, so it carries no box and no report is
+    /// written. The wait for the start check is not begun, or ends as the close
+    /// lands, and files moved or deleted make this the PC's first run all the same
+    /// (<see cref="CompletionViewModel.RecordFirstRun"/>), as on the cancel arms.
+    /// </summary>
+    private async Task<bool> TakeReportForCardAsync(int actedOn)
+    {
+        if (!CloseRequested)
+        {
+            var reportFree = _completion.ReportIsFreeAsync();
+            await Task.WhenAny(reportFree, _closeRequested.Task);
+            if (!CloseRequested) return await reportFree && _completion.TakeReport();
+        }
+        if (actedOn > 0) _completion.RecordFirstRun();
+        return false;
     }
 
     /// <summary>
@@ -2020,6 +2073,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// would read as a scan stalled at file 34 of 71 for as long as the walk
     /// takes, and a completed batch's "71 of 71" would make the same claim. The
     /// caller's finally clears them too, but only once the refresh has finished.
+    ///
+    /// Where the window has been asked to close (<see cref="CloseRequested"/>), no
+    /// scan runs and no source is installed. The list from before the batch is
+    /// dropped all the same, and the window closes as the operation ends.
     /// </summary>
     private async Task RefreshAfterBatchAsync()
     {
@@ -2039,6 +2096,17 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         // comes straight here. No Cancel first: nothing still running holds
         // the token.
         ReleaseOperationSource();
+
+        if (CloseRequested)
+        {
+            // The window is closing, so no scan runs and the overlay keeps its
+            // heading. The list from before the batch is dropped as a rescan that
+            // is cancelled drops it, so nothing is left on the window to act on
+            // while the close waits its turn on the dispatcher. A token cancelled
+            // from the start means the scan reads nothing (RunScanCoreAsync).
+            await _scan.RefreshAsync(new CancellationToken(canceled: true));
+            return;
+        }
 
         IsCancellationRequested = false;
         var cts = new CancellationTokenSource();

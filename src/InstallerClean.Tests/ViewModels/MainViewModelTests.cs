@@ -1959,6 +1959,160 @@ public class MainViewModelTests
         Assert.False(liveAtTheCard);
     }
 
+    /// <summary>
+    /// Sets both batches to run <paramref name="during"/> and then return
+    /// <paramref name="done"/> files done, <paramref name="errored"/> files failed, and
+    /// cancelled or not as <paramref name="cancelled"/> says. The scan finds two files.
+    /// </summary>
+    private void TwoFileBatch(Action<CancellationToken> during, int done, int errored, bool cancelled)
+    {
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2));
+        _confirmationService.ConfirmMove(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
+        FileOperationError[] Errors() => Enumerable.Range(0, errored)
+            .Select(i => (FileOperationError)new FileInUse($@"C:\Windows\Installer\orphan{i}.msi"))
+            .ToArray();
+        _moveService.MoveFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(ci =>
+            {
+                during((CancellationToken)ci[4]);
+                return new MoveResult(done, Errors(), Cancelled: cancelled);
+            });
+        _deleteService.DeleteFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(ci =>
+            {
+                during((CancellationToken)ci[3]);
+                return new DeleteResult(done, Errors(), Cancelled: cancelled);
+            });
+    }
+
+    private static Task RunBatch(MainViewModel vm, bool deleting) =>
+        (deleting ? vm.Cleanup.DeleteAllCommand.ExecuteAsync(null) : vm.Cleanup.MoveAllCommand.ExecuteAsync(null))
+            .WaitAsync(TimeSpan.FromSeconds(10));
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task A_close_during_a_Move_or_Delete_runs_no_rescan_and_takes_the_list_off_the_window(
+        bool deleting, bool cancelPressedFirst)
+    {
+        var vm = CreateViewModel();
+        bool? batchStopped = null;
+        TwoFileBatch(token =>
+        {
+            if (cancelPressedFirst) vm.Cleanup.CancelOperationCommand.Execute(null);
+            vm.Cleanup.RequestClose();
+            batchStopped = token.IsCancellationRequested;
+        }, done: 1, errored: 0, cancelled: true);
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = Path.Combine(Path.GetTempPath(), "ic-test-close-during-batch");
+
+        await RunBatch(vm, deleting);
+
+        // The batch is stopped, by the close or by the Cancel pressed before it, and
+        // the scan after it never runs: the only scan is the one the window opened on.
+        Assert.True(batchStopped);
+        Assert.True(vm.Cleanup.CloseRequested);
+        await _scanService.Received(1).ScanAsync(
+            Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>());
+        // The list from before the batch goes all the same, so nothing on the window
+        // offers files the batch has already acted on.
+        Assert.False(vm.Scan.HasScanned);
+        Assert.Null(vm.Scan.LastScanResult);
+        Assert.False(vm.Cleanup.IsOperating);
+        // A file went, so this was the PC's first run.
+        _firstRunMark.Received(1).Set();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_Move_or_Delete_that_finishes_after_a_close_carries_no_box_and_writes_no_report(bool deleting)
+    {
+        // The PC's first run. The close lands as the last file finishes, so the batch
+        // reports itself complete.
+        var vm = FirstRunAllClear();
+        TwoFileBatch(_ => vm.Cleanup.RequestClose(), done: 2, errored: 0, cancelled: false);
+        _resultLogService.SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(ResultLogSendOutcome.Sent);
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = Path.Combine(Path.GetTempPath(), "ic-test-close-before-the-card");
+
+        await RunBatch(vm, deleting);
+        vm.Dispose();
+
+        // The card goes up and the window takes it away unseen, so it carries no box,
+        // and nothing is written, sent or left waiting to go.
+        Assert.True(vm.Completion.IsComplete);
+        Assert.False(vm.Completion.OffersReport);
+        await _earlierRunCheck.DidNotReceive().ShowsAnEarlierRunWithinAsync(Arg.Any<TimeSpan>());
+        await _resultLogService.DidNotReceive().WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
+        await _resultLogService.DidNotReceive().SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _scanService.Received(1).ScanAsync(
+            Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>());
+        // Files went, so this was the PC's first run.
+        _firstRunMark.Received(1).Set();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_Move_or_Delete_that_finishes_after_a_close_with_every_file_failed_leaves_the_first_run_to_come(
+        bool deleting)
+    {
+        var vm = FirstRunAllClear();
+        TwoFileBatch(_ => vm.Cleanup.RequestClose(), done: 0, errored: 2, cancelled: false);
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = Path.Combine(Path.GetTempPath(), "ic-test-close-every-file-failed");
+
+        await RunBatch(vm, deleting);
+
+        // Every file is where it was, so the PC's first report is still to come.
+        Assert.True(vm.Completion.IsComplete);
+        Assert.False(vm.Completion.OffersReport);
+        await _resultLogService.DidNotReceive().WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
+        _firstRunMark.DidNotReceive().Set();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_close_during_the_wait_for_the_start_check_ends_the_wait(bool deleting)
+    {
+        // The PC's first run, with the start check still reading as the card is about
+        // to go up, and never answering. The close lands during that wait, where Cancel
+        // is out of use.
+        var vm = FirstRunAllClear();
+        TwoFileBatch(_ => { }, done: 2, errored: 0, cancelled: false);
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = Path.Combine(Path.GetTempPath(), "ic-test-close-during-the-report-wait");
+        var neverAnswers = new TaskCompletionSource<bool>();
+        bool? canCancelInTheWait = null;
+        _earlierRunCheck.ShowsAnEarlierRunWithinAsync(Arg.Any<TimeSpan>()).Returns(_ =>
+        {
+            canCancelInTheWait = vm.Cleanup.CancelOperationCommand.CanExecute(null);
+            vm.Cleanup.RequestClose();
+            return neverAnswers.Task;
+        });
+
+        await RunBatch(vm, deleting);
+
+        Assert.False(canCancelInTheWait);
+        Assert.False(vm.Cleanup.IsOperating);
+        Assert.True(vm.Completion.IsComplete);
+        Assert.False(vm.Completion.OffersReport);
+        await _resultLogService.DidNotReceive().WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
+        _firstRunMark.Received(1).Set();
+    }
+
     [Fact]
     public async Task Cancel_and_Esc_are_out_of_use_while_a_Delete_refused_at_the_installer_lock_re_checks_the_gate()
     {

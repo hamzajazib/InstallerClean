@@ -45,7 +45,9 @@ public enum MoveSpaceOutcome
 /// once the card is up (<see cref="WriteReportAsync"/>) and sent as the card
 /// closes with the box ticked, whatever closes it. A cancelled or stopped run
 /// that moved or deleted files carries no box and still counts as the first run
-/// (<see cref="RecordFirstRun"/>).
+/// (<see cref="RecordFirstRun"/>), and so does a Move or Delete that finishes
+/// after the window has been asked to close, its card going with the window
+/// unseen.
 /// </summary>
 public partial class CompletionViewModel : ObservableObject
 {
@@ -796,8 +798,9 @@ public partial class CompletionViewModel : ObservableObject
 
     /// <summary>
     /// Records the PC's first run where a cancelled or stopped Move or Delete moved or
-    /// deleted files, or one ended where how far it got is not known. Its card carries
-    /// no box and no report is written, and no later card in this sitting carries one.
+    /// deleted files, or a finished one did after the window was asked to close, or one
+    /// ended where how far it got is not known. Its card carries no box and no report
+    /// is written, and no later card in this sitting carries one.
     /// </summary>
     public void RecordFirstRun()
     {

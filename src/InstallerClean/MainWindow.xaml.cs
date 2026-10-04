@@ -207,13 +207,6 @@ public partial class MainWindow : Window
     private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
         => DetailWindowSizing.NudgeIntoWorkArea(this);
 
-    /// <summary>
-    /// True once a close has been requested during a Move or a Delete: the
-    /// close is held, the operation cancelled where its Cancel is live, and the
-    /// window closed for real when the operation lets go.
-    /// </summary>
-    private bool _closeHeldForOperation;
-
     private void OnClosing(object? sender, CancelEventArgs e)
     {
         // IsOperating, the overlay flag, and not IsOperationInFlight, the
@@ -248,12 +241,11 @@ public partial class MainWindow : Window
         // So: hold the close, cancel the batch, and take the close when the
         // operation lets go. Cancelling stops it at the next file boundary, so
         // the file being moved right now is finished rather than truncated. The
-        // wait is visible: the operating overlay stays up and says so.
+        // wait is visible: the operating overlay stays up and says so. The view
+        // model records the close and finishes the operation without the rescan
+        // after the batch (CleanupViewModel.RequestClose).
         e.Cancel = true;
-        if (_closeHeldForOperation) return;
-        _closeHeldForOperation = true;
-        if (_vm.Cleanup.CancelOperationCommand.CanExecute(null))
-            _vm.Cleanup.CancelOperationCommand.Execute(null);
+        _vm.Cleanup.RequestClose();
     }
 
     private void OnClosed(object? sender, EventArgs e)
@@ -568,7 +560,7 @@ public partial class MainWindow : Window
             HandFocusToCancel(OperationStopWaitingButton, OperationCancelButton);
 
         if (e.PropertyName == nameof(CleanupViewModel.IsOperating) && !_vm.Cleanup.IsOperating
-            && _closeHeldForOperation)
+            && _vm.Cleanup.CloseRequested)
         {
             // The close the user asked for during the operation. Deferred to a
             // later dispatcher pass rather than closed from here: this fires
