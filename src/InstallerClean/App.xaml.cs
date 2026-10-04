@@ -424,7 +424,7 @@ public partial class App : Application
             // own bound at most.
             //
             // Once the scan has finished, Cancel has nothing left to stop, so the splash
-            // takes it out of use and says "Done." at once, and the wait for the card runs
+            // takes it out of use and says "Ready" at once, and the wait for the card runs
             // beside the rest of the minimum and the close.
             if (cancelled)
             {

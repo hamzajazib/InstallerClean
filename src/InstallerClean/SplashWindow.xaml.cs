@@ -40,9 +40,16 @@ public partial class SplashWindow : Window
 
     public event EventHandler? CancelRequested;
 
+    // What the XAML gives Cancel to show and to be called, which a press replaces and
+    // the end of the scan puts back (ShowScanFinished).
+    private readonly object _cancelContent;
+    private readonly string _cancelName;
+
     public SplashWindow()
     {
         InitializeComponent();
+        _cancelContent = CancelButton.Content;
+        _cancelName = AutomationProperties.GetName(CancelButton);
         _liveRegions = new LiveRegionRaises(Dispatcher);
         ShowStep(Strings.Status_Scanning);
         _stepWait = new WaitLine(() => AutomationProperties.GetName(StepText), ShowStep);
@@ -108,10 +115,26 @@ public partial class SplashWindow : Window
 
     // The startup scan has finished, so Cancel has nothing left to stop: it goes out
     // of use, and Esc with it, a disabled IsCancel button taking no access key. The
-    // step says "Done." and the bar eases to full over the time the splash has left.
+    // step says "Ready" and the bar eases to full over the time the splash has left.
+    //
+    // The scan can return after Cancel has been pressed: the press can land during its
+    // last step, which does not stop for it, and a scan that fails returns too. What
+    // the press changed is undone here. The button gets back its label and its name
+    // and loses its tooltip and help text, and the bar shows a position again, so
+    // nothing on the splash says it is stopping. The press stays recorded
+    // (_cancelling), which keeps any progress arriving late off the step text.
     public void ShowScanFinished(TimeSpan ease)
     {
         CancelButton.IsEnabled = false;
+        if (_cancelling)
+        {
+            CancelButton.Content = _cancelContent;
+            AutomationProperties.SetName(CancelButton, _cancelName);
+            CancelButton.ClearValue(FrameworkElement.ToolTipProperty);
+            CancelButton.ClearValue(ToolTipService.ShowOnDisabledProperty);
+            CancelButton.ClearValue(AutomationProperties.HelpTextProperty);
+            SplashProgress.IsIndeterminate = false;
+        }
         UpdateStep(Strings.Status_Done, 100, ease);
     }
 
@@ -136,7 +159,7 @@ public partial class SplashWindow : Window
     //
     // Each line is read out once the splash is on screen, after the focus moves to Cancel
     // as it opens (LiveRegionRaises), so a screen reader hears every step, each wait and
-    // its end, "Cancelling..." and "Done.". The line written as the window is built, before
+    // its end, "Cancelling..." and "Ready". The line written as the window is built, before
     // it shows, is not; the first step after Show is.
     private void ShowStep(string line)
     {
