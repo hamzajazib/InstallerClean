@@ -18,9 +18,11 @@
 //   - every prefix QuestionFor classifies is in the test inventory
 //   - every prefix in the test inventory is classified by QuestionFor
 //
-// The second direction is not symmetrical decoration. An inventory entry with no
-// arm reaches the switch's default and throws, which the tests do catch; this
-// names it at the source in seconds instead.
+// An inventory entry with no arm reaches the switch's default and throws in the
+// tests; the second direction names it at the source.
+//
+// Exit 1 on a difference, a duplicate or a parse that finds nothing; exit 2 where
+// either file cannot be read to its end.
 //
 // Run from the repo root: node scripts/check-counted-string-inventory.mjs
 import { readFileSync } from 'node:fs';

@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 // Fails (exit 1) when a rule that lives BETWEEN two strings, or between a string
-// and the code that shows it, is broken in any of the sixteen languages.
-//
-// Every other check in scripts/ holds one file's structure or one key's sameness
-// across files, so none of them can see a rule of this shape. That is where the
-// rules the UI depends on live, and they were held by a human reading the
-// English resx: the About window's cuppa button showed one phrase and spoke
-// another in Japanese and Indonesian across four releases, and the say-thanks
-// heading had drifted the same way in Brazilian Portuguese and Vietnamese.
+// and the code that shows it, is broken in any language in LANGS. The rules are
+// numbered below: a control's spoken name against its visible label, a sentence
+// against the button it names, a word a string must not repeat, how github is cased
+// for the surface it is on, the folder token and the link phrase a translation has
+// to keep, a window title the code overwrites, and a resource read that goes round
+// Strings. Exit 2 where a resx file's entries cannot all be parsed or a C# file
+// cannot be read to its end.
 //
 // Run from the repo root: node scripts/check-cross-key-rules.mjs
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
@@ -45,8 +44,8 @@ const MUST_AGREE = [
   { label: 'Action.Donate', name: 'Automation.Donate' },
   { label: 'Action.DonateSmall', name: 'Automation.DonateSmall' },
   { label: 'Action.LeaveStarOnGitHub', name: 'Automation.LeaveStarOnGitHub.About' },
-  // Content is a plain string, so the override only restates what WPF derives.
-  // It can still drift per language, which is the whole point.
+  // Content is a plain string, so the override restates what WPF derives, and can
+  // still drift from it in any one language.
   { label: 'Action.CheckForUpdates', name: 'Automation.CheckForUpdates' },
   // Section headings drawn in SmallCaps: the resx value is pre-uppercased so a
   // screen reader never meets the glyph mapping, and the name is the same words
@@ -58,9 +57,8 @@ const MUST_AGREE = [
 ];
 
 // ---------------------------------------------------------------------------
-// Rule 2. Every automation name resolved in XAML is classified below, which is
-// what keeps rule 1 honest: a new control fails this guard until somebody
-// decides which list it belongs in.
+// Rule 2. Every automation name resolved in XAML is classified below, so a new
+// control fails this guard until somebody decides which list it belongs in.
 //
 // Names set from code-behind are out of a static check's reach, being built from
 // data or reassembled from the sentence a hyperlink was split out of. The one
@@ -81,14 +79,12 @@ const LABELS_A_VALUE = new Set([
   'Field.Subject', 'Field.Title',
 ]);
 
-// One label, several controls: three Cancels and two Details buttons that read
-// identically until the name says which is which. These DO label text, so
-// equality is the wrong rule and no rule is the wrong answer. The rule they owe
-// is containment: WCAG 2.5.3 Label in Name asks that the accessible name
-// contain the visible label, so speech input reaches the control by the word
-// the user can see. KEEP THE TWO SETS APART. Rule 2 stops a control being
-// unclassified and nothing more, so a control filed under the set that measures
-// nothing satisfies it and is then never measured against anything.
+// One label, several controls: Cancel and Details buttons that read identically
+// until the name says which is which. The rule they owe is containment: WCAG 2.5.3
+// Label in Name asks that the accessible name contain the visible label, so speech
+// input reaches the control by the word the user can see. KEEP THIS SET APART FROM
+// LABELS_A_VALUE. Rule 2 asks only that a control be classified, so a control filed
+// under the set that measures nothing satisfies it and is never measured.
 const ELABORATES_A_LABEL = [
   { label: 'Action.Cancel', name: 'Automation.CancelScan' },
   { label: 'Action.Cancel', name: 'Automation.CancelOperation' },
@@ -112,23 +108,16 @@ const ELABORATES_A_LABEL_IN_CODE = [
 // heading that labels it, through AutomationProperties.LabeledBy pointing at
 // that heading plus an explicit Name resolving to the heading's own key.
 //
-// IT IS EMPTY, AND EMPTY IS SAFE HERE IN A WAY AN EMPTY ALLOWLIST USUALLY IS
-// NOT. Emptying a list that SUPPRESSES a check would quietly stop the checking;
-// this one only ever ADMITS a key to a classification, and rule 2 below fails on
-// any automation name that is in none of the five lists. So an empty list here
-// can make the guard stricter and never looser, and the classification stays
-// written down for whoever builds that shape.
+// The list only ever admits a key to a classification, and rule 2 below fails on
+// any automation name in none of the five lists, so an empty list makes the guard
+// stricter and never looser.
 //
-// IT IS NOT MUST_AGREE, AND PUTTING A KEY THERE WOULD BE THIS FILE'S OWN NAMED
-// MISTAKE. That list measures whether two keys' values agree in every language.
-// One key cannot disagree with itself, so the comparison would pass in all
-// sixteen whatever anybody wrote, and the entry would be a control classified
-// into a list that measures nothing, which is exactly what the merge above hid.
-//
-// The rule it owes instead is KEY IDENTITY, checked below: the key must also
-// appear as visible Text in the same XAML file. That is not vacuous. Repoint the
-// Name at a different key, or delete the heading, and the guard fails and the
-// control has to be classified again by whoever did it.
+// Do not put such a key in MUST_AGREE. That list measures whether two keys' values
+// agree in every language, and one key cannot disagree with itself, so the entry
+// would pass whatever anybody wrote. The rule it owes is KEY IDENTITY, checked in
+// rule 2a below: the key also appears as visible Text in the same XAML file.
+// Repoint the Name at a different key, or delete the heading, and the guard fails
+// until the control is classified again.
 const NAME_IS_THE_LABEL = new Set([]);
 
 // Nothing visible to agree with: an icon-only button, a scroll region, a
@@ -163,17 +152,8 @@ const NO_VISIBLE_LABEL = new Set([
 // pending-reboot family says "Move and Delete are paused", which several
 // languages have to inflect, so a rule there would fault a correct translation.
 //
-// Three sentences that belong here are out for now, and what keeps them out is
-// what their satellites hold rather than anything the sentences say.
-// Confirm.DeletePermanently.Plural and both of Summary.MissingFromDisk's neutral
-// forms carry English in every satellite, either the current neutral value or a
-// wording the neutral has since replaced. A sentence still in English quotes an
-// English button while the button beside it has been translated, so listing them
-// here would fault fifteen languages for what check-still-english and
-// check-superseded-english already name, and name in the place the fix goes.
-// Rule 3a below carries them with the condition they are out under, so each one
-// rejoins this rule the day its language stops holding English for it rather than
-// the day somebody remembers to move it.
+// A sentence whose satellites still carry English goes in rule 3a below instead,
+// with the condition it is out under.
 const QUOTES_A_LABEL = [
   { sentence: 'Body.NotScanned.Why', label: 'Action.Rescan' },
   // Each confirmation dialog's spoken help names both of its own buttons, which
@@ -201,12 +181,10 @@ const QUOTES_A_LABEL = [
 // Rule 3a. The same rule, on the sentences whose satellites cannot meet it yet.
 //
 // A satellite still carrying English cannot quote a translated button, so a
-// sentence in that state fails rule 3 in every language for a reason that belongs
-// to the translation round and to the generator. Listing it above would mean
-// reading that failure fifteen times over; leaving it out of the file altogether
-// would mean somebody remembering to put it back. It is declared here instead,
-// with the condition it is out under, and it rejoins rule 3 language by language
-// as that condition lifts.
+// sentence in that state would fail rule 3 in every such language, for a reason
+// check-still-english and check-superseded-english already name in the place the
+// fix goes. It is declared here with the condition it is out under, and it is
+// checked in each language as soon as that condition lifts there.
 //
 // TWO LEGS, AND NEITHER IS SPARE, BECAUSE A SATELLITE HOLDS ENGLISH IN TWO SHAPES.
 // The value equalling the English it answers for catches a satellite carrying the
@@ -217,14 +195,10 @@ const QUOTES_A_LABEL = [
 // claim nobody has made rather than a translation, so the ledger has no answer for
 // it and the value comparison is the only thing that can hold it.
 //
-// Held out is either leg. Checked is neither. Every slot held out is printed with
-// the leg that held it, and an entry no language holds out any more is reported as
-// something to move up, so this list empties itself rather than outliving the
-// round it is waiting for.
+// Either leg holds a slot out; a slot neither holds is checked. Every slot held
+// out is printed with the leg that held it, and an entry no language holds out any
+// more fails the run as something to move up into rule 3.
 const QUOTES_A_LABEL_ONCE_TRANSLATED = [
-  // An entry here is a pair whose containment cannot be checked until the
-  // translation lands. It moves up into rule 3 when it does.
-  //
   // The line naming a drive or share the app carried on without ends by saying
   // which button to press once it responds normally.
   { sentence: 'Summary.SourceGivenUp.Drive', label: 'Action.Rescan' },
@@ -247,9 +221,8 @@ const MUST_NOT_NAME = [
 //
 // Narrator reads the CamelCase form letter by letter, "G I T hub", so every
 // string that is ONLY ever spoken lower-cases it; every string that is drawn
-// keeps the company's own capitalisation, because a reader sees it. Settled by
-// ear on Windows. It is also what lets rule 1 compare case-insensitively rather
-// than needing an exception carved for the star pill.
+// keeps the company's own capitalisation, because a reader sees it. Rule 1
+// compares case-insensitively, so the star pill needs no exception there.
 const GITHUB_SPOKEN = [
   'Automation.LeaveStarOnGitHub.About',
   'Automation.CheckForUpdates.HelpText',
@@ -300,35 +273,31 @@ const bracketCounts = (value) => ({
 //
 // Every dialog here is ShowInTaskbar=False under custom chrome, so Title is
 // never painted and exists only for the announcement a screen reader makes when
-// the window opens. A dialog that composes its title in the constructor, which
-// is the better announcement (the heading and the question, not a category),
-// must not also resolve one in XAML: that attribute would be the key's only
-// consumer and it is overwritten before the window can show. check-dead-resx-keys
-// cannot see it, the key being referenced and the reference dead.
+// the window opens. A dialog that composes its title in the constructor (the
+// heading and the question, not a category) must not also resolve one in XAML:
+// that attribute would be the key's only consumer and it is overwritten before
+// the window can show. check-dead-resx-keys does not report it, the key being
+// referenced and the reference dead.
 
 // ---------------------------------------------------------------------------
 // Rule 8. A resx value reaches a user through Strings and nothing else.
 //
-// Rule 6's token is only worth writing because Strings.Get and Strings.Find spend
-// it on the way out. Nothing in the language holds that: ResourceManager answers
-// any key by name, and a read that goes round the two doors hands a user a literal
-// {InstallerFolder} on screen, in a console or through a screen reader. Such a read
-// has already existed here once, the satellite-only plural overrides having no
-// typed accessor to come through, and it was caught by somebody reading the diff
-// rather than by anything that could fail.
+// Strings.Get and Strings.Find substitute rule 6's token on the way out.
+// ResourceManager answers any key by name, and a read that goes round the two
+// doors hands a user a literal {InstallerFolder} on screen, in a console or through
+// a screen reader. A satellite-only plural override has no typed accessor, and
+// Strings.Find is its door.
 //
 // The two doors are internal to the Core assembly and so is the manager behind
-// them, which is as far as visibility goes: every project in the solution holds
-// InternalsVisibleTo, so a compiler cannot tell a sanctioned read from a bypass.
-// This can.
+// them, and every project in the solution holds InternalsVisibleTo, so a compiler
+// cannot tell a sanctioned read from a bypass.
 //
-// Comments come off before the search, so the rule measures what a file DOES and a
-// file that merely discusses the manager is not a finding.
+// Comments come off before the search and strings stay, so a file that discusses
+// the manager in a comment is not a finding and a name in a string is.
 const RAW_READ = /\bResourceManager\b/;
 
-// A test may read raw, and these do it deliberately. Every entry says why, because
-// the next one is a decision about whether a value can reach a user unspent, and
-// that question has an answer rather than a shrug.
+// The files that read raw, each with why. Adding one is a decision about whether a
+// value can reach a user with its token unspent, so an entry says how it cannot.
 const RAW_READ_ALLOWED = [
   {
     file: 'src/InstallerClean.Core/Resources/Strings.Designer.cs',
@@ -391,11 +360,8 @@ const RAW_READ_ALLOWED = [
 // not read as an empty file. Neither figure is written down here, so adding a
 // string to the resx cannot make this go stale.
 //
-// The stale-declaration block below fails on an unreadable neutral, but only
-// because this file hard-codes key names to check against it, and it says in its
-// own message that a stop there leaves the per-language pass unrun. A control that
-// names the file is the better answer than a stale-declaration report that sends
-// the reader to the wrong place entirely.
+// It stops the run naming the file, ahead of the stale-declaration block below,
+// whose message would name keys rather than the file it could not read.
 const parseControl = (file, xml, parsed) => {
   const raw = (xml.match(/<data\b/g) || []).length;
   if (raw !== 0 && parsed === raw) return;
@@ -447,10 +413,8 @@ const wording = (value) => {
 //
 // Whitespace is normalised out. Japanese sets github off from the following kana
 // with a space in the star pill's spoken name and not in its label, both
-// coolvitto's own. A space there is typography
-// rather than a word, and it may earn its place in the spoken string by helping
-// an engine take github as a word; neither is testable from here, so the
-// comparison forces a change to neither string.
+// coolvitto's own. A space there is typography rather than a word, so the
+// comparison asks neither string to change.
 const compare = (value, lang) => wording(value).replace(/\s+/g, '').toLocaleLowerCase(lang);
 
 function collectXaml(dir, out = []) {
@@ -823,8 +787,7 @@ for (const lang of LANGS) {
 const perLanguageProblems = problems.length - sourceShapeProblems;
 
 // PRINTED ON EVERY RUN, CLEAN OR NOT, AND WITH THE LEG THAT DID IT. A sentence that
-// went unmeasured is not a sentence that passed, and a held-out list nobody sees is
-// the exclusion this rule was written to stop being invisible.
+// went unmeasured is not a sentence that passed.
 if (heldOut.length) {
   const byEntry = new Map();
   for (const { sentence, legs, lang } of heldOut) {

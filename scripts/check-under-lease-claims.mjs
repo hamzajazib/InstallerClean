@@ -1,35 +1,26 @@
 #!/usr/bin/env node
-// check-under-lease-claims.mjs: fail when a production call to an action service
+// check-under-lease-claims.mjs: fails where a production call to an action service
 // passes anything but the claims the pre-lease re-verify produced.
 //
-// WHY THIS EXISTS AND WHY THE COMPILER CANNOT DO IT. Both action services take the
-// claims as a required, non-nullable argument, so the compiler proves every caller
-// passes something. It cannot prove they pass the right thing.
-// UnderLeaseClaims.None is a legal value and RecheckUnderLease returns at its first
-// line for an empty batch, so a caller passing None receives a pass from the last
-// check standing in front of a permanent delete without anything having been asked.
+// Both action services take the claims as a required, non-nullable argument, so the
+// compiler holds every caller to passing something and not to passing the right
+// thing. UnderLeaseClaims.None is a legal value, and RecheckUnderLease returns
+// before asking anything for an empty batch, so a caller passing None gets a pass
+// from the last check in front of a permanent delete.
 //
-// AND WHY A TEST IS NOT ENOUGH ON ITS OWN. CliUnderLeaseClaimsTests and the two
-// assertions in MainViewModelTests drive the call sites that exist and read what the
-// service was handed, which is the stronger evidence and is not replaced by this. What
-// they cannot reach is a call site somebody adds tomorrow. This fails on the day that
-// one is written rather than when somebody thinks to test it.
+// What is matched: every call to DeleteFilesAsync or MoveFilesAsync under src/
+// outside the test project, read through csharp-source.mjs with the comments and the
+// text inside strings taken out. Each has to pass UnderLeaseClaims.From(...) in its
+// argument list, found by balancing its brackets, since the call sites wrap across
+// lines. What From hands the service is held by CliUnderLeaseClaimsTests and
+// MainViewModelTests, which drive the call sites and read what the service received.
 //
-// NEITHER COVERS THE OTHER AND THE DIVISION IS EXACT. This proves the call sites pass
-// UnderLeaseClaims.From(...) and says nothing whatever about what came out of it: a
-// re-verify that produced nothing would satisfy this check. The tests prove the value
-// is the re-verify's own claims and not the empty one, over the sites that exist. Read
-// as more than that, this becomes a licence to delete the tests.
+// The test project is not read. Its tests hand the services an empty batch on
+// purpose, to test what a service does with one.
 //
-// SCOPE IS PRODUCTION ONLY, DELIBERATELY. The test project passes None at sixty-one
-// sites and a matcher at sixty more, all correctly: a test of what a service does with
-// an empty batch has to be able to hand it one. Widening this to the test project
-// would report those as faults and be turned off.
-//
-// THE ARGUMENT LIST IS PARSED RATHER THAN MATCHED. A regex over one line cannot see a
-// call wrapped across four of them, and this project's call sites are wrapped. The
-// scan takes the balanced parenthesis span after the method name, so a call spelled
-// differently is read or reported, never skipped.
+// Every call site is printed with whether it passes From. Exit 1 where one does not;
+// exit 2 where a file cannot be read to its end, an argument list does not close, or
+// fewer than 4 call sites are found.
 //
 // Usage (from the repo root):
 //   node scripts/check-under-lease-claims.mjs
@@ -104,10 +95,9 @@ if (refusals.length) process.exit(2);
 
 for (const p of problems) console.error(`  ${p}`);
 
-// THE FLOOR IS NOT OPTIONAL. A scan that found no call sites reports no problems and
-// reads exactly like a clean run, and the two things most likely to cause it are a
-// rename and a change to how these calls are written. The figure is a floor rather
-// than a pinned count so that adding a caller does not fail this for the wrong reason.
+// A run matching no call site would print no problem, and renaming the methods or
+// changing how the calls are written is what would cause it. A floor rather than a
+// count, so that adding a caller does not fail this.
 if (callSites < 4) {
   console.error(`FLOOR FAILED: ${callSites} production call site(s) found, expected at least 4.`);
   console.error('Refusing to report clean over a set this small: the methods have been renamed, moved or rewritten.');
