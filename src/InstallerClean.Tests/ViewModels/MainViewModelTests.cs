@@ -2060,9 +2060,51 @@ public class MainViewModelTests
         AssertTheWindowSaysTheScanAfterTheBatchDidNotFinish(vm);
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task A_close_during_the_rescan_after_a_Move_or_Delete_reports_no_scan_cancelled(
+        bool deleting, bool cancelPressedFirst)
+    {
+        var vm = CreateViewModel();
+        TwoFileBatch(_ => { }, done: 2, errored: 0, cancelled: false);
+        // The close lands while the scan after the batch runs, the second scan, alone
+        // or after the user's own Cancel on that scan.
+        var scans = 0;
+        bool? rescanStopped = null;
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ci =>
+            {
+                if (++scans == 2)
+                {
+                    if (cancelPressedFirst) vm.Cleanup.CancelOperationCommand.Execute(null);
+                    vm.Cleanup.RequestClose();
+                    var token = ci.Arg<CancellationToken>();
+                    rescanStopped = token.IsCancellationRequested;
+                    token.ThrowIfCancellationRequested();
+                }
+                return ScanResultWithOrphans(2);
+            });
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = Path.Combine(Path.GetTempPath(), "ic-test-close-during-the-rescan");
+
+        await RunBatch(vm, deleting);
+
+        Assert.True(rescanStopped);
+        Assert.True(vm.Cleanup.CloseRequested);
+        Assert.Equal(2, scans);
+        Assert.False(vm.Scan.HasScanned);
+        Assert.Null(vm.Scan.LastScanResult);
+        AssertTheWindowSaysTheScanAfterTheBatchDidNotFinish(vm);
+        Assert.False(vm.Cleanup.IsOperating);
+    }
+
     /// <summary>
-    /// What the window says where the scan after a Move or Delete did not run because
-    /// the window is closing: that scan did not finish, and no scan was cancelled.
+    /// What the window says where the scan after a Move or Delete did not run, or was
+    /// stopped, because the window is closing: that scan did not finish, and no scan
+    /// was cancelled.
     /// </summary>
     private static void AssertTheWindowSaysTheScanAfterTheBatchDidNotFinish(MainViewModel vm)
     {

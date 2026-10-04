@@ -653,9 +653,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// True once the window has been asked to close while a Move or Delete runs
     /// (<see cref="RequestClose"/>). The window holds that close and takes it when
     /// <see cref="IsOperating"/> goes false. From then on the operation finishes
-    /// without what only an open window needs: no rescan after the batch, no wait for
-    /// the start check, and no report box, the card it would sit on going with the
-    /// window unseen.
+    /// without what only an open window needs: no rescan after the batch, a running
+    /// one being cancelled where Cancel is live, no wait for the start check, and no
+    /// report box, the card it would sit on going with the window unseen.
     /// </summary>
     public bool CloseRequested => _closeRequested.Task.IsCompleted;
 
@@ -2093,7 +2093,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// Where the window has been asked to close (<see cref="CloseRequested"/>), no
     /// scan runs and no source is installed. The list from before the batch is
     /// dropped all the same (<see cref="ScanViewModel.DropResultWithoutRescan"/>),
-    /// and the window closes as the operation ends.
+    /// and the window closes as the operation ends. A close that lands while the scan
+    /// runs cancels it where Cancel is live (<see cref="RequestClose"/>), and no scan
+    /// is reported cancelled there either
+    /// (<see cref="ScanViewModel.ClearCancelAsTheWindowCloses"/>).
     /// </summary>
     private async Task RefreshAfterBatchAsync()
     {
@@ -2141,6 +2144,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             if (ReferenceEquals(OperationSource, cts))
                 ReleaseOperationSource();
         }
+
+        // The window is closing, so the scan the close cancelled, or the one the user
+        // had cancelled before it, is not reported cancelled.
+        if (CloseRequested) _scan.ClearCancelAsTheWindowCloses();
     }
 
     /// <summary>

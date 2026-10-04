@@ -451,8 +451,10 @@ public partial class ScanViewModel : ObservableObject
     /// scanning overlay collapses to re-announce "Scan cancelled." past the
     /// focus move that would otherwise swallow it, and the main window's
     /// states with no result read it to say why there is nothing on screen.
-    /// Reset at the start of every scan, and where the scan after a Move or Delete
-    /// does not run (<see cref="DropResultWithoutRescan"/>).
+    /// Reset at the start of every scan, and where the window closes around the scan
+    /// after a Move or Delete, whether that scan does not run
+    /// (<see cref="DropResultWithoutRescan"/>) or runs as the close lands
+    /// (<see cref="ClearCancelAsTheWindowCloses"/>).
     ///
     /// Observable, not a plain property: the startup scan is the one that gets
     /// cancelled in practice, and it sets this without ever setting
@@ -582,6 +584,16 @@ public partial class ScanViewModel : ObservableObject
         UnfinishedRefreshMessage = Strings.Body_RescanNotFinished_Why;
         DropResult();
     }
+
+    /// <summary>
+    /// Clears <see cref="LastScanWasCancelled"/> where the window is closing as the scan
+    /// after a Move or Delete ends, so no scan is reported cancelled, as where the close
+    /// lands before that scan (<see cref="DropResultWithoutRescan"/>). Everything else
+    /// the scan left stands: the result it found, or the message saying it did not
+    /// finish, which names the crash log where the scan failed and the log was written
+    /// (<see cref="RefreshAsync"/>).
+    /// </summary>
+    public void ClearCancelAsTheWindowCloses() => LastScanWasCancelled = false;
 
     /// <summary>
     /// The scan's one error ladder: maps a scan (or act-time re-verify) failure to
@@ -911,7 +923,8 @@ public partial class ScanViewModel : ObservableObject
             // Not written to crash.log, unlike the failure below, because the
             // user asked for it. LastScanWasCancelled puts "Scan cancelled." under
             // the message, as it does in the window a cancelled startup scan
-            // leaves.
+            // leaves, except where the window is closing
+            // (ClearCancelAsTheWindowCloses).
             UnfinishedRefreshMessage = Strings.Body_RescanNotFinished_Why;
             LastScanWasCancelled = true;
             DropResult();

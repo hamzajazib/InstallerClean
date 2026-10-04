@@ -243,7 +243,8 @@ public partial class MainWindow : Window
         // the file being moved right now is finished rather than truncated. The
         // wait is visible: the operating overlay stays up and says so. The view
         // model records the close and finishes the operation without the rescan
-        // after the batch (CleanupViewModel.RequestClose).
+        // after the batch, cancelling that rescan where it is already running
+        // (CleanupViewModel.RequestClose).
         e.Cancel = true;
         _vm.Cleanup.RequestClose();
     }
