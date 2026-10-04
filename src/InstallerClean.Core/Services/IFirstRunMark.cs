@@ -4,8 +4,9 @@ namespace InstallerClean.Services;
 /// The PC's record that InstallerClean has had its first run: the value
 /// <c>FirstRunRecorded</c> under <c>HKLM\SOFTWARE\NoFaff\InstallerClean</c>, one
 /// for the whole PC, so every Windows account on it reads the same answer. The
-/// command line sets it after a Move or a Delete that moved or deleted a file.
-/// Nothing removes it, and the installer's uninstall leaves it in place.
+/// command line sets it after a Move or a Delete that moved or deleted a file, and
+/// the window's start check (<see cref="IEarlierRunCheck"/>) sets it where it finds
+/// an earlier run. Nothing removes it, and the installer's uninstall leaves it in place.
 /// </summary>
 public interface IFirstRunMark
 {

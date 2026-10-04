@@ -14,6 +14,9 @@ namespace InstallerClean.Tests.Helpers;
 /// real work method with substitute services; the mark is a substitute too, so nothing
 /// is written to the registry.
 ///
+/// EACH TEST ALSO READS THE RUN'S OWN APPLICATION-LOG ENTRIES BACK through the window's
+/// reader, which has to count them exactly where the run set the mark.
+///
 /// EVERY RUN THAT LEAVES THE MARK ALONE HAS A TWIN HERE THAT SETS IT, built from the same
 /// fixtures with one thing changed: the count the service hands back, the files the
 /// check before acting keeps, or, for the scan, the command.
@@ -44,6 +47,7 @@ public class CliFirstRunMarkTests
 
         Assert.Equal(CliExitCode.Ok, exitCode);
         mark.Received(1).Set();
+        AssertTheLogRecordsIt(actedOnFiles: true);
     }
 
     [Fact]
@@ -56,6 +60,7 @@ public class CliFirstRunMarkTests
 
         Assert.Equal(CliExitCode.Error, exitCode);
         mark.DidNotReceive().Set();
+        AssertTheLogRecordsIt(actedOnFiles: false);
     }
 
     [Fact]
@@ -75,6 +80,7 @@ public class CliFirstRunMarkTests
             Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
             Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
         mark.DidNotReceive().Set();
+        AssertTheLogRecordsIt(actedOnFiles: false);
     }
 
     [Fact]
@@ -95,6 +101,7 @@ public class CliFirstRunMarkTests
 
         Assert.Equal(CliExitCode.Partial, exitCode);
         mark.Received(1).Set();
+        AssertTheLogRecordsIt(actedOnFiles: true);
     }
 
     [Fact]
@@ -115,6 +122,7 @@ public class CliFirstRunMarkTests
 
         Assert.Equal(CliExitCode.Cancelled, exitCode);
         mark.DidNotReceive().Set();
+        AssertTheLogRecordsIt(actedOnFiles: false);
     }
 
     [Fact]
@@ -126,6 +134,7 @@ public class CliFirstRunMarkTests
 
         Assert.Equal(CliExitCode.Ok, exitCode);
         mark.Received(1).Set();
+        AssertTheLogRecordsIt(actedOnFiles: true);
     }
 
     [Fact]
@@ -138,6 +147,7 @@ public class CliFirstRunMarkTests
 
         Assert.Equal(CliExitCode.Error, exitCode);
         mark.DidNotReceive().Set();
+        AssertTheLogRecordsIt(actedOnFiles: false);
     }
 
     [Fact]
@@ -159,6 +169,7 @@ public class CliFirstRunMarkTests
 
         Assert.Equal(CliExitCode.Partial, exitCode);
         mark.Received(1).Set();
+        AssertTheLogRecordsIt(actedOnFiles: true);
     }
 
     [Fact]
@@ -170,6 +181,7 @@ public class CliFirstRunMarkTests
 
         Assert.Equal(CliExitCode.Partial, exitCode);
         mark.Received(1).Set();
+        AssertTheLogRecordsIt(actedOnFiles: true);
     }
 
     [Fact]
@@ -181,6 +193,7 @@ public class CliFirstRunMarkTests
 
         Assert.Equal(CliExitCode.Error, exitCode);
         mark.DidNotReceive().Set();
+        AssertTheLogRecordsIt(actedOnFiles: false);
     }
 
     [Fact]
@@ -193,9 +206,26 @@ public class CliFirstRunMarkTests
         // The scan offered both files and listed them, which is as far as /s goes.
         Assert.Equal(CliExitCode.Ok, exitCode);
         mark.DidNotReceive().Set();
+        AssertTheLogRecordsIt(actedOnFiles: false);
     }
 
     // ---- fixtures ----
+
+    /// <summary>
+    /// The window's start check reads the command line's entries back from the log
+    /// (<see cref="CommandLineRunRecord"/>), so it has to count a run's entries exactly
+    /// where that run set the mark, and an entry it counts has to carry an Event ID its
+    /// query asks the log for. The entries are the ones this run wrote, as the recorder
+    /// took them.
+    /// </summary>
+    private static void AssertTheLogRecordsIt(bool actedOnFiles)
+    {
+        var entries = EventLogRecorder.Entries;
+        Assert.NotEmpty(entries);
+        var counted = entries.Where(e => CommandLineRunRecord.ActedOnFiles(e.Text)).ToList();
+        Assert.Equal(actedOnFiles, counted.Count > 0);
+        Assert.All(counted, e => Assert.Contains(e.Class, new[] { CliEventClass.Ok, CliEventClass.Partial }));
+    }
 
     private static readonly FileOperationError[] NoErrors = Array.Empty<FileOperationError>();
 
@@ -242,6 +272,7 @@ public class CliFirstRunMarkTests
         };
         // Standard output is swapped for a buffer so the run's lines stay out of the test
         // runner's own output; nothing here reads them.
+        EventLogRecorder.Clear();
         var original = Console.Out;
         using var buffer = new StringWriter();
         try

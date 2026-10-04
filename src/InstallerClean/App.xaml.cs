@@ -339,7 +339,7 @@ public partial class App : Application
 
             splash.UpdateStep(Strings.Status_Scanning, ScanProgressFill.FloorPercent);
 
-            // Single container, single resolve. OnExit disposes the
+            // Single container, and the view model resolved once. OnExit disposes the
             // container; MainViewModel, ChromeViewModel and CleanupViewModel
             // implement IDisposable so their ScanViewModel PropertyChanged
             // subscriptions unhook on teardown.
@@ -356,6 +356,12 @@ public partial class App : Application
             // path or delay the window; the AutoUpdateCheck setting is read
             // inside it, so an opted-out install opens no socket.
             viewModel.Chrome.StartAutomaticUpdateCheck();
+
+            // Whether the PC has already had its first run, started before the scan so it
+            // runs beside it. Where an earlier run shows and the PC-wide mark is not yet
+            // set, the check sets it. Its task never faults and the singleton holds it,
+            // so nothing here waits on it.
+            _ = _services.GetRequiredService<IEarlierRunCheck>().ShowsAnEarlierRunAsync();
 
             using var startupCts = new CancellationTokenSource();
             splash.CancelRequested += (_, _) => startupCts.Cancel();

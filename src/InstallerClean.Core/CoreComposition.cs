@@ -88,6 +88,10 @@ public static class CoreComposition
         // Persistence. Settings are per account; the first-run mark is one for the PC.
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IFirstRunMark, FirstRunMark>();
+        // The window's start check and the command line's record it reads. A singleton,
+        // so the check started at launch and every later ask share one answer.
+        services.AddSingleton<ICommandLineRunRecord, CommandLineRunRecord>();
+        services.AddSingleton<IEarlierRunCheck, EarlierRunCheck>();
 
         // The two outbound-network services. Singleton keeps each one's
         // HttpClient connection pool reused for the life of the process.

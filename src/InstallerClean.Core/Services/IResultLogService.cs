@@ -50,6 +50,12 @@ public interface IResultLogService
     /// a caller that passes one must catch it.
     /// </summary>
     Task<string?> ReadLastLogAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Whether <c>last-run.json</c> is there, answered from the folder without opening
+    /// the file. False where the folder cannot be read. Never throws.
+    /// </summary>
+    bool LastLogExists();
 }
 
 public enum ResultLogSendOutcome

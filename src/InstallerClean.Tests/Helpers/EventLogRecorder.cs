@@ -6,8 +6,10 @@ namespace InstallerClean.Tests.Helpers;
 /// <summary>
 /// Takes every Application-channel entry the suite writes, in place of the channel.
 /// Installed as <see cref="EventLogWriter.Sink"/> when the assembly loads, before any
-/// test runs, and never removed, so an entry a test writes through
-/// <see cref="EventLogWriter.Write"/> lands here rather than in the machine's log.
+/// test runs, so an entry a test writes through <see cref="EventLogWriter.Write"/> lands
+/// here rather than in the machine's log. One test takes it out for a single write and
+/// puts it back: <c>CommandLineRunRecordIntegrationTests</c>, which runs only on a CI
+/// runner.
 /// </summary>
 /// <remarks>
 /// One list for the whole assembly, which is safe because the assembly disables test

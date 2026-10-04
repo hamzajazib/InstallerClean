@@ -165,6 +165,14 @@ jobs:
         if: success() || failure()
         run: node scripts/check-machine-contract-scope.mjs
 
+      # A Debug build reads switches a developer sets on their own PC, and a Release
+      # build must not contain them. Code inside #if DEBUG is not compiled into one, so
+      # each switch's name has to appear under src/ only there. The check also fails
+      # where the name is not found at all, so a renamed switch cannot pass it unread.
+      - name: Check the Debug-only switches stay out of Release builds
+        if: success() || failure()
+        run: node scripts/check-debug-only-switches.mjs
+
       # Every step in this job carries the same condition, for the reason set
       # out at the first guard: no step here is a premise for any other, so a
       # red one reports its own verdict and decides nothing about the rest.

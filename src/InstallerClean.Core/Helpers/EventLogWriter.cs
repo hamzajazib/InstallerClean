@@ -24,7 +24,11 @@ namespace InstallerClean.Helpers;
 /// </remarks>
 internal static class EventLogWriter
 {
-    private const string SourceName = "InstallerClean";
+    /// <summary>
+    /// The event source every entry is written under, and the name the window's start
+    /// check reads the command line's entries back by (<c>CommandLineRunRecord</c>).
+    /// </summary>
+    internal const string SourceName = "InstallerClean";
 
     /// <summary>
     /// Sticky flag: set true on the first Write that fails (source
