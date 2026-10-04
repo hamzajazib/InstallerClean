@@ -38,12 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | Continuer _sans attendre |
 | Check for _updates | Rechercher des _mises à jour |
 | _Close | _Fermer |
-| _Close without donating | _Close without donating |
+| _Close without donating | _Fermer sans faire de don |
 | _Delete permanently | _Supprimer définitivement |
 | _Done | _Terminé |
 | Details | Détails |
 | _Donate | Faire un _don |
-| _Donate $5 | _Donate $5 |
+| _Donate $5 | Faire un _don de 5 $ |
 | Donate | Faire un don |
 | Leave a _star on GitHub | _Laisser une étoile sur GitHub |
 | Apache 2.0 licence | Licence Apache 2.0 |
@@ -346,7 +346,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | Tout don, même modeste, est très apprécié. |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | Annulation demandée. InstallerClean attend que l'étape en cours atteigne un point d'arrêt. Cela peut prendre quelques secondes lors d'opérations d'E/S intensives ou d'un appel à la base de données MSI. |
 | Close | Fermer |
-| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | Je devrais vraiment faire payer InstallerClean, car il m'a demandé énormément de travail, mais je veux qu'il reste gratuit pour aider le plus de monde possible. Votre don fait que cela en vaut la peine, et il est très apprécié. |
 | A star helps other people find it. | Une étoile aide les autres à découvrir InstallerClean. |
 | Minimise | Réduire |
 | Move the unneeded files to the backup folder. | Déplace les fichiers inutiles vers le dossier de sauvegarde. |
@@ -361,7 +361,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Français |
 | --- | --- |
 | Donate | Faire un don |
-| Donate $5 | Donate $5 |
+| Donate $5 | Faire un don de 5 $ |
 | Donate | Faire un don |
 | Cancel operation | Annuler l'opération |
 | Cancel scan | Annuler l'analyse |
@@ -512,7 +512,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | Déplacement de {0} {1} inutiles vers {2}... |
 | Moved {0} unneeded {1}. | {0} {1} inutiles ont été déplacés. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Vérifiez que vos programmes se mettent toujours à jour et se désinstallent normalement, puis supprimez {0}. |
-| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean is free. If it helped, please donate $5: {0} |
+| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean est gratuit. S'il vous a été utile, merci de faire un don de 5 $ : {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | C'est simple à annuler. Redéplacez-les depuis {0} dans {InstallerFolder} et tout redeviendra comme avant. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean n'a plus pu confirmer le dossier de sauvegarde, il s'est donc arrêté. Vérifiez {0}, puis relancez la commande. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Un autre processus InstallerClean détient le verrou d'instance unique (l'interface ou une autre exécution de la CLI). Code de sortie 75 (transitoire) ; vous pouvez réessayer plus tard sans risque. |

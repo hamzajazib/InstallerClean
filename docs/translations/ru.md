@@ -38,12 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | Продолжить _без ожидания |
 | Check for _updates | Проверить о_бновления |
 | _Close | _Закрыть |
-| _Close without donating | _Close without donating |
+| _Close without donating | _Закрыть без поддержки |
 | _Delete permanently | _Удалить безвозвратно |
 | _Done | _Готово |
 | Details | Подробности |
 | _Donate | _Поддержать |
-| _Donate $5 | _Donate $5 |
+| _Donate $5 | _Поддержать на 5 $ |
 | Donate | Поддержать |
 | Leave a _star on GitHub | Поставить з_везду на GitHub |
 | Apache 2.0 licence | Лицензия Apache 2.0 |
@@ -346,7 +346,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | Любая, даже небольшая, поддержка очень ценна. |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | Запрошена отмена. InstallerClean ждёт, когда текущий шаг дойдёт до точки остановки. Это может занять несколько секунд при интенсивном вводе-выводе или обращении к базе данных MSI. |
 | Close | Закрыть |
-| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | Вообще-то за InstallerClean стоило бы брать деньги: на него ушло огромное количество труда. Но я хочу, чтобы он оставался бесплатным и помогал как можно большему числу людей. Ваша поддержка придаёт всему этому смысл, и я очень за неё благодарен. |
 | A star helps other people find it. | Звезда помогает другим найти InstallerClean. |
 | Minimise | Свернуть |
 | Move the unneeded files to the backup folder. | Перемещает ненужные файлы в папку резервных копий. |
@@ -361,7 +361,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Русский |
 | --- | --- |
 | Donate | Поддержать |
-| Donate $5 | Donate $5 |
+| Donate $5 | Поддержать на 5 $ |
 | Donate | Поддержать |
 | Cancel operation | Отмена операции |
 | Cancel scan | Отмена сканирования |
@@ -512,7 +512,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | Идёт перемещение в {2}: {0} ненужных {1}... |
 | Moved {0} unneeded {1}. | Перемещено {0} ненужных {1}. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Убедитесь, что ваши программы по-прежнему обновляются и удаляются как обычно, а затем удалите {0}. |
-| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean is free. If it helped, please donate $5: {0} |
+| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean бесплатен. Если он помог, пожалуйста, поддержите его на 5 $: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Это легко отменить. Переместите их из {0} обратно в {InstallerFolder}, и всё вернётся как было. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean больше не смог подтвердить папку резервных копий и остановился. Проверьте {0}, затем запустите команду снова. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Другой процесс InstallerClean удерживает блокировку единственного экземпляра (GUI или другой запуск CLI). Код выхода 75 (временное состояние); можно повторить попытку позже. |

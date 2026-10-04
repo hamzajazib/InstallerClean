@@ -38,12 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | Lanjutkan _tanpa menunggu |
 | Check for _updates | Periksa pem_baruan |
 | _Close | _Tutup |
-| _Close without donating | _Close without donating |
+| _Close without donating | _Tutup tanpa berdonasi |
 | _Delete permanently | _Hapus permanen |
 | _Done | _Selesai |
 | Details | Detail |
 | _Donate | _Donasi |
-| _Donate $5 | _Donate $5 |
+| _Donate $5 | _Donasi US$5 |
 | Donate | Donasi |
 | Leave a _star on GitHub | Beri _bintang di GitHub |
 | Apache 2.0 licence | Lisensi Apache 2.0 |
@@ -346,7 +346,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | Donasi sekecil apa pun sangat dihargai. |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | Pembatalan diminta. InstallerClean sedang menunggu langkah yang berjalan mencapai titik berhenti. Ini bisa memakan waktu beberapa detik saat I/O berat atau panggilan basis data MSI. |
 | Close | Tutup |
-| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | Sebenarnya saya seharusnya memungut biaya untuk InstallerClean, karena pembuatannya memakan banyak sekali tenaga, tetapi saya ingin tetap menggratiskannya agar bisa membantu sebanyak mungkin orang. Donasi Anda membuat semua itu sepadan dan sangat saya hargai. |
 | A star helps other people find it. | Bintang membantu orang lain menemukan InstallerClean. |
 | Minimise | Kecilkan |
 | Move the unneeded files to the backup folder. | Memindahkan file yang tidak diperlukan ke folder cadangan. |
@@ -361,7 +361,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Bahasa Indonesia |
 | --- | --- |
 | Donate | Donasi |
-| Donate $5 | Donate $5 |
+| Donate $5 | Donasi US$5 |
 | Donate | Donasi |
 | Cancel operation | Batal, operasi |
 | Cancel scan | Batal, pemindaian |
@@ -512,7 +512,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | Memindahkan {0} {1} yang tidak diperlukan ke {2}... |
 | Moved {0} unneeded {1}. | {0} {1} yang tidak diperlukan telah dipindahkan. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Pastikan program Anda masih bisa diperbarui dan dicopot seperti biasa, lalu hapus {0}. |
-| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean is free. If it helped, please donate $5: {0} |
+| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean gratis. Jika bermanfaat, silakan berdonasi US$5: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Mudah untuk dibatalkan. Pindahkan kembali dari {0} ke {InstallerFolder} dan semuanya akan kembali seperti semula. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean tidak bisa lagi memastikan folder cadangan, jadi berhenti. Periksa {0}, lalu jalankan perintahnya lagi. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Proses InstallerClean lain memegang kunci instans-tunggal (GUI atau proses CLI lain). Kode keluar 75 (sementara); aman untuk dicoba lagi nanti. |

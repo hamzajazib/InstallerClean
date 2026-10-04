@@ -38,12 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | Continua _senza attendere |
 | Check for _updates | Controlla _aggiornamenti |
 | _Close | _Chiudi |
-| _Close without donating | _Close without donating |
+| _Close without donating | _Chiudi senza donare |
 | _Delete permanently | _Elimina definitivamente |
 | _Done | _Fatto |
 | Details | Dettagli |
 | _Donate | _Dona |
-| _Donate $5 | _Donate $5 |
+| _Donate $5 | _Dona 5 $ |
 | Donate | Dona |
 | Leave a _star on GitHub | Lascia una _stella su GitHub |
 | Apache 2.0 licence | Licenza Apache 2.0 |
@@ -346,7 +346,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | Ogni piccola donazione è molto apprezzata. |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | Annullamento richiesto. InstallerClean sta aspettando che il passaggio in corso arrivi a un punto in cui fermarsi. Può richiedere qualche secondo durante operazioni di I/O intense o una chiamata al database MSI. |
 | Close | Chiudi |
-| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | Dovrei proprio far pagare InstallerClean, perché mi è costato un'enorme quantità di lavoro, ma voglio mantenerlo gratuito perché aiuti quante più persone possibile. La tua donazione ripaga lo sforzo ed è molto apprezzata. |
 | A star helps other people find it. | Una stella aiuta altre persone a trovare InstallerClean. |
 | Minimise | Riduci a icona |
 | Move the unneeded files to the backup folder. | Sposta i file non necessari nella cartella di backup. |
@@ -361,7 +361,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Italiano |
 | --- | --- |
 | Donate | Dona |
-| Donate $5 | Donate $5 |
+| Donate $5 | Dona 5 $ |
 | Donate | Dona |
 | Cancel operation | Annulla operazione |
 | Cancel scan | Annulla scansione |
@@ -512,7 +512,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | Spostamento di {0} {1} non necessari in {2}... |
 | Moved {0} unneeded {1}. | Spostati {0} {1} non necessari. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Verifica che i tuoi programmi si aggiornino e si disinstallino ancora normalmente, poi elimina {0}. |
-| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean is free. If it helped, please donate $5: {0} |
+| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean è gratuito. Se ti è stato utile, dona 5 $: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Annullarlo è semplice. Rispostali da {0} in {InstallerFolder} e tornerà tutto com'era. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean non è più riuscito a confermare la cartella di backup, quindi si è fermato. Controlla {0}, poi esegui di nuovo il comando. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Un altro processo InstallerClean mantiene il blocco a istanza singola (la GUI o un'altra esecuzione della CLI). Codice di uscita 75 (transitorio); è sicuro riprovare più tardi. |

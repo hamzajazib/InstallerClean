@@ -38,12 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | Continuar _sin esperar |
 | Check for _updates | _Buscar actualizaciones |
 | _Close | _Cerrar |
-| _Close without donating | _Close without donating |
+| _Close without donating | _Cerrar sin donar |
 | _Delete permanently | _Eliminar definitivamente |
 | _Done | _Listo |
 | Details | Detalles |
 | _Donate | _Donar |
-| _Donate $5 | _Donate $5 |
+| _Donate $5 | _Donar 5 $ |
 | Donate | Donar |
 | Leave a _star on GitHub | Deja una e_strella en GitHub |
 | Apache 2.0 licence | Licencia Apache 2.0 |
@@ -346,7 +346,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | Cualquier donación, por pequeña que sea, se agradece mucho. |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | Cancelación solicitada. InstallerClean está esperando a que el paso en curso llegue a un punto en el que pueda detenerse. Puede tardar unos segundos durante operaciones intensas de entrada/salida o una llamada a la base de datos MSI. |
 | Close | Cerrar |
-| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | La verdad es que debería cobrar por InstallerClean, porque me ha llevado muchísimo trabajo, pero quiero que siga siendo gratis para que ayude a cuanta más gente mejor. Tu donativo hace que valga la pena y lo agradezco muchísimo. |
 | A star helps other people find it. | Una estrella ayuda a otras personas a encontrar InstallerClean. |
 | Minimise | Minimizar |
 | Move the unneeded files to the backup folder. | Mueve los archivos innecesarios a la carpeta de copia de seguridad. |
@@ -361,7 +361,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Español |
 | --- | --- |
 | Donate | Donar |
-| Donate $5 | Donate $5 |
+| Donate $5 | Donar 5 $ |
 | Donate | Donar |
 | Cancel operation | Cancelar la operación |
 | Cancel scan | Cancelar el análisis |
@@ -512,7 +512,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | Moviendo {0} {1} innecesarios a {2}... |
 | Moved {0} unneeded {1}. | Se movieron {0} {1} innecesarios. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Comprueba que tus programas siguen actualizándose y desinstalándose con normalidad, y luego elimina {0}. |
-| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean is free. If it helped, please donate $5: {0} |
+| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean es gratis. Si te ha ayudado, dona 5 $, por favor: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Deshacerlo es sencillo. Muévelos de vuelta desde {0} a {InstallerFolder} y todo quedará como estaba. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean ya no pudo confirmar la carpeta de copia de seguridad, así que se detuvo. Comprueba {0} y vuelve a ejecutar el comando. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Otro proceso de InstallerClean mantiene el bloqueo de instancia única (la GUI u otra ejecución de la CLI). Código de salida 75 (transitorio); es seguro reintentar más tarde. |

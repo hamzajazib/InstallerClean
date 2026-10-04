@@ -162,7 +162,7 @@
        window, as Action.Done does on every other card, and like Done it has the
        focus and answers Enter when the card appears. Its access key must differ
        from Action.Donate's, the two being on that card together. -->
-  <data name="Action.CloseWithoutDonating" xml:space="preserve"><value>_Close without donating</value></data>
+  <data name="Action.CloseWithoutDonating" xml:space="preserve"><value>不捐赠，直接关闭(_C)</value></data>
   <!-- The label on both delete surfaces: the main window's button and the
        confirmation dialog's. It says "permanently" because Delete here does
        not mean what Delete means elsewhere in Windows, and the label is the
@@ -181,7 +181,7 @@
        stand in place of Done. The amount is in US dollars, written the way the
        language writes a dollar amount. Its access key must differ from
        Action.CloseWithoutDonating's, the two being on that card together. -->
-  <data name="Action.Donate" xml:space="preserve"><value>_Donate $5</value></data>
+  <data name="Action.Donate" xml:space="preserve"><value>捐赠 5 美元(_D)</value></data>
   <!-- The label on the small donate button under Done, on every completion card
        that carries Done. It takes no access key: Done is on screen beside it. The
        button shows this text as written, so an underscore here would appear on
@@ -225,7 +225,7 @@
        beside a label rather than a string, so WPF derives no name from it and
        this is the name; it says what the button says on screen, without the
        access-key marker. -->
-  <data name="Automation.Donate" xml:space="preserve"><value>Donate $5</value></data>
+  <data name="Automation.Donate" xml:space="preserve"><value>捐赠 5 美元</value></data>
   <!-- The spoken name of the button Action.DonateSmall labels, for the same
        reason as Automation.Donate's. -->
   <data name="Automation.DonateSmall" xml:space="preserve"><value>捐赠</value></data>
@@ -373,7 +373,7 @@
   <data name="Tooltip.CancellingPending" xml:space="preserve"><value>已请求取消。InstallerClean 正在等待当前步骤到达一个可以停下来的位置。在大量 I/O 操作或 MSI 数据库调用期间，这可能需要几秒钟。</value></data>
   <data name="Tooltip.Close" xml:space="preserve"><value>关闭</value></data>
   <data name="Tooltip.Donate" xml:space="preserve">
-    <value>I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.</value>
+    <value>我本该为 InstallerClean 收费，因为它花费了大量心血，但我希望它保持免费，好帮助尽可能多的人。您的捐赠让这一切变得值得，我非常感激。</value>
     <comment>Tooltip and screen-reader help on Action.Donate's button. The space before each hyphen is a no-break space, so a narrow tooltip never starts a line with the hyphen; a translation punctuates the aside the way its own language does.</comment>
   </data>
   <data name="Tooltip.LeaveStarOnGitHub.About" xml:space="preserve">
@@ -2198,7 +2198,7 @@ InstallerClean 本来就以管理员身份运行，所以再那样启动一次�
        a blank line, printed only to a console somebody is watching and never to the
        Application log. 0 = the donation page's address, printed as written. The
        amount is in US dollars, written the way the language writes a dollar amount. -->
-  <data name="Cli.DonateAsk" xml:space="preserve"><value>InstallerClean is free. If it helped, please donate $5: {0}</value></data>
+  <data name="Cli.DonateAsk" xml:space="preserve"><value>InstallerClean 是免费的。如果它帮到了您，请捐赠 5 美元：{0}</value></data>
   <!-- The line a cancelled Move prints instead of the one above, where the window's
        card carries Completion.MoveCancelledRestoreHint. A run that went the distance
        leaves the reader deciding when to delete the backup; a run somebody stopped

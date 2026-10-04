@@ -133,7 +133,7 @@ const MAP = {
   'Action.Done': `_Selesai`,
   'Action.Details': `Detail`,
   'Action.BuyMeACuppa': `_Donasi`,
-  'Action.Donate': `_Donate \$5`,
+  'Action.Donate': `_Donasi US\$5`,
   'Action.DonateSmall': `Donasi`,
   'Action.LeaveStarOnGitHub': `Beri _bintang di GitHub`,
   'Action.Licence': `Lisensi Apache 2.0`,
@@ -144,7 +144,7 @@ const MAP = {
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `Donasi`,
-  'Automation.Donate': `Donate \$5`,
+  'Automation.Donate': `Donasi US\$5`,
   'Automation.DonateSmall': `Donasi`,
   // The three Cancel names name the button and then say which one, the shape
   // Automation.ViewOrphanedFiles and its sibling already take, rather than the
@@ -592,9 +592,9 @@ const MAP = {
   'Cli.SourceGivenUp.Drive': `InstallerClean berhenti menunggu drive {0} dan membiarkan apa adanya setiap file yang masih harus diperiksa terhadapnya. Setelah drive itu kembali merespons dengan normal, jalankan perintahnya lagi.`,
   'Cli.SourceGivenUp.Path': `InstallerClean berhenti menunggu {0} dan membiarkan apa adanya setiap file yang masih harus diperiksa terhadapnya. Setelah lokasi itu kembali merespons dengan normal, jalankan perintahnya lagi.`,
   'Cli.SourcesGivenUp': `InstallerClean berhenti menunggu lebih dari satu drive atau berbagi jaringan ({0}) dan membiarkan apa adanya setiap file yang masih harus diperiksa terhadap salah satunya. Setelah semuanya kembali merespons dengan normal, jalankan perintahnya lagi.`,
-  'Action.CloseWithoutDonating': `_Close without donating`,
-  'Tooltip.Donate': `I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.`,
-  'Cli.DonateAsk': `InstallerClean is free. If it helped, please donate \$5: {0}`,
+  'Action.CloseWithoutDonating': `_Tutup tanpa berdonasi`,
+  'Tooltip.Donate': `Sebenarnya saya seharusnya memungut biaya untuk InstallerClean, karena pembuatannya memakan banyak sekali tenaga, tetapi saya ingin tetap menggratiskannya agar bisa membantu sebanyak mungkin orang. Donasi Anda membuat semua itu sepadan dan sangat saya hargai.`,
+  'Cli.DonateAsk': `InstallerClean gratis. Jika bermanfaat, silakan berdonasi US\$5: {0}`,
   'Completion.SendReport': `Send _anonymous report`,
   'Completion.ReportPanel.Intro': `The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs:`,
   'Completion.ReportPanel.Freed': `How much space was freed, and how many files were moved or deleted`,

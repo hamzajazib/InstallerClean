@@ -38,12 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | _Beklemeden devam et |
 | Check for _updates | Güncelleştirmeleri _denetle |
 | _Close | _Kapat |
-| _Close without donating | _Close without donating |
+| _Close without donating | Bağış yapmadan _kapat |
 | _Delete permanently | _Kalıcı olarak sil |
 | _Done | _Tamam |
 | Details | Ayrıntılar |
 | _Donate | _Bağış yap |
-| _Donate $5 | _Donate $5 |
+| _Donate $5 | 5 $ _bağış yap |
 | Donate | Bağış yap |
 | Leave a _star on GitHub | GitHub'da _yıldız bırak |
 | Apache 2.0 licence | Apache 2.0 lisansı |
@@ -346,7 +346,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | Küçük de olsa her bağış çok makbule geçer. |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | İptal istendi. InstallerClean, geçerli adımın durabileceği bir noktaya gelmesini bekliyor. Yoğun G/Ç sırasında ya da bir MSI veritabanı çağrısında bu birkaç saniye sürebilir. |
 | Close | Kapat |
-| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | Aslında InstallerClean için ücret almam gerekirdi, çünkü çok büyük bir emek harcandı; ama olabildiğince çok kişiye yardımcı olsun diye ücretsiz kalmasını istiyorum. Bağışınız tüm bu emeğe değmesini sağlıyor ve çok makbule geçiyor. |
 | A star helps other people find it. | Bir yıldız, başkalarının InstallerClean'i bulmasına yardımcı olur. |
 | Minimise | Simge durumuna küçült |
 | Move the unneeded files to the backup folder. | Gereksiz dosyaları yedek klasörüne taşır. |
@@ -361,7 +361,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Türkçe |
 | --- | --- |
 | Donate | Bağış yap |
-| Donate $5 | Donate $5 |
+| Donate $5 | 5 $ bağış yap |
 | Donate | Bağış yap |
 | Cancel operation | İşlemi iptal et |
 | Cancel scan | Taramayı iptal et |
@@ -512,7 +512,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | {0} gereksiz {1} şuraya taşınıyor: {2}... |
 | Moved {0} unneeded {1}. | {0} gereksiz {1} taşındı. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Programlarınızın hâlâ normal şekilde güncellendiğini ve kaldırıldığını doğrulayın, sonra {0} klasörünü silin. |
-| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean is free. If it helped, please donate $5: {0} |
+| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean ücretsizdir. İşinize yaradıysa lütfen 5 $ bağış yapın: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Geri almak kolay. Onları {0} konumundan {InstallerFolder} klasörüne geri taşıyın, her şey eskisi gibi olur. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean yedek klasörünü artık doğrulayamadı, bu yüzden durdu. {0} konumunu denetleyin, sonra komutu yeniden çalıştırın. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Başka bir InstallerClean işlemi tek örnek kilidini tutuyor (GUI ya da başka bir CLI çalıştırması). Çıkış 75 (geçici); daha sonra yeniden denemek güvenli. |

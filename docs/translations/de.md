@@ -38,12 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | Ohne _Warten fortfahren |
 | Check for _updates | Nach _Updates suchen |
 | _Close | _Schließen |
-| _Close without donating | _Close without donating |
+| _Close without donating | _Ohne Spende schließen |
 | _Delete permanently | Endgültig _löschen |
 | _Done | _Fertig |
 | Details | Details |
 | _Donate | S_penden |
-| _Donate $5 | _Donate $5 |
+| _Donate $5 | 5 $ _spenden |
 | Donate | Spenden |
 | Leave a _star on GitHub | Einen Stern auf _GitHub hinterlassen |
 | Apache 2.0 licence | Apache-2.0-Lizenz |
@@ -346,7 +346,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | Über jede kleine Spende freue ich mich sehr. |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | Abbruch angefordert. InstallerClean wartet, bis der aktuelle Schritt einen Haltepunkt erreicht. Bei starker Datenträgeraktivität oder einem MSI-Datenbankaufruf kann das ein paar Sekunden dauern. |
 | Close | Schließen |
-| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | Eigentlich sollte ich für InstallerClean Geld verlangen, denn es hat enorm viel Arbeit gekostet, aber ich möchte es kostenlos halten, damit es so vielen Menschen wie möglich hilft. Deine Spende macht die Mühe lohnenswert und wird sehr geschätzt. |
 | A star helps other people find it. | Ein Stern hilft anderen, InstallerClean zu finden. |
 | Minimise | Minimieren |
 | Move the unneeded files to the backup folder. | Verschiebt die nicht benötigten Dateien in den Sicherungsordner. |
@@ -361,7 +361,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Deutsch |
 | --- | --- |
 | Donate | Spenden |
-| Donate $5 | Donate $5 |
+| Donate $5 | 5 $ spenden |
 | Donate | Spenden |
 | Cancel operation | Vorgang abbrechen |
 | Cancel scan | Scan abbrechen |
@@ -512,7 +512,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | {0} nicht benötigte {1} werden nach {2} verschoben... |
 | Moved {0} unneeded {1}. | {0} nicht benötigte {1} verschoben. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Prüfe, ob deine Programme sich weiterhin wie gewohnt aktualisieren und deinstallieren lassen, und lösche dann {0}. |
-| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean is free. If it helped, please donate $5: {0} |
+| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean ist kostenlos. Wenn es dir geholfen hat, spende bitte 5 $: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Das lässt sich leicht rückgängig machen. Verschiebe sie aus {0} zurück nach {InstallerFolder}, und alles ist wieder wie vorher. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean konnte den Sicherungsordner nicht mehr bestätigen und hat deshalb angehalten. Prüfe {0} und führe den Befehl dann erneut aus. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Ein anderer InstallerClean-Prozess hält die Einzelinstanz-Sperre (die GUI oder ein anderer CLI-Lauf). Exit-Code 75 (vorübergehend); ein späterer Wiederholungsversuch ist sicher. |

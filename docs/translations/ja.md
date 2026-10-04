@@ -38,12 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | 待たずに続行(_W) |
 | Check for _updates | 更新の確認(_U) |
 | _Close | 閉じる(_C) |
-| _Close without donating | _Close without donating |
+| _Close without donating | 寄付せずに閉じる(_C) |
 | _Delete permanently | 完全に削除(_D) |
 | _Done | 完了(_D) |
 | Details | 詳細 |
 | _Donate | 寄付(_D) |
-| _Donate $5 | _Donate $5 |
+| _Donate $5 | 5 ドルを寄付(_D) |
 | Donate | 寄付 |
 | Leave a _star on GitHub | GitHubでスターを付ける(_S) |
 | Apache 2.0 licence | Apache 2.0 ライセンス |
@@ -346,7 +346,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | どんな少額のご寄付でもありがたく思います。 |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | キャンセルが要求されました。InstallerClean は現在のステップが停止可能なポイントに達するのを待っています。大量の I/O または MSI データベース呼び出し中は数秒かかることがあります。 |
 | Close | 閉じる |
-| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | 膨大な手間がかかっているので、本当は InstallerClean を有料にすべきなのですが、できるだけ多くの人の役に立つよう無料のままにしたいと思っています。ご寄付をいただけると報われますし、とてもありがたく思います。 |
 | A star helps other people find it. | スターを付けると、InstallerClean を見つけてもらいやすくなります。 |
 | Minimise | 最小化 |
 | Move the unneeded files to the backup folder. | 不要ファイルをバックアップフォルダーへ移します。 |
@@ -361,7 +361,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | 日本語 |
 | --- | --- |
 | Donate | 寄付 |
-| Donate $5 | Donate $5 |
+| Donate $5 | 5 ドルを寄付 |
 | Donate | 寄付 |
 | Cancel operation | 操作をキャンセル |
 | Cancel scan | スキャンをキャンセル |
@@ -512,7 +512,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | {0} 個の不要な {1} を {2} へ移動しています... |
 | Moved {0} unneeded {1}. | {0} 個の不要な {1} を移動しました。 |
 | Check that your programs still update and uninstall as normal, then delete {0}. | プログラムがこれまでどおり更新およびアンインストールできることを確認してから、{0} を削除してください。 |
-| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean is free. If it helped, please donate $5: {0} |
+| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean は無料です。お役に立てたなら、5 ドルのご寄付をお願いします：{0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | 元に戻すのは簡単です。{0} から {InstallerFolder} に戻せば、すべて元どおりになります。 |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean はバックアップフォルダーを確認できなくなったため、停止しました。{0} を確認してから、コマンドをもう一度実行してください。 |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | 別の InstallerClean プロセスが単一インスタンスロックを保持しています (GUIまたは別のCLI実行)。終了コード75 (一時的)。後で再試行しても安全です。 |

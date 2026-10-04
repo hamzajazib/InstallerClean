@@ -38,12 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | Продовжити _без очікування |
 | Check for _updates | Перевірити о_новлення |
 | _Close | _Закрити |
-| _Close without donating | _Close without donating |
+| _Close without donating | _Закрити без підтримки |
 | _Delete permanently | _Видалити назавжди |
 | _Done | _Готово |
 | Details | Деталі |
 | _Donate | _Підтримати |
-| _Donate $5 | _Donate $5 |
+| _Donate $5 | _Підтримати на 5 $ |
 | Donate | Підтримати |
 | Leave a _star on GitHub | Лишити зірку на _GitHub |
 | Apache 2.0 licence | Ліцензія Apache 2.0 |
@@ -346,7 +346,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | Будь-яка, навіть невелика, підтримка дуже цінна. |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | Скасування запитано. InstallerClean чекає, доки поточний крок дійде до точки зупинки. Це може тривати кілька секунд під час інтенсивного вводу-виводу чи звернення до бази даних MSI. |
 | Close | Закрити |
-| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | Насправді за InstallerClean варто було б брати гроші: на нього пішло дуже багато праці. Але я хочу, щоб він залишався безкоштовним і допомагав якомога більшій кількості людей. Ваша підтримка надає всьому цьому сенсу, і я дуже за неї вдячний. |
 | A star helps other people find it. | Зірка допомагає іншим знайти InstallerClean. |
 | Minimise | Згорнути |
 | Move the unneeded files to the backup folder. | Переміщує непотрібні файли до папки резервних копій. |
@@ -361,7 +361,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Українська |
 | --- | --- |
 | Donate | Підтримати |
-| Donate $5 | Donate $5 |
+| Donate $5 | Підтримати на 5 $ |
 | Donate | Підтримати |
 | Cancel operation | Скасувати операцію |
 | Cancel scan | Скасувати сканування |
@@ -512,7 +512,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | Триває переміщення до {2}: {0} непотрібних {1}... |
 | Moved {0} unneeded {1}. | Переміщено {0} непотрібних {1}. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Переконайтеся, що ваші програми досі оновлюються та видаляються як звичайно, а потім видаліть {0}. |
-| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean is free. If it helped, please donate $5: {0} |
+| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean безкоштовний. Якщо він допоміг, будь ласка, підтримайте його на 5 $: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Це легко скасувати. Перемістіть їх з {0} назад до {InstallerFolder}, і все повернеться як було. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean більше не зміг підтвердити папку резервних копій і зупинився. Перевірте {0}, потім запустіть команду ще раз. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Інший процес InstallerClean утримує блокування єдиного екземпляра (графічний інтерфейс чи інший запуск CLI). Вихід 75 (тимчасовий); можна безпечно повторити пізніше. |

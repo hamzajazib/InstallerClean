@@ -162,7 +162,7 @@
        window, as Action.Done does on every other card, and like Done it has the
        focus and answers Enter when the card appears. Its access key must differ
        from Action.Donate's, the two being on that card together. -->
-  <data name="Action.CloseWithoutDonating" xml:space="preserve"><value>_Close without donating</value></data>
+  <data name="Action.CloseWithoutDonating" xml:space="preserve"><value>_Закрыть без поддержки</value></data>
   <!-- The label on both delete surfaces: the main window's button and the
        confirmation dialog's. It says "permanently" because Delete here does
        not mean what Delete means elsewhere in Windows, and the label is the
@@ -181,7 +181,7 @@
        stand in place of Done. The amount is in US dollars, written the way the
        language writes a dollar amount. Its access key must differ from
        Action.CloseWithoutDonating's, the two being on that card together. -->
-  <data name="Action.Donate" xml:space="preserve"><value>_Donate $5</value></data>
+  <data name="Action.Donate" xml:space="preserve"><value>_Поддержать на 5 $</value></data>
   <!-- The label on the small donate button under Done, on every completion card
        that carries Done. It takes no access key: Done is on screen beside it. The
        button shows this text as written, so an underscore here would appear on
@@ -225,7 +225,7 @@
        beside a label rather than a string, so WPF derives no name from it and
        this is the name; it says what the button says on screen, without the
        access-key marker. -->
-  <data name="Automation.Donate" xml:space="preserve"><value>Donate $5</value></data>
+  <data name="Automation.Donate" xml:space="preserve"><value>Поддержать на 5 $</value></data>
   <!-- The spoken name of the button Action.DonateSmall labels, for the same
        reason as Automation.Donate's. -->
   <data name="Automation.DonateSmall" xml:space="preserve"><value>Поддержать</value></data>
@@ -373,7 +373,7 @@
   <data name="Tooltip.CancellingPending" xml:space="preserve"><value>Запрошена отмена. InstallerClean ждёт, когда текущий шаг дойдёт до точки остановки. Это может занять несколько секунд при интенсивном вводе-выводе или обращении к базе данных MSI.</value></data>
   <data name="Tooltip.Close" xml:space="preserve"><value>Закрыть</value></data>
   <data name="Tooltip.Donate" xml:space="preserve">
-    <value>I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.</value>
+    <value>Вообще-то за InstallerClean стоило бы брать деньги: на него ушло огромное количество труда. Но я хочу, чтобы он оставался бесплатным и помогал как можно большему числу людей. Ваша поддержка придаёт всему этому смысл, и я очень за неё благодарен.</value>
     <comment>Tooltip and screen-reader help on Action.Donate's button. The space before each hyphen is a no-break space, so a narrow tooltip never starts a line with the hyphen; a translation punctuates the aside the way its own language does.</comment>
   </data>
   <data name="Tooltip.LeaveStarOnGitHub.About" xml:space="preserve">
@@ -2382,5 +2382,5 @@ InstallerClean уже был запущен от имени администра
   <data name="Cli.SourceGivenUp.Drive" xml:space="preserve"><value>InstallerClean перестал ждать диск {0} и оставил без изменений все файлы, которые ещё нужно было сверить с ним. Когда он начнёт отвечать нормально, запустите команду снова.</value></data>
   <data name="Cli.SourceGivenUp.Path" xml:space="preserve"><value>InstallerClean перестал ждать {0} и оставил без изменений все файлы, которые ещё нужно было сверить с тем, что там находится. Когда доступ станет нормальным, запустите команду снова.</value></data>
   <data name="Cli.SourcesGivenUp" xml:space="preserve"><value>InstallerClean перестал ждать несколько дисков или сетевых ресурсов ({0}) и оставил без изменений все файлы, которые ещё нужно было сверить с одним из них. Когда они начнут отвечать нормально, запустите команду снова.</value></data>
-  <data name="Cli.DonateAsk" xml:space="preserve"><value>InstallerClean is free. If it helped, please donate $5: {0}</value></data>
+  <data name="Cli.DonateAsk" xml:space="preserve"><value>InstallerClean бесплатен. Если он помог, пожалуйста, поддержите его на 5 $: {0}</value></data>
 </root>

@@ -38,12 +38,12 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | 기다리지 않고 계속(_W) |
 | Check for _updates | 업데이트 확인(_U) |
 | _Close | 닫기(_C) |
-| _Close without donating | _Close without donating |
+| _Close without donating | 후원하지 않고 닫기(_C) |
 | _Delete permanently | 영구 삭제(_D) |
 | _Done | 완료(_D) |
 | Details | 세부 정보 |
 | _Donate | 후원(_D) |
-| _Donate $5 | _Donate $5 |
+| _Donate $5 | 5달러 후원(_D) |
 | Donate | 후원 |
 | Leave a _star on GitHub | GitHub에 별 남기기(_S) |
 | Apache 2.0 licence | Apache 2.0 라이선스 |
@@ -346,7 +346,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Any small donation is much appreciated. | 적은 금액의 후원도 정말 감사합니다. |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | 취소가 요청되었습니다. InstallerClean이 현재 단계가 멈출 수 있는 지점에 이를 때까지 기다리고 있습니다. I/O가 많거나 MSI 데이터베이스를 호출하는 동안에는 몇 초 걸릴 수 있습니다. |
 | Close | 닫기 |
-| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | 정말 많은 노력이 들어갔기 때문에 InstallerClean을 유료로 해야 마땅하지만, 최대한 많은 사람에게 도움이 되도록 무료로 유지하고 싶습니다. 후원해 주시면 큰 보람이 되고 정말 감사하겠습니다. |
 | A star helps other people find it. | 별 하나가 다른 사람들이 InstallerClean을 찾는 데 도움이 됩니다. |
 | Minimise | 최소화 |
 | Move the unneeded files to the backup folder. | 불필요한 파일을 백업 폴더로 옮깁니다. |
@@ -361,7 +361,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | 한국어 |
 | --- | --- |
 | Donate | 후원 |
-| Donate $5 | Donate $5 |
+| Donate $5 | 5달러 후원 |
 | Donate | 후원 |
 | Cancel operation | 작업 취소 |
 | Cancel scan | 검사 취소 |
@@ -512,7 +512,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | 불필요한 {1} {0}개를 {2}(으)로 이동 중... |
 | Moved {0} unneeded {1}. | 불필요한 {1} {0}개를 이동했습니다. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | 프로그램이 여전히 정상적으로 업데이트되고 제거되는지 확인한 다음 {0}을(를) 삭제하세요. |
-| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean is free. If it helped, please donate $5: {0} |
+| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean은 무료입니다. 도움이 되었다면 5달러를 후원해 주세요: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | 되돌리기는 간단합니다. {0}에서 {InstallerFolder}로 다시 옮기면 모든 것이 원래대로 돌아갑니다. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean이 백업 폴더를 더 이상 확인할 수 없어서, 중단했습니다. {0}을(를) 확인한 다음 명령을 다시 실행하세요. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | 다른 InstallerClean 프로세스가 단일 인스턴스 잠금을 보유하고 있습니다(GUI 또는 다른 CLI 실행). 종료 코드 75(일시적); 나중에 다시 시도해도 안전합니다. |

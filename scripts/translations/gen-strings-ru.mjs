@@ -104,7 +104,7 @@ const MAP = {
   'Action.Done': `_Готово`,
   'Action.Details': `Подробности`,
   'Action.BuyMeACuppa': `_Поддержать`,
-  'Action.Donate': `_Donate \$5`,
+  'Action.Donate': `_Поддержать на 5 \$`,
   'Action.DonateSmall': `Поддержать`,
   'Action.LeaveStarOnGitHub': `Поставить з_везду на GitHub`,
   'Action.Licence': `Лицензия Apache 2.0`,
@@ -117,7 +117,7 @@ const MAP = {
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `Поддержать`,
-  'Automation.Donate': `Donate \$5`,
+  'Automation.Donate': `Поддержать на 5 \$`,
   'Automation.DonateSmall': `Поддержать`,
   // The three Cancel names are built on the noun Отмена rather than the verb
   // Отменить, which share only a root: WCAG 2.5.3 (Label in Name) asks that a
@@ -484,8 +484,8 @@ const MAP = {
   'Summary.SourceGivenUp.Path': `InstallerClean продолжил работу без {0} и оставил без изменений все файлы, которые ещё нужно было сверить с тем, что там находится. Когда доступ снова станет нормальным, нажмите «Повторить сканирование».`,
   'Summary.SourcesGivenUp': `InstallerClean продолжил работу без нескольких дисков или сетевых ресурсов ({0}) и оставил без изменений все файлы, которые ещё нужно было сверить с одним из них. Когда они снова будут отвечать нормально, нажмите «Повторить сканирование».`,
   'Display.DriveName': `диск {0}`,
-  'Action.CloseWithoutDonating': `_Close without donating`,
-  'Tooltip.Donate': `I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.`,
+  'Action.CloseWithoutDonating': `_Закрыть без поддержки`,
+  'Tooltip.Donate': `Вообще-то за InstallerClean стоило бы брать деньги: на него ушло огромное количество труда. Но я хочу, чтобы он оставался бесплатным и помогал как можно большему числу людей. Ваша поддержка придаёт всему этому смысл, и я очень за неё благодарен.`,
   'Completion.SendReport': `Send _anonymous report`,
   'Completion.ReportPanel.Intro': `The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs:`,
   'Completion.ReportPanel.Freed': `How much space was freed, and how many files were moved or deleted`,
@@ -665,7 +665,7 @@ const CLI = {
   'Cli.SourceGivenUp.Drive': `InstallerClean перестал ждать диск {0} и оставил без изменений все файлы, которые ещё нужно было сверить с ним. Когда он начнёт отвечать нормально, запустите команду снова.`,
   'Cli.SourceGivenUp.Path': `InstallerClean перестал ждать {0} и оставил без изменений все файлы, которые ещё нужно было сверить с тем, что там находится. Когда доступ станет нормальным, запустите команду снова.`,
   'Cli.SourcesGivenUp': `InstallerClean перестал ждать несколько дисков или сетевых ресурсов ({0}) и оставил без изменений все файлы, которые ещё нужно было сверить с одним из них. Когда они начнут отвечать нормально, запустите команду снова.`,
-  'Cli.DonateAsk': `InstallerClean is free. If it helped, please donate \$5: {0}`,
+  'Cli.DonateAsk': `InstallerClean бесплатен. Если он помог, пожалуйста, поддержите его на 5 \$: {0}`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,
