@@ -249,7 +249,7 @@ const MAP = {
   'Status.ScanAccessDenied': `Akses ditolak. Windows menolak pemindaian.`,
   'Status.ScanStopped': `Pemindaian dihentikan.`,
   'Status.ScanCancelled': `Pemindaian dibatalkan.`,
-  'Status.Done': `Siap`,
+  'Status.Ready': `Siap`,
   'Status.ScanFailedDetails': `Pemindaian gagal ({0}). Detail di {1}.`,
   'Status.ScanFailedDetails.NoLog': `Pemindaian gagal ({0}). Log kerusakan tidak bisa ditulis.`,
 

@@ -247,7 +247,7 @@ const MAP = {
   'Status.ScanAccessDenied': `Zugriff verweigert. Windows hat den Scan abgelehnt.`,
   'Status.ScanStopped': `Scan gestoppt.`,
   'Status.ScanCancelled': `Scan abgebrochen.`,
-  'Status.Done': `Bereit`,
+  'Status.Ready': `Bereit`,
   'Status.ScanFailedDetails': `Scan fehlgeschlagen ({0}). Details in {1}.`,
   'Status.ScanFailedDetails.NoLog': `Scan fehlgeschlagen ({0}). Das Absturzprotokoll konnte nicht geschrieben werden.`,
 

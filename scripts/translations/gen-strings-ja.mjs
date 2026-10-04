@@ -205,7 +205,7 @@ const MAP = {
   'Status.ScanAccessDenied': `アクセスが拒否されました。Windows がスキャンを拒否しました。`,
   'Status.ScanStopped': `スキャンを中止しました。`,
   'Status.ScanCancelled': `スキャンがキャンセルされました。`,
-  'Status.Done': `準備完了`,
+  'Status.Ready': `準備完了`,
   'Status.ScanFailedDetails': `スキャンに失敗しました ({0})。詳細は {1} をご覧ください。`,
   'Status.ScanFailedDetails.NoLog': `スキャンに失敗しました ({0})。クラッシュログを書き込めませんでした。`,
   'Completion.AllClean': `すべてクリーン`,

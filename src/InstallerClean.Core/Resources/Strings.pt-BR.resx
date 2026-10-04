@@ -653,7 +653,7 @@ Para recolocá-lo, você precisa do instalador da versão que já tem. Consiga-o
        names none. -->
   <data name="Status.ScanStopped" xml:space="preserve"><value>Análise interrompida.</value></data>
   <data name="Status.ScanCancelled" xml:space="preserve"><value>Análise cancelada.</value></data>
-  <data name="Status.Done" xml:space="preserve"><value>Pronto</value></data>
+  <data name="Status.Ready" xml:space="preserve"><value>Pronto</value></data>
   <!-- 0 = exception type name. Full message + stack trace go only to
        the crash log because exception messages from elevated framework
        calls can contain paths from another user's profile. 1 = crash

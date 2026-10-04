@@ -253,7 +253,7 @@ const MAP = {
   'Status.ScanAccessDenied': `Відмовлено в доступі. Windows відхилив сканування.`,
   'Status.ScanStopped': `Сканування зупинено.`,
   'Status.ScanCancelled': `Сканування скасовано.`,
-  'Status.Done': `Готово`,
+  'Status.Ready': `Готово`,
   'Status.ScanFailedDetails': `Збій сканування ({0}). Деталі у {1}.`,
   'Status.ScanFailedDetails.NoLog': `Збій сканування ({0}). Не вдалося записати журнал збоїв.`,
 

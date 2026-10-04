@@ -266,7 +266,7 @@ const MAP = {
   'Status.ScanAccessDenied': `Odmowa dostępu. Windows odmówił skanowania.`,
   'Status.ScanStopped': `Skanowanie zatrzymane.`,
   'Status.ScanCancelled': `Skanowanie anulowane.`,
-  'Status.Done': `Gotowe`,
+  'Status.Ready': `Gotowe`,
   'Status.ScanFailedDetails': `Skanowanie nie powiodło się ({0}). Szczegóły w {1}.`,
   'Status.ScanFailedDetails.NoLog': `Skanowanie nie powiodło się ({0}). Nie udało się zapisać dziennika awarii.`,
 

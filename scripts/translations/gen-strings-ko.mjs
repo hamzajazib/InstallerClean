@@ -227,7 +227,7 @@ const MAP = {
   'Status.ScanAccessDenied': `액세스가 거부되었습니다. Windows가 검사를 거부했습니다.`,
   'Status.ScanStopped': `검사가 중지되었습니다.`,
   'Status.ScanCancelled': `검사가 취소되었습니다.`,
-  'Status.Done': `준비됨`,
+  'Status.Ready': `준비됨`,
   'Status.ScanFailedDetails': `검사 실패 ({0}). 자세한 내용은 {1}에 있습니다.`,
   'Status.ScanFailedDetails.NoLog': `검사 실패 ({0}). 크래시 로그를 기록할 수 없었습니다.`,
 

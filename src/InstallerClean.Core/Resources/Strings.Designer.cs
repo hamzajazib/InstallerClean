@@ -455,7 +455,6 @@ public static class Strings
     public static string Status_DeleteFailed => Get("Status.DeleteFailed");
     public static string Status_DeleteFailed_NoLog => Get("Status.DeleteFailed.NoLog");
     public static string Status_Deleting => Get("Status.Deleting");
-    public static string Status_Done => Get("Status.Done");
     public static string Status_FoundUnused => Get("Status.FoundUnused");
     public static string Status_MatchingCount => Get("Status.MatchingCount");
     public static string Status_MoveCancelled_Partial => Get("Status.MoveCancelled.Partial");
@@ -464,6 +463,7 @@ public static class Strings
     public static string Status_Moving => Get("Status.Moving");
     public static string Status_PreparingDestination => Get("Status.PreparingDestination");
     public static string Status_QueryingApi => Get("Status.QueryingApi");
+    public static string Status_Ready => Get("Status.Ready");
     public static string Status_RegisteredPackagesFound => Get("Status.RegisteredPackagesFound");
     public static string Status_ScanAccessDenied => Get("Status.ScanAccessDenied");
     public static string Status_ScanCancelled => Get("Status.ScanCancelled");

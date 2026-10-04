@@ -135,7 +135,7 @@ public partial class SplashWindow : Window
             CancelButton.ClearValue(AutomationProperties.HelpTextProperty);
             SplashProgress.IsIndeterminate = false;
         }
-        UpdateStep(Strings.Status_Done, 100, ease);
+        UpdateStep(Strings.Status_Ready, 100, ease);
     }
 
     public void UpdateStep(string message, double progressPercent, TimeSpan? ease = null)

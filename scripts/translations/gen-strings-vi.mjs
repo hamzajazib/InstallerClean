@@ -230,7 +230,7 @@ const MAP = {
   'Status.ScanAccessDenied': `Truy cập bị từ chối. Windows đã từ chối lần quét.`,
   'Status.ScanStopped': `Đã dừng quét.`,
   'Status.ScanCancelled': `Đã hủy quét.`,
-  'Status.Done': `Sẵn sàng`,
+  'Status.Ready': `Sẵn sàng`,
   'Status.ScanFailedDetails': `Quét thất bại ({0}). Chi tiết trong {1}.`,
   'Status.ScanFailedDetails.NoLog': `Quét thất bại ({0}). Không thể ghi nhật ký sự cố.`,
 

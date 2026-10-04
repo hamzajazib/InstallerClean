@@ -300,7 +300,7 @@ const MAP = {
   'Status.ScanAccessDenied': `Access denied. Windows refused the scan.`,
   'Status.ScanStopped': `Scan stopped.`,
   'Status.ScanCancelled': `Scan cancelled.`,
-  'Status.Done': `Ready`,
+  'Status.Ready': `Ready`,
   'Status.ScanFailedDetails': `Scan failed ({0}). Details in {1}.`,
   'Status.ScanFailedDetails.NoLog': `Scan failed ({0}). The crash log could not be written.`,
 

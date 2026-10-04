@@ -26,7 +26,7 @@
 //
 // DO NOT REPLACE THIS WITH A DATE COMPARISON. The date version of this check asks
 // whether a satellite's value last moved before the neutral's did, and the English
-// moves for reasons that leave a translation correct. It flags Status.Done in
+// moves for reasons that leave a translation correct. It flags Status.Ready in
 // Spanish and Russian, where the neutral says "Ready" and the satellites say
 // "Listo" and "Готово", which are correct; flagging destroys two good
 // translations for a human to redo. It flags the two Cli.Help lines where the only

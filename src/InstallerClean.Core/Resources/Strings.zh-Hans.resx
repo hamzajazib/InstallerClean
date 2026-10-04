@@ -653,7 +653,7 @@
        names none. -->
   <data name="Status.ScanStopped" xml:space="preserve"><value>扫描已停止。</value></data>
   <data name="Status.ScanCancelled" xml:space="preserve"><value>扫描已取消。</value></data>
-  <data name="Status.Done" xml:space="preserve"><value>就绪</value></data>
+  <data name="Status.Ready" xml:space="preserve"><value>就绪</value></data>
   <!-- 0 = exception type name. Full message + stack trace go only to
        the crash log because exception messages from elevated framework
        calls can contain paths from another user's profile. 1 = crash

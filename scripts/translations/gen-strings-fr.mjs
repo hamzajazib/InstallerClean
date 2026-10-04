@@ -255,7 +255,7 @@ const MAP = {
   'Status.ScanAccessDenied': `Accès refusé. Windows a refusé l'analyse.`,
   'Status.ScanStopped': `Analyse arrêtée.`,
   'Status.ScanCancelled': `Analyse annulée.`,
-  'Status.Done': `Prêt`,
+  'Status.Ready': `Prêt`,
   'Status.ScanFailedDetails': `Échec de l'analyse ({0}). Détails dans {1}.`,
   'Status.ScanFailedDetails.NoLog': `Échec de l'analyse ({0}). Le crash.log n'a pas pu être écrit.`,
 

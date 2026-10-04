@@ -222,7 +222,7 @@ const MAP = {
   'Status.ScanAccessDenied': `Accesso negato. Windows ha rifiutato la scansione.`,
   'Status.ScanStopped': `Scansione interrotta.`,
   'Status.ScanCancelled': `Scansione annullata.`,
-  'Status.Done': `Pronto`,
+  'Status.Ready': `Pronto`,
   'Status.ScanFailedDetails': `Scansione non riuscita ({0}). Dettagli in {1}.`,
   'Status.ScanFailedDetails.NoLog': `Scansione non riuscita ({0}). Non è stato possibile scrivere il file crash.log.`,
   'Completion.AllClean': `Tutto pulito`,

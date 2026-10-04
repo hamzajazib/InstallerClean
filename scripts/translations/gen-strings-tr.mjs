@@ -205,7 +205,7 @@ const MAP = {
   'Status.ScanAccessDenied': `Erişim reddedildi. Windows taramayı reddetti.`,
   'Status.ScanStopped': `Tarama durduruldu.`,
   'Status.ScanCancelled': `Tarama iptal edildi.`,
-  'Status.Done': `Hazır`,
+  'Status.Ready': `Hazır`,
   'Status.ScanFailedDetails': `Tarama başarısız oldu ({0}). Ayrıntılar {1} içinde.`,
   'Status.ScanFailedDetails.NoLog': `Tarama başarısız oldu ({0}). Çökme günlüğü yazılamadı.`,
   'Completion.AllClean': `Her şey temiz`,

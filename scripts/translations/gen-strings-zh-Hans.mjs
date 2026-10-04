@@ -199,7 +199,7 @@ const MAP = {
   'Status.ScanAccessDenied': `访问被拒绝。Windows 拒绝了扫描。`,
   'Status.ScanStopped': `扫描已停止。`,
   'Status.ScanCancelled': `扫描已取消。`,
-  'Status.Done': `就绪`,
+  'Status.Ready': `就绪`,
   'Status.ScanFailedDetails': `扫描失败（{0}）。详情见 {1}。`,
   'Status.ScanFailedDetails.NoLog': `扫描失败（{0}）。无法写入崩溃日志。`,
   'Completion.AllClean': `全部干净`,

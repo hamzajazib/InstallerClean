@@ -653,7 +653,7 @@ Aby go przywrócić, potrzebujesz instalatora tej wersji, którą już masz. Zdo
        names none. -->
   <data name="Status.ScanStopped" xml:space="preserve"><value>Skanowanie zatrzymane.</value></data>
   <data name="Status.ScanCancelled" xml:space="preserve"><value>Skanowanie anulowane.</value></data>
-  <data name="Status.Done" xml:space="preserve"><value>Gotowe</value></data>
+  <data name="Status.Ready" xml:space="preserve"><value>Gotowe</value></data>
   <!-- 0 = exception type name. Full message + stack trace go only to
        the crash log because exception messages from elevated framework
        calls can contain paths from another user's profile. 1 = crash

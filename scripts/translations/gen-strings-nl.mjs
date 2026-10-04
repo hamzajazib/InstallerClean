@@ -263,7 +263,7 @@ const MAP = {
   'Status.ScanAccessDenied': `Toegang geweigerd. Windows heeft de scan geweigerd.`,
   'Status.ScanStopped': `Scan gestopt.`,
   'Status.ScanCancelled': `Scan geannuleerd.`,
-  'Status.Done': `Klaar`,
+  'Status.Ready': `Klaar`,
   'Status.ScanFailedDetails': `Scan mislukt ({0}). Details in {1}.`,
   'Status.ScanFailedDetails.NoLog': `Scan mislukt ({0}). Het crashlog kon niet worden weggeschreven.`,
 
