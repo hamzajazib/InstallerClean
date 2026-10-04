@@ -1026,9 +1026,14 @@ public partial class MainWindow : Window
                 Width = 20,
                 VerticalAlignment = VerticalAlignment.Center,
             });
+            // Each name in the family its own language is drawn in, so Русский
+            // is in Montserrat and 日本語 in Yu Gothic UI whatever the screen's
+            // language. The East Asian families keep the theme family's line
+            // spacing, so every row of the menu is the same height.
             header.Children.Add(new TextBlock
             {
                 Text = endonym,
+                FontFamily = LanguageFonts.For(culture),
                 VerticalAlignment = VerticalAlignment.Center,
             });
             var item = new MenuItem

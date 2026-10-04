@@ -77,6 +77,10 @@
     <Resource Include="Fonts\Poppins-Medium.ttf" />
     <Resource Include="Fonts\Poppins-SemiBold.ttf" />
     <Resource Include="Fonts\Poppins-Bold.ttf" />
+    <Resource Include="Fonts\Montserrat-Regular.ttf" />
+    <Resource Include="Fonts\Montserrat-Medium.ttf" />
+    <Resource Include="Fonts\Montserrat-SemiBold.ttf" />
+    <Resource Include="Fonts\Montserrat-Bold.ttf" />
     <Resource Include="Assets\splash-icon.png" />
   </ItemGroup>
 

@@ -1021,8 +1021,9 @@ public partial class CompletionViewModel : ObservableObject
             // reference number.
             var count = bucket.Count();
             sb.Append(bucket.First().LocalisedGroupHeading(count)).AppendLine();
-            // Leading spaces alone vanish in a proportional font (Poppins), so
-            // the hyphen is what separates a filename from the sentence above it.
+            // Leading spaces alone vanish in a proportional font, which every
+            // font the app draws in is, so the hyphen is what separates a
+            // filename from the sentence above it.
             foreach (var err in bucket)
                 sb.Append("- ").Append(Path.GetFileName(err.FilePath)).AppendLine();
         }

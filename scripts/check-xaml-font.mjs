@@ -27,6 +27,12 @@
 //   a ContextMenu built in code take. A ToolTip or ContextMenu element naming a
 //   Style names one of those, and C# sets no Style on either.
 //
+// EVERY REFERENCE TO THE TOKEN IS A DynamicResource. App.OnStartup writes the
+// displayed language's family over Type.FontFamily in the application's own
+// resources. A StaticResource inside Components.xaml resolves against the
+// dictionaries the style was written in, Tokens.xaml among them, and never sees
+// that entry, so a StaticResource anywhere in the XAML fails.
+//
 // EVERY TABLE FAILS CLOSED. A XAML root element this file does not know, and a
 // Style= in C# outside an object initializer whose type it can read, stop the
 // build rather than pass unread.
@@ -122,7 +128,7 @@ const targetOf = (raw) => {
 };
 
 const problems = [];
-const matched = { windows: [], subclasses: [], popupStyles: [], popupElements: [], csStyles: [] };
+const matched = { windows: [], subclasses: [], popupStyles: [], popupElements: [], csStyles: [], tokenRefs: [] };
 
 const xamlFiles = collect(SRC, '.xaml');
 const csFiles = collect(SRC, '.cs').filter((f) => !f.endsWith('.Designer.cs'));
@@ -141,6 +147,14 @@ const popupElements = []; // { file, line, name, style }
 
 for (const file of xamlFiles) {
   const text = stripXmlComments(readFileSync(file, 'utf8'));
+
+  for (const m of text.matchAll(/\{(StaticResource|DynamicResource)\s+Type\.FontFamily\s*\}/g)) {
+    const line = lineAt(text, m.index);
+    matched.tokenRefs.push(`${file}:${line} ${m[1]}`);
+    if (m[1] === 'StaticResource') {
+      problems.push(`${file}:${line}: names Type.FontFamily through StaticResource, which cannot see the family App.OnStartup writes; expected ${FONT}`);
+    }
+  }
   const all = tags(text);
   const root = all.find((t) => !t.closing);
   if (!root) {
@@ -330,11 +344,12 @@ print('C# classes derived from Window', matched.subclasses);
 print('Popup styles', matched.popupStyles);
 print('Popup elements in XAML', matched.popupElements);
 print('Styles set in C#', matched.csStyles);
+print('References to Type.FontFamily in XAML', matched.tokenRefs);
 
 // A walk that matched no window, or no popup style, has stopped reading the
 // files rather than found them all correct.
-if (matched.windows.length === 0 || matched.popupStyles.length === 0) {
-  problems.push('the walk matched no Window root or no popup style, so it is not reading the files it is meant to');
+if (matched.windows.length === 0 || matched.popupStyles.length === 0 || matched.tokenRefs.length === 0) {
+  problems.push('the walk matched no Window root, no popup style or no reference to Type.FontFamily, so it is not reading the files it is meant to');
 }
 
 if (problems.length) {

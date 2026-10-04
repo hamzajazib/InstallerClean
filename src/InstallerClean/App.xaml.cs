@@ -35,7 +35,8 @@ public partial class App : Application
     private static bool _handlingUnhandledException;
 
     // The six Type.* size tokens that scale with the OS text-size
-    // setting. Type.FontFamily is deliberately absent: it is not a size.
+    // setting. Type.FontFamily is not among them: it is not a size, and
+    // OnStartup writes it once, for the displayed language.
     private static readonly string[] TypeSizeTokenKeys =
     {
         "Type.Display", "Type.Heading.Lg", "Type.Heading.Md",
@@ -89,14 +90,14 @@ public partial class App : Application
         // default tags every element with a language the app does not have,
         // whatever is on screen.
         //
-        // What hangs off it is font fallback, and the app leans on that harder
-        // than most: the bundled Poppins carries no CJK glyph, so every character
-        // of the Japanese, Korean and Chinese UI comes from a fallback font. The
-        // chain is all readable in dotnet/wpf. This property becomes the run's
-        // CultureInfo (DynamicPropertyReader.GetCultureInfo); the four-argument
-        // Typeface constructor the framework uses puts #GLOBAL USER INTERFACE
-        // behind the element's own family, so a character Poppins lacks reaches
-        // that composite font; and CompositeFontFamily.GetTargetFamilyMap picks
+        // What hangs off it is font fallback. A character the element's family
+        // does not carry, such as a Chinese, Japanese or Korean product name on a
+        // screen in another language, comes from a fallback font. The chain is
+        // all readable in dotnet/wpf. This property becomes the run's CultureInfo
+        // (DynamicPropertyReader.GetCultureInfo); the four-argument Typeface
+        // constructor the framework uses puts #GLOBAL USER INTERFACE behind the
+        // element's own family, so a character that family lacks reaches that
+        // composite font; and CompositeFontFamily.GetTargetFamilyMap picks
         // between its FontFamilyMaps by exactly this tag.
         //
         // The composite font it picks from is the pack resource
@@ -109,14 +110,14 @@ public partial class App : Application
         // below. A tag matching no map takes the maps carrying no language at all,
         // and those lead with Yu Gothic UI, Meiryo UI and Meiryo over the Han
         // block, the kana and CJK punctuation block and the fullwidth forms:
-        // Japanese faces. So Simplified Chinese draws its ideographs from a
-        // Japanese font, and Han unification makes that different characters
-        // rather than a different style. Japanese reaches the same faces either
-        // way, its maps being identical to the unlanguaged ones over kana and the
-        // fullwidth block and leading with the same three over Han, and Hangul has
-        // one map with no language on it at all, so what the tag moves for Korean
-        // is Han and CJK punctuation: a product name rather than one of the app's
-        // own strings.
+        // Japanese faces. Under zh-Hans its Chinese maps apply instead, leading
+        // with Microsoft YaHei UI, and Han unification makes the two different
+        // characters rather than a different style. Japanese reaches the same
+        // faces either way, its maps being identical to the unlanguaged ones over
+        // kana and the fullwidth block and leading with the same three over Han,
+        // and Hangul has one map with no language on it at all, so what the tag
+        // moves for Korean is Han and CJK punctuation: a product name rather than
+        // one of the app's own strings.
         //
         // Active(), not the preference and not the OS culture raw. The preference
         // is null on Automatic. The OS culture would be wrong the other way: on a
@@ -135,6 +136,20 @@ public partial class App : Application
             typeof(FrameworkElement),
             new FrameworkPropertyMetadata(
                 XmlLanguage.GetLanguage(SupportedLanguages.Active(Localisation.UiCulture))));
+
+        // The displayed language's font family, written over Type.FontFamily
+        // before anything is drawn, the first dialog below included. The read
+        // takes Tokens.xaml's value, nothing having been written over it yet.
+        // LanguageFonts hands a language it does not name that same theme family
+        // back, so for those languages the entry written holds the value
+        // Tokens.xaml already holds. A language change relaunches the app, so
+        // the family is chosen once per run.
+        //
+        // Every use of the token must be a DynamicResource: a StaticResource
+        // inside Components.xaml resolves against Tokens.xaml and never sees
+        // this entry.
+        LanguageFonts.Initialise((System.Windows.Media.FontFamily)Resources["Type.FontFamily"]);
+        Resources["Type.FontFamily"] = LanguageFonts.For(SupportedLanguages.Active(Localisation.UiCulture));
 
         // A process without administrator rights is told so and closes, before
         // anything scans. The manifest asks Windows for the rights, and Windows can

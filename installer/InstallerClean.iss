@@ -155,9 +155,9 @@ Source: "{#PublishDir}\cli\installerclean-cli.exe"; DestDir: "{app}"; Flags: ign
 ; you want to open this file?" picker instead.
 Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
 ; Same argument, for what is redistributed rather than what is licensed: the GUI
-; embeds four Poppins faces under the SIL Open Font License, and this setup
-; compiles in four community Inno Setup translations. The DestName trick is the
-; LICENSE one and is needed for the same reason.
+; embeds four Poppins and four Montserrat faces under the SIL Open Font License,
+; and this setup compiles in four community Inno Setup translations. The
+; DestName trick is the LICENSE one and is needed for the same reason.
 Source: "..\THIRD-PARTY-NOTICES"; DestDir: "{app}"; DestName: "THIRD-PARTY-NOTICES.txt"; Flags: ignoreversion
 
 [Icons]

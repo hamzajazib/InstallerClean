@@ -7,9 +7,9 @@ This file covers the third-party components redistributed inside InstallerClean'
 downloads. Which of them a download carries depends on which download it is, and
 the difference matters:
 
-  InstallerClean-<version>-setup.exe     Poppins, and four Inno Setup
-                                         translation files
-  InstallerClean-<version>-portable.exe  Poppins
+  InstallerClean-<version>-setup.exe     Poppins, Montserrat, and four
+                                         Inno Setup translation files
+  InstallerClean-<version>-portable.exe  Poppins and Montserrat
   installerclean-cli.exe                 neither, and nothing on this page
                                          applies to it: it is built from
                                          InstallerClean.Core alone, which
@@ -26,7 +26,8 @@ Poppins
 -------------------------------------------------------------------------------
 
 Four faces (Regular, Medium, SemiBold and Bold), version 4.004, are compiled
-into InstallerClean.exe as WPF resources and used for the interface text.
+into InstallerClean.exe as WPF resources and used for the interface text in
+every language whose letters they carry.
 
   https://github.com/itfoundry/Poppins
 
@@ -126,6 +127,38 @@ INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
 DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
+
+-------------------------------------------------------------------------------
+Montserrat
+-------------------------------------------------------------------------------
+
+Four faces (Regular, Medium, SemiBold and Bold), version 9.000, are compiled
+into InstallerClean.exe as WPF resources. They draw the interface text in
+Russian, Ukrainian and Vietnamese, whose letters Poppins lacks, and in the
+other languages any character Poppins lacks and Montserrat has, such as the
+sort arrows in the Details windows.
+
+  https://github.com/JulietaUla/Montserrat
+
+They are a modified version of the files in that repository's fonts/ttf/
+folder at commit 555facfb2a18c72c3c0380f0d9c0f060453a9058: their line spacing
+is Poppins's, and the Greek letters are out of their character maps.
+scripts/fonts/make-montserrat.py in this repository makes them. Montserrat has
+no Reserved Font Name, so they keep the name.
+
+Their own name table declares:
+
+  Copyright 2011 The Montserrat Project Authors (https://github.com/JulietaUla/Montserrat)
+
+  This Font Software is licensed under the SIL Open Font License, Version 1.1.
+  This license is available with a FAQ at: https://openfontlicense.org
+
+The licence file in that repository at that commit opens:
+
+  Copyright 2024 The Montserrat.Git Project Authors (https://github.com/JulietaUla/Montserrat.git)
+
+Its licence is the SIL Open Font License 1.1, word for word as printed in full
+under Poppins above.
 
 -------------------------------------------------------------------------------
 Inno Setup translation files

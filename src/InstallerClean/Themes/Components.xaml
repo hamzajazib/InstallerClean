@@ -585,12 +585,12 @@
         <Setter Property="Padding" Value="12,0"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="FocusVisualStyle" Value="{StaticResource PillFocusVisual}"/>
-        <!-- WPF auto-generates the TextBox right-click ContextMenu in
-             code at show-time. That code path bypasses the implicit-
-             style scope in Application.Resources, so the themed
-             ContextMenu / MenuItem styles defined elsewhere in this
-             file never reach it. An explicit ContextMenu Setter is
-             the only route for the dark theme to apply. -->
+        <!-- A TextBox with no ContextMenu of its own gets WPF's, built at
+             show-time from private subclasses of ContextMenu and MenuItem
+             (TextEditorContextMenu). An implicit style matches its exact
+             type only, so the ContextMenu and MenuItem styles in this file
+             never reach those subclasses. This menu is the app's own, so
+             they do. -->
         <Setter Property="ContextMenu">
             <Setter.Value>
                 <ContextMenu>
