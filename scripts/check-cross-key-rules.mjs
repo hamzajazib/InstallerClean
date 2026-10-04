@@ -14,6 +14,7 @@ import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { standsInFor } from './plural-overrides.mjs';
 import { readLedger, englishFor, recordedFreshness } from './translation-ledger.mjs';
+import { readCSharp } from './csharp-source.mjs';
 
 const RESX_DIR = 'src/InstallerClean.Core/Resources';
 const GUI = 'src/InstallerClean';
@@ -475,60 +476,15 @@ function collectCs(dir, out = []) {
   return out;
 }
 
-// C# with its comments taken out. String literals are left where they are: a
-// literal is code, and the quoted forms (verbatim, interpolated, both at once,
-// and char literals) have to be walked anyway to know which slashes open a
-// comment and which sit inside a path or a URL. Raw string literals are the one
-// form not walked; a """ block carrying a // would hide the rest of that line
-// from the search, so a bypass could sit inside one unseen.
-const codeOnly = (src) => {
-  let out = '';
-  let i = 0;
-  while (i < src.length) {
-    const two = src.slice(i, i + 2);
-    if (two === '//') {
-      while (i < src.length && src[i] !== '\n') i++;
-      out += '\n';
-      continue;
-    }
-    if (two === '/*') {
-      i += 2;
-      while (i < src.length && src.slice(i, i + 2) !== '*/') i++;
-      i += 2;
-      out += ' ';
-      continue;
-    }
-    // Verbatim: a backslash is a backslash and the only escape is a doubled quote.
-    const three = src.slice(i, i + 3);
-    const opener = three === '$@"' || three === '@$"' ? 3 : two === '@"' ? 2 : 0;
-    if (opener) {
-      out += src.slice(i, i + opener);
-      i += opener;
-      while (i < src.length) {
-        if (src[i] === '"' && src[i + 1] === '"') { out += '""'; i += 2; continue; }
-        out += src[i];
-        i++;
-        if (src[i - 1] === '"') break;
-      }
-      continue;
-    }
-    // Regular and interpolated strings, and char literals: backslash escapes.
-    if (src[i] === '"' || src[i] === "'") {
-      const quote = src[i];
-      out += src[i];
-      i++;
-      while (i < src.length) {
-        if (src[i] === '\\') { out += src.slice(i, i + 2); i += 2; continue; }
-        out += src[i];
-        i++;
-        if (src[i - 1] === quote) break;
-      }
-      continue;
-    }
-    out += src[i];
-    i++;
+// C# with its comments taken out, string literals left in place. A file that cannot be
+// read to its end stops the run.
+const codeOnly = (file) => {
+  try {
+    return readCSharp(readFileSync(file, 'utf8')).code;
+  } catch (e) {
+    console.error(`${file}: cannot be read to its end (${e.message}). Refusing to report on it.`);
+    process.exit(2);
   }
-  return out;
 };
 
 const problems = [];
@@ -602,7 +558,7 @@ for (const file of xamlFiles) {
 const csFiles = collectCs('src');
 const rawAllowed = new Map(RAW_READ_ALLOWED.map((e) => [e.file, e.reason]));
 const rawReaders = new Set(
-  csFiles.filter((f) => RAW_READ.test(codeOnly(readFileSync(f, 'utf8')))),
+  csFiles.filter((f) => RAW_READ.test(codeOnly(f))),
 );
 for (const file of [...rawReaders].sort())
   if (!rawAllowed.has(file))
@@ -621,7 +577,7 @@ for (const file of [...rawAllowed.keys()].sort())
 // the app no longer speaks looking used.
 const appCode = csFiles
   .filter((file) => !file.startsWith('src/InstallerClean.Tests/'))
-  .map((file) => codeOnly(readFileSync(file, 'utf8')))
+  .map((file) => codeOnly(file))
   .join('\n');
 for (const { name } of ELABORATES_A_LABEL_IN_CODE) {
   const accessor = `Strings.${name.replaceAll('.', '_')}`;

@@ -24,57 +24,55 @@
 //
 // Run from the repo root: node scripts/check-counted-string-inventory.mjs
 import { readFileSync } from 'node:fs';
+import { readCSharp } from './csharp-source.mjs';
 
 const switchPath = 'src/InstallerClean.Core/Helpers/DisplayHelpers.cs';
 const inventoryPath = 'src/InstallerClean.Tests/Helpers/CountedStringTests.cs';
 
-// Comments are stripped before any literal is read. Both regions carry prose in
-// double quotes explaining the classification, and a reader that does not drop it
-// returns whole sentences as though they were prefixes. A // is only a comment
-// where it is not inside a string, so the cut is taken at the first one with an
-// even number of quotes before it.
-function withoutComments(region) {
-  return region
-    .split('\n')
-    .map((line) => {
-      let quotes = 0;
-      for (let i = 0; i < line.length - 1; i++) {
-        if (line[i] === '"') quotes++;
-        else if (line[i] === '/' && line[i + 1] === '/' && quotes % 2 === 0) return line.slice(0, i);
-      }
-      return line;
-    })
-    .join('\n');
-}
+// Each file is read with its comments taken out. A literal is a regular string in the
+// code: its quotes are found where the text inside every string and character literal
+// is blanked, so a quote in a character literal is not one, and its text is read from
+// the code between them. A literal holding an escape is not a prefix and is left out.
+const read = (path) => {
+  try {
+    return readCSharp(readFileSync(path, 'utf8'));
+  } catch (e) {
+    console.error(`${path}: cannot be read to its end (${e.message}). Refusing to report on it.`);
+    process.exit(2);
+  }
+};
 
-const literals = (region) => [...withoutComments(region).matchAll(/"([^"\\]+)"/g)].map((m) => m[1]);
+const literals = ({ code, bare }, from, to) =>
+  [...bare.slice(from, to).matchAll(/"( +)"/g)]
+    .map((m) => code.slice(from + m.index + 1, from + m.index + 1 + m[1].length))
+    .filter((text) => !text.includes('\\'));
 
 // The classifier's arms, taken from the head of the switch to its default arm.
 // Stopping at the default matters: the throw below it holds prose in double quotes
 // that would otherwise read as prefixes.
 function classifiedPrefixes(source) {
-  const head = source.indexOf('QuestionFor(string keyPrefix) => keyPrefix switch');
+  const head = source.code.indexOf('QuestionFor(string keyPrefix) => keyPrefix switch');
   if (head === -1) fail(`${switchPath}: could not find the QuestionFor switch. Has it been renamed?`);
-  const tail = source.indexOf('_ =>', head);
+  const tail = source.code.indexOf('_ =>', head);
   if (tail === -1) fail(`${switchPath}: the QuestionFor switch has no default arm, so its end cannot be located.`);
-  return literals(source.slice(head, tail));
+  return literals(source, head, tail);
 }
 
 // The array the tests walk. Read to its closing brace rather than to the next
 // array, because a second inventory sits directly below this one and the two hold
 // deliberately different sets.
 function inventoryPrefixes(source) {
-  const head = source.indexOf('private static readonly string[] CountedPrefixes =');
+  const head = source.code.indexOf('private static readonly string[] CountedPrefixes =');
   if (head === -1) fail(`${inventoryPath}: could not find CountedPrefixes. Has it been renamed?`);
   // Both closers, because the array's syntax is not this check's to pin: written as
   // a collection expression it closes with ]; instead, and a reader that knew only
   // one form would run on into the next array and report its members as duplicates
   // of nothing. Whichever comes first is this array's end.
-  const braced = source.indexOf('};', head);
-  const bracketed = source.indexOf('];', head);
+  const braced = source.code.indexOf('};', head);
+  const bracketed = source.code.indexOf('];', head);
   const ends = [braced, bracketed].filter((i) => i !== -1);
   if (ends.length === 0) fail(`${inventoryPath}: CountedPrefixes is not closed, so its end cannot be located.`);
-  return literals(source.slice(head, Math.min(...ends)));
+  return literals(source, head, Math.min(...ends));
 }
 
 function fail(message) {
@@ -82,8 +80,8 @@ function fail(message) {
   process.exit(1);
 }
 
-const classified = classifiedPrefixes(readFileSync(switchPath, 'utf8'));
-const inventory = inventoryPrefixes(readFileSync(inventoryPath, 'utf8'));
+const classified = classifiedPrefixes(read(switchPath));
+const inventory = inventoryPrefixes(read(inventoryPath));
 
 // PARSE CONTROL, about the READING rather than about the content. A regex that has
 // stopped matching yields an empty set, and two empty sets agree with each other,

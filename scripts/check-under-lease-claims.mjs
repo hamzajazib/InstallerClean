@@ -35,23 +35,19 @@
 //   node scripts/check-under-lease-claims.mjs
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { readCSharp } from './csharp-source.mjs';
 
 const ROOT = 'src';
 const TESTS = join(ROOT, 'InstallerClean.Tests');
 const METHODS = ['DeleteFilesAsync', 'MoveFilesAsync'];
 const REQUIRED = 'UnderLeaseClaims.From(';
 
-// Comments come off before the search, so a file that merely discusses a call is not
-// a finding and a call commented out is not one either.
-const codeOnly = (s) =>
-  s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^[ \t]*\/\/.*$/gm, ' ').replace(/\/\/.*$/gm, ' ');
-
 function* csFiles(dir) {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name);
     if (path === TESTS || name === 'bin' || name === 'obj') continue;
     if (statSync(path).isDirectory()) yield* csFiles(path);
-    else if (name.endsWith('.cs')) yield path;
+    else if (name.endsWith('.cs')) yield path.replace(/\\/g, '/');
   }
 }
 
@@ -66,30 +62,45 @@ function argumentSpan(text, openIndex) {
 }
 
 const problems = [];
+const refusals = [];
 let callSites = 0;
 
+// Each file is read with its comments and the text inside its strings taken out, so a
+// call is code, a bracket is a bracket of the code, and a string holding the text of
+// a call is neither.
+console.log('Production calls to the action services:');
 for (const file of csFiles(ROOT)) {
-  const code = codeOnly(readFileSync(file, 'utf8'));
+  let code;
+  try {
+    code = readCSharp(readFileSync(file, 'utf8')).bare;
+  } catch (e) {
+    refusals.push(`${file}: cannot be read to its end (${e.message})`);
+    continue;
+  }
   for (const method of METHODS) {
     const re = new RegExp(`\\.${method}\\s*\\(`, 'g');
-    let m;
-    while ((m = re.exec(code)) !== null) {
-      const open = code.indexOf('(', m.index);
-      const args = argumentSpan(code, open);
+    for (const m of code.matchAll(re)) {
+      const line = code.slice(0, m.index).split('\n').length;
+      const args = argumentSpan(code, code.indexOf('(', m.index));
       if (args === null) {
-        problems.push(`${file}: a call to ${method} whose argument list does not close`);
+        refusals.push(`${file}:${line} a call to ${method} whose argument list does not close`);
         continue;
       }
       callSites++;
-      if (!args.includes(REQUIRED))
+      const passes = args.includes(REQUIRED);
+      console.log(`  ${file}:${line}  ${method}  ${passes ? `passes ${REQUIRED}...)` : `NOT passed ${REQUIRED}...)`}`);
+      if (!passes)
         problems.push(
-          `${file}:${code.slice(0, m.index).split('\n').length} ${method} is not passed `
+          `${file}:${line} ${method} is not passed `
           + `${REQUIRED}...). The claims the pre-lease re-verify produced are what the `
           + 'under-lease re-read is for; anything else hands it an empty batch and it '
           + 'returns a pass without asking.');
     }
   }
 }
+
+for (const r of refusals) console.error(`  REFUSING: ${r}`);
+if (refusals.length) process.exit(2);
 
 for (const p of problems) console.error(`  ${p}`);
 
