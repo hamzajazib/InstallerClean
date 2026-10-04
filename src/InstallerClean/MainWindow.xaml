@@ -8,6 +8,7 @@
         SizeToContent="Height"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
+        FontFamily="{StaticResource Type.FontFamily}"
         Background="{StaticResource Surface.Sidebar}">
 
     <WindowChrome.WindowChrome>

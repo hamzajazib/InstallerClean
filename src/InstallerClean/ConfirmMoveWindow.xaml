@@ -4,6 +4,7 @@
         xmlns:loc="clr-namespace:InstallerClean.Resources"
         xmlns:a11y="clr-namespace:InstallerClean.Helpers"
         WindowStyle="None" AllowsTransparency="True"
+        FontFamily="{StaticResource Type.FontFamily}"
         Background="Transparent"
         ShowInTaskbar="False"
         SizeToContent="WidthAndHeight"

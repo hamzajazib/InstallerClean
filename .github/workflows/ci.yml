@@ -146,6 +146,14 @@ jobs:
         if: success() || failure()
         run: node scripts/check-xaml-resources.mjs
 
+      # Text takes its font from the root it is drawn under, a window or a
+      # tooltip or menu popup, and a root without the app's font draws a styled
+      # TextBlock or a TextBox in the system font. Nothing fails when that
+      # happens: the window opens and the line is in the wrong typeface.
+      - name: Check every window and popup carries the app font
+        if: success() || failure()
+        run: node scripts/check-xaml-font.mjs
+
       # A production caller may pass the action services an empty set of claims and
       # the compiler cannot see it: the argument is required, so passing the wrong
       # value satisfies it. The under-lease re-read then returns a pass at its first

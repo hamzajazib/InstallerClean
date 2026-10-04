@@ -17,11 +17,19 @@
         <ResourceDictionary Source="Tokens.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
-    <!-- Global defaults. Bundled-font assignment on Window and
-         TextBlock removes the per-control FontFamily repetition. -->
-    <Style TargetType="Window">
-        <Setter Property="FontFamily" Value="{StaticResource Type.FontFamily}"/>
-    </Style>
+    <!-- The bundled font. Text inherits it from the root it is drawn
+         under, so each window sets FontFamily on its own root tag, and the
+         ToolTip and ContextMenu styles below set it for the popups, which
+         inherit nothing from the window that opens them. That reaches a
+         TextBlock carrying a Style of its own, which the implicit style
+         here does not, and a TextBox, whose text the box draws itself.
+
+         A window cannot take the font from an implicit Window style: an
+         implicit style matches its exact type, and every window here is a
+         class derived from Window. scripts/check-xaml-font.mjs fails the
+         build on a window root or a popup style without the font.
+
+         This implicit style covers a TextBlock under any other root. -->
     <Style TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource Type.FontFamily}"/>
     </Style>
@@ -1117,6 +1125,7 @@
          ToolTip style below is the default for everything else. -->
 
     <Style x:Key="AccentTooltip" TargetType="ToolTip">
+        <Setter Property="FontFamily" Value="{StaticResource Type.FontFamily}"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <!-- Wrap width scales with the OS text size; a fixed cap
@@ -1167,6 +1176,7 @@
     <!-- Default ToolTip for attribute-syntax ToolTip="..." usages. Dark
          card surface, hairline border, body text. -->
     <Style TargetType="ToolTip">
+        <Setter Property="FontFamily" Value="{StaticResource Type.FontFamily}"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="HasDropShadow" Value="False"/>
@@ -1295,6 +1305,7 @@
          asymmetric (12,6) padding menu rows want. -->
 
     <Style TargetType="ContextMenu">
+        <Setter Property="FontFamily" Value="{StaticResource Type.FontFamily}"/>
         <Setter Property="Background" Value="{StaticResource Surface.Sidebar}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Action.Standard.Background}"/>
         <Setter Property="BorderThickness" Value="{StaticResource BorderThickness.Hairline}"/>

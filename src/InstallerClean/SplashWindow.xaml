@@ -9,6 +9,7 @@
         SizeToContent="Height"
         WindowStyle="None"
         AllowsTransparency="True"
+        FontFamily="{StaticResource Type.FontFamily}"
         Background="Transparent"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
