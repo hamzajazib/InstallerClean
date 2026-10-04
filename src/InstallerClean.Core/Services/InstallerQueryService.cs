@@ -520,18 +520,16 @@ public sealed class InstallerQueryService : IInstallerQueryService
 #endif
 
         /// <summary>
-        /// THE ONE THING THAT MAKES THIS TYPE SAFE IS THE CALL GRAPH'S SHAPE, WHICH IS
-        /// NOT SOMETHING THE TYPE CAN HOLD ANYBODY TO. Every increment on a census is
-        /// a read-modify-write on a plain int field, so two threads incrementing one
-        /// census lose counts, and a lost normalisation refusal is a withholding that
-        /// does not fire. Today the enumeration is single-threaded by construction of
-        /// its entry point: the whole synchronous core runs inside one Task.Run with
-        /// no await in it, and this file holds no other concurrency primitive.
+        /// Every increment on a census happens on the thread that built it. The counters
+        /// are plain int fields with no interlocking, and the normalisation refusals among
+        /// them decide what the scan withholds, so each count has to be exact. The
+        /// enumeration builds and fills its censuses inside the one synchronous core that
+        /// <c>Task.Run</c> starts. Work split across threads needs a census for each part,
+        /// folded with <see cref="Add"/> on one thread afterwards.
         ///
-        /// This is what makes the first change to that fail a test rather than report
-        /// a smaller number. Debug builds only, which is where the suite runs: a
-        /// release build must not acquire a new way to throw on a user's machine for
-        /// the sake of an assertion about this project's own code.
+        /// In a Debug build, which is where the suite runs, this throws when a census is
+        /// touched from any other thread, so a change that breaks the rule fails a test.
+        /// A Release build compiles the call out.
         /// </summary>
         [System.Diagnostics.Conditional("DEBUG")]
         private void AssertOwningThread()
