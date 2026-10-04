@@ -24,9 +24,9 @@
 //
 // Usage (from the repo root):
 //   node scripts/check-machine-contract-scope.mjs
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
-import { readCSharp } from './csharp-source.mjs';
+import { readFileSync } from 'node:fs';
+import { argumentSpan, readCSharp } from './csharp-source.mjs';
+import { sourceFiles } from './source-files.mjs';
 
 const TESTS = 'src/InstallerClean.Tests';
 
@@ -46,30 +46,11 @@ const BUILDERS = [
 const RAW_VALUE = 'Strings\\.Cli_EventLog[A-Za-z0-9_]*';
 const SCOPES = ['MachineContract.English', 'MachineContract.WriteEventLog'];
 
-function* csFiles(dir) {
-  for (const name of readdirSync(dir)) {
-    const path = join(dir, name);
-    if (name === 'bin' || name === 'obj') continue;
-    if (statSync(path).isDirectory()) yield* csFiles(path);
-    else if (name.endsWith('.cs')) yield path.replace(/\\/g, '/');
-  }
-}
-
-// The balanced span after an opening parenthesis, or null where the file ends first.
-function argumentSpan(text, open) {
-  let depth = 0;
-  for (let i = open; i < text.length; i++) {
-    if (text[i] === '(') depth++;
-    else if (text[i] === ')' && --depth === 0) return [open + 1, i];
-  }
-  return null;
-}
-
 const problems = [];
 const refusals = [];
 const references = [];
 
-for (const file of csFiles(TESTS)) {
+for (const file of sourceFiles(TESTS, '.cs')) {
   let code;
   try {
     code = readCSharp(readFileSync(file, 'utf8')).bare;

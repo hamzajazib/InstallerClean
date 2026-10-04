@@ -50,10 +50,10 @@
 //
 // Usage (from the repo root):
 //   node scripts/check-debug-only-switches.mjs
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { readCSharp } from './csharp-source.mjs';
+import { sourceFiles } from './source-files.mjs';
 
 // Each switch, the constant holding its name, and the folder its read must be found in.
 const SWITCHES = [
@@ -115,17 +115,6 @@ const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // --- C# under src/ ------------------------------------------------------------------
 
-const csFiles = (dir) => {
-  const out = [];
-  for (const entry of readdirSync(dir)) {
-    if (entry === 'bin' || entry === 'obj') continue;
-    const path = join(dir, entry);
-    if (statSync(path).isDirectory()) out.push(...csFiles(path));
-    else if (path.endsWith('.cs')) out.push(path.replace(/\\/g, '/'));
-  }
-  return out.sort();
-};
-
 // For each line of a file, whether it sits in the branch of an #if whose condition is
 // exactly DEBUG, at any depth. An #elif or #else ends that branch. A directive is
 // taken by its keyword, so "#  else" is an #else.
@@ -152,7 +141,7 @@ const debugLines = (directives, lineCount) => {
 };
 
 const files = [];
-for (const file of csFiles('src')) {
+for (const file of sourceFiles('src', '.cs').sort()) {
   const source = readFileSync(file, 'utf8');
   try {
     const read = readCSharp(source);

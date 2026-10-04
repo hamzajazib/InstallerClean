@@ -33,8 +33,8 @@
 // keys and no plural key.
 //
 // Run from the repo root: node scripts/check-dead-resx-keys.mjs
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { sourceFiles } from './source-files.mjs';
 
 const SRC = 'src';
 const RESX = `${SRC}/InstallerClean.Core/Resources/Strings.resx`;
@@ -68,20 +68,10 @@ const ALLOWLIST = new Set([
 // heading can wait for a new condition; a sentence about a condition cannot
 // outlive it.
 
-// Every .cs / .xaml under src/, minus bin/ and obj/ (build output mirrors source)
-// and minus the generated Designer (it defines an accessor for every key).
-function collect(dir, exts, out = []) {
-  for (const name of readdirSync(dir)) {
-    if (name === 'bin' || name === 'obj') continue;
-    const p = join(dir, name);
-    if (statSync(p).isDirectory()) collect(p, exts, out);
-    else if (exts.some((e) => name.endsWith(e))) out.push(p);
-  }
-  return out;
-}
-
-const csFiles = collect(SRC, ['.cs']).filter((f) => !f.endsWith('Strings.Designer.cs'));
-const xamlFiles = collect(SRC, ['.xaml']);
+// Every .cs and .xaml under src/, minus the generated Designer, which defines an
+// accessor for every key.
+const csFiles = sourceFiles(SRC, '.cs').filter((f) => !f.endsWith('Strings.Designer.cs'));
+const xamlFiles = sourceFiles(SRC, '.xaml');
 // One corpus, joined by newline so a file boundary is also a token boundary.
 const corpus = [...csFiles, ...xamlFiles].map((f) => readFileSync(f, 'utf8')).join('\n');
 

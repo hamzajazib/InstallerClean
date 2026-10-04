@@ -24,33 +24,14 @@
 //
 // Usage (from the repo root):
 //   node scripts/check-under-lease-claims.mjs
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
-import { readCSharp } from './csharp-source.mjs';
+import { readFileSync } from 'node:fs';
+import { argumentSpan, readCSharp } from './csharp-source.mjs';
+import { sourceFiles } from './source-files.mjs';
 
 const ROOT = 'src';
-const TESTS = join(ROOT, 'InstallerClean.Tests');
+const TESTS = `${ROOT}/InstallerClean.Tests/`;
 const METHODS = ['DeleteFilesAsync', 'MoveFilesAsync'];
 const REQUIRED = 'UnderLeaseClaims.From(';
-
-function* csFiles(dir) {
-  for (const name of readdirSync(dir)) {
-    const path = join(dir, name);
-    if (path === TESTS || name === 'bin' || name === 'obj') continue;
-    if (statSync(path).isDirectory()) yield* csFiles(path);
-    else if (name.endsWith('.cs')) yield path.replace(/\\/g, '/');
-  }
-}
-
-// The balanced span after an opening parenthesis, or null where the file ends first.
-function argumentSpan(text, openIndex) {
-  let depth = 0;
-  for (let i = openIndex; i < text.length; i++) {
-    if (text[i] === '(') depth++;
-    else if (text[i] === ')' && --depth === 0) return text.slice(openIndex + 1, i);
-  }
-  return null;
-}
 
 const problems = [];
 const refusals = [];
@@ -60,7 +41,7 @@ let callSites = 0;
 // call is code, a bracket is a bracket of the code, and a string holding the text of
 // a call is neither.
 console.log('Production calls to the action services:');
-for (const file of csFiles(ROOT)) {
+for (const file of sourceFiles(ROOT, '.cs').filter((f) => !f.startsWith(TESTS))) {
   let code;
   try {
     code = readCSharp(readFileSync(file, 'utf8')).bare;
@@ -72,11 +53,12 @@ for (const file of csFiles(ROOT)) {
     const re = new RegExp(`\\.${method}\\s*\\(`, 'g');
     for (const m of code.matchAll(re)) {
       const line = code.slice(0, m.index).split('\n').length;
-      const args = argumentSpan(code, code.indexOf('(', m.index));
-      if (args === null) {
+      const span = argumentSpan(code, code.indexOf('(', m.index));
+      if (span === null) {
         refusals.push(`${file}:${line} a call to ${method} whose argument list does not close`);
         continue;
       }
+      const args = code.slice(...span);
       callSites++;
       const passes = args.includes(REQUIRED);
       console.log(`  ${file}:${line}  ${method}  ${passes ? `passes ${REQUIRED}...)` : `NOT passed ${REQUIRED}...)`}`);

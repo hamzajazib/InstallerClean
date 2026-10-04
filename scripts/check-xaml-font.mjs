@@ -39,11 +39,13 @@
 //
 // XML and C# comments are blanked before anything is matched, newlines kept, so
 // a reported line number is the line on disk and a tag quoted in prose is not
-// read as markup.
+// read as markup. C# is read through csharp-source.mjs, and a file it cannot follow
+// to its end stops the run (exit 2).
 //
 // Run from the repo root: node scripts/check-xaml-font.mjs
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, sep } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { readCSharp } from './csharp-source.mjs';
+import { sourceFiles } from './source-files.mjs';
 
 const SRC = 'src';
 const FONT = '{DynamicResource Type.FontFamily}';
@@ -52,25 +54,18 @@ const POPUPS = ['ToolTip', 'ContextMenu'];
 // ResourceDictionary's styles are checked where they target a popup.
 const NON_DRAWING_ROOTS = new Set(['Application', 'ResourceDictionary']);
 
-// Paths are normalised to forward slashes, so a report reads the same on
-// Windows as elsewhere.
-function collect(dir, ext, out = []) {
-  for (const name of readdirSync(dir)) {
-    if (name === 'bin' || name === 'obj') continue;
-    const p = join(dir, name);
-    if (statSync(p).isDirectory()) collect(p, ext, out);
-    else if (name.endsWith(ext)) out.push(p.split(sep).join('/'));
-  }
-  return out;
-}
-
 const blank = (m) => m.replace(/[^\n]/g, ' ');
 const stripXmlComments = (s) => s.replace(/<!--[\s\S]*?-->/g, blank);
-// The string-literal alternative is matched first and put back verbatim, so a
-// // or /* inside a string is not read as a comment.
-const stripCsComments = (s) =>
-  s.replace(/"(?:\\.|[^"\\])*"|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, (m) =>
-    m.startsWith('"') ? m : blank(m));
+// C# with its comments taken out, string literals left in place.
+const csCode = (file) => {
+  try {
+    return readCSharp(readFileSync(file, 'utf8')).code;
+  } catch (e) {
+    console.error(`check-xaml-font: ${file} cannot be read to its end (${e.message}).`);
+    console.error('Refusing to report on a file whose code cannot be told from its comments.');
+    process.exit(2);
+  }
+};
 
 const lineAt = (s, i) => s.slice(0, i).split('\n').length;
 
@@ -130,8 +125,8 @@ const targetOf = (raw) => {
 const problems = [];
 const matched = { windows: [], subclasses: [], popupStyles: [], popupElements: [], csStyles: [], tokenRefs: [] };
 
-const xamlFiles = collect(SRC, '.xaml');
-const csFiles = collect(SRC, '.cs').filter((f) => !f.endsWith('.Designer.cs'));
+const xamlFiles = sourceFiles(SRC, '.xaml');
+const csFiles = sourceFiles(SRC, '.cs').filter((f) => !f.endsWith('.Designer.cs'));
 
 if (xamlFiles.length === 0 || csFiles.length === 0) {
   console.error(`check-xaml-font: found ${xamlFiles.length} XAML and ${csFiles.length} C# files under ${SRC}/.`);
@@ -258,7 +253,7 @@ const bases = new Map(); // full name -> { base, file, line }
 const simpleToFull = new Map();
 const csTexts = [];
 for (const file of csFiles) {
-  const text = stripCsComments(readFileSync(file, 'utf8'));
+  const text = csCode(file);
   csTexts.push([file, text]);
   const ns = text.match(/^\s*namespace\s+([\w.]+)/m)?.[1] ?? '';
   for (const m of text.matchAll(/\bclass\s+(\w+)(?:<[^>]*>)?\s*:\s*([\w.]+)/g)) {

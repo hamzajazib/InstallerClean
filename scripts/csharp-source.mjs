@@ -1,5 +1,6 @@
 // csharp-source.mjs: reads a C# file into its code, its comments and its preprocessor
-// lines, for the checks in this folder that search C# source.
+// lines, and finds the brackets of a call in it, for the checks in this folder that
+// search C# source.
 //
 // readCSharp(source) returns four things:
 //   code        the source with every comment character replaced by a space. Strings,
@@ -27,6 +28,12 @@
 // A file that cannot be followed to its end throws, naming the line: an unclosed
 // string, character literal, block comment or interpolation hole. A check that reads a
 // file this throws on refuses its run.
+//
+// argumentSpan(bare, open) takes the offset of a call's '(' and returns [from, to], from
+// the first character inside the brackets to the ')' that closes them, or null where the
+// text ends first. It counts every '(' and ')' it meets, so it is given bare, where a
+// bracket inside a string or a comment is already a space; given code, a bracket inside
+// a string would close the call early or keep it open.
 
 const isSpace = (c) => c === ' ' || c === '\t' || c === '\r' || c === '\f' || c === '\v' || c === '\uFEFF';
 
@@ -231,4 +238,13 @@ export function readCSharp(source) {
     refuse(length, `the file ends inside ${open.kind === 'code' ? 'an interpolation hole' : 'a string'}`);
   }
   return { code: code.join(''), bare: bare.join(''), comments: comments.join(''), directives };
+}
+
+export function argumentSpan(bare, open) {
+  let depth = 0;
+  for (let i = open; i < bare.length; i++) {
+    if (bare[i] === '(') depth++;
+    else if (bare[i] === ')' && --depth === 0) return [open + 1, i];
+  }
+  return null;
 }

@@ -115,13 +115,16 @@
 // COMMENTS ARE STRIPPED FIRST, both sides. A comment is not a reference: WPF
 // never resolves one. Themes/Primitives.xaml explains the type-matching rule
 // using "{StaticResource X}" in prose, which without stripping is a reference to
-// a key named X that nothing defines, i.e. an instant false failure.
+// a key named X that nothing defines, i.e. an instant false failure. C# is read
+// through csharp-source.mjs, and a file it cannot follow to its end stops the run
+// (exit 2).
 //
 // bin/ and obj/ are excluded because build output mirrors source.
 //
 // Run from the repo root: node scripts/check-xaml-resources.mjs
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, sep } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { readCSharp } from './csharp-source.mjs';
+import { sourceFiles } from './source-files.mjs';
 
 const SRC = 'src';
 const APP_XAML = `${SRC}/InstallerClean/App.xaml`;
@@ -233,20 +236,6 @@ const EXTENSION_SLOTS = new Map([
   ['Binding.Converter', 'IValueConverter'],
 ]);
 
-// Paths are normalised to forward slashes. CI runs this on Windows, where
-// path.join yields backslashes, and the theme-file test below matches on a path
-// fragment: without this the collision check would quietly pass everything on the
-// one machine that gates the build.
-function collect(dir, ext, out = []) {
-  for (const name of readdirSync(dir)) {
-    if (name === 'bin' || name === 'obj') continue;
-    const p = join(dir, name);
-    if (statSync(p).isDirectory()) collect(p, ext, out);
-    else if (name.endsWith(ext)) out.push(p.split(sep).join('/'));
-  }
-  return out;
-}
-
 // Blanked rather than deleted, newlines kept, so every reported line number is
 // the line number in the file on disk.
 const blank = (m) => m.replace(/[^\n]/g, ' ');
@@ -256,17 +245,24 @@ const blank = (m) => m.replace(/[^\n]/g, ' ');
 const article = (t) => (/^[aeiou]/i.test(t) ? 'an' : 'a');
 
 const stripXmlComments = (s) => s.replace(/<!--[\s\S]*?-->/g, blank);
-// Line and block comments. The string-literal alternative is matched FIRST and
-// put back verbatim, so a // or /* inside a string is not read as a comment.
-const stripCsComments = (s) =>
-  s.replace(/"(?:\\.|[^"\\])*"|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, (m) =>
-    m.startsWith('"') ? m : blank(m));
+// C# with its comments taken out, string literals left in place.
+const csCode = (file) => {
+  try {
+    return readCSharp(readFileSync(file, 'utf8')).code;
+  } catch (e) {
+    console.error(`FAILED: ${file} cannot be read to its end (${e.message}).`);
+    console.error('Refusing to report on a file whose code cannot be told from its comments.');
+    process.exit(2);
+  }
+};
 
-const xamlFiles = collect(SRC, '.xaml');
-const csFiles = collect(SRC, '.cs').filter((f) => !f.endsWith('Strings.Designer.cs'));
+// Paths with forward slashes, on Windows as elsewhere: the theme-file test below
+// matches on a path fragment, and would pass every collision over a backslash path.
+const xamlFiles = sourceFiles(SRC, '.xaml');
+const csFiles = sourceFiles(SRC, '.cs').filter((f) => !f.endsWith('Strings.Designer.cs'));
 
 const xaml = xamlFiles.map((f) => [f, stripXmlComments(readFileSync(f, 'utf8'))]);
-const cs = csFiles.map((f) => [f, stripCsComments(readFileSync(f, 'utf8'))]);
+const cs = csFiles.map((f) => [f, csCode(f)]);
 
 // --- the XAML walk -----------------------------------------------------------
 // Element tags, whole, however many lines they span. The attribute blob skips
@@ -577,7 +573,7 @@ for (const [file, text] of cs) {
 // The name-built lookup: App's TypeSizeTokenKeys feeds Resources[key]. Parsed
 // here because no lookup site names these keys. A shape change must fail rather
 // than silently drop the check.
-const appSource = stripCsComments(readFileSync(APP_XAML_CS, 'utf8'));
+const appSource = csCode(APP_XAML_CS);
 const typeArray = appSource.match(/TypeSizeTokenKeys\s*=\s*(?:new\s+string\[\]\s*)?\{([^}]*)\}/);
 if (!typeArray) {
   console.error(`FAILED: could not read the TypeSizeTokenKeys array in ${APP_XAML_CS}.`);

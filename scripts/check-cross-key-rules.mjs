@@ -9,11 +9,11 @@
 // cannot be read to its end.
 //
 // Run from the repo root: node scripts/check-cross-key-rules.mjs
-import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
 import { standsInFor } from './plural-overrides.mjs';
 import { readLedger, englishFor, recordedFreshness } from './translation-ledger.mjs';
 import { readCSharp } from './csharp-source.mjs';
+import { sourceFiles } from './source-files.mjs';
 
 const RESX_DIR = 'src/InstallerClean.Core/Resources';
 const GUI = 'src/InstallerClean';
@@ -417,29 +417,6 @@ const wording = (value) => {
 // comparison asks neither string to change.
 const compare = (value, lang) => wording(value).replace(/\s+/g, '').toLocaleLowerCase(lang);
 
-function collectXaml(dir, out = []) {
-  for (const name of readdirSync(dir)) {
-    if (name === 'bin' || name === 'obj') continue;
-    const p = join(dir, name);
-    if (statSync(p).isDirectory()) collectXaml(p, out);
-    else if (name.endsWith('.xaml')) out.push(p);
-  }
-  return out;
-}
-
-// Built with a forward slash rather than join(), because these paths are compared
-// against the ones written by hand in RAW_READ_ALLOWED and CI runs on Windows,
-// where join() would produce a separator no entry could ever match.
-function collectCs(dir, out = []) {
-  for (const name of readdirSync(dir)) {
-    if (name === 'bin' || name === 'obj') continue;
-    const p = `${dir}/${name}`;
-    if (statSync(p).isDirectory()) collectCs(p, out);
-    else if (name.endsWith('.cs')) out.push(p);
-  }
-  return out;
-}
-
 // C# with its comments taken out, string literals left in place. A file that cannot be
 // read to its end stops the run.
 const codeOnly = (file) => {
@@ -461,7 +438,7 @@ const stale = [];
 // XAML, and claim none the XAML no longer has. Run before the per-language
 // work, because a stale list is a fact about this file rather than about any
 // language.
-const xamlFiles = collectXaml(GUI);
+const xamlFiles = sourceFiles(GUI, '.xaml');
 const namedInXaml = new Set();
 const visibleTextInXaml = {};
 for (const file of xamlFiles) {
@@ -519,7 +496,9 @@ for (const file of xamlFiles) {
 }
 
 // --- Rule 8, once: source shape, not language.
-const csFiles = collectCs('src');
+// Compared with the paths written by hand in RAW_READ_ALLOWED, which sourceFiles
+// writes the same way, with forward slashes.
+const csFiles = sourceFiles('src', '.cs');
 const rawAllowed = new Map(RAW_READ_ALLOWED.map((e) => [e.file, e.reason]));
 const rawReaders = new Set(
   csFiles.filter((f) => RAW_READ.test(codeOnly(f))),

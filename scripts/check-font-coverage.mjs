@@ -66,6 +66,8 @@
 //   node scripts/check-font-coverage.mjs --windows-fonts <folder>
 import { closeSync, openSync, readdirSync, readFileSync, readSync, statSync } from 'node:fs';
 import { join, sep } from 'node:path';
+import { readCSharp } from './csharp-source.mjs';
+import { sourceFiles } from './source-files.mjs';
 
 const TOKENS = 'src/InstallerClean/Themes/Tokens.xaml';
 const LANGUAGE_FONTS = 'src/InstallerClean/Helpers/LanguageFonts.cs';
@@ -112,12 +114,18 @@ const read = (file) => {
   }
 };
 
+// C# with its comments taken out, string literals left in place, through
+// csharp-source.mjs. A file it cannot follow to its end stops the run (exit 2).
+const csCode = (file) => {
+  const text = read(file);
+  try {
+    return readCSharp(text).code;
+  } catch (e) {
+    console.error(`\ncheck-font-coverage: ${file} cannot be read to its end (${e.message})`);
+    process.exit(2);
+  }
+};
 const blank = (m) => m.replace(/[^\n]/g, ' ');
-// The string-literal alternative is matched first and put back verbatim, so a
-// // or /* inside a string is not read as a comment.
-const stripCsComments = (s) =>
-  s.replace(/"(?:\\.|[^"\\])*"|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, (m) =>
-    m.startsWith('"') ? m : blank(m));
 const stripXmlComments = (s) => s.replace(/<!--[\s\S]*?-->/g, blank);
 
 // A C# regular string literal, quotes included, to the string it holds.
@@ -140,7 +148,7 @@ const themeList = xmlText(need(
   tokensXaml.match(/<FontFamily\s+x:Key="Type\.FontFamily"\s*>([^<]*)<\/FontFamily>/),
   TOKENS, '<FontFamily x:Key="Type.FontFamily">')[1]);
 
-const languageFontsCs = stripCsComments(read(LANGUAGE_FONTS));
+const languageFontsCs = csCode(LANGUAGE_FONTS);
 const montserratCultures = need(
   languageFontsCs.match(/\bMontserratCultures\s*=\s*\{([^}]*)\}/),
   LANGUAGE_FONTS, 'MontserratCultures = { ... }')[1].match(STRING)?.map(csString) ?? [];
@@ -157,7 +165,7 @@ if (montserratCultures.length === 0 || windowsFamilies.size === 0) {
   fail(`${LANGUAGE_FONTS}: read no culture from MontserratCultures or WindowsFamilies`);
 }
 
-const supportedCs = stripCsComments(read(SUPPORTED));
+const supportedCs = csCode(SUPPORTED);
 const neutral = csString(need(
   supportedCs.match(/\bconst\s+string\s+Neutral\s*=\s*("(?:\\.|[^"\\])*")\s*;/),
   SUPPORTED, 'const string Neutral = "..."')[1]);
@@ -167,7 +175,7 @@ const cultureNames = [...need(
   .map((m) => (m[0] === 'Neutral' ? neutral : csString(m[0])));
 if (!cultureNames.includes(neutral)) fail(`${SUPPORTED}: CultureNames does not hold the neutral ${neutral}`);
 
-const mainWindowCs = stripCsComments(read(MAIN_WINDOW));
+const mainWindowCs = csCode(MAIN_WINDOW);
 const endonyms = new Map(
   [...need(
     mainWindowCs.match(/\bEndonyms\s*=\s*new\([^)]*\)\s*\{([^}]*)\}/),
@@ -175,24 +183,12 @@ const endonyms = new Map(
     .matchAll(/\[\s*("(?:\\.|[^"\\])*")\s*\]\s*=\s*("(?:\\.|[^"\\])*")/g)]
     .map((m) => [csString(m[1]).toLowerCase(), csString(m[2])]));
 
-// Paths are normalised to forward slashes, so a report reads the same on
-// Windows as elsewhere.
-function collect(dir, ext, out = []) {
-  for (const name of readdirSync(dir)) {
-    if (name === 'bin' || name === 'obj') continue;
-    const p = join(dir, name);
-    if (statSync(p).isDirectory()) collect(p, ext, out);
-    else if (name.endsWith(ext)) out.push(p.split(sep).join('/'));
-  }
-  return out;
-}
-
 // The arrow is whatever a sorting window appends, as the two branches of
 // `var arrow = <ascending> ? "..." : "...";`.
 const arrowSources = [];
 const arrows = new Set();
-for (const file of collect(APP_DIR, '.cs')) {
-  const text = stripCsComments(read(file));
+for (const file of sourceFiles(APP_DIR, '.cs')) {
+  const text = csCode(file);
   if (!/\bListSortDirection\b/.test(text)) continue;
   const m = text.match(/\bvar\s+arrow\s*=[^;?]*\?\s*("(?:\\.|[^"\\])*")\s*:\s*("(?:\\.|[^"\\])*")\s*;/);
   if (!m) {
