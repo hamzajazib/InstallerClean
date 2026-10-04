@@ -51,8 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Path to folder if you move rather than delete. | Ścieżka do folderu, jeśli przenosisz zamiast usuwać. |
 | Open _release page | Otwórz stronę _wydania |
 | _Re-scan | _Skanuj ponownie |
-| Send report | Wyślij raport |
-| _Send | _Wyślij |
 
 ## About window
 
@@ -187,6 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | Trwale usunięto {0} {1} |
 | {0} {1} permanently deleted | Trwale usunięto {0} {1} |
 | Any small donation is much appreciated. | Każde, nawet drobne, wsparcie jest bardzo mile widziane. |
+| Send _anonymous report | Send _anonymous report |
 
 ## Summaries and counts
 
@@ -311,17 +310,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The link is on your clipboard, so you can paste it in yourself:<br><br>{0} | Link jest w schowku, więc możesz go wkleić samodzielnie:<br><br>{0} |
 | InstallerClean couldn't copy the link to your clipboard either, so here it is:<br><br>{0} | InstallerClean nie zdołał też skopiować linku do schowka, więc oto on:<br><br>{0} |
 
-## Sending the summary
-
-| English | Polski |
-| --- | --- |
-| Sending... | Wysyłanie... |
-| Thanks! Report sent. | Dzięki! Raport wysłany. |
-| Sending failed. Try again later. | Wysyłanie nie powiodło się. Spróbuj ponownie później. |
-| No report to send. | Brak raportu do wysłania. |
-| Send this? | Wysłać to? |
-| It goes to nofaff.netlify.app/api/result-log. Nothing identifies you or your machine; it just lets me know InstallerClean's working and [how much space people are freeing]. | Trafia do nofaff.netlify.app/api/result-log. Nic nie identyfikuje ciebie ani twojego komputera; to po prostu daje mi znać, że InstallerClean działa i [ile miejsca ludzie zwalniają]. |
-
 ## Startup and crashes
 
 | English | Polski |
@@ -348,8 +336,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | Gwiazdka pomaga innym znaleźć InstallerClean. |
 | Minimise | Minimalizuj |
-| Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | Twoja decyzja, ale będzie miło. Wysyła anonimowe podsumowanie, które po prostu daje mi znać, czy działa i ile miejsca ludzie zwalniają. Na następnym ekranie zobaczysz, co zostanie wysłane, zanim potwierdzisz. |
-| Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working. The next screen lets you see what will be sent before you confirm. | Twoja decyzja, ale będzie miło. Wysyła anonimowe podsumowanie, które po prostu daje mi znać, czy działa. Na następnym ekranie zobaczysz, co zostanie wysłane, zanim potwierdzisz. |
 | Move the unneeded files to the backup folder. | Przenosi niepotrzebne pliki do folderu kopii zapasowej. |
 | Move the unneeded files to a backup folder. You'll choose it next. | Przenosi niepotrzebne pliki do folderu kopii zapasowej. Wybierzesz go za chwilę. |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | Przenosi niepotrzebne pliki do folderu kopii zapasowej. Jest on na tym samym dysku, więc miejsce odzyskasz dopiero po skasowaniu tego folderu. |
@@ -377,7 +363,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Delete permanently removes the unneeded files. Cancel closes without deleting. | Usuń trwale usuwa niepotrzebne pliki. Anuluj zamyka okno bez usuwania. |
 | Move puts the unneeded files in the chosen destination folder. Cancel leaves them where they are. | Przenieś umieszcza niepotrzebne pliki w wybranym folderze docelowym. Anuluj zostawia je na miejscu. |
 | Say thanks | Podziękuj |
-| Send posts the report shown to No Faff. Cancel sends nothing. | Wyślij przekazuje pokazany raport do No Faff. Anuluj nie wysyła niczego. |
 | Check for updates | Sprawdź aktualizacje |
 | Checks github's releases page for a newer version. | Sprawdza na stronie wydań githuba, czy jest nowsza wersja. |
 | Opens the readme on github in your browser. | Otwiera readme na githubie w twojej przeglądarce. |
@@ -408,7 +393,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Files that could not be processed | Pliki, których nie udało się przetworzyć |
 | Explains this folder, and how to recover a file, in the README | Wyjaśnia ten folder i sposób odzyskania pliku w README |
 | {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
-| Report preview | Podgląd raportu |
 | Change language | Zmień język |
 | The program will restart. | Program zostanie ponownie uruchomiony. |
 

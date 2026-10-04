@@ -35,6 +35,9 @@ public class ScanMoveCompletionTests
     private readonly IResultLogService _resultLogService = Substitute.For<IResultLogService>();
     private readonly IUpdateCheckService _updateCheckService = Substitute.For<IUpdateCheckService>();
     private readonly IRemovableReverifier _reverifier = Substitute.For<IRemovableReverifier>();
+    private readonly IEarlierRunCheck _earlierRunCheck = Substitute.For<IEarlierRunCheck>();
+    private readonly IFirstRunMark _firstRunMark = Substitute.For<IFirstRunMark>();
+    private readonly IWindowsRegion _windowsRegion = Substitute.For<IWindowsRegion>();
 
     private readonly MockFileSystem _fileSystem = new();
 
@@ -50,7 +53,8 @@ public class ScanMoveCompletionTests
             _scanService, _moveService, _deleteService,
             _settingsService, _rebootService, _msiInfoService,
             _dialogService, _confirmationService, _windowService,
-            _fileSystem, _resultLogService, _updateCheckService, _reverifier);
+            _fileSystem, _resultLogService, _updateCheckService, _reverifier,
+            _earlierRunCheck, _firstRunMark, _windowsRegion);
     }
 
     [Fact]
@@ -218,7 +222,8 @@ public class ScanMoveCompletionTests
             scanService, moveService, deleteService,
             settingsService, rebootService, msiInfoService,
             dialogService, confirmationService, windowService,
-            fs, resultLogService, updateCheckService, reverifier);
+            fs, resultLogService, updateCheckService, reverifier,
+            Substitute.For<IEarlierRunCheck>(), Substitute.For<IFirstRunMark>(), Substitute.For<IWindowsRegion>());
 
         // Stage 1: real scan finds the two orphans.
         await vm.Scan.ScanWithProgressAsync(null);

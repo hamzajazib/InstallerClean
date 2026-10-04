@@ -14,7 +14,6 @@
       Cli.*                  console output for the CLI launcher
       Completion.*           completion overlay copy
       Confirm.*              confirmation dialog body text
-      ConfirmSendResultLog.* result-log Send confirmation modal
       CrashLog.*             crash.log header copy
       Display.*              size/duration formatting fragments
       Error.*                user-facing error messages
@@ -22,7 +21,6 @@
       FilePicker.*           folder-browser dialog labels
       Plural.*               singular/plural fragments used by DisplayHelpers
       Reason.*               Reason column values in the unneeded files list
-      ResultLog.*            send-report states (Sending / Sent / Failed)
       Section.*              heading text inside windows
       Startup.*              splash + already-running messages
       Status.*               transient status / progress text
@@ -200,8 +198,6 @@
   <data name="Action.BackupFolderPlaceholder" xml:space="preserve"><value>Đường dẫn thư mục nếu bạn chuyển thay vì xóa.</value></data>
   <data name="Action.OpenReleasePage" xml:space="preserve"><value>_Mở trang phát hành</value></data>
   <data name="Action.Rescan" xml:space="preserve"><value>_Quét lại</value></data>
-  <data name="Action.SendResultLog" xml:space="preserve"><value>Gửi báo cáo</value></data>
-  <data name="Action.SendResultLogConfirm" xml:space="preserve"><value>_Gửi</value></data>
 
   <!-- About window: the two links and the auto-update switch. Kept out of
        the Action.* block because none of the three is a button label; the
@@ -262,7 +258,6 @@
   <data name="Automation.ConfirmDelete" xml:space="preserve"><value>Xóa vĩnh viễn sẽ bỏ đi các tệp không cần thiết. Hủy sẽ đóng lại mà không xóa gì.</value></data>
   <data name="Automation.ConfirmMove" xml:space="preserve"><value>Chuyển sẽ đặt các tệp không cần thiết vào thư mục đích đã chọn. Hủy sẽ để chúng nguyên chỗ cũ.</value></data>
   <data name="Automation.SayThanks" xml:space="preserve"><value>Lời cảm ơn</value></data>
-  <data name="Automation.ConfirmSendResultLog" xml:space="preserve"><value>Gửi sẽ đăng báo cáo hiển thị tới No Faff. Hủy sẽ không gửi gì.</value></data>
   <data name="Automation.CheckForUpdates" xml:space="preserve"><value>Kiểm tra cập nhật</value></data>
   <!-- Heard, never read: the update button carries no tooltip, so this help
        text is the only description it has, and it is written for a speech
@@ -311,8 +306,8 @@
     Automation.CheckForUpdates.HelpText carries.</comment>
   </data>
   <!-- Window-level description for the update-available modal, read by a
-       screen reader on open, mirroring the ConfirmSendResultLog window.
-       The version numbers are in the body text; this states the choice. -->
+       screen reader on open. The version numbers are in the body text; this
+       states the choice. -->
   <data name="Automation.UpdateAvailable.HelpText" xml:space="preserve"><value>Mở trang phát hành để tải phiên bản mới hơn, hoặc hủy để giữ phiên bản hiện tại.</value></data>
   <data name="Automation.Licence.HelpText" xml:space="preserve"><value>Mở tệp giấy phép trên github.com trong trình duyệt của bạn.</value></data>
   <!-- Mixed-case AutomationProperties.Name overrides for the all-caps
@@ -386,8 +381,6 @@
     <comment>Tooltip and screen-reader help on the About window's star pill. The button it hangs on already names GitHub (Action.LeaveStarOnGitHub, "Leave a star on GitHub"), so naming it again here says the same word twice in one glance; keep the tooltip to what the star does. "It" is InstallerClean, which most languages will want to say outright.</comment>
   </data>
   <data name="Tooltip.Minimise" xml:space="preserve"><value>Thu nhỏ</value></data>
-  <data name="Tooltip.SendResultLog" xml:space="preserve"><value>Tùy bạn, nhưng rất được trân trọng. Gửi một bản tóm tắt ẩn danh chỉ để cho tôi biết nó có hoạt động không và mọi người đang giải phóng được bao nhiêu dung lượng. Màn hình tiếp theo cho bạn xem những gì sẽ được gửi trước khi bạn xác nhận.</value></data>
-  <data name="Tooltip.SendResultLog.NothingFound" xml:space="preserve"><value>Tùy bạn, nhưng rất được trân trọng. Gửi một bản tóm tắt ẩn danh chỉ để cho tôi biết nó có hoạt động không. Màn hình tiếp theo cho bạn xem những gì sẽ được gửi trước khi bạn xác nhận.</value></data>
   <!-- The Move button's three tooltip states, chosen by whether the backup
        folder is set and whether it sits on the drive the files are already
        on. Each is also the button's screen-reader help text, one value
@@ -965,6 +958,10 @@
     <value>Mọi đóng góp dù nhỏ đều rất được trân trọng.</value>
     <comment>Tooltip and screen-reader help on the small donate button under Done (Action.DonateSmall), which stands on every completion card that carries Done, including a scan that found nothing to clean up. Keep it plain, with no word putting the reader under an obligation.</comment>
   </data>
+  <data name="Completion.SendReport" xml:space="preserve">
+    <value>Send _anonymous report</value>
+    <comment>The checkbox on the first completion card the PC shows, whatever kind of card it is. Ticked, the report goes as the card closes. The underscore marks the access key (Alt+A in English), which must not clash with the card's buttons: Action.Done, Action.DonateSmall, Action.Donate and Action.CloseWithoutDonating.</comment>
+  </data>
 
   <!-- Summaries -->
   <!-- 0 = file count. Singular / plural pairs picked at the call
@@ -1479,28 +1476,6 @@ Chi tiết trong {1}.</value></data>
   <data name="Error.CannotWriteFolder" xml:space="preserve"><value>Không thể ghi vào {0}.</value></data>
   <!-- 0 = file name -->
   <data name="Error.DestinationCollision" xml:space="preserve"><value>Đã có một tệp tên '{0}' trong thư mục sao lưu.</value></data>
-
-  <!-- Result log (post-cleanup diagnostic send) -->
-  <data name="ResultLog.Sending" xml:space="preserve"><value>Đang gửi...</value></data>
-  <data name="ResultLog.Sent" xml:space="preserve"><value>Cảm ơn! Đã gửi báo cáo.</value></data>
-  <data name="ResultLog.Failed" xml:space="preserve"><value>Gửi thất bại. Hãy thử lại sau.</value></data>
-  <data name="ResultLog.NothingToSend" xml:space="preserve"><value>Không có báo cáo để gửi.</value></data>
-  <!-- Body header shown in the confirmation modal. Kept short: the JSON
-       right below is the actual disclosure, the title just asks. -->
-  <data name="ConfirmSendResultLog.Title" xml:space="preserve"><value>Gửi cái này?</value></data>
-  <!-- Reassurance line under the JSON. Leads with the destination so the URL
-       always opens its own sentence rather than trailing variable-length
-       prose (stops it wrapping unpredictably at different lengths per
-       language), then the no-PII property and purpose. The bracketed phrase
-       becomes a hyperlink into the README's reports-stats FAQ answer (built
-       in ConfirmSendResultLogWindow.xaml.cs), the same [ ]-delimited pattern
-       as the registered-files window's closing sentence uses for its own. -->
-  <data name="ConfirmSendResultLog.Reassurance" xml:space="preserve"><value>Nó được gửi tới nofaff.netlify.app/api/result-log. Không có gì nhận dạng bạn hay máy của bạn; nó chỉ cho tôi biết InstallerClean có hoạt động không và [mọi người đang giải phóng được bao nhiêu dung lượng].</value></data>
-  <!-- AutomationProperties.Name on the JSON preview TextBox so screen
-       readers announce its content rather than "edit, read-only". The
-       noun follows the button that opens this dialog (Action.SendResultLog,
-       "Send report") and the surrounding copy, which call it a report. -->
-  <data name="Automation.ResultLogPreview" xml:space="preserve"><value>Xem trước báo cáo</value></data>
 
   <!-- Single instance / startup / crash -->
   <data name="Startup.AlreadyRunningTitle" xml:space="preserve"><value>InstallerClean</value></data>

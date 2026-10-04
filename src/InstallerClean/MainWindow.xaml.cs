@@ -393,32 +393,18 @@ public partial class MainWindow : Window
                 AnnounceMarkedWarnings();
         }
 
-        // The Send-summary button collapses the moment the user consents
-        // (the modal closes and IsSendingResultLog hides it) or the
-        // silent no-log-to-send path hides it; WPF's focus restore after
-        // the confirm modal then has no target and keyboard focus drops
-        // to the window root. The button that closes the card is the landing
-        // that keeps the user inside the overlay. Dismissal paths are excluded because they
-        // clear IsComplete before the visibility recomputes.
-        if (e.PropertyName == nameof(CompletionViewModel.IsSendResultLogVisible)
-            && !_vm.Completion.IsSendResultLogVisible && _vm.Completion.IsComplete)
+        // The box leaves a card still up where its report could not be written. Focus
+        // on it would drop to the window root with it, so it moves to the button that
+        // closes the card, which keeps the user inside the card.
+        if (e.PropertyName == nameof(CompletionViewModel.OffersReport)
+            && !_vm.Completion.OffersReport && _vm.Completion.IsComplete
+            && CompletionReportBox.IsKeyboardFocusWithin)
         {
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
             {
                 if (_vm.Completion.IsComplete)
                     CompletionDismissButton().Focus();
             });
-        }
-
-        // Each status the result-log line takes is read out: "Sending..." as the
-        // line appears, which is when the user has just consented to a network
-        // call and wants confirmation, then the outcome that replaces it. Focus
-        // stays on the button that closes the card throughout, so nothing else
-        // reads them.
-        if (e.PropertyName == nameof(CompletionViewModel.ResultLogStatusMessage)
-            && !string.IsNullOrEmpty(_vm.Completion.ResultLogStatusMessage))
-        {
-            AnnounceLiveRegions(ResultLogStatusText);
         }
     }
 
@@ -779,9 +765,18 @@ public partial class MainWindow : Window
     // The per-file error list stays unraised, and that is a separate decision:
     // it is a list to read at leisure rather than an outcome, and it is reached
     // in scan mode. The count above it is what has to be spoken.
-    private void AnnounceCompletionOutcome() =>
+    //
+    // The report box follows the outcome on the card that carries it, which is
+    // settled before the card is revealed, so the reader hears that something is
+    // sent as the card closes, and whether the box is ticked, without having to
+    // Tab past the buttons to find out.
+    private void AnnounceCompletionOutcome()
+    {
         AnnounceLiveRegions(CompletionHeadingText, CompletionFailedCountText,
             CompletionSummaryText, CompletionRestoreText, CompletionSkippedText);
+        if (_vm.Completion.OffersReport)
+            AnnounceLiveRegion(CompletionReportBox, () => _vm.Completion.OffersReport);
+    }
 
     /// <summary>
     /// Composes the completion summary line from <see cref="CompletionViewModel.Summary"/>,

@@ -26,7 +26,6 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     private readonly IFileSystem _fs;
     private readonly ScanViewModel _scan;
     private readonly CompletionViewModel _completion;
-    private readonly IResultLogService _resultLogService;
     private readonly IRemovableReverifier _reverifier;
     private readonly PropertyChangedEventHandler _scanHandler;
 
@@ -259,7 +258,6 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         IFileSystem fileSystem,
         ScanViewModel scan,
         CompletionViewModel completion,
-        IResultLogService resultLogService,
         IRemovableReverifier reverifier,
         Func<string, bool?>? resolveIsOnCacheVolume = null)
     {
@@ -271,7 +269,6 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         _fs = fileSystem;
         _scan = scan;
         _completion = completion;
-        _resultLogService = resultLogService;
         _reverifier = reverifier;
         _resolveIsOnCacheVolume = resolveIsOnCacheVolume ?? AskWhetherOnCacheVolume;
 
@@ -527,8 +524,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         // keystroke that landed between the worker's snapshot read and the
         // swap. SettingsService.Update reloads, applies the captured destination
         // and saves atomically under its own lock, so this thread-pool debounce
-        // cannot lose the result-log lifetime lock or the language pick that run
-        // on the dispatcher to a last-writer-wins rename.
+        // cannot lose the language pick made on the dispatcher, or the report's
+        // own saves, to a last-writer-wins rename.
         //
         // No token on this Task.Run, deliberately. The debounce is the
         // cancellable part and it is already over; the body has nothing to
@@ -1018,8 +1015,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // here rather than at the method's own arms so the surviving list
                 // and the destination kind are still in scope to report with; the
                 // warning over the summary carries the reason. No result-log entry,
-                // for the reason recorded on the cancel arm below.
+                // for the reason recorded on the cancel arm below, and files that
+                // moved make this the PC's first run all the same.
                 await RefreshAfterBatchAsync();
+                if (ex.Partial.MovedCount > 0) _completion.RecordFirstRun();
                 // Same fold as the main path: a batch the destination guard
                 // stopped still owes an account of anything the under-lease re-read
                 // took back before it started.
@@ -1160,9 +1159,11 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // than throwing the tally away. Report the partial on the
                 // completion overlay, and write no result-log entry for a
                 // cancelled run, which keeps the public reports stats meaning
-                // what they mean. Only raise the overlay when something actually
+                // what they mean. Files that did move make this the PC's first run
+                // all the same. Only raise the overlay when something actually
                 // moved or errored; a cancel that reached no file just clears.
                 await RefreshAfterBatchAsync();
+                if (result.MovedCount > 0) _completion.RecordFirstRun();
                 if (result.MovedCount > 0 || result.Errors.Count > 0)
                 {
                     _completion.ShowMoveCancelledSummary(
@@ -1192,15 +1193,13 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // scan's.
             await RefreshAfterBatchAsync();
 
+            // The box goes on before the card is revealed, and the report is written
+            // once the card is up, on the PC's first run only.
+            var carriesReport = await _completion.ReportIsFreeAsync() && _completion.TakeReport();
             _completion.ShowMoveSummary(movedCount, movedBytes, movedDest, result.Errors,
                 ClassifySpaceOutcome(destinationKind), reverify);
 
-            // Skip the last-run.json write once the result-log surface
-            // is locked. Nothing will ever read the file from this point
-            // on: the Send button stays hidden for the rest of the
-            // session via the session lock, and the next session checks
-            // the persisted lifetime lock at startup.
-            if (!_completion.IsResultLogLocked)
+            if (carriesReport)
             {
                 var entry = ResultLogEntry.ForMove(
                     preOpScan, preOpDurationMs,
@@ -1213,8 +1212,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                     // owes an account of both. The drives and shares given up and the
                     // waits are the pre-act check's, which the fold carries through.
                     reverify);
-                if (await _resultLogService.WriteAsync(entry).ConfigureAwait(true))
-                    _completion.MarkResultLogReady();
+                await _completion.WriteReportAsync(entry);
             }
             // Completion overlay carries the user-facing summary; the
             // bottom-row pill stays blank once the overlay dismisses.
@@ -1271,6 +1269,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // coming from gates that run ahead of the per-file loop, which is why
             // only they can skip the rescan. The delete path's twin of this arm
             // is certain of just as little, and rescans on the same reasoning.
+            // For the same reason the run counts as the PC's first: files may
+            // have moved.
+            _completion.RecordFirstRun();
             await RefreshAfterBatchAsync();
             // Reaching here is rare: the move service collects per-file errors
             // rather than throwing.
@@ -1500,9 +1501,11 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             if (result.Cancelled)
             {
                 // Cancelled mid-batch: report the partial on the completion
-                // overlay (no result-log entry for a cancelled run). Only raise
-                // the overlay when something actually happened.
+                // overlay (no result-log entry for a cancelled run, which counts as
+                // the PC's first run where files went). Only raise the overlay when
+                // something actually happened.
                 await RefreshAfterBatchAsync();
+                if (result.DeletedCount > 0) _completion.RecordFirstRun();
                 if (result.DeletedCount > 0 || result.Errors.Count > 0)
                 {
                     var cancelledBytes = CompletedBytes(survivingFiles, result.DeletedCount, result.Errors);
@@ -1530,12 +1533,11 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // scan's.
             await RefreshAfterBatchAsync();
 
+            // As on the Move path: the box before the card, the report after it.
+            var carriesReport = await _completion.ReportIsFreeAsync() && _completion.TakeReport();
             _completion.ShowDeleteSummary(deletedCount, deletedBytes, result.Errors, reverify);
 
-            // Same lock-aware gate as MoveAllAsync: skip the write once the
-            // result-log surface is closed for the rest of the session and
-            // across future sessions.
-            if (!_completion.IsResultLogLocked)
+            if (carriesReport)
             {
                 var entry = ResultLogEntry.ForDelete(
                     ctx.PreOpScan, ctx.PreOpDurationMs,
@@ -1543,8 +1545,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                     operationTimer.ElapsedMilliseconds,
                     // Folded, as on the Move path.
                     reverify);
-                if (await _resultLogService.WriteAsync(entry).ConfigureAwait(true))
-                    _completion.MarkResultLogReady();
+                await _completion.WriteReportAsync(entry);
             }
             OperationProgress = string.Empty;
             return;
@@ -1567,7 +1568,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // arms above rescan for the same reason on strictly less: a cancel
             // stops at a file boundary, and this arm cannot say even that much.
             // Deletes are permanent, so a stale count here is the window
-            // offering to act on files a second time.
+            // offering to act on files a second time. Files may have gone, so the
+            // run counts as the PC's first.
+            _completion.RecordFirstRun();
             await RefreshAfterBatchAsync();
             OperationProgress = string.Empty;
             ShowActionFailed(ex, deleting: true);

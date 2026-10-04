@@ -37,6 +37,9 @@ public class CleanupPreFlightTests
     private readonly IWindowService _windowService = Substitute.For<IWindowService>();
     private readonly IResultLogService _resultLogService = Substitute.For<IResultLogService>();
     private readonly IRemovableReverifier _reverifier = Substitute.For<IRemovableReverifier>();
+    private readonly IEarlierRunCheck _earlierRunCheck = Substitute.For<IEarlierRunCheck>();
+    private readonly IFirstRunMark _firstRunMark = Substitute.For<IFirstRunMark>();
+    private readonly IWindowsRegion _windowsRegion = Substitute.For<IWindowsRegion>();
 
     private readonly IFileSystem _fileSystem = Substitute.For<IFileSystem>();
     private readonly IDirectory _directory = Substitute.For<IDirectory>();
@@ -75,7 +78,8 @@ public class CleanupPreFlightTests
         new(_scanService, _moveService, _deleteService,
             _settingsService, _rebootService, _msiInfoService,
             _dialogService, _confirmationService, _windowService,
-            _fileSystem, _resultLogService, _updateCheckService, _reverifier);
+            _fileSystem, _resultLogService, _updateCheckService, _reverifier,
+            _earlierRunCheck, _firstRunMark, _windowsRegion);
 
     /// <summary>
     /// Spins until <paramref name="condition"/> holds. The view-models have no

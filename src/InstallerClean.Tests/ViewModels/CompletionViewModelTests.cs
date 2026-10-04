@@ -4,6 +4,7 @@ using InstallerClean.Helpers;
 using InstallerClean.Models;
 using InstallerClean.Resources;
 using InstallerClean.Services;
+using InstallerClean.Tests.Helpers;
 using InstallerClean.ViewModels;
 
 namespace InstallerClean.Tests.ViewModels;
@@ -104,7 +105,7 @@ public class CompletionViewModelTests
     [Fact]
     public void ShowDeleteSummary_reads_freed_and_carries_no_restore_line()
     {
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowDeleteSummary(deletedCount: 2, deletedBytes: 3 * 1024 * 1024,
             errors: new List<FileOperationError>());
 
@@ -118,7 +119,7 @@ public class CompletionViewModelTests
     [Fact]
     public void ShowMoveSummary_reads_freed_only_when_the_folder_is_on_another_drive()
     {
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
 
         vm.ShowMoveSummary(movedCount: 1, movedBytes: 1024 * 1024, destination: @"D:\backup",
             errors: [], space: MoveSpaceOutcome.FreedSpace);
@@ -148,7 +149,7 @@ public class CompletionViewModelTests
         // The WPF host locates this raw string inside the formatted Summary
         // to force the destination onto its own line; it must be the
         // literal, unformatted path handed to ShowMoveSummary.
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowMoveSummary(movedCount: 1, movedBytes: 1024 * 1024, destination: @"D:\backup",
             errors: [], space: MoveSpaceOutcome.FreedSpace);
 
@@ -162,7 +163,7 @@ public class CompletionViewModelTests
         // The view-model instance is reused across operations, so a stale
         // destination path from a prior move must not bleed into a later
         // delete summary (which has no destination placeholder at all).
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowMoveSummary(movedCount: 1, movedBytes: 1024 * 1024, destination: @"D:\backup",
             errors: [], space: MoveSpaceOutcome.FreedSpace);
         Assert.NotEqual(string.Empty, vm.SummaryDestination);
@@ -184,7 +185,7 @@ public class CompletionViewModelTests
     [Fact]
     public void A_move_that_fully_succeeded_keeps_the_success_heading_and_no_count_line()
     {
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowMoveSummary(movedCount: 3, movedBytes: 1024 * 1024, destination: @"D:\backup",
             errors: [], space: MoveSpaceOutcome.FreedSpace);
 
@@ -196,7 +197,7 @@ public class CompletionViewModelTests
     [Fact]
     public void A_partly_failed_move_keeps_the_success_heading_and_states_the_count()
     {
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowMoveSummary(movedCount: 69, movedBytes: 1024 * 1024, destination: @"D:\backup",
             errors: Failures(2), space: MoveSpaceOutcome.FreedSpace);
 
@@ -215,7 +216,7 @@ public class CompletionViewModelTests
     [Fact]
     public void A_move_that_achieved_nothing_says_so_and_claims_no_destination()
     {
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowMoveSummary(movedCount: 0, movedBytes: 0, destination: @"D:\backup",
             errors: Failures(2), space: MoveSpaceOutcome.FreedSpace);
 
@@ -236,7 +237,7 @@ public class CompletionViewModelTests
     [Fact]
     public void A_delete_that_achieved_nothing_says_so_and_claims_nothing()
     {
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowDeleteSummary(deletedCount: 0, deletedBytes: 0, errors: Failures(3));
 
         Assert.True(vm.HeadingIsWarning);
@@ -250,7 +251,7 @@ public class CompletionViewModelTests
     [Fact]
     public void A_partly_failed_delete_keeps_the_success_heading()
     {
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowDeleteSummary(deletedCount: 5, deletedBytes: 1024, errors: Failures(1));
 
         // Five files really were deleted and the space really did come back, so
@@ -279,7 +280,7 @@ public class CompletionViewModelTests
     {
         using var scope = new LocalisationScope(CultureInfo.GetCultureInfo(cultureName));
 
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowMoveCancelledSummary(movedCount: 3, totalCount: 71, movedBytes: 1024,
             destination: @"D:\backup", errors: Failures(2), space: MoveSpaceOutcome.FreedSpace);
 
@@ -311,7 +312,7 @@ public class CompletionViewModelTests
     [Fact]
     public void A_stopped_move_says_why_it_stopped_and_not_to_delete_the_folder()
     {
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowMoveStoppedSummary(movedCount: 62, movedBytes: 1024 * 1024, destination: @"D:\backup",
             errors: [], space: MoveSpaceOutcome.FreedSpace);
 
@@ -322,7 +323,7 @@ public class CompletionViewModelTests
         // The control that makes the absence attributable. Without it, a line that
         // had stopped being written at all would satisfy the assertion above just
         // as well as one that had been replaced.
-        var finished = new CompletionViewModel();
+        var finished = TestCompletion.Create();
         finished.ShowMoveSummary(movedCount: 62, movedBytes: 1024 * 1024, destination: @"D:\backup",
             errors: [], space: MoveSpaceOutcome.FreedSpace);
         Assert.Equal(Strings.Completion_MoveRestoreHint, finished.Restore);
@@ -338,7 +339,7 @@ public class CompletionViewModelTests
     [Fact]
     public void A_stopped_move_that_moved_nothing_still_says_why_it_stopped()
     {
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowMoveStoppedSummary(movedCount: 0, movedBytes: 0, destination: @"D:\backup",
             errors: Failures(2), space: MoveSpaceOutcome.FreedSpace);
 
@@ -356,7 +357,7 @@ public class CompletionViewModelTests
     [Fact]
     public void A_cancelled_delete_that_deleted_nothing_and_hit_an_error_warns()
     {
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowDeleteCancelledSummary(deletedCount: 0, totalCount: 40, deletedBytes: 0,
             errors: Failures(1));
 
@@ -372,7 +373,7 @@ public class CompletionViewModelTests
     [Fact]
     public void A_cancelled_move_that_moved_nothing_and_hit_an_error_warns()
     {
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowMoveCancelledSummary(movedCount: 0, totalCount: 40, movedBytes: 0,
             destination: @"D:\backup", errors: Failures(2), space: MoveSpaceOutcome.FreedSpace);
 
@@ -394,7 +395,7 @@ public class CompletionViewModelTests
         // between them they say how to put things back. Neither is any use to a
         // reader on its own, so the destination reaching the summary is held here
         // rather than left to the call site.
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowMoveCancelledSummary(movedCount: 4, totalCount: 20, movedBytes: 1024,
             destination: @"D:\InstallerBackup", errors: Array.Empty<FileOperationError>(),
             space: MoveSpaceOutcome.FreedSpace);
@@ -411,7 +412,7 @@ public class CompletionViewModelTests
     [Fact]
     public void A_cancelled_move_that_moved_nothing_drops_its_restore_hint()
     {
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowMoveCancelledSummary(movedCount: 0, totalCount: 40, movedBytes: 0,
             destination: @"D:\backup", errors: Failures(2), space: MoveSpaceOutcome.FreedSpace);
 
@@ -422,7 +423,7 @@ public class CompletionViewModelTests
     [Fact]
     public void A_cancelled_move_that_moved_something_keeps_its_restore_hint()
     {
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowMoveCancelledSummary(movedCount: 3, totalCount: 40, movedBytes: 1024,
             destination: @"D:\backup", errors: Failures(2), space: MoveSpaceOutcome.FreedSpace);
 
@@ -437,7 +438,7 @@ public class CompletionViewModelTests
     {
         // Same rule as the completed delete: nothing under the summary at any
         // count.
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowDeleteCancelledSummary(deletedCount: 3, totalCount: 40, deletedBytes: 1024,
             errors: Failures(2));
 
@@ -450,7 +451,7 @@ public class CompletionViewModelTests
         // The view-model instance is reused across operations, so a count line
         // or a warning heading left over from a failed run would sit under the
         // next run's green heading.
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowMoveSummary(movedCount: 0, movedBytes: 0, destination: @"D:\backup",
             errors: Failures(2), space: MoveSpaceOutcome.FreedSpace);
         Assert.True(vm.HeadingIsWarning);
@@ -474,7 +475,7 @@ public class CompletionViewModelTests
         // much was going spare, which nothing established. The sentence is not quoted
         // here, because a quotation of a value that is still being worded goes stale
         // in a comment nothing checks.
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
 
         vm.ShowNothingOffered(
             wholesale: true, heldBackCount: 3, heldBackBytes: 3072,
@@ -504,11 +505,6 @@ public class CompletionViewModelTests
                 DisplayHelpers.FormatElapsedLong(TimeSpan.FromMilliseconds(10))),
             vm.Restore);
         Assert.Equal("Scanned 5 files in less than a second", vm.Restore);
-
-        // Nothing was freed, so the Send tooltip takes its please-send-anyway
-        // form: this cohort is the one the aggregate most needs.
-        Assert.True(vm.LastResultFreedNothing);
-        Assert.Equal(Strings.Tooltip_SendResultLog_NothingFound, vm.SendResultLogTooltip);
     }
 
     [Fact]
@@ -519,7 +515,7 @@ public class CompletionViewModelTests
         // drops the numeral and names the size alone. The literal assertion below is
         // the control: formatting the right key with the wrong argument, or selecting
         // the plural at a count of one, both still satisfy a key-level assertion.
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
 
         vm.ShowNothingOffered(
             wholesale: true, heldBackCount: 1, heldBackBytes: 1024,
@@ -548,8 +544,8 @@ public class CompletionViewModelTests
         // the other says the app could not establish enough to offer anything, on a
         // machine whose folder may be full. Showing the first where the second is true
         // is a claim about somebody's disk the scan never made.
-        var allClear = new CompletionViewModel();
-        var nothingOffered = new CompletionViewModel();
+        var allClear = TestCompletion.Create();
+        var nothingOffered = TestCompletion.Create();
 
         allClear.ShowAllClear(scannedFileCount: 5, scanDurationMs: 10);
         nothingOffered.ShowNothingOffered(
@@ -572,8 +568,8 @@ public class CompletionViewModelTests
         // other's machine, so a tidy that collapsed them would put a cause on a set
         // that did not earn it, with the heading and the receipt still matching and
         // nothing else to notice.
-        var wholesale = new CompletionViewModel();
-        var perFile = new CompletionViewModel();
+        var wholesale = TestCompletion.Create();
+        var perFile = TestCompletion.Create();
 
         wholesale.ShowNothingOffered(
             wholesale: true, heldBackCount: 3, heldBackBytes: 3072,
@@ -595,7 +591,7 @@ public class CompletionViewModelTests
         // The key-level assertion the test above cannot make: NotEqual would be
         // satisfied by any two different strings, including the right key formatted
         // with the wrong arguments. This names the value.
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
 
         vm.ShowNothingOffered(
             wholesale: false, heldBackCount: 3, heldBackBytes: 3072,
@@ -620,7 +616,7 @@ public class CompletionViewModelTests
     [Fact]
     public void A_batch_kept_back_for_one_cause_carries_the_sentence_at_its_count()
     {
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
 
         vm.ShowDeleteSummary(deletedCount: 2, deletedBytes: 4096, errors: [],
             reverify: new ReverifyResult([], ["a.msp"], new HeldBackReasons(Reclaimed: 1)));
@@ -634,7 +630,7 @@ public class CompletionViewModelTests
         // Where three sentences used to print. The four counts still exist on the
         // tally and travel in the result log; what the user gets is one line whose
         // number is 2 + 1 + 1 rather than any one cause's.
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
 
         vm.ShowDeleteSummary(deletedCount: 1, deletedBytes: 4096, errors: [],
             reverify: new ReverifyResult([], ["a.msp", "b.msp", "c.msp", "d.msp"],
@@ -650,12 +646,12 @@ public class CompletionViewModelTests
         // cause that is about the machine rather than about any file. The screen
         // cannot tell them apart, which is the whole of what "names no cause" means
         // and is worth a test rather than a comment.
-        var perFile = new CompletionViewModel();
+        var perFile = TestCompletion.Create();
         perFile.ShowDeleteSummary(deletedCount: 1, deletedBytes: 4096, errors: [],
             reverify: new ReverifyResult([], ["a.msp", "b.msp", "c.msp"],
                 new HeldBackReasons(Reclaimed: 2, RecordsChanged: 1)));
 
-        var machineWide = new CompletionViewModel();
+        var machineWide = TestCompletion.Create();
         machineWide.ShowDeleteSummary(deletedCount: 1, deletedBytes: 4096, errors: [],
             reverify: new ReverifyResult([], ["a.msp", "b.msp", "c.msp"],
                 new HeldBackReasons(OwnershipUnestablished: 3)));
@@ -669,7 +665,7 @@ public class CompletionViewModelTests
     {
         // The commonest run. An empty string is what collapses the block, so a
         // count of zero must not reach it as a sentence.
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
 
         vm.ShowDeleteSummary(deletedCount: 2, deletedBytes: 4096, errors: [],
             reverify: new ReverifyResult(["a.msi", "b.msi"], []));
@@ -685,7 +681,7 @@ public class CompletionViewModelTests
         // composed in the window's code-behind. That path splits on newlines, so
         // one sentence yields one Run and no break, which is why the collapse needs
         // nothing done to it.
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
 
         vm.ShowReverifyAllSkipped(new ReverifyResult([], ["a.msp", "b.msp"],
             new HeldBackReasons(Reclaimed: 1, RecordsUnreadable: 1)), deleting: false);
@@ -709,7 +705,7 @@ public class CompletionViewModelTests
         // is a word the user never pressed. Both strings are in the file and already
         // picked between by ShowMoveSummary and ShowDeleteSummary, so DO NOT COLLAPSE
         // THE PAIR INTO ONE WORD.
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
 
         vm.ShowReverifyAllSkipped(
             new ReverifyResult([], ["a.msp"], new HeldBackReasons(Reclaimed: 1)), deleting);
@@ -732,7 +728,7 @@ public class CompletionViewModelTests
     [Fact]
     public void A_delete_that_freed_bytes_asks_for_a_donation()
     {
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
 
         vm.ShowDeleteSummary(deletedCount: 3, deletedBytes: 4096, errors: []);
 
@@ -742,7 +738,7 @@ public class CompletionViewModelTests
     [Fact]
     public void A_delete_that_freed_nothing_keeps_done()
     {
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
 
         vm.ShowDeleteSummary(deletedCount: 0, deletedBytes: 0, errors: []);
 
@@ -756,7 +752,7 @@ public class CompletionViewModelTests
         // emptier. This is the card that separates the two: the files went to the
         // drive they came from, so nothing is reclaimed until the user deletes the
         // backup folder, and the heading says "moved" rather than "freed".
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
 
         vm.ShowMoveSummary(movedCount: 3, movedBytes: 4096, destination: @"C:\Backup",
             errors: [], space: MoveSpaceOutcome.SameDrive);
@@ -772,7 +768,7 @@ public class CompletionViewModelTests
     {
         // Files reached the backup folder before the stop, so the bytes alone would
         // ask. The stopped flag is what keeps this card on Done.
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
 
         vm.ShowMoveStoppedSummary(movedCount: 3, movedBytes: 4096, destination: @"D:\Backup",
             errors: [], space: MoveSpaceOutcome.FreedSpace);
@@ -785,7 +781,7 @@ public class CompletionViewModelTests
     {
         // The control for the stopped Move above: the same arguments through the
         // method that shares its body, so the flag is the only difference.
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
 
         vm.ShowMoveSummary(movedCount: 3, movedBytes: 4096, destination: @"D:\Backup",
             errors: [], space: MoveSpaceOutcome.FreedSpace);
@@ -796,7 +792,7 @@ public class CompletionViewModelTests
     [Fact]
     public void A_cancelled_move_that_moved_files_asks_for_a_donation()
     {
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
 
         vm.ShowMoveCancelledSummary(movedCount: 3, totalCount: 40, movedBytes: 1024,
             destination: @"D:\Backup", errors: [], space: MoveSpaceOutcome.FreedSpace);
@@ -807,8 +803,8 @@ public class CompletionViewModelTests
     [Fact]
     public void A_cancelled_delete_asks_for_a_donation_only_where_it_deleted_files()
     {
-        var deleted = new CompletionViewModel();
-        var nothing = new CompletionViewModel();
+        var deleted = TestCompletion.Create();
+        var nothing = TestCompletion.Create();
 
         deleted.ShowDeleteCancelledSummary(deletedCount: 3, totalCount: 40, deletedBytes: 1024, errors: []);
         nothing.ShowDeleteCancelledSummary(deletedCount: 0, totalCount: 40, deletedBytes: 0, errors: []);
@@ -821,7 +817,7 @@ public class CompletionViewModelTests
     public void Donate_opens_the_donate_page_and_closes_the_card()
     {
         var windowService = Substitute.For<IWindowService>();
-        var vm = new CompletionViewModel(windowService: windowService);
+        var vm = TestCompletion.Create(windowService);
         vm.ShowDeleteSummary(deletedCount: 3, deletedBytes: 4096, errors: []);
         Assert.True(vm.IsComplete);
 
@@ -836,7 +832,7 @@ public class CompletionViewModelTests
     {
         // Nothing was moved, so the card keeps Done, even though the screen is
         // green and the check ahead of the batch did its job.
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
 
         vm.ShowReverifyAllSkipped(
             new ReverifyResult([], ["a.msp"], new HeldBackReasons(Reclaimed: 1)), deleting: false);
@@ -850,7 +846,7 @@ public class CompletionViewModelTests
         // The view-model instance is reused across operations, so a flag left on
         // by the Delete would follow the user onto the all-clear that the
         // post-operation rescan produces, asking for a donation for a scan.
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         vm.ShowDeleteSummary(deletedCount: 3, deletedBytes: 4096, errors: []);
         Assert.True(vm.AsksForDonation);
 
@@ -876,7 +872,7 @@ public class CompletionViewModelTests
         // The scan held back nothing the count counts, so there is no sentence to put
         // the line under: a file kept for an installed program at a drive given up is
         // outside that count, and the line is everything the card has to say about it.
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
 
         vm.ShowNothingOffered(
             wholesale: false, heldBackCount: 0, heldBackBytes: 0,
@@ -893,8 +889,8 @@ public class CompletionViewModelTests
     [InlineData(true)]
     public void The_nothing_offered_screen_puts_the_line_under_the_held_back_sentence(bool wholesale)
     {
-        var vm = new CompletionViewModel();
-        var withoutLine = new CompletionViewModel();
+        var vm = TestCompletion.Create();
+        var withoutLine = TestCompletion.Create();
 
         vm.ShowNothingOffered(
             wholesale, heldBackCount: 3, heldBackBytes: 3072,
@@ -914,7 +910,7 @@ public class CompletionViewModelTests
     // file, Skipped on the rest.
     private static string CheckLinesOn(Card card, ReverifyResult reverify)
     {
-        var vm = new CompletionViewModel();
+        var vm = TestCompletion.Create();
         switch (card)
         {
             case Card.Move:

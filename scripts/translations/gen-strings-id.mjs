@@ -137,8 +137,6 @@ const MAP = {
   'Action.BackupFolderPlaceholder': `Jalur ke folder jika Anda memindahkan, bukan menghapus.`,
   'Action.OpenReleasePage': `Buka halaman _rilis`,
   'Action.Rescan': `Pindai _ulang`,
-  'Action.SendResultLog': `Kirim laporan`,
-  'Action.SendResultLogConfirm': `_Kirim`,
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `Donasi`,
@@ -165,7 +163,6 @@ const MAP = {
   'Automation.ConfirmDelete': `Hapus permanen menyingkirkan file yang tidak diperlukan. Batal menutup jendela tanpa menghapus apa pun.`,
   'Automation.ConfirmMove': `Pindahkan menaruh file yang tidak diperlukan di folder tujuan yang dipilih. Batal membiarkannya di tempatnya.`,
   'Automation.SayThanks': `Ucapkan terima kasih`,
-  'Automation.ConfirmSendResultLog': `Kirim mengirimkan laporan yang ditampilkan ke No Faff. Batal tidak mengirim apa pun.`,
   'Automation.CheckForUpdates': `Periksa pembaruan`,
   'Automation.CheckForUpdates.HelpText': `Memeriksa halaman rilis github untuk mencari versi yang lebih baru.`,
   'Automation.UpdateAvailable.HelpText': `Buka halaman rilis untuk mengunduh versi yang lebih baru, atau batalkan untuk tetap memakai versi saat ini.`,
@@ -198,8 +195,6 @@ const MAP = {
   'Tooltip.Close': `Tutup`,
   'Tooltip.LeaveStarOnGitHub.About': `Bintang membantu orang lain menemukan InstallerClean.`,
   'Tooltip.Minimise': `Kecilkan`,
-  'Tooltip.SendResultLog': `Terserah Anda, tapi sangat dihargai. Mengirim ringkasan anonim yang sekadar memberi tahu saya apakah aplikasi berfungsi dan berapa banyak ruang yang dikosongkan orang-orang. Layar berikutnya memperlihatkan apa yang akan dikirim sebelum Anda mengonfirmasi.`,
-  'Tooltip.SendResultLog.NothingFound': `Terserah Anda, tapi sangat dihargai. Mengirim ringkasan anonim yang sekadar memberi tahu saya apakah aplikasi berfungsi. Layar berikutnya memperlihatkan apa yang akan dikirim sebelum Anda mengonfirmasi.`,
   'Tooltip.Move': `Memindahkan file yang tidak diperlukan ke folder cadangan.`,
   'Tooltip.MoveNeedsDestination': `Memindahkan file yang tidak diperlukan ke sebuah folder cadangan. Anda akan memilihnya sebentar lagi.`,
   'Tooltip.Delete': `Menghapus permanen file yang tidak diperlukan. Gunakan Pindahkan saja kalau Anda ingin kesempatan meyakinkan diri bahwa semuanya baik-baik saja.`,
@@ -395,13 +390,6 @@ const MAP = {
   'Error.DestinationCollision': `File bernama '{0}' sudah ada di folder cadangan.`,
 
   // Result log (post-cleanup diagnostic send)
-  'ResultLog.Sending': `Mengirim...`,
-  'ResultLog.Sent': `Terima kasih! Laporan terkirim.`,
-  'ResultLog.Failed': `Pengiriman gagal. Coba lagi nanti.`,
-  'ResultLog.NothingToSend': `Tidak ada laporan untuk dikirim.`,
-  'ConfirmSendResultLog.Title': `Kirim ini?`,
-  'ConfirmSendResultLog.Reassurance': `Dikirim ke nofaff.netlify.app/api/result-log. Tidak ada yang mengidentifikasi Anda atau komputer Anda; ini hanya memberi tahu saya bahwa InstallerClean berfungsi dan [berapa banyak ruang yang dikosongkan orang-orang].`,
-  'Automation.ResultLogPreview': `Pratinjau laporan`,
 
   // Single instance / startup / crash
   'Startup.AlreadyRunningTitle': `InstallerClean`,
@@ -603,6 +591,7 @@ const MAP = {
   'Action.CloseWithoutDonating': `_Close without donating`,
   'Tooltip.Donate': `I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.`,
   'Cli.DonateAsk': `InstallerClean is free. If it helped, please donate \$5: {0}`,
+  'Completion.SendReport': `Send _anonymous report`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

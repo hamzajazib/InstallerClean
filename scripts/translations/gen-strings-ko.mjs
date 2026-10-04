@@ -125,8 +125,6 @@ const MAP = {
   'Action.BackupFolderPlaceholder': `삭제하지 않고 이동할 경우 사용할 폴더 경로입니다.`,
   'Action.OpenReleasePage': `릴리스 페이지 열기(_R)`,
   'Action.Rescan': `다시 검사(_R)`,
-  'Action.SendResultLog': `보고서 보내기`,
-  'Action.SendResultLogConfirm': `보내기(_S)`,
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `후원`,
@@ -143,7 +141,6 @@ const MAP = {
   'Automation.ConfirmDelete': `영구 삭제하면 불필요한 파일이 제거됩니다. 취소하면 아무것도 삭제하지 않고 닫습니다.`,
   'Automation.ConfirmMove': `이동하면 불필요한 파일이 선택한 대상 폴더에 들어갑니다. 취소하면 파일은 있던 자리에 그대로 남습니다.`,
   'Automation.SayThanks': `감사 인사`,
-  'Automation.ConfirmSendResultLog': `보내기를 누르면 표시된 보고서가 No Faff에 전송됩니다. 취소하면 아무것도 보내지 않습니다.`,
   'Automation.CheckForUpdates': `업데이트 확인`,
   'Automation.CheckForUpdates.HelpText': `github의 릴리스 페이지에서 새 버전이 있는지 확인합니다.`,
   'Automation.UpdateAvailable.HelpText': `새 버전을 내려받으려면 릴리스 페이지를 열고, 현재 버전을 유지하려면 취소하세요.`,
@@ -176,8 +173,6 @@ const MAP = {
   'Tooltip.Close': `닫기`,
   'Tooltip.LeaveStarOnGitHub.About': `별 하나가 다른 사람들이 InstallerClean을 찾는 데 도움이 됩니다.`,
   'Tooltip.Minimise': `최소화`,
-  'Tooltip.SendResultLog': `보내실지는 자유지만 보내 주시면 정말 감사합니다. 익명 요약을 전송하며, 이는 프로그램이 잘 작동하는지와 사람들이 공간을 얼마나 확보하고 있는지 제가 알 수 있게 해 줍니다. 다음 화면에서 확인 전에 보낼 내용을 미리 볼 수 있습니다.`,
-  'Tooltip.SendResultLog.NothingFound': `보내실지는 자유지만 보내 주시면 정말 감사합니다. 익명 요약을 전송하며, 이는 프로그램이 잘 작동하는지 제가 알 수 있게 해 줍니다. 다음 화면에서 확인 전에 보낼 내용을 미리 볼 수 있습니다.`,
   'Tooltip.Move': `불필요한 파일을 백업 폴더로 옮깁니다.`,
   'Tooltip.MoveNeedsDestination': `불필요한 파일을 백업 폴더로 옮깁니다. 폴더는 곧이어 선택하게 됩니다.`,
   'Tooltip.Delete': `불필요한 파일을 영구히 삭제합니다. 모든 것이 괜찮은지 직접 확인해 보고 싶으면 대신 이동을 사용하세요.`,
@@ -373,13 +368,6 @@ const MAP = {
   'Error.DestinationCollision': `'{0}'(이)라는 이름의 파일이 이미 백업 폴더에 있습니다.`,
 
   // Result log (post-cleanup diagnostic send)
-  'ResultLog.Sending': `보내는 중...`,
-  'ResultLog.Sent': `감사합니다! 보고서를 보냈습니다.`,
-  'ResultLog.Failed': `보내기에 실패했습니다. 나중에 다시 시도하세요.`,
-  'ResultLog.NothingToSend': `보낼 보고서가 없습니다.`,
-  'ConfirmSendResultLog.Title': `이 내용을 보내시겠습니까?`,
-  'ConfirmSendResultLog.Reassurance': `nofaff.netlify.app/api/result-log으로 전송됩니다. 사용자나 사용자의 컴퓨터를 식별할 수 있는 내용은 전혀 없습니다. 그저 InstallerClean이 잘 작동하는지와 [사람들이 공간을 얼마나 확보하고 있는지] 알 수 있게 해 줄 뿐입니다.`,
-  'Automation.ResultLogPreview': `보고서 미리 보기`,
 
   // Single instance / startup / crash
   'Startup.AlreadyRunningTitle': `InstallerClean`,
@@ -581,6 +569,7 @@ const MAP = {
   'Action.CloseWithoutDonating': `_Close without donating`,
   'Tooltip.Donate': `I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.`,
   'Cli.DonateAsk': `InstallerClean is free. If it helped, please donate \$5: {0}`,
+  'Completion.SendReport': `Send _anonymous report`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

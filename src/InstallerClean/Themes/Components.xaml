@@ -122,9 +122,8 @@
         </Setter>
     </Style>
 
-    <!-- Focus ring for flat, rectangular controls: the read-only JSON
-         preview TextBox in ConfirmSendResultLogWindow, the checkbox
-         row further down (whose focusable extent is the box plus its
+    <!-- Focus ring for flat, rectangular controls: the checkbox row
+         further down (whose focusable extent is the box plus its
          label, a rectangle) and, through the app-default focus visual
          near the end of this file, in-body Hyperlinks and anything
          else with no override of its own. The pill visuals above sit

@@ -164,8 +164,6 @@ const MAP = {
   'Action.BackupFolderPlaceholder': `Ścieżka do folderu, jeśli przenosisz zamiast usuwać.`,
   'Action.OpenReleasePage': `Otwórz stronę _wydania`,
   'Action.Rescan': `_Skanuj ponownie`,
-  'Action.SendResultLog': `Wyślij raport`,
-  'Action.SendResultLogConfirm': `_Wyślij`,
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `Wesprzyj`,
@@ -182,7 +180,6 @@ const MAP = {
   'Automation.ConfirmDelete': `Usuń trwale usuwa niepotrzebne pliki. Anuluj zamyka okno bez usuwania.`,
   'Automation.ConfirmMove': `Przenieś umieszcza niepotrzebne pliki w wybranym folderze docelowym. Anuluj zostawia je na miejscu.`,
   'Automation.SayThanks': `Podziękuj`,
-  'Automation.ConfirmSendResultLog': `Wyślij przekazuje pokazany raport do No Faff. Anuluj nie wysyła niczego.`,
   'Automation.CheckForUpdates': `Sprawdź aktualizacje`,
   'Automation.CheckForUpdates.HelpText': `Sprawdza na stronie wydań githuba, czy jest nowsza wersja.`,
   'Automation.UpdateAvailable.HelpText': `Otwórz stronę wydania, aby pobrać nowszą wersję, lub anuluj, aby zachować bieżącą.`,
@@ -215,8 +212,6 @@ const MAP = {
   'Tooltip.Close': `Zamknij`,
   'Tooltip.LeaveStarOnGitHub.About': `Gwiazdka pomaga innym znaleźć InstallerClean.`,
   'Tooltip.Minimise': `Minimalizuj`,
-  'Tooltip.SendResultLog': `Twoja decyzja, ale będzie miło. Wysyła anonimowe podsumowanie, które po prostu daje mi znać, czy działa i ile miejsca ludzie zwalniają. Na następnym ekranie zobaczysz, co zostanie wysłane, zanim potwierdzisz.`,
-  'Tooltip.SendResultLog.NothingFound': `Twoja decyzja, ale będzie miło. Wysyła anonimowe podsumowanie, które po prostu daje mi znać, czy działa. Na następnym ekranie zobaczysz, co zostanie wysłane, zanim potwierdzisz.`,
   'Tooltip.Move': `Przenosi niepotrzebne pliki do folderu kopii zapasowej.`,
   'Tooltip.MoveNeedsDestination': `Przenosi niepotrzebne pliki do folderu kopii zapasowej. Wybierzesz go za chwilę.`,
   'Tooltip.Delete': `Trwale usuwa niepotrzebne pliki. Użyj zamiast tego Przenieś, jeśli chcesz mieć okazję upewnić się, że wszystko jest w porządku.`,
@@ -412,13 +407,6 @@ const MAP = {
   'Error.DestinationCollision': `Plik o nazwie „{0}” już jest w folderze kopii zapasowej.`,
 
   // Result log (post-cleanup diagnostic send)
-  'ResultLog.Sending': `Wysyłanie...`,
-  'ResultLog.Sent': `Dzięki! Raport wysłany.`,
-  'ResultLog.Failed': `Wysyłanie nie powiodło się. Spróbuj ponownie później.`,
-  'ResultLog.NothingToSend': `Brak raportu do wysłania.`,
-  'ConfirmSendResultLog.Title': `Wysłać to?`,
-  'ConfirmSendResultLog.Reassurance': `Trafia do nofaff.netlify.app/api/result-log. Nic nie identyfikuje ciebie ani twojego komputera; to po prostu daje mi znać, że InstallerClean działa i [ile miejsca ludzie zwalniają].`,
-  'Automation.ResultLogPreview': `Podgląd raportu`,
 
   // Single instance / startup / crash
   'Startup.AlreadyRunningTitle': `InstallerClean`,
@@ -623,6 +611,7 @@ const MAP = {
   'Action.CloseWithoutDonating': `_Close without donating`,
   'Tooltip.Donate': `I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.`,
   'Cli.DonateAsk': `InstallerClean is free. If it helped, please donate \$5: {0}`,
+  'Completion.SendReport': `Send _anonymous report`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -7,7 +7,7 @@ namespace InstallerClean.Services;
 /// launch. The automatic one is gated on <c>AppSettings.AutoUpdateCheck</c>,
 /// read at the moment it fires, so an install that has opted out opens no
 /// socket at all. This is the app's only outbound call besides the
-/// explicitly consented result-log send.
+/// report the window sends (<see cref="IResultLogService"/>).
 /// </summary>
 public interface IUpdateCheckService
 {

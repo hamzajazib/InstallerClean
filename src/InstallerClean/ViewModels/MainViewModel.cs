@@ -20,8 +20,7 @@ namespace InstallerClean.ViewModels;
 ///   - The Scan command, behind Re-scan and F5, is refused while a Move
 ///     or a Delete is in flight and while the completion overlay is up.
 ///   - Esc goes to the overlay in front (<see cref="HandleEscape"/>).
-///   - A report sent successfully is saved to settings, so the Send
-///     button stays hidden in later sessions.
+///   - Closing the app settles the report box on a card still up.
 ///
 /// All scan/cleanup/completion/chrome state lives on the child VMs.
 /// XAML binds via the corresponding nested property
@@ -36,18 +35,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public ChromeViewModel Chrome { get; }
 
     private readonly EventHandler _scanCompletedHandler;
-    private readonly IResultLogService _resultLogService;
-    private readonly ISettingsService _settingsService;
-    private readonly bool _hasSentResultLogBefore;
 
     /// <summary>
-    /// The off-dispatcher write of the result-log lifetime lock, held so
-    /// <see cref="Dispose"/> can wait for it. Clicking Send can be the last
-    /// thing a user does before closing the window, and a write lost to the
-    /// process exiting would re-prompt them next session on a machine that has
-    /// already sent.
+    /// Completes once the latest scan that finished has put its card up or settled
+    /// that it puts none up. A card on the PC's first run waits for the window's start
+    /// check, which can still be reading as the startup scan finishes, so App waits on
+    /// this before it builds the window: the startup card is then either up as the
+    /// window is constructed, which replays it, or not coming.
     /// </summary>
-    private Task _lifetimeLockSave = Task.CompletedTask;
+    public Task ScanCardDecided { get; private set; } = Task.CompletedTask;
 
     public MainViewModel(
         IFileSystemScanService scanService,
@@ -62,17 +58,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IFileSystem fileSystem,
         IResultLogService resultLogService,
         IUpdateCheckService updateCheckService,
-        IRemovableReverifier reverifier)
+        IRemovableReverifier reverifier,
+        IEarlierRunCheck earlierRunCheck,
+        IFirstRunMark firstRunMark,
+        IWindowsRegion windowsRegion)
     {
-        _resultLogService = resultLogService;
-        _settingsService = settingsService;
-        // Snapshot the lifetime lock once at construction. The settings
-        // service is also read inside CleanupViewModel for MoveDestination,
-        // but those two reads can't race: this snapshot covers HasSentResultLog
-        // for the whole MainViewModel lifetime, and writes go through the
-        // persistence callback below.
-        _hasSentResultLogBefore = settingsService.Load().HasSentResultLog;
-
         // Closures read Cleanup / Completion at invocation time, after
         // the ctor runs.
         // IsOperationInFlight, not IsOperating: the latter is unset through
@@ -81,14 +71,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Scan = new ScanViewModel(scanService, rebootService, dialogService,
             isExternallyBlocked: () => Cleanup?.IsOperationInFlight == true || Completion?.IsComplete == true);
         Completion = new CompletionViewModel(
-            resultLogService: resultLogService,
-            confirmationService: confirmationService,
-            hasSentBefore: _hasSentResultLogBefore,
-            windowService: windowService);
+            resultLogService, settingsService, earlierRunCheck,
+            firstRunMark, windowsRegion, windowService);
         Cleanup = new CleanupViewModel(
             moveService, deleteService, settingsService,
             dialogService, confirmationService, fileSystem,
-            Scan, Completion, resultLogService, reverifier);
+            Scan, Completion, reverifier);
         Chrome = new ChromeViewModel(windowService, msiInfoService, settingsService,
             updateCheckService, dialogService, Scan,
             isBusy: () => IsBusy);
@@ -121,13 +109,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Chrome.Dispose();
         Cleanup.Dispose();
 
-        // Let the lifetime-lock write finish before the process goes. Bounded,
-        // because a settings.json on a wedged network profile must not be able
-        // to hold the app open on exit; the write is a few hundred bytes, so
-        // the bound is only ever reached by a disk that has stopped answering,
-        // and losing the lock then costs one extra prompt next session.
-        try { _lifetimeLockSave.Wait(TimeSpan.FromSeconds(5)); }
-        catch (Exception ex) { CrashLog.TryWrite(ex); }
+        // A card still up as the window goes is closed the way the window closed it:
+        // its box decides, and the send and its saves get a bounded wait before the
+        // process goes.
+        Completion.SettleReportOnExit();
     }
 
     /// <summary>
@@ -320,36 +305,34 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // or a completion is up so a parallel scan can't race the operation.
             Scan.NotifyExternallyBlockedChanged();
         }
-        else if (e.PropertyName == nameof(CompletionViewModel.HasSentResultLog) &&
-                 Completion.HasSentResultLog)
-        {
-            // Persist the lifetime lock after a successful send. Off the
-            // dispatcher, like the debounced destination save and for the same
-            // reason: Update is a load-then-save round trip to settings.json,
-            // which is a disk hop (OneDrive-redirected and network-roaming
-            // profiles bite hardest), and it can additionally block on the
-            // service's own gate behind that very save. This fires on a user
-            // click, so the stall would land on a visible interaction.
-            //
-            // Update serialises against the debounced save under that gate, so
-            // neither write clobbers the other, and it never throws (TrySave
-            // returns false instead), so the task cannot fault unobserved.
-            // Best-effort: a failed save just shows the prompt one extra time
-            // next session, self-correcting on the next successful send.
-            _lifetimeLockSave = Task.Run(() => _settingsService.Update(s => s.HasSentResultLog = true));
-        }
     }
 
-    private async void OnScanCompleted(object? sender, EventArgs e)
+    private void OnScanCompleted(object? sender, EventArgs e)
     {
-        // async void: WriteAsync documents never-throws, but the
-        // contract sits across an assembly boundary. The outer
-        // try/catch keeps any breach of that contract from riding
-        // DispatcherUnhandledException to a process exit.
+        var decided = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        ScanCardDecided = decided.Task;
+        _ = ShowScanCardAsync(decided);
+    }
+
+    /// <summary>
+    /// The card a scan that offered nothing puts up, and its report where it is the
+    /// PC's first. Never throws: a fault is logged, and <paramref name="decided"/>
+    /// completes on every path.
+    /// </summary>
+    private async Task ShowScanCardAsync(TaskCompletionSource decided)
+    {
         try
         {
-            if (Scan.OrphanedFileCount != 0 || Cleanup.IsOperating || Scan.LastScanResult is not { } result)
-                return;
+            if (ScanCardResult() is not { } result) return;
+
+            // Resumes on the dispatcher, which the card needs: revealing it raises the
+            // change the window answers by building the summary's inlines. Where the
+            // start check is still reading, this is a real wait, and a Re-scan or the
+            // operation after it can land inside it, so the card is put up only where
+            // the scan it is for is still the one on the window.
+            var reportIsFree = await Completion.ReportIsFreeAsync();
+            if (!ReferenceEquals(ScanCardResult(), result)) return;
+            var carriesReport = reportIsFree && Completion.TakeReport();
 
             // TWO SCREENS, and which one is shown turns on a fact the lists cannot
             // carry. An empty offer means EITHER that the scan held nothing back, or
@@ -414,50 +397,28 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     Scan.LastScanDurationMs,
                     Scan.SourcesGivenUpText);
             }
+            decided.TrySetResult();
 
-            // Either lock (the flag a successful send saved in an earlier
-            // session, or the one Send sets in this session on every
-            // outcome except a cancelled preview) hides the Send button
-            // for the rest of the session, so last-run.json written on
-            // this path would have no consumer. CleanupViewModel's Move
-            // and Delete paths read the same property.
-            if (Completion.IsResultLogLocked) return;
-
-            // WriteAsync returns false on disk-full / locked-file /
-            // read-only-profile failure; the Send button stays hidden
-            // rather than overpainting a dialog on the all-clear summary.
-            //
-            // ConfigureAwait(false) drops the I/O continuation off the
-            // dispatcher so a window-close mid-await doesn't throw on
-            // resumption. MarkResultLogReady() fires PropertyChanged
-            // for IsResultLogReady and IsSendResultLogVisible; binding
-            // subscribers (Send button Visibility, CanExecuteChanged
-            // routed through CommandManager.InvalidateRequerySuggested)
-            // are dispatcher-affined. Marshal that single field-write
-            // back to the dispatcher so the property change actually
-            // updates the UI; without the marshal the cross-thread
-            // PropertyChanged throws InvalidOperationException, the
-            // outer catch swallows it, and the Send button silently
-            // never appears on a happy-path startup-scan.
-            var entry = ResultLogEntry.ForScanOnly(result, Scan.LastScanDurationMs);
-            var written = await _resultLogService.WriteAsync(entry).ConfigureAwait(false);
-            if (written)
-            {
-                var dispatcher = System.Windows.Application.Current?.Dispatcher;
-                if (dispatcher is { HasShutdownStarted: false })
-                    await dispatcher.InvokeAsync(Completion.MarkResultLogReady);
-                else
-                    // No live dispatcher: either the window has closed (the
-                    // outer catch will absorb any binding-side InvalidOperation
-                    // Exception), or this is a unit test with Application.Current
-                    // null. In both cases a direct call is the right behaviour:
-                    // production fails closed, tests observe the property change.
-                    Completion.MarkResultLogReady();
-            }
+            if (carriesReport)
+                await Completion.WriteReportAsync(ResultLogEntry.ForScanOnly(result, Scan.LastScanDurationMs));
         }
         catch (Exception ex)
         {
             CrashLog.TryWrite(ex);
         }
+        finally
+        {
+            decided.TrySetResult();
+        }
     }
+
+    /// <summary>
+    /// The result of the scan that finished, where it is one the card is for: it offered
+    /// nothing and no Move or Delete is running behind it. Null otherwise. The refresh
+    /// after a Move or Delete finishes with <see cref="CleanupViewModel.IsOperating"/>
+    /// still true, so its scan puts up no card here and the operation's own card is not
+    /// painted over.
+    /// </summary>
+    private ScanResult? ScanCardResult() =>
+        Scan.OrphanedFileCount != 0 || Cleanup.IsOperating ? null : Scan.LastScanResult;
 }

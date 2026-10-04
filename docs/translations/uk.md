@@ -51,8 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Path to folder if you move rather than delete. | Шлях до папки, якщо ви переміщуєте, а не видаляєте. |
 | Open _release page | _Відкрити сторінку випуску |
 | _Re-scan | Пов_торити сканування |
-| Send report | Надіслати звіт |
-| _Send | _Надіслати |
 
 ## About window
 
@@ -187,6 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | Остаточно видалено {0} {1} |
 | {0} {1} permanently deleted | Остаточно видалено {0} {1} |
 | Any small donation is much appreciated. | Будь-яка, навіть невелика, підтримка дуже цінна. |
+| Send _anonymous report | Send _anonymous report |
 
 ## Summaries and counts
 
@@ -311,17 +310,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The link is on your clipboard, so you can paste it in yourself:<br><br>{0} | Посилання в буфері обміну, тож ви можете вставити його самі:<br><br>{0} |
 | InstallerClean couldn't copy the link to your clipboard either, so here it is:<br><br>{0} | InstallerClean також не зміг скопіювати посилання в буфер обміну, ось воно:<br><br>{0} |
 
-## Sending the summary
-
-| English | Українська |
-| --- | --- |
-| Sending... | Надсилання... |
-| Thanks! Report sent. | Дякую! Звіт надіслано. |
-| Sending failed. Try again later. | Не вдалося надіслати. Спробуйте пізніше. |
-| No report to send. | Немає звіту для надсилання. |
-| Send this? | Надіслати це? |
-| It goes to nofaff.netlify.app/api/result-log. Nothing identifies you or your machine; it just lets me know InstallerClean's working and [how much space people are freeing]. | Надсилається на nofaff.netlify.app/api/result-log. Ніщо не ідентифікує вас чи вашу машину; це лише дає мені знати, що InstallerClean працює і [скільки місця люди звільняють]. |
-
 ## Startup and crashes
 
 | English | Українська |
@@ -348,8 +336,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | Зірка допомагає іншим знайти InstallerClean. |
 | Minimise | Згорнути |
-| Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | На ваш розсуд, але буду вдячний. Надсилає анонімний підсумок, який лише дає мені знати, чи працює програма і скільки місця люди звільняють. На наступному екрані ви побачите, що буде надіслано, перш ніж підтвердити. |
-| Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working. The next screen lets you see what will be sent before you confirm. | На ваш розсуд, але буду вдячний. Надсилає анонімний підсумок, який лише дає мені знати, чи працює програма. На наступному екрані ви побачите, що буде надіслано, перш ніж підтвердити. |
 | Move the unneeded files to the backup folder. | Переміщує непотрібні файли до папки резервних копій. |
 | Move the unneeded files to a backup folder. You'll choose it next. | Переміщує непотрібні файли до папки резервних копій. Ви оберете її наступним кроком. |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | Переміщує непотрібні файли до папки резервних копій. Вона на тому самому диску, тож місце звільниться лише після того, як ви видалите цю папку. |
@@ -377,7 +363,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Delete permanently removes the unneeded files. Cancel closes without deleting. | «Видалити назавжди» прибирає непотрібні файли. «Скасувати» закриває вікно, нічого не видаляючи. |
 | Move puts the unneeded files in the chosen destination folder. Cancel leaves them where they are. | «Перемістити» кладе непотрібні файли до обраної папки призначення. «Скасувати» лишає їх там, де вони є. |
 | Say thanks | Подякувати |
-| Send posts the report shown to No Faff. Cancel sends nothing. | «Надіслати» надсилає показаний звіт до No Faff. «Скасувати» не надсилає нічого. |
 | Check for updates | Перевірити оновлення |
 | Checks github's releases page for a newer version. | Перевіряє на сторінці випусків github, чи є новіша версія. |
 | Opens the readme on github in your browser. | Відкриває readme на github у вашому браузері. |
@@ -408,7 +393,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Files that could not be processed | Файли, які не вдалося обробити |
 | Explains this folder, and how to recover a file, in the README | Пояснює цю папку і як відновити файл, у README |
 | {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
-| Report preview | Попередній перегляд звіту |
 | Change language | Змінити мову |
 | The program will restart. | Програму буде перезапущено. |
 

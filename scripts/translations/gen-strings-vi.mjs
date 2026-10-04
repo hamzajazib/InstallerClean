@@ -128,8 +128,6 @@ const MAP = {
   'Action.BackupFolderPlaceholder': `Đường dẫn thư mục nếu bạn chuyển thay vì xóa.`,
   'Action.OpenReleasePage': `_Mở trang phát hành`,
   'Action.Rescan': `_Quét lại`,
-  'Action.SendResultLog': `Gửi báo cáo`,
-  'Action.SendResultLogConfirm': `_Gửi`,
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `Ủng hộ`,
@@ -146,7 +144,6 @@ const MAP = {
   'Automation.ConfirmDelete': `Xóa vĩnh viễn sẽ bỏ đi các tệp không cần thiết. Hủy sẽ đóng lại mà không xóa gì.`,
   'Automation.ConfirmMove': `Chuyển sẽ đặt các tệp không cần thiết vào thư mục đích đã chọn. Hủy sẽ để chúng nguyên chỗ cũ.`,
   'Automation.SayThanks': `Lời cảm ơn`,
-  'Automation.ConfirmSendResultLog': `Gửi sẽ đăng báo cáo hiển thị tới No Faff. Hủy sẽ không gửi gì.`,
   'Automation.CheckForUpdates': `Kiểm tra cập nhật`,
   'Automation.CheckForUpdates.HelpText': `Kiểm tra trang phát hành của github xem có phiên bản mới hơn không.`,
   'Automation.UpdateAvailable.HelpText': `Mở trang phát hành để tải phiên bản mới hơn, hoặc hủy để giữ phiên bản hiện tại.`,
@@ -179,8 +176,6 @@ const MAP = {
   'Tooltip.Close': `Đóng`,
   'Tooltip.LeaveStarOnGitHub.About': `Một ngôi sao giúp người khác tìm thấy InstallerClean.`,
   'Tooltip.Minimise': `Thu nhỏ`,
-  'Tooltip.SendResultLog': `Tùy bạn, nhưng rất được trân trọng. Gửi một bản tóm tắt ẩn danh chỉ để cho tôi biết nó có hoạt động không và mọi người đang giải phóng được bao nhiêu dung lượng. Màn hình tiếp theo cho bạn xem những gì sẽ được gửi trước khi bạn xác nhận.`,
-  'Tooltip.SendResultLog.NothingFound': `Tùy bạn, nhưng rất được trân trọng. Gửi một bản tóm tắt ẩn danh chỉ để cho tôi biết nó có hoạt động không. Màn hình tiếp theo cho bạn xem những gì sẽ được gửi trước khi bạn xác nhận.`,
   'Tooltip.Move': `Chuyển các tệp không cần thiết vào thư mục sao lưu.`,
   'Tooltip.MoveNeedsDestination': `Chuyển các tệp không cần thiết vào một thư mục sao lưu. Bạn sẽ chọn thư mục ngay sau đây.`,
   'Tooltip.Delete': `Xóa vĩnh viễn các tệp không cần thiết. Hãy dùng Chuyển nếu bạn muốn có cơ hội tự mình yên tâm rằng mọi thứ đều ổn.`,
@@ -379,13 +374,6 @@ const MAP = {
   'Error.DestinationCollision': `Đã có một tệp tên '{0}' trong thư mục sao lưu.`,
 
   // Result log (post-cleanup diagnostic send)
-  'ResultLog.Sending': `Đang gửi...`,
-  'ResultLog.Sent': `Cảm ơn! Đã gửi báo cáo.`,
-  'ResultLog.Failed': `Gửi thất bại. Hãy thử lại sau.`,
-  'ResultLog.NothingToSend': `Không có báo cáo để gửi.`,
-  'ConfirmSendResultLog.Title': `Gửi cái này?`,
-  'ConfirmSendResultLog.Reassurance': `Nó được gửi tới nofaff.netlify.app/api/result-log. Không có gì nhận dạng bạn hay máy của bạn; nó chỉ cho tôi biết InstallerClean có hoạt động không và [mọi người đang giải phóng được bao nhiêu dung lượng].`,
-  'Automation.ResultLogPreview': `Xem trước báo cáo`,
 
   // Single instance / startup / crash
   'Startup.AlreadyRunningTitle': `InstallerClean`,
@@ -584,6 +572,7 @@ const MAP = {
   'Action.CloseWithoutDonating': `_Close without donating`,
   'Tooltip.Donate': `I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.`,
   'Cli.DonateAsk': `InstallerClean is free. If it helped, please donate \$5: {0}`,
+  'Completion.SendReport': `Send _anonymous report`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

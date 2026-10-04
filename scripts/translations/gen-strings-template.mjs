@@ -186,8 +186,6 @@ const MAP = {
   'Action.BackupFolderPlaceholder': `Path to folder if you move rather than delete.`,
   'Action.OpenReleasePage': `Open _release page`,
   'Action.Rescan': `_Re-scan`,
-  'Action.SendResultLog': `Send report`,
-  'Action.SendResultLogConfirm': `_Send`,
   'About.Link.Guide': `Guide and FAQ`,
   'About.Link.ReportProblem': `Report a problem`,
   'About.AutoUpdateCheck': `Check for updates automatically`,
@@ -206,7 +204,6 @@ const MAP = {
   'Automation.ConfirmDelete': `Delete permanently removes the unneeded files. Cancel closes without deleting.`,
   'Automation.ConfirmMove': `Move puts the unneeded files in the chosen destination folder. Cancel leaves them where they are.`,
   'Automation.SayThanks': `Say thanks`,
-  'Automation.ConfirmSendResultLog': `Send posts the report shown to No Faff. Cancel sends nothing.`,
   'Automation.CheckForUpdates': `Check for updates`,
   'Automation.CheckForUpdates.HelpText': `Checks github's releases page for a newer version.`,
   'Automation.About.Guide.HelpText': `Opens the readme on github in your browser.`,
@@ -243,8 +240,6 @@ const MAP = {
   'Tooltip.Close': `Close`,
   'Tooltip.LeaveStarOnGitHub.About': `A star helps other people find it.`,
   'Tooltip.Minimise': `Minimise`,
-  'Tooltip.SendResultLog': `Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm.`,
-  'Tooltip.SendResultLog.NothingFound': `Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working. The next screen lets you see what will be sent before you confirm.`,
   'Tooltip.Move': `Move the unneeded files to the backup folder.`,
   'Tooltip.MoveNeedsDestination': `Move the unneeded files to a backup folder. You'll choose it next.`,
   'Tooltip.Delete': `Delete the unneeded files permanently. Use Move instead if you'd like a chance to satisfy yourself all is well.`,
@@ -476,13 +471,6 @@ const MAP = {
   'Error.DestinationCollision': `A file called '{0}' is already in the backup folder.`,
 
   // Result log (post-cleanup diagnostic send)
-  'ResultLog.Sending': `Sending...`,
-  'ResultLog.Sent': `Thanks! Report sent.`,
-  'ResultLog.Failed': `Sending failed. Try again later.`,
-  'ResultLog.NothingToSend': `No report to send.`,
-  'ConfirmSendResultLog.Title': `Send this?`,
-  'ConfirmSendResultLog.Reassurance': `It goes to nofaff.netlify.app/api/result-log. Nothing identifies you or your machine; it just lets me know InstallerClean's working and [how much space people are freeing].`,
-  'Automation.ResultLogPreview': `Report preview`,
 
   // Single instance / startup / crash
   'Startup.AlreadyRunningTitle': `InstallerClean`,
@@ -654,6 +642,7 @@ const MAP = {
   'Action.DonateSmall': `Donate`,
   'Automation.DonateSmall': `Donate`,
   'Cli.DonateAsk': `InstallerClean is free. If it helped, please donate \$5: {0}`,
+  'Completion.SendReport': `Send _anonymous report`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

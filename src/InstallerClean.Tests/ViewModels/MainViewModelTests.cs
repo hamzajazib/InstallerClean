@@ -31,6 +31,9 @@ public class MainViewModelTests
     private readonly IResultLogService _resultLogService = Substitute.For<IResultLogService>();
     private readonly IUpdateCheckService _updateCheckService = Substitute.For<IUpdateCheckService>();
     private readonly IRemovableReverifier _reverifier = Substitute.For<IRemovableReverifier>();
+    private readonly IEarlierRunCheck _earlierRunCheck = Substitute.For<IEarlierRunCheck>();
+    private readonly IFirstRunMark _firstRunMark = Substitute.For<IFirstRunMark>();
+    private readonly IWindowsRegion _windowsRegion = Substitute.For<IWindowsRegion>();
     private readonly MockFileSystem _fileSystem = new();
 
     private MainViewModel CreateViewModel() => CreateViewModel(new AppSettings());
@@ -58,7 +61,8 @@ public class MainViewModelTests
             _scanService, _moveService, _deleteService,
             _settingsService, _rebootService, _msiInfoService,
             _dialogService, _confirmationService, _windowService,
-            _fileSystem, _resultLogService, _updateCheckService, _reverifier);
+            _fileSystem, _resultLogService, _updateCheckService, _reverifier,
+            _earlierRunCheck, _firstRunMark, _windowsRegion);
     }
 
     /// <summary>
@@ -3123,177 +3127,420 @@ public class MainViewModelTests
         _windowService.Received(1).OpenUrl(SupportLink.Url);
     }
 
-    // Result-log persistence path. The lifetime lock
-    // (AppSettings.HasSentResultLog) is the contract behind "one report
-    // ever per machine". The three tests below pin its load-bearing
-    // behaviours:
-    //
-    //   - A successful Send persists HasSentResultLog=true to settings.
-    //   - A failed Send does NOT persist, so a transient timeout on the
-    //     first-ever click doesn't permanently lock the user out without
-    //     anything reaching the receiver.
-    //   - A Send invoked when last-run.json is unreadable (missing,
-    //     oversize, IO failure) skips the modal AND the wire call and
-    //     does not persist either.
+    // The report box. The start check, the mark and the Windows region are faked, so each
+    // test fixes whether the PC has had its first run and which way the box starts.
+    // vm.Dispose() is the barrier for the sends and saves, which run off the
+    // dispatcher: it settles a card still up and waits for them, as closing the app
+    // does.
 
-    [Fact]
-    public async Task SendResultLog_success_persists_HasSentResultLog_to_settings()
+    /// <summary>
+    /// Every save the report makes, kept so a test can apply them all afterwards and
+    /// read what settings.json would hold. Each save reads the report's state as it
+    /// runs, which applying them later does too.
+    /// </summary>
+    private List<Action<AppSettings>> RecordSettingsSaves()
     {
-        var settings = new AppSettings();
-        var vm = CreateViewModel(settings);
-        _resultLogService.ReadLastLogAsync().Returns(Task.FromResult<string?>("{\"schemaVersion\":1}"));
-        _confirmationService.ConfirmSendResultLog(Arg.Any<string>()).Returns(true);
-        _resultLogService.SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(ResultLogSendOutcome.Sent);
-
-        await vm.Completion.SendResultLogCommand.ExecuteAsync(null);
-        // The write runs off the dispatcher, so it is Dispose that guarantees
-        // it landed. That is the barrier the app relies on too: the Send click
-        // is often the last thing a user does before closing the window.
-        vm.Dispose();
-
-        _settingsService.Received().Update(Arg.Is<Action<AppSettings>>(a => a != null && Applied(a).HasSentResultLog));
-    }
-
-    [Fact]
-    public async Task SendResultLog_network_failure_does_not_persist_HasSentResultLog()
-    {
-        var settings = new AppSettings();
-        var vm = CreateViewModel(settings);
-        _resultLogService.ReadLastLogAsync().Returns(Task.FromResult<string?>("{\"schemaVersion\":1}"));
-        _confirmationService.ConfirmSendResultLog(Arg.Any<string>()).Returns(true);
-        _resultLogService.SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(ResultLogSendOutcome.NetworkUnavailable);
-
-        await vm.Completion.SendResultLogCommand.ExecuteAsync(null);
-        vm.Dispose();
-
-        _settingsService.DidNotReceive().Update(Arg.Is<Action<AppSettings>>(a => a != null && Applied(a).HasSentResultLog));
-    }
-
-    [Fact]
-    public async Task SendResultLog_with_unreadable_log_skips_modal_and_send_and_does_not_persist()
-    {
-        var settings = new AppSettings();
-        var vm = CreateViewModel(settings);
-        _resultLogService.ReadLastLogAsync().Returns(Task.FromResult<string?>(null));
-
-        await vm.Completion.SendResultLogCommand.ExecuteAsync(null);
-        vm.Dispose();
-
-        _confirmationService.DidNotReceive().ConfirmSendResultLog(Arg.Any<string>());
-        await _resultLogService.DidNotReceive().SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
-        _settingsService.DidNotReceive().Update(Arg.Is<Action<AppSettings>>(a => a != null && Applied(a).HasSentResultLog));
-    }
-
-    [Fact]
-    public async Task MoveAllAsync_skips_last_run_log_write_when_lifetime_lock_set()
-    {
-        // Settings come in with HasSentResultLog=true (the user sent
-        // in a previous session). _alreadySentBeforeThisSession is
-        // therefore true at MainViewModel construction; Completion
-        // .IsResultLogLocked reads it. CleanupViewModel must not
-        // write last-run.json because the file has no consumer.
-        var vm = CreateViewModel(new AppSettings { HasSentResultLog = true });
-        var orphans = new List<OrphanedFile>
+        var saves = new List<Action<AppSettings>>();
+        _settingsService.Update(Arg.Any<Action<AppSettings>>()).Returns(ci =>
         {
-            new(@"C:\Windows\Installer\a.msi", 1024, false, false, false, Orphaned),
-        };
-        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
-            .Returns(new ScanResult(orphans, Array.Empty<RegisteredPackage>(), 0));
-        _moveService.MoveFilesAsync(
-                Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
-                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
-            .Returns(new MoveResult(1, Array.Empty<FileOperationError>()));
-        _confirmationService.ConfirmMove(
-            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
-
-        await vm.Scan.ScanWithProgressAsync(null);
-        vm.Cleanup.MoveDestination = Path.Combine(Path.GetTempPath(), "ic-locked-move");
-        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
-
-        await _resultLogService.DidNotReceive().WriteAsync(
-            Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
+            lock (saves) saves.Add((Action<AppSettings>)ci[0]!);
+            return true;
+        });
+        return saves;
     }
 
-    [Fact]
-    public async Task OnScanCompleted_skips_last_run_log_write_when_all_clear_and_lifetime_lock_set()
+    private static AppSettings AppliedInOrder(List<Action<AppSettings>> saves)
     {
-        // The all-clear path in MainViewModel.OnScanCompleted runs after
-        // a scan that returns zero orphans. The IsResultLogLocked gate
-        // must skip WriteAsync because no Send path exists to drain the
-        // resulting last-run.json: the Send button stays hidden via the
-        // lifetime lock for the rest of the user's time on this machine.
-        // Without the gate the file is overwritten on every all-clear
-        // with a payload nobody can read.
-        var vm = CreateViewModel(new AppSettings { HasSentResultLog = true });
-        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
-            .Returns(new ScanResult(
-                Array.Empty<OrphanedFile>(),
-                Array.Empty<RegisteredPackage>(),
-                0));
-
-        await vm.Scan.ScanWithProgressAsync(null);
-
-        await _resultLogService.DidNotReceive().WriteAsync(
-            Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
+        var settings = new AppSettings();
+        lock (saves)
+            foreach (var save in saves) save(settings);
+        return settings;
     }
 
-    [Fact]
-    public async Task DeleteAllAsync_skips_last_run_log_write_after_in_session_send()
+    /// <summary>The scan finds nothing, the report is written, and the region is <paramref name="region"/>.</summary>
+    private MainViewModel FirstRunAllClear(string? region = "GB")
     {
-        // First a successful Send flips the in-session lock. Then a
-        // Delete runs; the IsResultLogLocked OR property covers
-        // the in-session-only case (lifetime lock from settings is
-        // still false at construction).
         var vm = CreateViewModel();
-        _resultLogService.ReadLastLogAsync().Returns(Task.FromResult<string?>("{\"schemaVersion\":1}"));
-        _confirmationService.ConfirmSendResultLog(Arg.Any<string>()).Returns(true);
-        _resultLogService.SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(ResultLogSendOutcome.Sent);
-
-        await vm.Completion.SendResultLogCommand.ExecuteAsync(null);
-        Assert.True(vm.Completion.IsResultLogLocked);
-        _resultLogService.ClearReceivedCalls();
-
-        var orphans = new List<OrphanedFile>
-        {
-            new(@"C:\Windows\Installer\y.msi", 2048, false, false, false, Orphaned),
-        };
-        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
-            .Returns(new ScanResult(orphans, Array.Empty<RegisteredPackage>(), 0));
-        _deleteService.DeleteFilesAsync(
-                Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
-                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
-            .Returns(new DeleteResult(1, Array.Empty<FileOperationError>()));
-        _confirmationService.ConfirmDelete(
-            Arg.Any<int>(), Arg.Any<string>()).Returns(true);
-
-        await vm.Scan.ScanWithProgressAsync(null);
-        await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
-
-        await _resultLogService.DidNotReceive().WriteAsync(
-            Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task An_all_clear_writes_the_report_and_offers_Send()
-    {
-        // The scan finds zero orphans. The all-clear path calls WriteAsync,
-        // which the mock returns true for, and then MarkResultLogReady, so
-        // the Send button becomes visible.
-        var vm = CreateViewModel();
+        _windowsRegion.Read().Returns(region);
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(EmptyScanResult());
         _resultLogService.WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(true));
+        _resultLogService.ReadLastLogAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<string?>("{\"schemaVersion\":5}"));
+        return vm;
+    }
+
+    [Fact]
+    public async Task The_PCs_first_card_carries_the_box_ticked_writes_the_report_and_sets_the_mark()
+    {
+        var vm = FirstRunAllClear();
 
         await vm.Scan.ScanCommand.ExecuteAsync(null);
 
-        await _resultLogService.Received(1).WriteAsync(
-            Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
-        Assert.True(vm.Completion.IsResultLogReady);
-        Assert.True(vm.Completion.IsSendResultLogVisible);
+        Assert.True(vm.Completion.IsComplete);
+        Assert.True(vm.Completion.OffersReport);
+        Assert.True(vm.Completion.SendsReport);
+        await _resultLogService.Received(1).WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
+        _firstRunMark.Received(1).Set();
+    }
+
+    [Theory]
+    [InlineData("DE", false)]
+    [InlineData("GB", true)]
+    [InlineData("US", true)]
+    [InlineData("419", false)]
+    [InlineData(null, false)]
+    public async Task The_box_starts_the_way_Windows_Country_or_region_says(string? region, bool ticked)
+    {
+        var vm = FirstRunAllClear(region);
+
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+
+        Assert.True(vm.Completion.OffersReport);
+        Assert.Equal(ticked, vm.Completion.SendsReport);
+    }
+
+    [Fact]
+    public async Task A_PC_whose_first_run_is_recorded_shows_no_box_and_writes_nothing()
+    {
+        // The same for a second Windows account, or an account carrying an older
+        // version's last-run.json: the check answers that the PC has had its first run.
+        var vm = FirstRunAllClear();
+        _earlierRunCheck.ShowsAnEarlierRunWithinAsync(Arg.Any<TimeSpan>()).Returns(Task.FromResult(true));
+
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+
+        Assert.True(vm.Completion.IsComplete);
+        Assert.False(vm.Completion.OffersReport);
+        await _resultLogService.DidNotReceive().WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
+        _firstRunMark.DidNotReceive().Set();
+    }
+
+    [Fact]
+    public async Task A_later_card_in_the_same_sitting_carries_no_box_and_writes_nothing()
+    {
+        // The check keeps answering "first run" all sitting, as the real one does once
+        // its answer is taken, so only the sitting's own record can keep the box off.
+        var vm = FirstRunAllClear();
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+        Assert.True(vm.Completion.OffersReport);
+        vm.Completion.DismissCommand.Execute(null);
+
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+
+        Assert.True(vm.Completion.IsComplete);
+        Assert.False(vm.Completion.OffersReport);
+        await _resultLogService.Received(1).WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
+        await _earlierRunCheck.Received(1).ShowsAnEarlierRunWithinAsync(Arg.Any<TimeSpan>());
+        _firstRunMark.Received(1).Set();
+    }
+
+    public static TheoryData<string> WaysToCloseTheCard => new() { "Done", "Esc", "Donate", "Window" };
+
+    [Theory]
+    [MemberData(nameof(WaysToCloseTheCard))]
+    public async Task Each_way_of_closing_the_card_sends_the_report_when_the_box_is_ticked(string way)
+    {
+        var vm = FirstRunAllClear();
+        var saves = RecordSettingsSaves();
+        _resultLogService.SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(ResultLogSendOutcome.Sent);
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+
+        switch (way)
+        {
+            case "Done": vm.Completion.DismissCommand.Execute(null); break;
+            case "Esc": Assert.True(vm.HandleEscape()); break;
+            case "Donate": vm.Completion.DonateCommand.Execute(null); break;
+            case "Window": break;
+        }
+        vm.Dispose();
+
+        await _resultLogService.Received(1).SendAsync("{\"schemaVersion\":5}", Arg.Any<CancellationToken>());
+        Assert.False(vm.Completion.OffersReport);
+        var settings = AppliedInOrder(saves);
+        Assert.True(settings.HasSentResultLog);
+        Assert.False(settings.ReportToSend);
+    }
+
+    [Fact]
+    public async Task Closing_the_card_with_the_box_unticked_sends_nothing_and_leaves_nothing_waiting()
+    {
+        var vm = FirstRunAllClear();
+        var saves = RecordSettingsSaves();
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+
+        vm.Completion.SendsReport = false;
+        vm.Completion.DismissCommand.Execute(null);
+        vm.Dispose();
+
+        await _resultLogService.DidNotReceive().SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        // The mark is set all the same: this was the PC's first run.
+        _firstRunMark.Received(1).Set();
+        var settings = AppliedInOrder(saves);
+        Assert.False(settings.ReportToSend);
+        Assert.False(settings.HasSentResultLog);
+    }
+
+    [Fact]
+    public async Task Each_tick_and_untick_saves_whether_the_report_is_waiting()
+    {
+        var vm = FirstRunAllClear();
+        var saves = RecordSettingsSaves();
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+        await vm.Completion.ReportWork;
+        Assert.True(AppliedInOrder(saves).ReportToSend);
+
+        vm.Completion.SendsReport = false;
+        await vm.Completion.ReportWork;
+        Assert.False(AppliedInOrder(saves).ReportToSend);
+
+        vm.Completion.SendsReport = true;
+        await vm.Completion.ReportWork;
+        Assert.True(AppliedInOrder(saves).ReportToSend);
+        Assert.True(vm.Completion.OffersReport);
+    }
+
+    [Fact]
+    public async Task A_send_that_fails_leaves_the_report_waiting_for_a_later_start()
+    {
+        var vm = FirstRunAllClear();
+        var saves = RecordSettingsSaves();
+        _resultLogService.SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(ResultLogSendOutcome.NetworkUnavailable);
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+
+        vm.Completion.DismissCommand.Execute(null);
+        vm.Dispose();
+
+        await _resultLogService.Received(1).SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        var settings = AppliedInOrder(saves);
+        Assert.True(settings.ReportToSend);
+        Assert.False(settings.HasSentResultLog);
+    }
+
+    [Fact]
+    public async Task A_report_that_could_not_be_written_takes_the_box_away_and_sends_nothing()
+    {
+        var vm = FirstRunAllClear();
+        _resultLogService.WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(false));
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+
+        Assert.True(vm.Completion.IsComplete);
+        Assert.False(vm.Completion.OffersReport);
+        // The write was attempted, so this was the PC's first run.
+        _firstRunMark.Received(1).Set();
+
+        vm.Completion.DismissCommand.Execute(null);
+        vm.Dispose();
+        await _resultLogService.DidNotReceive().SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task A_card_closed_before_its_report_is_written_sends_it_once_it_is()
+    {
+        var vm = FirstRunAllClear();
+        var write = new TaskCompletionSource<bool>();
+        var writeStarted = new TaskCompletionSource();
+        _resultLogService.WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                writeStarted.TrySetResult();
+                return write.Task;
+            });
+        _resultLogService.SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(ResultLogSendOutcome.Sent);
+        var scan = vm.Scan.ScanCommand.ExecuteAsync(null);
+        await writeStarted.Task;
+
+        Assert.True(vm.Completion.IsComplete);
+        Assert.True(vm.Completion.OffersReport);
+        vm.Completion.DismissCommand.Execute(null);
+        await _resultLogService.DidNotReceive().SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+
+        write.SetResult(true);
+        await scan;
+        vm.Dispose();
+
+        await _resultLogService.Received(1).SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(true, true, false, true)]
+    [InlineData(true, false, false, false)]
+    [InlineData(true, true, true, false)]
+    [InlineData(false, true, false, false)]
+    public void A_start_sends_this_accounts_report_only_where_it_is_still_waiting(
+        bool read, bool reportToSend, bool hasSent, bool sends)
+    {
+        // The second row is a last-run.json from an older version, which never has
+        // ReportToSend beside it; the last is a settings file that could not be read.
+        var vm = CreateViewModel();
+        _settingsService.TryLoad(out _).ReturnsForAnyArgs(ci =>
+        {
+            ci[0] = new AppSettings { ReportToSend = reportToSend, HasSentResultLog = hasSent };
+            return read;
+        });
+        _resultLogService.ReadLastLogAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<string?>("{\"schemaVersion\":5}"));
+        _resultLogService.SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(ResultLogSendOutcome.Sent);
+
+        vm.Completion.StartSavedReportRetry();
+        vm.Dispose();
+
+        _resultLogService.Received(sends ? 1 : 0).SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        _earlierRunCheck.Received(1).ShowsAnEarlierRunAsync();
+    }
+
+    [Fact]
+    public async Task A_run_that_held_every_file_back_leaves_the_first_run_to_the_next_card()
+    {
+        var vm = FirstRunAllClear();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(1), EmptyScanResult());
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
+            .Returns(ci => new ReverifyResult(
+                Array.Empty<string>(), (IReadOnlyList<string>)ci[0]!, new HeldBackReasons(Reclaimed: 1)));
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
+
+        await vm.Scan.ScanWithProgressAsync(null);
+        await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+
+        Assert.True(vm.Completion.IsComplete);
+        Assert.False(vm.Completion.OffersReport);
+        _firstRunMark.DidNotReceive().Set();
+        await _resultLogService.DidNotReceive().WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
+
+        // The control: the next card in the sitting is the PC's first.
+        vm.Completion.DismissCommand.Execute(null);
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+        Assert.True(vm.Completion.OffersReport);
+    }
+
+    public static TheoryData<string> RunsThatActedWithoutAReport =>
+        new() { "Move cancelled", "Delete cancelled", "Move stopped", "Move failed", "Delete failed" };
+
+    [Theory]
+    [MemberData(nameof(RunsThatActedWithoutAReport))]
+    public async Task A_run_that_acted_on_files_without_a_report_records_the_first_run(string run)
+    {
+        var vm = FirstRunAllClear();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2), EmptyScanResult());
+        _confirmationService.ConfirmMove(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
+        Task<MoveResult> MoveCall() => _moveService.MoveFilesAsync(
+            Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
+            Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
+        Task<DeleteResult> DeleteCall() => _deleteService.DeleteFilesAsync(
+            Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+            Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
+        switch (run)
+        {
+            case "Move cancelled":
+                MoveCall().Returns(new MoveResult(1, Array.Empty<FileOperationError>(), Cancelled: true));
+                break;
+            case "Delete cancelled":
+                DeleteCall().Returns(new DeleteResult(1, Array.Empty<FileOperationError>(), Cancelled: true));
+                break;
+            case "Move stopped":
+                MoveCall().Returns<MoveResult>(_ => throw new MoveAbortedException(
+                    "stopped", new MoveResult(1, Array.Empty<FileOperationError>()),
+                    @"D:\Backup", MoveAbortReason.ResolvesElsewhere));
+                break;
+            case "Move failed":
+                MoveCall().Returns<MoveResult>(_ => throw new InvalidOperationException("planted"));
+                break;
+            case "Delete failed":
+                DeleteCall().Returns<DeleteResult>(_ => throw new InvalidOperationException("planted"));
+                break;
+        }
+
+        await vm.Scan.ScanWithProgressAsync(null);
+        if (run.StartsWith("Move", StringComparison.Ordinal))
+        {
+            vm.Cleanup.MoveDestination = Path.Combine(Path.GetTempPath(), "ic-test-first-run-move");
+            await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+        }
+        else
+        {
+            await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+        }
+
+        _firstRunMark.Received(1).Set();
+        Assert.False(vm.Completion.OffersReport);
+        await _resultLogService.DidNotReceive().WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
+
+        // And no later card in the sitting carries the box.
+        if (vm.Completion.IsComplete) vm.Completion.DismissCommand.Execute(null);
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+        Assert.True(vm.Completion.IsComplete);
+        Assert.False(vm.Completion.OffersReport);
+    }
+
+    [Fact]
+    public async Task A_cancelled_run_that_reached_no_file_leaves_the_first_run_to_the_next_card()
+    {
+        // The control for the theory above: the same cancel with nothing moved.
+        var vm = FirstRunAllClear();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2), EmptyScanResult());
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
+        _deleteService.DeleteFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new DeleteResult(0, Array.Empty<FileOperationError>(), Cancelled: true));
+
+        await vm.Scan.ScanWithProgressAsync(null);
+        await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+
+        _firstRunMark.DidNotReceive().Set();
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+        Assert.True(vm.Completion.OffersReport);
+    }
+
+    [Fact]
+    public async Task A_card_waiting_on_the_start_check_is_not_put_up_for_a_scan_since_replaced()
+    {
+        var vm = FirstRunAllClear();
+        var answer = new TaskCompletionSource<bool>();
+        _earlierRunCheck.ShowsAnEarlierRunWithinAsync(Arg.Any<TimeSpan>()).Returns(answer.Task);
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(EmptyScanResult(), ScanResultWithOrphans(1));
+
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+        Assert.False(vm.ScanCardDecided.IsCompleted);
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+        answer.SetResult(false);
+        await vm.ScanCardDecided;
+
+        Assert.False(vm.Completion.IsComplete);
+        Assert.False(vm.Completion.OffersReport);
+        _firstRunMark.DidNotReceive().Set();
+    }
+
+    [Fact]
+    public async Task The_scan_card_is_decided_once_the_start_check_answers()
+    {
+        // The control for the test above, and what App waits on before it builds the
+        // window: the card goes up, with its box, as the check answers.
+        var vm = FirstRunAllClear();
+        var answer = new TaskCompletionSource<bool>();
+        _earlierRunCheck.ShowsAnEarlierRunWithinAsync(Arg.Any<TimeSpan>()).Returns(answer.Task);
+
+        await vm.Scan.ScanWithProgressAsync(null);
+        Assert.False(vm.ScanCardDecided.IsCompleted);
+        Assert.False(vm.Completion.IsComplete);
+
+        answer.SetResult(false);
+        await vm.ScanCardDecided;
+
+        Assert.True(vm.Completion.IsComplete);
+        Assert.True(vm.Completion.OffersReport);
     }
 
     [Fact]

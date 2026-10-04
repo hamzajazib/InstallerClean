@@ -118,7 +118,6 @@ const GROUPS = [
   ['Error messages',                   ['Error.']],
   ['Update check',                     ['UpdateCheck.']],
   ['Opening links in your browser',    ['BrowserLaunch.']],
-  ['Sending the summary',              ['ResultLog.', 'ConfirmSendResultLog.']],
   ['Startup and crashes',              ['Startup.', 'CrashLog.']],
   ['Tooltips (hover text)',            ['Tooltip.']],
   ['Screen reader labels',             ['Automation.']],

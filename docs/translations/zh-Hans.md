@@ -51,8 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Path to folder if you move rather than delete. | 若选择移动而非删除，此处填写文件夹路径。 |
 | Open _release page | 打开发布页面(_R) |
 | _Re-scan | 重新扫描(_R) |
-| Send report | 发送报告 |
-| _Send | 发送(_S) |
 
 ## About window
 
@@ -187,6 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | 已永久删除 {0} 个{1} |
 | {0} {1} permanently deleted | 已永久删除 {0} 个{1} |
 | Any small donation is much appreciated. | 任何小额捐赠都非常感谢。 |
+| Send _anonymous report | Send _anonymous report |
 
 ## Summaries and counts
 
@@ -311,17 +310,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The link is on your clipboard, so you can paste it in yourself:<br><br>{0} | 链接已复制到剪贴板，您可以自己粘贴：<br><br>{0} |
 | InstallerClean couldn't copy the link to your clipboard either, so here it is:<br><br>{0} | InstallerClean 也无法把链接复制到剪贴板，链接在这里：<br><br>{0} |
 
-## Sending the summary
-
-| English | 简体中文 |
-| --- | --- |
-| Sending... | 正在发送… |
-| Thanks! Report sent. | 谢谢！报告已发送。 |
-| Sending failed. Try again later. | 发送失败。请稍后重试。 |
-| No report to send. | 没有可发送的报告。 |
-| Send this? | 把这个发送吗？ |
-| It goes to nofaff.netlify.app/api/result-log. Nothing identifies you or your machine; it just lets me know InstallerClean's working and [how much space people are freeing]. | 它会发送到 nofaff.netlify.app/api/result-log。没有任何内容能识别您或您的机器；它只是让我知道 InstallerClean 是否正常工作，以及[大家释放了多少空间]。 |
-
 ## Startup and crashes
 
 | English | 简体中文 |
@@ -348,8 +336,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | 点个星有助于更多人发现 InstallerClean。 |
 | Minimise | 最小化 |
-| Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | 由您决定，但非常感谢。会发送一份匿名摘要，只是让我知道它是否正常工作，以及大家释放了多少空间。下一个界面会让您在确认前先看到将要发送的内容。 |
-| Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working. The next screen lets you see what will be sent before you confirm. | 由您决定，但非常感谢。会发送一份匿名摘要，只是让我知道它是否正常工作。下一个界面会让您在确认前先看到将要发送的内容。 |
 | Move the unneeded files to the backup folder. | 把不需要的文件移动到备份文件夹。 |
 | Move the unneeded files to a backup folder. You'll choose it next. | 把不需要的文件移动到一个备份文件夹。您接下来会选择它。 |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | 把不需要的文件移动到备份文件夹。它在同一个驱动器上，所以要等您删除那个文件夹后才会释放空间。 |
@@ -377,7 +363,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Delete permanently removes the unneeded files. Cancel closes without deleting. | 永久删除会移除这些不需要的文件。取消则不删除任何内容并关闭。 |
 | Move puts the unneeded files in the chosen destination folder. Cancel leaves them where they are. | 移动会将不需要的文件放入所选的目标文件夹。取消则让它们留在原处。 |
 | Say thanks | 道声谢 |
-| Send posts the report shown to No Faff. Cancel sends nothing. | 发送会将所示报告提交给 No Faff。取消则不发送任何内容。 |
 | Check for updates | 检查更新 |
 | Checks github's releases page for a newer version. | 在 github 的发布页面上检查是否有更新版本。 |
 | Opens the readme on github in your browser. | 在浏览器中打开 github 上的 readme。 |
@@ -408,7 +393,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Files that could not be processed | 无法处理的文件 |
 | Explains this folder, and how to recover a file, in the README | 在 README 中解释了这个文件夹，以及如何恢复文件 |
 | {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
-| Report preview | 报告预览 |
 | Change language | 更改语言 |
 | The program will restart. | 程序会重启。 |
 

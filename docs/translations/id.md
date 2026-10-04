@@ -51,8 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Path to folder if you move rather than delete. | Jalur ke folder jika Anda memindahkan, bukan menghapus. |
 | Open _release page | Buka halaman _rilis |
 | _Re-scan | Pindai _ulang |
-| Send report | Kirim laporan |
-| _Send | _Kirim |
 
 ## About window
 
@@ -187,6 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | {0} {1} dihapus permanen |
 | {0} {1} permanently deleted | {0} {1} dihapus permanen |
 | Any small donation is much appreciated. | Donasi sekecil apa pun sangat dihargai. |
+| Send _anonymous report | Send _anonymous report |
 
 ## Summaries and counts
 
@@ -311,17 +310,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The link is on your clipboard, so you can paste it in yourself:<br><br>{0} | Tautannya ada di papan klip, jadi Anda bisa menempelkannya sendiri:<br><br>{0} |
 | InstallerClean couldn't copy the link to your clipboard either, so here it is:<br><br>{0} | InstallerClean juga tidak bisa menyalin tautannya ke papan klip, jadi ini dia:<br><br>{0} |
 
-## Sending the summary
-
-| English | Bahasa Indonesia |
-| --- | --- |
-| Sending... | Mengirim... |
-| Thanks! Report sent. | Terima kasih! Laporan terkirim. |
-| Sending failed. Try again later. | Pengiriman gagal. Coba lagi nanti. |
-| No report to send. | Tidak ada laporan untuk dikirim. |
-| Send this? | Kirim ini? |
-| It goes to nofaff.netlify.app/api/result-log. Nothing identifies you or your machine; it just lets me know InstallerClean's working and [how much space people are freeing]. | Dikirim ke nofaff.netlify.app/api/result-log. Tidak ada yang mengidentifikasi Anda atau komputer Anda; ini hanya memberi tahu saya bahwa InstallerClean berfungsi dan [berapa banyak ruang yang dikosongkan orang-orang]. |
-
 ## Startup and crashes
 
 | English | Bahasa Indonesia |
@@ -348,8 +336,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | Bintang membantu orang lain menemukan InstallerClean. |
 | Minimise | Kecilkan |
-| Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | Terserah Anda, tapi sangat dihargai. Mengirim ringkasan anonim yang sekadar memberi tahu saya apakah aplikasi berfungsi dan berapa banyak ruang yang dikosongkan orang-orang. Layar berikutnya memperlihatkan apa yang akan dikirim sebelum Anda mengonfirmasi. |
-| Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working. The next screen lets you see what will be sent before you confirm. | Terserah Anda, tapi sangat dihargai. Mengirim ringkasan anonim yang sekadar memberi tahu saya apakah aplikasi berfungsi. Layar berikutnya memperlihatkan apa yang akan dikirim sebelum Anda mengonfirmasi. |
 | Move the unneeded files to the backup folder. | Memindahkan file yang tidak diperlukan ke folder cadangan. |
 | Move the unneeded files to a backup folder. You'll choose it next. | Memindahkan file yang tidak diperlukan ke sebuah folder cadangan. Anda akan memilihnya sebentar lagi. |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | Memindahkan file yang tidak diperlukan ke folder cadangan. Folder itu ada di drive yang sama, jadi ruang kosongnya baru kembali setelah Anda menghapus folder itu. |
@@ -377,7 +363,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Delete permanently removes the unneeded files. Cancel closes without deleting. | Hapus permanen menyingkirkan file yang tidak diperlukan. Batal menutup jendela tanpa menghapus apa pun. |
 | Move puts the unneeded files in the chosen destination folder. Cancel leaves them where they are. | Pindahkan menaruh file yang tidak diperlukan di folder tujuan yang dipilih. Batal membiarkannya di tempatnya. |
 | Say thanks | Ucapkan terima kasih |
-| Send posts the report shown to No Faff. Cancel sends nothing. | Kirim mengirimkan laporan yang ditampilkan ke No Faff. Batal tidak mengirim apa pun. |
 | Check for updates | Periksa pembaruan |
 | Checks github's releases page for a newer version. | Memeriksa halaman rilis github untuk mencari versi yang lebih baru. |
 | Opens the readme on github in your browser. | Membuka readme di github melalui browser Anda. |
@@ -408,7 +393,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Files that could not be processed | File yang tidak dapat diproses |
 | Explains this folder, and how to recover a file, in the README | Menjelaskan folder ini, dan cara memulihkan file, di README |
 | {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
-| Report preview | Pratinjau laporan |
 | Change language | Ganti bahasa |
 | The program will restart. | Program akan dimulai ulang. |
 

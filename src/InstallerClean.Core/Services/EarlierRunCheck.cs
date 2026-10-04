@@ -79,7 +79,15 @@ internal sealed class EarlierRunCheck : IEarlierRunCheck
             if (_mark.Read() != FirstRunMarkState.NotSet)
                 return true;
 
-            if (_settings.Load().HasSentResultLog || _resultLog.LastLogExists())
+            // A settings file that is there and cannot be read says nothing either way,
+            // so the check goes on to the sources after it.
+            if (!_settings.TryLoad(out var settings))
+                CrashLog.TryWrite(new IOException(
+                    "settings.json could not be read for the start check; it went on without it."));
+            else if (settings.HasSentResultLog)
+                return SetMark();
+
+            if (_resultLog.LastLogExists())
                 return SetMark();
 
             if (_skipApplicationLog)

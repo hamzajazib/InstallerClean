@@ -31,18 +31,24 @@ public sealed class AppSettings
     public string MoveDestination { get; set; } = string.Empty;
 
     /// <summary>
-    /// Set to true once the user has successfully sent a result log
-    /// to No Faff. The Send button is then hidden across sessions and
-    /// across version upgrades, so the receiving cohort is each
-    /// machine's first-ever submission rather than a low-impact rerun.
-    /// One report per intact settings file: if the JSON ever becomes
-    /// unreadable, <see cref="Services.SettingsService"/>.Load renames
-    /// it to <c>settings.json.bad</c> and returns defaults, which
-    /// re-enables the prompt. The receiver does not deduplicate, so a
-    /// machine whose settings file is corrupted, deleted, or roaming-
-    /// profile-clobbered between sessions can submit again.
+    /// True once this account's report has been sent and accepted. The report goes
+    /// from the PC's first finished card, as the card closes with its box ticked,
+    /// or from a later start retrying one that did not go
+    /// (<see cref="ReportToSend"/>). The window's start check also reads it as an
+    /// earlier run in this account. Nothing clears it.
     /// </summary>
     public bool HasSentResultLog { get; set; }
+
+    /// <summary>
+    /// True while this account's saved report, <c>last-run.json</c>, is waiting to
+    /// be sent: written once the first finished card's report is on disk with its
+    /// box ticked, written again each time the box is ticked or unticked, and set
+    /// false once the report is accepted. A start that finds it true with
+    /// <see cref="HasSentResultLog"/> false sends that file, and every later start
+    /// tries again until one is accepted. A <c>last-run.json</c> with no true beside
+    /// it is never sent.
+    /// </summary>
+    public bool ReportToSend { get; set; }
 
     /// <summary>
     /// Whether the app asks GitHub for a newer version once per session,

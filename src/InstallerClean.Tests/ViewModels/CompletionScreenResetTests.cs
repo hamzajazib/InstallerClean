@@ -2,6 +2,7 @@ using System.CodeDom.Compiler;
 using System.Reflection;
 using InstallerClean.Models;
 using InstallerClean.Services;
+using InstallerClean.Tests.Helpers;
 using InstallerClean.ViewModels;
 
 namespace InstallerClean.Tests.ViewModels;
@@ -65,10 +66,10 @@ public class CompletionScreenResetTests
 
     /// <summary>
     /// The two observable properties a <c>Show*</c> method is right not to touch.
-    /// They are the send-a-report lifecycle rather than the completion card: one is
-    /// set by <see cref="CompletionViewModel.MarkResultLogReady"/> once the log has
-    /// been written, the other only while a send is in flight, and a screen method
-    /// clearing either would retract a button the user is part-way through pressing.
+    /// They are the report box rather than the card's outcome: both are set by
+    /// <see cref="CompletionViewModel.TakeReport"/> before the Show* method that
+    /// reveals the PC's first card, and cleared as that card closes, so a screen
+    /// method setting either would take the box off the one card that carries it.
     ///
     /// Named rather than discovered because nothing in the type tells them apart, and
     /// <c>nameof</c> rather than a string so a rename cannot leave a dead exclusion
@@ -76,8 +77,8 @@ public class CompletionScreenResetTests
     /// </summary>
     private static readonly string[] NotPaintedByAScreen =
     {
-        nameof(CompletionViewModel.IsResultLogReady),
-        nameof(CompletionViewModel.IsSendingResultLog),
+        nameof(CompletionViewModel.OffersReport),
+        nameof(CompletionViewModel.SendsReport),
     };
 
     /// <summary>
@@ -185,10 +186,10 @@ public class CompletionScreenResetTests
             {
                 var arguments = ArgumentsFor(screen, run);
 
-                var fresh = new CompletionViewModel();
+                var fresh = TestCompletion.Create();
                 screen.Invoke(fresh, arguments);
 
-                var reused = new CompletionViewModel();
+                var reused = TestCompletion.Create();
                 Plant(reused);
                 screen.Invoke(reused, arguments);
 
@@ -214,8 +215,8 @@ public class CompletionScreenResetTests
         // forgotten field indistinguishable from a set one, the comparison finds no
         // difference, and the test reports every screen clean for the same reason it
         // would if it had never run.
-        var fresh = new CompletionViewModel();
-        var planted = new CompletionViewModel();
+        var fresh = TestCompletion.Create();
+        var planted = TestCompletion.Create();
         Plant(planted);
 
         var invisible = ScreenFields()
@@ -243,6 +244,6 @@ public class CompletionScreenResetTests
         // buys. A new field joins the set every screen must paint; a new field that is
         // NOT part of the card goes in NotPaintedByAScreen with its reason.
         Assert.Equal(8, Screens().Length);
-        Assert.Equal(12, ScreenFields().Length);
+        Assert.Equal(10, ScreenFields().Length);
     }
 }

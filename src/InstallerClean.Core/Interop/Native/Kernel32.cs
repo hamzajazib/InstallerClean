@@ -486,6 +486,19 @@ internal static partial class Kernel32
     // GetUserPreferredUILanguages flag: culture names rather than language ids.
     public const uint MUI_LANGUAGE_NAME = 0x8;
 
+    /// <summary>
+    /// The Country or region a user has chosen in the Windows settings, for the account
+    /// running the process: an ISO 3166-1 two-letter code, or a UN M.49 number where the
+    /// location has no such code. Writes the name and its null terminator into the buffer
+    /// and returns the count of both, or 0 on failure. Windows 10 1709 and later; on an
+    /// older Windows the entry point is missing and the call throws
+    /// <see cref="EntryPointNotFoundException"/>.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "GetUserDefaultGeoName", SetLastError = true)]
+    public static partial int GetUserDefaultGeoName(
+        [MarshalUsing(CountElementName = nameof(geoNameCount))] char[] geoName,
+        int geoNameCount);
+
     // GetFinalPathNameByHandle flags. VOLUME_NAME_DOS names the volume by
     // its drive letter, giving "\\?\X:\Folder\...", where VOLUME_NAME_GUID
     // would give "\\?\Volume{guid}\...". Both forms keep the \\?\ prefix,

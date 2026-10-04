@@ -38,6 +38,9 @@ public class CleanupStopWaitingTests
     private readonly IWindowService _windowService = Substitute.For<IWindowService>();
     private readonly IResultLogService _resultLogService = Substitute.For<IResultLogService>();
     private readonly IRemovableReverifier _reverifier = Substitute.For<IRemovableReverifier>();
+    private readonly IEarlierRunCheck _earlierRunCheck = Substitute.For<IEarlierRunCheck>();
+    private readonly IFirstRunMark _firstRunMark = Substitute.For<IFirstRunMark>();
+    private readonly IWindowsRegion _windowsRegion = Substitute.For<IWindowsRegion>();
     private readonly IUpdateCheckService _updateCheckService = Substitute.For<IUpdateCheckService>();
 
     private readonly IFileSystem _fileSystem = Substitute.For<IFileSystem>();
@@ -72,7 +75,8 @@ public class CleanupStopWaitingTests
         new(_scanService, _moveService, _deleteService,
             _settingsService, _rebootService, _msiInfoService,
             _dialogService, _confirmationService, _windowService,
-            _fileSystem, _resultLogService, _updateCheckService, _reverifier);
+            _fileSystem, _resultLogService, _updateCheckService, _reverifier,
+            _earlierRunCheck, _firstRunMark, _windowsRegion);
 
     private static string WaitLine(string root) => DisplayHelpers.WaitingFor(root);
 

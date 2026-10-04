@@ -151,8 +151,6 @@ const MAP = {
   'Action.BackupFolderPlaceholder': `Шлях до папки, якщо ви переміщуєте, а не видаляєте.`,
   'Action.OpenReleasePage': `_Відкрити сторінку випуску`,
   'Action.Rescan': `Пов_торити сканування`,
-  'Action.SendResultLog': `Надіслати звіт`,
-  'Action.SendResultLogConfirm': `_Надіслати`,
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `Підтримати`,
@@ -169,7 +167,6 @@ const MAP = {
   'Automation.ConfirmDelete': `«Видалити назавжди» прибирає непотрібні файли. «Скасувати» закриває вікно, нічого не видаляючи.`,
   'Automation.ConfirmMove': `«Перемістити» кладе непотрібні файли до обраної папки призначення. «Скасувати» лишає їх там, де вони є.`,
   'Automation.SayThanks': `Подякувати`,
-  'Automation.ConfirmSendResultLog': `«Надіслати» надсилає показаний звіт до No Faff. «Скасувати» не надсилає нічого.`,
   'Automation.CheckForUpdates': `Перевірити оновлення`,
   'Automation.CheckForUpdates.HelpText': `Перевіряє на сторінці випусків github, чи є новіша версія.`,
   'Automation.UpdateAvailable.HelpText': `Відкрийте сторінку випуску, щоб завантажити новішу версію, або скасуйте, щоб лишити поточну версію.`,
@@ -202,8 +199,6 @@ const MAP = {
   'Tooltip.Close': `Закрити`,
   'Tooltip.LeaveStarOnGitHub.About': `Зірка допомагає іншим знайти InstallerClean.`,
   'Tooltip.Minimise': `Згорнути`,
-  'Tooltip.SendResultLog': `На ваш розсуд, але буду вдячний. Надсилає анонімний підсумок, який лише дає мені знати, чи працює програма і скільки місця люди звільняють. На наступному екрані ви побачите, що буде надіслано, перш ніж підтвердити.`,
-  'Tooltip.SendResultLog.NothingFound': `На ваш розсуд, але буду вдячний. Надсилає анонімний підсумок, який лише дає мені знати, чи працює програма. На наступному екрані ви побачите, що буде надіслано, перш ніж підтвердити.`,
   'Tooltip.Move': `Переміщує непотрібні файли до папки резервних копій.`,
   'Tooltip.MoveNeedsDestination': `Переміщує непотрібні файли до папки резервних копій. Ви оберете її наступним кроком.`,
   'Tooltip.Delete': `Назавжди видаляє непотрібні файли. Скористайтеся «Перемістити», якщо хочете спершу переконатися, що все гаразд.`,
@@ -399,13 +394,6 @@ const MAP = {
   'Error.DestinationCollision': `Файл з іменем «{0}» уже є в папці резервних копій.`,
 
   // Result log (post-cleanup diagnostic send)
-  'ResultLog.Sending': `Надсилання...`,
-  'ResultLog.Sent': `Дякую! Звіт надіслано.`,
-  'ResultLog.Failed': `Не вдалося надіслати. Спробуйте пізніше.`,
-  'ResultLog.NothingToSend': `Немає звіту для надсилання.`,
-  'ConfirmSendResultLog.Title': `Надіслати це?`,
-  'ConfirmSendResultLog.Reassurance': `Надсилається на nofaff.netlify.app/api/result-log. Ніщо не ідентифікує вас чи вашу машину; це лише дає мені знати, що InstallerClean працює і [скільки місця люди звільняють].`,
-  'Automation.ResultLogPreview': `Попередній перегляд звіту`,
 
   // Single instance / startup / crash
   'Startup.AlreadyRunningTitle': `InstallerClean`,
@@ -604,6 +592,7 @@ const MAP = {
   'Action.CloseWithoutDonating': `_Close without donating`,
   'Tooltip.Donate': `I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.`,
   'Cli.DonateAsk': `InstallerClean is free. If it helped, please donate \$5: {0}`,
+  'Completion.SendReport': `Send _anonymous report`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

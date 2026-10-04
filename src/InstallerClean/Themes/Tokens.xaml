@@ -201,7 +201,6 @@
            CompactPill  - fully rounded 30 px compact buttons.
            ModalCard    - the modal dialog cards.
            CardSm       - smaller rounded surfaces (splash card border).
-           Inset        - card-within-a-card surfaces (JSON preview, etc.).
            Chip         - the small rounded furniture: both tooltips, the
                           context menu, the scrollbar thumb and track, the
                           progress bar.
@@ -211,7 +210,6 @@
     <CornerRadius x:Key="Radius.CompactPill">15</CornerRadius>
     <CornerRadius x:Key="Radius.ModalCard">16</CornerRadius>
     <CornerRadius x:Key="Radius.CardSm">12</CornerRadius>
-    <CornerRadius x:Key="Radius.Inset">6</CornerRadius>
     <CornerRadius x:Key="Radius.Chip">4</CornerRadius>
     <CornerRadius x:Key="Radius.Tight">2</CornerRadius>
 

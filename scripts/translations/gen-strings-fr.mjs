@@ -153,8 +153,6 @@ const MAP = {
   'Action.BackupFolderPlaceholder': `Chemin du dossier si vous déplacez plutôt que supprimez.`,
   'Action.OpenReleasePage': `Ouvrir la page de la _version`,
   'Action.Rescan': `_Réanalyser`,
-  'Action.SendResultLog': `Envoyer le rapport`,
-  'Action.SendResultLogConfirm': `_Envoyer`,
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `Faire un don`,
@@ -171,7 +169,6 @@ const MAP = {
   'Automation.ConfirmDelete': `Supprimer définitivement retire les fichiers inutiles. Annuler ferme sans rien supprimer.`,
   'Automation.ConfirmMove': `Déplacer place les fichiers inutiles dans le dossier de destination choisi. Annuler les laisse où ils sont.`,
   'Automation.SayThanks': `Dire merci`,
-  'Automation.ConfirmSendResultLog': `Envoyer transmet à No Faff le rapport affiché. Annuler n'envoie rien.`,
   'Automation.CheckForUpdates': `Rechercher des mises à jour`,
   'Automation.CheckForUpdates.HelpText': `Vérifie sur la page des versions de github s'il existe une version plus récente.`,
   'Automation.UpdateAvailable.HelpText': `Ouvrez la page de la version pour télécharger la version plus récente, ou annulez pour conserver la version actuelle.`,
@@ -204,8 +201,6 @@ const MAP = {
   'Tooltip.Close': `Fermer`,
   'Tooltip.LeaveStarOnGitHub.About': `Une étoile aide les autres à découvrir InstallerClean.`,
   'Tooltip.Minimise': `Réduire`,
-  'Tooltip.SendResultLog': `Comme vous voulez, mais c'est apprécié. Envoie un résumé anonyme qui me dit juste si l'outil fonctionne et combien d'espace les gens libèrent. L'écran suivant vous montre ce qui sera envoyé avant que vous confirmiez.`,
-  'Tooltip.SendResultLog.NothingFound': `Comme vous voulez, mais c'est apprécié. Envoie un résumé anonyme qui me dit juste si l'outil fonctionne. L'écran suivant vous montre ce qui sera envoyé avant que vous confirmiez.`,
   'Tooltip.Move': `Déplace les fichiers inutiles vers le dossier de sauvegarde.`,
   'Tooltip.MoveNeedsDestination': `Déplace les fichiers inutiles vers un dossier de sauvegarde. Vous le choisirez juste après.`,
   'Tooltip.Delete': `Supprime définitivement les fichiers inutiles. Utilisez plutôt Déplacer si vous voulez pouvoir vous convaincre que tout va bien.`,
@@ -400,13 +395,6 @@ const MAP = {
   'Error.DestinationCollision': `Un fichier nommé « {0} » est déjà dans le dossier de sauvegarde.`,
 
   // Result log (post-cleanup diagnostic send)
-  'ResultLog.Sending': `Envoi...`,
-  'ResultLog.Sent': `Merci ! Rapport envoyé.`,
-  'ResultLog.Failed': `Échec de l'envoi. Réessayez plus tard.`,
-  'ResultLog.NothingToSend': `Aucun rapport à envoyer.`,
-  'ConfirmSendResultLog.Title': `Envoyer ceci ?`,
-  'ConfirmSendResultLog.Reassurance': `Ça va vers nofaff.netlify.app/api/result-log. Rien ne vous identifie, ni votre machine ; ça me dit juste qu'InstallerClean fonctionne et [combien d'espace les gens libèrent].`,
-  'Automation.ResultLogPreview': `Aperçu du rapport`,
 
   // Single instance / startup / crash
   'Startup.AlreadyRunningTitle': `InstallerClean`,
@@ -605,6 +593,7 @@ const MAP = {
   'Action.CloseWithoutDonating': `_Close without donating`,
   'Tooltip.Donate': `I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.`,
   'Cli.DonateAsk': `InstallerClean is free. If it helped, please donate \$5: {0}`,
+  'Completion.SendReport': `Send _anonymous report`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

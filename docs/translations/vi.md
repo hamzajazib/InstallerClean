@@ -51,8 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Path to folder if you move rather than delete. | Đường dẫn thư mục nếu bạn chuyển thay vì xóa. |
 | Open _release page | _Mở trang phát hành |
 | _Re-scan | _Quét lại |
-| Send report | Gửi báo cáo |
-| _Send | _Gửi |
 
 ## About window
 
@@ -187,6 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | Đã xóa vĩnh viễn {0} {1} |
 | {0} {1} permanently deleted | Đã xóa vĩnh viễn {0} {1} |
 | Any small donation is much appreciated. | Mọi đóng góp dù nhỏ đều rất được trân trọng. |
+| Send _anonymous report | Send _anonymous report |
 
 ## Summaries and counts
 
@@ -311,17 +310,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The link is on your clipboard, so you can paste it in yourself:<br><br>{0} | Liên kết đã nằm trong bảng nhớ tạm, nên bạn có thể tự dán:<br><br>{0} |
 | InstallerClean couldn't copy the link to your clipboard either, so here it is:<br><br>{0} | InstallerClean cũng không sao chép được liên kết vào bảng nhớ tạm, đây là liên kết:<br><br>{0} |
 
-## Sending the summary
-
-| English | Tiếng Việt |
-| --- | --- |
-| Sending... | Đang gửi... |
-| Thanks! Report sent. | Cảm ơn! Đã gửi báo cáo. |
-| Sending failed. Try again later. | Gửi thất bại. Hãy thử lại sau. |
-| No report to send. | Không có báo cáo để gửi. |
-| Send this? | Gửi cái này? |
-| It goes to nofaff.netlify.app/api/result-log. Nothing identifies you or your machine; it just lets me know InstallerClean's working and [how much space people are freeing]. | Nó được gửi tới nofaff.netlify.app/api/result-log. Không có gì nhận dạng bạn hay máy của bạn; nó chỉ cho tôi biết InstallerClean có hoạt động không và [mọi người đang giải phóng được bao nhiêu dung lượng]. |
-
 ## Startup and crashes
 
 | English | Tiếng Việt |
@@ -348,8 +336,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | Một ngôi sao giúp người khác tìm thấy InstallerClean. |
 | Minimise | Thu nhỏ |
-| Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | Tùy bạn, nhưng rất được trân trọng. Gửi một bản tóm tắt ẩn danh chỉ để cho tôi biết nó có hoạt động không và mọi người đang giải phóng được bao nhiêu dung lượng. Màn hình tiếp theo cho bạn xem những gì sẽ được gửi trước khi bạn xác nhận. |
-| Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working. The next screen lets you see what will be sent before you confirm. | Tùy bạn, nhưng rất được trân trọng. Gửi một bản tóm tắt ẩn danh chỉ để cho tôi biết nó có hoạt động không. Màn hình tiếp theo cho bạn xem những gì sẽ được gửi trước khi bạn xác nhận. |
 | Move the unneeded files to the backup folder. | Chuyển các tệp không cần thiết vào thư mục sao lưu. |
 | Move the unneeded files to a backup folder. You'll choose it next. | Chuyển các tệp không cần thiết vào một thư mục sao lưu. Bạn sẽ chọn thư mục ngay sau đây. |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | Chuyển các tệp không cần thiết vào thư mục sao lưu. Thư mục đó nằm trên cùng ổ đĩa, nên dung lượng chỉ được giải phóng sau khi bạn xóa thư mục đó. |
@@ -377,7 +363,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Delete permanently removes the unneeded files. Cancel closes without deleting. | Xóa vĩnh viễn sẽ bỏ đi các tệp không cần thiết. Hủy sẽ đóng lại mà không xóa gì. |
 | Move puts the unneeded files in the chosen destination folder. Cancel leaves them where they are. | Chuyển sẽ đặt các tệp không cần thiết vào thư mục đích đã chọn. Hủy sẽ để chúng nguyên chỗ cũ. |
 | Say thanks | Lời cảm ơn |
-| Send posts the report shown to No Faff. Cancel sends nothing. | Gửi sẽ đăng báo cáo hiển thị tới No Faff. Hủy sẽ không gửi gì. |
 | Check for updates | Kiểm tra cập nhật |
 | Checks github's releases page for a newer version. | Kiểm tra trang phát hành của github xem có phiên bản mới hơn không. |
 | Opens the readme on github in your browser. | Mở readme trên github trong trình duyệt của bạn. |
@@ -408,7 +393,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Files that could not be processed | Các tệp không thể xử lý |
 | Explains this folder, and how to recover a file, in the README | Giải thích thư mục này, và cách khôi phục một tệp, trong README |
 | {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
-| Report preview | Xem trước báo cáo |
 | Change language | Thay đổi ngôn ngữ |
 | The program will restart. | Chương trình sẽ khởi động lại. |
 

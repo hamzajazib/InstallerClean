@@ -51,8 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Path to folder if you move rather than delete. | 삭제하지 않고 이동할 경우 사용할 폴더 경로입니다. |
 | Open _release page | 릴리스 페이지 열기(_R) |
 | _Re-scan | 다시 검사(_R) |
-| Send report | 보고서 보내기 |
-| _Send | 보내기(_S) |
 
 ## About window
 
@@ -187,6 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | {1} {0}개 영구 삭제됨 |
 | {0} {1} permanently deleted | {1} {0}개 영구 삭제됨 |
 | Any small donation is much appreciated. | 적은 금액의 후원도 정말 감사합니다. |
+| Send _anonymous report | Send _anonymous report |
 
 ## Summaries and counts
 
@@ -311,17 +310,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The link is on your clipboard, so you can paste it in yourself:<br><br>{0} | 링크가 클립보드에 있으니 직접 붙여 넣으면 됩니다:<br><br>{0} |
 | InstallerClean couldn't copy the link to your clipboard either, so here it is:<br><br>{0} | InstallerClean이 링크를 클립보드에 복사하지도 못했습니다. 링크는 다음과 같습니다:<br><br>{0} |
 
-## Sending the summary
-
-| English | 한국어 |
-| --- | --- |
-| Sending... | 보내는 중... |
-| Thanks! Report sent. | 감사합니다! 보고서를 보냈습니다. |
-| Sending failed. Try again later. | 보내기에 실패했습니다. 나중에 다시 시도하세요. |
-| No report to send. | 보낼 보고서가 없습니다. |
-| Send this? | 이 내용을 보내시겠습니까? |
-| It goes to nofaff.netlify.app/api/result-log. Nothing identifies you or your machine; it just lets me know InstallerClean's working and [how much space people are freeing]. | nofaff.netlify.app/api/result-log으로 전송됩니다. 사용자나 사용자의 컴퓨터를 식별할 수 있는 내용은 전혀 없습니다. 그저 InstallerClean이 잘 작동하는지와 [사람들이 공간을 얼마나 확보하고 있는지] 알 수 있게 해 줄 뿐입니다. |
-
 ## Startup and crashes
 
 | English | 한국어 |
@@ -348,8 +336,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | 별 하나가 다른 사람들이 InstallerClean을 찾는 데 도움이 됩니다. |
 | Minimise | 최소화 |
-| Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | 보내실지는 자유지만 보내 주시면 정말 감사합니다. 익명 요약을 전송하며, 이는 프로그램이 잘 작동하는지와 사람들이 공간을 얼마나 확보하고 있는지 제가 알 수 있게 해 줍니다. 다음 화면에서 확인 전에 보낼 내용을 미리 볼 수 있습니다. |
-| Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working. The next screen lets you see what will be sent before you confirm. | 보내실지는 자유지만 보내 주시면 정말 감사합니다. 익명 요약을 전송하며, 이는 프로그램이 잘 작동하는지 제가 알 수 있게 해 줍니다. 다음 화면에서 확인 전에 보낼 내용을 미리 볼 수 있습니다. |
 | Move the unneeded files to the backup folder. | 불필요한 파일을 백업 폴더로 옮깁니다. |
 | Move the unneeded files to a backup folder. You'll choose it next. | 불필요한 파일을 백업 폴더로 옮깁니다. 폴더는 곧이어 선택하게 됩니다. |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | 불필요한 파일을 백업 폴더로 옮깁니다. 같은 드라이브에 있으므로 그 폴더를 삭제하기 전에는 공간이 확보되지 않습니다. |
@@ -377,7 +363,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Delete permanently removes the unneeded files. Cancel closes without deleting. | 영구 삭제하면 불필요한 파일이 제거됩니다. 취소하면 아무것도 삭제하지 않고 닫습니다. |
 | Move puts the unneeded files in the chosen destination folder. Cancel leaves them where they are. | 이동하면 불필요한 파일이 선택한 대상 폴더에 들어갑니다. 취소하면 파일은 있던 자리에 그대로 남습니다. |
 | Say thanks | 감사 인사 |
-| Send posts the report shown to No Faff. Cancel sends nothing. | 보내기를 누르면 표시된 보고서가 No Faff에 전송됩니다. 취소하면 아무것도 보내지 않습니다. |
 | Check for updates | 업데이트 확인 |
 | Checks github's releases page for a newer version. | github의 릴리스 페이지에서 새 버전이 있는지 확인합니다. |
 | Opens the readme on github in your browser. | 브라우저에서 github의 readme를 엽니다. |
@@ -408,7 +393,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Files that could not be processed | 처리할 수 없는 파일 |
 | Explains this folder, and how to recover a file, in the README | 이 폴더에 대한 설명과 파일 복구 방법을 README에서 안내 |
 | {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
-| Report preview | 보고서 미리 보기 |
 | Change language | 언어 변경 |
 | The program will restart. | 프로그램이 다시 시작됩니다. |
 

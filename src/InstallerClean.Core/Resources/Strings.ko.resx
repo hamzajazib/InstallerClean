@@ -14,7 +14,6 @@
       Cli.*                  console output for the CLI launcher
       Completion.*           completion overlay copy
       Confirm.*              confirmation dialog body text
-      ConfirmSendResultLog.* result-log Send confirmation modal
       CrashLog.*             crash.log header copy
       Display.*              size/duration formatting fragments
       Error.*                user-facing error messages
@@ -22,7 +21,6 @@
       FilePicker.*           folder-browser dialog labels
       Plural.*               singular/plural fragments used by DisplayHelpers
       Reason.*               Reason column values in the unneeded files list
-      ResultLog.*            send-report states (Sending / Sent / Failed)
       Section.*              heading text inside windows
       Startup.*              splash + already-running messages
       Status.*               transient status / progress text
@@ -200,8 +198,6 @@
   <data name="Action.BackupFolderPlaceholder" xml:space="preserve"><value>삭제하지 않고 이동할 경우 사용할 폴더 경로입니다.</value></data>
   <data name="Action.OpenReleasePage" xml:space="preserve"><value>릴리스 페이지 열기(_R)</value></data>
   <data name="Action.Rescan" xml:space="preserve"><value>다시 검사(_R)</value></data>
-  <data name="Action.SendResultLog" xml:space="preserve"><value>보고서 보내기</value></data>
-  <data name="Action.SendResultLogConfirm" xml:space="preserve"><value>보내기(_S)</value></data>
 
   <!-- About window: the two links and the auto-update switch. Kept out of
        the Action.* block because none of the three is a button label; the
@@ -262,7 +258,6 @@
   <data name="Automation.ConfirmDelete" xml:space="preserve"><value>영구 삭제하면 불필요한 파일이 제거됩니다. 취소하면 아무것도 삭제하지 않고 닫습니다.</value></data>
   <data name="Automation.ConfirmMove" xml:space="preserve"><value>이동하면 불필요한 파일이 선택한 대상 폴더에 들어갑니다. 취소하면 파일은 있던 자리에 그대로 남습니다.</value></data>
   <data name="Automation.SayThanks" xml:space="preserve"><value>감사 인사</value></data>
-  <data name="Automation.ConfirmSendResultLog" xml:space="preserve"><value>보내기를 누르면 표시된 보고서가 No Faff에 전송됩니다. 취소하면 아무것도 보내지 않습니다.</value></data>
   <data name="Automation.CheckForUpdates" xml:space="preserve"><value>업데이트 확인</value></data>
   <!-- Heard, never read: the update button carries no tooltip, so this help
        text is the only description it has, and it is written for a speech
@@ -311,8 +306,8 @@
     Automation.CheckForUpdates.HelpText carries.</comment>
   </data>
   <!-- Window-level description for the update-available modal, read by a
-       screen reader on open, mirroring the ConfirmSendResultLog window.
-       The version numbers are in the body text; this states the choice. -->
+       screen reader on open. The version numbers are in the body text; this
+       states the choice. -->
   <data name="Automation.UpdateAvailable.HelpText" xml:space="preserve"><value>새 버전을 내려받으려면 릴리스 페이지를 열고, 현재 버전을 유지하려면 취소하세요.</value></data>
   <data name="Automation.Licence.HelpText" xml:space="preserve"><value>브라우저에서 github.com의 라이선스 파일을 엽니다.</value></data>
   <!-- Mixed-case AutomationProperties.Name overrides for the all-caps
@@ -386,8 +381,6 @@
     <comment>Tooltip and screen-reader help on the About window's star pill. The button it hangs on already names GitHub (Action.LeaveStarOnGitHub, "Leave a star on GitHub"), so naming it again here says the same word twice in one glance; keep the tooltip to what the star does. "It" is InstallerClean, which most languages will want to say outright.</comment>
   </data>
   <data name="Tooltip.Minimise" xml:space="preserve"><value>최소화</value></data>
-  <data name="Tooltip.SendResultLog" xml:space="preserve"><value>보내실지는 자유지만 보내 주시면 정말 감사합니다. 익명 요약을 전송하며, 이는 프로그램이 잘 작동하는지와 사람들이 공간을 얼마나 확보하고 있는지 제가 알 수 있게 해 줍니다. 다음 화면에서 확인 전에 보낼 내용을 미리 볼 수 있습니다.</value></data>
-  <data name="Tooltip.SendResultLog.NothingFound" xml:space="preserve"><value>보내실지는 자유지만 보내 주시면 정말 감사합니다. 익명 요약을 전송하며, 이는 프로그램이 잘 작동하는지 제가 알 수 있게 해 줍니다. 다음 화면에서 확인 전에 보낼 내용을 미리 볼 수 있습니다.</value></data>
   <!-- The Move button's three tooltip states, chosen by whether the backup
        folder is set and whether it sits on the drive the files are already
        on. Each is also the button's screen-reader help text, one value
@@ -965,6 +958,10 @@
     <value>적은 금액의 후원도 정말 감사합니다.</value>
     <comment>Tooltip and screen-reader help on the small donate button under Done (Action.DonateSmall), which stands on every completion card that carries Done, including a scan that found nothing to clean up. Keep it plain, with no word putting the reader under an obligation.</comment>
   </data>
+  <data name="Completion.SendReport" xml:space="preserve">
+    <value>Send _anonymous report</value>
+    <comment>The checkbox on the first completion card the PC shows, whatever kind of card it is. Ticked, the report goes as the card closes. The underscore marks the access key (Alt+A in English), which must not clash with the card's buttons: Action.Done, Action.DonateSmall, Action.Donate and Action.CloseWithoutDonating.</comment>
+  </data>
 
   <!-- Summaries -->
   <!-- 0 = file count. Singular / plural pairs picked at the call
@@ -1479,28 +1476,6 @@ InstallerClean은 이미 관리자 권한으로 실행 중이었으므로 그런
   <data name="Error.CannotWriteFolder" xml:space="preserve"><value>{0}에 쓸 수 없습니다.</value></data>
   <!-- 0 = file name -->
   <data name="Error.DestinationCollision" xml:space="preserve"><value>'{0}'(이)라는 이름의 파일이 이미 백업 폴더에 있습니다.</value></data>
-
-  <!-- Result log (post-cleanup diagnostic send) -->
-  <data name="ResultLog.Sending" xml:space="preserve"><value>보내는 중...</value></data>
-  <data name="ResultLog.Sent" xml:space="preserve"><value>감사합니다! 보고서를 보냈습니다.</value></data>
-  <data name="ResultLog.Failed" xml:space="preserve"><value>보내기에 실패했습니다. 나중에 다시 시도하세요.</value></data>
-  <data name="ResultLog.NothingToSend" xml:space="preserve"><value>보낼 보고서가 없습니다.</value></data>
-  <!-- Body header shown in the confirmation modal. Kept short: the JSON
-       right below is the actual disclosure, the title just asks. -->
-  <data name="ConfirmSendResultLog.Title" xml:space="preserve"><value>이 내용을 보내시겠습니까?</value></data>
-  <!-- Reassurance line under the JSON. Leads with the destination so the URL
-       always opens its own sentence rather than trailing variable-length
-       prose (stops it wrapping unpredictably at different lengths per
-       language), then the no-PII property and purpose. The bracketed phrase
-       becomes a hyperlink into the README's reports-stats FAQ answer (built
-       in ConfirmSendResultLogWindow.xaml.cs), the same [ ]-delimited pattern
-       as the registered-files window's closing sentence uses for its own. -->
-  <data name="ConfirmSendResultLog.Reassurance" xml:space="preserve"><value>nofaff.netlify.app/api/result-log으로 전송됩니다. 사용자나 사용자의 컴퓨터를 식별할 수 있는 내용은 전혀 없습니다. 그저 InstallerClean이 잘 작동하는지와 [사람들이 공간을 얼마나 확보하고 있는지] 알 수 있게 해 줄 뿐입니다.</value></data>
-  <!-- AutomationProperties.Name on the JSON preview TextBox so screen
-       readers announce its content rather than "edit, read-only". The
-       noun follows the button that opens this dialog (Action.SendResultLog,
-       "Send report") and the surrounding copy, which call it a report. -->
-  <data name="Automation.ResultLogPreview" xml:space="preserve"><value>보고서 미리 보기</value></data>
 
   <!-- Single instance / startup / crash -->
   <data name="Startup.AlreadyRunningTitle" xml:space="preserve"><value>InstallerClean</value></data>

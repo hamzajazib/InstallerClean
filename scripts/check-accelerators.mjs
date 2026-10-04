@@ -56,9 +56,10 @@ const SETS = {
   'MainWindow-operating': ['Action.Cancel', 'Action.StopWaiting'],
   // The completion card carries Done with the small Donate under it, or, after a
   // Move or Delete that moved or deleted files, Donate $5 over Close without
-  // donating. Never both pairs.
-  'MainWindow-completion': ['Action.Done', 'Action.DonateSmall', 'Action.SendResultLog'],
-  'MainWindow-completionDonate': ['Action.Donate', 'Action.CloseWithoutDonating', 'Action.SendResultLog'],
+  // donating. Never both pairs. Either card, where it is the PC's first, carries
+  // the report box under them.
+  'MainWindow-completion': ['Action.Done', 'Action.DonateSmall', 'Completion.SendReport'],
+  'MainWindow-completionDonate': ['Action.Donate', 'Action.CloseWithoutDonating', 'Completion.SendReport'],
 
   // The window the startup scan runs in: Cancel, and the same stop-waiting button
   // while its step line names a wait.
@@ -68,7 +69,6 @@ const SETS = {
     'Action.BuyMeACuppa', 'Action.Close'],
   'ConfirmDelete': ['Action.Cancel', 'Action.DeletePermanently'],
   'ConfirmMove': ['Action.Cancel', 'Action.Move'],
-  'ConfirmSendResultLog': ['Action.Cancel', 'Action.SendResultLogConfirm'],
   'UpdateAvailable': ['Action.Cancel', 'Action.OpenReleasePage'],
 };
 

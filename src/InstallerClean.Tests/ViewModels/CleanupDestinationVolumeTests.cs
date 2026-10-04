@@ -1,6 +1,7 @@
 using System.IO.Abstractions;
 using InstallerClean.Models;
 using InstallerClean.Services;
+using InstallerClean.Tests.Helpers;
 using InstallerClean.ViewModels;
 using NSubstitute;
 
@@ -327,8 +328,7 @@ public class CleanupDestinationVolumeTests
             Substitute.For<IConfirmationService>(),
             Substitute.For<IFileSystem>(),
             scan,
-            new CompletionViewModel(),
-            Substitute.For<IResultLogService>(),
+            TestCompletion.Create(),
             Substitute.For<IRemovableReverifier>(),
             resolveIsOnCacheVolume);
     }

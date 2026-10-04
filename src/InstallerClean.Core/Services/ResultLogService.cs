@@ -13,8 +13,7 @@ namespace InstallerClean.Services;
 /// Default <see cref="IResultLogService"/>. Writes the JSON to
 /// <c>%LOCALAPPDATA%\NoFaff\InstallerClean\last-run.json</c> via the
 /// same atomic-rename pattern <see cref="SettingsService"/> uses, and
-/// POSTs the file's contents to the No Faff result-log endpoint on
-/// user click.
+/// POSTs the file's contents to the No Faff result-log endpoint.
 /// </summary>
 public sealed class ResultLogService : IResultLogService
 {
@@ -179,8 +178,7 @@ public sealed class ResultLogService : IResultLogService
     /// <summary>
     /// Off the caller's thread from its first line, for the same reason as
     /// <see cref="WriteAsync"/>: the existence check, the atomic open and the
-    /// length read all precede the first await, and this one is awaited on the
-    /// dispatcher with the send dialog about to open. The token is not passed to
+    /// length read all precede the first await. The token is not passed to
     /// Task.Run, so a cancellation still arrives as the rethrow below rather
     /// than from the scheduler.
     /// </summary>
@@ -207,8 +205,8 @@ public sealed class ResultLogService : IResultLogService
             if (fs.Length > IResultLogService.MaxLogBytes)
             {
                 // Oversize is not a normal outcome (writer caps at the
-                // schema's natural size); record it so a "Didn't work"
-                // user report has a breadcrumb to follow.
+                // schema's natural size); record it so a report that never
+                // went has a breadcrumb to follow.
                 CrashLog.TryWrite(new InvalidDataException(
                     $"last-run.json exceeds the {IResultLogService.MaxLogBytes}-byte cap and was not read."));
                 return null;

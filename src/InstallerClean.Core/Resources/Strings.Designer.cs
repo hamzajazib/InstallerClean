@@ -84,8 +84,6 @@ public static class Strings
     public static string Action_Paste => Get("Action.Paste");
     public static string Action_Rescan => Get("Action.Rescan");
     public static string Action_SelectAll => Get("Action.SelectAll");
-    public static string Action_SendResultLog => Get("Action.SendResultLog");
-    public static string Action_SendResultLogConfirm => Get("Action.SendResultLogConfirm");
     public static string Action_StopWaiting => Get("Action.StopWaiting");
     public static string Automation_About_Guide_HelpText => Get("Automation.About.Guide.HelpText");
     public static string Automation_About_ReportProblem_HelpText => Get("Automation.About.ReportProblem.HelpText");
@@ -105,7 +103,6 @@ public static class Strings
     public static string Automation_CompletionErrors => Get("Automation.CompletionErrors");
     public static string Automation_ConfirmDelete => Get("Automation.ConfirmDelete");
     public static string Automation_ConfirmMove => Get("Automation.ConfirmMove");
-    public static string Automation_ConfirmSendResultLog => Get("Automation.ConfirmSendResultLog");
     public static string Automation_Donate => Get("Automation.Donate");
     public static string Automation_DonateSmall => Get("Automation.DonateSmall");
     public static string Automation_LeaveStarOnGitHub_About => Get("Automation.LeaveStarOnGitHub.About");
@@ -114,7 +111,6 @@ public static class Strings
     public static string Automation_OperationProgress => Get("Automation.OperationProgress");
     public static string Automation_RegisteredMissingSeeAlso => Get("Automation.RegisteredMissingSeeAlso");
     public static string Automation_RescanInstaller => Get("Automation.RescanInstaller");
-    public static string Automation_ResultLogPreview => Get("Automation.ResultLogPreview");
     public static string Automation_SayThanks => Get("Automation.SayThanks");
     public static string Automation_ScanningProgress => Get("Automation.ScanningProgress");
     public static string Automation_ScanResultAnnouncement => Get("Automation.ScanResultAnnouncement");
@@ -314,6 +310,7 @@ public static class Strings
     public static string Completion_PermanentDeleteSummary_Singular => Get("Completion.PermanentDeleteSummary.Singular");
     public static string Completion_ReverifyIdentityClaimed => Get("Completion.ReverifyIdentityClaimed");
     public static string Completion_ReverifyIdentityUnreadable => Get("Completion.ReverifyIdentityUnreadable");
+    public static string Completion_SendReport => Get("Completion.SendReport");
     public static string Confirm_DeletePermanently_Plural => Get("Confirm.DeletePermanently.Plural");
     public static string Confirm_DeletePermanently_Singular => Get("Confirm.DeletePermanently.Singular");
     public static string Confirm_DeleteTitle => Get("Confirm.DeleteTitle");
@@ -321,8 +318,6 @@ public static class Strings
     public static string Confirm_MoveDestination_Singular => Get("Confirm.MoveDestination.Singular");
     public static string Confirm_MoveSameDrive => Get("Confirm.MoveSameDrive");
     public static string Confirm_MoveTitle => Get("Confirm.MoveTitle");
-    public static string ConfirmSendResultLog_Reassurance => Get("ConfirmSendResultLog.Reassurance");
-    public static string ConfirmSendResultLog_Title => Get("ConfirmSendResultLog.Title");
     public static string CrashLog_PrivacyHeader => Get("CrashLog.PrivacyHeader");
     public static string Display_DriveName => Get("Display.DriveName");
     public static string Display_ElapsedLong_LessThanASecond => Get("Display.ElapsedLong.LessThanASecond");
@@ -424,10 +419,6 @@ public static class Strings
     public static string Reason_Obsoleted => Get("Reason.Obsoleted");
     public static string Reason_Orphaned => Get("Reason.Orphaned");
     public static string Reason_Superseded => Get("Reason.Superseded");
-    public static string ResultLog_Failed => Get("ResultLog.Failed");
-    public static string ResultLog_NothingToSend => Get("ResultLog.NothingToSend");
-    public static string ResultLog_Sending => Get("ResultLog.Sending");
-    public static string ResultLog_Sent => Get("ResultLog.Sent");
     public static string Section_Backup_Folder => Get("Section.Backup.Folder");
     public static string Section_Registered_Details => Get("Section.Registered.Details");
     public static string Section_Registered_Patches => Get("Section.Registered.Patches");
@@ -501,8 +492,6 @@ public static class Strings
     public static string Tooltip_Move => Get("Tooltip.Move");
     public static string Tooltip_MoveNeedsDestination => Get("Tooltip.MoveNeedsDestination");
     public static string Tooltip_MoveSameDrive => Get("Tooltip.MoveSameDrive");
-    public static string Tooltip_SendResultLog => Get("Tooltip.SendResultLog");
-    public static string Tooltip_SendResultLog_NothingFound => Get("Tooltip.SendResultLog.NothingFound");
     public static string Tooltip_SigningCertificate => Get("Tooltip.SigningCertificate");
     public static string UpdateCheck_Failed_NetworkUnavailable => Get("UpdateCheck.Failed.NetworkUnavailable");
     public static string UpdateCheck_Failed_ResponseParseError => Get("UpdateCheck.Failed.ResponseParseError");

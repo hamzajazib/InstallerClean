@@ -51,8 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Path to folder if you move rather than delete. | Silmek yerine taşıyacaksanız klasörün yolu. |
 | Open _release page | _Sürüm sayfasını aç |
 | _Re-scan | _Yeniden tara |
-| Send report | Rapor gönder |
-| _Send | _Gönder |
 
 ## About window
 
@@ -187,6 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | {0} {1} kalıcı olarak silindi |
 | {0} {1} permanently deleted | {0} {1} kalıcı olarak silindi |
 | Any small donation is much appreciated. | Küçük de olsa her bağış çok makbule geçer. |
+| Send _anonymous report | Send _anonymous report |
 
 ## Summaries and counts
 
@@ -311,17 +310,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The link is on your clipboard, so you can paste it in yourself:<br><br>{0} | Bağlantı panoda, yani kendiniz yapıştırabilirsiniz:<br><br>{0} |
 | InstallerClean couldn't copy the link to your clipboard either, so here it is:<br><br>{0} | InstallerClean bağlantıyı panoya da kopyalayamadı, işte burada:<br><br>{0} |
 
-## Sending the summary
-
-| English | Türkçe |
-| --- | --- |
-| Sending... | Gönderiliyor... |
-| Thanks! Report sent. | Teşekkürler! Rapor gönderildi. |
-| Sending failed. Try again later. | Gönderme başarısız oldu. Daha sonra yeniden deneyin. |
-| No report to send. | Gönderilecek rapor yok. |
-| Send this? | Bunu göndermek ister misiniz? |
-| It goes to nofaff.netlify.app/api/result-log. Nothing identifies you or your machine; it just lets me know InstallerClean's working and [how much space people are freeing]. | nofaff.netlify.app/api/result-log adresine gönderilir. Hiçbir şey sizi ya da makinenizi tanımlamaz; yalnızca InstallerClean'in çalıştığını ve [insanların ne kadar yer açtığını] bana bildirir. |
-
 ## Startup and crashes
 
 | English | Türkçe |
@@ -348,8 +336,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | Bir yıldız, başkalarının InstallerClean'i bulmasına yardımcı olur. |
 | Minimise | Simge durumuna küçült |
-| Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | Size kalmış ama makbule geçer. Yalnızca uygulamanın çalışıp çalışmadığını ve insanların ne kadar yer açtığını bana bildiren anonim bir özet gönderir. Sonraki ekran, onaylamadan önce ne gönderileceğini görmenizi sağlar. |
-| Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working. The next screen lets you see what will be sent before you confirm. | Size kalmış ama makbule geçer. Yalnızca uygulamanın çalışıp çalışmadığını bana bildiren anonim bir özet gönderir. Sonraki ekran, onaylamadan önce ne gönderileceğini görmenizi sağlar. |
 | Move the unneeded files to the backup folder. | Gereksiz dosyaları yedek klasörüne taşır. |
 | Move the unneeded files to a backup folder. You'll choose it next. | Gereksiz dosyaları bir yedek klasörüne taşır. Klasörü hemen ardından seçeceksiniz. |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | Gereksiz dosyaları yedek klasörüne taşır. Klasör aynı sürücüde olduğu için, o klasörü silene kadar yeri geri kazanamazsınız. |
@@ -377,7 +363,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Delete permanently removes the unneeded files. Cancel closes without deleting. | Kalıcı olarak sil, gereksiz dosyaları kaldırır. İptal, hiçbir şey silmeden kapatır. |
 | Move puts the unneeded files in the chosen destination folder. Cancel leaves them where they are. | Taşı, gereksiz dosyaları seçilen hedef klasöre koyar. İptal, onları olduğu yerde bırakır. |
 | Say thanks | Teşekkür etmek için |
-| Send posts the report shown to No Faff. Cancel sends nothing. | Gönder, gösterilen raporu No Faff'a iletir. İptal hiçbir şey göndermez. |
 | Check for updates | Güncelleştirmeleri denetle |
 | Checks github's releases page for a newer version. | github üzerindeki sürümler sayfasında daha yeni bir sürüm olup olmadığını denetler. |
 | Opens the readme on github in your browser. | github üzerindeki readme'yi tarayıcınızda açar. |
@@ -408,7 +393,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Files that could not be processed | İşlenemeyen dosyalar |
 | Explains this folder, and how to recover a file, in the README | Bu klasörü açıklar ve bir dosyanın nasıl kurtarılacağını README'de anlatır |
 | {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
-| Report preview | Rapor önizlemesi |
 | Change language | Dili değiştir |
 | The program will restart. | Program yeniden başlatılacak. |
 

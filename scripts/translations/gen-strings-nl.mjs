@@ -158,8 +158,6 @@ const MAP = {
   'Action.BackupFolderPlaceholder': `Pad naar de map als je verplaatst in plaats van verwijdert.`,
   'Action.OpenReleasePage': `_Releasepagina openen`,
   'Action.Rescan': `Opnieuw _scannen`,
-  'Action.SendResultLog': `Rapport verzenden`,
-  'Action.SendResultLogConfirm': `_Verzenden`,
   'About.Link.Guide': `Handleiding en FAQ`,
   'About.Link.ReportProblem': `Een probleem melden`,
   'About.AutoUpdateCheck': `Automatisch controleren op updates`,
@@ -179,7 +177,6 @@ const MAP = {
   'Automation.ConfirmDelete': `Definitief verwijderen haalt de overbodige bestanden weg. Annuleren sluit het venster zonder iets te verwijderen.`,
   'Automation.ConfirmMove': `Verplaatsen zet de overbodige bestanden in de gekozen doelmap. Annuleren laat ze waar ze zijn.`,
   'Automation.SayThanks': `Zeg bedankt`,
-  'Automation.ConfirmSendResultLog': `Verzenden stuurt het getoonde rapport naar No Faff. Annuleren stuurt niets.`,
   'Automation.CheckForUpdates': `Controleren op updates`,
   'Automation.CheckForUpdates.HelpText': `Kijkt op de releasepagina van github of er een nieuwere versie is.`,
   'Automation.About.Guide.HelpText': `Opent het readme-bestand op github in je browser.`,
@@ -215,8 +212,6 @@ const MAP = {
   'Tooltip.Close': `Sluiten`,
   'Tooltip.LeaveStarOnGitHub.About': `Een ster helpt anderen het te vinden.`,
   'Tooltip.Minimise': `Minimaliseren`,
-  'Tooltip.SendResultLog': `Dat is aan jou, maar ik zou het op prijs stellen. Er wordt een anonieme samenvatting verstuurd die me alleen laat weten of het werkt en hoeveel ruimte mensen vrijmaken. Op het volgende scherm kun je zien wat er wordt verstuurd voordat je het bevestigt.`,
-  'Tooltip.SendResultLog.NothingFound': `Dat is aan jou, maar ik zou het op prijs stellen. Er wordt een anonieme samenvatting verstuurd die me alleen laat weten of het werkt. Op het volgende scherm kun je zien wat er wordt verstuurd voordat je het bevestigt.`,
   'Tooltip.Move': `De overbodige bestanden naar de back-upmap verplaatsen.`,
   'Tooltip.MoveNeedsDestination': `De overbodige bestanden naar een back-upmap verplaatsen. Die kies je hierna.`,
   'Tooltip.Delete': `De overbodige bestanden definitief verwijderen. Gebruik Verplaatsen als je jezelf eerst wilt overtuigen dat alles goed is.`,
@@ -373,13 +368,6 @@ const MAP = {
   'Error.DestinationCollision': `Er staat al een bestand met de naam '{0}' in de back-upmap.`,
 
   // Result log (post-cleanup diagnostic send)
-  'ResultLog.Sending': `Verzenden...`,
-  'ResultLog.Sent': `Bedankt! Rapport verzonden.`,
-  'ResultLog.Failed': `Verzenden mislukt. Probeer het later opnieuw.`,
-  'ResultLog.NothingToSend': `Geen rapport om te verzenden.`,
-  'ConfirmSendResultLog.Title': `Dit versturen?`,
-  'ConfirmSendResultLog.Reassurance': `Het gaat naar nofaff.netlify.app/api/result-log. Niets identificeert jou of je computer; het laat me alleen weten dat InstallerClean werkt en [hoeveel ruimte mensen vrijmaken].`,
-  'Automation.ResultLogPreview': `Rapportvoorbeeld`,
 
   // Single instance / startup / crash
   'Startup.AlreadyRunningTitle': `InstallerClean`,
@@ -565,6 +553,7 @@ const MAP = {
   'Action.CloseWithoutDonating': `_Close without donating`,
   'Tooltip.Donate': `I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.`,
   'Cli.DonateAsk': `InstallerClean is free. If it helped, please donate \$5: {0}`,
+  'Completion.SendReport': `Send _anonymous report`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

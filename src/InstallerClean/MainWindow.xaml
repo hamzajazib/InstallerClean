@@ -910,7 +910,6 @@
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <!-- Icon -->
@@ -1212,53 +1211,32 @@
                                 AutomationProperties.HelpText="{loc:Translate Automation.CloseResult}"/>
                     </StackPanel>
 
-                    <!-- Send-result-log button. Two locks hide it, and they
-                         are deliberately asymmetric: the session lock closes
-                         it on any click outcome, success or failure, while
-                         only a successful send persists
-                         AppSettings.HasSentResultLog and keeps it hidden in
-                         later sessions. A transient failure therefore costs
-                         one prompt, not the machine's only chance to send.
-                         FocusVisualStyle is set explicitly so this
-                         GhostPill paints a ring under Tab navigation. -->
-                    <Button Grid.Row="4" Style="{StaticResource GhostPill}"
-                            Content="{loc:Translate Action.SendResultLog}"
-                            Command="{Binding Completion.SendResultLogCommand}"
-                            Visibility="{Binding Completion.IsSendResultLogVisible, Converter={StaticResource BoolToVis}}"
-                            HorizontalAlignment="Center"
-                            MinHeight="28" Padding="16,0" FontSize="{DynamicResource Type.Body}"
-                            Margin="{StaticResource GapBottom.Sm}"
-                            FocusVisualStyle="{StaticResource SmallPillFocusVisual}"
-                            ToolTip="{Binding Completion.SendResultLogTooltip}"
-                            AutomationProperties.HelpText="{Binding Completion.SendResultLogTooltip}"/>
-
-                    <!-- Result-log status line. Shows "Sending..." while
-                         the POST is in flight, "Thanks!" after a success,
-                         or a localised failure reason. Empty (and so
-                         collapsed) at every other moment. A polite live
-                         region that code-behind reads out each time it
-                         changes, because focus stays on the button that
-                         closes the card and nothing else would read the silent-skip and post-POST
-                         status copy to users on Narrator/NVDA/JAWS. -->
-                    <TextBlock x:Name="ResultLogStatusText" Grid.Row="5"
-                               Text="{Binding Completion.ResultLogStatusMessage}"
-                               HorizontalAlignment="Center" TextAlignment="Center"
-                               Foreground="{StaticResource Text.Muted}"
-                               FontSize="{DynamicResource Type.Body}"
-                               TextWrapping="Wrap" MaxWidth="{a11y:TextScaled 380}"
-                               Margin="{StaticResource GapBottom.Sm}"
-                               AutomationProperties.LiveSetting="Polite">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Visibility" Value="Visible"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Completion.ResultLogStatusMessage}" Value="">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
+                    <!-- The report box, on the PC's first finished card only and
+                         collapsed on every other. Whatever it says as the card
+                         closes is what happens. Under the buttons, so Tab reaches
+                         it after them and the focus placed on the button that
+                         closes the card is unchanged; Enter still closes the
+                         card with the box focused, a CheckBox not taking Enter,
+                         and Space ticks it. The implicit CheckBox style with the
+                         muted caption text of the card's lesser lines; set
+                         through a style rather than as attributes, so the style's
+                         own hover brightening still applies. LiveSetting because
+                         the window reads it out after the outcome lines when the
+                         card is revealed. -->
+                    <CheckBox x:Name="CompletionReportBox" Grid.Row="4"
+                              Content="{loc:Translate Completion.SendReport}"
+                              IsChecked="{Binding Completion.SendsReport}"
+                              Visibility="{Binding Completion.OffersReport, Converter={StaticResource BoolToVis}}"
+                              HorizontalAlignment="Center"
+                              Margin="{StaticResource GapTop.Sm}"
+                              AutomationProperties.LiveSetting="Polite">
+                        <CheckBox.Style>
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+                                <Setter Property="Foreground" Value="{StaticResource Text.Muted}"/>
+                                <Setter Property="FontSize" Value="{DynamicResource Type.Caption}"/>
                             </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
+                        </CheckBox.Style>
+                    </CheckBox>
 
                 </Grid>
             </Border>

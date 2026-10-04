@@ -3,10 +3,12 @@ using InstallerClean.Models;
 namespace InstallerClean.Services;
 
 /// <summary>
-/// Writes the post-cleanup diagnostic log to disk and, on user
-/// request, POSTs the same JSON to No Faff. Each outbound call from
-/// the elevated process is bound to one direct user action; nothing
-/// in this service fires on its own.
+/// Writes the report of the PC's first finished run to disk and POSTs
+/// the same JSON to No Faff. The window sends it in two places: as that
+/// run's card closes with its report box ticked, and at a later start
+/// where this account's report is still waiting to go
+/// (<see cref="Models.AppSettings.ReportToSend"/>). Nothing in this
+/// service starts a call on its own.
 /// </summary>
 public interface IResultLogService
 {
@@ -28,13 +30,9 @@ public interface IResultLogService
 
     /// <summary>
     /// POSTs <paramref name="body"/> to the No Faff result-log endpoint.
-    /// The caller is expected to obtain the body via
-    /// <see cref="ReadLastLogAsync"/> immediately before calling so the
-    /// modal preview and the wire payload are the same bytes; reading
-    /// last-run.json twice would open a TOCTOU window between user
-    /// review and POST. Returns one of <see cref="ResultLogSendOutcome"/>;
-    /// the caller picks a localised message per case rather than the
-    /// service echoing a framework exception. Never throws for a network,
+    /// The caller reads the body with <see cref="ReadLastLogAsync"/>, so
+    /// what goes is what <c>last-run.json</c> holds. Returns one of
+    /// <see cref="ResultLogSendOutcome"/>. Never throws for a network,
     /// server or IO failure; a token cancelled by the caller surfaces as
     /// OperationCanceledException, so a caller that passes one must catch it.
     /// </summary>
@@ -42,7 +40,7 @@ public interface IResultLogService
 
     /// <summary>
     /// Reads <c>last-run.json</c> as UTF-8 text and returns the
-    /// raw content for display in the confirmation window. Returns null
+    /// raw content, which is the body <see cref="SendAsync"/> sends. Returns null
     /// when the file doesn't exist, exceeds the <see cref="MaxLogBytes"/>
     /// cap, or fails to read; oversize and read-failure cases write a
     /// breadcrumb to crash.log. Never throws for an IO failure; a token

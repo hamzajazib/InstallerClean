@@ -92,6 +92,8 @@ public static class CoreComposition
         // so the check started at launch and every later ask share one answer.
         services.AddSingleton<ICommandLineRunRecord, CommandLineRunRecord>();
         services.AddSingleton<IEarlierRunCheck, EarlierRunCheck>();
+        // Which way the report box on the first finished card starts.
+        services.AddSingleton<IWindowsRegion, WindowsRegion>();
 
         // The two outbound-network services. Singleton keeps each one's
         // HttpClient connection pool reused for the life of the process.

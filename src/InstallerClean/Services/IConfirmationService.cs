@@ -19,14 +19,6 @@ public interface IConfirmationService
     bool ConfirmDelete(int fileCount, string sizeDisplay);
 
     /// <summary>
-    /// Shows the diagnostic-log confirmation dialog. <paramref name="jsonContent"/>
-    /// is the literal text the app is about to POST to the No Faff endpoint.
-    /// Returns true if the user pressed Send, false if they cancelled or
-    /// closed the window.
-    /// </summary>
-    bool ConfirmSendResultLog(string jsonContent);
-
-    /// <summary>
     /// Shows the folder browser for the backup folder. Returns the chosen
     /// folder, or <c>null</c> if the user cancelled or there is no host
     /// window to own the dialog.

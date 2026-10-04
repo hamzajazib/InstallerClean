@@ -138,7 +138,6 @@ const NO_VISIBLE_LABEL = new Set([
   'Automation.CloseWindow',
   'Automation.Minimise',
   'Automation.OperationProgress',
-  'Automation.ResultLogPreview',
   'Automation.ScanningProgress',
   'Automation.StartupScanProgress',
   'Automation.Scroll.DialogBody',
@@ -181,8 +180,6 @@ const QUOTES_A_LABEL = [
   { sentence: 'Automation.ConfirmMove', label: 'Action.Cancel' },
   { sentence: 'Automation.ConfirmDelete', label: 'Action.DeletePermanently' },
   { sentence: 'Automation.ConfirmDelete', label: 'Action.Cancel' },
-  { sentence: 'Automation.ConfirmSendResultLog', label: 'Action.SendResultLogConfirm' },
-  { sentence: 'Automation.ConfirmSendResultLog', label: 'Action.Cancel' },
   // The sentence the delete dialog introduces offers the other way of doing it
   // by name, so the offer is worth exactly what the button it points at is
   // called, in both of its forms.

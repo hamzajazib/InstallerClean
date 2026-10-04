@@ -53,7 +53,6 @@ public class LinkPhraseCompositionTests
     private static readonly string[] KnownLinkKeys =
     {
         "Body.RegisteredMissingFromDisk.SeeAlso", // the registered-files window
-        "ConfirmSendResultLog.Reassurance",       // the send-report confirmation
     };
 
     /// <summary>

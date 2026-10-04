@@ -144,8 +144,6 @@ const MAP = {
   'Action.BackupFolderPlaceholder': `Pfad zum Ordner, falls du verschiebst statt zu löschen.`,
   'Action.OpenReleasePage': `_Release-Seite öffnen`,
   'Action.Rescan': `_Neu scannen`,
-  'Action.SendResultLog': `Bericht senden`,
-  'Action.SendResultLogConfirm': `_Senden`,
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `Spenden`,
@@ -162,7 +160,6 @@ const MAP = {
   'Automation.ConfirmDelete': `Endgültig löschen entfernt die nicht benötigten Dateien. Abbrechen schließt das Fenster, ohne zu löschen.`,
   'Automation.ConfirmMove': `Verschieben legt die nicht benötigten Dateien in den gewählten Zielordner. Abbrechen lässt sie, wo sie sind.`,
   'Automation.SayThanks': `Danke sagen`,
-  'Automation.ConfirmSendResultLog': `Senden übermittelt den angezeigten Bericht an No Faff. Abbrechen sendet nichts.`,
   'Automation.CheckForUpdates': `Nach Updates suchen`,
   'Automation.CheckForUpdates.HelpText': `Sucht auf der Release-Seite von github nach einer neueren Version.`,
   'Automation.UpdateAvailable.HelpText': `Öffne die Release-Seite, um die neuere Version herunterzuladen, oder brich ab, um die aktuelle Version zu behalten.`,
@@ -195,8 +192,6 @@ const MAP = {
   'Tooltip.Close': `Schließen`,
   'Tooltip.LeaveStarOnGitHub.About': `Ein Stern hilft anderen, InstallerClean zu finden.`,
   'Tooltip.Minimise': `Minimieren`,
-  'Tooltip.SendResultLog': `Ganz wie du magst, aber ich freue mich darüber. Sendet eine anonyme Zusammenfassung, die mir nur zeigt, ob es funktioniert und wie viel Platz die Leute freigeben. Auf dem nächsten Bildschirm siehst du vor dem Bestätigen, was gesendet wird.`,
-  'Tooltip.SendResultLog.NothingFound': `Ganz wie du magst, aber ich freue mich darüber. Sendet eine anonyme Zusammenfassung, die mir nur zeigt, ob es funktioniert. Auf dem nächsten Bildschirm siehst du vor dem Bestätigen, was gesendet wird.`,
   'Tooltip.Move': `Verschiebt die nicht benötigten Dateien in den Sicherungsordner.`,
   'Tooltip.MoveNeedsDestination': `Verschiebt die nicht benötigten Dateien in einen Sicherungsordner. Den wählst du gleich aus.`,
   'Tooltip.Delete': `Löscht die nicht benötigten Dateien endgültig. Nimm stattdessen Verschieben, wenn du dich erst überzeugen möchtest, dass alles in Ordnung ist.`,
@@ -394,13 +389,6 @@ const MAP = {
   'Error.DestinationCollision': `Eine Datei namens '{0}' liegt bereits im Sicherungsordner.`,
 
   // Result log (post-cleanup diagnostic send)
-  'ResultLog.Sending': `Wird gesendet...`,
-  'ResultLog.Sent': `Danke! Bericht gesendet.`,
-  'ResultLog.Failed': `Senden fehlgeschlagen. Versuch es später erneut.`,
-  'ResultLog.NothingToSend': `Kein Bericht zum Senden.`,
-  'ConfirmSendResultLog.Title': `Das senden?`,
-  'ConfirmSendResultLog.Reassurance': `Es geht an nofaff.netlify.app/api/result-log. Nichts identifiziert dich oder deinen Rechner; es zeigt mir nur, dass InstallerClean funktioniert und [wie viel Platz die Leute freigeben].`,
-  'Automation.ResultLogPreview': `Vorschau des Berichts`,
 
   // Single instance / startup / crash
   'Startup.AlreadyRunningTitle': `InstallerClean`,
@@ -599,6 +587,7 @@ const MAP = {
   'Action.CloseWithoutDonating': `_Close without donating`,
   'Tooltip.Donate': `I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.`,
   'Cli.DonateAsk': `InstallerClean is free. If it helped, please donate \$5: {0}`,
+  'Completion.SendReport': `Send _anonymous report`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

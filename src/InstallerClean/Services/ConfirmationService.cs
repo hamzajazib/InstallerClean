@@ -25,16 +25,6 @@ public sealed class ConfirmationService : IConfirmationService
         return dialog.ShowDialog() == true;
     }
 
-    public bool ConfirmSendResultLog(string jsonContent)
-    {
-        if (Application.Current is null) return false;
-        var dialog = new ConfirmSendResultLogWindow(jsonContent)
-        {
-            Owner = Application.Current.MainWindow,
-        };
-        return dialog.ShowDialog() == true;
-    }
-
     public string? AskForMoveDestination(string? currentDestination = null)
     {
         if (Application.Current is null) return null;

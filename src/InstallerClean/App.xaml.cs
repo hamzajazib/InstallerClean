@@ -363,6 +363,11 @@ public partial class App : Application
             // so nothing here waits on it.
             _ = _services.GetRequiredService<IEarlierRunCheck>().ShowsAnEarlierRunAsync();
 
+            // This account's report, where an earlier start left it waiting to go. It
+            // waits for the check above before it reads settings, and runs in the
+            // background.
+            viewModel.Completion.StartSavedReportRetry();
+
             using var startupCts = new CancellationTokenSource();
             splash.CancelRequested += (_, _) => startupCts.Cancel();
 
@@ -396,6 +401,13 @@ public partial class App : Application
                 // point is indistinguishable from a crash to the user.
                 cancelled = true;
             }
+
+            // The card a startup scan that offered nothing puts up can be waiting on the
+            // check above, which on a PC's first launch can outlast the scan. Building
+            // the window after it is settled means the card is either up as the window
+            // is constructed, which replays it, or not coming; the wait is the check's
+            // own bound at most.
+            await viewModel.ScanCardDecided;
 
             if (!cancelled)
             {
@@ -639,16 +651,14 @@ public partial class App : Application
     /// last writes to settings.json: MainViewModel.Dispose flushes a
     /// MoveDestination edit still inside its 400 ms debounce (see
     /// CleanupViewModel.Dispose, which names the language switch as one of the
-    /// paths it exists for) and waits out the result-log lifetime-lock write.
-    /// The child reads that same file twice early, in OnStartup for the
-    /// language and in CleanupViewModel's constructor for the destination.
-    /// Leaving the disposal to OnExit put both writes after Process.Start, a
-    /// race the parent happened to win only because the child has process
-    /// creation, runtime start, DI build and a splash-driven scan to get
-    /// through first. The lifetime-lock wait is bounded at five seconds and now
-    /// sits before the launch rather than beside it, which is the right side of
-    /// that trade: the bound is only reached by a disk that has stopped
-    /// answering, and a child that reads a stale file gets it wrong every time.
+    /// paths it exists for) and waits, for no more than two seconds, for the
+    /// report's sends and saves still running. The child reads that same file
+    /// twice early, in OnStartup for the language and in CleanupViewModel's
+    /// constructor for the destination, so the writes are settled before
+    /// Process.Start rather than racing those reads. The bounded wait sitting
+    /// before the launch is the right side of that trade: the bound is only
+    /// reached by a disk or a network that has stopped answering, and a child
+    /// that reads a stale file gets it wrong every time.
     ///
     /// Then the mutex: the child takes the
     /// same Global\InstallerClean_SingleInstance mutex on startup, and a

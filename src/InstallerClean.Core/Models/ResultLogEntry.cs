@@ -8,11 +8,11 @@ using InstallerClean.Services;
 namespace InstallerClean.Models;
 
 /// <summary>
-/// Diagnostic record produced after every cleanup operation (Move,
-/// Delete, or scan-with-no-orphans). Persisted as <c>last-run.json</c>
-/// in <c>%LOCALAPPDATA%\NoFaff\InstallerClean</c>; the file's contents
-/// are exactly what gets POSTed when the Send-result button is
-/// confirmed.
+/// The report of the PC's first finished run: a Move, a Delete, or a scan
+/// that offered nothing. Written once, as that run's card appears, to
+/// <c>last-run.json</c> in <c>%LOCALAPPDATA%\NoFaff\InstallerClean</c>;
+/// the file's contents are exactly what is POSTed when the card closes
+/// with its report box ticked.
 ///
 /// Schema is intentionally narrow. Every field is either categorical
 /// or a count; no file paths, no usernames, no machine identifiers,

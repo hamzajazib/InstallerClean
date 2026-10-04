@@ -33,10 +33,12 @@ public sealed class SettingsService : ISettingsService
 
     private readonly string _settingsFile;
 
-    // Serialises Update's read-modify-write. SettingsService is a DI singleton
-    // (CoreComposition), so one gate covers every settings writer in the
-    // process: the debounced MoveDestination save on a thread-pool thread, and
-    // the result-log lifetime lock and the language pick on the dispatcher.
+    // Serialises Update's read-modify-write, and every read with it, so no read
+    // in this process lands while a save is renaming the file into place.
+    // SettingsService is a DI singleton (CoreComposition), so one gate covers
+    // every settings writer in the process: the debounced MoveDestination save
+    // and the report's saves on thread-pool threads, and the language pick and
+    // the update-check opt-out on the dispatcher.
     private readonly object _ioGate = new();
 
     public SettingsService() : this(DefaultSettingsFile) { }
@@ -50,6 +52,12 @@ public sealed class SettingsService : ISettingsService
     {
         TryLoad(out var settings);
         return settings;
+    }
+
+    public bool TryLoad(out AppSettings settings)
+    {
+        lock (_ioGate)
+            return TryLoadCore(out settings);
     }
 
     /// <summary>
@@ -68,7 +76,7 @@ public sealed class SettingsService : ISettingsService
     /// has already answered. Only a file that parsed as something other than
     /// this schema is corrupt, and only that is renamed aside.
     /// </summary>
-    private bool TryLoad(out AppSettings settings)
+    private bool TryLoadCore(out AppSettings settings)
     {
         try
         {
@@ -181,7 +189,7 @@ public sealed class SettingsService : ISettingsService
             // default, which is the same loss as deleting the file and is why
             // the load's success is asked for here. Reporting the save as failed
             // is the truth and every caller already handles it.
-            if (!TryLoad(out var settings)) return false;
+            if (!TryLoadCore(out var settings)) return false;
             mutate(settings);
             return TrySave(settings);
         }

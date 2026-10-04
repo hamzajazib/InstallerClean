@@ -48,8 +48,9 @@ AppMutex=Global\InstallerClean_SingleInstance
 ; %LOCALAPPDATA%\NoFaff\InstallerClean\ user data (settings.json,
 ; last-run.json, settings.json.bad on a corrupt-and-recovered run,
 ; crash.log, crash.log.old once the log has rotated) survives
-; uninstall by design: the saved move destination and the lifetime
-; result-log lock carry across upgrades.
+; uninstall by design: the saved move destination, and settings.json's
+; record of whether this account's report has gone or is still waiting
+; to go, carry across upgrades.
 ; The CLI's Application event-log source, registered on its first run at
 ; HKLM\SYSTEM\CurrentControlSet\Services\EventLog\Application\InstallerClean,
 ; survives too, and no [Registry] or [UninstallDelete] entry should be added

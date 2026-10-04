@@ -34,21 +34,18 @@ public enum MoveSpaceOutcome
 
 /// <summary>
 /// Completion-screen slice. Holds what the card shows after a scan that
-/// offers nothing and at the end of a Move or Delete. The Send-result
-/// button on the same card routes through <see cref="IResultLogService"/>
-/// and <see cref="IConfirmationService"/>.
+/// offers nothing and at the end of a Move or Delete, and the report box the
+/// PC's first finished card carries.
 ///
-/// Visibility of the Send button is gated by two independent locks:
-///
-///   - Lifetime lock: <c>AppSettings.HasSentResultLog</c> on disk.
-///     Set to true on a successful POST, never cleared. The flag
-///     survives version upgrades and the prompt does not return on
-///     a later session. Documented in <see cref="AppSettings.HasSentResultLog"/>.
-///
-///   - Session lock: <see cref="_promptShownThisSession"/>. The first
-///     <see cref="MarkResultLogReady"/> call in a session sets the
-///     flag; later calls no-op. Each session offers the prompt at
-///     most once.
+/// THE REPORT IS THE PC'S FIRST RUN AND NO OTHER. A card that writes a report
+/// asks <see cref="ReportIsFreeAsync"/> before it is revealed and takes the box
+/// with <see cref="TakeReport"/>; from then on no later card in this sitting
+/// carries it, and the PC-wide mark (<see cref="IFirstRunMark"/>) keeps every
+/// later sitting, in any account, from carrying it either. The report is written
+/// once the card is up (<see cref="WriteReportAsync"/>) and sent as the card
+/// closes with the box ticked, whatever closes it. A cancelled or stopped run
+/// that moved or deleted files carries no box and still counts as the first run
+/// (<see cref="RecordFirstRun"/>).
 /// </summary>
 public partial class CompletionViewModel : ObservableObject
 {
@@ -108,20 +105,6 @@ public partial class CompletionViewModel : ObservableObject
     /// </summary>
     [ObservableProperty] private string _skipped = string.Empty;
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSendResultLogVisible))]
-    private bool _isResultLogReady;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSendResultLogVisible))]
-    private bool _isSendingResultLog;
-
-    [ObservableProperty] private string _resultLogStatusMessage = string.Empty;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(SendResultLogTooltip))]
-    private bool _lastResultFreedNothing;
-
     /// <summary>
     /// Puts "Donate $5" and "Close without donating" on the completion card in
     /// place of Done and the small Donate under it. True where a Move or Delete moved
@@ -132,88 +115,103 @@ public partial class CompletionViewModel : ObservableObject
     /// small Donate. It measures the bytes the run moved or deleted, NOT whether the
     /// disk got any emptier, so a same-drive Move sets it while its heading
     /// says "moved" rather than "freed". Set from the bytes argument in each
-    /// Show* method rather than derived from <see cref="LastResultFreedNothing"/>,
-    /// which agrees with it on most cards but answers a different question (it
-    /// picks the send-report tooltip's wording) and is free to diverge.
+    /// Show* method.
     /// </summary>
     [ObservableProperty] private bool _asksForDonation;
 
-    private readonly bool _alreadySentBeforeThisSession;
-    private bool _resultLogSentThisSession;
-    private bool _promptShownThisSession;
-    private bool _sendInFlight;
-
     /// <summary>
-    /// Visible when a fresh log exists for the operation just
-    /// completed and the user has not already sent or dismissed one
-    /// this session. The lifetime-lock clause is belt-and-braces:
-    /// MarkResultLogReady upstream of this getter also gates on the
-    /// same flag. The "once per machine, ever" privacy contract is
-    /// worth two independent checks.
+    /// Whether this card carries the "Send anonymous report" box. Set by
+    /// <see cref="TakeReport"/> before the card is revealed, so the box is in place
+    /// when the card is read out, and cleared as the card closes or where the
+    /// report could not be written. No Show* method touches it.
     /// </summary>
-    public bool IsSendResultLogVisible =>
-        IsResultLogReady && !_resultLogSentThisSession && !IsSendingResultLog
-        && !_alreadySentBeforeThisSession;
+    [ObservableProperty] private bool _offersReport;
 
     /// <summary>
-    /// Trigger property the MainViewModel listens to so it persists the
-    /// lifetime lock. Read-side returns true after any click outcome
-    /// (the session lock fires on success and failure both), but the
-    /// PropertyChanged event is only raised on a Sent outcome, so the
-    /// persistence handler only fires for actual transmissions. The
-    /// asymmetry is what stops a transient timeout permanently locking
-    /// a user out without anything reaching the receiver.
+    /// Whether the box is ticked. Its starting state comes from the Country or region
+    /// set in Windows (<see cref="ReportBoxRegions.StartsTicked"/>); what it says as the card
+    /// closes is what happens. No Show* method touches it.
     /// </summary>
-    public bool HasSentResultLog => _resultLogSentThisSession;
+    [ObservableProperty] private bool _sendsReport;
 
     /// <summary>
-    /// True when the result-log surface is shut down for any reason:
-    /// the user already sent in a previous session (lifetime lock from
-    /// settings) or the session lock has fired this run. Consumed by
-    /// CleanupViewModel and the all-clear handler in MainViewModel to
-    /// skip the last-run.json write when nobody will ever send the
-    /// file: the disk I/O is otherwise paid on every Move and Delete
-    /// for the rest of the session even though the Send button stays
-    /// hidden.
+    /// How long the PC's first card waits for the window's start check to answer
+    /// before it is revealed. Where the bound passes first the check answers that
+    /// the PC has had its first run, and sets the mark.
     /// </summary>
-    public bool IsResultLogLocked =>
-        _alreadySentBeforeThisSession || _resultLogSentThisSession;
+    internal static readonly TimeSpan ReportCheckBound = TimeSpan.FromSeconds(3);
 
     /// <summary>
-    /// Tooltip text for the Send button. Switches to the "please
-    /// send even if nothing was found" variant when the last completion
-    /// produced zero bytes freed (all-clear scan, or a Move/Delete that
-    /// found nothing to operate on), so the all-clear cohort isn't
-    /// silently filtered out of the aggregate.
+    /// How long closing the app waits for the report's send and its settings saves
+    /// before it lets the process go. A report cut off here is still waiting
+    /// (<see cref="AppSettings.ReportToSend"/>) and goes from a later start.
     /// </summary>
-    public string SendResultLogTooltip =>
-        LastResultFreedNothing
-            ? Strings.Tooltip_SendResultLog_NothingFound
-            : Strings.Tooltip_SendResultLog;
+    internal static readonly TimeSpan ExitWaitBound = TimeSpan.FromSeconds(2);
 
-    private readonly IResultLogService? _resultLogService;
-    private readonly IConfirmationService? _confirmationService;
-    private readonly IWindowService? _windowService;
+    private readonly IResultLogService _resultLogService;
+    private readonly ISettingsService _settingsService;
+    private readonly IEarlierRunCheck _earlierRunCheck;
+    private readonly IFirstRunMark _firstRunMark;
+    private readonly IWindowsRegion _windowsRegion;
+    private readonly IWindowService _windowService;
 
     /// <summary>
-    /// <paramref name="resultLogService"/> reads and sends the report
-    /// the last run wrote. <paramref name="confirmationService"/>
-    /// shows the modal that lets the user see exactly what would be
-    /// sent before pressing Send. <paramref name="hasSentBefore"/> is
-    /// the persisted lifetime flag (<see cref="AppSettings.HasSentResultLog"/>)
-    /// read once at construction. <paramref name="windowService"/> opens the
-    /// donate page. All services are optional so unit tests can construct a
-    /// bare view-model.
+    /// True once this sitting has had the PC's first run: a card took the report,
+    /// or a cancelled or stopped run moved or deleted files. The start check's
+    /// answer is taken once per start and does not change when this sitting sets the
+    /// mark, and the mark itself is not read back, so a mark that failed to save
+    /// still leaves every later card in this sitting without the box.
+    /// </summary>
+    private bool _firstRunTaken;
+
+    /// <summary>True from <see cref="TakeReport"/> until the card carrying the box closes.</summary>
+    private bool _boxOpen;
+
+    /// <summary>
+    /// What the box last said while it was open, read by the saves and the send on
+    /// thread-pool threads.
+    /// </summary>
+    private volatile bool _reportTicked;
+
+    /// <summary>True once this sitting's report is on disk.</summary>
+    private volatile bool _reportOnDisk;
+
+    /// <summary>True once a send has been accepted.</summary>
+    private volatile bool _reportSent;
+
+    /// <summary>
+    /// Completes with whether this sitting's report was written. Set before the write
+    /// is started, so a card closed while the write is still running finds it.
+    /// </summary>
+    private Task<bool>? _reportWritten;
+
+    /// <summary>
+    /// Every send and every report settings save still running, which closing the app
+    /// waits for (<see cref="SettleReportOnExit"/>). None of them faults.
+    /// </summary>
+    private Task _reportWork = Task.CompletedTask;
+    private readonly object _reportWorkGate = new();
+
+    /// <summary>
+    /// <paramref name="resultLogService"/> writes and sends the report and
+    /// <paramref name="settingsService"/> records whether it is waiting to go or has
+    /// gone. <paramref name="earlierRunCheck"/> and <paramref name="firstRunMark"/>
+    /// decide which card is the PC's first, and <paramref name="windowsRegion"/> which
+    /// way its box starts. <paramref name="windowService"/> opens the donate page.
     /// </summary>
     public CompletionViewModel(
-        IResultLogService? resultLogService = null,
-        IConfirmationService? confirmationService = null,
-        bool hasSentBefore = false,
-        IWindowService? windowService = null)
+        IResultLogService resultLogService,
+        ISettingsService settingsService,
+        IEarlierRunCheck earlierRunCheck,
+        IFirstRunMark firstRunMark,
+        IWindowsRegion windowsRegion,
+        IWindowService windowService)
     {
         _resultLogService = resultLogService;
-        _confirmationService = confirmationService;
-        _alreadySentBeforeThisSession = hasSentBefore;
+        _settingsService = settingsService;
+        _earlierRunCheck = earlierRunCheck;
+        _firstRunMark = firstRunMark;
+        _windowsRegion = windowsRegion;
         _windowService = windowService;
     }
 
@@ -244,8 +242,6 @@ public partial class CompletionViewModel : ObservableObject
             DisplayHelpers.FormatElapsedLong(TimeSpan.FromMilliseconds(scanDurationMs)));
         Errors = string.Empty;
         Skipped = string.Empty;
-        ResultLogStatusMessage = string.Empty;
-        LastResultFreedNothing = true;
         AsksForDonation = false;
         IsComplete = true;
     }
@@ -344,11 +340,6 @@ public partial class CompletionViewModel : ObservableObject
             DisplayHelpers.FormatElapsedLong(TimeSpan.FromMilliseconds(scanDurationMs)));
         Errors = string.Empty;
         Skipped = string.Empty;
-        ResultLogStatusMessage = string.Empty;
-        // Nothing was freed, so the Send button's tooltip takes its
-        // please-send-anyway form. This cohort is the one the aggregate most needs
-        // and the one least likely to press it.
-        LastResultFreedNothing = true;
         AsksForDonation = false;
         IsComplete = true;
     }
@@ -555,8 +546,6 @@ public partial class CompletionViewModel : ObservableObject
             : HeadingIsWarning ? string.Empty : MoveRestoreText(space);
         Errors = errors.Count > 0 ? FormatErrorBreakdown(errors) : string.Empty;
         Skipped = SkippedText(reverify);
-        ResultLogStatusMessage = string.Empty;
-        LastResultFreedNothing = movedBytes <= 0;
         // The card after a Move the app stopped keeps Done.
         AsksForDonation = movedBytes > 0 && !stopped;
         IsComplete = true;
@@ -597,8 +586,6 @@ public partial class CompletionViewModel : ObservableObject
         Restore = string.Empty;
         Errors = errors.Count > 0 ? FormatErrorBreakdown(errors) : string.Empty;
         Skipped = SkippedText(reverify);
-        ResultLogStatusMessage = string.Empty;
-        LastResultFreedNothing = deletedBytes <= 0;
         AsksForDonation = deletedBytes > 0;
         IsComplete = true;
     }
@@ -672,8 +659,6 @@ public partial class CompletionViewModel : ObservableObject
         Restore = movedCount == 0 ? string.Empty : Strings.Completion_MoveCancelledRestoreHint;
         Errors = errors.Count > 0 ? FormatErrorBreakdown(errors) : string.Empty;
         Skipped = SkippedText(reverify);
-        ResultLogStatusMessage = string.Empty;
-        LastResultFreedNothing = movedBytes <= 0;
         AsksForDonation = movedBytes > 0;
         IsComplete = true;
     }
@@ -711,8 +696,6 @@ public partial class CompletionViewModel : ObservableObject
         Restore = string.Empty;
         Errors = errors.Count > 0 ? FormatErrorBreakdown(errors) : string.Empty;
         Skipped = SkippedText(reverify);
-        ResultLogStatusMessage = string.Empty;
-        LastResultFreedNothing = deletedBytes <= 0;
         AsksForDonation = deletedBytes > 0;
         IsComplete = true;
     }
@@ -759,124 +742,220 @@ public partial class CompletionViewModel : ObservableObject
         Restore = string.Empty;
         Errors = string.Empty;
         Skipped = string.Empty;
-        ResultLogStatusMessage = string.Empty;
-        LastResultFreedNothing = true;
         AsksForDonation = false;
         IsComplete = true;
     }
 
     /// <summary>
-    /// Marks a fresh result-log as available to send. No-op when the
-    /// lifetime lock is set, when the session lock has fired (any click
-    /// outcome this run), or when the prompt has already been offered
-    /// once this session.
+    /// Whether the card about to be revealed can carry the report: false at once where
+    /// this sitting has already had the PC's first run, and otherwise the window's start
+    /// check, waited for no longer than <see cref="ReportCheckBound"/>. Resumes on the
+    /// caller's thread, so a caller on the dispatcher can reveal the card straight after.
+    /// Nothing is taken: <see cref="TakeReport"/> does that, once the caller has
+    /// confirmed the card is still wanted.
     /// </summary>
-    public void MarkResultLogReady()
+    public async Task<bool> ReportIsFreeAsync()
     {
-        if (_alreadySentBeforeThisSession) return;
-        if (_resultLogSentThisSession) return;
-        if (_promptShownThisSession) return;
-        _promptShownThisSession = true;
-        IsResultLogReady = true;
+        if (_firstRunTaken) return false;
+        return !await _earlierRunCheck.ShowsAnEarlierRunWithinAsync(ReportCheckBound);
     }
 
-    [RelayCommand]
-    private async Task SendResultLogAsync()
+    /// <summary>
+    /// Takes the report for the card about to be revealed: records the PC's first run,
+    /// sets the PC-wide mark, and puts the box on the card, ticked or not by the
+    /// Country or region set in Windows. Called before the Show* method, so the box is there when the
+    /// card is read out. False where this sitting has already had its first run, which
+    /// a second card reaching here behind the same answer from
+    /// <see cref="ReportIsFreeAsync"/> finds.
+    /// </summary>
+    public bool TakeReport()
     {
-        if (_resultLogService is null || _resultLogSentThisSession || _sendInFlight ||
-            _alreadySentBeforeThisSession)
-            return;
+        if (_firstRunTaken) return false;
+        _firstRunTaken = true;
+        _firstRunMark.Set();
+        var ticked = ReportBoxRegions.StartsTicked(_windowsRegion.Read());
+        _reportTicked = ticked;
+        _boxOpen = true;
+        SendsReport = ticked;
+        OffersReport = true;
+        return true;
+    }
 
-        // _sendInFlight gates re-entry across the modal await, which
-        // IsSendingResultLog cannot cover because the latter would
-        // flicker the button visible/invisible during the user's
-        // confirmation step. Cleared in the finally so a Cancel from
-        // the modal restores the ability to click again.
-        _sendInFlight = true;
+    /// <summary>
+    /// Records the PC's first run where a cancelled or stopped Move or Delete moved or
+    /// deleted files, or one ended where how far it got is not known. Its card carries
+    /// no box and no report is written, and no later card in this sitting carries one.
+    /// </summary>
+    public void RecordFirstRun()
+    {
+        if (_firstRunTaken) return;
+        _firstRunTaken = true;
+        _firstRunMark.Set();
+    }
+
+    /// <summary>
+    /// Writes the report of the card that took it, once that card is up. The write runs
+    /// off the dispatcher. Where it lands, this account records that the report is
+    /// waiting to go if the box is ticked; where it fails, a box still on the card is
+    /// taken away, there being nothing to send. Completes once the write has, and never
+    /// throws.
+    /// </summary>
+    public async Task WriteReportAsync(ResultLogEntry entry)
+    {
+        // In place before the write starts, because the card can be closed while the
+        // write is being started, and the send that close begins waits on this.
+        var written = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _reportWritten = written.Task;
+
+        Task<bool> write;
         try
         {
-            // Read once; the same bytes feed the modal preview and the
-            // POST. Reading from disk twice would let a concurrent
-            // writer slip a different payload between the user's review
-            // and the wire transmission.
-            var jsonContent = await _resultLogService.ReadLastLogAsync().ConfigureAwait(true);
-            if (jsonContent is null)
+            write = _resultLogService.WriteAsync(entry);
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+            write = Task.FromResult(false);
+        }
+
+        // Settled on a thread-pool thread rather than on the dispatcher, so a send
+        // waiting on it while the app closes is not held behind a dispatcher that has
+        // stopped. The save comes before the send can go, so a send cut off on exit
+        // leaves the report recorded as waiting.
+        Track(write.ContinueWith(t =>
+        {
+            var landed = t.Status == TaskStatus.RanToCompletion && t.Result;
+            if (landed)
             {
-                // File missing, oversize, or unreadable between the
-                // post-operation write and the user's click. Treat as
-                // a transient failure: session lock hides the button,
-                // status takes its place, lifetime lock stays open so
-                // the user is re-prompted on the next session.
-                CrashLog.TryWrite(new InvalidOperationException(
-                    "Send result clicked but last-run.json could not be read for preview."));
-                _resultLogSentThisSession = true;
-                IsResultLogReady = false;
-                // Distinct from the post-POST failure copy: the silent-
-                // skip path never opened the modal and never reached
-                // the wire. "No log to send" tells the user the app
-                // didn't try, vs "Didn't work" which implies it tried
-                // and got refused.
-                ResultLogStatusMessage = Strings.ResultLog_NothingToSend;
+                _reportOnDisk = true;
+                SaveReportToSend();
+            }
+            written.SetResult(landed);
+        }, TaskScheduler.Default));
+
+        if (await written.Task) return;
+        if (_boxOpen)
+        {
+            _boxOpen = false;
+            OffersReport = false;
+        }
+    }
+
+    /// <summary>
+    /// Sends this account's saved report where it is still waiting from an earlier
+    /// start: <see cref="AppSettings.ReportToSend"/> true and
+    /// <see cref="AppSettings.HasSentResultLog"/> false. Runs in the background and
+    /// waits for the window's start check first, so its settings read and save never
+    /// meet the check's read. Every start tries until one send is accepted.
+    /// </summary>
+    public void StartSavedReportRetry() => Track(Task.Run(async () =>
+    {
+        try
+        {
+            await _earlierRunCheck.ShowsAnEarlierRunAsync().ConfigureAwait(false);
+            if (!_settingsService.TryLoad(out var settings)
+                || !settings.ReportToSend || settings.HasSentResultLog)
                 return;
-            }
+            await SendSavedReportAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+        }
+    }));
 
-            if (_confirmationService is { } confirm)
-            {
-                if (!confirm.ConfirmSendResultLog(jsonContent))
-                    return;
-            }
+    /// <summary>
+    /// Settles a card still up as the app closes, as closing the card would, then waits
+    /// no longer than <see cref="ExitWaitBound"/> for every send and save still running.
+    /// </summary>
+    public void SettleReportOnExit()
+    {
+        SettleReport();
+        Task work;
+        lock (_reportWorkGate) work = _reportWork;
+        try { work.Wait(ExitWaitBound); }
+        catch (Exception ex) { CrashLog.TryWrite(ex); }
+    }
 
-            IsSendingResultLog = true;
-            ResultLogStatusMessage = Strings.ResultLog_Sending;
-            ResultLogSendOutcome outcome;
+    /// <summary>
+    /// Whatever the box says as its card closes is what happens: ticked, the report is
+    /// sent once it is on disk; unticked, nothing is sent, now or later. The box leaves
+    /// the card either way.
+    /// </summary>
+    private void SettleReport()
+    {
+        if (!_boxOpen) return;
+        _boxOpen = false;
+        OffersReport = false;
+        if (!_reportTicked) return;
+
+        var written = _reportWritten;
+        Track(Task.Run(async () =>
+        {
             try
             {
-                outcome = await _resultLogService.SendAsync(jsonContent)
-                    .ConfigureAwait(true);
+                if (written is null || !await written.ConfigureAwait(false)) return;
+                await SendSavedReportAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                // SendAsync documents never-throws, but the contract
-                // sits across an assembly boundary. The catch collapses
-                // any breach to the same visible failure state as a
-                // clean reject so a regression can't ride
-                // DispatcherUnhandledException to a process exit.
-                //
-                // No cancellation branch above this catch, because there is no
-                // caller-driven cancel to handle: the send is passed no token,
-                // and SendAsync maps its own HttpClient timeout to the Timeout
-                // outcome and only rethrows a cancellation when the token it
-                // was given was cancelled. A branch for one could not fire, and
-                // would describe a send the user can abandon, which this is
-                // not.
                 CrashLog.TryWrite(ex);
-                outcome = ResultLogSendOutcome.Unknown;
             }
-            finally
-            {
-                IsSendingResultLog = false;
-            }
+        }));
+    }
 
-            // Session lock flips on any click outcome so the button
-            // does not reappear after a transient failure within the
-            // same session. The lifetime lock only persists on a
-            // successful transmission: a first-ever click that hits
-            // a transient timeout (CGNAT blip, Netlify cold start,
-            // captive-portal DNS) leaves the lifetime lock unset, so
-            // the next session re-prompts rather than locking the
-            // machine out with nothing ever reaching the receiver.
-            _resultLogSentThisSession = true;
-            IsResultLogReady = false;
-            ResultLogStatusMessage = outcome == ResultLogSendOutcome.Sent
-                ? Strings.ResultLog_Sent
-                : Strings.ResultLog_Failed;
-            if (outcome == ResultLogSendOutcome.Sent)
-                OnPropertyChanged(nameof(HasSentResultLog));
-        }
-        finally
-        {
-            _sendInFlight = false;
-        }
+    partial void OnSendsReportChanged(bool value)
+    {
+        if (!_boxOpen) return;
+        _reportTicked = value;
+        if (_reportOnDisk)
+            Track(Task.Run(SaveReportToSend));
+    }
+
+    /// <summary>
+    /// Reads <c>last-run.json</c> and sends it, and where the send is accepted records
+    /// that this account's report has gone. On a thread-pool thread throughout, so the
+    /// exit wait on the dispatcher cannot hold it up.
+    /// </summary>
+    private async Task SendSavedReportAsync()
+    {
+        var body = await _resultLogService.ReadLastLogAsync().ConfigureAwait(false);
+        if (body is null) return;
+
+        var outcome = await _resultLogService.SendAsync(body).ConfigureAwait(false);
+        if (outcome != ResultLogSendOutcome.Sent) return;
+
+        _reportSent = true;
+        if (!_settingsService.Update(s =>
+            {
+                s.HasSentResultLog = true;
+                s.ReportToSend = false;
+            }))
+            CrashLog.TryWrite(new InvalidOperationException(
+                "The report was sent and settings.json could not record it."));
+    }
+
+    /// <summary>
+    /// Saves whether this account's report is waiting to go, reading the state as the
+    /// save runs rather than when it was asked for, so saves landing out of order still
+    /// leave the last word right: on disk, ticked and not yet sent.
+    /// </summary>
+    private void SaveReportToSend()
+    {
+        if (!_settingsService.Update(s => s.ReportToSend = _reportOnDisk && _reportTicked && !_reportSent))
+            CrashLog.TryWrite(new InvalidOperationException(
+                "settings.json could not record whether the report is waiting to be sent."));
+    }
+
+    /// <summary>The sends and saves still running, for a test to wait on.</summary>
+    internal Task ReportWork
+    {
+        get { lock (_reportWorkGate) return _reportWork; }
+    }
+
+    private void Track(Task task)
+    {
+        lock (_reportWorkGate) _reportWork = Task.WhenAll(_reportWork, task);
     }
 
     /// <summary>
@@ -886,18 +965,17 @@ public partial class CompletionViewModel : ObservableObject
     [RelayCommand]
     private void Donate()
     {
-        _windowService?.OpenUrl(SupportLink.Url);
+        _windowService.OpenUrl(SupportLink.Url);
         Dismiss();
     }
 
     [RelayCommand]
     private void Dismiss()
     {
+        SettleReport();
         IsComplete = false;
         Errors = string.Empty;
         FailedCount = string.Empty;
-        IsResultLogReady = false;
-        ResultLogStatusMessage = string.Empty;
     }
 
     /// <summary>

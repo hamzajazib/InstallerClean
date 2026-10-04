@@ -114,8 +114,6 @@ const MAP = {
   // Rescan takes Alt+в (not the natural Alt+П): П collides with Move (Переместить) in the
   // results view, where Move is the primary action and keeps П.
   'Action.Rescan': `По_вторить сканирование`,
-  'Action.SendResultLog': `Отправить отчёт`,
-  'Action.SendResultLogConfirm': `От_править`,
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `Поддержать`,
@@ -140,7 +138,6 @@ const MAP = {
   'Automation.ConfirmDelete': `«Удалить безвозвратно» убирает ненужные файлы. «Отмена» закрывает окно, ничего не удаляя.`,
   'Automation.ConfirmMove': `«Переместить» помещает ненужные файлы в выбранную папку назначения. «Отмена» оставляет их на месте.`,
   'Automation.SayThanks': `Поблагодарить`,
-  'Automation.ConfirmSendResultLog': `«Отправить» передаёт показанный отчёт в No Faff. «Отмена» не отправляет ничего.`,
   'Automation.CheckForUpdates': `Проверить обновления`,
   'Automation.CheckForUpdates.HelpText': `Проверяет на странице выпусков github, есть ли более новая версия.`,
   'Automation.UpdateAvailable.HelpText': `Откройте страницу выпуска, чтобы скачать более новую версию, или нажмите «Отмена», чтобы оставить текущую.`,
@@ -173,8 +170,6 @@ const MAP = {
   'Tooltip.Close': `Закрыть`,
   'Tooltip.LeaveStarOnGitHub.About': `Звезда помогает другим найти InstallerClean.`,
   'Tooltip.Minimise': `Свернуть`,
-  'Tooltip.SendResultLog': `На ваше усмотрение, но будет приятно. Отправляет анонимную сводку, которая просто даёт мне знать, работает ли приложение и сколько места люди освобождают. На следующем экране вы увидите, что именно будет отправлено, прежде чем подтвердить.`,
-  'Tooltip.SendResultLog.NothingFound': `На ваше усмотрение, но будет приятно. Отправляет анонимную сводку, которая просто даёт мне знать, работает ли приложение. На следующем экране вы увидите, что именно будет отправлено, прежде чем подтвердить.`,
   'Tooltip.Move': `Перемещает ненужные файлы в папку резервных копий.`,
   'Tooltip.MoveNeedsDestination': `Перемещает ненужные файлы в папку резервных копий. Вы выберете её следующим шагом.`,
   'Tooltip.Delete': `Безвозвратно удаляет ненужные файлы. Воспользуйтесь «Переместить», если хотите сначала убедиться, что всё в порядке.`,
@@ -372,13 +367,6 @@ const MAP = {
   'Error.DestinationCollision': `Файл с именем «{0}» уже есть в папке резервных копий.`,
 
   // Result log (post-cleanup diagnostic send)
-  'ResultLog.Sending': `Отправка...`,
-  'ResultLog.Sent': `Спасибо! Отчёт отправлен.`,
-  'ResultLog.Failed': `Не удалось отправить. Повторите попытку позже.`,
-  'ResultLog.NothingToSend': `Нет отчёта для отправки.`,
-  'ConfirmSendResultLog.Title': `Отправить это?`,
-  'ConfirmSendResultLog.Reassurance': `Отправляется на nofaff.netlify.app/api/result-log. Ничто не идентифицирует вас или ваш компьютер; это просто даёт мне знать, что InstallerClean работает и [сколько места люди освобождают].`,
-  'Automation.ResultLogPreview': `Предпросмотр отчёта`,
 
   // Single instance / startup / crash
   'Startup.AlreadyRunningTitle': `InstallerClean`,
@@ -498,6 +486,7 @@ const MAP = {
   'Display.DriveName': `drive {0}`,
   'Action.CloseWithoutDonating': `_Close without donating`,
   'Tooltip.Donate': `I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.`,
+  'Completion.SendReport': `Send _anonymous report`,
 };
 
 // Russian CLDR-category overrides beyond the neutral one/other split. They do NOT

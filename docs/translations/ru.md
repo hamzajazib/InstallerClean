@@ -51,8 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Path to folder if you move rather than delete. | Путь к папке, если вы перемещаете, а не удаляете. |
 | Open _release page | Открыть страницу _выпуска |
 | _Re-scan | По_вторить сканирование |
-| Send report | Отправить отчёт |
-| _Send | От_править |
 
 ## About window
 
@@ -187,6 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | Безвозвратно удалён {0} {1} |
 | {0} {1} permanently deleted | Безвозвратно удалено {0} {1} |
 | Any small donation is much appreciated. | Любая, даже небольшая, поддержка очень ценна. |
+| Send _anonymous report | Send _anonymous report |
 
 ## Summaries and counts
 
@@ -311,17 +310,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The link is on your clipboard, so you can paste it in yourself:<br><br>{0} | Ссылка в буфере обмена, так что вы можете вставить её сами:<br><br>{0} |
 | InstallerClean couldn't copy the link to your clipboard either, so here it is:<br><br>{0} | InstallerClean также не смог скопировать ссылку в буфер обмена, вот она:<br><br>{0} |
 
-## Sending the summary
-
-| English | Русский |
-| --- | --- |
-| Sending... | Отправка... |
-| Thanks! Report sent. | Спасибо! Отчёт отправлен. |
-| Sending failed. Try again later. | Не удалось отправить. Повторите попытку позже. |
-| No report to send. | Нет отчёта для отправки. |
-| Send this? | Отправить это? |
-| It goes to nofaff.netlify.app/api/result-log. Nothing identifies you or your machine; it just lets me know InstallerClean's working and [how much space people are freeing]. | Отправляется на nofaff.netlify.app/api/result-log. Ничто не идентифицирует вас или ваш компьютер; это просто даёт мне знать, что InstallerClean работает и [сколько места люди освобождают]. |
-
 ## Startup and crashes
 
 | English | Русский |
@@ -348,8 +336,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | Звезда помогает другим найти InstallerClean. |
 | Minimise | Свернуть |
-| Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | На ваше усмотрение, но будет приятно. Отправляет анонимную сводку, которая просто даёт мне знать, работает ли приложение и сколько места люди освобождают. На следующем экране вы увидите, что именно будет отправлено, прежде чем подтвердить. |
-| Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working. The next screen lets you see what will be sent before you confirm. | На ваше усмотрение, но будет приятно. Отправляет анонимную сводку, которая просто даёт мне знать, работает ли приложение. На следующем экране вы увидите, что именно будет отправлено, прежде чем подтвердить. |
 | Move the unneeded files to the backup folder. | Перемещает ненужные файлы в папку резервных копий. |
 | Move the unneeded files to a backup folder. You'll choose it next. | Перемещает ненужные файлы в папку резервных копий. Вы выберете её следующим шагом. |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | Перемещает ненужные файлы в папку резервных копий. Она на том же диске, поэтому место освободится только после того, как вы удалите эту папку. |
@@ -377,7 +363,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Delete permanently removes the unneeded files. Cancel closes without deleting. | «Удалить безвозвратно» убирает ненужные файлы. «Отмена» закрывает окно, ничего не удаляя. |
 | Move puts the unneeded files in the chosen destination folder. Cancel leaves them where they are. | «Переместить» помещает ненужные файлы в выбранную папку назначения. «Отмена» оставляет их на месте. |
 | Say thanks | Поблагодарить |
-| Send posts the report shown to No Faff. Cancel sends nothing. | «Отправить» передаёт показанный отчёт в No Faff. «Отмена» не отправляет ничего. |
 | Check for updates | Проверить обновления |
 | Checks github's releases page for a newer version. | Проверяет на странице выпусков github, есть ли более новая версия. |
 | Opens the readme on github in your browser. | Открывает readme на github в вашем браузере. |
@@ -408,7 +393,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Files that could not be processed | Файлы, которые не удалось обработать |
 | Explains this folder, and how to recover a file, in the README | Объясняет эту папку и то, как восстановить файл, в README |
 | {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
-| Report preview | Предпросмотр отчёта |
 | Change language | Изменить язык |
 | The program will restart. | Программа перезапустится. |
 

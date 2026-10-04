@@ -20,7 +20,7 @@ public class EarlierRunCheckTests
     public EarlierRunCheckTests()
     {
         _mark.Read().Returns(FirstRunMarkState.NotSet);
-        _settings.Load().Returns(new AppSettings());
+        Settings(new AppSettings());
         _resultLog.LastLogExists().Returns(false);
         _commandLine.Read().Returns(CommandLineRunRecordState.NothingActedOn);
     }
@@ -28,12 +28,24 @@ public class EarlierRunCheckTests
     private EarlierRunCheck Check(bool skipApplicationLog = false) =>
         new(_mark, _settings, _resultLog, _commandLine, skipApplicationLog);
 
+    /// <summary>
+    /// Fixes what the settings read answers: <paramref name="settings"/> through the out
+    /// parameter, and whether the file was read.
+    /// </summary>
+    private void Settings(AppSettings settings, bool read = true) =>
+        _settings.TryLoad(out _).ReturnsForAnyArgs(ci =>
+        {
+            ci[0] = settings;
+            return read;
+        });
+
     [Fact]
     public async Task A_mark_already_set_answers_yes_and_nothing_else_is_read()
     {
         _mark.Read().Returns(FirstRunMarkState.Set);
 
         Assert.True(await Check().ShowsAnEarlierRunAsync());
+        _settings.DidNotReceiveWithAnyArgs().TryLoad(out _);
         _settings.DidNotReceive().Load();
         _resultLog.DidNotReceive().LastLogExists();
         _commandLine.DidNotReceive().Read();
@@ -53,11 +65,37 @@ public class EarlierRunCheckTests
     [Fact]
     public async Task A_report_this_account_already_sent_answers_yes_and_sets_the_mark()
     {
-        _settings.Load().Returns(new AppSettings { HasSentResultLog = true });
+        Settings(new AppSettings { HasSentResultLog = true });
 
         Assert.True(await Check().ShowsAnEarlierRunAsync());
         _mark.Received(1).Set();
+        _resultLog.DidNotReceive().LastLogExists();
         _commandLine.DidNotReceive().Read();
+    }
+
+    [Fact]
+    public async Task A_settings_file_that_cannot_be_read_decides_nothing_and_the_check_goes_on()
+    {
+        // The flag planted in what the failed read hands back is what a check trusting it
+        // would answer yes from. Its control is
+        // A_report_this_account_already_sent_answers_yes_and_sets_the_mark, the same
+        // settings read successfully.
+        Settings(new AppSettings { HasSentResultLog = true }, read: false);
+
+        Assert.False(await Check().ShowsAnEarlierRunAsync());
+        _resultLog.Received(1).LastLogExists();
+        _commandLine.Received(1).Read();
+        _mark.DidNotReceive().Set();
+    }
+
+    [Fact]
+    public async Task A_settings_file_that_cannot_be_read_still_leaves_the_last_run_file_to_answer()
+    {
+        Settings(new AppSettings(), read: false);
+        _resultLog.LastLogExists().Returns(true);
+
+        Assert.True(await Check().ShowsAnEarlierRunAsync());
+        _mark.Received(1).Set();
     }
 
     [Fact]
@@ -93,7 +131,7 @@ public class EarlierRunCheckTests
     {
         // The control for the four above: every source read, none answering.
         Assert.False(await Check().ShowsAnEarlierRunAsync());
-        _settings.Received(1).Load();
+        _settings.ReceivedWithAnyArgs(1).TryLoad(out _);
         _resultLog.Received(1).LastLogExists();
         _commandLine.Received(1).Read();
         _mark.DidNotReceive().Set();

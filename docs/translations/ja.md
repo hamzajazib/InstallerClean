@@ -51,8 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Path to folder if you move rather than delete. | 削除ではなく移動する場合のフォルダーのパス。 |
 | Open _release page | リリースページを開く(_R) |
 | _Re-scan | 再スキャン(_R) |
-| Send report | レポートを送信 |
-| _Send | 送信(_S) |
 
 ## About window
 
@@ -187,6 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | {0} 個の {1} を完全に削除しました |
 | {0} {1} permanently deleted | {0} 個の {1} を完全に削除しました |
 | Any small donation is much appreciated. | どんな少額のご寄付でもありがたく思います。 |
+| Send _anonymous report | Send _anonymous report |
 
 ## Summaries and counts
 
@@ -311,17 +310,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The link is on your clipboard, so you can paste it in yourself:<br><br>{0} | リンクはクリップボードにあります。ご自身で貼り付けてください：<br><br>{0} |
 | InstallerClean couldn't copy the link to your clipboard either, so here it is:<br><br>{0} | InstallerClean はリンクをクリップボードにコピーすることもできませんでした。こちらです：<br><br>{0} |
 
-## Sending the summary
-
-| English | 日本語 |
-| --- | --- |
-| Sending... | 送信中... |
-| Thanks! Report sent. | ありがとうございます！レポートを送信しました。 |
-| Sending failed. Try again later. | 送信に失敗しました。後でもう一度試してください。 |
-| No report to send. | 送信するレポートがありません。 |
-| Send this? | これを送信しますか？ |
-| It goes to nofaff.netlify.app/api/result-log. Nothing identifies you or your machine; it just lets me know InstallerClean's working and [how much space people are freeing]. | 送信先は nofaff.netlify.app/api/result-log です。あなたやあなたのマシンを特定するものは何もありません。InstallerClean が動作していることと、[どれだけの容量が解放されているか]を知るためのものです。 |
-
 ## Startup and crashes
 
 | English | 日本語 |
@@ -348,8 +336,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. |
 | A star helps other people find it. | スターを付けると、InstallerClean を見つけてもらいやすくなります。 |
 | Minimise | 最小化 |
-| Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working and how much space people are freeing. The next screen lets you see what will be sent before you confirm. | 任意ですが、歓迎します。匿名の要約を送信するもので、正常に動作しているか、どれだけの容量が解放されているかを知るためのものです。次の画面で送信前に送信内容を確認できます。 |
-| Up to you but appreciated. Sends an anonymous summary that just lets me know if it's working. The next screen lets you see what will be sent before you confirm. | 任意ですが、歓迎します。匿名の要約を送信するもので、正常に動作しているかを知るためのものです。次の画面で送信前に送信内容を確認できます。 |
 | Move the unneeded files to the backup folder. | 不要ファイルをバックアップフォルダーへ移します。 |
 | Move the unneeded files to a backup folder. You'll choose it next. | 不要ファイルをバックアップフォルダーへ移します。フォルダーはこの後で選びます。 |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | 不要ファイルをバックアップフォルダーへ移します。同じドライブ上にあるため、そのフォルダーを削除するまで空き容量は戻りません。 |
@@ -377,7 +363,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Delete permanently removes the unneeded files. Cancel closes without deleting. | 完全に削除すると不要ファイルが取り除かれます。キャンセルすると何も削除せずに閉じます。 |
 | Move puts the unneeded files in the chosen destination folder. Cancel leaves them where they are. | 移動を実行すると不要ファイルが選択した移動先フォルダーに移動されます。キャンセルはそのままの場所に残します。 |
 | Say thanks | 謝意を伝える |
-| Send posts the report shown to No Faff. Cancel sends nothing. | 送信を実行すると表示されたレポートが No Faff に投稿されます。キャンセルは何も送信しません。 |
 | Check for updates | 更新の確認 |
 | Checks github's releases page for a newer version. | github のリリースページで新しいバージョンがあるかどうかを確認します。 |
 | Opens the readme on github in your browser. | ブラウザで github の readme を開きます。 |
@@ -408,7 +393,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Files that could not be processed | 処理できなかったファイル |
 | Explains this folder, and how to recover a file, in the README | このフォルダーとファイルの回復方法を README で説明しています |
 | {0} Press Alt+{1} to carry on without it. {2} | {0} Press Alt+{1} to carry on without it. {2} |
-| Report preview | レポートのプレビュー |
 | Change language | 言語を変更 |
 | The program will restart. | プログラムが再起動します。 |
 
