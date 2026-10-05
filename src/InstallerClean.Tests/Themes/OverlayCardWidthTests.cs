@@ -220,7 +220,8 @@ public class OverlayCardWidthTests
             FontStyles.Normal, FontWeights.Medium, FontStretches.Normal);
         Assert.True(face.TryGetGlyphTypeface(out var glyphs),
             $"{language}'s first family, {first}, did not resolve to a font file.");
-        Assert.True(Path.GetFileName(glyphs.FontUri.LocalPath).StartsWith(named + "-", StringComparison.Ordinal),
+        // The font's path can come back from WPF upper-cased.
+        Assert.True(Path.GetFileName(glyphs.FontUri.LocalPath).StartsWith(named + "-", StringComparison.OrdinalIgnoreCase),
             $"{language}'s first family, {first}, resolved to {glyphs.FontUri}.");
         return family;
     }
