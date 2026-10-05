@@ -1,23 +1,32 @@
 using System.Globalization;
+using System.Reflection;
 using System.Runtime.ExceptionServices;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Markup;
+using System.Windows.Media;
 using System.Xml.Linq;
+using InstallerClean.Helpers;
 
 namespace InstallerClean.Tests.Themes;
 
 // The main window's two overlay cards, the one shown while a scan runs and the one
 // shown while files move or are deleted, sit over the whole window, and the window's
 // width comes from the work area as well as the text size. These lay each card out
-// with WPF itself at a range of window widths and text sizes and check that it stays
-// inside its window. The scanning card holds a line that is replaced at each step of
-// a scan, so it is also checked to be the same width whatever its line says.
+// with WPF itself, as MainWindow.xaml writes it, in every language, at a range of
+// window widths and text sizes, and check that the card stays inside its window and
+// everything in it stays inside the card. The scanning card holds a line that is
+// replaced at each step of a scan, so it is also checked to be the same width
+// whatever its line says.
 //
-// Each card's own width, margin, padding, border and alignment are read off
-// MainWindow.xaml, and an attribute this file does not model fails the test. The
-// card's children are replaced by one line of wrapping text. Its ancestors up to the
-// window are required to carry nothing that narrows the room the window gives it, so
-// the window's width is the room it is laid out in.
+// Each card is parsed from MainWindow.xaml under the theme's own resources, with the
+// text sizes App.xaml.cs scales multiplied by the text size, every TextScaled length
+// multiplied by it too, and the language's own font family loaded from the app's font
+// files. Its ancestors up to the window are required to carry nothing that narrows
+// the room the window gives it, so the window's width is the room it is laid out in.
+// With no data context every binding falls back to its default, so every row the card
+// can show is shown, which is the widest the card gets.
 public class OverlayCardWidthTests
 {
     private static readonly XNamespace Xaml = ThemeXaml.Xaml;
@@ -27,9 +36,23 @@ public class OverlayCardWidthTests
     private const string ScanningCardLine = "ScanProgressText";
     private const string OperatingCardLine = "OperationHeadingText";
 
+    // Room for the rounding in WPF's arithmetic when it centres one length in another.
+    private const double Tolerance = 0.01;
+
     private const string ShortLine = "Scanning";
     private const string LongLine =
         "Fragt Windows Installer nach den Programmen und Updates, die auf diesem PC installiert sind";
+
+    // The app's font files, copied beside this assembly by the csproj. The theme
+    // names them by the application's pack URI, which needs a running Application to
+    // resolve, so here they are named by their place on disk instead.
+    private static readonly Uri FontBase = new(AppContext.BaseDirectory.TrimEnd('\\', '/') + "/");
+
+    // LanguageFonts builds the Montserrat family against the application's pack URI,
+    // and a test process has loaded nothing by pack URI, so the pack scheme is
+    // registered here, by PackUriHelper's first use.
+    static OverlayCardWidthTests()
+        => _ = System.IO.Packaging.PackUriHelper.Create(new Uri("application://"));
 
     [Theory]
     [InlineData(ScanningCardLine, 1.0)]
@@ -38,24 +61,39 @@ public class OverlayCardWidthTests
     [InlineData(OperatingCardLine, 1.0)]
     [InlineData(OperatingCardLine, 1.5)]
     [InlineData(OperatingCardLine, 2.25)]
-    public void The_card_stays_inside_its_window(string lineName, double scale)
+    public void The_card_and_everything_in_it_stay_inside_the_window_in_every_language(
+        string lineName, double scale)
     {
-        var card = Card(lineName);
-        var tokens = ThemeXaml.Load("ThemeXaml.Tokens.xaml");
+        var failures = new List<string>();
 
-        OnStaThread(() =>
+        foreach (var language in SupportedLanguages.CultureNames)
         {
-            foreach (var windowWidth in WindowWidths())
+            InLanguage(language, scale, lineName, (host, card) =>
             {
-                foreach (var line in new[] { ShortLine, LongLine })
+                ((TextBlock)card.FindName(lineName)).Text = LongLine;
+                var rows = (Panel)card.Child;
+                foreach (var windowWidth in WindowWidths())
                 {
-                    var (left, width) = LayOut(card, tokens, scale, windowWidth, line);
-                    Assert.True(left >= 0 && left + width <= windowWidth,
-                        $"At {scale:P0} text in a window {windowWidth} wide, with the line \"{line}\", "
-                        + $"the card spans {left} to {left + width}.");
+                    LayOut(host, windowWidth);
+
+                    var left = card.TranslatePoint(new Point(0, 0), host).X;
+                    if (left < -Tolerance || left + card.ActualWidth > windowWidth + Tolerance)
+                        failures.Add($"{language} at {scale:P0} in a window {windowWidth} wide: "
+                            + $"the card spans {left} to {left + card.ActualWidth}.");
+
+                    foreach (var element in Shown(rows))
+                    {
+                        var start = element.TranslatePoint(new Point(0, 0), rows).X;
+                        if (start < -Tolerance || start + element.ActualWidth > rows.ActualWidth + Tolerance)
+                            failures.Add($"{language} at {scale:P0} in a window {windowWidth} wide: "
+                                + $"{Describe(element)} spans {start} to {start + element.ActualWidth} "
+                                + $"inside a card {rows.ActualWidth} wide.");
+                    }
                 }
-            }
-        });
+            });
+        }
+
+        Assert.True(failures.Count == 0, Report(failures));
     }
 
     [Theory]
@@ -64,27 +102,136 @@ public class OverlayCardWidthTests
     [InlineData(2.25)]
     public void The_scanning_card_is_one_width_whatever_its_line_says(double scale)
     {
-        var card = Card(ScanningCardLine);
-        var tokens = ThemeXaml.Load("ThemeXaml.Tokens.xaml");
+        var failures = new List<string>();
 
-        OnStaThread(() =>
+        foreach (var language in SupportedLanguages.CultureNames)
         {
-            foreach (var windowWidth in WindowWidths())
+            InLanguage(language, scale, ScanningCardLine, (host, card) =>
             {
-                var (_, shortWidth) = LayOut(card, tokens, scale, windowWidth, ShortLine);
-                var (_, longWidth) = LayOut(card, tokens, scale, windowWidth, LongLine);
-                Assert.True(shortWidth == longWidth,
-                    $"At {scale:P0} text in a window {windowWidth} wide the card is {shortWidth} wide "
-                    + $"with a short line and {longWidth} with a long one.");
-            }
-        });
+                var line = (TextBlock)card.FindName(ScanningCardLine);
+                foreach (var windowWidth in WindowWidths())
+                {
+                    line.Text = ShortLine;
+                    LayOut(host, windowWidth);
+                    var shortWidth = card.ActualWidth;
+
+                    line.Text = LongLine;
+                    LayOut(host, windowWidth);
+                    var longWidth = card.ActualWidth;
+
+                    if (shortWidth != longWidth)
+                        failures.Add($"{language} at {scale:P0} in a window {windowWidth} wide: the card is "
+                            + $"{shortWidth} wide with a short line and {longWidth} with a long one.");
+                }
+            });
+        }
+
+        Assert.True(failures.Count == 0, Report(failures));
     }
+
+    private static string Report(List<string> failures)
+        => $"{failures.Count} failures, the first of them:{Environment.NewLine}"
+            + string.Join(Environment.NewLine, failures.Take(40));
 
     private static IEnumerable<double> WindowWidths()
     {
         for (var width = 400.0; width <= 1900; width += 25)
             yield return width;
     }
+
+    private static void LayOut(Grid host, double windowWidth)
+    {
+        host.Width = windowWidth;
+        host.Measure(new Size(windowWidth, double.PositiveInfinity));
+        host.Arrange(new Rect(0, 0, windowWidth, host.DesiredSize.Height));
+    }
+
+    /// <summary>
+    /// Every element under <paramref name="parent"/> in the logical tree, the card's
+    /// own rows and what they hold, that is not collapsed or hidden.
+    /// </summary>
+    private static IEnumerable<FrameworkElement> Shown(DependencyObject parent)
+    {
+        foreach (var child in LogicalTreeHelper.GetChildren(parent).OfType<FrameworkElement>())
+        {
+            if (child.Visibility != Visibility.Visible)
+                continue;
+            yield return child;
+            foreach (var descendant in Shown(child))
+                yield return descendant;
+        }
+    }
+
+    private static string Describe(FrameworkElement element)
+        => string.IsNullOrEmpty(element.Name) ? element.GetType().Name : $"{element.GetType().Name} {element.Name}";
+
+    /// <summary>
+    /// Parses the card under the theme in <paramref name="language"/> at
+    /// <paramref name="scale"/>, in that language's font, and hands it and the grid
+    /// standing for its window to <paramref name="body"/> on a thread WPF can use.
+    /// </summary>
+    private static void InLanguage(string language, double scale, string lineName, Action<Grid, Border> body)
+    {
+        var xaml = ComposedXaml(Card(lineName), scale);
+        var culture = CultureInfo.GetCultureInfo(language);
+
+        OnStaThread(() =>
+        {
+            Localisation.Set(culture, culture);
+            try
+            {
+                var host = (Grid)XamlReader.Parse(xaml);
+                host.Language = XmlLanguage.GetLanguage(language);
+                host.Resources["Type.FontFamily"] = LanguageFamily(language);
+                body(host, (Border)host.Children[0]);
+            }
+            finally
+            {
+                Localisation.Reset();
+            }
+        });
+    }
+
+    /// <summary>
+    /// The family the app draws <paramref name="language"/> in, from LanguageFonts,
+    /// with the app's own font files named by their place on disk. Refuses a family
+    /// whose first face resolves anywhere but where it names, so the widths measured
+    /// are never a fallback font's.
+    /// </summary>
+    private static FontFamily LanguageFamily(string language)
+    {
+        var theme = new FontFamily(FontBase, OnDisk(ThemeFamilySource()));
+        LanguageFonts.Initialise(theme);
+        var family = LanguageFonts.For(language);
+
+        if (family.Source is null)
+        {
+            // A composite of a Windows interface font, built in code.
+            var target = family.FamilyMaps.Single().Target.Split(',')[0].Trim();
+            Assert.True(Fonts.SystemFontFamilies.Any(f => f.Source == target),
+                $"{language} is drawn in {target}, which this machine does not have.");
+            return family;
+        }
+
+        if (family.BaseUri?.Scheme == "pack")
+            family = new FontFamily(FontBase, family.Source);
+
+        var first = family.Source.Split(',')[0].Trim();
+        var named = first[(first.IndexOf('#') + 1)..];
+        var face = new Typeface(new FontFamily(family.BaseUri, first),
+            FontStyles.Normal, FontWeights.Medium, FontStretches.Normal);
+        Assert.True(face.TryGetGlyphTypeface(out var glyphs),
+            $"{language}'s first family, {first}, did not resolve to a font file.");
+        Assert.True(Path.GetFileName(glyphs.FontUri.LocalPath).StartsWith(named + "-", StringComparison.Ordinal),
+            $"{language}'s first family, {first}, resolved to {glyphs.FontUri}.");
+        return family;
+    }
+
+    private static string ThemeFamilySource()
+        => ThemeXaml.ResourceValue(ThemeXaml.Load("ThemeXaml.Tokens.xaml"), "Type.FontFamily");
+
+    private static string OnDisk(string familySource)
+        => familySource.Replace("pack://application:,,,/", "./", StringComparison.Ordinal);
 
     /// <summary>The Border holding the named text block.</summary>
     private static XElement Card(string lineName)
@@ -107,69 +254,62 @@ public class OverlayCardWidthTests
     }
 
     /// <summary>
-    /// Lays the card out in a window of the given width and returns where its left
-    /// edge lands and how wide it is drawn.
+    /// One grid standing for the window: the theme's resources, the window's own,
+    /// and the card, as a single XAML document a XamlReader can parse.
     /// </summary>
-    private static (double Left, double Width) LayOut(
-        XElement card, XDocument tokens, double scale, double windowWidth, string line)
+    private static string ComposedXaml(XElement card, double scale)
     {
-        var border = new Border
-        {
-            Child = new TextBlock
-            {
-                Text = line,
-                FontSize = 16 * scale,
-                TextWrapping = TextWrapping.Wrap,
-                TextAlignment = TextAlignment.Center,
-            },
-        };
+        var window = ThemeXaml.Load("ThemeXaml.MainWindow.xaml");
+        var resources = new XElement(Presentation + "Grid.Resources");
 
-        foreach (var attribute in card.Attributes())
+        foreach (var theme in new[] { "Primitives", "Tokens", "Components" })
+            resources.Add(ThemeXaml.Load($"ThemeXaml.{theme}.xaml").Root!.Elements());
+
+        // The theme's family, with the app's font files named by their place on disk.
+        var family = resources.Elements().Single(e => (string?)e.Attribute(Xaml + "Key") == "Type.FontFamily");
+        family.Value = family.Value.Replace("pack://application:,,,/", FontBase.AbsoluteUri, StringComparison.Ordinal);
+
+        // The six text sizes App.xaml.cs multiplies by the text size.
+        var scaled = (string[])typeof(App)
+            .GetField("TypeSizeTokenKeys", BindingFlags.NonPublic | BindingFlags.Static)!
+            .GetValue(null)!;
+        foreach (var key in scaled)
         {
-            var value = attribute.Value;
-            switch (attribute.Name.LocalName)
-            {
-                case "Width": border.Width = Length(value, scale); break;
-                case "MinWidth": border.MinWidth = Length(value, scale); break;
-                case "MaxWidth": border.MaxWidth = Length(value, scale); break;
-                case "Margin": border.Margin = Thickness(value, tokens); break;
-                case "Padding": border.Padding = Thickness(value, tokens); break;
-                case "BorderThickness": border.BorderThickness = Thickness(value, tokens); break;
-                case "HorizontalAlignment":
-                    border.HorizontalAlignment = Enum.Parse<HorizontalAlignment>(value);
-                    break;
-                case "Background" or "BorderBrush" or "CornerRadius" or "VerticalAlignment":
-                    break;
-                default:
-                    throw new InvalidOperationException(
-                        $"The card sets {attribute.Name.LocalName}, which this test does not model.");
-            }
+            var size = resources.Elements().Single(e => (string?)e.Attribute(Xaml + "Key") == key);
+            size.Value = (double.Parse(size.Value, CultureInfo.InvariantCulture) * scale)
+                .ToString("R", CultureInfo.InvariantCulture);
         }
 
-        var window = new Grid { Width = windowWidth };
-        window.Children.Add(border);
-        window.Measure(new Size(windowWidth, double.PositiveInfinity));
-        window.Arrange(new Rect(0, 0, windowWidth, window.DesiredSize.Height));
+        // The window's converters rewrite a bound value only, and with no data
+        // context no value reaches them. The app's own are internal, which a
+        // XamlReader cannot build, so each stands in under its key as a framework one.
+        foreach (var converter in window.Root!.Element(Presentation + "Window.Resources")!.Elements())
+            resources.Add(converter.Name.Namespace == Presentation
+                ? new XElement(converter)
+                : new XElement(Presentation + "BooleanToVisibilityConverter",
+                    new XAttribute(Xaml + "Key", (string)converter.Attribute(Xaml + "Key")!)));
 
-        return (border.TranslatePoint(new Point(0, 0), window).X, border.ActualWidth);
-    }
+        var root = new XElement(Presentation + "Grid",
+            new XAttribute("xmlns", Presentation.NamespaceName),
+            new XAttribute(XNamespace.Xmlns + "x", Xaml.NamespaceName),
+            new XAttribute(XNamespace.Xmlns + "sys", "clr-namespace:System;assembly=mscorlib"),
+            new XAttribute(XNamespace.Xmlns + "loc", "clr-namespace:InstallerClean.Resources"),
+            new XAttribute(XNamespace.Xmlns + "a11y", "clr-namespace:InstallerClean.Helpers"),
+            new XAttribute(XNamespace.Xmlns + "chrome", "clr-namespace:InstallerClean.Controls"),
+            new XAttribute("TextElement.FontFamily", "{DynamicResource Type.FontFamily}"),
+            resources,
+            new XElement(card));
 
-    /// <summary>A plain length, or one written as <c>{a11y:TextScaled N}</c>.</summary>
-    private static double Length(string value, double scale)
-    {
-        const string scaled = "{a11y:TextScaled ";
-        if (value.StartsWith(scaled, StringComparison.Ordinal) && value.EndsWith('}'))
-            return double.Parse(value[scaled.Length..^1], CultureInfo.InvariantCulture) * scale;
-        return double.Parse(value, CultureInfo.InvariantCulture);
-    }
+        // The app's own namespaces are named with the assembly that holds them, which
+        // the compiled XAML does not need and a XamlReader does.
+        var text = root.ToString(SaveOptions.DisableFormatting);
+        foreach (var name in new[] { "Resources", "Helpers", "Controls" })
+            text = text.Replace($"\"clr-namespace:InstallerClean.{name}\"",
+                $"\"clr-namespace:InstallerClean.{name};assembly=InstallerClean\"", StringComparison.Ordinal);
 
-    /// <summary>A Thickness literal, or a <c>{StaticResource}</c> naming one in Tokens.xaml.</summary>
-    private static Thickness Thickness(string value, XDocument tokens)
-    {
-        const string resource = "{StaticResource ";
-        if (value.StartsWith(resource, StringComparison.Ordinal) && value.EndsWith('}'))
-            value = ThemeXaml.ResourceValue(tokens, value[resource.Length..^1].Trim());
-        return (Thickness)new ThicknessConverter().ConvertFromInvariantString(value)!;
+        return Regex.Replace(text, @"\{a11y:TextScaled ([0-9.]+)\}", match =>
+            (double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) * scale)
+                .ToString("R", CultureInfo.InvariantCulture));
     }
 
     /// <summary>

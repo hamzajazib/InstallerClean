@@ -67,4 +67,12 @@
     <EmbeddedResource Include="..\InstallerClean\MainWindow.xaml" LogicalName="ThemeXaml.MainWindow.xaml" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The app's font files, beside the test assembly, so the overlay card tests
+         lay text out in the faces the app draws it in. The app compiles them in
+         and names them by its pack URI, which only a running Application
+         resolves. -->
+    <None Include="..\InstallerClean\Fonts\*.ttf" LinkBase="Fonts" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

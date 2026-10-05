@@ -694,15 +694,23 @@
                          on that drive or share and the scan carries on; Cancel
                          below still ends the scan. It never takes the focus itself,
                          and code-behind hands the focus to Cancel if it has it as
-                         it goes. -->
+                         it goes.
+
+                         The label is an AccessText that wraps, so in a card too
+                         narrow for it on one line it takes two and the button is
+                         never wider than the card. The access key works as it does
+                         on a plain string: the AccessText registers it, and the
+                         key press reaches the button around it. -->
                     <Button x:Name="ScanStopWaitingButton" Style="{StaticResource GhostPill}"
-                            Content="{loc:Translate Action.StopWaiting}" Command="{Binding Scan.StopWaitingCommand}"
+                            Command="{Binding Scan.StopWaitingCommand}"
                             MinHeight="28" Padding="16,0" FontSize="{DynamicResource Type.Body}"
                             HorizontalAlignment="Center"
                             FocusVisualStyle="{StaticResource SmallPillFocusVisual}"
                             Visibility="{Binding Scan.CanStopWaiting, Converter={StaticResource BoolToVis}}"
                             AutomationProperties.Name="{Binding Scan.StopWaitingName}"
-                            AutomationProperties.HelpText="{loc:Translate Status.StopWaitingLeavesAlone}"/>
+                            AutomationProperties.HelpText="{loc:Translate Status.StopWaitingLeavesAlone}">
+                        <AccessText Text="{loc:Translate Action.StopWaiting}" TextWrapping="Wrap" TextAlignment="Center"/>
+                    </Button>
                     <!-- What the button leaves alone, shown with it, in the ticker's
                          colour and size. No LiveSetting: the line's spoken name
                          carries the same sentence while the button shows. -->
@@ -780,15 +788,18 @@
                          that drive or share and the check, or the scan after the
                          files have gone, carries on; Cancel below still ends it. It
                          never takes the focus itself, and code-behind hands the
-                         focus to Cancel if it has it as it goes. -->
+                         focus to Cancel if it has it as it goes. Its label wraps as
+                         the scanning card's does. -->
                     <Button x:Name="OperationStopWaitingButton" Style="{StaticResource GhostPill}"
-                            Content="{loc:Translate Action.StopWaiting}" Command="{Binding Cleanup.StopWaitingCommand}"
+                            Command="{Binding Cleanup.StopWaitingCommand}"
                             MinHeight="28" Padding="16,0" FontSize="{DynamicResource Type.Body}"
                             HorizontalAlignment="Center"
                             FocusVisualStyle="{StaticResource SmallPillFocusVisual}"
                             Visibility="{Binding Cleanup.CanStopWaiting, Converter={StaticResource BoolToVis}}"
                             AutomationProperties.Name="{Binding Cleanup.StopWaitingName}"
-                            AutomationProperties.HelpText="{loc:Translate Status.StopWaitingLeavesAlone}"/>
+                            AutomationProperties.HelpText="{loc:Translate Status.StopWaitingLeavesAlone}">
+                        <AccessText Text="{loc:Translate Action.StopWaiting}" TextWrapping="Wrap" TextAlignment="Center"/>
+                    </Button>
                     <!-- What the button leaves alone, shown with it. No LiveSetting:
                          the heading's spoken name carries the same sentence while the
                          button shows. -->
