@@ -71,6 +71,11 @@ public partial class SplashWindow : Window
         MinHeight = Math.Min(320 * factor, DetailWindowSizing.WorkAreaHeightLimit(null));
         MaxHeight = DetailWindowSizing.WorkAreaHeightLimit(null);
 
+        // The window grows down from a fixed top-left when a live text-size change
+        // enlarges its text, so each change of its size brings it back inside the
+        // work area. NoResize means SizeChanged never fires for a user drag-resize.
+        SizeChanged += (_, _) => DetailWindowSizing.NudgeIntoWorkArea(this);
+
         this.SuppressFocusVisualOnDeactivation();
         // Loaded fires after the visual tree is realised, so Focus()
         // on the only focusable element lands on first paint and the

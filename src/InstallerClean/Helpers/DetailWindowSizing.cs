@@ -100,7 +100,9 @@ internal static class DetailWindowSizing
     /// the main window is on: the card's MinWidth and MaxWidth come from
     /// <see cref="CardWidths"/> with <see cref="WorkAreaWidthLimit"/> as the limit,
     /// and the window's MaxHeight is <see cref="WorkAreaHeightLimit"/>. Both are
-    /// taken again when the text size changes, until the window closes.
+    /// taken again when the text size changes, until the window closes. A shown
+    /// window grows from a fixed top-left when its card grows, so each change of
+    /// its size goes through <see cref="NudgeIntoWorkArea"/> too.
     /// <paramref name="minimumWidth"/> and <paramref name="maximumWidth"/> are the
     /// card's widths at 100% text scale, and the card carries no width of its own
     /// in XAML, so these are the only ones it has.
@@ -122,9 +124,16 @@ internal static class DetailWindowSizing
                 Apply();
         }
 
+        void OnWindowSizeChanged(object sender, SizeChangedEventArgs e) => NudgeIntoWorkArea(window);
+
         Apply();
         AccessibilitySettings.Current.PropertyChanged += OnSettingsChanged;
-        window.Closed += (_, _) => AccessibilitySettings.Current.PropertyChanged -= OnSettingsChanged;
+        window.SizeChanged += OnWindowSizeChanged;
+        window.Closed += (_, _) =>
+        {
+            AccessibilitySettings.Current.PropertyChanged -= OnSettingsChanged;
+            window.SizeChanged -= OnWindowSizeChanged;
+        };
     }
 
     /// <summary>
