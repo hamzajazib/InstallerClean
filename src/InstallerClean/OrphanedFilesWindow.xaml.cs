@@ -29,12 +29,9 @@ public partial class OrphanedFilesWindow : Window
         // 620 is the 100% default, multiplied by the text-scale factor
         // because the columns and the details pane inside scale with it, so
         // an unscaled default would overflow into a horizontal scrollbar.
-        // The clamps keep the window inside the screen's work area.
+        // SizeWithinWorkArea keeps the window inside the screen's work area.
         var factor = AccessibilitySettings.Current.TextScaleFactor;
-        Width = DetailWindowSizing.ClampWidthToWorkArea(
-            Application.Current?.MainWindow, preferred: 1000 * factor, minimum: MinWidth);
-        Height = DetailWindowSizing.ClampHeightToWorkArea(
-            Application.Current?.MainWindow, preferred: 620 * factor, minimum: MinHeight);
+        this.SizeWithinWorkArea(1000 * factor, 620 * factor);
 
         Closed += OnClosed;
         this.EnableAltSpaceSystemMenu();

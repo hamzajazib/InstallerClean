@@ -25,31 +25,19 @@ public partial class RegisteredFilesWindow : Window
         DataContext = viewModel;
 
         // The window always opens at this computed size; it does not
-        // remember a previous one. A saved size does not scale with the OS
-        // text setting nor adapt to the current screen, so a size kept from
-        // one text scale or monitor could reopen too small to read or off
-        // another's edge; the computed default is always right for the
-        // current setting. 950 x 770 is the 100% default, multiplied by the
-        // text-scale factor because the columns and rows inside scale with
-        // it, so an unscaled default would overflow into a horizontal
-        // scrollbar. 770 lets the longest products' whole details, down to
-        // the comment line, read by arrowing down the list without clicking
-        // into the details pane to scroll: the file list is capped (MaxHeight
-        // 208 scaled, the rows a 680 window showed) so the units above that
-        // land in the patches/details band, and the longest real metadata (a
-        // 7-line signing identity plus a 2-line comment) needs about 90 of
-        // them beyond 680. A rarer longer entry still scrolls, as all three
-        // panes do. The 680 figure was taken before the two group headings
-        // came out of the layout, so the cap now begins to bite in a slightly
-        // shorter window than it did; that gives the details band more room
-        // rather than less, which is the direction this sizing wants. The clamps keep the window inside
-        // the work area, as little as ~672 device-independent units of
-        // height on a 1080p laptop at 150% display scale.
+        // remember a previous one. A saved size follows neither the OS text
+        // setting nor the screen, so a size kept from one text scale or
+        // monitor could reopen too small to read or past another's edge.
+        // 950 x 770 is the 100% default, multiplied by the text-scale factor
+        // because the columns and rows inside scale with it, so an unscaled
+        // default would overflow into a horizontal scrollbar. The file list
+        // stops at 208 scaled (the MaxHeight on its row in the XAML), so the
+        // height beyond that goes to the patches and details band below it,
+        // which holds the longest content; whatever outgrows a pane scrolls,
+        // in all three. SizeWithinWorkArea keeps the window inside the
+        // screen's work area.
         var factor = AccessibilitySettings.Current.TextScaleFactor;
-        Width = DetailWindowSizing.ClampWidthToWorkArea(
-            Application.Current?.MainWindow, preferred: 950 * factor, minimum: MinWidth);
-        Height = DetailWindowSizing.ClampHeightToWorkArea(
-            Application.Current?.MainWindow, preferred: 770 * factor, minimum: MinHeight);
+        this.SizeWithinWorkArea(950 * factor, 770 * factor);
 
         Closed += OnClosed;
         this.EnableAltSpaceSystemMenu();

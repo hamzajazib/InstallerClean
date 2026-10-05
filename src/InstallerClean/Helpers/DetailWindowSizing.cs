@@ -26,21 +26,47 @@ internal static class DetailWindowSizing
     private const double EdgeMargin = 24;
 
     /// <summary>
-    /// <paramref name="preferred"/> clamped to the work area of the
-    /// monitor hosting <paramref name="reference"/> (the primary
-    /// monitor when the reference is null or not yet shown), and never
-    /// below <paramref name="minimum"/>. All values in
-    /// device-independent units.
+    /// <paramref name="preferred"/>, raised to <paramref name="minimum"/>
+    /// and then held to the work-area height of the monitor hosting
+    /// <paramref name="reference"/> (the primary monitor when the
+    /// reference is null or not yet shown). See <see cref="Within"/>.
+    /// All values in device-independent units.
     /// </summary>
     public static double ClampHeightToWorkArea(Window? reference, double preferred, double minimum)
-        => Math.Max(minimum, Math.Min(preferred, WorkAreaHeightLimit(reference)));
+        => Within(preferred, minimum, WorkAreaHeightLimit(reference));
 
     /// <summary>
     /// Horizontal counterpart of
     /// <see cref="ClampHeightToWorkArea(Window?, double, double)"/>.
     /// </summary>
     public static double ClampWidthToWorkArea(Window? reference, double preferred, double minimum)
-        => Math.Max(minimum, Math.Min(preferred, WorkAreaWidthLimit(reference)));
+        => Within(preferred, minimum, WorkAreaWidthLimit(reference));
+
+    /// <summary>
+    /// <paramref name="preferred"/>, never below <paramref name="minimum"/>
+    /// and never above <paramref name="limit"/>. Where the limit is under the
+    /// minimum the limit wins, so a window sized through this is never larger
+    /// than its work area, whatever minimum it asks for.
+    /// </summary>
+    public static double Within(double preferred, double minimum, double limit)
+        => Math.Min(Math.Max(minimum, preferred), limit);
+
+    /// <summary>
+    /// Sizes a resizable window, before it is shown, to
+    /// <paramref name="preferredWidth"/> by <paramref name="preferredHeight"/>
+    /// held inside the work area of the monitor the main window is on. The window's MinWidth and MinHeight are
+    /// lowered to that work area first where they exceed it, because WPF holds
+    /// a window's Width and Height at its MinWidth and MinHeight; on a larger
+    /// work area they keep the values the XAML gives them.
+    /// </summary>
+    public static void SizeWithinWorkArea(this Window window, double preferredWidth, double preferredHeight)
+    {
+        var reference = Application.Current?.MainWindow;
+        window.MinWidth = Math.Min(window.MinWidth, WorkAreaWidthLimit(reference));
+        window.MinHeight = Math.Min(window.MinHeight, WorkAreaHeightLimit(reference));
+        window.Width = ClampWidthToWorkArea(reference, preferredWidth, window.MinWidth);
+        window.Height = ClampHeightToWorkArea(reference, preferredHeight, window.MinHeight);
+    }
 
     /// <summary>
     /// The tallest a window may sensibly open on the monitor hosting

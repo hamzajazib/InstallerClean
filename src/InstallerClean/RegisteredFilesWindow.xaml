@@ -28,20 +28,12 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="32"/>
             <!-- The MaxHeight is a fixed ceiling on the file list, so on a
-                 taller window every extra unit lands in the patches +
-                 product details band, where content overflows; the file
-                 list is the pane that does not need to grow. Below that
+                 taller window every extra unit lands in the patches and
+                 product details band, which holds the longest content; the
+                 file list is the pane that does not need to grow. Below that
                  height the cap is slack and the split behaves as plain
                  2*/3*. The cap scales with the OS text size so the list
-                 keeps showing the same number of rows as they get taller.
-
-                 208 was derived from the height the split gave the list in
-                 a 680-tall window at 100% text scale, BEFORE the two group
-                 headings came out. Removing them returned their rows to the
-                 split, so the cap now starts biting in a slightly shorter
-                 window than the one it was measured in. The value is
-                 unchanged and eye-verified; what moved is the crossover, and
-                 the checklist says to look at it. -->
+                 keeps showing the same number of rows as they get taller. -->
             <RowDefinition Height="2*" MaxHeight="{a11y:TextScaled 208}"/>
             <RowDefinition Height="20"/>
             <RowDefinition Height="3*"/><RowDefinition Height="12"/>
