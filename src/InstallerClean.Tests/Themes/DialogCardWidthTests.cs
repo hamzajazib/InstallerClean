@@ -2,7 +2,7 @@ using System.Xml.Linq;
 
 namespace InstallerClean.Tests.Themes;
 
-// The four dialogs that size to their card take the card's widths from
+// The dialogs that size to their card take the card's widths from
 // DetailWindowSizing.KeepCardInsideWorkArea in code-behind, which holds them to the
 // work area. A width written on the card in XAML is replaced there, so it would
 // describe a card that is never drawn, and it would come back unheld the moment the
@@ -17,6 +17,7 @@ public class DialogCardWidthTests
     [InlineData("ThemeXaml.ConfirmMoveWindow.xaml")]
     [InlineData("ThemeXaml.MessageWindow.xaml")]
     [InlineData("ThemeXaml.UpdateAvailableWindow.xaml")]
+    [InlineData("ThemeXaml.ReportWindow.xaml")]
     public void The_card_is_the_window_and_carries_no_width_of_its_own(string resource)
     {
         var window = ThemeXaml.Load(resource).Root!;
