@@ -588,6 +588,9 @@ const MAP = {
   'Completion.ReportPanel.Closing': `Tất cả chỉ là các con số và nhãn như thế này. Không có gì trong đó nêu tên bạn, máy tính, tệp hay chương trình của bạn, và tôi không bao giờ thấy địa chỉ IP của bạn.`,
   'Automation.ReportInfo': `Báo cáo chứa những gì`,
   'Automation.Scroll.ReportContents': `Báo cáo chứa những gì`,
+  'Completion.ReportPanel.SeeReport': `See exactly what's sent`,
+  'Window.Report.Title': `The anonymous report`,
+  'Window.Report.Unreadable': `InstallerClean couldn't read the report.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

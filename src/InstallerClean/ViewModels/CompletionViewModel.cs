@@ -212,7 +212,8 @@ public partial class CompletionViewModel : ObservableObject
     /// <paramref name="settingsService"/> records whether it is waiting to go or has
     /// gone. <paramref name="earlierRunCheck"/> and <paramref name="firstRunMark"/>
     /// decide which card is the PC's first, and <paramref name="windowsRegion"/> which
-    /// way its box starts. <paramref name="windowService"/> opens the donate page.
+    /// way its box starts. <paramref name="windowService"/> opens the donate page and
+    /// the report window.
     /// </summary>
     public CompletionViewModel(
         IResultLogService resultLogService,
@@ -972,6 +973,33 @@ public partial class CompletionViewModel : ObservableObject
     private void Track(Task task)
     {
         lock (_reportWorkGate) _reportWork = Task.WhenAll(_reportWork, task);
+    }
+
+    /// <summary>
+    /// The report panel's "See exactly what's sent" link: waits for the report's write,
+    /// reads <c>last-run.json</c> with the call the send reads it with, and opens the
+    /// window showing what that read returned, the file's own text, or null where the
+    /// file could not be read. The write is started in the same dispatcher turn as the
+    /// card carrying the box is revealed, so it is in hand before the link can be
+    /// clicked; a write that failed has taken the box, the panel and the link off the
+    /// card. Opens nothing where the box has left the card by the time the read is
+    /// back. Reads only: nothing is sent, saved or marked here.
+    /// </summary>
+    [RelayCommand]
+    private async Task ShowReportAsync()
+    {
+        try
+        {
+            var written = _reportWritten;
+            if (written is null || !await written) return;
+            var report = await _resultLogService.ReadLastLogAsync();
+            if (!_boxOpen) return;
+            _windowService.ShowReport(report);
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+        }
     }
 
     /// <summary>

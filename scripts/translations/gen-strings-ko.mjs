@@ -585,6 +585,9 @@ const MAP = {
   'Completion.ReportPanel.Closing': `모두 이와 같은 횟수와 라벨뿐입니다. 사용자나 사용자의 PC, 파일, 프로그램을 가리키는 정보는 전혀 없으며, 저는 사용자의 IP 주소를 결코 보지 않습니다.`,
   'Automation.ReportInfo': `보고서에 담긴 내용`,
   'Automation.Scroll.ReportContents': `보고서에 담긴 내용`,
+  'Completion.ReportPanel.SeeReport': `See exactly what's sent`,
+  'Window.Report.Title': `The anonymous report`,
+  'Window.Report.Unreadable': `InstallerClean couldn't read the report.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

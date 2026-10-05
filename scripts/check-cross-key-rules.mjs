@@ -120,7 +120,9 @@ const ELABORATES_A_LABEL_IN_CODE = [
 // rule 2a below: the key also appears as visible Text in the same XAML file.
 // Repoint the Name at a different key, or delete the heading, and the guard fails
 // until the control is classified again.
-const NAME_IS_THE_LABEL = new Set([]);
+const NAME_IS_THE_LABEL = new Set([
+  'Window.Report.Title',
+]);
 
 // Nothing visible to agree with: an icon-only button, a scroll region, a
 // progress bar. The name is the control's only text.

@@ -86,6 +86,14 @@
   <data name="Window.About.Title" xml:space="preserve"><value>Tentang</value></data>
   <data name="Window.Registered.Title" xml:space="preserve"><value>File yang dibiarkan apa adanya</value></data>
   <data name="Window.Orphaned.Title" xml:space="preserve"><value>File tidak diperlukan yang aman dihapus</value></data>
+  <data name="Window.Report.Title" xml:space="preserve">
+    <value>The anonymous report</value>
+    <comment>The heading of the small window Completion.ReportPanel.SeeReport opens, which shows the report exactly as it is sent. Also the window's spoken title and the screen-reader name of the box holding the report. Same words as the checkbox Completion.SendReport, which calls it an anonymous report.</comment>
+  </data>
+  <data name="Window.Report.Unreadable" xml:space="preserve">
+    <value>InstallerClean couldn't read the report.</value>
+    <comment>Shown in the window headed Window.Report.Title, in place of the report, where the file holding it cannot be read when the window opens.</comment>
+  </data>
 
   <!-- Section headings -->
   <data name="Section.Registered.Patches" xml:space="preserve"><value>PATCH</value></data>
@@ -1013,6 +1021,10 @@ Untuk mengembalikannya, Anda butuh pemasang versi yang sudah Anda miliki. Dapatk
   <data name="Completion.ReportPanel.Closing" xml:space="preserve">
     <value>Semuanya berupa jumlah dan label seperti ini. Tidak ada yang menyebut Anda, PC Anda, file Anda, atau program Anda, dan saya tidak pernah melihat alamat IP Anda.</value>
     <comment>The closing line of the panel opened from the small &quot;i&quot; beside Completion.SendReport, under the eleven bullets. &quot;I&quot; is the app's author.</comment>
+  </data>
+  <data name="Completion.ReportPanel.SeeReport" xml:space="preserve">
+    <value>See exactly what's sent</value>
+    <comment>A link on its own line at the end of the panel opened from the small &quot;i&quot; beside Completion.SendReport, under Completion.ReportPanel.Closing. It opens a window showing the report itself, exactly as it is sent. The whole line is the link, so it carries no brackets.</comment>
   </data>
   <data name="Automation.ReportInfo" xml:space="preserve">
     <value>Isi laporan</value>

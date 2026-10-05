@@ -14,6 +14,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | About | Over |
 | Files left alone | Ongemoeid gelaten bestanden |
 | Unneeded files that are safe to delete | Overbodige bestanden die veilig kunnen worden verwijderd |
+| The anonymous report | The anonymous report |
+| InstallerClean couldn't read the report. | InstallerClean couldn't read the report. |
 
 ## Section headings
 
@@ -199,6 +201,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean's version and the language it was showing | De versie van InstallerClean en de taal waarin het werd weergegeven |
 | Counts of anything that went wrong | Tellingen van alles wat er misging |
 | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Het zijn allemaal tellingen en labels zoals deze. Niets ervan noemt jou, je pc, je bestanden of je programma's, en ik zie je IP-adres nooit. |
+| See exactly what's sent | See exactly what's sent |
 
 ## Summaries and counts
 

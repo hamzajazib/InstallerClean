@@ -1288,7 +1288,8 @@
                  its link straight after the "i". The window sets its bottom margin
                  to sit it just above the report line (PlaceReportPanel); the other
                  margins keep it inside the window, and the text scrolls where the
-                 room above the line is shorter than it. The background is solid,
+                 room above the line is shorter than it. Tab reaches the chart's link
+                 and then the link to the report window. The background is solid,
                  so a click on the panel never reaches the controls under it. -->
             <Border x:Name="ReportPanel"
                     Visibility="{Binding Completion.ReportPanelOpen, Converter={StaticResource BoolToVis}}"
@@ -1333,6 +1334,11 @@
                         <TextBlock Text="{loc:Translate Completion.ReportPanel.Closing}"
                                    Foreground="{StaticResource Text.Body}" FontSize="{DynamicResource Type.Body}"
                                    TextWrapping="Wrap"/>
+                        <!-- The link to the window showing the report itself, on a line
+                             of its own, filled from code-behind (BuildReportPanel). -->
+                        <TextBlock x:Name="ReportPanelSeeReportText"
+                                   Foreground="{StaticResource Text.Body}" FontSize="{DynamicResource Type.Body}"
+                                   TextWrapping="Wrap" Margin="0,6,0,0"/>
                     </StackPanel>
                 </ScrollViewer>
             </Border>

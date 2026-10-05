@@ -3,8 +3,9 @@ using InstallerClean.ViewModels;
 namespace InstallerClean.Services;
 
 /// <summary>
-/// Opens the secondary windows (orphaned details, registered details,
-/// about) and closes the main window. The interface keeps MainViewModel
+/// Opens the secondary windows (the two Details windows, About, the update
+/// prompt and the report window), opens a link in the browser, relaunches the
+/// app and closes the main window. The interface keeps MainViewModel
 /// free of a direct dependency on Application.Current.MainWindow and on
 /// Window constructors, both of which NRE under xUnit.
 /// </summary>
@@ -23,6 +24,13 @@ public interface IWindowService
     /// of the launcher and the view-model free of Window construction.
     /// </summary>
     bool ShowUpdateAvailable(string currentVersion, string latestVersion);
+
+    /// <summary>
+    /// Shows the report window: <paramref name="report"/> is the text of
+    /// <c>last-run.json</c> as it was read, shown as it stands, or null where the
+    /// file could not be read, which the window says in place of the report.
+    /// </summary>
+    void ShowReport(string? report);
 
     void CloseMainWindow();
 

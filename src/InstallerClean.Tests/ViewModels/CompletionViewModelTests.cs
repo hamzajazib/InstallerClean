@@ -965,4 +965,149 @@ public class CompletionViewModelTests
 
         Assert.Equal(Line(1), CheckLinesOn(card, reverify));
     }
+
+    // The report panel's "See exactly what's sent" link. The card carrying the box is
+    // revealed before its report is written, so the window waits for the write; and it
+    // shows what the read the send also uses returned, so it cannot differ from what goes.
+
+    private const string Report = "{\"schemaVersion\":5}";
+
+    private sealed class ReportCard
+    {
+        public IResultLogService ResultLog { get; } = Substitute.For<IResultLogService>();
+        public ISettingsService Settings { get; } = Substitute.For<ISettingsService>();
+        public IFirstRunMark FirstRunMark { get; } = Substitute.For<IFirstRunMark>();
+        public IWindowService Windows { get; } = Substitute.For<IWindowService>();
+        public TaskCompletionSource<bool> Write { get; } = new();
+        public CompletionViewModel Vm { get; }
+
+        /// <summary>
+        /// A first card with its box on, its write started and held at
+        /// <see cref="Write"/>, and a read of <c>last-run.json</c> that returns
+        /// <see cref="Report"/>.
+        /// </summary>
+        public ReportCard()
+        {
+            ResultLog.WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>()).Returns(Write.Task);
+            ResultLog.ReadLastLogAsync(Arg.Any<CancellationToken>()).Returns(Report);
+            ResultLog.SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(ResultLogSendOutcome.Sent);
+            Settings.Update(Arg.Any<Action<AppSettings>>()).Returns(true);
+            Vm = new CompletionViewModel(ResultLog, Settings, Substitute.For<IEarlierRunCheck>(), FirstRunMark,
+                Substitute.For<IWindowsRegion>(), Windows);
+            Assert.True(Vm.TakeReport());
+            Vm.ShowAllClear(scannedFileCount: 5, scanDurationMs: 10);
+            Writing = Vm.WriteReportAsync(null!);
+        }
+
+        public Task Writing { get; }
+    }
+
+    [Fact]
+    public async Task The_report_window_opens_once_the_write_has_landed_and_not_before()
+    {
+        var card = new ReportCard();
+
+        var showing = card.Vm.ShowReportCommand.ExecuteAsync(null);
+
+        await card.ResultLog.DidNotReceive().ReadLastLogAsync(Arg.Any<CancellationToken>());
+        card.Windows.DidNotReceiveWithAnyArgs().ShowReport(default);
+
+        card.Write.SetResult(true);
+        await card.Writing;
+        await showing;
+
+        card.Windows.Received(1).ShowReport(Report);
+    }
+
+    [Fact]
+    public async Task The_report_window_shows_the_text_the_send_posts()
+    {
+        var card = new ReportCard();
+        card.Write.SetResult(true);
+        await card.Writing;
+        card.Vm.SendsReport = true;
+        string? shown = null;
+        card.Windows.ShowReport(Arg.Do<string?>(text => shown = text));
+
+        await card.Vm.ShowReportCommand.ExecuteAsync(null);
+        card.Vm.DismissCommand.Execute(null);
+        await card.Vm.ReportWork;
+
+        var sent = (string)card.ResultLog.ReceivedCalls()
+            .Single(call => call.GetMethodInfo().Name == nameof(IResultLogService.SendAsync))
+            .GetArguments()[0]!;
+        Assert.Equal(Report, sent);
+        Assert.Equal(sent, shown);
+    }
+
+    [Fact]
+    public async Task The_report_window_is_given_null_where_the_file_cannot_be_read()
+    {
+        var card = new ReportCard();
+        card.ResultLog.ReadLastLogAsync(Arg.Any<CancellationToken>()).Returns((string?)null);
+        card.Write.SetResult(true);
+        await card.Writing;
+
+        await card.Vm.ShowReportCommand.ExecuteAsync(null);
+
+        card.Windows.Received(1).ShowReport(null);
+    }
+
+    [Fact]
+    public async Task The_report_window_does_not_open_where_the_card_closed_during_the_read()
+    {
+        var card = new ReportCard();
+        var read = new TaskCompletionSource<string?>();
+        card.ResultLog.ReadLastLogAsync(Arg.Any<CancellationToken>()).Returns(read.Task);
+        card.Write.SetResult(true);
+        await card.Writing;
+
+        var showing = card.Vm.ShowReportCommand.ExecuteAsync(null);
+        await card.ResultLog.Received(1).ReadLastLogAsync(Arg.Any<CancellationToken>());
+        card.Vm.DismissCommand.Execute(null);
+        read.SetResult(Report);
+        await showing;
+
+        card.Windows.DidNotReceiveWithAnyArgs().ShowReport(default);
+    }
+
+    [Fact]
+    public async Task The_report_window_does_not_open_where_the_write_failed()
+    {
+        var card = new ReportCard();
+        card.Write.SetResult(false);
+        await card.Writing;
+        Assert.False(card.Vm.OffersReport);
+
+        await card.Vm.ShowReportCommand.ExecuteAsync(null);
+
+        await card.ResultLog.DidNotReceive().ReadLastLogAsync(Arg.Any<CancellationToken>());
+        card.Windows.DidNotReceiveWithAnyArgs().ShowReport(default);
+    }
+
+    [Fact]
+    public async Task Opening_the_report_window_sends_nothing_saves_nothing_and_leaves_the_box_as_it_was()
+    {
+        var card = new ReportCard();
+        card.Write.SetResult(true);
+        await card.Writing;
+        await card.Vm.ReportWork;
+        card.Vm.SendsReport = true;
+        await card.Vm.ReportWork;
+        card.ResultLog.ClearReceivedCalls();
+        card.Settings.ClearReceivedCalls();
+        card.FirstRunMark.ClearReceivedCalls();
+
+        await card.Vm.ShowReportCommand.ExecuteAsync(null);
+        await card.Vm.ReportWork;
+
+        card.Windows.Received(1).ShowReport(Report);
+        await card.ResultLog.DidNotReceive().SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await card.ResultLog.DidNotReceive().WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
+        card.Settings.DidNotReceiveWithAnyArgs().Update(default!);
+        card.FirstRunMark.DidNotReceiveWithAnyArgs().Set();
+        Assert.True(card.Vm.OffersReport);
+        Assert.True(card.Vm.SendsReport);
+        Assert.True(card.Vm.IsComplete);
+    }
 }

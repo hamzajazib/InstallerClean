@@ -1163,17 +1163,38 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// Fills the panel: the opening sentence with the chart's name as a link, the list,
-    /// and the closing line, which its XAML binds. Returns the panel's words as one line
-    /// for the screen reader, made from the same strings, so what is read and what is
-    /// drawn cannot drift apart.
+    /// the closing line, which its XAML binds, and the link to the report window under
+    /// it. Returns the panel's words as one line for the screen reader, made from the
+    /// same strings, so what is read and what is drawn cannot drift apart.
     /// </summary>
     private string BuildReportPanel()
     {
         var lines = ReportPanelLines;
         ReportPanelList.ItemsSource = lines;
+
+        var seeReport = new Hyperlink(new Run(Strings.Completion_ReportPanel_SeeReport))
+        {
+            Style = (Style)FindResource("SubtleLink"),
+        };
+        seeReport.Click += ReportPanelSeeReport_Click;
+        ReportPanelSeeReportText.Inlines.Clear();
+        ReportPanelSeeReportText.Inlines.Add(seeReport);
+
         var separator = Strings.Display_SentenceSeparator;
         return BuildReportPanelIntro() + " " + string.Join(separator, lines) + separator
-            + Strings.Completion_ReportPanel_Closing;
+            + Strings.Completion_ReportPanel_Closing + " " + Strings.Completion_ReportPanel_SeeReport;
+    }
+
+    /// <summary>
+    /// Opens the report window through the view model, which waits for the report's
+    /// write and reads the file first. A click landing while that is in hand does
+    /// nothing.
+    /// </summary>
+    private void ReportPanelSeeReport_Click(object sender, RoutedEventArgs e)
+    {
+        var showReport = _vm.Completion.ShowReportCommand;
+        if (showReport.CanExecute(null))
+            showReport.Execute(null);
     }
 
     /// <summary>

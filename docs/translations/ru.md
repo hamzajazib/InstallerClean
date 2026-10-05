@@ -14,6 +14,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | About | О программе |
 | Files left alone | Файлы, оставленные без изменений |
 | Unneeded files that are safe to delete | Ненужные файлы, которые можно безопасно удалить |
+| The anonymous report | The anonymous report |
+| InstallerClean couldn't read the report. | InstallerClean couldn't read the report. |
 
 ## Section headings
 
@@ -199,6 +201,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean's version and the language it was showing | Версия InstallerClean и язык, на котором он отображался |
 | Counts of anything that went wrong | Счётчики всего, что пошло не так |
 | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Всё это — счётчики и метки вроде этих. Ничто в нём не указывает на вас, ваш ПК, ваши файлы или программы, и я никогда не вижу ваш IP-адрес. |
+| See exactly what's sent | See exactly what's sent |
 
 ## Summaries and counts
 

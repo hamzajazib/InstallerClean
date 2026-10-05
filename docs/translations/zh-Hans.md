@@ -14,6 +14,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | About | 关于 |
 | Files left alone | 原样保留的文件 |
 | Unneeded files that are safe to delete | 不需要的文件，可安全删除 |
+| The anonymous report | The anonymous report |
+| InstallerClean couldn't read the report. | InstallerClean couldn't read the report. |
 
 ## Section headings
 
@@ -199,6 +201,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean's version and the language it was showing | InstallerClean 的版本及其显示的语言 |
 | Counts of anything that went wrong | 所有出错情况的计数 |
 | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | 其中全是这样的计数和标签。没有任何内容会指明您、您的电脑、文件或程序，我也永远看不到您的 IP 地址。 |
+| See exactly what's sent | See exactly what's sent |
 
 ## Summaries and counts
 

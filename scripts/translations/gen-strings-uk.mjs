@@ -608,6 +608,9 @@ const MAP = {
   'Completion.ReportPanel.Closing': `Усе це — лічильники та мітки на кшталт цих. Ніщо в ньому не вказує на вас, ваш ПК, ваші файли чи програми, і я ніколи не бачу вашу IP-адресу.`,
   'Automation.ReportInfo': `Що містить звіт`,
   'Automation.Scroll.ReportContents': `Що містить звіт`,
+  'Completion.ReportPanel.SeeReport': `See exactly what's sent`,
+  'Window.Report.Title': `The anonymous report`,
+  'Window.Report.Unreadable': `InstallerClean couldn't read the report.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

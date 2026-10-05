@@ -514,6 +514,9 @@ Ayrıntılar şuraya yazıldı:
   'Completion.ReportPanel.Closing': `Hepsi bunlar gibi sayılar ve etiketlerden ibarettir. Hiçbir şey sizi, bilgisayarınızı, dosyalarınızı veya programlarınızı tanımlamaz ve IP adresinizi asla görmem.`,
   'Automation.ReportInfo': `Raporun içeriği`,
   'Automation.Scroll.ReportContents': `Raporun içeriği`,
+  'Completion.ReportPanel.SeeReport': `See exactly what's sent`,
+  'Window.Report.Title': `The anonymous report`,
+  'Window.Report.Unreadable': `InstallerClean couldn't read the report.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

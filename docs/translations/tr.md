@@ -14,6 +14,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | About | Hakkında |
 | Files left alone | Olduğu gibi bırakılan dosyalar |
 | Unneeded files that are safe to delete | Silinmesi güvenli, gereksiz dosyalar |
+| The anonymous report | The anonymous report |
+| InstallerClean couldn't read the report. | InstallerClean couldn't read the report. |
 
 ## Section headings
 
@@ -199,6 +201,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean's version and the language it was showing | InstallerClean'in sürümü ve gösterildiği dil |
 | Counts of anything that went wrong | Ters giden her şeyin sayısı |
 | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Hepsi bunlar gibi sayılar ve etiketlerden ibarettir. Hiçbir şey sizi, bilgisayarınızı, dosyalarınızı veya programlarınızı tanımlamaz ve IP adresinizi asla görmem. |
+| See exactly what's sent | See exactly what's sent |
 
 ## Summaries and counts
 

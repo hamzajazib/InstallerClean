@@ -14,6 +14,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | About | 정보 |
 | Files left alone | 그대로 둔 파일 |
 | Unneeded files that are safe to delete | 안전하게 삭제할 수 있는 불필요한 파일 |
+| The anonymous report | The anonymous report |
+| InstallerClean couldn't read the report. | InstallerClean couldn't read the report. |
 
 ## Section headings
 
@@ -199,6 +201,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean's version and the language it was showing | InstallerClean의 버전과 표시하던 언어 |
 | Counts of anything that went wrong | 문제가 생긴 일의 횟수 |
 | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | 모두 이와 같은 횟수와 라벨뿐입니다. 사용자나 사용자의 PC, 파일, 프로그램을 가리키는 정보는 전혀 없으며, 저는 사용자의 IP 주소를 결코 보지 않습니다. |
+| See exactly what's sent | See exactly what's sent |
 
 ## Summaries and counts
 

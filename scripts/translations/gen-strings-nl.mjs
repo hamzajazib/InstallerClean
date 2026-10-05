@@ -569,6 +569,9 @@ const MAP = {
   'Completion.ReportPanel.Closing': `Het zijn allemaal tellingen en labels zoals deze. Niets ervan noemt jou, je pc, je bestanden of je programma's, en ik zie je IP-adres nooit.`,
   'Automation.ReportInfo': `Wat het rapport bevat`,
   'Automation.Scroll.ReportContents': `Wat het rapport bevat`,
+  'Completion.ReportPanel.SeeReport': `See exactly what's sent`,
+  'Window.Report.Title': `The anonymous report`,
+  'Window.Report.Unreadable': `InstallerClean couldn't read the report.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

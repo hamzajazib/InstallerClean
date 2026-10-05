@@ -14,6 +14,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | About | Über |
 | Files left alone | Unangetastete Dateien |
 | Unneeded files that are safe to delete | Nicht benötigte Dateien, die bedenkenlos gelöscht werden können |
+| The anonymous report | The anonymous report |
+| InstallerClean couldn't read the report. | InstallerClean couldn't read the report. |
 
 ## Section headings
 
@@ -199,6 +201,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean's version and the language it was showing | Die Version von InstallerClean und die Sprache, in der es angezeigt wurde |
 | Counts of anything that went wrong | Wie oft etwas schiefgegangen ist |
 | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Es sind alles Zahlen und Bezeichnungen wie diese. Nichts darin nennt dich, deinen PC, deine Dateien oder deine Programme, und ich sehe deine IP-Adresse nie. |
+| See exactly what's sent | See exactly what's sent |
 
 ## Summaries and counts
 

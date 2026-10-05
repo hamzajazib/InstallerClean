@@ -14,6 +14,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | About | InstallerClean について |
 | Files left alone | そのままにしたファイル |
 | Unneeded files that are safe to delete | 削除しても安全な不要ファイル |
+| The anonymous report | The anonymous report |
+| InstallerClean couldn't read the report. | InstallerClean couldn't read the report. |
 
 ## Section headings
 
@@ -199,6 +201,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean's version and the language it was showing | InstallerClean のバージョンと、表示していた言語 |
 | Counts of anything that went wrong | うまくいかなかったことの件数 |
 | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | すべてこのような件数とラベルだけです。あなた自身、あなたの PC、ファイル、プログラムを特定するものは一切含まれず、私があなたの IP アドレスを見ることもありません。 |
+| See exactly what's sent | See exactly what's sent |
 
 ## Summaries and counts
 

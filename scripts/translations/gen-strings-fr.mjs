@@ -609,6 +609,9 @@ const MAP = {
   'Completion.ReportPanel.Closing': `Tout cela se résume à des décomptes et des libellés comme ceux-ci. Rien n'y désigne ni vous, ni votre PC, ni vos fichiers, ni vos programmes, et je ne vois jamais votre adresse IP.`,
   'Automation.ReportInfo': `Ce que contient le rapport`,
   'Automation.Scroll.ReportContents': `Ce que contient le rapport`,
+  'Completion.ReportPanel.SeeReport': `See exactly what's sent`,
+  'Window.Report.Title': `The anonymous report`,
+  'Window.Report.Unreadable': `InstallerClean couldn't read the report.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

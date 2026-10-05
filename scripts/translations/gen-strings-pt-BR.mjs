@@ -590,6 +590,9 @@ const MAP = {
   'Completion.ReportPanel.Closing': `Tudo isso são contagens e rótulos como estes. Nada nele identifica você, seu PC, seus arquivos ou seus programas, e eu nunca vejo seu endereço IP.`,
   'Automation.ReportInfo': `O que o relatório contém`,
   'Automation.Scroll.ReportContents': `O que o relatório contém`,
+  'Completion.ReportPanel.SeeReport': `See exactly what's sent`,
+  'Window.Report.Title': `The anonymous report`,
+  'Window.Report.Unreadable': `InstallerClean couldn't read the report.`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

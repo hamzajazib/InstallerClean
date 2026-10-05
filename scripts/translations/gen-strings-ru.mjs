@@ -502,6 +502,9 @@ const MAP = {
   'Completion.ReportPanel.Closing': `Всё это — счётчики и метки вроде этих. Ничто в нём не указывает на вас, ваш ПК, ваши файлы или программы, и я никогда не вижу ваш IP-адрес.`,
   'Automation.ReportInfo': `Что содержит отчёт`,
   'Automation.Scroll.ReportContents': `Что содержит отчёт`,
+  'Completion.ReportPanel.SeeReport': `See exactly what's sent`,
+  'Window.Report.Title': `The anonymous report`,
+  'Window.Report.Unreadable': `InstallerClean couldn't read the report.`,
 };
 
 // Russian CLDR-category overrides beyond the neutral one/other split. They do NOT
