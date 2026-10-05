@@ -365,37 +365,29 @@ jobs:
       # has failed. Every one is named below, because a gate left out of the list
       # gets read as deliberate by default.
       #
-      # FOUR ARE KEYED TO THE TRANSLATION PASS and are red for the window between
-      # an English string landing and that pass running, which is most of a
-      # release: check-still-english, check-translation-freshness, the generator
-      # reproduction check (whose diff catches a satellite the generators would
-      # now write differently, and whose TEMPLATE OK holds a template the
-      # reworded neutral has left behind) and gen-translation-table --check,
-      # whose pages are generated from the resx. A red in any of them says the
-      # English has moved, not that somebody made a mistake.
+      # FOUR HOLD THE SATELLITES IN STEP WITH THE ENGLISH, so each goes red when
+      # a string in the neutral resx moves and the satellites, or the pages built
+      # from them, have not yet followed: check-still-english, on a satellite
+      # value that is still the English neutral; check-translation-freshness, on
+      # a ledger entry recording a translation made against an English the
+      # neutral has since replaced, or standing on a key the satellite or the
+      # neutral no longer holds; the generator reproduction check, whose diff
+      # catches a satellite the generators would now write differently and whose
+      # TEMPLATE OK holds a template the reworded neutral has left behind; and
+      # gen-translation-table --check, whose pages are generated from the resx.
       #
       # THREE ARE EXPECTED GREEN AT ALL TIMES and their red means a mistake:
       # check-accelerators, check-cross-key-rules and check-superseded-english.
-      # The last is not a translation-window gate even though it reads the
-      # satellites: a satellite holding a wording the English has ABANDONED is
-      # never a state the pass is on its way to producing.
+      # The last reads the satellites too, but a satellite holding a wording the
+      # English has ABANDONED is never a state a translation is on its way to
+      # producing.
       #
-      # They sit at the end for the same reason rather than for one of their own:
-      # from the old position ahead of the build, one red took everything after
-      # it down, and the whole 3.0.0 line of work was written against a suite
-      # that had not run anywhere.
-      #
-      # That is not a settled historical argument, and the reproduction check is
-      # the receipt. It was left at the front when the other four moved, and a
-      # Windows-only fault inside one generator then skipped the SDK setup, the
-      # vulnerable-package gate, both builds and the whole test run on every push
-      # for 38 commits, while the smoke publishes below carried on going green
-      # underneath it and the job looked like nothing worse than its usual reds.
-      # !cancelled() is what stops that happening inside this block, one red gate
-      # hiding the ones behind it, and unlike always() it stands down on a
-      # cancelled job instead of posting six more failures over the cancellation.
+      # They sit after the build and the test run, so a red language gate never
+      # stops either of those from running. Each runs under !cancelled(), so one
+      # red gate does not hide the ones after it, and unlike always() it stands
+      # down on a cancelled job instead of posting a failure for every gate left.
       # Nothing is softened by the position: a failure here fails the job exactly
-      # as it did from the top.
+      # as one at the top does.
 
       # The premise every resx guard in this job rests on: each Strings.<code>.resx
       # is a byte-reproducible artefact of its generator in scripts/translations/.

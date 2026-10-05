@@ -959,67 +959,67 @@
     <comment>Tooltip and screen-reader help on the small donate button under Done (Action.DonateSmall), which stands on every completion card that carries Done, including a scan that found nothing to clean up. Keep it plain, with no word putting the reader under an obligation.</comment>
   </data>
   <data name="Completion.SendReport" xml:space="preserve">
-    <value>Send _anonymous report</value>
+    <value>Отправить _анонимный отчёт</value>
     <comment>The checkbox on the first completion card the PC shows, whatever kind of card it is. Ticked, the report goes as the card closes. The underscore marks the access key (Alt+A in English), which must not clash with the card's buttons: Action.Done, Action.DonateSmall, Action.Donate and Action.CloseWithoutDonating.</comment>
   </data>
   <data name="Completion.ReportPanel.Intro" xml:space="preserve">
-    <value>The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs:</value>
+    <value>Отчёт добавляет ваш результат, полностью анонимно, в [этот график] на GitHub, где видно, сколько места InstallerClean освобождает при реальном использовании. Ещё в нём есть анонимные технические сведения, которые помогают мне находить ошибки:</value>
     <comment>The opening of the panel the small &quot;i&quot; beside Completion.SendReport opens, saying what the report holds. The eleven Completion.ReportPanel.* lines follow it as a bulleted list, then Completion.ReportPanel.Closing. The phrase in [ ] is a link to the chart of results in the README: keep exactly one pair of brackets, around the words that name the chart. &quot;Me&quot; is the app's author.</comment>
   </data>
   <data name="Completion.ReportPanel.Freed" xml:space="preserve">
-    <value>How much space was freed, and how many files were moved or deleted</value>
+    <value>Сколько места освобождено и сколько файлов перемещено или удалено</value>
     <comment>Bullet 1 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Destination" xml:space="preserve">
-    <value>Whether a Move went to the same drive, another drive, a removable drive or a network share</value>
+    <value>Был ли целью «Переместить» тот же диск, другой диск, съёмный диск или сетевой ресурс</value>
     <comment>Bullet 2 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Durations" xml:space="preserve">
-    <value>How long the scan and the Move or Delete took</value>
+    <value>Сколько длились сканирование и «Переместить» или «Удалить»</value>
     <comment>Bullet 3 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.InstallerFiles" xml:space="preserve">
-    <value>How many installer files there are of each kind, and how much space they take</value>
+    <value>Сколько файлов установщика каждого вида и сколько места они занимают</value>
     <comment>Bullet 4 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.LeftAlone" xml:space="preserve">
-    <value>How many files were left alone, and why</value>
+    <value>Сколько файлов оставлено без изменений и почему</value>
     <comment>Bullet 5 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Waits" xml:space="preserve">
-    <value>How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for</value>
+    <value>Как часто InstallerClean ждал медленный диск или сетевой ресурс и скольких из них он перестал ждать</value>
     <comment>Bullet 6 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Records" xml:space="preserve">
-    <value>How many programs and patches Windows has a record of</value>
+    <value>О скольких программах и исправлениях у Windows есть запись</value>
     <comment>Bullet 7 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.ShortNames" xml:space="preserve">
-    <value>Whether Windows still makes old-style short file names</value>
+    <value>Создаёт ли Windows по-прежнему короткие имена файлов старого образца</value>
     <comment>Bullet 8 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Windows" xml:space="preserve">
-    <value>Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to</value>
+    <value>Какая версия Windows, 10 или 11, x64 или Arm, и какой язык в ней задан</value>
     <comment>Bullet 9 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.AppVersion" xml:space="preserve">
-    <value>InstallerClean's version and the language it was showing</value>
+    <value>Версия InstallerClean и язык, на котором он отображался</value>
     <comment>Bullet 10 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Errors" xml:space="preserve">
-    <value>Counts of anything that went wrong</value>
+    <value>Счётчики всего, что пошло не так</value>
     <comment>Bullet 11 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Closing" xml:space="preserve">
-    <value>All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address.</value>
+    <value>Всё это — счётчики и метки вроде этих. Ничто в нём не указывает на вас, ваш ПК, ваши файлы или программы, и я никогда не вижу ваш IP-адрес.</value>
     <comment>The closing line of the panel opened from the small &quot;i&quot; beside Completion.SendReport, under the eleven bullets. &quot;I&quot; is the app's author.</comment>
   </data>
   <data name="Automation.ReportInfo" xml:space="preserve">
-    <value>What the report holds</value>
+    <value>Что содержит отчёт</value>
     <comment>Screen-reader name of the small &quot;i&quot; button beside Completion.SendReport, which opens a panel saying what the report holds. The button shows only the letter i, so this is its whole name.</comment>
   </data>
   <data name="Automation.Scroll.ReportContents" xml:space="preserve">
-    <value>What the report holds</value>
+    <value>Что содержит отчёт</value>
     <comment>Screen-reader name of the scrolling region of the panel opened from the small &quot;i&quot; beside Completion.SendReport. Same words as Automation.ReportInfo, the button that opens it.</comment>
   </data>
 

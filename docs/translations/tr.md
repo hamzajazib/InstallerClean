@@ -185,20 +185,20 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | {0} {1} kalıcı olarak silindi |
 | {0} {1} permanently deleted | {0} {1} kalıcı olarak silindi |
 | Any small donation is much appreciated. | Küçük de olsa her bağış çok makbule geçer. |
-| Send _anonymous report | Send _anonymous report |
-| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: |
-| How much space was freed, and how many files were moved or deleted | How much space was freed, and how many files were moved or deleted |
-| Whether a Move went to the same drive, another drive, a removable drive or a network share | Whether a Move went to the same drive, another drive, a removable drive or a network share |
-| How long the scan and the Move or Delete took | How long the scan and the Move or Delete took |
-| How many installer files there are of each kind, and how much space they take | How many installer files there are of each kind, and how much space they take |
-| How many files were left alone, and why | How many files were left alone, and why |
-| How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for |
-| How many programs and patches Windows has a record of | How many programs and patches Windows has a record of |
-| Whether Windows still makes old-style short file names | Whether Windows still makes old-style short file names |
-| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to |
-| InstallerClean's version and the language it was showing | InstallerClean's version and the language it was showing |
-| Counts of anything that went wrong | Counts of anything that went wrong |
-| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. |
+| Send _anonymous report | _Anonim rapor gönder |
+| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | Rapor, sonucunuzu tamamen anonim olarak GitHub'daki [bu grafiğe] ekler; bu grafik, InstallerClean'in gerçek kullanımda ne kadar yer açtığını gösterir. Ayrıca hataları fark etmeme yardımcı olacak anonim teknik ayrıntılar da içerir: |
+| How much space was freed, and how many files were moved or deleted | Ne kadar yer açıldığı ve kaç dosyanın taşındığı ya da silindiği |
+| Whether a Move went to the same drive, another drive, a removable drive or a network share | Taşı işleminin aynı sürücüye mi, başka bir sürücüye mi, çıkarılabilir bir sürücüye mi yoksa bir ağ paylaşımına mı yapıldığı |
+| How long the scan and the Move or Delete took | Taramanın ve Taşı ya da Sil işleminin ne kadar sürdüğü |
+| How many installer files there are of each kind, and how much space they take | Her türden kaç yükleyici dosyası olduğu ve ne kadar yer kapladıkları |
+| How many files were left alone, and why | Kaç dosyanın olduğu gibi bırakıldığı ve neden |
+| How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | InstallerClean'in yavaş bir sürücüyü veya ağ paylaşımını ne sıklıkla beklediği ve kaçını beklemeyi kestiği |
+| How many programs and patches Windows has a record of | Windows'ta kaydı bulunan program ve yama sayısı |
+| Whether Windows still makes old-style short file names | Windows'un hâlâ eski tarz kısa dosya adları oluşturup oluşturmadığı |
+| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Windows'un 10 mu 11 mi, x64 mü Arm mı olduğu ve hangi dile ayarlandığı |
+| InstallerClean's version and the language it was showing | InstallerClean'in sürümü ve gösterildiği dil |
+| Counts of anything that went wrong | Ters giden her şeyin sayısı |
+| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Hepsi bunlar gibi sayılar ve etiketlerden ibarettir. Hiçbir şey sizi, bilgisayarınızı, dosyalarınızı veya programlarınızı tanımlamaz ve IP adresinizi asla görmem. |
 
 ## Summaries and counts
 
@@ -406,8 +406,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Files that could not be processed | İşlenemeyen dosyalar |
 | Explains this folder, and how to recover a file, in the README | Bu klasörü açıklar ve bir dosyanın nasıl kurtarılacağını README'de anlatır |
 | {0} Press Alt+{1} to carry on without it. {2} | {0} Beklemeden devam etmek için Alt+{1} tuşlarına basın. {2} |
-| What the report holds | What the report holds |
-| What the report holds | What the report holds |
+| What the report holds | Raporun içeriği |
+| What the report holds | Raporun içeriği |
 | Change language | Dili değiştir |
 | The program will restart. | Program yeniden başlatılacak. |
 

@@ -185,20 +185,20 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | {0} {1} eliminado definitivamente |
 | {0} {1} permanently deleted | {0} {1} eliminados definitivamente |
 | Any small donation is much appreciated. | Cualquier donación, por pequeña que sea, se agradece mucho. |
-| Send _anonymous report | Send _anonymous report |
-| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: |
-| How much space was freed, and how many files were moved or deleted | How much space was freed, and how many files were moved or deleted |
-| Whether a Move went to the same drive, another drive, a removable drive or a network share | Whether a Move went to the same drive, another drive, a removable drive or a network share |
-| How long the scan and the Move or Delete took | How long the scan and the Move or Delete took |
-| How many installer files there are of each kind, and how much space they take | How many installer files there are of each kind, and how much space they take |
-| How many files were left alone, and why | How many files were left alone, and why |
-| How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for |
-| How many programs and patches Windows has a record of | How many programs and patches Windows has a record of |
-| Whether Windows still makes old-style short file names | Whether Windows still makes old-style short file names |
-| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to |
-| InstallerClean's version and the language it was showing | InstallerClean's version and the language it was showing |
-| Counts of anything that went wrong | Counts of anything that went wrong |
-| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. |
+| Send _anonymous report | Enviar informe _anónimo |
+| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | El informe añade tu resultado, de forma totalmente anónima, a [este gráfico] en GitHub, que permite ver cuánto espacio está recuperando InstallerClean en el uso real. También incluye datos técnicos anónimos que me ayudan a detectar errores: |
+| How much space was freed, and how many files were moved or deleted | Cuánto espacio se liberó y cuántos archivos se movieron o eliminaron |
+| Whether a Move went to the same drive, another drive, a removable drive or a network share | Si Mover llevó los archivos a la misma unidad, a otra unidad, a una unidad extraíble o a un recurso compartido de red |
+| How long the scan and the Move or Delete took | Cuánto tardaron el análisis y Mover o Eliminar |
+| How many installer files there are of each kind, and how much space they take | Cuántos archivos de instalación hay de cada tipo y cuánto espacio ocupan |
+| How many files were left alone, and why | Cuántos archivos se dejaron en paz y por qué |
+| How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | Cuántas veces InstallerClean esperó a una unidad o un recurso compartido de red lentos, y a cuántos dejó de esperar |
+| How many programs and patches Windows has a record of | De cuántos programas y parches tiene registro Windows |
+| Whether Windows still makes old-style short file names | Si Windows sigue creando nombres de archivo cortos de estilo antiguo |
+| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Si Windows es 10 u 11 y x64 o Arm, y en qué idioma está configurado |
+| InstallerClean's version and the language it was showing | La versión de InstallerClean y el idioma en que se mostraba |
+| Counts of anything that went wrong | Recuentos de cualquier cosa que haya fallado |
+| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Todo son recuentos y etiquetas como estos. Nada de ello te identifica a ti, a tu PC, tus archivos ni tus programas, y nunca veo tu dirección IP. |
 
 ## Summaries and counts
 
@@ -406,8 +406,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Files that could not be processed | Archivos que no se pudieron procesar |
 | Explains this folder, and how to recover a file, in the README | Explica esta carpeta, y cómo recuperar un archivo, en el README |
 | {0} Press Alt+{1} to carry on without it. {2} | {0} Pulsa Alt+{1} para continuar sin esperar. {2} |
-| What the report holds | What the report holds |
-| What the report holds | What the report holds |
+| What the report holds | Qué contiene el informe |
+| What the report holds | Qué contiene el informe |
 | Change language | Cambiar el idioma |
 | The program will restart. | El programa se reiniciará. |
 

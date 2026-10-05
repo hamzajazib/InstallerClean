@@ -185,20 +185,20 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | {1} {0}개 영구 삭제됨 |
 | {0} {1} permanently deleted | {1} {0}개 영구 삭제됨 |
 | Any small donation is much appreciated. | 적은 금액의 후원도 정말 감사합니다. |
-| Send _anonymous report | Send _anonymous report |
-| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: |
-| How much space was freed, and how many files were moved or deleted | How much space was freed, and how many files were moved or deleted |
-| Whether a Move went to the same drive, another drive, a removable drive or a network share | Whether a Move went to the same drive, another drive, a removable drive or a network share |
-| How long the scan and the Move or Delete took | How long the scan and the Move or Delete took |
-| How many installer files there are of each kind, and how much space they take | How many installer files there are of each kind, and how much space they take |
-| How many files were left alone, and why | How many files were left alone, and why |
-| How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for |
-| How many programs and patches Windows has a record of | How many programs and patches Windows has a record of |
-| Whether Windows still makes old-style short file names | Whether Windows still makes old-style short file names |
-| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to |
-| InstallerClean's version and the language it was showing | InstallerClean's version and the language it was showing |
-| Counts of anything that went wrong | Counts of anything that went wrong |
-| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. |
+| Send _anonymous report | 익명 보고서 보내기(_A) |
+| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | 보고서는 사용자의 결과를 완전히 익명으로 GitHub의 [이 차트]에 추가하며, 이를 통해 InstallerClean이 실제 사용에서 얼마나 많은 공간을 확보하고 있는지 누구나 볼 수 있습니다. 또한 버그를 찾는 데 도움이 되는 익명의 기술 정보도 포함됩니다: |
+| How much space was freed, and how many files were moved or deleted | 확보된 공간의 양과 이동하거나 삭제한 파일 수 |
+| Whether a Move went to the same drive, another drive, a removable drive or a network share | 이동 대상이 같은 드라이브, 다른 드라이브, 이동식 드라이브, 네트워크 공유 중 어디였는지 |
+| How long the scan and the Move or Delete took | 검사와 이동 또는 삭제에 걸린 시간 |
+| How many installer files there are of each kind, and how much space they take | 종류별 설치 관리자 파일 수와 차지하는 공간 |
+| How many files were left alone, and why | 그대로 둔 파일 수와 그 이유 |
+| How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | InstallerClean이 느린 드라이브나 네트워크 공유를 기다린 횟수와 대기를 중단한 수 |
+| How many programs and patches Windows has a record of | Windows에 기록이 있는 프로그램과 패치의 수 |
+| Whether Windows still makes old-style short file names | Windows가 아직도 예전 방식의 짧은 파일 이름을 만드는지 여부 |
+| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Windows가 10인지 11인지, x64인지 Arm인지, 그리고 어떤 언어로 설정되어 있는지 |
+| InstallerClean's version and the language it was showing | InstallerClean의 버전과 표시하던 언어 |
+| Counts of anything that went wrong | 문제가 생긴 일의 횟수 |
+| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | 모두 이와 같은 횟수와 라벨뿐입니다. 사용자나 사용자의 PC, 파일, 프로그램을 가리키는 정보는 전혀 없으며, 저는 사용자의 IP 주소를 결코 보지 않습니다. |
 
 ## Summaries and counts
 
@@ -406,8 +406,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Files that could not be processed | 처리할 수 없는 파일 |
 | Explains this folder, and how to recover a file, in the README | 이 폴더에 대한 설명과 파일 복구 방법을 README에서 안내 |
 | {0} Press Alt+{1} to carry on without it. {2} | {0} Alt+{1} 키를 누르면 기다리지 않고 계속합니다. {2} |
-| What the report holds | What the report holds |
-| What the report holds | What the report holds |
+| What the report holds | 보고서에 담긴 내용 |
+| What the report holds | 보고서에 담긴 내용 |
 | Change language | 언어 변경 |
 | The program will restart. | 프로그램이 다시 시작됩니다. |
 

@@ -185,20 +185,20 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | 已永久删除 {0} 个{1} |
 | {0} {1} permanently deleted | 已永久删除 {0} 个{1} |
 | Any small donation is much appreciated. | 任何小额捐赠都非常感谢。 |
-| Send _anonymous report | Send _anonymous report |
-| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: |
-| How much space was freed, and how many files were moved or deleted | How much space was freed, and how many files were moved or deleted |
-| Whether a Move went to the same drive, another drive, a removable drive or a network share | Whether a Move went to the same drive, another drive, a removable drive or a network share |
-| How long the scan and the Move or Delete took | How long the scan and the Move or Delete took |
-| How many installer files there are of each kind, and how much space they take | How many installer files there are of each kind, and how much space they take |
-| How many files were left alone, and why | How many files were left alone, and why |
-| How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for |
-| How many programs and patches Windows has a record of | How many programs and patches Windows has a record of |
-| Whether Windows still makes old-style short file names | Whether Windows still makes old-style short file names |
-| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to |
-| InstallerClean's version and the language it was showing | InstallerClean's version and the language it was showing |
-| Counts of anything that went wrong | Counts of anything that went wrong |
-| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. |
+| Send _anonymous report | 发送匿名报告(_A) |
+| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | 报告会以完全匿名的方式，把您的结果添加到 GitHub 上的[这张图表]中，让大家看到 InstallerClean 在实际使用中释放了多少空间。报告还包含匿名的技术细节，帮助我发现程序错误： |
+| How much space was freed, and how many files were moved or deleted | 释放了多少空间，以及移动或删除了多少个文件 |
+| Whether a Move went to the same drive, another drive, a removable drive or a network share | 移动的目标是同一个驱动器、另一个驱动器、可移动驱动器还是网络共享 |
+| How long the scan and the Move or Delete took | 扫描以及移动或删除各用了多长时间 |
+| How many installer files there are of each kind, and how much space they take | 每种安装程序文件各有多少个，以及它们占用了多少空间 |
+| How many files were left alone, and why | 有多少个文件原样保留，以及原因 |
+| How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | InstallerClean 等待缓慢的驱动器或网络共享的次数，以及停止等待的数量 |
+| How many programs and patches Windows has a record of | Windows 记录了多少个程序和补丁 |
+| Whether Windows still makes old-style short file names | Windows 是否仍在生成旧式短文件名 |
+| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Windows 是 10 还是 11，是 x64 还是 Arm，以及设置的是哪种语言 |
+| InstallerClean's version and the language it was showing | InstallerClean 的版本及其显示的语言 |
+| Counts of anything that went wrong | 所有出错情况的计数 |
+| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | 其中全是这样的计数和标签。没有任何内容会指明您、您的电脑、文件或程序，我也永远看不到您的 IP 地址。 |
 
 ## Summaries and counts
 
@@ -406,8 +406,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Files that could not be processed | 无法处理的文件 |
 | Explains this folder, and how to recover a file, in the README | 在 README 中解释了这个文件夹，以及如何恢复文件 |
 | {0} Press Alt+{1} to carry on without it. {2} | {0} 按 Alt+{1} 可不再等待并继续。{2} |
-| What the report holds | What the report holds |
-| What the report holds | What the report holds |
+| What the report holds | 报告包含哪些内容 |
+| What the report holds | 报告包含哪些内容 |
 | Change language | 更改语言 |
 | The program will restart. | 程序会重启。 |
 

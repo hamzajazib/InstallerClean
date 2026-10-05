@@ -185,20 +185,20 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | Đã xóa vĩnh viễn {0} {1} |
 | {0} {1} permanently deleted | Đã xóa vĩnh viễn {0} {1} |
 | Any small donation is much appreciated. | Mọi đóng góp dù nhỏ đều rất được trân trọng. |
-| Send _anonymous report | Send _anonymous report |
-| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: |
-| How much space was freed, and how many files were moved or deleted | How much space was freed, and how many files were moved or deleted |
-| Whether a Move went to the same drive, another drive, a removable drive or a network share | Whether a Move went to the same drive, another drive, a removable drive or a network share |
-| How long the scan and the Move or Delete took | How long the scan and the Move or Delete took |
-| How many installer files there are of each kind, and how much space they take | How many installer files there are of each kind, and how much space they take |
-| How many files were left alone, and why | How many files were left alone, and why |
-| How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for |
-| How many programs and patches Windows has a record of | How many programs and patches Windows has a record of |
-| Whether Windows still makes old-style short file names | Whether Windows still makes old-style short file names |
-| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to |
-| InstallerClean's version and the language it was showing | InstallerClean's version and the language it was showing |
-| Counts of anything that went wrong | Counts of anything that went wrong |
-| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. |
+| Send _anonymous report | _Gửi báo cáo ẩn danh |
+| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | Báo cáo sẽ thêm kết quả của bạn, hoàn toàn ẩn danh, vào [biểu đồ này] trên GitHub, nơi mọi người có thể thấy InstallerClean đang giải phóng được bao nhiêu dung lượng trong thực tế. Báo cáo cũng chứa các chi tiết kỹ thuật ẩn danh để giúp tôi phát hiện lỗi: |
+| How much space was freed, and how many files were moved or deleted | Đã giải phóng bao nhiêu dung lượng, và đã chuyển hoặc xóa bao nhiêu tệp |
+| Whether a Move went to the same drive, another drive, a removable drive or a network share | Thao tác Chuyển đã đưa tệp đến cùng ổ đĩa, ổ đĩa khác, ổ đĩa di động hay chia sẻ mạng |
+| How long the scan and the Move or Delete took | Lần quét và thao tác Chuyển hoặc Xóa mất bao lâu |
+| How many installer files there are of each kind, and how much space they take | Có bao nhiêu tệp cài đặt mỗi loại, và chúng chiếm bao nhiêu dung lượng |
+| How many files were left alone, and why | Có bao nhiêu tệp được để nguyên, và vì sao |
+| How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | InstallerClean đã chờ ổ đĩa hoặc chia sẻ mạng chậm bao nhiêu lần, và đã ngừng chờ bao nhiêu trong số đó |
+| How many programs and patches Windows has a record of | Windows có bản ghi về bao nhiêu chương trình và bản vá |
+| Whether Windows still makes old-style short file names | Windows có còn tạo tên tệp ngắn kiểu cũ hay không |
+| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Windows là bản 10 hay 11, x64 hay Arm, và đang đặt ngôn ngữ nào |
+| InstallerClean's version and the language it was showing | Phiên bản InstallerClean và ngôn ngữ nó đang hiển thị |
+| Counts of anything that went wrong | Số lần xảy ra bất kỳ sự cố nào |
+| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Tất cả chỉ là các con số và nhãn như thế này. Không có gì trong đó nêu tên bạn, máy tính, tệp hay chương trình của bạn, và tôi không bao giờ thấy địa chỉ IP của bạn. |
 
 ## Summaries and counts
 
@@ -406,8 +406,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Files that could not be processed | Các tệp không thể xử lý |
 | Explains this folder, and how to recover a file, in the README | Giải thích thư mục này, và cách khôi phục một tệp, trong README |
 | {0} Press Alt+{1} to carry on without it. {2} | {0} Nhấn Alt+{1} để tiếp tục mà không chờ. {2} |
-| What the report holds | What the report holds |
-| What the report holds | What the report holds |
+| What the report holds | Báo cáo chứa những gì |
+| What the report holds | Báo cáo chứa những gì |
 | Change language | Thay đổi ngôn ngữ |
 | The program will restart. | Chương trình sẽ khởi động lại. |
 

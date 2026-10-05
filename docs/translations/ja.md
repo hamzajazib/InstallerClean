@@ -185,20 +185,20 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | {0} 個の {1} を完全に削除しました |
 | {0} {1} permanently deleted | {0} 個の {1} を完全に削除しました |
 | Any small donation is much appreciated. | どんな少額のご寄付でもありがたく思います。 |
-| Send _anonymous report | Send _anonymous report |
-| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: |
-| How much space was freed, and how many files were moved or deleted | How much space was freed, and how many files were moved or deleted |
-| Whether a Move went to the same drive, another drive, a removable drive or a network share | Whether a Move went to the same drive, another drive, a removable drive or a network share |
-| How long the scan and the Move or Delete took | How long the scan and the Move or Delete took |
-| How many installer files there are of each kind, and how much space they take | How many installer files there are of each kind, and how much space they take |
-| How many files were left alone, and why | How many files were left alone, and why |
-| How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for |
-| How many programs and patches Windows has a record of | How many programs and patches Windows has a record of |
-| Whether Windows still makes old-style short file names | Whether Windows still makes old-style short file names |
-| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to |
-| InstallerClean's version and the language it was showing | InstallerClean's version and the language it was showing |
-| Counts of anything that went wrong | Counts of anything that went wrong |
-| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. |
+| Send _anonymous report | 匿名レポートを送信(_A) |
+| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | レポートは、あなたの結果を完全に匿名のまま GitHub の[このグラフ]に追加します。このグラフでは、InstallerClean が実際の使用でどれだけの容量を取り戻しているかを見ることができます。また、バグを見つけるのに役立つ匿名の技術情報も含まれます： |
+| How much space was freed, and how many files were moved or deleted | 解放された容量と、移動または削除されたファイルの数 |
+| Whether a Move went to the same drive, another drive, a removable drive or a network share | 移動先が同じドライブ、別のドライブ、リムーバブル ドライブ、ネットワーク共有のどれだったか |
+| How long the scan and the Move or Delete took | スキャンと、移動または削除にかかった時間 |
+| How many installer files there are of each kind, and how much space they take | 種類ごとのインストーラーファイルの数と、それらが占める容量 |
+| How many files were left alone, and why | そのままにしたファイルの数とその理由 |
+| How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | InstallerClean が低速なドライブやネットワーク共有を待った回数と、待機をやめた数 |
+| How many programs and patches Windows has a record of | Windows に登録情報がある、プログラムとパッチの数 |
+| Whether Windows still makes old-style short file names | Windows が今も旧式の短いファイル名を作成しているかどうか |
+| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Windows が 10 か 11 か、x64 か Arm か、そしてどの言語に設定されているか |
+| InstallerClean's version and the language it was showing | InstallerClean のバージョンと、表示していた言語 |
+| Counts of anything that went wrong | うまくいかなかったことの件数 |
+| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | すべてこのような件数とラベルだけです。あなた自身、あなたの PC、ファイル、プログラムを特定するものは一切含まれず、私があなたの IP アドレスを見ることもありません。 |
 
 ## Summaries and counts
 
@@ -406,8 +406,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Files that could not be processed | 処理できなかったファイル |
 | Explains this folder, and how to recover a file, in the README | このフォルダーとファイルの回復方法を README で説明しています |
 | {0} Press Alt+{1} to carry on without it. {2} | {0} Alt+{1} キーを押すと、待たずに続行します。{2} |
-| What the report holds | What the report holds |
-| What the report holds | What the report holds |
+| What the report holds | レポートの内容 |
+| What the report holds | レポートの内容 |
 | Change language | 言語を変更 |
 | The program will restart. | プログラムが再起動します。 |
 

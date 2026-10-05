@@ -185,20 +185,20 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | {0} {1} dihapus permanen |
 | {0} {1} permanently deleted | {0} {1} dihapus permanen |
 | Any small donation is much appreciated. | Donasi sekecil apa pun sangat dihargai. |
-| Send _anonymous report | Send _anonymous report |
-| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: |
-| How much space was freed, and how many files were moved or deleted | How much space was freed, and how many files were moved or deleted |
-| Whether a Move went to the same drive, another drive, a removable drive or a network share | Whether a Move went to the same drive, another drive, a removable drive or a network share |
-| How long the scan and the Move or Delete took | How long the scan and the Move or Delete took |
-| How many installer files there are of each kind, and how much space they take | How many installer files there are of each kind, and how much space they take |
-| How many files were left alone, and why | How many files were left alone, and why |
-| How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for |
-| How many programs and patches Windows has a record of | How many programs and patches Windows has a record of |
-| Whether Windows still makes old-style short file names | Whether Windows still makes old-style short file names |
-| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to |
-| InstallerClean's version and the language it was showing | InstallerClean's version and the language it was showing |
-| Counts of anything that went wrong | Counts of anything that went wrong |
-| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. |
+| Send _anonymous report | Kirim laporan _anonim |
+| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | Laporan ini menambahkan hasil Anda, sepenuhnya anonim, ke [grafik ini] di GitHub, yang memperlihatkan berapa banyak ruang yang dikosongkan InstallerClean dalam pemakaian nyata. Laporan ini juga berisi detail teknis anonim untuk membantu saya menemukan bug: |
+| How much space was freed, and how many files were moved or deleted | Berapa banyak ruang yang dikosongkan, dan berapa banyak file yang dipindahkan atau dihapus |
+| Whether a Move went to the same drive, another drive, a removable drive or a network share | Apakah Pindahkan menuju drive yang sama, drive lain, drive yang dapat dilepas, atau berbagi jaringan |
+| How long the scan and the Move or Delete took | Berapa lama pemindaian serta Pindahkan atau Hapus berlangsung |
+| How many installer files there are of each kind, and how much space they take | Berapa banyak file penginstal dari setiap jenis, dan berapa banyak ruang yang dipakainya |
+| How many files were left alone, and why | Berapa banyak file yang dibiarkan apa adanya, dan alasannya |
+| How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | Seberapa sering InstallerClean menunggu drive atau berbagi jaringan yang lambat, dan berapa banyak yang berhenti ditunggunya |
+| How many programs and patches Windows has a record of | Berapa banyak program dan patch yang dicatat Windows |
+| Whether Windows still makes old-style short file names | Apakah Windows masih membuat nama file pendek gaya lama |
+| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Apakah Windows versi 10 atau 11 dan x64 atau Arm, serta bahasa yang disetel di dalamnya |
+| InstallerClean's version and the language it was showing | Versi InstallerClean dan bahasa yang ditampilkannya |
+| Counts of anything that went wrong | Jumlah dari apa pun yang gagal |
+| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Semuanya berupa jumlah dan label seperti ini. Tidak ada yang menyebut Anda, PC Anda, file Anda, atau program Anda, dan saya tidak pernah melihat alamat IP Anda. |
 
 ## Summaries and counts
 
@@ -406,8 +406,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Files that could not be processed | File yang tidak dapat diproses |
 | Explains this folder, and how to recover a file, in the README | Menjelaskan folder ini, dan cara memulihkan file, di README |
 | {0} Press Alt+{1} to carry on without it. {2} | {0} Tekan Alt+{1} untuk melanjutkan tanpa menunggu. {2} |
-| What the report holds | What the report holds |
-| What the report holds | What the report holds |
+| What the report holds | Isi laporan |
+| What the report holds | Isi laporan |
 | Change language | Ganti bahasa |
 | The program will restart. | Program akan dimulai ulang. |
 
