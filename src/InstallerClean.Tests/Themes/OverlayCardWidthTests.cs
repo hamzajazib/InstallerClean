@@ -260,8 +260,21 @@ public class OverlayCardWidthTests
         var window = ThemeXaml.Load("ThemeXaml.MainWindow.xaml");
         var resources = new XElement(Presentation + "Grid.Resources");
 
+        // Tokens and Components each merge the file before them, and all three go in
+        // here whole and in order, so the merges are left out: a property element
+        // inside Grid.Resources does not parse. Any other property element at a
+        // file's top level fails the test rather than being dropped.
         foreach (var theme in new[] { "Primitives", "Tokens", "Components" })
-            resources.Add(ThemeXaml.Load($"ThemeXaml.{theme}.xaml").Root!.Elements());
+        {
+            foreach (var element in ThemeXaml.Load($"ThemeXaml.{theme}.xaml").Root!.Elements())
+            {
+                if (element.Name == Presentation + "ResourceDictionary.MergedDictionaries")
+                    continue;
+                Assert.False(element.Name.LocalName.Contains('.'),
+                    $"{theme}.xaml sets {element.Name.LocalName} on its dictionary, which this test does not model.");
+                resources.Add(element);
+            }
+        }
 
         // The theme's family, with the app's font files named by their place on disk.
         var family = resources.Elements().Single(e => (string?)e.Attribute(Xaml + "Key") == "Type.FontFamily");
