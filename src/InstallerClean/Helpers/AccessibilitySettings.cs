@@ -78,30 +78,24 @@ public sealed class AccessibilitySettings : INotifyPropertyChanged
 
     private void Refresh()
     {
-        // SystemEvents can raise off the dispatcher thread; marshal so
-        // PropertyChanged consumers (live bindings) update where WPF
-        // expects them.
+        // SystemEvents can raise off the dispatcher thread, so the read is
+        // marshalled onto it and PropertyChanged consumers (live bindings)
+        // update where WPF expects them.
         //
-        // NO DISPATCHER MEANS DROP IT, NOT DO IT HERE, and that is the whole of
-        // what changed. Application.Current is null once WPF has shut down, and
-        // the two subscriptions in the constructor are never removed, so this
-        // method is still reachable then, on the SystemEvents thread. Falling
-        // through to the direct call there would read the settings and raise
-        // PropertyChanged off the dispatcher, which is what the summary at the
-        // top of this file says does not happen, into a handler that writes
-        // the application's resource dictionary. Nothing here catches what that
-        // throws, and the throw would land on the SystemEvents thread.
-        //
-        // NOTHING IS LOST BY DROPPING. The value is read again on the next
+        // With no dispatcher the refresh is dropped. Application.Current is null
+        // once WPF has shut down, and the two subscriptions in the constructor
+        // are never removed, so this method is still reachable then, on the
+        // SystemEvents thread. Reading the settings there would raise
+        // PropertyChanged off the dispatcher, into a handler that writes the
+        // application's resource dictionary, and anything that handler threw
+        // would land on the SystemEvents thread with nothing to catch it.
+        // Nothing is lost by dropping it: the value is read again on the next
         // setting change, and a process whose dispatcher has gone has no binding
-        // left to tell.
+        // left to update.
         //
-        // THE OTHER MARSHALS IN THIS APP DO NOT SETTLE IT AND CONSISTENCY IS NOT
-        // THE ARGUMENT. Some of them drop the work when the dispatcher is gone
-        // and some run it on the calling thread on purpose, MainViewModel having
-        // written down why running it there is right for a test with no
-        // Application at all. What decides it here is what running it here would
-        // do, which is the paragraph above, and not what the neighbours do.
+        // Some other marshals in the app run their work on the calling thread
+        // when there is no dispatcher. Do not make this one match them, for the
+        // reason in the paragraph above.
         var dispatcher = Application.Current?.Dispatcher;
         if (dispatcher is null) return;
 
