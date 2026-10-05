@@ -180,6 +180,36 @@ internal static class DetailWindowSizing
     }
 
     /// <summary>
+    /// <paramref name="minimum"/>, held to the width a room
+    /// <paramref name="roomWidth"/> wide leaves when <paramref name="margins"/>
+    /// are kept clear across its two sides.
+    /// </summary>
+    public static double HeldMinimum(double minimum, double roomWidth, double margins)
+        => Math.Min(minimum, RoomLimit(roomWidth, margins));
+
+    /// <summary>
+    /// Holds the MinWidth the XAML gives <paramref name="element"/> inside the room
+    /// <paramref name="room"/> gives it, less the element's own left and right
+    /// margins, through <see cref="HeldMinimum"/>. Taken again whenever the room's
+    /// width changes, until the window closes, and not while the room has not been
+    /// laid out. Suits a MinWidth that does not scale with the text size; one that
+    /// does goes through <see cref="KeepCardInsideRoom"/>.
+    /// </summary>
+    public static void KeepMinWidthInsideRoom(this Window window, FrameworkElement element, FrameworkElement room)
+    {
+        var minimum = element.MinWidth;
+
+        void OnRoomSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (e.WidthChanged && room.ActualWidth > 0)
+                element.MinWidth = HeldMinimum(minimum, room.ActualWidth, element.Margin.Left + element.Margin.Right);
+        }
+
+        room.SizeChanged += OnRoomSizeChanged;
+        window.Closed += (_, _) => room.SizeChanged -= OnRoomSizeChanged;
+    }
+
+    /// <summary>
     /// Moves <paramref name="window"/> back inside its monitor's work
     /// area if its bottom or right edge has crossed out. A shown
     /// SizeToContent window grows down and right from a fixed top-left,

@@ -41,6 +41,19 @@ public class DetailWindowSizingCardWidthsTests
     }
 
     [Fact]
+    public void A_minimum_that_fits_the_room_is_kept()
+    {
+        // The Move or Delete card's 260 in a window 1000 wide, keeping 24 each side.
+        Assert.Equal(260.0, DetailWindowSizing.HeldMinimum(260, 1000, 48));
+    }
+
+    [Fact]
+    public void A_minimum_wider_than_the_room_gives_the_room()
+    {
+        Assert.Equal(252.0, DetailWindowSizing.HeldMinimum(260, 300, 48));
+    }
+
+    [Fact]
     public void A_room_narrower_than_the_margins_gives_no_width_rather_than_less()
     {
         Assert.Equal(0.0, DetailWindowSizing.RoomLimit(40, 48));

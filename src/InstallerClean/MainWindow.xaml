@@ -682,7 +682,7 @@
                     Padding="28,22" MaxWidth="{a11y:TextScaled 480}" Margin="{StaticResource GapX.Xl}"
                     HorizontalAlignment="Stretch" VerticalAlignment="Center">
                 <StackPanel>
-                    <ProgressBar IsIndeterminate="True" Width="240" Height="8" Margin="{StaticResource GapBottom.Md}"
+                    <ProgressBar IsIndeterminate="True" MaxWidth="240" Height="8" Margin="{StaticResource GapBottom.Md}"
                                  AutomationProperties.Name="{loc:Translate Automation.ScanningProgress}"/>
                     <!-- The text drawn takes break opportunities inside a path
                          the line names, as a wait on a share does; the name a
@@ -764,8 +764,12 @@
                  the window, so in a window too narrow for 480 scaled it is still
                  never wider than the scanning card. A longer heading, as a wait
                  naming a long share is, wraps inside that rather than widening
-                 the card. -->
-            <Border Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.Pill}"
+                 the card. The MinWidth keeps a short heading's card wide enough
+                 for the 200 of the bar, and is held to the window less the 24
+                 each side in code-behind (KeepMinWidthInsideRoom), so in a window
+                 too narrow for it the card narrows with the window, and the bar,
+                 which stops at 200, narrows with the card. -->
+            <Border x:Name="OperatingCard" Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.Pill}"
                     BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}"
                     Padding="28,22" MinWidth="260" MaxWidth="{a11y:TextScaled 480}" Margin="{StaticResource GapX.Xl}"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -832,7 +836,7 @@
                     <ProgressBar Value="{Binding Cleanup.OperationProgressPercent}"
                                  IsIndeterminate="{Binding Cleanup.IsOperationProgressIndeterminate}"
                                  Minimum="0" Maximum="100"
-                                 Width="200" Height="8" Margin="0,12,0,8"
+                                 MaxWidth="200" Height="8" Margin="0,12,0,8"
                                  AutomationProperties.Name="{loc:Translate Automation.OperationProgress}"/>
                     <!-- The 0,0,0,2 here and the 0,4,0,0 on the filename below sit
                          off the 8/12/16/24 spacing scale on purpose: they tighten

@@ -127,6 +127,32 @@ public class OverlayCardWidthTests
         Assert.True(failures.Count == 0, Report(failures));
     }
 
+    // Below the window widths the tests above take, where the card is narrower than
+    // the bar's own width: the bar narrows with the card rather than running past it.
+    [Theory]
+    [InlineData(ScanningCardLine)]
+    [InlineData(OperatingCardLine)]
+    public void The_progress_bar_stays_inside_its_card_in_a_narrow_window(string lineName)
+    {
+        var failures = new List<string>();
+
+        InLanguage("en-GB", 1.0, lineName, (host, card) =>
+        {
+            var rows = (Panel)card.Child;
+            var bar = Shown(rows).OfType<ProgressBar>().Single();
+            for (var windowWidth = 200.0; windowWidth < 400; windowWidth += 25)
+            {
+                LayOut(host, windowWidth);
+                var start = bar.TranslatePoint(new Point(0, 0), rows).X;
+                if (start < -Tolerance || start + bar.ActualWidth > rows.ActualWidth + Tolerance)
+                    failures.Add($"In a window {windowWidth} wide the bar spans {start} to "
+                        + $"{start + bar.ActualWidth} inside a card {rows.ActualWidth} wide.");
+            }
+        });
+
+        Assert.True(failures.Count == 0, Report(failures));
+    }
+
     private static string Report(List<string> failures)
         => $"{failures.Count} failures, the first of them:{Environment.NewLine}"
             + string.Join(Environment.NewLine, failures.Take(40));
