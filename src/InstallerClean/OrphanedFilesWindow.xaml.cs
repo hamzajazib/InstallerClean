@@ -114,11 +114,10 @@ public partial class OrphanedFilesWindow : Window
     /// column behind it, which is the filler header WPF generates past the last
     /// column.
     ///
-    /// This list is as long as the cache folder, so the mechanism matters: a
-    /// machine with 800,000 files in <c>C:\Windows\Installer</c> puts three
-    /// quarters of a million rows behind these headers, and the sort runs on the
-    /// UI thread. The obvious speed-up, swapping the property name for a typed
-    /// comparer, is a step backwards, and the reason is not visible from here.
+    /// This list is as long as the cache folder, which can hold hundreds of
+    /// thousands of files in <c>C:\Windows\Installer</c>, and the sort runs on
+    /// the UI thread. Keep the sort as a property name rather than a typed
+    /// comparer, for the reason below.
     ///
     /// A SortDescription costs one property read per ITEM, not one per
     /// comparison. ListCollectionView.PrepareLocalArray sorts its local
@@ -128,11 +127,9 @@ public partial class OrphanedFilesWindow : Window
     /// is evaluated once per row and every comparison reads the cached value.
     /// Any OTHER IComparer, which is what CustomSort takes, falls to the plain
     /// ArrayList.Sort branch with no cache at all. So replacing this with a typed
-    /// comparer would trade one read per row for two reads per comparison.
-    /// Measured over 776,000 of these rows, that trade loses on the File column:
-    /// 1.4 s for the cached shape against 1.8 s for the per-comparison one,
-    /// because FileName is a Path.GetFileName over the full path and the comparer
-    /// would run it thirty million times rather than 776,000.
+    /// comparer would trade one read per row for two reads per comparison, and
+    /// FileName is a Path.GetFileName over the full path, which the comparer
+    /// would then run on every comparison rather than once per row.
     ///
     /// What is left after that is culture-aware collation, which costs the same
     /// whichever mechanism asks for it and is the ordering the app wants (see
@@ -161,19 +158,17 @@ public partial class OrphanedFilesWindow : Window
     /// <summary>
     /// Puts the view in the given order and repaints the indicators to match.
     /// The order the window opens in comes through here too, so the arrow the
-    /// user sees always has a SortDescription behind it; mirroring the view
-    /// model's LINQ order into the _lastSort* fields instead left the first
-    /// click back onto that column reordering the rows rather than reversing
-    /// them, the view never having been sorted at all.
+    /// user sees always has a SortDescription behind it, and the first click on
+    /// the column the window opened sorted by reverses the rows.
     ///
     /// Every sort ends on the full path, which is unique per row, so the order
     /// is total. This list needs that more than its sibling does: the Reason
     /// column takes exactly two values, so sorting by it puts every row into
     /// one of two ties, and without a tiebreaker Reason, File, Reason
     /// reshuffles rows inside a group for no reason a user can see.
-    /// RegisteredFilesWindow.ApplySort builds its descriptions the same way and
-    /// says why SortDescriptions beat a CustomSort comparer, which is not the
-    /// obvious way round.
+    /// RegisteredFilesWindow.ApplySort builds its descriptions the same way, and
+    /// SortByColumn above says why they are SortDescriptions rather than a
+    /// CustomSort comparer.
     /// </summary>
     private void ApplySort(string sortProperty, ListSortDirection direction, GridViewColumn column)
     {

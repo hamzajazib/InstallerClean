@@ -54,13 +54,9 @@
                 Click="CloseClick" HorizontalAlignment="Right" VerticalAlignment="Top"
                 Margin="{StaticResource Margin.CloseButtonOverhang}" AutomationProperties.Name="{loc:Translate Automation.CloseWindow}" ToolTip="{loc:Translate Tooltip.Close}"/>
 
-        <!-- ONE LIST, and no heading over it. The window title says what the
-             list is, and the two headings that stood here said what the two
-             groups were; with the groups merged, neither sentence is true of
-             every row and a second sentence directly under a title bar that
-             already carries one is furniture. OrphanedFilesWindow is the pair
-             to this window and lays out the same way: title bar, then its
-             list. -->
+        <!-- One list, with no heading over it: the window title says what the
+             list is. OrphanedFilesWindow is the pair to this window and lays
+             out the same way: title bar, then its list. -->
         <Border Grid.Row="1" Style="{StaticResource CardNoPad}" ClipToBounds="True">
             <!-- Negative top/bottom margin bleeds the ListView past the
                  CardNoPad inner edges so the first and last rows sit flush with
@@ -120,11 +116,12 @@
                 </ListView.ItemContainerStyle>
                 <ListView.View>
                     <GridView>
-                        <!-- The four columns total 860. Size and Patches are sized
-                             for their own header plus a sort arrow (see the note
-                             on Size below) and Product name takes what is left:
-                             the widest translated header here is about 142
-                             against 480, and product names wrap. -->
+                        <!-- The four columns total 860. File, Size and Patches are
+                             sized for their contents and their own header plus a
+                             sort arrow (see the note on Size below), and Product
+                             name takes what is left. A product name too long for
+                             it ends in an ellipsis, and its tooltip holds the
+                             whole name. -->
                         <GridViewColumn Header="{loc:Translate Field.ProductName}" Width="{a11y:TextScaled 480}"
                                         x:Name="ColProductName">
                             <GridViewColumn.CellTemplate>
@@ -146,14 +143,10 @@
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
-                        <!-- 120, and the 50 it gives up goes to the Patches column at
-                             the end of the row, so the total across the four is
-                             unchanged and nothing else in the layout moves. This
-                             column holds a Windows-generated cache name, which is
-                             eight hex digits and an extension: twelve characters at
-                             its longest, and comfortably inside 120 with the
-                             sorted header's arrow. The heading is short in all
-                             sixteen languages, "Bestand" the longest of them. -->
+                        <!-- This column holds a Windows-generated cache name, which
+                             is eight hex digits and an extension: twelve
+                             characters at its longest, inside 120 with room to
+                             spare. -->
                         <GridViewColumn Header="{loc:Translate Field.File}" Width="{a11y:TextScaled 120}"
                                         x:Name="ColFileName">
                             <GridViewColumn.CellTemplate>
@@ -164,11 +157,12 @@
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
-                        <!-- 110 and 100, not 90 and 80: the sorted header carries two
-                             spaces and an arrow and the header template spends 16 on
-                             padding, so "Dimensione" (84) and "Correctifs" (71)
-                             overflowed and lost or clipped their arrows. Matches the
-                             orphaned-files window, which has the same Size column. -->
+                        <!-- The sorted header carries two spaces and an arrow, and
+                             the header template spends 16 on padding. Any column
+                             can be sorted, so each column is at least as wide as
+                             its header with that suffix and padding, in every
+                             language. The same width as the orphaned-files
+                             window's Size column. -->
                         <GridViewColumn Header="{loc:Translate Field.Size}" Width="{a11y:TextScaled 110}"
                                         x:Name="ColSizeBytes"
                                         HeaderContainerStyle="{StaticResource NumericColumnHeader}">
@@ -197,14 +191,10 @@
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
-                        <!-- 150, taking the 50 the File column gives up. This heading
-                             is the longest of the four in the languages that matter
-                             most to it: the Russian and Ukrainian words for patches
-                             each run to eleven characters, and Poppins carries no
-                             Cyrillic, so both are served by the system fallback face
-                             at its own widths. At 100 they filled the column and left
-                             the sorted header no room for its arrow. The cells hold a
-                             small integer, so the width is decided by the heading. -->
+                        <!-- The cells hold a small integer, so the width is decided
+                             by the heading and its sort arrow. The Russian and
+                             Ukrainian words for patches each run to eleven
+                             characters, drawn in Montserrat. -->
                         <GridViewColumn Header="{loc:Translate Field.Patches}" Width="{a11y:TextScaled 150}"
                                         x:Name="ColPatchCount"
                                         HeaderContainerStyle="{StaticResource NumericColumnHeader}">

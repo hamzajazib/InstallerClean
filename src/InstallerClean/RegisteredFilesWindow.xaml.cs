@@ -68,9 +68,8 @@ public partial class RegisteredFilesWindow : Window
         // The rows themselves are not marked and no cause travels with them. What
         // their product cell says is that there is no program to name, which is
         // the fact about the file rather than a label put on the row, and the
-        // ordering is the whole of the rest of the distinction. Splitting them
-        // back out under a heading of their own is undoing a decision rather than
-        // tidying a layout, one list being the ruling.
+        // ordering is the whole of the rest of the distinction. They stay in the
+        // one list, with no heading of their own.
         //
         // How many rows land there is not something this app can know. It is
         // whatever the scan could not settle on the machine in front of it.
@@ -110,8 +109,8 @@ public partial class RegisteredFilesWindow : Window
             // reachable in a way its sibling is not. A scan that claimed no
             // package at all throws before it can produce a result
             // (InstallerQueryService, Error.InstallerDbEmpty), so the state
-            // looks unreachable through a successful scan; this costs nothing
-            // and settles it rather than resting on that reading.
+            // looks unreachable through a successful scan, and focus goes to
+            // Close all the same.
             CloseButton.Focus();
         }
 
@@ -127,15 +126,13 @@ public partial class RegisteredFilesWindow : Window
     /// UTF-16 code unit and so files every accented or non-Latin product name
     /// after Z; a SortDescription compares culture-aware, which interleaves them
     /// with their base letters. On any machine holding a product name outside
-    /// plain ASCII, and there are plenty, the two orders differ, and the first
-    /// click on Product name would then reorder the rows rather than reverse
-    /// them.
+    /// plain ASCII the two orders differ, and the first click on Product name
+    /// would then reorder the rows rather than reverse them.
     ///
     /// Every sort ends on the full path, which is unique per row, so the order
     /// is total: rows sharing a product name (one product code registered with
     /// several caches), a size or a patch count resolve the same way every time
-    /// rather than however WPF's comparer happened to leave them. That is also
-    /// where the view model's own path tiebreaker went.
+    /// rather than however WPF's comparer happened to leave them.
     ///
     /// SortDescriptions and not a CustomSort comparer, for the reason set out on
     /// OrphanedFilesWindow.SortByColumn: WPF caches the sort value per item for a
@@ -144,12 +141,11 @@ public partial class RegisteredFilesWindow : Window
     /// </summary>
     private void ApplySort(string sortProperty, ListSortDirection direction, GridViewColumn column)
     {
-        // One rebuild, not three. Every SortDescriptions mutation raises a
-        // CollectionChanged that ListCollectionView turns into its own
-        // RefreshOrDefer, and Clear raises one even when the collection is
-        // already empty, so undeferred this sorts the whole list TWICE per
-        // header click: once by the primary key alone, which the second Add then
-        // throws away and redoes with the tiebreaker attached.
+        // Deferred, so the descriptions below are one rebuild. Every
+        // SortDescriptions mutation raises a CollectionChanged that
+        // ListCollectionView turns into its own RefreshOrDefer, and Clear raises
+        // one even when the collection is already empty, so undeferred each Add
+        // would sort the whole list again.
         var view = CollectionViewSource.GetDefaultView(ProductsList.ItemsSource);
         using (view.DeferRefresh())
         {

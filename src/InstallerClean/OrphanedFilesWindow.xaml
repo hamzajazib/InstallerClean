@@ -118,12 +118,11 @@
                     </ListView.ItemContainerStyle>
                     <ListView.View>
                         <GridView>
-                            <!-- The three column widths total under the list
-                                 pane's ~466 units at the 1000 default (952
-                                 content minus the 12 gap, the 460 details
-                                 pane, the card border and the scrollbar),
-                                 and they scale with the OS text size so the
-                                 names and sizes stay whole as they grow.
+                            <!-- The three column widths total less than the
+                                 list's own column at the 1000 default, after
+                                 the card border and the scrollbar, and they
+                                 scale with the OS text size so the names and
+                                 sizes stay whole as they grow.
                                  Horizontal scrolling is Auto, not Disabled:
                                  when the scaled columns outgrow the pane (a
                                  large scale on a small screen, or a
@@ -171,14 +170,11 @@
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <!-- 110, not 90. UpdateSortIndicators appends two spaces
-                                 and an arrow to the sorted header, and the header
-                                 template spends 16 on padding, so the widest
-                                 translation ("Dimensione", 84 at Type.Caption in
-                                 Poppins Medium) overflowed 90 and dropped its arrow
-                                 entirely in Italian, clipping it in Vietnamese. Any
-                                 column can be sorted, so a header must fit its own
-                                 width plus that suffix in every language. -->
+                            <!-- UpdateSortIndicators appends two spaces and an
+                                 arrow to the sorted header, and the header template
+                                 spends 16 on padding. Any column can be sorted, so
+                                 each column is at least as wide as its header with
+                                 that suffix and padding, in every language. -->
                             <GridViewColumn Header="{loc:Translate Field.Size}" Width="{a11y:TextScaled 110}"
                                             x:Name="ColSize"
                                             HeaderContainerStyle="{StaticResource NumericColumnHeader}">
