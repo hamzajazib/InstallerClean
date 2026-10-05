@@ -44,12 +44,16 @@
                    HorizontalAlignment="Center"
                    RenderOptions.BitmapScalingMode="HighQuality"/>
 
-            <!-- App name -->
-            <TextBlock Grid.Row="3" Text="{loc:Translate Window.Main.Title}"
-                       Foreground="{StaticResource Text.Heading}"
-                       FontSize="{DynamicResource Type.Display}"
-                       FontWeight="Bold"
-                       HorizontalAlignment="Center"/>
+            <!-- App name. One word, so it cannot wrap: in a window narrower
+                 than the name at a large text size, the Viewbox shrinks it to
+                 the window's width, and at any width it fits it is drawn at its
+                 own size. -->
+            <Viewbox Grid.Row="3" StretchDirection="DownOnly" HorizontalAlignment="Center">
+                <TextBlock Text="{loc:Translate Window.Main.Title}"
+                           Foreground="{StaticResource Text.Heading}"
+                           FontSize="{DynamicResource Type.Display}"
+                           FontWeight="Bold"/>
+            </Viewbox>
 
             <!-- Progress bar. Splash is the brand moment, not functional UI:
                  a heavier 12px bar reads as deliberate against the 96px hero
@@ -83,17 +87,24 @@
                  drive or share and the scan carries on. It sits 4 under the
                  step text, as on the two cards in the main window, and never
                  takes the focus itself. Its spoken name, naming the drive or
-                 share, is set from code-behind with the wait. -->
+                 share, is set from code-behind with the wait.
+
+                 The label is an AccessText that wraps, as on the main window's
+                 two cards, so in a window too narrow for it on one line it takes
+                 two, kept 16 off the card's edges as the step text is. The
+                 access key works as it does on a plain string: the AccessText
+                 registers it, and the key press reaches the button around it. -->
             <Button Grid.Row="8"
                     x:Name="StopWaitingButton"
-                    Content="{loc:Translate Action.StopWaiting}"
                     Click="StopWaitingClick"
                     Style="{StaticResource SmallGhostPill}"
                     Padding="16,0"
-                    Margin="0,4,0,0"
+                    Margin="16,4,16,0"
                     HorizontalAlignment="Center"
                     Visibility="Collapsed"
-                    AutomationProperties.HelpText="{loc:Translate Status.StopWaitingLeavesAlone}"/>
+                    AutomationProperties.HelpText="{loc:Translate Status.StopWaitingLeavesAlone}">
+                <AccessText Text="{loc:Translate Action.StopWaiting}" TextWrapping="Wrap" TextAlignment="Center"/>
+            </Button>
 
             <!-- What the button leaves alone, shown with it, in the ticker's
                  colour and size. It wraps inside the card as the step text
