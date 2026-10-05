@@ -591,6 +591,7 @@ const MAP = {
   'Completion.ReportPanel.SeeReport': `Xem chính xác những gì được gửi`,
   'Window.Report.Title': `Báo cáo ẩn danh`,
   'Window.Report.Unreadable': `InstallerClean không đọc được báo cáo.`,
+  'Automation.Scroll.Waiting': `Waiting for a drive or share`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

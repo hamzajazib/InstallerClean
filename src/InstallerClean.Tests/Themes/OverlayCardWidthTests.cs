@@ -153,6 +153,46 @@ public class OverlayCardWidthTests
         Assert.True(failures.Count == 0, Report(failures));
     }
 
+    // A window shorter than the card, as a wait naming a long share at a large text
+    // size makes it on a short screen: the line read out and Cancel stay inside the
+    // window, and the part a wait adds scrolls. The window is the card's own height
+    // less 40, so the case holds in every language whatever that height is.
+    [Theory]
+    [InlineData(ScanningCardLine, "ScanCancelButton")]
+    [InlineData(OperatingCardLine, "OperationCancelButton")]
+    public void The_read_out_line_and_Cancel_stay_inside_a_window_shorter_than_the_card(
+        string lineName, string cancelName)
+    {
+        const double Shortfall = 40;
+        var failures = new List<string>();
+
+        foreach (var language in SupportedLanguages.CultureNames)
+        {
+            InLanguage(language, 2.25, lineName, (host, card) =>
+            {
+                var line = (TextBlock)card.FindName(lineName);
+                var cancel = (FrameworkElement)card.FindName(cancelName);
+                line.Text = LongLine;
+                foreach (var windowWidth in new[] { 800.0, 1200.0 })
+                {
+                    LayOut(host, windowWidth);
+                    var windowHeight = host.ActualHeight - Shortfall;
+                    LayOut(host, windowWidth, windowHeight);
+
+                    foreach (var element in new FrameworkElement[] { line, cancel })
+                    {
+                        var top = element.TranslatePoint(new Point(0, 0), host).Y;
+                        if (top < -Tolerance || top + element.ActualHeight > windowHeight + Tolerance)
+                            failures.Add($"{language} in a window {windowWidth} by {windowHeight}: "
+                                + $"{Describe(element)} spans {top} to {top + element.ActualHeight}.");
+                    }
+                }
+            });
+        }
+
+        Assert.True(failures.Count == 0, Report(failures));
+    }
+
     private static string Report(List<string> failures)
         => $"{failures.Count} failures, the first of them:{Environment.NewLine}"
             + string.Join(Environment.NewLine, failures.Take(40));
@@ -163,9 +203,10 @@ public class OverlayCardWidthTests
             yield return width;
     }
 
-    private static void LayOut(Grid host, double windowWidth)
+    private static void LayOut(Grid host, double windowWidth, double windowHeight = double.PositiveInfinity)
     {
         host.Width = windowWidth;
+        host.MaxHeight = windowHeight;
         host.Measure(new Size(windowWidth, double.PositiveInfinity));
         host.Arrange(new Rect(0, 0, windowWidth, host.DesiredSize.Height));
     }

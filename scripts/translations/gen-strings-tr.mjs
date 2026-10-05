@@ -517,6 +517,7 @@ Ayrıntılar şuraya yazıldı:
   'Completion.ReportPanel.SeeReport': `Tam olarak neyin gönderildiğini gör`,
   'Window.Report.Title': `Anonim rapor`,
   'Window.Report.Unreadable': `InstallerClean raporu okuyamadı.`,
+  'Automation.Scroll.Waiting': `Waiting for a drive or share`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

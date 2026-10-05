@@ -518,6 +518,7 @@ const MAP = {
   'Completion.ReportPanel.SeeReport': `送信される内容をそのまま見る`,
   'Window.Report.Title': `匿名レポート`,
   'Window.Report.Unreadable': `InstallerClean はレポートを読み取れませんでした。`,
+  'Automation.Scroll.Waiting': `Waiting for a drive or share`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

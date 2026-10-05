@@ -525,6 +525,7 @@ const MAP = {
   'Completion.ReportPanel.SeeReport': `Ver exactamente qué se envía`,
   'Window.Report.Title': `El informe anónimo`,
   'Window.Report.Unreadable': `InstallerClean no pudo leer el informe.`,
+  'Automation.Scroll.Waiting': `Waiting for a drive or share`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

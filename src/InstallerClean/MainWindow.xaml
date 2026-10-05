@@ -681,76 +681,97 @@
                     BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}"
                     Padding="28,22" MaxWidth="{a11y:TextScaled 480}" Margin="{StaticResource GapX.Xl}"
                     HorizontalAlignment="Stretch" VerticalAlignment="Center">
-                <StackPanel>
-                    <ProgressBar IsIndeterminate="True" MaxWidth="240" Height="8" Margin="{StaticResource GapBottom.Md}"
-                                 AutomationProperties.Name="{loc:Translate Automation.ScanningProgress}"/>
-                    <!-- The text drawn takes break opportunities inside a path
-                         the line names, as a wait on a share does; the name a
-                         screen reader speaks is the line as composed, followed,
-                         while the stop-waiting button shows, by its key and what
-                         it leaves alone. The code-behind reads it out as the card
-                         appears and each time it changes while the scan runs.
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0">
+                        <ProgressBar IsIndeterminate="True" MaxWidth="240" Height="8" Margin="{StaticResource GapBottom.Md}"
+                                     AutomationProperties.Name="{loc:Translate Automation.ScanningProgress}"/>
+                        <!-- The text drawn takes break opportunities inside a path
+                             the line names, as a wait on a share does; the name a
+                             screen reader speaks is the line as composed, followed,
+                             while the stop-waiting button shows, by its key and what
+                             it leaves alone. The code-behind reads it out as the card
+                             appears and each time it changes while the scan runs.
 
-                         The 4 under it and the 4 over the ticker keep the 8
-                         between the two that the scale gives, while the button and
-                         its line, which take no space when collapsed, sit 4 under
-                         this line when they show. -->
-                    <TextBlock x:Name="ScanProgressText"
-                               Text="{Binding Scan.ScanProgress, Converter={StaticResource BreakPathsAtFolders}}"
-                               Foreground="{StaticResource Text.Heading}"
-                               FontSize="{DynamicResource Type.Heading.Sm}" TextWrapping="Wrap" TextAlignment="Center"
-                               Margin="0,0,0,4"
-                               AutomationProperties.Name="{Binding Scan.ScanProgressName}"
-                               AutomationProperties.LiveSetting="Polite"/>
-                    <!-- Shown only while the line above names a wait. It gives up
-                         on that drive or share and the scan carries on; Cancel
-                         below still ends the scan. It never takes the focus itself,
-                         and code-behind hands the focus to Cancel if it has it as
-                         it goes.
+                             The 4 under it and the 4 over the ticker keep the 8
+                             between the two that the scale gives, while the button and
+                             its line, which take no space when collapsed, sit 4 under
+                             this line when they show. -->
+                        <TextBlock x:Name="ScanProgressText"
+                                   Text="{Binding Scan.ScanProgress, Converter={StaticResource BreakPathsAtFolders}}"
+                                   Foreground="{StaticResource Text.Heading}"
+                                   FontSize="{DynamicResource Type.Heading.Sm}" TextWrapping="Wrap" TextAlignment="Center"
+                                   Margin="0,0,0,4"
+                                   AutomationProperties.Name="{Binding Scan.ScanProgressName}"
+                                   AutomationProperties.LiveSetting="Polite"/>
+                    </StackPanel>
+                    <!-- What a wait adds to the card, and the only part of it that
+                         scrolls. Where the card is taller than the window, as a wait
+                         naming a long share at a large text size makes it, this region
+                         scrolls while the bar, the milestone line and Cancel stay in
+                         view. The milestone line sits outside it because it is read
+                         out, and a line scrolled out of view is reported off screen. -->
+                    <ScrollViewer Grid.Row="1" Style="{StaticResource BodyScrollRegion}"
+                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  AutomationProperties.Name="{loc:Translate Automation.Scroll.Waiting}">
+                        <StackPanel>
+                            <!-- Shown only while the line above names a wait. It gives up
+                                 on that drive or share and the scan carries on; Cancel
+                                 below still ends the scan. It never takes the focus itself,
+                                 and code-behind hands the focus to Cancel if it has it as
+                                 it goes.
 
-                         The label is an AccessText that wraps, so in a card too
-                         narrow for it on one line it takes two and the button is
-                         never wider than the card. The access key works as it does
-                         on a plain string: the AccessText registers it, and the
-                         key press reaches the button around it. -->
-                    <Button x:Name="ScanStopWaitingButton" Style="{StaticResource GhostPill}"
-                            Command="{Binding Scan.StopWaitingCommand}"
-                            MinHeight="28" Padding="16,0" FontSize="{DynamicResource Type.Body}"
-                            HorizontalAlignment="Center"
-                            FocusVisualStyle="{StaticResource SmallPillFocusVisual}"
-                            Visibility="{Binding Scan.CanStopWaiting, Converter={StaticResource BoolToVis}}"
-                            AutomationProperties.Name="{Binding Scan.StopWaitingName}"
-                            AutomationProperties.HelpText="{loc:Translate Status.StopWaitingLeavesAlone}">
-                        <AccessText Text="{loc:Translate Action.StopWaiting}" TextWrapping="Wrap" TextAlignment="Center"/>
-                    </Button>
-                    <!-- What the button leaves alone, shown with it, in the ticker's
-                         colour and size. No LiveSetting: the line's spoken name
-                         carries the same sentence while the button shows. -->
-                    <TextBlock x:Name="ScanStopWaitingLeavesAlone"
-                               Text="{loc:Translate Status.StopWaitingLeavesAlone}"
-                               Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Caption}"
-                               TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center"
-                               Margin="0,2,0,4"
-                               Visibility="{Binding Scan.CanStopWaiting, Converter={StaticResource BoolToVis}}"/>
-                    <!-- Ticker: a count of the folder's files as the scan
-                         lists them, the name of each installed program as it
-                         asks Windows about it, then a count of the files as it
-                         matches them. Display-only and never read out, because
-                         it updates once per program and many times while the
-                         files are counted, and reading each update would queue
-                         speech far faster than it is spoken. The milestone line
-                         above is the one read out. -->
-                    <TextBlock Text="{Binding Scan.ScanTicker}"
-                               Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Caption}"
-                               HorizontalAlignment="Center" Margin="0,4,0,16"
-                               TextTrimming="CharacterEllipsis" MaxWidth="{a11y:TextScaled 240}"/>
-                    <Button x:Name="ScanCancelButton" Style="{StaticResource GhostPill}"
-                            Content="{loc:Translate Action.Cancel}" Command="{Binding Scan.CancelScanCommand}"
-                            MinHeight="28" Padding="16,0" FontSize="{DynamicResource Type.Body}"
-                            HorizontalAlignment="Center"
-                            FocusVisualStyle="{StaticResource SmallPillFocusVisual}"
-                            AutomationProperties.Name="{loc:Translate Automation.CancelScan}"/>
-                </StackPanel>
+                                 The label is an AccessText that wraps, so in a card too
+                                 narrow for it on one line it takes two and the button is
+                                 never wider than the card. The access key works as it does
+                                 on a plain string: the AccessText registers it, and the
+                                 key press reaches the button around it. -->
+                            <Button x:Name="ScanStopWaitingButton" Style="{StaticResource GhostPill}"
+                                    Command="{Binding Scan.StopWaitingCommand}"
+                                    MinHeight="28" Padding="16,0" FontSize="{DynamicResource Type.Body}"
+                                    HorizontalAlignment="Center"
+                                    FocusVisualStyle="{StaticResource SmallPillFocusVisual}"
+                                    Visibility="{Binding Scan.CanStopWaiting, Converter={StaticResource BoolToVis}}"
+                                    AutomationProperties.Name="{Binding Scan.StopWaitingName}"
+                                    AutomationProperties.HelpText="{loc:Translate Status.StopWaitingLeavesAlone}">
+                                <AccessText Text="{loc:Translate Action.StopWaiting}" TextWrapping="Wrap" TextAlignment="Center"/>
+                            </Button>
+                            <!-- What the button leaves alone, shown with it, in the ticker's
+                                 colour and size. No LiveSetting: the line's spoken name
+                                 carries the same sentence while the button shows. -->
+                            <TextBlock x:Name="ScanStopWaitingLeavesAlone"
+                                       Text="{loc:Translate Status.StopWaitingLeavesAlone}"
+                                       Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Caption}"
+                                       TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center"
+                                       Margin="0,2,0,4"
+                                       Visibility="{Binding Scan.CanStopWaiting, Converter={StaticResource BoolToVis}}"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                    <StackPanel Grid.Row="2">
+                        <!-- Ticker: a count of the folder's files as the scan
+                             lists them, the name of each installed program as it
+                             asks Windows about it, then a count of the files as it
+                             matches them. Display-only and never read out, because
+                             it updates once per program and many times while the
+                             files are counted, and reading each update would queue
+                             speech far faster than it is spoken. The milestone line
+                             above is the one read out. -->
+                        <TextBlock Text="{Binding Scan.ScanTicker}"
+                                   Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Caption}"
+                                   HorizontalAlignment="Center" Margin="0,4,0,16"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="{a11y:TextScaled 240}"/>
+                        <Button x:Name="ScanCancelButton" Style="{StaticResource GhostPill}"
+                                Content="{loc:Translate Action.Cancel}" Command="{Binding Scan.CancelScanCommand}"
+                                MinHeight="28" Padding="16,0" FontSize="{DynamicResource Type.Body}"
+                                HorizontalAlignment="Center"
+                                FocusVisualStyle="{StaticResource SmallPillFocusVisual}"
+                                AutomationProperties.Name="{loc:Translate Automation.CancelScan}"/>
+                    </StackPanel>
+                </Grid>
             </Border>
         </Grid>
 
@@ -773,7 +794,12 @@
                     BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}"
                     Padding="28,22" MinWidth="260" MaxWidth="{a11y:TextScaled 480}" Margin="{StaticResource GapX.Xl}"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
-                <StackPanel>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
                     <!-- Code-behind reads this heading out when the overlay
                          appears, and again each time it changes while the
                          overlay is up: a wait, the heading put back, "Cancelling..."
@@ -792,7 +818,7 @@
                          the two that the scale gives, while the button and its line,
                          which take no space when collapsed, sit 4 under the heading
                          when they show. -->
-                    <TextBlock x:Name="OperationHeadingText"
+                    <TextBlock x:Name="OperationHeadingText" Grid.Row="0"
                                Text="{Binding Cleanup.OperationProgress, Converter={StaticResource BreakPathsAtFolders}}"
                                Foreground="{StaticResource Text.Heading}"
                                FontSize="{DynamicResource Type.Heading.Sm}" FontWeight="SemiBold"
@@ -800,122 +826,137 @@
                                Margin="0,0,0,4"
                                AutomationProperties.Name="{Binding Cleanup.OperationProgressName}"
                                AutomationProperties.LiveSetting="Polite"/>
-                    <!-- Shown only while the heading names a wait. It gives up on
-                         that drive or share and the check, or the scan after the
-                         files have gone, carries on; Cancel below still ends it. It
-                         never takes the focus itself, and code-behind hands the
-                         focus to Cancel if it has it as it goes. Its label wraps as
-                         the scanning card's does. -->
-                    <Button x:Name="OperationStopWaitingButton" Style="{StaticResource GhostPill}"
-                            Command="{Binding Cleanup.StopWaitingCommand}"
-                            MinHeight="28" Padding="16,0" FontSize="{DynamicResource Type.Body}"
-                            HorizontalAlignment="Center"
-                            FocusVisualStyle="{StaticResource SmallPillFocusVisual}"
-                            Visibility="{Binding Cleanup.CanStopWaiting, Converter={StaticResource BoolToVis}}"
-                            AutomationProperties.Name="{Binding Cleanup.StopWaitingName}"
-                            AutomationProperties.HelpText="{loc:Translate Status.StopWaitingLeavesAlone}">
-                        <AccessText Text="{loc:Translate Action.StopWaiting}" TextWrapping="Wrap" TextAlignment="Center"/>
-                    </Button>
-                    <!-- What the button leaves alone, shown with it. No LiveSetting:
-                         the heading's spoken name carries the same sentence while the
-                         button shows. -->
-                    <TextBlock x:Name="OperationStopWaitingLeavesAlone"
-                               Text="{loc:Translate Status.StopWaitingLeavesAlone}"
-                               Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Caption}"
-                               TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center"
-                               Margin="0,2,0,0"
-                               Visibility="{Binding Cleanup.CanStopWaiting, Converter={StaticResource BoolToVis}}"/>
-                    <!-- Indeterminate from the re-verify before a batch until its
-                         first file, and for the rescan after a batch, where there
-                         is no per-file progress to report: before the batch a
-                         filled bar would describe files not yet reached, and after
-                         it the batch that has ended. The count
-                         row and the filename below go with it, on the same
-                         binding, so the card is a heading and a moving bar,
-                         which is what the scanning overlay above already is. -->
-                    <ProgressBar Value="{Binding Cleanup.OperationProgressPercent}"
-                                 IsIndeterminate="{Binding Cleanup.IsOperationProgressIndeterminate}"
-                                 Minimum="0" Maximum="100"
-                                 MaxWidth="200" Height="8" Margin="0,12,0,8"
-                                 AutomationProperties.Name="{loc:Translate Automation.OperationProgress}"/>
-                    <!-- The 0,0,0,2 here and the 0,4,0,0 on the filename below sit
-                         off the 8/12/16/24 spacing scale on purpose: they tighten
-                         the "X of Y" / percentage row and the filename into one
-                         compact block under the progress bar, where the scale's
-                         8px would loosen the grouping. -->
-                    <DockPanel Margin="0,0,0,2"
-                               Visibility="{Binding Cleanup.ShowOperationProgressDetail, Converter={StaticResource BoolToVis}}">
-                        <TextBlock DockPanel.Dock="Right" Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Caption}">
-                            <Run Text="{Binding Cleanup.OperationProgressPercent, Mode=OneWay, StringFormat='{}{0:F0}%'}"/>
-                        </TextBlock>
-                        <Grid>
-                            <!-- Visible count: updates once per file and is
-                                 never read out, because reading each file
-                                 would flood the speech queue on a large
-                                 batch. -->
-                            <TextBlock Text="{Binding Cleanup.OperationProgressDetail}"
-                                       Foreground="{StaticResource Text.Muted}"
-                                       FontSize="{DynamicResource Type.Caption}"/>
-                            <!-- Screen-reader twin: the same "X of Y files"
-                                 line, updated at most once per tenth of the
-                                 batch (first and last file always), and read
-                                 out by code-behind each time, so the
-                                 announcements keep pace with speech. Opacity
-                                 0, not Collapsed, keeps UI Automation
-                                 reporting it on screen, without painting over
-                                 the visible count. -->
-                            <TextBlock x:Name="OperationProgressAnnouncementText"
-                                       Text="{Binding Cleanup.OperationProgressAnnouncement}"
-                                       Foreground="{StaticResource Text.Muted}"
-                                       FontSize="{DynamicResource Type.Caption}"
-                                       Opacity="0" IsHitTestVisible="False"
-                                       AutomationProperties.LiveSetting="Polite"/>
-                        </Grid>
-                    </DockPanel>
-                    <!-- Never read out: the per-file filename changes at
-                         I/O speed and would flood the screen-reader queue
-                         faster than the user can drain it. The throttled
-                         twin above carries the "X of Y" count for the SR. -->
-                    <TextBlock Text="{Binding Cleanup.OperationCurrentFileName}"
-                               Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Caption}"
-                               HorizontalAlignment="Center" Margin="0,4,0,0"
-                               TextTrimming="CharacterEllipsis" MaxWidth="{a11y:TextScaled 240}"
-                               Visibility="{Binding Cleanup.ShowOperationProgressDetail, Converter={StaticResource BoolToVis}}"/>
-                    <!-- Cancel button binds IsEnabled via the
-                         CanCancelOperation predicate, so it is out of use
-                         where the operation has nothing running that it
-                         could stop, and a second click after the
-                         cancel-in-flight is dropped. The
-                         tooltip set by the IsCancellationRequested
-                         trigger explains the disabled state during the
-                         several-second window between Cancel and the
-                         next CancellationToken checkpoint, mirroring
-                         the splash window's pattern. -->
-                    <Button x:Name="OperationCancelButton" Content="{loc:Translate Action.Cancel}"
-                            Command="{Binding Cleanup.CancelOperationCommand}"
-                            AutomationProperties.Name="{loc:Translate Automation.CancelOperation}"
-                            FocusVisualStyle="{StaticResource SmallPillFocusVisual}"
-                            HorizontalAlignment="Center" Margin="{StaticResource GapTop.Sm}"
-                            MinHeight="28" Padding="16,0" FontSize="{DynamicResource Type.Body}">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource GhostPill}">
-                                <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
-                                <Style.Triggers>
-                                    <!-- HelpText alongside the ToolTip, from
-                                         the same key: a WPF ToolTip opens on
-                                         hover and never on keyboard focus, so
-                                         without it the one sentence explaining
-                                         a button that has just gone dead
-                                         reaches a mouse user only. -->
-                                    <DataTrigger Binding="{Binding Cleanup.IsCancellationRequested}" Value="True">
-                                        <Setter Property="ToolTip" Value="{loc:Translate Tooltip.CancellingPending}"/>
-                                        <Setter Property="AutomationProperties.HelpText" Value="{loc:Translate Tooltip.CancellingPending}"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-                </StackPanel>
+                    <!-- What a wait adds to the card, and the only part of it that
+                         scrolls. Where the card is taller than the window, as a wait
+                         naming a long share at a large text size makes it, this region
+                         scrolls while the heading, the bar, the count and Cancel stay in
+                         view. The heading and the count's spoken twin sit outside it
+                         because they are read out, and a line scrolled out of view is
+                         reported off screen. -->
+                    <ScrollViewer Grid.Row="1" Style="{StaticResource BodyScrollRegion}"
+                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  AutomationProperties.Name="{loc:Translate Automation.Scroll.Waiting}">
+                        <StackPanel>
+                            <!-- Shown only while the heading names a wait. It gives up on
+                                 that drive or share and the check, or the scan after the
+                                 files have gone, carries on; Cancel below still ends it. It
+                                 never takes the focus itself, and code-behind hands the
+                                 focus to Cancel if it has it as it goes. Its label wraps as
+                                 the scanning card's does. -->
+                            <Button x:Name="OperationStopWaitingButton" Style="{StaticResource GhostPill}"
+                                    Command="{Binding Cleanup.StopWaitingCommand}"
+                                    MinHeight="28" Padding="16,0" FontSize="{DynamicResource Type.Body}"
+                                    HorizontalAlignment="Center"
+                                    FocusVisualStyle="{StaticResource SmallPillFocusVisual}"
+                                    Visibility="{Binding Cleanup.CanStopWaiting, Converter={StaticResource BoolToVis}}"
+                                    AutomationProperties.Name="{Binding Cleanup.StopWaitingName}"
+                                    AutomationProperties.HelpText="{loc:Translate Status.StopWaitingLeavesAlone}">
+                                <AccessText Text="{loc:Translate Action.StopWaiting}" TextWrapping="Wrap" TextAlignment="Center"/>
+                            </Button>
+                            <!-- What the button leaves alone, shown with it. No LiveSetting:
+                                 the heading's spoken name carries the same sentence while the
+                                 button shows. -->
+                            <TextBlock x:Name="OperationStopWaitingLeavesAlone"
+                                       Text="{loc:Translate Status.StopWaitingLeavesAlone}"
+                                       Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Caption}"
+                                       TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center"
+                                       Margin="0,2,0,0"
+                                       Visibility="{Binding Cleanup.CanStopWaiting, Converter={StaticResource BoolToVis}}"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                    <StackPanel Grid.Row="2">
+                        <!-- Indeterminate from the re-verify before a batch until its
+                             first file, and for the rescan after a batch, where there
+                             is no per-file progress to report: before the batch a
+                             filled bar would describe files not yet reached, and after
+                             it the batch that has ended. The count
+                             row and the filename below go with it, on the same
+                             binding, so the card is a heading and a moving bar,
+                             which is what the scanning overlay above already is. -->
+                        <ProgressBar Value="{Binding Cleanup.OperationProgressPercent}"
+                                     IsIndeterminate="{Binding Cleanup.IsOperationProgressIndeterminate}"
+                                     Minimum="0" Maximum="100"
+                                     MaxWidth="200" Height="8" Margin="0,12,0,8"
+                                     AutomationProperties.Name="{loc:Translate Automation.OperationProgress}"/>
+                        <!-- The 0,0,0,2 here and the 0,4,0,0 on the filename below sit
+                             off the 8/12/16/24 spacing scale on purpose: they tighten
+                             the "X of Y" / percentage row and the filename into one
+                             compact block under the progress bar, where the scale's
+                             8px would loosen the grouping. -->
+                        <DockPanel Margin="0,0,0,2"
+                                   Visibility="{Binding Cleanup.ShowOperationProgressDetail, Converter={StaticResource BoolToVis}}">
+                            <TextBlock DockPanel.Dock="Right" Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Caption}">
+                                <Run Text="{Binding Cleanup.OperationProgressPercent, Mode=OneWay, StringFormat='{}{0:F0}%'}"/>
+                            </TextBlock>
+                            <Grid>
+                                <!-- Visible count: updates once per file and is
+                                     never read out, because reading each file
+                                     would flood the speech queue on a large
+                                     batch. -->
+                                <TextBlock Text="{Binding Cleanup.OperationProgressDetail}"
+                                           Foreground="{StaticResource Text.Muted}"
+                                           FontSize="{DynamicResource Type.Caption}"/>
+                                <!-- Screen-reader twin: the same "X of Y files"
+                                     line, updated at most once per tenth of the
+                                     batch (first and last file always), and read
+                                     out by code-behind each time, so the
+                                     announcements keep pace with speech. Opacity
+                                     0, not Collapsed, keeps UI Automation
+                                     reporting it on screen, without painting over
+                                     the visible count. -->
+                                <TextBlock x:Name="OperationProgressAnnouncementText"
+                                           Text="{Binding Cleanup.OperationProgressAnnouncement}"
+                                           Foreground="{StaticResource Text.Muted}"
+                                           FontSize="{DynamicResource Type.Caption}"
+                                           Opacity="0" IsHitTestVisible="False"
+                                           AutomationProperties.LiveSetting="Polite"/>
+                            </Grid>
+                        </DockPanel>
+                        <!-- Never read out: the per-file filename changes at
+                             I/O speed and would flood the screen-reader queue
+                             faster than the user can drain it. The throttled
+                             twin above carries the "X of Y" count for the SR. -->
+                        <TextBlock Text="{Binding Cleanup.OperationCurrentFileName}"
+                                   Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Caption}"
+                                   HorizontalAlignment="Center" Margin="0,4,0,0"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="{a11y:TextScaled 240}"
+                                   Visibility="{Binding Cleanup.ShowOperationProgressDetail, Converter={StaticResource BoolToVis}}"/>
+                        <!-- Cancel button binds IsEnabled via the
+                             CanCancelOperation predicate, so it is out of use
+                             where the operation has nothing running that it
+                             could stop, and a second click after the
+                             cancel-in-flight is dropped. The
+                             tooltip set by the IsCancellationRequested
+                             trigger explains the disabled state during the
+                             several-second window between Cancel and the
+                             next CancellationToken checkpoint, mirroring
+                             the splash window's pattern. -->
+                        <Button x:Name="OperationCancelButton" Content="{loc:Translate Action.Cancel}"
+                                Command="{Binding Cleanup.CancelOperationCommand}"
+                                AutomationProperties.Name="{loc:Translate Automation.CancelOperation}"
+                                FocusVisualStyle="{StaticResource SmallPillFocusVisual}"
+                                HorizontalAlignment="Center" Margin="{StaticResource GapTop.Sm}"
+                                MinHeight="28" Padding="16,0" FontSize="{DynamicResource Type.Body}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource GhostPill}">
+                                    <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
+                                    <Style.Triggers>
+                                        <!-- HelpText alongside the ToolTip, from
+                                             the same key: a WPF ToolTip opens on
+                                             hover and never on keyboard focus, so
+                                             without it the one sentence explaining
+                                             a button that has just gone dead
+                                             reaches a mouse user only. -->
+                                        <DataTrigger Binding="{Binding Cleanup.IsCancellationRequested}" Value="True">
+                                            <Setter Property="ToolTip" Value="{loc:Translate Tooltip.CancellingPending}"/>
+                                            <Setter Property="AutomationProperties.HelpText" Value="{loc:Translate Tooltip.CancellingPending}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </StackPanel>
+                </Grid>
             </Border>
         </Grid>
         <!-- Completion overlay. TabNavigation="Cycle" traps Tab

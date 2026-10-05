@@ -141,6 +141,7 @@ const NO_VISIBLE_LABEL = new Set([
   'Automation.Scroll.ReportContents',
   'Automation.Scroll.ResultDetails',
   'Automation.Scroll.ScanResults',
+  'Automation.Scroll.Waiting',
 ]);
 
 // ---------------------------------------------------------------------------

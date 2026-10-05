@@ -121,6 +121,7 @@ public static class Strings
     public static string Automation_Scroll_ReportContents => Get("Automation.Scroll.ReportContents");
     public static string Automation_Scroll_ResultDetails => Get("Automation.Scroll.ResultDetails");
     public static string Automation_Scroll_ScanResults => Get("Automation.Scroll.ScanResults");
+    public static string Automation_Scroll_Waiting => Get("Automation.Scroll.Waiting");
     public static string Automation_Section_BackupFolder => Get("Automation.Section.BackupFolder");
     public static string Automation_Section_Patches => Get("Automation.Section.Patches");
     public static string Automation_Section_ProductDetails => Get("Automation.Section.ProductDetails");
