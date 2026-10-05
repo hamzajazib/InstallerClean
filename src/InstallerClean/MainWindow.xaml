@@ -653,17 +653,22 @@
                  line sit straight on the half-transparent dim and the summary
                  rows behind them read through.
 
-                 Width is fixed rather than taken from the content. The milestone
-                 line is replaced at each step of a scan and the steps are
-                 different lengths, so a card that took its width from the text
-                 would resize several times in one scan. The line wraps inside the
-                 fixed width instead: it holds the longest English step on one
-                 line, and the longer German ones take two. Scaled, so the card
-                 keeps pace with the text it holds. -->
+                 The width comes from the window rather than the content. The
+                 milestone line is replaced at each step of a scan and the steps
+                 are different lengths, so a card that took its width from the
+                 text would resize several times in one scan. Stretched, the card
+                 fills the window less the 24 each side the content column keeps,
+                 up to 480 scaled, and the line wraps inside that: at its full
+                 width it holds the longest English step on one line, and the
+                 longer German ones take two. Scaled, so the card keeps pace with
+                 the text it holds. A window too narrow for the full width, as a
+                 large text size on a narrow screen gives, narrows the card with
+                 it, and a stretched card held below its slot by MaxWidth is
+                 centred by WPF. -->
             <Border Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.Pill}"
                     BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}"
-                    Padding="28,22" Width="{a11y:TextScaled 480}"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                    Padding="28,22" MaxWidth="{a11y:TextScaled 480}" Margin="{StaticResource GapX.Xl}"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Center">
                 <StackPanel>
                     <ProgressBar IsIndeterminate="True" Width="240" Height="8" Margin="{StaticResource GapBottom.Md}"
                                  AutomationProperties.Name="{loc:Translate Automation.ScanningProgress}"/>
@@ -735,11 +740,14 @@
               KeyboardNavigation.ControlTabNavigation="Cycle">
             <chrome:DecorativeBorder Background="{StaticResource Surface.Overlay}"/>
             <!-- The card takes its width from its content, up to the scanning
-                 card's width. A longer heading, as a wait naming a long share
-                 is, wraps inside that rather than widening the card. -->
+                 card's width, and keeps the scanning card's 24 from each side of
+                 the window, so in a window too narrow for 480 scaled it is still
+                 never wider than the scanning card. A longer heading, as a wait
+                 naming a long share is, wraps inside that rather than widening
+                 the card. -->
             <Border Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.Pill}"
                     BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}"
-                    Padding="28,22" MinWidth="260" MaxWidth="{a11y:TextScaled 480}"
+                    Padding="28,22" MinWidth="260" MaxWidth="{a11y:TextScaled 480}" Margin="{StaticResource GapX.Xl}"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel>
                     <!-- Code-behind reads this heading out when the overlay

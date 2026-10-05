@@ -301,6 +301,9 @@
          element wants equal left+right margin without affecting
          vertical layout. -->
     <Thickness x:Key="GapX.Md">12,0,12,0</Thickness>
+    <!-- The main window's two overlay cards keep this from the window's
+         sides, the same 24 as Margin.MainContent's. -->
+    <Thickness x:Key="GapX.Xl">24,0,24,0</Thickness>
 
     <!-- Outer margin shared by the detail windows (Orphaned, Registered,
          About) so they share a consistent inset. -->
