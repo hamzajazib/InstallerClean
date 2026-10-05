@@ -606,7 +606,7 @@ const MAP = {
   'Completion.ReportPanel.SeeReport': `Genau sehen, was gesendet wird`,
   'Window.Report.Title': `Der anonyme Bericht`,
   'Window.Report.Unreadable': `InstallerClean konnte den Bericht nicht lesen.`,
-  'Automation.Scroll.Waiting': `Waiting for a drive or share`,
+  'Automation.Scroll.Waiting': `Warten auf ein Laufwerk oder eine Freigabe`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

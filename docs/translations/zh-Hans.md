@@ -405,6 +405,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | File details | 文件详情 |
 | Product details | 产品详情 |
 | Dialog text | 对话框文本 |
+| Waiting for a drive or share | 正在等待驱动器或共享 |
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | 无法处理的文件 |
 | Explains this folder, and how to recover a file, in the README | 在 README 中解释了这个文件夹，以及如何恢复文件 |

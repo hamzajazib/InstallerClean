@@ -405,6 +405,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | File details | Dosya ayrıntıları |
 | Product details | Ürün ayrıntıları |
 | Dialog text | İletişim kutusu metni |
+| Waiting for a drive or share | Bir sürücü veya paylaşım bekleniyor |
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | İşlenemeyen dosyalar |
 | Explains this folder, and how to recover a file, in the README | Bu klasörü açıklar ve bir dosyanın nasıl kurtarılacağını README'de anlatır |

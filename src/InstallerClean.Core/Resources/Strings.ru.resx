@@ -365,7 +365,7 @@
        opening window holding the button that stops waiting for a drive or
        share and the line saying what it leaves alone. A screen reader says it
        only while the region can scroll, as it takes the Tab stop. -->
-  <data name="Automation.Scroll.Waiting" xml:space="preserve"><value>Waiting for a drive or share</value></data>
+  <data name="Automation.Scroll.Waiting" xml:space="preserve"><value>Ожидание диска или сетевого ресурса</value></data>
   <!-- Composes the announced outcome of a scan that found files:
        0 = the "N unneeded files to clean up" line, 1 = the total size. -->
   <data name="Automation.ScanResultAnnouncement" xml:space="preserve"><value>{0} ({1})</value></data>

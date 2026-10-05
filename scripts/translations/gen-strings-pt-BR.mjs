@@ -593,7 +593,7 @@ const MAP = {
   'Completion.ReportPanel.SeeReport': `Ver exatamente o que é enviado`,
   'Window.Report.Title': `O relatório anônimo`,
   'Window.Report.Unreadable': `O InstallerClean não conseguiu ler o relatório.`,
-  'Automation.Scroll.Waiting': `Waiting for a drive or share`,
+  'Automation.Scroll.Waiting': `Aguardando uma unidade ou compartilhamento`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

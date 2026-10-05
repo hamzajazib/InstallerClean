@@ -405,6 +405,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | File details | Detail file |
 | Product details | Detail produk |
 | Dialog text | Teks dialog |
+| Waiting for a drive or share | Menunggu drive atau berbagi jaringan |
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | File yang tidak dapat diproses |
 | Explains this folder, and how to recover a file, in the README | Menjelaskan folder ini, dan cara memulihkan file, di README |

@@ -405,6 +405,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | File details | Bestandsdetails |
 | Product details | Productgegevens |
 | Dialog text | Dialoogtekst |
+| Waiting for a drive or share | Wachten op een schijf of share |
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | Bestanden die niet konden worden verwerkt |
 | Explains this folder, and how to recover a file, in the README | Legt uit wat deze map is en hoe je een bestand terugzet, in het README-bestand |

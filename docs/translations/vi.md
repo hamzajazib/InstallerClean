@@ -405,6 +405,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | File details | Chi tiết tệp |
 | Product details | Chi tiết sản phẩm |
 | Dialog text | Nội dung hộp thoại |
+| Waiting for a drive or share | Đang chờ ổ đĩa hoặc chia sẻ mạng |
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | Các tệp không thể xử lý |
 | Explains this folder, and how to recover a file, in the README | Giải thích thư mục này, và cách khôi phục một tệp, trong README |

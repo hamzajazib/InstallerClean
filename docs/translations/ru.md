@@ -405,6 +405,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | File details | Сведения о файле |
 | Product details | Сведения о продукте |
 | Dialog text | Текст диалогового окна |
+| Waiting for a drive or share | Ожидание диска или сетевого ресурса |
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | Файлы, которые не удалось обработать |
 | Explains this folder, and how to recover a file, in the README | Объясняет эту папку и то, как восстановить файл, в README |

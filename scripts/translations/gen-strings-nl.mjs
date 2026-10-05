@@ -572,7 +572,7 @@ const MAP = {
   'Completion.ReportPanel.SeeReport': `Precies zien wat er wordt verstuurd`,
   'Window.Report.Title': `Het anonieme rapport`,
   'Window.Report.Unreadable': `InstallerClean kon het rapport niet lezen.`,
-  'Automation.Scroll.Waiting': `Waiting for a drive or share`,
+  'Automation.Scroll.Waiting': `Wachten op een schijf of share`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

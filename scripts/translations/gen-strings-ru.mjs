@@ -505,7 +505,7 @@ const MAP = {
   'Completion.ReportPanel.SeeReport': `Посмотреть, что именно отправляется`,
   'Window.Report.Title': `Анонимный отчёт`,
   'Window.Report.Unreadable': `InstallerClean не смог прочитать отчёт.`,
-  'Automation.Scroll.Waiting': `Waiting for a drive or share`,
+  'Automation.Scroll.Waiting': `Ожидание диска или сетевого ресурса`,
 };
 
 // Russian CLDR-category overrides beyond the neutral one/other split. They do NOT

@@ -405,6 +405,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | File details | ファイルの詳細 |
 | Product details | 製品の詳細 |
 | Dialog text | ダイアログテキスト |
+| Waiting for a drive or share | ドライブまたは共有を待機中 |
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | 処理できなかったファイル |
 | Explains this folder, and how to recover a file, in the README | このフォルダーとファイルの回復方法を README で説明しています |

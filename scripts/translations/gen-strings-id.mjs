@@ -614,7 +614,7 @@ const MAP = {
   'Completion.ReportPanel.SeeReport': `Lihat persis apa yang dikirim`,
   'Window.Report.Title': `Laporan anonim`,
   'Window.Report.Unreadable': `InstallerClean tidak bisa membaca laporan.`,
-  'Automation.Scroll.Waiting': `Waiting for a drive or share`,
+  'Automation.Scroll.Waiting': `Menunggu drive atau berbagi jaringan`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

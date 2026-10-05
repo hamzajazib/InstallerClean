@@ -405,6 +405,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | File details | Szczegóły pliku |
 | Product details | Szczegóły produktu |
 | Dialog text | Tekst okna dialogowego |
+| Waiting for a drive or share | Oczekiwanie na dysk lub udział |
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | Pliki, których nie udało się przetworzyć |
 | Explains this folder, and how to recover a file, in the README | Wyjaśnia ten folder i sposób odzyskania pliku w README |

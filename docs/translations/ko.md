@@ -405,6 +405,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | File details | 파일 세부 정보 |
 | Product details | 제품 세부 정보 |
 | Dialog text | 대화 상자 텍스트 |
+| Waiting for a drive or share | 드라이브 또는 공유를 기다리는 중 |
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | 처리할 수 없는 파일 |
 | Explains this folder, and how to recover a file, in the README | 이 폴더에 대한 설명과 파일 복구 방법을 README에서 안내 |

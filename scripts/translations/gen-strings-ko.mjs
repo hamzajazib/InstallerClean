@@ -588,7 +588,7 @@ const MAP = {
   'Completion.ReportPanel.SeeReport': `보내는 내용 그대로 보기`,
   'Window.Report.Title': `익명 보고서`,
   'Window.Report.Unreadable': `InstallerClean이 보고서를 읽을 수 없었습니다.`,
-  'Automation.Scroll.Waiting': `Waiting for a drive or share`,
+  'Automation.Scroll.Waiting': `드라이브 또는 공유를 기다리는 중`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,
