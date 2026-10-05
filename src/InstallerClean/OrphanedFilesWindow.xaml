@@ -46,13 +46,16 @@
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
+                <!-- Both star, so a window too narrow for the details card
+                     at its full width shares its room evenly between the
+                     list and the card rather than letting either push the
+                     other out. The card's column stops at 460 scaled and
+                     the list takes the rest: TextScaled can target the
+                     column's MaxWidth, a double, where it cannot target its
+                     Width, a GridLength. -->
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="12"/>
-                <!-- Auto plus an explicit text-scaled width on the details
-                     card itself: ColumnDefinition.Width is a GridLength,
-                     which the double-typed TextScaled binding cannot
-                     target. -->
-                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*" MaxWidth="{a11y:TextScaled 460}"/>
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" Style="{StaticResource CardNoPad}" ClipToBounds="True">
@@ -191,7 +194,7 @@
                 </ListView>
             </Border>
 
-            <Border Grid.Column="2" Style="{StaticResource Card}" Width="{a11y:TextScaled 460}">
+            <Border Grid.Column="2" Style="{StaticResource Card}">
                 <Grid>
                     <TextBlock Text="{loc:Translate Body.NoFileSelected}"
                                Foreground="{StaticResource Text.Dim}" FontSize="{DynamicResource Type.Body}" FontStyle="Italic"

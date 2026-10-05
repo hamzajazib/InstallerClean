@@ -1,7 +1,5 @@
 using System.Globalization;
 using System.Reflection;
-using System.Runtime.ExceptionServices;
-using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Markup;
@@ -175,7 +173,7 @@ public class OverlayCardWidthTests
         var xaml = ComposedXaml(Card(lineName), scale);
         var culture = CultureInfo.GetCultureInfo(language);
 
-        OnStaThread(() =>
+        LooseXaml.OnStaThread(() =>
         {
             Localisation.Set(culture, culture);
             try
@@ -300,34 +298,6 @@ public class OverlayCardWidthTests
             resources,
             new XElement(card));
 
-        // The app's own namespaces are named with the assembly that holds them, which
-        // the compiled XAML does not need and a XamlReader does.
-        var text = root.ToString(SaveOptions.DisableFormatting);
-        foreach (var name in new[] { "Resources", "Helpers", "Controls" })
-            text = text.Replace($"\"clr-namespace:InstallerClean.{name}\"",
-                $"\"clr-namespace:InstallerClean.{name};assembly=InstallerClean\"", StringComparison.Ordinal);
-
-        return Regex.Replace(text, @"\{a11y:TextScaled ([0-9.]+)\}", match =>
-            (double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) * scale)
-                .ToString("R", CultureInfo.InvariantCulture));
-    }
-
-    /// <summary>
-    /// Runs <paramref name="body"/> on a thread of its own in a single-threaded
-    /// apartment, which WPF elements need, and rethrows anything it threw.
-    /// </summary>
-    private static void OnStaThread(Action body)
-    {
-        Exception? failure = null;
-        var thread = new Thread(() =>
-        {
-            try { body(); }
-            catch (Exception ex) { failure = ex; }
-        });
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
-        thread.Join();
-        if (failure is not null)
-            ExceptionDispatchInfo.Capture(failure).Throw();
+        return LooseXaml.Prepared(root.ToString(SaveOptions.DisableFormatting), scale);
     }
 }
