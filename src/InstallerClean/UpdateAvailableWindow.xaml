@@ -2,7 +2,6 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:loc="clr-namespace:InstallerClean.Resources"
-        xmlns:a11y="clr-namespace:InstallerClean.Helpers"
         WindowStyle="None" AllowsTransparency="True"
         FontFamily="{DynamicResource Type.FontFamily}"
         Background="Transparent"
@@ -20,9 +19,11 @@
     </WindowChrome.WindowChrome>
 
     <!-- Card width scales with the OS text size so the copy keeps its
-         line length instead of wrapping into a tall sliver. -->
-    <Border Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.ModalCard}" Padding="{StaticResource Padding.ModalCard}"
-            MaxWidth="{a11y:TextScaled 400}" MinWidth="{a11y:TextScaled 320}"
+         line length instead of wrapping into a tall sliver. It grows from 320
+         to 400, both scaled and set in code-behind, held to the work area
+         there. -->
+    <Border x:Name="Card"
+            Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.ModalCard}" Padding="{StaticResource Padding.ModalCard}"
             BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}">
         <!-- Grid, not a StackPanel: the version copy sits in a star row
              so it scrolls once the window's work-area MaxHeight binds

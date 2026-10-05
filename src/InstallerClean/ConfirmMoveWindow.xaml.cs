@@ -43,21 +43,21 @@ public partial class ConfirmMoveWindow : Window
         // user deciding whether to press Move.
         //
         // The destination rides along for the same reason, and it is the fact
-        // this dialog exists to confirm: where the files are going was on the
-        // card and in no announcement, and the body sits in a scroll region
-        // that is not even a tab stop until it overflows, so there was no
-        // route to it either. Label then value, the order the card reads, so
-        // the join holds in every language. The raw path, not the wrapped
+        // this dialog exists to confirm. The body sits in a scroll region that
+        // is not a tab stop until it overflows, so the title is the route a
+        // screen reader has to it. Label then value, the order the card reads,
+        // so the join holds in every language. The raw path, not the wrapped
         // DestinationText, whose break characters are for the line breaker.
         var destinationLine = DestinationLabel.Text + " " + destination;
         Title = sameDrive
             ? MessageText.Text + " " + destinationLine + " " + Strings.Confirm_MoveSameDrive
             : MessageText.Text + " " + destinationLine;
 
-        // Sized to content; the clamp stops a very large text scale
-        // pushing the card past the work area, at which point the
-        // destination row scrolls and the action buttons stay visible.
-        MaxHeight = DetailWindowSizing.WorkAreaHeightLimit(Application.Current?.MainWindow);
+        // Sized to content, the card from 440 to 520 scaled. The clamps stop a
+        // very large text scale pushing the card past the work area: across, its
+        // text wraps into the narrower card, and down, the destination row
+        // scrolls and the action buttons stay visible.
+        this.KeepCardInsideWorkArea(Card, minimumWidth: 440, maximumWidth: 520);
 
         this.EnableAltSpaceSystemMenu();
         this.SuppressFocusVisualOnDeactivation();

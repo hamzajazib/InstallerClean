@@ -2,7 +2,6 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:loc="clr-namespace:InstallerClean.Resources"
-        xmlns:a11y="clr-namespace:InstallerClean.Helpers"
         WindowStyle="None" AllowsTransparency="True"
         FontFamily="{DynamicResource Type.FontFamily}"
         Background="Transparent"
@@ -22,12 +21,11 @@
     <!-- Card width scales with the OS text size so the copy keeps its
          line length instead of wrapping into a tall sliver.
 
-         Fixed at 440, min and max, which is measured rather than chosen: at
-         420 the linked phrase splits across a line end, and at 460 and above
-         the card goes ragged. The move dialog shares the 440 floor so the two
+         One width, 440 scaled, min and max, set in code-behind and held to
+         the work area there. The move dialog shares the 440 floor so the two
          match whenever their content is short. -->
-    <Border Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.ModalCard}" Padding="{StaticResource Padding.ModalCard}"
-            MaxWidth="{a11y:TextScaled 440}" MinWidth="{a11y:TextScaled 440}"
+    <Border x:Name="Card"
+            Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.ModalCard}" Padding="{StaticResource Padding.ModalCard}"
             BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}">
         <!-- Grid, not a StackPanel: the body sits in a star row so it
              scrolls once the window's work-area MaxHeight binds (very

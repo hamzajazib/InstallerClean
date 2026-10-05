@@ -28,10 +28,11 @@ public partial class UpdateAvailableWindow : Window
         Title = Strings.UpdateCheck_UpdateAvailable_Title
             + Strings.Display_SentenceSeparator + VersionInfo.Text;
 
-        // Sized to content; the clamp stops a very large text scale
-        // pushing the card past the work area, at which point the
-        // version row scrolls and the action buttons stay visible.
-        MaxHeight = DetailWindowSizing.WorkAreaHeightLimit(Application.Current?.MainWindow);
+        // Sized to content, the card from 320 to 400 scaled. The clamps stop a
+        // very large text scale pushing the card past the work area: across, its
+        // text wraps into the narrower card, and down, the version row scrolls
+        // and the action buttons stay visible.
+        this.KeepCardInsideWorkArea(Card, minimumWidth: 320, maximumWidth: 400);
 
         this.EnableAltSpaceSystemMenu();
         this.SuppressFocusVisualOnDeactivation();

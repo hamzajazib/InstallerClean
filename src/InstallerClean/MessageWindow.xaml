@@ -20,11 +20,12 @@
     </WindowChrome.WindowChrome>
 
     <!-- Card width scales with the OS text size so the copy keeps its
-         line length instead of wrapping into a tall sliver. Wider than the
-         confirm dialogs (they ask a one-line question; this one can carry a
-         crash-log path or a URL). -->
-    <Border Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.ModalCard}" Padding="{StaticResource Padding.ModalCard}"
-            MaxWidth="{a11y:TextScaled 520}" MinWidth="{a11y:TextScaled 360}"
+         line length instead of wrapping into a tall sliver. It grows from 360
+         to 520, wider than the delete dialog (which asks a one-line question;
+         this one can carry a crash-log path or a URL). Both are scaled and
+         set in code-behind, held to the work area there. -->
+    <Border x:Name="Card"
+            Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.ModalCard}" Padding="{StaticResource Padding.ModalCard}"
             BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}">
         <!-- Grid, not a StackPanel: the message sits in a star row so it
              scrolls once the window's work-area MaxHeight binds (very large

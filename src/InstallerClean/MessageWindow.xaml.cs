@@ -42,10 +42,11 @@ public partial class MessageWindow : Window
         // ends a sentence is not the same in every language.
         Title = caption + Strings.Display_SentenceSeparator + message;
 
-        // Sized to content; the clamp stops a very large text scale pushing the
-        // card past the work area, at which point the message scrolls and the
+        // Sized to content, the card from 360 to 520 scaled. The clamps stop a
+        // very large text scale pushing the card past the work area: across, the
+        // message wraps into the narrower card, and down, it scrolls and the
         // Close button stays visible.
-        MaxHeight = DetailWindowSizing.WorkAreaHeightLimit(Application.Current?.MainWindow);
+        this.KeepCardInsideWorkArea(Card, minimumWidth: 360, maximumWidth: 520);
 
         this.EnableAltSpaceSystemMenu();
         this.SuppressFocusVisualOnDeactivation();

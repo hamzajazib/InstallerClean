@@ -55,8 +55,9 @@
          scrollbar margins against the list bleed), the composited contrast
          of a token against the surfaces it is drawn on, the order of two
          control-template triggers, where the wrong order is valid XAML that
-         simply looks wrong on screen, and the main window's overlay cards
-         against the width of their window. Embedded as plain bytes, not
+         simply looks wrong on screen, the main window's overlay cards
+         against the width of their window, and the dialogs' cards, whose
+         widths code-behind sets. Embedded as plain bytes, not
          compiled: this project has no UseWPF, so no Page processing
          applies. -->
     <EmbeddedResource Include="..\InstallerClean\Themes\Primitives.xaml" LogicalName="ThemeXaml.Primitives.xaml" />
@@ -65,6 +66,10 @@
     <EmbeddedResource Include="..\InstallerClean\OrphanedFilesWindow.xaml" LogicalName="ThemeXaml.OrphanedFilesWindow.xaml" />
     <EmbeddedResource Include="..\InstallerClean\RegisteredFilesWindow.xaml" LogicalName="ThemeXaml.RegisteredFilesWindow.xaml" />
     <EmbeddedResource Include="..\InstallerClean\MainWindow.xaml" LogicalName="ThemeXaml.MainWindow.xaml" />
+    <EmbeddedResource Include="..\InstallerClean\ConfirmDeleteWindow.xaml" LogicalName="ThemeXaml.ConfirmDeleteWindow.xaml" />
+    <EmbeddedResource Include="..\InstallerClean\ConfirmMoveWindow.xaml" LogicalName="ThemeXaml.ConfirmMoveWindow.xaml" />
+    <EmbeddedResource Include="..\InstallerClean\MessageWindow.xaml" LogicalName="ThemeXaml.MessageWindow.xaml" />
+    <EmbeddedResource Include="..\InstallerClean\UpdateAvailableWindow.xaml" LogicalName="ThemeXaml.UpdateAvailableWindow.xaml" />
   </ItemGroup>
 
   <ItemGroup>

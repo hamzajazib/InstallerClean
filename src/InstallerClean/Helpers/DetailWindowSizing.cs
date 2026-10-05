@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Interop;
@@ -9,8 +10,9 @@ namespace InstallerClean.Helpers;
 /// <summary>
 /// Window sizing against the work area (the monitor minus the taskbar)
 /// of the screen the app is on: startup heights for the detail windows,
-/// and MaxWidth / MaxHeight limits for the SizeToContent windows so
-/// large OS text scales grow them up to the screen and no further. A
+/// MaxWidth / MaxHeight limits for the SizeToContent windows, and the
+/// card widths of the dialogs that size to their card, so large OS text
+/// scales grow them up to the screen and no further. A
 /// fixed default cannot cover the range: a 1080p laptop at 150% scale
 /// has roughly 672 device-independent units of work-area height, while
 /// a 100% desktop has roughly 1030.
@@ -55,6 +57,49 @@ internal static class DetailWindowSizing
     /// </summary>
     public static double WorkAreaWidthLimit(Window? reference)
         => WorkArea(reference).Width - EdgeMargin;
+
+    /// <summary>
+    /// The least and greatest width of a dialog's card: <paramref name="minimum"/>
+    /// and <paramref name="maximum"/>, its widths at 100% text scale, multiplied by
+    /// <paramref name="factor"/>, and neither wider than <paramref name="limit"/>.
+    /// The minimum is held to the limit as well as the maximum, because WPF lets
+    /// MinWidth win over both MaxWidth and the room an element is given.
+    /// </summary>
+    public static (double Minimum, double Maximum) CardWidths(
+        double minimum, double maximum, double factor, double limit)
+        => (Math.Min(minimum * factor, limit), Math.Min(maximum * factor, limit));
+
+    /// <summary>
+    /// Holds a dialog that sizes to its card inside the work area of the monitor
+    /// the main window is on: the card's MinWidth and MaxWidth come from
+    /// <see cref="CardWidths"/> with <see cref="WorkAreaWidthLimit"/> as the limit,
+    /// and the window's MaxHeight is <see cref="WorkAreaHeightLimit"/>. Both are
+    /// taken again when the text size changes, until the window closes.
+    /// <paramref name="minimumWidth"/> and <paramref name="maximumWidth"/> are the
+    /// card's widths at 100% text scale, and the card carries no width of its own
+    /// in XAML, so these are the only ones it has.
+    /// </summary>
+    public static void KeepCardInsideWorkArea(
+        this Window window, FrameworkElement card, double minimumWidth, double maximumWidth)
+    {
+        void Apply()
+        {
+            var reference = Application.Current?.MainWindow;
+            (card.MinWidth, card.MaxWidth) = CardWidths(minimumWidth, maximumWidth,
+                AccessibilitySettings.Current.TextScaleFactor, WorkAreaWidthLimit(reference));
+            window.MaxHeight = WorkAreaHeightLimit(reference);
+        }
+
+        void OnSettingsChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is null or nameof(AccessibilitySettings.TextScaleFactor))
+                Apply();
+        }
+
+        Apply();
+        AccessibilitySettings.Current.PropertyChanged += OnSettingsChanged;
+        window.Closed += (_, _) => AccessibilitySettings.Current.PropertyChanged -= OnSettingsChanged;
+    }
 
     /// <summary>
     /// Moves <paramref name="window"/> back inside its monitor's work

@@ -30,10 +30,11 @@ public partial class ConfirmDeleteWindow : Window
         // the dialog is asking.
         Title = MessageText.Text + " " + body;
 
-        // Sized to content; the clamp stops a very large text scale
-        // pushing the card past the work area, at which point the body
-        // row scrolls and the action buttons stay visible.
-        MaxHeight = DetailWindowSizing.WorkAreaHeightLimit(Application.Current?.MainWindow);
+        // Sized to content, the card one width, 440 scaled. The clamps stop a
+        // very large text scale pushing the card past the work area: across, its
+        // text wraps into the narrower card, and down, the body row scrolls and
+        // the action buttons stay visible.
+        this.KeepCardInsideWorkArea(Card, minimumWidth: 440, maximumWidth: 440);
 
         this.EnableAltSpaceSystemMenu();
         this.SuppressFocusVisualOnDeactivation();
