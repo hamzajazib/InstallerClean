@@ -89,12 +89,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Scan.ScanCompleted += _scanCompletedHandler;
 
         // Drive IsMainContentInteractive off the three overlay states.
-        // The caption buttons themselves remain IsEnabled=true, but the
-        // scanning and operating overlays span all three grid rows so
-        // their dim Border absorbs clicks on the title bar. Esc reaches
-        // the overlays through MainWindow.OnPreviewKeyDown and HandleEscape,
-        // and Alt+F4 reaches the window's normal SC_CLOSE path through
-        // WM_SYSCOMMAND (only SC_MAXIMIZE is intercepted).
+        // The caption buttons themselves remain IsEnabled=true. The
+        // scanning, operating and completion overlays all span the three
+        // grid rows and are drawn over the title bar, so while one is up a
+        // click on the minimise or close button lands on the overlay's dim
+        // Border. That Border inherits WindowChrome.IsHitTestVisibleInChrome
+        // as false, so WindowChrome hands the click to Windows as a click on
+        // the window's own title bar and the WPF button never receives it.
+        // Esc reaches the overlays through MainWindow.OnPreviewKeyDown and
+        // HandleEscape, and Alt+F4 reaches the window's normal SC_CLOSE path
+        // through WM_SYSCOMMAND (only SC_MAXIMIZE is intercepted).
         Scan.PropertyChanged += OnChildPropertyChanged;
         Cleanup.PropertyChanged += OnChildPropertyChanged;
         Completion.PropertyChanged += OnChildPropertyChanged;
