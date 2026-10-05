@@ -24,8 +24,13 @@
 // A window carrying one access key cannot clash, so the message and two details
 // windows are not listed.
 //
+// It also fails when a string carrying an access key is shown by XAML that does
+// not turn the marker into one: a TextBlock's Text, say, draws the underscore and
+// the key does nothing. See the consumers pass at the end.
+//
 // Run from the repo root: node scripts/check-accelerators.mjs
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 const DIR = 'src/InstallerClean.Core/Resources';
 
@@ -209,6 +214,69 @@ for (const lang of LANGS) {
   }
 }
 
+// THE CONSUMERS PASS. A marker becomes an access key only where WPF reads it as
+// one: the Text of an AccessText, or the string Content of a Button or CheckBox,
+// whose templates here hand it to a ContentPresenter that recognises access keys.
+// A Content shown through a ContentTemplate keeps its key only when that template
+// is an AccessText bound to the string. Every other consumer is refused rather
+// than trusted, so a new kind of site has to be added here on purpose. Strings
+// read in C# are outside this pass: what they are shown in is decided in code.
+const ACCESS_KEY_CONSUMERS = new Set(['AccessText.Text', 'Button.Content', 'CheckBox.Content']);
+const XAML_ROOT = 'src/InstallerClean';
+const xamlFiles = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+  e.isDirectory() ? (['bin', 'obj'].includes(e.name) ? [] : xamlFiles(join(dir, e.name)))
+    : e.name.endsWith('.xaml') ? [join(dir, e.name)] : []);
+const blankComments = (t) => t.replace(/<!--[\s\S]*?-->/g, (m) => m.replace(/[^\n]/g, ' '));
+const wrappingTemplates = (text) => {
+  const ok = new Set();
+  for (const m of text.matchAll(/<DataTemplate\s+x:Key="([^"]+)"\s*>([\s\S]*?)<\/DataTemplate>/g))
+    if (/^\s*<AccessText\s[^<>]*Text="\{Binding\}"[^<>]*\/>\s*$/.test(m[2])) ok.add(m[1]);
+  return ok;
+};
+let sitesChecked = 0;
+const consumerProblems = [];
+for (const file of xamlFiles(XAML_ROOT)) {
+  const text = blankComments(readFileSync(file, 'utf8'));
+  const templates = wrappingTemplates(text);
+  for (const tag of text.matchAll(/<([\w:.]+)\b([^<>]*?)\/?>/g)) {
+    const [, element, attributes] = tag;
+    const line = text.slice(0, tag.index).split('\n').length;
+    for (const attr of attributes.matchAll(/([\w:.]+)="([^"]*)"/g)) {
+      for (const use of attr[2].matchAll(/\{loc:Translate ([\w.]+)\}/g)) {
+        const key = use[1];
+        if (!neutral.has(key) || accelerator(neutral.get(key), 'en-GB') === null) continue;
+        sitesChecked++;
+        const site = `${file}:${line}`;
+        const consumer = `${element}.${attr[1]}`;
+        if (!ACCESS_KEY_CONSUMERS.has(consumer)) {
+          consumerProblems.push(`${key} carries an access key, and ${site} shows it in ${consumer}, `
+            + 'which draws the underscore and leaves the key doing nothing.');
+          continue;
+        }
+        const template = /ContentTemplate="\{StaticResource ([^}]+)\}"/.exec(attributes);
+        if (attr[1] === 'Content' && /ContentTemplate=/.test(attributes)
+            && !(template && templates.has(template[1])))
+          consumerProblems.push(`${key} carries an access key, and ${site} shows it through a ContentTemplate `
+            + 'that is not an AccessText bound to the string in the same file.');
+      }
+    }
+  }
+}
+// The control on the pass itself: a reader that matched nothing would report clean.
+if (sitesChecked === 0) {
+  console.error('CONSUMERS PASS FAILED: no XAML site showing a string with an access key was found.');
+  process.exit(2);
+}
+console.log(`\nConsumers: ${sitesChecked} XAML site(s) showing a string with an access key checked.`);
+if (consumerProblems.length) {
+  console.error(`\nAccess keys FAILED (${consumerProblems.length}):`);
+  for (const p of consumerProblems) console.error(`  ${p}`);
+  console.error('\nShow the string in one of the consumers above, as an AccessText or as the'
+    + '\nstring Content of a Button or CheckBox, with a ContentTemplate that is an'
+    + '\nAccessText bound to it where the label has to wrap.');
+  if (!problems.length) process.exit(1);
+}
+
 if (problems.length) {
   console.error(`\nAccelerators FAILED (${problems.length}):`);
   for (const p of problems) console.error(`  ${p}`);
@@ -218,4 +286,4 @@ if (problems.length) {
   process.exit(1);
 }
 
-console.log(`\nAccelerators OK: ${LANGS.length} languages, ${Object.keys(SETS).length} window states, no clashes.`);
+console.log(`\nAccelerators OK: ${LANGS.length} languages, ${Object.keys(SETS).length} window states, no clashes, and every access key shown where WPF reads it.`);

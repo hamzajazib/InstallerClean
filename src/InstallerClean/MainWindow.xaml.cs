@@ -150,6 +150,12 @@ public partial class MainWindow : Window
         CompletionOverlay.SizeChanged += OnReportPanelSurroundsSizeChanged;
         CompletionCard.SizeChanged += OnReportPanelSurroundsSizeChanged;
 
+        // The completion card's widths at 100% text scale; see the card in the XAML.
+        // Its overlay spans the root grid with no margin, so the root grid's width
+        // is the card's room, and unlike the overlay it is laid out before the card
+        // first shows.
+        this.KeepCardInsideRoom(CompletionCard, RootLayout, minimumWidth: 340, maximumWidth: 520);
+
         // Width is explicit, the designed 828 (the content column's 780
         // MaxWidth plus the content margins) multiplied by the
         // text-scale factor; height sizes to content with the root

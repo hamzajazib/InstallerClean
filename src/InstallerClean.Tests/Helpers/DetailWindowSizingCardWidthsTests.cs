@@ -32,6 +32,20 @@ public class DetailWindowSizingCardWidthsTests
         Assert.Equal((990.0, 1073.0), DetailWindowSizing.CardWidths(440, 520, 2.25, limit: 1073));
     }
 
+    [Fact]
+    public void A_card_over_a_window_narrower_than_its_minimum_takes_the_window_less_its_margins()
+    {
+        // The completion card at 225% text in a window 700 wide, keeping 24 each side.
+        Assert.Equal((652.0, 652.0),
+            DetailWindowSizing.CardWidths(340, 520, 2.25, DetailWindowSizing.RoomLimit(700, 48)));
+    }
+
+    [Fact]
+    public void A_room_narrower_than_the_margins_gives_no_width_rather_than_less()
+    {
+        Assert.Equal(0.0, DetailWindowSizing.RoomLimit(40, 48));
+    }
+
     [Theory]
     [InlineData(1.0)]
     [InlineData(2.25)]

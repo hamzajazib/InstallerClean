@@ -128,6 +128,58 @@ internal static class DetailWindowSizing
     }
 
     /// <summary>
+    /// The widest a card may be in a room <paramref name="roomWidth"/> wide when it
+    /// keeps <paramref name="margins"/> clear across its two sides, and never below
+    /// zero.
+    /// </summary>
+    public static double RoomLimit(double roomWidth, double margins)
+        => Math.Max(0, roomWidth - margins);
+
+    /// <summary>
+    /// Holds a card that sits over the window's content inside the room
+    /// <paramref name="room"/> gives it, less the card's own left and right margins:
+    /// the card's MinWidth and MaxWidth come from <see cref="CardWidths"/> with that
+    /// width as the limit. Both are taken again when the room changes size or the
+    /// text size changes, until the window closes, and not while the room has not
+    /// been laid out. <paramref name="minimumWidth"/> and
+    /// <paramref name="maximumWidth"/> are the card's widths at 100% text scale,
+    /// and the card carries no width of its own in XAML.
+    /// </summary>
+    public static void KeepCardInsideRoom(
+        this Window window, FrameworkElement card, FrameworkElement room,
+        double minimumWidth, double maximumWidth)
+    {
+        void Apply()
+        {
+            if (room.ActualWidth <= 0)
+                return;
+            (card.MinWidth, card.MaxWidth) = CardWidths(minimumWidth, maximumWidth,
+                AccessibilitySettings.Current.TextScaleFactor,
+                RoomLimit(room.ActualWidth, card.Margin.Left + card.Margin.Right));
+        }
+
+        void OnRoomSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (e.WidthChanged)
+                Apply();
+        }
+
+        void OnSettingsChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is null or nameof(AccessibilitySettings.TextScaleFactor))
+                Apply();
+        }
+
+        room.SizeChanged += OnRoomSizeChanged;
+        AccessibilitySettings.Current.PropertyChanged += OnSettingsChanged;
+        window.Closed += (_, _) =>
+        {
+            room.SizeChanged -= OnRoomSizeChanged;
+            AccessibilitySettings.Current.PropertyChanged -= OnSettingsChanged;
+        };
+    }
+
+    /// <summary>
     /// Moves <paramref name="window"/> back inside its monitor's work
     /// area if its bottom or right edge has crossed out. A shown
     /// SizeToContent window grows down and right from a fixed top-left,

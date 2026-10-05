@@ -24,6 +24,18 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <a11y:InstallerPathTextConverter x:Key="KeepInstallerPathWhole"/>
         <a11y:AnyPathTextConverter x:Key="BreakPathsAtFolders"/>
+        <!-- A control's label that takes further lines where the control is
+             given too little width for one, centred for a button and from the
+             left for a check box. The control's Content stays the string, so its
+             spoken name is still the label without its access-key marker, and
+             the AccessText registers the access key, which reaches the control
+             around it. -->
+        <DataTemplate x:Key="WrappingCentredLabel">
+            <AccessText Text="{Binding}" TextWrapping="Wrap" TextAlignment="Center"/>
+        </DataTemplate>
+        <DataTemplate x:Key="WrappingLabel">
+            <AccessText Text="{Binding}" TextWrapping="Wrap"/>
+        </DataTemplate>
     </Window.Resources>
 
     <Grid x:Name="RootLayout">
@@ -913,11 +925,15 @@
             <chrome:DecorativeBorder Background="{StaticResource Surface.Overlay}"
                        MouseLeftButtonDown="CompletionDimAreaClick"
                        Cursor="Arrow"/>
-            <!-- Card width scales with the OS text size so the copy keeps
-                 its line length instead of wrapping into a tall sliver. -->
+            <!-- The card's width runs from 340 to 520 scaled, set in
+                 code-behind (KeepCardInsideRoom), so the copy keeps its line
+                 length as the OS text size grows instead of wrapping into a
+                 tall sliver. Both are held to the window less the 24 each
+                 side the other two overlay cards keep, so in a window too
+                 narrow for 340 scaled the card narrows with it. -->
             <Border x:Name="CompletionCard" Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.Pill}"
                     BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}"
-                    Padding="36,32" MinWidth="{a11y:TextScaled 340}" MaxWidth="{a11y:TextScaled 520}"
+                    Padding="36,32" Margin="{StaticResource GapX.Xl}"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <!-- Grid, not a StackPanel: the icon, heading and buttons
                      sit in Auto rows and the variable-length copy in a
@@ -1143,7 +1159,8 @@
                          small Donate takes no access key. -->
                     <StackPanel Grid.Row="3" HorizontalAlignment="Center">
                         <Button x:Name="CompletionCloseButton"
-                                Content="{loc:Translate Action.Done}" Command="{Binding Completion.DismissCommand}"
+                                Content="{loc:Translate Action.Done}" ContentTemplate="{StaticResource WrappingCentredLabel}"
+                                Command="{Binding Completion.DismissCommand}"
                                 IsDefault="True"
                                 HorizontalAlignment="Center" MinWidth="120"
                                 Margin="{StaticResource GapBottom.Sm}"
@@ -1181,13 +1198,14 @@
                                     </Style.Triggers>
                                 </Style>
                             </Button.Style>
-                            <StackPanel Orientation="Horizontal">
-                                <Path Data="{StaticResource Icon.Heart}"
+                            <DockPanel>
+                                <Path DockPanel.Dock="Left" Data="{StaticResource Icon.Heart}"
                                       Fill="{StaticResource Decoration.Heart}" Stretch="Uniform"
                                       Width="{a11y:TextScaled 12}" Height="{a11y:TextScaled 12}"
                                       VerticalAlignment="Center" Margin="{StaticResource GapRight.Icon}"/>
-                                <TextBlock Text="{loc:Translate Action.DonateSmall}" VerticalAlignment="Center"/>
-                            </StackPanel>
+                                <TextBlock Text="{loc:Translate Action.DonateSmall}" VerticalAlignment="Center"
+                                           TextWrapping="Wrap" TextAlignment="Center"/>
+                            </DockPanel>
                             <Button.ToolTip>
                                 <ToolTip x:Name="CompletionDonateToolTip"
                                          Style="{StaticResource AccentTooltip}"
@@ -1208,13 +1226,14 @@
                                 ToolTipService.InitialShowDelay="0"
                                 AutomationProperties.Name="{loc:Translate Automation.Donate}"
                                 AutomationProperties.HelpText="{loc:Translate Tooltip.Donate}">
-                            <StackPanel Orientation="Horizontal">
-                                <Path Data="{StaticResource Icon.Heart}"
+                            <DockPanel>
+                                <Path DockPanel.Dock="Left" Data="{StaticResource Icon.Heart}"
                                       Fill="{StaticResource Decoration.Heart}" Stretch="Uniform"
                                       Width="{a11y:TextScaled 14}" Height="{a11y:TextScaled 14}"
                                       VerticalAlignment="Center" Margin="{StaticResource GapRight.Icon}"/>
-                                <AccessText Text="{loc:Translate Action.Donate}" VerticalAlignment="Center"/>
-                            </StackPanel>
+                                <AccessText Text="{loc:Translate Action.Donate}" VerticalAlignment="Center"
+                                            TextWrapping="Wrap" TextAlignment="Center"/>
+                            </DockPanel>
                             <Button.ToolTip>
                                 <ToolTip x:Name="CompletionDonateFiveToolTip"
                                          Style="{StaticResource AccentTooltip}"
@@ -1226,6 +1245,7 @@
                         <Button x:Name="CompletionCloseWithoutDonatingButton" Style="{StaticResource SmallGhostPill}"
                                 Visibility="{Binding Completion.AsksForDonation, Converter={StaticResource BoolToVis}}"
                                 Content="{loc:Translate Action.CloseWithoutDonating}"
+                                ContentTemplate="{StaticResource WrappingCentredLabel}"
                                 Command="{Binding Completion.DismissCommand}"
                                 IsDefault="True"
                                 HorizontalAlignment="Center" Padding="12,0"
@@ -1250,12 +1270,17 @@
                          hairline, its accent fill being its edge, so it does not draw the
                          eye; unticked, it keeps the hairline an empty box needs to be
                          seen. The "i" has no tooltip: it is clicked. -->
-                    <StackPanel x:Name="CompletionReportLine" Grid.Row="4" Orientation="Horizontal"
-                                HorizontalAlignment="Center"
-                                Margin="{StaticResource GapTop.Sm}"
-                                Visibility="{Binding Completion.OffersReport, Converter={StaticResource BoolToVis}}">
+                    <Grid x:Name="CompletionReportLine" Grid.Row="4"
+                          HorizontalAlignment="Center"
+                          Margin="{StaticResource GapTop.Sm}"
+                          Visibility="{Binding Completion.OffersReport, Converter={StaticResource BoolToVis}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
                         <CheckBox x:Name="CompletionReportBox"
                                   Content="{loc:Translate Completion.SendReport}"
+                                  ContentTemplate="{StaticResource WrappingLabel}"
                                   IsChecked="{Binding Completion.SendsReport}"
                                   VerticalAlignment="Center"
                                   AutomationProperties.LiveSetting="Polite">
@@ -1271,13 +1296,13 @@
                                 </Style>
                             </CheckBox.Style>
                         </CheckBox>
-                        <chrome:DisclosureButton x:Name="ReportInfoButton"
+                        <chrome:DisclosureButton x:Name="ReportInfoButton" Grid.Column="1"
                                                  Style="{StaticResource InfoButton}"
                                                  IsChecked="{Binding Completion.ReportPanelOpen}"
                                                  VerticalAlignment="Center"
                                                  Margin="{StaticResource GapLeft.Sm}"
                                                  AutomationProperties.Name="{loc:Translate Automation.ReportInfo}"/>
-                    </StackPanel>
+                    </Grid>
 
                 </Grid>
             </Border>

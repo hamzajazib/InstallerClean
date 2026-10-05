@@ -451,7 +451,13 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
-                    <StackPanel x:Name="Root" Orientation="Horizontal" Background="Transparent">
+                    <!-- A Grid rather than a horizontal StackPanel, so a label
+                         that wraps is given the width left beside the box. -->
+                    <Grid x:Name="Root" Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
                         <Border x:Name="Box"
                                 Width="{a11y:TextScaled 18}" Height="{a11y:TextScaled 18}"
                                 CornerRadius="{StaticResource Radius.Chip}"
@@ -468,8 +474,8 @@
                                   HorizontalAlignment="Center" VerticalAlignment="Center"
                                   Visibility="Collapsed"/>
                         </Border>
-                        <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True"/>
-                    </StackPanel>
+                        <ContentPresenter Grid.Column="1" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Box" Property="Background" Value="{StaticResource Action.Standard.Hover}"/>
