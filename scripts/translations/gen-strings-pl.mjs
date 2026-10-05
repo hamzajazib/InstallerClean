@@ -627,9 +627,9 @@ const MAP = {
   'Completion.ReportPanel.Closing': `Wszystko to są liczby i etykiety takie jak te. Nic w nim nie wskazuje ciebie, twojego komputera, twoich plików ani programów, a twojego adresu IP nigdy nie widzę.`,
   'Automation.ReportInfo': `Co zawiera raport`,
   'Automation.Scroll.ReportContents': `Co zawiera raport`,
-  'Completion.ReportPanel.SeeReport': `See exactly what's sent`,
-  'Window.Report.Title': `The anonymous report`,
-  'Window.Report.Unreadable': `InstallerClean couldn't read the report.`,
+  'Completion.ReportPanel.SeeReport': `Zobacz dokładnie, co jest wysyłane`,
+  'Window.Report.Title': `Anonimowy raport`,
+  'Window.Report.Unreadable': `InstallerClean nie zdołał odczytać raportu.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

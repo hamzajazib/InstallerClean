@@ -14,8 +14,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | About | Giới thiệu |
 | Files left alone | Tệp được để nguyên |
 | Unneeded files that are safe to delete | Tệp không cần thiết, có thể xóa an toàn |
-| The anonymous report | The anonymous report |
-| InstallerClean couldn't read the report. | InstallerClean couldn't read the report. |
+| The anonymous report | Báo cáo ẩn danh |
+| InstallerClean couldn't read the report. | InstallerClean không đọc được báo cáo. |
 
 ## Section headings
 
@@ -201,7 +201,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean's version and the language it was showing | Phiên bản InstallerClean và ngôn ngữ nó đang hiển thị |
 | Counts of anything that went wrong | Số lần xảy ra bất kỳ sự cố nào |
 | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Tất cả chỉ là các con số và nhãn như thế này. Không có gì trong đó nêu tên bạn, máy tính, tệp hay chương trình của bạn, và tôi không bao giờ thấy địa chỉ IP của bạn. |
-| See exactly what's sent | See exactly what's sent |
+| See exactly what's sent | Xem chính xác những gì được gửi |
 
 ## Summaries and counts
 

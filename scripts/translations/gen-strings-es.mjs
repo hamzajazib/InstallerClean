@@ -522,9 +522,9 @@ const MAP = {
   'Completion.ReportPanel.Closing': `Todo son recuentos y etiquetas como estos. Nada de ello te identifica a ti, a tu PC, tus archivos ni tus programas, y nunca veo tu dirección IP.`,
   'Automation.ReportInfo': `Qué contiene el informe`,
   'Automation.Scroll.ReportContents': `Qué contiene el informe`,
-  'Completion.ReportPanel.SeeReport': `See exactly what's sent`,
-  'Window.Report.Title': `The anonymous report`,
-  'Window.Report.Unreadable': `InstallerClean couldn't read the report.`,
+  'Completion.ReportPanel.SeeReport': `Ver exactamente qué se envía`,
+  'Window.Report.Title': `El informe anónimo`,
+  'Window.Report.Unreadable': `InstallerClean no pudo leer el informe.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

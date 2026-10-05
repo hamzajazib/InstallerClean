@@ -14,8 +14,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | About | Tentang |
 | Files left alone | File yang dibiarkan apa adanya |
 | Unneeded files that are safe to delete | File tidak diperlukan yang aman dihapus |
-| The anonymous report | The anonymous report |
-| InstallerClean couldn't read the report. | InstallerClean couldn't read the report. |
+| The anonymous report | Laporan anonim |
+| InstallerClean couldn't read the report. | InstallerClean tidak bisa membaca laporan. |
 
 ## Section headings
 
@@ -201,7 +201,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean's version and the language it was showing | Versi InstallerClean dan bahasa yang ditampilkannya |
 | Counts of anything that went wrong | Jumlah dari apa pun yang gagal |
 | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Semuanya berupa jumlah dan label seperti ini. Tidak ada yang menyebut Anda, PC Anda, file Anda, atau program Anda, dan saya tidak pernah melihat alamat IP Anda. |
-| See exactly what's sent | See exactly what's sent |
+| See exactly what's sent | Lihat persis apa yang dikirim |
 
 ## Summaries and counts
 

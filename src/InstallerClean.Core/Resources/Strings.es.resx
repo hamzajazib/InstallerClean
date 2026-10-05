@@ -87,11 +87,11 @@
   <data name="Window.Registered.Title" xml:space="preserve"><value>Archivos que se han dejado en paz</value></data>
   <data name="Window.Orphaned.Title" xml:space="preserve"><value>Archivos innecesarios que puedes eliminar sin riesgo</value></data>
   <data name="Window.Report.Title" xml:space="preserve">
-    <value>The anonymous report</value>
+    <value>El informe anónimo</value>
     <comment>The heading of the small window Completion.ReportPanel.SeeReport opens, which shows the report exactly as it is sent. Also the window's spoken title and the screen-reader name of the box holding the report. Same words as the checkbox Completion.SendReport, which calls it an anonymous report.</comment>
   </data>
   <data name="Window.Report.Unreadable" xml:space="preserve">
-    <value>InstallerClean couldn't read the report.</value>
+    <value>InstallerClean no pudo leer el informe.</value>
     <comment>Shown in the window headed Window.Report.Title, in place of the report, where the file holding it cannot be read when the window opens.</comment>
   </data>
 
@@ -1023,7 +1023,7 @@ Para reponerlo, necesitas el instalador de la versión que ya tienes. Consíguel
     <comment>The closing line of the panel opened from the small &quot;i&quot; beside Completion.SendReport, under the eleven bullets. &quot;I&quot; is the app's author.</comment>
   </data>
   <data name="Completion.ReportPanel.SeeReport" xml:space="preserve">
-    <value>See exactly what's sent</value>
+    <value>Ver exactamente qué se envía</value>
     <comment>A link on its own line at the end of the panel opened from the small &quot;i&quot; beside Completion.SendReport, under Completion.ReportPanel.Closing. It opens a window showing the report itself, exactly as it is sent. The whole line is the link, so it carries no brackets.</comment>
   </data>
   <data name="Automation.ReportInfo" xml:space="preserve">

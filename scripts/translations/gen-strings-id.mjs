@@ -611,9 +611,9 @@ const MAP = {
   'Completion.ReportPanel.Closing': `Semuanya berupa jumlah dan label seperti ini. Tidak ada yang menyebut Anda, PC Anda, file Anda, atau program Anda, dan saya tidak pernah melihat alamat IP Anda.`,
   'Automation.ReportInfo': `Isi laporan`,
   'Automation.Scroll.ReportContents': `Isi laporan`,
-  'Completion.ReportPanel.SeeReport': `See exactly what's sent`,
-  'Window.Report.Title': `The anonymous report`,
-  'Window.Report.Unreadable': `InstallerClean couldn't read the report.`,
+  'Completion.ReportPanel.SeeReport': `Lihat persis apa yang dikirim`,
+  'Window.Report.Title': `Laporan anonim`,
+  'Window.Report.Unreadable': `InstallerClean tidak bisa membaca laporan.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

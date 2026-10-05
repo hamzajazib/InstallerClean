@@ -515,9 +515,9 @@ const MAP = {
   'Completion.ReportPanel.Closing': `すべてこのような件数とラベルだけです。あなた自身、あなたの PC、ファイル、プログラムを特定するものは一切含まれず、私があなたの IP アドレスを見ることもありません。`,
   'Automation.ReportInfo': `レポートの内容`,
   'Automation.Scroll.ReportContents': `レポートの内容`,
-  'Completion.ReportPanel.SeeReport': `See exactly what's sent`,
-  'Window.Report.Title': `The anonymous report`,
-  'Window.Report.Unreadable': `InstallerClean couldn't read the report.`,
+  'Completion.ReportPanel.SeeReport': `送信される内容をそのまま見る`,
+  'Window.Report.Title': `匿名レポート`,
+  'Window.Report.Unreadable': `InstallerClean はレポートを読み取れませんでした。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,
