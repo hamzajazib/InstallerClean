@@ -53,7 +53,7 @@ InstallerClean scans the folder and asks Windows Installer what it still holds a
 
 Delete is permanent. The files do not go to the Recycle Bin, and nothing is deleted until you confirm. Move puts them in a folder you choose instead, which lets you satisfy yourself that nothing has broken before you delete anything. Both are refused while Windows Installer has a transaction running or suspended.
 
-The app reads the folder and the Windows records; it does not change your installed programs. On launch it asks GitHub once whether a newer version exists, which you can turn off in About. No ads, no telemetry, nothing running in the background.
+The app reads the folder and the Windows records; it does not change your installed programs. It checks GitHub for a newer version when you run it, which you can turn off, and the first time it finishes on a PC it sends one anonymous report of how the run went, unless you untick the box on the result screen. No ads, no tracking, nothing running in the background.
 
 A separate console executable, installerclean-cli.exe, ships in the setup build and as a standalone download, for scheduled tasks and unattended use, with its own exit codes and Windows event-log entries for scripting.
 
