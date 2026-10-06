@@ -193,8 +193,8 @@ public class WithholdingSplitTests
     public async Task A_screen_that_answered_about_a_different_number_of_files_gives_up_nothing_the_result_carries_and_its_waits_still_travel()
     {
         // The waits were shown whatever the screen answered, so they travel where its answer
-        // does not. What it says it read of the cached packages is part of its answer, and
-        // does not.
+        // does not. What it says it read of the cached packages is part of its answer, so that
+        // does not travel either.
         var result = await Scan(
             walked: new[] { $@"{Folder}\a.msi", $@"{Folder}\b.msi" },
             registered: Array.Empty<string>(),

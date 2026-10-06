@@ -697,9 +697,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         /// <summary>
         /// An installation whose cached package gave <paramref name="reading"/> rather than a
-        /// product code, and whose own record showed <paramref name="record"/>. Only one that
-        /// keeps every installation package is counted by what its cached package gave, by
-        /// what its record showed and by its context.
+        /// product code, and whose own record showed <paramref name="record"/>. Unless the check
+        /// has no file readers, every one is counted as read and by what its record showed, and
+        /// only one that keeps every installation package is counted by what its cached package
+        /// gave and by its context.
         /// </summary>
         internal void Undeclared(CachedPackageReading reading, RecordReading record, MsiInstallContext context)
         {
