@@ -37,6 +37,7 @@ When you open InstallerClean, it asks GitHub's releases page whether a newer ver
 - How many recorded files are missing from disk, and how many of those a program still needs.
 - How many files were left alone and why, by the scan and at the last moment before a Move or Delete.
 - How many programs and patches Windows has a record of, and how many programs are installed as a second copy of themselves.
+- How many installed programs' cached installer files InstallerClean read; for the programs whose file wouldn't say which program it belongs to, how many Windows showed to be an ordinary installation, and for the rest, why the file gave no answer, why Windows couldn't show that, and how many are installed for everyone on the PC.
 - Whether Windows still makes old-style short file names, and how many file names are too long to be one.
 - How many drives or network shares InstallerClean gave up on, and why; how many times it showed a line saying it was waiting; and how many files it left alone as a result. Never which drive, share or file.
 - Whether the run was a scan, a Move or a Delete, and whether it finished; how many files it moved or deleted and how many failed; how much space it freed; and for a Move, whether it went to the same drive, another drive, a removable drive or a network share.
