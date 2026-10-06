@@ -565,7 +565,7 @@ public partial class MainWindow : Window
     private void OnCleanupPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(CleanupViewModel.CanStopWaiting) && !_vm.Cleanup.CanStopWaiting)
-            HandFocusToCancel(OperationStopWaitingButton, OperationCancelButton);
+            HandFocusToCancel(OperationWaitingRegion, OperationCancelButton);
 
         if (e.PropertyName == nameof(CleanupViewModel.IsOperating) && !_vm.Cleanup.IsOperating
             && _vm.Cleanup.CloseRequested)
@@ -648,17 +648,20 @@ public partial class MainWindow : Window
             OperatingCardInFront() && _vm.Cleanup.OperationProgress.Length > 0);
 
     /// <summary>
-    /// Moves the keyboard focus from a card's stop-waiting button, as the button goes, to
-    /// that card's Cancel. Here and not posted: WPF answers a focused element going hidden
-    /// with a focus check posted at Input priority, which finds Cancel focused and leaves it,
-    /// where a move posted after it would run once the focus had already fallen to the
-    /// window. A Cancel out of use, pressed already or with nothing left to stop, takes no
-    /// focus, so the focus goes where WPF puts it, as it does when Cancel goes out of use
-    /// under the focus.
+    /// Moves the keyboard focus to a card's Cancel as the card's wait ends, where the focus is
+    /// in the card's waiting region: on the stop-waiting button, or on the region itself,
+    /// which takes the focus while it can scroll. As the wait ends the button goes and the
+    /// region, left with nothing to scroll, stops taking the focus, and WPF moves focus held
+    /// by either up to the window. Here and not posted: WPF answers a focused element going
+    /// hidden or no longer taking the focus with a focus check posted at Input priority,
+    /// which finds Cancel focused and leaves it, where a move posted after it would run once
+    /// the focus had already fallen to the window. A Cancel out of use, pressed already or
+    /// with nothing left to stop, takes no focus, so the focus goes where WPF puts it, as it
+    /// does when Cancel goes out of use under the focus.
     /// </summary>
-    private static void HandFocusToCancel(Button stopWaiting, Button cancel)
+    private static void HandFocusToCancel(ScrollViewer waitingRegion, Button cancel)
     {
-        if (stopWaiting.IsKeyboardFocused && cancel.IsEnabled)
+        if (waitingRegion.IsKeyboardFocusWithin && cancel.IsEnabled)
             cancel.Focus();
     }
 
@@ -689,7 +692,7 @@ public partial class MainWindow : Window
             AnnounceScanProgress();
 
         if (e.PropertyName == nameof(ScanViewModel.CanStopWaiting) && !_vm.Scan.CanStopWaiting)
-            HandFocusToCancel(ScanStopWaitingButton, ScanCancelButton);
+            HandFocusToCancel(ScanWaitingRegion, ScanCancelButton);
 
         if (e.PropertyName == nameof(ScanViewModel.IsScanning) && !_vm.Scan.IsScanning)
         {
