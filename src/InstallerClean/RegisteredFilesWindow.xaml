@@ -356,12 +356,16 @@
                              scrollable because the note runs several paragraphs, so
                              it reads from the top rather than floating centred, and
                              a short window can still scroll to the end. The icon
-                             docks top-left, beside the first line. -->
+                             docks top-left, beside the first line. The note keeps
+                             FocusRing.Room from the region's edges, so the focus ring
+                             round its link is drawn whole, and the region reaches the
+                             same distance into the card's padding, so nothing moves. -->
                         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                       Style="{StaticResource BodyScrollRegion}"
+                                      Margin="-4"
                                       AutomationProperties.Name="{loc:Translate Automation.Scroll.ProductDetails}"
                                       Visibility="{Binding ShowMissing, Converter={StaticResource BoolToVis}}">
-                            <Grid>
+                            <Grid Margin="4">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>

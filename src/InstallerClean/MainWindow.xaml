@@ -36,6 +36,24 @@
         <DataTemplate x:Key="WrappingLabel">
             <AccessText Text="{Binding}" TextWrapping="Wrap"/>
         </DataTemplate>
+        <!-- The focus ring of the scrolling region on the scanning card and on the
+             Move or Delete card, each of which reaches 4 up into the gap under the
+             line above it. The ring is drawn 2 inside the region's top edge and 2
+             outside its other three, so it sits in that gap rather than across the
+             line. -->
+        <Style x:Key="WaitingRegionFocusVisual">
+            <Setter Property="Control.Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Border CornerRadius="{StaticResource Radius.Tight}"
+                                BorderThickness="{StaticResource BorderThickness.Focus}"
+                                BorderBrush="{DynamicResource Text.Body}"
+                                Margin="-2,2,-2,-2"
+                                SnapsToDevicePixels="True"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid x:Name="RootLayout">
@@ -714,9 +732,15 @@
                          naming a long share at a large text size makes it, this region
                          scrolls while the bar, the milestone line and Cancel stay in
                          view. The milestone line sits outside it because it is read
-                         out, and a line scrolled out of view is reported off screen. -->
+                         out, and a line scrolled out of view is reported off screen.
+                         The button keeps FocusRing.Room from the region's top and
+                         sides, so its focus ring is drawn whole, and the region reaches
+                         the same distance up into the gap under the line, so the button
+                         sits 4 under the line. -->
                     <ScrollViewer Grid.Row="1" Style="{StaticResource BodyScrollRegion}"
                                   VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Margin="0,-4,0,0"
+                                  FocusVisualStyle="{StaticResource WaitingRegionFocusVisual}"
                                   AutomationProperties.Name="{loc:Translate Automation.Scroll.Waiting}">
                         <StackPanel>
                             <!-- Shown only while the line above names a wait. It gives up
@@ -731,6 +755,7 @@
                                  on a plain string: the AccessText registers it, and the
                                  key press reaches the button around it. -->
                             <Button x:Name="ScanStopWaitingButton" Style="{StaticResource GhostPill}"
+                                    Margin="4,4,4,0"
                                     Command="{Binding Scan.StopWaitingCommand}"
                                     MinHeight="28" Padding="16,0" FontSize="{DynamicResource Type.Body}"
                                     HorizontalAlignment="Center"
@@ -832,9 +857,11 @@
                          scrolls while the heading, the bar, the count and Cancel stay in
                          view. The heading and the count's spoken twin sit outside it
                          because they are read out, and a line scrolled out of view is
-                         reported off screen. -->
+                         reported off screen. Its margins are the scanning card's. -->
                     <ScrollViewer Grid.Row="1" Style="{StaticResource BodyScrollRegion}"
                                   VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Margin="0,-4,0,0"
+                                  FocusVisualStyle="{StaticResource WaitingRegionFocusVisual}"
                                   AutomationProperties.Name="{loc:Translate Automation.Scroll.Waiting}">
                         <StackPanel>
                             <!-- Shown only while the heading names a wait. It gives up on
@@ -844,6 +871,7 @@
                                  focus to Cancel if it has it as it goes. Its label wraps as
                                  the scanning card's does. -->
                             <Button x:Name="OperationStopWaitingButton" Style="{StaticResource GhostPill}"
+                                    Margin="4,4,4,0"
                                     Command="{Binding Cleanup.StopWaitingCommand}"
                                     MinHeight="28" Padding="16,0" FontSize="{DynamicResource Type.Body}"
                                     HorizontalAlignment="Center"
@@ -1360,7 +1388,11 @@
                  margins keep it inside the window, and the text scrolls where the
                  room above the line is shorter than it. Tab reaches the chart's link
                  and then the link to the report window. The background is solid,
-                 so a click on the panel never reaches the controls under it. -->
+                 so a click on the panel never reaches the controls under it. The
+                 text keeps FocusRing.Room from the edges of the region it scrolls
+                 in, so the focus ring round either link is drawn whole, and the
+                 region reaches the same distance into the panel's padding, so the
+                 text sits where the padding puts it. -->
             <Border x:Name="ReportPanel"
                     Visibility="{Binding Completion.ReportPanelOpen, Converter={StaticResource BoolToVis}}"
                     Background="{StaticResource Surface.Sidebar}"
@@ -1375,8 +1407,9 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled"
                               Style="{StaticResource BodyScrollRegion}"
+                              Margin="-4"
                               AutomationProperties.Name="{loc:Translate Automation.Scroll.ReportContents}">
-                    <StackPanel>
+                    <StackPanel Margin="4">
                         <!-- Inlines composed in code-behind (BuildReportPanelIntro),
                              the chart's name being a link inside the sentence. -->
                         <TextBlock x:Name="ReportPanelIntroText"
