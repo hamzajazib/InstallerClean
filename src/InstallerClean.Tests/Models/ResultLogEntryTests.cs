@@ -98,7 +98,7 @@ public class ResultLogEntryTests
         SourcesGivenUpReadTimeCount: 0,
         FilesKeptForSourcesGivenUpCount: 0,
         SourceWaitsShownCount: 0,
-        SecondCopyCachedPackagesReadCount: 0,
+        SecondCopyListedCheckedCount: 0,
         SecondCopyKeepPathUnreadableCount: 0,
         SecondCopyKeepNoneRecordedCount: 0,
         SecondCopyKeepNotThereCount: 0,
@@ -108,7 +108,19 @@ public class ResultLogEntryTests
         SecondCopyKeepPackageCodeUnansweredCount: 0,
         SecondCopyKeepInstanceTypeNotOrdinaryCount: 0,
         SecondCopyKeepPerMachineCount: 0,
-        SecondCopyReleasedOrdinaryCount: 0);
+        SecondCopyReleasedOrdinaryCount: 0,
+        SecondCopyUnruledCheckedCount: 0,
+        SecondCopyUnseenPathUnreadableCount: 0,
+        SecondCopyUnseenNoneRecordedCount: 0,
+        SecondCopyUnseenNotThereCount: 0,
+        SecondCopyUnseenWouldNotIdentifyCount: 0,
+        SecondCopyUnseenWouldNotReadCount: 0,
+        SecondCopyUnseenNoProductCodeCount: 0,
+        SecondCopyUnseenPerUserUnmanagedCount: 0,
+        SecondCopyUnseenSourcesGivenUpCount: 0,
+        SecondCopyUnseenSourceNotRuledOutCount: 0,
+        SecondCopyUnseenPerMachineCount: 0,
+        SecondCopyUnseenByNameFileCount: 0);
 
     private static MachineInfo SampleMachine() => new(
         ShortNameCreation: ShortNameCreationLabels.NoVolumes,
@@ -328,17 +340,29 @@ public class ResultLogEntryTests
                 "sourcesGivenUpSlowFailureCount", "sourcesGivenUpFailedReadsCount",
                 "sourcesGivenUpReadTimeCount", "filesKeptForSourcesGivenUpCount",
                 "sourceWaitsShownCount",
-                // What the screen read of each listed installation's cached package: how many
-                // it read, the installations keeping every installation package by what their
+                // What the screen found of the two conditions under which it holds back every
+                // installation package it would otherwise let through. First, how many listed
+                // installations it looked at, the installations setting the hold by what their
                 // cached package gave and then by why their record did not settle it, those of
                 // them that are per-machine, and those whose record showed them ordinary.
-                "secondCopyCachedPackagesReadCount",
+                "secondCopyListedCheckedCount",
                 "secondCopyKeepPathUnreadableCount", "secondCopyKeepNoneRecordedCount",
                 "secondCopyKeepNotThereCount", "secondCopyKeepWouldNotReadCount",
                 "secondCopyKeepNoProductCodeCount",
                 "secondCopyKeepAnotherAccountCount", "secondCopyKeepPackageCodeUnansweredCount",
                 "secondCopyKeepInstanceTypeNotOrdinaryCount",
                 "secondCopyKeepPerMachineCount", "secondCopyReleasedOrdinaryCount",
+                // Then how many installations not ruled out as a second copy it looked at,
+                // which step stopped the read at one whose packages could not all be seen,
+                // whether that one is per-machine, and the files held back where a package on
+                // the network that a file could be by its name could not be ruled out.
+                "secondCopyUnruledCheckedCount",
+                "secondCopyUnseenPathUnreadableCount", "secondCopyUnseenNoneRecordedCount",
+                "secondCopyUnseenNotThereCount", "secondCopyUnseenWouldNotIdentifyCount",
+                "secondCopyUnseenWouldNotReadCount", "secondCopyUnseenNoProductCodeCount",
+                "secondCopyUnseenPerUserUnmanagedCount", "secondCopyUnseenSourcesGivenUpCount",
+                "secondCopyUnseenSourceNotRuledOutCount", "secondCopyUnseenPerMachineCount",
+                "secondCopyUnseenByNameFileCount",
             ],
             root.GetProperty("scan").EnumerateObject().Select(p => p.Name));
 
@@ -598,51 +622,69 @@ public class ResultLogEntryTests
     }
 
     [Fact]
-    public void What_the_screen_read_of_the_cached_packages_travels_member_by_member()
+    public void What_the_screen_found_of_the_installations_travels_member_by_member()
     {
-        // Eleven ints in a row, each given a different value, so an argument that lands on its
-        // neighbour's key fails here rather than sending one count under another's name.
+        // Twenty-three ints in a row, each given a different value, so an argument that lands on
+        // its neighbour's key fails here rather than sending one count under another's name.
         var scan = new ScanResult(
             Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
             CachedPackageCensus: new CachedPackageCensus(
-                InstallationsRead: 64, KeptPathUnreadable: 1, KeptNoneRecorded: 2, KeptNotThere: 3,
+                ListedChecked: 64, KeptPathUnreadable: 1, KeptNoneRecorded: 2, KeptNotThere: 3,
                 KeptWouldNotRead: 4, KeptNoProductCode: 5, KeptAnotherAccount: 6,
                 KeptPackageCodeUnanswered: 7, KeptInstanceTypeNotOrdinary: 8, KeptPerMachine: 9,
-                ReleasedOrdinary: 10));
+                ReleasedOrdinary: 10, UnruledChecked: 11, UnseenPathUnreadable: 12, UnseenNoneRecorded: 13,
+                UnseenNotThere: 14, UnseenWouldNotIdentify: 15, UnseenWouldNotRead: 16,
+                UnseenNoProductCode: 17, UnseenPerUserUnmanaged: 18, UnseenSourcesGivenUp: 19,
+                UnseenSourceNotRuledOut: 20, UnseenPerMachine: 21, UnseenByNameFiles: 22));
 
         var info = ScanInfo.From(scan, 10);
 
         Assert.Equal(
-            [64, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            [64, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
             [
-                info.SecondCopyCachedPackagesReadCount, info.SecondCopyKeepPathUnreadableCount,
+                info.SecondCopyListedCheckedCount, info.SecondCopyKeepPathUnreadableCount,
                 info.SecondCopyKeepNoneRecordedCount, info.SecondCopyKeepNotThereCount,
                 info.SecondCopyKeepWouldNotReadCount, info.SecondCopyKeepNoProductCodeCount,
                 info.SecondCopyKeepAnotherAccountCount, info.SecondCopyKeepPackageCodeUnansweredCount,
                 info.SecondCopyKeepInstanceTypeNotOrdinaryCount, info.SecondCopyKeepPerMachineCount,
                 info.SecondCopyReleasedOrdinaryCount,
+                info.SecondCopyUnruledCheckedCount, info.SecondCopyUnseenPathUnreadableCount,
+                info.SecondCopyUnseenNoneRecordedCount, info.SecondCopyUnseenNotThereCount,
+                info.SecondCopyUnseenWouldNotIdentifyCount, info.SecondCopyUnseenWouldNotReadCount,
+                info.SecondCopyUnseenNoProductCodeCount, info.SecondCopyUnseenPerUserUnmanagedCount,
+                info.SecondCopyUnseenSourcesGivenUpCount, info.SecondCopyUnseenSourceNotRuledOutCount,
+                info.SecondCopyUnseenPerMachineCount, info.SecondCopyUnseenByNameFileCount,
             ]);
 
         using var doc = JsonDocument.Parse(JsonSerializer.Serialize(info, JsonOptions));
-        Assert.Equal(64, doc.RootElement.GetProperty("secondCopyCachedPackagesReadCount").GetInt32());
+        Assert.Equal(64, doc.RootElement.GetProperty("secondCopyListedCheckedCount").GetInt32());
         Assert.Equal(9, doc.RootElement.GetProperty("secondCopyKeepPerMachineCount").GetInt32());
         Assert.Equal(10, doc.RootElement.GetProperty("secondCopyReleasedOrdinaryCount").GetInt32());
+        Assert.Equal(11, doc.RootElement.GetProperty("secondCopyUnruledCheckedCount").GetInt32());
+        Assert.Equal(21, doc.RootElement.GetProperty("secondCopyUnseenPerMachineCount").GetInt32());
+        Assert.Equal(22, doc.RootElement.GetProperty("secondCopyUnseenByNameFileCount").GetInt32());
     }
 
     [Fact]
-    public void A_scan_whose_screen_read_no_cached_package_sends_eleven_zeros()
+    public void A_scan_whose_screen_looked_at_no_installation_sends_twenty_three_zeros()
     {
         var info = ScanInfo.From(
             new ScanResult(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0), 10);
 
         Assert.All(
             [
-                info.SecondCopyCachedPackagesReadCount, info.SecondCopyKeepPathUnreadableCount,
+                info.SecondCopyListedCheckedCount, info.SecondCopyKeepPathUnreadableCount,
                 info.SecondCopyKeepNoneRecordedCount, info.SecondCopyKeepNotThereCount,
                 info.SecondCopyKeepWouldNotReadCount, info.SecondCopyKeepNoProductCodeCount,
                 info.SecondCopyKeepAnotherAccountCount, info.SecondCopyKeepPackageCodeUnansweredCount,
                 info.SecondCopyKeepInstanceTypeNotOrdinaryCount, info.SecondCopyKeepPerMachineCount,
                 info.SecondCopyReleasedOrdinaryCount,
+                info.SecondCopyUnruledCheckedCount, info.SecondCopyUnseenPathUnreadableCount,
+                info.SecondCopyUnseenNoneRecordedCount, info.SecondCopyUnseenNotThereCount,
+                info.SecondCopyUnseenWouldNotIdentifyCount, info.SecondCopyUnseenWouldNotReadCount,
+                info.SecondCopyUnseenNoProductCodeCount, info.SecondCopyUnseenPerUserUnmanagedCount,
+                info.SecondCopyUnseenSourcesGivenUpCount, info.SecondCopyUnseenSourceNotRuledOutCount,
+                info.SecondCopyUnseenPerMachineCount, info.SecondCopyUnseenByNameFileCount,
             ],
             count => Assert.Equal(0, count));
     }

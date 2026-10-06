@@ -89,11 +89,10 @@ public sealed record ResultLogEntry(
     /// to a version a release already sends could only be permitted there, never
     /// required, without rejecting every report from that release.
     ///
-    /// SCHEMA 6 ADDS ELEVEN KEYS UNDER <c>scan</c> AND TAKES NONE AWAY: what the
-    /// declared-product screen read of each listed installation's cached package, and of
-    /// the record of each installation whose cached package did not say which product it
-    /// declares (<see cref="ScanInfo.SecondCopyCachedPackagesReadCount"/> and the ten after
-    /// it).
+    /// SCHEMA 6 ADDS TWENTY-THREE KEYS UNDER <c>scan</c> AND TAKES NONE AWAY: what the
+    /// declared-product screen found of the two conditions under which it holds back every
+    /// installation package it would otherwise let through
+    /// (<see cref="ScanInfo.SecondCopyListedCheckedCount"/> and the twenty-two after it).
     ///
     /// A receiver that does not recognise a version stores the report under a
     /// lenient v&lt;n&gt;-unknown/ prefix rather than rejecting it, so a bump
@@ -1109,21 +1108,23 @@ public sealed record MachineInfo(
 /// (<see cref="ScanResult.SourceWaitCount"/>). Every wait is counted, whether or not its
 /// drive or share was then given up.
 /// </param>
-/// <param name="SecondCopyCachedPackagesReadCount">
-/// The listed installations whose cached package the declared-product screen read in this
-/// scan (<see cref="CachedPackageCensus.InstallationsRead"/>): every one, read once, where
-/// an installation package reached the step that reads them, and none where none did. Off
-/// <see cref="ScanResult.CachedPackageCensus"/>, as are the ten after it.
+/// <param name="SecondCopyListedCheckedCount">
+/// The listed installations whose cached package the declared-product screen looked for in
+/// this scan (<see cref="CachedPackageCensus.ListedChecked"/>): every one, once, where an
+/// installation package reached that step, and none where none did. Off
+/// <see cref="ScanResult.CachedPackageCensus"/>, as are the twenty-two after it.
 ///
-/// THE ELEVEN ARE APPENDED LAST, for the reason the members before them were. Counts of
-/// installations, and nothing naming one.
+/// THE TWENTY-THREE ARE APPENDED LAST, for the reason the members before them were. Counts
+/// of installations and of files, and nothing naming one.
 /// </param>
 /// <param name="SecondCopyKeepPathUnreadableCount">
-/// Installations whose cached package did not say which product it declares and whose own
-/// record did not show an ordinary installation, each of which keeps every installation
-/// package the screen would otherwise let through
-/// (<paramref name="WithheldSecondCopyUnestablishedCount"/>), where the cached package's
-/// path would not read.
+/// Installations that set the hold counted in
+/// <paramref name="WithheldSecondCopyUnestablishedCount"/>: their cached package did not say
+/// which product it declares and their own record did not show an ordinary installation.
+/// Counted where the screen reads them, before any file's verdict, so they are counted
+/// whether or not any file was then held back for them. This one counts those for which
+/// Windows gave no answer about the cached package's path: a read that failed, or an answer
+/// that it does not know the product in that account and context.
 ///
 /// THE FIVE KEYS FROM THIS ONE SAY WHAT EACH SUCH INSTALLATION'S CACHED PACKAGE GAVE, AND
 /// THE THREE AFTER THEM WHY ITS RECORD DID NOT SETTLE IT. Each installation is in one of
@@ -1137,7 +1138,7 @@ public sealed record MachineInfo(
 /// </param>
 /// <param name="SecondCopyKeepWouldNotReadCount">The same, where the cached package would not read.</param>
 /// <param name="SecondCopyKeepNoProductCodeCount">
-/// The same, where the cached package read and declares no product code.
+/// The same, where the cached package read and declares no product code, or reads as a patch.
 /// </param>
 /// <param name="SecondCopyKeepAnotherAccountCount">
 /// The same installations, where the installation is per-user and not shown to belong to
@@ -1156,7 +1157,52 @@ public sealed record MachineInfo(
 /// </param>
 /// <param name="SecondCopyReleasedOrdinaryCount">
 /// Installations whose cached package did not say which product it declares and whose own
-/// record shows an ordinary installation, so they keep nothing.
+/// record shows an ordinary installation, so they do not set the hold.
+/// </param>
+/// <param name="SecondCopyUnruledCheckedCount">
+/// The listed installations not ruled out as a second copy of a program whose packages the
+/// screen looked for, the one it stopped at included. None where an installation sets the
+/// hold, which the screen then does not look further than, or where no installation package
+/// the answer about its own product lets through reached that step.
+///
+/// THE NINE KEYS AFTER THIS ONE SAY WHICH STEP STOPPED THE READ, at the first such
+/// installation whose packages could not all be seen, which holds back every installation
+/// package the screen would otherwise let through. At most one of them is 1 and the rest 0.
+/// Counted where the read is made, before any file's verdict.
+/// </param>
+/// <param name="SecondCopyUnseenPathUnreadableCount">
+/// Windows gave no answer about the cached package's path, as for
+/// <paramref name="SecondCopyKeepPathUnreadableCount"/>.
+/// </param>
+/// <param name="SecondCopyUnseenNoneRecordedCount">The installation records no cached package.</param>
+/// <param name="SecondCopyUnseenNotThereCount">The cached package's path names no file that is there.</param>
+/// <param name="SecondCopyUnseenWouldNotIdentifyCount">
+/// The cached package's volume and file ID would not read.
+/// </param>
+/// <param name="SecondCopyUnseenWouldNotReadCount">The cached package would not read.</param>
+/// <param name="SecondCopyUnseenNoProductCodeCount">
+/// The cached package declares no product code, or reads as a patch.
+/// </param>
+/// <param name="SecondCopyUnseenPerUserUnmanagedCount">
+/// The installation is in the per-user unmanaged context, whose source list is not read.
+/// </param>
+/// <param name="SecondCopyUnseenSourcesGivenUpCount">
+/// A package in a folder its sources name was refused for a drive or share given up for the
+/// scan.
+/// </param>
+/// <param name="SecondCopyUnseenSourceNotRuledOutCount">
+/// Its sources could not be ruled out for any other reason
+/// (<see cref="CachedPackageCensus.UnseenSourceNotRuledOut"/>).
+/// </param>
+/// <param name="SecondCopyUnseenPerMachineCount">
+/// 1 where the installation the read stopped at is per-machine, and 0 where it is per-user or
+/// the read did not stop.
+/// </param>
+/// <param name="SecondCopyUnseenByNameFileCount">
+/// Files held back because a package in a folder on the network, which the sources of an
+/// installation not ruled out as a second copy name and which the file could be by its name,
+/// could not be ruled out. Each is also counted in
+/// <paramref name="WithheldSecondCopyUnestablishedCount"/>.
 /// </param>
 public sealed record ScanInfo(
     long DurationMs,
@@ -1204,7 +1250,7 @@ public sealed record ScanInfo(
     int SourcesGivenUpReadTimeCount,
     int FilesKeptForSourcesGivenUpCount,
     int SourceWaitsShownCount,
-    int SecondCopyCachedPackagesReadCount,
+    int SecondCopyListedCheckedCount,
     int SecondCopyKeepPathUnreadableCount,
     int SecondCopyKeepNoneRecordedCount,
     int SecondCopyKeepNotThereCount,
@@ -1214,7 +1260,19 @@ public sealed record ScanInfo(
     int SecondCopyKeepPackageCodeUnansweredCount,
     int SecondCopyKeepInstanceTypeNotOrdinaryCount,
     int SecondCopyKeepPerMachineCount,
-    int SecondCopyReleasedOrdinaryCount)
+    int SecondCopyReleasedOrdinaryCount,
+    int SecondCopyUnruledCheckedCount,
+    int SecondCopyUnseenPathUnreadableCount,
+    int SecondCopyUnseenNoneRecordedCount,
+    int SecondCopyUnseenNotThereCount,
+    int SecondCopyUnseenWouldNotIdentifyCount,
+    int SecondCopyUnseenWouldNotReadCount,
+    int SecondCopyUnseenNoProductCodeCount,
+    int SecondCopyUnseenPerUserUnmanagedCount,
+    int SecondCopyUnseenSourcesGivenUpCount,
+    int SecondCopyUnseenSourceNotRuledOutCount,
+    int SecondCopyUnseenPerMachineCount,
+    int SecondCopyUnseenByNameFileCount)
 {
     public static ScanInfo From(ScanResult scan, long durationMs)
     {
@@ -1306,9 +1364,9 @@ public sealed record ScanInfo(
             givenUp.ReadTime,
             givenUp.FilesKept,
             givenUp.WaitsShown,
-            // What the screen read of each listed installation's cached package, and of the
-            // record of each one whose cached package did not say what it declares.
-            cachedPackages.InstallationsRead,
+            // What the screen found of the two conditions under which it holds back every
+            // installation package it would otherwise let through.
+            cachedPackages.ListedChecked,
             cachedPackages.KeptPathUnreadable,
             cachedPackages.KeptNoneRecorded,
             cachedPackages.KeptNotThere,
@@ -1318,7 +1376,19 @@ public sealed record ScanInfo(
             cachedPackages.KeptPackageCodeUnanswered,
             cachedPackages.KeptInstanceTypeNotOrdinary,
             cachedPackages.KeptPerMachine,
-            cachedPackages.ReleasedOrdinary);
+            cachedPackages.ReleasedOrdinary,
+            cachedPackages.UnruledChecked,
+            cachedPackages.UnseenPathUnreadable,
+            cachedPackages.UnseenNoneRecorded,
+            cachedPackages.UnseenNotThere,
+            cachedPackages.UnseenWouldNotIdentify,
+            cachedPackages.UnseenWouldNotRead,
+            cachedPackages.UnseenNoProductCode,
+            cachedPackages.UnseenPerUserUnmanaged,
+            cachedPackages.UnseenSourcesGivenUp,
+            cachedPackages.UnseenSourceNotRuledOut,
+            cachedPackages.UnseenPerMachine,
+            cachedPackages.UnseenByNameFiles);
     }
 }
 

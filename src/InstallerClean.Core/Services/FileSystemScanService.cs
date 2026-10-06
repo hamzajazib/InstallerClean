@@ -1376,9 +1376,10 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// (<see cref="DeclaredProductScreening.RootsGivenUp"/>), and none where it handed the
     /// screen nothing or did not use its answer, and how many waits the screen made
     /// (<see cref="DeclaredProductScreening.WaitCount"/>), whether or not its answer was used,
-    /// a host showing the waits having shown each of them, and what the screen read of each
-    /// listed installation's cached package (<see cref="DeclaredProductScreening.CachedPackages"/>),
-    /// a pass that read none where it handed the screen nothing or did not use its answer.
+    /// a host showing the waits having shown each of them, and what the screen found of the
+    /// conditions that hold back every file it would otherwise let through
+    /// (<see cref="DeclaredProductScreening.CachedPackages"/>), a pass that looked at no
+    /// installation where it handed the screen nothing or did not use its answer.
     /// </summary>
     private (IReadOnlyList<SourceRootGivenUp> RootsGivenUp, int WaitCount, CachedPackageCensus CachedPackages)
         WithholdCandidatesByWhatTheyDeclare(
@@ -1424,7 +1425,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // would attach one file's verdict to another. Every candidate is kept
         // rather than none, which is the direction this whole pass fails in. The drives
         // and shares it says it gave up are not carried either, its answer not being used,
-        // nor what it read of the cached packages. Its waits are, each having been reported
+        // nor what it found of the installations. Its waits are, each having been reported
         // whatever it answered.
         if (outcomes.Count != candidates.Count)
         {

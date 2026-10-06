@@ -231,9 +231,8 @@ public interface IDeclaredProductCheck
 /// time, so no two of them overlap.
 /// </param>
 /// <param name="CachedPackages">
-/// What the pass read of each listed installation's cached package, and of the record of
-/// each one whose cached package did not say which product it declares
-/// (<see cref="CachedPackageCensus"/>).
+/// What the pass found of the two conditions under which it holds back every installation
+/// package it would otherwise let through (<see cref="CachedPackageCensus"/>).
 /// </param>
 public sealed record DeclaredProductScreening(
     IReadOnlyList<DeclaredProductOutcome> Outcomes,

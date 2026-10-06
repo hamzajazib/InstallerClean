@@ -211,8 +211,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             if (givenUp is not null && outcomes[i].Withholds()) pass.CountKept(givenUp);
         }
 
-        return new DeclaredProductScreening(
-            outcomes, pass.GivenUp(), pass.WaitCount, pass.Links?.Census ?? CachedPackageCensus.None);
+        return new DeclaredProductScreening(outcomes, pass.GivenUp(), pass.WaitCount, pass.Census.Census());
     }
 
     /// <summary>
@@ -339,10 +338,14 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         IReadOnlyList<FileIdentity>? secondCopies = null;
         string? secondCopiesGivenUp = null;
+        var unseenByName = false;
         if (!LinksOf(pass, recordRefusal).UnreadPackageNotRuledOut
             && PackagesSecondCopiesOpen(pass, namesAFileInInstallerFolder, out secondCopiesGivenUp) is { } second)
+        {
             secondCopies = WithPackagesItCouldBe(
                 candidate, second.Identities, second.ByName, pass, namesAFileInInstallerFolder, out secondCopiesGivenUp);
+            unseenByName = secondCopies is null;
+        }
 
         if (secondCopies is null)
         {
@@ -351,6 +354,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                 : CompareWithRecorded(candidatePath, recorded, letThrough, DeclaredProductOutcome.DeclaredProductInstalled);
             if (verdict.Withholds()) return verdict;
 
+            if (unseenByName) pass.Census.UnseenByName();
             givenUp = secondCopiesGivenUp;
             return DeclaredProductOutcome.SecondCopyUnestablished;
         }
@@ -386,6 +390,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <paramref name="givenUp"/> is the root whose give-up refused the read that made it
     /// null (<see cref="ReadSourcePackage"/>), kept for the pass with the answer, and null
     /// otherwise.
+    ///
+    /// Each installation read is counted in the pass's census, the one that makes it null by
+    /// the step that stopped it (<see cref="CensusTally.SecondCopyRead"/>).
     /// </summary>
     private OpenedPackages? PackagesSecondCopiesOpen(
         PassAnswers pass, Func<string, bool?>? namesAFileInInstallerFolder, out string? givenUp)
@@ -404,7 +411,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             pass.CancellationToken.ThrowIfCancellationRequested();
             if (!installation.SecondCopyNotRuledOut) continue;
 
-            if (!AddSecondCopyPackages(installation, pass, namesAFileInInstallerFolder, identities, byName, out givenUp))
+            var seen = AddSecondCopyPackages(
+                installation, pass, namesAFileInInstallerFolder, identities, byName, out givenUp, out var reading);
+            pass.Census.SecondCopyRead(reading, (MsiInstallContext)installation.Context);
+            if (!seen)
             {
                 identities = null;
                 break;
@@ -425,7 +435,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// The cached package has to be a file that is there, that identifies, and that
     /// yields a product code: a value naming anything else shows nothing about which
     /// package the installation opens. <paramref name="givenUp"/> is as
-    /// <see cref="AddSourcePackages"/> gives it.
+    /// <see cref="AddSourcePackages"/> gives it, and <paramref name="reading"/> says which
+    /// step answered false, or <see cref="SecondCopyReading.Seen"/>.
     /// </summary>
     private bool AddSecondCopyPackages(
         ListedInstallation installation,
@@ -433,42 +444,60 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         Func<string, bool?>? namesAFileInInstallerFolder,
         List<FileIdentity> opened,
         List<NetworkPackage> byName,
-        out string? givenUp)
+        out string? givenUp,
+        out SecondCopyReading reading)
     {
         givenUp = null;
+        reading = SecondCopyReading.NoReaders;
         if (_fileIdentities is null || _fileSystem is null) return false;
 
         var context = (MsiInstallContext)installation.Context;
         var read = InstallerQueryService.ReadProductProperty(
             _msi, installation.ProductCode, installation.UserSid, context, MsiInstallProperty.LocalPackage);
+        reading = SecondCopyReading.PathUnreadable;
         if (read.Unreadable) return false;
 
         var path = read.Value.TrimEnd('\0');
+        reading = SecondCopyReading.NoneRecorded;
         if (path.Length == 0) return false;
 
         // File.Exists is false for a folder and for a path that will not parse, and the
         // identity read below opens folders too, so this is what keeps a value naming a
         // folder from standing in for a package.
+        reading = SecondCopyReading.NotThere;
         if (!_fileSystem.File.Exists(path)) return false;
 
+        reading = SecondCopyReading.WouldNotIdentify;
         if (_fileIdentities.ReadOutcome(path, out var recorded) != FileIdentityRead.Read) return false;
 
         var declared = _identityReader.Read(path, isPatch: false, out _);
-        if (declared is null || declared.Value.IsPatch || declared.Value.Code.Length == 0) return false;
+        reading = SecondCopyReading.WouldNotRead;
+        if (declared is null) return false;
+        reading = SecondCopyReading.NoProductCode;
+        if (declared.Value.IsPatch || declared.Value.Code.Length == 0) return false;
 
         opened.Add(recorded);
 
-        return AddSourcePackages(installation.ProductCode, installation.UserSid, context, pass,
+        var sourcesSeen = AddSourcePackages(installation.ProductCode, installation.UserSid, context, pass,
             namesAFileInInstallerFolder, opened, byName, out givenUp);
+
+        // In the order AddSourcePackages refuses: a check without the readers it needs, then
+        // the per-user unmanaged context, whose list is not read, then everything after it.
+        reading = sourcesSeen ? SecondCopyReading.Seen
+            : namesAFileInInstallerFolder is null || _registry is null ? SecondCopyReading.NoReaders
+            : context == MsiInstallContext.UserUnmanaged ? SecondCopyReading.PerUserUnmanaged
+            : givenUp is not null ? SecondCopyReading.SourcesGivenUp
+            : SecondCopyReading.SourceNotRuledOut;
+        return sourcesSeen;
     }
 
     /// <summary>
     /// Every installation the caller listed that is registered under a code other than
     /// the one its cached package declares, keyed by the declared code, whether an
     /// installation whose cached package did not say what it declares is not shown by its
-    /// own record to be an ordinary installation, and the count of what each installation's
-    /// cached package and record gave (<see cref="CachedPackageCensus"/>). Read once per
-    /// pass, the first time it is needed.
+    /// own record to be an ordinary installation, each installation being counted in the
+    /// pass's census by what its cached package and record gave (<see cref="CensusTally"/>).
+    /// Read once per pass, the first time it is needed.
     ///
     /// EVERY CONTEXT IS READ, AND A FAILED READ KEEPS UNLESS THE RECORD RULES IT OUT. A
     /// link only ever adds an installation to the ones a candidate is compared with, so
@@ -492,7 +521,6 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             new Dictionary<string, List<(string RegisteredCode, string? Sid, MsiInstallContext Context)>>(
                 StringComparer.Ordinal);
         string? unread = null;
-        var census = new CensusTally();
 
         foreach (var installation in pass.Installations)
         {
@@ -505,11 +533,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             {
                 var record = WhatItsOwnRecordShows(installation.ProductCode, installation.UserSid, context);
                 if (record != RecordReading.Ordinary) unread ??= detail;
-                census.Undeclared(reading, record, context);
+                pass.Census.Undeclared(reading, record, context);
                 continue;
             }
 
-            census.Declared();
+            pass.Census.Declared();
             if (SameCode(declared, installation.ProductCode)) continue;
 
             if (!byDeclaredCode.TryGetValue(declared, out var linked))
@@ -527,7 +555,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                     + "is kept rather than offered. Detail: " + unread + "."),
                 unread);
 
-        return pass.Links = new InstallationLinks(byDeclaredCode, unread is not null, census.Census());
+        return pass.Links = new InstallationLinks(byDeclaredCode, unread is not null);
     }
 
     /// <summary>
@@ -679,34 +707,79 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     }
 
     /// <summary>
-    /// The counts of a <see cref="CachedPackageCensus"/>, taken by <see cref="LinksOf"/> one
-    /// installation at a time. An installation whose cached package was not read, the check
-    /// having no file readers, is counted nowhere, so every installation counted among the
-    /// keeping ones is in exactly one count of what its cached package gave and one of what
-    /// its record showed.
+    /// Which step answered for one installation not ruled out as a second copy
+    /// (<see cref="AddSecondCopyPackages"/>): <see cref="Seen"/> where its packages can all be
+    /// seen, and otherwise the step that could not see one.
+    /// </summary>
+    private enum SecondCopyReading
+    {
+        /// <summary>Its cached package and the packages its sources name can all be seen.</summary>
+        Seen,
+
+        /// <summary>Not looked for, the check having no file readers or no registry reader.</summary>
+        NoReaders,
+
+        /// <summary>Its cached package's path would not read.</summary>
+        PathUnreadable,
+
+        /// <summary>It records no cached package.</summary>
+        NoneRecorded,
+
+        /// <summary>Its cached package's path names no file that is there.</summary>
+        NotThere,
+
+        /// <summary>Its cached package's volume and file ID would not read.</summary>
+        WouldNotIdentify,
+
+        /// <summary>Its cached package would not read.</summary>
+        WouldNotRead,
+
+        /// <summary>Its cached package declares no product code, or reads as a patch.</summary>
+        NoProductCode,
+
+        /// <summary>It is in the per-user unmanaged context, whose source list is not read.</summary>
+        PerUserUnmanaged,
+
+        /// <summary>A package its sources name is under a root given up for the pass.</summary>
+        SourcesGivenUp,
+
+        /// <summary>Its sources could not be ruled out for any other reason.</summary>
+        SourceNotRuledOut,
+    }
+
+    /// <summary>
+    /// The counts of a <see cref="CachedPackageCensus"/>, taken one installation at a time by
+    /// <see cref="LinksOf"/> and <see cref="PackagesSecondCopiesOpen"/>, and one file at a time
+    /// by <see cref="Settle"/>. An installation a check without its file readers could not look
+    /// at is counted nowhere, so every installation counted as setting the hold is in exactly
+    /// one count of what its cached package gave and one of what its record showed.
     /// </summary>
     private sealed class CensusTally
     {
         private readonly int[] _byReading = new int[Enum.GetValues<CachedPackageReading>().Length];
         private readonly int[] _byRecord = new int[Enum.GetValues<RecordReading>().Length];
-        private int _read;
+        private readonly int[] _bySecondCopyReading = new int[Enum.GetValues<SecondCopyReading>().Length];
+        private int _listedChecked;
         private int _perMachine;
+        private int _unruledChecked;
+        private int _unseenPerMachine;
+        private int _unseenByNameFiles;
 
         /// <summary>An installation whose cached package declares a product code.</summary>
-        internal void Declared() => _read++;
+        internal void Declared() => _listedChecked++;
 
         /// <summary>
         /// An installation whose cached package gave <paramref name="reading"/> rather than a
         /// product code, and whose own record showed <paramref name="record"/>. Unless the check
-        /// has no file readers, every one is counted as read and by what its record showed, and
-        /// only one that keeps every installation package is counted by what its cached package
-        /// gave and by its context.
+        /// has no file readers, every one is counted as checked and by what its record showed,
+        /// and only one that sets the hold is counted by what its cached package gave and by its
+        /// context.
         /// </summary>
         internal void Undeclared(CachedPackageReading reading, RecordReading record, MsiInstallContext context)
         {
             if (reading == CachedPackageReading.NoReaders) return;
 
-            _read++;
+            _listedChecked++;
             _byRecord[(int)record]++;
             if (record == RecordReading.Ordinary) return;
 
@@ -714,9 +787,32 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             if (context == MsiInstallContext.Machine) _perMachine++;
         }
 
+        /// <summary>
+        /// An installation not ruled out as a second copy, whose packages gave
+        /// <paramref name="reading"/>. Unless the check has no readers, every one is counted
+        /// as checked, and one whose packages could not all be seen by the step that could not
+        /// see one and by its context.
+        /// </summary>
+        internal void SecondCopyRead(SecondCopyReading reading, MsiInstallContext context)
+        {
+            if (reading == SecondCopyReading.NoReaders) return;
+
+            _unruledChecked++;
+            if (reading == SecondCopyReading.Seen) return;
+
+            _bySecondCopyReading[(int)reading]++;
+            if (context == MsiInstallContext.Machine) _unseenPerMachine++;
+        }
+
+        /// <summary>
+        /// A file held back because a package in a folder on the network, which a second copy's
+        /// sources name and which the file could be by its name, could not be ruled out.
+        /// </summary>
+        internal void UnseenByName() => _unseenByNameFiles++;
+
         /// <summary>The counts taken.</summary>
         internal CachedPackageCensus Census() => new(
-            InstallationsRead: _read,
+            ListedChecked: _listedChecked,
             KeptPathUnreadable: _byReading[(int)CachedPackageReading.PathUnreadable],
             KeptNoneRecorded: _byReading[(int)CachedPackageReading.NoneRecorded],
             KeptNotThere: _byReading[(int)CachedPackageReading.NotThere],
@@ -726,7 +822,19 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             KeptPackageCodeUnanswered: _byRecord[(int)RecordReading.PackageCodeUnanswered],
             KeptInstanceTypeNotOrdinary: _byRecord[(int)RecordReading.InstanceTypeNotOrdinary],
             KeptPerMachine: _perMachine,
-            ReleasedOrdinary: _byRecord[(int)RecordReading.Ordinary]);
+            ReleasedOrdinary: _byRecord[(int)RecordReading.Ordinary],
+            UnruledChecked: _unruledChecked,
+            UnseenPathUnreadable: _bySecondCopyReading[(int)SecondCopyReading.PathUnreadable],
+            UnseenNoneRecorded: _bySecondCopyReading[(int)SecondCopyReading.NoneRecorded],
+            UnseenNotThere: _bySecondCopyReading[(int)SecondCopyReading.NotThere],
+            UnseenWouldNotIdentify: _bySecondCopyReading[(int)SecondCopyReading.WouldNotIdentify],
+            UnseenWouldNotRead: _bySecondCopyReading[(int)SecondCopyReading.WouldNotRead],
+            UnseenNoProductCode: _bySecondCopyReading[(int)SecondCopyReading.NoProductCode],
+            UnseenPerUserUnmanaged: _bySecondCopyReading[(int)SecondCopyReading.PerUserUnmanaged],
+            UnseenSourcesGivenUp: _bySecondCopyReading[(int)SecondCopyReading.SourcesGivenUp],
+            UnseenSourceNotRuledOut: _bySecondCopyReading[(int)SecondCopyReading.SourceNotRuledOut],
+            UnseenPerMachine: _unseenPerMachine,
+            UnseenByNameFiles: _unseenByNameFiles);
     }
 
     /// <summary>Whether two spellings name one product code.</summary>
@@ -2162,11 +2270,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// Whether an installation whose cached package did not say what it declares is not
     /// shown by its own record to be an ordinary installation.
     /// </param>
-    /// <param name="Census">What each listed installation's cached package and record gave.</param>
     private sealed record InstallationLinks(
         Dictionary<string, List<(string RegisteredCode, string? Sid, MsiInstallContext Context)>> ByDeclaredCode,
-        bool UnreadPackageNotRuledOut,
-        CachedPackageCensus Census);
+        bool UnreadPackageNotRuledOut);
 
     /// <summary>
     /// What one pass has asked Windows about installations and patch registrations,
@@ -2249,6 +2355,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         /// <summary>The pass's links, once the first declared code has been asked about.</summary>
         internal InstallationLinks? Links { get; set; }
+
+        /// <summary>
+        /// What the pass has found about the two conditions that hold back every installation
+        /// package it would otherwise let through (<see cref="CachedPackageCensus"/>).
+        /// </summary>
+        internal CensusTally Census { get; } = new();
 
         /// <summary>
         /// The packages opened by the installations not ruled out as second copies, or

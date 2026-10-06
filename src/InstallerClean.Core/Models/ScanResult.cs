@@ -409,10 +409,10 @@ namespace InstallerClean.Models;
 /// scan used the screen's answer, and nought where the screen did not run.
 /// </param>
 /// <param name="CachedPackageCensus">
-/// What the declared-product screen read in this scan of each listed installation's cached
-/// package, and of the record of each one whose cached package did not say which product it
-/// declares (<see cref="Services.DeclaredProductScreening.CachedPackages"/>). A pass that
-/// read no installation where the screen did not run, read none, or its answer was not used.
+/// What the declared-product screen found in this scan of the two conditions under which it
+/// holds back every installation package it would otherwise let through
+/// (<see cref="Services.DeclaredProductScreening.CachedPackages"/>). A pass that looked at no
+/// installation where the screen did not run, looked at none, or its answer was not used.
 /// </param>
 public record ScanResult(
     IReadOnlyList<OrphanedFile> RemovableFiles,

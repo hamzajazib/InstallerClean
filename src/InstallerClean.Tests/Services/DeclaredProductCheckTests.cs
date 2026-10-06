@@ -3240,9 +3240,16 @@ public class DeclaredProductCheckTests
     private static CachedPackageCensus Census(
         int read = 1, int pathUnreadable = 0, int noneRecorded = 0, int notThere = 0, int wouldNotRead = 0,
         int noProductCode = 0, int anotherAccount = 0, int packageCodeUnanswered = 0,
-        int instanceTypeNotOrdinary = 0, int perMachine = 0, int released = 0) =>
+        int instanceTypeNotOrdinary = 0, int perMachine = 0, int released = 0,
+        int unruled = 0, int unseenPathUnreadable = 0, int unseenNoneRecorded = 0, int unseenNotThere = 0,
+        int unseenWouldNotIdentify = 0, int unseenWouldNotRead = 0, int unseenNoProductCode = 0,
+        int unseenPerUserUnmanaged = 0, int unseenSourcesGivenUp = 0, int unseenSourceNotRuledOut = 0,
+        int unseenPerMachine = 0, int unseenByName = 0) =>
         new(read, pathUnreadable, noneRecorded, notThere, wouldNotRead, noProductCode,
-            anotherAccount, packageCodeUnanswered, instanceTypeNotOrdinary, perMachine, released);
+            anotherAccount, packageCodeUnanswered, instanceTypeNotOrdinary, perMachine, released,
+            unruled, unseenPathUnreadable, unseenNoneRecorded, unseenNotThere, unseenWouldNotIdentify,
+            unseenWouldNotRead, unseenNoProductCode, unseenPerUserUnmanaged, unseenSourcesGivenUp,
+            unseenSourceNotRuledOut, unseenPerMachine, unseenByName);
 
     [Theory]
     [InlineData(CachedPackageFault.ReadFails)]
@@ -3329,21 +3336,26 @@ public class DeclaredProductCheckTests
     public void Every_listed_installation_is_counted_once_in_a_pass_of_many_candidates()
     {
         // The installations are read once for the pass, whichever candidate reaches them
-        // first, so a second candidate adds nothing to the counts.
+        // first, so a second candidate adds nothing to the counts. The second candidate
+        // declares a product that is not installed and not listed, so it reaches the
+        // installations after the first, and the hold they set keeps it.
         const string OtherCandidate = @"C:\Windows\Installer\b2.msi";
+        const string ProductD = "{77777777-7777-7777-7777-777777777777}";
         var f = ACopyBesideASecondCopy();
-        f.Packages.Declares(OtherCandidate, ProductB);
-        f.Msi.NotInstalled(ProductB, MsiError.UnknownProduct);
+        f.Packages.Declares(OtherCandidate, ProductD);
+        f.Msi.NotInstalled(ProductD, MsiError.UnknownProduct);
         f.Msi.RecordsPackage(ProductB, null, MsiInstallContext.Machine, string.Empty);
         f.Msi.PackageCodeAnswers(ProductB, null, MsiInstallContext.Machine, MsiError.UnknownProperty);
         f.Msi.InstanceTypeAnswers(ProductB, null, MsiInstallContext.Machine, MsiError.UnknownProperty);
         f = f with { Listed = [.. f.Listed, ListedPerMachine(ProductB)] };
 
-        var census = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
-            .Screen([Package(Candidate), Package(OtherCandidate)], f.Listed, default, null, InInstallerFolder)
-            .CachedPackages;
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate), Package(OtherCandidate)], f.Listed, default, null, InInstallerFolder);
 
-        Assert.Equal(Census(read: 2, noneRecorded: 1, packageCodeUnanswered: 1, perMachine: 1), census);
+        Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[1]);
+        Assert.Equal(Census(read: 2, noneRecorded: 1, packageCodeUnanswered: 1, perMachine: 1), screening.CachedPackages);
+        Assert.Single(f.Msi.RecordReads,
+            read => read == (MsiInstallProperty.PackageCode, ProductB, (string?)null, MsiInstallContext.Machine));
     }
 
     [Fact]
@@ -3687,6 +3699,197 @@ public class DeclaredProductCheckTests
         Assert.All(outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductNotInstalled, outcome));
         Assert.Equal(new[] { (SecondCopy, (string?)null, MsiInstallContext.Machine) }, f.Msi.PackageNameReads);
         Assert.Single(f.Files.Reads, read => read == SetupPackage);
+    }
+
+    // ---- What the pass counts of the second copies' packages ----
+    //
+    // Read only where no installation sets the hold through its cached package and record.
+    // The read stops at the first installation whose packages cannot all be seen, and the
+    // census says which step stopped it and whether that installation is per-machine.
+
+    [Fact]
+    public void A_second_copy_whose_packages_are_all_seen_is_counted_as_checked_and_nothing_else()
+    {
+        var f = AMarkedSecondCopy();
+
+        var census = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate), Package(OtherCandidate)], f.Listed, default, null, InInstallerFolder)
+            .CachedPackages;
+
+        Assert.Equal(Census(unruled: 1), census);
+    }
+
+    [Theory]
+    [InlineData(CachedPackageFault.ReadFails)]
+    [InlineData(CachedPackageFault.NamesNoPackage)]
+    [InlineData(CachedPackageFault.NotAFile)]
+    [InlineData(CachedPackageFault.NoIdentity)]
+    [InlineData(CachedPackageFault.APatch)]
+    [InlineData(CachedPackageFault.NoCode)]
+    public void A_second_copy_whose_cached_package_cannot_be_seen_is_counted_by_what_its_cached_package_gave(
+        CachedPackageFault fault)
+    {
+        // Its own record shows an ordinary installation, so it does not set the hold through
+        // the links, and the read of its packages stops at its cached package.
+        var f = AMarkedSecondCopy();
+        Break(f, fault, null, MsiInstallContext.Machine);
+        f.Msi.AnswersItsOwnRecord(SecondCopy, null, MsiInstallContext.Machine);
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate), Package(OtherCandidate)], f.Listed, default, null, InInstallerFolder);
+
+        Assert.All(screening.Outcomes, outcome => Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, outcome));
+        Assert.Equal(
+            fault switch
+            {
+                CachedPackageFault.ReadFails => Census(released: 1, unruled: 1, unseenPathUnreadable: 1, unseenPerMachine: 1),
+                CachedPackageFault.NamesNoPackage => Census(released: 1, unruled: 1, unseenNoneRecorded: 1, unseenPerMachine: 1),
+                CachedPackageFault.NotAFile => Census(released: 1, unruled: 1, unseenNotThere: 1, unseenPerMachine: 1),
+                CachedPackageFault.NoIdentity => Census(released: 1, unruled: 1, unseenWouldNotRead: 1, unseenPerMachine: 1),
+                _ => Census(released: 1, unruled: 1, unseenNoProductCode: 1, unseenPerMachine: 1),
+            },
+            screening.CachedPackages);
+    }
+
+    [Fact]
+    public void A_second_copy_whose_cached_package_will_not_identify_is_counted_as_that()
+    {
+        // The links read what the cached package declares and not its volume and file ID, so
+        // the cached package declares a code there, and the read of its packages stops at
+        // the identity.
+        var f = AMarkedSecondCopy();
+        f.Files.Answers(SecondCopysPackage, FileIdentityRead.OpenRefused);
+
+        var census = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder).CachedPackages;
+
+        Assert.Equal(Census(unruled: 1, unseenWouldNotIdentify: 1, unseenPerMachine: 1), census);
+    }
+
+    [Fact]
+    public void A_per_user_unmanaged_second_copy_is_counted_as_that_and_not_as_per_machine()
+    {
+        var f = AMarkedSecondCopy(MsiInstallContext.UserUnmanaged);
+
+        var census = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, SomebodyElse)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder).CachedPackages;
+
+        Assert.Equal(Census(unruled: 1, unseenPerUserUnmanaged: 1), census);
+    }
+
+    [Fact]
+    public void A_per_user_managed_second_copy_whose_source_package_will_not_identify_is_not_counted_as_per_machine()
+    {
+        var f = AMarkedSecondCopy(MsiInstallContext.UserManaged);
+        f.Msi.RecordsSources(SecondCopy, OtherUserSid, MsiInstallContext.UserManaged, SetupName, OtherFolder);
+        f.Files.Answers(OtherPackage, FileIdentityRead.OpenRefused);
+
+        var census = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, SomebodyElse)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder).CachedPackages;
+
+        Assert.Equal(Census(unruled: 1, unseenSourceNotRuledOut: 1), census);
+    }
+
+    [Fact]
+    public void A_second_copy_whose_source_package_will_not_identify_is_counted_as_a_source_not_ruled_out()
+    {
+        var f = AMarkedSecondCopy();
+        f.Msi.RecordsSources(SecondCopy, null, MsiInstallContext.Machine, SetupName, OtherFolder);
+        f.Files.Answers(OtherPackage, FileIdentityRead.OpenRefused);
+
+        var census = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder).CachedPackages;
+
+        Assert.Equal(Census(unruled: 1, unseenSourceNotRuledOut: 1, unseenPerMachine: 1), census);
+    }
+
+    [Fact]
+    public void A_second_copy_whose_source_package_does_not_answer_is_counted_as_a_source_given_up()
+    {
+        var f = AMarkedSecondCopy();
+        f.Files.Opens(SetupPackage, 9);
+        using var files = new HeldFileIdentities(f.Files);
+        files.Holds(SetupPackage, HeldFor);
+
+        var census = new DeclaredProductCheck(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
+            { SourceFolderTimeLimit = ShortLimit, DriveKindOf = FixedDrive, NamesInFolderOf = NameOnly }
+            .Screen([Package(Candidate), Package(OtherCandidate)], f.Listed, default, null, InInstallerFolder)
+            .CachedPackages;
+
+        Assert.Equal(Census(unruled: 1, unseenSourcesGivenUp: 1, unseenPerMachine: 1), census);
+    }
+
+    [Theory]
+    [InlineData(false, 2)]
+    [InlineData(true, 1)]
+    public void The_read_stops_at_the_first_second_copy_whose_packages_cannot_be_seen(bool unseenFirst, int checkedCount)
+    {
+        // A second per-machine copy whose source package will not identify, listed after the
+        // first copy, whose packages are all seen, or before it. The read stops at it either
+        // way, so the first copy is checked only where it comes first.
+        const string ThirdCopy = "{66666666-6666-6666-6666-666666666666}";
+        const string ThirdCopysPackage = @"C:\Windows\Installer\copy3.msi";
+        var f = AMarkedSecondCopy();
+        f.Msi.RecordsPackage(ThirdCopy, null, MsiInstallContext.Machine, ThirdCopysPackage);
+        f.Msi.RecordsSources(ThirdCopy, null, MsiInstallContext.Machine, SetupName, OtherFolder);
+        f.Packages.Declares(ThirdCopysPackage, ThirdCopy);
+        f.Files.Opens(ThirdCopysPackage, 6);
+        f.Files.Answers(OtherPackage, FileIdentityRead.OpenRefused);
+        f.Disk.AddFile(ThirdCopysPackage, new MockFileData(new byte[100]));
+        var third = new ListedInstallation(ThirdCopy, null, (int)MsiInstallContext.Machine, true);
+        f = f with { Listed = unseenFirst ? [third, .. f.Listed] : [.. f.Listed, third] };
+
+        var census = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder).CachedPackages;
+
+        Assert.Equal(Census(read: 2, unruled: checkedCount, unseenSourceNotRuledOut: 1, unseenPerMachine: 1), census);
+    }
+
+    [Fact]
+    public void The_second_copies_are_counted_once_in_a_pass_of_many_candidates()
+    {
+        var f = AMarkedSecondCopy();
+        f.Msi.RecordsSources(SecondCopy, null, MsiInstallContext.Machine, SetupName, OtherFolder);
+        f.Files.Answers(OtherPackage, FileIdentityRead.OpenRefused);
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate), Package(OtherCandidate)], f.Listed, default, null, InInstallerFolder);
+
+        Assert.All(screening.Outcomes, outcome => Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, outcome));
+        Assert.Equal(Census(unruled: 1, unseenSourceNotRuledOut: 1, unseenPerMachine: 1), screening.CachedPackages);
+    }
+
+    [Fact]
+    public void No_second_copy_is_read_where_an_installation_sets_the_hold_through_its_cached_package_and_record()
+    {
+        // The per-machine copy's cached package path will not read and its PackageCode does
+        // not answer, so the links hold every candidate and its packages are not read again.
+        var f = AMarkedSecondCopy();
+        Break(f, CachedPackageFault.ReadFails, null, MsiInstallContext.Machine);
+        f.Msi.PackageCodeAnswers(SecondCopy, null, MsiInstallContext.Machine, MsiError.UnknownProperty);
+
+        var census = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder).CachedPackages;
+
+        Assert.Equal(Census(pathUnreadable: 1, packageCodeUnanswered: 1, perMachine: 1), census);
+        Assert.Empty(f.Msi.PackageNameReads);
+    }
+
+    [Fact]
+    public void A_file_kept_for_a_second_copys_package_on_the_network_is_counted_and_the_file_it_is_not_named_as_is_not()
+    {
+        var f = AMarkedSecondCopy();
+        f.Msi.RecordsSources(SecondCopy, null, MsiInstallContext.Machine, CandidateName, ShareFolder);
+        f.Files.Answers(SharePackage, FileIdentityRead.OpenRefused);
+
+        var screening = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+            { DriveKindOf = FixedDrive, NamesInFolderOf = NameOnly }
+            .Screen([Package(Candidate), Package(OtherCandidate)], f.Listed, default, null, InInstallerFolder);
+
+        Assert.Equal(
+            new[] { DeclaredProductOutcome.SecondCopyUnestablished, DeclaredProductOutcome.DeclaredProductNotInstalled },
+            screening.Outcomes);
+        Assert.Equal(Census(unruled: 1, unseenByName: 1), screening.CachedPackages);
     }
 
     // ---- A source package that does not answer in time ----
