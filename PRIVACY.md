@@ -1,6 +1,6 @@
 # InstallerClean privacy policy
 
-Last updated 6 October 2026.
+Last updated 7 October 2026.
 
 I don't find out anything about you or your files. The first time you use InstallerClean on a PC it can send me one anonymous report of how that run went, and a box on the result screen decides whether it does. No ads, no tracking. Here is every time InstallerClean touches the network or writes anything down.
 
