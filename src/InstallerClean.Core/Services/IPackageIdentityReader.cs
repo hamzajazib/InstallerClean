@@ -79,7 +79,8 @@ public enum PackageReadRefusal
     /// <summary>
     /// The file read, and what it declares is not a code: an installation package whose
     /// <c>ProductCode</c> row is missing, empty or not a well-formed GUID, or a patch whose
-    /// code or target list is not set, is not made of well-formed GUIDs, or names no target.
+    /// code or target list is not set, is stored as something other than text, is not made
+    /// of well-formed GUIDs, or names no target.
     /// </summary>
     DeclaresNoCode,
 }

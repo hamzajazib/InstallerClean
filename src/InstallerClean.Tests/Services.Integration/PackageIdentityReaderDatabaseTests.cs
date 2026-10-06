@@ -29,8 +29,7 @@ public sealed class PackageIdentityReaderDatabaseTests : IDisposable
     [Fact]
     public void A_package_declaring_a_well_formed_ProductCode_reads_as_that_code()
     {
-        // The must-hit half: the same building, with a code the reader accepts. Without it,
-        // the tests below could pass over databases the building never made.
+        // The building APackage gives the packages below, with a ProductCode the reader accepts.
         var path = APackage(("ProductCode", WellFormedCode), ("ProductName", "Something"));
 
         var identity = Reader.Read(path, isPatch: false, out var detail, out _);
@@ -78,7 +77,7 @@ public sealed class PackageIdentityReaderDatabaseTests : IDisposable
 
         Assert.Null(identity);
         Assert.Equal(PackageReadRefusal.DeclaresNoCode, refusal);
-        Assert.Equal("ProductCode is not a well-formed GUID", detail);
+        Assert.Equal("ProductCode is empty", detail);
     }
 
     [Fact]
@@ -128,7 +127,7 @@ public sealed class PackageIdentityReaderDatabaseTests : IDisposable
     [Fact]
     public void A_patch_declaring_its_code_and_a_target_reads_as_both()
     {
-        // The must-hit half for the patch building.
+        // The building APatch gives the patches below, with both values set and well formed.
         var path = APatch(revisionNumber: WellFormedPatchCode, template: WellFormedCode);
 
         var identity = Reader.Read(path, isPatch: true, out var detail, out _);

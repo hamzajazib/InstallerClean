@@ -111,6 +111,13 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
                 return null;
             }
 
+            if (raw.Length == 0)
+            {
+                detail = "ProductCode is empty";
+                refusal = PackageReadRefusal.DeclaresNoCode;
+                return null;
+            }
+
             var code = Canonicalise(raw);
             if (code is null)
             {

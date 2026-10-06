@@ -5920,6 +5920,7 @@ internal sealed class ScriptedPackageIdentities : IPackageIdentityReader
     public void Yields(string path, PackageIdentity identity)
     {
         _byPath[path] = identity;
+        _notes.Remove(path);
         _declaresNoCode.Remove(path);
     }
 
@@ -5942,6 +5943,7 @@ internal sealed class ScriptedPackageIdentities : IPackageIdentityReader
     public void DeclaresNoCode(string path)
     {
         _byPath[path] = null;
+        _notes.Remove(path);
         _declaresNoCode.Add(path);
     }
 
