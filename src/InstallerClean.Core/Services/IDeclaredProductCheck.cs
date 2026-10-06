@@ -155,8 +155,8 @@ public interface IDeclaredProductCheck
     /// The files the path comparison and the file-identity match between them
     /// left unclaimed. The caller has already put every one through
     /// <see cref="CandidateGuard.CheckSafeToRemove"/>; see
-    /// <see cref="IPackageIdentityReader.Read"/> for why that is a precondition
-    /// and not a courtesy.
+    /// <see cref="IPackageIdentityReader.Read(string, bool, out string, out PackageReadRefusal)"/>
+    /// for why that is a precondition and not a courtesy.
     /// </param>
     /// <param name="installations">
     /// Every installation the caller's own enumeration established,

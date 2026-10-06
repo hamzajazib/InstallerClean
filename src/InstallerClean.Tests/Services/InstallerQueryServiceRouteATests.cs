@@ -54,9 +54,10 @@ public class InstallerQueryServiceRouteATests
     /// </summary>
     private sealed class DeclaringReader : IPackageIdentityReader
     {
-        public PackageIdentity? Read(string filePath, bool isPatch, out string detail)
+        public PackageIdentity? Read(string filePath, bool isPatch, out string detail, out PackageReadRefusal refusal)
         {
             detail = string.Empty;
+            refusal = PackageReadRefusal.WouldNotRead;
             return isPatch
                 ? new PackageIdentity(string.Empty, true, new[] { Enumerated })
                 : new PackageIdentity(string.Empty, false, Array.Empty<string>());

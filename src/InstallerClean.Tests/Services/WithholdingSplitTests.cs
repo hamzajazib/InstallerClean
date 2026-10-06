@@ -197,6 +197,43 @@ public class WithholdingSplitTests
     }
 
     [Fact]
+    public async Task What_the_screen_read_of_the_second_copies_travels_on_the_result()
+    {
+        var screen = Substitute.For<IDeclaredProductCheck>();
+        screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
+                Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(),
+                Arg.Any<Func<string, bool?>?>(), Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>())
+            .Returns(call => new DeclaredProductScreening(
+                [.. Enumerable.Repeat(DeclaredProductOutcome.SecondCopyUnestablished,
+                    call.ArgAt<IReadOnlyList<OrphanedFile>>(0).Count)],
+                [],
+                WaitCount: 0,
+                CachedPackages: ASecondCopyCensus));
+
+        var result = await Scan(
+            walked: new[] { $@"{Folder}\a.msi" },
+            registered: Array.Empty<string>(),
+            screen: screen);
+
+        Assert.Equal(ASecondCopyCensus, result.CachedPackageCensus);
+        Assert.Equal(1, result.WithheldBy.SecondCopyUnestablishedCount);
+        AssertPartitions(result);
+    }
+
+    /// <summary>
+    /// What a screen holding a file because a second copy's packages could not all be seen says
+    /// it found: no installation setting the hold on every installation package, three second
+    /// copies checked, and the read of one per-machine copy stopped at its sources.
+    /// </summary>
+    private static readonly CachedPackageCensus ASecondCopyCensus = new(
+        ListedChecked: 64, KeptPathUnreadable: 0, KeptNoneRecorded: 0, KeptNotThere: 0, KeptWouldNotRead: 0,
+        KeptNoProductCode: 0, KeptAnotherAccount: 0, KeptPackageCodeUnanswered: 0, KeptInstanceTypeNotOrdinary: 0,
+        KeptPerMachine: 0, ReleasedOrdinary: 2, UnruledChecked: 3, UnseenPathUnreadable: 0, UnseenNoneRecorded: 0,
+        UnseenNotThere: 0, UnseenWouldNotIdentify: 0, UnseenWouldNotRead: 0, UnseenNoProductCode: 0,
+        UnseenPerUserUnmanaged: 0, UnseenSourcesGivenUp: 0, UnseenSourceNotRuledOut: 1, UnseenPerMachine: 1,
+        UnseenByNameFiles: 0);
+
+    [Fact]
     public async Task A_screen_that_answered_about_a_different_number_of_files_gives_up_nothing_the_result_carries_and_its_waits_still_travel()
     {
         // The waits were shown whatever the screen answered, so they travel where its answer

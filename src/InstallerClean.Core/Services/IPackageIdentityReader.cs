@@ -23,7 +23,8 @@ public interface IPackageIdentityReader
     /// this reader does not recognise. What every one of them has in common, and
     /// the whole of what a caller may conclude, is that the file did not yield all
     /// that the questions about it need. <paramref name="detail"/> carries the
-    /// difference for the crash log alone.
+    /// difference for the crash log, and <paramref name="refusal"/> sorts it into
+    /// two kinds for the report's counts; no decision reads either.
     ///
     /// THE CALLER DECIDES WHAT THE PATH IS TAKEN TO NAME. This opens the file named
     /// and asks it what it is, so a path that resolves somewhere else answers about
@@ -48,24 +49,19 @@ public interface IPackageIdentityReader
     /// runs elevated and this is written to a log read after a report about some
     /// other file entirely.
     /// </param>
-    PackageIdentity? Read(string filePath, bool isPatch, out string detail);
+    /// <param name="refusal">
+    /// Where the answer is null, which of two kinds of failure it was, for a caller
+    /// that counts them. Nothing may decide anything on it: null keeps whatever the
+    /// caller would keep for it either way.
+    /// </param>
+    PackageIdentity? Read(string filePath, bool isPatch, out string detail, out PackageReadRefusal refusal);
 
     /// <summary>
-    /// <see cref="Read(string, bool, out string)"/>, and where it answers null, in
-    /// <paramref name="refusal"/> which of two kinds of failure it was, for a caller that
-    /// counts them. Nothing may decide anything on it: null keeps whatever the caller
-    /// would keep for it either way.
-    ///
-    /// A reader that does not tell the two apart answers
-    /// <see cref="PackageReadRefusal.WouldNotRead"/> for every null, which claims nothing
-    /// about what the file declares.
+    /// <see cref="Read(string, bool, out string, out PackageReadRefusal)"/>, for a caller
+    /// that does not count the refusals.
     /// </summary>
-    PackageIdentity? Read(string filePath, bool isPatch, out string detail, out PackageReadRefusal refusal)
-    {
-        var identity = Read(filePath, isPatch, out detail);
-        refusal = PackageReadRefusal.WouldNotRead;
-        return identity;
-    }
+    PackageIdentity? Read(string filePath, bool isPatch, out string detail) =>
+        Read(filePath, isPatch, out detail, out _);
 }
 
 /// <summary>
@@ -81,9 +77,9 @@ public enum PackageReadRefusal
     WouldNotRead,
 
     /// <summary>
-    /// The file read, and what it declares is not a code: an installation package with no
-    /// <c>ProductCode</c> row or one that is not a well-formed GUID, or a patch whose code
-    /// or target list is not made of well-formed GUIDs, or names no target.
+    /// The file read, and what it declares is not a code: an installation package whose
+    /// <c>ProductCode</c> row is missing, empty or not a well-formed GUID, or a patch whose
+    /// code or target list is not set, is not made of well-formed GUIDs, or names no target.
     /// </summary>
     DeclaresNoCode,
 }

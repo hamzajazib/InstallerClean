@@ -359,9 +359,10 @@ public class InstallerQueryServiceRecoveredProductTests
     /// </summary>
     private sealed class DeclaringReader(string patchPath, params string[] targets) : IPackageIdentityReader
     {
-        public PackageIdentity? Read(string filePath, bool isPatch, out string detail)
+        public PackageIdentity? Read(string filePath, bool isPatch, out string detail, out PackageReadRefusal refusal)
         {
             detail = string.Empty;
+            refusal = PackageReadRefusal.WouldNotRead;
             if (!filePath.EndsWith(Path.GetFileName(patchPath), StringComparison.OrdinalIgnoreCase))
                 return new PackageIdentity(string.Empty, isPatch, new[] { Enumerated });
             return new PackageIdentity(string.Empty, isPatch, targets);

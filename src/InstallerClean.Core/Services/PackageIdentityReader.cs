@@ -44,10 +44,6 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
         "SELECT `Value` FROM `Property` WHERE `Property` = 'ProductCode'";
 
     /// <inheritdoc />
-    public PackageIdentity? Read(string filePath, bool isPatch, out string detail) =>
-        Read(filePath, isPatch, out detail, out _);
-
-    /// <inheritdoc />
     public PackageIdentity? Read(string filePath, bool isPatch, out string detail, out PackageReadRefusal refusal) =>
         isPatch ? ReadPatch(filePath, out detail, out refusal) : ReadProduct(filePath, out detail, out refusal);
 
@@ -155,8 +151,8 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
     /// keyed patch read, which reaches a registration the machine-wide patch
     /// enumeration does not list, can only be put through a product that might hold
     /// the patch, and the Template is where the file says which products those are. A
-    /// patch that names none is one that read cannot be put for, so it is reported
-    /// unread rather than returned as an identity whose questions cannot all be put.
+    /// patch that names none is one that read cannot be put for, so it answers null
+    /// rather than an identity whose questions cannot all be put.
     /// </summary>
     private static PackageIdentity? ReadPatch(string filePath, out string detail, out PackageReadRefusal refusal)
     {
@@ -172,10 +168,15 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
                 return null;
             }
 
-            if (!TrySummaryString(hSummary, MsiSummaryProperty.RevisionNumber, out var revision))
+            switch (ReadSummaryString(hSummary, MsiSummaryProperty.RevisionNumber, out var revision))
             {
-                detail = "patch declares no revision number";
-                return null;
+                case SummaryString.WouldNotRead:
+                    detail = "patch revision number would not read";
+                    return null;
+                case SummaryString.NotText:
+                    detail = "patch declares no revision number";
+                    refusal = PackageReadRefusal.DeclaresNoCode;
+                    return null;
             }
 
             // Fixed-width, and the length test is what keeps it honest. The value
@@ -198,10 +199,15 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
                 return null;
             }
 
-            if (!TrySummaryString(hSummary, MsiSummaryProperty.Template, out var template))
+            switch (ReadSummaryString(hSummary, MsiSummaryProperty.Template, out var template))
             {
-                detail = "patch declares no target products";
-                return null;
+                case SummaryString.WouldNotRead:
+                    detail = "patch target list would not read";
+                    return null;
+                case SummaryString.NotText:
+                    detail = "patch declares no target products";
+                    refusal = PackageReadRefusal.DeclaresNoCode;
+                    return null;
             }
 
             var targets = ParseTargets(template);
@@ -214,8 +220,8 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
 
             if (targets.Count == 0)
             {
-                // A present but empty Template names no product to put the keyed
-                // patch read through, so it is reported unread like an absent one.
+                // An empty Template, or one of separators alone, names no product
+                // to put the keyed patch read through.
                 detail = "patch names no target product";
                 refusal = PackageReadRefusal.DeclaresNoCode;
                 return null;
@@ -290,7 +296,9 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
 
     /// <summary>
     /// One field of a fetched record, through the double-call buffer pattern.
-    /// False for anything other than a value that was read in full.
+    /// False where the value would not read in full. An empty field reads as an
+    /// empty string: Windows Installer holds an empty string and a null field
+    /// alike, so neither is a failed read.
     /// </summary>
     private static bool TryRecordString(uint hRecord, uint field, out string value)
     {
@@ -299,7 +307,7 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
 
         var error = Msi.MsiRecordGetString(hRecord, field, null, ref bufferLen);
         if (error != MsiError.Success && error != MsiError.MoreData) return false;
-        if (bufferLen == 0) return false;
+        if (bufferLen == 0) return true;
 
         bufferLen++; // space for the null terminator
         var buffer = new char[bufferLen];
@@ -315,32 +323,47 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
     }
 
     /// <summary>
-    /// One summary-stream property as text. False for a property that is absent,
-    /// stored as something other than text, or could not be read: the caller
-    /// treats all three the same way and none of them is a value.
+    /// What one summary-stream property gives as text. A property that is not set,
+    /// or is stored as something other than text, is <see cref="SummaryString.NotText"/>:
+    /// the stream read and holds no text there. An empty string is
+    /// <see cref="SummaryString.Text"/> with an empty <paramref name="value"/>.
     ///
     /// A real receiver is passed for the FILETIME out-parameter rather than null,
     /// for the reason the P/Invoke declaration gives: the API writes through that
     /// pointer whenever the stored type is VT_FILETIME, which a malformed file can
     /// declare in a slot being read for text.
     /// </summary>
-    private static bool TrySummaryString(uint hSummary, uint propertyId, out string value)
+    private static SummaryString ReadSummaryString(uint hSummary, uint propertyId, out string value)
     {
         value = string.Empty;
         uint bufferLen = 0;
 
         var error = Msi.MsiSummaryInfoGetProperty(
             hSummary, propertyId, out var dataType, out _, out _, null, ref bufferLen);
-        if (error != MsiError.Success && error != MsiError.MoreData) return false;
-        if (dataType != VtType.String || bufferLen == 0) return false;
+        if (error != MsiError.Success && error != MsiError.MoreData) return SummaryString.WouldNotRead;
+        if (dataType != VtType.String) return SummaryString.NotText;
+        if (bufferLen == 0) return SummaryString.Text;
 
         bufferLen++; // space for the null terminator
         var buffer = new char[bufferLen];
         error = Msi.MsiSummaryInfoGetProperty(
             hSummary, propertyId, out dataType, out _, out _, buffer, ref bufferLen);
-        if (error != MsiError.Success) return false;
+        if (error != MsiError.Success) return SummaryString.WouldNotRead;
 
         value = new string(buffer, 0, (int)Math.Min(bufferLen, (uint)buffer.Length));
-        return true;
+        return SummaryString.Text;
+    }
+
+    /// <summary>What <see cref="ReadSummaryString"/> gave.</summary>
+    private enum SummaryString
+    {
+        /// <summary>Text, possibly empty.</summary>
+        Text,
+
+        /// <summary>The property is not set, or is stored as something other than text.</summary>
+        NotText,
+
+        /// <summary>The property would not read.</summary>
+        WouldNotRead,
     }
 }

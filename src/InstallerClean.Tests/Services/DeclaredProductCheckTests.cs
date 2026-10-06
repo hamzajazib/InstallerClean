@@ -3059,6 +3059,21 @@ public class DeclaredProductCheckTests
     }
 
     [Theory]
+    [InlineData(CachedPackageFault.NoIdentity, "the cached package would not read")]
+    [InlineData(CachedPackageFault.MalformedCode, "the cached package declares no product code")]
+    public void A_cached_package_the_reader_wrote_no_note_about_is_logged_by_what_the_reader_answered(
+        CachedPackageFault fault, string cause)
+    {
+        var f = ACopyBesideASecondCopy();
+        Break(f, fault, OtherUserSid, MsiInstallContext.UserUnmanaged);
+        var recorded = new List<string>();
+
+        ScreenBesideTheSecondCopy(f, recordRefusal: (_, detail) => recorded.Add(detail), account: SomebodyElse);
+
+        Assert.Equal(new[] { cause }, recorded);
+    }
+
+    [Theory]
     [InlineData(CachedPackageFault.ReadFails)]
     [InlineData(CachedPackageFault.NamesNoPackage)]
     [InlineData(CachedPackageFault.NotAFile)]
@@ -3764,28 +3779,6 @@ public class DeclaredProductCheckTests
     }
 
     [Fact]
-    public void A_reader_that_does_not_say_why_it_read_nothing_is_counted_as_would_not_read()
-    {
-        // A reader with only the plain read. Every null it answers is counted as a file that
-        // would not give up its product code, never as one that declares none.
-        var f = AMarkedSecondCopy();
-        f.Packages.DeclaresNoCode(SecondCopysPackage);
-        f.Msi.AnswersItsOwnRecord(SecondCopy, null, MsiInstallContext.Machine);
-
-        var census = ScriptedCheck(f.Msi, new PlainReader(f.Packages), f.Files, f.Disk, f.Msi.Registry, TheOwner)
-            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder).CachedPackages;
-
-        Assert.Equal(Census(released: 1, unruled: 1, unseenWouldNotRead: 1, unseenPerMachine: 1), census);
-    }
-
-    /// <summary><see cref="ScriptedPackageIdentities"/> behind the plain read alone.</summary>
-    private sealed class PlainReader(ScriptedPackageIdentities inner) : IPackageIdentityReader
-    {
-        public PackageIdentity? Read(string filePath, bool isPatch, out string detail) =>
-            inner.Read(filePath, isPatch, out detail);
-    }
-
-    [Fact]
     public void A_second_copy_is_counted_as_a_source_not_ruled_out_by_a_check_with_no_registry_reader()
     {
         // Such a check reads the cached package and cannot read the sources, so every
@@ -3794,6 +3787,21 @@ public class DeclaredProductCheckTests
 
         var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, registry: null, TheOwner)
             .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+
+        Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
+        Assert.Equal(Census(unruled: 1, unseenSourceNotRuledOut: 1, unseenPerMachine: 1), screening.CachedPackages);
+    }
+
+    [Fact]
+    public void A_second_copy_is_counted_as_a_source_not_ruled_out_by_a_screen_with_no_Installer_folder_test()
+    {
+        // The sources are not read without the test of whether a package could be a file in the
+        // Installer folder, so every installation package is kept and the step that stopped it is
+        // counted.
+        var f = AMarkedSecondCopy();
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, namesAFileInInstallerFolder: null);
 
         Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
         Assert.Equal(Census(unruled: 1, unseenSourceNotRuledOut: 1, unseenPerMachine: 1), screening.CachedPackages);
@@ -5903,13 +5911,17 @@ internal sealed class ScriptedPackageIdentities : IPackageIdentityReader
     public List<string> PatchReads { get; } = new();
 
     public void Declares(string path, string productCode) =>
-        _byPath[path] = new PackageIdentity(productCode, IsPatch: false, Array.Empty<string>());
+        Yields(path, new PackageIdentity(productCode, IsPatch: false, Array.Empty<string>()));
 
     /// <summary>The file is a patch declaring its own code and the products it may be applied to.</summary>
     public void DeclaresPatch(string path, string patchCode, params string[] targets) =>
-        _byPath[path] = new PackageIdentity(patchCode, IsPatch: true, targets);
+        Yields(path, new PackageIdentity(patchCode, IsPatch: true, targets));
 
-    public void Yields(string path, PackageIdentity identity) => _byPath[path] = identity;
+    public void Yields(string path, PackageIdentity identity)
+    {
+        _byPath[path] = identity;
+        _declaresNoCode.Remove(path);
+    }
 
     /// <summary>
     /// The file would not give up an identity at all. The note is what the real
@@ -5920,11 +5932,12 @@ internal sealed class ScriptedPackageIdentities : IPackageIdentityReader
     {
         _byPath[path] = null;
         _notes[path] = note;
+        _declaresNoCode.Remove(path);
     }
 
     /// <summary>
     /// The file read and declares no code the reader could use, as the real reader answers for
-    /// a ProductCode that is missing or not a well-formed GUID.
+    /// a ProductCode that is missing, empty or not a well-formed GUID.
     /// </summary>
     public void DeclaresNoCode(string path)
     {
@@ -5936,16 +5949,10 @@ internal sealed class ScriptedPackageIdentities : IPackageIdentityReader
 
     public PackageIdentity? Read(string filePath, bool isPatch, out string detail, out PackageReadRefusal refusal)
     {
-        var identity = Read(filePath, isPatch, out detail);
-        refusal = _declaresNoCode.Contains(filePath) ? PackageReadRefusal.DeclaresNoCode : PackageReadRefusal.WouldNotRead;
-        return identity;
-    }
-
-    public PackageIdentity? Read(string filePath, bool isPatch, out string detail)
-    {
         Reads.Add(filePath);
         if (isPatch) PatchReads.Add(filePath);
         detail = _notes.TryGetValue(filePath, out var note) ? note : string.Empty;
+        refusal = _declaresNoCode.Contains(filePath) ? PackageReadRefusal.DeclaresNoCode : PackageReadRefusal.WouldNotRead;
         if (!_byPath.TryGetValue(filePath, out var identity))
             throw new InvalidOperationException(
                 $"the fake reader was asked to read {filePath}, which no test scripted");

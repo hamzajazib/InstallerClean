@@ -363,9 +363,10 @@ public class ScanProgressAgainstTheScanTests
     /// </summary>
     private sealed class YieldsNothing : IPackageIdentityReader
     {
-        public PackageIdentity? Read(string filePath, bool isPatch, out string detail)
+        public PackageIdentity? Read(string filePath, bool isPatch, out string detail, out PackageReadRefusal refusal)
         {
             detail = string.Empty;
+            refusal = PackageReadRefusal.WouldNotRead;
             return null;
         }
     }

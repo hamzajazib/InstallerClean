@@ -1820,9 +1820,10 @@ public class InstallerQueryServiceUnitTests
     /// </summary>
     private sealed class OnePatchFileUnread(string leaf) : IPackageIdentityReader
     {
-        public PackageIdentity? Read(string filePath, bool isPatch, out string detail)
+        public PackageIdentity? Read(string filePath, bool isPatch, out string detail, out PackageReadRefusal refusal)
         {
             detail = string.Empty;
+            refusal = PackageReadRefusal.WouldNotRead;
             return filePath.EndsWith(leaf, StringComparison.OrdinalIgnoreCase)
                 ? null
                 : new PackageIdentity(string.Empty, isPatch, Array.Empty<string>());
@@ -1955,9 +1956,10 @@ public class InstallerQueryServiceUnitTests
     /// </summary>
     private sealed class OnePatchFileDeclaring(string leaf, params string[] targets) : IPackageIdentityReader
     {
-        public PackageIdentity? Read(string filePath, bool isPatch, out string detail)
+        public PackageIdentity? Read(string filePath, bool isPatch, out string detail, out PackageReadRefusal refusal)
         {
             detail = string.Empty;
+            refusal = PackageReadRefusal.WouldNotRead;
             return new PackageIdentity(string.Empty, isPatch,
                 filePath.EndsWith(leaf, StringComparison.OrdinalIgnoreCase) ? targets : Array.Empty<string>());
         }

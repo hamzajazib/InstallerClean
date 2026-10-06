@@ -1,18 +1,21 @@
 using System.Runtime.InteropServices;
+using InstallerClean.Interop;
+using InstallerClean.Interop.Native;
 using InstallerClean.Services;
 
 namespace InstallerClean.Tests.Services.Integration;
 
 /// <summary>
 /// The real reader against small databases built here with msi.dll: what it answers for an
-/// installation package whose Property table gives no usable ProductCode, and for a file it
-/// cannot read. Each database is built by the calls below, every one of which must succeed,
-/// so a fixture that did not build fails the test rather than reading as a file that would
-/// not open.
+/// installation package whose Property table gives no usable ProductCode, for a patch whose
+/// summary stream gives no usable code or target, and for a file it cannot read. Each database
+/// is built by the calls below, every one of which must succeed, so a fixture that did not
+/// build fails the test rather than reading as a file that would not open.
 /// </summary>
 public sealed class PackageIdentityReaderDatabaseTests : IDisposable
 {
     private const string WellFormedCode = "{12345678-1234-1234-1234-123456789ABC}";
+    private const string WellFormedPatchCode = "{87654321-4321-4321-4321-CBA987654321}";
 
     /// <summary>The real reader, asked through the interface, as the declared-product check asks it.</summary>
     private static readonly IPackageIdentityReader Reader = new PackageIdentityReader();
@@ -63,6 +66,22 @@ public sealed class PackageIdentityReaderDatabaseTests : IDisposable
     }
 
     [Fact]
+    public void A_package_whose_ProductCode_is_empty_declares_no_code()
+    {
+        // The Value column here takes a null, which is how Windows Installer holds an empty
+        // string, so the ProductCode row is there and states nothing.
+        var path = ADatabase(
+            "CREATE TABLE `Property` (`Property` CHAR(72) NOT NULL, `Value` LONGCHAR LOCALIZABLE PRIMARY KEY `Property`)",
+            "INSERT INTO `Property` (`Property`) VALUES ('ProductCode')");
+
+        var identity = Reader.Read(path, isPatch: false, out var detail, out var refusal);
+
+        Assert.Null(identity);
+        Assert.Equal(PackageReadRefusal.DeclaresNoCode, refusal);
+        Assert.Equal("ProductCode is not a well-formed GUID", detail);
+    }
+
+    [Fact]
     public void A_database_with_no_Property_table_would_not_read()
     {
         // The query naming the table does not open, which the reader cannot tell from a query
@@ -92,17 +111,71 @@ public sealed class PackageIdentityReaderDatabaseTests : IDisposable
         Assert.StartsWith("package would not open as a database", detail);
     }
 
-    [Fact]
-    public void The_plain_read_answers_as_the_read_that_says_why()
+    [Theory]
+    [InlineData(WellFormedCode)]
+    [InlineData("not-a-guid")]
+    public void The_plain_read_answers_as_the_read_that_says_why(string productCode)
     {
-        var path = APackage(("ProductCode", "not-a-guid"));
-        var reader = Reader;
+        var path = APackage(("ProductCode", productCode));
 
-        var plain = reader.Read(path, isPatch: false, out var plainDetail);
-        var withRefusal = reader.Read(path, isPatch: false, out var detail, out _);
+        var plain = Reader.Read(path, isPatch: false, out var plainDetail);
+        var withRefusal = Reader.Read(path, isPatch: false, out var detail, out _);
 
         Assert.Equal(withRefusal, plain);
         Assert.Equal(detail, plainDetail);
+    }
+
+    [Fact]
+    public void A_patch_declaring_its_code_and_a_target_reads_as_both()
+    {
+        // The must-hit half for the patch building.
+        var path = APatch(revisionNumber: WellFormedPatchCode, template: WellFormedCode);
+
+        var identity = Reader.Read(path, isPatch: true, out var detail, out _);
+
+        Assert.NotNull(identity);
+        Assert.Equal(WellFormedPatchCode, identity.Value.Code);
+        Assert.True(identity.Value.IsPatch);
+        Assert.Equal(new[] { WellFormedCode }, identity.Value.TargetProductCodes);
+        Assert.Equal(string.Empty, detail);
+    }
+
+    [Fact]
+    public void A_patch_with_no_revision_number_declares_no_code()
+    {
+        var path = APatch(revisionNumber: null, template: WellFormedCode);
+
+        var identity = Reader.Read(path, isPatch: true, out var detail, out var refusal);
+
+        Assert.Null(identity);
+        Assert.Equal(PackageReadRefusal.DeclaresNoCode, refusal);
+        Assert.Equal("patch declares no revision number", detail);
+    }
+
+    [Fact]
+    public void A_patch_with_no_template_declares_no_code()
+    {
+        var path = APatch(revisionNumber: WellFormedPatchCode, template: null);
+
+        var identity = Reader.Read(path, isPatch: true, out var detail, out var refusal);
+
+        Assert.Null(identity);
+        Assert.Equal(PackageReadRefusal.DeclaresNoCode, refusal);
+        Assert.Equal("patch declares no target products", detail);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(";")]
+    public void A_patch_whose_template_names_no_product_declares_no_code(string template)
+    {
+        var path = APatch(revisionNumber: WellFormedPatchCode, template: template);
+
+        var identity = Reader.Read(path, isPatch: true, out var detail, out var refusal);
+
+        Assert.Null(identity);
+        Assert.Equal(PackageReadRefusal.DeclaresNoCode, refusal);
+        Assert.Equal("patch names no target product", detail);
     }
 
     /// <summary>A database whose Property table holds the rows given.</summary>
@@ -113,31 +186,67 @@ public sealed class PackageIdentityReaderDatabaseTests : IDisposable
             .. rows.Select(row => $"INSERT INTO `Property` (`Property`, `Value`) VALUES ('{row.Property}', '{row.Value}')"),
         ]);
 
+    /// <summary>
+    /// A database whose summary stream holds the revision number and Template given as text,
+    /// and leaves unset each one given as null. The reader takes the patch reading of it by
+    /// being asked to.
+    /// </summary>
+    private string APatch(string? revisionNumber, string? template) =>
+        ADatabase([], summary =>
+        {
+            if (revisionNumber is not null) SetText(summary, MsiSummaryProperty.RevisionNumber, revisionNumber);
+            if (template is not null) SetText(summary, MsiSummaryProperty.Template, template);
+        });
+
+    private static void SetText(uint summary, uint property, string value) =>
+        Assert.Equal(MsiError.Success, MsiSummaryInfoSetPropertyW(summary, property, VtType.String, 0, IntPtr.Zero, value));
+
     /// <summary>A new database in the test's folder, built by running each query and committed.</summary>
-    private string ADatabase(params string[] queries)
+    private string ADatabase(params string[] queries) => ADatabase(queries, writeSummary: null);
+
+    /// <summary>
+    /// A new database in the test's folder, built by running each query, then writing its
+    /// summary stream where <paramref name="writeSummary"/> is given, and committed.
+    /// </summary>
+    private string ADatabase(string[] queries, Action<uint>? writeSummary)
     {
         var path = Path.Combine(_folder, Guid.NewGuid() + ".msi");
-        Assert.Equal(0u, MsiOpenDatabaseW(path, CreateMode, out var database));
+        Assert.Equal(MsiError.Success, Msi.MsiOpenDatabase(path, CreateMode, out var database));
         try
         {
             foreach (var query in queries)
             {
-                Assert.Equal(0u, MsiDatabaseOpenViewW(database, query, out var view));
+                Assert.Equal(MsiError.Success, Msi.MsiDatabaseOpenView(database, query, out var view));
                 try
                 {
-                    Assert.Equal(0u, MsiViewExecute(view, 0));
+                    Assert.Equal(MsiError.Success, Msi.MsiViewExecute(view, 0));
                 }
                 finally
                 {
-                    MsiCloseHandle(view);
+                    Msi.MsiCloseHandle(view);
                 }
             }
 
-            Assert.Equal(0u, MsiDatabaseCommit(database));
+            if (writeSummary is not null)
+            {
+                Assert.Equal(MsiError.Success,
+                    Msi.MsiGetSummaryInformation(database, null, SummaryUpdateCount, out var summary));
+                try
+                {
+                    writeSummary(summary);
+                    Assert.Equal(MsiError.Success, MsiSummaryInfoPersist(summary));
+                }
+                finally
+                {
+                    Msi.MsiCloseHandle(summary);
+                }
+            }
+
+            Assert.Equal(MsiError.Success, MsiDatabaseCommit(database));
         }
         finally
         {
-            MsiCloseHandle(database);
+            Msi.MsiCloseHandle(database);
         }
 
         return path;
@@ -146,18 +255,16 @@ public sealed class PackageIdentityReaderDatabaseTests : IDisposable
     /// <summary>MSIDBOPEN_CREATE in msiquery.h, passed as the pointer value it is declared as.</summary>
     private static readonly IntPtr CreateMode = 3;
 
-    [DllImport("msi.dll", CharSet = CharSet.Unicode)]
-    private static extern uint MsiOpenDatabaseW(string szDatabasePath, IntPtr szPersist, out uint phDatabase);
-
-    [DllImport("msi.dll", CharSet = CharSet.Unicode)]
-    private static extern uint MsiDatabaseOpenViewW(uint hDatabase, string szQuery, out uint phView);
-
-    [DllImport("msi.dll")]
-    private static extern uint MsiViewExecute(uint hView, uint hRecord);
+    /// <summary>How many properties the summary stream may be given; more than the two written.</summary>
+    private const uint SummaryUpdateCount = 20;
 
     [DllImport("msi.dll")]
     private static extern uint MsiDatabaseCommit(uint hDatabase);
 
+    [DllImport("msi.dll", CharSet = CharSet.Unicode)]
+    private static extern uint MsiSummaryInfoSetPropertyW(
+        uint hSummaryInfo, uint uiProperty, uint uiDataType, int iValue, IntPtr pftValue, string szValue);
+
     [DllImport("msi.dll")]
-    private static extern uint MsiCloseHandle(uint hAny);
+    private static extern uint MsiSummaryInfoPersist(uint hSummaryInfo);
 }

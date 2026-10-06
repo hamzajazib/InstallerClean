@@ -249,9 +249,10 @@ public class InstallerQueryServicePatchTruncationTests
             _detailByPath[path] = detail;
         }
 
-        public PackageIdentity? Read(string filePath, bool isPatch, out string detail)
+        public PackageIdentity? Read(string filePath, bool isPatch, out string detail, out PackageReadRefusal refusal)
         {
             detail = string.Empty;
+            refusal = PackageReadRefusal.WouldNotRead;
             foreach (var kv in _detailByPath)
                 if (filePath.EndsWith(System.IO.Path.GetFileName(kv.Key), StringComparison.OrdinalIgnoreCase))
                     detail = kv.Value;

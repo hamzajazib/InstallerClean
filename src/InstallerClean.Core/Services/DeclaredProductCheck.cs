@@ -650,7 +650,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             reading = refusal == PackageReadRefusal.WouldNotRead
                 ? CachedPackageReading.WouldNotRead
                 : CachedPackageReading.NoProductCode;
-            detail = readerDetail.Length == 0 ? "the cached package would not read" : readerDetail;
+            detail = readerDetail.Length != 0 ? readerDetail
+                : reading == CachedPackageReading.WouldNotRead ? "the cached package would not read"
+                : "the cached package declares no product code";
             return null;
         }
 
@@ -823,7 +825,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         /// <summary>
         /// An installation not ruled out as a second copy, whose packages gave
-        /// <paramref name="reading"/>. Unless the check has no readers, every one is counted
+        /// <paramref name="reading"/>. Unless the check has no file readers, every one is counted
         /// as checked, and one whose packages could not all be seen by the step that could not
         /// see one and by its context.
         /// </summary>

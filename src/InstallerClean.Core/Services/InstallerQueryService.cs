@@ -680,9 +680,11 @@ public sealed class InstallerQueryService : IInstallerQueryService
     {
         internal static readonly NoPackageIdentity Instance = new();
 
-        public Models.PackageIdentity? Read(string filePath, bool isPatch, out string detail)
+        public Models.PackageIdentity? Read(
+            string filePath, bool isPatch, out string detail, out PackageReadRefusal refusal)
         {
             detail = string.Empty;
+            refusal = PackageReadRefusal.WouldNotRead;
             return new Models.PackageIdentity(string.Empty, isPatch, Array.Empty<string>());
         }
     }

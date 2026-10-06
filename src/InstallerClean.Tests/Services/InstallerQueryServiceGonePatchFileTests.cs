@@ -233,9 +233,10 @@ public class InstallerQueryServiceGonePatchFileTests
     /// <summary>A reader for a folder whose patch files have gone: none of them reads.</summary>
     private sealed class ReadsNothing : IPackageIdentityReader
     {
-        public PackageIdentity? Read(string filePath, bool isPatch, out string detail)
+        public PackageIdentity? Read(string filePath, bool isPatch, out string detail, out PackageReadRefusal refusal)
         {
             detail = string.Empty;
+            refusal = PackageReadRefusal.WouldNotRead;
             return null;
         }
     }

@@ -884,9 +884,10 @@ public class FileSystemScanServiceTests
         /// <summary>A file that is on the disk and still will not say what it is.</summary>
         internal void WillNotBeRead(string path) => _presentButUnreadable.Add(Path.GetFileName(path));
 
-        public PackageIdentity? Read(string filePath, bool isPatch, out string detail)
+        public PackageIdentity? Read(string filePath, bool isPatch, out string detail, out PackageReadRefusal refusal)
         {
             detail = string.Empty;
+            refusal = PackageReadRefusal.WouldNotRead;
             var leaf = Path.GetFileName(filePath);
             if (_presentButUnreadable.Contains(leaf)) return null;
             var onDisk = _fs.AllFiles.Any(f =>
