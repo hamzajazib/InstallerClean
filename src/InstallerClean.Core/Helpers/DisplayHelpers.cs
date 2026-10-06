@@ -162,6 +162,23 @@ internal static class DisplayHelpers
             : line;
 
     /// <summary>
+    /// What the language the app is showing puts after a sentence's closing mark and
+    /// before the next sentence: the whitespace <c>Display.SentenceSeparator</c> ends with.
+    /// A space in a language that spaces its sentences, and nothing in Japanese and
+    /// Chinese, whose full-width marks carry their own spacing. It follows a part of a
+    /// spoken line that carries its own stop, colon or question mark, where the separator
+    /// would put a second stop after the first.
+    /// </summary>
+    internal static string SentenceSpace
+    {
+        get
+        {
+            var separator = Strings.Display_SentenceSeparator;
+            return separator[separator.TrimEnd().Length..];
+        }
+    }
+
+    /// <summary>
     /// The access key <paramref name="label"/> gives its control, as WPF reads it: the
     /// character after the first underscore that is not doubled, a doubled underscore
     /// being a literal one. Upper case in the language the app is showing, as a key is

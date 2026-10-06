@@ -1146,30 +1146,10 @@ public partial class MainWindow : Window
     private const double ReportPanelGap = 12;
 
     /// <summary>
-    /// The panel's words as one line for the screen reader: the opening sentence, each
-    /// line of the list, then the closing line, the list's lines ended the way the
-    /// displayed language ends a sentence.
+    /// The panel's words as one line for the screen reader
+    /// (<see cref="ReportPanelText.SpokenLine"/>).
     /// </summary>
     private readonly string _reportPanelSpokenText;
-
-    /// <summary>
-    /// The lines of the panel's list, one for each kind of thing the report carries, in
-    /// the order they are shown.
-    /// </summary>
-    private static string[] ReportPanelLines =>
-    [
-        Strings.Completion_ReportPanel_Freed,
-        Strings.Completion_ReportPanel_Destination,
-        Strings.Completion_ReportPanel_Durations,
-        Strings.Completion_ReportPanel_InstallerFiles,
-        Strings.Completion_ReportPanel_LeftAlone,
-        Strings.Completion_ReportPanel_Waits,
-        Strings.Completion_ReportPanel_Records,
-        Strings.Completion_ReportPanel_ShortNames,
-        Strings.Completion_ReportPanel_Windows,
-        Strings.Completion_ReportPanel_AppVersion,
-        Strings.Completion_ReportPanel_Errors,
-    ];
 
     /// <summary>
     /// Fills the panel: the opening sentence with the chart's name as a link, the list,
@@ -1179,8 +1159,7 @@ public partial class MainWindow : Window
     /// </summary>
     private string BuildReportPanel()
     {
-        var lines = ReportPanelLines;
-        ReportPanelList.ItemsSource = lines;
+        ReportPanelList.ItemsSource = ReportPanelText.Lines;
 
         var seeReport = new Hyperlink(new Run(Strings.Completion_ReportPanel_SeeReport))
         {
@@ -1190,9 +1169,7 @@ public partial class MainWindow : Window
         ReportPanelSeeReportText.Inlines.Clear();
         ReportPanelSeeReportText.Inlines.Add(seeReport);
 
-        var separator = Strings.Display_SentenceSeparator;
-        return BuildReportPanelIntro() + " " + string.Join(separator, lines) + separator
-            + Strings.Completion_ReportPanel_Closing + " " + Strings.Completion_ReportPanel_SeeReport;
+        return ReportPanelText.SpokenLine(BuildReportPanelIntro());
     }
 
     /// <summary>

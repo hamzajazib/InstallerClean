@@ -27,8 +27,9 @@ public partial class ConfirmDeleteWindow : Window
         // in the body alone would go unheard. Here that line is the one being
         // consented to. It says the deletion is permanent and offers Move as the
         // way to keep a backup, which is the choice still open to the person
-        // the dialog is asking.
-        Title = MessageText.Text + " " + body;
+        // the dialog is asking. The question carries its own punctuation, so the
+        // space after it is the one the language puts after a sentence.
+        Title = MessageText.Text + DisplayHelpers.SentenceSpace + body;
 
         // Sized to content, the card one width, 440 scaled. The clamps stop a
         // very large text scale pushing the card past the work area: across, its

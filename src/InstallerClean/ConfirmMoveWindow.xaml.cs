@@ -48,10 +48,17 @@ public partial class ConfirmMoveWindow : Window
         // screen reader has to it. Label then value, the order the card reads,
         // so the join holds in every language. The raw path, not the wrapped
         // DestinationText, whose break characters are for the line breaker.
-        var destinationLine = DestinationLabel.Text + " " + destination;
+        //
+        // The question and the label each carry their own punctuation, so the
+        // space after each is the one the language puts after a sentence. The
+        // path carries none, so the note after it takes the language's own stop
+        // and space.
+        var space = DisplayHelpers.SentenceSpace;
+        var destinationLine = DestinationLabel.Text + space + destination;
         Title = sameDrive
-            ? MessageText.Text + " " + destinationLine + " " + Strings.Confirm_MoveSameDrive
-            : MessageText.Text + " " + destinationLine;
+            ? MessageText.Text + space + destinationLine
+                + Strings.Display_SentenceSeparator + Strings.Confirm_MoveSameDrive
+            : MessageText.Text + space + destinationLine;
 
         // Sized to content, the card from 440 to 520 scaled. The clamps stop a
         // very large text scale pushing the card past the work area: across, its
