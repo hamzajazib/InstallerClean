@@ -29,7 +29,8 @@ namespace InstallerClean.Models;
 /// be ruled out.
 ///
 /// A check built without its file readers reads no cached package and no second copy's
-/// packages, and counts nothing.
+/// packages, and counts nothing. A check with them that cannot read sources counts that
+/// under <see cref="UnseenSourceNotRuledOut"/>.
 /// </summary>
 /// <param name="ListedChecked">
 /// The listed installations whose cached package the pass looked for: every one, where an
@@ -48,10 +49,13 @@ namespace InstallerClean.Models;
 /// Installations setting the hold whose cached package's path names no file that is there, a
 /// path naming a folder included.
 /// </param>
-/// <param name="KeptWouldNotRead">Installations setting the hold whose cached package would not read.</param>
+/// <param name="KeptWouldNotRead">
+/// Installations setting the hold whose cached package would not give up its product code: it
+/// would not open, or its <c>Property</c> table or the value would not read.
+/// </param>
 /// <param name="KeptNoProductCode">
 /// Installations setting the hold whose cached package read and declares no product code, or
-/// read as a patch.
+/// one that is not a well-formed GUID, or read as a patch.
 /// </param>
 /// <param name="KeptAnotherAccount">
 /// Installations setting the hold in a per-user context that are not shown to belong to the
@@ -86,10 +90,13 @@ namespace InstallerClean.Models;
 /// <param name="UnseenWouldNotIdentify">
 /// The read stopped at an installation whose cached package's volume and file ID would not read.
 /// </param>
-/// <param name="UnseenWouldNotRead">The read stopped at an installation whose cached package would not read.</param>
+/// <param name="UnseenWouldNotRead">
+/// The read stopped at an installation whose cached package would not give up its product
+/// code, as for <see cref="KeptWouldNotRead"/>.
+/// </param>
 /// <param name="UnseenNoProductCode">
-/// The read stopped at an installation whose cached package declares no product code, or read
-/// as a patch.
+/// The read stopped at an installation whose cached package declares no product code, or one
+/// that is not a well-formed GUID, or read as a patch.
 /// </param>
 /// <param name="UnseenPerUserUnmanaged">
 /// The read stopped at an installation in the per-user unmanaged context, whose source list is
@@ -101,9 +108,10 @@ namespace InstallerClean.Models;
 /// </param>
 /// <param name="UnseenSourceNotRuledOut">
 /// The read stopped at an installation whose sources could not be ruled out for any other
-/// reason: its package name, source list or installed-from folder would not read, held a form
-/// the check does not compare, or differed from what the registry holds; or a package there
-/// would not identify, or could be a file directly in the Installer folder.
+/// reason: the check had no way to read them; its package name, source list or installed-from
+/// folder would not read, held a form the check does not compare, or differed from what the
+/// registry holds; or a package there would not identify, or could be a file directly in the
+/// Installer folder.
 /// </param>
 /// <param name="UnseenPerMachine">
 /// The read stopped at an installation in the per-machine context: one, where one of the nine

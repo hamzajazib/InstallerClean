@@ -2989,8 +2989,12 @@ public class DeclaredProductCheckTests
         Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome);
     }
 
-    /// <summary>The ways an installation's cached package can fail to say what it declares.</summary>
-    public enum CachedPackageFault { ReadFails, NamesNoPackage, NotAFile, NoIdentity, APatch, NoCode }
+    /// <summary>
+    /// The ways an installation's cached package can fail to say what it declares. NoIdentity
+    /// is a file the reader could not read; MalformedCode is one it read and found declaring
+    /// no product code it could use, a ProductCode that is not a well-formed GUID among them.
+    /// </summary>
+    public enum CachedPackageFault { ReadFails, NamesNoPackage, NotAFile, NoIdentity, APatch, NoCode, MalformedCode }
 
     private static void Break(
         (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
@@ -3017,6 +3021,9 @@ public class DeclaredProductCheckTests
             case CachedPackageFault.NoCode:
                 f.Packages.Yields(SecondCopysPackage, new PackageIdentity(string.Empty, IsPatch: false, []));
                 break;
+            case CachedPackageFault.MalformedCode:
+                f.Packages.DeclaresNoCode(SecondCopysPackage);
+                break;
         }
     }
 
@@ -3027,6 +3034,7 @@ public class DeclaredProductCheckTests
     [InlineData(CachedPackageFault.NoIdentity)]
     [InlineData(CachedPackageFault.APatch)]
     [InlineData(CachedPackageFault.NoCode)]
+    [InlineData(CachedPackageFault.MalformedCode)]
     public void Every_installation_package_is_kept_while_another_accounts_cached_package_does_not_say_what_it_declares(
         CachedPackageFault fault)
     {
@@ -3057,6 +3065,7 @@ public class DeclaredProductCheckTests
     [InlineData(CachedPackageFault.NoIdentity)]
     [InlineData(CachedPackageFault.APatch)]
     [InlineData(CachedPackageFault.NoCode)]
+    [InlineData(CachedPackageFault.MalformedCode)]
     public void A_per_machine_cached_package_that_does_not_say_what_it_declares_keeps_nothing_where_its_record_shows_an_ordinary_installation(
         CachedPackageFault fault)
     {
@@ -3258,6 +3267,7 @@ public class DeclaredProductCheckTests
     [InlineData(CachedPackageFault.NoIdentity)]
     [InlineData(CachedPackageFault.APatch)]
     [InlineData(CachedPackageFault.NoCode)]
+    [InlineData(CachedPackageFault.MalformedCode)]
     public void An_installation_keeping_every_installation_package_is_counted_by_what_its_cached_package_gave(
         CachedPackageFault fault)
     {
@@ -3540,6 +3550,7 @@ public class DeclaredProductCheckTests
     [InlineData(CachedPackageFault.NoIdentity)]
     [InlineData(CachedPackageFault.APatch)]
     [InlineData(CachedPackageFault.NoCode)]
+    [InlineData(CachedPackageFault.MalformedCode)]
     public void Every_installation_package_is_kept_beside_a_second_copy_whose_cached_package_does_not_say_what_it_declares(
         CachedPackageFault fault)
     {
@@ -3726,6 +3737,7 @@ public class DeclaredProductCheckTests
     [InlineData(CachedPackageFault.NoIdentity)]
     [InlineData(CachedPackageFault.APatch)]
     [InlineData(CachedPackageFault.NoCode)]
+    [InlineData(CachedPackageFault.MalformedCode)]
     public void A_second_copy_whose_cached_package_cannot_be_seen_is_counted_by_what_its_cached_package_gave(
         CachedPackageFault fault)
     {
@@ -3749,6 +3761,42 @@ public class DeclaredProductCheckTests
                 _ => Census(released: 1, unruled: 1, unseenNoProductCode: 1, unseenPerMachine: 1),
             },
             screening.CachedPackages);
+    }
+
+    [Fact]
+    public void A_reader_that_does_not_say_why_it_read_nothing_is_counted_as_would_not_read()
+    {
+        // A reader with only the plain read. Every null it answers is counted as a file that
+        // would not give up its product code, never as one that declares none.
+        var f = AMarkedSecondCopy();
+        f.Packages.DeclaresNoCode(SecondCopysPackage);
+        f.Msi.AnswersItsOwnRecord(SecondCopy, null, MsiInstallContext.Machine);
+
+        var census = ScriptedCheck(f.Msi, new PlainReader(f.Packages), f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder).CachedPackages;
+
+        Assert.Equal(Census(released: 1, unruled: 1, unseenWouldNotRead: 1, unseenPerMachine: 1), census);
+    }
+
+    /// <summary><see cref="ScriptedPackageIdentities"/> behind the plain read alone.</summary>
+    private sealed class PlainReader(ScriptedPackageIdentities inner) : IPackageIdentityReader
+    {
+        public PackageIdentity? Read(string filePath, bool isPatch, out string detail) =>
+            inner.Read(filePath, isPatch, out detail);
+    }
+
+    [Fact]
+    public void A_second_copy_is_counted_as_a_source_not_ruled_out_by_a_check_with_no_registry_reader()
+    {
+        // Such a check reads the cached package and cannot read the sources, so every
+        // installation package is kept and the step that stopped it is counted.
+        var f = AMarkedSecondCopy();
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, registry: null, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+
+        Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
+        Assert.Equal(Census(unruled: 1, unseenSourceNotRuledOut: 1, unseenPerMachine: 1), screening.CachedPackages);
     }
 
     [Fact]
@@ -5872,6 +5920,25 @@ internal sealed class ScriptedPackageIdentities : IPackageIdentityReader
     {
         _byPath[path] = null;
         _notes[path] = note;
+    }
+
+    /// <summary>
+    /// The file read and declares no code the reader could use, as the real reader answers for
+    /// a ProductCode that is missing or not a well-formed GUID.
+    /// </summary>
+    public void DeclaresNoCode(string path)
+    {
+        _byPath[path] = null;
+        _declaresNoCode.Add(path);
+    }
+
+    private readonly HashSet<string> _declaresNoCode = new(StringComparer.OrdinalIgnoreCase);
+
+    public PackageIdentity? Read(string filePath, bool isPatch, out string detail, out PackageReadRefusal refusal)
+    {
+        var identity = Read(filePath, isPatch, out detail);
+        refusal = _declaresNoCode.Contains(filePath) ? PackageReadRefusal.DeclaresNoCode : PackageReadRefusal.WouldNotRead;
+        return identity;
     }
 
     public PackageIdentity? Read(string filePath, bool isPatch, out string detail)

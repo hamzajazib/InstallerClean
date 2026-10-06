@@ -49,4 +49,41 @@ public interface IPackageIdentityReader
     /// other file entirely.
     /// </param>
     PackageIdentity? Read(string filePath, bool isPatch, out string detail);
+
+    /// <summary>
+    /// <see cref="Read(string, bool, out string)"/>, and where it answers null, in
+    /// <paramref name="refusal"/> which of two kinds of failure it was, for a caller that
+    /// counts them. Nothing may decide anything on it: null keeps whatever the caller
+    /// would keep for it either way.
+    ///
+    /// A reader that does not tell the two apart answers
+    /// <see cref="PackageReadRefusal.WouldNotRead"/> for every null, which claims nothing
+    /// about what the file declares.
+    /// </summary>
+    PackageIdentity? Read(string filePath, bool isPatch, out string detail, out PackageReadRefusal refusal)
+    {
+        var identity = Read(filePath, isPatch, out detail);
+        refusal = PackageReadRefusal.WouldNotRead;
+        return identity;
+    }
+}
+
+/// <summary>
+/// Why <see cref="IPackageIdentityReader.Read(string, bool, out string, out PackageReadRefusal)"/>
+/// answered null. Meaningless where it answered an identity.
+/// </summary>
+public enum PackageReadRefusal
+{
+    /// <summary>
+    /// The file did not give up the value: it would not open, a table or stream in it would
+    /// not read, a value would not read, or the read raised.
+    /// </summary>
+    WouldNotRead,
+
+    /// <summary>
+    /// The file read, and what it declares is not a code: an installation package with no
+    /// <c>ProductCode</c> row or one that is not a well-formed GUID, or a patch whose code
+    /// or target list is not made of well-formed GUIDs, or names no target.
+    /// </summary>
+    DeclaresNoCode,
 }

@@ -45,7 +45,11 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
 
     /// <inheritdoc />
     public PackageIdentity? Read(string filePath, bool isPatch, out string detail) =>
-        isPatch ? ReadPatch(filePath, out detail) : ReadProduct(filePath, out detail);
+        Read(filePath, isPatch, out detail, out _);
+
+    /// <inheritdoc />
+    public PackageIdentity? Read(string filePath, bool isPatch, out string detail, out PackageReadRefusal refusal) =>
+        isPatch ? ReadPatch(filePath, out detail, out refusal) : ReadProduct(filePath, out detail, out refusal);
 
     /// <summary>
     /// An installation package's ProductCode, out of its own Property table.
@@ -55,8 +59,9 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
     /// file being opened is one the app is about to offer to delete, on a machine
     /// where the same folder is what Windows Installer itself works from.
     /// </summary>
-    private static PackageIdentity? ReadProduct(string filePath, out string detail)
+    private static PackageIdentity? ReadProduct(string filePath, out string detail, out PackageReadRefusal refusal)
     {
+        refusal = PackageReadRefusal.WouldNotRead;
         uint hDatabase = 0;
         uint hView = 0;
         uint hRecord = 0;
@@ -93,9 +98,14 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
                 // carries no ProductCode row. Documented as required, so this is
                 // a malformed package rather than a package that happens not to
                 // say.
-                detail = error == MsiError.NoMoreItems
-                    ? "package declares no ProductCode"
-                    : $"Property table row would not fetch ({error})";
+                if (error == MsiError.NoMoreItems)
+                {
+                    detail = "package declares no ProductCode";
+                    refusal = PackageReadRefusal.DeclaresNoCode;
+                    return null;
+                }
+
+                detail = $"Property table row would not fetch ({error})";
                 return null;
             }
 
@@ -109,6 +119,7 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
             if (code is null)
             {
                 detail = "ProductCode is not a well-formed GUID";
+                refusal = PackageReadRefusal.DeclaresNoCode;
                 return null;
             }
 
@@ -147,8 +158,9 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
     /// patch that names none is one that read cannot be put for, so it is reported
     /// unread rather than returned as an identity whose questions cannot all be put.
     /// </summary>
-    private static PackageIdentity? ReadPatch(string filePath, out string detail)
+    private static PackageIdentity? ReadPatch(string filePath, out string detail, out PackageReadRefusal refusal)
     {
+        refusal = PackageReadRefusal.WouldNotRead;
         uint hSummary = 0;
         try
         {
@@ -174,6 +186,7 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
             if (revision.Length < BracedGuidLength || revision.Length % BracedGuidLength != 0)
             {
                 detail = "patch revision number is not a whole number of GUIDs";
+                refusal = PackageReadRefusal.DeclaresNoCode;
                 return null;
             }
 
@@ -181,6 +194,7 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
             if (code is null)
             {
                 detail = "patch code is not a well-formed GUID";
+                refusal = PackageReadRefusal.DeclaresNoCode;
                 return null;
             }
 
@@ -194,6 +208,7 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
             if (targets is null)
             {
                 detail = "patch target list is not a list of GUIDs";
+                refusal = PackageReadRefusal.DeclaresNoCode;
                 return null;
             }
 
@@ -202,6 +217,7 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
                 // A present but empty Template names no product to put the keyed
                 // patch read through, so it is reported unread like an absent one.
                 detail = "patch names no target product";
+                refusal = PackageReadRefusal.DeclaresNoCode;
                 return null;
             }
 

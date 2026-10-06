@@ -470,24 +470,23 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         reading = SecondCopyReading.WouldNotIdentify;
         if (_fileIdentities.ReadOutcome(path, out var recorded) != FileIdentityRead.Read) return false;
 
-        var declared = _identityReader.Read(path, isPatch: false, out _);
-        reading = SecondCopyReading.WouldNotRead;
-        if (declared is null) return false;
-        reading = SecondCopyReading.NoProductCode;
-        if (declared.Value.IsPatch || declared.Value.Code.Length == 0) return false;
+        var declared = _identityReader.Read(path, isPatch: false, out _, out var refusal);
+        reading = declared is null && refusal == PackageReadRefusal.WouldNotRead
+            ? SecondCopyReading.WouldNotRead
+            : SecondCopyReading.NoProductCode;
+        if (declared is null || declared.Value.IsPatch || declared.Value.Code.Length == 0) return false;
 
         opened.Add(recorded);
 
         var sourcesSeen = AddSourcePackages(installation.ProductCode, installation.UserSid, context, pass,
-            namesAFileInInstallerFolder, opened, byName, out givenUp);
-
-        // In the order AddSourcePackages refuses: a check without the readers it needs, then
-        // the per-user unmanaged context, whose list is not read, then everything after it.
-        reading = sourcesSeen ? SecondCopyReading.Seen
-            : namesAFileInInstallerFolder is null || _registry is null ? SecondCopyReading.NoReaders
-            : context == MsiInstallContext.UserUnmanaged ? SecondCopyReading.PerUserUnmanaged
-            : givenUp is not null ? SecondCopyReading.SourcesGivenUp
-            : SecondCopyReading.SourceNotRuledOut;
+            namesAFileInInstallerFolder, opened, byName, out givenUp, out var sourceRefusal);
+        reading = sourceRefusal switch
+        {
+            SourceRefusal.None => SecondCopyReading.Seen,
+            SourceRefusal.PerUserUnmanaged => SecondCopyReading.PerUserUnmanaged,
+            SourceRefusal.GivenUp => SecondCopyReading.SourcesGivenUp,
+            _ => SecondCopyReading.SourceNotRuledOut,
+        };
         return sourcesSeen;
     }
 
@@ -645,10 +644,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             return null;
         }
 
-        var identity = _identityReader.Read(path, isPatch: false, out var readerDetail);
+        var identity = _identityReader.Read(path, isPatch: false, out var readerDetail, out var refusal);
         if (identity is null)
         {
-            reading = CachedPackageReading.WouldNotRead;
+            reading = refusal == PackageReadRefusal.WouldNotRead
+                ? CachedPackageReading.WouldNotRead
+                : CachedPackageReading.NoProductCode;
             detail = readerDetail.Length == 0 ? "the cached package would not read" : readerDetail;
             return null;
         }
@@ -683,10 +684,13 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// <summary>Nothing: its path names no file that is there.</summary>
         NotThere,
 
-        /// <summary>Nothing: the file would not read.</summary>
+        /// <summary>Nothing: the file would not give up its product code (<see cref="PackageReadRefusal.WouldNotRead"/>).</summary>
         WouldNotRead,
 
-        /// <summary>No product code: the file declares none, or reads as a patch.</summary>
+        /// <summary>
+        /// No product code: the file declares none, or one that is not a well-formed GUID, or
+        /// reads as a patch.
+        /// </summary>
         NoProductCode,
     }
 
@@ -716,7 +720,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// <summary>Its cached package and the packages its sources name can all be seen.</summary>
         Seen,
 
-        /// <summary>Not looked for, the check having no file readers or no registry reader.</summary>
+        /// <summary>Not looked for, the check having no file readers.</summary>
         NoReaders,
 
         /// <summary>Its cached package's path would not read.</summary>
@@ -731,10 +735,13 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// <summary>Its cached package's volume and file ID would not read.</summary>
         WouldNotIdentify,
 
-        /// <summary>Its cached package would not read.</summary>
+        /// <summary>Its cached package would not give up its product code.</summary>
         WouldNotRead,
 
-        /// <summary>Its cached package declares no product code, or reads as a patch.</summary>
+        /// <summary>
+        /// Its cached package declares no product code, or one that is not a well-formed GUID,
+        /// or reads as a patch.
+        /// </summary>
         NoProductCode,
 
         /// <summary>It is in the per-user unmanaged context, whose source list is not read.</summary>
@@ -743,8 +750,35 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// <summary>A package its sources name is under a root given up for the pass.</summary>
         SourcesGivenUp,
 
-        /// <summary>Its sources could not be ruled out for any other reason.</summary>
+        /// <summary>
+        /// Its sources could not be ruled out for any other reason, a check with no way to read
+        /// them included (<see cref="SourceRefusal.NotRuledOut"/>).
+        /// </summary>
         SourceNotRuledOut,
+    }
+
+    /// <summary>
+    /// Which kind of check answered false in <see cref="AddSourcePackages"/>, or
+    /// <see cref="None"/> where it answered true.
+    /// </summary>
+    private enum SourceRefusal
+    {
+        /// <summary>Every package the sources name was read, or left to be read by name.</summary>
+        None,
+
+        /// <summary>The per-user unmanaged context, whose source list is not read.</summary>
+        PerUserUnmanaged,
+
+        /// <summary>A package read refused for a root given up for the pass.</summary>
+        GivenUp,
+
+        /// <summary>
+        /// Any other check: the check has no way to read the sources, or the package name, the
+        /// source list or the installed-from folder would not read, held a form that is not
+        /// compared or differed from what the registry holds, or a package would not identify
+        /// or could be a file in the Installer folder.
+        /// </summary>
+        NotRuledOut,
     }
 
     /// <summary>
@@ -907,7 +941,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             identities.Add(recorded);
 
             if (!AddSourcePackages(
-                    registeredCode, sid, context, pass, namesAFileInInstallerFolder, identities, byName, out givenUp))
+                    registeredCode, sid, context, pass, namesAFileInInstallerFolder, identities, byName, out givenUp, out _))
                 return null;
         }
 
@@ -989,7 +1023,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     ///
     /// Where false is a package read refused for a root given up for the pass,
     /// <paramref name="givenUp"/> is that root (<see cref="ReadSourcePackage"/>); for every
-    /// other answer it is null.
+    /// other answer it is null. <paramref name="refusal"/> says which kind of check answered
+    /// false, and is <see cref="SourceRefusal.None"/> where the answer is true.
     /// </summary>
     private bool AddSourcePackages(
         string code,
@@ -999,9 +1034,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         Func<string, bool?>? namesAFileInInstallerFolder,
         List<FileIdentity> opened,
         List<NetworkPackage> byName,
-        out string? givenUp)
+        out string? givenUp,
+        out SourceRefusal refusal)
     {
         givenUp = null;
+        refusal = SourceRefusal.NotRuledOut;
         if (namesAFileInInstallerFolder is null || _fileIdentities is null || _registry is null) return false;
 
         // A PER-USER-UNMANAGED SOURCE LIST IS NOT READ, IN ANY ACCOUNT, AND THE COPY IS
@@ -1012,7 +1049,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         // is kept whatever the list would say. The account this process runs as is not
         // compared with the installation's, so its own per-user-unmanaged installations
         // are kept the same way.
-        if (context == MsiInstallContext.UserUnmanaged) return false;
+        if (context == MsiInstallContext.UserUnmanaged)
+        {
+            refusal = SourceRefusal.PerUserUnmanaged;
+            return false;
+        }
 
         var name = InstallerQueryService.ReadProductProperty(
             _msi, code, sid, context, MsiInstallProperty.PackageName);
@@ -1081,10 +1122,16 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             }
 
             var inInstallerFolder = IsLocalDrive(RootOf(package), pass) ? null : namesAFileInInstallerFolder;
-            if (!ReadSourcePackage(package, pass, inInstallerFolder, out var identity, out givenUp)) return false;
+            if (!ReadSourcePackage(package, pass, inInstallerFolder, out var identity, out givenUp))
+            {
+                if (givenUp is not null) refusal = SourceRefusal.GivenUp;
+                return false;
+            }
+
             if (identity is { } read) opened.Add(read);
         }
 
+        refusal = SourceRefusal.None;
         return true;
     }
 

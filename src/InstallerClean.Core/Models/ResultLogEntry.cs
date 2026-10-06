@@ -1136,9 +1136,13 @@ public sealed record MachineInfo(
 /// <param name="SecondCopyKeepNotThereCount">
 /// The same, where the cached package's path names no file that is there.
 /// </param>
-/// <param name="SecondCopyKeepWouldNotReadCount">The same, where the cached package would not read.</param>
+/// <param name="SecondCopyKeepWouldNotReadCount">
+/// The same, where the cached package would not give up its product code: it would not open,
+/// or its <c>Property</c> table or the value would not read.
+/// </param>
 /// <param name="SecondCopyKeepNoProductCodeCount">
-/// The same, where the cached package read and declares no product code, or reads as a patch.
+/// The same, where the cached package read and declares no product code, or one that is not a
+/// well-formed GUID, or reads as a patch.
 /// </param>
 /// <param name="SecondCopyKeepAnotherAccountCount">
 /// The same installations, where the installation is per-user and not shown to belong to
@@ -1179,9 +1183,13 @@ public sealed record MachineInfo(
 /// <param name="SecondCopyUnseenWouldNotIdentifyCount">
 /// The cached package's volume and file ID would not read.
 /// </param>
-/// <param name="SecondCopyUnseenWouldNotReadCount">The cached package would not read.</param>
+/// <param name="SecondCopyUnseenWouldNotReadCount">
+/// The cached package would not give up its product code, as for
+/// <paramref name="SecondCopyKeepWouldNotReadCount"/>.
+/// </param>
 /// <param name="SecondCopyUnseenNoProductCodeCount">
-/// The cached package declares no product code, or reads as a patch.
+/// The cached package declares no product code, or one that is not a well-formed GUID, or
+/// reads as a patch.
 /// </param>
 /// <param name="SecondCopyUnseenPerUserUnmanagedCount">
 /// The installation is in the per-user unmanaged context, whose source list is not read.

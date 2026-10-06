@@ -166,14 +166,18 @@ public class WithholdingSplitTests
         return screen;
     }
 
-    /// <summary>What the screen above says it found of the listed installations.</summary>
+    /// <summary>
+    /// What the screen above says it found of the listed installations: one installation setting
+    /// the hold, which keeps nothing more where every file is already kept for its own program,
+    /// so the second condition is not read.
+    /// </summary>
     private static readonly CachedPackageCensus ACensus = new(
         ListedChecked: 64, KeptPathUnreadable: 0, KeptNoneRecorded: 1, KeptNotThere: 0, KeptWouldNotRead: 0,
         KeptNoProductCode: 0, KeptAnotherAccount: 0, KeptPackageCodeUnanswered: 1, KeptInstanceTypeNotOrdinary: 0,
         KeptPerMachine: 1, ReleasedOrdinary: 2, UnruledChecked: 0, UnseenPathUnreadable: 0, UnseenNoneRecorded: 0,
         UnseenNotThere: 0, UnseenWouldNotIdentify: 0, UnseenWouldNotRead: 0, UnseenNoProductCode: 0,
         UnseenPerUserUnmanaged: 0, UnseenSourcesGivenUp: 0, UnseenSourceNotRuledOut: 0, UnseenPerMachine: 0,
-        UnseenByNameFiles: 3);
+        UnseenByNameFiles: 0);
 
     [Fact]
     public async Task The_drives_and_shares_the_screen_gave_up_and_its_waits_travel_on_the_result_beside_the_split()
