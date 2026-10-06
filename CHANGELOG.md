@@ -2,6 +2,12 @@
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.1] - Unreleased
+
+### Changed
+
+- The anonymous report is in a new format, version 6. It adds eleven counts about the cached installer packages InstallerClean reads, one for each installed program Windows Installer lists, to tell whether a program could be a second copy of another. They are how many it read; how many programs held back every installation package no record names that the check of the program it declares would otherwise let through, because their cached package did not say which program it belongs to and Windows did not show them to be ordinary installations, counted once by why the package gave no answer (its path would not read, none is recorded, the file is not there, the file would not read, or it names no program) and once by why Windows did not settle it (the program is installed for another account, its package code did not answer, or Windows did not report an ordinary installation); how many of those programs are installed for everyone on the PC; and how many programs whose cached package gave no answer Windows showed to be ordinary installations, so that they held nothing back. Nothing naming a program is sent. What InstallerClean offers and holds back is unchanged.
+
 ## [3.1.0] - 2026-10-06
 
 ### Added
