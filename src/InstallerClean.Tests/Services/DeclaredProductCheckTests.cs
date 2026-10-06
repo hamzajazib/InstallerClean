@@ -3225,6 +3225,155 @@ public class DeclaredProductCheckTests
         Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, outcome);
     }
 
+    // ---- What the pass counts of the cached packages and records it read ----
+    //
+    // The census the screening carries, which the report sends. Each test reads the census
+    // of one pass over the second copy's fixture.
+
+    private static CachedPackageCensus CensusBesideTheSecondCopy(
+        (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+            ScriptedFileIdentities Files, MockFileSystem Disk, ListedInstallation[] Listed) f,
+        IRunningAccount? account = null) =>
+        ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, account)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder).CachedPackages;
+
+    private static CachedPackageCensus Census(
+        int read = 1, int pathUnreadable = 0, int noneRecorded = 0, int notThere = 0, int wouldNotRead = 0,
+        int noProductCode = 0, int anotherAccount = 0, int packageCodeUnanswered = 0,
+        int instanceTypeNotOrdinary = 0, int perMachine = 0, int released = 0) =>
+        new(read, pathUnreadable, noneRecorded, notThere, wouldNotRead, noProductCode,
+            anotherAccount, packageCodeUnanswered, instanceTypeNotOrdinary, perMachine, released);
+
+    [Theory]
+    [InlineData(CachedPackageFault.ReadFails)]
+    [InlineData(CachedPackageFault.NamesNoPackage)]
+    [InlineData(CachedPackageFault.NotAFile)]
+    [InlineData(CachedPackageFault.NoIdentity)]
+    [InlineData(CachedPackageFault.APatch)]
+    [InlineData(CachedPackageFault.NoCode)]
+    public void An_installation_keeping_every_installation_package_is_counted_by_what_its_cached_package_gave(
+        CachedPackageFault fault)
+    {
+        // Another account's installation, whose record is not read. It is counted once by what
+        // its cached package gave and once by why its record did not settle it.
+        var f = ACopyBesideASecondCopy();
+        Break(f, fault, OtherUserSid, MsiInstallContext.UserUnmanaged);
+
+        var census = CensusBesideTheSecondCopy(f, SomebodyElse);
+
+        var expected = fault switch
+        {
+            CachedPackageFault.ReadFails => Census(pathUnreadable: 1, anotherAccount: 1),
+            CachedPackageFault.NamesNoPackage => Census(noneRecorded: 1, anotherAccount: 1),
+            CachedPackageFault.NotAFile => Census(notThere: 1, anotherAccount: 1),
+            CachedPackageFault.NoIdentity => Census(wouldNotRead: 1, anotherAccount: 1),
+            _ => Census(noProductCode: 1, anotherAccount: 1),
+        };
+        Assert.Equal(expected, census);
+    }
+
+    [Fact]
+    public void A_per_machine_installation_whose_package_code_does_not_answer_is_counted_as_per_machine()
+    {
+        var f = AnUnreadCachedPackage(MsiInstallContext.Machine);
+        f.Msi.AnswersItsOwnRecord(SecondCopy, null, MsiInstallContext.Machine);
+        f.Msi.PackageCodeAnswers(SecondCopy, null, MsiInstallContext.Machine, MsiError.UnknownProperty);
+
+        Assert.Equal(
+            Census(pathUnreadable: 1, packageCodeUnanswered: 1, perMachine: 1),
+            CensusBesideTheSecondCopy(f, TheOwner));
+    }
+
+    [Fact]
+    public void The_running_accounts_own_installation_read_as_a_second_instance_is_counted_by_its_InstanceType()
+    {
+        var f = AnUnreadCachedPackage();
+        f.Msi.AnswersItsOwnRecord(SecondCopy, OtherUserSid, MsiInstallContext.UserUnmanaged, instanceType: "1");
+
+        Assert.Equal(
+            Census(pathUnreadable: 1, instanceTypeNotOrdinary: 1),
+            CensusBesideTheSecondCopy(f, TheOwner));
+    }
+
+    [Fact]
+    public void An_InstanceType_that_will_not_read_is_counted_with_one_read_as_a_second_instance()
+    {
+        var f = AnUnreadCachedPackage();
+        f.Msi.AnswersItsOwnRecord(SecondCopy, OtherUserSid, MsiInstallContext.UserUnmanaged);
+        f.Msi.InstanceTypeAnswers(SecondCopy, OtherUserSid, MsiInstallContext.UserUnmanaged, MsiError.AccessDenied);
+
+        Assert.Equal(
+            Census(pathUnreadable: 1, instanceTypeNotOrdinary: 1),
+            CensusBesideTheSecondCopy(f, TheOwner));
+    }
+
+    [Fact]
+    public void An_installation_whose_record_shows_it_ordinary_is_counted_as_keeping_nothing()
+    {
+        var f = AnUnreadCachedPackage(MsiInstallContext.Machine);
+        f.Msi.AnswersItsOwnRecord(SecondCopy, null, MsiInstallContext.Machine);
+
+        Assert.Equal(Census(released: 1), CensusBesideTheSecondCopy(f, TheOwner));
+    }
+
+    [Fact]
+    public void An_installation_whose_cached_package_declares_a_code_is_counted_as_read_and_nothing_else()
+    {
+        // Linked under the code its cached package declares, so it keeps nothing.
+        var f = ACopyBesideASecondCopy();
+
+        Assert.Equal(Census(), CensusBesideTheSecondCopy(f, SomebodyElse));
+    }
+
+    [Fact]
+    public void Every_listed_installation_is_counted_once_in_a_pass_of_many_candidates()
+    {
+        // The installations are read once for the pass, whichever candidate reaches them
+        // first, so a second candidate adds nothing to the counts.
+        const string OtherCandidate = @"C:\Windows\Installer\b2.msi";
+        var f = ACopyBesideASecondCopy();
+        f.Packages.Declares(OtherCandidate, ProductB);
+        f.Msi.NotInstalled(ProductB, MsiError.UnknownProduct);
+        f.Msi.RecordsPackage(ProductB, null, MsiInstallContext.Machine, string.Empty);
+        f.Msi.PackageCodeAnswers(ProductB, null, MsiInstallContext.Machine, MsiError.UnknownProperty);
+        f.Msi.InstanceTypeAnswers(ProductB, null, MsiInstallContext.Machine, MsiError.UnknownProperty);
+        f = f with { Listed = [.. f.Listed, ListedPerMachine(ProductB)] };
+
+        var census = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate), Package(OtherCandidate)], f.Listed, default, null, InInstallerFolder)
+            .CachedPackages;
+
+        Assert.Equal(Census(read: 2, noneRecorded: 1, packageCodeUnanswered: 1, perMachine: 1), census);
+    }
+
+    [Fact]
+    public void A_pass_in_which_no_installation_package_reaches_the_installations_counts_nothing()
+    {
+        // The only candidate yields no product code of its own, so the pass never asks about
+        // a product and never reads an installation's cached package. A census of zeros then
+        // says the step did not run, where one read installation says it ran.
+        var f = ACopyBesideASecondCopy();
+        f.Packages.YieldsNothing(Candidate);
+
+        Assert.Equal(CachedPackageCensus.None, CensusBesideTheSecondCopy(f, SomebodyElse));
+        Assert.Empty(f.Msi.PackageReads);
+    }
+
+    [Fact]
+    public void A_check_without_its_file_readers_counts_no_installation()
+    {
+        // It reads no cached package, so it has no reason to give for one, and it counts the
+        // installation nowhere rather than under a reason it did not meet. Every installation
+        // package is kept all the same.
+        var f = ACopyBesideASecondCopy();
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, runningAccount: SomebodyElse)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+
+        Assert.Equal(CachedPackageCensus.None, screening.CachedPackages);
+        Assert.True(screening.Outcomes[0].Withholds());
+    }
+
     [Fact]
     public void The_composition_root_gives_the_check_the_running_account()
     {

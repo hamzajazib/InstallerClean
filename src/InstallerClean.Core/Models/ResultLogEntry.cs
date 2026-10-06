@@ -89,6 +89,12 @@ public sealed record ResultLogEntry(
     /// to a version a release already sends could only be permitted there, never
     /// required, without rejecting every report from that release.
     ///
+    /// SCHEMA 6 ADDS ELEVEN KEYS UNDER <c>scan</c> AND TAKES NONE AWAY: what the
+    /// declared-product screen read of each listed installation's cached package, and of
+    /// the record of each installation whose cached package did not say which product it
+    /// declares (<see cref="ScanInfo.SecondCopyCachedPackagesReadCount"/> and the ten after
+    /// it).
+    ///
     /// A receiver that does not recognise a version stores the report under a
     /// lenient v&lt;n&gt;-unknown/ prefix rather than rejecting it, so a bump
     /// never loses data even if the allowlist has not caught up. THAT LENIENCE
@@ -97,7 +103,7 @@ public sealed record ResultLogEntry(
     /// <c>machine</c> arriving before the receiving end knows the name is a
     /// rejected report and a user told sending failed. The receiver ships first.
     /// </summary>
-    public const int CurrentSchemaVersion = 5;
+    public const int CurrentSchemaVersion = 6;
 
     public static ResultLogEntry ForScanOnly(ScanResult scan, long scanDurationMs) =>
         new(
@@ -1103,6 +1109,55 @@ public sealed record MachineInfo(
 /// (<see cref="ScanResult.SourceWaitCount"/>). Every wait is counted, whether or not its
 /// drive or share was then given up.
 /// </param>
+/// <param name="SecondCopyCachedPackagesReadCount">
+/// The listed installations whose cached package the declared-product screen read in this
+/// scan (<see cref="CachedPackageCensus.InstallationsRead"/>): every one, read once, where
+/// an installation package reached the step that reads them, and none where none did. Off
+/// <see cref="ScanResult.CachedPackageCensus"/>, as are the ten after it.
+///
+/// THE ELEVEN ARE APPENDED LAST, for the reason the members before them were. Counts of
+/// installations, and nothing naming one.
+/// </param>
+/// <param name="SecondCopyKeepPathUnreadableCount">
+/// Installations whose cached package did not say which product it declares and whose own
+/// record did not show an ordinary installation, each of which keeps every installation
+/// package the screen would otherwise let through
+/// (<paramref name="WithheldSecondCopyUnestablishedCount"/>), where the cached package's
+/// path would not read.
+///
+/// THE FIVE KEYS FROM THIS ONE SAY WHAT EACH SUCH INSTALLATION'S CACHED PACKAGE GAVE, AND
+/// THE THREE AFTER THEM WHY ITS RECORD DID NOT SETTLE IT. Each installation is in one of
+/// each, so the five and the three add up to the same figure, which is not sent.
+/// </param>
+/// <param name="SecondCopyKeepNoneRecordedCount">
+/// The same installations, where the installation records no cached package.
+/// </param>
+/// <param name="SecondCopyKeepNotThereCount">
+/// The same, where the cached package's path names no file that is there.
+/// </param>
+/// <param name="SecondCopyKeepWouldNotReadCount">The same, where the cached package would not read.</param>
+/// <param name="SecondCopyKeepNoProductCodeCount">
+/// The same, where the cached package read and declares no product code.
+/// </param>
+/// <param name="SecondCopyKeepAnotherAccountCount">
+/// The same installations, where the installation is per-user and not shown to belong to
+/// the account the app runs as, so its record was not read.
+/// </param>
+/// <param name="SecondCopyKeepPackageCodeUnansweredCount">
+/// The same, where the record's <c>PackageCode</c> did not read as a value.
+/// </param>
+/// <param name="SecondCopyKeepInstanceTypeNotOrdinaryCount">
+/// The same, where <c>PackageCode</c> read and <c>InstanceType</c> did not read as an
+/// ordinary installation.
+/// </param>
+/// <param name="SecondCopyKeepPerMachineCount">
+/// The same installations, where the installation is per-machine. Every one in
+/// <paramref name="SecondCopyKeepAnotherAccountCount"/> is per-user.
+/// </param>
+/// <param name="SecondCopyReleasedOrdinaryCount">
+/// Installations whose cached package did not say which product it declares and whose own
+/// record shows an ordinary installation, so they keep nothing.
+/// </param>
 public sealed record ScanInfo(
     long DurationMs,
     int RegisteredCount,
@@ -1148,7 +1203,18 @@ public sealed record ScanInfo(
     int SourcesGivenUpFailedReadsCount,
     int SourcesGivenUpReadTimeCount,
     int FilesKeptForSourcesGivenUpCount,
-    int SourceWaitsShownCount)
+    int SourceWaitsShownCount,
+    int SecondCopyCachedPackagesReadCount,
+    int SecondCopyKeepPathUnreadableCount,
+    int SecondCopyKeepNoneRecordedCount,
+    int SecondCopyKeepNotThereCount,
+    int SecondCopyKeepWouldNotReadCount,
+    int SecondCopyKeepNoProductCodeCount,
+    int SecondCopyKeepAnotherAccountCount,
+    int SecondCopyKeepPackageCodeUnansweredCount,
+    int SecondCopyKeepInstanceTypeNotOrdinaryCount,
+    int SecondCopyKeepPerMachineCount,
+    int SecondCopyReleasedOrdinaryCount)
 {
     public static ScanInfo From(ScanResult scan, long durationMs)
     {
@@ -1165,6 +1231,7 @@ public sealed record ScanInfo(
         var obsoletedCount = scan.RemovableFiles.Count(f => f.IsObsoleted);
         var supersededCount = scan.RemovableFiles.Count(f => f.IsRemovablePatch) - obsoletedCount;
         var givenUp = SourcesGivenUpCounts.Of(scan);
+        var cachedPackages = scan.CachedPackageCensus;
         return new(
             durationMs,
             scan.RegisteredPackages.Count,
@@ -1238,7 +1305,20 @@ public sealed record ScanInfo(
             givenUp.FailedReads,
             givenUp.ReadTime,
             givenUp.FilesKept,
-            givenUp.WaitsShown);
+            givenUp.WaitsShown,
+            // What the screen read of each listed installation's cached package, and of the
+            // record of each one whose cached package did not say what it declares.
+            cachedPackages.InstallationsRead,
+            cachedPackages.KeptPathUnreadable,
+            cachedPackages.KeptNoneRecorded,
+            cachedPackages.KeptNotThere,
+            cachedPackages.KeptWouldNotRead,
+            cachedPackages.KeptNoProductCode,
+            cachedPackages.KeptAnotherAccount,
+            cachedPackages.KeptPackageCodeUnanswered,
+            cachedPackages.KeptInstanceTypeNotOrdinary,
+            cachedPackages.KeptPerMachine,
+            cachedPackages.ReleasedOrdinary);
     }
 }
 

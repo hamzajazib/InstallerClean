@@ -230,10 +230,20 @@ public interface IDeclaredProductCheck
 /// showing the waits puts its waiting line up once for each. The pass makes one read at a
 /// time, so no two of them overlap.
 /// </param>
+/// <param name="CachedPackages">
+/// What the pass read of each listed installation's cached package, and of the record of
+/// each one whose cached package did not say which product it declares
+/// (<see cref="CachedPackageCensus"/>).
+/// </param>
 public sealed record DeclaredProductScreening(
     IReadOnlyList<DeclaredProductOutcome> Outcomes,
     IReadOnlyList<SourceRootGivenUp> RootsGivenUp,
-    int WaitCount);
+    int WaitCount,
+    CachedPackageCensus? CachedPackages = null)
+{
+    /// <summary>Never null: a screening built without one reads as a pass that read no installation.</summary>
+    public CachedPackageCensus CachedPackages { get; init; } = CachedPackages ?? CachedPackageCensus.None;
+}
 
 /// <summary>
 /// What the screen settled about one candidate. Some verdicts keep the file and the

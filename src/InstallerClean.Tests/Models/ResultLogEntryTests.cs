@@ -97,7 +97,18 @@ public class ResultLogEntryTests
         SourcesGivenUpFailedReadsCount: 0,
         SourcesGivenUpReadTimeCount: 0,
         FilesKeptForSourcesGivenUpCount: 0,
-        SourceWaitsShownCount: 0);
+        SourceWaitsShownCount: 0,
+        SecondCopyCachedPackagesReadCount: 0,
+        SecondCopyKeepPathUnreadableCount: 0,
+        SecondCopyKeepNoneRecordedCount: 0,
+        SecondCopyKeepNotThereCount: 0,
+        SecondCopyKeepWouldNotReadCount: 0,
+        SecondCopyKeepNoProductCodeCount: 0,
+        SecondCopyKeepAnotherAccountCount: 0,
+        SecondCopyKeepPackageCodeUnansweredCount: 0,
+        SecondCopyKeepInstanceTypeNotOrdinaryCount: 0,
+        SecondCopyKeepPerMachineCount: 0,
+        SecondCopyReleasedOrdinaryCount: 0);
 
     private static MachineInfo SampleMachine() => new(
         ShortNameCreation: ShortNameCreationLabels.NoVolumes,
@@ -171,26 +182,15 @@ public class ResultLogEntryTests
     }
 
     [Fact]
-    public void Schema_version_is_five()
+    public void Schema_version_is_six()
     {
-        // The receiving Edge Function field-validates per version; a silent bump
-        // routes every record through its lenient v<n>-unknown/ path. This pin
-        // makes a version change a deliberate, reviewed act. It did not move when
-        // Delete stopped going through the shell, which retired two delete-only
-        // error categories and the per-code map that only they populated: an
-        // allowlisting receiver sees both as subtractions, so neither needed a new
-        // version to be understood.
-        //
-        // It moved to 4 for the population fields, which are additions, and for
-        // pendingReboot leaving, which is not: a receiver that requires that field
-        // has to be told which versions still carry it.
-        //
-        // It moved to 5 for six keys added to objects schema 4 already carries, and
-        // for app.language changing what it carries. A release sends 4, and the
-        // receiver requires every key in a version's shape, so under 4 the new keys
-        // could only have been permitted, never required, without rejecting that
-        // release's reports.
-        Assert.Equal(5, ResultLogEntry.CurrentSchemaVersion);
+        // The receiving Edge Function field-validates per version and holds each version a
+        // release sends to its exact set of keys, every count in it required; a version it
+        // does not know goes to its lenient v<n>-unknown/ path. So a key added to or taken
+        // from what a version carries moves the version once a release sends it, and this
+        // pin makes that move a deliberate, reviewed act. Schema 6 is schema 5 with eleven
+        // keys appended under scan.
+        Assert.Equal(6, ResultLogEntry.CurrentSchemaVersion);
     }
 
     [Fact]
@@ -328,6 +328,17 @@ public class ResultLogEntryTests
                 "sourcesGivenUpSlowFailureCount", "sourcesGivenUpFailedReadsCount",
                 "sourcesGivenUpReadTimeCount", "filesKeptForSourcesGivenUpCount",
                 "sourceWaitsShownCount",
+                // What the screen read of each listed installation's cached package: how many
+                // it read, the installations keeping every installation package by what their
+                // cached package gave and then by why their record did not settle it, those of
+                // them that are per-machine, and those whose record showed them ordinary.
+                "secondCopyCachedPackagesReadCount",
+                "secondCopyKeepPathUnreadableCount", "secondCopyKeepNoneRecordedCount",
+                "secondCopyKeepNotThereCount", "secondCopyKeepWouldNotReadCount",
+                "secondCopyKeepNoProductCodeCount",
+                "secondCopyKeepAnotherAccountCount", "secondCopyKeepPackageCodeUnansweredCount",
+                "secondCopyKeepInstanceTypeNotOrdinaryCount",
+                "secondCopyKeepPerMachineCount", "secondCopyReleasedOrdinaryCount",
             ],
             root.GetProperty("scan").EnumerateObject().Select(p => p.Name));
 
@@ -584,6 +595,56 @@ public class ResultLogEntryTests
         Assert.Equal([0, 0, 0, 0, 0], GivenUpByRoute(info));
         Assert.Equal(0, info.FilesKeptForSourcesGivenUpCount);
         Assert.Equal(4, info.SourceWaitsShownCount);
+    }
+
+    [Fact]
+    public void What_the_screen_read_of_the_cached_packages_travels_member_by_member()
+    {
+        // Eleven ints in a row, each given a different value, so an argument that lands on its
+        // neighbour's key fails here rather than sending one count under another's name.
+        var scan = new ScanResult(
+            Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
+            CachedPackageCensus: new CachedPackageCensus(
+                InstallationsRead: 64, KeptPathUnreadable: 1, KeptNoneRecorded: 2, KeptNotThere: 3,
+                KeptWouldNotRead: 4, KeptNoProductCode: 5, KeptAnotherAccount: 6,
+                KeptPackageCodeUnanswered: 7, KeptInstanceTypeNotOrdinary: 8, KeptPerMachine: 9,
+                ReleasedOrdinary: 10));
+
+        var info = ScanInfo.From(scan, 10);
+
+        Assert.Equal(
+            [64, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            [
+                info.SecondCopyCachedPackagesReadCount, info.SecondCopyKeepPathUnreadableCount,
+                info.SecondCopyKeepNoneRecordedCount, info.SecondCopyKeepNotThereCount,
+                info.SecondCopyKeepWouldNotReadCount, info.SecondCopyKeepNoProductCodeCount,
+                info.SecondCopyKeepAnotherAccountCount, info.SecondCopyKeepPackageCodeUnansweredCount,
+                info.SecondCopyKeepInstanceTypeNotOrdinaryCount, info.SecondCopyKeepPerMachineCount,
+                info.SecondCopyReleasedOrdinaryCount,
+            ]);
+
+        using var doc = JsonDocument.Parse(JsonSerializer.Serialize(info, JsonOptions));
+        Assert.Equal(64, doc.RootElement.GetProperty("secondCopyCachedPackagesReadCount").GetInt32());
+        Assert.Equal(9, doc.RootElement.GetProperty("secondCopyKeepPerMachineCount").GetInt32());
+        Assert.Equal(10, doc.RootElement.GetProperty("secondCopyReleasedOrdinaryCount").GetInt32());
+    }
+
+    [Fact]
+    public void A_scan_whose_screen_read_no_cached_package_sends_eleven_zeros()
+    {
+        var info = ScanInfo.From(
+            new ScanResult(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0), 10);
+
+        Assert.All(
+            [
+                info.SecondCopyCachedPackagesReadCount, info.SecondCopyKeepPathUnreadableCount,
+                info.SecondCopyKeepNoneRecordedCount, info.SecondCopyKeepNotThereCount,
+                info.SecondCopyKeepWouldNotReadCount, info.SecondCopyKeepNoProductCodeCount,
+                info.SecondCopyKeepAnotherAccountCount, info.SecondCopyKeepPackageCodeUnansweredCount,
+                info.SecondCopyKeepInstanceTypeNotOrdinaryCount, info.SecondCopyKeepPerMachineCount,
+                info.SecondCopyReleasedOrdinaryCount,
+            ],
+            count => Assert.Equal(0, count));
     }
 
     [Fact]

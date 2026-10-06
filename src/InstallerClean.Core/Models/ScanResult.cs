@@ -408,6 +408,12 @@ namespace InstallerClean.Models;
 /// (<see cref="Services.DeclaredProductScreening.WaitCount"/>). Counted whether or not the
 /// scan used the screen's answer, and nought where the screen did not run.
 /// </param>
+/// <param name="CachedPackageCensus">
+/// What the declared-product screen read in this scan of each listed installation's cached
+/// package, and of the record of each one whose cached package did not say which product it
+/// declares (<see cref="Services.DeclaredProductScreening.CachedPackages"/>). A pass that
+/// read no installation where the screen did not run, read none, or its answer was not used.
+/// </param>
 public record ScanResult(
     IReadOnlyList<OrphanedFile> RemovableFiles,
     IReadOnlyList<RegisteredPackage> RegisteredPackages,
@@ -438,11 +444,16 @@ public record ScanResult(
     int SupersededContainmentUnestablishedCount = 0,
     long SupersededContainmentBytes = 0,
     IReadOnlyList<SourceRootGivenUp>? SourceRootsGivenUp = null,
-    int SourceWaitCount = 0)
+    int SourceWaitCount = 0,
+    CachedPackageCensus? CachedPackageCensus = null)
 {
     /// <summary>Never null: a result built without the list reads as one that gave nothing up.</summary>
     public IReadOnlyList<SourceRootGivenUp> SourceRootsGivenUp { get; init; }
         = SourceRootsGivenUp ?? Array.Empty<SourceRootGivenUp>();
+
+    /// <summary>Never null: a result built without one reads as a scan that read no installation.</summary>
+    public CachedPackageCensus CachedPackageCensus { get; init; }
+        = CachedPackageCensus ?? CachedPackageCensus.None;
 
     /// <summary>
     /// The drives and shares in <see cref="SourceRootsGivenUp"/> at which the screen kept at

@@ -75,7 +75,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// </param>
     /// <param name="runningAccount">
     /// The account this process runs as, which a per-user installation's account is held
-    /// against before its own record is read (<see cref="AnswersFromItsOwnRecord"/>).
+    /// against before its own record is read (<see cref="WhatItsOwnRecordShows"/>).
     /// </param>
     /// <remarks>
     /// WITHOUT BOTH FILE READERS NO RECORDED PACKAGE IS LOOKED AT, and every candidate
@@ -211,7 +211,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             if (givenUp is not null && outcomes[i].Withholds()) pass.CountKept(givenUp);
         }
 
-        return new DeclaredProductScreening(outcomes, pass.GivenUp(), pass.WaitCount);
+        return new DeclaredProductScreening(
+            outcomes, pass.GivenUp(), pass.WaitCount, pass.Links?.Census ?? CachedPackageCensus.None);
     }
 
     /// <summary>
@@ -463,17 +464,18 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
     /// <summary>
     /// Every installation the caller listed that is registered under a code other than
-    /// the one its cached package declares, keyed by the declared code, and whether an
+    /// the one its cached package declares, keyed by the declared code, whether an
     /// installation whose cached package did not say what it declares is not shown by its
-    /// own record to be an ordinary installation. Read once per pass, the first time it is
-    /// needed.
+    /// own record to be an ordinary installation, and the count of what each installation's
+    /// cached package and record gave (<see cref="CachedPackageCensus"/>). Read once per
+    /// pass, the first time it is needed.
     ///
     /// EVERY CONTEXT IS READ, AND A FAILED READ KEEPS UNLESS THE RECORD RULES IT OUT. A
     /// link only ever adds an installation to the ones a candidate is compared with, so
     /// it can keep a file and never offer one. Where an installation's cached package
     /// does not say what it declares, nothing links it to any candidate, so that
     /// installation keeps every file unless its own record shows it to be an ordinary
-    /// installation (<see cref="AnswersFromItsOwnRecord"/>): <see cref="Settle"/> then
+    /// installation (<see cref="WhatItsOwnRecordShows"/>): <see cref="Settle"/> then
     /// gives every candidate the answer would let through
     /// <see cref="DeclaredProductOutcome.SecondCopyUnestablished"/>.
     ///
@@ -490,6 +492,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             new Dictionary<string, List<(string RegisteredCode, string? Sid, MsiInstallContext Context)>>(
                 StringComparer.Ordinal);
         string? unread = null;
+        var census = new CensusTally();
 
         foreach (var installation in pass.Installations)
         {
@@ -497,14 +500,16 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
             var context = (MsiInstallContext)installation.Context;
             var declared = CodeTheCachedPackageDeclares(
-                installation.ProductCode, installation.UserSid, context, out var detail);
+                installation.ProductCode, installation.UserSid, context, out var reading, out var detail);
             if (declared is null)
             {
-                if (!AnswersFromItsOwnRecord(installation.ProductCode, installation.UserSid, context))
-                    unread ??= detail;
+                var record = WhatItsOwnRecordShows(installation.ProductCode, installation.UserSid, context);
+                if (record != RecordReading.Ordinary) unread ??= detail;
+                census.Undeclared(reading, record, context);
                 continue;
             }
 
+            census.Declared();
             if (SameCode(declared, installation.ProductCode)) continue;
 
             if (!byDeclaredCode.TryGetValue(declared, out var linked))
@@ -522,24 +527,26 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                     + "is kept rather than offered. Detail: " + unread + "."),
                 unread);
 
-        return pass.Links = new InstallationLinks(byDeclaredCode, unread is not null);
+        return pass.Links = new InstallationLinks(byDeclaredCode, unread is not null, census.Census());
     }
 
     /// <summary>
-    /// Whether Windows answers, to this process, the record one installation keeps of
-    /// itself, and the record shows an ordinary installation: its <c>PackageCode</c> reads
-    /// as a value, and its <c>InstanceType</c> reads as an ordinary installation, through
-    /// the classification the scan's own reading uses
-    /// (<see cref="InstallerQueryService.ReadInstanceType"/>). Both are read by the code
-    /// the installation is registered under, in its account and context.
+    /// What Windows answers, to this process, of the record one installation keeps of
+    /// itself. <see cref="RecordReading.Ordinary"/> where its <c>PackageCode</c> reads as a
+    /// value and its <c>InstanceType</c> reads as an ordinary installation, through the
+    /// classification the scan's own reading uses
+    /// (<see cref="InstallerQueryService.ReadInstanceType"/>), and otherwise the first of
+    /// those two that did not. Both are read by the code the installation is registered
+    /// under, in its account and context.
     ///
     /// A PER-USER INSTALLATION HAS TO BELONG TO THE ACCOUNT THIS PROCESS RUNS AS. A
     /// per-user installation keeps these properties under its own account, and asked
     /// about another account's installation, an answer need not come from that account's
     /// record. So in the two per-user contexts the installation's account is
     /// compared with <see cref="IRunningAccount.Sid"/>, without regard to case, and any
-    /// other account, or no account, answers false. A per-machine installation's record is
-    /// the machine's, and no account is compared for it.
+    /// other account, or no account, is <see cref="RecordReading.AnotherAccount"/> with
+    /// nothing read. A per-machine installation's record is the machine's, and no account is
+    /// compared for it.
     ///
     /// <c>PACKAGECODE</c> IS WHAT SHOWS THE RECORD ANSWERED. Every installed product has a
     /// package code. The returns <see cref="InstallerQueryService.ReadProductProperty"/>
@@ -547,34 +554,41 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// ordinary looks the same whether the record carries no such value or did not answer
     /// at all. A <c>PackageCode</c> that comes back as a value tells the two apart.
     /// </summary>
-    private bool AnswersFromItsOwnRecord(string code, string? sid, MsiInstallContext context)
+    private RecordReading WhatItsOwnRecordShows(string code, string? sid, MsiInstallContext context)
     {
         if (context != MsiInstallContext.Machine
             && (sid is null
                 || _runningAccount?.Sid is not { } account
                 || !string.Equals(sid, account, StringComparison.OrdinalIgnoreCase)))
-            return false;
+            return RecordReading.AnotherAccount;
 
         var packageCode = InstallerQueryService.ReadProductProperty(
             _msi, code, sid, context, MsiInstallProperty.PackageCode);
-        if (packageCode.Unreadable || packageCode.Value.TrimEnd('\0').Length == 0) return false;
+        if (packageCode.Unreadable || packageCode.Value.TrimEnd('\0').Length == 0)
+            return RecordReading.PackageCodeUnanswered;
 
         return InstallerQueryService.ReadInstanceType(_msi, code, sid, context)
-            == InstallerQueryService.InstanceReading.Ordinary;
+            == InstallerQueryService.InstanceReading.Ordinary
+            ? RecordReading.Ordinary
+            : RecordReading.InstanceTypeNotOrdinary;
     }
 
     /// <summary>
     /// The product code the cached package of one installation declares, read by the
-    /// code the installation is registered under. Null, with what went wrong, where the
+    /// code the installation is registered under, with <paramref name="reading"/>
+    /// <see cref="CachedPackageReading.Declared"/>. Null, with what went wrong in
+    /// <paramref name="reading"/> and in words in <paramref name="detail"/>, where the
     /// record names no package, the value will not read, names no file, or names a file
     /// that does not yield a product code; and for every installation where the check
     /// was built without its file readers, having no way to look.
     /// </summary>
     private string? CodeTheCachedPackageDeclares(
-        string registeredCode, string? sid, MsiInstallContext context, out string detail)
+        string registeredCode, string? sid, MsiInstallContext context,
+        out CachedPackageReading reading, out string detail)
     {
         if (!ComparesRecordedPackages)
         {
+            reading = CachedPackageReading.NoReaders;
             detail = "no way to read a cached package";
             return null;
         }
@@ -583,6 +597,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             _msi, registeredCode, sid, context, MsiInstallProperty.LocalPackage);
         if (read.Unreadable)
         {
+            reading = CachedPackageReading.PathUnreadable;
             detail = "the cached package's path would not read";
             return null;
         }
@@ -590,12 +605,14 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var path = read.Value.TrimEnd('\0');
         if (path.Length == 0)
         {
+            reading = CachedPackageReading.NoneRecorded;
             detail = "the installation records no cached package";
             return null;
         }
 
         if (!_fileSystem!.File.Exists(path))
         {
+            reading = CachedPackageReading.NotThere;
             detail = "the cached package is not a file that is there";
             return null;
         }
@@ -603,18 +620,112 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var identity = _identityReader.Read(path, isPatch: false, out var readerDetail);
         if (identity is null)
         {
+            reading = CachedPackageReading.WouldNotRead;
             detail = readerDetail.Length == 0 ? "the cached package would not read" : readerDetail;
             return null;
         }
 
         if (identity.Value.IsPatch || identity.Value.Code.Length == 0)
         {
+            reading = CachedPackageReading.NoProductCode;
             detail = "the cached package declares no product code";
             return null;
         }
 
+        reading = CachedPackageReading.Declared;
         detail = string.Empty;
         return identity.Value.Code;
+    }
+
+    /// <summary>What an installation's cached package gave (<see cref="CodeTheCachedPackageDeclares"/>).</summary>
+    private enum CachedPackageReading
+    {
+        /// <summary>A product code.</summary>
+        Declared,
+
+        /// <summary>Nothing, the check having no file readers to read it with.</summary>
+        NoReaders,
+
+        /// <summary>Nothing: its path would not read.</summary>
+        PathUnreadable,
+
+        /// <summary>Nothing: the installation records none.</summary>
+        NoneRecorded,
+
+        /// <summary>Nothing: its path names no file that is there.</summary>
+        NotThere,
+
+        /// <summary>Nothing: the file would not read.</summary>
+        WouldNotRead,
+
+        /// <summary>No product code: the file declares none, or reads as a patch.</summary>
+        NoProductCode,
+    }
+
+    /// <summary>What an installation's own record showed (<see cref="WhatItsOwnRecordShows"/>).</summary>
+    private enum RecordReading
+    {
+        /// <summary>An ordinary installation: a package code, and an ordinary <c>InstanceType</c>.</summary>
+        Ordinary,
+
+        /// <summary>Not read: a per-user installation not shown to be the running account's.</summary>
+        AnotherAccount,
+
+        /// <summary>Its <c>PackageCode</c> did not read as a value.</summary>
+        PackageCodeUnanswered,
+
+        /// <summary>Its <c>InstanceType</c> read as a second instance, or did not read.</summary>
+        InstanceTypeNotOrdinary,
+    }
+
+    /// <summary>
+    /// The counts of a <see cref="CachedPackageCensus"/>, taken by <see cref="LinksOf"/> one
+    /// installation at a time. An installation whose cached package was not read, the check
+    /// having no file readers, is counted nowhere, so every installation counted among the
+    /// keeping ones is in exactly one count of what its cached package gave and one of what
+    /// its record showed.
+    /// </summary>
+    private sealed class CensusTally
+    {
+        private readonly int[] _byReading = new int[Enum.GetValues<CachedPackageReading>().Length];
+        private readonly int[] _byRecord = new int[Enum.GetValues<RecordReading>().Length];
+        private int _read;
+        private int _perMachine;
+
+        /// <summary>An installation whose cached package declares a product code.</summary>
+        internal void Declared() => _read++;
+
+        /// <summary>
+        /// An installation whose cached package gave <paramref name="reading"/> rather than a
+        /// product code, and whose own record showed <paramref name="record"/>. Only one that
+        /// keeps every installation package is counted by what its cached package gave, by
+        /// what its record showed and by its context.
+        /// </summary>
+        internal void Undeclared(CachedPackageReading reading, RecordReading record, MsiInstallContext context)
+        {
+            if (reading == CachedPackageReading.NoReaders) return;
+
+            _read++;
+            _byRecord[(int)record]++;
+            if (record == RecordReading.Ordinary) return;
+
+            _byReading[(int)reading]++;
+            if (context == MsiInstallContext.Machine) _perMachine++;
+        }
+
+        /// <summary>The counts taken.</summary>
+        internal CachedPackageCensus Census() => new(
+            InstallationsRead: _read,
+            KeptPathUnreadable: _byReading[(int)CachedPackageReading.PathUnreadable],
+            KeptNoneRecorded: _byReading[(int)CachedPackageReading.NoneRecorded],
+            KeptNotThere: _byReading[(int)CachedPackageReading.NotThere],
+            KeptWouldNotRead: _byReading[(int)CachedPackageReading.WouldNotRead],
+            KeptNoProductCode: _byReading[(int)CachedPackageReading.NoProductCode],
+            KeptAnotherAccount: _byRecord[(int)RecordReading.AnotherAccount],
+            KeptPackageCodeUnanswered: _byRecord[(int)RecordReading.PackageCodeUnanswered],
+            KeptInstanceTypeNotOrdinary: _byRecord[(int)RecordReading.InstanceTypeNotOrdinary],
+            KeptPerMachine: _perMachine,
+            ReleasedOrdinary: _byRecord[(int)RecordReading.Ordinary]);
     }
 
     /// <summary>Whether two spellings name one product code.</summary>
@@ -2050,9 +2161,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// Whether an installation whose cached package did not say what it declares is not
     /// shown by its own record to be an ordinary installation.
     /// </param>
+    /// <param name="Census">What each listed installation's cached package and record gave.</param>
     private sealed record InstallationLinks(
         Dictionary<string, List<(string RegisteredCode, string? Sid, MsiInstallContext Context)>> ByDeclaredCode,
-        bool UnreadPackageNotRuledOut);
+        bool UnreadPackageNotRuledOut,
+        CachedPackageCensus Census);
 
     /// <summary>
     /// What one pass has asked Windows about installations and patch registrations,

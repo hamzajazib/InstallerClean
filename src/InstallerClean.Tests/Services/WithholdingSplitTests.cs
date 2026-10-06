@@ -144,8 +144,9 @@ public class WithholdingSplitTests
 
     /// <summary>
     /// A screen that keeps every file it is handed as one whose program is installed, and
-    /// reports a share given up with as many files kept at it as it was handed and three
-    /// waits, answering about <paramref name="answered"/> files where that is given.
+    /// reports a share given up with as many files kept at it as it was handed, three waits
+    /// and <see cref="ACensus"/>, answering about <paramref name="answered"/> files where that
+    /// is given.
     /// </summary>
     private static IDeclaredProductCheck ScreenGivingUpAShare(int? answered = null)
     {
@@ -159,10 +160,17 @@ public class WithholdingSplitTests
                 return new DeclaredProductScreening(
                     [.. Enumerable.Repeat(DeclaredProductOutcome.DeclaredProductInstalled, answered ?? handed)],
                     [new SourceRootGivenUp(@"\\nas\apps", SourceRootGiveUpRoute.NoAnswer, handed)],
-                    WaitCount: 3);
+                    WaitCount: 3,
+                    CachedPackages: ACensus);
             });
         return screen;
     }
+
+    /// <summary>What the screen above says it read of the listed installations' cached packages.</summary>
+    private static readonly CachedPackageCensus ACensus = new(
+        InstallationsRead: 64, KeptPathUnreadable: 0, KeptNoneRecorded: 1, KeptNotThere: 0, KeptWouldNotRead: 0,
+        KeptNoProductCode: 0, KeptAnotherAccount: 0, KeptPackageCodeUnanswered: 1, KeptInstanceTypeNotOrdinary: 0,
+        KeptPerMachine: 1, ReleasedOrdinary: 2);
 
     [Fact]
     public async Task The_drives_and_shares_the_screen_gave_up_and_its_waits_travel_on_the_result_beside_the_split()
@@ -176,6 +184,7 @@ public class WithholdingSplitTests
 
         Assert.Equal([new SourceRootGivenUp(@"\\nas\apps", SourceRootGiveUpRoute.NoAnswer, 2)], result.SourceRootsGivenUp);
         Assert.Equal(3, result.SourceWaitCount);
+        Assert.Equal(ACensus, result.CachedPackageCensus);
         Assert.Equal(2, result.WithheldBy.DeclaredProductInstalledCount);
         AssertPartitions(result);
     }
@@ -184,6 +193,7 @@ public class WithholdingSplitTests
     public async Task A_screen_that_answered_about_a_different_number_of_files_gives_up_nothing_the_result_carries_and_its_waits_still_travel()
     {
         // The waits were shown whatever the screen answered, so they travel where its answer
+        // does not. What it says it read of the cached packages is part of its answer, and
         // does not.
         var result = await Scan(
             walked: new[] { $@"{Folder}\a.msi", $@"{Folder}\b.msi" },
@@ -193,6 +203,7 @@ public class WithholdingSplitTests
         Assert.Equal(2, result.WithheldBy.ScreenUnansweredCount);
         Assert.Empty(result.SourceRootsGivenUp);
         Assert.Equal(3, result.SourceWaitCount);
+        Assert.Equal(CachedPackageCensus.None, result.CachedPackageCensus);
     }
 
     [Fact]
