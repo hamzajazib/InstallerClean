@@ -881,9 +881,12 @@
          for text-only content) and announces by the
          AutomationProperties.Name each consuming site sets.
          FocusRing.KeepsInView scrolls a focused link or control into
-         view with its focus ring. -->
+         view with its focus ring. ScrollRegionFocus.PassesFocusOn moves
+         the focus to the next stop when a region that has it stops
+         overflowing and the trigger takes its stop away. -->
     <Style x:Key="BodyScrollRegion" TargetType="ScrollViewer">
         <Setter Property="a11y:FocusRing.KeepsInView" Value="True"/>
+        <Setter Property="a11y:ScrollRegionFocus.PassesFocusOn" Value="True"/>
         <Style.Triggers>
             <MultiDataTrigger>
                 <MultiDataTrigger.Conditions>

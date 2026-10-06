@@ -650,12 +650,11 @@ public partial class MainWindow : Window
     /// <summary>
     /// Moves the keyboard focus to a card's Cancel as the card's wait ends, where the focus is
     /// in the card's waiting region: on the stop-waiting button, or on the region itself,
-    /// which takes the focus while it can scroll. As the wait ends the button goes and the
-    /// region, left with nothing to scroll, stops taking the focus, and WPF moves focus held
-    /// by either up to the window. Here and not posted: WPF answers a focused element going
-    /// hidden or no longer taking the focus with a focus check posted at Input priority,
-    /// which finds Cancel focused and leaves it, where a move posted after it would run once
-    /// the focus had already fallen to the window. A Cancel out of use, pressed already or
+    /// which takes the focus while it can scroll. As the wait ends the region goes, and WPF
+    /// moves focus held by either up to the window. Here and not posted: WPF answers a
+    /// focused element going hidden with a focus check posted at Input priority, which
+    /// finds Cancel focused and leaves it, where a move posted behind it at Input would run
+    /// once the focus had already fallen to the window. A Cancel out of use, pressed already or
     /// with nothing left to stop, takes no focus, so the focus goes where WPF puts it, as it
     /// does when Cancel goes out of use under the focus.
     /// </summary>
