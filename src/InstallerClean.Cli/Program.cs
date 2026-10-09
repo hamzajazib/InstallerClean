@@ -607,6 +607,17 @@ internal static class Program
 
             if (arg == "/s" && count > 0)
             {
+                // The summary is written before anything is printed, so a console that fails
+                // while the notices, the count line or the list print costs the run no entry.
+                // The noun and size are recomputed inside the en-GB scope rather than reusing
+                // the human-facing `size` (which is in the OS region and grouped), so this
+                // audit line reads fully English and carries the size in the form tooling
+                // reads.
+                MachineContract.WriteEventLog(CliEventClass.Ok,
+                    () => string.Format(Strings.Cli_EventLogScanFound,
+                        arg, count, DisplayHelpers.PluraliseFile(count),
+                        DisplayHelpers.FormatSizeForMachine(totalBytes)));
+
                 notices.ForEach(Console.WriteLine);
                 Console.WriteLine(FoundLine());
 
@@ -625,14 +636,6 @@ internal static class Program
                 Console.WriteLine(string.Join(Environment.NewLine,
                     scanResult.RemovableFiles.Select(f =>
                         $"  {f.FileName.PadRight(nameColumn)}  ({f.SizeDisplay}, {f.Reason})")));
-                // The noun and size are recomputed inside the en-GB scope rather
-                // than reusing the human-facing `size` (which is in the OS
-                // region and grouped), so this audit line reads fully English
-                // and carries the size in the form tooling reads.
-                MachineContract.WriteEventLog(CliEventClass.Ok,
-                    () => string.Format(Strings.Cli_EventLogScanFound,
-                        arg, count, DisplayHelpers.PluraliseFile(count),
-                        DisplayHelpers.FormatSizeForMachine(totalBytes)));
                 return ExitOk;
             }
 
@@ -1277,7 +1280,8 @@ internal static class Program
     /// IT WRITES THE APPLICATION-LOG ENTRIES AND RETURNS THE STDOUT LINES, in the order
     /// they are to be printed, for the caller to print where its output needs them. Every
     /// entry is written before any of the lines is printed, so a console that fails while
-    /// printing them costs none of these entries.
+    /// printing them costs none of these entries. A /s that lists files writes its summary
+    /// before it prints anything too, so on that run such a console costs no entry at all.
     /// </summary>
     /// <remarks>
     /// Called once, immediately after the scan, so every return the work loop can

@@ -80,19 +80,27 @@ public class CliScanNoticeOrderTests
         Assert.True(deleted > notices[^1], run.Stdout);
     }
 
-    [Fact]
-    public async Task A_console_that_fails_at_the_first_notice_still_leaves_every_notice_in_the_Application_log()
+    [Theory]
+    [InlineData("the first notice")]
+    [InlineData("the first row")]
+    public async Task A_console_that_fails_while_printing_leaves_every_notice_and_the_summary_in_the_Application_log(
+        string failsAt)
     {
-        var console = new ConsoleFailingAt(Opening(Strings.Cli_NothingListedPerFile_Singular));
+        var console = new ConsoleFailingAt(failsAt == "the first row"
+            ? Offer()[0].FileName
+            : Opening(Strings.Cli_NothingListedPerFile_Singular));
 
         var run = await Run("/s", EveryNotice(), console);
 
-        Assert.True(console.Refused > 0, "The console refused no write, so the notices were printed.");
+        Assert.True(console.Refused > 0, $"The console refused no write, so it never failed at {failsAt}.");
         Assert.Equal(CliExitCode.Error, run.ExitCode);
         Assert.Contains(run.Entries, entry => entry.Class == CliEventClass.ScanNothingOfferedNotice);
         Assert.Contains(run.Entries, entry => entry.Class == CliEventClass.SourcesGivenUpNotice);
         Assert.Contains(run.Entries, entry => entry.Class == CliEventClass.ScanSupersededHeldBackNotice);
         Assert.Contains(run.Entries, entry => entry.Class == CliEventClass.ScanMissingFilesNotice);
+        Assert.Contains(run.Entries, entry => entry.Class == CliEventClass.Ok
+            && entry.Text == MachineContract.English(() => string.Format(Strings.Cli_EventLogScanFound,
+                "/s", 2, DisplayHelpers.PluraliseFile(2), DisplayHelpers.FormatSizeForMachine(2048))));
     }
 
     // ---- fixtures ----
