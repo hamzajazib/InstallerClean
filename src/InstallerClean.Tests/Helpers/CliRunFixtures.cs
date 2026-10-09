@@ -1,5 +1,6 @@
 using InstallerClean.Cli;
 using InstallerClean.Helpers;
+using InstallerClean.Models;
 using InstallerClean.Services;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -35,6 +36,25 @@ internal static class CliRunFixtures
             .BuildServiceProvider();
 
     /// <summary>
+    /// The services the work method resolves for a scan returning <paramref name="scan"/>: a
+    /// clean pending-reboot gate and a re-verify keeping every file the scan offers, so the
+    /// run reaches whichever service the test scripted.
+    /// </summary>
+    internal static IServiceProvider ServicesKeepingTheOffer(
+        ScanResult scan, IDeleteFilesService? delete = null, IMoveFilesService? move = null)
+    {
+        var scanService = Substitute.For<IFileSystemScanService>();
+        scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(scan);
+        var reboot = Substitute.For<IPendingRebootService>();
+        reboot.Check().Returns(PendingRebootResult.Clean);
+        var reverifier = Substitute.For<IRemovableReverifier>();
+        reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(new ReverifyResult(scan.RemovableFiles.Select(f => f.FullPath).ToList(), Array.Empty<string>()));
+        return Services(scanService, reboot: reboot, reverifier: reverifier, delete: delete, move: move);
+    }
+
+    /// <summary>
     /// Whether an entry of <paramref name="entryClass"/> is a run's summary: Ok, Partial,
     /// TransientSkip or HardError, the four outcome classes, each run writing exactly one.
     /// Every other class is a notice.
@@ -57,25 +77,12 @@ internal static class CliRunFixtures
     {
         // The sink, the flag and the note's latch are process-global; the assembly disables
         // test parallelisation.
-        var sink = EventLogWriter.Sink;
-        var unavailable = EventLogWriter.EventLogUnavailable;
-        var notePrinted = Program.EventLogNotePrinted;
-        try
+        using var state = EventLogRecorder.FreshLogState();
+        EventLogWriter.Sink = (entry, text) =>
         {
-            EventLogWriter.EventLogUnavailable = false;
-            Program.EventLogNotePrinted = false;
-            EventLogWriter.Sink = (entry, text) =>
-            {
-                if (refuses(entry)) throw new InvalidOperationException("The log refused the entry.");
-                EventLogRecorder.Sink(entry, text);
-            };
-            return await run();
-        }
-        finally
-        {
-            EventLogWriter.Sink = sink;
-            EventLogWriter.EventLogUnavailable = unavailable;
-            Program.EventLogNotePrinted = notePrinted;
-        }
+            if (refuses(entry)) throw new InvalidOperationException("The log refused the entry.");
+            EventLogRecorder.Sink(entry, text);
+        };
+        return await run();
     }
 }

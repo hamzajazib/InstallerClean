@@ -59,16 +59,9 @@ public class CliRunFailureTests
         // and whose batch comes back cancelled. The console has no guard in front of it and
         // refuses the line saying the run was cancelled, so that write throws out of the
         // cancellation's catch and out of the work, and is reported as Main reports it.
-        var scan = Substitute.For<IFileSystemScanService>();
-        scan.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
-            .Returns(new ScanResult(
-                [new OrphanedFile(@"C:\Windows\Installer\a.msi", 100, false, false, false, "unclaimed")],
-                Array.Empty<RegisteredPackage>(), 0) with { MissingAffectedCount = 1 });
-        var reboot = Substitute.For<IPendingRebootService>();
-        reboot.Check().Returns(PendingRebootResult.Clean);
-        var reverifier = Substitute.For<IRemovableReverifier>();
-        reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
-            .Returns(new ReverifyResult([@"C:\Windows\Installer\a.msi"], Array.Empty<string>()));
+        var scan = new ScanResult(
+            [new OrphanedFile(@"C:\Windows\Installer\a.msi", 100, false, false, false, "unclaimed")],
+            Array.Empty<RegisteredPackage>(), 0) with { MissingAffectedCount = 1 };
         using var cts = new CancellationTokenSource();
         var delete = Substitute.For<IDeleteFilesService>();
         delete.DeleteFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
@@ -78,7 +71,7 @@ public class CliRunFailureTests
                 cts.Cancel();
                 return new DeleteResult(0, Array.Empty<FileOperationError>(), Cancelled: true);
             });
-        var services = CliRunFixtures.Services(scan, reboot: reboot, reverifier: reverifier, delete: delete);
+        var services = CliRunFixtures.ServicesKeepingTheOffer(scan, delete: delete);
 
         var original = Console.Out;
         using var console = new ConsoleFailingAt(Strings.Cli_Cancelled);

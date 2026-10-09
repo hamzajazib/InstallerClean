@@ -27,11 +27,8 @@ public class EventLogWriterTests
         // The flag is process-wide and sticky, so it is put back afterwards: a
         // command-line test that prints the unavailable line must not do so because
         // this test ran before it.
-        var before = EventLogWriter.EventLogUnavailable;
-        try
+        using (EventLogRecorder.FreshLogState())
         {
-            EventLogWriter.EventLogUnavailable = false;
-
             var escaped = Record.Exception(() => EventLogWriter.Write(
                 CliEventClass.TransientSkip,
                 () =>
@@ -45,10 +42,6 @@ public class EventLogWriterTests
             // rethrow: a Write that never invoked the builder would also not throw.
             Assert.True(built);
             Assert.True(EventLogWriter.EventLogUnavailable);
-        }
-        finally
-        {
-            EventLogWriter.EventLogUnavailable = before;
         }
     }
 

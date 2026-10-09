@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using InstallerClean.Cli;
 using InstallerClean.Helpers;
 
 namespace InstallerClean.Tests.Helpers;
@@ -29,4 +30,33 @@ internal static class EventLogRecorder
     internal static IReadOnlyList<(CliEventClass Class, string Text)> Entries => Recorded.ToArray();
 
     internal static void Clear() => Recorded.Clear();
+
+    /// <summary>
+    /// Clears the log's refused flag and the command line's note latch
+    /// (<see cref="Program.EventLogNotePrinted"/>), and puts both back, with the writer's
+    /// sink, when disposed. All three are process-global, and the flag and the latch go
+    /// together: a flag cleared with the latch still set would leave a later run's note
+    /// unprinted.
+    /// </summary>
+    internal static IDisposable FreshLogState() => new LogState();
+
+    private sealed class LogState : IDisposable
+    {
+        private readonly Action<CliEventClass, string>? _sink = EventLogWriter.Sink;
+        private readonly bool _unavailable = EventLogWriter.EventLogUnavailable;
+        private readonly bool _notePrinted = Program.EventLogNotePrinted;
+
+        internal LogState()
+        {
+            EventLogWriter.EventLogUnavailable = false;
+            Program.EventLogNotePrinted = false;
+        }
+
+        public void Dispose()
+        {
+            EventLogWriter.Sink = _sink;
+            EventLogWriter.EventLogUnavailable = _unavailable;
+            Program.EventLogNotePrinted = _notePrinted;
+        }
+    }
 }

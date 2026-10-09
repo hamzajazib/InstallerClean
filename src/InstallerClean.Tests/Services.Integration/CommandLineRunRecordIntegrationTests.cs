@@ -21,22 +21,14 @@ public class CommandLineRunRecordIntegrationTests
 
         // The assembly sends every entry to its recorder, so the writer is pointed at the
         // log for this one write and put back afterwards.
-        var sink = EventLogWriter.Sink;
-        var unavailable = EventLogWriter.EventLogUnavailable;
-        try
+        using (EventLogRecorder.FreshLogState())
         {
             EventLogWriter.Sink = null;
-            EventLogWriter.EventLogUnavailable = false;
             MachineContract.WriteEventLog(CliEventClass.Ok,
                 () => string.Format(Strings.Cli_EventLogMoveSummary,
                     "/m", 1, 1, DisplayHelpers.PluraliseFile(1), folder,
                     DisplayHelpers.FormatSizeForMachine(100), 0, DisplayHelpers.PluraliseError(0)));
             Assert.False(EventLogWriter.EventLogUnavailable, "The entry was not written to the Application log.");
-        }
-        finally
-        {
-            EventLogWriter.Sink = sink;
-            EventLogWriter.EventLogUnavailable = unavailable;
         }
 
         // Read until the entry shows, for up to five seconds.
