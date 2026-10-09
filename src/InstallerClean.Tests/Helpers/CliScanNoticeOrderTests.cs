@@ -105,7 +105,7 @@ public class CliScanNoticeOrderTests
     {
         var console = new ConsoleFailingAt(Strings.Cli_FoundNoOrphans);
 
-        var run = await Run("/s", new ScanResult(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0), console);
+        var run = await Run("/s", OffersNothing(), console);
 
         Assert.True(console.Refused > 0, "The console refused no write.");
         Assert.Equal(CliExitCode.Error, run.ExitCode);
@@ -117,7 +117,7 @@ public class CliScanNoticeOrderTests
     {
         var console = new ConsoleFailingAt(Strings.Cli_FoundNoOrphans);
 
-        var run = await Run("/d", new ScanResult(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0), console);
+        var run = await Run("/d", OffersNothing(), console);
 
         Assert.True(console.Refused > 0, "The console refused no write.");
         Assert.Equal(CliExitCode.Ok, run.ExitCode);
@@ -166,6 +166,54 @@ public class CliScanNoticeOrderTests
         Assert.True(deleted >= 0 && note > deleted, run.Stdout);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task A_scan_whose_summary_the_log_refused_and_whose_log_note_then_fails_exits_1_on_one_error_entry(
+        bool listsFiles)
+    {
+        var console = new ConsoleFailingAt(Strings.Cli_EventLogUnavailable);
+
+        var run = await WithTheLogRefusing(entry => entry == CliEventClass.Ok,
+            () => Run("/s", listsFiles ? EveryNotice() : OffersNothing(), console));
+
+        Assert.True(console.Refused > 0, "The console refused no write, so the note never failed.");
+        Assert.Equal(CliExitCode.Error, run.ExitCode);
+        AssertEndsOnTheErrorForTheFailedWrite(run);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task A_scan_whose_notices_the_log_refused_and_whose_log_note_fails_exits_1_on_one_error_entry(
+        bool listsFiles)
+    {
+        var console = new ConsoleFailingAt(Strings.Cli_EventLogUnavailable);
+
+        var run = await WithTheLogRefusing(entry => !CliRunFixtures.IsSummary(entry),
+            () => Run("/s", listsFiles ? EveryNotice() : EveryNotice() with { RemovableFiles = [] }, console));
+
+        Assert.True(console.Refused > 0, "The console refused no write, so the note never failed.");
+        Assert.Equal(CliExitCode.Error, run.ExitCode);
+        AssertEndsOnTheErrorForTheFailedWrite(run);
+    }
+
+    [Fact]
+    public async Task A_scan_that_offers_nothing_and_whose_notices_the_log_refused_exits_0_on_its_summary_and_prints_the_log_note_once()
+    {
+        var scan = EveryNotice() with { RemovableFiles = [] };
+
+        var run = await WithTheLogRefusing(entry => !CliRunFixtures.IsSummary(entry), () => Run("/s", scan));
+
+        Assert.Equal(CliExitCode.Ok, run.ExitCode);
+        var summary = Assert.Single(run.Entries, CliRunFixtures.IsSummary);
+        Assert.Equal(CliEventClass.Ok, summary.Class);
+        var lines = run.Stdout.Split(Environment.NewLine);
+        Assert.Equal(1, lines.Count(l => l == Strings.Cli_EventLogUnavailable));
+        Assert.Equal(Strings.Cli_EventLogUnavailable, lines[^2]);
+        Assert.StartsWith(NoticeOpenings(scan)[^1], lines[^3], StringComparison.Ordinal);
+    }
+
     // ---- fixtures ----
 
     /// <summary>
@@ -199,6 +247,10 @@ public class CliScanNoticeOrderTests
 
     /// <summary>The opening of the list's last row, which names the second file offered.</summary>
     private static string LastRow => "  " + Offer()[1].FileName + " ";
+
+    /// <summary>A scan that offers nothing, holds nothing back and has nothing to report.</summary>
+    private static ScanResult OffersNothing() =>
+        new(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0);
 
     private static OrphanedFile[] Offer() =>
         new[] { OfferA, OfferB }

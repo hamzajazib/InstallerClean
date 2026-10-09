@@ -443,9 +443,9 @@ internal static class Program
     /// <summary>
     /// Prints the one stdout audit line saying the Application channel was
     /// unwritable, so an RMM consumer polling for entries that never arrived has
-    /// a record of why. Every caller has already written this run's Application-log
-    /// entry, so a throw from here would reach <see cref="Main"/>'s catch-all and
-    /// write a second. In a run, <see cref="ConsoleGuard"/> takes a failed write first,
+    /// a record of why. Nothing here may throw: most callers have already written this
+    /// run's Application-log entry, and a throw from here would reach a catch-all that
+    /// writes a second. In a run, <see cref="ConsoleGuard"/> takes a failed write first,
     /// and the note carries a guard of its own as well, so the one entry does not rest
     /// on the console guard being in place.
     /// </summary>
@@ -469,13 +469,21 @@ internal static class Program
     /// </summary>
     private sealed class EventLogNote : IDisposable
     {
-        /// <summary>Whether the run has printed the note itself.</summary>
+        /// <summary>Whether the run has printed the note.</summary>
         internal bool Printed { get; set; }
 
-        public void Dispose()
+        /// <summary>
+        /// Prints the note where the Application log has refused an entry and the run has
+        /// not printed it yet.
+        /// </summary>
+        internal void PrintIfOwed()
         {
-            if (!Printed) NoteEventLogUnavailable();
+            if (Printed || !EventLogWriter.EventLogUnavailable) return;
+            Printed = true;
+            NoteEventLogUnavailable();
         }
+
+        public void Dispose() => PrintIfOwed();
     }
 
     /// <param name="servicesOverride">
@@ -511,8 +519,8 @@ internal static class Program
         consoleWatched ??= ConsoleIsWatched;
 
         // The note saying the Application log refused an entry prints when the run ends,
-        // after the run's own entry, on every path out of this method, unless the run has
-        // already printed it among a scan's notices.
+        // after the run's own entry, on every path out of this method, unless a scan-only
+        // run has already printed it (EndScanOnly).
         using var eventLogNote = new EventLogNote();
 
         // What a cancelled batch had actually committed, read by the OCE catch to
@@ -638,9 +646,10 @@ internal static class Program
             // ahead of the line counting the files instead, so the list sits straight under
             // that line: the reasons a file was held back are indented like the rows, and a
             // script reading the rows takes the indented lines after that line to the end of
-            // the output. Two lines can follow the list, neither of them indented: the
-            // unexpected-error line of a run whose output failed, and the note saying the
-            // Application log refused the run's summary.
+            // the output. What can follow the list is never indented: the unexpected-error
+            // line of a run whose output failed and the note saying the Application log
+            // refused the run's summary, in either order, and a blank line wherever a failed
+            // write lost a whole line (ConsoleGuard).
             var notices = ReportScanSignals(arg, scanResult, sourcesGivenUp);
 
             if (arg == "/s" && count > 0)
@@ -679,12 +688,7 @@ internal static class Program
                 }
 
                 // EVERY LINE IS BUILT AND PRINTED BEFORE THE SUMMARY IS WRITTEN, so the summary
-                // says whether the list got out. What a scan-only run is asked for is its
-                // output, so a write to it that failed, such as a redirect to a full disk, fails
-                // the run: the summary is the HardError entry the catch-all writes for the
-                // guard's first failed write, the catch-all's line follows the list, and the run
-                // exits 1. Otherwise the summary is the Ok entry and the run exits 0. One summary
-                // either way, which is what an RMM counts runs by. A line that cannot be built, a
+                // says whether the list got out (EndScanOnly). A line that cannot be built, a
                 // translation whose placeholders do not match its arguments for example, throws
                 // before the list is printed, and the catch-all's entry is the run's one.
                 //
@@ -693,13 +697,10 @@ internal static class Program
                 // audit line reads fully English and carries the size in the form tooling
                 // reads.
                 listing.ForEach(Console.WriteLine);
-                if (output?.FirstFailure is { } listingFailure)
-                    return ReportUnexpectedError(arg, listingFailure.Exception, listingFailure.CrashLog);
-                MachineContract.WriteEventLog(CliEventClass.Ok,
+                return EndScanOnly(arg, output, eventLogNote,
                     () => string.Format(Strings.Cli_EventLogScanFound,
                         arg, count, DisplayHelpers.PluraliseFile(count),
                         DisplayHelpers.FormatSizeForMachine(totalBytes)));
-                return ExitOk;
             }
 
             if (count > 0)
@@ -719,12 +720,6 @@ internal static class Program
 
             if (count == 0)
             {
-                // A scan-only run whose output failed fails, as the listing branch above
-                // says. A Delete or Move that found nothing to act on exits as that Delete or
-                // Move, which is what it was asked for, whatever became of its output.
-                if (arg == "/s" && output?.FirstFailure is { } scanFailure)
-                    return ReportUnexpectedError(arg, scanFailure.Exception, scanFailure.CrashLog);
-
                 // The audit line follows the same split as stdout, so a monitoring
                 // tool watching the Application channel is not told a machine is
                 // clean when the scan could not judge it. The first machine takes the
@@ -742,8 +737,8 @@ internal static class Program
                 // A WITHHOLDING TO REPORT TAKES ITS OWN MESSAGE EVEN WHERE A DRIVE OR
                 // SHARE WAS GIVEN UP TOO: it counts the files held back, and the notice
                 // ReportScanSignals has already written names the drives and shares.
-                MachineContract.WriteEventLog(CliEventClass.Ok,
-                    () => scanResult.HasWithholdingToReport
+                string NothingOfferedSummary() =>
+                    scanResult.HasWithholdingToReport
                         ? string.Format(
                             wholesale
                                 ? Strings.Cli_EventLogNothingOffered
@@ -751,8 +746,21 @@ internal static class Program
                             arg, withheldCount, DisplayHelpers.PluraliseFile(withheldCount))
                         : sourcesGivenUp.Count > 0
                             ? SourcesGivenUpEventLogLine(arg, sourcesGivenUp)
-                            : string.Format(Strings.Cli_EventLogScanNoOrphans, arg));
-                return ExitOk;
+                            : string.Format(Strings.Cli_EventLogScanNoOrphans, arg);
+
+                // A Delete or Move that found nothing to act on exits as that Delete or Move,
+                // which is what it was asked for, whatever became of its output.
+                if (arg != "/s")
+                {
+                    MachineContract.WriteEventLog(CliEventClass.Ok, NothingOfferedSummary);
+                    return ExitOk;
+                }
+
+                // A scan-only run prints the note saying the Application log refused an entry
+                // under its notices where the log has already refused one of theirs, as the
+                // listing branch above prints it with them, and then ends as that branch does.
+                eventLogNote.PrintIfOwed();
+                return EndScanOnly(arg, output, eventLogNote, NothingOfferedSummary);
             }
 
             // /s reads only, so it skips the gate.
@@ -1234,6 +1242,43 @@ internal static class Program
     }
 
     /// <summary>
+    /// Ends a scan-only run once every line it has is printed, and returns its exit code.
+    /// What a scan-only run is asked for is its output, so a write to it that failed, such
+    /// as one to a redirect on a full disk, fails the run: the run reports the guard's first
+    /// failed write through <see cref="ReportUnexpectedError(string, Exception, ValueTuple{string, bool})"/>,
+    /// whose HardError entry is its summary and whose line follows its output, and exits 1.
+    /// Otherwise it writes the Ok entry <paramref name="summary"/> builds and exits 0. One
+    /// summary either way, which is what an RMM counts runs by.
+    ///
+    /// WHERE THE APPLICATION LOG REFUSES THE OK ENTRY, THE NOTE SAYING SO IS PRINTED HERE, and
+    /// its write counts like every other: where it fails, the run reports it and exits 1 as
+    /// above. The flag is read on both sides of the write because it is sticky. Where it was
+    /// already set, the log refused an earlier entry, the caller has printed the note, and the
+    /// Ok entry may have landed, so a HardError after it would be a second summary. Where the
+    /// write set it, the log took no entry, so the HardError is the only one that can land.
+    /// </summary>
+    /// <remarks>
+    /// <paramref name="note"/> is the run's own, so the note prints once whichever of the two
+    /// prints it.
+    /// </remarks>
+    private static int EndScanOnly(
+        string arg, ConsoleGuard? output, EventLogNote note, Func<string> summary)
+    {
+        if (output?.FirstFailure is { } failure)
+            return ReportUnexpectedError(arg, failure.Exception, failure.CrashLog);
+
+        var refusedEarlier = EventLogWriter.EventLogUnavailable;
+        MachineContract.WriteEventLog(CliEventClass.Ok, summary);
+        if (refusedEarlier || !EventLogWriter.EventLogUnavailable)
+            return ExitOk;
+
+        note.PrintIfOwed();
+        return output?.FirstFailure is { } noteFailure
+            ? ReportUnexpectedError(arg, noteFailure.Exception, noteFailure.CrashLog)
+            : ExitOk;
+    }
+
+    /// <summary>
     /// Whether a person can be watching this console: standard output is not
     /// redirected to a file or another program, and the process runs in an
     /// interactive window station, which is what <see cref="Environment.UserInteractive"/>
@@ -1349,9 +1394,7 @@ internal static class Program
     /// IT WRITES THE APPLICATION-LOG ENTRIES AND RETURNS THE STDOUT LINES, in the order
     /// they are to be printed, for the caller to print where its output needs them. Every
     /// entry is written before any of the lines is printed, so a console that fails while
-    /// printing them costs none of these entries. A /s that lists files writes its summary
-    /// before it prints anything about the scan's result too, so on that run such a console
-    /// costs no entry at all.
+    /// printing them costs none of these entries.
     /// </summary>
     /// <remarks>
     /// Called once, immediately after the scan, so every return the work loop can
@@ -1603,24 +1646,22 @@ internal static class Program
     /// The last-resort handler for an exception no specific catch anticipated,
     /// shared by <see cref="RunWorkAsync"/>'s catch-all and <see cref="Main"/>'s
     /// pre-flight guard so the two report on the same contract. Writes the full
-    /// detail to crash.log, prints only the exception type name and the
-    /// crash-log path (never <c>ex.Message</c>: under elevation it can carry a
-    /// path out of another user's profile, and Task Scheduler / RMM tooling
-    /// captures stdout to disk), records one HardError Application-log entry, and
-    /// returns <see cref="ExitError"/> so a scheduled task sees a documented exit
-    /// code rather than a runtime abort with an undocumented one. Safe to call
-    /// after the console itself has failed (the stdout write is guarded, and
-    /// <see cref="CrashLog.TryWrite"/> and <see cref="EventLogWriter"/> both
-    /// swallow their own IO).
+    /// detail to crash.log and reports the exception through the overload below.
     /// </summary>
     private static int ReportUnexpectedError(string mode, Exception ex) =>
         ReportUnexpectedError(mode, ex, Helpers.CrashLog.TryWrite(ex));
 
     /// <summary>
-    /// <see cref="ReportUnexpectedError(string, Exception)"/> for an exception crash.log has
-    /// already been given, <paramref name="crash"/> being where it went, so the exception
-    /// is not recorded twice. A scan-only run whose output failed reports through here with
-    /// the guard's first failed write.
+    /// Reports an exception crash.log has already been given, <paramref name="crash"/>
+    /// being where it went, so the exception is not recorded twice: the overload above
+    /// for the two catch-alls, and <see cref="EndScanOnly"/> for a scan-only run's first
+    /// failed write. Prints only the exception type name and the crash-log path (never
+    /// <c>ex.Message</c>: under elevation it can carry a path out of another user's
+    /// profile, and Task Scheduler / RMM tooling captures stdout to disk), records one
+    /// HardError Application-log entry, and returns <see cref="ExitError"/> so a scheduled
+    /// task sees a documented exit code rather than a runtime abort with an undocumented
+    /// one. Safe to call after the console itself has failed (the stdout write is guarded,
+    /// and <see cref="EventLogWriter"/> swallows its own IO).
     /// </summary>
     private static int ReportUnexpectedError(string mode, Exception ex, (string Path, bool Written) crash)
     {
@@ -1634,11 +1675,11 @@ internal static class Program
         catch (Exception)
         {
             // Broad on purpose, and broader than a stdout failure alone would need.
-            // This runs inside Main's own catch clause, so anything it lets past
+            // Main's own catch clause calls this, so anything it lets past there
             // reaches the runtime default handler and produces the undocumented exit
             // the routing exists to prevent. Two things in the try can throw: the
-            // write itself, and formatting a resx string. The exception that brought
-            // us here is already in crash.log, and the audit entry below still fires.
+            // write itself, and formatting a resx string. The exception being reported
+            // has already been given to crash.log, and the audit entry below still fires.
         }
         MachineContract.WriteEventLog(CliEventClass.HardError, () => crash.Written
             ? string.Format(Strings.Cli_EventLogHardError, mode, typeName, crash.Path)
