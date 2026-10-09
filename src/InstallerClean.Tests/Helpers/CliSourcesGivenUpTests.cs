@@ -172,8 +172,10 @@ public class CliSourcesGivenUpTests
     }
 
     [Fact]
-    public async Task A_scan_that_offered_files_prints_the_line_after_its_found_line()
+    public async Task A_scan_that_offered_files_prints_the_line_after_its_list()
     {
+        // Lines drops the blank line between the list and the notices, so the line is the
+        // next one after the two rows. CliScanNoticeOrderTests holds the blank line.
         var result = new ScanResult(
             Offer(2), Array.Empty<RegisteredPackage>(), 0,
             SourceRootsGivenUp: [Given("E:", 1)]);
@@ -183,7 +185,8 @@ public class CliSourcesGivenUpTests
         var lines = Lines(run.Stdout);
         var found = Array.FindIndex(lines, l => l.StartsWith(Opening(Strings.Cli_FoundOrphans), StringComparison.Ordinal));
         Assert.True(found >= 0, run.Stdout);
-        Assert.Equal(SourcesGivenUpReport.CommandLine([Given("E:", 1)]), lines[found + 1]);
+        Assert.StartsWith("  " + Offer(2)[1].FileName + " ", lines[found + 2], StringComparison.Ordinal);
+        Assert.Equal(SourcesGivenUpReport.CommandLine([Given("E:", 1)]), lines[found + 3]);
         Assert.Single(run.Entries, entry => entry.Class == CliEventClass.SourcesGivenUpNotice);
     }
 

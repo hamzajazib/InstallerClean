@@ -353,11 +353,16 @@ internal static class Program
     ///
     /// Deliberately not a machine-read line. <see cref="NoteSourcesGivenUp"/> writes the
     /// same pass to the Application channel in English, and an RMM reads that.
+    ///
+    /// The line goes to <paramref name="lines"/> where one is given, for the caller to
+    /// print, and to the console otherwise.
     /// </summary>
-    internal static void ReportSourcesGivenUp(IReadOnlyList<SourceRootGivenUp> roots)
+    internal static void ReportSourcesGivenUp(IReadOnlyList<SourceRootGivenUp> roots, List<string>? lines = null)
     {
         var line = SourcesGivenUpReport.CommandLine(roots);
-        if (line.Length > 0) Console.WriteLine(line);
+        if (line.Length == 0) return;
+        if (lines is null) Console.WriteLine(line);
+        else lines.Add(line);
     }
 
     /// <summary>
@@ -540,8 +545,9 @@ internal static class Program
             // files one at a time and could not clear them. "Found no unneeded files"
             // is printed for the first machine only, and the two withholding
             // sentences say different things that are each false of the other's
-            // machine. On all three, ReportScanSignals follows with the line about
-            // files held back for being under a day old wherever the scan held any.
+            // machine. On all three, the lines ReportScanSignals returns follow, with the
+            // line about files held back for being under a day old wherever the scan held
+            // any.
             //
             // AND THE FIRST MACHINE GETS IT ONLY WHERE THAT LINE IS NOT PRINTED. The line
             // says a later scan will probably be able to offer those files, and it stands
@@ -554,9 +560,9 @@ internal static class Program
             // the files it left alone are ones it never established to be needed or
             // unneeded, so the clean line would be a claim about them the scan never made.
             // Nothing is printed here for that machine: the line naming the drives and
-            // shares, which ReportScanSignals prints next, stands in its place. Such a
-            // file can be kept for a program Windows still has installed, which is why the
-            // withholding reading alone does not answer this.
+            // shares, which ReportScanSignals returns and the run prints next, stands in its
+            // place. Such a file can be kept for a program Windows still has installed,
+            // which is why the withholding reading alone does not answer this.
             //
             // THE HOST DOES NOT PARTITION ANYTHING TO GET HERE. Deciding it here would
             // mean reading a split the scan owns, and a host that infers one decision's
@@ -604,7 +610,15 @@ internal static class Program
             else if (sourcesGivenUp.Count == 0 && !UnderADayOldReport.HasLine(scanResult))
                 Console.WriteLine(Strings.Cli_FoundNoOrphans);
 
-            ReportScanSignals(arg, scanResult, sourcesGivenUp);
+            // THE NOTICES' APPLICATION-LOG ENTRIES ARE WRITTEN HERE AND THEIR STDOUT LINES
+            // COME BACK TO BE PRINTED. Every run prints them at once, under the line counting what
+            // was found, except a /s that lists files: its list belongs straight under the
+            // line counting it, so the notices, which are about other files, follow the list.
+            var notices = ReportScanSignals(arg, scanResult, sourcesGivenUp);
+            var listFollows = arg == "/s" && count > 0;
+            if (!listFollows)
+                foreach (var line in notices)
+                    Console.WriteLine(line);
 
             if (count == 0)
             {
@@ -655,6 +669,15 @@ internal static class Program
                 Console.WriteLine(string.Join(Environment.NewLine,
                     scanResult.RemovableFiles.Select(f =>
                         $"  {f.FileName.PadRight(nameColumn)}  ({f.SizeDisplay}, {f.Reason})")));
+                // A blank line sets the notices off from the rows, so a notice opening with a
+                // count and a bracketed size is not read as the list's total. A list with no
+                // notices after it ends at its last row.
+                if (notices.Count > 0)
+                {
+                    Console.WriteLine();
+                    foreach (var line in notices)
+                        Console.WriteLine(line);
+                }
                 // The noun and size are recomputed inside the en-GB scope rather
                 // than reusing the human-facing `size` (which is in the OS
                 // region and grouped), so this audit line reads fully English
@@ -1256,19 +1279,26 @@ internal static class Program
     /// because scheduled tasks discard the first and RMM tools read the second.
     /// Others reach one of the two alone, each for the reason the comment at that
     /// condition gives.
+    ///
+    /// IT WRITES THE APPLICATION-LOG ENTRIES AND RETURNS THE STDOUT LINES, in the order
+    /// they are to be printed, for the caller to print. So where the caller prints them
+    /// later, after a /s list, every entry has still been written before any line is
+    /// printed, and a console that fails while printing costs no entry.
     /// </summary>
     /// <remarks>
     /// Called once, immediately after the scan, so every return the work loop can
-    /// take from there on has reported these first, the nothing-to-do one
+    /// take from there on has written these entries first, the nothing-to-do one
     /// included: a fleet carrying either condition every night for a month
     /// otherwise looks, on the only surface anybody watches, exactly like a fleet
     /// with nothing to clean. The four returns in
     /// <see cref="ResolveAndValidateMoveDestination"/> come before the scan, so
     /// there is nothing to report by the time they take it.
     /// </remarks>
-    private static void ReportScanSignals(
+    private static List<string> ReportScanSignals(
         string arg, ScanResult scanResult, IReadOnlyList<SourceRootGivenUp> sourcesGivenUp)
     {
+        var lines = new List<string>();
+
         // FILES THE FOLDER WALK FOUND WERE HELD BACK, IN ONE GO OR ONE AT A TIME. An
         // audit line for every machine that meets it, and on stdout a lead, a header and
         // one line per condition the run met. The lead is the one part that is gated, on whether anything was offered
@@ -1318,7 +1348,7 @@ internal static class Program
             // nothing at all about the half that went; this line is where stdout
             // states it on that machine.
             if (scanResult.RemovableFiles.Count > 0)
-                Console.WriteLine(string.Format(
+                lines.Add(string.Format(
                     DisplayHelpers.Pluralise(heldBack,
                         perFile
                             ? Strings.Cli_NothingListedPerFile_Singular
@@ -1359,9 +1389,9 @@ internal static class Program
 
             if (reasons.Count > 0 && scanResult.NamedConditionsCoverEveryHeldBackFile)
             {
-                Console.WriteLine(Strings.Cli_WithheldReasons_Header);
+                lines.Add(Strings.Cli_WithheldReasons_Header);
                 foreach (var line in reasons)
-                    Console.WriteLine(line);
+                    lines.Add(line);
             }
         }
 
@@ -1372,7 +1402,7 @@ internal static class Program
         // line after the scanning one, standing where the clean line would have been. The
         // window draws its own line under its left-alone count and above its missing-files
         // line, which is this order.
-        ReportSourcesGivenUp(sourcesGivenUp);
+        ReportSourcesGivenUp(sourcesGivenUp, lines);
         NoteSourcesGivenUp(arg, sourcesGivenUp, duringTheCheck: false);
 
         // SUPERSEDED FILES HELD BACK, printed wherever the count this line carries is
@@ -1389,7 +1419,7 @@ internal static class Program
         var supersededHeldBack = scanResult.SupersededHeldBackCount;
         if (supersededHeldBack > 0)
         {
-            Console.WriteLine(string.Format(
+            lines.Add(string.Format(
                 DisplayHelpers.Pluralise(supersededHeldBack,
                     Strings.Cli_SupersededHeldBack_Singular,
                     Strings.Cli_SupersededHeldBack_Plural,
@@ -1452,7 +1482,7 @@ internal static class Program
         {
             var programs = MissingFilesReport.Inline(
                 MissingFilesReport.Products(scanResult.RegisteredPackages));
-            Console.WriteLine(string.Format(
+            lines.Add(string.Format(
                 DisplayHelpers.Pluralise(scanResult.MissingAffectedCount,
                     Strings.Cli_MissingFromDisk_Singular,
                     Strings.Cli_MissingFromDisk_Plural,
@@ -1475,7 +1505,9 @@ internal static class Program
         // one a scheduled task's trigger is set in.
         var underADayOld = UnderADayOldReport.Line(scanResult, TimeZoneInfo.Local);
         if (underADayOld.Length > 0)
-            Console.WriteLine(underADayOld);
+            lines.Add(underADayOld);
+
+        return lines;
     }
 
     /// <summary>
