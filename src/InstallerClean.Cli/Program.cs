@@ -543,6 +543,12 @@ internal static class Program
             // machine. On all three, ReportScanSignals follows with the line about
             // files held back for being under a day old wherever the scan held any.
             //
+            // AND THE FIRST MACHINE GETS IT ONLY WHERE THAT LINE IS NOT PRINTED. The line
+            // says a later scan will probably be able to offer those files, and it stands
+            // in the clean line's place here as it does on the window's nothing-offered
+            // screen for the same run. Whether it is printed is UnderADayOldReport's
+            // answer, the same one ReportScanSignals spends.
+            //
             // AND THE FIRST MACHINE GETS IT ONLY WHERE THE SCAN STOPPED WAITING FOR NO
             // DRIVE OR SHARE WHILE FILES STILL HAD TO BE CHECKED AGAINST IT. Where it did,
             // the files it left alone are ones it never established to be needed or
@@ -595,7 +601,7 @@ internal static class Program
                     : HeldBackLine(
                         Strings.Cli_NothingOfferedPerFile_Singular,
                         Strings.Cli_NothingOfferedPerFile_Plural, "Cli.NothingOfferedPerFile"));
-            else if (sourcesGivenUp.Count == 0)
+            else if (sourcesGivenUp.Count == 0 && !UnderADayOldReport.HasLine(scanResult))
                 Console.WriteLine(Strings.Cli_FoundNoOrphans);
 
             ReportScanSignals(arg, scanResult, sourcesGivenUp);
@@ -604,7 +610,10 @@ internal static class Program
             {
                 // The audit line follows the same split as stdout, so a monitoring
                 // tool watching the Application channel is not told a machine is
-                // clean when the scan could not judge it.
+                // clean when the scan could not judge it. The first machine takes the
+                // clean entry whether or not files were held back for being under a day
+                // old: the line saying when a scan can probably offer them is on stdout
+                // alone.
                 //
                 // ONE EVENT CLASS FOR ALL OF THEM. The run did its job on each of these
                 // machines, so each entry belongs in the outcome band, and the notice

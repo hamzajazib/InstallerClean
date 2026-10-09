@@ -17,8 +17,9 @@ namespace InstallerClean.Tests.Helpers;
 /// declaring a program Windows still has installed; a rule about the machine's records
 /// emptied the walk-derived offer in one go; or the files were judged one at a time and
 /// none could be cleared.
-/// The clean line is printed for the first alone, and the two withholding sentences
-/// each name something the other's machine did not meet.
+/// The clean line is printed for the first alone, and there only where no line about
+/// files under a day old is printed. The two withholding sentences each name something
+/// the other's machine did not meet.
 ///
 /// THE FIXTURES ARE WHAT THIS FILE IS. Every other file that drives this method scripts
 /// a scan with two removable files in it, so the branch below is reached by none of
@@ -273,28 +274,50 @@ public class CliNothingOfferedTests
         Assert.Contains(Program.LineFor(WithholdingSplitArm.ScreenUnanswered), stdout, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task A_run_whose_every_held_file_was_read_as_under_a_day_old_gets_the_clean_line_and_when_to_scan_again()
+    [Theory]
+    [InlineData(2, 0)]
+    [InlineData(1, 1)]
+    public async Task A_run_holding_files_for_their_age_says_when_to_scan_again_in_place_of_the_clean_line(
+        int underADayOld, int forAnInstalledProgram)
     {
-        // Kept for their age with their age read: no held-back sentence and no reasons,
-        // as for the installed-program arm's files, and then the line saying when a scan
-        // can probably offer them.
+        // Kept for their age with their age read, alone or beside a file kept for a program
+        // Windows still has installed: no held-back sentence and no reasons, and the line
+        // saying when a scan can probably offer them where the clean line would be.
         var result = Scan(
             withheld: 2,
-            split: new WithholdingSplit(UnderADayOldCount: 2),
-            underADayOldBytes: 2048,
+            split: new WithholdingSplit(
+                UnderADayOldCount: underADayOld, DeclaredProductInstalledCount: forAnInstalledProgram),
+            positiveBytes: 1024 * forAnInstalledProgram,
+            underADayOldBytes: 1024 * underADayOld,
             underADayOldAllADayOldAt: new DateTime(2030, 6, 16, 9, 40, 0, DateTimeKind.Utc));
 
         var (exit, stdout) = await Run(result);
 
         Assert.Equal(CliExitCode.Ok, exit);
-        Assert.Contains(Strings.Cli_FoundNoOrphans, stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain(Strings.Cli_FoundNoOrphans, stdout, StringComparison.Ordinal);
         Assert.DoesNotContain(Opening(Strings.Cli_NothingOfferedPerFile_Plural), stdout, StringComparison.Ordinal);
         Assert.DoesNotContain(Strings.Cli_WithheldReasons_Header, stdout, StringComparison.Ordinal);
 
         var line = UnderADayOldReport.Line(result, TimeZoneInfo.Local);
         Assert.NotEqual(string.Empty, line);
         Assert.Equal(1, Occurrences(stdout, line));
+    }
+
+    [Fact]
+    public async Task A_run_holding_files_for_their_age_with_no_time_to_give_gets_the_clean_line()
+    {
+        // The count with no instant gives no sentence about age, so the clean line is what
+        // follows the scanning line.
+        var result = Scan(
+            withheld: 2,
+            split: new WithholdingSplit(UnderADayOldCount: 2),
+            underADayOldBytes: 2048);
+
+        var (exit, stdout) = await Run(result);
+
+        Assert.Equal(CliExitCode.Ok, exit);
+        Assert.Equal(string.Empty, UnderADayOldReport.Line(result, TimeZoneInfo.Local));
+        Assert.Contains(Strings.Cli_FoundNoOrphans, stdout, StringComparison.Ordinal);
     }
 
     [Fact]

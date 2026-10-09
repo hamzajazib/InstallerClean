@@ -20,19 +20,17 @@ namespace InstallerClean.Helpers;
 internal static class UnderADayOldReport
 {
     /// <summary>
-    /// The sentence for <paramref name="scan"/>, or empty where there is no scan or it
-    /// held back no file for being under a day old. The time and date are
+    /// The sentence for <paramref name="scan"/>, or empty where <see cref="HasLine"/> is
+    /// false. The time and date are
     /// <see cref="ScanResult.WithheldUnderADayOldAllADayOldAtUtc"/> rounded up to the
     /// next whole minute, in <paramref name="zone"/>; the hosts pass
     /// <see cref="TimeZoneInfo.Local"/>.
     /// </summary>
     internal static string Line(ScanResult? scan, TimeZoneInfo zone)
     {
-        if (scan is null
-            || scan.WithheldBy.UnderADayOldCount == 0
-            || scan.WithheldUnderADayOldAllADayOldAtUtc is not { } allADayOldAtUtc)
-            return string.Empty;
+        if (!HasLine(scan)) return string.Empty;
 
+        var allADayOldAtUtc = scan!.WithheldUnderADayOldAllADayOldAtUtc!.Value;
         var count = scan.WithheldBy.UnderADayOldCount;
         var (time, date) = DisplayHelpers.FormatTimeAndDate(RoundUpToMinute(allADayOldAtUtc), zone);
 
@@ -50,6 +48,17 @@ internal static class UnderADayOldReport
             time,
             date);
     }
+
+    /// <summary>
+    /// Whether <see cref="Line"/> has a sentence for <paramref name="scan"/>: it held back
+    /// at least one file for being under a day old, and the instant from which every such
+    /// file is a day old is known. A count with no instant has no time to give, so it has
+    /// no sentence. The command line prints its clean line only where this is false.
+    /// </summary>
+    internal static bool HasLine(ScanResult? scan) =>
+        scan is not null
+        && scan.WithheldBy.UnderADayOldCount > 0
+        && scan.WithheldUnderADayOldAllADayOldAtUtc is not null;
 
     /// <summary>
     /// <paramref name="utc"/> moved forward to the next whole minute, or left where it is

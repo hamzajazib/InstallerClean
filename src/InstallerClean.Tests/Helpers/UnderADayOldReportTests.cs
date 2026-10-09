@@ -40,6 +40,12 @@ public class UnderADayOldReportTests
         // A count with no instant has no time to give, so it says nothing rather than
         // print a sentence with a hole in it.
         Assert.Equal(string.Empty, UnderADayOldReport.Line(Holding(2, Bytes, null), SevenAhead));
+
+        // HasLine gives the same answer, which is what the command line's clean line reads.
+        Assert.False(UnderADayOldReport.HasLine(null));
+        Assert.False(UnderADayOldReport.HasLine(Holding(0, 0, null)));
+        Assert.False(UnderADayOldReport.HasLine(Holding(2, Bytes, null)));
+        Assert.True(UnderADayOldReport.HasLine(Holding(2, Bytes, Utc(16, 9, 40))));
     }
 
     // ---- The sentence ----
