@@ -1,6 +1,6 @@
 # InstallerClean privacy policy
 
-Last updated 7 October 2026.
+Last updated 9 October 2026.
 
 I don't find out anything about you or your files. The first time you use InstallerClean on a PC it can send me one anonymous report of how that run went, and a box on the result screen decides whether it does. No ads, no tracking. Here is every time InstallerClean touches the network or writes anything down.
 
@@ -14,7 +14,7 @@ When you open InstallerClean, it asks GitHub's releases page whether a newer ver
 
 **Only once per PC.** No later run on the same PC writes or sends a report, from any Windows account. A run you cancel, or that InstallerClean stops, carries no box, and if it moved or deleted any files it counts as the PC's first run. A Move or Delete that left every file alone at the last moment carries no box and does not count.
 
-**Where the box starts unticked.** If the Country or region set in Windows is in the European Union, Iceland, Liechtenstein or Norway, including the EU's overseas regions, or InstallerClean can't read it, the box starts unticked and nothing is sent unless you tick it. Everywhere else, the UK included, it starts ticked. The setting is read on your PC and is not in the report.
+**Where the box starts unticked.** If the Country or region set in Windows is in the European Union, Iceland, Liechtenstein or Norway, including the EU's overseas regions, or InstallerClean can't read it, the box starts unticked and nothing is sent unless you tick it. Everywhere else, the UK included, it starts ticked. The report carries that setting.
 
 **If it can't be sent.** If the report doesn't go, because there's no network or you closed InstallerClean straight away, it stays saved and InstallerClean tries again each time you open it until it goes. A report you unticked is never sent.
 
@@ -30,14 +30,14 @@ When you open InstallerClean, it asks GitHub's releases page whether a newer ver
 
 **What it holds.** Counts and fixed labels only:
 
-- InstallerClean's version and the language it was showing, the language Windows is set to (never a country), and the report format's version.
+- InstallerClean's version and the language it was showing, the language Windows is set to, the Country or region set in Windows, and the report format's version.
 - Windows 10 or 11, and x64, Arm or 32-bit.
 - How long the scan and the Move or Delete took.
 - How many installer files Windows has a record of, how many of them are no longer needed of each kind, and how much space each group takes.
 - How many recorded files are missing from disk, and how many of those a program still needs.
 - How many files were left alone and why, by the scan and at the last moment before a Move or Delete.
 - How many programs and patches Windows has a record of, and how many programs are installed as a second copy of themselves.
-- How many installations of programs InstallerClean looked for a cached installer file for; for those whose file wouldn't say which program it belongs to, how many Windows showed to be an ordinary installation, and for the rest, why the file gave no answer, why Windows couldn't show that, and how many are installed for everyone on the PC.
+- How many installations of programs InstallerClean looked for a cached installer file for; for those whose file wouldn't say which program it belongs to, how many Windows showed to be an ordinary installation, how many are installed for everyone on the PC with no installer file or installation source recorded, and for the rest, why the file gave no answer, why Windows couldn't show that, and how many are installed for everyone on the PC.
 - For installations that may be a second copy of a program, how many InstallerClean checked, what stopped it at the first one whose installer files it couldn't all see, and whether that one is installed for everyone on the PC; and how many files it left alone because an installer file in a network folder they could be couldn't be checked.
 - Whether Windows still makes old-style short file names, and how many file names are too long to be one.
 - How many drives or network shares InstallerClean gave up on, and why; how many times it showed a line saying it was waiting; and how many files it left alone as a result. Never which drive, share or file.
