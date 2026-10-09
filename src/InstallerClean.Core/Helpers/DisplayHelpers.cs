@@ -218,6 +218,24 @@ internal static class DisplayHelpers
             ? Strings.Display_ElapsedLong_LessThanASecond
             : string.Format(Localisation.FormatCulture, Strings.Display_ElapsedLong_Seconds, elapsed.TotalSeconds);
 
+    /// <summary>
+    /// <paramref name="utc"/> in <paramref name="zone"/>, as the displayed language's short
+    /// time ("16:40", "4:40 PM") and its day and month ("16 June", "6月16日"), for a
+    /// sentence that names a moment within the next few days.
+    ///
+    /// THE DISPLAYED LANGUAGE AND NOT <see cref="Localisation.FormatCulture"/>, because a
+    /// month name and a morning or afternoon marker are words of the sentence. The two
+    /// cultures can be different languages: the window left on Automatic formats by the
+    /// Windows regional format while it speaks the Windows display language, so the format
+    /// culture would put a German month into an English sentence.
+    /// </summary>
+    internal static (string Time, string Date) FormatTimeAndDate(DateTime utc, TimeZoneInfo zone)
+    {
+        var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), zone);
+        var language = DisplayedLanguage;
+        return (local.ToString("t", language), local.ToString("M", language));
+    }
+
     internal enum PluralCategory { One, Few, Many, Other }
 
     /// <summary>
@@ -355,6 +373,7 @@ internal static class DisplayHelpers
             or "Error.AccessDenied" or "Error.FileInUse" or "Error.IOFailure"
             or "Error.UnknownError"
             or "Cli.SupersededHeldBack"
+            or "Completion.UnderADayOld"
             => CountQuestion.Cardinality,
 
         _ => throw new ArgumentOutOfRangeException(nameof(keyPrefix), keyPrefix,

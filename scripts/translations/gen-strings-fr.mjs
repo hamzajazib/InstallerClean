@@ -613,6 +613,8 @@ const MAP = {
   'Window.Report.Title': `Le rapport anonyme`,
   'Window.Report.Unreadable': `InstallerClean n'a pas pu lire le rapport.`,
   'Automation.Scroll.Waiting': `En attente d'un lecteur ou d'un partage`,
+  'Completion.UnderADayOld.Singular': `Un fichier ({2}) a été retenu parce qu'il a moins d'un jour, et une installation ou une mise à jour l'utilise peut-être encore. Relancez une analyse après {3} le {4} et InstallerClean pourra probablement le proposer.`,
+  'Completion.UnderADayOld.Plural': `{0} {1} ({2}) ont été retenus parce qu'ils ont moins d'un jour, et une installation ou une mise à jour les utilise peut-être encore. Relancez une analyse après {3} le {4} et InstallerClean pourra probablement les proposer.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

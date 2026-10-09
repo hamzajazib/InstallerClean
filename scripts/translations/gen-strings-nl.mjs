@@ -573,6 +573,8 @@ const MAP = {
   'Window.Report.Title': `Het anonieme rapport`,
   'Window.Report.Unreadable': `InstallerClean kon het rapport niet lezen.`,
   'Automation.Scroll.Waiting': `Wachten op een schijf of share`,
+  'Completion.UnderADayOld.Singular': `Eén bestand ({2}) is achtergehouden omdat het minder dan een dag oud is, en een installatie of update het mogelijk nog gebruikt. Scan opnieuw na {3} uur op {4}, dan kan InstallerClean het waarschijnlijk aanbieden.`,
+  'Completion.UnderADayOld.Plural': `{0} {1} ({2}) zijn achtergehouden omdat ze minder dan een dag oud zijn, en een installatie of update ze mogelijk nog gebruikt. Scan opnieuw na {3} uur op {4}, dan kan InstallerClean ze waarschijnlijk aanbieden.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -518,6 +518,8 @@ Ayrıntılar şuraya yazıldı:
   'Window.Report.Title': `Anonim rapor`,
   'Window.Report.Unreadable': `InstallerClean raporu okuyamadı.`,
   'Automation.Scroll.Waiting': `Bir sürücü veya paylaşım bekleniyor`,
+  'Completion.UnderADayOld.Singular': `Bir dosya ({2}) bir günden daha yeni olduğu için geri tutuldu; bir yükleme ya da güncelleme onu hâlâ kullanıyor olabilir. {4} {3} sonrasında yeniden tarayın; InstallerClean büyük olasılıkla onu sunabilecek.`,
+  'Completion.UnderADayOld.Plural': `{0} {1} ({2}) bir günden daha yeni oldukları için geri tutuldu; bir yükleme ya da güncelleme onları hâlâ kullanıyor olabilir. {4} {3} sonrasında yeniden tarayın; InstallerClean büyük olasılıkla onları sunabilecek.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

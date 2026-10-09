@@ -592,6 +592,8 @@ const MAP = {
   'Window.Report.Title': `Báo cáo ẩn danh`,
   'Window.Report.Unreadable': `InstallerClean không đọc được báo cáo.`,
   'Automation.Scroll.Waiting': `Đang chờ ổ đĩa hoặc chia sẻ mạng`,
+  'Completion.UnderADayOld.Singular': `Một tệp ({2}) đã bị giữ lại vì nó chưa được một ngày tuổi, và có thể một lượt cài đặt hoặc cập nhật vẫn đang dùng nó. Hãy quét lại sau {3} ngày {4}, và nhiều khả năng InstallerClean sẽ đề xuất được nó.`,
+  'Completion.UnderADayOld.Plural': `{0} {1} ({2}) đã bị giữ lại vì chúng chưa được một ngày tuổi, và có thể một lượt cài đặt hoặc cập nhật vẫn đang dùng chúng. Hãy quét lại sau {3} ngày {4}, và nhiều khả năng InstallerClean sẽ đề xuất được chúng.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

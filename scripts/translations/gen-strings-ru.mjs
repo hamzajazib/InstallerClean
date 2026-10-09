@@ -506,6 +506,8 @@ const MAP = {
   'Window.Report.Title': `Анонимный отчёт`,
   'Window.Report.Unreadable': `InstallerClean не смог прочитать отчёт.`,
   'Automation.Scroll.Waiting': `Ожидание диска или сетевого ресурса`,
+  'Completion.UnderADayOld.Singular': `Задержан один файл ({2}), потому что ему меньше суток и его, возможно, ещё использует установка или обновление. Повторите сканирование {4} после {3}, и InstallerClean, вероятно, сможет его предложить.`,
+  'Completion.UnderADayOld.Plural': `InstallerClean задержал {0} {1} ({2}), потому что им меньше суток и их, возможно, ещё использует установка или обновление. Повторите сканирование {4} после {3}, и тогда их, вероятно, удастся предложить.`,
 };
 
 // Russian CLDR-category overrides beyond the neutral one/other split. They do NOT

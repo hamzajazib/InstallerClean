@@ -612,6 +612,8 @@ const MAP = {
   'Window.Report.Title': `Анонімний звіт`,
   'Window.Report.Unreadable': `InstallerClean не зміг прочитати звіт.`,
   'Automation.Scroll.Waiting': `Очікування диска або мережевого ресурсу`,
+  'Completion.UnderADayOld.Singular': `Затримано один файл ({2}), бо йому менше доби і його, можливо, ще використовує встановлення або оновлення. Повторіть сканування {4} після {3}, і InstallerClean, імовірно, зможе його запропонувати.`,
+  'Completion.UnderADayOld.Plural': `InstallerClean затримав {0} {1} ({2}), бо їм менше доби і їх, можливо, ще використовує встановлення або оновлення. Повторіть сканування {4} після {3}, і тоді їх, імовірно, вдасться запропонувати.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

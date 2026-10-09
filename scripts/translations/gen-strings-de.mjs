@@ -607,6 +607,8 @@ const MAP = {
   'Window.Report.Title': `Der anonyme Bericht`,
   'Window.Report.Unreadable': `InstallerClean konnte den Bericht nicht lesen.`,
   'Automation.Scroll.Waiting': `Warten auf ein Laufwerk oder eine Freigabe`,
+  'Completion.UnderADayOld.Singular': `Eine Datei ({2}) wurde zurückgehalten, weil sie weniger als einen Tag alt ist und eine Installation oder ein Update sie möglicherweise noch verwendet. Scanne nach {3} Uhr am {4} erneut, dann kann InstallerClean sie wahrscheinlich anbieten.`,
+  'Completion.UnderADayOld.Plural': `{0} {1} ({2}) wurden zurückgehalten, weil sie weniger als einen Tag alt sind und eine Installation oder ein Update sie möglicherweise noch verwendet. Scanne nach {3} Uhr am {4} erneut, dann kann InstallerClean sie wahrscheinlich anbieten.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

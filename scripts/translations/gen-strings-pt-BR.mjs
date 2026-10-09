@@ -594,6 +594,8 @@ const MAP = {
   'Window.Report.Title': `O relatório anônimo`,
   'Window.Report.Unreadable': `O InstallerClean não conseguiu ler o relatório.`,
   'Automation.Scroll.Waiting': `Aguardando uma unidade ou compartilhamento`,
+  'Completion.UnderADayOld.Singular': `Um arquivo ({2}) foi retido porque tem menos de um dia, e uma instalação ou atualização ainda pode estar usando-o. Faça uma nova análise depois das {3} de {4} e o InstallerClean provavelmente poderá oferecê-lo.`,
+  'Completion.UnderADayOld.Plural': `{0} {1} ({2}) foram retidos porque têm menos de um dia, e uma instalação ou atualização ainda pode estar usando-os. Faça uma nova análise depois das {3} de {4} e o InstallerClean provavelmente poderá oferecê-los.`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

@@ -662,6 +662,8 @@ const MAP = {
   'Window.Report.Title': `The anonymous report`,
   'Window.Report.Unreadable': `InstallerClean couldn't read the report.`,
   'Automation.Scroll.Waiting': `Waiting for a drive or share`,
+  'Completion.UnderADayOld.Singular': `One file ({2}) was held back because it's less than a day old, and an install or update may still be using it. Scan again after {3} on {4} and InstallerClean will probably be able to offer it.`,
+  'Completion.UnderADayOld.Plural': `{0} {1} ({2}) were held back because they're less than a day old, and an install or update may still be using them. Scan again after {3} on {4} and InstallerClean will probably be able to offer them.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -328,6 +328,8 @@ public static class Strings
     public static string Completion_ReverifyIdentityClaimed => Get("Completion.ReverifyIdentityClaimed");
     public static string Completion_ReverifyIdentityUnreadable => Get("Completion.ReverifyIdentityUnreadable");
     public static string Completion_SendReport => Get("Completion.SendReport");
+    public static string Completion_UnderADayOld_Plural => Get("Completion.UnderADayOld.Plural");
+    public static string Completion_UnderADayOld_Singular => Get("Completion.UnderADayOld.Singular");
     public static string Confirm_DeletePermanently_Plural => Get("Confirm.DeletePermanently.Plural");
     public static string Confirm_DeletePermanently_Singular => Get("Confirm.DeletePermanently.Singular");
     public static string Confirm_DeleteTitle => Get("Confirm.DeleteTitle");

@@ -165,6 +165,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back all {0} {1} ({2}) rather than offering them. | InstallerClean は、キャッシュ内のどのファイルがここにインストールされたプログラムのものかを確実には判断できなかったため、{0} 個の{1}({2})をすべて提示せずに保留しました。 |
 | InstallerClean couldn't establish that the cached file it found is unneeded, so it has held back the one file ({2}) rather than offering it. | InstallerClean は、見つけたキャッシュ内のファイルが不要であることを確認できなかったため、その 1 個のファイル({2})を提示せずに保留しました。 |
 | InstallerClean couldn't establish that any of the cached files it found are unneeded, so it has held back all {0} {1} ({2}) rather than offering them. | InstallerClean は、見つけたキャッシュ内のファイルのいずれについても不要であることを確認できなかったため、{0} 個の{1}({2})をすべて提示せずに保留しました。 |
+| One file ({2}) was held back because it's less than a day old, and an install or update may still be using it. Scan again after {3} on {4} and InstallerClean will probably be able to offer it. | 1 個のファイル({2})は、まだ 1 日経っていないため保留しました。インストールまたは更新でまだ使用中の可能性があります。{4} {3} 以降にもう一度スキャンすれば、InstallerClean はおそらくこのファイルを提示できます。 |
+| {0} {1} ({2}) were held back because they're less than a day old, and an install or update may still be using them. Scan again after {3} on {4} and InstallerClean will probably be able to offer them. | {0} 個の{1}({2})は、まだ 1 日経っていないため保留しました。インストールまたは更新でまだ使用中の可能性があります。{4} {3} 以降にもう一度スキャンすれば、InstallerClean はおそらくこれらのファイルを提示できます。 |
 | Delete that folder when you're satisfied all is well. | 問題ないと納得できたら、そのフォルダーを削除してください。 |
 | Delete that folder when you're satisfied all is well. You won't actually reclaim the space until you do. | 問題ないと納得できたら、そのフォルダーを削除してください。削除するまで空き容量は実際には戻りません。 |
 | {0} freed | {0} 解放 |

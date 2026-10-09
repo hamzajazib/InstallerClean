@@ -526,6 +526,8 @@ const MAP = {
   'Window.Report.Title': `El informe anónimo`,
   'Window.Report.Unreadable': `InstallerClean no pudo leer el informe.`,
   'Automation.Scroll.Waiting': `Esperando a una unidad o recurso compartido`,
+  'Completion.UnderADayOld.Singular': `Se ha retenido un archivo ({2}) porque tiene menos de un día de antigüedad y puede que una instalación o actualización todavía lo esté usando. Vuelve a analizar después de las {3} del {4} y probablemente InstallerClean podrá ofrecerlo.`,
+  'Completion.UnderADayOld.Plural': `Se han retenido {0} {1} ({2}) porque tienen menos de un día de antigüedad y puede que una instalación o actualización todavía los esté usando. Vuelve a analizar después de las {3} del {4} y probablemente InstallerClean podrá ofrecerlos.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

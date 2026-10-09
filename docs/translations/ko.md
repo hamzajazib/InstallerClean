@@ -165,6 +165,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back all {0} {1} ({2}) rather than offering them. | InstallerClean이 캐시에 있는 어떤 파일이 여기 설치된 프로그램에 속하는지 확실히 알 수 없어서, {1} {0}개({2}) 전부를 제시하지 않고 보류했습니다. |
 | InstallerClean couldn't establish that the cached file it found is unneeded, so it has held back the one file ({2}) rather than offering it. | InstallerClean이 찾은 캐시 파일이 필요 없다는 것을 확인하지 못해서, 그 파일 하나({2})를 제시하지 않고 보류했습니다. |
 | InstallerClean couldn't establish that any of the cached files it found are unneeded, so it has held back all {0} {1} ({2}) rather than offering them. | InstallerClean이 찾은 캐시 파일 중 어느 것도 필요 없다는 것을 확인하지 못해서, {1} {0}개({2}) 전부를 제시하지 않고 보류했습니다. |
+| One file ({2}) was held back because it's less than a day old, and an install or update may still be using it. Scan again after {3} on {4} and InstallerClean will probably be able to offer it. | 파일 하나({2})는 아직 하루가 지나지 않아 보류했습니다. 설치나 업데이트가 아직 사용하고 있을 수 있습니다. {4} {3} 이후에 다시 검사하면 InstallerClean이 아마 이 파일을 제시할 수 있을 것입니다. |
+| {0} {1} ({2}) were held back because they're less than a day old, and an install or update may still be using them. Scan again after {3} on {4} and InstallerClean will probably be able to offer them. | {1} {0}개({2})는 아직 하루가 지나지 않아 보류했습니다. 설치나 업데이트가 아직 사용하고 있을 수 있습니다. {4} {3} 이후에 다시 검사하면 InstallerClean이 아마 이 파일들을 제시할 수 있을 것입니다. |
 | Delete that folder when you're satisfied all is well. | 모든 것이 괜찮다고 확신하게 되면 그 폴더를 삭제하세요. |
 | Delete that folder when you're satisfied all is well. You won't actually reclaim the space until you do. | 모든 것이 괜찮다고 확신하게 되면 그 폴더를 삭제하세요. 그때까지는 공간이 실제로 확보되지 않습니다. |
 | {0} freed | {0} 확보 |

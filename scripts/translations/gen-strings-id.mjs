@@ -615,6 +615,8 @@ const MAP = {
   'Window.Report.Title': `Laporan anonim`,
   'Window.Report.Unreadable': `InstallerClean tidak bisa membaca laporan.`,
   'Automation.Scroll.Waiting': `Menunggu drive atau berbagi jaringan`,
+  'Completion.UnderADayOld.Singular': `Satu file ({2}) ditahan karena umurnya belum sehari, dan mungkin masih digunakan oleh instalasi atau pembaruan. Pindai lagi setelah pukul {3} pada {4}, dan kemungkinan besar InstallerClean akan bisa menawarkannya.`,
+  'Completion.UnderADayOld.Plural': `{0} {1} ({2}) ditahan karena umurnya belum sehari, dan mungkin masih digunakan oleh instalasi atau pembaruan. Pindai lagi setelah pukul {3} pada {4}, dan kemungkinan besar InstallerClean akan bisa menawarkannya.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -589,6 +589,8 @@ const MAP = {
   'Window.Report.Title': `익명 보고서`,
   'Window.Report.Unreadable': `InstallerClean이 보고서를 읽을 수 없었습니다.`,
   'Automation.Scroll.Waiting': `드라이브 또는 공유를 기다리는 중`,
+  'Completion.UnderADayOld.Singular': `파일 하나({2})는 아직 하루가 지나지 않아 보류했습니다. 설치나 업데이트가 아직 사용하고 있을 수 있습니다. {4} {3} 이후에 다시 검사하면 InstallerClean이 아마 이 파일을 제시할 수 있을 것입니다.`,
+  'Completion.UnderADayOld.Plural': `{1} {0}개({2})는 아직 하루가 지나지 않아 보류했습니다. 설치나 업데이트가 아직 사용하고 있을 수 있습니다. {4} {3} 이후에 다시 검사하면 InstallerClean이 아마 이 파일들을 제시할 수 있을 것입니다.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

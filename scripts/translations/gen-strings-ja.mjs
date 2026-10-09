@@ -519,6 +519,8 @@ const MAP = {
   'Window.Report.Title': `匿名レポート`,
   'Window.Report.Unreadable': `InstallerClean はレポートを読み取れませんでした。`,
   'Automation.Scroll.Waiting': `ドライブまたは共有を待機中`,
+  'Completion.UnderADayOld.Singular': `1 個のファイル({2})は、まだ 1 日経っていないため保留しました。インストールまたは更新でまだ使用中の可能性があります。{4} {3} 以降にもう一度スキャンすれば、InstallerClean はおそらくこのファイルを提示できます。`,
+  'Completion.UnderADayOld.Plural': `{0} 個の{1}({2})は、まだ 1 日経っていないため保留しました。インストールまたは更新でまだ使用中の可能性があります。{4} {3} 以降にもう一度スキャンすれば、InstallerClean はおそらくこれらのファイルを提示できます。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

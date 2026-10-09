@@ -522,6 +522,8 @@ const MAP = {
   'Window.Report.Title': `Il rapporto anonimo`,
   'Window.Report.Unreadable': `InstallerClean non è riuscito a leggere il rapporto.`,
   'Automation.Scroll.Waiting': `In attesa di un'unità o condivisione`,
+  'Completion.UnderADayOld.Singular': `Un file ({2}) è stato trattenuto perché ha meno di un giorno, e un'installazione o un aggiornamento potrebbe ancora usarlo. Ripeti la scansione dopo le {3} del {4} e probabilmente InstallerClean potrà proporlo.`,
+  'Completion.UnderADayOld.Plural': `{0} {1} ({2}) sono stati trattenuti perché hanno meno di un giorno, e un'installazione o un aggiornamento potrebbe ancora usarli. Ripeti la scansione dopo le {3} del {4} e probabilmente InstallerClean potrà proporli.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,
