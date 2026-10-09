@@ -1054,11 +1054,14 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// product's original package rather than its cached copy, a repair among other
     /// things, it tries the source it used last and then the sources on the product's
     /// source list, network folders, media and URLs, looking in each for the file named
-    /// by <c>PackageName</c>. The folders compared are the network sources and the
+    /// by <c>PackageName</c>. The folders compared are the network sources, the source
+    /// used last where it is a network source (<see cref="SourceUsedLastOf"/>), and the
     /// folder the installation records as its <c>InstallSource</c>, the one its package
     /// was installed from. Windows Installer puts that folder on the list when it
     /// installs the product, and the list can change afterwards, so the folder is
     /// compared whether or not the list still holds it (<see cref="InstallSourceOf"/>).
+    /// The source used last is compared whether or not the list holds it in the same
+    /// spelling, case included.
     /// Everything else on the list is read to decide whether the copy is kept, and it is
     /// kept for any of these:
     /// - A URL ENTRY, WHATEVER ITS SCHEME. A web address can name this PC as well as any
@@ -1077,9 +1080,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     ///   the numbering or anywhere else, keeps the copy. So does a package name the key
     ///   holds otherwise than the API answers it, or holds as a REG_EXPAND_SZ
     ///   (<see cref="HoldsThePackageName"/>).
-    /// - A SOURCE USED LAST THAT IS NOT A NETWORK ENTRY ON THE LIST, it being the one
-    ///   Windows Installer tries first, or that the registry holds differently
-    ///   (<see cref="SourceUsedLastIsOnTheList"/>).
+    /// - A SOURCE USED LAST THAT IS NOT A NETWORK SOURCE, it being the one Windows
+    ///   Installer tries first, or that the registry holds differently
+    ///   (<see cref="SourceUsedLastOf"/>).
     /// - A MEDIA PACKAGE PATH, the package's path on the installation media
     ///   (<see cref="NamesNoMediaPackagePath"/>). No media source is compared, and a list
     ///   naming a path on one keeps the copy.
@@ -1108,8 +1111,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// or to read the registry; a per-user-unmanaged account and context, whose list is
     /// not read; a package name, a source list or a property of the list that will not
     /// read; an empty package name, or one holding a '\', a '/', a ':', a '%' or a null;
-    /// each of the six above; a source entry holding a null; an <c>InstallSource</c>
-    /// that <see cref="InstallSourceOf"/> answers null for; and, for a package read
+    /// each of the six above; a source entry holding a null; a source used last that
+    /// <see cref="SourceUsedLastOf"/> answers null for; an <c>InstallSource</c> that
+    /// <see cref="InstallSourceOf"/> answers null for; and, for a package read
     /// here, one not on a local drive that would be a file directly in the Installer
     /// folder or where that cannot be established, one that exists and will not identify,
     /// one whose read has not answered within the time limit, and one under a drive, a share
@@ -1192,18 +1196,23 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         if (!IsTheList(_registry.LocalMachineValues(path + @"\Net"), sources)
             || !IsTheList(_registry.LocalMachineValues(path + @"\URL"), urls)
-            || !NamesNoMediaPackagePath(code, sid, context, _registry.LocalMachineValues(path + @"\Media"))
-            || !SourceUsedLastIsOnTheList(code, sid, context, sources, sourceList.Values))
+            || !NamesNoMediaPackagePath(code, sid, context, _registry.LocalMachineValues(path + @"\Media")))
             return false;
 
-        // The InstallSource joins the folders compared, unless it is already one of the
-        // network entries.
+        var usedLast = SourceUsedLastOf(code, sid, context, sourceList.Values);
+        if (usedLast is null) return false;
+
         var installSource = InstallSourceOf(_registry, code, sid, context);
         if (installSource is null) return false;
 
-        var folders = sources;
-        if (installSource.Length > 0 && !sources.Contains(installSource, StringComparer.Ordinal))
-            folders = [.. sources, installSource];
+        // The source used last and the InstallSource join the folders compared, each
+        // unless the same text is already among them. Text differing only in case is a
+        // folder of its own here: a folder can be case sensitive, and only the filesystem
+        // can say which file each spelling opens.
+        var folders = new List<string>(sources);
+        if (usedLast.Length > 0 && !folders.Contains(usedLast, StringComparer.Ordinal)) folders.Add(usedLast);
+        if (installSource.Length > 0 && !folders.Contains(installSource, StringComparer.Ordinal))
+            folders.Add(installSource);
 
         foreach (var folder in folders)
         {
@@ -1797,10 +1806,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     }
 
     /// <summary>
-    /// Whether the source Windows Installer used last for one installation of a product
-    /// is one of <paramref name="network"/>, compared as text, so that the folder it
-    /// tries first is one of the folders compared; and whether the registry holds it as
-    /// the API answers it.
+    /// The folder Windows Installer used last as the source of one installation of a
+    /// product, the one it tries first: the folder; an empty string where the API and the
+    /// registry agree that there is none, Windows Installer then going straight to the
+    /// list; or null, which keeps the file.
     ///
     /// THE REGISTRY HOLDS IT AS ONE VALUE of the <c>SourceList</c> key,
     /// <paramref name="sourceList"/>: the source's type, its index on the list and its
@@ -1808,30 +1817,34 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// as two properties. The stored type and text have to be the two the API answers,
     /// and a value that is not there or is empty has to be answered as no source at all.
     ///
-    /// NO SOURCE USED LAST ANSWERS TRUE, Windows Installer then going straight to the
-    /// list. A URL or a media source, a source of any other kind, one on no list, one the
-    /// registry holds differently and a read that fails answer false, which keeps the
-    /// file.
+    /// THE FOLDER IS NOT LOOKED FOR ON THE LIST. Its package is compared in
+    /// <see cref="AddSourcePackages"/> like that of a folder on the list, so whichever
+    /// spelling Windows Installer recorded, case included, the file that path opens is the
+    /// one compared.
+    ///
+    /// NULL for: a read through the API that fails; a URL or a media source, or a source
+    /// of any other kind; one the registry holds differently; and a folder holding a '%'
+    /// or a null, or starting neither with a drive letter, a ':' and a '\' nor with two
+    /// '\', for the reasons a list entry like it keeps the file.
     /// </summary>
-    private bool SourceUsedLastIsOnTheList(
+    private string? SourceUsedLastOf(
         string code,
         string? sid,
         MsiInstallContext context,
-        IReadOnlyList<string> network,
         IReadOnlyList<RegistryValue> sourceList)
     {
         var source = InstallerQueryService.ReadSourceListProperty(
             _msi, code, sid, context, MsiSourceListOptions.Product, MsiInstallProperty.LastUsedSource);
         var type = InstallerQueryService.ReadSourceListProperty(
             _msi, code, sid, context, MsiSourceListOptions.Product, MsiInstallProperty.LastUsedType);
-        if (source.Unreadable || type.Unreadable) return false;
+        if (source.Unreadable || type.Unreadable) return null;
 
         var folder = source.Value.TrimEnd('\0');
         var folderType = type.Value.TrimEnd('\0');
 
         var stored = ValueNamed(sourceList, MsiInstallProperty.LastUsedSource, out var count)?.Text;
-        if (count > 0 && stored is null) return false;
-        if (string.IsNullOrEmpty(stored)) return folder.Length == 0 && folderType.Length == 0;
+        if (count > 0 && stored is null) return null;
+        if (string.IsNullOrEmpty(stored)) return folder.Length == 0 && folderType.Length == 0 ? string.Empty : null;
 
         var parts = stored.Split(';', 3);
         if (parts.Length != 3
@@ -1839,12 +1852,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             || !string.Equals(parts[2], folder, StringComparison.Ordinal)
             || folder.Length == 0
             || !string.Equals(folderType, "n", StringComparison.Ordinal))
-            return false;
+            return null;
 
-        foreach (var entry in network)
-            if (string.Equals(entry, folder, StringComparison.Ordinal)) return true;
+        if (folder.Contains('%') || folder.Contains('\0') || !IsOnADriveOrAShare(folder)) return null;
 
-        return false;
+        return folder;
     }
 
     /// <summary>
@@ -1892,8 +1904,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
     /// <summary>
     /// Whether <paramref name="folder"/> starts with a drive letter, a ':' and a '\', or
-    /// with two '\': the two forms of folder this check compares, on a source list and as
-    /// an <c>InstallSource</c> alike.
+    /// with two '\': the two forms of folder this check compares, on a source list, as the
+    /// source used last and as an <c>InstallSource</c> alike.
     /// </summary>
     private static bool IsOnADriveOrAShare(string folder) =>
         (folder.Length >= 3 && char.IsAsciiLetter(folder[0]) && folder[1] == ':' && folder[2] == '\\')

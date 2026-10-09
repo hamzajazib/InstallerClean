@@ -1256,17 +1256,6 @@ public class DeclaredProductCheckTests
         Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
     }
 
-    [Fact]
-    public void A_copy_is_kept_when_the_source_used_last_is_on_no_list()
-    {
-        // The registry holds it as the API answers it, so only its place keeps the copy.
-        var f = ACopyBesideTheRecordedPackage();
-        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
-            MsiInstallProperty.LastUsedSource, InstallerFolder + @"\");
-
-        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
-    }
-
     [Theory]
     [InlineData("u", "http://localhost/setup/")]
     [InlineData("m", @"E:\")]
@@ -1293,6 +1282,184 @@ public class DeclaredProductCheckTests
             MsiInstallProperty.LastUsedType, "");
 
         Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+    }
+
+    // ---- The folder used last, compared like a folder on the list ----
+    //
+    // The source used last is a network source, and its folder is not looked for on the
+    // list. Its package is compared as a list entry's is, so each test below sets it to a
+    // folder the list does not hold, OtherFolder unless it says otherwise, and scripts the
+    // file that folder's package name opens where the test reads it.
+
+    /// <summary>The fixture with <paramref name="folder"/> as the source used last.</summary>
+    private static (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+        ScriptedFileIdentities Files, MockFileSystem Disk) ACopyWithTheSourceUsedLast(string folder)
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedSource, folder);
+        return f;
+    }
+
+    [Fact]
+    public void A_copy_is_let_through_when_the_package_in_the_folder_used_last_is_another_file()
+    {
+        var f = ACopyWithTheSourceUsedLast(OtherFolder);
+        f.Files.Opens(OtherPackage, 9);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+        Assert.Contains(OtherPackage, f.Files.Reads);
+    }
+
+    [Fact]
+    public void A_copy_is_let_through_when_the_folder_used_last_holds_no_package()
+    {
+        var f = ACopyWithTheSourceUsedLast(OtherFolder);
+        f.Files.Answers(OtherPackage, FileIdentityRead.NamesNothing);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+        Assert.Contains(OtherPackage, f.Files.Reads);
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_package_in_the_folder_used_last_is_the_copy_itself()
+    {
+        var f = ACopyWithTheSourceUsedLast(OtherFolder);
+        f.Files.Opens(OtherPackage, 1);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_package_in_the_folder_used_last_will_not_identify()
+    {
+        var f = ACopyWithTheSourceUsedLast(OtherFolder);
+        f.Files.Answers(OtherPackage, FileIdentityRead.OpenRefused);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Theory]
+    [InlineData(@"%TEMP%\Setup\")]
+    [InlineData("D:\\Set\0up\\")]
+    [InlineData(@"Setup\")]
+    [InlineData(@"D:Setup\")]
+    public void A_copy_is_kept_when_the_folder_used_last_is_one_the_check_does_not_compare(string folder)
+    {
+        // A folder naming an environment variable, one holding a null, a relative folder
+        // and one relative to a drive's current folder. The package in none of them is
+        // scripted, and the fake's file reader throws on a path no test scripted, so the
+        // copy is kept without any of them being read.
+        var f = ACopyWithTheSourceUsedLast(folder);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void The_Installer_folder_as_the_folder_used_last_keeps_the_copy_it_opens_as()
+    {
+        // The package there is setup.msi, a second copy of product A; the first copy is
+        // another file. On a local drive the package is compared by identity alone, as a
+        // list entry naming the Installer folder is.
+        const string Named = @"C:\Windows\Installer\setup.msi";
+        var f = ACopyWithTheSourceUsedLast(InstallerFolder + @"\");
+        f.Packages.Declares(Named, ProductA);
+        f.Files.Opens(Named, 5);
+        f.Disk.AddFile(Named, new MockFileData(new byte[100]));
+
+        var outcomes = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+            .Screen([Package(Candidate), Package(Named)], [], default, null, InInstallerFolder).Outcomes;
+
+        Assert.Equal(
+            new[] { DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, DeclaredProductOutcome.DeclaredProductInstalled },
+            outcomes);
+    }
+
+    [Fact]
+    public void A_package_in_a_network_folder_used_last_named_otherwise_than_the_copy_is_not_read()
+    {
+        var f = ACopyWithTheSourceUsedLast(NasFolder);
+        f.Files.Answers(NasFolder + SetupName, FileIdentityRead.OpenRefused);
+
+        var outcome = CheckBesideASource(f).Screen([Package(Candidate)], [], default, null, InInstallerFolder).Outcomes[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome);
+        Assert.DoesNotContain(NasFolder + SetupName, f.Files.Reads);
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_package_in_a_network_folder_used_last_carries_its_name_and_is_the_copy()
+    {
+        // The package name is the copy's own, so the package on the share is read for it.
+        const string CopysName = "a.msi";
+        var f = ACopyWithTheSourceUsedLast(NasFolder);
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, CopysName, SetupFolder);
+        f.Files.Answers(SetupFolder + CopysName, FileIdentityRead.NamesNothing);
+        f.Files.Opens(NasFolder + CopysName, 1);
+
+        var outcome = CheckBesideASource(f).Screen([Package(Candidate)], [], default, null, InInstallerFolder).Outcomes[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome);
+        Assert.Contains(NasFolder + CopysName, f.Files.Reads);
+    }
+
+    // A record of the Office 16 Click-to-Run Extensibility Component in which the list's
+    // one network entry and the InstallSource spell the folder in mixed case and the
+    // source used last spells the same folder in lower case. An Office update can leave
+    // the earlier build's copy of its package in the Installer folder.
+
+    private const string Extensibility = "{90160000-008C-0000-1000-0000000FF1CE}";
+
+    private const string ExtensibilitySourceList =
+        @"SOFTWARE\Classes\Installer\Products\00006109C80000000100000000F01FEC\SourceList";
+
+    private const string IntegrationFolder = @"C:\Program Files\Microsoft Office\root\Integration\";
+    private const string IntegrationFolderUsedLast = @"c:\program files\microsoft office\root\integration\";
+    private const string IntegrationPackageName = "C2RInt.16.msi";
+
+    [Fact]
+    public void An_older_copy_of_Offices_Extensibility_Component_is_let_through_with_its_folder_used_last_in_lower_case()
+    {
+        const string OlderCopy = @"C:\Windows\Installer\55749af.msi";
+        const string Cached = @"C:\Windows\Installer\12a583.msi";
+
+        var packages = new ScriptedPackageIdentities();
+        packages.Declares(OlderCopy, Extensibility);
+        packages.Declares(Cached, Extensibility);
+
+        var msi = new ScriptedMsiProducts();
+        msi.Installed(Extensibility);
+        msi.RecordsPackage(Extensibility, null, MsiInstallContext.Machine, Cached);
+        msi.RecordsSources(Extensibility, null, MsiInstallContext.Machine, IntegrationPackageName, IntegrationFolder);
+        msi.ListProperty(Extensibility, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedSource, IntegrationFolderUsedLast);
+
+        // The list's keys value by value, in the types Windows writes them.
+        msi.Registry.Holds(ExtensibilitySourceList,
+            Sz(MsiInstallProperty.PackageName, IntegrationPackageName),
+            ExpandSz(MsiInstallProperty.LastUsedSource, "n;1;" + IntegrationFolderUsedLast));
+        msi.Registry.Holds(ExtensibilitySourceList + @"\Net", ExpandSz("1", IntegrationFolder));
+        msi.Registry.Answers(ExtensibilitySourceList + @"\URL", RegistryKeyPresence.Absent);
+        msi.Registry.Holds(ExtensibilitySourceList + @"\Media",
+            Sz("DiskPrompt", "Office 16 Click-to-Run Extensibility Component"), Sz("1", "OFFICE16;1"));
+
+        // The package in the integration folder is present under either spelling, and is
+        // neither the older copy nor the cached package.
+        var files = new ScriptedFileIdentities();
+        files.Opens(OlderCopy, 1);
+        files.Opens(Cached, 2);
+        files.Opens(IntegrationFolder + IntegrationPackageName, 3);
+
+        var disk = new MockFileSystem();
+        disk.AddFile(OlderCopy, new MockFileData(new byte[100]));
+        disk.AddFile(Cached, new MockFileData(new byte[100]));
+
+        var outcome = ScriptedCheck(msi, packages, files, disk, msi.Registry)
+            .Screen([Package(OlderCopy)], [], default, null, InInstallerFolder).Outcomes[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome);
+        Assert.Contains(IntegrationFolderUsedLast + IntegrationPackageName, files.Reads);
+        Assert.Contains(IntegrationFolder + IntegrationPackageName, files.Reads);
     }
 
     [Theory]

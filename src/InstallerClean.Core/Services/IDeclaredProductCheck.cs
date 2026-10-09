@@ -57,7 +57,7 @@ namespace InstallerClean.Services;
 /// source list holds something the check does not compare, a URL, an entry naming an
 /// environment variable, a media package path or a package name naming a folder, a
 /// drive, a stream or a variable, or holding a null; while the source used last is not
-/// a network entry on the list; and while the registry key holding the list does not
+/// a network source; and while the registry key holding the list does not
 /// hold what the API returned for it, package name included, or holds that name as
 /// anything but a REG_SZ. So it is while an installation's <c>InstallSource</c> will
 /// not read, is held in the registry otherwise than the API answers it or as anything
@@ -314,7 +314,7 @@ public enum DeclaredProductOutcome
     /// environment variable or starting neither with a drive letter, a ':' and a '\' nor
     /// with two '\', a media package path or a package name naming a folder, a drive, a
     /// stream or a variable, or holding a null, one whose source used last is not a network
-    /// entry on it, and one whose registry key does not hold what the API returned for it,
+    /// source, and one whose registry key does not hold what the API returned for it,
     /// package name included, or holds that name as anything but a REG_SZ. It covers an
     /// <c>InstallSource</c> whose package is this file, will not identify or does not
     /// answer within the time limit, one on a drive or share the check has stopped reading,
@@ -342,19 +342,19 @@ public enum DeclaredProductOutcome
     /// Windows still holds a record of the product this file declares, or of an
     /// installation whose cached package declares it, every such installation records a
     /// cached package that is present, is a different file, and itself declares the
-    /// same product, no installation is in a per-user-unmanaged context, and no
-    /// installation's source list or <c>InstallSource</c> points at the Installer
-    /// folder or at this file, a source in a folder on the network counting only where
-    /// its package name could be this file's name. Every installation's source list is
-    /// held in the registry as the API returns it, with its package name as a REG_SZ,
-    /// and so is its <c>InstallSource</c> where there is one, which starts with a drive
-    /// letter, a ':' and a '\', or with two '\'. Every source list holds network
-    /// entries only, none of them naming an environment variable, names no media
-    /// package path, has a package name naming a file alone, and was last used from one
-    /// of its own network entries or not at all. Every installation the caller could
-    /// not rule out as a second copy opens packages the check saw, and this file is a
-    /// different file from all of them too. The candidate goes on being decided by
-    /// everything else.
+    /// same product, no installation is in a per-user-unmanaged context, and no package
+    /// in a folder on an installation's source list, in the folder it used last as a
+    /// source or in its <c>InstallSource</c> is this file or, on a root other than a local
+    /// drive, would be a file directly in the Installer folder, a package in a folder on
+    /// the network counting only where its package name could be this file's name. Every
+    /// installation's source list is held in the registry as the API returns it, with its
+    /// package name as a REG_SZ, and so is its <c>InstallSource</c> where there is one,
+    /// which starts with a drive letter, a ':' and a '\', or with two '\'. Every source
+    /// list holds no URL and no entry naming an environment variable, names no media
+    /// package path, has a package name naming a file alone, and was last used from a
+    /// network source or not at all. Every installation the caller could not rule out as a
+    /// second copy opens packages the check saw, and this file is a different file from
+    /// all of them too. The candidate goes on being decided by everything else.
     ///
     /// Windows Installer opens a product's cached package through the
     /// <c>LocalPackage</c> value recorded for each installation, and its original
