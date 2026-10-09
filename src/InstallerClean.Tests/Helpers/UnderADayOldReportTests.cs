@@ -121,6 +121,78 @@ public class UnderADayOldReportTests
         Assert.DoesNotContain("June", line);
     }
 
+    [Fact]
+    public void United_States_formats_with_the_app_in_English_give_a_twelve_hour_time_and_the_month_first()
+    {
+        using var scope = new LocalisationScope(British, CultureInfo.GetCultureInfo("en-US"));
+
+        var line = UnderADayOldReport.Line(Holding(3, Bytes, Utc(16, 9, 40)), SevenAhead);
+
+        var at = new DateTime(2030, 6, 16, 16, 40, 0);
+        Assert.Contains(
+            $"after {at.ToString("t", CultureInfo.GetCultureInfo("en-US"))} on June 16 ", line);
+        Assert.Contains("PM", line);
+        Assert.DoesNotContain("16:40", line);
+    }
+
+    [Fact]
+    public void German_formats_with_the_app_in_English_keep_the_English_month()
+    {
+        using var scope = new LocalisationScope(British, CultureInfo.GetCultureInfo("de-DE"));
+
+        var line = UnderADayOldReport.Line(Holding(3, Bytes, Utc(16, 9, 40)), SevenAhead);
+
+        Assert.Contains("after 16:40 on 16 June ", line);
+        Assert.DoesNotContain("Juni", line);
+    }
+
+    [Fact]
+    public void German_formats_with_the_app_in_German_are_used()
+    {
+        var germany = CultureInfo.GetCultureInfo("de-DE");
+        using var scope = new LocalisationScope(CultureInfo.GetCultureInfo("de"), germany);
+
+        var line = UnderADayOldReport.Line(Holding(3, Bytes, Utc(16, 9, 40)), SevenAhead);
+
+        var at = new DateTime(2030, 6, 16, 16, 40, 0);
+        Assert.Contains(at.ToString("t", germany), line);
+        Assert.Contains(at.ToString("M", germany), line);
+    }
+
+    [Fact]
+    public void A_regional_format_of_the_displayed_language_is_used_where_it_differs_from_that_language()
+    {
+        // Austrian German calls January "Jänner" where German has "Januar", and Australian
+        // English writes "pm" where British English writes a 24-hour time, so both lines can
+        // only have come from the regional format.
+        var january = new DateTime(2031, 1, 16, 9, 40, 0, DateTimeKind.Utc);
+
+        using (new LocalisationScope(CultureInfo.GetCultureInfo("de"), CultureInfo.GetCultureInfo("de-AT")))
+            Assert.Contains("16. Jänner", UnderADayOldReport.Line(Holding(3, Bytes, january), SevenAhead));
+
+        using (new LocalisationScope(British, CultureInfo.GetCultureInfo("en-AU")))
+            Assert.Contains("pm on 16 January", UnderADayOldReport.Line(Holding(3, Bytes, january), SevenAhead));
+    }
+
+    [Fact]
+    public void A_regional_format_the_app_would_not_display_in_the_sentence_s_language_is_not_used()
+    {
+        // Taiwan's formats share Chinese's two-letter code and the app displays them in
+        // English, so the Simplified Chinese sentence keeps its own 24-hour time rather than
+        // Taiwan's "下午". Saudi Arabia's formats are displayed in English too, and the English
+        // sentence keeps "16:40" and "16 June" rather than Arabic.
+        using (new LocalisationScope(CultureInfo.GetCultureInfo("zh-Hans"), CultureInfo.GetCultureInfo("zh-TW")))
+        {
+            var line = UnderADayOldReport.Line(Holding(3, Bytes, Utc(16, 9, 40)), SevenAhead);
+            Assert.Contains("16:40", line);
+            Assert.DoesNotContain("下午", line);
+        }
+
+        using (new LocalisationScope(British, CultureInfo.GetCultureInfo("ar-SA")))
+            Assert.Contains("after 16:40 on 16 June ",
+                UnderADayOldReport.Line(Holding(3, Bytes, Utc(16, 9, 40)), SevenAhead));
+    }
+
     private sealed class LocalisationScope : IDisposable
     {
         public LocalisationScope(CultureInfo uiCulture, CultureInfo formatCulture) =>

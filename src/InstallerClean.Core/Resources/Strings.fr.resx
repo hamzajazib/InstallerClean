@@ -788,11 +788,12 @@ Pour le remettre, il vous faut l'installateur de la version que vous avez déjà
        0 = files held back for their age, 1 = pluralised "file"/"files", 2 = their size,
        3 = a time and 4 = a date. Together 3 and 4 are the instant from which every one of
        these files is a day old, rounded up to the next whole minute and given in the PC's
-       own time zone: 3 is written as the language's short time ("16:40", "4:40 PM",
-       "오후 4:40") and 4 as its day and month ("16 June", "16. Juni", "6月16日"), both in the
-       conventions of the language the sentence is in. They are separate slots so a
-       language can put them in its own order and the words around them ("Uhr", "pukul")
-       where its grammar wants them. No year: the instant is always within two days of the
+       own time zone: 3 is a short time ("16:40", "4:40 PM", "오후 4:40") and 4 a day and
+       month ("16 June", "June 16", "16. Juni", "6月16日"). Both are written in the PC's
+       regional format where that is a format of the language the sentence is in, and in
+       that language's own conventions otherwise, so a month name is never another
+       language's. They are separate slots so a language can put them in its own order and
+       the words around them ("Uhr", "pukul") where its grammar wants them. No year: the instant is always within two days of the
        scan.
 
        THE ONE-FORM NAMES THE SIZE AND NOT THE NUMERAL, as Completion.NothingOfferedPerFileBody
