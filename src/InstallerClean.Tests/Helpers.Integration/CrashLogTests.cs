@@ -39,19 +39,32 @@ public class CrashLogTests
     public void A_folder_whose_delete_is_refused_is_left_without_a_throw()
     {
         // A read-only file makes the delete throw UnauthorizedAccessException on Windows, as a
-        // file an antivirus holds can.
+        // file an antivirus holds can. Elsewhere a file's own mode does not stop its delete and
+        // its folder's does, so there the folder is made read-only instead.
         var folder = Path.Combine(Path.GetTempPath(), "InstallerClean.Tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder);
         var file = Path.Combine(folder, "crash.log");
         File.WriteAllText(file, "held");
-        File.SetAttributes(file, FileAttributes.ReadOnly);
+        if (OperatingSystem.IsWindows())
+            File.SetAttributes(file, FileAttributes.ReadOnly);
+        else
+            File.SetUnixFileMode(folder, UnixFileMode.UserRead | UnixFileMode.UserExecute);
         try
         {
             Assert.Null(Record.Exception(() => TestCrashLog.TryDelete(folder)));
+            Assert.True(File.Exists(file), "The delete was not refused, so the folder went.");
         }
         finally
         {
-            if (File.Exists(file)) File.SetAttributes(file, FileAttributes.Normal);
+            if (OperatingSystem.IsWindows())
+            {
+                if (File.Exists(file)) File.SetAttributes(file, FileAttributes.Normal);
+            }
+            else if (Directory.Exists(folder))
+            {
+                File.SetUnixFileMode(folder,
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            }
             TestCrashLog.TryDelete(folder);
         }
     }
