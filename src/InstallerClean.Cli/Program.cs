@@ -36,10 +36,11 @@ internal static class Program
         // default handler: ex.ToString() to stderr (a cross-profile path leak under
         // elevation), no Application-log record, and an undocumented exit code no
         // RMM can branch on. Route any such throw through the same crash-log +
-        // audit + ExitError path the work loop uses. Run holds the single-instance
-        // mutex on this thread (acquire and release both here, per the Win32
-        // owner-thread rule) and RunWorkAsync owns its own catch-all, so the work
-        // itself never lands here: only Run's pre-flight and its cleanup can.
+        // audit + ExitError path the work loop uses, with the note the work loop
+        // prints where the Application log refused the entry. Run holds the
+        // single-instance mutex on this thread (acquire and release both here, per
+        // the Win32 owner-thread rule) and RunWorkAsync owns its own catch-all, so
+        // the work itself never lands here: only Run's pre-flight and its cleanup can.
         //
         // The code page is set and restored around all of that, the catch-all
         // included, so the crash line still goes out in UTF-8 and the console is
@@ -59,12 +60,24 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            return ReportUnexpectedError(args.Length > 0 ? args[0].ToLowerInvariant() : "(none)", ex);
+            return ReportRunFailure(args, ex);
         }
         finally
         {
             RestoreOutputEncoding(previousOutputEncoding);
         }
+    }
+
+    /// <summary>
+    /// Reports an exception thrown out of <see cref="Run"/> to <see cref="Main"/>'s catch-all,
+    /// as <see cref="ReportUnexpectedError(string, Exception)"/> reports one, then prints the
+    /// note where the Application log refused its entry, and returns its exit code.
+    /// </summary>
+    internal static int ReportRunFailure(string[] args, Exception ex)
+    {
+        var exitCode = ReportUnexpectedError(args.Length > 0 ? args[0].ToLowerInvariant() : "(none)", ex);
+        NoteEventLogUnavailable();
+        return exitCode;
     }
 
     /// <summary>
@@ -1628,8 +1641,9 @@ internal static class Program
     /// recognised flag with an extra token, but the audit entry
     /// (<c>Cli.EventLogBadArguments</c>) and the exit code are identical for both,
     /// so an RMM filter matching the Application channel sees one "bad arguments"
-    /// contract whichever the user hit. The arg switch returns before the work
-    /// loop's try/finally, so the event-log-unavailable note is emitted inline here.
+    /// contract whichever the user hit. The arg switch returns before
+    /// <see cref="RunWorkAsync"/>, whose disposal prints the note saying the Application
+    /// log refused an entry, so the note is printed here.
     /// </summary>
     private static int ReportBadArguments(CliInvocation invocation, string stdoutMessage)
     {
@@ -1935,8 +1949,9 @@ internal static class Program
     /// rights a process runs with change only when somebody starts it differently, so
     /// a scheduler retrying on the transient code would be refused on every run.
     ///
-    /// It returns before the work loop's cleanup, so it prints the note on an
-    /// unwritable Application channel itself, as the mutex refusal does.
+    /// It returns before <see cref="RunWorkAsync"/>, whose disposal prints the note on an
+    /// unwritable Application channel, so it prints the note itself, as the mutex refusal
+    /// does.
     ///
     /// The event-log line it writes (<see cref="AdminRightsNeededEventLogLine"/>) is
     /// reachable separately and this method is not, for the reason
