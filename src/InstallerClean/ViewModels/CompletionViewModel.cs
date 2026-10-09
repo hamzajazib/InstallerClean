@@ -836,10 +836,12 @@ public partial class CompletionViewModel : ObservableObject
     /// card would speak for the scan the operation started from.
     ///
     /// The time is in the zone the constructor's <c>zone</c> answers with as the card is
-    /// revealed.
+    /// revealed, and the zone is asked for only where the card carries the line
+    /// (<see cref="UnderADayOldReport.HasLine"/>). Asking for the PC's own zone empties the
+    /// cache <see cref="CurrentZone"/> sets out.
     /// </summary>
     private string UnderADayOldLine(ScanResult? scan) =>
-        UnderADayOldReport.Line(scan, _zone());
+        UnderADayOldReport.HasLine(scan) ? UnderADayOldReport.Line(scan, _zone()) : string.Empty;
 
     /// <summary>
     /// The PC's time zone as Windows has it now. .NET answers

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using NSubstitute;
 using InstallerClean.Helpers;
 using InstallerClean.Models;
@@ -756,6 +757,77 @@ public class CompletionViewModelTests
         vm.ShowAllClear(scannedFileCount: 5, scanDurationMs: 10);
 
         Assert.Equal(string.Empty, vm.UnderADayOld);
+    }
+
+    public static TheoryData<string> CardsThatCanCarryTheDayOldLine()
+    {
+        var cards = new TheoryData<string> { "nothing offered" };
+        foreach (var card in CardsAfterAMoveOrDelete()) cards.Add(card);
+        return cards;
+    }
+
+    private static void ShowCardFor(CompletionViewModel vm, string card, ScanResult scan)
+    {
+        if (card == "nothing offered")
+            vm.ShowNothingOffered(scan, scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: string.Empty);
+        else
+            ShowCard(vm, card);
+    }
+
+    /// <summary>
+    /// A view model whose zone counts how many times it is asked for, in
+    /// <paramref name="asked"/>.
+    /// </summary>
+    private static CompletionViewModel CountingZoneAsks(Func<ScanResult?> lastScan, StrongBox<int> asked) =>
+        TestCompletion.Create(lastScan: lastScan, zone: () =>
+        {
+            asked.Value++;
+            return TimeZoneInfo.Utc;
+        });
+
+    [Theory]
+    [MemberData(nameof(CardsThatCanCarryTheDayOldLine))]
+    public void A_card_without_the_day_old_line_does_not_ask_for_the_time_zone(string card)
+    {
+        // Asking for the PC's zone empties .NET's cached one, so only a card that shows the
+        // line asks.
+        var scan = HeldBack(2, PerFile(2));
+        var asked = new StrongBox<int>();
+        var vm = CountingZoneAsks(() => scan, asked);
+
+        ShowCardFor(vm, card, scan);
+
+        Assert.True(vm.IsComplete);
+        Assert.Equal(string.Empty, vm.UnderADayOld);
+        Assert.Equal(0, asked.Value);
+    }
+
+    [Theory]
+    [MemberData(nameof(CardsAfterAMoveOrDelete))]
+    public void A_card_with_no_scan_behind_it_does_not_ask_for_the_time_zone(string card)
+    {
+        var asked = new StrongBox<int>();
+        var vm = CountingZoneAsks(() => null, asked);
+
+        ShowCard(vm, card);
+
+        Assert.True(vm.IsComplete);
+        Assert.Equal(string.Empty, vm.UnderADayOld);
+        Assert.Equal(0, asked.Value);
+    }
+
+    [Theory]
+    [MemberData(nameof(CardsThatCanCarryTheDayOldLine))]
+    public void A_card_with_the_day_old_line_asks_for_the_time_zone_once(string card)
+    {
+        var scan = HeldBack(2, new WithholdingSplit(UnderADayOldCount: 2), DayOldAt);
+        var asked = new StrongBox<int>();
+        var vm = CountingZoneAsks(() => scan, asked);
+
+        ShowCardFor(vm, card, scan);
+
+        Assert.True(vm.IsComplete);
+        Assert.Equal(1, asked.Value);
     }
 
     /// <summary>
