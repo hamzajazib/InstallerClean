@@ -686,6 +686,33 @@ public class ScanResultTests
     private static readonly DateTime ADayOldAt = new(2030, 6, 16, 9, 40, 0, DateTimeKind.Utc);
 
     [Theory]
+    [InlineData("nothing held back", false)]
+    [InlineData("under a day old, with no time from which they are a day old", false)]
+    [InlineData("under a day old", true)]
+    public void A_scan_has_a_line_about_files_under_a_day_old_where_it_held_one_and_knows_when_they_are_a_day_old(
+        string run, bool hasLine)
+    {
+        var result = run switch
+        {
+            "nothing held back" => new ScanResult([], [], 0),
+            // A count with no instant has no time to give, so there is no line, and the
+            // command line's clean line reads the same answer.
+            "under a day old, with no time from which they are a day old" => new ScanResult([], [], 0,
+                WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+                WithheldBy: new WithholdingSplit(UnderADayOldCount: 2),
+                WithheldUnderADayOldBytes: 3072),
+            "under a day old" => new ScanResult([], [], 0,
+                WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+                WithheldBy: new WithholdingSplit(UnderADayOldCount: 2),
+                WithheldUnderADayOldBytes: 3072,
+                WithheldUnderADayOldAllADayOldAtUtc: ADayOldAt),
+            _ => throw new ArgumentOutOfRangeException(nameof(run), run, null),
+        };
+
+        Assert.Equal(hasLine, result.HasUnderADayOldLine);
+    }
+
+    [Theory]
     [InlineData("under a day old", true)]
     [InlineData("under a day old, beside one kept for an installed program", true)]
     [InlineData("under a day old, with no time from which they are a day old", false)]

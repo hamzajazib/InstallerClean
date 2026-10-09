@@ -837,11 +837,11 @@ public partial class CompletionViewModel : ObservableObject
     ///
     /// The time is in the zone the constructor's <c>zone</c> answers with as the card is
     /// revealed, and the zone is asked for only where the card carries the line
-    /// (<see cref="UnderADayOldReport.HasLine"/>). Asking for the PC's own zone empties the
+    /// (<see cref="ScanResult.HasUnderADayOldLine"/>). Asking for the PC's own zone empties the
     /// cache <see cref="CurrentZone"/> sets out.
     /// </summary>
     private string UnderADayOldLine(ScanResult? scan) =>
-        UnderADayOldReport.HasLine(scan) ? UnderADayOldReport.Line(scan, _zone()) : string.Empty;
+        scan?.HasUnderADayOldLine == true ? UnderADayOldReport.Line(scan, _zone()) : string.Empty;
 
     /// <summary>
     /// The PC's time zone as Windows has it now. .NET answers

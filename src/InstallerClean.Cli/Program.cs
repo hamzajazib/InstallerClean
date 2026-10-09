@@ -548,8 +548,8 @@ internal static class Program
             // AND THE FIRST MACHINE GETS IT ONLY WHERE THAT LINE IS NOT PRINTED. The line
             // says a later scan will probably be able to offer those files, and it stands
             // in the clean line's place here as it does on the window's nothing-offered
-            // screen for the same run. Whether it is printed is UnderADayOldReport's
-            // answer, the same one ReportScanSignals spends.
+            // screen for the same run. Whether it is printed is the scan's answer
+            // (HasUnderADayOldLine), the same one ReportScanSignals spends.
             //
             // AND THE FIRST MACHINE GETS IT ONLY WHERE THE SCAN STOPPED WAITING FOR NO
             // DRIVE OR SHARE WHILE FILES STILL HAD TO BE CHECKED AGAINST IT. Where it did,
@@ -667,7 +667,7 @@ internal static class Program
                     : HeldBackLine(
                         Strings.Cli_NothingOfferedPerFile_Singular,
                         Strings.Cli_NothingOfferedPerFile_Plural, "Cli.NothingOfferedPerFile"));
-            else if (sourcesGivenUp.Count == 0 && !UnderADayOldReport.HasLine(scanResult))
+            else if (sourcesGivenUp.Count == 0 && !scanResult.HasUnderADayOldLine)
                 Console.WriteLine(Strings.Cli_FoundNoOrphans);
 
             notices.ForEach(Console.WriteLine);
