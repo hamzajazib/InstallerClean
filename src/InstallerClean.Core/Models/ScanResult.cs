@@ -1078,7 +1078,8 @@ public static class ShortNameCreationLabels
 /// Installation packages the screen kept back because an installation the scan could
 /// not rule out as a second copy of a program opens packages that could not all be
 /// seen, or because an installation's cached package did not say which product it
-/// declares and its own record did not show it to be an ordinary installation. See
+/// declares, its own record did not show it to be an ordinary installation, and it is not
+/// shown to have no package for Windows Installer to open. See
 /// <see cref="Services.DeclaredProductOutcome.SecondCopyUnestablished"/>.
 ///
 /// NOT TO BE ADDED TO <see cref="DeclaredProductUnestablishedCount"/>. That one is about
@@ -1214,9 +1215,10 @@ public enum WithholdingSplitArm
     /// <summary>
     /// An installation the scan could not rule out as a second copy of a program opens
     /// packages that could not all be seen, or an installation's cached package would not
-    /// say which program it belongs to and its own record did not show it to be an
-    /// ordinary installation. Either way a file could be the package such an installation
-    /// opens. Two findings under one arm, as the verdict they come from keeps them.
+    /// say which program it belongs to, its own record did not show it to be an ordinary
+    /// installation, and it is not shown to have no package for Windows Installer to open.
+    /// Either way a file could be the package such an installation opens. Two findings
+    /// under one arm, as the verdict they come from keeps them.
     /// </summary>
     SecondCopyUnestablished,
 }

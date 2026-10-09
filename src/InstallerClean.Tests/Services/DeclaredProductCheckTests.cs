@@ -3839,6 +3839,31 @@ public class DeclaredProductCheckTests
         Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void An_ordinary_registration_with_no_package_to_open_is_counted_as_one(bool noSources)
+    {
+        // The registration's record reads as ordinary, so it sets no hold either way. With no
+        // package to open it lets the copy declaring its code through and is counted as having
+        // none; with its source list there it keeps the copy and is counted as ordinary.
+        var f = ACopyBesideOfficesFeatureRegistration();
+        f.Packages.Declares(Candidate, OfficeFeatures);
+        f.Msi.Installed(OfficeFeatures);
+        f.Msi.AnswersItsOwnRecord(OfficeFeatures, null, MsiInstallContext.Machine);
+        if (!noSources) f.Msi.Registry.Holds(OfficeFeaturesSourceList);
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+
+        Assert.Equal(
+            noSources
+                ? DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile
+                : DeclaredProductOutcome.DeclaredProductInstalled,
+            screening.Outcomes[0]);
+        Assert.Equal(noSources ? Census(opensNoPackage: 1) : Census(released: 1), screening.CachedPackages);
+    }
+
     [Fact]
     public void Every_other_installation_of_the_registrations_code_is_still_read()
     {
@@ -3883,7 +3908,7 @@ public class DeclaredProductCheckTests
             screening.Outcomes[0]);
         Assert.Equal(
             noSources
-                ? Census(released: 1, unruled: 1)
+                ? Census(opensNoPackage: 1, unruled: 1)
                 : Census(released: 1, unruled: 1, unseenNoneRecorded: 1, unseenPerMachine: 1),
             screening.CachedPackages);
     }

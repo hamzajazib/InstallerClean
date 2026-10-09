@@ -512,8 +512,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// the one its cached package declares, keyed by the declared code, whether an
     /// installation whose cached package did not say what it declares is not shown by its
     /// own record to be an ordinary installation nor shown to open no package, each
-    /// installation being counted in the pass's census by what its cached package and record
-    /// gave (<see cref="CensusTally"/>).
+    /// installation being counted in the pass's census by what its cached package gave,
+    /// whether it opens no package, and otherwise what its record showed
+    /// (<see cref="CensusTally"/>).
     /// Read once per pass, the first time it is needed.
     ///
     /// EVERY CONTEXT IS READ, AND A FAILED READ KEEPS UNLESS THE RECORD RULES IT OUT. A
@@ -549,15 +550,14 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                 installation.ProductCode, installation.UserSid, context, out var reading, out var detail);
             if (declared is null)
             {
-                var record = WhatItsOwnRecordShows(installation.ProductCode, installation.UserSid, context);
-                if (record != RecordReading.Ordinary
-                    && reading == CachedPackageReading.NoneRecorded
+                if (reading == CachedPackageReading.NoneRecorded
                     && OpensNoPackage(installation.ProductCode, installation.UserSid, context))
                 {
                     pass.Census.OpensNoPackage();
                     continue;
                 }
 
+                var record = WhatItsOwnRecordShows(installation.ProductCode, installation.UserSid, context);
                 if (record != RecordReading.Ordinary) unread ??= detail;
                 pass.Census.Undeclared(reading, record, context);
                 continue;
@@ -876,9 +876,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         internal void Declared() => _listedChecked++;
 
         /// <summary>
-        /// An installation that records no cached package, whose record does not show an
-        /// ordinary installation, and which has no package to open at all, so it does not set
-        /// the hold (<see cref="OpensNoPackage"/>).
+        /// An installation that records no cached package and has no package to open at all
+        /// (<see cref="OpensNoPackage"/>), whatever its record shows, so it does not set the
+        /// hold. Its record is not read.
         /// </summary>
         internal void OpensNoPackage()
         {

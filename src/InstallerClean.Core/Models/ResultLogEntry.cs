@@ -1076,7 +1076,8 @@ public sealed record MachineInfo(
 /// Candidates the declared-product screen kept back because an installation the scan
 /// could not rule out as a second copy of a program opens packages that could not all
 /// be seen, or because an installation's cached package did not say which product it
-/// declares and its own record did not show it to be an ordinary installation:
+/// declares, its own record did not show it to be an ordinary installation, and it is not
+/// shown to have no package for Windows Installer to open:
 /// <c>ScanResult.WithheldBy.SecondCopyUnestablishedCount</c>. The last of the twelve
 /// counts that split <paramref name="WithheldCandidateCount"/>, appended after the
 /// members before it for the reason they were.
@@ -1144,7 +1145,8 @@ public sealed record MachineInfo(
 /// <param name="SecondCopyKeepPathUnreadableCount">
 /// Installations that set the hold counted in
 /// <paramref name="WithheldSecondCopyUnestablishedCount"/>: their cached package did not say
-/// which product it declares and their own record did not show an ordinary installation.
+/// which product it declares, their own record did not show an ordinary installation, and
+/// they are not shown to have no package for Windows Installer to open.
 /// Counted where the screen reads them, before any file's verdict, so they are counted
 /// whether or not any file was then held back for them. This one counts those for which
 /// Windows gave no answer about the cached package's path: a read that failed, or an answer
@@ -1185,7 +1187,10 @@ public sealed record MachineInfo(
 /// </param>
 /// <param name="SecondCopyReleasedOrdinaryCount">
 /// Installations whose cached package did not say which product it declares and whose own
-/// record shows an ordinary installation, so they do not set the hold.
+/// record shows an ordinary installation, so they do not set the hold. One with no package
+/// for Windows Installer to open is counted in
+/// <paramref name="SecondCopyReleasedOpensNoPackageCount"/> instead, and its record is not
+/// read.
 /// </param>
 /// <param name="SecondCopyUnruledCheckedCount">
 /// The listed installations not ruled out as a second copy of a program whose packages the
@@ -1237,9 +1242,8 @@ public sealed record MachineInfo(
 /// <paramref name="WithheldSecondCopyUnestablishedCount"/>.
 /// </param>
 /// <param name="SecondCopyReleasedOpensNoPackageCount">
-/// Installations whose cached package did not say which product it declares and whose own
-/// record does not show an ordinary installation, which do not set the hold because Windows
-/// Installer has no package to open for them: per machine, recording no cached package, and
+/// Installations which do not set the hold because Windows Installer has no package to open
+/// for them, whatever their own record shows: per machine, recording no cached package, and
 /// with no source list, by the API's answer and in the registry alike
 /// (<see cref="CachedPackageCensus.ReleasedOpensNoPackage"/>). Each is also counted in
 /// <paramref name="SecondCopyListedCheckedCount"/>, and in none of the keys from
