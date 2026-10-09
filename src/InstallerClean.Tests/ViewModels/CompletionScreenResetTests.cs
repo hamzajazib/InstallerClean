@@ -11,37 +11,31 @@ namespace InstallerClean.Tests.ViewModels;
 /// The rule every public <c>Show*</c> method on <see cref="CompletionViewModel"/> keeps:
 /// each one sets every field the completion card reads.
 ///
-/// WHY IT IS LOAD-BEARING RATHER THAN TIDY. The view-model instance is REUSED across
-/// operations, so a method that left one field alone would not leave it blank; it
-/// would paint the PREVIOUS run's value under this run's heading. A Move that failed
-/// at two files, then a Delete that succeeded, would show the delete's green heading
-/// over the move's "2 of 71 could not be moved". Several of the fields say so on their
-/// own declaration, in the words "cleared everywhere else, because the view-model
+/// The view-model instance is reused across operations, so a method that left a field
+/// alone would paint the previous run's value under this run's heading: a Move that
+/// failed at two files, then a Delete that succeeded, would show the delete's green
+/// heading over the move's "2 of 71 could not be moved". Several of the fields say so on
+/// their own declaration, in the words "cleared everywhere else, because the view-model
 /// instance is reused across operations".
 ///
 /// <c>The_count_line_and_warning_heading_do_not_survive_into_the_next_operation</c> in
-/// CompletionViewModelTests holds one transition and two of the fields, and stays: it
-/// is the specific case, and this is the same rule at its full width. The shape to
-/// expect is an eighth screen, this class having gained two in 3.0.0.
+/// CompletionViewModelTests holds one transition and two of the fields. This class holds
+/// the same rule for every screen and every field.
 ///
-/// WHY THE SHAPE IS TWO RUNS AND NOT AN ASSERTION THAT IT ASSIGNS. An assignment is
-/// not observable from outside the object, and the two obvious instruments are both
-/// blind. Reading the field after one call cannot tell an assignment from a field
-/// that happened to hold the right value already, since a fresh screen's defaults are
-/// empty and false and so is most of what these methods write. And PropertyChanged is
-/// worse than useless here: CommunityToolkit's generated setter calls SetProperty,
-/// which compares first and raises NOTHING when the value is unchanged, so a method
-/// that correctly assigns a value equal to the one already there would read as a miss.
+/// Each screen is painted twice rather than checked for an assignment, because an
+/// assignment is not observable from outside the object. Reading a field after one call
+/// cannot tell an assignment from a field that already held the right value, since a
+/// fresh screen's defaults are empty and false and so is most of what these methods
+/// write. PropertyChanged cannot tell either: CommunityToolkit's generated setter calls
+/// SetProperty, which compares first and raises nothing when the value is unchanged.
 ///
-/// So the property tested is the one that actually matters: the screen a Show* method
-/// paints must not depend on what the instance held before it. The same call is made
-/// twice with the same arguments, once on a fresh instance and once on an instance
-/// whose every field has been set to a value no default holds, and the two screens
-/// must come out identical. A field the method forgets keeps the planted value in the
-/// second run and not in the first, so it names itself.
+/// So the same call is made twice with the same arguments, once on a fresh instance and
+/// once on an instance whose every field has been set to a value no default holds, and
+/// the two screens must come out identical. A field the method does not set keeps the
+/// planted value in the second run and not in the first, and the failure names it.
 ///
-/// THE METHODS AND THE FIELDS ARE BOTH DISCOVERED, which is the whole point: a screen
-/// added next year is walked without anybody remembering this file, and so is a field.
+/// The methods and the fields are both discovered, so a new screen or a new field is
+/// walked without this file changing.
 /// <c>The_walk_finds_the_screens_and_the_fields_rather_than_an_empty_set</c> is the
 /// control under that, because a discovery that matches nothing makes every assertion
 /// here pass over an empty set.
@@ -213,11 +207,10 @@ public class CompletionScreenResetTests
     [Fact]
     public void The_planted_values_are_ones_a_fresh_screen_never_holds()
     {
-        // The control under the test above, and it is not decoration: the plant is the
-        // whole instrument. A value equal to a fresh screen's default makes a
-        // forgotten field indistinguishable from a set one, the comparison finds no
-        // difference, and the test reports every screen clean for the same reason it
-        // would if it had never run.
+        // The control under the test above. A planted value equal to a fresh screen's
+        // default makes a field the screen does not set indistinguishable from one it
+        // sets, the comparison finds no difference, and the test reports every screen
+        // clean.
         var fresh = TestCompletion.Create();
         var planted = TestCompletion.Create();
         Plant(planted);
@@ -235,18 +228,17 @@ public class CompletionScreenResetTests
     [Fact]
     public void The_walk_finds_the_screens_and_the_fields_rather_than_an_empty_set()
     {
-        // Both figures are here because both discoveries can silently return nothing.
-        // The field walk keys on a source generator's own tool name, which a package
-        // bump can rename, and a zero-length field set makes the first test pass over
-        // every screen without comparing anything at all. The method walk keys on a
-        // prefix, and a rename away from Show* would empty it the same way.
+        // Both figures are here because either discovery can return nothing without
+        // failing. The field walk keys on a source generator's own tool name, which a
+        // package update can rename, and an empty field set makes the first test pass
+        // over every screen without comparing anything. The method walk keys on a
+        // prefix, and a rename away from Show* empties it the same way.
         //
-        // A LEGITIMATE ADDITION IS MEANT TO FAIL HERE. Adding a ninth screen or a
-        // fifteenth observable property should be a decision somebody takes with this
-        // rule in front of them, which is what a figure that has to be moved by hand
-        // buys. A new field joins the set every screen must paint; a new field that is
-        // NOT part of the card goes in NotPaintedByAScreen with its reason.
+        // A new screen or a new observable property fails here until the figure is
+        // moved by hand, so it is added with this rule in front of whoever adds it. A new
+        // field the card shows joins the set every screen must paint; a new field that is
+        // not part of the card goes in NotPaintedByAScreen with its reason.
         Assert.Equal(8, Screens().Length);
-        Assert.Equal(10, ScreenFields().Length);
+        Assert.Equal(11, ScreenFields().Length);
     }
 }
