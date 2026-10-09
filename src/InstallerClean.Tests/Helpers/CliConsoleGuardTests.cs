@@ -542,15 +542,17 @@ internal sealed class DiskRefusingWrites(params int[] refused) : MemoryStream
 /// <summary>
 /// A console that takes every write until one carrying <c>text</c>, and throws on that one,
 /// as a write to a redirected standard output on a full disk does. An empty
-/// <c>text</c> refuses every write: a string, a character, characters from an array, a
-/// span, a string builder and a line break alike. <see cref="Refused"/> counts the writes
-/// it threw on.
+/// <c>text</c> refuses every write it is given: a string, a character, characters from an
+/// array, a span, each chunk of a string builder and a line break alike. <see cref="Refused"/>
+/// counts the writes it threw on.
 /// </summary>
 /// <remarks>
 /// StringWriter writes a span and a string builder straight to its own buffer, so those
 /// overloads are refused here as well as the ones every other write comes down to. A
-/// string builder is written a chunk at a time, as the console's writer writes one, so the
-/// chunks ahead of the one refused are out.
+/// string builder is written a chunk at a time, as the console's writer writes one, and
+/// each chunk is matched on its own: the chunks ahead of the one refused are out, text split
+/// across two chunks is not refused, and a null builder writes nothing and so is not
+/// refused either.
 /// </remarks>
 internal sealed class ConsoleFailingAt(string text) : StringWriter
 {

@@ -132,7 +132,7 @@ public class CliScanNoticeOrderTests
     {
         var scan = EveryNotice();
 
-        var run = await WithTheLogRefusing(entry => !CliRunFixtures.IsSummary(entry), () => Run("/s", scan));
+        var run = await CliRunFixtures.WithTheLogRefusing(entry => !CliRunFixtures.IsSummary(entry), () => Run("/s", scan));
 
         var lines = run.Stdout.Split(Environment.NewLine);
         var lastNotice = Array.FindIndex(lines, l => l.StartsWith(NoticeOpenings(scan)[^1], StringComparison.Ordinal));
@@ -147,7 +147,7 @@ public class CliScanNoticeOrderTests
     [Fact]
     public async Task A_scan_whose_summary_alone_the_log_refused_prints_the_log_note_after_the_list()
     {
-        var run = await WithTheLogRefusing(entry => entry == CliEventClass.Ok, () => Run("/s", EveryNotice()));
+        var run = await CliRunFixtures.WithTheLogRefusing(entry => entry == CliEventClass.Ok, () => Run("/s", EveryNotice()));
 
         var lines = run.Stdout.Split(Environment.NewLine);
         Assert.Equal(1, lines.Count(l => l == Strings.Cli_EventLogUnavailable));
@@ -158,7 +158,7 @@ public class CliScanNoticeOrderTests
     [Fact]
     public async Task A_delete_whose_entries_the_log_refused_prints_the_log_note_once_after_its_result()
     {
-        var run = await WithTheLogRefusing(_ => true, () => Run("/d", EveryNotice()));
+        var run = await CliRunFixtures.WithTheLogRefusing(_ => true, () => Run("/d", EveryNotice()));
 
         var lines = run.Stdout.Split(Environment.NewLine);
         var deleted = Array.FindIndex(lines, l => l.StartsWith(Opening(Strings.Cli_DeletedFiles), StringComparison.Ordinal));
@@ -175,7 +175,7 @@ public class CliScanNoticeOrderTests
     {
         var console = new ConsoleFailingAt(Strings.Cli_EventLogUnavailable);
 
-        var run = await WithTheLogRefusing(entry => entry == CliEventClass.Ok,
+        var run = await CliRunFixtures.WithTheLogRefusing(entry => entry == CliEventClass.Ok,
             () => Run("/s", listsFiles ? EveryNotice() : OffersNothing(), console));
 
         Assert.True(console.Refused > 0, "The console refused no write, so the note never failed.");
@@ -191,7 +191,7 @@ public class CliScanNoticeOrderTests
     {
         var console = new ConsoleFailingAt(Strings.Cli_EventLogUnavailable);
 
-        var run = await WithTheLogRefusing(entry => !CliRunFixtures.IsSummary(entry),
+        var run = await CliRunFixtures.WithTheLogRefusing(entry => !CliRunFixtures.IsSummary(entry),
             () => Run("/s", listsFiles ? EveryNotice() : EveryNotice() with { RemovableFiles = [] }, console));
 
         Assert.True(console.Refused > 0, "The console refused no write, so the note never failed.");
@@ -204,7 +204,7 @@ public class CliScanNoticeOrderTests
     {
         var scan = EveryNotice() with { RemovableFiles = [] };
 
-        var run = await WithTheLogRefusing(entry => !CliRunFixtures.IsSummary(entry), () => Run("/s", scan));
+        var run = await CliRunFixtures.WithTheLogRefusing(entry => !CliRunFixtures.IsSummary(entry), () => Run("/s", scan));
 
         Assert.Equal(CliExitCode.Ok, run.ExitCode);
         var summary = Assert.Single(run.Entries, CliRunFixtures.IsSummary);
@@ -216,39 +216,6 @@ public class CliScanNoticeOrderTests
     }
 
     // ---- fixtures ----
-
-    /// <summary>
-    /// Runs <paramref name="run"/> with an Application log that refuses the entries
-    /// <paramref name="refuses"/> picks, as a log Group Policy or a stopped service refuses,
-    /// and records the rest. A refused entry marks the log unavailable, as a refused write
-    /// to the real log does.
-    /// </summary>
-    private static async Task<RunResult> WithTheLogRefusing(
-        Func<CliEventClass, bool> refuses, Func<Task<RunResult>> run)
-    {
-        // The sink, the flag and the note's latch are process-global; the assembly disables
-        // test parallelisation.
-        var sink = EventLogWriter.Sink;
-        var unavailable = EventLogWriter.EventLogUnavailable;
-        var notePrinted = Program.EventLogNotePrinted;
-        try
-        {
-            EventLogWriter.EventLogUnavailable = false;
-            Program.EventLogNotePrinted = false;
-            EventLogWriter.Sink = (entry, text) =>
-            {
-                if (refuses(entry)) throw new InvalidOperationException("The log refused the entry.");
-                EventLogRecorder.Sink(entry, text);
-            };
-            return await run();
-        }
-        finally
-        {
-            EventLogWriter.Sink = sink;
-            EventLogWriter.EventLogUnavailable = unavailable;
-            Program.EventLogNotePrinted = notePrinted;
-        }
-    }
 
     /// <summary>The opening of the list's last row, which names the second file offered.</summary>
     private static string LastRow => "  " + Offer()[1].FileName + " ";
