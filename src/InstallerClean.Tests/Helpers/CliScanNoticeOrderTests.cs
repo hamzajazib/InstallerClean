@@ -83,7 +83,7 @@ public class CliScanNoticeOrderTests
     [Theory]
     [InlineData("the first notice")]
     [InlineData("the first row")]
-    public async Task A_console_that_fails_while_printing_ends_the_run_on_its_one_summary_with_every_notice_written(
+    public async Task A_scan_whose_output_fails_exits_1_on_one_error_entry_with_every_notice_written(
         string failsAt)
     {
         var console = new ConsoleFailingAt(failsAt == "the first row"
@@ -93,16 +93,38 @@ public class CliScanNoticeOrderTests
         var run = await Run("/s", EveryNotice(), console);
 
         Assert.True(console.Refused > 0, $"The console refused no write, so it never failed at {failsAt}.");
-        Assert.Equal(CliExitCode.Ok, run.ExitCode);
+        Assert.Equal(CliExitCode.Error, run.ExitCode);
         Assert.Contains(run.Entries, entry => entry.Class == CliEventClass.ScanNothingOfferedNotice);
         Assert.Contains(run.Entries, entry => entry.Class == CliEventClass.SourcesGivenUpNotice);
         Assert.Contains(run.Entries, entry => entry.Class == CliEventClass.ScanSupersededHeldBackNotice);
         Assert.Contains(run.Entries, entry => entry.Class == CliEventClass.ScanMissingFilesNotice);
-        var summary = Assert.Single(run.Entries, entry => entry.Class is CliEventClass.Ok
-            or CliEventClass.Partial or CliEventClass.TransientSkip or CliEventClass.HardError);
+        AssertEndsOnTheErrorForTheFailedWrite(run);
+    }
+
+    [Fact]
+    public async Task A_scan_that_offers_nothing_and_whose_output_fails_exits_1_on_one_error_entry()
+    {
+        var console = new ConsoleFailingAt(Strings.Cli_FoundNoOrphans);
+
+        var run = await Run("/s", new ScanResult(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0), console);
+
+        Assert.True(console.Refused > 0, "The console refused no write.");
+        Assert.Equal(CliExitCode.Error, run.ExitCode);
+        AssertEndsOnTheErrorForTheFailedWrite(run);
+    }
+
+    [Fact]
+    public async Task A_delete_that_has_nothing_to_delete_and_whose_output_fails_exits_as_that_delete()
+    {
+        var console = new ConsoleFailingAt(Strings.Cli_FoundNoOrphans);
+
+        var run = await Run("/d", new ScanResult(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0), console);
+
+        Assert.True(console.Refused > 0, "The console refused no write.");
+        Assert.Equal(CliExitCode.Ok, run.ExitCode);
+        var summary = Assert.Single(run.Entries, IsOutcome);
         Assert.Equal(CliEventClass.Ok, summary.Class);
-        Assert.Equal(MachineContract.English(() => string.Format(Strings.Cli_EventLogScanFound,
-            "/s", 2, DisplayHelpers.PluraliseFile(2), DisplayHelpers.FormatSizeForMachine(2048))), summary.Text);
+        Assert.Equal(MachineContract.English(() => string.Format(Strings.Cli_EventLogScanNoOrphans, "/d")), summary.Text);
     }
 
     // ---- fixtures ----
@@ -151,12 +173,40 @@ public class CliScanNoticeOrderTests
         UnderADayOldReport.Line(scan, TimeZoneInfo.Local),
     ];
 
+    /// <summary>
+    /// The run's one outcome entry is the HardError the catch-all writes for the guard's first
+    /// failed write, naming the crash.log entry the guard made, and the last line printed is
+    /// the catch-all's own, on a line of its own.
+    /// </summary>
+    private static void AssertEndsOnTheErrorForTheFailedWrite(RunResult run)
+    {
+        var failure = run.Failure ?? throw new Xunit.Sdk.XunitException("The guard recorded no failed write.");
+        var (crashPath, written) = failure.CrashLog;
+        var typeName = failure.Exception.GetType().Name;
+        var summary = Assert.Single(run.Entries, IsOutcome);
+        Assert.Equal(CliEventClass.HardError, summary.Class);
+        Assert.Equal(MachineContract.English(() => written
+            ? string.Format(Strings.Cli_EventLogHardError, "/s", typeName, crashPath)
+            : string.Format(Strings.Cli_EventLogHardError_NoLog, "/s", typeName)), summary.Text);
+
+        var lines = run.Stdout.Split(Environment.NewLine);
+        Assert.Equal(written
+            ? string.Format(Strings.Cli_GenericError, typeName, crashPath)
+            : string.Format(Strings.Cli_GenericError_NoLog, typeName), lines[^2]);
+        Assert.Equal(string.Empty, lines[^1]);
+    }
+
+    private static bool IsOutcome((CliEventClass Class, string Text) entry) =>
+        entry.Class is CliEventClass.Ok or CliEventClass.Partial
+            or CliEventClass.TransientSkip or CliEventClass.HardError;
+
     // A sentence's words up to its first placeholder, which no name or count changes.
     private static string Opening(string value) =>
         value.Contains('{') ? value[..value.IndexOf('{')] : value;
 
     private sealed record RunResult(
-        int ExitCode, string Stdout, IReadOnlyList<(CliEventClass Class, string Text)> Entries);
+        int ExitCode, string Stdout, IReadOnlyList<(CliEventClass Class, string Text)> Entries,
+        OutputFailure? Failure);
 
     private static async Task<RunResult> Run(string arg, ScanResult result, StringWriter? console = null)
     {
@@ -197,10 +247,12 @@ public class CliScanNoticeOrderTests
         using var buffer = console ?? new StringWriter();
         try
         {
-            Console.SetOut(console is null ? buffer : new ConsoleGuard(buffer));
+            var guard = console is null ? null : new ConsoleGuard(buffer);
+            Console.SetOut(guard ?? (TextWriter)buffer);
             EventLogRecorder.Clear();
-            var exitCode = await Program.RunWorkAsync(arg, invocation, CancellationToken.None, services);
-            return new RunResult(exitCode, buffer.ToString(), EventLogRecorder.Entries);
+            var exitCode = await Program.RunWorkAsync(
+                arg, invocation, CancellationToken.None, services, output: guard);
+            return new RunResult(exitCode, buffer.ToString(), EventLogRecorder.Entries, guard?.FirstFailure);
         }
         finally
         {

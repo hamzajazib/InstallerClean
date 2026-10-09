@@ -234,21 +234,49 @@ public class CliConsoleGuardTests
 
     // ---- Main ----
 
-    [Fact]
-    public void Main_puts_the_run_s_output_behind_the_guard()
+    [Theory]
+    [InlineData("--version")]
+    [InlineData("--help")]
+    public void A_help_or_version_request_whose_output_fails_exits_1_and_writes_no_entry(string arg)
     {
-        // --version prints and exits Ok, and writes no entry, so a failed write that got
-        // past the guard would show as the catch-all's ExitError.
+        // Through Main, which puts the output behind the guard. A failed write that got past
+        // the guard would reach Main's catch-all, which writes a HardError entry.
         var console = new ConsoleFailingAt("");
         var original = Console.Out;
         try
         {
             Console.SetOut(console);
+            EventLogRecorder.Clear();
 
-            var exitCode = Program.Main(["--version"]);
+            var exitCode = Program.Main([arg]);
 
             Assert.True(console.Refused > 0, "The console refused no write.");
+            Assert.Equal(CliExitCode.Error, exitCode);
+            Assert.Empty(EventLogRecorder.Entries);
+        }
+        finally
+        {
+            Console.SetOut(original);
+        }
+    }
+
+    [Theory]
+    [InlineData("--version")]
+    [InlineData("--help")]
+    public void A_help_or_version_request_whose_output_is_written_exits_0(string arg)
+    {
+        var console = new StringWriter();
+        var original = Console.Out;
+        try
+        {
+            Console.SetOut(console);
+            EventLogRecorder.Clear();
+
+            var exitCode = Program.Main([arg]);
+
+            Assert.NotEqual(string.Empty, console.ToString());
             Assert.Equal(CliExitCode.Ok, exitCode);
+            Assert.Empty(EventLogRecorder.Entries);
         }
         finally
         {
@@ -285,9 +313,10 @@ public class CliConsoleGuardTests
         var original = Console.Out;
         try
         {
-            Console.SetOut(new ConsoleGuard(console));
+            var guard = new ConsoleGuard(console);
+            Console.SetOut(guard);
             EventLogRecorder.Clear();
-            var exitCode = await Program.RunWorkAsync(arg, invocation, token, services, () => false);
+            var exitCode = await Program.RunWorkAsync(arg, invocation, token, services, () => false, guard);
             return new RunResult(exitCode, console.Refused, EventLogRecorder.Entries);
         }
         finally

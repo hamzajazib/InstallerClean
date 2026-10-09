@@ -39,8 +39,11 @@ internal sealed class ConsoleGuard(TextWriter inner) : TextWriter
     /// </summary>
     private bool _lineCut;
 
+    /// <summary>The first write that failed, or null where every write has gone through.</summary>
+    internal OutputFailure? FirstFailure { get; private set; }
+
     /// <summary>Whether any write has failed.</summary>
-    internal bool Failed { get; private set; }
+    internal bool Failed => FirstFailure is not null;
 
     public override Encoding Encoding => inner.Encoding;
 
@@ -94,7 +97,12 @@ internal sealed class ConsoleGuard(TextWriter inner) : TextWriter
     {
         _lineCut = true;
         if (Failed) return;
-        Failed = true;
-        CrashLog.TryWrite(ex);
+        FirstFailure = new OutputFailure(ex, CrashLog.TryWrite(ex));
     }
 }
+
+/// <summary>
+/// A write to the run's output that failed: the exception it threw, and where crash.log
+/// recorded it, if it could.
+/// </summary>
+internal sealed record OutputFailure(Exception Exception, (string Path, bool Written) CrashLog);

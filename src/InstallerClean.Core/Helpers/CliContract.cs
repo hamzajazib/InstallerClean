@@ -13,10 +13,16 @@ namespace InstallerClean.Helpers;
 /// </summary>
 internal enum CliCommand
 {
-    /// <summary>An explicit help request (<c>--help</c>, <c>/?</c>, <c>-h</c>): print usage and exit Ok.</summary>
+    /// <summary>
+    /// An explicit help request (<c>--help</c>, <c>/?</c>, <c>-h</c>): print usage, and exit Ok
+    /// where all of it was written and Error where a write failed.
+    /// </summary>
     Help,
 
-    /// <summary>A version request (<c>--version</c>, <c>-v</c>): print the version and exit Ok.</summary>
+    /// <summary>
+    /// A version request (<c>--version</c>, <c>-v</c>): print the version, and exit Ok where it
+    /// was written and Error where the write failed.
+    /// </summary>
     Version,
 
     /// <summary><c>/s</c>: scan and list removable files, read-only.</summary>
@@ -71,13 +77,16 @@ internal readonly record struct CliInvocation(
 internal static class CliExitCode
 {
     /// <summary>
-    /// 0: the run did what it was asked and nothing in it failed.
+    /// 0: the run did what it was asked.
     ///
     /// FIVE RUNS REACH IT, AND THREE OF THEM PROCESS NOTHING. <c>/?</c> and
     /// <c>--version</c> print and stop, and a scan-only run processes nothing at all,
-    /// whether it listed sixty-eight files or none. Only a delete or a move batch
-    /// processes anything, and it takes this code when no file in it errored
-    /// (<see cref="CliContract.ClassifyFileOperation"/>).
+    /// whether it listed sixty-eight files or none. What those three are asked for is
+    /// their output, so each takes this code only where every write to it went through,
+    /// and <see cref="Error"/> where one failed. Only a delete or a move batch processes
+    /// anything, and it takes this code when no file in it errored
+    /// (<see cref="CliContract.ClassifyFileOperation"/>), whatever became of its output:
+    /// what it is asked for is the files.
     ///
     /// SO IT NAMES WHAT THE FIVE SHARE AND NO CAUSE. A cause would be false of some
     /// of them, and what they share is the whole of what may be said about them
@@ -95,8 +104,10 @@ internal static class CliExitCode
 
     /// <summary>
     /// 1: nothing was accomplished. A scan that threw, a malformed or absent
-    /// argument, a batch in which every file failed, or a run the app declined to
-    /// perform at all. Distinct from <see cref="Partial"/> so a retry policy can
+    /// argument, a batch in which every file failed, a run the app declined to
+    /// perform at all, or a help request, a version request or a scan-only run
+    /// whose output was not all written, its output being what each of those is
+    /// asked for. Distinct from <see cref="Partial"/> so a retry policy can
     /// treat total failure differently from a run that did part of the work.
     ///
     /// A REFUSAL IS NOT A FAILURE AND SHARES THIS CODE ANYWAY, which is worth

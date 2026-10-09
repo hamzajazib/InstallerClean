@@ -47,12 +47,15 @@ internal static class Program
         //
         // EVERYTHING THE RUN PRINTS GOES THROUGH ConsoleGuard, installed after the
         // code page is set. A write that fails loses its own text and never ends the
-        // run, so no failed write reaches this catch-all or the work loop's.
+        // run, so no failed write reaches this catch-all or the work loop's. Run is
+        // handed the guard, so a run whose product is its output can answer for a
+        // write that failed.
         var previousOutputEncoding = TrySetUtf8Output();
         try
         {
-            Console.SetOut(new ConsoleGuard(Console.Out));
-            return Run(args);
+            var output = new ConsoleGuard(Console.Out);
+            Console.SetOut(output);
+            return Run(args, output);
         }
         catch (Exception ex)
         {
@@ -120,7 +123,7 @@ internal static class Program
         }
     }
 
-    private static int Run(string[] args)
+    private static int Run(string[] args, ConsoleGuard output)
     {
         // Human-facing stdout follows the OS UI culture: Italian on an Italian
         // machine, Japanese on a Japanese one; a locale with no satellite falls
@@ -137,12 +140,14 @@ internal static class Program
         var invocation = CliContract.ParseArguments(args);
         switch (invocation.Command)
         {
+            // What help and version are asked for is their output, so a write to it that
+            // failed fails the run. Neither writes an Application-log entry either way.
             case CliCommand.Help:
                 PrintUsage();
-                return ExitOk;
+                return output.Failed ? ExitError : ExitOk;
             case CliCommand.Version:
                 PrintVersion();
-                return ExitOk;
+                return output.Failed ? ExitError : ExitOk;
             case CliCommand.NoArguments:
                 // An argless run is a misconfiguration, most often a scheduled
                 // task that dropped its flag. Print usage like --help but exit
@@ -291,7 +296,7 @@ internal static class Program
             // AbandonedMutexException path. A console Main has no
             // SynchronizationContext, so GetResult here cannot deadlock
             // on captured-context resumption.
-            return RunWorkAsync(arg, invocation, cts.Token).GetAwaiter().GetResult();
+            return RunWorkAsync(arg, invocation, cts.Token, output: output).GetAwaiter().GetResult();
         }
         finally
         {
@@ -479,9 +484,15 @@ internal static class Program
     /// on every production path. A test passes its own answer, standard output being
     /// redirected under a test runner.
     /// </param>
+    /// <param name="output">
+    /// The guard <see cref="Main"/> put the run's output behind, which a scan-only run reads
+    /// to answer for a write that failed. Null only where a caller installed no guard, and
+    /// then no failed write is read.
+    /// </param>
     internal static async Task<int> RunWorkAsync(
         string arg, CliInvocation invocation, CancellationToken token,
-        IServiceProvider? servicesOverride = null, Func<bool>? consoleWatched = null)
+        IServiceProvider? servicesOverride = null, Func<bool>? consoleWatched = null,
+        ConsoleGuard? output = null)
     {
         consoleWatched ??= ConsoleIsWatched;
 
@@ -625,7 +636,7 @@ internal static class Program
                 // standing clear of the ragged name ends above it. This is the
                 // output most likely to be pasted into a ticket.
                 var nameColumn = scanResult.RemovableFiles.Max(f => f.FileName.Length) + 2;
-                var output = new List<string>(notices)
+                var listing = new List<string>(notices)
                 {
                     FoundLine(),
                     string.Join(Environment.NewLine,
@@ -633,25 +644,28 @@ internal static class Program
                             $"  {f.FileName.PadRight(nameColumn)}  ({f.SizeDisplay}, {f.Reason})")),
                 };
 
-                // EVERY LINE IS BUILT BEFORE THE SUMMARY IS WRITTEN, AND THE SUMMARY IS WRITTEN
-                // BEFORE ANY LINE IS PRINTED, so this run writes one summary however its output
-                // ends. A line that cannot be built, a translation whose placeholders do not
-                // match its arguments for example, throws ahead of the summary, and the
-                // catch-all's entry is the run's one. Building a line after the summary would
-                // let such a fault write a HardError entry beside it, and one summary per run is
-                // what an RMM counts runs by. A write that fails, such as a redirect to a full
-                // disk, loses its own text and does not end the run (ConsoleGuard), and the run
-                // ends on the summary with ExitOk.
+                // EVERY LINE IS BUILT AND PRINTED BEFORE THE SUMMARY IS WRITTEN, so the summary
+                // says whether the list got out. What a scan-only run is asked for is its
+                // output, so a write to it that failed, such as a redirect to a full disk, fails
+                // the run: the summary is the HardError entry the catch-all writes for the
+                // guard's first failed write, the catch-all's line follows the list, and the run
+                // exits 1. Otherwise the summary is the Ok entry and the run exits 0. One entry
+                // either way, and one summary per run is what an RMM counts runs by. A line that
+                // cannot be built, a translation whose placeholders do not match its arguments
+                // for example, throws before the list is printed, and the catch-all's entry is
+                // the run's one.
                 //
                 // The noun and size are recomputed inside the en-GB scope rather than reusing
                 // the human-facing `size` (which is in the OS region and grouped), so this
                 // audit line reads fully English and carries the size in the form tooling
                 // reads.
+                listing.ForEach(Console.WriteLine);
+                if (output?.FirstFailure is { } listingFailure)
+                    return ReportUnexpectedError(arg, listingFailure.Exception, listingFailure.CrashLog);
                 MachineContract.WriteEventLog(CliEventClass.Ok,
                     () => string.Format(Strings.Cli_EventLogScanFound,
                         arg, count, DisplayHelpers.PluraliseFile(count),
                         DisplayHelpers.FormatSizeForMachine(totalBytes)));
-                output.ForEach(Console.WriteLine);
                 return ExitOk;
             }
 
@@ -672,6 +686,12 @@ internal static class Program
 
             if (count == 0)
             {
+                // A scan-only run whose output failed fails, as the listing branch above
+                // says. A Delete or Move that found nothing to act on exits as that Delete or
+                // Move, which is what it was asked for, whatever became of its output.
+                if (arg == "/s" && output?.FirstFailure is { } scanFailure)
+                    return ReportUnexpectedError(arg, scanFailure.Exception, scanFailure.CrashLog);
+
                 // The audit line follows the same split as stdout, so a monitoring
                 // tool watching the Application channel is not told a machine is
                 // clean when the scan could not judge it. The first machine takes the
@@ -1560,9 +1580,17 @@ internal static class Program
     /// <see cref="CrashLog.TryWrite"/> and <see cref="EventLogWriter"/> both
     /// swallow their own IO).
     /// </summary>
-    private static int ReportUnexpectedError(string mode, Exception ex)
+    private static int ReportUnexpectedError(string mode, Exception ex) =>
+        ReportUnexpectedError(mode, ex, Helpers.CrashLog.TryWrite(ex));
+
+    /// <summary>
+    /// <see cref="ReportUnexpectedError(string, Exception)"/> for an exception crash.log has
+    /// already been given, <paramref name="crash"/> being where it went, so the exception
+    /// is not recorded twice. A scan-only run whose output failed reports through here with
+    /// the guard's first failed write.
+    /// </summary>
+    private static int ReportUnexpectedError(string mode, Exception ex, (string Path, bool Written) crash)
     {
-        var crash = Helpers.CrashLog.TryWrite(ex);
         var typeName = ex.GetType().Name;
         try
         {
