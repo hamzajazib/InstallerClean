@@ -120,7 +120,8 @@ public class ResultLogEntryTests
         SecondCopyUnseenSourcesGivenUpCount: 0,
         SecondCopyUnseenSourceNotRuledOutCount: 0,
         SecondCopyUnseenPerMachineCount: 0,
-        SecondCopyUnseenByNameFileCount: 0);
+        SecondCopyUnseenByNameFileCount: 0,
+        SecondCopyReleasedOpensNoPackageCount: 0);
 
     private static MachineInfo SampleMachine() => new(
         ShortNameCreation: ShortNameCreationLabels.NoVolumes,
@@ -201,7 +202,8 @@ public class ResultLogEntryTests
         // does not know goes to its lenient v<n>-unknown/ path. So a key added to or taken
         // from what a version carries moves the version once a release sends it, and this
         // pin makes that move a deliberate, reviewed act. Schema 7 is schema 6 with
-        // windowsRegion appended under app.
+        // windowsRegion appended under app and secondCopyReleasedOpensNoPackageCount under
+        // scan.
         Assert.Equal(7, ResultLogEntry.CurrentSchemaVersion);
     }
 
@@ -362,6 +364,9 @@ public class ResultLogEntryTests
                 "secondCopyUnseenPerUserUnmanagedCount", "secondCopyUnseenSourcesGivenUpCount",
                 "secondCopyUnseenSourceNotRuledOutCount", "secondCopyUnseenPerMachineCount",
                 "secondCopyUnseenByNameFileCount",
+                // And the installations it found with no package for Windows Installer to
+                // open, which set no hold.
+                "secondCopyReleasedOpensNoPackageCount",
             ],
             root.GetProperty("scan").EnumerateObject().Select(p => p.Name));
 
@@ -623,7 +628,7 @@ public class ResultLogEntryTests
     [Fact]
     public void What_the_screen_found_of_the_installations_travels_member_by_member()
     {
-        // Twenty-three ints in a row, each given a different value, so an argument that lands on
+        // The census's ints in a row, each given a different value, so an argument that lands on
         // its neighbour's key fails here rather than sending one count under another's name.
         var scan = new ScanResult(
             Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
@@ -634,12 +639,13 @@ public class ResultLogEntryTests
                 ReleasedOrdinary: 10, UnruledChecked: 11, UnseenPathUnreadable: 12, UnseenNoneRecorded: 13,
                 UnseenNotThere: 14, UnseenWouldNotIdentify: 15, UnseenWouldNotRead: 16,
                 UnseenNoProductCode: 17, UnseenPerUserUnmanaged: 18, UnseenSourcesGivenUp: 19,
-                UnseenSourceNotRuledOut: 20, UnseenPerMachine: 21, UnseenByNameFiles: 22));
+                UnseenSourceNotRuledOut: 20, UnseenPerMachine: 21, UnseenByNameFiles: 22,
+                ReleasedOpensNoPackage: 23));
 
         var info = ScanInfo.From(scan, 10);
 
         Assert.Equal(
-            [64, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
+            [64, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
             [
                 info.SecondCopyListedCheckedCount, info.SecondCopyKeepPathUnreadableCount,
                 info.SecondCopyKeepNoneRecordedCount, info.SecondCopyKeepNotThereCount,
@@ -653,6 +659,7 @@ public class ResultLogEntryTests
                 info.SecondCopyUnseenNoProductCodeCount, info.SecondCopyUnseenPerUserUnmanagedCount,
                 info.SecondCopyUnseenSourcesGivenUpCount, info.SecondCopyUnseenSourceNotRuledOutCount,
                 info.SecondCopyUnseenPerMachineCount, info.SecondCopyUnseenByNameFileCount,
+                info.SecondCopyReleasedOpensNoPackageCount,
             ]);
 
         using var doc = JsonDocument.Parse(JsonSerializer.Serialize(info, JsonOptions));
@@ -662,10 +669,11 @@ public class ResultLogEntryTests
         Assert.Equal(11, doc.RootElement.GetProperty("secondCopyUnruledCheckedCount").GetInt32());
         Assert.Equal(21, doc.RootElement.GetProperty("secondCopyUnseenPerMachineCount").GetInt32());
         Assert.Equal(22, doc.RootElement.GetProperty("secondCopyUnseenByNameFileCount").GetInt32());
+        Assert.Equal(23, doc.RootElement.GetProperty("secondCopyReleasedOpensNoPackageCount").GetInt32());
     }
 
     [Fact]
-    public void A_scan_whose_screen_looked_at_no_installation_sends_twenty_three_zeros()
+    public void A_scan_whose_screen_looked_at_no_installation_sends_a_zero_for_every_census_count()
     {
         var info = ScanInfo.From(
             new ScanResult(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0), 10);
@@ -684,6 +692,7 @@ public class ResultLogEntryTests
                 info.SecondCopyUnseenNoProductCodeCount, info.SecondCopyUnseenPerUserUnmanagedCount,
                 info.SecondCopyUnseenSourcesGivenUpCount, info.SecondCopyUnseenSourceNotRuledOutCount,
                 info.SecondCopyUnseenPerMachineCount, info.SecondCopyUnseenByNameFileCount,
+                info.SecondCopyReleasedOpensNoPackageCount,
             ],
             count => Assert.Equal(0, count));
     }

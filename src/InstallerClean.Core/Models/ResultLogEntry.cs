@@ -92,10 +92,15 @@ public sealed record ResultLogEntry(
     /// SCHEMA 6 ADDS TWENTY-THREE KEYS UNDER <c>scan</c> AND TAKES NONE AWAY: what the
     /// declared-product screen found of the two conditions under which it holds back every
     /// installation package it would otherwise let through
-    /// (<see cref="ScanInfo.SecondCopyListedCheckedCount"/> and the twenty-two after it).
+    /// (<see cref="ScanInfo.SecondCopyListedCheckedCount"/> to
+    /// <see cref="ScanInfo.SecondCopyUnseenByNameFileCount"/>).
     ///
-    /// SCHEMA 7 ADDS ONE KEY UNDER <c>app</c> AND TAKES NONE AWAY: <c>windowsRegion</c>,
-    /// the Country or region set in Windows (<see cref="AppInfo.WindowsRegion"/>).
+    /// SCHEMA 7 ADDS ONE KEY UNDER <c>app</c> AND ONE UNDER <c>scan</c> AND TAKES NONE AWAY:
+    /// <c>windowsRegion</c>, the Country or region set in Windows
+    /// (<see cref="AppInfo.WindowsRegion"/>), and
+    /// <c>secondCopyReleasedOpensNoPackageCount</c>, the installations the declared-product
+    /// screen found with no package for Windows Installer to open
+    /// (<see cref="ScanInfo.SecondCopyReleasedOpensNoPackageCount"/>).
     ///
     /// A receiver that does not recognise a version stores the report under a
     /// lenient v&lt;n&gt;-unknown/ prefix rather than rejecting it, so a bump
@@ -1131,9 +1136,9 @@ public sealed record MachineInfo(
 /// The listed installations whose cached package the declared-product screen looked for in
 /// this scan (<see cref="CachedPackageCensus.ListedChecked"/>): every one, once, where an
 /// installation package reached that step, and none where none did. Off
-/// <see cref="ScanResult.CachedPackageCensus"/>, as are the twenty-two after it.
+/// <see cref="ScanResult.CachedPackageCensus"/>, as is every key after it.
 ///
-/// THE TWENTY-THREE ARE APPENDED LAST, for the reason the members before them were. Counts
+/// THEY ARE APPENDED LAST, for the reason the members before them were. Counts
 /// of installations and of files, and nothing naming one.
 /// </param>
 /// <param name="SecondCopyKeepPathUnreadableCount">
@@ -1231,6 +1236,17 @@ public sealed record MachineInfo(
 /// could not be ruled out. Each is also counted in
 /// <paramref name="WithheldSecondCopyUnestablishedCount"/>.
 /// </param>
+/// <param name="SecondCopyReleasedOpensNoPackageCount">
+/// Installations whose cached package did not say which product it declares and whose own
+/// record does not show an ordinary installation, which do not set the hold because Windows
+/// Installer has no package to open for them: per machine, recording no cached package, and
+/// with no source list, by the API's answer and in the registry alike
+/// (<see cref="CachedPackageCensus.ReleasedOpensNoPackage"/>). Each is also counted in
+/// <paramref name="SecondCopyListedCheckedCount"/>, and in none of the keys from
+/// <paramref name="SecondCopyKeepPathUnreadableCount"/> to
+/// <paramref name="SecondCopyReleasedOrdinaryCount"/>. Counted where the screen reads them,
+/// before any file's verdict.
+/// </param>
 public sealed record ScanInfo(
     long DurationMs,
     int RegisteredCount,
@@ -1299,7 +1315,8 @@ public sealed record ScanInfo(
     int SecondCopyUnseenSourcesGivenUpCount,
     int SecondCopyUnseenSourceNotRuledOutCount,
     int SecondCopyUnseenPerMachineCount,
-    int SecondCopyUnseenByNameFileCount)
+    int SecondCopyUnseenByNameFileCount,
+    int SecondCopyReleasedOpensNoPackageCount)
 {
     public static ScanInfo From(ScanResult scan, long durationMs)
     {
@@ -1415,7 +1432,8 @@ public sealed record ScanInfo(
             cachedPackages.UnseenSourcesGivenUp,
             cachedPackages.UnseenSourceNotRuledOut,
             cachedPackages.UnseenPerMachine,
-            cachedPackages.UnseenByNameFiles);
+            cachedPackages.UnseenByNameFiles,
+            cachedPackages.ReleasedOpensNoPackage);
     }
 }
 
