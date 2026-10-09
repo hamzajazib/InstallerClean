@@ -413,7 +413,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             decided.TrySetResult();
 
             if (carriesReport)
-                await Completion.WriteReportAsync(ResultLogEntry.ForScanOnly(result, Scan.LastScanDurationMs));
+                await Completion.WriteReportAsync(
+                    ResultLogEntry.ForScanOnly(result, Scan.LastScanDurationMs, Completion.ReportRegion));
         }
         catch (Exception ex)
         {

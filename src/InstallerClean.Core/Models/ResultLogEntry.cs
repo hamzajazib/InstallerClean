@@ -94,6 +94,9 @@ public sealed record ResultLogEntry(
     /// installation package it would otherwise let through
     /// (<see cref="ScanInfo.SecondCopyListedCheckedCount"/> and the twenty-two after it).
     ///
+    /// SCHEMA 7 ADDS ONE KEY UNDER <c>app</c> AND TAKES NONE AWAY: <c>windowsRegion</c>,
+    /// the Country or region set in Windows (<see cref="AppInfo.WindowsRegion"/>).
+    ///
     /// A receiver that does not recognise a version stores the report under a
     /// lenient v&lt;n&gt;-unknown/ prefix rather than rejecting it, so a bump
     /// never loses data even if the allowlist has not caught up. THAT LENIENCE
@@ -102,12 +105,14 @@ public sealed record ResultLogEntry(
     /// <c>machine</c> arriving before the receiving end knows the name is a
     /// rejected report and a user told sending failed. The receiver ships first.
     /// </summary>
-    public const int CurrentSchemaVersion = 6;
+    public const int CurrentSchemaVersion = 7;
 
-    public static ResultLogEntry ForScanOnly(ScanResult scan, long scanDurationMs) =>
+    // Each factory takes windowsRegion as IWindowsRegion.Read returned it for the
+    // report box, so the report carries the value the box started from.
+    public static ResultLogEntry ForScanOnly(ScanResult scan, long scanDurationMs, string? windowsRegion) =>
         new(
             CurrentSchemaVersion,
-            AppInfo.Current(),
+            AppInfo.Current(windowsRegion),
             ResolveOs(),
             MachineInfo.From(scan),
             ScanInfo.From(scan, scanDurationMs),
@@ -120,10 +125,11 @@ public sealed record ResultLogEntry(
         long bytesFreed,
         long operationDurationMs,
         string moveDestinationKind,
-        ReverifyResult check) =>
+        ReverifyResult check,
+        string? windowsRegion) =>
         new(
             CurrentSchemaVersion,
-            AppInfo.Current(),
+            AppInfo.Current(windowsRegion),
             ResolveOs(),
             MachineInfo.From(scan),
             ScanInfo.From(scan, scanDurationMs),
@@ -135,10 +141,11 @@ public sealed record ResultLogEntry(
         DeleteResult delete,
         long bytesFreed,
         long operationDurationMs,
-        ReverifyResult check) =>
+        ReverifyResult check,
+        string? windowsRegion) =>
         new(
             CurrentSchemaVersion,
-            AppInfo.Current(),
+            AppInfo.Current(windowsRegion),
             ResolveOs(),
             MachineInfo.From(scan),
             ScanInfo.From(scan, scanDurationMs),
@@ -172,8 +179,8 @@ public sealed record ResultLogEntry(
 }
 
 /// <summary>
-/// Which build produced the report, which language its user was reading, and which
-/// language Windows was showing them.
+/// Which build produced the report, which language its user was reading, which
+/// language Windows was showing them, and the Country or region set in Windows.
 /// </summary>
 /// <param name="Language">
 /// The language the app was showing for this run: one of
@@ -199,17 +206,29 @@ public sealed record ResultLogEntry(
 /// BESIDE <paramref name="Language"/>, THE PAIR SAYS WHO READ THE APP IN A LANGUAGE
 /// OTHER THAN THE ONE WINDOWS SHOWS: a machine showing Windows in Czech and the app in
 /// English is somebody the app has no translation for. It names a language and never a
-/// country, so it narrows nobody either.
+/// country.
 /// </param>
-public sealed record AppInfo(string Version, string Language, string WindowsLanguage)
+/// <param name="WindowsRegion">
+/// The Country or region set in Windows for the account running the app, the value
+/// <see cref="IWindowsRegion.Read"/> gave when the report box was put on the card and
+/// <see cref="ReportBoxRegions.StartsTicked"/> decided the box's starting state from, in
+/// the shape <see cref="WindowsRegionLabel.For"/> gives it: an ISO 3166-1 two-letter code,
+/// a UN M.49 number, or one of two fixed labels.
+/// </param>
+public sealed record AppInfo(string Version, string Language, string WindowsLanguage, string WindowsRegion)
 {
-    public static AppInfo Current() =>
+    /// <summary>
+    /// This build and this user's languages, with <paramref name="windowsRegion"/>, a value
+    /// <see cref="IWindowsRegion.Read"/> returned.
+    /// </summary>
+    public static AppInfo Current(string? windowsRegion) =>
         new(Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0",
             // The UI culture rather than the format culture, resolved to the
             // language whose strings were shown: a UI culture with no satellite of
             // its own, the invariant culture included, shows the neutral English.
             SupportedLanguages.Active(Localisation.UiCulture),
-            WindowsDisplayLanguage.Current());
+            WindowsDisplayLanguage.Current(),
+            WindowsRegionLabel.For(windowsRegion));
 }
 
 /// <summary>

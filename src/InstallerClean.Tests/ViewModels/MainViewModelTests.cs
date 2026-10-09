@@ -3101,6 +3101,47 @@ public class MainViewModelTests
             Arg.Any<CancellationToken>());
     }
 
+    [Theory]
+    [InlineData(OperationKinds.Move)]
+    [InlineData(OperationKinds.Delete)]
+    public async Task A_Move_or_Delete_report_carries_the_region_the_box_started_from(string kind)
+    {
+        var vm = CreateViewModel();
+        _windowsRegion.Read().Returns("NO");
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2));
+        _moveService.MoveFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new MoveResult(2, Array.Empty<FileOperationError>()));
+        _deleteService.DeleteFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new DeleteResult(2, Array.Empty<FileOperationError>()));
+        _confirmationService.ConfirmMove(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
+        _resultLogService.WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(true));
+
+        await vm.Scan.ScanWithProgressAsync(null);
+        if (kind == OperationKinds.Move)
+        {
+            vm.Cleanup.MoveDestination = Path.Combine(Path.GetTempPath(), "ic-test-move-region");
+            await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+        }
+        else
+        {
+            await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+        }
+
+        Assert.True(vm.Completion.OffersReport);
+        Assert.False(vm.Completion.SendsReport);
+        await _resultLogService.Received(1).WriteAsync(
+            Arg.Is<ResultLogEntry>(e => e.Operation.Kind == kind && e.App.WindowsRegion == "NO"),
+            Arg.Any<CancellationToken>());
+    }
+
     [Fact]
     public async Task DeleteAllAsync_a_batch_the_service_empties_reports_nothing_deleted_and_logs_nothing()
     {
@@ -3777,12 +3818,13 @@ public class MainViewModelTests
     }
 
     [Theory]
-    [InlineData("DE", false)]
-    [InlineData("GB", true)]
-    [InlineData("US", true)]
-    [InlineData("419", false)]
-    [InlineData(null, false)]
-    public async Task The_box_starts_the_way_Windows_Country_or_region_says(string? region, bool ticked)
+    [InlineData("DE", false, "DE")]
+    [InlineData("GB", true, "GB")]
+    [InlineData("US", true, "US")]
+    [InlineData("419", false, "419")]
+    [InlineData(null, false, WindowsRegionLabel.Unreadable)]
+    public async Task The_box_starts_the_way_Windows_Country_or_region_says_and_the_report_carries_it(
+        string? region, bool ticked, string reported)
     {
         var vm = FirstRunAllClear(region);
 
@@ -3790,6 +3832,22 @@ public class MainViewModelTests
 
         Assert.True(vm.Completion.OffersReport);
         Assert.Equal(ticked, vm.Completion.SendsReport);
+        await _resultLogService.Received(1).WriteAsync(
+            Arg.Is<ResultLogEntry>(e => e.App.WindowsRegion == reported), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task The_report_carries_the_region_the_box_started_from_not_a_later_read()
+    {
+        var vm = FirstRunAllClear("GB");
+        _windowsRegion.Read().Returns("GB", "DE");
+
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+
+        Assert.True(vm.Completion.SendsReport);
+        await _resultLogService.Received(1).WriteAsync(
+            Arg.Is<ResultLogEntry>(e => e.App.WindowsRegion == "GB"), Arg.Any<CancellationToken>());
+        _windowsRegion.Received(1).Read();
     }
 
     [Fact]

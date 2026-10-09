@@ -15,10 +15,10 @@ namespace InstallerClean.Tests.Models;
 /// production unnoticed until the aggregator started returning zero
 /// totals.
 ///
-/// That receiver allowlists every key at every object level, so a field this
-/// side renames is not a mismatch anybody sees: the report is accepted, the key
-/// is dropped, and the series simply stops. Hence the whole-payload pin below
-/// rather than a test per interesting field.
+/// That receiver allowlists every key at every object level and, from schema 4,
+/// requires every count a version carries, so a field this side renames or
+/// stops sending is a 400 for the whole report. Hence the whole-payload pin
+/// below rather than a test per interesting field.
 /// </summary>
 public class ResultLogEntryTests
 {
@@ -167,7 +167,7 @@ public class ResultLogEntryTests
 
     private static ResultLogEntry SampleEntry() => new(
         SchemaVersion: ResultLogEntry.CurrentSchemaVersion,
-        App: new AppInfo("1.8.0", "en-GB", "en"),
+        App: new AppInfo("1.8.0", "en-GB", "en", "GB"),
         Os: "Windows 11 (X64)",
         Machine: SampleMachine(),
         Scan: SampleScan(),
@@ -194,25 +194,26 @@ public class ResultLogEntryTests
     }
 
     [Fact]
-    public void Schema_version_is_six()
+    public void Schema_version_is_seven()
     {
         // The receiving Edge Function field-validates per version and holds each version a
         // release sends to its exact set of keys, every count in it required; a version it
         // does not know goes to its lenient v<n>-unknown/ path. So a key added to or taken
         // from what a version carries moves the version once a release sends it, and this
-        // pin makes that move a deliberate, reviewed act. Schema 6 is schema 5 with eleven
-        // keys appended under scan.
-        Assert.Equal(6, ResultLogEntry.CurrentSchemaVersion);
+        // pin makes that move a deliberate, reviewed act. Schema 7 is schema 6 with
+        // windowsRegion appended under app.
+        Assert.Equal(7, ResultLogEntry.CurrentSchemaVersion);
     }
 
     [Fact]
     public void The_whole_payload_is_pinned_key_by_key()
     {
         // ONE TEST FOR THE WHOLE SHAPE, because the failure this guards against is
-        // not a wrong value: it is a key that quietly stops being sent, which the
-        // receiver accepts in silence and which no per-field assertion would ever
-        // reach. Every key the receiver allowlists is named here, so adding a
-        // field to the payload without adding it to the receiver fails here first.
+        // not a wrong value: it is a key added, renamed or no longer sent, which no
+        // per-field assertion would ever reach and which the receiver answers with a
+        // 400 for the whole report. Every key the receiver allowlists is named here,
+        // so adding a field to the payload without adding it to the receiver fails
+        // here first.
         var json = JsonSerializer.Serialize(SampleEntry(), JsonOptions);
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
@@ -222,7 +223,7 @@ public class ResultLogEntryTests
             root.EnumerateObject().Select(p => p.Name));
 
         Assert.Equal(
-            ["version", "language", "windowsLanguage"],
+            ["version", "language", "windowsLanguage", "windowsRegion"],
             root.GetProperty("app").EnumerateObject().Select(p => p.Name));
 
         Assert.Equal(
@@ -266,11 +267,9 @@ public class ResultLogEntryTests
                 // rather than merely unlikely. The serialiser emits the positional
                 // members first and these in declaration order.
                 //
-                // TWO OF THEM WERE MISSING FROM THIS PIN AND THE TEST WAS RED, which
-                // is what this list is for: pathFlaggedSpellingCount and
-                // pathResolverRefusedCount both reached the payload without being
-                // named here, and a key the receiver has not allowlisted is a 400 for
-                // the whole report rather than one dropped field.
+                // A derived total reaches the payload like any other key, so a new
+                // one is named here too: a key the receiver has not allowlisted is a
+                // 400 for the whole report rather than one dropped field.
                 "pathNormalisationRefusedCount", "pathResolverRefusedCount",
                 "registrationIdentityRefusedCount", "candidateIdentityRefusedCount",
             ],
@@ -732,7 +731,7 @@ public class ResultLogEntryTests
             SourceRootsGivenUp: [new("E:", SourceRootGiveUpRoute.StoppedWaiting, 5)], SourceWaitCount: 7);
 
         var entry = ResultLogEntry.ForDelete(
-            scan, 100, new DeleteResult(1, Array.Empty<FileOperationError>()), 10, 20, check);
+            scan, 100, new DeleteResult(1, Array.Empty<FileOperationError>()), 10, 20, check, "GB");
 
         Assert.Equal([0, 0, 1, 0, 0], GivenUpByRoute(entry.Scan));
         Assert.Equal(3, entry.Scan.FilesKeptForSourcesGivenUpCount);
@@ -873,6 +872,14 @@ public class ResultLogEntryTests
     }
 
     [Fact]
+    public void The_report_carries_the_region_it_is_given_in_the_receivers_shape()
+    {
+        Assert.Equal("GB", AppInfo.Current("gb").WindowsRegion);
+        Assert.Equal("419", AppInfo.Current("419").WindowsRegion);
+        Assert.Equal(WindowsRegionLabel.Unreadable, AppInfo.Current(null).WindowsRegion);
+    }
+
+    [Fact]
     public void The_report_language_is_the_language_the_app_shows()
     {
         // The language the app's strings resolve to, which is what the user read. A
@@ -887,14 +894,14 @@ public class ResultLogEntryTests
             Localisation.Reset();
 
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("cs-CZ");
-            Assert.Equal(SupportedLanguages.Neutral, AppInfo.Current().Language);
+            Assert.Equal(SupportedLanguages.Neutral, AppInfo.Current("GB").Language);
 
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("de-AT");
-            Assert.Equal("de", AppInfo.Current().Language);
+            Assert.Equal("de", AppInfo.Current("GB").Language);
 
             var picked = CultureInfo.GetCultureInfo("ja");
             Localisation.Set(picked, picked);
-            Assert.Equal("ja", AppInfo.Current().Language);
+            Assert.Equal("ja", AppInfo.Current("GB").Language);
         }
         finally
         {

@@ -60,9 +60,9 @@ public static class WindowsDisplayLanguage
     /// than one way, its script.
     ///
     /// ANYTHING NOT THEN A LANGUAGE OF TWO OR THREE LOWER-CASE LETTERS, WITH AT MOST A
-    /// FOUR-LETTER SCRIPT, IS <see cref="Unrecognised"/>. The report then carries nothing
-    /// that names a country, and nothing outside the shape the receiver accepts for this
-    /// field. Widening the pattern here needs the receiver's pattern widened first.
+    /// FOUR-LETTER SCRIPT, IS <see cref="Unrecognised"/>. This field then never names a
+    /// country, and never carries anything outside the shape the receiver accepts for it.
+    /// Widening the pattern here needs the receiver's pattern widened first.
     /// </summary>
     public static string Neutral(string? name)
     {

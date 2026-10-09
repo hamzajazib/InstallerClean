@@ -137,6 +137,13 @@ public partial class CompletionViewModel : ObservableObject
     [ObservableProperty] private bool _sendsReport;
 
     /// <summary>
+    /// The Country or region <see cref="TakeReport"/> read to start the box, which the
+    /// report built for the same card carries. Null until a card takes the report, and
+    /// wherever Windows gave nothing.
+    /// </summary>
+    public string? ReportRegion { get; private set; }
+
+    /// <summary>
     /// Whether the panel saying what the report holds is open, the panel the small
     /// "i" beside the box opens and closes. It closes whenever the box leaves the card,
     /// which every close of the card does, so it is never open without the box. No
@@ -779,7 +786,8 @@ public partial class CompletionViewModel : ObservableObject
     /// <summary>
     /// Takes the report for the card about to be revealed: records the PC's first run,
     /// sets the PC-wide mark, and puts the box on the card, ticked or not by the
-    /// Country or region set in Windows. Called before the Show* method, so the box is there when the
+    /// Country or region set in Windows, which it keeps in <see cref="ReportRegion"/> for
+    /// the report. Called before the Show* method, so the box is there when the
     /// card is read out. False where this sitting has already had its first run, which
     /// a second card reaching here behind the same answer from
     /// <see cref="ReportIsFreeAsync"/> finds.
@@ -789,7 +797,8 @@ public partial class CompletionViewModel : ObservableObject
         if (_firstRunTaken) return false;
         _firstRunTaken = true;
         _firstRunMark.Set();
-        var ticked = ReportBoxRegions.StartsTicked(_windowsRegion.Read());
+        ReportRegion = _windowsRegion.Read();
+        var ticked = ReportBoxRegions.StartsTicked(ReportRegion);
         _reportTicked = ticked;
         _boxOpen = true;
         SendsReport = ticked;
