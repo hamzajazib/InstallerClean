@@ -1,3 +1,4 @@
+using System.Text;
 using InstallerClean.Cli;
 using InstallerClean.Helpers;
 using InstallerClean.Models;
@@ -10,9 +11,9 @@ namespace InstallerClean.Tests.Helpers;
 
 /// <summary>
 /// The guard every run's output goes through (<see cref="ConsoleGuard"/>): a write that
-/// fails ends the output and never the run, so a run's one outcome entry and its exit code
-/// are the ones its work earns. Driven on its own, through the real work method with a
-/// failing console behind the guard as Main puts it there, and through Main.
+/// fails loses what it was writing and never ends the run, so a run's one outcome entry and
+/// its exit code are the ones its work earns. Driven on its own, through the real work method
+/// with a failing console behind the guard as Main puts it there, and through Main.
 ///
 /// WHAT EVERY RUN FIXTURE SETS UP is a scan offering two files, a clean pending-reboot gate
 /// and a re-verify that keeps both, so the run reaches whichever service the test scripted,
@@ -56,7 +57,7 @@ public class CliConsoleGuardTests
     }
 
     [Fact]
-    public void A_write_that_fails_ends_the_output_and_throws_nothing()
+    public void A_write_that_fails_loses_its_own_text_and_the_next_write_starts_a_line_of_its_own()
     {
         var console = new ConsoleFailingAt("second");
         var guard = new ConsoleGuard(console);
@@ -73,7 +74,34 @@ public class CliConsoleGuardTests
         Assert.Null(thrown);
         Assert.True(guard.Failed);
         Assert.Equal(1, console.Refused);
-        Assert.Equal("first" + NewLine, console.ToString());
+        Assert.Equal("first" + NewLine + NewLine + "third" + NewLine + "x", console.ToString());
+    }
+
+    [Fact]
+    public void A_line_a_failed_write_cuts_short_is_not_joined_by_the_next_line_out()
+    {
+        // The writer the console gives a run: a StreamWriter with the console's 256-character
+        // buffer, flushing after every write, behind TextWriter.Synchronized. The first line
+        // goes to the disk in two pieces. The disk takes the first piece and refuses the second,
+        // then refuses the line break the guard puts ahead of the next line, then has room.
+        var disk = new DiskRefusingWrites(2, 3);
+        var console = TextWriter.Synchronized(
+            new StreamWriter(disk, new UTF8Encoding(false), 256, leaveOpen: true) { AutoFlush = true });
+        var guard = new ConsoleGuard(console);
+
+        var thrown = Record.Exception(() =>
+        {
+            guard.WriteLine(new string('a', 300));
+            guard.WriteLine("lost");
+            guard.WriteLine("last");
+        });
+
+        Assert.Null(thrown);
+        Assert.True(guard.Failed);
+        Assert.Equal(5, disk.Writes);
+        Assert.Equal(
+            new string('a', 256) + NewLine + "last" + NewLine,
+            Encoding.UTF8.GetString(disk.ToArray()));
     }
 
     [Fact]
@@ -84,11 +112,13 @@ public class CliConsoleGuardTests
         CrashLog.FolderForTests = folder;
         try
         {
-            var guard = new ConsoleGuard(new ConsoleFailingAt(""));
+            var console = new ConsoleFailingAt("");
+            var guard = new ConsoleGuard(console);
 
             guard.WriteLine("first");
             guard.WriteLine("second");
 
+            Assert.True(console.Refused == 2, "The second write never reached the console.");
             var log = File.ReadAllText(Path.Combine(folder, "crash.log"));
             Assert.Equal(1, log.Split(ConsoleFailingAt.Message).Length - 1);
         }
@@ -311,6 +341,25 @@ public class CliConsoleGuardTests
             .AddSingleton(Substitute.For<ISettingsService>())
             .AddSingleton(Substitute.For<IFirstRunMark>())
             .BuildServiceProvider();
+    }
+}
+
+/// <summary>
+/// A disk under a redirected standard output that refuses the stream writes whose numbers,
+/// counted from one, are in <c>refused</c>, as a full disk does, and takes the rest.
+/// <see cref="Writes"/> counts every write it was asked for.
+/// </summary>
+internal sealed class DiskRefusingWrites(params int[] refused) : MemoryStream
+{
+    public int Writes { get; private set; }
+
+    public override void Write(ReadOnlySpan<byte> buffer) => Write(buffer.ToArray(), 0, buffer.Length);
+
+    public override void Write(byte[] buffer, int offset, int count)
+    {
+        if (refused.Contains(++Writes))
+            throw new IOException(ConsoleFailingAt.Message);
+        base.Write(buffer, offset, count);
     }
 }
 

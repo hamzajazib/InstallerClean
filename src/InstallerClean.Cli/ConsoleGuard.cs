@@ -6,11 +6,24 @@ namespace InstallerClean.Cli;
 /// <summary>
 /// Standard output for the whole run. Every write goes to the writer the console gave the
 /// run, and a write that fails, such as one to an output redirected to a disk that is full,
-/// is recorded in crash.log and ends the run's output: every later write is dropped. Nothing
-/// the run prints can throw, so its Application-log entry and its exit code describe what the
-/// run did whatever became of its output. A Delete that deleted files is logged and exits as
-/// that Delete, and a run refused for something that clears by itself keeps the code that
-/// tells a scheduler to come back.
+/// loses what it was writing and nothing more: the next write is tried as if none had
+/// failed, and goes through once the disk has room, which a Delete on that disk can give it.
+/// Nothing the run prints can throw, so its Application-log entry and its exit code describe
+/// what the run did whatever became of its output. A Delete that deleted files is logged and
+/// exits as that Delete, and a run refused for something that clears by itself keeps the
+/// code that tells a scheduler to come back.
+///
+/// The first failure is recorded in crash.log and the later ones are not. One cause, such
+/// as a full disk, can refuse many writes in a row, and an entry each would spend
+/// crash.log's rotation on copies of it.
+///
+/// A FAILED WRITE CAN STOP PART-WAY THROUGH A LINE. The console's writer sends a line longer
+/// than its buffer out in pieces, so the pieces ahead of the failure are out and the rest of
+/// the line, its line break included, is not. So after a failure the guard puts a line break
+/// ahead of the next write, tried as part of that write: the next text out starts a line of
+/// its own, and where the failure lost a whole line a blank line stands in its place. Where
+/// the line break is refused too, the write it leads is not made, since its text would join
+/// the cut line, and the next write tries again.
 ///
 /// <see cref="Program"/>'s Main installs it once, after it sets the code page.
 /// Setting <see cref="Console.OutputEncoding"/> replaces a writer the console made for
@@ -20,40 +33,68 @@ namespace InstallerClean.Cli;
 /// </summary>
 internal sealed class ConsoleGuard(TextWriter inner) : TextWriter
 {
-    /// <summary>Whether a write has failed, after which nothing more is written.</summary>
+    /// <summary>
+    /// Whether the next write owes a line break: a write has failed and no line break has
+    /// gone through since.
+    /// </summary>
+    private bool _lineCut;
+
+    /// <summary>Whether any write has failed.</summary>
     internal bool Failed { get; private set; }
 
     public override Encoding Encoding => inner.Encoding;
 
     public override IFormatProvider FormatProvider => inner.FormatProvider;
 
-    public override void Write(char value) => Guard(() => inner.Write(value));
+    public override void Write(char value) => Guard(value, static (w, v) => w.Write(v));
 
     public override void Write(char[] buffer, int index, int count) =>
-        Guard(() => inner.Write(buffer, index, count));
+        Guard((buffer, index, count), static (w, v) => w.Write(v.buffer, v.index, v.count));
 
-    public override void Write(string? value) => Guard(() => inner.Write(value));
+    public override void Write(string? value) => Guard(value, static (w, v) => w.Write(v));
 
-    public override void WriteLine() => Guard(inner.WriteLine);
+    public override void WriteLine() => Guard(0, static (w, _) => w.WriteLine());
 
-    public override void WriteLine(string? value) => Guard(() => inner.WriteLine(value));
+    public override void WriteLine(string? value) => Guard(value, static (w, v) => w.WriteLine(v));
 
-    public override void Flush() => Guard(inner.Flush);
-
-    private void Guard(Action write)
+    public override void Flush()
     {
-        if (Failed) return;
         try
         {
-            write();
+            inner.Flush();
         }
         catch (Exception ex)
         {
-            // One entry for the run: a writer that has refused one line refuses the rest
-            // for the same cause, and an entry each would spend crash.log's rotation on
-            // copies of it.
-            Failed = true;
-            CrashLog.TryWrite(ex);
+            Record(ex);
         }
+    }
+
+    /// <summary>
+    /// Makes one write, with the line break a failure leaves owing ahead of it. Takes the
+    /// value and a static write rather than a closure, so no write allocates.
+    /// </summary>
+    private void Guard<T>(T value, Action<TextWriter, T> write)
+    {
+        try
+        {
+            if (_lineCut)
+            {
+                inner.WriteLine();
+                _lineCut = false;
+            }
+            write(inner, value);
+        }
+        catch (Exception ex)
+        {
+            Record(ex);
+        }
+    }
+
+    private void Record(Exception ex)
+    {
+        _lineCut = true;
+        if (Failed) return;
+        Failed = true;
+        CrashLog.TryWrite(ex);
     }
 }

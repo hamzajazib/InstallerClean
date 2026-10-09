@@ -46,8 +46,8 @@ internal static class Program
         // handed back last.
         //
         // EVERYTHING THE RUN PRINTS GOES THROUGH ConsoleGuard, installed after the
-        // code page is set. A write that fails ends the output and never the run, so
-        // no failed write reaches this catch-all or the work loop's.
+        // code page is set. A write that fails loses its own text and never ends the
+        // run, so no failed write reaches this catch-all or the work loop's.
         var previousOutputEncoding = TrySetUtf8Output();
         try
         {
@@ -640,8 +640,8 @@ internal static class Program
                 // catch-all's entry is the run's one. Building a line after the summary would
                 // let such a fault write a HardError entry beside it, and one summary per run is
                 // what an RMM counts runs by. A write that fails, such as a redirect to a full
-                // disk, ends the output and not the run (ConsoleGuard), and the run ends on the
-                // summary with ExitOk.
+                // disk, loses its own text and does not end the run (ConsoleGuard), and the run
+                // ends on the summary with ExitOk.
                 //
                 // The noun and size are recomputed inside the en-GB scope rather than reusing
                 // the human-facing `size` (which is in the OS region and grouped), so this
@@ -785,12 +785,12 @@ internal static class Program
             // error against a file that is perfectly fine. A failed write is a fact
             // about the console and never about the file being deleted or moved.
             //
-            // One crash-log entry per run rather than one per file. Whatever stops
-            // stdout accepting a line stops it for every remaining report, so an
-            // entry each would spend crash.log's rotation budget on copies of a
-            // cause already recorded and evict the history behind them, which is
-            // the failure PerItemFailureLog exists to prevent on the service side
-            // of the same batch.
+            // One crash-log entry per run rather than one per file. One cause, such
+            // as a full disk, can refuse many reports in a row, so an entry each
+            // would spend crash.log's rotation budget on copies of a cause already
+            // recorded and evict the history behind them, which is the failure
+            // PerItemFailureLog exists to prevent on the service side of the same
+            // batch.
             var progressWriteFailed = false;
             var progress = new SynchronousProgress<OperationProgress>(p =>
             {
