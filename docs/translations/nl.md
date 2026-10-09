@@ -45,7 +45,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | _Done | _Klaar |
 | Details | Details |
 | _Donate | _Doneren |
-| _Donate $5 | $ 5 _doneren |
+| _Donate $3 | $ 3 _doneren |
 | Donate | Doneren |
 | Leave a _star on GitHub | Geef een s_ter op GitHub |
 | Apache 2.0 licence | Apache 2.0-licentie |
@@ -366,7 +366,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Nederlands |
 | --- | --- |
 | Donate | Doneren |
-| Donate $5 | $ 5 doneren |
+| Donate $3 | $ 3 doneren |
 | Donate | Doneren |
 | Cancel operation | Bewerking annuleren |
 | Cancel scan | Scan annuleren |
@@ -518,7 +518,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | {0} overbodige {1} verplaatsen naar {2}... |
 | Moved {0} unneeded {1}. | {0} overbodige {1} verplaatst. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Controleer of je programma's nog gewoon bijwerken en verwijderen, en verwijder daarna {0}. |
-| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean is gratis. Heb je er iets aan gehad, doneer dan $ 5: {0} |
+| InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean is gratis. Heb je er iets aan gehad, doneer dan $ 3: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Het is eenvoudig ongedaan te maken. Verplaats ze vanuit {0} terug naar {InstallerFolder} en alles is weer zoals het was. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean kon de back-upmap niet meer bevestigen en is gestopt. Controleer {0} en voer de opdracht opnieuw uit. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Een ander InstallerClean-proces houdt de single-instance-vergrendeling vast (de GUI of een andere CLI-uitvoering). Exit 75 (tijdelijk); je kunt het later veilig opnieuw proberen. |

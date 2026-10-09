@@ -156,7 +156,7 @@ const MAP = {
   'Action.Done': `_Gotowe`,
   'Action.Details': `Szczegóły`,
   'Action.BuyMeACuppa': `_Wesprzyj`,
-  'Action.Donate': `_Wesprzyj kwotą 5 \$`,
+  'Action.Donate': `_Wesprzyj kwotą 3 \$`,
   'Action.DonateSmall': `Wesprzyj`,
   'Action.LeaveStarOnGitHub': `Zostaw _gwiazdkę na GitHubie`,
   'Action.Licence': `Licencja Apache 2.0`,
@@ -167,7 +167,7 @@ const MAP = {
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `Wesprzyj`,
-  'Automation.Donate': `Wesprzyj kwotą 5 \$`,
+  'Automation.Donate': `Wesprzyj kwotą 3 \$`,
   'Automation.DonateSmall': `Wesprzyj`,
   'Automation.CancelOperation': `Anuluj operację`,
   'Automation.CancelScan': `Anuluj skanowanie`,
@@ -610,7 +610,7 @@ const MAP = {
   'Cli.SourcesGivenUp': `InstallerClean przestał czekać na kilka dysków lub udziałów ({0}) i pozostawił bez zmian każdy plik, który trzeba było jeszcze porównać z jednym z nich. Gdy znów zaczną normalnie odpowiadać, uruchom polecenie ponownie.`,
   'Action.CloseWithoutDonating': `_Zamknij bez wsparcia`,
   'Tooltip.Donate': `Naprawdę powinienem pobierać opłatę za InstallerClean, bo kosztował mnie ogrom pracy, ale chcę, żeby pozostał darmowy i pomagał jak największej liczbie osób. Twoje wsparcie sprawia, że było warto, i jest bardzo doceniane.`,
-  'Cli.DonateAsk': `InstallerClean jest darmowy. Jeśli ci pomógł, wesprzyj go kwotą 5 \$: {0}`,
+  'Cli.DonateAsk': `InstallerClean jest darmowy. Jeśli ci pomógł, wesprzyj go kwotą 3 \$: {0}`,
   'Completion.SendReport': `Wyślij _anonimowy raport`,
   'Completion.ReportPanel.Intro': `Raport dodaje twój wynik, całkowicie anonimowo, do [tego wykresu] na GitHubie, który pokazuje, ile miejsca InstallerClean odzyskuje w rzeczywistym użyciu. Zawiera też anonimowe dane techniczne, które pomagają mi wyłapywać błędy:`,
   'Completion.ReportPanel.Freed': `Ile miejsca zwolniono i ile plików przeniesiono lub usunięto`,

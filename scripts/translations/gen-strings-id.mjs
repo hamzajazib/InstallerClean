@@ -133,7 +133,7 @@ const MAP = {
   'Action.Done': `_Selesai`,
   'Action.Details': `Detail`,
   'Action.BuyMeACuppa': `_Donasi`,
-  'Action.Donate': `_Donasi US\$5`,
+  'Action.Donate': `_Donasi US\$3`,
   'Action.DonateSmall': `Donasi`,
   'Action.LeaveStarOnGitHub': `Beri _bintang di GitHub`,
   'Action.Licence': `Lisensi Apache 2.0`,
@@ -144,7 +144,7 @@ const MAP = {
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `Donasi`,
-  'Automation.Donate': `Donasi US\$5`,
+  'Automation.Donate': `Donasi US\$3`,
   'Automation.DonateSmall': `Donasi`,
   // The three Cancel names name the button and then say which one, the shape
   // Automation.ViewOrphanedFiles and its sibling already take, rather than the
@@ -594,7 +594,7 @@ const MAP = {
   'Cli.SourcesGivenUp': `InstallerClean berhenti menunggu lebih dari satu drive atau berbagi jaringan ({0}) dan membiarkan apa adanya setiap file yang masih harus diperiksa terhadap salah satunya. Setelah semuanya kembali merespons dengan normal, jalankan perintahnya lagi.`,
   'Action.CloseWithoutDonating': `_Tutup tanpa berdonasi`,
   'Tooltip.Donate': `Sebenarnya saya seharusnya memungut biaya untuk InstallerClean, karena pembuatannya memakan banyak sekali tenaga, tetapi saya ingin tetap menggratiskannya agar bisa membantu sebanyak mungkin orang. Donasi Anda membuat semua itu sepadan dan sangat saya hargai.`,
-  'Cli.DonateAsk': `InstallerClean gratis. Jika bermanfaat, silakan berdonasi US\$5: {0}`,
+  'Cli.DonateAsk': `InstallerClean gratis. Jika bermanfaat, silakan berdonasi US\$3: {0}`,
   'Completion.SendReport': `Kirim laporan _anonim`,
   'Completion.ReportPanel.Intro': `Laporan ini menambahkan hasil Anda, sepenuhnya anonim, ke [grafik ini] di GitHub, yang memperlihatkan berapa banyak ruang yang dikosongkan InstallerClean dalam pemakaian nyata. Laporan ini juga berisi detail teknis anonim untuk membantu saya menemukan bug:`,
   'Completion.ReportPanel.Freed': `Berapa banyak ruang yang dikosongkan, dan berapa banyak file yang dipindahkan atau dihapus`,

@@ -45,7 +45,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | _Done | 완료(_D) |
 | Details | 세부 정보 |
 | _Donate | 후원(_D) |
-| _Donate $5 | 5달러 후원(_D) |
+| _Donate $3 | 3달러 후원(_D) |
 | Donate | 후원 |
 | Leave a _star on GitHub | GitHub에 별 남기기(_S) |
 | Apache 2.0 licence | Apache 2.0 라이선스 |
@@ -366,7 +366,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | 한국어 |
 | --- | --- |
 | Donate | 후원 |
-| Donate $5 | 5달러 후원 |
+| Donate $3 | 3달러 후원 |
 | Donate | 후원 |
 | Cancel operation | 작업 취소 |
 | Cancel scan | 검사 취소 |
@@ -518,7 +518,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | 불필요한 {1} {0}개를 {2}(으)로 이동 중... |
 | Moved {0} unneeded {1}. | 불필요한 {1} {0}개를 이동했습니다. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | 프로그램이 여전히 정상적으로 업데이트되고 제거되는지 확인한 다음 {0}을(를) 삭제하세요. |
-| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean은 무료입니다. 도움이 되었다면 5달러를 후원해 주세요: {0} |
+| InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean은 무료입니다. 도움이 되었다면 3달러를 후원해 주세요: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | 되돌리기는 간단합니다. {0}에서 {InstallerFolder}로 다시 옮기면 모든 것이 원래대로 돌아갑니다. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean이 백업 폴더를 더 이상 확인할 수 없어서, 중단했습니다. {0}을(를) 확인한 다음 명령을 다시 실행하세요. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | 다른 InstallerClean 프로세스가 단일 인스턴스 잠금을 보유하고 있습니다(GUI 또는 다른 CLI 실행). 종료 코드 75(일시적); 나중에 다시 시도해도 안전합니다. |

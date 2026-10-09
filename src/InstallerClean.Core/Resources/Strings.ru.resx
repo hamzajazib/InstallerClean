@@ -193,7 +193,7 @@
        stand in place of Done. The amount is in US dollars, written the way the
        language writes a dollar amount. Its access key must differ from
        Action.CloseWithoutDonating's, the two being on that card together. -->
-  <data name="Action.Donate" xml:space="preserve"><value>_Поддержать на 5 $</value></data>
+  <data name="Action.Donate" xml:space="preserve"><value>_Поддержать на 3 $</value></data>
   <!-- The label on the small donate button under Done, on every completion card
        that carries Done. It takes no access key: Done is on screen beside it. The
        button shows this text as written, so an underscore here would appear on
@@ -237,7 +237,7 @@
        beside a label rather than a string, so WPF derives no name from it and
        this is the name; it says what the button says on screen, without the
        access-key marker. -->
-  <data name="Automation.Donate" xml:space="preserve"><value>Поддержать на 5 $</value></data>
+  <data name="Automation.Donate" xml:space="preserve"><value>Поддержать на 3 $</value></data>
   <!-- The spoken name of the button Action.DonateSmall labels, for the same
        reason as Automation.Donate's. -->
   <data name="Automation.DonateSmall" xml:space="preserve"><value>Поддержать</value></data>
@@ -2424,5 +2424,5 @@ InstallerClean уже был запущен от имени администра
   <data name="Cli.SourceGivenUp.Drive" xml:space="preserve"><value>InstallerClean перестал ждать диск {0} и оставил без изменений все файлы, которые ещё нужно было сверить с ним. Когда он начнёт отвечать нормально, запустите команду снова.</value></data>
   <data name="Cli.SourceGivenUp.Path" xml:space="preserve"><value>InstallerClean перестал ждать {0} и оставил без изменений все файлы, которые ещё нужно было сверить с тем, что там находится. Когда доступ станет нормальным, запустите команду снова.</value></data>
   <data name="Cli.SourcesGivenUp" xml:space="preserve"><value>InstallerClean перестал ждать несколько дисков или сетевых ресурсов ({0}) и оставил без изменений все файлы, которые ещё нужно было сверить с одним из них. Когда они начнут отвечать нормально, запустите команду снова.</value></data>
-  <data name="Cli.DonateAsk" xml:space="preserve"><value>InstallerClean бесплатен. Если он помог, пожалуйста, поддержите его на 5 $: {0}</value></data>
+  <data name="Cli.DonateAsk" xml:space="preserve"><value>InstallerClean бесплатен. Если он помог, пожалуйста, поддержите его на 3 $: {0}</value></data>
 </root>

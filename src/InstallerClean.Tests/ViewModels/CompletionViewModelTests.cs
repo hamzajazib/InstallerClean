@@ -834,7 +834,7 @@ public class CompletionViewModelTests
     }
 
     // The card's two sets of buttons. After a Move or Delete that moved or
-    // deleted files it carries "Donate $5" over "Close without donating"; every
+    // deleted files it carries the large Donate over Close without donating; every
     // other card carries Done and the small Donate under it.
 
     [Fact]

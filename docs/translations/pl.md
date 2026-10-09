@@ -45,7 +45,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | _Done | _Gotowe |
 | Details | Szczegóły |
 | _Donate | _Wesprzyj |
-| _Donate $5 | _Wesprzyj kwotą 5 $ |
+| _Donate $3 | _Wesprzyj kwotą 3 $ |
 | Donate | Wesprzyj |
 | Leave a _star on GitHub | Zostaw _gwiazdkę na GitHubie |
 | Apache 2.0 licence | Licencja Apache 2.0 |
@@ -366,7 +366,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Polski |
 | --- | --- |
 | Donate | Wesprzyj |
-| Donate $5 | Wesprzyj kwotą 5 $ |
+| Donate $3 | Wesprzyj kwotą 3 $ |
 | Donate | Wesprzyj |
 | Cancel operation | Anuluj operację |
 | Cancel scan | Anuluj skanowanie |
@@ -518,7 +518,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | Trwa przenoszenie: {0} niepotrzebnych {1} do {2}... |
 | Moved {0} unneeded {1}. | Przeniesiono {0} niepotrzebnych {1}. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Sprawdź, czy twoje programy nadal normalnie się aktualizują i odinstalowują, a potem skasuj {0}. |
-| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean jest darmowy. Jeśli ci pomógł, wesprzyj go kwotą 5 $: {0} |
+| InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean jest darmowy. Jeśli ci pomógł, wesprzyj go kwotą 3 $: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Łatwo to cofnąć. Przenieś je z {0} z powrotem do {InstallerFolder}, a wszystko wróci do stanu sprzed. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean nie mógł już potwierdzić folderu kopii zapasowej, więc zatrzymał się. Sprawdź {0}, a potem uruchom polecenie ponownie. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Inny proces InstallerClean trzyma blokadę pojedynczej instancji (GUI lub inne uruchomienie CLI). Kod zakończenia 75 (stan przejściowy); można bezpiecznie spróbować ponownie później. |

@@ -11,7 +11,7 @@ public static class SupportLink
 {
     /// <summary>
     /// The page the app's donate controls open: the two donate buttons on the
-    /// card shown at the end of a run, "Donate $5" and the small Donate under
+    /// card shown at the end of a run, the large Donate and the small Donate under
     /// Done, and the pill in the About window.
     /// </summary>
     public const string Url = "https://nofaff.netlify.app/support";

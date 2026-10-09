@@ -45,7 +45,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | _Done | _Готово |
 | Details | Подробности |
 | _Donate | _Поддержать |
-| _Donate $5 | _Поддержать на 5 $ |
+| _Donate $3 | _Поддержать на 3 $ |
 | Donate | Поддержать |
 | Leave a _star on GitHub | Поставить з_везду на GitHub |
 | Apache 2.0 licence | Лицензия Apache 2.0 |
@@ -366,7 +366,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Русский |
 | --- | --- |
 | Donate | Поддержать |
-| Donate $5 | Поддержать на 5 $ |
+| Donate $3 | Поддержать на 3 $ |
 | Donate | Поддержать |
 | Cancel operation | Отмена операции |
 | Cancel scan | Отмена сканирования |
@@ -518,7 +518,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | Идёт перемещение в {2}: {0} ненужных {1}... |
 | Moved {0} unneeded {1}. | Перемещено {0} ненужных {1}. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Убедитесь, что ваши программы по-прежнему обновляются и удаляются как обычно, а затем удалите {0}. |
-| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean бесплатен. Если он помог, пожалуйста, поддержите его на 5 $: {0} |
+| InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean бесплатен. Если он помог, пожалуйста, поддержите его на 3 $: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Это легко отменить. Переместите их из {0} обратно в {InstallerFolder}, и всё вернётся как было. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean больше не смог подтвердить папку резервных копий и остановился. Проверьте {0}, затем запустите команду снова. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Другой процесс InstallerClean удерживает блокировку единственного экземпляра (GUI или другой запуск CLI). Код выхода 75 (временное состояние); можно повторить попытку позже. |

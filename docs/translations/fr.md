@@ -45,7 +45,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | _Done | _Terminé |
 | Details | Détails |
 | _Donate | Faire un _don |
-| _Donate $5 | Faire un _don de 5 $ |
+| _Donate $3 | Faire un _don de 3 $ |
 | Donate | Faire un don |
 | Leave a _star on GitHub | _Laisser une étoile sur GitHub |
 | Apache 2.0 licence | Licence Apache 2.0 |
@@ -366,7 +366,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Français |
 | --- | --- |
 | Donate | Faire un don |
-| Donate $5 | Faire un don de 5 $ |
+| Donate $3 | Faire un don de 3 $ |
 | Donate | Faire un don |
 | Cancel operation | Annuler l'opération |
 | Cancel scan | Annuler l'analyse |
@@ -518,7 +518,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | Déplacement de {0} {1} inutiles vers {2}... |
 | Moved {0} unneeded {1}. | {0} {1} inutiles ont été déplacés. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Vérifiez que vos programmes se mettent toujours à jour et se désinstallent normalement, puis supprimez {0}. |
-| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean est gratuit. S'il vous a été utile, merci de faire un don de 5 $ : {0} |
+| InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean est gratuit. S'il vous a été utile, merci de faire un don de 3 $ : {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | C'est simple à annuler. Redéplacez-les depuis {0} dans {InstallerFolder} et tout redeviendra comme avant. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean n'a plus pu confirmer le dossier de sauvegarde, il s'est donc arrêté. Vérifiez {0}, puis relancez la commande. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Un autre processus InstallerClean détient le verrou d'instance unique (l'interface ou une autre exécution de la CLI). Code de sortie 75 (transitoire) ; vous pouvez réessayer plus tard sans risque. |

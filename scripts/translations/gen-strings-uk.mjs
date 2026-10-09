@@ -143,7 +143,7 @@ const MAP = {
   'Action.Done': `_Готово`,
   'Action.Details': `Деталі`,
   'Action.BuyMeACuppa': `_Підтримати`,
-  'Action.Donate': `_Підтримати на 5 \$`,
+  'Action.Donate': `_Підтримати на 3 \$`,
   'Action.DonateSmall': `Підтримати`,
   'Action.LeaveStarOnGitHub': `Лишити зірку на _GitHub`,
   'Action.Licence': `Ліцензія Apache 2.0`,
@@ -154,7 +154,7 @@ const MAP = {
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `Підтримати`,
-  'Automation.Donate': `Підтримати на 5 \$`,
+  'Automation.Donate': `Підтримати на 3 \$`,
   'Automation.DonateSmall': `Підтримати`,
   'Automation.CancelOperation': `Скасувати операцію`,
   'Automation.CancelScan': `Скасувати сканування`,
@@ -591,7 +591,7 @@ const MAP = {
   'Cli.SourcesGivenUp': `InstallerClean перестав чекати на кілька дисків або мережевих ресурсів ({0}) і залишив без змін усі файли, які ще треба було звірити з одним із них. Коли вони почнуть відповідати нормально, запустіть команду ще раз.`,
   'Action.CloseWithoutDonating': `_Закрити без підтримки`,
   'Tooltip.Donate': `Насправді за InstallerClean варто було б брати гроші: на нього пішло дуже багато праці. Але я хочу, щоб він залишався безкоштовним і допомагав якомога більшій кількості людей. Ваша підтримка надає всьому цьому сенсу, і я дуже за неї вдячний.`,
-  'Cli.DonateAsk': `InstallerClean безкоштовний. Якщо він допоміг, будь ласка, підтримайте його на 5 \$: {0}`,
+  'Cli.DonateAsk': `InstallerClean безкоштовний. Якщо він допоміг, будь ласка, підтримайте його на 3 \$: {0}`,
   'Completion.SendReport': `Надіслати _анонімний звіт`,
   'Completion.ReportPanel.Intro': `Звіт додає ваш результат, повністю анонімно, до [цього графіка] на GitHub, де видно, скільки місця InstallerClean звільняє під час реального використання. Також у ньому є анонімні технічні відомості, які допомагають мені знаходити помилки:`,
   'Completion.ReportPanel.Freed': `Скільки місця звільнено і скільки файлів переміщено або видалено`,

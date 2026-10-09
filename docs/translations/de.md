@@ -45,7 +45,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | _Done | _Fertig |
 | Details | Details |
 | _Donate | S_penden |
-| _Donate $5 | 5 $ _spenden |
+| _Donate $3 | 3 $ _spenden |
 | Donate | Spenden |
 | Leave a _star on GitHub | Einen Stern auf _GitHub hinterlassen |
 | Apache 2.0 licence | Apache-2.0-Lizenz |
@@ -366,7 +366,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | Deutsch |
 | --- | --- |
 | Donate | Spenden |
-| Donate $5 | 5 $ spenden |
+| Donate $3 | 3 $ spenden |
 | Donate | Spenden |
 | Cancel operation | Vorgang abbrechen |
 | Cancel scan | Scan abbrechen |
@@ -518,7 +518,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | {0} nicht benötigte {1} werden nach {2} verschoben... |
 | Moved {0} unneeded {1}. | {0} nicht benötigte {1} verschoben. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Prüfe, ob deine Programme sich weiterhin wie gewohnt aktualisieren und deinstallieren lassen, und lösche dann {0}. |
-| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean ist kostenlos. Wenn es dir geholfen hat, spende bitte 5 $: {0} |
+| InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean ist kostenlos. Wenn es dir geholfen hat, spende bitte 3 $: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Das lässt sich leicht rückgängig machen. Verschiebe sie aus {0} zurück nach {InstallerFolder}, und alles ist wieder wie vorher. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean konnte den Sicherungsordner nicht mehr bestätigen und hat deshalb angehalten. Prüfe {0} und führe den Befehl dann erneut aus. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Ein anderer InstallerClean-Prozess hält die Einzelinstanz-Sperre (die GUI oder ein anderer CLI-Lauf). Exit-Code 75 (vorübergehend); ein späterer Wiederholungsversuch ist sicher. |

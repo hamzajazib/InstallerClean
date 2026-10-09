@@ -117,7 +117,7 @@ const MAP = {
   'Action.Done': `완료(_D)`,
   'Action.Details': `세부 정보`,
   'Action.BuyMeACuppa': `후원(_D)`,
-  'Action.Donate': `5달러 후원(_D)`,
+  'Action.Donate': `3달러 후원(_D)`,
   'Action.DonateSmall': `후원`,
   'Action.LeaveStarOnGitHub': `GitHub에 별 남기기(_S)`,
   'Action.Licence': `Apache 2.0 라이선스`,
@@ -128,7 +128,7 @@ const MAP = {
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `후원`,
-  'Automation.Donate': `5달러 후원`,
+  'Automation.Donate': `3달러 후원`,
   'Automation.DonateSmall': `후원`,
   'Automation.CancelOperation': `작업 취소`,
   'Automation.CancelScan': `검사 취소`,
@@ -568,7 +568,7 @@ const MAP = {
   'Cli.SourcesGivenUp': `InstallerClean이 여러 드라이브 또는 공유 ({0})에 대한 대기를 중단했으며, 아직 그중 하나와 대조해야 했던 파일은 모두 그대로 두었습니다. 정상적으로 응답하게 되면 명령을 다시 실행하세요.`,
   'Action.CloseWithoutDonating': `후원하지 않고 닫기(_C)`,
   'Tooltip.Donate': `정말 많은 노력이 들어갔기 때문에 InstallerClean을 유료로 해야 마땅하지만, 최대한 많은 사람에게 도움이 되도록 무료로 유지하고 싶습니다. 후원해 주시면 큰 보람이 되고 정말 감사하겠습니다.`,
-  'Cli.DonateAsk': `InstallerClean은 무료입니다. 도움이 되었다면 5달러를 후원해 주세요: {0}`,
+  'Cli.DonateAsk': `InstallerClean은 무료입니다. 도움이 되었다면 3달러를 후원해 주세요: {0}`,
   'Completion.SendReport': `익명 보고서 보내기(_A)`,
   'Completion.ReportPanel.Intro': `보고서는 사용자의 결과를 완전히 익명으로 GitHub의 [이 차트]에 추가하며, 이를 통해 InstallerClean이 실제 사용에서 얼마나 많은 공간을 확보하고 있는지 누구나 볼 수 있습니다. 또한 버그를 찾는 데 도움이 되는 익명의 기술 정보도 포함됩니다:`,
   'Completion.ReportPanel.Freed': `확보된 공간의 양과 이동하거나 삭제한 파일 수`,

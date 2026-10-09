@@ -104,7 +104,7 @@ const MAP = {
   'Action.Done': `_Готово`,
   'Action.Details': `Подробности`,
   'Action.BuyMeACuppa': `_Поддержать`,
-  'Action.Donate': `_Поддержать на 5 \$`,
+  'Action.Donate': `_Поддержать на 3 \$`,
   'Action.DonateSmall': `Поддержать`,
   'Action.LeaveStarOnGitHub': `Поставить з_везду на GitHub`,
   'Action.Licence': `Лицензия Apache 2.0`,
@@ -117,7 +117,7 @@ const MAP = {
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `Поддержать`,
-  'Automation.Donate': `Поддержать на 5 \$`,
+  'Automation.Donate': `Поддержать на 3 \$`,
   'Automation.DonateSmall': `Поддержать`,
   // The three Cancel names are built on the noun Отмена rather than the verb
   // Отменить, which share only a root: WCAG 2.5.3 (Label in Name) asks that a
@@ -671,7 +671,7 @@ const CLI = {
   'Cli.SourceGivenUp.Drive': `InstallerClean перестал ждать диск {0} и оставил без изменений все файлы, которые ещё нужно было сверить с ним. Когда он начнёт отвечать нормально, запустите команду снова.`,
   'Cli.SourceGivenUp.Path': `InstallerClean перестал ждать {0} и оставил без изменений все файлы, которые ещё нужно было сверить с тем, что там находится. Когда доступ станет нормальным, запустите команду снова.`,
   'Cli.SourcesGivenUp': `InstallerClean перестал ждать несколько дисков или сетевых ресурсов ({0}) и оставил без изменений все файлы, которые ещё нужно было сверить с одним из них. Когда они начнут отвечать нормально, запустите команду снова.`,
-  'Cli.DonateAsk': `InstallerClean бесплатен. Если он помог, пожалуйста, поддержите его на 5 \$: {0}`,
+  'Cli.DonateAsk': `InstallerClean бесплатен. Если он помог, пожалуйста, поддержите его на 3 \$: {0}`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -124,13 +124,13 @@ public partial class CompletionViewModel : ObservableObject
     [ObservableProperty] private string _underADayOld = string.Empty;
 
     /// <summary>
-    /// Puts "Donate $5" and "Close without donating" on the completion card in
+    /// Puts the large Donate and Close without donating on the completion card in
     /// place of Done and the small Donate under it. True where a Move or Delete moved
     /// or deleted files, a run the user cancelled part-way included. An
     /// all-clear, a run the re-verify held back entirely, a run every file
     /// errored on, a Move or Delete that reached no file and a Move the app
     /// stopped itself all leave it false, and those cards keep Done and the
-    /// small Donate. It measures the bytes the run moved or deleted, NOT whether the
+    /// small Donate. It measures the bytes the run moved or deleted, not whether the
     /// disk got any emptier, so a same-drive Move sets it while its heading
     /// says "moved" rather than "freed". Set from the bytes argument in each
     /// Show* method.
@@ -1062,7 +1062,7 @@ public partial class CompletionViewModel : ObservableObject
     }
 
     /// <summary>
-    /// The card's "Donate $5" button: opens the donate page in the browser and
+    /// The card's large Donate button: opens the donate page in the browser and
     /// closes the card, which returns the user to the main window as Done does.
     /// </summary>
     [RelayCommand]

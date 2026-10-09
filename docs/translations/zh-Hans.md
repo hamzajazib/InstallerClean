@@ -45,7 +45,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | _Done | 完成(_D) |
 | Details | 详情 |
 | _Donate | 捐赠(_D) |
-| _Donate $5 | 捐赠 5 美元(_D) |
+| _Donate $3 | 捐赠 3 美元(_D) |
 | Donate | 捐赠 |
 | Leave a _star on GitHub | 在 GitHub 上点个星(_S) |
 | Apache 2.0 licence | Apache 2.0 许可证 |
@@ -366,7 +366,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | English | 简体中文 |
 | --- | --- |
 | Donate | 捐赠 |
-| Donate $5 | 捐赠 5 美元 |
+| Donate $3 | 捐赠 3 美元 |
 | Donate | 捐赠 |
 | Cancel operation | 取消操作 |
 | Cancel scan | 取消扫描 |
@@ -518,7 +518,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | 正在把 {0} 个不需要的{1}移动到 {2}… |
 | Moved {0} unneeded {1}. | 已移动 {0} 个不需要的{1}。 |
 | Check that your programs still update and uninstall as normal, then delete {0}. | 请确认您的程序仍能照常更新和卸载，然后删除 {0}。 |
-| InstallerClean is free. If it helped, please donate $5: {0} | InstallerClean 是免费的。如果它帮到了您，请捐赠 5 美元：{0} |
+| InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean 是免费的。如果它帮到了您，请捐赠 3 美元：{0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | 撤销很简单。把它们从 {0} 移回 {InstallerFolder}，一切就会恢复原样。 |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean 已无法确认备份文件夹，因此停了下来。请检查 {0}，然后重新运行该命令。 |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | 另一个 InstallerClean 进程正持有单实例锁（GUI 或另一次 CLI 运行）。退出代码 75（暂时性）；稍后可安全重试。 |

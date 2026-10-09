@@ -150,7 +150,7 @@ const MAP = {
   'Action.Done': `_Klaar`,
   'Action.Details': `Details`,
   'Action.BuyMeACuppa': `_Doneren`,
-  'Action.Donate': `\$ 5 _doneren`,
+  'Action.Donate': `\$ 3 _doneren`,
   'Action.DonateSmall': `Doneren`,
   'Action.LeaveStarOnGitHub': `Geef een s_ter op GitHub`,
   'Action.Licence': `Apache 2.0-licentie`,
@@ -164,7 +164,7 @@ const MAP = {
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `Doneren`,
-  'Automation.Donate': `\$ 5 doneren`,
+  'Automation.Donate': `\$ 3 doneren`,
   'Automation.DonateSmall': `Doneren`,
   'Automation.CancelOperation': `Bewerking annuleren`,
   'Automation.CancelScan': `Scan annuleren`,
@@ -552,7 +552,7 @@ const MAP = {
   'Cli.SourcesGivenUp': `InstallerClean is gestopt met wachten op meer dan één schijf of share ({0}) en heeft elk bestand dat nog met een daarvan vergeleken moest worden, ongemoeid gelaten. Voer de opdracht opnieuw uit zodra ze weer normaal reageren.`,
   'Action.CloseWithoutDonating': `_Sluiten zonder te doneren`,
   'Tooltip.Donate': `Eigenlijk zou ik geld moeten vragen voor InstallerClean, want het is ontzettend veel werk geweest, maar ik wil het gratis houden zodat het zoveel mogelijk mensen helpt. Jouw donatie maakt het de moeite waard en wordt zeer gewaardeerd.`,
-  'Cli.DonateAsk': `InstallerClean is gratis. Heb je er iets aan gehad, doneer dan \$ 5: {0}`,
+  'Cli.DonateAsk': `InstallerClean is gratis. Heb je er iets aan gehad, doneer dan \$ 3: {0}`,
   'Completion.SendReport': `_Anoniem rapport versturen`,
   'Completion.ReportPanel.Intro': `Het rapport voegt je resultaat volledig anoniem toe aan [deze grafiek] op GitHub, waarop iedereen kan zien hoeveel ruimte InstallerClean in de praktijk vrijmaakt. Het bevat ook anonieme technische gegevens die me helpen eventuele bugs op te sporen:`,
   'Completion.ReportPanel.Freed': `Hoeveel ruimte er is vrijgemaakt en hoeveel bestanden er zijn verplaatst of verwijderd`,

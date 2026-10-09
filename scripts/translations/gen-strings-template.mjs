@@ -179,7 +179,7 @@ const MAP = {
   'Action.Done': `_Done`,
   'Action.Details': `Details`,
   'Action.BuyMeACuppa': `_Donate`,
-  'Action.Donate': `_Donate \$5`,
+  'Action.Donate': `_Donate \$3`,
   'Action.LeaveStarOnGitHub': `Leave a _star on GitHub`,
   'Action.Licence': `Apache 2.0 licence`,
   'Action.Move': `_Move`,
@@ -192,7 +192,7 @@ const MAP = {
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `Donate`,
-  'Automation.Donate': `Donate \$5`,
+  'Automation.Donate': `Donate \$3`,
   'Automation.CancelOperation': `Cancel operation`,
   'Automation.CancelScan': `Cancel scan`,
   'Automation.CancelStartupScan': `Cancel startup scan`,
@@ -641,7 +641,7 @@ const MAP = {
   'Tooltip.Donate': `I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated.`,
   'Action.DonateSmall': `Donate`,
   'Automation.DonateSmall': `Donate`,
-  'Cli.DonateAsk': `InstallerClean is free. If it helped, please donate \$5: {0}`,
+  'Cli.DonateAsk': `InstallerClean is free. If it helped, please donate \$3: {0}`,
   'Completion.SendReport': `Send _anonymous report`,
   'Completion.ReportPanel.Intro': `The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs:`,
   'Completion.ReportPanel.Freed': `How much space was freed, and how many files were moved or deleted`,

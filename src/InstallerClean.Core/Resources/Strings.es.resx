@@ -193,7 +193,7 @@
        stand in place of Done. The amount is in US dollars, written the way the
        language writes a dollar amount. Its access key must differ from
        Action.CloseWithoutDonating's, the two being on that card together. -->
-  <data name="Action.Donate" xml:space="preserve"><value>_Donar 5 $</value></data>
+  <data name="Action.Donate" xml:space="preserve"><value>_Donar 3 $</value></data>
   <!-- The label on the small donate button under Done, on every completion card
        that carries Done. It takes no access key: Done is on screen beside it. The
        button shows this text as written, so an underscore here would appear on
@@ -237,7 +237,7 @@
        beside a label rather than a string, so WPF derives no name from it and
        this is the name; it says what the button says on screen, without the
        access-key marker. -->
-  <data name="Automation.Donate" xml:space="preserve"><value>Donar 5 $</value></data>
+  <data name="Automation.Donate" xml:space="preserve"><value>Donar 3 $</value></data>
   <!-- The spoken name of the button Action.DonateSmall labels, for the same
        reason as Automation.Donate's. -->
   <data name="Automation.DonateSmall" xml:space="preserve"><value>Donar</value></data>
@@ -2240,7 +2240,7 @@ Vuelve a ejecutar InstallerClean como administrador.</value></data>
        a blank line, printed only to a console somebody is watching and never to the
        Application log. 0 = the donation page's address, printed as written. The
        amount is in US dollars, written the way the language writes a dollar amount. -->
-  <data name="Cli.DonateAsk" xml:space="preserve"><value>InstallerClean es gratis. Si te ha ayudado, dona 5 $, por favor: {0}</value></data>
+  <data name="Cli.DonateAsk" xml:space="preserve"><value>InstallerClean es gratis. Si te ha ayudado, dona 3 $, por favor: {0}</value></data>
   <!-- The line a cancelled Move prints instead of the one above, where the window's
        card carries Completion.MoveCancelledRestoreHint. A run that went the distance
        leaves the reader deciding when to delete the backup; a run somebody stopped

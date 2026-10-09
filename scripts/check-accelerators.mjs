@@ -60,7 +60,7 @@ const SETS = {
   'MainWindow-scanning': ['Action.Cancel', 'Action.StopWaiting'],
   'MainWindow-operating': ['Action.Cancel', 'Action.StopWaiting'],
   // The completion card carries Done with the small Donate under it, or, after a
-  // Move or Delete that moved or deleted files, Donate $5 over Close without
+  // Move or Delete that moved or deleted files, the large Donate over Close without
   // donating. Never both pairs. Either card, where it is the PC's first, carries
   // the report box under them.
   'MainWindow-completion': ['Action.Done', 'Action.DonateSmall', 'Completion.SendReport'],

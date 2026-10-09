@@ -395,7 +395,7 @@ public partial class MainWindow : Window
 
         if (e.PropertyName == nameof(CompletionViewModel.IsComplete) && !_vm.Completion.IsComplete)
         {
-            // Overlay dismissed (Done, Close without donating, Donate $5, Esc or a
+            // Overlay dismissed (Done, Close without donating, the large Donate, Esc or a
             // click on the dim margin). The focused button is
             // gone, so move focus to a sensible non-destructive control rather
             // than letting it drop to the window root.
@@ -792,7 +792,7 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// The completion card's button that closes it: Close without donating on the
-    /// card carrying Donate $5, Done on every other. Read when focus is placed, so
+    /// card carrying the large Donate, Done on every other. Read when focus is placed, so
     /// <see cref="CompletionViewModel.AsksForDonation"/> has to be settled before
     /// <see cref="CompletionViewModel.IsComplete"/> reveals the card, as every Show*
     /// method settles it.

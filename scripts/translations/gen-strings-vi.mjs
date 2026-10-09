@@ -120,7 +120,7 @@ const MAP = {
   'Action.Done': `_Xong`,
   'Action.Details': `Chi tiết`,
   'Action.BuyMeACuppa': `Ủng _hộ`,
-  'Action.Donate': `Ủng _hộ 5 USD`,
+  'Action.Donate': `Ủng _hộ 3 USD`,
   'Action.DonateSmall': `Ủng hộ`,
   'Action.LeaveStarOnGitHub': `Gắn _sao trên GitHub`,
   'Action.Licence': `Giấy phép Apache 2.0`,
@@ -131,7 +131,7 @@ const MAP = {
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `Ủng hộ`,
-  'Automation.Donate': `Ủng hộ 5 USD`,
+  'Automation.Donate': `Ủng hộ 3 USD`,
   'Automation.DonateSmall': `Ủng hộ`,
   'Automation.CancelOperation': `Hủy thao tác`,
   'Automation.CancelScan': `Hủy quét`,
@@ -571,7 +571,7 @@ const MAP = {
   'Cli.SourcesGivenUp': `InstallerClean đã ngừng chờ nhiều ổ đĩa hoặc chia sẻ mạng ({0}) và để nguyên mọi tệp còn cần đối chiếu với một trong số đó. Khi chúng phản hồi bình thường trở lại, hãy chạy lại lệnh.`,
   'Action.CloseWithoutDonating': `Đóng mà _không ủng hộ`,
   'Tooltip.Donate': `Lẽ ra tôi nên thu phí InstallerClean, vì nó đã tốn rất nhiều công sức, nhưng tôi muốn giữ nó miễn phí để giúp được càng nhiều người càng tốt. Sự ủng hộ của bạn khiến mọi công sức trở nên xứng đáng và tôi rất trân trọng điều đó.`,
-  'Cli.DonateAsk': `InstallerClean miễn phí. Nếu nó có ích, hãy ủng hộ 5 USD: {0}`,
+  'Cli.DonateAsk': `InstallerClean miễn phí. Nếu nó có ích, hãy ủng hộ 3 USD: {0}`,
   'Completion.SendReport': `_Gửi báo cáo ẩn danh`,
   'Completion.ReportPanel.Intro': `Báo cáo sẽ thêm kết quả của bạn, hoàn toàn ẩn danh, vào [biểu đồ này] trên GitHub, nơi mọi người có thể thấy InstallerClean đang giải phóng được bao nhiêu dung lượng trong thực tế. Báo cáo cũng chứa các chi tiết kỹ thuật ẩn danh để giúp tôi phát hiện lỗi:`,
   'Completion.ReportPanel.Freed': `Đã giải phóng bao nhiêu dung lượng, và đã chuyển hoặc xóa bao nhiêu tệp`,

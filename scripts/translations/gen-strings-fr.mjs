@@ -145,7 +145,7 @@ const MAP = {
   'Action.Done': `_Terminé`,
   'Action.Details': `Détails`,
   'Action.BuyMeACuppa': `Faire un _don`,
-  'Action.Donate': `Faire un _don de 5 \$`,
+  'Action.Donate': `Faire un _don de 3 \$`,
   'Action.DonateSmall': `Faire un don`,
   'Action.LeaveStarOnGitHub': `_Laisser une étoile sur GitHub`,
   'Action.Licence': `Licence Apache 2.0`,
@@ -156,7 +156,7 @@ const MAP = {
 
   // Automation names (screen reader / accessibility)
   'Automation.BuyMeACuppa.About': `Faire un don`,
-  'Automation.Donate': `Faire un don de 5 \$`,
+  'Automation.Donate': `Faire un don de 3 \$`,
   'Automation.DonateSmall': `Faire un don`,
   'Automation.CancelOperation': `Annuler l'opération`,
   'Automation.CancelScan': `Annuler l'analyse`,
@@ -592,7 +592,7 @@ const MAP = {
   'Cli.SourcesGivenUp': `InstallerClean a cessé d'attendre plusieurs lecteurs ou partages ({0}) et a laissé de côté tout fichier qui restait à vérifier par rapport à l'un d'eux. Dès qu'ils répondent de nouveau normalement, relancez la commande.`,
   'Action.CloseWithoutDonating': `_Fermer sans faire de don`,
   'Tooltip.Donate': `Je devrais vraiment faire payer InstallerClean, car il m'a demandé énormément de travail, mais je veux qu'il reste gratuit pour aider le plus de monde possible. Votre don fait que cela en vaut la peine, et il est très apprécié.`,
-  'Cli.DonateAsk': `InstallerClean est gratuit. S'il vous a été utile, merci de faire un don de 5 \$ : {0}`,
+  'Cli.DonateAsk': `InstallerClean est gratuit. S'il vous a été utile, merci de faire un don de 3 \$ : {0}`,
   'Completion.SendReport': `Envoyer un rapport _anonyme`,
   'Completion.ReportPanel.Intro': `Le rapport ajoute votre résultat, de façon totalement anonyme, à [ce graphique] sur GitHub, qui permet de voir combien d'espace InstallerClean libère en conditions réelles. Il contient aussi des détails techniques anonymes qui m'aident à repérer d'éventuels bugs :`,
   'Completion.ReportPanel.Freed': `La quantité d'espace libérée et le nombre de fichiers déplacés ou supprimés`,

@@ -1233,13 +1233,13 @@
 
                     <!-- The card's buttons. Done with a small Donate under it on
                          every card but one, and on that one, the card after a
-                         Move or Delete that moved or deleted files, "Donate $5"
+                         Move or Delete that moved or deleted files, the large Donate
                          over "Close without donating". Exactly one of Done and
                          Close without donating is ever on screen, and one of
                          the two donate buttons.
 
                          Done and Close without donating close the result
-                         overlay, NOT the app: exiting from here would trap the
+                         overlay and not the app: exiting from here would trap the
                          user with no way to re-scan or open About. Whichever is
                          showing is focused on overlay show, so a keyboard user
                          lands on the dismiss action with a visible ring; Enter
@@ -1247,7 +1247,7 @@
                          handler, so neither needs the focus. Neither donate
                          button is focused or the default, so Enter closes the
                          card on every card. Alt+D is Done on the cards that
-                         carry it and Donate $5 on the one that does not, and the
+                         carry it and the large Donate on the one that does not, and the
                          small Donate takes no access key. -->
                     <StackPanel Grid.Row="3" HorizontalAlignment="Center">
                         <Button x:Name="CompletionCloseButton"
