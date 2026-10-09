@@ -79,9 +79,9 @@ internal static class CliExitCode
     /// <summary>
     /// 0: the run did what it was asked.
     ///
-    /// FIVE RUNS REACH IT, AND THREE OF THEM PROCESS NOTHING. <c>/?</c> and
+    /// FIVE RUNS REACH IT, AND FOUR OF THEM PROCESS NOTHING. <c>/?</c> and
     /// <c>--version</c> print and stop, and a scan-only run processes nothing at all,
-    /// whether it listed sixty-eight files or none. What those three are asked for is
+    /// whether it listed sixty-eight files or none. What those four are asked for is
     /// their output, so each takes this code only where every write to it went through,
     /// and <see cref="Error"/> where one failed. Only a delete or a move batch processes
     /// anything, and it takes this code when no file in it errored

@@ -850,9 +850,9 @@ public class CompletionViewModelTests
     /// <summary>Every held file judged on its own and kept.</summary>
     private static WithholdingSplit PerFile(int files) => new(DeclaredProductUnestablishedCount: files);
 
-    // The kept-back block. One sentence since 3.0.0, naming no cause, carrying the
-    // batch total. What is pinned here is that the mix of causes cannot be read off
-    // it and that the number is every file held back.
+    // The kept-back block: one sentence, naming no cause, carrying the batch total.
+    // What is pinned here is that the mix of causes cannot be read off it and that the
+    // number is every file held back.
 
     private static string Line(int count) =>
         string.Format(

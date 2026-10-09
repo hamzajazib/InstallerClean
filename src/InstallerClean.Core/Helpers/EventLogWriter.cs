@@ -33,9 +33,9 @@ internal static class EventLogWriter
     /// <summary>
     /// Sticky flag: set true on the first Write that fails (source
     /// creation denied by Group Policy, event-log service stopped,
-    /// source pre-mapped to a non-Application log). The CLI Main
-    /// surfaces a one-line stdout warning when this is set, so an
-    /// RMM consumer expecting Application-channel entries can tell
+    /// source pre-mapped to a non-Application log). The command line
+    /// prints a one-line stdout warning, once in a run, when this is
+    /// set, so an RMM consumer expecting Application-channel entries can tell
     /// "the channel was unwritable" apart from "nothing happened".
     /// </summary>
     internal static bool EventLogUnavailable { get; set; }

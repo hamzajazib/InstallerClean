@@ -2366,9 +2366,11 @@ Run InstallerClean again as administrator.</value></data>
        name, 2 = crash log path. -->
   <data name="Cli.EventLogHardError" xml:space="preserve"><value>{0} mode failed: {1}. Details in {2}.</value></data>
   <data name="Cli.EventLogHardError.NoLog" xml:space="preserve"><value>{0} mode failed: {1}. The crash log could not be written.</value></data>
-  <!-- Stdout warning printed once at the end of a CLI run if any
-       Event Log write failed (Group Policy or service unavailable).
-       Tells an RMM consumer expecting an Application entry that the
+  <!-- Stdout warning printed once in a CLI run where an Event Log write
+       failed (Group Policy or service unavailable), after the run's summary
+       entry is written. A /s run whose notices' entries the log has already
+       refused prints it with those notices instead, ahead of any list of
+       files. Tells an RMM consumer expecting an Application entry that the
        channel was unwritable, not just empty. -->
   <data name="Cli.EventLogUnavailable" xml:space="preserve"><value>Note: Event Log writing failed. Check Application log permissions or Group Policy.</value></data>
 

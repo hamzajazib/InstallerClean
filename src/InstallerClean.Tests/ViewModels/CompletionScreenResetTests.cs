@@ -51,7 +51,10 @@ public class CompletionScreenResetTests
     /// </summary>
     private enum Run
     {
-        /// <summary>Files moved or deleted, nothing failed, nothing held back.</summary>
+        /// <summary>
+        /// Files moved or deleted, nothing failed, nothing held back by the check before
+        /// acting, and one file held back by the scan the nothing-offered screen is given.
+        /// </summary>
         DidWork,
 
         /// <summary>Reached no file and something failed, which is the warning-heading branch.</summary>

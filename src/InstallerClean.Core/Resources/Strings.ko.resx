@@ -2318,9 +2318,11 @@ InstallerClean을 관리자 권한으로 다시 실행하세요.</value></data>
        back (path-leak risk under elevation), only the type name and
        crash log path travel to the EventLog. 0 = mode arg, 1 = type
        name, 2 = crash log path. -->
-  <!-- Stdout warning printed once at the end of a CLI run if any
-       Event Log write failed (Group Policy or service unavailable).
-       Tells an RMM consumer expecting an Application entry that the
+  <!-- Stdout warning printed once in a CLI run where an Event Log write
+       failed (Group Policy or service unavailable), after the run's summary
+       entry is written. A /s run whose notices' entries the log has already
+       refused prints it with those notices instead, ahead of any list of
+       files. Tells an RMM consumer expecting an Application entry that the
        channel was unwritable, not just empty. -->
   <data name="Cli.EventLogUnavailable" xml:space="preserve"><value>참고: 이벤트 로그 쓰기에 실패했습니다. 응용 프로그램 로그 권한 또는 그룹 정책을 확인하세요.</value></data>
 

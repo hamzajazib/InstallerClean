@@ -16,14 +16,14 @@ namespace InstallerClean.Tests.Helpers;
 /// declaring a program Windows still has installed; a rule about the machine's records
 /// emptied the walk-derived offer in one go; or the files were judged one at a time and
 /// none could be cleared.
-/// The clean line is printed for the first alone, and there only where no line about
-/// files under a day old is printed. The two withholding sentences each name something
-/// the other's machine did not meet.
+/// The clean line is printed for the first alone, and there only where neither a line
+/// about files under a day old nor a line naming a drive or share given up is printed.
+/// The two withholding sentences each name something the other's machine did not meet.
 ///
-/// THE FIXTURES ARE WHAT THIS FILE IS. Every other file that drives this method scripts
-/// a scan with two removable files in it, so the branch below is reached by none of
-/// them and every assertion about it would be made over a run that never took it. Read
-/// what each test SETS UP rather than what it asserts: they differ in the withheld list
+/// THE FIXTURES ARE WHAT THIS FILE IS. The branch below is taken only where the scan
+/// offers nothing, so a fixture with a file in its offer would make every assertion
+/// about it over a run that never took it. Read what each test SETS UP rather than what
+/// it asserts: they differ in the withheld list
 /// and in the split that says what put those files there, which is exactly the pair the
 /// reading is derived from.
 /// </summary>

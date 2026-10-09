@@ -652,7 +652,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     ///
     /// AN ANSWER THAT KEEPS FILES STANDS FOR THE PASS, AND ONE THAT LETS FILES THROUGH IS ASKED
     /// AGAIN AT THE NEXT CALL (<see cref="PassAnswers.OpensNoPackageOf"/>). Once any of the three
-    /// steps finds a package to open for an installation, in whichever spelling of the code,
+    /// steps finds a package to open for an installation, whatever the case of the code's letters,
     /// every later step of the pass takes that answer without asking. <see cref="LinksOf"/> and
     /// <see cref="PackagesSecondCopiesOpen"/> each reach their conclusion once in a pass, and
     /// <see cref="PackagesOpenedBy"/> once for each declared code, and every later candidate

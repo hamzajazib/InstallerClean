@@ -611,8 +611,9 @@ internal static class Program
             // declares an installed program, is under a day old or is a copy of a
             // patch Windows holds a registration of. Superseded files held back are
             // printed in a line of their own. The window's finished screen counts
-            // differently, in one sentence that also takes in a file under a day old
-            // and a superseded file.
+            // differently: its one sentence also takes in a file under a day old and a
+            // superseded file, and where every file it would count is under a day old it
+            // gives the line about those files in that sentence's place.
             var withheldCount = scanResult.UnestablishedWithheldCount;
 
             // The one-form names the size and not the numeral ("the one file"), so it
@@ -1127,8 +1128,8 @@ internal static class Program
                     Console.WriteLine($"  {Path.GetFileName(err.FilePath)}: {err.LocalisedMessage}");
             }
             // AFTER THE ERROR BLOCK RATHER THAN BETWEEN IT AND THE SUMMARY, so a
-            // script scraping the "\d+ errors:" shape finds it where it has always
-            // been: this line is new and the block above it is not.
+            // script scraping the "\d+ errors:" shape finds that block straight under
+            // the line counting what was moved.
             //
             // Only where something moved, on the silent-at-zero rule the run lines
             // above already follow. A move that put no file in the folder has not
@@ -1673,11 +1674,12 @@ internal static class Program
         catch (Exception)
         {
             // Broad on purpose, and broader than a stdout failure alone would need.
-            // Main's own catch clause calls this, so anything it lets past there
-            // reaches the runtime default handler and produces the undocumented exit
-            // the routing exists to prevent. Two things in the try can throw: the
-            // write itself, and formatting a resx string. The exception being reported
-            // has already been given to crash.log, and the audit entry below still fires.
+            // Main's own catch clause reaches this through ReportRunFailure, so anything
+            // it lets past there reaches the runtime default handler and produces the
+            // undocumented exit the routing exists to prevent. Two things in the try
+            // can throw: the write itself, and formatting a resx string. The exception
+            // being reported has already been given to crash.log, and the audit entry
+            // below still fires.
         }
         MachineContract.WriteEventLog(CliEventClass.HardError, () => crash.Written
             ? string.Format(Strings.Cli_EventLogHardError, mode, typeName, crash.Path)

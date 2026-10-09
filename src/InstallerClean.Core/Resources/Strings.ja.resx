@@ -2332,9 +2332,11 @@ InstallerClean を管理者としてもう一度実行してください。</val
        name, 2 = crash log path. -->
   <data name="Cli.EventLogHardError" xml:space="preserve"><value>{0}モードが失敗しました：{1}。詳細は {2} をご覧ください。</value></data>
   <data name="Cli.EventLogHardError.NoLog" xml:space="preserve"><value>{0}モードが失敗しました：{1}。クラッシュログを書き込めませんでした。</value></data>
-  <!-- Stdout warning printed once at the end of a CLI run if any
-       Event Log write failed (Group Policy or service unavailable).
-       Tells an RMM consumer expecting an Application entry that the
+  <!-- Stdout warning printed once in a CLI run where an Event Log write
+       failed (Group Policy or service unavailable), after the run's summary
+       entry is written. A /s run whose notices' entries the log has already
+       refused prints it with those notices instead, ahead of any list of
+       files. Tells an RMM consumer expecting an Application entry that the
        channel was unwritable, not just empty. -->
   <data name="Cli.EventLogUnavailable" xml:space="preserve"><value>注意：イベントログの書き込みに失敗しました。Application ログのアクセス許可またはグループポリシーを確認してください。</value></data>
 

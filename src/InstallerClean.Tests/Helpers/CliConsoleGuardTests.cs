@@ -14,9 +14,10 @@ namespace InstallerClean.Tests.Helpers;
 /// its exit code are the ones its work earns. Driven on its own, through the real work method
 /// with a failing console behind the guard as Main puts it there, and through Main.
 ///
-/// WHAT EVERY RUN FIXTURE SETS UP is a scan offering two files, a clean pending-reboot gate
-/// and a re-verify that keeps both, so the run reaches whichever service the test scripted,
-/// and a console that fails at a line printed after that service has answered.
+/// WHAT EVERY RUN FIXTURE SETS UP is a scan offering two files and a re-verify that keeps
+/// both, with a clean pending-reboot gate unless the test blocks it, so the run reaches
+/// whichever service the test scripted. The console fails at the line the test names, or at
+/// every write from the scanning line on.
 /// </summary>
 public class CliConsoleGuardTests
 {

@@ -3582,9 +3582,11 @@ public class DeclaredProductCheckTests
     //
     // Office Click-to-Run can register Office's features with Windows Installer as a product
     // of its own, per machine, recording no cached package, no package code and no source
-    // list. Windows Installer has nothing to open for it, so it sets no hold. Each test after
-    // the first changes one of the answers that show it, and every one of them keeps every
-    // installation package as before.
+    // list. Windows Installer has nothing to open for it, so it sets no hold. Where any one
+    // of the answers that show it changes, it keeps every installation package as before.
+    // The tests after the first change those answers one at a time, or set the registration
+    // beside a copy declaring its own code, beside other installations, or beside a source
+    // list that appears or goes while the pass runs.
 
     /// <summary>The product code Office Click-to-Run registers Office's features under.</summary>
     private const string OfficeFeatures = "{9AC08E99-230B-47e8-9721-4577B7F124EA}";
@@ -3605,7 +3607,7 @@ public class DeclaredProductCheckTests
     /// is Office's feature registration, per machine, answering as Windows answers for it: no
     /// LocalPackage (ERROR_UNKNOWN_PROPERTY), an empty PackageCode and InstanceType, its
     /// package name off the source list ERROR_BAD_CONFIGURATION, and neither its
-    /// InstallProperties key nor its SourceList key there. Each test changes one thing.
+    /// InstallProperties key nor its SourceList key there. Each test starts from it.
     /// </summary>
     private static (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
         ScriptedFileIdentities Files, MockFileSystem Disk, ListedInstallation[] Listed)

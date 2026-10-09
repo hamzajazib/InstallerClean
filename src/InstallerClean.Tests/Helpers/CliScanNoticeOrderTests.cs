@@ -15,9 +15,10 @@ namespace InstallerClean.Tests.Helpers;
 /// other run prints them after the line saying what the scan found, or after the scanning
 /// line where no such line is printed. Driven through the real work method.
 ///
-/// WHAT EVERY FIXTURE SETS UP is an offer of two files and, unless it is the one without,
-/// a scan meeting every condition that has a stdout line, so a notice printed in the wrong
-/// place has a list or a count line to be found beside.
+/// WHAT THE FIXTURES SET UP is a scan meeting every condition that has a stdout line
+/// (EveryNotice), with the offer of two files or without it, so a notice printed in the
+/// wrong place has a list or a count line to be found beside; and, for the runs that need
+/// no notice, a scan with the offer alone or with nothing at all (OffersNothing).
 /// </summary>
 public class CliScanNoticeOrderTests
 {

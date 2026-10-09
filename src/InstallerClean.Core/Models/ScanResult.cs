@@ -625,11 +625,11 @@ public record ScanResult(
     }
 
     /// <summary>
-    /// Whether the command line has anything to say about this run's withholding: false
-    /// for <see cref="WithholdingAccount.Nothing"/> and
+    /// Whether the command line has a held-back sentence to print for this run's
+    /// withholding: false for <see cref="WithholdingAccount.Nothing"/> and
     /// <see cref="WithholdingAccount.KeptWithoutNotice"/>, true for every other
-    /// reading. Written as the two silent readings excluded, so a reading added to the
-    /// enum is reported rather than silenced.
+    /// reading. Written as the two readings with no such sentence excluded, so a reading
+    /// added to the enum is reported rather than silenced.
     /// </summary>
     public bool HasWithholdingToReport =>
         Withholding is not (WithholdingAccount.Nothing or WithholdingAccount.KeptWithoutNotice);
@@ -825,7 +825,7 @@ public record ScanResult(
 /// The window's finished screen does not read it; its reading is
 /// <see cref="ScanResult.UnsettledHeldBackCount"/>.
 ///
-/// THE COMMAND LINE STAYS SILENT FOR <see cref="Nothing"/> AND
+/// THE COMMAND LINE PRINTS NO HELD-BACK SENTENCE FOR <see cref="Nothing"/> AND
 /// <see cref="KeptWithoutNotice"/> AND FOR NOTHING ELSE, through
 /// <see cref="ScanResult.HasWithholdingToReport"/>, and speaks the wholesale sentence for
 /// <see cref="WholeWalkOffer"/> and the per-file one for every other member. A member
@@ -876,8 +876,11 @@ public enum WithholdingAccount
     /// before the scan, or no more than a day after it, which every later scan judges
     /// afresh. The third is a patch copy whose declared patch Windows holds a
     /// registration of, where at least one registration records no cached copy the
-    /// check could show is a different file. The command line says what it says on a run
-    /// that kept nothing back, and the files stay among those left alone. The window's
+    /// check could show is a different file. The command line prints no held-back sentence
+    /// for these files, as on a run that kept nothing back, and the files stay among those
+    /// left alone; where any is under a day old, it prints the line about those files
+    /// (<see cref="Helpers.UnderADayOldReport"/>), which stands in place of its clean line
+    /// where nothing is offered. The window's
     /// finished screen counts a file under a day old among those held back, through
     /// <see cref="ScanResult.UnsettledHeldBackCount"/>.
     /// </summary>

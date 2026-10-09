@@ -11,9 +11,7 @@ namespace InstallerClean.Tests.Models;
 /// Wire-format pins for the result-log schema. The receiving Edge
 /// Function depends on bytesFreed (not bytesCleared) and on the
 /// three-atom orphanedCount + supersededCount + obsoletedCount triple
-/// (not a combined removableCount); a silent rename here would land in
-/// production unnoticed until the aggregator started returning zero
-/// totals.
+/// (not a combined removableCount).
 ///
 /// That receiver allowlists every key at every object level and, from schema 4,
 /// requires every count a version carries, so a field this side renames or

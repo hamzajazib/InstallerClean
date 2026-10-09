@@ -123,14 +123,13 @@ namespace InstallerClean.Services;
 /// through is decided by the rest of the scan exactly as if this check had not
 /// run. For an installation package, a file it cannot read, a question it cannot
 /// put, an answer that contradicts the caller's enumeration, an installation whose
-/// cached package does not say which product it declares and whose own record shows
-/// neither an ordinary installation nor that it records no cached package and has no
-/// source list, an installation not ruled out as a second copy whose packages cannot
-/// all be seen, a source that answers off the allowlist and a recorded package it
-/// cannot identify all keep the file. For a patch, a file it
-/// cannot read, a registration it cannot list or ask about, an answer about a product
-/// it names that contradicts the caller's enumeration and a recorded copy it cannot
-/// identify all keep the file.
+/// cached package does not say which product it declares, unless its own record shows an
+/// ordinary installation or it is shown to record no cached package and have no source
+/// list, an installation not ruled out as a second copy whose packages cannot all be
+/// seen, a source that answers off the allowlist and a recorded package it cannot
+/// identify all keep the file. For a patch, a file it cannot read, a registration it
+/// cannot list or ask about, an answer about a product it names that contradicts the
+/// caller's enumeration and a recorded copy it cannot identify all keep the file.
 ///
 /// THE SUPERSEDED HALF OF THE OFFER IS NEVER PUT TO IT, AND THAT IS LOAD-BEARING. A
 /// registered superseded patch's cached file is the very file its registrations
