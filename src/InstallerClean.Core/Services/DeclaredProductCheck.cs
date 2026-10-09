@@ -2566,9 +2566,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// a false one being kept for the rest of the pass. The code and the account compare
         /// without case, as <see cref="PatchStateOf"/>'s do.
         ///
-        /// Only an answer finding a package is remembered. Remembering one that finds none
-        /// would let files through after a source list appears while the pass runs, on an
-        /// answer Windows no longer gives (<see cref="DeclaredProductCheck.OpensNoPackage"/>).
+        /// Only an answer finding a package is remembered, so an installation with none is asked
+        /// again at the next call and a source list that appears while the pass runs is found
+        /// there (<see cref="DeclaredProductCheck.OpensNoPackage"/>).
         /// </summary>
         internal bool OpensNoPackageOf(string productCode, string? sid, MsiInstallContext context, Func<bool> ask)
         {
