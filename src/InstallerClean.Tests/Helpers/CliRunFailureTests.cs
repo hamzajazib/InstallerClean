@@ -23,7 +23,7 @@ public class CliRunFailureTests
         Assert.Empty(run.Entries);
         var lines = run.Stdout.Split(Environment.NewLine);
         Assert.Equal(3, lines.Length);
-        Assert.Contains(lines[0], ErrorLines);
+        Assert.Contains(lines[0], ErrorLines(nameof(InvalidOperationException)));
         Assert.Equal(Strings.Cli_EventLogUnavailable, lines[1]);
         Assert.Equal(string.Empty, lines[2]);
     }
@@ -38,7 +38,7 @@ public class CliRunFailureTests
         Assert.Equal(CliEventClass.HardError, entry.Class);
         var lines = run.Stdout.Split(Environment.NewLine);
         Assert.Equal(2, lines.Length);
-        Assert.Contains(lines[0], ErrorLines);
+        Assert.Contains(lines[0], ErrorLines(nameof(InvalidOperationException)));
         Assert.Equal(string.Empty, lines[1]);
     }
 
@@ -49,17 +49,76 @@ public class CliRunFailureTests
 
         var lines = run.Stdout.Split(Environment.NewLine);
         Assert.Equal(1, lines.Count(l => l == Strings.Cli_EventLogUnavailable));
-        Assert.Contains(lines[^2], ErrorLines);
+        Assert.Contains(lines[^2], ErrorLines(nameof(InvalidOperationException)));
+    }
+
+    [Fact]
+    public async Task An_exception_thrown_inside_one_of_the_work_s_catches_prints_the_log_note_once_after_the_error_line()
+    {
+        // A Delete whose scan reports files missing from the folder, an entry the log refuses,
+        // and whose batch comes back cancelled. The console has no guard in front of it and
+        // refuses the line saying the run was cancelled, so that write throws out of the
+        // cancellation's catch and out of the work, and is reported as Main reports it.
+        var scan = Substitute.For<IFileSystemScanService>();
+        scan.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(new ScanResult(
+                [new OrphanedFile(@"C:\Windows\Installer\a.msi", 100, false, false, false, "unclaimed")],
+                Array.Empty<RegisteredPackage>(), 0) with { MissingAffectedCount = 1 });
+        var reboot = Substitute.For<IPendingRebootService>();
+        reboot.Check().Returns(PendingRebootResult.Clean);
+        var reverifier = Substitute.For<IRemovableReverifier>();
+        reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            .Returns(new ReverifyResult([@"C:\Windows\Installer\a.msi"], Array.Empty<string>()));
+        using var cts = new CancellationTokenSource();
+        var delete = Substitute.For<IDeleteFilesService>();
+        delete.DeleteFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                cts.Cancel();
+                return new DeleteResult(0, Array.Empty<FileOperationError>(), Cancelled: true);
+            });
+        var services = CliRunFixtures.Services(scan, reboot: reboot, reverifier: reverifier, delete: delete);
+
+        var original = Console.Out;
+        using var console = new ConsoleFailingAt(Strings.Cli_Cancelled);
+        try
+        {
+            Console.SetOut(console);
+            await CliRunFixtures.WithTheLogRefusing(_ => true, async () =>
+            {
+                try
+                {
+                    return await Program.RunWorkAsync("/d", new CliInvocation(CliCommand.Delete, null, null),
+                        cts.Token, services, () => false);
+                }
+                catch (Exception ex)
+                {
+                    return Program.ReportRunFailure(["/d"], ex);
+                }
+            });
+        }
+        finally
+        {
+            Console.SetOut(original);
+        }
+
+        Assert.True(console.Refused > 0, "The console refused no write, so nothing was thrown out of the work.");
+        var lines = console.ToString().Split(Environment.NewLine);
+        var error = Array.FindIndex(lines, line => ErrorLines(nameof(IOException)).Contains(line));
+        Assert.True(error >= 0, console.ToString());
+        Assert.Equal(1, lines.Count(l => l == Strings.Cli_EventLogUnavailable));
+        Assert.Equal(Strings.Cli_EventLogUnavailable, lines[error + 1]);
     }
 
     /// <summary>
-    /// The two forms of the unexpected-error line for the exception <see cref="Report"/>
-    /// reports: crash.log written, and crash.log refused.
+    /// The two forms of the unexpected-error line for an exception of the type
+    /// <paramref name="typeName"/> names: crash.log written, and crash.log refused.
     /// </summary>
-    private static string[] ErrorLines =>
+    private static string[] ErrorLines(string typeName) =>
     [
-        string.Format(Strings.Cli_GenericError, nameof(InvalidOperationException), CrashLog.LogPath),
-        string.Format(Strings.Cli_GenericError_NoLog, nameof(InvalidOperationException)),
+        string.Format(Strings.Cli_GenericError, typeName, CrashLog.LogPath),
+        string.Format(Strings.Cli_GenericError_NoLog, typeName),
     ];
 
     private sealed record RunResult(

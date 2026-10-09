@@ -39,10 +39,10 @@ internal static class Program
         // path the work loop uses, and the note where the Application log refused
         // an entry, which prints once in a run wherever it is printed from.
         // Run holds the single-instance mutex on this thread (acquire and release
-        // both here, per the Win32 owner-thread rule) and RunWorkAsync reports what
-        // its work throws through its own catches, so what lands here is a throw
-        // from Run's pre-flight or its cleanup, or one thrown inside one of those
-        // catches.
+        // both here, per the Win32 owner-thread rule) and guards its own cleanup, and
+        // the work reports what it throws through its own catches (DoWorkAsync), so
+        // what lands here is a throw from Run's pre-flight or one thrown inside one of
+        // the work's catches.
         //
         // The code page is set and restored around all of that, the catch-all
         // included, so the crash line still goes out in UTF-8 and the console is
@@ -516,6 +516,24 @@ internal static class Program
         string arg, CliInvocation invocation, CancellationToken token,
         IServiceProvider? servicesOverride = null, Func<bool>? consoleWatched = null,
         ConsoleGuard? output = null)
+    {
+        // The note follows the run's entry wherever the work returns. Where an exception
+        // escapes the work, thrown inside one of its catches, nothing here prints it: Main
+        // reports the exception and prints the note after its own line and entry.
+        var exitCode = await DoWorkAsync(arg, invocation, token, servicesOverride, consoleWatched, output);
+        NoteEventLogUnavailable();
+        return exitCode;
+    }
+
+    /// <summary>
+    /// The work of a /s, /d or /m run, whose parameters <see cref="RunWorkAsync"/> documents.
+    /// Returns the run's exit code once the run's entry is written; everything its work throws
+    /// is reported by its own catches, and only an exception thrown inside one of those
+    /// escapes it.
+    /// </summary>
+    private static async Task<int> DoWorkAsync(
+        string arg, CliInvocation invocation, CancellationToken token,
+        IServiceProvider? servicesOverride, Func<bool>? consoleWatched, ConsoleGuard? output)
     {
         consoleWatched ??= ConsoleIsWatched;
 
@@ -1236,12 +1254,6 @@ internal static class Program
             // HardError audit entry, ExitError, and never ex.Message.
             return ReportUnexpectedError(arg, ex);
         }
-        finally
-        {
-            // The note, after the run's entry, on every path out of this method, a throw out
-            // of one of the catches included. Where the run has printed it already, nothing.
-            NoteEventLogUnavailable();
-        }
     }
 
     /// <summary>
@@ -1300,13 +1312,13 @@ internal static class Program
     }
 
     /// <summary>
-    /// The three ways <see cref="RunWorkAsync"/> reports a failure, as <see cref="Classify"/>
+    /// The three ways <see cref="DoWorkAsync"/> reports a failure, as <see cref="Classify"/>
     /// sorts them.
     /// </summary>
     private enum WorkFailure { Cancelled, Localised, Unforeseen }
 
     /// <summary>
-    /// Which of <see cref="RunWorkAsync"/>'s catches reports a failure: a cancellation; a
+    /// Which of <see cref="DoWorkAsync"/>'s catches reports a failure: a cancellation; a
     /// localised exception, whose message the app built from its own strings and which is
     /// safe to echo; or anything else, which the last catch reports without its message.
     /// <see cref="HandOverBatchAsync{TResult}"/> reads the same answer to decide whether a
@@ -1332,7 +1344,7 @@ internal static class Program
     /// count of files moved or deleted (<paramref name="actedOn"/>) is above nought, the
     /// mark is set as the batch returns, ahead of everything the caller does with the
     /// result, the cancel re-entry among them. Where the service fails with an exception
-    /// <see cref="Classify"/> calls unforeseen, which <see cref="RunWorkAsync"/> reports
+    /// <see cref="Classify"/> calls unforeseen, which <see cref="DoWorkAsync"/> reports
     /// through its last catch, the mark is set before the failure goes on: how far that
     /// batch got is not known, and the failure line it ends in names no count for the
     /// window's start check to read.
@@ -1643,7 +1655,7 @@ internal static class Program
 
     /// <summary>
     /// The last-resort handler for an exception no specific catch anticipated,
-    /// shared by <see cref="RunWorkAsync"/>'s catch-all and <see cref="Main"/>'s
+    /// shared by <see cref="DoWorkAsync"/>'s catch-all and <see cref="Main"/>'s
     /// pre-flight guard so the two report on the same contract. Writes the full
     /// detail to crash.log and reports the exception through the overload below.
     /// </summary>

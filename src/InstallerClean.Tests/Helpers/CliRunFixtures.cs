@@ -1,3 +1,4 @@
+using InstallerClean.Cli;
 using InstallerClean.Helpers;
 using InstallerClean.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,4 +45,37 @@ internal static class CliRunFixtures
 
     /// <inheritdoc cref="IsSummary(CliEventClass)"/>
     internal static bool IsSummary((CliEventClass Class, string Text) entry) => IsSummary(entry.Class);
+
+    /// <summary>
+    /// Runs <paramref name="run"/> with an Application log that refuses the entries
+    /// <paramref name="refuses"/> picks, as a log Group Policy or a stopped service refuses,
+    /// and records the rest in <see cref="EventLogRecorder"/>. The log starts with no entry
+    /// refused and the note saying so not yet printed. A refused entry marks the log
+    /// unavailable, as a refused write to the real log does.
+    /// </summary>
+    internal static async Task<T> WithTheLogRefusing<T>(Func<CliEventClass, bool> refuses, Func<Task<T>> run)
+    {
+        // The sink, the flag and the note's latch are process-global; the assembly disables
+        // test parallelisation.
+        var sink = EventLogWriter.Sink;
+        var unavailable = EventLogWriter.EventLogUnavailable;
+        var notePrinted = Program.EventLogNotePrinted;
+        try
+        {
+            EventLogWriter.EventLogUnavailable = false;
+            Program.EventLogNotePrinted = false;
+            EventLogWriter.Sink = (entry, text) =>
+            {
+                if (refuses(entry)) throw new InvalidOperationException("The log refused the entry.");
+                EventLogRecorder.Sink(entry, text);
+            };
+            return await run();
+        }
+        finally
+        {
+            EventLogWriter.Sink = sink;
+            EventLogWriter.EventLogUnavailable = unavailable;
+            Program.EventLogNotePrinted = notePrinted;
+        }
+    }
 }
