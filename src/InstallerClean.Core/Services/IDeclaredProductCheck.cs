@@ -123,10 +123,11 @@ namespace InstallerClean.Services;
 /// through is decided by the rest of the scan exactly as if this check had not
 /// run. For an installation package, a file it cannot read, a question it cannot
 /// put, an answer that contradicts the caller's enumeration, an installation whose
-/// cached package does not say which product it declares and whose own record does not
-/// show it to be an ordinary installation, an installation not ruled out as a second
-/// copy whose packages cannot all be seen, a source that answers off the allowlist and
-/// a recorded package it cannot identify all keep the file. For a patch, a file it
+/// cached package does not say which product it declares and whose own record shows
+/// neither an ordinary installation nor that it records no cached package and has no
+/// source list, an installation not ruled out as a second copy whose packages cannot
+/// all be seen, a source that answers off the allowlist and a recorded package it
+/// cannot identify all keep the file. For a patch, a file it
 /// cannot read, a registration it cannot list or ask about, an answer about a product
 /// it names that contradicts the caller's enumeration and a recorded copy it cannot
 /// identify all keep the file.
@@ -278,7 +279,8 @@ public enum DeclaredProductOutcome
     /// product is installed, in any account and any context, the caller's own
     /// enumeration listed no installation of it, and no cached package the check read,
     /// of the installations it listed, declares it, every one whose cached package did
-    /// not read being shown by its own record to be an ordinary installation. Every
+    /// not read being shown by its own record to be an ordinary installation, or shown to
+    /// record no cached package and have no source list, so that it opens none. Every
     /// installation the caller could not rule out as a second copy opens packages the
     /// check saw, and this file is shown to be a different file from all of them. The
     /// candidate goes on being decided by everything else.
@@ -359,6 +361,11 @@ public enum DeclaredProductOutcome
     /// package through the package name in the folders on the source list, so a copy
     /// that none of those names is not a package any installation of the product
     /// opens.
+    ///
+    /// AN INSTALLATION WITH NEITHER IS LEFT OUT OF ALL OF THIS. A per-machine installation
+    /// that records no cached package and has no source list, by the API's answer and in
+    /// the registry alike, opens no package, so there is none for this file to be. Every
+    /// other installation of the product is read as above.
     ///
     /// EVERY INSTALLATION, NOT ONE. One code can name a per-machine installation and
     /// per-user installations under several accounts, each recording its own
@@ -477,8 +484,9 @@ public enum DeclaredProductOutcome
     /// The answer about the product this installation package declares would let it
     /// through, and either an installation the caller could not rule out as a second copy
     /// of a program opens packages the check could not all see, or an installation's
-    /// cached package does not say which product it declares and its own record does not
-    /// show it to be an ordinary installation. Kept back.
+    /// cached package does not say which product it declares, its own record does not
+    /// show it to be an ordinary installation, and it is not shown to record no cached
+    /// package and have no source list. Kept back.
     ///
     /// IT IS ABOUT ANOTHER INSTALLATION AND NOT ABOUT THIS FILE. Such an installation
     /// could be a second copy of a program installed under an instance transform, whose

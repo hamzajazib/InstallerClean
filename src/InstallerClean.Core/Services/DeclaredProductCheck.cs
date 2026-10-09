@@ -29,7 +29,9 @@ namespace InstallerClean.Services;
 /// its cached package and the packages its sources name, and where those cannot all be
 /// seen every candidate installation package is kept. So is every one where an
 /// installation's cached package does not say which product it declares, unless its own
-/// record shows it to be an ordinary installation.
+/// record shows it to be an ordinary installation, or it records no cached package and
+/// has no source list, by the API's answer and in the registry, so that Windows Installer
+/// has no package to open for it.
 /// For each candidate patch it reads the patch's own code and the products its Template
 /// names, finds the registrations of that patch through the machine-wide patch
 /// enumeration and the keyed patch read, and reads the <c>LocalPackage</c> each
@@ -282,7 +284,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// Where those packages cannot all be seen
     /// (<see cref="PackagesSecondCopiesOpen"/>), or an installation's cached package does
     /// not say what it declares and its own record does not show an ordinary installation
-    /// (<see cref="LinksOf"/>), every candidate the answer lets through is
+    /// nor that it opens no package (<see cref="LinksOf"/>), every candidate the answer lets
+    /// through is
     /// <see cref="DeclaredProductOutcome.SecondCopyUnestablished"/>.
     ///
     /// A PACKAGE IN A FOLDER ON THE NETWORK IS READ HERE, FOR THIS CANDIDATE, and only
@@ -378,7 +381,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     ///
     /// NULL IS THE ANSWER THAT KEEPS EVERY CANDIDATE, and every way such an
     /// installation's packages can fail to be seen reaches it: a <c>LocalPackage</c> read
-    /// that failed or came back empty, a value that names nothing, names a folder, will not
+    /// that failed, or came back empty for an installation not shown to open no package
+    /// (<see cref="OpensNoPackage"/>), a value that names nothing, names a folder, will not
     /// open to an identity, or names a file that yields no product code; any source
     /// <see cref="AddSourcePackages"/> cannot rule out, a per-user-unmanaged context among
     /// them; and a check built without its file readers, having no way to look. One such
@@ -434,7 +438,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// network goes into <paramref name="byName"/> instead (<see cref="AddSourcePackages"/>).
     /// The cached package has to be a file that is there, that identifies, and that
     /// yields a product code: a value naming anything else shows nothing about which
-    /// package the installation opens. <paramref name="givenUp"/> is as
+    /// package the installation opens. An installation that records none and has no
+    /// package to open at all (<see cref="OpensNoPackage"/>) adds nothing and answers true.
+    /// <paramref name="givenUp"/> is as
     /// <see cref="AddSourcePackages"/> gives it, and <paramref name="reading"/> says which
     /// step answered false, or <see cref="SecondCopyReading.Seen"/>.
     /// </summary>
@@ -457,9 +463,20 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         reading = SecondCopyReading.PathUnreadable;
         if (read.Unreadable) return false;
 
+        // An installation recording no cached package opens nothing to compare where it has no
+        // package to open at all (OpensNoPackage), and keeps every file otherwise.
         var path = read.Value.TrimEnd('\0');
-        reading = SecondCopyReading.NoneRecorded;
-        if (path.Length == 0) return false;
+        if (path.Length == 0)
+        {
+            if (!OpensNoPackage(installation.ProductCode, installation.UserSid, context))
+            {
+                reading = SecondCopyReading.NoneRecorded;
+                return false;
+            }
+
+            reading = SecondCopyReading.Seen;
+            return true;
+        }
 
         // File.Exists is false for a folder and for a path that will not parse, and the
         // identity read below opens folders too, so this is what keeps a value naming a
@@ -494,8 +511,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// Every installation the caller listed that is registered under a code other than
     /// the one its cached package declares, keyed by the declared code, whether an
     /// installation whose cached package did not say what it declares is not shown by its
-    /// own record to be an ordinary installation, each installation being counted in the
-    /// pass's census by what its cached package and record gave (<see cref="CensusTally"/>).
+    /// own record to be an ordinary installation nor shown to open no package, each
+    /// installation being counted in the pass's census by what its cached package and record
+    /// gave (<see cref="CensusTally"/>).
     /// Read once per pass, the first time it is needed.
     ///
     /// EVERY CONTEXT IS READ, AND A FAILED READ KEEPS UNLESS THE RECORD RULES IT OUT. A
@@ -503,8 +521,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// it can keep a file and never offer one. Where an installation's cached package
     /// does not say what it declares, nothing links it to any candidate, so that
     /// installation keeps every file unless its own record shows it to be an ordinary
-    /// installation (<see cref="WhatItsOwnRecordShows"/>): <see cref="Settle"/> then
-    /// gives every candidate the answer would let through
+    /// installation (<see cref="WhatItsOwnRecordShows"/>), or it records no cached package
+    /// and Windows Installer has no package to open for it (<see cref="OpensNoPackage"/>):
+    /// <see cref="Settle"/> then gives every candidate the answer would let through
     /// <see cref="DeclaredProductOutcome.SecondCopyUnestablished"/>.
     ///
     /// The codes are compared as GUIDs, because the reader canonicalises the declared
@@ -531,6 +550,14 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             if (declared is null)
             {
                 var record = WhatItsOwnRecordShows(installation.ProductCode, installation.UserSid, context);
+                if (record != RecordReading.Ordinary
+                    && reading == CachedPackageReading.NoneRecorded
+                    && OpensNoPackage(installation.ProductCode, installation.UserSid, context))
+                {
+                    pass.Census.OpensNoPackage();
+                    continue;
+                }
+
                 if (record != RecordReading.Ordinary) unread ??= detail;
                 pass.Census.Undeclared(reading, record, context);
                 continue;
@@ -598,6 +625,46 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             == InstallerQueryService.InstanceReading.Ordinary
             ? RecordReading.Ordinary
             : RecordReading.InstanceTypeNotOrdinary;
+    }
+
+    /// <summary>
+    /// Whether Windows Installer has no package to open for one installation that records
+    /// no cached package: whether it has no source list either, by the API's answer and by
+    /// the registry alike. Asked only where the installation's <c>LocalPackage</c> has
+    /// already read as none.
+    ///
+    /// WINDOWS INSTALLER OPENS A PRODUCT'S PACKAGE IN TWO WAYS ONLY: the cached copy its
+    /// <c>LocalPackage</c> names, and the file named by its package name in a folder on its
+    /// source list. An installation with neither opens no file in the Installer folder, so
+    /// it is no reason to keep one.
+    ///
+    /// TRUE ONLY WHERE ALL OF THESE HOLD, and anything short of them answers false, which
+    /// leaves the installation to keep files as one whose package cannot be seen:
+    /// - the installation is per machine, with no account;
+    /// - <c>MsiSourceListGetInfo</c> answers <see cref="MsiError.BadConfiguration"/> for its
+    ///   package name, and no other return;
+    /// - its <c>InstallProperties</c> key (<see cref="InstallPropertiesKeyPath"/>) and its
+    ///   <c>SourceList</c> key (<see cref="SourceListKeyPath"/>) are both absent, a key that
+    ///   will not read answering false.
+    /// The API is asked first, so a registry read is made only for an installation whose
+    /// source list the API has already answered for. A check built without its registry
+    /// reader answers false for every installation.
+    /// </summary>
+    private bool OpensNoPackage(string code, string? sid, MsiInstallContext context)
+    {
+        if (context != MsiInstallContext.Machine || sid is not null || _registry is null) return false;
+
+        uint length = 0;
+        if (_msi.GetSourceListInfo(code, sid, context, MsiSourceListOptions.Product,
+                MsiInstallProperty.PackageName, null, ref length) != MsiError.BadConfiguration)
+            return false;
+
+        var properties = InstallPropertiesKeyPath(code, sid, context);
+        var sourceList = SourceListKeyPath(code, sid, context);
+        return properties is not null
+            && sourceList is not null
+            && _registry.LocalMachineValues(properties).Presence == RegistryKeyPresence.Absent
+            && _registry.LocalMachineValues(sourceList).Presence == RegistryKeyPresence.Absent;
     }
 
     /// <summary>
@@ -719,7 +786,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// </summary>
     private enum SecondCopyReading
     {
-        /// <summary>Its cached package and the packages its sources name can all be seen.</summary>
+        /// <summary>
+        /// Its cached package and the packages its sources name can all be seen, or it records no
+        /// cached package and has no package to open at all.
+        /// </summary>
         Seen,
 
         /// <summary>Not looked for, the check having no file readers.</summary>
@@ -728,7 +798,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// <summary>Its cached package's path would not read.</summary>
         PathUnreadable,
 
-        /// <summary>It records no cached package.</summary>
+        /// <summary>It records no cached package, and is not shown to have no package to open.</summary>
         NoneRecorded,
 
         /// <summary>Its cached package's path names no file that is there.</summary>
@@ -796,6 +866,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         private readonly int[] _byRecord = new int[Enum.GetValues<RecordReading>().Length];
         private readonly int[] _bySecondCopyReading = new int[Enum.GetValues<SecondCopyReading>().Length];
         private int _listedChecked;
+        private int _opensNoPackage;
         private int _perMachine;
         private int _unruledChecked;
         private int _unseenPerMachine;
@@ -803,6 +874,17 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         /// <summary>An installation whose cached package declares a product code.</summary>
         internal void Declared() => _listedChecked++;
+
+        /// <summary>
+        /// An installation that records no cached package, whose record does not show an
+        /// ordinary installation, and which has no package to open at all, so it does not set
+        /// the hold (<see cref="OpensNoPackage"/>).
+        /// </summary>
+        internal void OpensNoPackage()
+        {
+            _listedChecked++;
+            _opensNoPackage++;
+        }
 
         /// <summary>
         /// An installation whose cached package gave <paramref name="reading"/> rather than a
@@ -870,7 +952,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             UnseenSourcesGivenUp: _bySecondCopyReading[(int)SecondCopyReading.SourcesGivenUp],
             UnseenSourceNotRuledOut: _bySecondCopyReading[(int)SecondCopyReading.SourceNotRuledOut],
             UnseenPerMachine: _unseenPerMachine,
-            UnseenByNameFiles: _unseenByNameFiles);
+            UnseenByNameFiles: _unseenByNameFiles,
+            ReleasedOpensNoPackage: _opensNoPackage);
     }
 
     /// <summary>Whether two spellings name one product code.</summary>
@@ -891,10 +974,15 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// copy is not <paramref name="code"/>, and its cached package has to declare
     /// <paramref name="code"/> all the same.
     ///
+    /// AN INSTALLATION RECORDING NO CACHED PACKAGE AND HAVING NO PACKAGE TO OPEN AT ALL
+    /// (<see cref="OpensNoPackage"/>) ADDS NOTHING, and every other installation of the code
+    /// is still read.
+    ///
     /// NULL IS THE ANSWER THAT KEEPS THE FILE, and every way an installation's package
-    /// can fail to be seen reaches it: a <c>LocalPackage</c> read that failed or came
-    /// back empty, a value that names nothing, names a folder, will not open to an
-    /// identity, or names a file that does not declare <paramref name="code"/>; and
+    /// can fail to be seen reaches it: a <c>LocalPackage</c> read that failed, or came
+    /// back empty for any other installation, a value that names nothing, names a folder,
+    /// will not open to an identity, or names a file that does not declare
+    /// <paramref name="code"/>; and
     /// any source the check cannot rule out, which <see cref="AddSourcePackages"/>
     /// sets out. One such installation is enough, because its package is the one this
     /// candidate could be. <paramref name="givenUp"/> is the root whose give-up refused the
@@ -918,8 +1006,14 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                 _msi, registeredCode, sid, context, MsiInstallProperty.LocalPackage);
             if (read.Unreadable) return null;
 
+            // An installation recording no cached package adds nothing where it has no
+            // package to open at all (OpensNoPackage), and keeps the file otherwise.
             var path = read.Value.TrimEnd('\0');
-            if (path.Length == 0) return null;
+            if (path.Length == 0)
+            {
+                if (OpensNoPackage(registeredCode, sid, context)) continue;
+                return null;
+            }
 
             // File.Exists is false for a folder and for a path that will not parse,
             // and the identity read below opens folders too, so this is what keeps a
@@ -2317,7 +2411,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// </param>
     /// <param name="UnreadPackageNotRuledOut">
     /// Whether an installation whose cached package did not say what it declares is not
-    /// shown by its own record to be an ordinary installation.
+    /// shown by its own record to be an ordinary installation, nor shown to open no package
+    /// (<see cref="OpensNoPackage"/>).
     /// </param>
     private sealed record InstallationLinks(
         Dictionary<string, List<(string RegisteredCode, string? Sid, MsiInstallContext Context)>> ByDeclaredCode,

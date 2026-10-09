@@ -38,6 +38,15 @@ public static class MsiError
     /// exist, rather than existing and failing to be read.
     /// </summary>
     public const uint UnknownPatch = 1647;
+
+    /// <summary>
+    /// ERROR_BAD_CONFIGURATION, "the configuration data for this product is corrupt" in
+    /// Microsoft's Windows Installer error-code table. The declared-product check takes it
+    /// from <c>MsiSourceListGetInfo</c>, asked for a product's package name, as the answer
+    /// that the product has no source list, and only beside the registry holding no
+    /// <c>SourceList</c> key for it.
+    /// </summary>
+    public const uint BadConfiguration = 1610;
 }
 
 /// <summary>
@@ -149,7 +158,9 @@ public static class MsiInstallProperty
     /// source list when it needs the original rather than the cached copy
     /// (INSTALLPROPERTY_PACKAGENAME). A product's is read through
     /// <c>MsiGetProductInfoEx</c> and a patch's through <c>MsiSourceListGetInfo</c>,
-    /// <c>MsiGetPatchInfoEx</c> not taking it.
+    /// <c>MsiGetPatchInfoEx</c> not taking it. A product's is also put to
+    /// <c>MsiSourceListGetInfo</c> where its installation records no cached package, to
+    /// ask whether it has a source list at all.
     /// </summary>
     public const string PackageName = "PackageName";
 

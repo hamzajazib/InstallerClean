@@ -3268,12 +3268,12 @@ public class DeclaredProductCheckTests
         int unruled = 0, int unseenPathUnreadable = 0, int unseenNoneRecorded = 0, int unseenNotThere = 0,
         int unseenWouldNotIdentify = 0, int unseenWouldNotRead = 0, int unseenNoProductCode = 0,
         int unseenPerUserUnmanaged = 0, int unseenSourcesGivenUp = 0, int unseenSourceNotRuledOut = 0,
-        int unseenPerMachine = 0, int unseenByName = 0) =>
+        int unseenPerMachine = 0, int unseenByName = 0, int opensNoPackage = 0) =>
         new(read, pathUnreadable, noneRecorded, notThere, wouldNotRead, noProductCode,
             anotherAccount, packageCodeUnanswered, instanceTypeNotOrdinary, perMachine, released,
             unruled, unseenPathUnreadable, unseenNoneRecorded, unseenNotThere, unseenWouldNotIdentify,
             unseenWouldNotRead, unseenNoProductCode, unseenPerUserUnmanaged, unseenSourcesGivenUp,
-            unseenSourceNotRuledOut, unseenPerMachine, unseenByName);
+            unseenSourceNotRuledOut, unseenPerMachine, unseenByName, opensNoPackage);
 
     [Theory]
     [InlineData(CachedPackageFault.ReadFails)]
@@ -3409,6 +3409,316 @@ public class DeclaredProductCheckTests
 
         Assert.Equal(CachedPackageCensus.None, screening.CachedPackages);
         Assert.True(screening.Outcomes[0].Withholds());
+    }
+
+    // ---- An installation with no package to open ----
+    //
+    // Office Click-to-Run can register Office's features with Windows Installer as a product
+    // of its own, per machine, recording no cached package, no package code and no source
+    // list. Windows Installer has nothing to open for it, so it sets no hold. Each test after
+    // the first changes one of the answers that show it, and every one of them keeps every
+    // installation package as before.
+
+    /// <summary>The product code Office Click-to-Run registers Office's features under.</summary>
+    private const string OfficeFeatures = "{9AC08E99-230B-47e8-9721-4577B7F124EA}";
+
+    /// <summary>
+    /// Its <c>SourceList</c> key, the code in the packed form the registry holds it under.
+    /// </summary>
+    private const string OfficeFeaturesSourceList =
+        @"SOFTWARE\Classes\Installer\Products\99E80CA9B0328E74791254777B1F42AE\SourceList";
+
+    /// <summary>Its <c>InstallProperties</c> key.</summary>
+    private const string OfficeFeaturesInstallProperties =
+        @"SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-18\Products\"
+        + @"99E80CA9B0328E74791254777B1F42AE\InstallProperties";
+
+    /// <summary>
+    /// The candidate declares product A, which is not installed. The one installation listed
+    /// is Office's feature registration, per machine, answering as Windows answers for it: no
+    /// LocalPackage (ERROR_UNKNOWN_PROPERTY), an empty PackageCode and InstanceType, its
+    /// package name off the source list ERROR_BAD_CONFIGURATION, and neither its
+    /// InstallProperties key nor its SourceList key there. Each test changes one thing.
+    /// </summary>
+    private static (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+        ScriptedFileIdentities Files, MockFileSystem Disk, ListedInstallation[] Listed)
+        ACopyBesideOfficesFeatureRegistration(bool marked = false)
+    {
+        var packages = new ScriptedPackageIdentities();
+        packages.Declares(Candidate, ProductA);
+
+        var msi = new ScriptedMsiProducts();
+        msi.NotInstalled(ProductA, MsiError.UnknownProduct);
+        AnswersAsOfficesFeatureRegistration(msi, OfficeFeatures);
+        msi.Registry.Answers(OfficeFeaturesSourceList, RegistryKeyPresence.Absent);
+        msi.Registry.Answers(OfficeFeaturesInstallProperties, RegistryKeyPresence.Absent);
+
+        var files = new ScriptedFileIdentities();
+        files.Opens(Candidate, 1);
+
+        var disk = new MockFileSystem();
+        disk.AddFile(Candidate, new MockFileData(new byte[100]));
+
+        return (packages, msi, files, disk,
+            [new ListedInstallation(OfficeFeatures, null, (int)MsiInstallContext.Machine, marked)]);
+    }
+
+    /// <summary>
+    /// The API's answers for Office's feature registration, per machine, under
+    /// <paramref name="code"/>. The registry keys are scripted by the caller.
+    /// </summary>
+    private static void AnswersAsOfficesFeatureRegistration(ScriptedMsiProducts msi, string code)
+    {
+        msi.PackageReadAnswers(code, null, MsiInstallContext.Machine, MsiError.UnknownProperty);
+        msi.PackageCodeAnswers(code, null, MsiInstallContext.Machine, MsiError.Success);
+        msi.InstanceTypeAnswers(code, null, MsiInstallContext.Machine, MsiError.Success);
+        msi.SourceListPackageNameAnswers(code, null, MsiInstallContext.Machine, MsiError.BadConfiguration);
+    }
+
+    [Fact]
+    public void Offices_feature_registration_keeps_nothing()
+    {
+        var f = ACopyBesideOfficesFeatureRegistration();
+        var recorded = new List<Exception>();
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, (ex, _) => recorded.Add(ex), InInstallerFolder);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductNotInstalled, screening.Outcomes[0]);
+        Assert.Empty(recorded);
+        Assert.Equal(Census(opensNoPackage: 1), screening.CachedPackages);
+        // Read by the API and at both keys, the keys by the spelling the registry holds.
+        Assert.Equal(new[] { (OfficeFeatures, (string?)null, MsiInstallContext.Machine) },
+            f.Msi.SourceListPackageNameReads);
+        Assert.Contains(OfficeFeaturesSourceList, f.Msi.Registry.Reads);
+        Assert.Contains(OfficeFeaturesInstallProperties, f.Msi.Registry.Reads);
+    }
+
+    /// <summary>One answer about Office's feature registration that does not show it has no package to open.</summary>
+    public enum NoPackageFault
+    {
+        InstallPropertiesThere,
+        InstallPropertiesUnreadable,
+        SourceListThere,
+        SourceListUnreadable,
+        PackageNameUnknownProduct,
+        PackageNameAccessDenied,
+        PackageNameEmpty,
+        PackageNameRead,
+        LocalPackageUnreadable,
+    }
+
+    private static void Break(
+        (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+            ScriptedFileIdentities Files, MockFileSystem Disk, ListedInstallation[] Listed) f,
+        NoPackageFault fault)
+    {
+        const MsiInstallContext Machine = MsiInstallContext.Machine;
+        switch (fault)
+        {
+            case NoPackageFault.InstallPropertiesThere:
+                f.Msi.Registry.Holds(OfficeFeaturesInstallProperties);
+                break;
+            case NoPackageFault.InstallPropertiesUnreadable:
+                f.Msi.Registry.Answers(OfficeFeaturesInstallProperties, RegistryKeyPresence.Unreadable);
+                break;
+            case NoPackageFault.SourceListThere:
+                f.Msi.Registry.Holds(OfficeFeaturesSourceList);
+                break;
+            case NoPackageFault.SourceListUnreadable:
+                f.Msi.Registry.Answers(OfficeFeaturesSourceList, RegistryKeyPresence.Unreadable);
+                break;
+            case NoPackageFault.PackageNameUnknownProduct:
+                f.Msi.SourceListPackageNameAnswers(OfficeFeatures, null, Machine, MsiError.UnknownProduct);
+                break;
+            case NoPackageFault.PackageNameAccessDenied:
+                f.Msi.SourceListPackageNameAnswers(OfficeFeatures, null, Machine, MsiError.AccessDenied);
+                break;
+            case NoPackageFault.PackageNameEmpty:
+                f.Msi.SourceListPackageNameAnswers(OfficeFeatures, null, Machine, MsiError.Success);
+                break;
+            case NoPackageFault.PackageNameRead:
+                // A package name that reads as a value, which is the answer a source list gives.
+                f.Msi.RecordsSources(OfficeFeatures, null, Machine, SetupName, SetupFolder);
+                f.Msi.SourceListPackageNameAnswers(OfficeFeatures, null, Machine, MsiError.MoreData);
+                break;
+            case NoPackageFault.LocalPackageUnreadable:
+                f.Msi.PackageReadAnswers(OfficeFeatures, null, Machine, MsiError.AccessDenied);
+                break;
+        }
+    }
+
+    [Theory]
+    [InlineData(NoPackageFault.InstallPropertiesThere)]
+    [InlineData(NoPackageFault.InstallPropertiesUnreadable)]
+    [InlineData(NoPackageFault.SourceListThere)]
+    [InlineData(NoPackageFault.SourceListUnreadable)]
+    [InlineData(NoPackageFault.PackageNameUnknownProduct)]
+    [InlineData(NoPackageFault.PackageNameAccessDenied)]
+    [InlineData(NoPackageFault.PackageNameEmpty)]
+    [InlineData(NoPackageFault.PackageNameRead)]
+    [InlineData(NoPackageFault.LocalPackageUnreadable)]
+    public void A_registration_not_shown_to_have_no_package_to_open_keeps_every_installation_package(
+        NoPackageFault fault)
+    {
+        var f = ACopyBesideOfficesFeatureRegistration();
+        Break(f, fault);
+        var recorded = new List<Exception>();
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, (ex, _) => recorded.Add(ex), InInstallerFolder);
+
+        Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
+        Assert.Single(recorded);
+        Assert.Equal(
+            fault == NoPackageFault.LocalPackageUnreadable
+                ? Census(pathUnreadable: 1, packageCodeUnanswered: 1, perMachine: 1)
+                : Census(noneRecorded: 1, packageCodeUnanswered: 1, perMachine: 1),
+            screening.CachedPackages);
+    }
+
+    [Fact]
+    public void A_per_user_registration_answering_the_same_keeps_every_installation_package()
+    {
+        // Per user and managed, in the running account, so its own record is read, and its
+        // source list is not asked about.
+        const MsiInstallContext Managed = MsiInstallContext.UserManaged;
+        var f = ACopyBesideOfficesFeatureRegistration();
+        f.Msi.PackageReadAnswers(OfficeFeatures, OtherUserSid, Managed, MsiError.UnknownProperty);
+        f.Msi.PackageCodeAnswers(OfficeFeatures, OtherUserSid, Managed, MsiError.Success);
+        f.Msi.SourceListPackageNameAnswers(OfficeFeatures, OtherUserSid, Managed, MsiError.BadConfiguration);
+        f = f with { Listed = [new ListedInstallation(OfficeFeatures, OtherUserSid, (int)Managed, false)] };
+
+        var outcome = ScreenBesideTheSecondCopy(f, account: TheOwner)[0];
+
+        Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, outcome);
+        Assert.Empty(f.Msi.SourceListPackageNameReads);
+    }
+
+    [Fact]
+    public void Without_the_registry_reader_the_registration_keeps_every_installation_package()
+    {
+        var f = ACopyBesideOfficesFeatureRegistration();
+
+        var outcome = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, runningAccount: TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder).Outcomes[0];
+
+        Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, outcome);
+    }
+
+    [Fact]
+    public void Every_such_registration_on_the_machine_has_to_show_it_has_no_package_to_open()
+    {
+        // Two registrations of the same shape keep nothing between them; one of them with its
+        // SourceList key there keeps every installation package.
+        const string Other = "{AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE}";
+        const string OtherPacked = "AAAAAAAABBBBCCCCDDDDEEEEEEEEEEEE";
+        foreach (var otherHasNoSources in new[] { true, false })
+        {
+            var f = ACopyBesideOfficesFeatureRegistration();
+            AnswersAsOfficesFeatureRegistration(f.Msi, Other);
+            f.Msi.Registry.Answers(
+                $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-18\Products\{OtherPacked}\InstallProperties",
+                RegistryKeyPresence.Absent);
+            if (otherHasNoSources)
+                f.Msi.Registry.Answers($@"SOFTWARE\Classes\Installer\Products\{OtherPacked}\SourceList",
+                    RegistryKeyPresence.Absent);
+            else
+                f.Msi.Registry.Holds($@"SOFTWARE\Classes\Installer\Products\{OtherPacked}\SourceList");
+            f = f with { Listed = [.. f.Listed, ListedPerMachine(Other)] };
+
+            var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+                .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+
+            Assert.Equal(
+                otherHasNoSources
+                    ? DeclaredProductOutcome.DeclaredProductNotInstalled
+                    : DeclaredProductOutcome.SecondCopyUnestablished,
+                screening.Outcomes[0]);
+            Assert.Equal(
+                otherHasNoSources
+                    ? Census(read: 2, opensNoPackage: 2)
+                    : Census(read: 2, noneRecorded: 1, packageCodeUnanswered: 1, perMachine: 1, opensNoPackage: 1),
+                screening.CachedPackages);
+        }
+    }
+
+    [Fact]
+    public void A_copy_declaring_the_registrations_own_code_is_let_through()
+    {
+        // The registration answers for the code the candidate declares, and opens nothing it
+        // could be, so the candidate goes on to everything else.
+        var f = ACopyBesideOfficesFeatureRegistration();
+        f.Packages.Declares(Candidate, OfficeFeatures);
+        f.Msi.Installed(OfficeFeatures);
+
+        var outcome = ScreenBesideTheSecondCopy(f, account: TheOwner)[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome);
+        Assert.False(outcome.Withholds());
+    }
+
+    [Fact]
+    public void A_copy_declaring_the_registrations_code_is_kept_where_its_source_list_is_there()
+    {
+        // The must-miss half of the test above.
+        var f = ACopyBesideOfficesFeatureRegistration();
+        f.Packages.Declares(Candidate, OfficeFeatures);
+        f.Msi.Installed(OfficeFeatures);
+        f.Msi.Registry.Holds(OfficeFeaturesSourceList);
+
+        var outcome = ScreenBesideTheSecondCopy(f, account: TheOwner)[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome);
+    }
+
+    [Fact]
+    public void Every_other_installation_of_the_registrations_code_is_still_read()
+    {
+        // A second installation of the same code, per user and unmanaged, whose source list
+        // is not read, so the candidate is kept for it whatever the registration opens.
+        const string OthersPackage = @"C:\Windows\Installer\other.msi";
+        var f = ACopyBesideOfficesFeatureRegistration();
+        f.Packages.Declares(Candidate, OfficeFeatures);
+        f.Packages.Declares(OthersPackage, OfficeFeatures);
+        f.Msi.Installed(OfficeFeatures, (null, MsiInstallContext.Machine), (OtherUserSid, MsiInstallContext.UserUnmanaged));
+        f.Msi.RecordsPackage(OfficeFeatures, OtherUserSid, MsiInstallContext.UserUnmanaged, OthersPackage);
+        f.Files.Opens(OthersPackage, 2);
+        f.Disk.AddFile(OthersPackage, new MockFileData(new byte[100]));
+        f = f with
+        {
+            Listed = [.. f.Listed, new ListedInstallation(OfficeFeatures, OtherUserSid, (int)MsiInstallContext.UserUnmanaged, false)],
+        };
+
+        var outcome = ScreenBesideTheSecondCopy(f, account: TheOwner)[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome);
+        Assert.Contains((OfficeFeatures, (string?)OtherUserSid, MsiInstallContext.UserUnmanaged), f.Msi.PackageReads);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void An_installation_not_ruled_out_as_a_second_copy_opens_nothing_where_it_has_no_package_to_open(
+        bool noSources)
+    {
+        // Its record reads as ordinary, so it sets no hold, and it is listed as not ruled out
+        // as a second copy, so its packages are read for every candidate.
+        var f = ACopyBesideOfficesFeatureRegistration(marked: true);
+        f.Msi.AnswersItsOwnRecord(OfficeFeatures, null, MsiInstallContext.Machine);
+        if (!noSources) f.Msi.Registry.Holds(OfficeFeaturesSourceList);
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+
+        Assert.Equal(
+            noSources ? DeclaredProductOutcome.DeclaredProductNotInstalled : DeclaredProductOutcome.SecondCopyUnestablished,
+            screening.Outcomes[0]);
+        Assert.Equal(
+            noSources
+                ? Census(released: 1, unruled: 1)
+                : Census(released: 1, unruled: 1, unseenNoneRecorded: 1, unseenPerMachine: 1),
+            screening.CachedPackages);
     }
 
     [Fact]
@@ -6236,6 +6546,19 @@ internal sealed class ScriptedMsiProducts : IMsiApi
     public void PackageNameAnswers(string productCode, string? sid, MsiInstallContext context, uint error) =>
         _packageNames[(productCode, sid, context)] = (error, string.Empty);
 
+    private readonly Dictionary<(string ProductCode, string? Sid, MsiInstallContext Context), uint>
+        _sourceListPackageNames = new();
+
+    /// <summary>Every product PackageName read off the source list this API answered, in order.</summary>
+    public List<(string ProductCode, string? Sid, MsiInstallContext Context)> SourceListPackageNameReads { get; } = new();
+
+    /// <summary>
+    /// What reading one installation's PackageName off its source list returns, in place of
+    /// what <see cref="GetProductInfo"/> answers for it.
+    /// </summary>
+    public void SourceListPackageNameAnswers(string productCode, string? sid, MsiInstallContext context, uint error) =>
+        _sourceListPackageNames[(productCode, sid, context)] = error;
+
     /// <summary>What reading one installation's source list returns instead of an entry.</summary>
     public void SourceListAnswers(string productCode, string? sid, MsiInstallContext context, uint error) =>
         _sources[(productCode, sid, context)] = new SourceList(Array.Empty<string>(), error);
@@ -6659,13 +6982,15 @@ internal sealed class ScriptedMsiProducts : IMsiApi
 
     /// <summary>
     /// Answers the source-list properties the check reads, with the real API's two-call
-    /// shape: PackageName for a patch, a product's being read through
-    /// <see cref="GetProductInfo"/>, and for either kind the three
-    /// <see cref="ListProperty"/> names. Anything else throws.
+    /// shape: PackageName for a patch, and for a product as scripted with
+    /// <see cref="SourceListPackageNameAnswers"/> or else as <see cref="GetProductInfo"/>
+    /// answers it; and for either kind the three <see cref="ListProperty"/> names. Anything
+    /// else throws.
     ///
     /// AN UNSCRIPTED PATCH OR LIST THROWS. A package name naming no file at any source is
     /// an answer that lets a patch copy through, so a fake inventing one would let a test
-    /// assert an offer nothing established.
+    /// assert an offer nothing established. A product whose package name nothing scripted
+    /// answers ERROR_UNKNOWN_PRODUCT, which keeps the file.
     /// </summary>
     public uint GetSourceListInfo(string productCodeOrPatchCode, string? userSid, MsiInstallContext context,
         uint options, string property, char[]? value, ref uint valueLength)
@@ -6680,13 +7005,16 @@ internal sealed class ScriptedMsiProducts : IMsiApi
         };
 
         (uint Error, string Value) scripted;
-        if (property == MsiInstallProperty.PackageName)
+        if (property == MsiInstallProperty.PackageName && !isPatch)
         {
-            if (!isPatch)
-                throw new InvalidOperationException(
-                    "the declared-product check reads a product's PackageName through MsiGetProductInfoEx, "
-                    + "and was asked for it off the source list");
-
+            var key = (productCodeOrPatchCode, userSid, context);
+            if (value is null) SourceListPackageNameReads.Add(key);
+            scripted = _sourceListPackageNames.TryGetValue(key, out var error) ? (error, string.Empty)
+                : _packageNames.TryGetValue(key, out var name) ? name
+                : (MsiError.UnknownProduct, string.Empty);
+        }
+        else if (property == MsiInstallProperty.PackageName)
+        {
             if (!_patchPackageNames.TryGetValue((productCodeOrPatchCode, userSid, context), out scripted))
                 throw new InvalidOperationException(
                     $"the fake was asked for the PackageName patch {productCodeOrPatchCode} has "

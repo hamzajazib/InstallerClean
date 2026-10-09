@@ -7,12 +7,13 @@ namespace InstallerClean.Models;
 /// installations, and of files, and nothing naming either.
 ///
 /// THE FIRST CONDITION IS AN INSTALLATION THAT SETS THE HOLD: one whose cached package does
-/// not say which product it declares and whose own record does not show an ordinary
-/// installation. The check looks for the cached package of every installation the caller
-/// listed, once, the first time an installation package reaches that step, and reads the
-/// record of each one whose cached package gave no product code. The count is taken there,
-/// before any file's verdict, so an installation is counted as setting the hold whether or
-/// not any installation package was then let through for it to hold back. Each such
+/// not say which product it declares, whose own record does not show an ordinary
+/// installation, and which is not shown to have no package for Windows Installer to open
+/// (<see cref="ReleasedOpensNoPackage"/>). The check looks for the cached package of every
+/// installation the caller listed, once, the first time an installation package reaches that
+/// step, and reads the record of each one whose cached package gave no product code. The count
+/// is taken there, before any file's verdict, so an installation is counted as setting the hold
+/// whether or not any installation package was then let through for it to hold back. Each such
 /// installation is counted once among the five members saying what its cached package gave,
 /// and once among the three saying why its record did not settle it, so the two groups add up
 /// to the same figure.
@@ -123,6 +124,12 @@ namespace InstallerClean.Models;
 /// installation not ruled out as a second copy name and which the file could be by its name,
 /// could not be ruled out.
 /// </param>
+/// <param name="ReleasedOpensNoPackage">
+/// Installations whose cached package did not say what it declares and whose own record does
+/// not show an ordinary installation, which do not set the hold because Windows Installer has no
+/// package to open for them: per machine, recording no cached package, and with no source list,
+/// both by the API's answer and in the registry.
+/// </param>
 public sealed record CachedPackageCensus(
     int ListedChecked,
     int KeptPathUnreadable,
@@ -146,9 +153,10 @@ public sealed record CachedPackageCensus(
     int UnseenSourcesGivenUp,
     int UnseenSourceNotRuledOut,
     int UnseenPerMachine,
-    int UnseenByNameFiles)
+    int UnseenByNameFiles,
+    int ReleasedOpensNoPackage = 0)
 {
     /// <summary>A pass that looked for no installation's packages.</summary>
     public static CachedPackageCensus None { get; } =
-        new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
