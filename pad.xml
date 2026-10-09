@@ -14,9 +14,9 @@
 
   <Program_Info>
     <Program_Name>InstallerClean</Program_Name>
-    <Program_Version>3.1.1</Program_Version>
+    <Program_Version>3.1.2</Program_Version>
     <Program_Release_Month>10</Program_Release_Month>
-    <Program_Release_Day>06</Program_Release_Day>
+    <Program_Release_Day>09</Program_Release_Day>
     <Program_Release_Year>2026</Program_Release_Year>
     <Program_Cost_Dollars>0</Program_Cost_Dollars>
     <Program_Cost_Other_Code>GBP</Program_Cost_Other_Code>
@@ -26,14 +26,14 @@
     <Program_Install_Support>Install and Uninstall</Program_Install_Support>
     <Program_OS_Support>Win10x64,Win11</Program_OS_Support>
     <Program_Language>English, Simplified Chinese, Russian, Spanish, Japanese, Brazilian Portuguese, Polish, Turkish, Korean, French, Italian, German, Indonesian, Vietnamese, Ukrainian, Dutch</Program_Language>
-    <Program_Change_Info>InstallerClean&#x27;s anonymous report now says more about one of the reasons it leaves installation packages alone: an installation whose cached installer won&#x27;t say which program it belongs to, where Windows can&#x27;t confirm it&#x27;s an ordinary installation, or a possible second copy of a program whose installation packages it can&#x27;t all see.</Program_Change_Info>
+    <Program_Change_Info>On a PC with Microsoft 365, InstallerClean now offers the unneeded installer files that Office&#x27;s registration made it hold back, and the old copies Office updates leave behind. It also says when files held back for being less than a day old can probably be offered.</Program_Change_Info>
     <Program_Specific_Category>System</Program_Specific_Category>
     <Program_Category_Class>System &amp; Desktop Utilities::File &amp; Disk Management</Program_Category_Class>
     <Program_System_Requirements>Windows 10 or 11 (64-bit). Administrator rights required to access C:\Windows\Installer.</Program_System_Requirements>
     <File_Info>
-      <File_Size_Bytes>97422504</File_Size_Bytes>
-      <File_Size_K>95140</File_Size_K>
-      <File_Size_MB>92.91</File_Size_MB>
+      <File_Size_Bytes>97444604</File_Size_Bytes>
+      <File_Size_K>95161</File_Size_K>
+      <File_Size_MB>92.93</File_Size_MB>
     </File_Info>
     <Expire_Info>
       <Has_Expire_Info>N</Has_Expire_Info>
@@ -71,9 +71,9 @@ Inspired by PatchCleaner, which does a similar job but is closed source and hasn
       <Application_XML_File_URL>https://raw.githubusercontent.com/no-faff/InstallerClean/main/pad.xml</Application_XML_File_URL>
     </Application_URLs>
     <Download_URLs>
-      <Primary_Download_URL>https://github.com/no-faff/InstallerClean/releases/download/v3.1.1/InstallerClean-3.1.1-setup.exe</Primary_Download_URL>
-      <Secondary_Download_URL>https://github.com/no-faff/InstallerClean/releases/download/v3.1.1/InstallerClean-3.1.1-portable.exe</Secondary_Download_URL>
-      <Additional_Download_URL_1>https://github.com/no-faff/InstallerClean/releases/download/v3.1.1/installerclean-cli.exe</Additional_Download_URL_1>
+      <Primary_Download_URL>https://github.com/no-faff/InstallerClean/releases/download/v3.1.2/InstallerClean-3.1.2-setup.exe</Primary_Download_URL>
+      <Secondary_Download_URL>https://github.com/no-faff/InstallerClean/releases/download/v3.1.2/InstallerClean-3.1.2-portable.exe</Secondary_Download_URL>
+      <Additional_Download_URL_1>https://github.com/no-faff/InstallerClean/releases/download/v3.1.2/installerclean-cli.exe</Additional_Download_URL_1>
     </Download_URLs>
   </Web_Info>
 
