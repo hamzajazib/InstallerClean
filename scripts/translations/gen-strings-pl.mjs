@@ -488,7 +488,7 @@ const MAP = {
   'Cli.Help.MovePath': `  installerclean-cli /m ŚCIEŻKA  Przenieś do wskazanej ścieżki`,
   'Cli.Help.NoteLine1': `installerclean-cli blokuje wiersz polecenia aż do końca, więc skrypt&#10;albo zadanie zaplanowane może na niego zaczekać.`,
   'Cli.Help.ExitCodesHeader': `Kody zakończenia:`,
-  'Cli.Help.ExitCodeOk': `  0   sukces: zrobił to, o co poproszono, i nic nie zawiodło`,
+  'Cli.Help.ExitCodeOk': `  0   sukces: zrobił to, o co poproszono`,
   'Cli.Help.ExitCodeError': `  1   nic nie przetworzono: uruchomienie zawiodło albo zostało odrzucone`,
   'Cli.Help.ExitCodePartial': `  2   częściowo: część przetworzona, część nie (błąd albo Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  stan przejściowy: coś zablokowało uruchomienie (zob. komunikat)`,

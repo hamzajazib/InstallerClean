@@ -446,7 +446,7 @@ const MAP = {
   'Cli.Help.MovePath': `  installerclean-cli /m 경로    지정한 경로로 이동`,
   'Cli.Help.NoteLine1': `installerclean-cli는 끝날 때까지 프롬프트를 붙잡고 있으므로 스크립트나&#10;예약 작업이 이를 기다릴 수 있습니다.`,
   'Cli.Help.ExitCodesHeader': `종료 코드:`,
-  'Cli.Help.ExitCodeOk': `  0   성공: 요청한 일을 했고 실패한 것이 없음`,
+  'Cli.Help.ExitCodeOk': `  0   성공: 요청한 일을 했음`,
   'Cli.Help.ExitCodeError': `  1   아무것도 처리되지 않음: 실행이 실패했거나 거부됨`,
   'Cli.Help.ExitCodePartial': `  2   부분: 일부는 처리되고 일부는 안 됨 (실패 또는 Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  일시적: 일시적인 상황으로 실행이 차단됨 (메시지 참고)`,

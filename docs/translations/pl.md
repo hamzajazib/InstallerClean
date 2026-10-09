@@ -537,7 +537,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli blokuje wiersz polecenia aż do końca, więc skrypt<br>albo zadanie zaplanowane może na niego zaczekać. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Folder dla każdego użytkownika; zaplanowane lub SYSTEM: /m ŚCIEŻKA. |
 | Exit codes: | Kody zakończenia: |
-|   0   success: the run did what it was asked and nothing failed |   0   sukces: zrobił to, o co poproszono, i nic nie zawiodło |
+|   0   success: the run did what it was asked |   0   sukces: zrobił to, o co poproszono |
 |   1   nothing processed: the run failed or was refused |   1   nic nie przetworzono: uruchomienie zawiodło albo zostało odrzucone |
 |   2   partial: some processed, some not (a failure or a Ctrl+C part way) |   2   częściowo: część przetworzona, część nie (błąd albo Ctrl+C) |
 |   75  transient: a temporary condition blocked the run (see the message) |   75  stan przejściowy: coś zablokowało uruchomienie (zob. komunikat) |

@@ -470,7 +470,7 @@ const MAP = {
   'Cli.Help.MovePath': `  installerclean-cli /m CHEMIN  Déplace vers le chemin spécifié`,
   'Cli.Help.NoteLine1': `installerclean-cli bloque l'invite jusqu'à la fin, pour qu'un script ou&#10;une tâche planifiée puisse l'attendre.`,
   'Cli.Help.ExitCodesHeader': `Codes de sortie :`,
-  'Cli.Help.ExitCodeOk': `  0   succès : l'exécution a fait ce qui lui était demandé, sans échec`,
+  'Cli.Help.ExitCodeOk': `  0   succès : l'exécution a fait ce qui lui était demandé`,
   'Cli.Help.ExitCodeError': `  1   rien de traité : l'exécution a échoué ou a été refusée`,
   'Cli.Help.ExitCodePartial': `  2   partiel : une partie traitée, l'autre non (un échec ou un Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  transitoire : quelque chose a bloqué l'exécution (voir le message)`,

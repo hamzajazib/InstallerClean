@@ -553,7 +553,7 @@ const MAP = {
   'Cli.Help.NoteLine1': `installerclean-cli blocks the prompt until it finishes, so a script or&#10;scheduled task can wait on it.`,
   'Cli.Help.MoveScheduledNote': `That folder is saved per-user; scheduled or SYSTEM runs need /m PATH.`,
   'Cli.Help.ExitCodesHeader': `Exit codes:`,
-  'Cli.Help.ExitCodeOk': `  0   success: the run did what it was asked and nothing failed`,
+  'Cli.Help.ExitCodeOk': `  0   success: the run did what it was asked`,
   'Cli.Help.ExitCodeError': `  1   nothing processed: the run failed or was refused`,
   'Cli.Help.ExitCodePartial': `  2   partial: some processed, some not (a failure or a Ctrl+C part way)`,
   'Cli.Help.ExitCodeTransient': `  75  transient: a temporary condition blocked the run (see the message)`,

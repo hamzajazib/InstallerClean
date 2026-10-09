@@ -469,7 +469,7 @@ const MAP = {
   'Cli.Help.MovePath': `  installerclean-cli /m ШЛЯХ    Перемістити за вказаним шляхом`,
   'Cli.Help.NoteLine1': `installerclean-cli утримує командний рядок до кінця роботи, щоб&#10;скрипт або запланована задача могли на нього зачекати.`,
   'Cli.Help.ExitCodesHeader': `Коди виходу:`,
-  'Cli.Help.ExitCodeOk': `  0   успіх: запуск зробив те, про що просили, і нічого не збоїло`,
+  'Cli.Help.ExitCodeOk': `  0   успіх: запуск зробив те, про що просили`,
   'Cli.Help.ExitCodeError': `  1   нічого не оброблено: запуск завершився збоєм або був відхилений`,
   'Cli.Help.ExitCodePartial': `  2   частково: щось оброблено, щось ні (збій або Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  тимчасова: запуск заблокувала тимчасова умова (див. повідомлення)`,

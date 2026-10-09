@@ -380,7 +380,7 @@ const MAP = {
   'Cli.Help.MovePath': `  installerclean-cli /m RUTA    Mueve a la ruta especificada`,
   'Cli.Help.NoteLine1': `installerclean-cli bloquea el símbolo del sistema hasta terminar, para&#10;que un script o una tarea programada pueda esperarlo.`,
   'Cli.Help.ExitCodesHeader': `Códigos de salida:`,
-  'Cli.Help.ExitCodeOk': `  0   correcto: hizo lo que se le pidió y nada falló`,
+  'Cli.Help.ExitCodeOk': `  0   correcto: hizo lo que se le pidió`,
   'Cli.Help.ExitCodeError': `  1   nada procesado: la ejecución falló o fue rechazada`,
   'Cli.Help.ExitCodePartial': `  2   parcial: unos procesados y otros no (un fallo o un Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  transitorio: algo temporal bloqueó la ejecución (ver el mensaje)`,

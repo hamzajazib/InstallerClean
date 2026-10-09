@@ -373,7 +373,7 @@ const MAP = {
   'Cli.Help.MovePath': `  installerclean-cli /m PATH    指定されたパスに移動`,
   'Cli.Help.NoteLine1': `installerclean-cli は終了までプロンプトを占有するため、スクリプトや&#10;スケジュールされたタスクが完了を待てます。`,
   'Cli.Help.ExitCodesHeader': `終了コード：`,
-  'Cli.Help.ExitCodeOk': `  0   成功：求められた処理を行い、失敗は何もなかった`,
+  'Cli.Help.ExitCodeOk': `  0   成功：求められた処理を行った`,
   'Cli.Help.ExitCodeError': `  1   何も処理されなかった：実行が失敗したか拒否された`,
   'Cli.Help.ExitCodePartial': `  2   一部：一部は処理され、一部は処理されず (失敗または Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  一時的：一時的な状態が実行をブロックしました (メッセージを参照)`,

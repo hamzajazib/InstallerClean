@@ -449,7 +449,7 @@ const MAP = {
   'Cli.Help.MovePath': `  installerclean-cli /m ĐƯỜNG_DẪN  Chuyển tới đường dẫn được chỉ định`,
   'Cli.Help.NoteLine1': `installerclean-cli giữ dấu nhắc cho tới khi xong, để một tập lệnh hoặc&#10;một tác vụ theo lịch có thể chờ nó.`,
   'Cli.Help.ExitCodesHeader': `Mã thoát:`,
-  'Cli.Help.ExitCodeOk': `  0   thành công: đã làm đúng việc được yêu cầu, không có gì hỏng`,
+  'Cli.Help.ExitCodeOk': `  0   thành công: đã làm đúng việc được yêu cầu`,
   'Cli.Help.ExitCodeError': `  1   không xử lý gì: lần chạy đã thất bại hoặc bị từ chối`,
   'Cli.Help.ExitCodePartial': `  2   một phần: xử lý được một phần (một lỗi hoặc một Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  tạm thời: một điều kiện tạm thời đã chặn lần chạy (xem thông báo)`,

@@ -2307,10 +2307,12 @@ InstallerClean уже был запущен от имени администра
        LEFT. Five runs exit 0: the help and version flags (/? and -v), which print
        and stop; a /s scan that found files and listed them, which can leave an
        administrator plenty to do; a /s scan that found none; and a /d or /m batch
-       in which every file was processed without error. The sentence has to be true
-       of all five, so it says what they share, which is that the run did what it
-       was asked and nothing in it failed. Anyone tightening it checks it against
-       the five. -->
+       in which every file was processed without error. The first four take it only
+       where every write to their output went through, their output being what they
+       are asked for, and a /d or /m batch takes it whatever became of its output,
+       the files being what it is asked for. The sentence has to be true of all five,
+       so it says what they share, which is that the run did what it was asked.
+       Anyone tightening it checks it against the five. -->
   <!-- The runs that end on this code are not one kind of thing: a refusal is
        among them, and CliExitCode.Error says in its own capitals that a refusal
        is not a failure and shares the code anyway. So the line says what they
@@ -2378,7 +2380,7 @@ InstallerClean уже был запущен от имени администра
   <data name="Cli.Help.MovePath" xml:space="preserve"><value>  installerclean-cli /m ПУТЬ      Переместить в указанный путь</value></data>
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli удерживает командную строку до конца работы, чтобы&#10;скрипт или запланированная задача могли его дождаться.</value></data>
   <data name="Cli.Help.ExitCodesHeader" xml:space="preserve"><value>Коды выхода:</value></data>
-  <data name="Cli.Help.ExitCodeOk" xml:space="preserve"><value>  0   успех: запуск сделал то, о чём просили, и ничего не сбоило</value></data>
+  <data name="Cli.Help.ExitCodeOk" xml:space="preserve"><value>  0   успех: запуск сделал то, о чём просили</value></data>
   <data name="Cli.Help.ExitCodeError" xml:space="preserve"><value>  1   ничего не обработано: запуск завершился сбоем или был отклонён</value></data>
   <data name="Cli.Help.ExitCodePartial" xml:space="preserve"><value>  2   частично: часть обработана, часть нет (сбой или Ctrl+C)</value></data>
   <data name="Cli.Help.ExitCodeTransient" xml:space="preserve"><value>  75  временно: запуск заблокирован временным состоянием (см. сообщение)</value></data>

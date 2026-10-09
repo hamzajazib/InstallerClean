@@ -537,7 +537,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli bitene kadar komut istemini tutar, böylece bir betik<br>ya da zamanlanmış görev onu bekleyebilir. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Klasör kullanıcıya özeldir; zamanlanmış veya SYSTEM: /m YOL. |
 | Exit codes: | Çıkış kodları: |
-|   0   success: the run did what it was asked and nothing failed |   0   başarılı: isteneni yaptı ve hiçbir şey başarısız olmadı |
+|   0   success: the run did what it was asked |   0   başarılı: isteneni yaptı |
 |   1   nothing processed: the run failed or was refused |   1   hiçbir şey işlenmedi: çalıştırma başarısız oldu ya da reddedildi |
 |   2   partial: some processed, some not (a failure or a Ctrl+C part way) |   2   kısmi: bir kısmı işlendi, bir kısmı işlenmedi (hata ya da Ctrl+C) |
 |   75  transient: a temporary condition blocked the run (see the message) |   75  geçici: geçici bir durum çalıştırmayı engelledi (iletiye bakın) |

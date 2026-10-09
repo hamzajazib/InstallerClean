@@ -537,7 +537,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli удерживает командную строку до конца работы, чтобы<br>скрипт или запланированная задача могли его дождаться. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Папка своя у каждого пользователя; запланированным и SYSTEM: /m ПУТЬ. |
 | Exit codes: | Коды выхода: |
-|   0   success: the run did what it was asked and nothing failed |   0   успех: запуск сделал то, о чём просили, и ничего не сбоило |
+|   0   success: the run did what it was asked |   0   успех: запуск сделал то, о чём просили |
 |   1   nothing processed: the run failed or was refused |   1   ничего не обработано: запуск завершился сбоем или был отклонён |
 |   2   partial: some processed, some not (a failure or a Ctrl+C part way) |   2   частично: часть обработана, часть нет (сбой или Ctrl+C) |
 |   75  transient: a temporary condition blocked the run (see the message) |   75  временно: запуск заблокирован временным состоянием (см. сообщение) |

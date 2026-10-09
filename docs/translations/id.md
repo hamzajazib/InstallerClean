@@ -537,7 +537,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli menahan prompt sampai selesai, sehingga skrip atau<br>tugas terjadwal bisa menunggunya. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Folder disimpan per pengguna; tugas terjadwal atau SYSTEM: /m JALUR. |
 | Exit codes: | Kode keluar: |
-|   0   success: the run did what it was asked and nothing failed |   0   berhasil: menjalankan yang diminta dan tidak ada yang gagal |
+|   0   success: the run did what it was asked |   0   berhasil: menjalankan yang diminta |
 |   1   nothing processed: the run failed or was refused |   1   tidak ada yang diproses: proses gagal atau ditolak |
 |   2   partial: some processed, some not (a failure or a Ctrl+C part way) |   2   sebagian: sebagian diproses, sebagian tidak (gagal atau Ctrl+C) |
 |   75  transient: a temporary condition blocked the run (see the message) |   75  sementara: kondisi sementara memblokir proses (lihat pesannya) |

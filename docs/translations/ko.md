@@ -537,7 +537,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli는 끝날 때까지 프롬프트를 붙잡고 있으므로 스크립트나<br>예약 작업이 이를 기다릴 수 있습니다. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | 폴더는 사용자별 저장. 예약 또는 SYSTEM 실행에는 /m 경로 필요. |
 | Exit codes: | 종료 코드: |
-|   0   success: the run did what it was asked and nothing failed |   0   성공: 요청한 일을 했고 실패한 것이 없음 |
+|   0   success: the run did what it was asked |   0   성공: 요청한 일을 했음 |
 |   1   nothing processed: the run failed or was refused |   1   아무것도 처리되지 않음: 실행이 실패했거나 거부됨 |
 |   2   partial: some processed, some not (a failure or a Ctrl+C part way) |   2   부분: 일부는 처리되고 일부는 안 됨 (실패 또는 Ctrl+C) |
 |   75  transient: a temporary condition blocked the run (see the message) |   75  일시적: 일시적인 상황으로 실행이 차단됨 (메시지 참고) |

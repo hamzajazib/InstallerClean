@@ -472,7 +472,7 @@ const MAP = {
   'Cli.Help.MovePath': `  installerclean-cli /m JALUR   Pindahkan ke jalur yang ditentukan`,
   'Cli.Help.NoteLine1': `installerclean-cli menahan prompt sampai selesai, sehingga skrip atau&#10;tugas terjadwal bisa menunggunya.`,
   'Cli.Help.ExitCodesHeader': `Kode keluar:`,
-  'Cli.Help.ExitCodeOk': `  0   berhasil: menjalankan yang diminta dan tidak ada yang gagal`,
+  'Cli.Help.ExitCodeOk': `  0   berhasil: menjalankan yang diminta`,
   'Cli.Help.ExitCodeError': `  1   tidak ada yang diproses: proses gagal atau ditolak`,
   'Cli.Help.ExitCodePartial': `  2   sebagian: sebagian diproses, sebagian tidak (gagal atau Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  sementara: kondisi sementara memblokir proses (lihat pesannya)`,

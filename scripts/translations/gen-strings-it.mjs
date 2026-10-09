@@ -376,7 +376,7 @@ const MAP = {
   'Cli.Help.MovePath': `  installerclean-cli /m PERCORSO  Sposta nel percorso specificato`,
   'Cli.Help.NoteLine1': `installerclean-cli blocca il prompt finché non termina, così uno script&#10;o un'operazione pianificata può attenderlo.`,
   'Cli.Help.ExitCodesHeader': `Codici di uscita:`,
-  'Cli.Help.ExitCodeOk': `  0   riuscito: ha fatto quanto richiesto e nulla è fallito`,
+  'Cli.Help.ExitCodeOk': `  0   riuscito: ha fatto quanto richiesto`,
   'Cli.Help.ExitCodeError': `  1   nulla elaborato: l'esecuzione è fallita o è stata rifiutata`,
   'Cli.Help.ExitCodePartial': `  2   parziale: alcuni elaborati, altri no (un errore o un Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  transitorio: qualcosa ha bloccato l'esecuzione (vedi il messaggio)`,

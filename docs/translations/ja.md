@@ -537,7 +537,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli は終了までプロンプトを占有するため、スクリプトや<br>スケジュールされたタスクが完了を待てます。 |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | フォルダーはユーザーごと。予約実行や SYSTEM には /m PATH が必要。 |
 | Exit codes: | 終了コード： |
-|   0   success: the run did what it was asked and nothing failed |   0   成功：求められた処理を行い、失敗は何もなかった |
+|   0   success: the run did what it was asked |   0   成功：求められた処理を行った |
 |   1   nothing processed: the run failed or was refused |   1   何も処理されなかった：実行が失敗したか拒否された |
 |   2   partial: some processed, some not (a failure or a Ctrl+C part way) |   2   一部：一部は処理され、一部は処理されず (失敗または Ctrl+C) |
 |   75  transient: a temporary condition blocked the run (see the message) |   75  一時的：一時的な状態が実行をブロックしました (メッセージを参照) |

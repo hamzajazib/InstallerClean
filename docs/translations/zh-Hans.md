@@ -537,7 +537,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli 会占住命令提示符直到结束，因此脚本或计划任务<br>可以等待它完成。 |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | 该文件夹按用户保存；计划任务或 SYSTEM 运行需要 /m 路径。 |
 | Exit codes: | 退出代码： |
-|   0   success: the run did what it was asked and nothing failed |   0   成功：本次运行做了要求的事，并且没有任何失败 |
+|   0   success: the run did what it was asked |   0   成功：本次运行做了要求的事 |
 |   1   nothing processed: the run failed or was refused |   1   没有处理任何内容：本次运行失败或被拒绝 |
 |   2   partial: some processed, some not (a failure or a Ctrl+C part way) |   2   部分：部分已处理，部分未处理（失败或 Ctrl+C） |
 |   75  transient: a temporary condition blocked the run (see the message) |   75  暂时性：临时状况阻止了本次运行（见相关消息） |

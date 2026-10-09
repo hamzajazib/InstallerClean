@@ -451,7 +451,7 @@ const MAP = {
   'Cli.Help.MovePath': `  installerclean-cli /m CAMINHO  Move para o caminho especificado`,
   'Cli.Help.NoteLine1': `O installerclean-cli bloqueia o prompt até terminar, para que um script&#10;ou uma tarefa agendada possa esperar por ele.`,
   'Cli.Help.ExitCodesHeader': `Códigos de saída:`,
-  'Cli.Help.ExitCodeOk': `  0   êxito: a execução fez o que foi pedido e nada falhou`,
+  'Cli.Help.ExitCodeOk': `  0   êxito: a execução fez o que foi pedido`,
   'Cli.Help.ExitCodeError': `  1   nada processado: a execução falhou ou foi recusada`,
   'Cli.Help.ExitCodePartial': `  2   parcial: alguns processados, outros não (falha ou Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  transitório: algo temporário bloqueou a execução (veja a mensagem)`,

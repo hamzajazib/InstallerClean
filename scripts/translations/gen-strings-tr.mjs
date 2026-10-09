@@ -375,7 +375,7 @@ Ayrıntılar şuraya yazıldı:
   'Cli.Help.MovePath': `  installerclean-cli /m YOL     Belirtilen yola taşı`,
   'Cli.Help.NoteLine1': `installerclean-cli bitene kadar komut istemini tutar, böylece bir betik&#10;ya da zamanlanmış görev onu bekleyebilir.`,
   'Cli.Help.ExitCodesHeader': `Çıkış kodları:`,
-  'Cli.Help.ExitCodeOk': `  0   başarılı: isteneni yaptı ve hiçbir şey başarısız olmadı`,
+  'Cli.Help.ExitCodeOk': `  0   başarılı: isteneni yaptı`,
   'Cli.Help.ExitCodeError': `  1   hiçbir şey işlenmedi: çalıştırma başarısız oldu ya da reddedildi`,
   'Cli.Help.ExitCodePartial': `  2   kısmi: bir kısmı işlendi, bir kısmı işlenmedi (hata ya da Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  geçici: geçici bir durum çalıştırmayı engelledi (iletiye bakın)`,

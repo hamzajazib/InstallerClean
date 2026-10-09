@@ -464,7 +464,7 @@ const MAP = {
   'Cli.Help.MovePath': `  installerclean-cli /m PFAD    An den angegebenen Pfad`,
   'Cli.Help.NoteLine1': `installerclean-cli blockiert die Eingabeaufforderung bis zum Ende,&#10;damit ein Skript oder eine geplante Aufgabe darauf warten kann.`,
   'Cli.Help.ExitCodesHeader': `Exit-Codes:`,
-  'Cli.Help.ExitCodeOk': `  0   Erfolg: Der Lauf hat getan, worum gebeten wurde, ohne Fehler`,
+  'Cli.Help.ExitCodeOk': `  0   Erfolg: Der Lauf hat getan, worum gebeten wurde`,
   'Cli.Help.ExitCodeError': `  1   nichts verarbeitet: der Lauf schlug fehl oder wurde abgelehnt`,
   'Cli.Help.ExitCodePartial': `  2   teilweise: einiges verarbeitet, anderes nicht (Fehler oder Strg+C)`,
   'Cli.Help.ExitCodeTransient': `  75  vorübergehend: etwas hat den Lauf blockiert (siehe Meldung)`,

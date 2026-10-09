@@ -2378,11 +2378,13 @@ Jalankan InstallerClean lagi sebagai administrator.</value></data>
        LEFT. Five runs exit 0: the help and version flags (/? and -v), which print
        and stop; a /s scan that found files and listed them, which can leave an
        administrator plenty to do; a /s scan that found none; and a /d or /m batch
-       in which every file was processed without error. The sentence has to be true
-       of all five, so it says what they share, which is that the run did what it
-       was asked and nothing in it failed. Anyone tightening it checks it against
-       the five. -->
-  <data name="Cli.Help.ExitCodeOk" xml:space="preserve"><value>  0   berhasil: menjalankan yang diminta dan tidak ada yang gagal</value></data>
+       in which every file was processed without error. The first four take it only
+       where every write to their output went through, their output being what they
+       are asked for, and a /d or /m batch takes it whatever became of its output,
+       the files being what it is asked for. The sentence has to be true of all five,
+       so it says what they share, which is that the run did what it was asked.
+       Anyone tightening it checks it against the five. -->
+  <data name="Cli.Help.ExitCodeOk" xml:space="preserve"><value>  0   berhasil: menjalankan yang diminta</value></data>
   <!-- The runs that end on this code are not one kind of thing: a refusal is
        among them, and CliExitCode.Error says in its own capitals that a refusal
        is not a failure and shares the code anyway. So the line says what they

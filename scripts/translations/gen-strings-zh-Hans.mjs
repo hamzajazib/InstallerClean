@@ -353,7 +353,7 @@ const MAP = {
   'Cli.Help.MovePath': `  installerclean-cli /m 路径    移动到指定路径`,
   'Cli.Help.NoteLine1': `installerclean-cli 会占住命令提示符直到结束，因此脚本或计划任务&#10;可以等待它完成。`,
   'Cli.Help.ExitCodesHeader': `退出代码：`,
-  'Cli.Help.ExitCodeOk': `  0   成功：本次运行做了要求的事，并且没有任何失败`,
+  'Cli.Help.ExitCodeOk': `  0   成功：本次运行做了要求的事`,
   'Cli.Help.ExitCodeError': `  1   没有处理任何内容：本次运行失败或被拒绝`,
   'Cli.Help.ExitCodePartial': `  2   部分：部分已处理，部分未处理（失败或 Ctrl+C）`,
   'Cli.Help.ExitCodeTransient': `  75  暂时性：临时状况阻止了本次运行（见相关消息）`,

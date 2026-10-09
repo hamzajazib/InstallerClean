@@ -451,7 +451,7 @@ const MAP = {
   'Cli.Help.NoteLine1': `installerclean-cli blokkeert de prompt tot het klaar is, zodat een script&#10;of geplande taak erop kan wachten.`,
   'Cli.Help.MoveScheduledNote': `Die map geldt per gebruiker; geplande of SYSTEM-taken vereisen /m PAD.`,
   'Cli.Help.ExitCodesHeader': `Afsluitcodes:`,
-  'Cli.Help.ExitCodeOk': `  0   geslaagd: de uitvoering deed wat gevraagd was, zonder fouten`,
+  'Cli.Help.ExitCodeOk': `  0   geslaagd: de uitvoering deed wat gevraagd was`,
   'Cli.Help.ExitCodeError': `  1   niets verwerkt: de uitvoering is mislukt of is geweigerd`,
   'Cli.Help.ExitCodePartial': `  2   gedeeltelijk: een deel verwerkt, een deel niet (een fout of Ctrl+C)`,
   'Cli.Help.ExitCodeTransient': `  75  tijdelijk: iets tijdelijks blokkeerde de uitvoering (zie de melding)`,

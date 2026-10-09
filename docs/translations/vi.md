@@ -537,7 +537,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli giữ dấu nhắc cho tới khi xong, để một tập lệnh hoặc<br>một tác vụ theo lịch có thể chờ nó. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Thư mục theo người dùng; tác vụ theo lịch hoặc SYSTEM: /m ĐƯỜNG_DẪN. |
 | Exit codes: | Mã thoát: |
-|   0   success: the run did what it was asked and nothing failed |   0   thành công: đã làm đúng việc được yêu cầu, không có gì hỏng |
+|   0   success: the run did what it was asked |   0   thành công: đã làm đúng việc được yêu cầu |
 |   1   nothing processed: the run failed or was refused |   1   không xử lý gì: lần chạy đã thất bại hoặc bị từ chối |
 |   2   partial: some processed, some not (a failure or a Ctrl+C part way) |   2   một phần: xử lý được một phần (một lỗi hoặc một Ctrl+C) |
 |   75  transient: a temporary condition blocked the run (see the message) |   75  tạm thời: một điều kiện tạm thời đã chặn lần chạy (xem thông báo) |

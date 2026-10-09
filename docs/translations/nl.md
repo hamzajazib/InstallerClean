@@ -537,7 +537,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli blokkeert de prompt tot het klaar is, zodat een script<br>of geplande taak erop kan wachten. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Die map geldt per gebruiker; geplande of SYSTEM-taken vereisen /m PAD. |
 | Exit codes: | Afsluitcodes: |
-|   0   success: the run did what it was asked and nothing failed |   0   geslaagd: de uitvoering deed wat gevraagd was, zonder fouten |
+|   0   success: the run did what it was asked |   0   geslaagd: de uitvoering deed wat gevraagd was |
 |   1   nothing processed: the run failed or was refused |   1   niets verwerkt: de uitvoering is mislukt of is geweigerd |
 |   2   partial: some processed, some not (a failure or a Ctrl+C part way) |   2   gedeeltelijk: een deel verwerkt, een deel niet (een fout of Ctrl+C) |
 |   75  transient: a temporary condition blocked the run (see the message) |   75  tijdelijk: iets tijdelijks blokkeerde de uitvoering (zie de melding) |
