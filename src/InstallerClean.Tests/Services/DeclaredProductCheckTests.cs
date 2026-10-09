@@ -3914,6 +3914,75 @@ public class DeclaredProductCheckTests
     }
 
     [Fact]
+    public void A_source_list_found_after_the_hold_was_settled_keeps_the_copy_declaring_the_code()
+    {
+        // The registration has no source list when the hold's step asks and has one when the
+        // step reading the installations of the candidate's own code asks.
+        var f = ACopyBesideOfficesFeatureRegistration();
+        f.Packages.Declares(Candidate, OfficeFeatures);
+        f.Msi.Installed(OfficeFeatures);
+        f.Msi.SourceListPackageNameAnswersInTurn(OfficeFeatures, null, MsiInstallContext.Machine,
+            MsiError.BadConfiguration, MsiError.Success);
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, screening.Outcomes[0]);
+        Assert.Equal(Census(opensNoPackage: 1), screening.CachedPackages);
+        Assert.Equal(2, f.Msi.SourceListPackageNameReads.Count);
+    }
+
+    [Fact]
+    public void A_source_list_found_after_the_hold_was_settled_keeps_the_copies_beside_a_possible_second_copy()
+    {
+        // The same, where the registration is not ruled out as a second copy and its packages
+        // are read for the candidate after the hold's step.
+        var f = ACopyBesideOfficesFeatureRegistration(marked: true);
+        f.Msi.SourceListPackageNameAnswersInTurn(OfficeFeatures, null, MsiInstallContext.Machine,
+            MsiError.BadConfiguration, MsiError.Success);
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+
+        Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
+        Assert.Equal(Census(opensNoPackage: 1, unruled: 1, unseenNoneRecorded: 1, unseenPerMachine: 1),
+            screening.CachedPackages);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_package_found_to_open_stands_for_the_rest_of_the_pass(bool declaredInUpperCase)
+    {
+        // The registration's record reads as ordinary. The hold's step finds a package for it
+        // to open, and the step reading the installations of the candidate's own code takes
+        // that answer without asking, in either spelling of the code, though an ask would now
+        // find none.
+        var f = ACopyBesideOfficesFeatureRegistration();
+        f.Msi.AnswersItsOwnRecord(OfficeFeatures, null, MsiInstallContext.Machine);
+        f.Msi.SourceListPackageNameAnswersInTurn(OfficeFeatures, null, MsiInstallContext.Machine,
+            MsiError.Success, MsiError.BadConfiguration);
+        var declared = OfficeFeatures;
+        if (declaredInUpperCase)
+        {
+            declared = OfficeFeatures.ToUpperInvariant();
+            Assert.NotEqual(OfficeFeatures, declared);
+            AnswersAsOfficesFeatureRegistration(f.Msi, declared);
+        }
+        f.Packages.Declares(Candidate, declared);
+        f.Msi.Installed(declared);
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, screening.Outcomes[0]);
+        Assert.Equal(Census(released: 1), screening.CachedPackages);
+        Assert.Contains((declared, (string?)null, MsiInstallContext.Machine), f.Msi.PackageReads);
+        Assert.Equal(new[] { (OfficeFeatures, (string?)null, MsiInstallContext.Machine) },
+            f.Msi.SourceListPackageNameReads);
+    }
+
+    [Fact]
     public void The_composition_root_gives_the_check_the_running_account()
     {
         using var services = new ServiceCollection().AddInstallerCleanCore().BuildServiceProvider();
@@ -6751,6 +6820,18 @@ internal sealed class ScriptedMsiProducts : IMsiApi
     public void SourceListPackageNameAnswers(string productCode, string? sid, MsiInstallContext context, uint error) =>
         _sourceListPackageNames[(productCode, sid, context)] = error;
 
+    private readonly Dictionary<(string ProductCode, string? Sid, MsiInstallContext Context), Queue<uint>>
+        _sourceListPackageNameTurns = new();
+
+    /// <summary>
+    /// What successive reads of one installation's PackageName off its source list return, one
+    /// answer per read in the order given, the last repeating: a source list that appears or
+    /// goes while a pass runs. It wins over <see cref="SourceListPackageNameAnswers"/>.
+    /// </summary>
+    public void SourceListPackageNameAnswersInTurn(string productCode, string? sid, MsiInstallContext context,
+        params uint[] errors) =>
+        _sourceListPackageNameTurns[(productCode, sid, context)] = new Queue<uint>(errors);
+
     /// <summary>What reading one installation's source list returns instead of an entry.</summary>
     public void SourceListAnswers(string productCode, string? sid, MsiInstallContext context, uint error) =>
         _sources[(productCode, sid, context)] = new SourceList(Array.Empty<string>(), error);
@@ -7201,7 +7282,9 @@ internal sealed class ScriptedMsiProducts : IMsiApi
         {
             var key = (productCodeOrPatchCode, userSid, context);
             if (value is null) SourceListPackageNameReads.Add(key);
-            scripted = _sourceListPackageNames.TryGetValue(key, out var error) ? (error, string.Empty)
+            scripted = _sourceListPackageNameTurns.TryGetValue(key, out var turns)
+                    ? (turns.Count > 1 ? turns.Dequeue() : turns.Peek(), string.Empty)
+                : _sourceListPackageNames.TryGetValue(key, out var error) ? (error, string.Empty)
                 : _packageNames.TryGetValue(key, out var name) ? name
                 : (MsiError.UnknownProduct, string.Empty);
         }

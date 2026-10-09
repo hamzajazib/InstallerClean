@@ -468,7 +468,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var path = read.Value.TrimEnd('\0');
         if (path.Length == 0)
         {
-            if (!OpensNoPackage(installation.ProductCode, installation.UserSid, context))
+            if (!OpensNoPackage(installation.ProductCode, installation.UserSid, context, pass))
             {
                 reading = SecondCopyReading.NoneRecorded;
                 return false;
@@ -551,7 +551,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             if (declared is null)
             {
                 if (reading == CachedPackageReading.NoneRecorded
-                    && OpensNoPackage(installation.ProductCode, installation.UserSid, context))
+                    && OpensNoPackage(installation.ProductCode, installation.UserSid, context, pass))
                 {
                     pass.Census.OpensNoPackage();
                     continue;
@@ -649,11 +649,24 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// The API is asked first, so a registry read is made only for an installation whose
     /// source list the API has already answered for. A check built without its registry
     /// reader answers false for every installation.
+    ///
+    /// AN ANSWER THAT KEEPS FILES STANDS FOR THE PASS, AND ONE THAT LETS FILES THROUGH IS ASKED
+    /// AGAIN (<see cref="PassAnswers.OpensNoPackageOf"/>). Once any of the three steps finds a
+    /// package to open for an installation, in whichever spelling of the code, every later
+    /// step of the pass takes that answer without asking. A step that would let a file
+    /// through on finding none asks for itself, so a source list that appears while the pass
+    /// runs keeps every file a later step would have let through.
     /// </summary>
-    private bool OpensNoPackage(string code, string? sid, MsiInstallContext context)
+    private bool OpensNoPackage(string code, string? sid, MsiInstallContext context, PassAnswers pass)
     {
         if (context != MsiInstallContext.Machine || sid is not null || _registry is null) return false;
 
+        return pass.OpensNoPackageOf(code, sid, context, () => AsksAndFindsNoPackage(code, sid, context));
+    }
+
+    /// <summary>The questions <see cref="OpensNoPackage"/> puts, for one installation it has not yet asked about.</summary>
+    private bool AsksAndFindsNoPackage(string code, string? sid, MsiInstallContext context)
+    {
         uint length = 0;
         if (_msi.GetSourceListInfo(code, sid, context, MsiSourceListOptions.Product,
                 MsiInstallProperty.PackageName, null, ref length) != MsiError.BadConfiguration)
@@ -663,7 +676,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var sourceList = SourceListKeyPath(code, sid, context);
         return properties is not null
             && sourceList is not null
-            && _registry.LocalMachineValues(properties).Presence == RegistryKeyPresence.Absent
+            && _registry!.LocalMachineValues(properties).Presence == RegistryKeyPresence.Absent
             && _registry.LocalMachineValues(sourceList).Presence == RegistryKeyPresence.Absent;
     }
 
@@ -1011,7 +1024,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             var path = read.Value.TrimEnd('\0');
             if (path.Length == 0)
             {
-                if (OpensNoPackage(registeredCode, sid, context)) continue;
+                if (OpensNoPackage(registeredCode, sid, context, pass)) continue;
                 return null;
             }
 
@@ -2539,6 +2552,25 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         private readonly Dictionary<(string PatchCode, string ProductCode, string? Sid, MsiInstallContext Context),
             InstallerQueryService.PropertyRead> _patchStates = new();
+
+        private readonly HashSet<(string ProductCode, string? Sid, MsiInstallContext Context)> _hasAPackage = new();
+
+        /// <summary>
+        /// Whether one installation has no package to open
+        /// (<see cref="DeclaredProductCheck.OpensNoPackage"/>): false without asking where an
+        /// earlier ask in this pass found one, and otherwise <paramref name="ask"/>'s answer,
+        /// a false one being kept for the rest of the pass. The code and the account compare
+        /// without case, as <see cref="PatchStateOf"/>'s do.
+        /// </summary>
+        internal bool OpensNoPackageOf(string productCode, string? sid, MsiInstallContext context, Func<bool> ask)
+        {
+            var key = (productCode.ToUpperInvariant(), sid?.ToUpperInvariant(), context);
+            if (_hasAPackage.Contains(key)) return false;
+            if (ask()) return true;
+
+            _hasAPackage.Add(key);
+            return false;
+        }
 
         /// <summary>
         /// One installation's answer to the keyed read of a patch's <c>State</c>, asked
