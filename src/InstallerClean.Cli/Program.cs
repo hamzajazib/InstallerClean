@@ -300,14 +300,12 @@ internal static class Program
         }
         finally
         {
-            // RunWorkAsync has already written this run's summary entry by the
-            // time it returns, so nothing in this cleanup may reach Main's
-            // catch-all: that writes a second, and one summary per run is what
-            // an RMM counts runs by. The stdout note carries a guard of its
-            // own so that a dead stream cannot skip the mutex release beneath it,
-            // and the unhook goes last inside that guard because nothing depends
-            // on it having happened.
-            NoteEventLogUnavailable();
+            // RunWorkAsync has already written this run's summary entry, and printed
+            // the note about an Application log that refused it, by the time it
+            // returns, so nothing in this cleanup may reach Main's catch-all: that
+            // writes a second, and one summary per run is what an RMM counts runs by.
+            // The unhook goes last inside the guard because nothing depends on it
+            // having happened.
             try
             {
                 if (holdsMutex) mutex!.ReleaseMutex();
@@ -447,9 +445,9 @@ internal static class Program
     /// unwritable, so an RMM consumer polling for entries that never arrived has
     /// a record of why. Every caller has already written this run's Application-log
     /// entry, so a throw from here would reach <see cref="Main"/>'s catch-all and
-    /// write a second. Every caller runs inside Main, where <see cref="ConsoleGuard"/>
-    /// takes a failed write first, and the note carries a guard of its own as well,
-    /// so the one entry does not rest on the console guard being in place.
+    /// write a second. In a run, <see cref="ConsoleGuard"/> takes a failed write first,
+    /// and the note carries a guard of its own as well, so the one entry does not rest
+    /// on the console guard being in place.
     /// </summary>
     private static void NoteEventLogUnavailable()
     {
@@ -461,6 +459,22 @@ internal static class Program
         catch (Exception ex)
         {
             Helpers.CrashLog.TryWrite(ex);
+        }
+    }
+
+    /// <summary>
+    /// The note saying the Application log refused an entry, for one work run. Disposed
+    /// when <see cref="RunWorkAsync"/> ends, after the run's entry, and prints the note
+    /// then (<see cref="NoteEventLogUnavailable"/>) unless the run has already printed it.
+    /// </summary>
+    private sealed class EventLogNote : IDisposable
+    {
+        /// <summary>Whether the run has printed the note itself.</summary>
+        internal bool Printed { get; set; }
+
+        public void Dispose()
+        {
+            if (!Printed) NoteEventLogUnavailable();
         }
     }
 
@@ -495,6 +509,11 @@ internal static class Program
         ConsoleGuard? output = null)
     {
         consoleWatched ??= ConsoleIsWatched;
+
+        // The note saying the Application log refused an entry prints when the run ends,
+        // after the run's own entry, on every path out of this method, unless the run has
+        // already printed it among a scan's notices.
+        using var eventLogNote = new EventLogNote();
 
         // What a cancelled batch had actually committed, read by the OCE catch to
         // write its EventLog summary and to pick ExitPartial over ExitCancelled.
@@ -619,7 +638,9 @@ internal static class Program
             // ahead of the line counting the files instead, so the list sits straight under
             // that line and is the last thing printed: the reasons a file was held back are
             // indented like the rows, and a script reading the rows takes the indented lines
-            // after that line to the end of the output.
+            // after that line to the end of the output. The one line that can follow the
+            // list is the note saying the Application log refused the run's summary, which
+            // is not indented.
             var notices = ReportScanSignals(arg, scanResult, sourcesGivenUp);
 
             if (arg == "/s" && count > 0)
@@ -643,6 +664,19 @@ internal static class Program
                         scanResult.RemovableFiles.Select(f =>
                             $"  {f.FileName.PadRight(nameColumn)}  ({f.SizeDisplay}, {f.Reason})")),
                 };
+
+                // THE NOTE SAYING THE APPLICATION LOG REFUSED AN ENTRY GOES WITH THE OTHER
+                // NOTES, ahead of the count line, where the log has already refused a notice's
+                // entry. Where it has refused none, whether it takes the summary is known only
+                // once the summary is written, after the list, and the note then follows the
+                // list. A check of the log made before printing would be a forecast, since a log
+                // can pass one and still refuse the entry, a stopped Event Log service being one
+                // way.
+                if (EventLogWriter.EventLogUnavailable)
+                {
+                    listing.Insert(notices.Count, Strings.Cli_EventLogUnavailable);
+                    eventLogNote.Printed = true;
+                }
 
                 // EVERY LINE IS BUILT AND PRINTED BEFORE THE SUMMARY IS WRITTEN, so the summary
                 // says whether the list got out. What a scan-only run is asked for is its

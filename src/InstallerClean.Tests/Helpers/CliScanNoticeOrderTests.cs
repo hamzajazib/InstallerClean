@@ -127,7 +127,76 @@ public class CliScanNoticeOrderTests
         Assert.Equal(MachineContract.English(() => string.Format(Strings.Cli_EventLogScanNoOrphans, "/d")), summary.Text);
     }
 
+    [Fact]
+    public async Task A_scan_whose_notices_the_log_refused_prints_the_log_note_ahead_of_the_count_line_and_ends_on_the_list()
+    {
+        var scan = EveryNotice();
+
+        var run = await WithTheLogRefusing(entry => !IsOutcome((entry, string.Empty)), () => Run("/s", scan));
+
+        var lines = run.Stdout.Split(Environment.NewLine);
+        var lastNotice = Array.FindIndex(lines, l => l.StartsWith(NoticeOpenings(scan)[^1], StringComparison.Ordinal));
+        var note = Array.IndexOf(lines, Strings.Cli_EventLogUnavailable);
+        var found = Array.FindIndex(lines, l => l.StartsWith(Opening(Strings.Cli_FoundOrphans), StringComparison.Ordinal));
+        Assert.Equal(1, lines.Count(l => l == Strings.Cli_EventLogUnavailable));
+        Assert.True(note == lastNotice + 1 && found == note + 1, run.Stdout);
+        Assert.StartsWith(LastRow, lines[^2], StringComparison.Ordinal);
+        Assert.Equal(string.Empty, lines[^1]);
+    }
+
+    [Fact]
+    public async Task A_scan_whose_summary_alone_the_log_refused_prints_the_log_note_after_the_list()
+    {
+        var run = await WithTheLogRefusing(entry => entry == CliEventClass.Ok, () => Run("/s", EveryNotice()));
+
+        var lines = run.Stdout.Split(Environment.NewLine);
+        Assert.Equal(1, lines.Count(l => l == Strings.Cli_EventLogUnavailable));
+        Assert.Equal(Strings.Cli_EventLogUnavailable, lines[^2]);
+        Assert.StartsWith(LastRow, lines[^3], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_delete_whose_entries_the_log_refused_prints_the_log_note_once_after_its_result()
+    {
+        var run = await WithTheLogRefusing(_ => true, () => Run("/d", EveryNotice()));
+
+        var lines = run.Stdout.Split(Environment.NewLine);
+        var deleted = Array.FindIndex(lines, l => l.StartsWith(Opening(Strings.Cli_DeletedFiles), StringComparison.Ordinal));
+        var note = Array.IndexOf(lines, Strings.Cli_EventLogUnavailable);
+        Assert.Equal(1, lines.Count(l => l == Strings.Cli_EventLogUnavailable));
+        Assert.True(deleted >= 0 && note > deleted, run.Stdout);
+    }
+
     // ---- fixtures ----
+
+    /// <summary>
+    /// Runs <paramref name="run"/> with an Application log that refuses the entries
+    /// <paramref name="refuses"/> picks, as a log Group Policy or a stopped service refuses,
+    /// and records the rest. A refused entry marks the log unavailable, as a refused write
+    /// to the real log does.
+    /// </summary>
+    private static async Task<RunResult> WithTheLogRefusing(
+        Func<CliEventClass, bool> refuses, Func<Task<RunResult>> run)
+    {
+        // Both are process-global; the assembly disables test parallelisation.
+        var sink = EventLogWriter.Sink;
+        var unavailable = EventLogWriter.EventLogUnavailable;
+        try
+        {
+            EventLogWriter.EventLogUnavailable = false;
+            EventLogWriter.Sink = (entry, text) =>
+            {
+                if (refuses(entry)) throw new InvalidOperationException("The log refused the entry.");
+                EventLogRecorder.Sink(entry, text);
+            };
+            return await run();
+        }
+        finally
+        {
+            EventLogWriter.Sink = sink;
+            EventLogWriter.EventLogUnavailable = unavailable;
+        }
+    }
 
     /// <summary>The opening of the list's last row, which names the second file offered.</summary>
     private static string LastRow => "  " + Offer()[1].FileName + " ";
