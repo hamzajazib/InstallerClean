@@ -3,7 +3,6 @@ using InstallerClean.Helpers;
 using InstallerClean.Models;
 using InstallerClean.Resources;
 using InstallerClean.Services;
-using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 
 namespace InstallerClean.Tests.Helpers;
@@ -292,15 +291,7 @@ public class CliHeldBackBesideAnOfferTests
             .Returns(delete ?? new DeleteResult(
                 result.RemovableFiles.Count, Array.Empty<FileOperationError>()));
 
-        var services = new ServiceCollection()
-            .AddSingleton(scan)
-            .AddSingleton(reboot)
-            .AddSingleton(reverifier)
-            .AddSingleton(deleter)
-            .AddSingleton(Substitute.For<IMoveFilesService>())
-            .AddSingleton(Substitute.For<ISettingsService>())
-            .AddSingleton(Substitute.For<IFirstRunMark>())
-            .BuildServiceProvider();
+        var services = CliRunFixtures.Services(scan, reboot: reboot, reverifier: reverifier, delete: deleter);
 
         var original = Console.Out;
         using var buffer = new StringWriter();

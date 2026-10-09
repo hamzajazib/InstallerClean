@@ -3,7 +3,6 @@ using InstallerClean.Helpers;
 using InstallerClean.Models;
 using InstallerClean.Resources;
 using InstallerClean.Services;
-using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 
 namespace InstallerClean.Tests.Helpers;
@@ -233,15 +232,8 @@ public class CliPendingRebootOutcomeTests
             .Returns(new MoveResult(0, Array.Empty<FileOperationError>(),
                 InstallerBusy: busy, InstallerLockAccessRefused: refused));
 
-        var services = new ServiceCollection()
-            .AddSingleton(scan)
-            .AddSingleton(reboot)
-            .AddSingleton(reverifier)
-            .AddSingleton(delete)
-            .AddSingleton(move)
-            .AddSingleton(Substitute.For<ISettingsService>())
-            .AddSingleton(Substitute.For<IFirstRunMark>())
-            .BuildServiceProvider();
+        var services = CliRunFixtures.Services(scan, reboot: reboot, reverifier: reverifier,
+            delete: delete, move: move);
 
         var invocation = arg == "/m"
             ? new CliInvocation(CliCommand.Move, null, Destination)

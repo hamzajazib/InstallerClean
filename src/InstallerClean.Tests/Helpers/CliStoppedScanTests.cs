@@ -3,7 +3,6 @@ using InstallerClean.Helpers;
 using InstallerClean.Models;
 using InstallerClean.Resources;
 using InstallerClean.Services;
-using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
@@ -131,14 +130,6 @@ public class CliStoppedScanTests
         var reboot = Substitute.For<IPendingRebootService>();
         reboot.Check().Returns(PendingRebootResult.Clean);
 
-        return new ServiceCollection()
-            .AddSingleton(scan)
-            .AddSingleton(reboot)
-            .AddSingleton(Substitute.For<IRemovableReverifier>())
-            .AddSingleton(delete)
-            .AddSingleton(move)
-            .AddSingleton(Substitute.For<ISettingsService>())
-            .AddSingleton(Substitute.For<IFirstRunMark>())
-            .BuildServiceProvider();
+        return CliRunFixtures.Services(scan, reboot: reboot, delete: delete, move: move);
     }
 }

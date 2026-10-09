@@ -3,7 +3,6 @@ using InstallerClean.Helpers;
 using InstallerClean.Models;
 using InstallerClean.Resources;
 using InstallerClean.Services;
-using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 
 namespace InstallerClean.Tests.Helpers;
@@ -122,7 +121,7 @@ public class CliScanNoticeOrderTests
 
         Assert.True(console.Refused > 0, "The console refused no write.");
         Assert.Equal(CliExitCode.Ok, run.ExitCode);
-        var summary = Assert.Single(run.Entries, IsOutcome);
+        var summary = Assert.Single(run.Entries, CliRunFixtures.IsSummary);
         Assert.Equal(CliEventClass.Ok, summary.Class);
         Assert.Equal(MachineContract.English(() => string.Format(Strings.Cli_EventLogScanNoOrphans, "/d")), summary.Text);
     }
@@ -132,7 +131,7 @@ public class CliScanNoticeOrderTests
     {
         var scan = EveryNotice();
 
-        var run = await WithTheLogRefusing(entry => !IsOutcome((entry, string.Empty)), () => Run("/s", scan));
+        var run = await WithTheLogRefusing(entry => !CliRunFixtures.IsSummary(entry), () => Run("/s", scan));
 
         var lines = run.Stdout.Split(Environment.NewLine);
         var lastNotice = Array.FindIndex(lines, l => l.StartsWith(NoticeOpenings(scan)[^1], StringComparison.Ordinal));
@@ -252,7 +251,7 @@ public class CliScanNoticeOrderTests
         var failure = run.Failure ?? throw new Xunit.Sdk.XunitException("The guard recorded no failed write.");
         var (crashPath, written) = failure.CrashLog;
         var typeName = failure.Exception.GetType().Name;
-        var summary = Assert.Single(run.Entries, IsOutcome);
+        var summary = Assert.Single(run.Entries, CliRunFixtures.IsSummary);
         Assert.Equal(CliEventClass.HardError, summary.Class);
         Assert.Equal(MachineContract.English(() => written
             ? string.Format(Strings.Cli_EventLogHardError, "/s", typeName, crashPath)
@@ -264,10 +263,6 @@ public class CliScanNoticeOrderTests
             : string.Format(Strings.Cli_GenericError_NoLog, typeName), lines[^2]);
         Assert.Equal(string.Empty, lines[^1]);
     }
-
-    private static bool IsOutcome((CliEventClass Class, string Text) entry) =>
-        entry.Class is CliEventClass.Ok or CliEventClass.Partial
-            or CliEventClass.TransientSkip or CliEventClass.HardError;
 
     // A sentence's words up to its first placeholder, which no name or count changes.
     private static string Opening(string value) =>
@@ -295,15 +290,7 @@ public class CliScanNoticeOrderTests
                 Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
             .Returns(new DeleteResult(result.RemovableFiles.Count, Array.Empty<FileOperationError>()));
 
-        var services = new ServiceCollection()
-            .AddSingleton(scan)
-            .AddSingleton(reboot)
-            .AddSingleton(reverifier)
-            .AddSingleton(deleter)
-            .AddSingleton(Substitute.For<IMoveFilesService>())
-            .AddSingleton(Substitute.For<ISettingsService>())
-            .AddSingleton(Substitute.For<IFirstRunMark>())
-            .BuildServiceProvider();
+        var services = CliRunFixtures.Services(scan, reboot: reboot, reverifier: reverifier, delete: deleter);
 
         var invocation = arg == "/d"
             ? new CliInvocation(CliCommand.Delete, null, null)

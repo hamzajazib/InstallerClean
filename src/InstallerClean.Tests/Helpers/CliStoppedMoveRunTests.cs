@@ -3,7 +3,6 @@ using InstallerClean.Helpers;
 using InstallerClean.Models;
 using InstallerClean.Resources;
 using InstallerClean.Services;
-using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 
 namespace InstallerClean.Tests.Helpers;
@@ -133,15 +132,7 @@ public class CliStoppedMoveRunTests
                 SurvivingPatchClaims: new[] { SurvivingA, SurvivingB },
                 SiblingPatchClaims: Array.Empty<PatchClaim>()));
 
-        return new ServiceCollection()
-            .AddSingleton(scan)
-            .AddSingleton(reboot)
-            .AddSingleton(reverifier)
-            .AddSingleton(Substitute.For<IDeleteFilesService>())
-            .AddSingleton(move)
-            .AddSingleton(Substitute.For<ISettingsService>())
-            .AddSingleton(Substitute.For<IFirstRunMark>())
-            .BuildServiceProvider();
+        return CliRunFixtures.Services(scan, reboot: reboot, reverifier: reverifier, move: move);
     }
 
     private static async Task<(int ExitCode, string Stdout)> Run(IServiceProvider services)

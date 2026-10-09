@@ -3,7 +3,6 @@ using InstallerClean.Helpers;
 using InstallerClean.Models;
 using InstallerClean.Resources;
 using InstallerClean.Services;
-using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 
 namespace InstallerClean.Tests.Helpers;
@@ -495,15 +494,7 @@ public class CliNothingOfferedTests
         var reboot = Substitute.For<IPendingRebootService>();
         reboot.Check().Returns(PendingRebootResult.Clean);
 
-        var services = new ServiceCollection()
-            .AddSingleton(scan)
-            .AddSingleton(reboot)
-            .AddSingleton(Substitute.For<IRemovableReverifier>())
-            .AddSingleton(Substitute.For<IDeleteFilesService>())
-            .AddSingleton(Substitute.For<IMoveFilesService>())
-            .AddSingleton(Substitute.For<ISettingsService>())
-            .AddSingleton(Substitute.For<IFirstRunMark>())
-            .BuildServiceProvider();
+        var services = CliRunFixtures.Services(scan, reboot: reboot);
 
         var original = Console.Out;
         using var buffer = new StringWriter();

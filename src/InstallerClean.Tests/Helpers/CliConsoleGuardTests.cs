@@ -4,7 +4,6 @@ using InstallerClean.Helpers;
 using InstallerClean.Models;
 using InstallerClean.Resources;
 using InstallerClean.Services;
-using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 
 namespace InstallerClean.Tests.Helpers;
@@ -166,7 +165,7 @@ public class CliConsoleGuardTests
 
         Assert.True(run.Refused > 0, "The console refused no write, so it never failed after the batch.");
         Assert.Equal(CliExitCode.Ok, run.ExitCode);
-        var summary = Assert.Single(run.Entries, IsOutcome);
+        var summary = Assert.Single(run.Entries, CliRunFixtures.IsSummary);
         Assert.Equal(CliEventClass.Ok, summary.Class);
         Assert.Equal(MachineContract.English(() => string.Format(Strings.Cli_EventLogDeleteSummary,
             "/d", 2, 2, DisplayHelpers.PluraliseFile(2), DisplayHelpers.FormatSizeForMachine(300),
@@ -186,7 +185,7 @@ public class CliConsoleGuardTests
 
         Assert.True(run.Refused > 0, "The console refused no write, so it never failed after the batch.");
         Assert.Equal(CliExitCode.Ok, run.ExitCode);
-        var summary = Assert.Single(run.Entries, IsOutcome);
+        var summary = Assert.Single(run.Entries, CliRunFixtures.IsSummary);
         Assert.Equal(CliEventClass.Ok, summary.Class);
         Assert.Equal(MachineContract.English(() => string.Format(Strings.Cli_EventLogMoveSummary,
             "/m", 2, 2, DisplayHelpers.PluraliseFile(2), Destination,
@@ -216,7 +215,7 @@ public class CliConsoleGuardTests
 
         Assert.True(run.Refused > 0, $"The console refused no write, so it never failed at {failsAt}.");
         Assert.Equal(CliExitCode.Partial, run.ExitCode);
-        var summary = Assert.Single(run.Entries, IsOutcome);
+        var summary = Assert.Single(run.Entries, CliRunFixtures.IsSummary);
         Assert.Equal(CliEventClass.Partial, summary.Class);
     }
 
@@ -236,7 +235,7 @@ public class CliConsoleGuardTests
 
         Assert.True(run.Refused > 0, "The console refused no write, so it never failed after the stop.");
         Assert.Equal(stopped.ExitCode, run.ExitCode);
-        var summary = Assert.Single(run.Entries, IsOutcome);
+        var summary = Assert.Single(run.Entries, CliRunFixtures.IsSummary);
         Assert.Equal(stopped.EventClass, summary.Class);
     }
 
@@ -268,7 +267,7 @@ public class CliConsoleGuardTests
                 Destination, Arg.Any<UnderLeaseClaims>(), Arg.Any<IProgress<OperationProgress>?>(),
                 Arg.Any<CancellationToken>());
         Assert.Equal(CliExitCode.Ok, run.ExitCode);
-        var summary = Assert.Single(run.Entries, IsOutcome);
+        var summary = Assert.Single(run.Entries, CliRunFixtures.IsSummary);
         Assert.Equal(CliEventClass.Ok, summary.Class);
         Assert.Equal(arg == "/d"
             ? MachineContract.English(() => string.Format(Strings.Cli_EventLogDeleteSummary,
@@ -291,7 +290,7 @@ public class CliConsoleGuardTests
 
         Assert.True(run.Refused > 0, "The console refused no write.");
         Assert.Equal(CliExitCode.Transient, run.ExitCode);
-        var summary = Assert.Single(run.Entries, IsOutcome);
+        var summary = Assert.Single(run.Entries, CliRunFixtures.IsSummary);
         Assert.Equal(CliEventClass.TransientSkip, summary.Class);
     }
 
@@ -352,10 +351,6 @@ public class CliConsoleGuardTests
     /// <summary>A console that fails at the first write carrying the words of <paramref name="value"/> up to its first placeholder.</summary>
     private static ConsoleFailingAt FailsAt(string value) =>
         new(value.Contains('{') ? value[..value.IndexOf('{')] : value);
-
-    private static bool IsOutcome((CliEventClass Class, string Text) entry) =>
-        entry.Class is CliEventClass.Ok or CliEventClass.Partial
-            or CliEventClass.TransientSkip or CliEventClass.HardError;
 
     private sealed record RunResult(
         int ExitCode, int Refused, IReadOnlyList<(CliEventClass Class, string Text)> Entries);
@@ -424,15 +419,8 @@ public class CliConsoleGuardTests
                 SurvivingPatchClaims: new[] { SurvivingA, SurvivingB },
                 SiblingPatchClaims: Array.Empty<PatchClaim>()));
 
-        return new ServiceCollection()
-            .AddSingleton(scan)
-            .AddSingleton(reboot)
-            .AddSingleton(reverifier)
-            .AddSingleton(delete ?? Substitute.For<IDeleteFilesService>())
-            .AddSingleton(move ?? Substitute.For<IMoveFilesService>())
-            .AddSingleton(Substitute.For<ISettingsService>())
-            .AddSingleton(Substitute.For<IFirstRunMark>())
-            .BuildServiceProvider();
+        return CliRunFixtures.Services(scan, reboot: reboot, reverifier: reverifier,
+            delete: delete, move: move);
     }
 }
 

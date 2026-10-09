@@ -2,7 +2,6 @@ using InstallerClean.Cli;
 using InstallerClean.Helpers;
 using InstallerClean.Models;
 using InstallerClean.Services;
-using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 
 namespace InstallerClean.Tests.Helpers;
@@ -435,14 +434,7 @@ public class CliFirstRunMarkTests
                     SiblingPatchClaims: Array.Empty<PatchClaim>()));
         }
 
-        return new ServiceCollection()
-            .AddSingleton(scan)
-            .AddSingleton(reboot)
-            .AddSingleton(reverifier)
-            .AddSingleton(delete ?? Substitute.For<IDeleteFilesService>())
-            .AddSingleton(move ?? Substitute.For<IMoveFilesService>())
-            .AddSingleton(Substitute.For<ISettingsService>())
-            .AddSingleton(mark)
-            .BuildServiceProvider();
+        return CliRunFixtures.Services(scan, reboot: reboot, reverifier: reverifier,
+            delete: delete, move: move, firstRunMark: mark);
     }
 }

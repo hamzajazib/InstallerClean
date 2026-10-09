@@ -3,7 +3,6 @@ using InstallerClean.Helpers;
 using InstallerClean.Models;
 using InstallerClean.Resources;
 using InstallerClean.Services;
-using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 
 namespace InstallerClean.Tests.Helpers;
@@ -132,15 +131,7 @@ public class CliNoticeEntryTests
         scan.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(result);
 
-        var services = new ServiceCollection()
-            .AddSingleton(scan)
-            .AddSingleton(Substitute.For<IPendingRebootService>())
-            .AddSingleton(Substitute.For<IRemovableReverifier>())
-            .AddSingleton(Substitute.For<IDeleteFilesService>())
-            .AddSingleton(Substitute.For<IMoveFilesService>())
-            .AddSingleton(Substitute.For<ISettingsService>())
-            .AddSingleton(Substitute.For<IFirstRunMark>())
-            .BuildServiceProvider();
+        var services = CliRunFixtures.Services(scan);
 
         // Console.SetOut and the recorder are process-global; the assembly disables test
         // parallelisation, which is what makes both safe to read back here.

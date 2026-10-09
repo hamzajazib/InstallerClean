@@ -3,7 +3,6 @@ using InstallerClean.Helpers;
 using InstallerClean.Models;
 using InstallerClean.Resources;
 using InstallerClean.Services;
-using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.Core;
 
@@ -407,15 +406,8 @@ public class CliSourcesGivenUpTests
                 Arg.Any<CancellationToken>())
             .Returns(move ?? (_ => new MoveResult(result.RemovableFiles.Count, Array.Empty<FileOperationError>())));
 
-        var services = new ServiceCollection()
-            .AddSingleton(scan)
-            .AddSingleton(reboot)
-            .AddSingleton(reverifier)
-            .AddSingleton(deleter)
-            .AddSingleton(mover)
-            .AddSingleton(Substitute.For<ISettingsService>())
-            .AddSingleton(Substitute.For<IFirstRunMark>())
-            .BuildServiceProvider();
+        var services = CliRunFixtures.Services(scan, reboot: reboot, reverifier: reverifier,
+            delete: deleter, move: mover);
 
         var invocation = arg switch
         {

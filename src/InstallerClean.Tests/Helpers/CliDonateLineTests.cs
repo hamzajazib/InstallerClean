@@ -3,7 +3,6 @@ using InstallerClean.Helpers;
 using InstallerClean.Models;
 using InstallerClean.Resources;
 using InstallerClean.Services;
-using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 
 namespace InstallerClean.Tests.Helpers;
@@ -255,14 +254,7 @@ public class CliDonateLineTests
                 SurvivingPatchClaims: new[] { SurvivingA, SurvivingB },
                 SiblingPatchClaims: Array.Empty<PatchClaim>()));
 
-        return new ServiceCollection()
-            .AddSingleton(scan)
-            .AddSingleton(reboot)
-            .AddSingleton(reverifier)
-            .AddSingleton(delete ?? Substitute.For<IDeleteFilesService>())
-            .AddSingleton(move ?? Substitute.For<IMoveFilesService>())
-            .AddSingleton(Substitute.For<ISettingsService>())
-            .AddSingleton(Substitute.For<IFirstRunMark>())
-            .BuildServiceProvider();
+        return CliRunFixtures.Services(scan, reboot: reboot, reverifier: reverifier,
+            delete: delete, move: move);
     }
 }
