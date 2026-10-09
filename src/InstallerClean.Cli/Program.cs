@@ -115,8 +115,8 @@ internal static class Program
         }
         catch (Exception)
         {
-            // The console went away under us. Nothing left to restore it to, and
-            // nothing left to tell.
+            // Nothing more can be done for the console here, and nothing left to
+            // tell.
         }
     }
 
@@ -779,13 +779,11 @@ internal static class Program
             // print after the post-await summary ("Deleted N files."),
             // breaking the stdout line order an RMM scrapes.
             totalToProcess = count;
-            // Guarded here as well as by ConsoleGuard. In a run from Main the guard
-            // takes a failed write before this handler sees it; RunWorkAsync also
-            // runs without the guard, as the tests run it, and there a throw out of
-            // this handler is filed as a per-file error against a file that is
-            // perfectly fine, the action services reporting from inside their
-            // per-file try. A failed write is a fact about the console and never
-            // about the file being deleted.
+            // Guarded here as well as by ConsoleGuard, so the handler holds wherever
+            // RunWorkAsync is called from. The action services report from inside
+            // their per-file try, so a throw out of this handler is filed as an
+            // error against a file that is perfectly fine. A failed write is a fact
+            // about the console and never about the file being deleted or moved.
             //
             // One crash-log entry per run rather than one per file. Whatever stops
             // stdout accepting a line stops it for every remaining report, so an
