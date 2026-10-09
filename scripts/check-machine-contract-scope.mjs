@@ -10,10 +10,10 @@
 //
 // What is read: every .cs file in the test project, through csharp-source.mjs, with the
 // comments and the text inside strings taken out, so every match is code. What is
-// matched: a call to any method in BUILDERS, and any Strings.Cli_EventLog* value. What
-// is in scope: anything inside the argument list of a MachineContract.English or
-// MachineContract.WriteEventLog call, found by balancing its brackets, since the call
-// sites here wrap across lines.
+// matched: a call to any method in BUILDERS, and any Strings.Cli_EventLog* value but the
+// stdout note (RAW_VALUE). What is in scope: anything inside the argument list of a
+// MachineContract.English or MachineContract.WriteEventLog call, found by balancing its
+// brackets, since the call sites here wrap across lines.
 //
 // The production code is not read. The builders' own bodies read these values outside
 // any scope, being what each write site wraps.
@@ -33,6 +33,10 @@ const TESTS = 'src/InstallerClean.Tests';
 // The builders whose result is an Application-channel line, and the raw resx values
 // those lines are made of. Both spellings reach the same fault: the first through a
 // method that reads the value, the second by reading it directly.
+//
+// Cli.EventLogUnavailable is not one of those values. It is the note the command line
+// prints to standard output, in the PC's language, saying the Application log refused an
+// entry, so a test composes it outside any scope and the pattern leaves it out.
 const BUILDERS = [
   'AbortedMoveEventLogLine',
   'InstallerLockUnavailableEventLogLine',
@@ -43,7 +47,7 @@ const BUILDERS = [
   'SourcesGivenUpEventLogLine',
   'SourcesGivenUpNoticeEventLogLine',
 ];
-const RAW_VALUE = 'Strings\\.Cli_EventLog[A-Za-z0-9_]*';
+const RAW_VALUE = 'Strings\\.Cli_EventLog(?!Unavailable\\b)[A-Za-z0-9_]*';
 const SCOPES = ['MachineContract.English', 'MachineContract.WriteEventLog'];
 
 const problems = [];
