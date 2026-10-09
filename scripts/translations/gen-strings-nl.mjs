@@ -563,7 +563,7 @@ const MAP = {
   'Completion.ReportPanel.Waits': `Hoe vaak InstallerClean op een trage schijf of netwerkshare wachtte, en op hoeveel het is gestopt met wachten`,
   'Completion.ReportPanel.Records': `Van hoeveel programma's en patches Windows een registratie heeft`,
   'Completion.ReportPanel.ShortNames': `Of Windows nog ouderwetse korte bestandsnamen aanmaakt`,
-  'Completion.ReportPanel.Windows': `Of Windows 10 of 11 is en x64 of Arm, en op welke taal het is ingesteld`,
+  'Completion.ReportPanel.Windows': `Of Windows 10 of 11 is en x64 of Arm, en op welke taal en welk land of welke regio het is ingesteld`,
   'Completion.ReportPanel.AppVersion': `De versie van InstallerClean en de taal waarin het werd weergegeven`,
   'Completion.ReportPanel.Errors': `Tellingen van alles wat er misging`,
   'Completion.ReportPanel.Closing': `Het zijn allemaal tellingen en labels zoals deze. Niets ervan noemt jou, je pc, je bestanden of je programma's, en ik zie je IP-adres nooit.`,

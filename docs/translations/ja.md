@@ -197,7 +197,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | InstallerClean が低速なドライブやネットワーク共有を待った回数と、待機をやめた数 |
 | How many programs and patches Windows has a record of | Windows に登録情報がある、プログラムとパッチの数 |
 | Whether Windows still makes old-style short file names | Windows が今も旧式の短いファイル名を作成しているかどうか |
-| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Windows が 10 か 11 か、x64 か Arm か、そしてどの言語に設定されているか |
+| Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Windows が 10 か 11 か、x64 か Arm か、そしてどの言語と国または地域に設定されているか |
 | InstallerClean's version and the language it was showing | InstallerClean のバージョンと、表示していた言語 |
 | Counts of anything that went wrong | うまくいかなかったことの件数 |
 | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | すべてこのような件数とラベルだけです。あなた自身、あなたの PC、ファイル、プログラムを特定するものは一切含まれず、私があなたの IP アドレスを見ることもありません。 |

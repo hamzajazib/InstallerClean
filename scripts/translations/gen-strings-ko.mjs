@@ -579,7 +579,7 @@ const MAP = {
   'Completion.ReportPanel.Waits': `InstallerClean이 느린 드라이브나 네트워크 공유를 기다린 횟수와 대기를 중단한 수`,
   'Completion.ReportPanel.Records': `Windows에 기록이 있는 프로그램과 패치의 수`,
   'Completion.ReportPanel.ShortNames': `Windows가 아직도 예전 방식의 짧은 파일 이름을 만드는지 여부`,
-  'Completion.ReportPanel.Windows': `Windows가 10인지 11인지, x64인지 Arm인지, 그리고 어떤 언어로 설정되어 있는지`,
+  'Completion.ReportPanel.Windows': `Windows가 10인지 11인지, x64인지 Arm인지, 그리고 어떤 언어와 국가 또는 지역으로 설정되어 있는지`,
   'Completion.ReportPanel.AppVersion': `InstallerClean의 버전과 표시하던 언어`,
   'Completion.ReportPanel.Errors': `문제가 생긴 일의 횟수`,
   'Completion.ReportPanel.Closing': `모두 이와 같은 횟수와 라벨뿐입니다. 사용자나 사용자의 PC, 파일, 프로그램을 가리키는 정보는 전혀 없으며, 저는 사용자의 IP 주소를 결코 보지 않습니다.`,

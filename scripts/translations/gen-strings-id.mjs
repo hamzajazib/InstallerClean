@@ -605,7 +605,7 @@ const MAP = {
   'Completion.ReportPanel.Waits': `Seberapa sering InstallerClean menunggu drive atau berbagi jaringan yang lambat, dan berapa banyak yang berhenti ditunggunya`,
   'Completion.ReportPanel.Records': `Berapa banyak program dan patch yang dicatat Windows`,
   'Completion.ReportPanel.ShortNames': `Apakah Windows masih membuat nama file pendek gaya lama`,
-  'Completion.ReportPanel.Windows': `Apakah Windows versi 10 atau 11 dan x64 atau Arm, serta bahasa yang disetel di dalamnya`,
+  'Completion.ReportPanel.Windows': `Apakah Windows versi 10 atau 11 dan x64 atau Arm, serta bahasa dan negara atau wilayah yang disetel di dalamnya`,
   'Completion.ReportPanel.AppVersion': `Versi InstallerClean dan bahasa yang ditampilkannya`,
   'Completion.ReportPanel.Errors': `Jumlah dari apa pun yang gagal`,
   'Completion.ReportPanel.Closing': `Semuanya berupa jumlah dan label seperti ini. Tidak ada yang menyebut Anda, PC Anda, file Anda, atau program Anda, dan saya tidak pernah melihat alamat IP Anda.`,

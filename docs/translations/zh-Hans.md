@@ -197,7 +197,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | InstallerClean 等待缓慢的驱动器或网络共享的次数，以及停止等待的数量 |
 | How many programs and patches Windows has a record of | Windows 记录了多少个程序和补丁 |
 | Whether Windows still makes old-style short file names | Windows 是否仍在生成旧式短文件名 |
-| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Windows 是 10 还是 11，是 x64 还是 Arm，以及设置的是哪种语言 |
+| Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Windows 是 10 还是 11，是 x64 还是 Arm，以及设置的是哪种语言和哪个国家或地区 |
 | InstallerClean's version and the language it was showing | InstallerClean 的版本及其显示的语言 |
 | Counts of anything that went wrong | 所有出错情况的计数 |
 | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | 其中全是这样的计数和标签。没有任何内容会指明您、您的电脑、文件或程序，我也永远看不到您的 IP 地址。 |

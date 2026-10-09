@@ -197,7 +197,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | Як часто InstallerClean чекав на повільний диск або мережевий ресурс і на скільки з них перестав чекати |
 | How many programs and patches Windows has a record of | Про скільки програм і виправлень Windows має запис |
 | Whether Windows still makes old-style short file names | Чи досі Windows створює короткі імена файлів старого зразка |
-| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Яка версія Windows, 10 чи 11, x64 чи Arm, і яку мову в ній встановлено |
+| Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Яка версія Windows, 10 чи 11, x64 чи Arm, і які в ній встановлено мову та країну або регіон |
 | InstallerClean's version and the language it was showing | Версія InstallerClean і мова, якою він відображався |
 | Counts of anything that went wrong | Лічильники всього, що пішло не так |
 | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Усе це — лічильники та мітки на кшталт цих. Ніщо в ньому не вказує на вас, ваш ПК, ваші файли чи програми, і я ніколи не бачу вашу IP-адресу. |

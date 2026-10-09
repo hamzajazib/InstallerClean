@@ -582,7 +582,7 @@ const MAP = {
   'Completion.ReportPanel.Waits': `InstallerClean đã chờ ổ đĩa hoặc chia sẻ mạng chậm bao nhiêu lần, và đã ngừng chờ bao nhiêu trong số đó`,
   'Completion.ReportPanel.Records': `Windows có bản ghi về bao nhiêu chương trình và bản vá`,
   'Completion.ReportPanel.ShortNames': `Windows có còn tạo tên tệp ngắn kiểu cũ hay không`,
-  'Completion.ReportPanel.Windows': `Windows là bản 10 hay 11, x64 hay Arm, và đang đặt ngôn ngữ nào`,
+  'Completion.ReportPanel.Windows': `Windows là bản 10 hay 11, x64 hay Arm, và đang đặt ngôn ngữ cùng quốc gia hoặc khu vực nào`,
   'Completion.ReportPanel.AppVersion': `Phiên bản InstallerClean và ngôn ngữ nó đang hiển thị`,
   'Completion.ReportPanel.Errors': `Số lần xảy ra bất kỳ sự cố nào`,
   'Completion.ReportPanel.Closing': `Tất cả chỉ là các con số và nhãn như thế này. Không có gì trong đó nêu tên bạn, máy tính, tệp hay chương trình của bạn, và tôi không bao giờ thấy địa chỉ IP của bạn.`,

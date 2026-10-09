@@ -489,7 +489,7 @@ const MAP = {
   'Completion.ReportPanel.Waits': `InstallerClean 等待缓慢的驱动器或网络共享的次数，以及停止等待的数量`,
   'Completion.ReportPanel.Records': `Windows 记录了多少个程序和补丁`,
   'Completion.ReportPanel.ShortNames': `Windows 是否仍在生成旧式短文件名`,
-  'Completion.ReportPanel.Windows': `Windows 是 10 还是 11，是 x64 还是 Arm，以及设置的是哪种语言`,
+  'Completion.ReportPanel.Windows': `Windows 是 10 还是 11，是 x64 还是 Arm，以及设置的是哪种语言和哪个国家或地区`,
   'Completion.ReportPanel.AppVersion': `InstallerClean 的版本及其显示的语言`,
   'Completion.ReportPanel.Errors': `所有出错情况的计数`,
   'Completion.ReportPanel.Closing': `其中全是这样的计数和标签。没有任何内容会指明您、您的电脑、文件或程序，我也永远看不到您的 IP 地址。`,

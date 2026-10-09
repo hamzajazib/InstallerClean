@@ -197,7 +197,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | Quantas vezes o InstallerClean esperou por uma unidade ou um compartilhamento de rede lentos, e por quantos parou de esperar |
 | How many programs and patches Windows has a record of | De quantos programas e patches o Windows tem registro |
 | Whether Windows still makes old-style short file names | Se o Windows ainda cria nomes de arquivo curtos no estilo antigo |
-| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Se o Windows é 10 ou 11 e x64 ou Arm, e em que idioma está configurado |
+| Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Se o Windows é 10 ou 11 e x64 ou Arm, e em que idioma e país ou região está configurado |
 | InstallerClean's version and the language it was showing | A versão do InstallerClean e o idioma em que ele estava sendo exibido |
 | Counts of anything that went wrong | Contagens de qualquer coisa que tenha dado errado |
 | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Tudo isso são contagens e rótulos como estes. Nada nele identifica você, seu PC, seus arquivos ou seus programas, e eu nunca vejo seu endereço IP. |

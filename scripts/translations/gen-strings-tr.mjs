@@ -508,7 +508,7 @@ Ayrıntılar şuraya yazıldı:
   'Completion.ReportPanel.Waits': `InstallerClean'in yavaş bir sürücüyü veya ağ paylaşımını ne sıklıkla beklediği ve kaçını beklemeyi kestiği`,
   'Completion.ReportPanel.Records': `Windows'ta kaydı bulunan program ve yama sayısı`,
   'Completion.ReportPanel.ShortNames': `Windows'un hâlâ eski tarz kısa dosya adları oluşturup oluşturmadığı`,
-  'Completion.ReportPanel.Windows': `Windows'un 10 mu 11 mi, x64 mü Arm mı olduğu ve hangi dile ayarlandığı`,
+  'Completion.ReportPanel.Windows': `Windows'un 10 mu 11 mi, x64 mü Arm mı olduğu ve hangi dile ve ülke veya bölgeye ayarlandığı`,
   'Completion.ReportPanel.AppVersion': `InstallerClean'in sürümü ve gösterildiği dil`,
   'Completion.ReportPanel.Errors': `Ters giden her şeyin sayısı`,
   'Completion.ReportPanel.Closing': `Hepsi bunlar gibi sayılar ve etiketlerden ibarettir. Hiçbir şey sizi, bilgisayarınızı, dosyalarınızı veya programlarınızı tanımlamaz ve IP adresinizi asla görmem.`,

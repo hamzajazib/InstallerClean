@@ -1016,7 +1016,7 @@ Para recolocá-lo, você precisa do instalador da versão que já tem. Consiga-o
     <comment>Bullet 8 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Windows" xml:space="preserve">
-    <value>Se o Windows é 10 ou 11 e x64 ou Arm, e em que idioma está configurado</value>
+    <value>Se o Windows é 10 ou 11 e x64 ou Arm, e em que idioma e país ou região está configurado</value>
     <comment>Bullet 9 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.AppVersion" xml:space="preserve">

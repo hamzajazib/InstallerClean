@@ -197,7 +197,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | Hoe vaak InstallerClean op een trage schijf of netwerkshare wachtte, en op hoeveel het is gestopt met wachten |
 | How many programs and patches Windows has a record of | Van hoeveel programma's en patches Windows een registratie heeft |
 | Whether Windows still makes old-style short file names | Of Windows nog ouderwetse korte bestandsnamen aanmaakt |
-| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Of Windows 10 of 11 is en x64 of Arm, en op welke taal het is ingesteld |
+| Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Of Windows 10 of 11 is en x64 of Arm, en op welke taal en welk land of welke regio het is ingesteld |
 | InstallerClean's version and the language it was showing | De versie van InstallerClean en de taal waarin het werd weergegeven |
 | Counts of anything that went wrong | Tellingen van alles wat er misging |
 | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Het zijn allemaal tellingen en labels zoals deze. Niets ervan noemt jou, je pc, je bestanden of je programma's, en ik zie je IP-adres nooit. |

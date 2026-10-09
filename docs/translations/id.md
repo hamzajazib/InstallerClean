@@ -197,7 +197,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | Seberapa sering InstallerClean menunggu drive atau berbagi jaringan yang lambat, dan berapa banyak yang berhenti ditunggunya |
 | How many programs and patches Windows has a record of | Berapa banyak program dan patch yang dicatat Windows |
 | Whether Windows still makes old-style short file names | Apakah Windows masih membuat nama file pendek gaya lama |
-| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Apakah Windows versi 10 atau 11 dan x64 atau Arm, serta bahasa yang disetel di dalamnya |
+| Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Apakah Windows versi 10 atau 11 dan x64 atau Arm, serta bahasa dan negara atau wilayah yang disetel di dalamnya |
 | InstallerClean's version and the language it was showing | Versi InstallerClean dan bahasa yang ditampilkannya |
 | Counts of anything that went wrong | Jumlah dari apa pun yang gagal |
 | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Semuanya berupa jumlah dan label seperti ini. Tidak ada yang menyebut Anda, PC Anda, file Anda, atau program Anda, dan saya tidak pernah melihat alamat IP Anda. |

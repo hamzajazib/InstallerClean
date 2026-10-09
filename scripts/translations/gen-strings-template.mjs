@@ -652,7 +652,7 @@ const MAP = {
   'Completion.ReportPanel.Waits': `How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for`,
   'Completion.ReportPanel.Records': `How many programs and patches Windows has a record of`,
   'Completion.ReportPanel.ShortNames': `Whether Windows still makes old-style short file names`,
-  'Completion.ReportPanel.Windows': `Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to`,
+  'Completion.ReportPanel.Windows': `Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to`,
   'Completion.ReportPanel.AppVersion': `InstallerClean's version and the language it was showing`,
   'Completion.ReportPanel.Errors': `Counts of anything that went wrong`,
   'Completion.ReportPanel.Closing': `All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address.`,

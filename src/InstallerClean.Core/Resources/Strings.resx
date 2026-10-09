@@ -1016,7 +1016,7 @@ To put it back, you need the installer for the version you already have. Get it 
     <comment>Bullet 8 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Windows" xml:space="preserve">
-    <value>Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to</value>
+    <value>Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to</value>
     <comment>Bullet 9 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.AppVersion" xml:space="preserve">

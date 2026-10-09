@@ -509,7 +509,7 @@ const MAP = {
   'Completion.ReportPanel.Waits': `InstallerClean が低速なドライブやネットワーク共有を待った回数と、待機をやめた数`,
   'Completion.ReportPanel.Records': `Windows に登録情報がある、プログラムとパッチの数`,
   'Completion.ReportPanel.ShortNames': `Windows が今も旧式の短いファイル名を作成しているかどうか`,
-  'Completion.ReportPanel.Windows': `Windows が 10 か 11 か、x64 か Arm か、そしてどの言語に設定されているか`,
+  'Completion.ReportPanel.Windows': `Windows が 10 か 11 か、x64 か Arm か、そしてどの言語と国または地域に設定されているか`,
   'Completion.ReportPanel.AppVersion': `InstallerClean のバージョンと、表示していた言語`,
   'Completion.ReportPanel.Errors': `うまくいかなかったことの件数`,
   'Completion.ReportPanel.Closing': `すべてこのような件数とラベルだけです。あなた自身、あなたの PC、ファイル、プログラムを特定するものは一切含まれず、私があなたの IP アドレスを見ることもありません。`,

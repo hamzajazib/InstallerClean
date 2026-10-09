@@ -1016,7 +1016,7 @@ Om het terug te zetten heb je het installatieprogramma nodig van de versie die j
     <comment>Bullet 8 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Windows" xml:space="preserve">
-    <value>Of Windows 10 of 11 is en x64 of Arm, en op welke taal het is ingesteld</value>
+    <value>Of Windows 10 of 11 is en x64 of Arm, en op welke taal en welk land of welke regio het is ingesteld</value>
     <comment>Bullet 9 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.AppVersion" xml:space="preserve">

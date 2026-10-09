@@ -512,7 +512,7 @@ const MAP = {
   'Completion.ReportPanel.Waits': `Quante volte InstallerClean ha atteso un'unità o una condivisione di rete lenta e quante ha smesso di attendere`,
   'Completion.ReportPanel.Records': `Di quanti programmi e patch Windows ha un record`,
   'Completion.ReportPanel.ShortNames': `Se Windows crea ancora i nomi di file brevi vecchio stile`,
-  'Completion.ReportPanel.Windows': `Se Windows è 10 o 11 e x64 o Arm, e in quale lingua è impostato`,
+  'Completion.ReportPanel.Windows': `Se Windows è 10 o 11 e x64 o Arm, e in quale lingua e con quale paese o area geografica è impostato`,
   'Completion.ReportPanel.AppVersion': `La versione di InstallerClean e la lingua in cui era visualizzato`,
   'Completion.ReportPanel.Errors': `Il conteggio di qualsiasi cosa sia andata storta`,
   'Completion.ReportPanel.Closing': `È tutto fatto di conteggi ed etichette come questi. Niente indica te, il tuo PC, i tuoi file o i tuoi programmi, e non vedo mai il tuo indirizzo IP.`,

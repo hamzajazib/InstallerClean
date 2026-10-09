@@ -496,7 +496,7 @@ const MAP = {
   'Completion.ReportPanel.Waits': `Как часто InstallerClean ждал медленный диск или сетевой ресурс и скольких из них он перестал ждать`,
   'Completion.ReportPanel.Records': `О скольких программах и исправлениях у Windows есть запись`,
   'Completion.ReportPanel.ShortNames': `Создаёт ли Windows по-прежнему короткие имена файлов старого образца`,
-  'Completion.ReportPanel.Windows': `Какая версия Windows, 10 или 11, x64 или Arm, и какой язык в ней задан`,
+  'Completion.ReportPanel.Windows': `Какая версия Windows, 10 или 11, x64 или Arm, и какие в ней заданы язык и страна или регион`,
   'Completion.ReportPanel.AppVersion': `Версия InstallerClean и язык, на котором он отображался`,
   'Completion.ReportPanel.Errors': `Счётчики всего, что пошло не так`,
   'Completion.ReportPanel.Closing': `Всё это — счётчики и метки вроде этих. Ничто в нём не указывает на вас, ваш ПК, ваши файлы или программы, и я никогда не вижу ваш IP-адрес.`,

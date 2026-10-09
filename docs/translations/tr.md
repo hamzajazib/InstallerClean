@@ -197,7 +197,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | How often InstallerClean waited for a slow drive or network share, and how many it stopped waiting for | InstallerClean'in yavaş bir sürücüyü veya ağ paylaşımını ne sıklıkla beklediği ve kaçını beklemeyi kestiği |
 | How many programs and patches Windows has a record of | Windows'ta kaydı bulunan program ve yama sayısı |
 | Whether Windows still makes old-style short file names | Windows'un hâlâ eski tarz kısa dosya adları oluşturup oluşturmadığı |
-| Whether Windows is 10 or 11 and x64 or Arm, and which language it's set to | Windows'un 10 mu 11 mi, x64 mü Arm mı olduğu ve hangi dile ayarlandığı |
+| Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Windows'un 10 mu 11 mi, x64 mü Arm mı olduğu ve hangi dile ve ülke veya bölgeye ayarlandığı |
 | InstallerClean's version and the language it was showing | InstallerClean'in sürümü ve gösterildiği dil |
 | Counts of anything that went wrong | Ters giden her şeyin sayısı |
 | All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Hepsi bunlar gibi sayılar ve etiketlerden ibarettir. Hiçbir şey sizi, bilgisayarınızı, dosyalarınızı veya programlarınızı tanımlamaz ve IP adresinizi asla görmem. |
