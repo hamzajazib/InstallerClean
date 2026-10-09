@@ -540,7 +540,8 @@ internal static class Program
             // files one at a time and could not clear them. "Found no unneeded files"
             // is printed for the first machine only, and the two withholding
             // sentences say different things that are each false of the other's
-            // machine.
+            // machine. On all three, ReportScanSignals follows with the line about
+            // files held back for being under a day old wherever the scan held any.
             //
             // AND THE FIRST MACHINE GETS IT ONLY WHERE THE SCAN STOPPED WAITING FOR NO
             // DRIVE OR SHARE WHILE FILES STILL HAD TO BE CHECKED AGAINST IT. Where it did,
@@ -1237,8 +1238,9 @@ internal static class Program
     /// drives and shares the scan stopped waiting for while files still had to be
     /// checked against them (<paramref name="sourcesGivenUp"/>, the scan's
     /// <see cref="ScanResult.SourceRootsGivenUpKeepingFiles"/> as the caller read
-    /// it), superseded files kept back, records the scan could not fully read, and
-    /// registrations naming a file that is not there.
+    /// it), superseded files kept back, files kept back for being under a day old,
+    /// records the scan could not fully read, and registrations naming a file that is
+    /// not there.
     ///
     /// THE SURFACE IS PER CONDITION AND NOT ONE RULE OVER ALL OF THEM. Some reach
     /// stdout in the operator's language and the Application log in English,
@@ -1278,7 +1280,8 @@ internal static class Program
         // NOTHING IS REPORTED HERE FOR A RUN WHOSE EVERY HELD FILE WAS KEPT FOR A
         // PROGRAM WINDOWS STILL HAS INSTALLED, FOR BEING UNDER A DAY OLD OR FOR ITS
         // PATCH'S REGISTRATIONS, the three arms WithholdingAccount.KeptWithoutNotice
-        // names: HasWithholdingToReport is false for it.
+        // names: HasWithholdingToReport is false for it. A file under a day old has a
+        // line of its own further down.
         if (scanResult.HasWithholdingToReport)
         {
             // WHICH OF THE TWO SENTENCES, ASKED ONCE AND SPENT BY BOTH THE AUDIT LINE
@@ -1454,6 +1457,16 @@ internal static class Program
                         "Cli.EventLogMissingFromDisk"),
                     arg, scanResult.MissingAffectedCount));
         }
+
+        // FILES HELD BACK FOR BEING UNDER A DAY OLD, AND WHEN A SCAN CAN PROBABLY OFFER
+        // THEM: the sentence the window's cards carry (UnderADayOldReport.Line), printed
+        // wherever the scan held at least one file back for that reason, on every mode and
+        // whatever else was offered. It is on stdout only, for whoever reads the console;
+        // no Application-log entry carries it. The time is in the PC's own time zone, the
+        // one a scheduled task's trigger is set in.
+        var underADayOld = UnderADayOldReport.Line(scanResult, TimeZoneInfo.Local);
+        if (underADayOld.Length > 0)
+            Console.WriteLine(underADayOld);
     }
 
     /// <summary>

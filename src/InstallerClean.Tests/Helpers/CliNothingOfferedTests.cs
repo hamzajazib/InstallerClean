@@ -274,19 +274,44 @@ public class CliNothingOfferedTests
     }
 
     [Fact]
-    public async Task A_run_whose_every_held_file_was_read_as_under_a_day_old_gets_the_clean_line()
+    public async Task A_run_whose_every_held_file_was_read_as_under_a_day_old_gets_the_clean_line_and_when_to_scan_again()
     {
-        // Kept for their age with their age read, which is left alone without a word
-        // as the installed-program arm's files are.
-        var (exit, stdout) = await Run(Scan(
+        // Kept for their age with their age read: no held-back sentence and no reasons,
+        // as for the installed-program arm's files, and then the line saying when a scan
+        // can probably offer them.
+        var result = Scan(
             withheld: 2,
             split: new WithholdingSplit(UnderADayOldCount: 2),
-            underADayOldBytes: 2048));
+            underADayOldBytes: 2048,
+            underADayOldAllADayOldAt: new DateTime(2030, 6, 16, 9, 40, 0, DateTimeKind.Utc));
+
+        var (exit, stdout) = await Run(result);
 
         Assert.Equal(CliExitCode.Ok, exit);
         Assert.Contains(Strings.Cli_FoundNoOrphans, stdout, StringComparison.Ordinal);
         Assert.DoesNotContain(Opening(Strings.Cli_NothingOfferedPerFile_Plural), stdout, StringComparison.Ordinal);
         Assert.DoesNotContain(Strings.Cli_WithheldReasons_Header, stdout, StringComparison.Ordinal);
+
+        var line = UnderADayOldReport.Line(result, TimeZoneInfo.Local);
+        Assert.NotEqual(string.Empty, line);
+        Assert.Equal(1, Occurrences(stdout, line));
+    }
+
+    [Fact]
+    public async Task A_run_holding_no_file_for_its_age_says_nothing_about_age()
+    {
+        // The same reader of the split, on a run whose held files were kept for another
+        // reason, so the absence is of the line and not of a run.
+        var (_, stdout) = await Run(Scan(
+            withheld: 2,
+            split: new WithholdingSplit(DeclaredProductUnestablishedCount: 2)));
+
+        Assert.Contains(Opening(Strings.Cli_NothingOfferedPerFile_Plural), stdout, StringComparison.Ordinal);
+        // The words between the size and the time, which no count, size or time changes.
+        var dayOld = Strings.Completion_UnderADayOld_Plural;
+        var words = dayOld[(dayOld.IndexOf("({2})", StringComparison.Ordinal) + 5)..dayOld.IndexOf("{3}", StringComparison.Ordinal)];
+        Assert.NotEqual(string.Empty, words.Trim());
+        Assert.DoesNotContain(words, stdout, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -419,14 +444,15 @@ public class CliNothingOfferedTests
     private static ScanResult Scan(
         int withheld, WithholdingSplit split,
         EnumerationCensus census = default, long positiveBytes = 0,
-        long underADayOldBytes = 0, long patchBytes = 0) =>
+        long underADayOldBytes = 0, long patchBytes = 0, DateTime? underADayOldAllADayOldAt = null) =>
         new(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
             Census: census,
             WithheldFiles: Held(withheld),
             WithheldBy: split,
             WithheldDeclaredProductInstalledBytes: positiveBytes,
             WithheldUnderADayOldBytes: underADayOldBytes,
-            WithheldDeclaredPatchRegisteredBytes: patchBytes);
+            WithheldDeclaredPatchRegisteredBytes: patchBytes,
+            WithheldUnderADayOldAllADayOldAtUtc: underADayOldAllADayOldAt);
 
     private static OrphanedFile[] Held(int n) =>
         n switch
