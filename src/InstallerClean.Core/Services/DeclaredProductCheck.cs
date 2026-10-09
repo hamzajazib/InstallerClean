@@ -651,11 +651,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// reader answers false for every installation.
     ///
     /// AN ANSWER THAT KEEPS FILES STANDS FOR THE PASS, AND ONE THAT LETS FILES THROUGH IS ASKED
-    /// AGAIN (<see cref="PassAnswers.OpensNoPackageOf"/>). Once any of the three steps finds a
-    /// package to open for an installation, in whichever spelling of the code, every later
-    /// step of the pass takes that answer without asking. A step that would let a file
-    /// through on finding none asks for itself, so a source list that appears while the pass
-    /// runs keeps every file a later step would have let through.
+    /// AGAIN AT THE NEXT CALL (<see cref="PassAnswers.OpensNoPackageOf"/>). Once any of the three
+    /// steps finds a package to open for an installation, in whichever spelling of the code,
+    /// every later step of the pass takes that answer without asking. <see cref="LinksOf"/> and
+    /// <see cref="PackagesSecondCopiesOpen"/> each reach their conclusion once in a pass, and
+    /// <see cref="PackagesOpenedBy"/> once for each declared code, and every later candidate
+    /// takes that conclusion without a further call.
     /// </summary>
     private bool OpensNoPackage(string code, string? sid, MsiInstallContext context, PassAnswers pass)
     {
@@ -2445,7 +2446,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
     /// <summary>
     /// What one pass has asked Windows about installations and patch registrations,
-    /// kept so that nothing is asked twice inside the pass and nothing outlives it.
+    /// kept so that nothing outlives the pass and nothing is asked twice inside it, except
+    /// whether an installation has no package to open, which is asked again until one is
+    /// found (<see cref="OpensNoPackageOf"/>).
     /// </summary>
     private sealed class PassAnswers
     {
