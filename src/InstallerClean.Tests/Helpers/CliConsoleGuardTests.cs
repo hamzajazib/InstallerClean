@@ -76,6 +76,70 @@ public class CliConsoleGuardTests
         Assert.Equal("first" + NewLine + NewLine + "third" + NewLine + "x", console.ToString());
     }
 
+    [Theory]
+    [InlineData("a character")]
+    [InlineData("a character array")]
+    [InlineData("part of a character array")]
+    [InlineData("a span of characters")]
+    [InlineData("a bool")]
+    [InlineData("an int")]
+    [InlineData("a uint")]
+    [InlineData("a long")]
+    [InlineData("a ulong")]
+    [InlineData("a float")]
+    [InlineData("a double")]
+    [InlineData("a decimal")]
+    [InlineData("a string builder")]
+    [InlineData("a string builder, with no line break")]
+    public void A_write_that_fails_in_any_form_leaves_one_blank_line_in_place_of_its_own(string form)
+    {
+        // Two chunks, so a builder written a chunk at a time puts its first chunk out.
+        var builder = new StringBuilder(4).Append("abcd").Append("2xyz");
+        var console = new ConsoleFailingAt(form == "a bool" ? "True" : "2");
+        var guard = new ConsoleGuard(console);
+
+        guard.WriteLine("first");
+        var thrown = Record.Exception(() =>
+        {
+            switch (form)
+            {
+                case "a character": guard.WriteLine('2'); break;
+                case "a character array": guard.WriteLine(['2']); break;
+                case "part of a character array": guard.WriteLine(['1', '2', '3'], 1, 1); break;
+                case "a span of characters": guard.WriteLine("2".AsSpan()); break;
+                case "a bool": guard.WriteLine(true); break;
+                case "an int": guard.WriteLine(2); break;
+                case "a uint": guard.WriteLine(2u); break;
+                case "a long": guard.WriteLine(2L); break;
+                case "a ulong": guard.WriteLine(2UL); break;
+                case "a float": guard.WriteLine(2f); break;
+                case "a double": guard.WriteLine(2d); break;
+                case "a decimal": guard.WriteLine(2m); break;
+                case "a string builder": guard.WriteLine(builder); break;
+                default: guard.Write(builder); break;
+            }
+            guard.WriteLine("third");
+        });
+
+        Assert.Null(thrown);
+        Assert.Equal(1, console.Refused);
+        Assert.Equal("first" + NewLine + NewLine + "third" + NewLine, console.ToString());
+    }
+
+    [Fact]
+    public void A_span_written_after_a_failed_write_starts_a_line_of_its_own()
+    {
+        var console = new ConsoleFailingAt("second");
+        var guard = new ConsoleGuard(console);
+
+        guard.WriteLine("first");
+        guard.WriteLine("second");
+        guard.WriteLine("third".AsSpan());
+
+        Assert.Equal(1, console.Refused);
+        Assert.Equal("first" + NewLine + NewLine + "third" + NewLine, console.ToString());
+    }
+
     [Fact]
     public void A_line_a_failed_write_cuts_short_is_not_joined_by_the_next_line_out()
     {
@@ -132,6 +196,8 @@ public class CliConsoleGuardTests
     [InlineData("a character")]
     [InlineData("a line break")]
     [InlineData("characters from an array")]
+    [InlineData("a span of characters")]
+    [InlineData("a string builder")]
     public void A_console_failing_at_an_empty_text_refuses_every_write(string write)
     {
         var console = new ConsoleFailingAt("");
@@ -142,6 +208,8 @@ public class CliConsoleGuardTests
             {
                 case "a character": console.Write('x'); break;
                 case "a line break": console.WriteLine(); break;
+                case "a span of characters": console.Write("xy".AsSpan()); break;
+                case "a string builder": console.Write(new StringBuilder("xy")); break;
                 default: console.Write(['x', 'y'], 0, 2); break;
             }
         });
@@ -446,9 +514,14 @@ internal sealed class DiskRefusingWrites(params int[] refused) : MemoryStream
 /// <summary>
 /// A console that takes every write until one carrying <c>text</c>, and throws on that one,
 /// as a write to a redirected standard output on a full disk does. An empty
-/// <c>text</c> refuses every write: a string, a character, characters from an array and a
-/// line break alike. <see cref="Refused"/> counts the writes it threw on.
+/// <c>text</c> refuses every write: a string, a character, characters from an array, a
+/// span, a string builder and a line break alike. <see cref="Refused"/> counts the writes
+/// it threw on.
 /// </summary>
+/// <remarks>
+/// StringWriter writes a span and a string builder straight to its own buffer, so those
+/// overloads are refused here as well as the ones every other write comes down to.
+/// </remarks>
 internal sealed class ConsoleFailingAt(string text) : StringWriter
 {
     /// <summary>The message of the exception every refused write throws.</summary>
@@ -460,6 +533,30 @@ internal sealed class ConsoleFailingAt(string text) : StringWriter
     {
         Refuse(value ?? string.Empty);
         base.Write(value);
+    }
+
+    public override void Write(ReadOnlySpan<char> buffer)
+    {
+        Refuse(new string(buffer));
+        base.Write(buffer);
+    }
+
+    public override void Write(StringBuilder? value)
+    {
+        Refuse(value?.ToString() ?? string.Empty);
+        base.Write(value);
+    }
+
+    public override void WriteLine(ReadOnlySpan<char> buffer)
+    {
+        Write(buffer);
+        base.WriteLine();
+    }
+
+    public override void WriteLine(StringBuilder? value)
+    {
+        Write(value);
+        base.WriteLine();
     }
 
     public override void Write(char value)

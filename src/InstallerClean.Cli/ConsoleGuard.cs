@@ -8,10 +8,13 @@ namespace InstallerClean.Cli;
 /// run, and a write that fails, such as one to an output redirected to a disk that is full,
 /// loses what it was writing and nothing more: the next write is tried as if none had
 /// failed, and goes through once the disk has room, which a Delete on that disk can give it.
-/// Nothing the run prints can throw, so its Application-log entry and its exit code describe
-/// what the run did whatever became of its output. A Delete that deleted files is logged and
-/// exits as that Delete, and a run refused for something that clears by itself keeps the
-/// code that tells a scheduler to come back.
+/// Every write reaches the console's writer as one call, whichever overload made it.
+///
+/// Nothing the run prints can throw, so no failed write ends a run or reaches a catch-all. A
+/// Delete that deleted files is logged and exits as that Delete, and a run refused for
+/// something that clears by itself keeps the code that tells a scheduler to come back. A run
+/// whose output is what it is asked for, a scan-only run, --help or --version, reads
+/// <see cref="FirstFailure"/> and exits 1 where a write failed.
 ///
 /// The first failure is recorded in crash.log and the later ones are not. One cause, such
 /// as a full disk, can refuse many writes in a row, and an entry each would spend
@@ -60,6 +63,51 @@ internal sealed class ConsoleGuard(TextWriter inner) : TextWriter
 
     public override void WriteLine(string? value) => Guard(value, static (w, v) => w.WriteLine(v));
 
+    // TextWriter writes each of the overloads below as more than one write: a line as its
+    // text and then a line break, a string builder a chunk at a time. Each is overridden so
+    // it reaches the console's writer as one call, inside one guard.
+
+    public override void Write(StringBuilder? value) => Guard(value, static (w, v) => w.Write(v));
+
+    public override void WriteLine(char value) => Guard(value, static (w, v) => w.WriteLine(v));
+
+    public override void WriteLine(char[]? buffer) => Guard(buffer, static (w, v) => w.WriteLine(v));
+
+    public override void WriteLine(char[] buffer, int index, int count) =>
+        Guard((buffer, index, count), static (w, v) => w.WriteLine(v.buffer, v.index, v.count));
+
+    // A span cannot be handed to Guard's delegate, so this one makes the same write itself.
+    public override void WriteLine(ReadOnlySpan<char> buffer)
+    {
+        try
+        {
+            WriteOwedLineBreak();
+            inner.WriteLine(buffer);
+        }
+        catch (Exception ex)
+        {
+            Record(ex);
+        }
+    }
+
+    public override void WriteLine(bool value) => Guard(value, static (w, v) => w.WriteLine(v));
+
+    public override void WriteLine(int value) => Guard(value, static (w, v) => w.WriteLine(v));
+
+    public override void WriteLine(uint value) => Guard(value, static (w, v) => w.WriteLine(v));
+
+    public override void WriteLine(long value) => Guard(value, static (w, v) => w.WriteLine(v));
+
+    public override void WriteLine(ulong value) => Guard(value, static (w, v) => w.WriteLine(v));
+
+    public override void WriteLine(float value) => Guard(value, static (w, v) => w.WriteLine(v));
+
+    public override void WriteLine(double value) => Guard(value, static (w, v) => w.WriteLine(v));
+
+    public override void WriteLine(decimal value) => Guard(value, static (w, v) => w.WriteLine(v));
+
+    public override void WriteLine(StringBuilder? value) => Guard(value, static (w, v) => w.WriteLine(v));
+
     public override void Flush()
     {
         try
@@ -80,17 +128,24 @@ internal sealed class ConsoleGuard(TextWriter inner) : TextWriter
     {
         try
         {
-            if (_lineCut)
-            {
-                inner.WriteLine();
-                _lineCut = false;
-            }
+            WriteOwedLineBreak();
             write(inner, value);
         }
         catch (Exception ex)
         {
             Record(ex);
         }
+    }
+
+    /// <summary>
+    /// Writes the line break a failure leaves owing, where one is owed. Called inside the
+    /// write it leads, so where it is refused that write is not made.
+    /// </summary>
+    private void WriteOwedLineBreak()
+    {
+        if (!_lineCut) return;
+        inner.WriteLine();
+        _lineCut = false;
     }
 
     private void Record(Exception ex)
