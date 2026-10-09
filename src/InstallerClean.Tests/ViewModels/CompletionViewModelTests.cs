@@ -597,12 +597,13 @@ public class CompletionViewModelTests
     }
 
     // The line about files held back for being under a day old. The card places the
-    // sentence UnderADayOldReport.Line gives for the scan it speaks for, and
+    // sentence UnderADayOldReport.Line gives for the scan it speaks for, in the zone
+    // TestCompletion gives it, UTC unless a test says otherwise, and
     // UnderADayOldReportTests pins that sentence, so these compare with what it returns.
 
     private static readonly DateTime DayOldAt = new(2030, 6, 16, 9, 40, 0, DateTimeKind.Utc);
 
-    private static string DayOldLineOf(ScanResult scan) => UnderADayOldReport.Line(scan, TimeZoneInfo.Local);
+    private static string DayOldLineOf(ScanResult scan) => UnderADayOldReport.Line(scan, TimeZoneInfo.Utc);
 
     [Fact]
     public void Nothing_offered_keeps_its_body_and_adds_the_day_old_line_where_other_files_are_held_too()
@@ -701,6 +702,30 @@ public class CompletionViewModelTests
         ShowCard(vm, card);
 
         Assert.Equal(string.Empty, vm.UnderADayOld);
+    }
+
+    [Fact]
+    public void The_day_old_line_gives_its_time_in_the_zone_as_it_is_when_the_card_is_revealed()
+    {
+        // The zone moves between two cards on one view model, as it does when somebody
+        // changes it with the window open, and each card gives the time in the zone of
+        // its own moment. Both screens that carry the line are walked.
+        var sevenAhead = TimeZoneInfo.CreateCustomTimeZone("Test+7", TimeSpan.FromHours(7), "Test+7", "Test+7");
+        var zone = TimeZoneInfo.Utc;
+        var scan = HeldBack(2, new WithholdingSplit(UnderADayOldCount: 2), DayOldAt);
+        var vm = TestCompletion.Create(lastScan: () => scan, zone: () => zone);
+
+        vm.ShowDeleteSummary(1, 1024, []);
+        var inUtc = vm.UnderADayOld;
+        zone = sevenAhead;
+        vm.ShowDeleteSummary(1, 1024, []);
+        var afterTheChange = vm.UnderADayOld;
+        vm.ShowNothingOffered(scan, scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: string.Empty);
+
+        Assert.Equal(UnderADayOldReport.Line(scan, TimeZoneInfo.Utc), inUtc);
+        Assert.Equal(UnderADayOldReport.Line(scan, sevenAhead), afterTheChange);
+        Assert.NotEqual(inUtc, afterTheChange);
+        Assert.Equal(UnderADayOldReport.Line(scan, sevenAhead), vm.Summary);
     }
 
     [Fact]

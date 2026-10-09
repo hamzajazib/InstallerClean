@@ -194,6 +194,7 @@ public partial class CompletionViewModel : ObservableObject
     private readonly IWindowsRegion _windowsRegion;
     private readonly IWindowService _windowService;
     private readonly Func<ScanResult?> _lastScan;
+    private readonly Func<TimeZoneInfo> _zone;
 
     /// <summary>
     /// True once this sitting has had the PC's first run: a card took the report,
@@ -240,6 +241,9 @@ public partial class CompletionViewModel : ObservableObject
     /// way its box starts. <paramref name="windowService"/> opens the donate page and
     /// the report window. <paramref name="lastScan"/> answers with the scan the window
     /// shows at the moment it is asked, which the card after a Move or Delete speaks for.
+    /// <paramref name="zone"/> answers with the time zone the line about files under a day
+    /// old gives its time in, and is the PC's own as it is at that moment where it is not
+    /// given (<see cref="CurrentZone"/>).
     /// </summary>
     public CompletionViewModel(
         IResultLogService resultLogService,
@@ -248,7 +252,8 @@ public partial class CompletionViewModel : ObservableObject
         IFirstRunMark firstRunMark,
         IWindowsRegion windowsRegion,
         IWindowService windowService,
-        Func<ScanResult?> lastScan)
+        Func<ScanResult?> lastScan,
+        Func<TimeZoneInfo>? zone = null)
     {
         _resultLogService = resultLogService;
         _settingsService = settingsService;
@@ -257,6 +262,7 @@ public partial class CompletionViewModel : ObservableObject
         _windowsRegion = windowsRegion;
         _windowService = windowService;
         _lastScan = lastScan;
+        _zone = zone ?? CurrentZone;
     }
 
     /// <summary>Shows the "All clean" state after a scan finds no orphans.
@@ -827,9 +833,25 @@ public partial class CompletionViewModel : ObservableObject
     /// A CARD AFTER A MOVE OR DELETE IS SHOWN AFTER THE REFRESH THAT ENDS THE BATCH
     /// (<see cref="CleanupViewModel"/>'s <c>RefreshAfterBatchAsync</c>). Shown before it, the
     /// card would speak for the scan the operation started from.
+    ///
+    /// The time is in the zone the constructor's <c>zone</c> answers with as the card is
+    /// revealed.
     /// </summary>
-    private static string UnderADayOldLine(ScanResult? scan) =>
-        UnderADayOldReport.Line(scan, TimeZoneInfo.Local);
+    private string UnderADayOldLine(ScanResult? scan) =>
+        UnderADayOldReport.Line(scan, _zone());
+
+    /// <summary>
+    /// The PC's time zone as Windows has it now. .NET answers
+    /// <see cref="TimeZoneInfo.Local"/> from a cache it fills once and keeps until
+    /// <see cref="TimeZoneInfo.ClearCachedData"/> empties it, so the cache is emptied first
+    /// and a zone changed while the window is open is the one the next card gives its time
+    /// in.
+    /// </summary>
+    private static TimeZoneInfo CurrentZone()
+    {
+        TimeZoneInfo.ClearCachedData();
+        return TimeZoneInfo.Local;
+    }
 
     /// <summary>
     /// Whether the card about to be revealed can carry the report: false at once where
