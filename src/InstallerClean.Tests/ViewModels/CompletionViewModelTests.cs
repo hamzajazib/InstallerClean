@@ -476,8 +476,7 @@ public class CompletionViewModelTests
         var vm = TestCompletion.Create();
 
         vm.ShowNothingOffered(
-            wholesale: true, heldBackCount: 3, heldBackBytes: 3072,
-            scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
+            HeldBack(3, Wholesale(3)), scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
 
         Assert.True(vm.IsComplete);
         Assert.False(vm.HeadingIsWarning);
@@ -516,8 +515,7 @@ public class CompletionViewModelTests
         var vm = TestCompletion.Create();
 
         vm.ShowNothingOffered(
-            wholesale: true, heldBackCount: 1, heldBackBytes: 1024,
-            scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
+            HeldBack(1, Wholesale(1)), scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
 
         Assert.Equal(
             string.Format(
@@ -547,8 +545,7 @@ public class CompletionViewModelTests
 
         allClear.ShowAllClear(scannedFileCount: 5, scanDurationMs: 10);
         nothingOffered.ShowNothingOffered(
-            wholesale: true, heldBackCount: 3, heldBackBytes: 3072,
-            scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
+            HeldBack(3, Wholesale(3)), scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
 
         Assert.NotEqual(allClear.Heading, nothingOffered.Heading);
         Assert.NotEqual(allClear.Summary, nothingOffered.Summary);
@@ -570,11 +567,9 @@ public class CompletionViewModelTests
         var perFile = TestCompletion.Create();
 
         wholesale.ShowNothingOffered(
-            wholesale: true, heldBackCount: 3, heldBackBytes: 3072,
-            scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
+            HeldBack(3, Wholesale(3)), scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
         perFile.ShowNothingOffered(
-            wholesale: false, heldBackCount: 3, heldBackBytes: 3072,
-            scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
+            HeldBack(3, PerFile(3)), scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
 
         Assert.NotEqual(wholesale.Summary, perFile.Summary);
         // Everything else about the screen IS shared, which is what makes the body the
@@ -592,8 +587,7 @@ public class CompletionViewModelTests
         var vm = TestCompletion.Create();
 
         vm.ShowNothingOffered(
-            wholesale: false, heldBackCount: 3, heldBackBytes: 3072,
-            scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
+            HeldBack(3, PerFile(3)), scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
 
         Assert.Equal(
             string.Format(
@@ -602,28 +596,30 @@ public class CompletionViewModelTests
             vm.Summary);
     }
 
-    // The line about files held back for being under a day old. The view model places
-    // the sentence it is handed; UnderADayOldReportTests pins the sentence itself, so a
-    // stand-in is enough here.
+    // The line about files held back for being under a day old. The card places the
+    // sentence UnderADayOldReport.Line gives for the scan it speaks for, and
+    // UnderADayOldReportTests pins that sentence, so these compare with what it returns.
 
-    private const string DayOldLine = "Stand-in for the line about files under a day old.";
+    private static readonly DateTime DayOldAt = new(2030, 6, 16, 9, 40, 0, DateTimeKind.Utc);
+
+    private static string DayOldLineOf(ScanResult scan) => UnderADayOldReport.Line(scan, TimeZoneInfo.Local);
 
     [Fact]
     public void Nothing_offered_keeps_its_body_and_adds_the_day_old_line_where_other_files_are_held_too()
     {
         var vm = TestCompletion.Create();
+        var scan = HeldBack(5, new WithholdingSplit(DeclaredProductUnestablishedCount: 2, UnderADayOldCount: 3),
+            DayOldAt);
 
-        vm.ShowNothingOffered(
-            wholesale: false, heldBackCount: 5, heldBackBytes: 5120,
-            scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: string.Empty,
-            underADayOldCount: 3, underADayOld: DayOldLine);
+        vm.ShowNothingOffered(scan, scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: string.Empty);
 
         Assert.Equal(
             string.Format(
                 Strings.Completion_NothingOfferedPerFileBody_Plural,
                 5, DisplayHelpers.PluraliseFile(5), DisplayHelpers.FormatSize(5120)),
             vm.Summary);
-        Assert.Equal(DayOldLine, vm.UnderADayOld);
+        Assert.NotEqual(string.Empty, DayOldLineOf(scan));
+        Assert.Equal(DayOldLineOf(scan), vm.UnderADayOld);
     }
 
     [Fact]
@@ -632,13 +628,12 @@ public class CompletionViewModelTests
         // Shown once, in the body's place, with the line naming a drive or share still
         // under it, and nothing left in the zone below.
         var vm = TestCompletion.Create();
+        var scan = HeldBack(3, new WithholdingSplit(UnderADayOldCount: 3), DayOldAt);
 
-        vm.ShowNothingOffered(
-            wholesale: false, heldBackCount: 3, heldBackBytes: 3072,
-            scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: "Drive line.",
-            underADayOldCount: 3, underADayOld: DayOldLine);
+        vm.ShowNothingOffered(scan, scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: "Drive line.");
 
-        Assert.Equal(DayOldLine + Environment.NewLine + "Drive line.", vm.Summary);
+        Assert.NotEqual(string.Empty, DayOldLineOf(scan));
+        Assert.Equal(DayOldLineOf(scan) + Environment.NewLine + "Drive line.", vm.Summary);
         Assert.Equal(string.Empty, vm.UnderADayOld);
     }
 
@@ -648,31 +643,28 @@ public class CompletionViewModelTests
         "finished Delete", "cancelled Delete", "everything held back",
     };
 
-    private static void ShowCard(CompletionViewModel vm, string card, string underADayOld)
+    private static void ShowCard(CompletionViewModel vm, string card)
     {
         var reverify = new ReverifyResult([], ["a.msi"], new HeldBackReasons(Reclaimed: 1));
         switch (card)
         {
             case "finished Move":
-                vm.ShowMoveSummary(1, 1024, @"D:\Backup", [], MoveSpaceOutcome.FreedSpace,
-                    underADayOld: underADayOld);
+                vm.ShowMoveSummary(1, 1024, @"D:\Backup", [], MoveSpaceOutcome.FreedSpace);
                 break;
             case "stopped Move":
-                vm.ShowMoveStoppedSummary(1, 1024, @"D:\Backup", [], MoveSpaceOutcome.FreedSpace,
-                    underADayOld: underADayOld);
+                vm.ShowMoveStoppedSummary(1, 1024, @"D:\Backup", [], MoveSpaceOutcome.FreedSpace);
                 break;
             case "cancelled Move":
-                vm.ShowMoveCancelledSummary(1, 2, 1024, @"D:\Backup", [], MoveSpaceOutcome.FreedSpace,
-                    underADayOld: underADayOld);
+                vm.ShowMoveCancelledSummary(1, 2, 1024, @"D:\Backup", [], MoveSpaceOutcome.FreedSpace);
                 break;
             case "finished Delete":
-                vm.ShowDeleteSummary(1, 1024, [], underADayOld: underADayOld);
+                vm.ShowDeleteSummary(1, 1024, []);
                 break;
             case "cancelled Delete":
-                vm.ShowDeleteCancelledSummary(1, 2, 1024, [], underADayOld: underADayOld);
+                vm.ShowDeleteCancelledSummary(1, 2, 1024, []);
                 break;
             case "everything held back":
-                vm.ShowReverifyAllSkipped(reverify, deleting: true, underADayOld);
+                vm.ShowReverifyAllSkipped(reverify, deleting: true);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(card), card, null);
@@ -681,26 +673,32 @@ public class CompletionViewModelTests
 
     [Theory]
     [MemberData(nameof(CardsAfterAMoveOrDelete))]
-    public void Every_card_after_a_Move_or_Delete_carries_the_day_old_line_it_is_given(string card)
+    public void Every_card_after_a_Move_or_Delete_carries_the_day_old_line_of_the_scan_the_window_shows(string card)
     {
-        var vm = TestCompletion.Create();
+        var scan = HeldBack(2, new WithholdingSplit(UnderADayOldCount: 2), DayOldAt);
+        var vm = TestCompletion.Create(lastScan: () => scan);
 
-        ShowCard(vm, card, DayOldLine);
+        ShowCard(vm, card);
 
         Assert.True(vm.IsComplete);
-        Assert.Equal(DayOldLine, vm.UnderADayOld);
+        Assert.NotEqual(string.Empty, DayOldLineOf(scan));
+        Assert.Equal(DayOldLineOf(scan), vm.UnderADayOld);
     }
 
     [Theory]
     [MemberData(nameof(CardsAfterAMoveOrDelete))]
-    public void A_card_given_no_day_old_line_clears_the_last_one(string card)
+    public void A_card_reads_the_scan_as_it_is_revealed_and_clears_a_line_the_scan_no_longer_has(string card)
     {
-        // The view model is reused across operations, so a card that has no line has to
-        // take the previous card's away.
-        var vm = TestCompletion.Create();
-        vm.ShowDeleteSummary(1, 1024, [], underADayOld: DayOldLine);
+        // The view model is reused across operations, and the scan behind the card changes
+        // between them, so a card whose scan held no file back for its age takes the
+        // previous card's line away.
+        ScanResult? scan = HeldBack(2, new WithholdingSplit(UnderADayOldCount: 2), DayOldAt);
+        var vm = TestCompletion.Create(lastScan: () => scan);
+        vm.ShowDeleteSummary(1, 1024, []);
+        Assert.NotEqual(string.Empty, vm.UnderADayOld);
 
-        ShowCard(vm, card, string.Empty);
+        scan = HeldBack(2, PerFile(2));
+        ShowCard(vm, card);
 
         Assert.Equal(string.Empty, vm.UnderADayOld);
     }
@@ -708,13 +706,35 @@ public class CompletionViewModelTests
     [Fact]
     public void The_all_clear_clears_the_day_old_line()
     {
-        var vm = TestCompletion.Create();
-        vm.ShowDeleteSummary(1, 1024, [], underADayOld: DayOldLine);
+        var scan = HeldBack(2, new WithholdingSplit(UnderADayOldCount: 2), DayOldAt);
+        var vm = TestCompletion.Create(lastScan: () => scan);
+        vm.ShowDeleteSummary(1, 1024, []);
+        Assert.NotEqual(string.Empty, vm.UnderADayOld);
 
         vm.ShowAllClear(scannedFileCount: 5, scanDurationMs: 10);
 
         Assert.Equal(string.Empty, vm.UnderADayOld);
     }
+
+    /// <summary>
+    /// A scan that offered nothing and held back <paramref name="files"/> files of 1 KB
+    /// each, counted by <paramref name="split"/>, the files under a day old all a day old
+    /// at <paramref name="allADayOldAtUtc"/>.
+    /// </summary>
+    private static ScanResult HeldBack(int files, WithholdingSplit split, DateTime? allADayOldAtUtc = null) =>
+        new(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
+            WithheldFiles: Enumerable.Range(0, files)
+                .Select(i => new OrphanedFile($@"C:\Windows\Installer\{i}.msi", 1024, false, false, false, "unclaimed"))
+                .ToArray(),
+            WithheldBy: split,
+            WithheldUnderADayOldBytes: 1024L * split.UnderADayOldCount,
+            WithheldUnderADayOldAllADayOldAtUtc: allADayOldAtUtc);
+
+    /// <summary>Every held file kept by the rule about the machine's records, in one go.</summary>
+    private static WithholdingSplit Wholesale(int files) => new(WholesaleCount: files);
+
+    /// <summary>Every held file judged on its own and kept.</summary>
+    private static WithholdingSplit PerFile(int files) => new(DeclaredProductUnestablishedCount: files);
 
     // The kept-back block. One sentence since 3.0.0, naming no cause, carrying the
     // batch total. What is pinned here is that the mix of causes cannot be read off
@@ -987,8 +1007,7 @@ public class CompletionViewModelTests
         var vm = TestCompletion.Create();
 
         vm.ShowNothingOffered(
-            wholesale: false, heldBackCount: 0, heldBackBytes: 0,
-            scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: DriveDLine);
+            HeldBack(0, default), scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: DriveDLine);
 
         Assert.Equal(Strings.Completion_NothingOffered, vm.Heading);
         Assert.Equal(DriveDLine, vm.Summary);
@@ -1004,12 +1023,9 @@ public class CompletionViewModelTests
         var vm = TestCompletion.Create();
         var withoutLine = TestCompletion.Create();
 
-        vm.ShowNothingOffered(
-            wholesale, heldBackCount: 3, heldBackBytes: 3072,
-            scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: DriveDLine);
-        withoutLine.ShowNothingOffered(
-            wholesale, heldBackCount: 3, heldBackBytes: 3072,
-            scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
+        var scan = HeldBack(3, wholesale ? Wholesale(3) : PerFile(3));
+        vm.ShowNothingOffered(scan, scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: DriveDLine);
+        withoutLine.ShowNothingOffered(scan, scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
 
         Assert.Equal(new[] { withoutLine.Summary, DriveDLine }, vm.Summary.Split(Environment.NewLine));
         Assert.DoesNotContain(Environment.NewLine, withoutLine.Summary, System.StringComparison.Ordinal);
@@ -1105,7 +1121,7 @@ public class CompletionViewModelTests
             ResultLog.SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(ResultLogSendOutcome.Sent);
             Settings.Update(Arg.Any<Action<AppSettings>>()).Returns(true);
             Vm = new CompletionViewModel(ResultLog, Settings, Substitute.For<IEarlierRunCheck>(), FirstRunMark,
-                Substitute.For<IWindowsRegion>(), Windows);
+                Substitute.For<IWindowsRegion>(), Windows, () => null);
             Assert.True(Vm.TakeReport());
             Vm.ShowAllClear(scannedFileCount: 5, scanDurationMs: 10);
             Writing = Vm.WriteReportAsync(null!);

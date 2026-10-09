@@ -36,6 +36,49 @@ public class MainViewModelTests
     private readonly IWindowsRegion _windowsRegion = Substitute.For<IWindowsRegion>();
     private readonly MockFileSystem _fileSystem = new();
 
+    [Fact]
+    public async Task The_card_after_a_Delete_gives_the_day_old_line_of_the_scan_the_refresh_ran()
+    {
+        // The Delete starts from a scan holding one file back for its age and ends with a
+        // refresh holding two, at a later time. The card is revealed over the second scan
+        // and speaks for it.
+        var vm = CreateViewModel();
+        var before = DayOldScan(ScanResultWithOrphans(1), held: 1, new DateTime(2030, 6, 16, 9, 40, 0, DateTimeKind.Utc));
+        var after = DayOldScan(EmptyScanResult(), held: 2, new DateTime(2030, 6, 16, 11, 5, 0, DateTimeKind.Utc));
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(before, after);
+        _deleteService.DeleteFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new DeleteResult(1, Array.Empty<FileOperationError>()));
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
+
+        await vm.Scan.ScanWithProgressAsync(null);
+        await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+
+        var afterLine = UnderADayOldReport.Line(after, TimeZoneInfo.Local);
+        Assert.True(vm.Completion.IsComplete);
+        Assert.Same(after, vm.Scan.LastScanResult);
+        Assert.NotEqual(string.Empty, afterLine);
+        Assert.NotEqual(UnderADayOldReport.Line(before, TimeZoneInfo.Local), afterLine);
+        Assert.Equal(afterLine, vm.Completion.UnderADayOld);
+    }
+
+    /// <summary>
+    /// <paramref name="scan"/> holding <paramref name="held"/> files of 1 KB back for being
+    /// under a day old, all a day old at <paramref name="allADayOldAtUtc"/>.
+    /// </summary>
+    private static ScanResult DayOldScan(ScanResult scan, int held, DateTime allADayOldAtUtc) =>
+        scan with
+        {
+            WithheldFiles = Enumerable.Range(0, held)
+                .Select(i => new OrphanedFile($@"C:\Windows\Installer\young{i}.msi", 1024, false, false, false, Orphaned))
+                .ToList(),
+            WithheldBy = new WithholdingSplit(UnderADayOldCount: held),
+            WithheldUnderADayOldBytes = 1024L * held,
+            WithheldUnderADayOldAllADayOldAtUtc = allADayOldAtUtc,
+        };
+
     private MainViewModel CreateViewModel() => CreateViewModel(new AppSettings());
 
     /// <summary>

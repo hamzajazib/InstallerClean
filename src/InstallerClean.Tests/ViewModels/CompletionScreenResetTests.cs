@@ -169,6 +169,16 @@ public class CompletionScreenResetTests
                 : new ReverifyResult([], [@"C:\Windows\Installer\b.msi"],
                     new HeldBackReasons(Reclaimed: 1));
 
+        // A scan holding one file back on one vector and none on the other, so the
+        // nothing-offered screen is painted both with a body counting a file and with
+        // the line naming a drive or share as its whole body.
+        if (type == typeof(ScanResult))
+            return run == Run.DidWork
+                ? new ScanResult(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
+                    WithheldFiles: [new OrphanedFile(@"C:\Windows\Installer\c.msi", 1024, false, false, false, "unclaimed")],
+                    WithheldBy: new WithholdingSplit(WholesaleCount: 1))
+                : new ScanResult(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0);
+
         throw new NotSupportedException(
             $"{parameter.Member.Name} takes a {type.Name} for {parameter.Name}, which this file has "
             + "no argument for. Add one; a screen that cannot be called is a screen that is not checked.");

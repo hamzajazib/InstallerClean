@@ -72,7 +72,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             isExternallyBlocked: () => Cleanup?.IsOperationInFlight == true || Completion?.IsComplete == true);
         Completion = new CompletionViewModel(
             resultLogService, settingsService, earlierRunCheck,
-            firstRunMark, windowsRegion, windowService);
+            firstRunMark, windowsRegion, windowService,
+            lastScan: () => Scan.LastScanResult);
         Cleanup = new CleanupViewModel(
             moveService, deleteService, settingsService,
             dialogService, confirmationService, fileSystem,
@@ -403,14 +404,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
             else
             {
                 Completion.ShowNothingOffered(
-                    result.UnsettledHeldBackIsWholesale,
-                    result.UnsettledHeldBackCount,
-                    result.UnsettledHeldBackBytes,
+                    result,
                     Scan.RegisteredFileCount,
                     Scan.LastScanDurationMs,
-                    Scan.SourcesGivenUpText,
-                    result.WithheldBy.UnderADayOldCount,
-                    UnderADayOldReport.Line(result, TimeZoneInfo.Local));
+                    Scan.SourcesGivenUpText);
             }
             decided.TrySetResult();
 
