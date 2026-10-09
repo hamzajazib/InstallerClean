@@ -217,6 +217,46 @@ public class CliConsoleGuardTests
         Assert.Equal(stopped.EventClass, summary.Class);
     }
 
+    [Theory]
+    [InlineData("/d")]
+    [InlineData("/m")]
+    public async Task A_delete_or_move_whose_output_fails_from_its_first_line_still_acts_and_exits_as_its_batch(string arg)
+    {
+        var delete = Substitute.For<IDeleteFilesService>();
+        delete.DeleteFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new DeleteResult(2, Array.Empty<FileOperationError>()));
+        var move = Substitute.For<IMoveFilesService>();
+        move.MoveFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>(),
+                Arg.Any<UnderLeaseClaims>(), Arg.Any<IProgress<OperationProgress>?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new MoveResult(2, Array.Empty<FileOperationError>()));
+
+        // Every write fails, the scanning line first.
+        var run = await Run(arg, Services(delete: delete, move: move), new ConsoleFailingAt(""));
+
+        Assert.True(run.Refused > 0, "The console refused no write.");
+        string[] both = [File1, File2];
+        if (arg == "/d")
+            await delete.Received(1).DeleteFilesAsync(Arg.Is<IEnumerable<string>>(f => f.SequenceEqual(both)),
+                Arg.Any<UnderLeaseClaims>(), Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
+        else
+            await move.Received(1).MoveFilesAsync(Arg.Is<IEnumerable<string>>(f => f.SequenceEqual(both)),
+                Destination, Arg.Any<UnderLeaseClaims>(), Arg.Any<IProgress<OperationProgress>?>(),
+                Arg.Any<CancellationToken>());
+        Assert.Equal(CliExitCode.Ok, run.ExitCode);
+        var summary = Assert.Single(run.Entries, IsOutcome);
+        Assert.Equal(CliEventClass.Ok, summary.Class);
+        Assert.Equal(arg == "/d"
+            ? MachineContract.English(() => string.Format(Strings.Cli_EventLogDeleteSummary,
+                "/d", 2, 2, DisplayHelpers.PluraliseFile(2), DisplayHelpers.FormatSizeForMachine(300),
+                0, DisplayHelpers.PluraliseError(0)))
+            : MachineContract.English(() => string.Format(Strings.Cli_EventLogMoveSummary,
+                "/m", 2, 2, DisplayHelpers.PluraliseFile(2), Destination,
+                DisplayHelpers.FormatSizeForMachine(300), 0, DisplayHelpers.PluraliseError(0))),
+            summary.Text);
+    }
+
     [Fact]
     public async Task A_run_refused_for_an_install_in_progress_keeps_its_come_back_later_code_when_its_output_fails()
     {
