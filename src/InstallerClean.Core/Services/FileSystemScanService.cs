@@ -1096,7 +1096,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
             supersededContainedBytes,
             sourceRootsGivenUp,
             sourceWaitCount,
-            cachedPackageCensus);
+            cachedPackageCensus,
+            withheldBy.UnderADayOldAllADayOldAtUtc);
     }
 
     /// <summary>
@@ -1189,6 +1190,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         private int _screenUnanswered;
         private int _underADayOld;
         private long _underADayOldBytes;
+        private DateTime? _underADayOldAllADayOldAtUtc;
         private int _ageUnestablished;
         private int _declaredPatchRegistered;
         private long _declaredPatchRegisteredBytes;
@@ -1198,11 +1200,20 @@ public sealed class FileSystemScanService : IFileSystemScanService
 
         internal void IdentityUnestablished() => _identityUnestablished++;
 
-        internal void UnderADayOld(long sizeBytes)
+        internal void UnderADayOld(long sizeBytes, DateTime aDayOldAtUtc)
         {
             _underADayOld++;
             _underADayOldBytes += sizeBytes;
+            if (_underADayOldAllADayOldAtUtc is not { } latest || aDayOldAtUtc > latest)
+                _underADayOldAllADayOldAtUtc = aDayOldAtUtc;
         }
+
+        /// <summary>
+        /// The latest of the instants (<see cref="CachedFileAge.ADayOldAtUtc"/>) at which
+        /// the files counted under the under-a-day-old arm are a day old, so the instant
+        /// from which every one of them is. Null where the arm counted none.
+        /// </summary>
+        internal DateTime? UnderADayOldAllADayOldAtUtc => _underADayOldAllADayOldAtUtc;
 
         internal void AgeUnestablished() => _ageUnestablished++;
 
@@ -1513,10 +1524,11 @@ public sealed class FileSystemScanService : IFileSystemScanService
             // carries the two counts apart. The command line's held-back sentence counts
             // a file whose age was not established and leaves out a file under a day
             // old, whose size is summed here so that the sentence's size can leave it
-            // out too. The window's finished screen counts both.
+            // out too. The window's finished screen counts both. The instant a file
+            // under a day old is a day old goes to the tally too, which keeps the latest.
             withheld.Add(candidate);
             if (verdict == CachedFileAgeVerdict.UnderADayOld)
-                withheldBy.UnderADayOld(candidate.SizeBytes);
+                withheldBy.UnderADayOld(candidate.SizeBytes, CachedFileAge.ADayOldAtUtc(times));
             else
                 withheldBy.AgeUnestablished();
         }

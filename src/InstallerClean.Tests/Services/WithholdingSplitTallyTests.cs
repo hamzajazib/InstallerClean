@@ -245,4 +245,20 @@ public class WithholdingSplitTallyTests
             seen[moved[0]] = outcome;
         }
     }
+
+    [Fact]
+    public void The_instant_every_file_under_a_day_old_is_a_day_old_is_the_latest_counted()
+    {
+        var tally = new FileSystemScanService.WithholdingSplitTally();
+        Assert.Null(tally.UnderADayOldAllADayOldAtUtc);
+
+        var first = new DateTime(2030, 6, 16, 9, 0, 0, DateTimeKind.Utc);
+        tally.UnderADayOld(1024, first);
+        tally.UnderADayOld(2048, first.AddHours(5));
+        tally.UnderADayOld(4096, first.AddHours(-2));
+
+        Assert.Equal(first.AddHours(5), tally.UnderADayOldAllADayOldAtUtc);
+        Assert.Equal(3, tally.Taken().UnderADayOldCount);
+        Assert.Equal(7168, tally.UnderADayOldBytes);
+    }
 }

@@ -138,6 +138,19 @@ public static class CachedFileAge
     }
 
     /// <summary>
+    /// The instant a file with these times is a day old: the latest of them plus
+    /// <see cref="MinimumAge"/>. <see cref="Judge"/> answers
+    /// <see cref="CachedFileAgeVerdict.ShownADayOld"/> against a clock standing there
+    /// or later, and <see cref="CachedFileAgeVerdict.UnderADayOld"/> against one a tick
+    /// earlier.
+    ///
+    /// A latest time within <see cref="MinimumAge"/> of <see cref="DateTime.MaxValue"/>
+    /// throws. The scan asks only of a file judged under a day old, whose latest time is
+    /// at most <see cref="MinimumAge"/> after the scan's clock.
+    /// </summary>
+    public static DateTime ADayOldAtUtc(FileTimes times) => Latest(times) + MinimumAge;
+
+    /// <summary>
     /// True only where <see cref="Judge"/> answers <see cref="CachedFileAgeVerdict.ShownADayOld"/>.
     /// </summary>
     public static bool ShownADayOld(FileTimesRead outcome, FileTimes times, DateTimeOffset scanClock) =>

@@ -414,6 +414,20 @@ namespace InstallerClean.Models;
 /// (<see cref="Services.DeclaredProductScreening.CachedPackages"/>). A pass that looked at no
 /// installation where the screen did not run, looked at none, or its answer was not used.
 /// </param>
+/// <param name="WithheldUnderADayOldAllADayOldAtUtc">
+/// The instant, in UTC, from which every file <see cref="WithholdingSplit.UnderADayOldCount"/>
+/// counts is a day old: the latest of their <see cref="Services.CachedFileAge.ADayOldAtUtc"/>
+/// instants. A scan whose clock stands there or later judges none of them under a day old
+/// while their times are unchanged, and every other check still applies to each. Null where
+/// that count is nought.
+///
+/// IT IS AFTER THIS SCAN'S CLOCK AND NO MORE THAN TWO DAYS AFTER IT, because a file is under
+/// a day old only where its latest time is less than a day before that clock or no more than
+/// a day after it.
+///
+/// APPENDED AFTER <see cref="CachedPackageCensus"/>, so a positional construction of the
+/// members above still means what it meant.
+/// </param>
 public record ScanResult(
     IReadOnlyList<OrphanedFile> RemovableFiles,
     IReadOnlyList<RegisteredPackage> RegisteredPackages,
@@ -445,7 +459,8 @@ public record ScanResult(
     long SupersededContainmentBytes = 0,
     IReadOnlyList<SourceRootGivenUp>? SourceRootsGivenUp = null,
     int SourceWaitCount = 0,
-    CachedPackageCensus? CachedPackageCensus = null)
+    CachedPackageCensus? CachedPackageCensus = null,
+    DateTime? WithheldUnderADayOldAllADayOldAtUtc = null)
 {
     /// <summary>Never null: a result built without the list reads as one that gave nothing up.</summary>
     public IReadOnlyList<SourceRootGivenUp> SourceRootsGivenUp { get; init; }

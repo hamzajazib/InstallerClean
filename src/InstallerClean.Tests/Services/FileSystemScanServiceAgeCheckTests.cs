@@ -54,6 +54,47 @@ public class FileSystemScanServiceAgeCheckTests
     }
 
     [Fact]
+    public async Task The_result_carries_when_the_newest_file_kept_for_its_age_is_a_day_old()
+    {
+        // Two files under a day old with different latest times, and one whose latest
+        // time is too far ahead of the clock to be an age. Only the first two count, and
+        // the later of their two instants is the one carried.
+        var newer = Now.UtcDateTime.AddHours(-1);
+        var times = new ScriptedFileTimes();
+        times.Reads($@"{Folder}\old.msi", Old, Old, Old);
+        times.Reads($@"{Folder}\new.msi", Old, Now.UtcDateTime.AddHours(-20), Old);
+        times.Reads($@"{Folder}\newer.msi", newer, Old, Old);
+        times.Reads($@"{Folder}\ahead.msi", Old, Old, Now.UtcDateTime.AddDays(3));
+
+        var result = await Scan(new[]
+        {
+            $@"{Folder}\old.msi", $@"{Folder}\newer.msi", $@"{Folder}\new.msi", $@"{Folder}\ahead.msi",
+        }, times);
+
+        Assert.Equal($@"{Folder}\old.msi", Assert.Single(result.RemovableFiles).FullPath);
+        Assert.Equal(2, result.WithheldBy.UnderADayOldCount);
+        Assert.Equal(1, result.WithheldBy.AgeUnestablishedCount);
+        Assert.Equal(newer + CachedFileAge.MinimumAge, result.WithheldUnderADayOldAllADayOldAtUtc);
+    }
+
+    [Fact]
+    public async Task A_scan_keeping_no_file_for_its_age_carries_no_instant()
+    {
+        // The same reader keeps a file back in this scan, as one whose age was not
+        // established, and offers another.
+        var times = new ScriptedFileTimes();
+        times.Reads($@"{Folder}\old.msi", Old, Old, Old);
+        times.Answers($@"{Folder}\unvouched.msi", FileTimesRead.NotNtfs);
+
+        var result = await Scan(new[] { $@"{Folder}\old.msi", $@"{Folder}\unvouched.msi" }, times);
+
+        Assert.Single(result.RemovableFiles);
+        Assert.Equal(1, result.WithheldBy.AgeUnestablishedCount);
+        Assert.Equal(0, result.WithheldBy.UnderADayOldCount);
+        Assert.Null(result.WithheldUnderADayOldAllADayOldAtUtc);
+    }
+
+    [Fact]
     public async Task A_file_kept_for_its_age_owes_no_notice()
     {
         // The treatment files kept for an installed program get: counted among the

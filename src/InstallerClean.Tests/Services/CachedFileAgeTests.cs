@@ -157,6 +157,33 @@ public class CachedFileAgeTests
         Assert.Equal(late, CachedFileAge.Latest(new FileTimes(mid, early, late)));
     }
 
+    // ---- The instant a file is a day old ----
+
+    [Fact]
+    public void A_file_is_a_day_old_a_minimum_age_after_its_latest_time()
+    {
+        var late = Clock.UtcDateTime.AddHours(-3);
+        var times = new FileTimes(late.AddDays(-4), late, late.AddHours(-1));
+
+        Assert.Equal(late + CachedFileAge.MinimumAge, CachedFileAge.ADayOldAtUtc(times));
+    }
+
+    [Theory]
+    [InlineData(-3)]
+    [InlineData(5)]
+    public void The_judgement_turns_at_the_instant_the_file_is_a_day_old(int hoursFromClock)
+    {
+        // A latest time before the scan's clock and one after it: in both, the verdict
+        // is under a day old a tick before the instant and shown a day old at it.
+        var times = AllAt(Clock.UtcDateTime.AddHours(hoursFromClock));
+        var at = new DateTimeOffset(CachedFileAge.ADayOldAtUtc(times), TimeSpan.Zero);
+
+        Assert.Equal(CachedFileAgeVerdict.UnderADayOld, CachedFileAge.Judge(
+            FileTimesRead.Read, times, at - TimeSpan.FromTicks(1)));
+        Assert.Equal(CachedFileAgeVerdict.ShownADayOld, CachedFileAge.Judge(
+            FileTimesRead.Read, times, at));
+    }
+
     [Fact]
     public void The_minimum_age_is_one_day()
     {
