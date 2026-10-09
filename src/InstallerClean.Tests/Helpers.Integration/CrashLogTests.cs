@@ -31,7 +31,28 @@ public class CrashLogTests
         finally
         {
             CrashLog.FolderForTests = suite;
-            try { Directory.Delete(folder, recursive: true); } catch (IOException) { }
+            TestCrashLog.TryDelete(folder);
+        }
+    }
+
+    [Fact]
+    public void A_folder_whose_delete_is_refused_is_left_without_a_throw()
+    {
+        // A read-only file makes the delete throw UnauthorizedAccessException on Windows, as a
+        // file an antivirus holds can.
+        var folder = Path.Combine(Path.GetTempPath(), "InstallerClean.Tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        var file = Path.Combine(folder, "crash.log");
+        File.WriteAllText(file, "held");
+        File.SetAttributes(file, FileAttributes.ReadOnly);
+        try
+        {
+            Assert.Null(Record.Exception(() => TestCrashLog.TryDelete(folder)));
+        }
+        finally
+        {
+            if (File.Exists(file)) File.SetAttributes(file, FileAttributes.Normal);
+            TestCrashLog.TryDelete(folder);
         }
     }
 

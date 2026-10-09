@@ -118,15 +118,38 @@ public class CliConsoleGuardTests
             guard.WriteLine("first");
             guard.WriteLine("second");
 
-            Assert.True(console.Refused == 2, "The second write never reached the console.");
+            Assert.True(console.Refused == 2, "The second write's line break never reached the console.");
             var log = File.ReadAllText(Path.Combine(folder, "crash.log"));
             Assert.Equal(1, log.Split(ConsoleFailingAt.Message).Length - 1);
         }
         finally
         {
             CrashLog.FolderForTests = suite;
-            try { Directory.Delete(folder, recursive: true); } catch (IOException) { }
+            TestCrashLog.TryDelete(folder);
         }
+    }
+
+    [Theory]
+    [InlineData("a character")]
+    [InlineData("a line break")]
+    [InlineData("characters from an array")]
+    public void A_console_failing_at_an_empty_text_refuses_every_write(string write)
+    {
+        var console = new ConsoleFailingAt("");
+
+        var thrown = Record.Exception(() =>
+        {
+            switch (write)
+            {
+                case "a character": console.Write('x'); break;
+                case "a line break": console.WriteLine(); break;
+                default: console.Write(['x', 'y'], 0, 2); break;
+            }
+        });
+
+        Assert.IsType<IOException>(thrown);
+        Assert.Equal(1, console.Refused);
+        Assert.Equal(string.Empty, console.ToString());
     }
 
     // ---- Runs whose output fails ----
@@ -435,7 +458,8 @@ internal sealed class DiskRefusingWrites(params int[] refused) : MemoryStream
 /// <summary>
 /// A console that takes every write until one carrying <c>text</c>, and throws on that one,
 /// as a write to a redirected standard output on a full disk does. An empty
-/// <c>text</c> refuses every write. <see cref="Refused"/> counts the writes it threw on.
+/// <c>text</c> refuses every write: a string, a character, characters from an array and a
+/// line break alike. <see cref="Refused"/> counts the writes it threw on.
 /// </summary>
 internal sealed class ConsoleFailingAt(string text) : StringWriter
 {
@@ -446,12 +470,28 @@ internal sealed class ConsoleFailingAt(string text) : StringWriter
 
     public override void Write(string? value)
     {
-        if (value is not null && value.Contains(text, StringComparison.Ordinal))
-        {
-            Refused++;
-            throw new IOException(Message);
-        }
+        Refuse(value ?? string.Empty);
         base.Write(value);
+    }
+
+    public override void Write(char value)
+    {
+        Refuse(value.ToString());
+        base.Write(value);
+    }
+
+    // A line break with no text reaches here, through TextWriter.WriteLine().
+    public override void Write(char[] buffer, int index, int count)
+    {
+        Refuse(new string(buffer, index, count));
+        base.Write(buffer, index, count);
+    }
+
+    private void Refuse(string value)
+    {
+        if (!value.Contains(text, StringComparison.Ordinal)) return;
+        Refused++;
+        throw new IOException(Message);
     }
 
     public override void WriteLine(string? value)

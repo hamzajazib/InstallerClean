@@ -35,13 +35,35 @@ internal static class TestCulture
 /// <summary>
 /// Every test that writes the crash log writes it to a folder of this run's own under the
 /// temp folder, never to the log of the PC running the suite. The folder is set before any
-/// test runs, so a test reaching the log by a path nobody planned for is covered too.
-/// A CrashLogTests test that changes the folder for its run puts this one back.
+/// test runs, so a test reaching the log by a path nobody planned for is covered too, and
+/// it is deleted when the test process exits, along with the shared InstallerClean.Tests
+/// folder above it where no other run's folder is left in it. A CrashLogTests test that
+/// changes the folder for its run puts this one back.
 /// </summary>
 internal static class TestCrashLog
 {
+    private static readonly string Shared = Path.Combine(Path.GetTempPath(), "InstallerClean.Tests");
+
     [ModuleInitializer]
-    internal static void Redirect() =>
-        CrashLog.FolderForTests = Path.Combine(
-            Path.GetTempPath(), "InstallerClean.Tests", Guid.NewGuid().ToString("N"));
+    internal static void Redirect()
+    {
+        var folder = Path.Combine(Shared, Guid.NewGuid().ToString("N"));
+        CrashLog.FolderForTests = folder;
+        AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+        {
+            TryDelete(folder);
+            // Not recursive, so a folder another run is still using stays.
+            try { Directory.Delete(Shared); } catch (Exception) { }
+        };
+    }
+
+    /// <summary>
+    /// Deletes <paramref name="folder"/> and everything in it, and throws nothing where the
+    /// delete is refused: a file an antivirus holds open, or a read-only one on Windows,
+    /// leaves the folder in place and the test that made it passing.
+    /// </summary>
+    internal static void TryDelete(string folder)
+    {
+        try { Directory.Delete(folder, recursive: true); } catch (Exception) { }
+    }
 }
