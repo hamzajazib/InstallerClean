@@ -656,7 +656,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// every later step of the pass takes that answer without asking. <see cref="LinksOf"/> and
     /// <see cref="PackagesSecondCopiesOpen"/> each reach their conclusion once in a pass, and
     /// <see cref="PackagesOpenedBy"/> once for each declared code, and every later candidate
-    /// takes that conclusion without a further call.
+    /// takes that conclusion without a further call. A source list that appears while the pass
+    /// runs is found by the next step that asks, and that step keeps the files it reaches.
     /// </summary>
     private bool OpensNoPackage(string code, string? sid, MsiInstallContext context, PassAnswers pass)
     {
@@ -2564,6 +2565,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// earlier ask in this pass found one, and otherwise <paramref name="ask"/>'s answer,
         /// a false one being kept for the rest of the pass. The code and the account compare
         /// without case, as <see cref="PatchStateOf"/>'s do.
+        ///
+        /// Only an answer finding a package is remembered. Remembering one that finds none
+        /// would let files through after a source list appears while the pass runs, on an
+        /// answer Windows no longer gives (<see cref="DeclaredProductCheck.OpensNoPackage"/>).
         /// </summary>
         internal bool OpensNoPackageOf(string productCode, string? sid, MsiInstallContext context, Func<bool> ask)
         {
