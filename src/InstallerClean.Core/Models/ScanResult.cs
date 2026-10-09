@@ -793,19 +793,21 @@ public record ScanResult(
     /// Whether this scan held back at least one file for being under a day old and knows the
     /// instant from which every such file is a day old. The scan records that instant with
     /// every such file it counts. Where this is true, the line about those files
-    /// (<see cref="Helpers.UnderADayOldReport.Line"/>) gives the instant as a time and date;
-    /// the command line prints its clean line only where this is false.
+    /// (<see cref="Helpers.UnderADayOldReport.Line(ScanResult, Func{TimeZoneInfo})"/>) gives the
+    /// instant as a time and date; the command line prints its clean line only where this is
+    /// false.
     /// </summary>
     public bool HasUnderADayOldLine =>
         WithheldBy.UnderADayOldCount > 0 && WithheldUnderADayOldAllADayOldAtUtc is not null;
 
     /// <summary>
-    /// Whether the line about files under a day old (<see cref="Helpers.UnderADayOldReport.Line"/>)
-    /// counts every file <see cref="UnsettledHeldBackCount"/> counts: every one was held back
-    /// for being under a day old, and the time from which every one of them is a day old is
-    /// known (<see cref="HasUnderADayOldLine"/>). Where it does, the window's finished
-    /// screen on a run that offered nothing gives that line in place of the sentence counting
-    /// the files held back.
+    /// Whether the line about files under a day old
+    /// (<see cref="Helpers.UnderADayOldReport.Line(ScanResult, Func{TimeZoneInfo})"/>) counts
+    /// every file <see cref="UnsettledHeldBackCount"/> counts: every one was held back for
+    /// being under a day old, and the time from which every one of them is a day old is known
+    /// (<see cref="HasUnderADayOldLine"/>). Where it does, the window's finished screen on a
+    /// run that offered nothing gives that line in place of the sentence counting the files
+    /// held back.
     ///
     /// FALSE WHERE NOTHING IS COUNTED, AND WHERE THE TIME IS NOT KNOWN. Without a time there is
     /// no line, so the screen keeps the sentence counting the files.

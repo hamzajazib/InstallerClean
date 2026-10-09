@@ -109,10 +109,11 @@ public partial class CompletionViewModel : ObservableObject
 
     /// <summary>
     /// The line saying how many files the scan held back for being less than a day old,
-    /// and when a scan can probably offer them (<see cref="UnderADayOldReport.Line"/>),
-    /// shown under <see cref="Skipped"/>. Empty on every card whose scan held no file back
-    /// for that reason, which collapses the bound TextBlock, on the all-clear, whose scan
-    /// never does, and on the nothing-offered card where the line is the body
+    /// and when a scan can probably offer them
+    /// (<see cref="UnderADayOldReport.Line(ScanResult, Func{TimeZoneInfo})"/>), shown under
+    /// <see cref="Skipped"/>. Empty on every card whose scan held no file back for that
+    /// reason, which collapses the bound TextBlock, on the all-clear, whose scan never does,
+    /// and on the nothing-offered card where the line is the body
     /// (<see cref="ShowNothingOffered"/>). Each card that carries it works it out as it is
     /// revealed (<see cref="UnderADayOldLine"/>), and every other card clears it, because the
     /// view-model instance is reused across operations.
@@ -826,22 +827,21 @@ public partial class CompletionViewModel : ObservableObject
 
     /// <summary>
     /// The line about files <paramref name="scan"/> held back for being under a day old
-    /// (<see cref="UnderADayOldReport.Line"/>), or empty. Every card that carries it gets it
-    /// here, as the card is revealed: "Nothing offered on this PC" for its own scan, and the
-    /// card after a Move or Delete for the scan the window shows then, which is empty where
-    /// there is none, as on a window that is closing.
+    /// (<see cref="UnderADayOldReport.Line(ScanResult, Func{TimeZoneInfo})"/>), or empty.
+    /// Every card that carries it gets it here, as the card is revealed: "Nothing offered on
+    /// this PC" for its own scan, and the card after a Move or Delete for the scan the window
+    /// shows then, which is empty where there is none, as on a window that is closing.
     ///
     /// A CARD AFTER A MOVE OR DELETE IS SHOWN AFTER THE REFRESH THAT ENDS THE BATCH
     /// (<see cref="CleanupViewModel"/>'s <c>RefreshAfterBatchAsync</c>). Shown before it, the
     /// card would speak for the scan the operation started from.
     ///
     /// The time is in the zone the constructor's <c>zone</c> answers with as the card is
-    /// revealed, and the zone is asked for only where the card carries the line
-    /// (<see cref="ScanResult.HasUnderADayOldLine"/>). Asking for the PC's own zone empties the
-    /// cache <see cref="CurrentZone"/> sets out.
+    /// revealed. The line is handed that function uncalled and calls it only where the card
+    /// carries the line, because asking for the PC's own zone empties the cache
+    /// <see cref="CurrentZone"/> sets out.
     /// </summary>
-    private string UnderADayOldLine(ScanResult? scan) =>
-        scan?.HasUnderADayOldLine == true ? UnderADayOldReport.Line(scan, _zone()) : string.Empty;
+    private string UnderADayOldLine(ScanResult? scan) => UnderADayOldReport.Line(scan, _zone);
 
     /// <summary>
     /// The PC's time zone as Windows has it now. .NET answers

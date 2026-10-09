@@ -42,6 +42,28 @@ public class UnderADayOldReportTests
         Assert.Equal(string.Empty, UnderADayOldReport.Line(Holding(2, Bytes, null), SevenAhead));
     }
 
+    [Fact]
+    public void The_zone_is_asked_for_once_and_only_where_there_is_a_sentence()
+    {
+        var asked = 0;
+        TimeZoneInfo Zone()
+        {
+            asked++;
+            return SevenAhead;
+        }
+
+        Assert.Equal(string.Empty, UnderADayOldReport.Line(null, Zone));
+        Assert.Equal(string.Empty, UnderADayOldReport.Line(Holding(0, 0, null), Zone));
+        Assert.Equal(string.Empty, UnderADayOldReport.Line(Holding(2, Bytes, null), Zone));
+        Assert.Equal(0, asked);
+
+        var scan = Holding(3, Bytes, Utc(16, 9, 40));
+        var line = UnderADayOldReport.Line(scan, Zone);
+        Assert.Equal(1, asked);
+        Assert.NotEqual(string.Empty, line);
+        Assert.Equal(UnderADayOldReport.Line(scan, SevenAhead), line);
+    }
+
     // ---- The sentence ----
 
     [Fact]

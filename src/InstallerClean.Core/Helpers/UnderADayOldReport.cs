@@ -20,19 +20,28 @@ namespace InstallerClean.Helpers;
 internal static class UnderADayOldReport
 {
     /// <summary>
+    /// The sentence <see cref="Line(ScanResult, Func{TimeZoneInfo})"/> gives, with its time in
+    /// <paramref name="zone"/>. The command line passes <see cref="TimeZoneInfo.Local"/>.
+    /// </summary>
+    internal static string Line(ScanResult? scan, TimeZoneInfo zone) => Line(scan, () => zone);
+
+    /// <summary>
     /// The sentence for <paramref name="scan"/>, or empty where there is no scan or its
     /// <see cref="ScanResult.HasUnderADayOldLine"/> is false. The time and date are
     /// <see cref="ScanResult.WithheldUnderADayOldAllADayOldAtUtc"/> rounded up to the
-    /// next whole minute, in <paramref name="zone"/>; the hosts pass
-    /// <see cref="TimeZoneInfo.Local"/>.
+    /// next whole minute, in the zone <paramref name="zone"/> answers with.
+    ///
+    /// THE ZONE IS ASKED FOR ONCE, AND ONLY WHERE THERE IS A SENTENCE, so a caller whose zone
+    /// costs something to read pays for it only then. The window's finished card is one:
+    /// its zone empties .NET's cached one before reading it.
     /// </summary>
-    internal static string Line(ScanResult? scan, TimeZoneInfo zone)
+    internal static string Line(ScanResult? scan, Func<TimeZoneInfo> zone)
     {
         if (scan is null || !scan.HasUnderADayOldLine) return string.Empty;
 
         var allADayOldAtUtc = scan.WithheldUnderADayOldAllADayOldAtUtc!.Value;
         var count = scan.WithheldBy.UnderADayOldCount;
-        var (time, date) = DisplayHelpers.FormatTimeAndDate(RoundUpToMinute(allADayOldAtUtc), zone);
+        var (time, date) = DisplayHelpers.FormatTimeAndDate(RoundUpToMinute(allADayOldAtUtc), zone());
 
         // The one-form names the size and not the numeral, so it spends {2}, {3} and {4}
         // and leaves {0} and {1} unused. Every argument is passed on either form so the
