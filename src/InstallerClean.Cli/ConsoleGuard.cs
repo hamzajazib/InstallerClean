@@ -8,7 +8,8 @@ namespace InstallerClean.Cli;
 /// run, and a write that fails, such as one to an output redirected to a disk that is full,
 /// loses what it was writing and nothing more: the next write is tried as if none had
 /// failed, and goes through once the disk has room, which a Delete on that disk can give it.
-/// Every write reaches the console's writer as one call, whichever overload made it.
+/// Every write reaches the console's writer as one call, whichever overload made it, and
+/// is guarded as one.
 ///
 /// Nothing the run prints can throw, so no failed write ends a run or reaches a catch-all. A
 /// Delete that deleted files is logged and exits as that Delete, and a run refused for
@@ -21,12 +22,12 @@ namespace InstallerClean.Cli;
 /// crash.log's rotation on copies of it.
 ///
 /// A FAILED WRITE CAN STOP PART-WAY THROUGH A LINE. The console's writer sends a line longer
-/// than its buffer out in pieces, so the pieces ahead of the failure are out and the rest of
-/// the line, its line break included, is not. So after a failure the guard puts a line break
-/// ahead of the next write, tried as part of that write: the next text out starts a line of
-/// its own, and where the failure lost a whole line a blank line stands in its place. Where
-/// the line break is refused too, the write it leads is not made, since its text would join
-/// the cut line, and the next write tries again.
+/// than its buffer, or a string builder, out in pieces, so the pieces ahead of the failure
+/// are out and the rest of the write, its line break included, is not. So after a failure
+/// the guard puts a line break ahead of the next write, tried as part of that write: the
+/// next text out starts a line of its own, and where the failure lost a whole line a blank
+/// line stands in its place. Where the line break is refused too, the write it leads is not
+/// made, since its text would join the cut line, and the next write tries again.
 ///
 /// <see cref="Program"/>'s Main installs it once, after it sets the code page.
 /// Setting <see cref="Console.OutputEncoding"/> replaces a writer the console made for
@@ -65,7 +66,10 @@ internal sealed class ConsoleGuard(TextWriter inner) : TextWriter
 
     // TextWriter writes each of the overloads below as more than one write: a line as its
     // text and then a line break, a string builder a chunk at a time. Each is overridden so
-    // it reaches the console's writer as one call, inside one guard.
+    // it reaches the console's writer as one call, inside one guard, and a failure part-way
+    // through it ends that write: no later chunk goes out after the line break the failure
+    // leaves owing, and no second line break follows. WriteLine of a span is not overridden:
+    // TextWriter writes it through WriteLine of part of a character array, which is.
 
     public override void Write(StringBuilder? value) => Guard(value, static (w, v) => w.Write(v));
 
@@ -75,20 +79,6 @@ internal sealed class ConsoleGuard(TextWriter inner) : TextWriter
 
     public override void WriteLine(char[] buffer, int index, int count) =>
         Guard((buffer, index, count), static (w, v) => w.WriteLine(v.buffer, v.index, v.count));
-
-    // A span cannot be handed to Guard's delegate, so this one makes the same write itself.
-    public override void WriteLine(ReadOnlySpan<char> buffer)
-    {
-        try
-        {
-            WriteOwedLineBreak();
-            inner.WriteLine(buffer);
-        }
-        catch (Exception ex)
-        {
-            Record(ex);
-        }
-    }
 
     public override void WriteLine(bool value) => Guard(value, static (w, v) => w.WriteLine(v));
 
@@ -128,24 +118,17 @@ internal sealed class ConsoleGuard(TextWriter inner) : TextWriter
     {
         try
         {
-            WriteOwedLineBreak();
+            if (_lineCut)
+            {
+                inner.WriteLine();
+                _lineCut = false;
+            }
             write(inner, value);
         }
         catch (Exception ex)
         {
             Record(ex);
         }
-    }
-
-    /// <summary>
-    /// Writes the line break a failure leaves owing, where one is owed. Called inside the
-    /// write it leads, so where it is refused that write is not made.
-    /// </summary>
-    private void WriteOwedLineBreak()
-    {
-        if (!_lineCut) return;
-        inner.WriteLine();
-        _lineCut = false;
     }
 
     private void Record(Exception ex)

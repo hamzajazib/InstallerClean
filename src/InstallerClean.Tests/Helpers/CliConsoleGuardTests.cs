@@ -89,12 +89,8 @@ public class CliConsoleGuardTests
     [InlineData("a float")]
     [InlineData("a double")]
     [InlineData("a decimal")]
-    [InlineData("a string builder")]
-    [InlineData("a string builder, with no line break")]
     public void A_write_that_fails_in_any_form_leaves_one_blank_line_in_place_of_its_own(string form)
     {
-        // Two chunks, so a builder written a chunk at a time puts its first chunk out.
-        var builder = new StringBuilder(4).Append("abcd").Append("2xyz");
         var console = new ConsoleFailingAt(form == "a bool" ? "True" : "2");
         var guard = new ConsoleGuard(console);
 
@@ -114,9 +110,7 @@ public class CliConsoleGuardTests
                 case "a ulong": guard.WriteLine(2UL); break;
                 case "a float": guard.WriteLine(2f); break;
                 case "a double": guard.WriteLine(2d); break;
-                case "a decimal": guard.WriteLine(2m); break;
-                case "a string builder": guard.WriteLine(builder); break;
-                default: guard.Write(builder); break;
+                default: guard.WriteLine(2m); break;
             }
             guard.WriteLine("third");
         });
@@ -124,6 +118,39 @@ public class CliConsoleGuardTests
         Assert.Null(thrown);
         Assert.Equal(1, console.Refused);
         Assert.Equal("first" + NewLine + NewLine + "third" + NewLine, console.ToString());
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void A_string_builder_that_fails_part_way_ends_where_it_stopped_and_writes_nothing_more_of_itself(
+        bool asALine)
+    {
+        // Three chunks, written a chunk at a time as the console's writer writes them: the
+        // first goes out and the second is refused.
+        var builder = new StringBuilder(4).Append("abcd").Append("2xyz").Append("efgh");
+        Assert.Equal(3, CountChunks(builder));
+        var console = new ConsoleFailingAt("2");
+        var guard = new ConsoleGuard(console);
+
+        guard.WriteLine("first");
+        var thrown = Record.Exception(() =>
+        {
+            if (asALine) guard.WriteLine(builder);
+            else guard.Write(builder);
+            guard.WriteLine("third");
+        });
+
+        Assert.Null(thrown);
+        Assert.Equal(1, console.Refused);
+        Assert.Equal("first" + NewLine + "abcd" + NewLine + "third" + NewLine, console.ToString());
+    }
+
+    private static int CountChunks(StringBuilder builder)
+    {
+        var chunks = 0;
+        foreach (var _ in builder.GetChunks()) chunks++;
+        return chunks;
     }
 
     [Fact]
@@ -520,7 +547,9 @@ internal sealed class DiskRefusingWrites(params int[] refused) : MemoryStream
 /// </summary>
 /// <remarks>
 /// StringWriter writes a span and a string builder straight to its own buffer, so those
-/// overloads are refused here as well as the ones every other write comes down to.
+/// overloads are refused here as well as the ones every other write comes down to. A
+/// string builder is written a chunk at a time, as the console's writer writes one, so the
+/// chunks ahead of the one refused are out.
 /// </remarks>
 internal sealed class ConsoleFailingAt(string text) : StringWriter
 {
@@ -543,8 +572,9 @@ internal sealed class ConsoleFailingAt(string text) : StringWriter
 
     public override void Write(StringBuilder? value)
     {
-        Refuse(value?.ToString() ?? string.Empty);
-        base.Write(value);
+        if (value is null) return;
+        foreach (var chunk in value.GetChunks())
+            Write(chunk.Span);
     }
 
     public override void WriteLine(ReadOnlySpan<char> buffer)
