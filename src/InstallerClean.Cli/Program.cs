@@ -111,8 +111,8 @@ internal static class Program
         }
         catch (Exception)
         {
-            // The console went away under us (the parent shell closed). Nothing
-            // left to restore it to, and nothing left to tell.
+            // The console went away under us. Nothing left to restore it to, and
+            // nothing left to tell.
         }
     }
 
@@ -607,20 +607,6 @@ internal static class Program
 
             if (arg == "/s" && count > 0)
             {
-                // The summary is written before anything is printed, so a console that fails
-                // while the notices, the count line or the list print costs the run no entry.
-                // The noun and size are recomputed inside the en-GB scope rather than reusing
-                // the human-facing `size` (which is in the OS region and grouped), so this
-                // audit line reads fully English and carries the size in the form tooling
-                // reads.
-                MachineContract.WriteEventLog(CliEventClass.Ok,
-                    () => string.Format(Strings.Cli_EventLogScanFound,
-                        arg, count, DisplayHelpers.PluraliseFile(count),
-                        DisplayHelpers.FormatSizeForMachine(totalBytes)));
-
-                notices.ForEach(Console.WriteLine);
-                Console.WriteLine(FoundLine());
-
                 // The name column is measured off this run's own longest name
                 // rather than fixed, because the cache's names are derived from
                 // package identity and vary in length from machine to machine: a
@@ -633,9 +619,41 @@ internal static class Program
                 // standing clear of the ragged name ends above it. This is the
                 // output most likely to be pasted into a ticket.
                 var nameColumn = scanResult.RemovableFiles.Max(f => f.FileName.Length) + 2;
-                Console.WriteLine(string.Join(Environment.NewLine,
-                    scanResult.RemovableFiles.Select(f =>
-                        $"  {f.FileName.PadRight(nameColumn)}  ({f.SizeDisplay}, {f.Reason})")));
+                var output = new List<string>(notices)
+                {
+                    FoundLine(),
+                    string.Join(Environment.NewLine,
+                        scanResult.RemovableFiles.Select(f =>
+                            $"  {f.FileName.PadRight(nameColumn)}  ({f.SizeDisplay}, {f.Reason})")),
+                };
+
+                // EVERY LINE IS BUILT BEFORE THE SUMMARY IS WRITTEN, AND THE SUMMARY IS WRITTEN
+                // BEFORE ANY LINE IS PRINTED, so this run writes one summary however its output
+                // ends. A line that cannot be built, a translation whose placeholders do not
+                // match its arguments for example, throws ahead of the summary, and the
+                // catch-all's entry is the run's one. A write that fails after it, such as a
+                // redirect to a full disk, goes to crash.log and the run ends on the summary
+                // with ExitOk: a failed write is a fact about the console and not about the
+                // scan, as it is for the progress lines of a delete or a move. Letting it reach
+                // the catch-all writes a HardError entry beside the summary, and one summary per
+                // run is what an RMM counts runs by.
+                //
+                // The noun and size are recomputed inside the en-GB scope rather than reusing
+                // the human-facing `size` (which is in the OS region and grouped), so this
+                // audit line reads fully English and carries the size in the form tooling
+                // reads.
+                MachineContract.WriteEventLog(CliEventClass.Ok,
+                    () => string.Format(Strings.Cli_EventLogScanFound,
+                        arg, count, DisplayHelpers.PluraliseFile(count),
+                        DisplayHelpers.FormatSizeForMachine(totalBytes)));
+                try
+                {
+                    output.ForEach(Console.WriteLine);
+                }
+                catch (Exception ex)
+                {
+                    Helpers.CrashLog.TryWrite(ex);
+                }
                 return ExitOk;
             }
 
@@ -1281,7 +1299,8 @@ internal static class Program
     /// they are to be printed, for the caller to print where its output needs them. Every
     /// entry is written before any of the lines is printed, so a console that fails while
     /// printing them costs none of these entries. A /s that lists files writes its summary
-    /// before it prints anything too, so on that run such a console costs no entry at all.
+    /// before it prints anything about the scan's result too, so on that run such a console
+    /// costs no entry at all.
     /// </summary>
     /// <remarks>
     /// Called once, immediately after the scan, so every return the work loop can

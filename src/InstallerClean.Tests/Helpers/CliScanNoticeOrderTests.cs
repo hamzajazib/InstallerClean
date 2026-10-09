@@ -83,7 +83,7 @@ public class CliScanNoticeOrderTests
     [Theory]
     [InlineData("the first notice")]
     [InlineData("the first row")]
-    public async Task A_console_that_fails_while_printing_leaves_every_notice_and_the_summary_in_the_Application_log(
+    public async Task A_console_that_fails_while_printing_ends_the_run_on_its_one_summary_with_every_notice_written(
         string failsAt)
     {
         var console = new ConsoleFailingAt(failsAt == "the first row"
@@ -93,14 +93,16 @@ public class CliScanNoticeOrderTests
         var run = await Run("/s", EveryNotice(), console);
 
         Assert.True(console.Refused > 0, $"The console refused no write, so it never failed at {failsAt}.");
-        Assert.Equal(CliExitCode.Error, run.ExitCode);
+        Assert.Equal(CliExitCode.Ok, run.ExitCode);
         Assert.Contains(run.Entries, entry => entry.Class == CliEventClass.ScanNothingOfferedNotice);
         Assert.Contains(run.Entries, entry => entry.Class == CliEventClass.SourcesGivenUpNotice);
         Assert.Contains(run.Entries, entry => entry.Class == CliEventClass.ScanSupersededHeldBackNotice);
         Assert.Contains(run.Entries, entry => entry.Class == CliEventClass.ScanMissingFilesNotice);
-        Assert.Contains(run.Entries, entry => entry.Class == CliEventClass.Ok
-            && entry.Text == MachineContract.English(() => string.Format(Strings.Cli_EventLogScanFound,
-                "/s", 2, DisplayHelpers.PluraliseFile(2), DisplayHelpers.FormatSizeForMachine(2048))));
+        var summary = Assert.Single(run.Entries, entry => entry.Class is CliEventClass.Ok
+            or CliEventClass.Partial or CliEventClass.TransientSkip or CliEventClass.HardError);
+        Assert.Equal(CliEventClass.Ok, summary.Class);
+        Assert.Equal(MachineContract.English(() => string.Format(Strings.Cli_EventLogScanFound,
+            "/s", 2, DisplayHelpers.PluraliseFile(2), DisplayHelpers.FormatSizeForMachine(2048))), summary.Text);
     }
 
     // ---- fixtures ----
@@ -155,8 +157,8 @@ public class CliScanNoticeOrderTests
 
     /// <summary>
     /// A console that takes every write until one carrying <paramref name="text"/>, and
-    /// throws on that one, as a console whose reader has gone does. <see cref="Refused"/>
-    /// counts the writes it threw on.
+    /// throws on that one, as a write to a redirected standard output on a full disk does.
+    /// <see cref="Refused"/> counts the writes it threw on.
     /// </summary>
     private sealed class ConsoleFailingAt(string text) : StringWriter
     {
@@ -167,7 +169,7 @@ public class CliScanNoticeOrderTests
             if (value is not null && value.Contains(text, StringComparison.Ordinal))
             {
                 Refused++;
-                throw new IOException("The pipe is being closed.");
+                throw new IOException("There is not enough space on the disk.");
             }
             base.Write(value);
         }

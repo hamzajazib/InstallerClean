@@ -36,7 +36,7 @@ internal static class TestCulture
 /// Every test that writes the crash log writes it to a folder of this run's own under the
 /// temp folder, never to the log of the PC running the suite. The folder is set before any
 /// test runs, so a test reaching the log by a path nobody planned for is covered too.
-/// Two of CrashLogTests' tests set a folder of their own for their run and put this one back.
+/// A CrashLogTests test that changes the folder for its run puts this one back.
 /// </summary>
 internal static class TestCrashLog
 {
