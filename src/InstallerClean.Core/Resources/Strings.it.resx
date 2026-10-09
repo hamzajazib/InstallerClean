@@ -770,7 +770,8 @@ Per rimetterlo, ti serve il programma di installazione della versione che hai gi
        scan judged one at a time, a file under a day old, a superseded patch the scan
        held back, and any mix of those with the finding about the records, whose sentence
        is false of every file that finding did not take. It states only what is true of
-       all of them.
+       all of them. Where every file it would count was held back for being under a day
+       old, Completion.UnderADayOld is shown in its place.
 
        0 = files held back, 1 = pluralised "file"/"files", 2 = their size, and the
        one-form names the size rather than the numeral, exactly as the pair above

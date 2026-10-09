@@ -469,12 +469,10 @@ public class CompletionViewModelTests
     [Fact]
     public void The_wholesale_screen_says_what_was_held_back_and_shows_the_scan_receipt()
     {
-        // THE FIGURES ARE THE WITHHELD SET AND NEVER THE FOLDER. The body says the app
-        // held back what it might otherwise have OFFERED, which is a claim about what
-        // the scan would have listed; a folder total there would tell somebody that
-        // much was going spare, which nothing established. The sentence is not quoted
-        // here, because a quotation of a value that is still being worded goes stale
-        // in a comment nothing checks.
+        // The body's count and size are those of the files held back, not of the
+        // folder. It says the app held back files it might otherwise have offered,
+        // and a folder total would tell somebody that much space was going spare,
+        // which the scan has not established.
         var vm = TestCompletion.Create();
 
         vm.ShowNothingOffered(
@@ -602,6 +600,120 @@ public class CompletionViewModelTests
                 Strings.Completion_NothingOfferedPerFileBody_Plural,
                 3, DisplayHelpers.PluraliseFile(3), DisplayHelpers.FormatSize(3072)),
             vm.Summary);
+    }
+
+    // The line about files held back for being under a day old. The view model places
+    // the sentence it is handed; UnderADayOldReportTests pins the sentence itself, so a
+    // stand-in is enough here.
+
+    private const string DayOldLine = "Stand-in for the line about files under a day old.";
+
+    [Fact]
+    public void Nothing_offered_keeps_its_body_and_adds_the_day_old_line_where_other_files_are_held_too()
+    {
+        var vm = TestCompletion.Create();
+
+        vm.ShowNothingOffered(
+            wholesale: false, heldBackCount: 5, heldBackBytes: 5120,
+            scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: string.Empty,
+            underADayOldCount: 3, underADayOld: DayOldLine);
+
+        Assert.Equal(
+            string.Format(
+                Strings.Completion_NothingOfferedPerFileBody_Plural,
+                5, DisplayHelpers.PluraliseFile(5), DisplayHelpers.FormatSize(5120)),
+            vm.Summary);
+        Assert.Equal(DayOldLine, vm.UnderADayOld);
+    }
+
+    [Fact]
+    public void Nothing_offered_shows_the_day_old_line_as_its_body_where_those_are_every_file_it_counts()
+    {
+        // Shown once, in the body's place, with the line naming a drive or share still
+        // under it, and nothing left in the zone below.
+        var vm = TestCompletion.Create();
+
+        vm.ShowNothingOffered(
+            wholesale: false, heldBackCount: 3, heldBackBytes: 3072,
+            scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: "Drive line.",
+            underADayOldCount: 3, underADayOld: DayOldLine);
+
+        Assert.Equal(DayOldLine + Environment.NewLine + "Drive line.", vm.Summary);
+        Assert.Equal(string.Empty, vm.UnderADayOld);
+    }
+
+    public static TheoryData<string> CardsAfterAMoveOrDelete() => new()
+    {
+        "finished Move", "stopped Move", "cancelled Move",
+        "finished Delete", "cancelled Delete", "everything held back",
+    };
+
+    private static void ShowCard(CompletionViewModel vm, string card, string underADayOld)
+    {
+        var reverify = new ReverifyResult([], ["a.msi"], new HeldBackReasons(Reclaimed: 1));
+        switch (card)
+        {
+            case "finished Move":
+                vm.ShowMoveSummary(1, 1024, @"D:\Backup", [], MoveSpaceOutcome.FreedSpace,
+                    underADayOld: underADayOld);
+                break;
+            case "stopped Move":
+                vm.ShowMoveStoppedSummary(1, 1024, @"D:\Backup", [], MoveSpaceOutcome.FreedSpace,
+                    underADayOld: underADayOld);
+                break;
+            case "cancelled Move":
+                vm.ShowMoveCancelledSummary(1, 2, 1024, @"D:\Backup", [], MoveSpaceOutcome.FreedSpace,
+                    underADayOld: underADayOld);
+                break;
+            case "finished Delete":
+                vm.ShowDeleteSummary(1, 1024, [], underADayOld: underADayOld);
+                break;
+            case "cancelled Delete":
+                vm.ShowDeleteCancelledSummary(1, 2, 1024, [], underADayOld: underADayOld);
+                break;
+            case "everything held back":
+                vm.ShowReverifyAllSkipped(reverify, deleting: true, underADayOld);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(card), card, null);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(CardsAfterAMoveOrDelete))]
+    public void Every_card_after_a_Move_or_Delete_carries_the_day_old_line_it_is_given(string card)
+    {
+        var vm = TestCompletion.Create();
+
+        ShowCard(vm, card, DayOldLine);
+
+        Assert.True(vm.IsComplete);
+        Assert.Equal(DayOldLine, vm.UnderADayOld);
+    }
+
+    [Theory]
+    [MemberData(nameof(CardsAfterAMoveOrDelete))]
+    public void A_card_given_no_day_old_line_clears_the_last_one(string card)
+    {
+        // The view model is reused across operations, so a card that has no line has to
+        // take the previous card's away.
+        var vm = TestCompletion.Create();
+        vm.ShowDeleteSummary(1, 1024, [], underADayOld: DayOldLine);
+
+        ShowCard(vm, card, string.Empty);
+
+        Assert.Equal(string.Empty, vm.UnderADayOld);
+    }
+
+    [Fact]
+    public void The_all_clear_clears_the_day_old_line()
+    {
+        var vm = TestCompletion.Create();
+        vm.ShowDeleteSummary(1, 1024, [], underADayOld: DayOldLine);
+
+        vm.ShowAllClear(scannedFileCount: 5, scanDurationMs: 10);
+
+        Assert.Equal(string.Empty, vm.UnderADayOld);
     }
 
     // The kept-back block. One sentence since 3.0.0, naming no cause, carrying the

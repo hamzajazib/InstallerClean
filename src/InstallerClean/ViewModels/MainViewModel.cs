@@ -408,7 +408,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     result.UnsettledHeldBackBytes,
                     Scan.RegisteredFileCount,
                     Scan.LastScanDurationMs,
-                    Scan.SourcesGivenUpText);
+                    Scan.SourcesGivenUpText,
+                    result.WithheldBy.UnderADayOldCount,
+                    UnderADayOldReport.Line(result, TimeZoneInfo.Local));
             }
             decided.TrySetResult();
 

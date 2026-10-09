@@ -1060,7 +1060,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // The re-verify kept every candidate back. Act on nothing and
                 // report it, with the re-verify's own reason for keeping them.
                 await RefreshAfterBatchAsync();
-                _completion.ShowReverifyAllSkipped(reverify, deleting: false);
+                _completion.ShowReverifyAllSkipped(reverify, deleting: false, UnderADayOldAfterBatch());
                 OperationProgress = string.Empty;
                 if (createdDestination) await RemoveCreatedDestinationAsync(dest);
                 return;
@@ -1141,7 +1141,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                     _completion.ShowMoveStoppedSummary(ex.Partial.MovedCount,
                         CompletedBytes(abortSurviving, ex.Partial.MovedCount, ex.Partial.Errors),
                         ex.Destination, ex.Partial.Errors, ClassifySpaceOutcome(destinationKind),
-                        FoldHeldBack(reverify, ex.Partial.HeldBack, ex.Partial.HeldBackReasons));
+                        FoldHeldBack(reverify, ex.Partial.HeldBack, ex.Partial.HeldBackReasons),
+                        UnderADayOldAfterBatch());
                 }
                 return;
             }
@@ -1235,7 +1236,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // to return before creating anything. The destination folder the
                 // PRE-FLIGHT made is still there, and nothing was ever put in it.
                 await RefreshAfterBatchAsync();
-                _completion.ShowReverifyAllSkipped(reverify, deleting: false);
+                _completion.ShowReverifyAllSkipped(reverify, deleting: false, UnderADayOldAfterBatch());
                 OperationProgress = string.Empty;
                 if (createdDestination) await RemoveCreatedDestinationAsync(dest);
                 return;
@@ -1257,7 +1258,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                     _completion.ShowMoveCancelledSummary(
                         result.MovedCount, survivingFiles.Count,
                         CompletedBytes(survivingFiles, result.MovedCount, result.Errors),
-                        dest, result.Errors, ClassifySpaceOutcome(destinationKind), reverify);
+                        dest, result.Errors, ClassifySpaceOutcome(destinationKind), reverify,
+                        UnderADayOldAfterBatch());
                 }
                 OperationProgress = string.Empty;
                 return;
@@ -1288,7 +1290,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             OperationProgress = string.Empty;
             var carriesReport = await TakeReportForCardAsync(movedCount);
             _completion.ShowMoveSummary(movedCount, movedBytes, movedDest, result.Errors,
-                ClassifySpaceOutcome(destinationKind), reverify);
+                ClassifySpaceOutcome(destinationKind), reverify, UnderADayOldAfterBatch());
 
             if (carriesReport)
             {
@@ -1499,7 +1501,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // The re-verify kept every candidate back. Act on nothing and
                 // report it, with the re-verify's own reason for keeping them.
                 await RefreshAfterBatchAsync();
-                _completion.ShowReverifyAllSkipped(reverify, deleting: true);
+                _completion.ShowReverifyAllSkipped(reverify, deleting: true, UnderADayOldAfterBatch());
                 OperationProgress = string.Empty;
                 return;
             }
@@ -1598,7 +1600,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // the result log would take a bytesFreed of zero as a run that freed
                 // nothing rather than a run that never was.
                 await RefreshAfterBatchAsync();
-                _completion.ShowReverifyAllSkipped(reverify, deleting: true);
+                _completion.ShowReverifyAllSkipped(reverify, deleting: true, UnderADayOldAfterBatch());
                 OperationProgress = string.Empty;
                 return;
             }
@@ -1615,7 +1617,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 {
                     var cancelledBytes = CompletedBytes(survivingFiles, result.DeletedCount, result.Errors);
                     _completion.ShowDeleteCancelledSummary(
-                        result.DeletedCount, survivingFiles.Count, cancelledBytes, result.Errors, reverify);
+                        result.DeletedCount, survivingFiles.Count, cancelledBytes, result.Errors, reverify,
+                        UnderADayOldAfterBatch());
                 }
                 OperationProgress = string.Empty;
                 return;
@@ -1642,7 +1645,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // report after it.
             OperationProgress = string.Empty;
             var carriesReport = await TakeReportForCardAsync(deletedCount);
-            _completion.ShowDeleteSummary(deletedCount, deletedBytes, result.Errors, reverify);
+            _completion.ShowDeleteSummary(deletedCount, deletedBytes, result.Errors, reverify,
+                UnderADayOldAfterBatch());
 
             if (carriesReport)
             {
@@ -2043,6 +2047,16 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         OperationSource = null;
         cts?.Dispose();
     }
+
+    /// <summary>
+    /// The line about files held back for being under a day old
+    /// (<see cref="UnderADayOldReport.Line"/>) for the card after a Move or Delete, read
+    /// off the scan <see cref="RefreshAfterBatchAsync"/> has just run. That scan is the one
+    /// on the window behind the card, so every card calls this after the refresh and before
+    /// it is revealed. Empty where the refresh left no result, as on a window that is closing.
+    /// </summary>
+    private string UnderADayOldAfterBatch() =>
+        UnderADayOldReport.Line(_scan.LastScanResult, TimeZoneInfo.Local);
 
     /// <summary>
     /// The refresh a Move or Delete owes the window at the end of a batch, run

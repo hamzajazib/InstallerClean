@@ -804,8 +804,8 @@ public partial class MainWindow : Window
     // assigned before IsComplete reveals the overlay and is not touched while it
     // is up, so this one raise is the only time it is read. The failure count and
     // the kept-back count are empty on a clean run, which collapses the element,
-    // and so are the summary, the restore line and the skipped line on the cards
-    // that carry none.
+    // and so are the summary, the restore line, the skipped line and the line about
+    // files under a day old on the cards that carry none.
     //
     // The per-file error list stays unraised, and that is a separate decision:
     // it is a list to read at leisure rather than an outcome, and it is reached
@@ -818,7 +818,8 @@ public partial class MainWindow : Window
     private void AnnounceCompletionOutcome()
     {
         AnnounceLiveRegions(CompletionHeadingText, CompletionFailedCountText,
-            CompletionSummaryText, CompletionRestoreText, CompletionSkippedText);
+            CompletionSummaryText, CompletionRestoreText, CompletionSkippedText,
+            CompletionUnderADayOldText);
         if (_vm.Completion.OffersReport)
             AnnounceLiveRegion(CompletionReportBox, () => _vm.Completion.OffersReport);
     }

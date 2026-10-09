@@ -1179,6 +1179,28 @@
                         </TextBlock.Style>
                     </TextBlock>
 
+                    <!-- How many files the scan held back for being less than a day old,
+                         and when a scan can probably offer them; empty (and collapsed) on
+                         every card whose scan held none back for that reason. LiveSetting
+                         so it is announced with the outcome. -->
+                    <TextBlock x:Name="CompletionUnderADayOldText"
+                               Text="{Binding Completion.UnderADayOld}"
+                               Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Body}"
+                               HorizontalAlignment="Center" TextAlignment="Center"
+                               TextWrapping="Wrap" Margin="{StaticResource GapBottom.Xl}"
+                               AutomationProperties.LiveSetting="Polite">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Completion.UnderADayOld}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
                     <!-- Error details (only visible when there are errors).
                          160 rather than 80: at 80 the box showed about two
                          lines, so a single group heading and one filename

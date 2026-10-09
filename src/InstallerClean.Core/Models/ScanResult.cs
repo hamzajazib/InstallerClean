@@ -344,8 +344,8 @@ namespace InstallerClean.Models;
 /// </param>
 /// <param name="WithheldUnderADayOldBytes">
 /// The size of the files <see cref="WithholdingSplit.UnderADayOldCount"/> counts, so
-/// that <see cref="UnestablishedWithheldBytes"/> can leave them out, carried the same
-/// way.
+/// that <see cref="UnestablishedWithheldBytes"/> can leave them out and
+/// <see cref="Helpers.UnderADayOldReport"/> can give their size, carried the same way.
 /// </param>
 /// <param name="WithheldDeclaredPatchRegisteredBytes">
 /// The size of the files <see cref="WithholdingSplit.DeclaredPatchRegisteredCount"/>

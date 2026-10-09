@@ -108,6 +108,22 @@ public partial class CompletionViewModel : ObservableObject
     [ObservableProperty] private string _skipped = string.Empty;
 
     /// <summary>
+    /// The line saying how many files the scan held back for being less than a day old,
+    /// and when a scan can probably offer them (<see cref="UnderADayOldReport.Line"/>),
+    /// shown under <see cref="Skipped"/>. Empty on every card whose scan held no file back
+    /// for that reason, which collapses the bound TextBlock, and on the all-clear, whose
+    /// scan never does. Set through the <c>underADayOld</c> argument of the Show* methods
+    /// and cleared everywhere else, because the view-model instance is reused across
+    /// operations.
+    ///
+    /// AFTER A MOVE OR DELETE IT SPEAKS FOR THE SCAN THAT RAN WHEN THE OPERATION FINISHED,
+    /// not the one the operation started from. That scan is the one on the window behind
+    /// the card, and a file that turned a day old while the operation ran is on offer there
+    /// rather than counted here.
+    /// </summary>
+    [ObservableProperty] private string _underADayOld = string.Empty;
+
+    /// <summary>
     /// Puts "Donate $5" and "Close without donating" on the completion card in
     /// place of Done and the small Donate under it. True where a Move or Delete moved
     /// or deleted files, a run the user cancelled part-way included. An
@@ -265,6 +281,7 @@ public partial class CompletionViewModel : ObservableObject
             DisplayHelpers.FormatElapsedLong(TimeSpan.FromMilliseconds(scanDurationMs)));
         Errors = string.Empty;
         Skipped = string.Empty;
+        UnderADayOld = string.Empty;
         AsksForDonation = false;
         IsComplete = true;
     }
@@ -298,6 +315,11 @@ public partial class CompletionViewModel : ObservableObject
     /// Several conditions reach each of them, they are different facts about a machine,
     /// and a sentence naming one of them is false of the files the others contribute.
     ///
+    /// THE LINE ABOUT FILES UNDER A DAY OLD NAMES ITS CAUSE, AND IT IS TRUE OF EVERY FILE IT
+    /// COUNTS, which are the files one decision kept for one reason. Where they are every
+    /// file the body would count, the line stands in the body's place. Anywhere else the
+    /// body counts every file and the line is shown under the card's other lines.
+    ///
     /// THE RECEIPT LINE STAYS, and it is the same one the all-clear carries. A screen
     /// with a heading and a body and no evidence that a scan ran reads as a failure
     /// rather than as a result, which is the opposite of what it has to say.
@@ -324,6 +346,16 @@ public partial class CompletionViewModel : ObservableObject
     /// file under a day old out of both, so its figures for one machine need not match
     /// this screen's.
     /// </param>
+    /// <param name="underADayOldCount">
+    /// How many of the files <paramref name="heldBackCount"/> counts were held back for
+    /// being under a day old: the scan result's <see cref="WithholdingSplit.UnderADayOldCount"/>.
+    /// Equal to <paramref name="heldBackCount"/> only where those are every file it counts.
+    /// </param>
+    /// <param name="underADayOld">
+    /// <see cref="UnderADayOldReport.Line"/> for the same scan, or empty. It is the body
+    /// where <paramref name="underADayOldCount"/> equals <paramref name="heldBackCount"/>,
+    /// and <see cref="UnderADayOld"/> otherwise.
+    /// </param>
     /// <param name="scannedFileCount">
     /// The receipt's own count, on the terms <see cref="ShowAllClear"/> sets out: how
     /// many cached files the scan accounted for, in files rather than in programs.
@@ -347,14 +379,23 @@ public partial class CompletionViewModel : ObservableObject
     /// </param>
     public void ShowNothingOffered(
         bool wholesale, int heldBackCount, long heldBackBytes,
-        int scannedFileCount, long scanDurationMs, string sourcesGivenUp)
+        int scannedFileCount, long scanDurationMs, string sourcesGivenUp,
+        int underADayOldCount = 0, string underADayOld = "")
     {
         HeadingIsWarning = false;
         Heading = Strings.Completion_NothingOffered;
         FailedCount = string.Empty;
         SummaryDestination = string.Empty;
+        // WHERE EVERY FILE THE BODY COUNTS IS ONE HELD FOR BEING UNDER A DAY OLD, THE
+        // DAY-OLD LINE IS THE BODY. It counts the same files and says why each was held
+        // and when a scan can probably offer it, so the body's sentence would only repeat
+        // the count. Anywhere else the body counts files the line does not, so both are
+        // shown.
+        var dayOldIsTheBody = underADayOld.Length > 0 && underADayOldCount == heldBackCount;
         Summary = JoinLines(
-            heldBackCount == 0 ? string.Empty : NothingOfferedBody(wholesale, heldBackCount, heldBackBytes),
+            dayOldIsTheBody ? underADayOld
+                : heldBackCount == 0 ? string.Empty
+                : NothingOfferedBody(wholesale, heldBackCount, heldBackBytes),
             sourcesGivenUp);
         Restore = string.Format(
             Strings.Completion_NothingToCleanUpReceipt,
@@ -363,6 +404,7 @@ public partial class CompletionViewModel : ObservableObject
             DisplayHelpers.FormatElapsedLong(TimeSpan.FromMilliseconds(scanDurationMs)));
         Errors = string.Empty;
         Skipped = string.Empty;
+        UnderADayOld = dayOldIsTheBody ? string.Empty : underADayOld;
         AsksForDonation = false;
         IsComplete = true;
     }
@@ -493,8 +535,9 @@ public partial class CompletionViewModel : ObservableObject
     /// claim-less verb and the restore line that names no drive.
     /// </summary>
     public void ShowMoveSummary(int movedCount, long movedBytes, string destination,
-        IReadOnlyList<FileOperationError> errors, MoveSpaceOutcome space, ReverifyResult? reverify = null) =>
-        ShowMoveCard(movedCount, movedBytes, destination, errors, space, reverify, stopped: false);
+        IReadOnlyList<FileOperationError> errors, MoveSpaceOutcome space, ReverifyResult? reverify = null,
+        string underADayOld = "") =>
+        ShowMoveCard(movedCount, movedBytes, destination, errors, space, reverify, underADayOld, stopped: false);
 
     /// <summary>
     /// Shows the card after a Move the app stopped itself, which is what the
@@ -514,8 +557,9 @@ public partial class CompletionViewModel : ObservableObject
     /// two are not always the same place.
     /// </summary>
     public void ShowMoveStoppedSummary(int movedCount, long movedBytes, string destination,
-        IReadOnlyList<FileOperationError> errors, MoveSpaceOutcome space, ReverifyResult? reverify = null) =>
-        ShowMoveCard(movedCount, movedBytes, destination, errors, space, reverify, stopped: true);
+        IReadOnlyList<FileOperationError> errors, MoveSpaceOutcome space, ReverifyResult? reverify = null,
+        string underADayOld = "") =>
+        ShowMoveCard(movedCount, movedBytes, destination, errors, space, reverify, underADayOld, stopped: true);
 
     // One body for both, because everything except the last line is the same
     // card and a second copy of it would drift. The flag is read once, at that
@@ -524,7 +568,7 @@ public partial class CompletionViewModel : ObservableObject
     // after it would be drawn but never spoken.
     private void ShowMoveCard(int movedCount, long movedBytes, string destination,
         IReadOnlyList<FileOperationError> errors, MoveSpaceOutcome space, ReverifyResult? reverify,
-        bool stopped)
+        string underADayOld, bool stopped)
     {
         // The heading states one outcome and only one. A partial failure still
         // freed what it freed, so it keeps the size heading and lets the count
@@ -569,6 +613,7 @@ public partial class CompletionViewModel : ObservableObject
             : HeadingIsWarning ? string.Empty : MoveRestoreText(space);
         Errors = errors.Count > 0 ? FormatErrorBreakdown(errors) : string.Empty;
         Skipped = SkippedText(reverify);
+        UnderADayOld = underADayOld;
         // The card after a Move the app stopped keeps Done.
         AsksForDonation = movedBytes > 0 && !stopped;
         IsComplete = true;
@@ -586,7 +631,8 @@ public partial class CompletionViewModel : ObservableObject
     /// will not happen.
     /// </summary>
     public void ShowDeleteSummary(int deletedCount, long deletedBytes,
-        IReadOnlyList<FileOperationError> errors, ReverifyResult? reverify = null)
+        IReadOnlyList<FileOperationError> errors, ReverifyResult? reverify = null,
+        string underADayOld = "")
     {
         // See ShowMoveSummary for why a partial failure keeps the size heading
         // and only a delete that reached no file at all swaps to the warning.
@@ -609,6 +655,7 @@ public partial class CompletionViewModel : ObservableObject
         Restore = string.Empty;
         Errors = errors.Count > 0 ? FormatErrorBreakdown(errors) : string.Empty;
         Skipped = SkippedText(reverify);
+        UnderADayOld = underADayOld;
         AsksForDonation = deletedBytes > 0;
         IsComplete = true;
     }
@@ -639,7 +686,7 @@ public partial class CompletionViewModel : ObservableObject
     /// </summary>
     public void ShowMoveCancelledSummary(int movedCount, int totalCount, long movedBytes,
         string destination, IReadOnlyList<FileOperationError> errors, MoveSpaceOutcome space,
-        ReverifyResult? reverify = null)
+        ReverifyResult? reverify = null, string underADayOld = "")
     {
         // The same test ShowMoveSummary applies, and for the same reason: a cancel
         // that reached no file and hit an error has nothing to put in a size
@@ -682,6 +729,7 @@ public partial class CompletionViewModel : ObservableObject
         Restore = movedCount == 0 ? string.Empty : Strings.Completion_MoveCancelledRestoreHint;
         Errors = errors.Count > 0 ? FormatErrorBreakdown(errors) : string.Empty;
         Skipped = SkippedText(reverify);
+        UnderADayOld = underADayOld;
         AsksForDonation = movedBytes > 0;
         IsComplete = true;
     }
@@ -700,7 +748,7 @@ public partial class CompletionViewModel : ObservableObject
     /// over a line saying a file could not be processed.
     /// </summary>
     public void ShowDeleteCancelledSummary(int deletedCount, int totalCount, long deletedBytes,
-        IReadOnlyList<FileOperationError> errors, ReverifyResult? reverify = null)
+        IReadOnlyList<FileOperationError> errors, ReverifyResult? reverify = null, string underADayOld = "")
     {
         // See ShowMoveCancelledSummary, which this mirrors line for line: the
         // warning heading only where the cancel reached no file AND something
@@ -719,6 +767,7 @@ public partial class CompletionViewModel : ObservableObject
         Restore = string.Empty;
         Errors = errors.Count > 0 ? FormatErrorBreakdown(errors) : string.Empty;
         Skipped = SkippedText(reverify);
+        UnderADayOld = underADayOld;
         AsksForDonation = deletedBytes > 0;
         IsComplete = true;
     }
@@ -733,7 +782,7 @@ public partial class CompletionViewModel : ObservableObject
     /// <see cref="FailedCountText"/>: this screen only ever follows one of the two
     /// buttons, so it says which one.
     /// </summary>
-    public void ShowReverifyAllSkipped(ReverifyResult reverify, bool deleting)
+    public void ShowReverifyAllSkipped(ReverifyResult reverify, bool deleting, string underADayOld = "")
     {
         // Every candidate being kept back is the check working, not the run
         // failing, so this heading is not a warning however it reads. That is the
@@ -765,6 +814,7 @@ public partial class CompletionViewModel : ObservableObject
         Restore = string.Empty;
         Errors = string.Empty;
         Skipped = string.Empty;
+        UnderADayOld = underADayOld;
         AsksForDonation = false;
         IsComplete = true;
     }
