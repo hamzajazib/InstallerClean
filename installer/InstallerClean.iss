@@ -89,14 +89,12 @@ OutputDir={#PublishDir}
 ; its properties. The release pipeline builds the same name from the same
 ; version to find this file afterwards, so the two have to agree.
 OutputBaseFilename=InstallerClean-{#AppVersion}-setup
-; Compression=bzip; SolidCompression=yes. Of the Inno compression combinations
-; tested for this setup, this is the one that did not trip a static false
-; positive on the setup hash: lzma2 and zip both did, zip with or without
-; SolidCompression=yes, and bzip without it varied with the files inside. Every
-; file in [Files] is always installed, so packing them as one block costs
-; nothing at install time. Changing either line means scanning the setup again.
+; Compression=bzip; SolidCompression=no. Static antivirus models score a setup's
+; hash differently under each compression setting, and lzma2 and zip draw false
+; positives on this one more often than bzip does. Changing either line means
+; scanning the setup again.
 Compression=bzip
-SolidCompression=yes
+SolidCompression=no
 ; The .NET 10 Desktop Runtime's oldest supported Windows release is
 ; Windows 10 version 1607 (build 14393), so an older build is blocked here
 ; with a clear message instead of failing cryptically at first launch. Inno
