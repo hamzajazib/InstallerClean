@@ -31,16 +31,18 @@ internal static class Program
 
     public static int Main(string[] args)
     {
-        // A throw from Run outside the work loop (a name or ACL clash constructing
-        // the single-instance mutex, say) would otherwise reach the runtime's
-        // default handler: ex.ToString() to stderr (a cross-profile path leak under
-        // elevation), no Application-log record, and an undocumented exit code no
-        // RMM can branch on. Route any such throw through the same crash-log +
-        // audit + ExitError path the work loop uses, with the note the work loop
-        // prints where the Application log refused the entry. Run holds the
-        // single-instance mutex on this thread (acquire and release both here, per
-        // the Win32 owner-thread rule) and RunWorkAsync owns its own catch-all, so
-        // the work itself never lands here: only Run's pre-flight and its cleanup can.
+        // A throw out of Run (a name or ACL clash constructing the single-instance
+        // mutex, say) would otherwise reach the runtime's default handler:
+        // ex.ToString() to stderr (a cross-profile path leak under elevation), no
+        // Application-log record, and an undocumented exit code no RMM can branch
+        // on. Route any such throw through the same crash-log + audit + ExitError
+        // path the work loop uses, and the note where the Application log refused
+        // an entry, which prints once in a run wherever it is printed from.
+        // Run holds the single-instance mutex on this thread (acquire and release
+        // both here, per the Win32 owner-thread rule) and RunWorkAsync reports what
+        // its work throws through its own catches, so what lands here is a throw
+        // from Run's pre-flight or its cleanup, or one thrown inside one of those
+        // catches.
         //
         // The code page is set and restored around all of that, the catch-all
         // included, so the crash line still goes out in UTF-8 and the console is
@@ -71,7 +73,8 @@ internal static class Program
     /// <summary>
     /// Reports an exception thrown out of <see cref="Run"/> to <see cref="Main"/>'s catch-all,
     /// as <see cref="ReportUnexpectedError(string, Exception)"/> reports one, then prints the
-    /// note where the Application log refused its entry, and returns its exit code.
+    /// note where the Application log has refused an entry and the run has not printed it,
+    /// and returns its exit code.
     /// </summary>
     internal static int ReportRunFailure(string[] args, Exception ex)
     {
@@ -454,9 +457,17 @@ internal static class Program
         roots.Sum(root => root.FilesKept);
 
     /// <summary>
+    /// Whether the note saying the Application log refused an entry has been printed in this
+    /// process, by <see cref="NoteEventLogUnavailable"/> or in a scan's listing.
+    /// </summary>
+    internal static bool EventLogNotePrinted { get; set; }
+
+    /// <summary>
     /// Prints the one stdout audit line saying the Application channel was
     /// unwritable, so an RMM consumer polling for entries that never arrived has
-    /// a record of why. Nothing here may throw: most callers have already written this
+    /// a record of why: where the log has refused an entry and the line has not been
+    /// printed yet (<see cref="EventLogNotePrinted"/>), so every caller can call it and the
+    /// run prints it once. Nothing here may throw: most callers have already written this
     /// run's Application-log entry, and a throw from here would reach a catch-all that
     /// writes a second. In a run, <see cref="ConsoleGuard"/> takes a failed write first,
     /// and the note carries a guard of its own as well, so the one entry does not rest
@@ -464,7 +475,8 @@ internal static class Program
     /// </summary>
     private static void NoteEventLogUnavailable()
     {
-        if (!EventLogWriter.EventLogUnavailable) return;
+        if (!EventLogWriter.EventLogUnavailable || EventLogNotePrinted) return;
+        EventLogNotePrinted = true;
         try
         {
             Console.WriteLine(Strings.Cli_EventLogUnavailable);
@@ -473,30 +485,6 @@ internal static class Program
         {
             Helpers.CrashLog.TryWrite(ex);
         }
-    }
-
-    /// <summary>
-    /// The note saying the Application log refused an entry, for one work run. Disposed
-    /// when <see cref="RunWorkAsync"/> ends, after the run's entry, and prints the note
-    /// then (<see cref="NoteEventLogUnavailable"/>) unless the run has already printed it.
-    /// </summary>
-    private sealed class EventLogNote : IDisposable
-    {
-        /// <summary>Whether the run has printed the note.</summary>
-        internal bool Printed { get; set; }
-
-        /// <summary>
-        /// Prints the note where the Application log has refused an entry and the run has
-        /// not printed it yet.
-        /// </summary>
-        internal void PrintIfOwed()
-        {
-            if (Printed || !EventLogWriter.EventLogUnavailable) return;
-            Printed = true;
-            NoteEventLogUnavailable();
-        }
-
-        public void Dispose() => PrintIfOwed();
     }
 
     /// <param name="servicesOverride">
@@ -530,11 +518,6 @@ internal static class Program
         ConsoleGuard? output = null)
     {
         consoleWatched ??= ConsoleIsWatched;
-
-        // The note saying the Application log refused an entry prints when the run ends,
-        // after the run's own entry, on every path out of this method, unless a scan-only
-        // run has already printed it (EndScanOnly).
-        using var eventLogNote = new EventLogNote();
 
         // What a cancelled batch had actually committed, read by the OCE catch to
         // write its EventLog summary and to pick ExitPartial over ExitCancelled.
@@ -697,7 +680,7 @@ internal static class Program
                 if (EventLogWriter.EventLogUnavailable)
                 {
                     listing.Insert(notices.Count, Strings.Cli_EventLogUnavailable);
-                    eventLogNote.Printed = true;
+                    EventLogNotePrinted = true;
                 }
 
                 // EVERY LINE IS BUILT AND PRINTED BEFORE THE SUMMARY IS WRITTEN, so the summary
@@ -710,7 +693,7 @@ internal static class Program
                 // audit line reads fully English and carries the size in the form tooling
                 // reads.
                 listing.ForEach(Console.WriteLine);
-                return EndScanOnly(arg, output, eventLogNote,
+                return EndScanOnly(arg, output,
                     () => string.Format(Strings.Cli_EventLogScanFound,
                         arg, count, DisplayHelpers.PluraliseFile(count),
                         DisplayHelpers.FormatSizeForMachine(totalBytes)));
@@ -772,8 +755,8 @@ internal static class Program
                 // A scan-only run prints the note saying the Application log refused an entry
                 // under its notices where the log has already refused one of theirs, as the
                 // listing branch above prints it with them, and then ends as that branch does.
-                eventLogNote.PrintIfOwed();
-                return EndScanOnly(arg, output, eventLogNote, NothingOfferedSummary);
+                NoteEventLogUnavailable();
+                return EndScanOnly(arg, output, NothingOfferedSummary);
             }
 
             // /s reads only, so it skips the gate.
@@ -1252,6 +1235,12 @@ internal static class Program
             // HardError audit entry, ExitError, and never ex.Message.
             return ReportUnexpectedError(arg, ex);
         }
+        finally
+        {
+            // The note, after the run's entry, on every path out of this method, a throw out
+            // of one of the catches included. Where the run has printed it already, nothing.
+            NoteEventLogUnavailable();
+        }
     }
 
     /// <summary>
@@ -1270,12 +1259,7 @@ internal static class Program
     /// Ok entry may have landed, so a HardError after it would be a second summary. Where the
     /// write set it, the log took no entry, so the HardError is the only one that can land.
     /// </summary>
-    /// <remarks>
-    /// <paramref name="note"/> is the run's own, so the note prints once whichever of the two
-    /// prints it.
-    /// </remarks>
-    private static int EndScanOnly(
-        string arg, ConsoleGuard? output, EventLogNote note, Func<string> summary)
+    private static int EndScanOnly(string arg, ConsoleGuard? output, Func<string> summary)
     {
         if (output?.FirstFailure is { } failure)
             return ReportUnexpectedError(arg, failure.Exception, failure.CrashLog);
@@ -1285,7 +1269,7 @@ internal static class Program
         if (refusedEarlier || !EventLogWriter.EventLogUnavailable)
             return ExitOk;
 
-        note.PrintIfOwed();
+        NoteEventLogUnavailable();
         return output?.FirstFailure is { } noteFailure
             ? ReportUnexpectedError(arg, noteFailure.Exception, noteFailure.CrashLog)
             : ExitOk;
@@ -1642,8 +1626,8 @@ internal static class Program
     /// (<c>Cli.EventLogBadArguments</c>) and the exit code are identical for both,
     /// so an RMM filter matching the Application channel sees one "bad arguments"
     /// contract whichever the user hit. The arg switch returns before
-    /// <see cref="RunWorkAsync"/>, whose disposal prints the note saying the Application
-    /// log refused an entry, so the note is printed here.
+    /// <see cref="RunWorkAsync"/>, which prints the note saying the Application log
+    /// refused an entry as it ends, so the note is printed here.
     /// </summary>
     private static int ReportBadArguments(CliInvocation invocation, string stdoutMessage)
     {
@@ -1949,8 +1933,8 @@ internal static class Program
     /// rights a process runs with change only when somebody starts it differently, so
     /// a scheduler retrying on the transient code would be refused on every run.
     ///
-    /// It returns before <see cref="RunWorkAsync"/>, whose disposal prints the note on an
-    /// unwritable Application channel, so it prints the note itself, as the mutex refusal
+    /// It returns before <see cref="RunWorkAsync"/>, which prints the note on an unwritable
+    /// Application channel as it ends, so it prints the note itself, as the mutex refusal
     /// does.
     ///
     /// The event-log line it writes (<see cref="AdminRightsNeededEventLogLine"/>) is

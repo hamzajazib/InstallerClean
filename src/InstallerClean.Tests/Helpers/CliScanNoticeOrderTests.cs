@@ -225,12 +225,15 @@ public class CliScanNoticeOrderTests
     private static async Task<RunResult> WithTheLogRefusing(
         Func<CliEventClass, bool> refuses, Func<Task<RunResult>> run)
     {
-        // Both are process-global; the assembly disables test parallelisation.
+        // The sink, the flag and the note's latch are process-global; the assembly disables
+        // test parallelisation.
         var sink = EventLogWriter.Sink;
         var unavailable = EventLogWriter.EventLogUnavailable;
+        var notePrinted = Program.EventLogNotePrinted;
         try
         {
             EventLogWriter.EventLogUnavailable = false;
+            Program.EventLogNotePrinted = false;
             EventLogWriter.Sink = (entry, text) =>
             {
                 if (refuses(entry)) throw new InvalidOperationException("The log refused the entry.");
@@ -242,6 +245,7 @@ public class CliScanNoticeOrderTests
         {
             EventLogWriter.Sink = sink;
             EventLogWriter.EventLogUnavailable = unavailable;
+            Program.EventLogNotePrinted = notePrinted;
         }
     }
 
