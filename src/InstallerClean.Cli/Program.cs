@@ -636,11 +636,11 @@ internal static class Program
             // COME BACK TO BE PRINTED, after the line saying what the scan found, or after the
             // scanning line where no such line is printed. A /s that lists files prints them
             // ahead of the line counting the files instead, so the list sits straight under
-            // that line and is the last thing printed: the reasons a file was held back are
-            // indented like the rows, and a script reading the rows takes the indented lines
-            // after that line to the end of the output. The one line that can follow the
-            // list is the note saying the Application log refused the run's summary, which
-            // is not indented.
+            // that line: the reasons a file was held back are indented like the rows, and a
+            // script reading the rows takes the indented lines after that line to the end of
+            // the output. Two lines can follow the list, neither of them indented: the
+            // unexpected-error line of a run whose output failed, and the note saying the
+            // Application log refused the run's summary.
             var notices = ReportScanSignals(arg, scanResult, sourcesGivenUp);
 
             if (arg == "/s" && count > 0)
@@ -683,11 +683,10 @@ internal static class Program
                 // output, so a write to it that failed, such as a redirect to a full disk, fails
                 // the run: the summary is the HardError entry the catch-all writes for the
                 // guard's first failed write, the catch-all's line follows the list, and the run
-                // exits 1. Otherwise the summary is the Ok entry and the run exits 0. One entry
-                // either way, and one summary per run is what an RMM counts runs by. A line that
-                // cannot be built, a translation whose placeholders do not match its arguments
-                // for example, throws before the list is printed, and the catch-all's entry is
-                // the run's one.
+                // exits 1. Otherwise the summary is the Ok entry and the run exits 0. One summary
+                // either way, which is what an RMM counts runs by. A line that cannot be built, a
+                // translation whose placeholders do not match its arguments for example, throws
+                // before the list is printed, and the catch-all's entry is the run's one.
                 //
                 // The noun and size are recomputed inside the en-GB scope rather than reusing
                 // the human-facing `size` (which is in the OS region and grouped), so this
