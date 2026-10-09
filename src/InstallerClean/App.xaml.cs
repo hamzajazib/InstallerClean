@@ -61,24 +61,27 @@ public partial class App : Application
         // every window. SettingsService has a no-dependency constructor, so
         // this runs without the DI container (not built until later). Resolve
         // returns null for Automatic or an unsupported value, leaving the OS
-        // culture in place. Both UICulture (which strings) and Culture (number
-        // formatting) are set, so a deliberate pick reads fully in that
-        // language, file sizes ("3,2 GB") included.
+        // culture in place. A pick sets the language the strings are in; numbers
+        // keep the PC's regional format, and times and dates take it wherever it
+        // is a format of the picked language (Localisation.SetPickedLanguage).
         var languagePreference = LanguagePreference.Resolve(new SettingsService().Load().Language);
         if (languagePreference is not null)
         {
-            // Localisation.Set is the load-bearing one: the resx lookups and the
-            // size formatting read it directly, so the chosen language holds for
-            // every window, not just the ones built during startup. A culture set
-            // only on the thread does not survive the dispatcher's later
-            // callbacks, so a window opened from a click would otherwise fall back
-            // to the OS language. The thread/default-thread cultures cover other
-            // culture-dependent framework code.
-            Localisation.Set(languagePreference, languagePreference);
+            // Localisation is the load-bearing one: the resx lookups and the
+            // number, time and date formatting read it directly, so the chosen
+            // language holds for every window, not just the ones built during
+            // startup. A culture set only on the thread does not survive the
+            // dispatcher's later callbacks, so a window opened from a click would
+            // otherwise fall back to the OS language. SetPickedLanguage reads the
+            // regional format off the thread, so it comes before the lines below.
+            // The thread/default-thread cultures cover other culture-dependent
+            // framework code, and are given the same format culture, so the
+            // framework formats as the app does.
+            Localisation.SetPickedLanguage(languagePreference);
             CultureInfo.CurrentUICulture = languagePreference;
-            CultureInfo.CurrentCulture = languagePreference;
+            CultureInfo.CurrentCulture = Localisation.FormatCulture;
             CultureInfo.DefaultThreadCurrentUICulture = languagePreference;
-            CultureInfo.DefaultThreadCurrentCulture = languagePreference;
+            CultureInfo.DefaultThreadCurrentCulture = Localisation.FormatCulture;
         }
 
         // Outside the branch above, because Automatic is the default and returns

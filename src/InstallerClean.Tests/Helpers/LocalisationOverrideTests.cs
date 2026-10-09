@@ -5,13 +5,14 @@ using InstallerClean.Resources;
 namespace InstallerClean.Tests.Helpers;
 
 /// <summary>
-/// Covers the explicit-language path: what happens when the user picks a
-/// language rather than leaving it on Automatic. Everything downstream of that
-/// pick runs through Localisation's override, the resx resolution in
-/// Strings.Get and the number formatting in DisplayHelpers. Covering it at all
-/// depends on LocalisationScope: an override that can be set but not unset
-/// leaks the pinned language into every test that runs after it, rewriting
-/// their expected strings.
+/// Covers Localisation's override: the language the resx strings resolve in and
+/// the culture DisplayHelpers formats numbers, times and dates against, each
+/// pinned above the thread's culture. A language picked in the app pins the
+/// first to the pick and the second to the PC's regional format
+/// (<see cref="Localisation.SetPickedLanguage"/>); the other tests here pin the
+/// two by hand. Covering it at all depends on LocalisationScope: an override
+/// that can be set but not unset leaks the pinned language into every test that
+/// runs after it, rewriting their expected strings.
 ///
 /// The assertions deliberately hold no French text. French punctuation needs
 /// narrow no-break spaces, which many editors and text tools normalise away
@@ -23,6 +24,9 @@ public class LocalisationOverrideTests
 {
     private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr");
     private static readonly CultureInfo British = CultureInfo.GetCultureInfo("en-GB");
+    private static readonly CultureInfo German = CultureInfo.GetCultureInfo("de");
+    private static readonly CultureInfo UnitedStates = CultureInfo.GetCultureInfo("en-US");
+    private static readonly CultureInfo Germany = CultureInfo.GetCultureInfo("de-DE");
 
     [Fact]
     public void An_explicit_pick_drives_the_generated_string_accessor()
@@ -37,12 +41,12 @@ public class LocalisationOverrideTests
     }
 
     [Fact]
-    public void An_explicit_pick_drives_number_formatting_even_when_the_thread_disagrees()
+    public void A_pinned_format_culture_drives_number_formatting_even_when_the_thread_disagrees()
     {
-        // The thread stays British while the app is pinned to French. This is
-        // the case Localisation exists for: a thread culture does not reliably
-        // survive the dispatcher's per-callback context, so the override is
-        // what every window has to read.
+        // The thread stays British while the format culture is pinned to French.
+        // This is the case Localisation exists for: a thread culture does not
+        // reliably survive the dispatcher's per-callback context, so the override
+        // is what every window has to read.
         using var thread = new CultureScope(British);
         using var scope = new LocalisationScope(French, French);
 
@@ -82,6 +86,73 @@ public class LocalisationOverrideTests
             DisplayHelpers.PluraliseFile(0));
     }
 
+    // ---- A language picked in the app ----
+
+    // 16:40 UTC, read in UTC, so every time below is 16:40 or 4:40 PM.
+    private static readonly DateTime SixteenForty = new(2030, 6, 16, 16, 40, 0, DateTimeKind.Utc);
+
+    // 1,023.9 KB: a figure with both a group and a decimal separator in it.
+    private const long JustUnderAMegabyte = 1_048_474;
+
+    [Fact]
+    public void English_picked_on_a_US_regional_format_keeps_US_times_and_dates()
+    {
+        using var thread = new CultureScope(UnitedStates);
+        using var pick = new PickedLanguageScope(British);
+
+        var (time, date) = DisplayHelpers.FormatTimeAndDate(SixteenForty, TimeZoneInfo.Utc);
+
+        Assert.Equal(British, Localisation.UiCulture);
+        Assert.Same(UnitedStates, Localisation.FormatCulture);
+        Assert.Contains("4:40", time);
+        Assert.Contains("PM", time);
+        Assert.Equal("June 16", date);
+        Assert.StartsWith("1,023.9", DisplayHelpers.FormatSize(JustUnderAMegabyte));
+    }
+
+    [Fact]
+    public void A_pick_keeps_the_regional_format_as_the_user_has_customised_it()
+    {
+        // A US format switched to a 24-hour clock in Windows: the culture the
+        // thread holds carries the change, and a culture looked up by name does not.
+        var customised = (CultureInfo)UnitedStates.Clone();
+        customised.DateTimeFormat.ShortTimePattern = "HH:mm";
+        using var thread = new CultureScope(customised);
+        using var pick = new PickedLanguageScope(British);
+
+        var (time, date) = DisplayHelpers.FormatTimeAndDate(SixteenForty, TimeZoneInfo.Utc);
+
+        Assert.Equal("16:40", time);
+        Assert.Equal("June 16", date);
+    }
+
+    [Fact]
+    public void German_picked_on_a_US_regional_format_writes_US_numbers_and_German_dates()
+    {
+        using var thread = new CultureScope(UnitedStates);
+        using var pick = new PickedLanguageScope(German);
+
+        var (time, date) = DisplayHelpers.FormatTimeAndDate(SixteenForty, TimeZoneInfo.Utc);
+
+        Assert.Equal("16:40", time);
+        Assert.Equal("16. Juni", date);
+        Assert.StartsWith("1,023.9", DisplayHelpers.FormatSize(JustUnderAMegabyte));
+    }
+
+    [Fact]
+    public void English_picked_on_a_German_regional_format_writes_German_numbers_and_English_dates()
+    {
+        using var thread = new CultureScope(Germany);
+        using var pick = new PickedLanguageScope(British);
+
+        var (time, date) = DisplayHelpers.FormatTimeAndDate(SixteenForty, TimeZoneInfo.Utc);
+
+        Assert.Equal("16:40", time);
+        Assert.Equal("16 June", date);
+        Assert.StartsWith("1.023,9", DisplayHelpers.FormatSize(JustUnderAMegabyte));
+        Assert.StartsWith("1,5", DisplayHelpers.FormatElapsedLong(TimeSpan.FromSeconds(1.5)));
+    }
+
     [Fact]
     public void Automatic_falls_back_to_the_ambient_thread_culture()
     {
@@ -117,6 +188,18 @@ public class LocalisationOverrideTests
     {
         public LocalisationScope(CultureInfo uiCulture, CultureInfo formatCulture) =>
             Localisation.Set(uiCulture, formatCulture);
+
+        public void Dispose() => Localisation.Reset();
+    }
+
+    /// <summary>
+    /// Picks a language the way the app does at startup, reading the regional
+    /// format off the thread, and drops the pin on the way out.
+    /// </summary>
+    private sealed class PickedLanguageScope : IDisposable
+    {
+        public PickedLanguageScope(CultureInfo language) =>
+            Localisation.SetPickedLanguage(language);
 
         public void Dispose() => Localisation.Reset();
     }
