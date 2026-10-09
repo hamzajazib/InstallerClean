@@ -111,9 +111,10 @@ public partial class CompletionViewModel : ObservableObject
     /// The line saying how many files the scan held back for being less than a day old,
     /// and when a scan can probably offer them (<see cref="UnderADayOldReport.Line"/>),
     /// shown under <see cref="Skipped"/>. Empty on every card whose scan held no file back
-    /// for that reason, which collapses the bound TextBlock, and on the all-clear, whose
-    /// scan never does. Each card that carries it works it out as it is revealed
-    /// (<see cref="UnderADayOldLine"/>), and every other card clears it, because the
+    /// for that reason, which collapses the bound TextBlock, on the all-clear, whose scan
+    /// never does, and on the nothing-offered card where the line is the body
+    /// (<see cref="ShowNothingOffered"/>). Each card that carries it works it out as it is
+    /// revealed (<see cref="UnderADayOldLine"/>), and every other card clears it, because the
     /// view-model instance is reused across operations.
     ///
     /// AFTER A MOVE OR DELETE IT SPEAKS FOR THE SCAN THAT RAN WHEN THE OPERATION FINISHED,
@@ -327,9 +328,11 @@ public partial class CompletionViewModel : ObservableObject
     /// and a sentence naming one of them is false of the files the others contribute.
     ///
     /// THE LINE ABOUT FILES UNDER A DAY OLD NAMES ITS CAUSE, AND IT IS TRUE OF EVERY FILE IT
-    /// COUNTS, which are the files one decision kept for one reason. Where they are every
-    /// file the body would count, the line stands in the body's place. Anywhere else the
-    /// body counts every file and the line is shown under the card's other lines.
+    /// COUNTS, which are the files one decision kept for one reason. Where the scan says
+    /// they are every file the body would count
+    /// (<see cref="ScanResult.UnderADayOldLineCoversUnsettledHeldBack"/>), the line stands
+    /// in the body's place. Anywhere else the body counts every file and the line is shown
+    /// under the card's other lines.
     ///
     /// THE RECEIPT LINE STAYS, and it is the same one the all-clear carries. A screen
     /// with a heading and a body and no evidence that a scan ran reads as a failure
@@ -358,8 +361,8 @@ public partial class CompletionViewModel : ObservableObject
     /// this screen's.
     ///
     /// The line about files under a day old (<see cref="UnderADayOldLine"/>) is the body
-    /// where the files <see cref="WithholdingSplit.UnderADayOldCount"/> counts are every
-    /// file the body would count, and <see cref="UnderADayOld"/> otherwise.
+    /// where <see cref="ScanResult.UnderADayOldLineCoversUnsettledHeldBack"/> is true, and
+    /// <see cref="UnderADayOld"/> otherwise.
     /// </param>
     /// <param name="scannedFileCount">
     /// The receipt's own count, on the terms <see cref="ShowAllClear"/> sets out: how
@@ -391,13 +394,11 @@ public partial class CompletionViewModel : ObservableObject
         Heading = Strings.Completion_NothingOffered;
         FailedCount = string.Empty;
         SummaryDestination = string.Empty;
-        // WHERE EVERY FILE THE BODY COUNTS IS ONE HELD FOR BEING UNDER A DAY OLD, THE
-        // DAY-OLD LINE IS THE BODY. It counts the same files and says why each was held
-        // and when a scan can probably offer it, so the body's sentence would only repeat
-        // the count. Anywhere else the body counts files the line does not, so both are
-        // shown.
-        var dayOldIsTheBody =
-            underADayOld.Length > 0 && result.WithheldBy.UnderADayOldCount == heldBackCount;
+        // WHERE THE DAY-OLD LINE COUNTS EVERY FILE THE BODY WOULD, IT IS THE BODY. It says
+        // why each was held and when a scan can probably offer it, so the body's sentence
+        // would only repeat the count. Anywhere else the body counts files the line does
+        // not, so both are shown.
+        var dayOldIsTheBody = result.UnderADayOldLineCoversUnsettledHeldBack;
         Summary = JoinLines(
             dayOldIsTheBody ? underADayOld
                 : heldBackCount == 0 ? string.Empty

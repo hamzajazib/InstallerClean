@@ -683,6 +683,58 @@ public class ScanResultTests
         Assert.Equal(0, result.UnestablishedWithheldBytes);
     }
 
+    private static readonly DateTime ADayOldAt = new(2030, 6, 16, 9, 40, 0, DateTimeKind.Utc);
+
+    [Theory]
+    [InlineData("under a day old", true)]
+    [InlineData("under a day old, beside one kept for an installed program", true)]
+    [InlineData("under a day old, with no time from which they are a day old", false)]
+    [InlineData("under a day old, beside a superseded file held back", false)]
+    [InlineData("under a day old, beside one the scan could not settle", false)]
+    [InlineData("nothing held back", false)]
+    [InlineData("wholesale", false)]
+    public void The_line_about_files_under_a_day_old_covers_the_held_back_files_only_where_it_counts_every_one(
+        string run, bool covers)
+    {
+        var result = run switch
+        {
+            "under a day old" => new ScanResult([], [], 0,
+                WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+                WithheldBy: new WithholdingSplit(UnderADayOldCount: 2),
+                WithheldUnderADayOldBytes: 3072,
+                WithheldUnderADayOldAllADayOldAtUtc: ADayOldAt),
+            "under a day old, beside one kept for an installed program" => new ScanResult([], [], 0,
+                WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+                WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1, UnderADayOldCount: 1),
+                WithheldDeclaredProductInstalledBytes: 1024,
+                WithheldUnderADayOldBytes: 2048,
+                WithheldUnderADayOldAllADayOldAtUtc: ADayOldAt),
+            "under a day old, with no time from which they are a day old" => new ScanResult([], [], 0,
+                WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+                WithheldBy: new WithholdingSplit(UnderADayOldCount: 2),
+                WithheldUnderADayOldBytes: 3072),
+            "under a day old, beside a superseded file held back" => new ScanResult([], [], 0,
+                WithheldCount: 1,
+                WithheldFiles: [File("a.msi", 1024)],
+                WithheldBy: new WithholdingSplit(UnderADayOldCount: 1),
+                WithheldUnderADayOldBytes: 1024,
+                SupersededWithheldBytes: 2048,
+                WithheldUnderADayOldAllADayOldAtUtc: ADayOldAt),
+            "under a day old, beside one the scan could not settle" => new ScanResult([], [], 0,
+                WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+                WithheldBy: new WithholdingSplit(DeclaredProductUnestablishedCount: 1, UnderADayOldCount: 1),
+                WithheldUnderADayOldBytes: 2048,
+                WithheldUnderADayOldAllADayOldAtUtc: ADayOldAt),
+            "nothing held back" => new ScanResult([], [], 0),
+            "wholesale" => new ScanResult([], [], 0,
+                WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+                WithheldBy: new WithholdingSplit(WholesaleCount: 2)),
+            _ => throw new ArgumentOutOfRangeException(nameof(run), run, null),
+        };
+
+        Assert.Equal(covers, result.UnderADayOldLineCoversUnsettledHeldBack);
+    }
+
     [Fact]
     public void A_file_under_a_day_old_is_counted_beside_one_kept_for_an_installed_program()
     {

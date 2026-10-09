@@ -1,3 +1,5 @@
+using InstallerClean.Helpers;
+
 namespace InstallerClean.Models;
 
 /// <summary>
@@ -788,6 +790,24 @@ public record ScanResult(
     /// </summary>
     public bool UnsettledHeldBackIsWholesale =>
         UnsettledHeldBackCount > 0 && WithheldBy.WholesaleCount == UnsettledHeldBackCount;
+
+    /// <summary>
+    /// Whether the line about files under a day old (<see cref="UnderADayOldReport.Line"/>)
+    /// counts every file <see cref="UnsettledHeldBackCount"/> counts: every one was held back
+    /// for being under a day old, and the time from which every one of them is a day old is
+    /// known (<see cref="UnderADayOldReport.HasLine"/>). Where it does, the window's finished
+    /// screen on a run that offered nothing gives that line in place of the sentence counting
+    /// the files held back.
+    ///
+    /// FALSE WHERE NOTHING IS COUNTED, AND WHERE THE TIME IS NOT KNOWN. Without a time there is
+    /// no line, so the screen keeps the sentence counting the files.
+    ///
+    /// THE COMMAND LINE DOES NOT READ IT. Its sentences counting files held back leave out a
+    /// file under a day old, so its line about them is printed beside those sentences and
+    /// never in place of one.
+    /// </summary>
+    public bool UnderADayOldLineCoversUnsettledHeldBack =>
+        WithheldBy.UnderADayOldCount == UnsettledHeldBackCount && UnderADayOldReport.HasLine(this);
 }
 
 /// <summary>

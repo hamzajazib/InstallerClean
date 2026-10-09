@@ -638,6 +638,23 @@ public class CompletionViewModelTests
         Assert.Equal(string.Empty, vm.UnderADayOld);
     }
 
+    [Fact]
+    public void Nothing_offered_counts_files_under_a_day_old_in_its_body_where_the_scan_gives_no_time_for_them()
+    {
+        // With no time to give there is no day-old line, so the body counts the files.
+        var vm = TestCompletion.Create();
+        var scan = HeldBack(2, new WithholdingSplit(UnderADayOldCount: 2));
+
+        vm.ShowNothingOffered(scan, scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: string.Empty);
+
+        Assert.Equal(
+            string.Format(
+                Strings.Completion_NothingOfferedPerFileBody_Plural,
+                2, DisplayHelpers.PluraliseFile(2), DisplayHelpers.FormatSize(2048)),
+            vm.Summary);
+        Assert.Equal(string.Empty, vm.UnderADayOld);
+    }
+
     public static TheoryData<string> CardsAfterAMoveOrDelete() => new()
     {
         "finished Move", "stopped Move", "cancelled Move",
