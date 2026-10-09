@@ -611,9 +611,10 @@ internal static class Program
                 Console.WriteLine(Strings.Cli_FoundNoOrphans);
 
             // THE NOTICES' APPLICATION-LOG ENTRIES ARE WRITTEN HERE AND THEIR STDOUT LINES
-            // COME BACK TO BE PRINTED. Every run prints them at once, under the line counting what
-            // was found, except a /s that lists files: its list belongs straight under the
-            // line counting it, so the notices, which are about other files, follow the list.
+            // COME BACK TO BE PRINTED. Every run prints them at once, after the line saying what
+            // the scan found, or after the scanning line where no such line is printed, except a
+            // /s that lists files: its list belongs straight under the line counting it, so the
+            // notices, which are about other files, follow the list.
             var notices = ReportScanSignals(arg, scanResult, sourcesGivenUp);
             var listFollows = arg == "/s" && count > 0;
             if (!listFollows)

@@ -12,8 +12,9 @@ namespace InstallerClean.Tests.Helpers;
 /// Where the command line prints the scan's notices: the files held back and why, the
 /// drives and shares given up, the superseded files held back, the files missing from the
 /// folder and the files held back for being under a day old. A /s that lists files prints
-/// them after the list, set off by a blank line; every other run prints them under the
-/// line counting what was found. Driven through the real work method.
+/// them after the list, set off by a blank line; every other run prints them after the line
+/// saying what the scan found, or after the scanning line where no such line is printed.
+/// Driven through the real work method.
 ///
 /// WHAT EVERY FIXTURE SETS UP is an offer of two files and, unless it is the one without,
 /// a scan meeting every condition that has a stdout line, so a notice printed in the wrong
@@ -80,8 +81,11 @@ public class CliScanNoticeOrderTests
     [Fact]
     public async Task A_console_that_fails_during_the_list_still_leaves_every_notice_in_the_Application_log()
     {
-        var run = await Run("/s", EveryNotice(), new ConsoleFailingAt("offer-a.msi"));
+        var console = new ConsoleFailingAt("offer-a.msi");
 
+        var run = await Run("/s", EveryNotice(), console);
+
+        Assert.True(console.Refused > 0, "The console refused no write, so the list never failed.");
         Assert.Equal(CliExitCode.Error, run.ExitCode);
         Assert.Contains(run.Entries, entry => entry.Class == CliEventClass.ScanNothingOfferedNotice);
         Assert.Contains(run.Entries, entry => entry.Class == CliEventClass.SourcesGivenUpNotice);
@@ -141,14 +145,20 @@ public class CliScanNoticeOrderTests
 
     /// <summary>
     /// A console that takes every write until one carrying <paramref name="text"/>, and
-    /// throws on that one, as a console whose reader has gone does.
+    /// throws on that one, as a console whose reader has gone does. <see cref="Refused"/>
+    /// counts the writes it threw on.
     /// </summary>
     private sealed class ConsoleFailingAt(string text) : StringWriter
     {
+        public int Refused { get; private set; }
+
         public override void Write(string? value)
         {
             if (value is not null && value.Contains(text, StringComparison.Ordinal))
+            {
+                Refused++;
                 throw new IOException("The pipe is being closed.");
+            }
             base.Write(value);
         }
 
