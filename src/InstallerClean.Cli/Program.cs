@@ -630,8 +630,10 @@ internal static class Program
             // patch Windows holds a registration of. Superseded files held back are
             // printed in a line of their own. The window's finished screen counts
             // differently: its one sentence also takes in a file under a day old and a
-            // superseded file, and where every file it would count is under a day old it
-            // gives the line about those files in that sentence's place.
+            // superseded file, and on a run that offered nothing, where every file it would
+            // count is under a day old and the time from which they are all a day old is
+            // known (ScanResult.UnderADayOldLineCoversUnsettledHeldBack), it gives the line
+            // about those files in that sentence's place.
             var withheldCount = scanResult.UnestablishedWithheldCount;
 
             // The one-form names the size and not the numeral ("the one file"), so it

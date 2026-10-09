@@ -878,10 +878,11 @@ public enum WithholdingAccount
     /// registration of, where at least one registration records no cached copy the
     /// check could show is a different file. The command line prints no held-back sentence
     /// for these files, as on a run that kept nothing back, and the files stay among those
-    /// left alone; where any is under a day old, it prints the line about those files
-    /// (<see cref="Helpers.UnderADayOldReport"/>), which stands in place of its clean line
-    /// where nothing is offered. The window's
-    /// finished screen counts a file under a day old among those held back, through
+    /// left alone; where any is under a day old and the scan knows the time from which every
+    /// such file is a day old (<see cref="ScanResult.HasUnderADayOldLine"/>), it prints the
+    /// line about those files (<see cref="Helpers.UnderADayOldReport"/>), which stands in
+    /// place of its clean line where nothing is offered. The window's finished screen counts
+    /// a file under a day old among those held back, through
     /// <see cref="ScanResult.UnsettledHeldBackCount"/>.
     /// </summary>
     KeptWithoutNotice,
