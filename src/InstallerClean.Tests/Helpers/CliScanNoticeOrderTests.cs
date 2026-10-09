@@ -12,9 +12,9 @@ namespace InstallerClean.Tests.Helpers;
 /// Where the command line prints the scan's notices: the files held back and why, the
 /// drives and shares given up, the superseded files held back, the files missing from the
 /// folder and the files held back for being under a day old. A /s that lists files prints
-/// them after the list, set off by a blank line; every other run prints them after the line
-/// saying what the scan found, or after the scanning line where no such line is printed.
-/// Driven through the real work method.
+/// them ahead of the line counting the files, so the list is the last thing printed; every
+/// other run prints them after the line saying what the scan found, or after the scanning
+/// line where no such line is printed. Driven through the real work method.
 ///
 /// WHAT EVERY FIXTURE SETS UP is an offer of two files and, unless it is the one without,
 /// a scan meeting every condition that has a stdout line, so a notice printed in the wrong
@@ -28,24 +28,26 @@ public class CliScanNoticeOrderTests
     private static readonly DateTime ADayOldAt = new(2030, 6, 16, 9, 40, 0, DateTimeKind.Utc);
 
     [Fact]
-    public async Task A_scan_that_lists_files_prints_its_notices_after_the_list_and_a_blank_line()
+    public async Task A_scan_that_lists_files_prints_its_notices_ahead_of_the_count_line_and_ends_on_the_list()
     {
         var scan = EveryNotice();
 
         var run = await Run("/s", scan);
 
         var lines = run.Stdout.Split(Environment.NewLine);
-        var found = Array.FindIndex(lines, l => l.StartsWith(Opening(Strings.Cli_FoundOrphans), StringComparison.Ordinal));
-        var lastRow = Array.FindIndex(lines, l => l.StartsWith(LastRow, StringComparison.Ordinal));
-        Assert.True(found >= 0 && lastRow == found + 2, run.Stdout);
-        Assert.Equal(string.Empty, lines[lastRow + 1]);
-
         var notices = NoticeOpenings(scan)
             .Select(opening => Array.FindIndex(lines, l => l.StartsWith(opening, StringComparison.Ordinal)))
             .ToArray();
-        Assert.Equal(lastRow + 2, notices[0]);
+        Assert.Equal(Strings.Cli_ScanningInstaller, lines[0]);
+        Assert.Equal(1, notices[0]);
         for (var i = 1; i < notices.Length; i++)
             Assert.True(notices[i] > notices[i - 1], $"Notice {i} out of order at {notices[i]}.\n{run.Stdout}");
+
+        var found = Array.FindIndex(lines, l => l.StartsWith(Opening(Strings.Cli_FoundOrphans), StringComparison.Ordinal));
+        var lastRow = Array.FindIndex(lines, l => l.StartsWith(LastRow, StringComparison.Ordinal));
+        Assert.True(found == notices[^1] + 1 && lastRow == found + 2, run.Stdout);
+        Assert.Equal(lines.Length - 2, lastRow);
+        Assert.Equal(string.Empty, lines[^1]);
     }
 
     [Fact]
@@ -79,13 +81,13 @@ public class CliScanNoticeOrderTests
     }
 
     [Fact]
-    public async Task A_console_that_fails_during_the_list_still_leaves_every_notice_in_the_Application_log()
+    public async Task A_console_that_fails_at_the_first_notice_still_leaves_every_notice_in_the_Application_log()
     {
-        var console = new ConsoleFailingAt("offer-a.msi");
+        var console = new ConsoleFailingAt(Opening(Strings.Cli_NothingListedPerFile_Singular));
 
         var run = await Run("/s", EveryNotice(), console);
 
-        Assert.True(console.Refused > 0, "The console refused no write, so the list never failed.");
+        Assert.True(console.Refused > 0, "The console refused no write, so the notices were printed.");
         Assert.Equal(CliExitCode.Error, run.ExitCode);
         Assert.Contains(run.Entries, entry => entry.Class == CliEventClass.ScanNothingOfferedNotice);
         Assert.Contains(run.Entries, entry => entry.Class == CliEventClass.SourcesGivenUpNotice);

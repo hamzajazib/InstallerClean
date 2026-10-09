@@ -347,22 +347,18 @@ internal static class Program
     /// <see cref="SourcesGivenUpReport.CommandLine"/>, which the window's line shares its
     /// forms with. A pass that gave none up prints nothing.
     ///
-    /// CALLED FOR THE SCAN AND FOR THE CHECK MADE BEFORE ACTING, each with its own pass's
-    /// list. The two are separate waits and can be on different drives, so a run whose
-    /// scan and check each gave one up prints the line twice, each true of its own pass.
+    /// CALLED FOR THE CHECK MADE BEFORE ACTING. The scan's own line, from the same
+    /// helper, goes out with the scan's other notices (<see cref="ReportScanSignals"/>).
+    /// The two are separate waits and can be on different drives, so a run whose scan and
+    /// check each gave one up prints the line twice, each true of its own pass.
     ///
     /// Deliberately not a machine-read line. <see cref="NoteSourcesGivenUp"/> writes the
     /// same pass to the Application channel in English, and an RMM reads that.
-    ///
-    /// The line goes to <paramref name="lines"/> where one is given, for the caller to
-    /// print, and to the console otherwise.
     /// </summary>
-    internal static void ReportSourcesGivenUp(IReadOnlyList<SourceRootGivenUp> roots, List<string>? lines = null)
+    internal static void ReportSourcesGivenUp(IReadOnlyList<SourceRootGivenUp> roots)
     {
         var line = SourcesGivenUpReport.CommandLine(roots);
-        if (line.Length == 0) return;
-        if (lines is null) Console.WriteLine(line);
-        else lines.Add(line);
+        if (line.Length > 0) Console.WriteLine(line);
     }
 
     /// <summary>
@@ -595,10 +591,53 @@ internal static class Program
             // scan says is worth reporting.
             var wholesale = scanResult.Withholding == WithholdingAccount.WholeWalkOffer;
 
-            if (count > 0)
-                Console.WriteLine(string.Format(
+            string FoundLine() =>
+                string.Format(
                     DisplayHelpers.Pluralise(count, Strings.Cli_FoundOrphans, "Cli.FoundOrphans"),
-                    DisplayHelpers.FormatCount(count), DisplayHelpers.PluraliseFile(count), size));
+                    DisplayHelpers.FormatCount(count), DisplayHelpers.PluraliseFile(count), size);
+
+            // THE NOTICES' APPLICATION-LOG ENTRIES ARE WRITTEN HERE AND THEIR STDOUT LINES
+            // COME BACK TO BE PRINTED, after the line saying what the scan found, or after the
+            // scanning line where no such line is printed. A /s that lists files prints them
+            // ahead of the line counting the files instead, so the list sits straight under
+            // that line and is the last thing printed: the reasons a file was held back are
+            // indented like the rows, and a script reading the rows takes the indented lines
+            // after that line to the end of the output.
+            var notices = ReportScanSignals(arg, scanResult, sourcesGivenUp);
+
+            if (arg == "/s" && count > 0)
+            {
+                notices.ForEach(Console.WriteLine);
+                Console.WriteLine(FoundLine());
+
+                // The name column is measured off this run's own longest name
+                // rather than fixed, because the cache's names are derived from
+                // package identity and vary in length from machine to machine: a
+                // constant is padding every row of one list out and too narrow
+                // for another, and one name past it puts the wandering size and
+                // reason straight back. Only the name is padded and nothing is
+                // right-aligned. Plus two, with the two spaces in the format,
+                // leaves four columns before the bracket: two separates a pair of
+                // words, and reading down sixty-odd rows wants the bracket column
+                // standing clear of the ragged name ends above it. This is the
+                // output most likely to be pasted into a ticket.
+                var nameColumn = scanResult.RemovableFiles.Max(f => f.FileName.Length) + 2;
+                Console.WriteLine(string.Join(Environment.NewLine,
+                    scanResult.RemovableFiles.Select(f =>
+                        $"  {f.FileName.PadRight(nameColumn)}  ({f.SizeDisplay}, {f.Reason})")));
+                // The noun and size are recomputed inside the en-GB scope rather
+                // than reusing the human-facing `size` (which is in the OS
+                // region and grouped), so this audit line reads fully English
+                // and carries the size in the form tooling reads.
+                MachineContract.WriteEventLog(CliEventClass.Ok,
+                    () => string.Format(Strings.Cli_EventLogScanFound,
+                        arg, count, DisplayHelpers.PluraliseFile(count),
+                        DisplayHelpers.FormatSizeForMachine(totalBytes)));
+                return ExitOk;
+            }
+
+            if (count > 0)
+                Console.WriteLine(FoundLine());
             else if (scanResult.HasWithholdingToReport)
                 Console.WriteLine(wholesale
                     ? HeldBackLine(
@@ -610,16 +649,7 @@ internal static class Program
             else if (sourcesGivenUp.Count == 0 && !UnderADayOldReport.HasLine(scanResult))
                 Console.WriteLine(Strings.Cli_FoundNoOrphans);
 
-            // THE NOTICES' APPLICATION-LOG ENTRIES ARE WRITTEN HERE AND THEIR STDOUT LINES
-            // COME BACK TO BE PRINTED. Every run prints them at once, after the line saying what
-            // the scan found, or after the scanning line where no such line is printed, except a
-            // /s that lists files: its list belongs straight under the line counting it, so the
-            // notices, which are about other files, follow the list.
-            var notices = ReportScanSignals(arg, scanResult, sourcesGivenUp);
-            var listFollows = arg == "/s" && count > 0;
-            if (!listFollows)
-                foreach (var line in notices)
-                    Console.WriteLine(line);
+            notices.ForEach(Console.WriteLine);
 
             if (count == 0)
             {
@@ -650,43 +680,6 @@ internal static class Program
                         : sourcesGivenUp.Count > 0
                             ? SourcesGivenUpEventLogLine(arg, sourcesGivenUp)
                             : string.Format(Strings.Cli_EventLogScanNoOrphans, arg));
-                return ExitOk;
-            }
-
-            if (arg == "/s")
-            {
-                // The name column is measured off this run's own longest name
-                // rather than fixed, because the cache's names are derived from
-                // package identity and vary in length from machine to machine: a
-                // constant is padding every row of one list out and too narrow
-                // for another, and one name past it puts the wandering size and
-                // reason straight back. Only the name is padded and nothing is
-                // right-aligned. Plus two, with the two spaces in the format,
-                // leaves four columns before the bracket: two separates a pair of
-                // words, and reading down sixty-odd rows wants the bracket column
-                // standing clear of the ragged name ends above it. This is the
-                // output most likely to be pasted into a ticket.
-                var nameColumn = scanResult.RemovableFiles.Max(f => f.FileName.Length) + 2;
-                Console.WriteLine(string.Join(Environment.NewLine,
-                    scanResult.RemovableFiles.Select(f =>
-                        $"  {f.FileName.PadRight(nameColumn)}  ({f.SizeDisplay}, {f.Reason})")));
-                // A blank line sets the notices off from the rows, so a notice opening with a
-                // count and a bracketed size is not read as the list's total. A list with no
-                // notices after it ends at its last row.
-                if (notices.Count > 0)
-                {
-                    Console.WriteLine();
-                    foreach (var line in notices)
-                        Console.WriteLine(line);
-                }
-                // The noun and size are recomputed inside the en-GB scope rather
-                // than reusing the human-facing `size` (which is in the OS
-                // region and grouped), so this audit line reads fully English
-                // and carries the size in the form tooling reads.
-                MachineContract.WriteEventLog(CliEventClass.Ok,
-                    () => string.Format(Strings.Cli_EventLogScanFound,
-                        arg, count, DisplayHelpers.PluraliseFile(count),
-                        DisplayHelpers.FormatSizeForMachine(totalBytes)));
                 return ExitOk;
             }
 
@@ -1282,9 +1275,9 @@ internal static class Program
     /// condition gives.
     ///
     /// IT WRITES THE APPLICATION-LOG ENTRIES AND RETURNS THE STDOUT LINES, in the order
-    /// they are to be printed, for the caller to print. So where the caller prints them
-    /// later, after a /s list, every entry has still been written before any line is
-    /// printed, and a console that fails while printing costs no entry.
+    /// they are to be printed, for the caller to print where its output needs them. Every
+    /// entry is written before any of the lines is printed, so a console that fails while
+    /// printing them costs none of these entries.
     /// </summary>
     /// <remarks>
     /// Called once, immediately after the scan, so every return the work loop can
@@ -1343,11 +1336,10 @@ internal static class Program
                     arg, heldBack, DisplayHelpers.PluraliseFile(heldBack)));
 
             // THE LEAD, FOR THE MACHINE THAT OTHERWISE HEARS NOTHING. Where the offer
-            // is empty the branch above this method has already said this in the line
-            // it printed instead of the clean one. Where something WAS offered beside
-            // the withheld half, that branch printed "Found N unneeded files" and said
-            // nothing at all about the half that went; this line is where stdout
-            // states it on that machine.
+            // is empty, the line the caller prints in place of the clean one already
+            // says this. Where something WAS offered beside the withheld half, the line
+            // counting what was found says nothing at all about the half that went;
+            // this line is where stdout states it on that machine.
             if (scanResult.RemovableFiles.Count > 0)
                 lines.Add(string.Format(
                     DisplayHelpers.Pluralise(heldBack,
@@ -1403,7 +1395,8 @@ internal static class Program
         // line after the scanning one, standing where the clean line would have been. The
         // window draws its own line under its left-alone count and above its missing-files
         // line, which is this order.
-        ReportSourcesGivenUp(sourcesGivenUp, lines);
+        var givenUp = SourcesGivenUpReport.CommandLine(sourcesGivenUp);
+        if (givenUp.Length > 0) lines.Add(givenUp);
         NoteSourcesGivenUp(arg, sourcesGivenUp, duringTheCheck: false);
 
         // SUPERSEDED FILES HELD BACK, printed wherever the count this line carries is
