@@ -20,12 +20,20 @@ public static class CrashLog
     private static readonly string PrivacyHeader =
         Strings.CrashLog_PrivacyHeader.Replace("\n", Environment.NewLine) + Environment.NewLine;
 
-    private static readonly string LogFolder = Path.Combine(
+    private static readonly string DefaultFolder = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "NoFaff", "InstallerClean");
 
-    private static readonly string LogFile = Path.Combine(LogFolder, "crash.log");
-    private static readonly string ArchiveFile = Path.Combine(LogFolder, "crash.log.old");
+    /// <summary>
+    /// The folder the test suite has the log written to for its whole run, so that no test
+    /// writes into the log of the PC running it. Null everywhere else, which puts the log in
+    /// its own folder under the user's local application data. Nothing in the app sets it.
+    /// </summary>
+    internal static string? FolderForTests { get; set; }
+
+    private static string LogFolder => FolderForTests ?? DefaultFolder;
+    private static string LogFile => Path.Combine(LogFolder, "crash.log");
+    private static string ArchiveFile => Path.Combine(LogFolder, "crash.log.old");
 
     /// <summary>
     /// Where the log lives, for the one caller that needs to recognise the path

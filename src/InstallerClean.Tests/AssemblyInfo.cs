@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using InstallerClean.Helpers;
 
 // Tests run one at a time. The app's chosen language is process-global state:
 // Localisation holds a static override, and every Strings lookup and every
@@ -29,4 +30,18 @@ internal static class TestCulture
         CultureInfo.DefaultThreadCurrentCulture = english;
         CultureInfo.DefaultThreadCurrentUICulture = english;
     }
+}
+
+/// <summary>
+/// Every test that writes the crash log writes it to a folder of this run's own under the
+/// temp folder, never to the log of the PC running the suite. The folder is set before any
+/// test runs, so a test reaching the log by a path nobody planned for is covered too.
+/// Two of CrashLogTests' tests set a folder of their own for their run and put this one back.
+/// </summary>
+internal static class TestCrashLog
+{
+    [ModuleInitializer]
+    internal static void Redirect() =>
+        CrashLog.FolderForTests = Path.Combine(
+            Path.GetTempPath(), "InstallerClean.Tests", Guid.NewGuid().ToString("N"));
 }
