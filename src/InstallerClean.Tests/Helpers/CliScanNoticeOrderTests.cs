@@ -155,32 +155,6 @@ public class CliScanNoticeOrderTests
     private static string Opening(string value) =>
         value.Contains('{') ? value[..value.IndexOf('{')] : value;
 
-    /// <summary>
-    /// A console that takes every write until one carrying <paramref name="text"/>, and
-    /// throws on that one, as a write to a redirected standard output on a full disk does.
-    /// <see cref="Refused"/> counts the writes it threw on.
-    /// </summary>
-    private sealed class ConsoleFailingAt(string text) : StringWriter
-    {
-        public int Refused { get; private set; }
-
-        public override void Write(string? value)
-        {
-            if (value is not null && value.Contains(text, StringComparison.Ordinal))
-            {
-                Refused++;
-                throw new IOException("There is not enough space on the disk.");
-            }
-            base.Write(value);
-        }
-
-        public override void WriteLine(string? value)
-        {
-            Write(value);
-            base.WriteLine();
-        }
-    }
-
     private sealed record RunResult(
         int ExitCode, string Stdout, IReadOnlyList<(CliEventClass Class, string Text)> Entries);
 
@@ -217,12 +191,13 @@ public class CliScanNoticeOrderTests
             : new CliInvocation(CliCommand.ScanOnly, null, null);
 
         // Console.SetOut and the recorder are process-global; the assembly disables test
-        // parallelisation, which is what makes both safe to read back here.
+        // parallelisation, which is what makes both safe to read back here. A failing
+        // console goes behind the guard, as Main puts the console there.
         var original = Console.Out;
         using var buffer = console ?? new StringWriter();
         try
         {
-            Console.SetOut(buffer);
+            Console.SetOut(console is null ? buffer : new ConsoleGuard(buffer));
             EventLogRecorder.Clear();
             var exitCode = await Program.RunWorkAsync(arg, invocation, CancellationToken.None, services);
             return new RunResult(exitCode, buffer.ToString(), EventLogRecorder.Entries);

@@ -32,22 +32,26 @@ internal static class Program
     public static int Main(string[] args)
     {
         // A throw from Run outside the work loop (a name or ACL clash constructing
-        // the single-instance mutex, say, or an unwritable stdout in the cleanup
-        // finally) would otherwise reach the runtime's default handler:
-        // ex.ToString() to stderr (a cross-profile path leak under elevation), no
-        // Application-log record, and an undocumented exit code no RMM can branch
-        // on. Route any such throw through the same crash-log + audit + ExitError
-        // path the work loop uses. Run holds the single-instance mutex on this
-        // thread (acquire and release both here, per the Win32 owner-thread rule)
-        // and RunWorkAsync owns its own catch-all, so the work itself never lands
-        // here: only Run's pre-flight and its cleanup can.
+        // the single-instance mutex, say) would otherwise reach the runtime's
+        // default handler: ex.ToString() to stderr (a cross-profile path leak under
+        // elevation), no Application-log record, and an undocumented exit code no
+        // RMM can branch on. Route any such throw through the same crash-log +
+        // audit + ExitError path the work loop uses. Run holds the single-instance
+        // mutex on this thread (acquire and release both here, per the Win32
+        // owner-thread rule) and RunWorkAsync owns its own catch-all, so the work
+        // itself never lands here: only Run's pre-flight and its cleanup can.
         //
         // The code page is set and restored around all of that, the catch-all
         // included, so the crash line still goes out in UTF-8 and the console is
         // handed back last.
+        //
+        // EVERYTHING THE RUN PRINTS GOES THROUGH ConsoleGuard, installed after the
+        // code page is set. A write that fails ends the output and never the run, so
+        // no failed write reaches this catch-all or the work loop's.
         var previousOutputEncoding = TrySetUtf8Output();
         try
         {
+            Console.SetOut(new ConsoleGuard(Console.Out));
             return Run(args);
         }
         catch (Exception ex)
@@ -436,9 +440,11 @@ internal static class Program
     /// <summary>
     /// Prints the one stdout audit line saying the Application channel was
     /// unwritable, so an RMM consumer polling for entries that never arrived has
-    /// a record of why. Guarded, and every caller relies on that: each has
-    /// already written this run's Application-log entry, and a throw from a dead
-    /// stdout would reach <see cref="Main"/>'s catch-all and produce a second.
+    /// a record of why. Every caller has already written this run's Application-log
+    /// entry, so a throw from here would reach <see cref="Main"/>'s catch-all and
+    /// write a second. Every caller runs inside Main, where <see cref="ConsoleGuard"/>
+    /// takes a failed write first, and the note carries a guard of its own as well,
+    /// so the one entry does not rest on the console guard being in place.
     /// </summary>
     private static void NoteEventLogUnavailable()
     {
@@ -631,12 +637,11 @@ internal static class Program
                 // BEFORE ANY LINE IS PRINTED, so this run writes one summary however its output
                 // ends. A line that cannot be built, a translation whose placeholders do not
                 // match its arguments for example, throws ahead of the summary, and the
-                // catch-all's entry is the run's one. A write that fails after it, such as a
-                // redirect to a full disk, goes to crash.log and the run ends on the summary
-                // with ExitOk: a failed write is a fact about the console and not about the
-                // scan, as it is for the progress lines of a delete or a move. Letting it reach
-                // the catch-all writes a HardError entry beside the summary, and one summary per
-                // run is what an RMM counts runs by.
+                // catch-all's entry is the run's one. Building a line after the summary would
+                // let such a fault write a HardError entry beside it, and one summary per run is
+                // what an RMM counts runs by. A write that fails, such as a redirect to a full
+                // disk, ends the output and not the run (ConsoleGuard), and the run ends on the
+                // summary with ExitOk.
                 //
                 // The noun and size are recomputed inside the en-GB scope rather than reusing
                 // the human-facing `size` (which is in the OS region and grouped), so this
@@ -646,14 +651,7 @@ internal static class Program
                     () => string.Format(Strings.Cli_EventLogScanFound,
                         arg, count, DisplayHelpers.PluraliseFile(count),
                         DisplayHelpers.FormatSizeForMachine(totalBytes)));
-                try
-                {
-                    output.ForEach(Console.WriteLine);
-                }
-                catch (Exception ex)
-                {
-                    Helpers.CrashLog.TryWrite(ex);
-                }
+                output.ForEach(Console.WriteLine);
                 return ExitOk;
             }
 
@@ -781,11 +779,13 @@ internal static class Program
             // print after the post-await summary ("Deleted N files."),
             // breaking the stdout line order an RMM scrapes.
             totalToProcess = count;
-            // Guarded like every other console write in this host, and with a
-            // sharper reason than the rest: the action services report from inside
-            // their per-file try, so a throw out of this handler is filed as a
-            // per-file error against a file that is perfectly fine. A dead stdout
-            // is a fact about the console and never about the file being deleted.
+            // Guarded here as well as by ConsoleGuard. In a run from Main the guard
+            // takes a failed write before this handler sees it; RunWorkAsync also
+            // runs without the guard, as the tests run it, and there a throw out of
+            // this handler is filed as a per-file error against a file that is
+            // perfectly fine, the action services reporting from inside their
+            // per-file try. A failed write is a fact about the console and never
+            // about the file being deleted.
             //
             // One crash-log entry per run rather than one per file. Whatever stops
             // stdout accepting a line stops it for every remaining report, so an
@@ -1560,8 +1560,7 @@ internal static class Program
     /// code rather than a runtime abort with an undocumented one. Safe to call
     /// after the console itself has failed (the stdout write is guarded, and
     /// <see cref="CrashLog.TryWrite"/> and <see cref="EventLogWriter"/> both
-    /// swallow their own IO), which is the state a pre-flight console failure
-    /// leaves behind.
+    /// swallow their own IO).
     /// </summary>
     private static int ReportUnexpectedError(string mode, Exception ex)
     {
