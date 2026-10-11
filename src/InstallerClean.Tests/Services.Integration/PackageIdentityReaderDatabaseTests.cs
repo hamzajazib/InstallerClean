@@ -7,7 +7,8 @@ namespace InstallerClean.Tests.Services.Integration;
 
 /// <summary>
 /// The real reader against small databases built here with msi.dll: what it answers for an
-/// installation package whose Property table gives no usable ProductCode, for a patch whose
+/// installation package whose Property table gives no usable ProductCode, the package code it
+/// reads from an installation package's summary stream, what it answers for a patch whose
 /// summary stream gives no usable code or target, and for a file it cannot read. Each database
 /// is built by the calls below, every one of which must succeed, so a fixture that did not
 /// build fails the test rather than reading as a file that would not open.
@@ -177,13 +178,65 @@ public sealed class PackageIdentityReaderDatabaseTests : IDisposable
         Assert.Equal("patch names no target product", detail);
     }
 
+    [Fact]
+    public void A_package_s_package_code_is_its_revision_number_in_upper_case()
+    {
+        var path = APackageRevised(
+            "{abcdef01-2345-6789-abcd-ef0123456789}", ("ProductCode", WellFormedCode));
+
+        Assert.Equal("{ABCDEF01-2345-6789-ABCD-EF0123456789}", Reader.PackageCodeOf(path));
+        // The product code reads as it does without the package code.
+        Assert.Equal(WellFormedCode, Reader.Read(path, isPatch: false, out _, out _)?.Code);
+    }
+
+    [Fact]
+    public void A_package_with_no_revision_number_has_no_package_code()
+    {
+        var path = APackageRevised(null, ("ProductCode", WellFormedCode));
+
+        Assert.Null(Reader.PackageCodeOf(path));
+    }
+
+    [Fact]
+    public void A_file_that_will_not_open_has_no_package_code()
+    {
+        var path = Path.Combine(_folder, "not-a-package.msi");
+        File.WriteAllText(path, "not a database");
+
+        Assert.Null(Reader.PackageCodeOf(path));
+        Assert.Null(Reader.PackageCodeOf(Path.Combine(_folder, "absent.msi")));
+    }
+
+    [Theory]
+    [InlineData("not-a-guid")]
+    [InlineData("{ABCDEF01-2345-6789-ABCD-EF0123456789}{ABCDEF01-2345-6789-ABCD-EF0123456789}")]
+    [InlineData(" {ABCDEF01-2345-6789-ABCD-EF0123456789}")]
+    public void A_package_whose_revision_number_is_not_one_braced_GUID_has_no_package_code(string revision)
+    {
+        var path = APackageRevised(revision, ("ProductCode", WellFormedCode));
+
+        Assert.Null(Reader.PackageCodeOf(path));
+    }
+
     /// <summary>A database whose Property table holds the rows given.</summary>
     private string APackage(params (string Property, string Value)[] rows) =>
-        ADatabase(
-        [
-            "CREATE TABLE `Property` (`Property` CHAR(72) NOT NULL, `Value` LONGCHAR NOT NULL LOCALIZABLE PRIMARY KEY `Property`)",
-            .. rows.Select(row => $"INSERT INTO `Property` (`Property`, `Value`) VALUES ('{row.Property}', '{row.Value}')"),
-        ]);
+        ADatabase(PropertyTable(rows));
+
+    /// <summary>
+    /// A database whose Property table holds the rows given and whose summary stream holds the
+    /// revision number given as text, or leaves it unset where it is null.
+    /// </summary>
+    private string APackageRevised(string? revisionNumber, params (string Property, string Value)[] rows) =>
+        ADatabase(PropertyTable(rows), summary =>
+        {
+            if (revisionNumber is not null) SetText(summary, MsiSummaryProperty.RevisionNumber, revisionNumber);
+        });
+
+    private static string[] PropertyTable((string Property, string Value)[] rows) =>
+    [
+        "CREATE TABLE `Property` (`Property` CHAR(72) NOT NULL, `Value` LONGCHAR NOT NULL LOCALIZABLE PRIMARY KEY `Property`)",
+        .. rows.Select(row => $"INSERT INTO `Property` (`Property`, `Value`) VALUES ('{row.Property}', '{row.Value}')"),
+    ];
 
     /// <summary>
     /// A database whose summary stream holds the revision number and Template given as text,

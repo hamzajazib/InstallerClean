@@ -233,7 +233,8 @@ public static class MsiSummaryProperty
     public const uint Template = 7;
 
     /// <summary>
-    /// PID_REVNUMBER. On a patch this begins with the patch code, followed by
+    /// PID_REVNUMBER. On an installation package it is the package code, one
+    /// braced GUID. On a patch it begins with the patch code, followed by
     /// the codes of the patches it obsoletes and then the package code, all as
     /// braced GUIDs run together with no separator. The leading 38 characters
     /// are therefore the patch's own identity, and a value whose length is not a

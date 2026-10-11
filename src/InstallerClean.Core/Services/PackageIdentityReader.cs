@@ -149,6 +149,32 @@ public sealed class PackageIdentityReader : IPackageIdentityReader
         }
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// The summary information is opened read-only, by path, without opening the database,
+    /// and only the one property is read.
+    /// </remarks>
+    public string? PackageCodeOf(string filePath)
+    {
+        uint hSummary = 0;
+        try
+        {
+            if (Msi.MsiGetSummaryInformation(hDatabase: 0, filePath, 0, out hSummary) != MsiError.Success) return null;
+
+            return ReadSummaryString(hSummary, MsiSummaryProperty.RevisionNumber, out var revision) == SummaryString.Text
+                ? Canonicalise(revision)
+                : null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+        finally
+        {
+            if (hSummary != 0) Msi.MsiCloseHandle(hSummary);
+        }
+    }
+
     /// <summary>
     /// A patch's own code and the products it declares it may be applied to, both
     /// out of its summary-information stream.
