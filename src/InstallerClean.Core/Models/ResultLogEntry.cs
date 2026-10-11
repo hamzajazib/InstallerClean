@@ -109,9 +109,14 @@ public sealed record ResultLogEntry(
     /// because their <c>InstallProperties</c> key records none as well and every package their
     /// sources name was seen, and for each of the rest what kept it.
     /// <c>scan.secondCopyKeepNoneRecordedCount</c> AND <c>scan.secondCopyUnseenNoneRecordedCount</c>
-    /// NARROW AT 8. From 8 an installation recording no cached package is counted in either only
-    /// where its <c>InstallProperties</c> key does not show it records none as well, or a source it
-    /// names could not be ruled out. After those come the keys saying why the screen kept each file
+    /// NARROW AT 8. From 8 an installation recording no cached package is counted in the first only
+    /// where its <c>InstallProperties</c> key does not show it records none as well, or its sources
+    /// could not all be seen, and in the second only where the key does not show it.
+    /// <c>scan.secondCopyUnseenPerUserUnmanagedCount</c>,
+    /// <c>scan.secondCopyUnseenSourcesGivenUpCount</c> AND
+    /// <c>scan.secondCopyUnseenSourceNotRuledOutCount</c> WIDEN AT 8: from 8 they also count an
+    /// installation recording no cached package whose key shows it records none, by the source
+    /// step that stopped the read. After those come the keys saying why the screen kept each file
     /// counted in <c>scan.withheldDeclaredProductInstalledCount</c>, one key to a file
     /// (<see cref="ScanInfo.DeclaredInstalledIsItsCachedPackageCount"/> to
     /// <see cref="ScanInfo.DeclaredInstalledByNameCount"/>).
@@ -1229,7 +1234,8 @@ public sealed record MachineInfo(
 /// </param>
 /// <param name="SecondCopyUnseenNoneRecordedCount">
 /// The installation records no cached package, and its <c>InstallProperties</c> key does not show
-/// it records none as well, or a source it names could not be ruled out.
+/// it records none as well. One whose key shows it, and whose sources stopped the read, is counted
+/// in the key for the source step that stopped it.
 /// </param>
 /// <param name="SecondCopyUnseenNotThereCount">The cached package's path names no file that is there.</param>
 /// <param name="SecondCopyUnseenWouldNotIdentifyCount">
@@ -1267,8 +1273,9 @@ public sealed record MachineInfo(
 /// </param>
 /// <param name="SecondCopyReleasedOpensNoPackageCount">
 /// Installations which do not set the hold because Windows Installer has no package to open
-/// for them, whatever their own record shows: per machine, recording no cached package, and
-/// with no source list, by the API's answer and in the registry alike
+/// for them, whatever their own record shows: per machine, recording no cached package, with no
+/// <c>InstallProperties</c> key, and with no source list, by the API's answer and in the registry
+/// alike
 /// (<see cref="CachedPackageCensus.ReleasedOpensNoPackage"/>). Each is also counted in
 /// <paramref name="SecondCopyListedCheckedCount"/>, and in none of the keys from
 /// <paramref name="SecondCopyKeepPathUnreadableCount"/> to
@@ -1301,13 +1308,15 @@ public sealed record MachineInfo(
 /// The same, not counted in <paramref name="SecondCopyKeepNoneRecordedOtherAnswerCount"/>, where
 /// the registry does not agree with Windows Installer: the installation's <c>InstallProperties</c>
 /// key holds a cached package, or, per machine where Windows Installer answered
-/// <c>ERROR_BAD_CONFIGURATION</c>, its <c>SourceList</c> key is there; or a key could not be read.
+/// <c>ERROR_BAD_CONFIGURATION</c>, its <c>InstallProperties</c> key or its <c>SourceList</c> key is
+/// there; or a key could not be read.
 /// Per user as well as per machine.
 /// </param>
 /// <param name="SecondCopyKeepNoneRecordedSourcesNotRuledOutCount">
 /// The rest of them: per user, or per machine where Windows Installer answered with the package
 /// name, and in each case, the <c>InstallProperties</c> key recording none as well, a source the
-/// screen could not rule out, a drive or share given up for the scan included.
+/// screen could not rule out, a per-user unmanaged installation and a drive or share given up for
+/// the scan included.
 /// </param>
 /// <param name="DeclaredInstalledIsItsCachedPackageCount">
 /// Of the files in <paramref name="WithheldDeclaredProductInstalledCount"/>, those that open as the
@@ -1362,8 +1371,9 @@ public sealed record MachineInfo(
 /// product's or a patch (<see cref="DeclaredProductInstalledCauses.NotThisProduct"/>).
 /// </param>
 /// <param name="DeclaredInstalledSourcesPerUserUnmanagedCount">
-/// Those whose program has a per-user unmanaged installation, whose source list is not read
-/// (<see cref="DeclaredProductInstalledCauses.SourcesPerUserUnmanaged"/>).
+/// Those whose program has a per-user unmanaged installation, whose source list is not read,
+/// and which, where it records no cached package, has an <c>InstallProperties</c> key recording
+/// none as well (<see cref="DeclaredProductInstalledCauses.SourcesPerUserUnmanaged"/>).
 /// </param>
 /// <param name="DeclaredInstalledSourcesGivenUpCount">
 /// Those whose program has an installation with a package at a source, read for every file

@@ -72,7 +72,11 @@ public enum DeclaredProductInstalledCause
     /// </summary>
     NotThisProduct,
 
-    /// <summary>An installation is per user and unmanaged, a context whose source list is not read.</summary>
+    /// <summary>
+    /// An installation is per user and unmanaged, a context whose source list is not read, and,
+    /// where it records no cached package, its <c>InstallProperties</c> key records none as well.
+    /// One whose key does not show that gives <see cref="NoneRecordedRegistryDisagrees"/>.
+    /// </summary>
     SourcesPerUserUnmanaged,
 
     /// <summary>

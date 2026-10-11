@@ -555,6 +555,31 @@ public class DeclaredProductCheckTests
         Assert.Equal(machineOnly, f.Msi.SourceListWalks);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_copy_is_kept_beside_a_per_user_unmanaged_installation_recording_no_package_for_what_its_key_holds(
+        bool keyHoldsOne)
+    {
+        // The copy that is let through above, with the second installation per user and
+        // unmanaged and recording no cached package. Its InstallProperties key is read first,
+        // and its source list, in that context, is not read at all.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Installed(ProductA,
+            (null, MsiInstallContext.Machine),
+            (UserSid, MsiInstallContext.UserUnmanaged));
+        f.Msi.RecordsPackage(ProductA, UserSid, MsiInstallContext.UserUnmanaged, string.Empty);
+        var usersProperties = InstallPropertiesKey("11111111111111111111111111111111", UserSid);
+        if (keyHoldsOne) PropertiesShow(f.Msi.Registry, usersProperties, PropertiesFault.HoldsACachedPackage);
+        else f.Msi.Registry.Holds(usersProperties);
+
+        AssertKeptFor(
+            keyHoldsOne
+                ? DeclaredProductInstalledCause.NoneRecordedRegistryDisagrees
+                : DeclaredProductInstalledCause.SourcesPerUserUnmanaged,
+            f);
+    }
+
     [Fact]
     public void A_copy_is_kept_when_one_installation_records_no_package_and_its_sources_cannot_be_ruled_out()
     {
@@ -3302,6 +3327,13 @@ public class DeclaredProductCheckTests
     /// </summary>
     public enum CachedPackageFault { ReadFails, NamesNoPackage, NotAFile, NoIdentity, APatch, NoCode, MalformedCode }
 
+    /// <summary>
+    /// The InstallProperties key of the installation under <see cref="SecondCopy"/> in
+    /// <paramref name="sid"/>'s account, or per machine where it is null.
+    /// </summary>
+    private static string SecondCopysProperties(string? sid) =>
+        InstallPropertiesKey("33333333333333333333333333333333", sid ?? "S-1-5-18");
+
     private static void Break(
         (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
             ScriptedFileIdentities Files, MockFileSystem Disk, ListedInstallation[] Listed) f,
@@ -3313,7 +3345,11 @@ public class DeclaredProductCheckTests
                 f.Msi.PackageReadAnswers(SecondCopy, sid, context, MsiError.AccessDenied);
                 break;
             case CachedPackageFault.NamesNoPackage:
+                // Its InstallProperties key records no cached package either. The fake holds that
+                // key as the API answers it per machine and per user managed, and an unmanaged
+                // installation's is scripted here.
                 f.Msi.RecordsPackage(SecondCopy, sid, context, string.Empty);
+                if (context == MsiInstallContext.UserUnmanaged) f.Msi.Registry.Holds(SecondCopysProperties(sid));
                 break;
             case CachedPackageFault.NotAFile:
                 f.Disk.RemoveFile(SecondCopysPackage);
@@ -4072,7 +4108,7 @@ public class DeclaredProductCheckTests
         Assert.Equal(
             noSources
                 ? Census(opensNoPackage: 1, unruled: 1)
-                : Census(released: 1, unruled: 1, unseenNoneRecorded: 1, unseenPerMachine: 1),
+                : Census(released: 1, unruled: 1, unseenSourceNotRuledOut: 1, unseenPerMachine: 1),
             screening.CachedPackages);
     }
 
@@ -4108,7 +4144,7 @@ public class DeclaredProductCheckTests
             .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
 
         Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
-        Assert.Equal(Census(opensNoPackage: 1, unruled: 1, unseenNoneRecorded: 1, unseenPerMachine: 1),
+        Assert.Equal(Census(opensNoPackage: 1, unruled: 1, unseenSourceNotRuledOut: 1, unseenPerMachine: 1),
             screening.CachedPackages);
     }
 
@@ -4156,8 +4192,11 @@ public class DeclaredProductCheckTests
     }
 
     [Fact]
-    public void An_InstallProperties_key_holding_no_cached_package_shows_there_is_none_as_an_absent_key_does()
+    public void A_registration_with_no_source_list_and_an_InstallProperties_key_keeps_every_installation_package()
     {
+        // The key is there and holds no cached package. Only an absent key, beside an absent
+        // SourceList key, shows that Windows Installer has no package to open for it, so it is
+        // judged by its sources, whose package name Windows Installer does not answer.
         var f = ACopyBesideOfficesFeatureRegistration();
         f.Msi.Registry.Holds(OfficeFeaturesInstallProperties,
             new RegistryValue("DisplayName", RegistryValueKind.String, "Office"));
@@ -4165,8 +4204,27 @@ public class DeclaredProductCheckTests
         var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
             .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
 
-        Assert.Equal(DeclaredProductOutcome.DeclaredProductNotInstalled, screening.Outcomes[0]);
-        Assert.Equal(Census(opensNoPackage: 1), screening.CachedPackages);
+        Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
+        Assert.Equal(Census(noneRecorded: 1, packageCodeUnanswered: 1, perMachine: 1, keptRegistryDisagrees: 1),
+            screening.CachedPackages);
+        Assert.Equal(new[] { (OfficeFeatures, (string?)null, MsiInstallContext.Machine) }, f.Msi.PackageNameReads);
+    }
+
+    [Fact]
+    public void A_copy_declaring_the_code_of_a_registration_with_no_source_list_and_an_InstallProperties_key_is_kept()
+    {
+        var f = ACopyBesideOfficesFeatureRegistration();
+        f.Packages.Declares(Candidate, OfficeFeatures);
+        f.Msi.Installed(OfficeFeatures);
+        f.Msi.AnswersItsOwnRecord(OfficeFeatures, null, MsiInstallContext.Machine);
+        f.Msi.Registry.Holds(OfficeFeaturesInstallProperties,
+            new RegistryValue("DisplayName", RegistryValueKind.String, "Office"));
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+
+        Assert.Equal((DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.SourcesWouldNotRead),
+            (screening.Outcomes[0], screening.InstalledCauses[0]));
     }
 
     [Theory]
@@ -4194,8 +4252,9 @@ public class DeclaredProductCheckTests
         "the installation records no cached package, and Windows Installer answered 1605 when asked its "
         + "source list's package name")]
     [InlineData(NoPackageFault.SourceListThere,
-        "the installation records no cached package, and the registry holds a cached package or a source "
-        + "list where Windows Installer answers that it has none, or a key would not read")]
+        "the installation records no cached package, and the registry does not agree: it holds a cached "
+        + "package for the installation, or its InstallProperties key or source list where Windows Installer "
+        + "answers that it has no source list, or a key would not read")]
     [InlineData(NoPackageFault.PackageNameRead,
         "the installation records no cached package, and a source it names could not be ruled out")]
     public void A_registration_with_no_cached_package_is_logged_by_the_answer_that_kept_it(
@@ -4483,7 +4542,7 @@ public class DeclaredProductCheckTests
         var screening = ScreenBesideIt(f);
 
         Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
-        Assert.Equal(Census(released: 1, unruled: 1, unseenNoneRecorded: 1, unseenPerMachine: 1),
+        Assert.Equal(Census(released: 1, unruled: 1, unseenSourceNotRuledOut: 1, unseenPerMachine: 1),
             screening.CachedPackages);
     }
 
@@ -4582,8 +4641,9 @@ public class DeclaredProductCheckTests
         Assert.Equal(
             new[]
             {
-                "the installation records no cached package, and the registry holds a cached package or a source "
-                + "list where Windows Installer answers that it has none, or a key would not read",
+                "the installation records no cached package, and the registry does not agree: it holds a cached "
+                + "package for the installation, or its InstallProperties key or source list where Windows "
+                + "Installer answers that it has no source list, or a key would not read",
             },
             recorded);
         Assert.Empty(f.Msi.PackageNameReads);
@@ -5144,6 +5204,55 @@ public class DeclaredProductCheckTests
             .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder).CachedPackages;
 
         Assert.Equal(Census(unruled: 1, unseenPerUserUnmanaged: 1), census);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_per_user_unmanaged_installation_with_no_cached_package_is_counted_by_what_its_key_holds(
+        bool keyHoldsOne)
+    {
+        // Another account's installation, whose record is not read and whose source list is not
+        // read in that context, so it keeps every installation package whatever its key holds.
+        var f = ACopyBesideASecondCopy();
+        Break(f, CachedPackageFault.NamesNoPackage, OtherUserSid, MsiInstallContext.UserUnmanaged);
+        if (keyHoldsOne)
+            PropertiesShow(f.Msi.Registry, SecondCopysProperties(OtherUserSid), PropertiesFault.HoldsACachedPackage);
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, SomebodyElse)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+
+        Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
+        Assert.Equal(
+            keyHoldsOne
+                ? Census(noneRecorded: 1, anotherAccount: 1, keptRegistryDisagrees: 1)
+                : Census(noneRecorded: 1, anotherAccount: 1, keptSourcesNotRuledOut: 1),
+            screening.CachedPackages);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_per_user_unmanaged_second_copy_with_no_cached_package_is_counted_by_what_its_key_holds(
+        bool keyHoldsOne)
+    {
+        // The account the check runs as owns it and its record reads as ordinary, so it sets no
+        // hold and its packages are read for every candidate.
+        var f = AMarkedSecondCopy(MsiInstallContext.UserUnmanaged);
+        Break(f, CachedPackageFault.NamesNoPackage, OtherUserSid, MsiInstallContext.UserUnmanaged);
+        f.Msi.AnswersItsOwnRecord(SecondCopy, OtherUserSid, MsiInstallContext.UserUnmanaged);
+        if (keyHoldsOne)
+            PropertiesShow(f.Msi.Registry, SecondCopysProperties(OtherUserSid), PropertiesFault.HoldsACachedPackage);
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+
+        Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
+        Assert.Equal(
+            keyHoldsOne
+                ? Census(released: 1, unruled: 1, unseenNoneRecorded: 1)
+                : Census(released: 1, unruled: 1, unseenPerUserUnmanaged: 1),
+            screening.CachedPackages);
     }
 
     [Fact]

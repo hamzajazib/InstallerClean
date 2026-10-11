@@ -42,7 +42,8 @@ namespace InstallerClean.Services;
 /// spelling. An installation whose value is empty records no cached package and opens
 /// what its sources name, so it keeps the file only where its <c>InstallProperties</c> key
 /// does not show that it records none as well, or where a source cannot be ruled out, and
-/// not at all where it is shown to have no source list either. It is kept too while
+/// not at all where it is shown to have no source list and no <c>InstallProperties</c> key
+/// either. It is kept too while
 /// some source cannot be ruled out: one in the Installer folder itself, one naming this
 /// file, one that cannot be read, one whose package does not answer within the check's
 /// time limit, and one on a
@@ -113,7 +114,7 @@ namespace InstallerClean.Services;
 /// installation, or it records no cached package and has no package to open at all. A
 /// per-user installation keeps that record under its owner's account, and it is read only
 /// where the owner is the account this process runs as. One that records no cached package
-/// and has a source list opens what its sources name, so where its <c>InstallProperties</c>
+/// and has a package to open is judged by its sources, so where its <c>InstallProperties</c>
 /// key records none as well and every package they name can be seen, every installation
 /// package is compared with those packages instead, as with the installations below.
 ///
@@ -300,9 +301,9 @@ public enum DeclaredProductOutcome
     /// enumeration listed no installation of it, and no cached package the check read,
     /// of the installations it listed, declares it, every one whose cached package did
     /// not read being shown by its own record to be an ordinary installation, or shown to
-    /// record no cached package and have no source list, so that it opens none, or to record
-    /// none, in its <c>InstallProperties</c> key as well, and open only packages its sources
-    /// name that the check saw. Every installation
+    /// record no cached package and have no source list or <c>InstallProperties</c> key, so
+    /// that it opens none, or to record none, in its <c>InstallProperties</c> key as well, and
+    /// open only packages its sources name that the check saw. Every installation
     /// the caller could not rule out as a second copy opens packages the check saw, and this
     /// file is shown to be a different file from all of those packages. The candidate goes
     /// on being decided by everything else.
@@ -326,7 +327,8 @@ public enum DeclaredProductOutcome
     /// declares another product, and one naming this very file under another spelling. An
     /// empty value is covered where the installation's <c>InstallProperties</c> key holds a
     /// cached package or will not read, and otherwise through its sources, below; it is not
-    /// covered at all for an installation that has no source list either.
+    /// covered at all for an installation that has no source list and no
+    /// <c>InstallProperties</c> key either.
     /// It covers a source list or package name that will not read, a source whose package
     /// is this file, will not identify or does not answer within the check's time limit, a
     /// source on a drive or share the check has stopped reading for the pass (a read there
@@ -393,8 +395,8 @@ public enum DeclaredProductOutcome
     ///
     /// AN INSTALLATION WITH NEITHER IS LEFT OUT OF ALL OF THIS. A per-machine installation
     /// that records no cached package and has no source list, by the API's answer and in
-    /// the registry alike, opens no package, so there is none for this file to be. Every
-    /// other installation of the product is read as above.
+    /// the registry alike, and no <c>InstallProperties</c> key, opens no package, so there is
+    /// none for this file to be. Every other installation of the product is read as above.
     ///
     /// EVERY INSTALLATION, NOT ONE. One code can name a per-machine installation and
     /// per-user installations under several accounts, each recording its own
@@ -515,7 +517,8 @@ public enum DeclaredProductOutcome
     /// of a program opens packages the check could not all see, or an installation's
     /// cached package does not say which product it declares, its own record does not
     /// show it to be an ordinary installation, and it is not shown to record no cached
-    /// package and either have no source list or have sources whose packages the check saw.
+    /// package and either have no source list or <c>InstallProperties</c> key or have sources
+    /// whose packages the check saw.
     /// Kept back.
     ///
     /// IT IS ABOUT ANOTHER INSTALLATION AND NOT ABOUT THIS FILE. Such an installation

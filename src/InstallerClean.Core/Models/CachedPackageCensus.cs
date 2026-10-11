@@ -96,8 +96,8 @@ namespace InstallerClean.Models;
 /// </param>
 /// <param name="UnseenNoneRecorded">
 /// The read stopped at an installation that records no cached package and has a package to open,
-/// and has an <c>InstallProperties</c> key that does not show it records none as well, or a
-/// source the check cannot rule out.
+/// and has an <c>InstallProperties</c> key that does not show it records none as well. One whose
+/// key shows it, and whose sources stopped the read, is counted by the source step that stopped it.
 /// </param>
 /// <param name="UnseenNotThere">
 /// The read stopped at an installation whose cached package's path names no file that is there.
@@ -141,8 +141,9 @@ namespace InstallerClean.Models;
 /// </param>
 /// <param name="ReleasedOpensNoPackage">
 /// Installations which do not set the hold because Windows Installer has no package to open for
-/// them, whatever their own record shows: per machine, recording no cached package, and with no
-/// source list, both by the API's answer and in the registry.
+/// them, whatever their own record shows: per machine, recording no cached package, with no
+/// <c>InstallProperties</c> key, and with no source list, both by the API's answer and in the
+/// registry.
 /// </param>
 /// <param name="ReleasedBySources">
 /// Installations recording no cached package, with a package to open and a record that does not
@@ -161,7 +162,8 @@ namespace InstallerClean.Models;
 /// <see cref="KeptNoneRecordedOtherAnswer"/>, those whose registry does not agree with Windows
 /// Installer: the installation's <c>InstallProperties</c> key holds a cached package, or, per
 /// machine where the source-list API answered <c>ERROR_BAD_CONFIGURATION</c>, its
-/// <c>SourceList</c> key is there; or a key could not be read. Per user as well as per machine.
+/// <c>InstallProperties</c> key or its <c>SourceList</c> key is there; or a key could not be read.
+/// Per user as well as per machine.
 /// </param>
 /// <param name="KeptNoneRecordedSourcesNotRuledOut">
 /// Of the installations counted in <see cref="KeptNoneRecorded"/>, the rest: per user, or checked
