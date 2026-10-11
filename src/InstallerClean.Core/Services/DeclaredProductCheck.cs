@@ -1576,8 +1576,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// or a path on the network can name a file Windows Installer opens while the text read
     /// here names nothing, and a read on the network can wait on a server. A key that does
     /// not read, or holds the cached package otherwise than the API answers it, does not
-    /// show which package the installation records. Every one of them keeps every candidate,
-    /// and so does a check built without its registry reader.
+    /// show which package the installation records. A path on a drive the pass has given up
+    /// is not read (<see cref="PassAnswers.IsGivenUp"/>). Every one of them keeps every
+    /// candidate, and so does a check built without its registry reader.
     /// </summary>
     private bool NamesNothing(
         string path, string code, string? sid, MsiInstallContext context, PassAnswers pass)
@@ -1585,7 +1586,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (_registry is null || _fileIdentities is null) return false;
         if (path.Length < 4 || !IsDriveLetter(path[..2]) || path[2] != '\\'
             || path.IndexOfAny(['%', '\0']) >= 0
-            || !IsLocalDrive(RootOf(path), pass))
+            || !IsLocalDrive(RootOf(path), pass)
+            || pass.IsGivenUp(RootOf(path)))
             return false;
 
         if (_fileIdentities.ReadOutcome(path, out _) != FileIdentityRead.NamesNothing) return false;

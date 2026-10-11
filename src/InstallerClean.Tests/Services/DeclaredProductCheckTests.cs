@@ -1093,6 +1093,39 @@ public class DeclaredProductCheckTests
         Assert.Equal([("E:", 1)], screening.RootsGivenUp.Select(given => (given.Root, given.FilesKept)));
     }
 
+    [Fact]
+    public void A_recorded_package_naming_nothing_on_a_drive_already_given_up_is_not_read()
+    {
+        // Product B's source on E: is held past the limit and screened first, so E: is given up
+        // before product A's recorded package there is asked about.
+        const string RecordedOnE = @"E:\Windows\Installer\b.msi";
+        const string OtherCandidate = @"C:\Windows\Installer\b2.msi";
+        const string OtherRecorded = @"C:\Windows\Installer\b3.msi";
+        const string HeldSource = @"E:\setup\b2.msi";
+        var f = ARecordedPackageNamingNothingAt(RecordedOnE);
+        f.Msi.Installed(ProductB);
+        f.Msi.RecordsPackage(ProductB, null, MsiInstallContext.Machine, OtherRecorded);
+        f.Msi.RecordsSources(ProductB, null, MsiInstallContext.Machine, "b2.msi", @"E:\setup\");
+        f.Packages.Declares(OtherCandidate, ProductB);
+        f.Packages.Declares(OtherRecorded, ProductB);
+        f.Files.Opens(OtherCandidate, 3);
+        f.Files.Opens(OtherRecorded, 4);
+        f.Disk.AddFile(OtherCandidate, new MockFileData(new byte[100]));
+        f.Disk.AddFile(OtherRecorded, new MockFileData(new byte[100]));
+        using var held = new HeldFileIdentities(f.Files);
+        held.Holds(HeldSource, HeldFor);
+
+        var screening = new DeclaredProductCheck(f.Msi, f.Packages, held, f.Disk, f.Msi.Registry)
+            { SourceFolderTimeLimit = ShortLimit, DriveKindOf = FixedDrive, NamesInFolderOf = NameOnly }
+            .Screen([Package(OtherCandidate), Package(Candidate)], [], default, null, InInstallerFolder);
+
+        Assert.Equal(
+            (DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.NotThereUnestablished),
+            (screening.Outcomes[1], screening.InstalledCauses[1]));
+        Assert.DoesNotContain(RecordedOnE, held.Calls);
+        Assert.Equal([("E:", 2)], screening.RootsGivenUp.Select(given => (given.Root, given.FilesKept)));
+    }
+
     [Theory]
     [InlineData(DriveType.Network)]
     [InlineData(DriveType.Unknown)]
