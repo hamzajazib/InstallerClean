@@ -644,7 +644,9 @@ public class CleanupPreFlightTests
     {
         // The scan after the Move reports a milestone and a ticker update, as a scan does,
         // and then one wait on drive D: and its end. The Move runs on a stand-in for the
-        // window's dispatcher, which keeps every scan update posted to it.
+        // window's dispatcher, which keeps every scan update posted to it. The scan returns once
+        // the dispatcher has run what it reported, as the window runs a scan's reports before
+        // the code that awaits the scan.
         const string Milestone = "a milestone the scan reported";
         const string Ticker = "a ticker update the scan reported";
         var wait = ScanProgressUpdate.Waiting(new SourceFolderWait("D:", () => { }));
@@ -667,13 +669,14 @@ public class CleanupPreFlightTests
                 headings.Enqueue(vm.Cleanup.OperationProgress);
         };
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
-            .Returns(ci =>
+            .Returns(async ci =>
             {
                 var progress = (IProgress<ScanProgressUpdate>)ci[0]!;
                 progress.Report(new ScanProgressUpdate(Milestone));
                 progress.Report(new ScanProgressUpdate(Ticker, IsMilestone: false, Position: 1, Total: 2));
                 progress.Report(wait);
                 progress.Report(end);
+                await dispatcher.IdleAsync();
                 return new ScanResult(new List<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0);
             });
 
