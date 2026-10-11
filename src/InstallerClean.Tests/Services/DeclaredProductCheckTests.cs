@@ -422,8 +422,9 @@ public class DeclaredProductCheckTests
         (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
             ScriptedFileIdentities Files, MockFileSystem Disk) f,
         Func<string, bool?>? namesAFileInInstallerFolder = null,
-        IReadOnlyList<ListedInstallation>? installations = null) =>
-        ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+        IReadOnlyList<ListedInstallation>? installations = null,
+        IRunningAccount? runningAccount = null) =>
+        ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, runningAccount)
             .Screen(new[] { Package(Candidate) }, installations ?? [], default, null,
                 namesAFileInInstallerFolder ?? InInstallerFolder).Outcomes[0];
 
@@ -436,9 +437,10 @@ public class DeclaredProductCheckTests
         (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
             ScriptedFileIdentities Files, MockFileSystem Disk) f,
         Func<string, bool?>? namesAFileInInstallerFolder = null,
-        IReadOnlyList<ListedInstallation>? installations = null)
+        IReadOnlyList<ListedInstallation>? installations = null,
+        IRunningAccount? runningAccount = null)
     {
-        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, runningAccount)
             .Screen(new[] { Package(Candidate) }, installations ?? [], default, null,
                 namesAFileInInstallerFolder ?? InInstallerFolder);
 
@@ -663,14 +665,512 @@ public class DeclaredProductCheckTests
     }
 
     [Fact]
-    public void A_copy_is_kept_when_the_recorded_package_is_not_on_disk()
+    public void A_copy_is_kept_when_the_recorded_package_is_not_on_disk_and_its_path_still_identifies()
     {
-        // The identity fake still answers for the recorded path, so this is decided by
-        // the file being absent and not by an identity that would not read.
+        // The file is not there and the identity fake still answers for the recorded path, so
+        // nothing shows that the path names nothing.
         var f = ACopyBesideTheRecordedPackage();
         f.Disk.RemoveFile(Recorded);
 
-        AssertKeptFor(DeclaredProductInstalledCause.NotThere, f);
+        AssertKeptFor(DeclaredProductInstalledCause.NotThereUnestablished, f);
+    }
+
+    // ---- An installed product whose recorded package names nothing ----
+    //
+    // Windows Installer cannot open a cached package that is not there, so the
+    // installation opens what its sources name. A copy could still be the missing package,
+    // and the package code the installation records says which package that is: a copy
+    // carrying it, or whose own does not read, is kept,
+    // and a copy carrying another goes on to be compared with everything else. The
+    // fixture lets the copy through; each keeping test changes one thing.
+
+    private const string MissingPackageCode = "{B8DCB621-9BA2-4A82-8656-2E865819D497}";
+    private const string AnotherPackageCode = "{0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0}";
+
+    /// <summary>
+    /// <see cref="MissingPackageCode"/> as Windows Installer writes it in a product's key:
+    /// each of the first three fields backwards, and the last eight bytes as swapped pairs.
+    /// </summary>
+    private const string MissingPackageCodePacked = "126BCD8B2AB928A46865E26885914D79";
+
+    /// <summary>The product key product A is published under per machine.</summary>
+    private static readonly string ProductAPublishedKey =
+        @"SOFTWARE\Classes\Installer\Products\" + ScriptedMsiProducts.PackedForTheFake(ProductA);
+
+    /// <summary>
+    /// <see cref="ACopyBesideTheRecordedPackage"/> with the recorded package gone, the identity
+    /// read answering that its path names nothing, the installation recording
+    /// <see cref="MissingPackageCode"/>, which its product key holds as well, and the copy
+    /// carrying <see cref="AnotherPackageCode"/>.
+    /// </summary>
+    private static (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+        ScriptedFileIdentities Files, MockFileSystem Disk) ACopyBesideARecordedPackageThatNamesNothing()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Disk.RemoveFile(Recorded);
+        f.Files.Answers(Recorded, FileIdentityRead.NamesNothing);
+        f.Msi.PackageCodeAnswers(ProductA, null, MsiInstallContext.Machine, MsiError.Success, MissingPackageCode);
+        CarriesPackageCode(f.Packages, Candidate, AnotherPackageCode);
+        return f;
+    }
+
+    private static void CarriesPackageCode(ScriptedPackageIdentities packages, string path, string? packageCode) =>
+        packages.CarriesPackageCode(path, packageCode);
+
+    [Fact]
+    public void A_copy_carrying_another_package_code_than_a_missing_recorded_package_is_let_through()
+    {
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+
+        var outcome = ScreenTheCopy(f);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome);
+        Assert.False(outcome.Withholds());
+        // The package code was read both ways, and the installation's sources were read.
+        Assert.Contains((MsiInstallProperty.PackageCode, ProductA, (string?)null, MsiInstallContext.Machine), f.Msi.RecordReads);
+        Assert.Contains(ProductAPublishedKey, f.Msi.Registry.Reads);
+        Assert.Contains(SetupPackage, f.Files.Reads);
+    }
+
+    [Fact]
+    public void A_copy_carrying_the_package_code_of_a_missing_recorded_package_is_kept()
+    {
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        CarriesPackageCode(f.Packages, Candidate, MissingPackageCode);
+
+        AssertKeptFor(DeclaredProductInstalledCause.MissingSpareIsIt, f);
+    }
+
+    [Fact]
+    public void A_copy_is_kept_beside_a_missing_recorded_package_when_its_own_package_code_does_not_read()
+    {
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        CarriesPackageCode(f.Packages, Candidate, null);
+
+        AssertKeptFor(DeclaredProductInstalledCause.MissingSparePackageCodeUnread, f);
+    }
+
+    [Fact]
+    public void A_recorded_package_code_in_lower_case_is_the_same_code_as_the_copy_s()
+    {
+        // The API's answer is compared in the braced upper-case form the reader gives the
+        // copy's code in, so a lower-case answer naming the same code keeps the copy.
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.PackageCodeAnswers(ProductA, null, MsiInstallContext.Machine, MsiError.Success,
+            MissingPackageCode.ToLowerInvariant());
+        f.Msi.Registry.Holds(ProductAPublishedKey, new RegistryValue(
+            MsiInstallProperty.PackageCode, RegistryValueKind.String, MissingPackageCodePacked));
+        CarriesPackageCode(f.Packages, Candidate, MissingPackageCode);
+
+        AssertKeptFor(DeclaredProductInstalledCause.MissingSpareIsIt, f);
+    }
+
+    [Fact]
+    public void Every_copy_is_kept_when_the_recorded_package_names_a_file_that_is_not_there_and_will_not_identify()
+    {
+        // Not there by File.Exists, and the identity read does not answer that the path
+        // names nothing, so nothing shows Windows Installer cannot open a package there.
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Files.Answers(Recorded, FileIdentityRead.OpenRefused);
+
+        AssertKeptFor(DeclaredProductInstalledCause.NotThereUnestablished, f);
+        Assert.DoesNotContain(ProductAPublishedKey, f.Msi.Registry.Reads);
+    }
+
+    [Fact]
+    public void Every_copy_is_kept_beside_a_missing_recorded_package_whose_package_code_will_not_read()
+    {
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.PackageCodeAnswers(ProductA, null, MsiInstallContext.Machine, MsiError.AccessDenied);
+
+        AssertKeptFor(DeclaredProductInstalledCause.MissingPackageCodeUnread, f);
+    }
+
+    [Theory]
+    [InlineData(MsiError.Success, "")]
+    [InlineData(MsiError.UnknownProperty, "")]
+    [InlineData(MsiError.Success, "not-a-guid")]
+    [InlineData(MsiError.Success, "B8DCB621-9BA2-4A82-8656-2E865819D497")]
+    public void Every_copy_is_kept_beside_a_missing_recorded_package_whose_package_code_reads_as_no_GUID(
+        uint answer, string value)
+    {
+        // ERROR_UNKNOWN_PROPERTY reads as an empty value rather than a failure, and an empty
+        // value names no package.
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.PackageCodeAnswers(ProductA, null, MsiInstallContext.Machine, answer, value);
+        f.Msi.Registry.Holds(ProductAPublishedKey, new RegistryValue(
+            MsiInstallProperty.PackageCode, RegistryValueKind.String, ScriptedMsiProducts.PackedForTheFake(MissingPackageCode)));
+
+        AssertKeptFor(DeclaredProductInstalledCause.MissingPackageCodeUnread, f);
+    }
+
+    [Fact]
+    public void The_product_key_s_package_code_is_read_in_the_packed_form_Windows_Installer_writes()
+    {
+        // The key holds the text as written on a real PC, not the fake's own packing of it,
+        // so a packing the wrong way round fails here.
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.Registry.Holds(ProductAPublishedKey, new RegistryValue(
+            MsiInstallProperty.PackageCode, RegistryValueKind.String, MissingPackageCodePacked));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+
+        CarriesPackageCode(f.Packages, Candidate, MissingPackageCode);
+        AssertKeptFor(DeclaredProductInstalledCause.MissingSpareIsIt, f);
+    }
+
+    [Fact]
+    public void Every_copy_is_kept_when_the_product_key_holds_another_package_code_than_the_API_answers()
+    {
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.Registry.Holds(ProductAPublishedKey, new RegistryValue(
+            MsiInstallProperty.PackageCode, RegistryValueKind.String, ScriptedMsiProducts.PackedForTheFake(AnotherPackageCode)));
+
+        AssertKeptFor(DeclaredProductInstalledCause.MissingPackageCodeUnread, f);
+    }
+
+    public static TheoryData<RegistryValue[]> ProductKeysNotHoldingOnePackageCode => new()
+    {
+        Array.Empty<RegistryValue>(),
+        new[] { new RegistryValue(MsiInstallProperty.PackageCode, RegistryValueKind.ExpandString,
+            ScriptedMsiProducts.PackedForTheFake(MissingPackageCode)) },
+        new[]
+        {
+            new RegistryValue(MsiInstallProperty.PackageCode, RegistryValueKind.String,
+                ScriptedMsiProducts.PackedForTheFake(MissingPackageCode)),
+            new RegistryValue("packagecode", RegistryValueKind.String, ScriptedMsiProducts.PackedForTheFake(MissingPackageCode)),
+        },
+        new[] { new RegistryValue(MsiInstallProperty.PackageCode, RegistryValueKind.String, "not packed") },
+    };
+
+    [Theory]
+    [MemberData(nameof(ProductKeysNotHoldingOnePackageCode))]
+    public void Every_copy_is_kept_when_the_product_key_does_not_hold_the_package_code_once_as_a_REG_SZ(
+        RegistryValue[] values)
+    {
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.Registry.Holds(ProductAPublishedKey, values);
+
+        AssertKeptFor(DeclaredProductInstalledCause.MissingPackageCodeUnread, f);
+    }
+
+    [Theory]
+    [InlineData(RegistryKeyPresence.Absent)]
+    [InlineData(RegistryKeyPresence.Unreadable)]
+    public void Every_copy_is_kept_when_the_product_key_is_not_read(RegistryKeyPresence presence)
+    {
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.Registry.Answers(ProductAPublishedKey, presence);
+
+        AssertKeptFor(DeclaredProductInstalledCause.MissingPackageCodeUnread, f);
+    }
+
+    [Fact]
+    public void Every_copy_is_kept_beside_a_missing_recorded_package_whose_sources_cannot_be_ruled_out()
+    {
+        // The package codes differ, and the installation's source list will not read, so
+        // the package it opens from its sources could be this copy.
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.SourceListAnswers(ProductA, null, MsiInstallContext.Machine, MsiError.AccessDenied);
+
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesWouldNotRead, f);
+    }
+
+    [Fact]
+    public void A_copy_carrying_another_package_code_than_a_missing_recorded_package_is_kept_where_a_source_opens_as_it()
+    {
+        // The package codes differ, and the installation's source in the Installer folder is
+        // this very copy, which Windows Installer opens from there.
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, "a.msi", InstallerFolder + @"\");
+
+        AssertKeptFor(DeclaredProductInstalledCause.IsAtItsSources, f);
+    }
+
+    [Fact]
+    public void A_copy_is_let_through_beside_a_missing_per_user_managed_package_whose_codes_read_from_its_own_key()
+    {
+        const string ManagedKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Managed\" + UserSid
+            + @"\Installer\Products\";
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.Installed(ProductA,
+            (null, MsiInstallContext.Machine),
+            (UserSid, MsiInstallContext.UserManaged));
+        f.Msi.RecordsPackage(ProductA, UserSid, MsiInstallContext.UserManaged, @"C:\Windows\Installer\c.msi");
+        f.Msi.RecordsSources(ProductA, UserSid, MsiInstallContext.UserManaged, SetupName, SetupFolder);
+        f.Msi.PackageCodeAnswers(ProductA, UserSid, MsiInstallContext.UserManaged, MsiError.Success, MissingPackageCode);
+        f.Files.Answers(@"C:\Windows\Installer\c.msi", FileIdentityRead.NamesNothing);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile,
+            ScreenTheCopy(f, runningAccount: new Account(UserSid)));
+        Assert.Contains(ManagedKey + ScriptedMsiProducts.PackedForTheFake(ProductA), f.Msi.Registry.Reads);
+    }
+
+    [Fact]
+    public void Every_copy_is_kept_beside_a_missing_per_user_package_of_another_account()
+    {
+        // The account a per-user installation's own record is read in has to be the one this
+        // check runs as; another account's package code is not taken as its record's.
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.Installed(ProductA,
+            (null, MsiInstallContext.Machine),
+            (UserSid, MsiInstallContext.UserManaged));
+        f.Msi.RecordsPackage(ProductA, UserSid, MsiInstallContext.UserManaged, @"C:\Windows\Installer\c.msi");
+        f.Msi.RecordsSources(ProductA, UserSid, MsiInstallContext.UserManaged, SetupName, SetupFolder);
+        f.Msi.PackageCodeAnswers(ProductA, UserSid, MsiInstallContext.UserManaged, MsiError.Success, MissingPackageCode);
+        f.Files.Answers(@"C:\Windows\Installer\c.msi", FileIdentityRead.NamesNothing);
+
+        AssertKeptFor(DeclaredProductInstalledCause.MissingPackageCodeUnread, f, runningAccount: new Account(OtherUserSid));
+        AssertKeptFor(DeclaredProductInstalledCause.MissingPackageCodeUnread, f);
+    }
+
+    [Fact]
+    public void Every_copy_is_kept_beside_a_missing_per_user_unmanaged_package()
+    {
+        // A per-user unmanaged installation's product key is not one this check reads, and
+        // its source list is not read either.
+        const string UsersPackage = @"C:\Windows\Installer\c.msi";
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.Installed(ProductA,
+            (null, MsiInstallContext.Machine),
+            (UserSid, MsiInstallContext.UserUnmanaged));
+        f.Msi.RecordsPackage(ProductA, UserSid, MsiInstallContext.UserUnmanaged, UsersPackage);
+        f.Msi.RecordsSources(ProductA, UserSid, MsiInstallContext.UserUnmanaged, SetupName, SetupFolder);
+        f.Msi.PackageCodeAnswers(ProductA, UserSid, MsiInstallContext.UserUnmanaged, MsiError.Success, MissingPackageCode);
+        f.Files.Answers(UsersPackage, FileIdentityRead.NamesNothing);
+
+        AssertKeptFor(DeclaredProductInstalledCause.NotThereUnestablished, f);
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_it_carries_the_package_code_of_one_of_two_missing_recorded_packages()
+    {
+        const string UsersPackage = @"C:\Windows\Installer\c.msi";
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.Installed(ProductA,
+            (null, MsiInstallContext.Machine),
+            (UserSid, MsiInstallContext.UserManaged));
+        f.Msi.RecordsPackage(ProductA, UserSid, MsiInstallContext.UserManaged, UsersPackage);
+        f.Msi.RecordsSources(ProductA, UserSid, MsiInstallContext.UserManaged, SetupName, SetupFolder);
+        f.Msi.PackageCodeAnswers(ProductA, UserSid, MsiInstallContext.UserManaged, MsiError.Success, AnotherPackageCode);
+        f.Files.Answers(UsersPackage, FileIdentityRead.NamesNothing);
+
+        AssertKeptFor(DeclaredProductInstalledCause.MissingSpareIsIt, f, runningAccount: new Account(UserSid));
+        Assert.Contains(Candidate, f.Packages.PackageCodeReads);
+    }
+
+    [Fact]
+    public void A_copy_carrying_another_package_code_than_a_missing_recorded_package_is_kept_where_it_is_another_installation_s_cached_package()
+    {
+        // The per-user installation records this very copy as its cached package.
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.Installed(ProductA,
+            (null, MsiInstallContext.Machine),
+            (UserSid, MsiInstallContext.UserManaged));
+        f.Msi.RecordsPackage(ProductA, UserSid, MsiInstallContext.UserManaged, Candidate);
+        f.Msi.RecordsSources(ProductA, UserSid, MsiInstallContext.UserManaged, SetupName, SetupFolder);
+
+        AssertKeptFor(DeclaredProductInstalledCause.IsItsCachedPackage, f);
+    }
+
+    [Fact]
+    public void A_copy_carrying_the_package_code_of_a_missing_recorded_package_is_kept_beside_another_present_package()
+    {
+        // One installation's package is there and is another file, and the other's names
+        // nothing and records the package code this copy carries.
+        const string UsersPackage = @"C:\Windows\Installer\c.msi";
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.Installed(ProductA,
+            (null, MsiInstallContext.Machine),
+            (UserSid, MsiInstallContext.UserManaged));
+        f.Msi.RecordsPackage(ProductA, UserSid, MsiInstallContext.UserManaged, UsersPackage);
+        f.Msi.RecordsSources(ProductA, UserSid, MsiInstallContext.UserManaged, SetupName, SetupFolder);
+        f.Msi.PackageCodeAnswers(ProductA, UserSid, MsiInstallContext.UserManaged, MsiError.Success, MissingPackageCode);
+        f.Files.Answers(UsersPackage, FileIdentityRead.NamesNothing);
+        CarriesPackageCode(f.Packages, Candidate, MissingPackageCode);
+        var owner = new Account(UserSid);
+
+        AssertKeptFor(DeclaredProductInstalledCause.MissingSpareIsIt, f, runningAccount: owner);
+
+        CarriesPackageCode(f.Packages, Candidate, AnotherPackageCode);
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f, runningAccount: owner));
+    }
+
+    [Fact]
+    public void A_copy_carrying_the_package_code_of_a_missing_recorded_package_is_counted_as_the_present_package_it_opens_as()
+    {
+        // The per-machine installation records this very file under another spelling, and the
+        // per-user one's package names nothing and records the package code this copy carries.
+        const string ShortName = @"C:\Windows\Installer\A~1.MSI";
+        const string UsersPackage = @"C:\Windows\Installer\c.msi";
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsPackage(ProductA, null, MsiInstallContext.Machine, ShortName);
+        f.Packages.Declares(ShortName, ProductA);
+        f.Files.Opens(ShortName, 1);
+        f.Disk.AddFile(ShortName, new MockFileData(new byte[100]));
+        f.Msi.Installed(ProductA,
+            (null, MsiInstallContext.Machine),
+            (UserSid, MsiInstallContext.UserManaged));
+        f.Msi.RecordsPackage(ProductA, UserSid, MsiInstallContext.UserManaged, UsersPackage);
+        f.Msi.RecordsSources(ProductA, UserSid, MsiInstallContext.UserManaged, SetupName, SetupFolder);
+        f.Msi.PackageCodeAnswers(ProductA, UserSid, MsiInstallContext.UserManaged, MsiError.Success, MissingPackageCode);
+        f.Files.Answers(UsersPackage, FileIdentityRead.NamesNothing);
+        CarriesPackageCode(f.Packages, Candidate, MissingPackageCode);
+
+        AssertKeptFor(DeclaredProductInstalledCause.IsItsCachedPackage, f, runningAccount: new Account(UserSid));
+    }
+
+    [Fact]
+    public void A_copy_carrying_the_package_code_of_a_present_recorded_package_is_decided_by_its_identity_alone()
+    {
+        // The package code is asked only of an installation whose recorded package names
+        // nothing. Beside a present package, a copy carrying the same code is another file
+        // and is let through, as before, and no package code is read.
+        var f = ACopyBesideTheRecordedPackage();
+        CarriesPackageCode(f.Packages, Candidate, MissingPackageCode);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+        Assert.DoesNotContain(f.Msi.RecordReads, read => read.Property == MsiInstallProperty.PackageCode);
+        Assert.Empty(f.Packages.PackageCodeReads);
+    }
+
+    /// <summary>
+    /// <see cref="ACopyBesideARecordedPackageThatNamesNothing"/> with the installation recording
+    /// <paramref name="localPackage"/> instead, which names nothing by the identity read.
+    /// </summary>
+    private static (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+        ScriptedFileIdentities Files, MockFileSystem Disk) ARecordedPackageNamingNothingAt(string localPackage)
+    {
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.RecordsPackage(ProductA, null, MsiInstallContext.Machine, localPackage);
+        f.Files.Answers(localPackage, FileIdentityRead.NamesNothing);
+        return f;
+    }
+
+    [Theory]
+    [InlineData(@"%SystemRoot%\Installer\b.msi")]
+    [InlineData(@"\\?\C:\Windows\Installer\b.msi")]
+    [InlineData(@"\\server\share\b.msi")]
+    [InlineData(@"C:b.msi")]
+    [InlineData(@"Installer\b.msi")]
+    public void Every_copy_is_kept_when_a_recorded_package_naming_nothing_is_not_a_plain_path_on_a_drive(string localPackage)
+    {
+        // Windows Installer can open a file through a variable, a prefix or a share while the
+        // text read here names nothing.
+        var f = ARecordedPackageNamingNothingAt(localPackage);
+
+        AssertKeptFor(DeclaredProductInstalledCause.NotThereUnestablished, f);
+        Assert.DoesNotContain(ProductAPublishedKey, f.Msi.Registry.Reads);
+    }
+
+    [Fact]
+    public void A_recorded_package_naming_nothing_on_another_local_drive_is_judged_by_its_package_code()
+    {
+        var f = ARecordedPackageNamingNothingAt(@"E:\Windows\Installer\b.msi");
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_kept_beside_a_recorded_package_naming_nothing_on_a_drive_that_does_not_answer_is_counted_against_it()
+    {
+        var f = ARecordedPackageNamingNothingAt(@"E:\Windows\Installer\b.msi");
+
+        var screening = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+        {
+            SourceFolderTimeLimit = ShortLimit,
+            DriveKindOf = drive =>
+            {
+                if (drive.StartsWith('E')) Thread.Sleep(HeldFor);
+                return DriveType.Fixed;
+            },
+            NamesInFolderOf = NameOnly,
+        }.Screen(new[] { Package(Candidate) }, [], default, null, InInstallerFolder);
+
+        Assert.Equal(
+            (DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.NotThereUnestablished),
+            (screening.Outcomes[0], screening.InstalledCauses[0]));
+        Assert.Equal([("E:", 1)], screening.RootsGivenUp.Select(given => (given.Root, given.FilesKept)));
+    }
+
+    [Theory]
+    [InlineData(DriveType.Network)]
+    [InlineData(DriveType.Unknown)]
+    [InlineData(DriveType.NoRootDirectory)]
+    public void Every_copy_is_kept_when_a_recorded_package_naming_nothing_is_on_a_drive_Windows_reports_as_not_local(
+        DriveType kind)
+    {
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+
+        var screening = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+        {
+            DriveKindOf = drive => drive.StartsWith('C') ? kind : DriveType.Fixed,
+            NamesInFolderOf = NameOnly,
+        }.Screen(new[] { Package(Candidate) }, [], default, null, InInstallerFolder);
+
+        Assert.Equal(
+            (DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.NotThereUnestablished),
+            (screening.Outcomes[0], screening.InstalledCauses[0]));
+        Assert.DoesNotContain(ProductAPublishedKey, f.Msi.Registry.Reads);
+    }
+
+    /// <summary>The InstallSource the fixture's installation records, as its key holds it.</summary>
+    private static readonly RegistryValue TheInstallSource =
+        new(MsiInstallProperty.InstallSource, RegistryValueKind.String, SetupFolder);
+
+    public static TheoryData<RegistryValue[]> InstallPropertiesNotHoldingTheRecordedPath => new()
+    {
+        Array.Empty<RegistryValue>(),
+        new[] { new RegistryValue(MsiInstallProperty.LocalPackage, RegistryValueKind.String, @"C:\Windows\Installer\x.msi") },
+        new[] { new RegistryValue(MsiInstallProperty.LocalPackage, RegistryValueKind.ExpandString, Recorded) },
+        new[] { new RegistryValue(MsiInstallProperty.LocalPackage, RegistryValueKind.String, Recorded.ToUpperInvariant()) },
+        new[]
+        {
+            new RegistryValue(MsiInstallProperty.LocalPackage, RegistryValueKind.String, Recorded),
+            new RegistryValue("ManagedLocalPackage", RegistryValueKind.String, @"C:\Windows\Installer\x.msi"),
+        },
+        new[]
+        {
+            new RegistryValue(MsiInstallProperty.LocalPackage, RegistryValueKind.String, Recorded),
+            new RegistryValue("localpackage", RegistryValueKind.String, Recorded),
+        },
+    };
+
+    [Theory]
+    [MemberData(nameof(InstallPropertiesNotHoldingTheRecordedPath))]
+    public void Every_copy_is_kept_when_the_InstallProperties_key_does_not_hold_the_recorded_path_as_the_API_answers_it(
+        RegistryValue[] values)
+    {
+        // The key holds the installation's InstallSource as the API answers it, so the cached
+        // package's values are the one thing that differs.
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.Registry.Holds(ProductAProperties, [.. values, TheInstallSource]);
+
+        AssertKeptFor(DeclaredProductInstalledCause.NotThereUnestablished, f);
+    }
+
+    [Theory]
+    [InlineData(RegistryKeyPresence.Absent)]
+    [InlineData(RegistryKeyPresence.Unreadable)]
+    public void Every_copy_is_kept_when_the_InstallProperties_key_is_not_read(RegistryKeyPresence presence)
+    {
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.Registry.Answers(ProductAProperties, presence);
+
+        AssertKeptFor(DeclaredProductInstalledCause.NotThereUnestablished, f);
+    }
+
+    [Fact]
+    public void A_copy_is_let_through_where_the_InstallProperties_key_holds_the_recorded_path_under_both_names()
+    {
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.Registry.Holds(ProductAProperties,
+            new RegistryValue(MsiInstallProperty.LocalPackage, RegistryValueKind.String, Recorded),
+            new RegistryValue("ManagedLocalPackage", RegistryValueKind.String, Recorded),
+            TheInstallSource);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+        Assert.Contains(ProductAProperties, f.Msi.Registry.Reads);
     }
 
     [Fact]
@@ -684,7 +1184,7 @@ public class DeclaredProductCheckTests
         f.Files.Opens(AFolder, 4);
         f.Disk.AddDirectory(AFolder);
 
-        AssertKeptFor(DeclaredProductInstalledCause.NotThere, f);
+        AssertKeptFor(DeclaredProductInstalledCause.NotThereUnestablished, f);
     }
 
     [Fact]
@@ -7377,6 +7877,32 @@ internal sealed class ScriptedPackageIdentities : IPackageIdentityReader
 
     private readonly HashSet<string> _declaresNoCode = new(StringComparer.OrdinalIgnoreCase);
 
+    private readonly Dictionary<string, string?> _packageCodes = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Every path this reader was asked the package code of, in order.</summary>
+    public List<string> PackageCodeReads { get; } = new();
+
+    /// <summary>
+    /// The file's package code reads as <paramref name="packageCode"/>, or does not read
+    /// where it is null.
+    /// </summary>
+    public void CarriesPackageCode(string path, string? packageCode) => _packageCodes[path] = packageCode;
+
+    /// <summary>
+    /// The package code scripted for the path. AN UNSCRIPTED PATH THROWS, for the reason
+    /// <see cref="Read"/> does: a package code read is asked only beside an installation
+    /// whose cached package is missing, and a code other than that installation's is the
+    /// answer that lets a copy through.
+    /// </summary>
+    public string? PackageCodeOf(string filePath)
+    {
+        PackageCodeReads.Add(filePath);
+        if (!_packageCodes.TryGetValue(filePath, out var code))
+            throw new InvalidOperationException(
+                $"the fake reader was asked for the package code of {filePath}, which no test scripted");
+        return code;
+    }
+
     public PackageIdentity? Read(string filePath, bool isPatch, out string detail, out PackageReadRefusal refusal)
     {
         Reads.Add(filePath);
@@ -7921,6 +8447,15 @@ internal sealed class ScriptedMsiProducts : IMsiApi
         RegexOptions.CultureInvariant);
 
     /// <summary>
+    /// The key a product is published under, per machine or per user and managed, which
+    /// holds its <c>PackageCode</c>.
+    /// </summary>
+    private static readonly Regex ProductKey = new(
+        @"^SOFTWARE\\(?:Classes\\Installer|Microsoft\\Windows\\CurrentVersion\\Installer\\Managed\\(?<sid>S-[0-9-]+)\\Installer)"
+        + @"\\Products\\(?<packed>[0-9A-F]{32})$",
+        RegexOptions.CultureInvariant);
+
+    /// <summary>
     /// An installation's <c>InstallProperties</c> key, per machine under <c>S-1-5-18</c>
     /// or per user and managed under the account.
     /// </summary>
@@ -7937,10 +8472,34 @@ internal sealed class ScriptedMsiProducts : IMsiApi
     /// from 1, and each URL entry the same way, a key with none being absent; and a
     /// <c>Media</c> key holding the REG_SZ "1" and the media package path where there is
     /// one. An installation's <c>InstallProperties</c> key holds its InstallSource as a
-    /// REG_SZ where it has one. A path that names no scripted list throws.
+    /// REG_SZ where it has one, and the cached package it records as a REG_SZ named
+    /// <c>LocalPackage</c> where it records one. A product's key holds the package code its
+    /// record answers, packed, as a REG_SZ named <c>PackageCode</c> where the record answers
+    /// a GUID, and nothing otherwise. A path that names no scripted list, or a product key
+    /// whose package code no test scripted, throws.
     /// </summary>
     internal RegistryKeyValues MirroredKey(string path)
     {
+        var product = ProductKey.Match(path);
+        if (product.Success)
+        {
+            var productSid = product.Groups["sid"].Success ? product.Groups["sid"].Value : null;
+            var productContext = productSid is null ? MsiInstallContext.Machine : MsiInstallContext.UserManaged;
+            if (!_packageCodes.TryGetValue(
+                    (UnpackedForTheFake(product.Groups["packed"].Value), productSid, productContext), out var scripted))
+                throw new InvalidOperationException(
+                    $"the fake registry was asked for {path}, whose package code no test scripted");
+
+            var recorded = scripted.Error == MsiError.Success && Guid.TryParseExact(scripted.Value, "B", out _)
+                ? scripted.Value
+                : null;
+
+            return new RegistryKeyValues(RegistryKeyPresence.Present,
+                recorded is null
+                    ? Array.Empty<RegistryValue>()
+                    : new[] { new RegistryValue(MsiInstallProperty.PackageCode, RegistryValueKind.String, PackedForTheFake(recorded)) });
+        }
+
         var properties = InstallPropertiesKey.Match(path);
         if (properties.Success)
         {
@@ -7948,13 +8507,17 @@ internal sealed class ScriptedMsiProducts : IMsiApi
             var (installSid, installContext) = account == "S-1-5-18"
                 ? ((string?)null, MsiInstallContext.Machine)
                 : (account, MsiInstallContext.UserManaged);
-            var installSource = InstallSourceFor(
-                UnpackedForTheFake(properties.Groups["packed"].Value), installSid, installContext);
+            var installedCode = UnpackedForTheFake(properties.Groups["packed"].Value);
+            var values = new List<RegistryValue>();
+            if (_localPackages.TryGetValue((installedCode, installSid, installContext), out var localPackage)
+                && localPackage.Error == MsiError.Success && localPackage.Value.Length > 0)
+                values.Add(new RegistryValue(MsiInstallProperty.LocalPackage, RegistryValueKind.String, localPackage.Value));
 
-            return new RegistryKeyValues(RegistryKeyPresence.Present,
-                installSource.Error == MsiError.Success && installSource.Value.Length > 0
-                    ? new[] { new RegistryValue(MsiInstallProperty.InstallSource, RegistryValueKind.String, installSource.Value) }
-                    : Array.Empty<RegistryValue>());
+            var installSource = InstallSourceFor(installedCode, installSid, installContext);
+            if (installSource.Error == MsiError.Success && installSource.Value.Length > 0)
+                values.Add(new RegistryValue(MsiInstallProperty.InstallSource, RegistryValueKind.String, installSource.Value));
+
+            return new RegistryKeyValues(RegistryKeyPresence.Present, values);
         }
 
         var match = SourceListKey.Match(path);
@@ -8026,6 +8589,17 @@ internal sealed class ScriptedMsiProducts : IMsiApi
                 NumberStyles.HexNumber, CultureInfo.InvariantCulture);
         return new Guid(bytes).ToString("B").ToUpperInvariant();
     }
+
+    /// <summary>
+    /// A braced code in the packed form, the inverse of <see cref="UnpackedForTheFake"/>: each
+    /// of the GUID's bytes in its own byte order, written low digit first.
+    /// </summary>
+    internal static string PackedForTheFake(string code) =>
+        string.Concat(Guid.ParseExact(code, "B").ToByteArray().Select(b =>
+        {
+            var hex = b.ToString("X2", CultureInfo.InvariantCulture);
+            return string.Concat(hex[1], hex[0]);
+        }));
 
     /// <summary>ERROR_INVALID_PARAMETER, which a source-list call out of sequence answers.</summary>
     internal const uint InvalidParameter = 87;

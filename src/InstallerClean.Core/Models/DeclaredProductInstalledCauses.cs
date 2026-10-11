@@ -18,7 +18,8 @@ namespace InstallerClean.Models;
 /// <param name="IsAtAnotherInstallationsSources">The files kept for <see cref="DeclaredProductInstalledCause.IsAtAnotherInstallationsSources"/>.</param>
 /// <param name="PathUnreadable">The files kept for <see cref="DeclaredProductInstalledCause.PathUnreadable"/>.</param>
 /// <param name="NoneRecordedRegistryDisagrees">The files kept for <see cref="DeclaredProductInstalledCause.NoneRecordedRegistryDisagrees"/>.</param>
-/// <param name="NotThere">The files kept for <see cref="DeclaredProductInstalledCause.NotThere"/>.</param>
+/// <param name="NotThereUnestablished">The files kept for <see cref="DeclaredProductInstalledCause.NotThereUnestablished"/>.</param>
+/// <param name="MissingPackageCodeUnread">The files kept for <see cref="DeclaredProductInstalledCause.MissingPackageCodeUnread"/>.</param>
 /// <param name="WouldNotIdentify">The files kept for <see cref="DeclaredProductInstalledCause.WouldNotIdentify"/>.</param>
 /// <param name="WouldNotRead">The files kept for <see cref="DeclaredProductInstalledCause.WouldNotRead"/>.</param>
 /// <param name="NotThisProduct">The files kept for <see cref="DeclaredProductInstalledCause.NotThisProduct"/>.</param>
@@ -28,6 +29,8 @@ namespace InstallerClean.Models;
 /// <param name="SourcesRegistryDiffers">The files kept for <see cref="DeclaredProductInstalledCause.SourcesRegistryDiffers"/>.</param>
 /// <param name="SourcesFormNotCompared">The files kept for <see cref="DeclaredProductInstalledCause.SourcesFormNotCompared"/>.</param>
 /// <param name="SourcePackageNotRuledOut">The files kept for <see cref="DeclaredProductInstalledCause.SourcePackageNotRuledOut"/>.</param>
+/// <param name="MissingSparePackageCodeUnread">The files kept for <see cref="DeclaredProductInstalledCause.MissingSparePackageCodeUnread"/>.</param>
+/// <param name="MissingSpareIsIt">The files kept for <see cref="DeclaredProductInstalledCause.MissingSpareIsIt"/>.</param>
 /// <param name="ByName">The files kept for <see cref="DeclaredProductInstalledCause.ByName"/>.</param>
 public sealed record DeclaredProductInstalledCauses(
     int IsItsCachedPackage,
@@ -36,7 +39,8 @@ public sealed record DeclaredProductInstalledCauses(
     int IsAtAnotherInstallationsSources,
     int PathUnreadable,
     int NoneRecordedRegistryDisagrees,
-    int NotThere,
+    int NotThereUnestablished,
+    int MissingPackageCodeUnread,
     int WouldNotIdentify,
     int WouldNotRead,
     int NotThisProduct,
@@ -46,9 +50,11 @@ public sealed record DeclaredProductInstalledCauses(
     int SourcesRegistryDiffers,
     int SourcesFormNotCompared,
     int SourcePackageNotRuledOut,
+    int MissingSparePackageCodeUnread,
+    int MissingSpareIsIt,
     int ByName)
 {
     /// <summary>A scan that kept no file for this reason.</summary>
     public static DeclaredProductInstalledCauses None { get; } =
-        new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }

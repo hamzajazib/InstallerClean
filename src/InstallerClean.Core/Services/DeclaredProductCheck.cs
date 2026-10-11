@@ -34,7 +34,10 @@ namespace InstallerClean.Services;
 /// key, so that Windows Installer has no package to open for it. An installation that records
 /// no cached package and has a package to open is judged by its sources, and every
 /// candidate is compared with the packages they name where its <c>InstallProperties</c> key
-/// records no cached package either and they can all be seen.
+/// records no cached package either and they can all be seen. An installation whose recorded
+/// cached package names nothing is judged by its sources as well, and a candidate carrying
+/// the package code it records, read through the API and from the registry alike, is kept
+/// as that missing package, as is one whose own package code does not read.
 /// For each candidate patch it reads the patch's own code and the products its Template
 /// names, finds the registrations of that patch through the machine-wide patch
 /// enumeration and the keyed patch read, and reads the <c>LocalPackage</c> each
@@ -266,7 +269,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             code, installations, pass, namesAFileInInstallerFolder, out var givenUp, out var cause);
         return new DeclarationAnswer(
             DeclaredProductOutcome.DeclaredProductInstalled, packages?.Identities, packages?.ByName, givenUp,
-            packages?.Cached, cause);
+            packages?.Cached, cause, packages?.MissingPackageCodes);
     }
 
     /// <summary>
@@ -297,6 +300,14 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// can be seen (<see cref="LinksOf"/>), every candidate the answer lets through is
     /// <see cref="DeclaredProductOutcome.SecondCopyUnestablished"/>.
     ///
+    /// A CANDIDATE THAT IS, OR COULD BE, A MISSING PACKAGE IS KEPT FIRST. Where an
+    /// installation of its own product records a package that names nothing, a candidate
+    /// carrying the package code that installation records, or whose own package code does
+    /// not read, is <see cref="DeclaredProductOutcome.DeclaredProductInstalled"/>
+    /// (<see cref="AsAMissingPackage"/>), its cause being the package of its own product it
+    /// opens as where it opens as one. Every other candidate goes on to the comparisons
+    /// below.
+    ///
     /// A PACKAGE IN A FOLDER ON THE NETWORK IS READ HERE, FOR THIS CANDIDATE, and only
     /// where its package name could be this candidate's name
     /// (<see cref="WithPackagesItCouldBe"/>). One that cannot be ruled out keeps this
@@ -320,8 +331,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <see cref="DeclaredProductOutcome.DeclaredProductInstalled"/> is kept, and
     /// <see cref="DeclaredProductInstalledCause.None"/> for every other verdict: the package it
     /// opens as (<see cref="CompareWithOpened"/>), a package in a folder on the network it could be
-    /// by its name (<see cref="DeclaredProductInstalledCause.ByName"/>), or the step that could not
-    /// see its own product's packages (<see cref="DeclarationAnswer.Cause"/>).
+    /// by its name (<see cref="DeclaredProductInstalledCause.ByName"/>), the missing package it is or
+    /// could be where it opens as none of its own product's packages (<see cref="AsAMissingPackage"/>),
+    /// or the step that could not see its own product's packages (<see cref="DeclarationAnswer.Cause"/>).
     /// </summary>
     private DeclaredProductOutcome Settle(
         string candidatePath,
@@ -342,6 +354,17 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         switch (answer.Outcome)
         {
             case DeclaredProductOutcome.DeclaredProductInstalled when answer.RecordedPackages is { } packages:
+                if (AsAMissingPackage(candidatePath, answer.MissingPackageCodes) is var missing
+                    && missing != DeclaredProductInstalledCause.None)
+                {
+                    // One that opens as a package its own product's installations open is counted as that package.
+                    _ = CompareWithOpened(
+                        candidatePath, packages, answer.Cached ?? [], [], [],
+                        DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, out var opened);
+                    cause = opened != DeclaredProductInstalledCause.None ? opened : missing;
+                    return DeclaredProductOutcome.DeclaredProductInstalled;
+                }
+
                 if (WithPackagesItCouldBe(
                         candidate, packages, answer.ByName ?? [], pass, namesAFileInInstallerFolder, out givenUp)
                     is not { } own)
@@ -454,6 +477,35 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         return cause == DeclaredProductInstalledCause.None
             ? differentFromEvery
             : DeclaredProductOutcome.DeclaredProductInstalled;
+    }
+
+    /// <summary>
+    /// Whether the candidate at <paramref name="candidatePath"/> is, or could be, the package of
+    /// an installation of its product whose recorded package names nothing
+    /// (<see cref="OpenedPackages.MissingPackageCodes"/>), and the cause it is kept for if so.
+    /// Where there is such an installation:
+    /// <see cref="DeclaredProductInstalledCause.MissingSparePackageCodeUnread"/> where the
+    /// candidate's own package code (<see cref="IPackageIdentityReader.PackageCodeOf"/>) does not
+    /// read, and <see cref="DeclaredProductInstalledCause.MissingSpareIsIt"/> where it is one such
+    /// an installation records. <see cref="DeclaredProductInstalledCause.None"/> otherwise, and the
+    /// candidate is not kept here. The candidate's package code is read only where there is such
+    /// an installation.
+    ///
+    /// WINDOWS INSTALLER RECORDS, FOR EACH INSTALLATION, THE PACKAGE CODE OF THE PACKAGE IT
+    /// CACHED FOR IT. A candidate carrying that code is the missing package, and is kept. A
+    /// candidate carrying another code is not that package, and goes on to be compared with
+    /// the packages the installations open. Windows Installer checks the package code of the
+    /// file at the recorded path against the recorded one, and ignores a file carrying another.
+    /// </summary>
+    private DeclaredProductInstalledCause AsAMissingPackage(
+        string candidatePath, IReadOnlyList<string>? missingPackageCodes)
+    {
+        if (missingPackageCodes is not { Count: > 0 }) return DeclaredProductInstalledCause.None;
+        if (_identityReader.PackageCodeOf(candidatePath) is not { } candidatePackageCode)
+            return DeclaredProductInstalledCause.MissingSparePackageCodeUnread;
+        return missingPackageCodes.Contains(candidatePackageCode, StringComparer.Ordinal)
+            ? DeclaredProductInstalledCause.MissingSpareIsIt
+            : DeclaredProductInstalledCause.None;
     }
 
     /// <summary>
@@ -798,11 +850,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// </summary>
     private RecordReading WhatItsOwnRecordShows(string code, string? sid, MsiInstallContext context)
     {
-        if (context != MsiInstallContext.Machine
-            && (sid is null
-                || _runningAccount?.Sid is not { } account
-                || !string.Equals(sid, account, StringComparison.OrdinalIgnoreCase)))
-            return RecordReading.AnotherAccount;
+        if (!ReadsItsOwnRecord(sid, context)) return RecordReading.AnotherAccount;
 
         var packageCode = InstallerQueryService.ReadProductProperty(
             _msi, code, sid, context, MsiInstallProperty.PackageCode);
@@ -814,6 +862,19 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             ? RecordReading.Ordinary
             : RecordReading.InstanceTypeNotOrdinary;
     }
+
+    /// <summary>
+    /// Whether an answer about one installation's own record can be taken as that record's:
+    /// true per machine, and per user only where the installation's account is the account
+    /// this process runs as (<see cref="IRunningAccount.Sid"/>), compared without regard to
+    /// case. A check built without the running account answers false for every per-user
+    /// installation.
+    /// </summary>
+    private bool ReadsItsOwnRecord(string? sid, MsiInstallContext context) =>
+        context == MsiInstallContext.Machine
+        || (sid is not null
+            && _runningAccount?.Sid is { } account
+            && string.Equals(sid, account, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Whether Windows Installer has no package to open for one installation that records
@@ -1357,15 +1418,26 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// open at all (<see cref="OpensNoPackage"/>). Every other installation of the code is read
     /// as well.
     ///
+    /// AN INSTALLATION WHOSE RECORDED PACKAGE NAMES NOTHING ADDS THE PACKAGES ITS SOURCES NAME
+    /// TOO, Windows Installer having no cached package to open for it, and its package code
+    /// goes into <see cref="OpenedPackages.MissingPackageCodes"/>: a candidate is kept where it
+    /// carries that code or its own does not read (<see cref="AsAMissingPackage"/>).
+    /// The value has to be shown to name nothing (<see cref="NamesNothing"/>), the package code
+    /// has to read (<see cref="RecordedPackageCode"/>), and the installation must not be in a
+    /// per-user-unmanaged context.
+    ///
     /// NULL IS THE ANSWER THAT KEEPS THE FILE, and every way an installation's package
-    /// can fail to be seen reaches it: a <c>LocalPackage</c> read that failed, a value that
-    /// names nothing, names a folder, will not open to an identity, or names a file that
-    /// does not declare <paramref name="code"/>; an empty value beside an
+    /// can fail to be seen reaches it: a <c>LocalPackage</c> read that failed; a value that
+    /// names a folder, will not open to an identity, or names a file that does not declare
+    /// <paramref name="code"/>; a value naming no file that is there where it is not shown to
+    /// name nothing, where the installation is per user and unmanaged, or where its package
+    /// code does not read; an empty value beside an
     /// <c>InstallProperties</c> key that does not show the installation records none; and any
     /// source the check cannot rule out, which <see cref="AddSourcePackages"/> sets out. One
     /// such installation is enough, because its package is the one this candidate could be.
     /// <paramref name="givenUp"/> is the root whose give-up refused the read that made it null
-    /// (<see cref="ReadSourcePackage"/>), and null otherwise. <paramref name="cause"/> is the step
+    /// (<see cref="ReadSourcePackage"/>), or the given-up drive of a recorded package naming no
+    /// file that is there (<see cref="KindOf"/>), and null otherwise. <paramref name="cause"/> is the step
     /// that made it null, at the first installation whose package could not be seen, and
     /// <see cref="DeclaredProductInstalledCause.None"/> where it is not null or the check has no
     /// way to look.
@@ -1385,6 +1457,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var identities = new List<FileIdentity>(installations.Count);
         var byName = new List<NetworkPackage>();
         var cached = new List<FileIdentity>(installations.Count);
+        List<string>? missing = null;
         foreach (var (registeredCode, sid, context) in installations)
         {
             var read = InstallerQueryService.ReadProductProperty(
@@ -1417,8 +1490,40 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             // value naming a folder from standing in for a package.
             if (!_fileSystem.File.Exists(path))
             {
-                cause = DeclaredProductInstalledCause.NotThere;
-                return null;
+                // A RECORDED PACKAGE THAT NAMES NOTHING is one Windows Installer cannot open
+                // either, so the installation opens what its sources name. A candidate could
+                // still be the missing package, and the package code the installation records
+                // is what says which package that is (AsAMissingPackage). Anything short of a
+                // recorded path shown to name nothing, a package code read two ways and
+                // agreeing, and sources that can all be seen keeps every candidate, and so does
+                // a per-user-unmanaged installation, whose sources are not read
+                // (AddSourcePackages).
+                if (context == MsiInstallContext.UserUnmanaged
+                    || !NamesNothing(path, registeredCode, sid, context, pass))
+                {
+                    // A drive whose kind did not answer in time is given up for the pass (KindOf),
+                    // and the files kept for it are counted against it.
+                    if (context != MsiInstallContext.UserUnmanaged && pass.IsGivenUp(RootOf(path)))
+                        givenUp = RootOf(path);
+                    cause = DeclaredProductInstalledCause.NotThereUnestablished;
+                    return null;
+                }
+
+                if (RecordedPackageCode(registeredCode, sid, context) is not { } packageCode)
+                {
+                    cause = DeclaredProductInstalledCause.MissingPackageCodeUnread;
+                    return null;
+                }
+
+                if (!AddSourcePackages(registeredCode, sid, context, noneRecorded: false,
+                        pass, namesAFileInInstallerFolder, identities, byName, out givenUp, out var missingRefusal))
+                {
+                    cause = CauseOf(missingRefusal);
+                    return null;
+                }
+
+                (missing ??= []).Add(packageCode);
+                continue;
             }
 
             if (_fileIdentities.ReadOutcome(path, out var recorded) != FileIdentityRead.Read)
@@ -1454,7 +1559,90 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             }
         }
 
-        return new OpenedPackages(identities, byName, cached);
+        return new OpenedPackages(identities, byName, cached, missing);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="path"/>, the <c>LocalPackage</c> one installation records and
+    /// no file that is there, is shown to name nothing: a path on a drive Windows reports as
+    /// local (<see cref="IsLocalDrive"/>), starting with its drive letter, a ':' and a '\'
+    /// and holding no '%' and no null; the identity read answering that it names nothing
+    /// (<see cref="FileIdentityRead.NamesNothing"/>); and the installation's
+    /// <c>InstallProperties</c> key (<see cref="InstallPropertiesKeyPath"/>) holding that same
+    /// text, as a REG_SZ, under every name a cached package is recorded under that it holds
+    /// (<see cref="InstallerQueryService.CachedPackageValueNames"/>), and under one at least.
+    ///
+    /// A PATH OF ANY OTHER FORM IS NOT TAKEN TO NAME NOTHING. A variable, a long-path prefix
+    /// or a path on the network can name a file Windows Installer opens while the text read
+    /// here names nothing, and a read on the network can wait on a server. A key that does
+    /// not read, or holds the cached package otherwise than the API answers it, does not
+    /// show which package the installation records. Every one of them keeps every candidate,
+    /// and so does a check built without its registry reader.
+    /// </summary>
+    private bool NamesNothing(
+        string path, string code, string? sid, MsiInstallContext context, PassAnswers pass)
+    {
+        if (_registry is null || _fileIdentities is null) return false;
+        if (path.Length < 4 || !IsDriveLetter(path[..2]) || path[2] != '\\'
+            || path.IndexOfAny(['%', '\0']) >= 0
+            || !IsLocalDrive(RootOf(path), pass))
+            return false;
+
+        if (_fileIdentities.ReadOutcome(path, out _) != FileIdentityRead.NamesNothing) return false;
+
+        if (InstallPropertiesKeyPath(code, sid, context) is not { } keyPath) return false;
+        var key = _registry.LocalMachineValues(keyPath);
+        if (key.Presence != RegistryKeyPresence.Present || key.Values is null) return false;
+
+        var held = 0;
+        foreach (var name in InstallerQueryService.CachedPackageValueNames)
+        {
+            var stored = ValueNamed(key.Values, name, out var count);
+            if (count == 0) continue;
+            if (count != 1 || stored is not { Kind: RegistryValueKind.String, Text: { } text }
+                || !string.Equals(text.TrimEnd('\0'), path, StringComparison.Ordinal))
+                return false;
+            held++;
+        }
+
+        return held > 0;
+    }
+
+    /// <summary>
+    /// The package code one installation records, in the braced upper-case form
+    /// (<see cref="PackageIdentityReader.Canonicalise"/>), read two ways: through the API
+    /// (<c>PackageCode</c>) and from the <c>PackageCode</c> value of the product's key in the
+    /// registry (<see cref="ProductKeyPath"/>), which holds it in the packed form. Windows
+    /// Installer keeps it there, apart from the cached package, so it reads whether or not
+    /// that file is there.
+    ///
+    /// NULL, WHICH KEEPS EVERY CANDIDATE, where either read fails, is empty or is not a
+    /// GUID, where the key holds the value more than once or as anything but a REG_SZ,
+    /// where the two disagree, where the context has no key this check reads (per user
+    /// and unmanaged), for a per-user installation not shown to be the running account's
+    /// (<see cref="ReadsItsOwnRecord"/>), and for a check built without its registry reader.
+    /// </summary>
+    private string? RecordedPackageCode(string code, string? sid, MsiInstallContext context)
+    {
+        if (_registry is null || !ReadsItsOwnRecord(sid, context)
+            || ProductKeyPath(code, sid, context) is not { } keyPath)
+            return null;
+
+        var read = InstallerQueryService.ReadProductProperty(_msi, code, sid, context, MsiInstallProperty.PackageCode);
+        if (read.Unreadable || PackageIdentityReader.Canonicalise(read.Value.TrimEnd('\0')) is not { } answered)
+            return null;
+
+        var key = _registry.LocalMachineValues(keyPath);
+        if (key.Presence != RegistryKeyPresence.Present || key.Values is null) return null;
+
+        // The key holds the value under the name the API reads it by.
+        var stored = ValueNamed(key.Values, MsiInstallProperty.PackageCode, out var count);
+        if (count != 1 || stored is not { Kind: RegistryValueKind.String, Text: { } packed }) return null;
+
+        return InstallerQueryService.UnpackRegistryProductCode(packed) is { } unpacked
+            && PackageIdentityReader.Canonicalise(unpacked) == answered
+                ? answered
+                : null;
     }
 
     /// <summary>
@@ -2490,16 +2678,28 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// key name. An account is taken only as 'S-' followed by digits and hyphens, so no
     /// account names a key outside its own.
     /// </summary>
-    private static string? SourceListKeyPath(string code, string? sid, MsiInstallContext context)
+    private static string? SourceListKeyPath(string code, string? sid, MsiInstallContext context) =>
+        ProductKeyPath(code, sid, context) is { } key ? key + @"\SourceList" : null;
+
+    /// <summary>
+    /// The HKLM path of the key a product is published under, in one account and context,
+    /// which holds its <c>PackageCode</c> and its <c>SourceList</c> key
+    /// (<see cref="SourceListKeyPath"/>): per machine, <c>SOFTWARE\Classes\Installer\Products</c>
+    /// and the code in its packed form; per user and managed, the same below
+    /// <c>SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Managed\&lt;SID&gt;\Installer</c>.
+    /// Null, which keeps the file, for any other context, per machine with an account, per
+    /// user and managed without one, and a code or an account that will not make a key name.
+    /// </summary>
+    private static string? ProductKeyPath(string code, string? sid, MsiInstallContext context)
     {
         var packed = InstallerQueryService.PackRegistryCode(code);
         if (packed is null) return null;
 
         if (context == MsiInstallContext.Machine && sid is null)
-            return $@"SOFTWARE\Classes\Installer\Products\{packed}\SourceList";
+            return $@"SOFTWARE\Classes\Installer\Products\{packed}";
 
         if (context == MsiInstallContext.UserManaged && InstallerQueryService.IsAccount(sid))
-            return $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Managed\{sid}\Installer\Products\{packed}\SourceList";
+            return $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Managed\{sid}\Installer\Products\{packed}";
 
         return null;
     }
@@ -2842,13 +3042,20 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// the product is kept for. <see cref="DeclaredProductInstalledCause.None"/> for every other
     /// answer.
     /// </param>
+    /// <param name="MissingPackageCodes">
+    /// Beside <paramref name="RecordedPackages"/> for an installed product, the package code
+    /// of every installation whose recorded package names nothing
+    /// (<see cref="OpenedPackages.MissingPackageCodes"/>). Null where there is none, and for
+    /// every other verdict.
+    /// </param>
     private readonly record struct DeclarationAnswer(
         DeclaredProductOutcome Outcome,
         IReadOnlyList<FileIdentity>? RecordedPackages,
         IReadOnlyList<NetworkPackage>? ByName = null,
         string? GivenUp = null,
         IReadOnlyList<FileIdentity>? Cached = null,
-        DeclaredProductInstalledCause Cause = DeclaredProductInstalledCause.None);
+        DeclaredProductInstalledCause Cause = DeclaredProductInstalledCause.None,
+        IReadOnlyList<string>? MissingPackageCodes = null);
 
     /// <param name="Identities">The identity of every package read for every candidate.</param>
     /// <param name="ByName">
@@ -2859,10 +3066,16 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// The cached packages among <paramref name="Identities"/>, each the <c>LocalPackage</c> an
     /// installation records. The rest are packages its sources name.
     /// </param>
+    /// <param name="MissingPackageCodes">
+    /// The package code each installation records whose recorded package names nothing, read
+    /// for <see cref="PackagesOpenedBy"/> (<see cref="RecordedPackageCode"/>). Null where there
+    /// is none.
+    /// </param>
     private sealed record OpenedPackages(
         IReadOnlyList<FileIdentity> Identities,
         IReadOnlyList<NetworkPackage> ByName,
-        IReadOnlyList<FileIdentity> Cached);
+        IReadOnlyList<FileIdentity> Cached,
+        IReadOnlyList<string>? MissingPackageCodes = null);
 
     /// <param name="Path">The path Windows Installer opens: the source folder and the package name.</param>
     /// <param name="Name">The package name.</param>

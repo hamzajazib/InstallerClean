@@ -323,8 +323,15 @@ public enum DeclaredProductOutcome
     /// of a program opens this file as its package. Kept back.
     ///
     /// That covers a recorded <c>LocalPackage</c> value that will not read, one naming a
-    /// folder or a file that is absent or cannot be identified, one naming a file that
-    /// declares another product, and one naming this very file under another spelling. An
+    /// folder or a file that cannot be identified, one naming a file that declares another
+    /// product, and one naming this very file under another spelling. A value naming a file
+    /// that is not there is covered unless it is a plain path on a drive Windows reports as
+    /// local, the identity read answers that it names nothing, and the installation's
+    /// <c>InstallProperties</c> key holds that same text; it is covered for an installation
+    /// in a per-user-unmanaged context, or of an account other than the one this check runs
+    /// as, where the installation's package code does not read through the API and from the
+    /// registry alike, where this file carries that package code or its own does not read,
+    /// and otherwise through the installation's sources, below. An
     /// empty value is covered where the installation's <c>InstallProperties</c> key holds a
     /// cached package or will not read, and otherwise through its sources, below; it is not
     /// covered at all for an installation that has no source list and no
@@ -369,7 +376,8 @@ public enum DeclaredProductOutcome
     /// Windows still holds a record of the product this file declares, or of an
     /// installation whose cached package declares it, every such installation records a
     /// cached package that is present, is a different file, and itself declares the
-    /// same product, or records none, no installation is in a per-user-unmanaged context,
+    /// same product, or records one that names nothing and a package code this file does not
+    /// carry, or records none, no installation is in a per-user-unmanaged context,
     /// and no package in a folder on an installation's source list, in the folder it used last as a
     /// source or in its <c>InstallSource</c> is this file or, on a root other than a local
     /// drive, would be a file directly in the Installer folder, a package in a folder on
@@ -392,6 +400,12 @@ public enum DeclaredProductOutcome
     /// AN INSTALLATION RECORDING NO CACHED PACKAGE OPENS WHAT ITS SOURCES NAME, so where its
     /// <c>InstallProperties</c> key records none as well, its sources are read as above and no
     /// cached package is asked of it.
+    ///
+    /// AN INSTALLATION WHOSE CACHED PACKAGE IS MISSING OPENS WHAT ITS SOURCES NAME TOO, and
+    /// this file is not that missing package. Windows Installer records, for each
+    /// installation, the package code of the package it cached for it, the API and the
+    /// product's registry key answer the same one, and this file's own package code, the
+    /// Revision Number of its summary information, is another. Its sources are read as above.
     ///
     /// AN INSTALLATION WITH NEITHER IS LEFT OUT OF ALL OF THIS. A per-machine installation
     /// that records no cached package and has no source list, by the API's answer and in

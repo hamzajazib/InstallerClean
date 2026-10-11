@@ -1303,7 +1303,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
             IsAtAnotherInstallationsSources: By(DeclaredProductInstalledCause.IsAtAnotherInstallationsSources),
             PathUnreadable: By(DeclaredProductInstalledCause.PathUnreadable),
             NoneRecordedRegistryDisagrees: By(DeclaredProductInstalledCause.NoneRecordedRegistryDisagrees),
-            NotThere: By(DeclaredProductInstalledCause.NotThere),
+            NotThereUnestablished: By(DeclaredProductInstalledCause.NotThereUnestablished),
+            MissingPackageCodeUnread: By(DeclaredProductInstalledCause.MissingPackageCodeUnread),
             WouldNotIdentify: By(DeclaredProductInstalledCause.WouldNotIdentify),
             WouldNotRead: By(DeclaredProductInstalledCause.WouldNotRead),
             NotThisProduct: By(DeclaredProductInstalledCause.NotThisProduct),
@@ -1313,6 +1314,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
             SourcesRegistryDiffers: By(DeclaredProductInstalledCause.SourcesRegistryDiffers),
             SourcesFormNotCompared: By(DeclaredProductInstalledCause.SourcesFormNotCompared),
             SourcePackageNotRuledOut: By(DeclaredProductInstalledCause.SourcePackageNotRuledOut),
+            MissingSparePackageCodeUnread: By(DeclaredProductInstalledCause.MissingSparePackageCodeUnread),
+            MissingSpareIsIt: By(DeclaredProductInstalledCause.MissingSpareIsIt),
             ByName: By(DeclaredProductInstalledCause.ByName));
 
         private int By(DeclaredProductInstalledCause cause) => _declaredProductInstalledBy[(int)cause];

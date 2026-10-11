@@ -130,7 +130,8 @@ public class ResultLogEntryTests
         DeclaredInstalledIsAtAnotherInstallationsSourcesCount: 0,
         DeclaredInstalledPathUnreadableCount: 0,
         DeclaredInstalledNoneRecordedRegistryDisagreesCount: 0,
-        DeclaredInstalledNotThereCount: 0,
+        DeclaredInstalledNotThereUnestablishedCount: 0,
+        DeclaredInstalledMissingPackageCodeUnreadCount: 0,
         DeclaredInstalledWouldNotIdentifyCount: 0,
         DeclaredInstalledWouldNotReadCount: 0,
         DeclaredInstalledNotThisProductCount: 0,
@@ -140,6 +141,8 @@ public class ResultLogEntryTests
         DeclaredInstalledSourcesRegistryDiffersCount: 0,
         DeclaredInstalledSourcesFormNotComparedCount: 0,
         DeclaredInstalledSourcePackageNotRuledOutCount: 0,
+        DeclaredInstalledMissingSparePackageCodeUnreadCount: 0,
+        DeclaredInstalledMissingSpareIsItCount: 0,
         DeclaredInstalledByNameCount: 0);
 
     private static MachineInfo SampleMachine() => new(
@@ -396,13 +399,16 @@ public class ResultLogEntryTests
                 "declaredInstalledIsAnotherCachedPackageCount",
                 "declaredInstalledIsAtAnotherInstallationsSourcesCount",
                 "declaredInstalledPathUnreadableCount",
-                "declaredInstalledNoneRecordedRegistryDisagreesCount", "declaredInstalledNotThereCount",
+                "declaredInstalledNoneRecordedRegistryDisagreesCount",
+                "declaredInstalledNotThereUnestablishedCount", "declaredInstalledMissingPackageCodeUnreadCount",
                 "declaredInstalledWouldNotIdentifyCount", "declaredInstalledWouldNotReadCount",
                 "declaredInstalledNotThisProductCount", "declaredInstalledSourcesPerUserUnmanagedCount",
                 "declaredInstalledSourcesGivenUpCount", "declaredInstalledSourcesWouldNotReadCount",
                 "declaredInstalledSourcesRegistryDiffersCount",
                 "declaredInstalledSourcesFormNotComparedCount",
-                "declaredInstalledSourcePackageNotRuledOutCount", "declaredInstalledByNameCount",
+                "declaredInstalledSourcePackageNotRuledOutCount",
+                "declaredInstalledMissingSparePackageCodeUnreadCount", "declaredInstalledMissingSpareIsItCount",
+                "declaredInstalledByNameCount",
             ],
             root.GetProperty("scan").EnumerateObject().Select(p => p.Name));
 
@@ -752,34 +758,40 @@ public class ResultLogEntryTests
             WithheldDeclaredProductInstalledCauses: new DeclaredProductInstalledCauses(
                 IsItsCachedPackage: 1, IsAtItsSources: 2, IsAnotherCachedPackage: 3,
                 IsAtAnotherInstallationsSources: 4, PathUnreadable: 5, NoneRecordedRegistryDisagrees: 6,
-                NotThere: 7, WouldNotIdentify: 8, WouldNotRead: 9, NotThisProduct: 10,
-                SourcesPerUserUnmanaged: 11, SourcesGivenUp: 12, SourcesWouldNotRead: 13,
-                SourcesRegistryDiffers: 14, SourcesFormNotCompared: 15, SourcePackageNotRuledOut: 16,
-                ByName: 17));
+                NotThereUnestablished: 7, MissingPackageCodeUnread: 8, WouldNotIdentify: 9, WouldNotRead: 10,
+                NotThisProduct: 11, SourcesPerUserUnmanaged: 12, SourcesGivenUp: 13, SourcesWouldNotRead: 14,
+                SourcesRegistryDiffers: 15, SourcesFormNotCompared: 16, SourcePackageNotRuledOut: 17,
+                MissingSparePackageCodeUnread: 18, MissingSpareIsIt: 19, ByName: 20));
 
         var info = ScanInfo.From(scan, 10);
 
         Assert.Equal(
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
             [
                 info.DeclaredInstalledIsItsCachedPackageCount, info.DeclaredInstalledIsAtItsSourcesCount,
                 info.DeclaredInstalledIsAnotherCachedPackageCount,
                 info.DeclaredInstalledIsAtAnotherInstallationsSourcesCount,
                 info.DeclaredInstalledPathUnreadableCount,
-                info.DeclaredInstalledNoneRecordedRegistryDisagreesCount, info.DeclaredInstalledNotThereCount,
+                info.DeclaredInstalledNoneRecordedRegistryDisagreesCount,
+                info.DeclaredInstalledNotThereUnestablishedCount, info.DeclaredInstalledMissingPackageCodeUnreadCount,
                 info.DeclaredInstalledWouldNotIdentifyCount, info.DeclaredInstalledWouldNotReadCount,
                 info.DeclaredInstalledNotThisProductCount, info.DeclaredInstalledSourcesPerUserUnmanagedCount,
                 info.DeclaredInstalledSourcesGivenUpCount, info.DeclaredInstalledSourcesWouldNotReadCount,
                 info.DeclaredInstalledSourcesRegistryDiffersCount,
                 info.DeclaredInstalledSourcesFormNotComparedCount,
-                info.DeclaredInstalledSourcePackageNotRuledOutCount, info.DeclaredInstalledByNameCount,
+                info.DeclaredInstalledSourcePackageNotRuledOutCount,
+                info.DeclaredInstalledMissingSparePackageCodeUnreadCount, info.DeclaredInstalledMissingSpareIsItCount,
+                info.DeclaredInstalledByNameCount,
             ]);
 
         using var doc = JsonDocument.Parse(JsonSerializer.Serialize(info, JsonOptions));
         Assert.Equal(1, doc.RootElement.GetProperty("declaredInstalledIsItsCachedPackageCount").GetInt32());
-        Assert.Equal(7, doc.RootElement.GetProperty("declaredInstalledNotThereCount").GetInt32());
-        Assert.Equal(12, doc.RootElement.GetProperty("declaredInstalledSourcesGivenUpCount").GetInt32());
-        Assert.Equal(17, doc.RootElement.GetProperty("declaredInstalledByNameCount").GetInt32());
+        Assert.Equal(7, doc.RootElement.GetProperty("declaredInstalledNotThereUnestablishedCount").GetInt32());
+        Assert.Equal(8, doc.RootElement.GetProperty("declaredInstalledMissingPackageCodeUnreadCount").GetInt32());
+        Assert.Equal(13, doc.RootElement.GetProperty("declaredInstalledSourcesGivenUpCount").GetInt32());
+        Assert.Equal(18, doc.RootElement.GetProperty("declaredInstalledMissingSparePackageCodeUnreadCount").GetInt32());
+        Assert.Equal(19, doc.RootElement.GetProperty("declaredInstalledMissingSpareIsItCount").GetInt32());
+        Assert.Equal(20, doc.RootElement.GetProperty("declaredInstalledByNameCount").GetInt32());
     }
 
     [Fact]
@@ -794,13 +806,16 @@ public class ResultLogEntryTests
                 info.DeclaredInstalledIsAnotherCachedPackageCount,
                 info.DeclaredInstalledIsAtAnotherInstallationsSourcesCount,
                 info.DeclaredInstalledPathUnreadableCount,
-                info.DeclaredInstalledNoneRecordedRegistryDisagreesCount, info.DeclaredInstalledNotThereCount,
+                info.DeclaredInstalledNoneRecordedRegistryDisagreesCount,
+                info.DeclaredInstalledNotThereUnestablishedCount, info.DeclaredInstalledMissingPackageCodeUnreadCount,
                 info.DeclaredInstalledWouldNotIdentifyCount, info.DeclaredInstalledWouldNotReadCount,
                 info.DeclaredInstalledNotThisProductCount, info.DeclaredInstalledSourcesPerUserUnmanagedCount,
                 info.DeclaredInstalledSourcesGivenUpCount, info.DeclaredInstalledSourcesWouldNotReadCount,
                 info.DeclaredInstalledSourcesRegistryDiffersCount,
                 info.DeclaredInstalledSourcesFormNotComparedCount,
-                info.DeclaredInstalledSourcePackageNotRuledOutCount, info.DeclaredInstalledByNameCount,
+                info.DeclaredInstalledSourcePackageNotRuledOutCount,
+                info.DeclaredInstalledMissingSparePackageCodeUnreadCount, info.DeclaredInstalledMissingSpareIsItCount,
+                info.DeclaredInstalledByNameCount,
             ],
             count => Assert.Equal(0, count));
     }

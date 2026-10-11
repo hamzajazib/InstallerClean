@@ -1330,7 +1330,8 @@ public sealed record MachineInfo(
 /// package an installation opens. Those from <paramref name="DeclaredInstalledPathUnreadableCount"/>
 /// to <paramref name="DeclaredInstalledSourcePackageNotRuledOutCount"/> are files whose own
 /// program's packages could not all be seen, every file declaring that program counted under the
-/// step that stopped the read at its first installation that could not be seen.
+/// step that stopped the read at its first installation that could not be seen. The rest are
+/// counted for the file itself, after its program's packages were seen.
 /// </param>
 /// <param name="DeclaredInstalledIsAtItsSourcesCount">
 /// Those that open as the package at a source of one of their own program's installations
@@ -1354,9 +1355,16 @@ public sealed record MachineInfo(
 /// <c>InstallProperties</c> key holds one, would not read, or has a path that would not make
 /// (<see cref="DeclaredProductInstalledCauses.NoneRecordedRegistryDisagrees"/>).
 /// </param>
-/// <param name="DeclaredInstalledNotThereCount">
+/// <param name="DeclaredInstalledNotThereUnestablishedCount">
 /// Those whose program has an installation whose cached package's path names no file that is
-/// there, a folder included (<see cref="DeclaredProductInstalledCauses.NotThere"/>).
+/// there, a folder included, and is not shown to name nothing, or whose installation is per user
+/// and unmanaged (<see cref="DeclaredProductInstalledCauses.NotThereUnestablished"/>).
+/// </param>
+/// <param name="DeclaredInstalledMissingPackageCodeUnreadCount">
+/// Those whose program has an installation whose cached package's path is shown to name nothing,
+/// where the package code the installation records was not read: through the API or from the
+/// registry it does not read or is not a GUID, the two differ, or the installation is another
+/// account's (<see cref="DeclaredProductInstalledCauses.MissingPackageCodeUnread"/>).
 /// </param>
 /// <param name="DeclaredInstalledWouldNotIdentifyCount">
 /// Those whose program has an installation whose cached package's volume and file ID would not
@@ -1400,6 +1408,15 @@ public sealed record MachineInfo(
 /// Those whose program has an installation with a package at a source that would not identify or
 /// could be a file directly in the Installer folder
 /// (<see cref="DeclaredProductInstalledCauses.SourcePackageNotRuledOut"/>).
+/// </param>
+/// <param name="DeclaredInstalledMissingSparePackageCodeUnreadCount">
+/// Those whose program has an installation whose cached package names nothing, where the file's
+/// own package code would not read
+/// (<see cref="DeclaredProductInstalledCauses.MissingSparePackageCodeUnread"/>).
+/// </param>
+/// <param name="DeclaredInstalledMissingSpareIsItCount">
+/// Those carrying the package code an installation of their program records whose cached package
+/// names nothing (<see cref="DeclaredProductInstalledCauses.MissingSpareIsIt"/>).
 /// </param>
 /// <param name="DeclaredInstalledByNameCount">
 /// Those a package in a folder on the network, at a source of their own program, could be by their
@@ -1486,7 +1503,8 @@ public sealed record ScanInfo(
     int DeclaredInstalledIsAtAnotherInstallationsSourcesCount,
     int DeclaredInstalledPathUnreadableCount,
     int DeclaredInstalledNoneRecordedRegistryDisagreesCount,
-    int DeclaredInstalledNotThereCount,
+    int DeclaredInstalledNotThereUnestablishedCount,
+    int DeclaredInstalledMissingPackageCodeUnreadCount,
     int DeclaredInstalledWouldNotIdentifyCount,
     int DeclaredInstalledWouldNotReadCount,
     int DeclaredInstalledNotThisProductCount,
@@ -1496,6 +1514,8 @@ public sealed record ScanInfo(
     int DeclaredInstalledSourcesRegistryDiffersCount,
     int DeclaredInstalledSourcesFormNotComparedCount,
     int DeclaredInstalledSourcePackageNotRuledOutCount,
+    int DeclaredInstalledMissingSparePackageCodeUnreadCount,
+    int DeclaredInstalledMissingSpareIsItCount,
     int DeclaredInstalledByNameCount)
 {
     public static ScanInfo From(ScanResult scan, long durationMs)
@@ -1627,7 +1647,8 @@ public sealed record ScanInfo(
             installedBy.IsAtAnotherInstallationsSources,
             installedBy.PathUnreadable,
             installedBy.NoneRecordedRegistryDisagrees,
-            installedBy.NotThere,
+            installedBy.NotThereUnestablished,
+            installedBy.MissingPackageCodeUnread,
             installedBy.WouldNotIdentify,
             installedBy.WouldNotRead,
             installedBy.NotThisProduct,
@@ -1637,6 +1658,8 @@ public sealed record ScanInfo(
             installedBy.SourcesRegistryDiffers,
             installedBy.SourcesFormNotCompared,
             installedBy.SourcePackageNotRuledOut,
+            installedBy.MissingSparePackageCodeUnread,
+            installedBy.MissingSpareIsIt,
             installedBy.ByName);
     }
 }
