@@ -1436,8 +1436,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// source the check cannot rule out, which <see cref="AddSourcePackages"/> sets out. One
     /// such installation is enough, because its package is the one this candidate could be.
     /// <paramref name="givenUp"/> is the root whose give-up refused the read that made it null
-    /// (<see cref="ReadSourcePackage"/>), or the given-up drive of a recorded package naming no
-    /// file that is there (<see cref="KindOf"/>), and null otherwise. <paramref name="cause"/> is the step
+    /// (<see cref="ReadSourcePackage"/>), or the drive where the check of a recorded package
+    /// naming no file that is there stopped at a read the pass refused
+    /// (<see cref="NamesNothing"/>), and null otherwise. <paramref name="cause"/> is the step
     /// that made it null, at the first installation whose package could not be seen, and
     /// <see cref="DeclaredProductInstalledCause.None"/> where it is not null or the check has no
     /// way to look.
@@ -1497,14 +1498,13 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                 // recorded path shown to name nothing, a package code read two ways and
                 // agreeing, and sources that can all be seen keeps every candidate, and so does
                 // a per-user-unmanaged installation, whose sources are not read
-                // (AddSourcePackages).
+                // (AddSourcePackages). The files kept are counted against a drive only where
+                // the check stopped at a read the pass refused there (NamesNothing).
+                string? pathGivenUp = null;
                 if (context == MsiInstallContext.UserUnmanaged
-                    || !NamesNothing(path, registeredCode, sid, context, pass))
+                    || !NamesNothing(path, registeredCode, sid, context, pass, out pathGivenUp))
                 {
-                    // A drive whose kind did not answer in time is given up for the pass (KindOf),
-                    // and the files kept for it are counted against it.
-                    if (context != MsiInstallContext.UserUnmanaged && pass.IsGivenUp(RootOf(path)))
-                        givenUp = RootOf(path);
+                    givenUp = pathGivenUp;
                     cause = DeclaredProductInstalledCause.NotThereUnestablished;
                     return null;
                 }
@@ -1565,9 +1565,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <summary>
     /// Whether <paramref name="path"/>, the <c>LocalPackage</c> one installation records and
     /// no file that is there, is shown to name nothing: a path on a drive Windows reports as
-    /// local (<see cref="IsLocalDrive"/>), starting with its drive letter, a ':' and a '\'
-    /// and holding no '%' and no null; the identity read answering that it names nothing
-    /// (<see cref="FileIdentityRead.NamesNothing"/>); and the installation's
+    /// local (<see cref="KindOf"/>, <see cref="IsLocalKind"/>), starting with its drive letter,
+    /// a ':' and a '\' and holding no '%' and no null; the identity read answering that it
+    /// names nothing (<see cref="FileIdentityRead.NamesNothing"/>); and the installation's
     /// <c>InstallProperties</c> key (<see cref="InstallPropertiesKeyPath"/>) holding that same
     /// text, as a REG_SZ, under every name a cached package is recorded under that it holds
     /// (<see cref="InstallerQueryService.CachedPackageValueNames"/>), and under one at least.
@@ -1579,16 +1579,37 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// show which package the installation records. A path on a drive the pass has given up
     /// is not read (<see cref="PassAnswers.IsGivenUp"/>). Every one of them keeps every
     /// candidate, and so does a check built without its registry reader.
+    ///
+    /// <paramref name="givenUp"/> is the drive where the answer stops at a read the pass
+    /// refused there: the identity read, on a local drive the pass has given up, or the read
+    /// of the drive's kind, on a drive given up before its kind answered
+    /// (<see cref="KindOf"/>). It is null for every other answer, among them a path refused
+    /// for its form or for its drive's kind, which keeps every candidate whatever the drive
+    /// answers.
     /// </summary>
     private bool NamesNothing(
-        string path, string code, string? sid, MsiInstallContext context, PassAnswers pass)
+        string path, string code, string? sid, MsiInstallContext context, PassAnswers pass, out string? givenUp)
     {
+        givenUp = null;
         if (_registry is null || _fileIdentities is null) return false;
         if (path.Length < 4 || !IsDriveLetter(path[..2]) || path[2] != '\\'
-            || path.IndexOfAny(['%', '\0']) >= 0
-            || !IsLocalDrive(RootOf(path), pass)
-            || pass.IsGivenUp(RootOf(path)))
+            || path.IndexOfAny(['%', '\0']) >= 0)
             return false;
+
+        // A drive the pass has already given up is not asked its kind; the kind it answered
+        // earlier in the pass is used, where it answered one.
+        var root = RootOf(path);
+        var kind = pass.IsGivenUp(root) ? pass.DriveKinds.GetValueOrDefault(root) : KindOf(root, pass);
+        var local = kind is { } answered && IsLocalKind(answered);
+
+        // Asked again after KindOf, which gives the drive up where its kind does not answer in
+        // time or takes the drive's reads past their budget.
+        var refused = pass.IsGivenUp(root);
+        if (!local || refused)
+        {
+            if (refused && (local || kind is null)) givenUp = root;
+            return false;
+        }
 
         if (_fileIdentities.ReadOutcome(path, out _) != FileIdentityRead.NamesNothing) return false;
 
@@ -2215,13 +2236,19 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
     /// <summary>
     /// Whether <paramref name="root"/>, from <see cref="RootOf"/>, is a drive letter that
-    /// Windows reports as a local drive: fixed, removable, an optical drive or a RAM disk
-    /// (<see cref="KindOf"/>). A drive whose kind does not answer within the time limit is
-    /// not, and neither is a root of any other form.
+    /// Windows reports as a local drive (<see cref="KindOf"/>, <see cref="IsLocalKind"/>). A
+    /// drive whose kind does not answer within the time limit is not, and neither is a root of
+    /// any other form.
     /// </summary>
     private bool IsLocalDrive(string root, PassAnswers pass) =>
-        IsDriveLetter(root)
-        && KindOf(root, pass) is DriveType.Fixed or DriveType.Removable or DriveType.CDRom or DriveType.Ram;
+        IsDriveLetter(root) && KindOf(root, pass) is { } kind && IsLocalKind(kind);
+
+    /// <summary>
+    /// Whether a drive of <paramref name="kind"/> is a local drive: fixed, removable, an
+    /// optical drive or a RAM disk.
+    /// </summary>
+    private static bool IsLocalKind(DriveType kind) =>
+        kind is DriveType.Fixed or DriveType.Removable or DriveType.CDRom or DriveType.Ram;
 
     /// <summary>
     /// Whether the package at <paramref name="package"/> is left to be read for each

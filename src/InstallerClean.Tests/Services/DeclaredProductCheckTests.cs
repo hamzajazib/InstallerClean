@@ -1096,13 +1096,121 @@ public class DeclaredProductCheckTests
     [Fact]
     public void A_recorded_package_naming_nothing_on_a_drive_already_given_up_is_not_read()
     {
-        // Product B's source on E: is held past the limit and screened first, so E: is given up
-        // before product A's recorded package there is asked about.
         const string RecordedOnE = @"E:\Windows\Installer\b.msi";
+
+        var (screening, reads) = ScreenedAfterEIsGivenUp(RecordedOnE, FixedDrive);
+
+        Assert.Equal(
+            (DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.NotThereUnestablished),
+            (screening.Outcomes[1], screening.InstalledCauses[1]));
+        Assert.DoesNotContain(RecordedOnE, reads);
+        Assert.Equal([("E:", 2)], screening.RootsGivenUp.Select(given => (given.Root, given.FilesKept)));
+    }
+
+    [Theory]
+    [InlineData(@"\\?\E:\Windows\Installer\b.msi", DriveType.Fixed)]
+    [InlineData(@"\\.\E:\Windows\Installer\b.msi", DriveType.Fixed)]
+    [InlineData(@"E:\Windows\%Folder%\b.msi", DriveType.Fixed)]
+    [InlineData(@"E:\Windows\Installer\b.msi", DriveType.Network)]
+    [InlineData(@"E:\Windows\Installer\b.msi", DriveType.Unknown)]
+    [InlineData(@"E:\Windows\Installer\b.msi", DriveType.NoRootDirectory)]
+    public void A_copy_kept_for_a_recorded_package_naming_nothing_that_its_form_or_drive_kind_keeps_is_not_counted_against_a_drive_given_up(
+        string recordedOnE, DriveType kindOfE)
+    {
+        // The path's form, or E: being a drive of another kind than local, keeps every copy of
+        // product A whatever E: answers, so only product B's copy, whose check stopped at the
+        // source read refused on E:, is counted there.
+        var (screening, _) = ScreenedAfterEIsGivenUp(
+            recordedOnE, drive => drive.StartsWith('E') ? kindOfE : DriveType.Fixed);
+
+        Assert.Equal(
+            (DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.NotThereUnestablished),
+            (screening.Outcomes[1], screening.InstalledCauses[1]));
+        Assert.Equal([("E:", 1)], screening.RootsGivenUp.Select(given => (given.Root, given.FilesKept)));
+    }
+
+    [Fact]
+    public void Every_copy_kept_for_a_recorded_package_naming_nothing_on_a_drive_whose_kind_did_not_answer_is_counted_against_it()
+    {
+        // Product B's recorded package on E: is asked about first, and E:'s kind does not answer
+        // within the limit, so E: is given up there. Product A's recorded package on E: is asked
+        // about after it, and E: is not asked its kind again.
+        const string OtherCandidate = @"C:\Windows\Installer\b2.msi";
+        const string OtherRecorded = @"E:\Windows\Installer\b4.msi";
+        var f = ARecordedPackageNamingNothingAt(@"E:\Windows\Installer\b.msi");
+        f.Msi.Installed(ProductB);
+        f.Msi.RecordsPackage(ProductB, null, MsiInstallContext.Machine, OtherRecorded);
+        f.Files.Answers(OtherRecorded, FileIdentityRead.NamesNothing);
+        f.Packages.Declares(OtherCandidate, ProductB);
+        f.Files.Opens(OtherCandidate, 3);
+        f.Disk.AddFile(OtherCandidate, new MockFileData(new byte[100]));
+        var kindReadsOfE = 0;
+
+        var screening = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+        {
+            SourceFolderTimeLimit = ShortLimit,
+            DriveKindOf = drive =>
+            {
+                if (!drive.StartsWith('E')) return DriveType.Fixed;
+                Interlocked.Increment(ref kindReadsOfE);
+                Thread.Sleep(HeldFor);
+                return DriveType.Fixed;
+            },
+            NamesInFolderOf = NameOnly,
+        }.Screen([Package(OtherCandidate), Package(Candidate)], [], default, null, InInstallerFolder);
+
+        Assert.All(
+            screening.Outcomes.Zip(screening.InstalledCauses),
+            verdict => Assert.Equal(
+                (DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.NotThereUnestablished),
+                verdict));
+        Assert.Equal(1, kindReadsOfE);
+        Assert.Equal([("E:", 2)], screening.RootsGivenUp.Select(given => (given.Root, given.FilesKept)));
+    }
+
+    [Fact]
+    public void A_copy_kept_for_a_recorded_package_naming_nothing_on_a_local_drive_its_kind_read_takes_past_its_budget_is_counted_against_it()
+    {
+        // E:'s kind answers fixed at once, and the read takes E:'s reads past their budget on the
+        // check's clock, so E: is given up and the recorded package there is not read.
+        const string RecordedOnE = @"E:\Windows\Installer\b.msi";
+        var f = ARecordedPackageNamingNothingAt(RecordedOnE);
+        var clock = new SteppedClock();
+        using var files = new HeldFileIdentities(f.Files);
+
+        var screening = new DeclaredProductCheck(f.Msi, f.Packages, files, f.Disk, f.Msi.Registry)
+        {
+            Clock = clock,
+            SourceFolderReadBudget = TimeSpan.FromSeconds(20),
+            DriveKindOf = drive =>
+            {
+                if (drive.StartsWith('E')) clock.Advance(TimeSpan.FromSeconds(25));
+                return DriveType.Fixed;
+            },
+            NamesInFolderOf = NameOnly,
+        }.Screen([Package(Candidate)], [], default, null, InInstallerFolder);
+
+        Assert.Equal(
+            (DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.NotThereUnestablished),
+            (screening.Outcomes[0], screening.InstalledCauses[0]));
+        Assert.DoesNotContain(RecordedOnE, files.Calls);
+        Assert.Equal([new("E:", SourceRootGiveUpRoute.ReadsAddUp, 1)], GivenUp(screening));
+    }
+
+    /// <summary>
+    /// A copy of product B and then <see cref="Candidate"/>, screened in that order. Product B's
+    /// source, E:\setup\b2.msi, is held past the time limit, so E: is given up before product
+    /// A's recorded package, <paramref name="recordedOnE"/>, which names nothing, is asked about.
+    /// Every drive's kind is <paramref name="driveKindOf"/>'s answer. Also every path a file
+    /// identity read was started for, in order.
+    /// </summary>
+    private static (DeclaredProductScreening Screening, string[] Reads) ScreenedAfterEIsGivenUp(
+        string recordedOnE, Func<string, DriveType> driveKindOf)
+    {
         const string OtherCandidate = @"C:\Windows\Installer\b2.msi";
         const string OtherRecorded = @"C:\Windows\Installer\b3.msi";
         const string HeldSource = @"E:\setup\b2.msi";
-        var f = ARecordedPackageNamingNothingAt(RecordedOnE);
+        var f = ARecordedPackageNamingNothingAt(recordedOnE);
         f.Msi.Installed(ProductB);
         f.Msi.RecordsPackage(ProductB, null, MsiInstallContext.Machine, OtherRecorded);
         f.Msi.RecordsSources(ProductB, null, MsiInstallContext.Machine, "b2.msi", @"E:\setup\");
@@ -1116,14 +1224,10 @@ public class DeclaredProductCheckTests
         held.Holds(HeldSource, HeldFor);
 
         var screening = new DeclaredProductCheck(f.Msi, f.Packages, held, f.Disk, f.Msi.Registry)
-            { SourceFolderTimeLimit = ShortLimit, DriveKindOf = FixedDrive, NamesInFolderOf = NameOnly }
+            { SourceFolderTimeLimit = ShortLimit, DriveKindOf = driveKindOf, NamesInFolderOf = NameOnly }
             .Screen([Package(OtherCandidate), Package(Candidate)], [], default, null, InInstallerFolder);
 
-        Assert.Equal(
-            (DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.NotThereUnestablished),
-            (screening.Outcomes[1], screening.InstalledCauses[1]));
-        Assert.DoesNotContain(RecordedOnE, held.Calls);
-        Assert.Equal([("E:", 2)], screening.RootsGivenUp.Select(given => (given.Root, given.FilesKept)));
+        return (screening, [.. held.Calls]);
     }
 
     [Theory]
