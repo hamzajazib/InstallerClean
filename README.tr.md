@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <strong>Türkçe</strong> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
+  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <strong>Türkçe</strong> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
 </p>
 
 <p align="center">
@@ -41,6 +41,8 @@
 - **Güvenli mi:** Evet. InstallerClean yalnızca `C:\Windows\Installer` içindeki dosyalara dokunur. Hâlâ nelerin gerekli olduğunu Windows Installer'a sorar, aynı kayıtları bir de kayıt defterinden okur. Bir dosyayı ancak makinede kurulu hiçbir şey onu sahiplenmiyorsa ya da daha yeni bir yama onun yerine geçmişse ve buradaki hiçbir program eskisine geri dönemiyorsa sunar. Net bir yanıt alamadığı her şeyi geri tutar. [Daha fazlası aşağıda](#nasıl-çalışır).
 - **InstallerClean sizinle ilgili hiçbir şey öğrenmez:** Açık kaynak (Apache 2.0). Hesap yok, reklam yok, takip yok, arka planda çalışan hiçbir şey yok. Siz çalıştırdığınızda GitHub'da daha yeni bir sürüm olup olmadığına bakar, bunu kapatabilirsiniz; bir bilgisayarda işini ilk kez bitirdiğinde de çalıştırmanın nasıl geçtiğine dair tek bir anonim rapor gönderir, sonuç ekranındaki kutunun işaretini kaldırırsanız göndermez.
 - **Edinme:** [En son sürümü indirin](../../releases/latest). Çalıştırın; [Windows'un göstereceği uyarıya](#unknown-publisher) ve [yönetici istemine](#admin) tıklayıp geçin. Bulduklarını taşıyın ya da silin. Bu kadar.
+
+[![Ko-fi'de beni destekleyin](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nofaff)
 
 ## İçindekiler
 
@@ -467,7 +469,7 @@ dotnet test src/InstallerClean.Tests/
 
 Bir hata mı buldunuz ya da bir öneriniz mi var? [Bir konu açın](../../issues) ya da bir [tartışma](../../discussions) başlatın. Çekme istekleri memnuniyetle karşılanır. Lütfen göndermeden önce `dotnet test` çalıştırın.
 
-InstallerClean 16 dilde geliyor ve her biri onun tamamını kapsıyor: uygulama, kurulum, komut satırı ve bu README. Uygulamada, kurulumda ve komut satırında Japoncanın ve Felemenkçenin tamamı coolvitto ile RijckAlex'ten geldi, İtalyanca ise kendi makine çevirimin bovirus tarafından düzeltilip onaylanmış hâli; üçü de anadili konuşuru. Geri kalanı kendi makine çevirilerim. Her dildeki her README benim. Onlara epey emek verdim, ama kusursuz olmayacaklar; her birini anadili konuşuru biri denetleyene kadar bekletmektense oldukları gibi yayımlamaya karar verdim. İngilizceyi ve bu dillerden birini biliyorsanız ve geliştirilebilecek bir şey fark ederseniz, bunu bir [konu](../../issues/new?template=translation_review.md), bir çekme isteği ya da bir [tartışma](../../discussions) yoluyla duymaktan memnuniyet duyarım.
+InstallerClean 17 dilde geliyor ve her biri onun tamamını kapsıyor: uygulama, kurulum, komut satırı ve bu README. Uygulamada, kurulumda ve komut satırında Japoncanın ve Felemenkçenin tamamı coolvitto ile RijckAlex'ten geldi, İtalyanca ise kendi makine çevirimin bovirus tarafından düzeltilip onaylanmış hâli; üçü de anadili konuşuru. Geri kalanı kendi makine çevirilerim. Her dildeki her README benim. Onlara epey emek verdim, ama kusursuz olmayacaklar; her birini anadili konuşuru biri denetleyene kadar bekletmektense oldukları gibi yayımlamaya karar verdim. İngilizceyi ve bu dillerden birini biliyorsanız ve geliştirilebilecek bir şey fark ederseniz, bunu bir [konu](../../issues/new?template=translation_review.md), bir çekme isteği ya da bir [tartışma](../../discussions) yoluyla duymaktan memnuniyet duyarım.
 
 ## Projeyi destekleyin
 

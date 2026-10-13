@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <strong>Polski</strong> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
+  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <strong>Polski</strong> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
 </p>
 
 <p align="center">
@@ -41,6 +41,8 @@
 - **Czy to bezpieczne:** Tak. InstallerClean rusza wyłącznie pliki w `C:\Windows\Installer`, pyta Windows Installer, co jest jeszcze potrzebne, i czyta te same rekordy również wprost z rejestru. Proponuje plik tylko wtedy, gdy żaden program na komputerze się do niego nie przyznaje albo gdy zastąpiła go nowsza poprawka i żaden program nie mógłby do niego wrócić. Wszystko, co do czego nie dostaje jasnej odpowiedzi, zatrzymuje. [Więcej niżej](#jak-to-działa).
 - **Nic o tobie:** Otwarty kod źródłowy (Apache 2.0). Bez konta, bez reklam, bez śledzenia, bez niczego działającego w tle. Przy uruchomieniu sprawdza, czy na GitHubie jest nowsza wersja, co możesz wyłączyć, a gdy po raz pierwszy ukończy przebieg na danym komputerze, wysyła jeden anonimowy raport o tym, jak ten przebieg poszedł, chyba że na ekranie wyników odznaczysz pole.
 - **Pobierz:** [Pobierz najnowszą wersję](../../releases/latest). Uruchom; przeklikaj się przez [ostrzeżenie, jakie pokaże Windows](#unknown-publisher) i [monit administratora](#admin). Przenieś albo usuń to, co znajdzie. Gotowe.
+
+[![Wesprzyj mnie na Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nofaff)
 
 ## Spis treści
 
@@ -466,7 +468,7 @@ dotnet test src/InstallerClean.Tests/
 
 Znalazłeś błąd albo masz sugestię? [Zgłoś problem](../../issues) lub rozpocznij [dyskusję](../../discussions). Pull requesty mile widziane. Przed zgłoszeniem uruchom `dotnet test`.
 
-InstallerClean jest dostępny w 16 językach, a każdy z nich obejmuje całość: aplikację, instalator, wiersz poleceń i ten plik README. W aplikacji, instalatorze i wierszu poleceń japoński i niderlandzki przekazali w całości coolvitto i RijckAlex, a włoski to moje tłumaczenie maszynowe, które poprawił i zatwierdził bovirus, wszyscy trzej to rodzimi użytkownicy tych języków; resztę przetłumaczyłem maszynowo sam. Każdy plik README jest mój, w każdym języku. Włożyłem w nie dużo pracy, ale nie będą idealne, i postanowiłem wydać je w takiej postaci, zamiast trzymać je, aż każdy z nich sprawdzi rodzimy użytkownik. Jeśli znasz angielski i jeden z tych języków i zauważysz coś, co dałoby się poprawić, chętnie o tym usłyszę, przez [zgłoszenie](../../issues/new?template=translation_review.md), pull request lub [dyskusję](../../discussions).
+InstallerClean jest dostępny w 17 językach, a każdy z nich obejmuje całość: aplikację, instalator, wiersz poleceń i ten plik README. W aplikacji, instalatorze i wierszu poleceń japoński i niderlandzki przekazali w całości coolvitto i RijckAlex, a włoski to moje tłumaczenie maszynowe, które poprawił i zatwierdził bovirus, wszyscy trzej to rodzimi użytkownicy tych języków; resztę przetłumaczyłem maszynowo sam. Każdy plik README jest mój, w każdym języku. Włożyłem w nie dużo pracy, ale nie będą idealne, i postanowiłem wydać je w takiej postaci, zamiast trzymać je, aż każdy z nich sprawdzi rodzimy użytkownik. Jeśli znasz angielski i jeden z tych języków i zauważysz coś, co dałoby się poprawić, chętnie o tym usłyszę, przez [zgłoszenie](../../issues/new?template=translation_review.md), pull request lub [dyskusję](../../discussions).
 
 ## Wesprzyj projekt
 

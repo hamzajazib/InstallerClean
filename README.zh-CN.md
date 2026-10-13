@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> · <strong>简体中文</strong> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
+  <a href="README.md">English</a> · <strong>简体中文</strong> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
 </p>
 
 <p align="center">
@@ -41,6 +41,8 @@
 - **是否安全：** 是的。它碰的只有 `C:\Windows\Installer` 里的文件。它会问 Windows Installer 哪些还需要，同时还从注册表里把同一批记录再读一遍。只有当这台机器上没有任何已安装的东西认领某个文件，或者较新的补丁已经取代了它、并且这里没有任何程序还能退回到旧的那个时，InstallerClean 才会把这个文件提供出来。凡是它得不到明确答复的，一律保留。[详见下文](#工作原理)。
 - **不涉及您的任何信息：** 开源（Apache 2.0）。没有账号，没有广告，没有跟踪，也没有任何东西在后台运行。它会在您运行时到 GitHub 查一下有没有新版本，这可以关掉；它在一台电脑上第一次运行完成时，会发送一份关于这次运行情况的匿名报告，除非您在结果界面上取消勾选复选框。
 - **如何获取：** [下载最新版本](../../releases/latest)。运行它；点过 [Windows 显示的任何警告](#unknown-publisher)和[管理员提示](#admin)。把它找出来的文件移走或删掉。搞定。
+
+[![在 Ko-fi 上支持我](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nofaff)
 
 ## 目录
 
@@ -466,7 +468,7 @@ dotnet test src/InstallerClean.Tests/
 
 发现了 bug，或有什么建议？[提交 issue](../../issues) 或发起[讨论](../../discussions)。欢迎 pull request。提交前请先运行 `dotnet test`。
 
-InstallerClean 提供 16 种语言，每一种都覆盖它的全部：应用、安装程序、命令行，以及这份 README。在应用、安装程序和命令行里，日文和荷兰文由 coolvitto 和 RijckAlex 完整贡献，意大利文是我的机器翻译经 bovirus 校正并认可的，三位都是母语者；其余都是我自己的机器翻译。每一份 README，在每一种语言里都出自我自己之手。我在这上面下了不少功夫，但它们不会完美，而我决定就这样发布，而不是压着不放、等到每一种语言都有母语者校对为止。如果您懂英文和其中一种语言，发现任何可以改进的地方，我会很乐意听到，可以通过 [issue](../../issues/new?template=translation_review.md)、pull request 或[讨论](../../discussions)告诉我。
+InstallerClean 提供 17 种语言，每一种都覆盖它的全部：应用、安装程序、命令行，以及这份 README。在应用、安装程序和命令行里，日文和荷兰文由 coolvitto 和 RijckAlex 完整贡献，意大利文是我的机器翻译经 bovirus 校正并认可的，三位都是母语者；其余都是我自己的机器翻译。每一份 README，在每一种语言里都出自我自己之手。我在这上面下了不少功夫，但它们不会完美，而我决定就这样发布，而不是压着不放、等到每一种语言都有母语者校对为止。如果您懂英文和其中一种语言，发现任何可以改进的地方，我会很乐意听到，可以通过 [issue](../../issues/new?template=translation_review.md)、pull request 或[讨论](../../discussions)告诉我。
 
 ## 支持本项目
 

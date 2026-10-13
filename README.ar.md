@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <strong>العربية</strong> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
+  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <strong>العربية</strong> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
 </p>
 
 <p align="center"><em>البرنامج نفسه بالإنجليزية؛ ولم يُترجَم إلى العربية سوى هذا الملف التعريفي، لأن جعل الواجهة تعمل من اليمين إلى اليسار مهمة مستقلة ليوم آخر.</em></p>
@@ -43,6 +43,8 @@
 - **هل هو آمن:** نعم. كل ما يمسّه InstallerClean ملفات داخل `C:\Windows\Installer`. فهو يسأل Windows Installer عمّا لا يزال مطلوباً، ويقرأ التطبيق السجلات نفسها من سجل النظام كذلك. ولا يعرض ملفاً إلا إذا لم يطالب به شيء مثبّت على الجهاز، أو حلّ محلّه تصحيح أحدث ولم يعد بوسع أي برنامج هنا الرجوع إلى القديم. وكل ما لا يجد InstallerClean عنه جواباً قاطعاً يحجبه. [التفاصيل أدناه](#كيف-يعمل).
 - **لا شيء عنك:** مفتوح المصدر (Apache 2.0). لا حساب، ولا إعلانات، ولا تتبّع، ولا شيء يعمل في الخلفية. يتحقق من GitHub بحثاً عن إصدار أحدث عند تشغيله، ويمكنك إيقاف ذلك، وفي أول مرة ينتهي فيها من عمله على جهاز ما، يرسل تقريراً واحداً مجهول الهوية عن سير التشغيل، ما لم تُلغِ تحديد الخانة في شاشة النتيجة.
 - **احصل عليه:** [نزّل أحدث إصدار](../../releases/latest). شغّله؛ وتجاوز [أي تحذير يعرضه Windows](#unknown-publisher) و[طلب صلاحيات المسؤول](#admin). انقل ما يجده أو احذفه. تم.
+
+[![ادعمني على Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nofaff)
 
 ## المحتويات
 
@@ -468,7 +470,7 @@ dotnet test src/InstallerClean.Tests/
 
 وجدت عيباً أو لديك اقتراح؟ [افتح مشكلة](../../issues) أو ابدأ [نقاشاً](../../discussions). وطلبات السحب مرحَّب بها. ويُرجى تشغيل `dotnet test` قبل الإرسال.
 
-يأتي InstallerClean بـ16 لغة، تغطي كل منها المشروع كله: التطبيق والمثبّت وسطر الأوامر وهذا الملف التعريفي. وفي التطبيق والمثبّت وسطر الأوامر، ساهم coolvitto وRijckAlex باليابانية والهولندية كاملتين، والإيطالية ترجمة آلية من عندي صحّحها واعتمدها bovirus، وثلاثتهم ناطقون بلغاتهم أصلاً؛ وما بقي ترجمات آلية من عندي. وكل ملف تعريفي من عندي، بكل لغة. بذلت فيها جهداً كبيراً، لكنها لن تكون مثالية، وقررت أن أنشرها كما هي بدل حبسها حتى يراجع كل واحدة منها ناطق أصلي. فإن كنت تتحدث الإنجليزية وإحدى هذه اللغات ولاحظت ما يمكن تحسينه، فيسعدني أن أسمعه، في [مشكلة](../../issues/new?template=translation_review.md) أو طلب سحب أو [نقاش](../../discussions).
+يأتي InstallerClean بـ17 لغة، تغطي كل منها المشروع كله: التطبيق والمثبّت وسطر الأوامر وهذا الملف التعريفي. وفي التطبيق والمثبّت وسطر الأوامر، ساهم coolvitto وRijckAlex باليابانية والهولندية كاملتين، والإيطالية ترجمة آلية من عندي صحّحها واعتمدها bovirus، وثلاثتهم ناطقون بلغاتهم أصلاً؛ وما بقي ترجمات آلية من عندي. وكل ملف تعريفي من عندي، بكل لغة. بذلت فيها جهداً كبيراً، لكنها لن تكون مثالية، وقررت أن أنشرها كما هي بدل حبسها حتى يراجع كل واحدة منها ناطق أصلي. فإن كنت تتحدث الإنجليزية وإحدى هذه اللغات ولاحظت ما يمكن تحسينه، فيسعدني أن أسمعه، في [مشكلة](../../issues/new?template=translation_review.md) أو طلب سحب أو [نقاش](../../discussions).
 
 ## ادعم المشروع
 

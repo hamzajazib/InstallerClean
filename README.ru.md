@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <strong>Русский</strong> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
+  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <strong>Русский</strong> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
 </p>
 
 <p align="center">
@@ -41,6 +41,8 @@
 - **Это безопасно:** Да. InstallerClean трогает только файлы в `C:\Windows\Installer`. Он спрашивает у Windows Installer, что ещё нужно, и читает те же записи ещё и из реестра. Файл попадает в список, только когда его на машине ничто не заявляет или когда его заменило более новое исправление и ни одна программа здесь не смогла бы вернуться к старому. Всё, о чём InstallerClean не может получить внятного ответа, он придерживает. [Подробнее ниже](#как-это-работает).
 - **Ничего о вас:** Открытый исходный код (Apache 2.0). Ни учётной записи, ни рекламы, ни отслеживания, ничего работающего в фоне. При запуске InstallerClean проверяет на GitHub, нет ли более новой версии, и это можно отключить, а по итогам первого завершённого запуска на компьютере отправляет один анонимный отчёт о том, как всё прошло, если только вы не снимете флажок на экране с результатом.
 - **Как получить:** [Скачайте последнюю версию](../../releases/latest). Запустите; согласитесь с [предупреждением, которое покажет Windows](#unknown-publisher), и с [запросом прав администратора](#admin). Переместите или удалите то, что нашёл InstallerClean. Готово.
+
+[![Поддержите меня на Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nofaff)
 
 ## Содержание
 
@@ -466,7 +468,7 @@ dotnet test src/InstallerClean.Tests/
 
 Нашли баг или есть предложение? [Откройте issue](../../issues) или начните [обсуждение](../../discussions). Пул-реквесты приветствуются. Перед отправкой запустите `dotnet test`.
 
-InstallerClean выходит на 16 языках, и каждый охватывает его целиком: приложение, установщик, командную строку и этот README. В приложении, установщике и командной строке японский и нидерландский целиком прислали coolvitto и RijckAlex, а итальянский — мой машинный перевод, выправленный и одобренный bovirus; все трое носители языка. Остальные — мои машинные переводы. Все README на всех языках — мои. Я вложил в них много труда, но идеальными они не будут, и я решил выпустить их как есть, а не придерживать, пока каждый не проверит носитель языка. Если вы говорите по-английски и на одном из этих языков и заметите, что можно улучшить, буду рад услышать — в [issue](../../issues/new?template=translation_review.md), пул-реквесте или [обсуждении](../../discussions).
+InstallerClean выходит на 17 языках, и каждый охватывает его целиком: приложение, установщик, командную строку и этот README. В приложении, установщике и командной строке японский и нидерландский целиком прислали coolvitto и RijckAlex, а итальянский — мой машинный перевод, выправленный и одобренный bovirus; все трое носители языка. Остальные — мои машинные переводы. Все README на всех языках — мои. Я вложил в них много труда, но идеальными они не будут, и я решил выпустить их как есть, а не придерживать, пока каждый не проверит носитель языка. Если вы говорите по-английски и на одном из этих языков и заметите, что можно улучшить, буду рад услышать — в [issue](../../issues/new?template=translation_review.md), пул-реквесте или [обсуждении](../../discussions).
 
 ## Поддержать проект
 

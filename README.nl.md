@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <strong>Nederlands</strong>
+  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <strong>Nederlands</strong>
 </p>
 
 <p align="center">
@@ -41,6 +41,8 @@
 - **Is het veilig:** Ja. Het komt alleen aan bestanden in `C:\Windows\Installer`. Het vraagt Windows Installer wat er nog nodig is, en leest dezelfde records ook uit het register. Het biedt een bestand alleen aan wanneer niets wat op de machine geïnstalleerd is het opeist, of wanneer een nieuwere patch het heeft vervangen en geen enkel programma hier op het oude terug zou kunnen vallen. Alles waar het geen helder antwoord over krijgt, houdt het achter. [Meer hieronder](#hoe-het-werkt).
 - **Niets over jou:** Open source (Apache 2.0). Geen account, geen advertenties, geen tracking, niets dat op de achtergrond draait. Het kijkt bij het starten op GitHub of er een nieuwere versie is, wat je kunt uitzetten, en de eerste keer dat het op een pc een run afrondt, verstuurt het één anoniem rapport over hoe de run ging, tenzij je op het resultaatscherm het vinkje weghaalt.
 - **Downloaden:** [Download de nieuwste versie](../../releases/latest). Voer hem uit; klik je door [een eventuele waarschuwing van Windows](#unknown-publisher) en [de beheerdersvraag](#admin) heen. Verplaats of verwijder wat het vindt. Klaar.
+
+[![Steun me op Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nofaff)
 
 ## Inhoud
 
@@ -466,7 +468,7 @@ dotnet test src/InstallerClean.Tests/
 
 Een bug gevonden of een suggestie? [Open een issue](../../issues) of begin een [discussie](../../discussions). Pull requests zijn welkom. Draai `dotnet test` voordat je iets instuurt.
 
-InstallerClean is er in 16 talen, die elk het geheel dekken: de app, de installer, de opdrachtregel en dit README-bestand. In de app, de installer en de opdrachtregel zijn het Japans en het Nederlands compleet bijgedragen door coolvitto en RijckAlex, en is het Italiaans mijn eigen machinevertaling die door bovirus is gecorrigeerd en goedgekeurd, alle drie moedertaalsprekers; de rest is mijn eigen machinevertaling. Elk README-bestand is van mijzelf, in elke taal. Ik heb er veel werk in gestoken, maar perfect zullen ze niet zijn, en ik heb besloten ze te leveren zoals ze zijn in plaats van ze vast te houden tot een moedertaalspreker er stuk voor stuk naar kon kijken. Spreek je Engels en een van deze talen en zie je iets dat beter kan, dan hoor ik het graag, in een [issue](../../issues/new?template=translation_review.md), een pull request of een [discussie](../../discussions).
+InstallerClean is er in 17 talen, die elk het geheel dekken: de app, de installer, de opdrachtregel en dit README-bestand. In de app, de installer en de opdrachtregel zijn het Japans en het Nederlands compleet bijgedragen door coolvitto en RijckAlex, en is het Italiaans mijn eigen machinevertaling die door bovirus is gecorrigeerd en goedgekeurd, alle drie moedertaalsprekers; de rest is mijn eigen machinevertaling. Elk README-bestand is van mijzelf, in elke taal. Ik heb er veel werk in gestoken, maar perfect zullen ze niet zijn, en ik heb besloten ze te leveren zoals ze zijn in plaats van ze vast te houden tot een moedertaalspreker er stuk voor stuk naar kon kijken. Spreek je Engels en een van deze talen en zie je iets dat beter kan, dan hoor ik het graag, in een [issue](../../issues/new?template=translation_review.md), een pull request of een [discussie](../../discussions).
 
 ## Het project steunen
 

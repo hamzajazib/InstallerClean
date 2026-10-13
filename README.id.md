@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <strong>Bahasa Indonesia</strong> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
+  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <strong>Bahasa Indonesia</strong> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
 </p>
 
 <p align="center">
@@ -41,6 +41,8 @@
 - **Apakah aman:** Ya. Yang disentuhnya hanya file di `C:\Windows\Installer`. Aplikasi menanyakan kepada Windows Installer apa yang masih diperlukan, dan membaca catatan yang sama dari registri juga. InstallerClean baru menawarkan sebuah file kalau tidak ada program terpasang di mesin ini yang mengakuinya, atau kalau patch yang lebih baru sudah menggantikannya dan tidak ada program di sini yang bisa kembali ke yang lama. Apa pun yang tidak bisa dijawab dengan jelas, ditahannya. [Selengkapnya di bawah](#cara-kerjanya).
 - **Tidak ada apa pun soal Anda:** Sumber terbuka (Apache 2.0). Tanpa akun, tanpa iklan, tanpa pelacakan, tidak ada yang berjalan di latar belakang. Aplikasi memeriksa GitHub untuk versi yang lebih baru saat Anda menjalankannya, dan itu bisa Anda matikan, lalu saat pertama kali selesai berjalan di sebuah PC, aplikasi mengirim satu laporan anonim tentang bagaimana prosesnya berjalan, kecuali Anda menghapus centang kotak di layar hasil.
 - **Dapatkan:** [Unduh rilis terbaru](../../releases/latest). Jalankan; lewati [peringatan apa pun yang ditampilkan Windows](#unknown-publisher) dan [permintaan administrator](#admin). Pindahkan atau hapus apa yang ditemukannya. Selesai.
+
+[![Dukung saya di Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nofaff)
 
 ## Daftar isi
 
@@ -466,7 +468,7 @@ dotnet test src/InstallerClean.Tests/
 
 Menemukan bug atau punya saran? [Buka sebuah issue](../../issues) atau mulai [diskusi](../../discussions). Pull request dipersilakan. Mohon jalankan `dotnet test` sebelum mengirim.
 
-InstallerClean tersedia dalam 16 bahasa, masing-masing mencakup keseluruhannya: aplikasi, pemasang, baris perintah dan README ini. Di aplikasi, pemasang dan baris perintah, bahasa Jepang dan Belanda disumbangkan lengkap oleh coolvitto dan RijckAlex, dan bahasa Italia adalah terjemahan mesin saya sendiri yang dikoreksi dan disetujui oleh bovirus, ketiganya penutur asli; sisanya adalah terjemahan mesin saya sendiri. Setiap README adalah buatan saya, dalam semua bahasa. Saya mencurahkan banyak usaha ke dalamnya, tetapi hasilnya tidak akan sempurna, dan saya memutuskan merilisnya apa adanya daripada menahannya sampai seorang penutur asli sempat memeriksa satu per satu. Kalau Anda berbahasa Inggris dan salah satu bahasa ini, lalu menemukan apa pun yang bisa diperbaiki, saya akan dengan senang hati mendengarnya, lewat [issue](../../issues/new?template=translation_review.md), pull request atau [diskusi](../../discussions).
+InstallerClean tersedia dalam 17 bahasa, masing-masing mencakup keseluruhannya: aplikasi, pemasang, baris perintah dan README ini. Di aplikasi, pemasang dan baris perintah, bahasa Jepang dan Belanda disumbangkan lengkap oleh coolvitto dan RijckAlex, dan bahasa Italia adalah terjemahan mesin saya sendiri yang dikoreksi dan disetujui oleh bovirus, ketiganya penutur asli; sisanya adalah terjemahan mesin saya sendiri. Setiap README adalah buatan saya, dalam semua bahasa. Saya mencurahkan banyak usaha ke dalamnya, tetapi hasilnya tidak akan sempurna, dan saya memutuskan merilisnya apa adanya daripada menahannya sampai seorang penutur asli sempat memeriksa satu per satu. Kalau Anda berbahasa Inggris dan salah satu bahasa ini, lalu menemukan apa pun yang bisa diperbaiki, saya akan dengan senang hati mendengarnya, lewat [issue](../../issues/new?template=translation_review.md), pull request atau [diskusi](../../discussions).
 
 ## Dukung proyek ini
 

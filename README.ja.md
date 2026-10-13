@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <strong>日本語</strong> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
+  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <strong>日本語</strong> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
 </p>
 
 <p align="center">
@@ -41,6 +41,8 @@
 - **安全ですか：** はい。触れるのは `C:\Windows\Installer` の中のファイルだけです。何がまだ必要かを Windows Installer に問い合わせ、同じ登録情報をレジストリからも読み取ります。ファイルを提示するのは、このマシンにあるどのプログラムもそのファイルを自分のものだと示さないとき、または新しいパッチが置き換えていて、ここにあるどのプログラムも古いほうへ戻れないときだけです。はっきりした答えが得られないものは、InstallerClean がすべて保留します。[詳しくは下をご覧ください](#仕組み)。
 - **あなたについては何も：** オープンソース（Apache 2.0）です。アカウントも、広告も、追跡もなく、バックグラウンドで動くものもありません。起動したときに GitHub で新しいバージョンがないか確認し（これはオフにできます）、ある PC で初めて処理を終えたときには、その実行がどうだったかを伝える匿名レポートを 1 件送ります。ただし、結果画面でチェックを外せば送られません。
 - **入手方法：** [最新リリースをダウンロード](../../releases/latest)してください。実行し、[Windows が出す警告](#unknown-publisher)と[管理者権限の確認](#admin)をクリックして進みます。見つかったものを移動するか削除します。これで完了です。
+
+[![Ko-fi で支援する](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nofaff)
 
 ## 目次
 
@@ -466,7 +468,7 @@ dotnet test src/InstallerClean.Tests/
 
 バグを見つけた、あるいは提案があるという場合は、[Issue を立てる](../../issues)か、[ディスカッション](../../discussions)を始めてください。プルリクエストも歓迎します。送る前に `dotnet test` を実行してください。
 
-InstallerClean は 16 の言語に対応しており、そのどれもが全体を覆っています。アプリ、インストーラー、コマンドライン、そしてこの README です。アプリとインストーラーとコマンドラインについては、日本語とオランダ語を coolvitto さんと RijckAlex さんが完成した形で寄贈してくださいました。イタリア語は私の機械翻訳を bovirus さんが直して承認したものです。三名ともネイティブスピーカーです。残りは私自身の機械翻訳です。README はどの言語も私自身のものです。かなりの手間をかけましたが完璧ではないでしょうし、ネイティブスピーカーが一つずつ確認できるまで出さずにおくより、このまま出すことにしました。英語とこれらの言語のどれかが分かる方で、改善できそうな点に気づかれたら、[Issue](../../issues/new?template=translation_review.md)、プルリクエスト、[ディスカッション](../../discussions)のいずれでもかまいませんので、ぜひお聞かせください。
+InstallerClean は 17 の言語に対応しており、そのどれもが全体を覆っています。アプリ、インストーラー、コマンドライン、そしてこの README です。アプリとインストーラーとコマンドラインについては、日本語とオランダ語を coolvitto さんと RijckAlex さんが完成した形で寄贈してくださいました。イタリア語は私の機械翻訳を bovirus さんが直して承認したものです。三名ともネイティブスピーカーです。残りは私自身の機械翻訳です。README はどの言語も私自身のものです。かなりの手間をかけましたが完璧ではないでしょうし、ネイティブスピーカーが一つずつ確認できるまで出さずにおくより、このまま出すことにしました。英語とこれらの言語のどれかが分かる方で、改善できそうな点に気づかれたら、[Issue](../../issues/new?template=translation_review.md)、プルリクエスト、[ディスカッション](../../discussions)のいずれでもかまいませんので、ぜひお聞かせください。
 
 ## プロジェクトを応援する
 

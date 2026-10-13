@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <strong>Deutsch</strong> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
+  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <strong>Deutsch</strong> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
 </p>
 
 <p align="center">
@@ -41,6 +41,8 @@
 - **Ist es sicher:** Ja. Es rührt nur Dateien in `C:\Windows\Installer` an. Es fragt Windows Installer, was noch gebraucht wird, und liest dieselben Einträge zusätzlich aus der Registrierung. Es bietet eine Datei nur dann an, wenn nichts von dem, was auf dem Rechner installiert ist, sie beansprucht oder wenn ein neuerer Patch sie ersetzt hat und kein Programm hier auf die alte zurückgehen könnte. Alles, wozu es keine klare Antwort bekommt, hält es zurück. [Mehr dazu weiter unten](#wie-es-funktioniert).
 - **Nichts über dich:** Quelloffen (Apache 2.0). Kein Konto, keine Werbung, kein Tracking, nichts, was im Hintergrund läuft. Es sucht bei jedem Start auf GitHub nach einer neueren Version, was du abschalten kannst, und wenn es auf einem PC seinen ersten Lauf abschließt, sendet es einen anonymen Bericht darüber, wie es gelaufen ist, es sei denn, du entfernst auf dem Ergebnisbildschirm das Häkchen im Kästchen.
 - **Holen:** [Lade die neueste Version herunter](../../releases/latest). Führe sie aus; klick dich durch [eine etwaige Warnung von Windows](#unknown-publisher) und [die Administrator-Abfrage](#admin). Verschiebe oder lösche, was es findet. Fertig.
+
+[![Unterstütze mich auf Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nofaff)
 
 ## Inhalt
 
@@ -466,7 +468,7 @@ dotnet test src/InstallerClean.Tests/
 
 Einen Bug gefunden oder einen Vorschlag? [Erstelle ein Issue](../../issues) oder starte eine [Diskussion](../../discussions). Pull Requests sind willkommen. Bitte führe `dotnet test` aus, bevor du etwas einreichst.
 
-InstallerClean gibt es in 16 Sprachen, jede davon durchgehend: die App, der Installer, die Befehlszeile und dieses README. Für die App, den Installer und die Befehlszeile haben coolvitto und RijckAlex das Japanische und das Niederländische vollständig beigesteuert, und das Italienische ist meine eigene Maschinenübersetzung, von bovirus korrigiert und freigegeben, alle drei Muttersprachler; der Rest sind meine eigenen Maschinenübersetzungen. Jedes README ist meines, in jeder Sprache. Ich habe viel Mühe hineingesteckt, perfekt werden sie nicht sein, und ich habe mich entschieden, sie so zu veröffentlichen, wie sie sind, statt sie zurückzuhalten, bis ein Muttersprachler jedes einzelne prüfen konnte. Wenn du Englisch und eine dieser Sprachen sprichst und dir etwas auffällt, das sich verbessern lässt, freue ich mich über einen Hinweis, in einem [Issue](../../issues/new?template=translation_review.md), einem Pull Request oder einer [Diskussion](../../discussions).
+InstallerClean gibt es in 17 Sprachen, jede davon durchgehend: die App, der Installer, die Befehlszeile und dieses README. Für die App, den Installer und die Befehlszeile haben coolvitto und RijckAlex das Japanische und das Niederländische vollständig beigesteuert, und das Italienische ist meine eigene Maschinenübersetzung, von bovirus korrigiert und freigegeben, alle drei Muttersprachler; der Rest sind meine eigenen Maschinenübersetzungen. Jedes README ist meines, in jeder Sprache. Ich habe viel Mühe hineingesteckt, perfekt werden sie nicht sein, und ich habe mich entschieden, sie so zu veröffentlichen, wie sie sind, statt sie zurückzuhalten, bis ein Muttersprachler jedes einzelne prüfen konnte. Wenn du Englisch und eine dieser Sprachen sprichst und dir etwas auffällt, das sich verbessern lässt, freue ich mich über einen Hinweis, in einem [Issue](../../issues/new?template=translation_review.md), einem Pull Request oder einer [Diskussion](../../discussions).
 
 ## Das Projekt unterstützen
 

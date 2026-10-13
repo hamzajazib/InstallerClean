@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <strong>한국어</strong> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
+  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <strong>한국어</strong> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
 </p>
 
 <p align="center">
@@ -41,6 +41,8 @@
 - **안전한가요:** 네. InstallerClean은 `C:\Windows\Installer` 안의 파일만 건드립니다. 무엇이 아직 필요한지를 Windows Installer에 물어보고, 같은 기록을 레지스트리에서도 읽습니다. 컴퓨터에 설치된 어떤 것도 그 파일을 자기 것이라고 하지 않을 때, 또는 더 새로운 패치가 그 파일을 대체했고 여기 있는 어떤 프로그램도 옛 파일로 되돌아갈 수 없을 때에만 그 파일을 제시합니다. 분명한 답을 얻지 못한 것을 모두 보류합니다. [자세한 내용은 아래](#작동-방식)에 있습니다.
 - **사용자에 대해서는 아무것도 모릅니다:** 오픈 소스(Apache 2.0)입니다. 계정도, 광고도, 추적도 없고, 백그라운드에서 도는 것도 없습니다. 실행할 때 GitHub에 새 버전이 있는지 확인하는데, 이는 끌 수 있습니다. 그리고 어떤 PC에서 처음으로 작업을 마치면 그 실행이 어땠는지를 담은 익명 보고서를 한 건 보냅니다. 단, 결과 화면에서 체크 상자의 선택을 해제하면 보내지 않습니다.
 - **받기:** [최신 릴리스를 다운로드하세요](../../releases/latest). 실행하고, [Windows가 표시하는 경고](#unknown-publisher)와 [관리자 권한 요청](#admin)을 클릭해 넘어가세요. 찾아낸 파일을 이동하거나 삭제하세요. 끝입니다.
+
+[![Ko-fi에서 후원하기](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nofaff)
 
 ## 목차
 
@@ -466,7 +468,7 @@ dotnet test src/InstallerClean.Tests/
 
 버그를 찾았거나 제안할 것이 있나요? [이슈를 열](../../issues)거나 [토론](../../discussions)을 시작하세요. 풀 리퀘스트는 환영합니다. 제출하기 전에 `dotnet test`를 실행해 주세요.
 
-InstallerClean은 16개 언어로 나오며, 각 언어가 앱과 설치 관리자, 명령줄, 그리고 이 README까지 전부를 덮습니다. 앱과 설치 관리자와 명령줄에서, 일본어와 네덜란드어는 coolvitto와 RijckAlex가 완성본을 기여해 주셨고, 이탈리아어는 제 기계 번역을 bovirus가 고치고 승인해 주신 것입니다. 세 분 모두 원어민입니다. 나머지는 제 기계 번역입니다. README는 모든 언어에서 제가 직접 썼습니다. 공을 많이 들였지만 완벽하지는 않을 것이고, 원어민이 하나하나 확인해 줄 때까지 붙들어 두기보다 있는 그대로 내보내기로 했습니다. 영어와 이 언어들 가운데 하나를 하실 줄 알고 더 나아질 만한 부분을 발견하셨다면, [이슈](../../issues/new?template=translation_review.md)나 풀 리퀘스트, 또는 [토론](../../discussions)으로 알려 주시면 정말 감사하겠습니다.
+InstallerClean은 17개 언어로 나오며, 각 언어가 앱과 설치 관리자, 명령줄, 그리고 이 README까지 전부를 덮습니다. 앱과 설치 관리자와 명령줄에서, 일본어와 네덜란드어는 coolvitto와 RijckAlex가 완성본을 기여해 주셨고, 이탈리아어는 제 기계 번역을 bovirus가 고치고 승인해 주신 것입니다. 세 분 모두 원어민입니다. 나머지는 제 기계 번역입니다. README는 모든 언어에서 제가 직접 썼습니다. 공을 많이 들였지만 완벽하지는 않을 것이고, 원어민이 하나하나 확인해 줄 때까지 붙들어 두기보다 있는 그대로 내보내기로 했습니다. 영어와 이 언어들 가운데 하나를 하실 줄 알고 더 나아질 만한 부분을 발견하셨다면, [이슈](../../issues/new?template=translation_review.md)나 풀 리퀘스트, 또는 [토론](../../discussions)으로 알려 주시면 정말 감사하겠습니다.
 
 ## 프로젝트 후원
 

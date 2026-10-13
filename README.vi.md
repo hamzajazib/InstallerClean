@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <strong>Tiếng Việt</strong> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
+  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <strong>Tiếng Việt</strong> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
 </p>
 
 <p align="center">
@@ -41,6 +41,8 @@
 - **Có an toàn không:** Có. Thứ duy nhất nó động đến là các tệp trong `C:\Windows\Installer`. Nó hỏi Windows Installer xem những gì vẫn còn cần, và nó cũng đọc chính những bản ghi đó từ registry. Nó chỉ đề xuất một tệp khi không có gì đã cài trên máy nhận tệp đó là của mình, hoặc khi một bản vá mới hơn đã thay thế nó và không chương trình nào ở đây có thể quay lại dùng bản cũ. Bất cứ thứ gì nó không có được câu trả lời rõ ràng thì nó giữ lại. [Chi tiết ở bên dưới](#cách-hoạt-động).
 - **Không thu thập gì về bạn:** Mã nguồn mở (Apache 2.0). Không tài khoản, không quảng cáo, không theo dõi, không có gì chạy ngầm. Nó kiểm tra GitHub xem có phiên bản mới hơn không mỗi khi bạn chạy nó, việc này bạn có thể tắt, và lần đầu tiên nó chạy xong trên một máy tính, nó gửi một báo cáo ẩn danh về việc lượt chạy đó diễn ra thế nào, trừ khi bạn bỏ chọn ô trên màn hình kết quả.
 - **Tải về:** [Tải bản phát hành mới nhất](../../releases/latest). Chạy nó; bấm qua [mọi cảnh báo Windows hiện ra](#unknown-publisher) và [lời nhắc quyền quản trị](#admin). Chuyển hoặc xóa những gì nó tìm được. Xong.
+
+[![Ủng hộ tôi trên Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nofaff)
 
 ## Nội dung
 
@@ -466,7 +468,7 @@ dotnet test src/InstallerClean.Tests/
 
 Tìm thấy lỗi hay có đề xuất? Hãy [mở một issue](../../issues) hoặc bắt đầu một [thảo luận](../../discussions). Pull request luôn được hoan nghênh. Vui lòng chạy `dotnet test` trước khi gửi.
 
-InstallerClean có 16 ngôn ngữ, mỗi ngôn ngữ bao trọn toàn bộ: ứng dụng, trình cài đặt, dòng lệnh và cả README này. Trong ứng dụng, trình cài đặt và dòng lệnh, bản tiếng Nhật và bản tiếng Hà Lan do coolvitto và RijckAlex đóng góp hoàn chỉnh, còn bản tiếng Ý là bản dịch máy của tôi được bovirus sửa và duyệt, cả ba đều là người bản ngữ; phần còn lại là bản dịch máy của tôi. Mọi README đều do tôi làm, ở mọi ngôn ngữ. Tôi đã bỏ rất nhiều công vào chúng, nhưng chúng sẽ không hoàn hảo, và tôi quyết định phát hành nguyên trạng thay vì giữ lại cho đến khi có người bản ngữ kiểm tra từng bản. Nếu bạn biết tiếng Anh và một trong những ngôn ngữ này mà thấy chỗ nào có thể cải thiện, tôi rất vui được nghe, qua một [issue](../../issues/new?template=translation_review.md), một pull request hoặc một [thảo luận](../../discussions).
+InstallerClean có 17 ngôn ngữ, mỗi ngôn ngữ bao trọn toàn bộ: ứng dụng, trình cài đặt, dòng lệnh và cả README này. Trong ứng dụng, trình cài đặt và dòng lệnh, bản tiếng Nhật và bản tiếng Hà Lan do coolvitto và RijckAlex đóng góp hoàn chỉnh, còn bản tiếng Ý là bản dịch máy của tôi được bovirus sửa và duyệt, cả ba đều là người bản ngữ; phần còn lại là bản dịch máy của tôi. Mọi README đều do tôi làm, ở mọi ngôn ngữ. Tôi đã bỏ rất nhiều công vào chúng, nhưng chúng sẽ không hoàn hảo, và tôi quyết định phát hành nguyên trạng thay vì giữ lại cho đến khi có người bản ngữ kiểm tra từng bản. Nếu bạn biết tiếng Anh và một trong những ngôn ngữ này mà thấy chỗ nào có thể cải thiện, tôi rất vui được nghe, qua một [issue](../../issues/new?template=translation_review.md), một pull request hoặc một [thảo luận](../../discussions).
 
 ## Ủng hộ dự án
 

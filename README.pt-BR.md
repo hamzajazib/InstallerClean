@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <strong>Português (BR)</strong> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
+  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <strong>Português (BR)</strong> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
 </p>
 
 <p align="center">
@@ -41,6 +41,8 @@
 - **É seguro:** Sim. O InstallerClean só mexe em arquivos de `C:\Windows\Installer`. Ele pergunta ao Windows Installer o que ainda é necessário e ele próprio lê esses mesmos dados também no Registro do Windows. Ele só oferece um arquivo quando nada instalado na máquina o reivindica, ou quando um patch mais novo o substituiu e nenhum programa daqui poderia voltar ao antigo. Tudo aquilo sobre o que ele não consegue uma resposta clara, ele retém. [Mais detalhes abaixo](#como-funciona).
 - **Nada sobre você:** Código aberto (Apache 2.0). Sem conta, sem anúncios, sem rastreamento, nada rodando em segundo plano. Ele consulta o GitHub em busca de uma versão mais recente quando você o executa, o que você pode desligar, e na primeira vez que conclui uma execução em um PC envia um relatório anônimo de como foi a execução, a menos que você desmarque a caixa na tela de resultado.
 - **Como obter:** [Baixe a versão mais recente](../../releases/latest). Execute; passe [por qualquer aviso que o Windows mostrar](#unknown-publisher) e [pelo prompt de administrador](#admin). Mova ou exclua o que o InstallerClean encontrar. Pronto.
+
+[![Me apoie no Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nofaff)
 
 ## Conteúdo
 
@@ -466,7 +468,7 @@ dotnet test src/InstallerClean.Tests/
 
 Encontrou um bug ou tem uma sugestão? [Abra uma issue](../../issues) ou comece uma [discussão](../../discussions). Pull requests são bem-vindas. Por favor, rode `dotnet test` antes de enviar.
 
-O InstallerClean vem em 16 idiomas, cada um cobrindo o programa inteiro: o aplicativo, o instalador, a linha de comando e este README. No aplicativo, no instalador e na linha de comando, o japonês e o holandês vieram completos, de coolvitto e RijckAlex, e o italiano é a minha própria tradução automática corrigida e aprovada por bovirus, os três falantes nativos; o resto são traduções automáticas minhas. Todos os READMEs são meus, em todos os idiomas. Me esforcei muito neles, mas não vão ser perfeitos, e decidi publicá-los como estão em vez de segurá-los até que um falante nativo pudesse revisar cada um. Se você fala inglês e um destes idiomas e nota qualquer coisa que dê para melhorar, eu vou adorar saber, seja em uma [issue](../../issues/new?template=translation_review.md), um pull request ou uma [discussão](../../discussions).
+O InstallerClean vem em 17 idiomas, cada um cobrindo o programa inteiro: o aplicativo, o instalador, a linha de comando e este README. No aplicativo, no instalador e na linha de comando, o japonês e o holandês vieram completos, de coolvitto e RijckAlex, e o italiano é a minha própria tradução automática corrigida e aprovada por bovirus, os três falantes nativos; o resto são traduções automáticas minhas. Todos os READMEs são meus, em todos os idiomas. Me esforcei muito neles, mas não vão ser perfeitos, e decidi publicá-los como estão em vez de segurá-los até que um falante nativo pudesse revisar cada um. Se você fala inglês e um destes idiomas e nota qualquer coisa que dê para melhorar, eu vou adorar saber, seja em uma [issue](../../issues/new?template=translation_review.md), um pull request ou uma [discussão](../../discussions).
 
 ## Apoie o projeto
 

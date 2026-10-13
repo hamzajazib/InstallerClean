@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <strong>Français</strong> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
+  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <strong>Français</strong> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.uk.md">Українська</a> · <a href="README.nl.md">Nederlands</a>
 </p>
 
 <p align="center">
@@ -41,6 +41,8 @@
 - **Est-ce sûr :** Oui. Il ne touche qu'aux fichiers de `C:\Windows\Installer`. Il demande à Windows Installer ce qui est encore nécessaire, et lit en plus les mêmes enregistrements dans le registre. Il ne propose un fichier que si rien de ce qui est installé sur la machine ne le revendique, ou si un correctif plus récent l'a remplacé et qu'aucun programme présent ne pourrait revenir à l'ancien. Tout ce sur quoi il n'obtient pas de réponse claire, il le retient. [Plus de détails ci-dessous](#comment-ça-marche).
 - **Rien sur vous :** Open source (Apache 2.0). Pas de compte, pas de publicité, pas de pistage, rien qui tourne en arrière-plan. Il vérifie sur GitHub s'il existe une version plus récente quand vous le lancez, ce que vous pouvez désactiver, et à la fin de sa première exécution sur un PC, il envoie un rapport anonyme sur le déroulement de l'exécution, sauf si vous décochez la case sur l'écran de résultat.
 - **Comment l'obtenir :** [Téléchargez la dernière version](../../releases/latest). Lancez-la ; passez [l'avertissement que Windows peut afficher](#unknown-publisher) et [l'invite d'administrateur](#admin). Déplacez ou supprimez ce qu'il trouve. C'est tout.
+
+[![Soutenez-moi sur Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nofaff)
 
 ## Sommaire
 
@@ -466,7 +468,7 @@ dotnet test src/InstallerClean.Tests/
 
 Vous avez trouvé un bug ou vous avez une suggestion ? [Ouvrez un ticket](../../issues) ou démarrez une [discussion](../../discussions). Les pull requests sont les bienvenues. Lancez `dotnet test` avant de soumettre.
 
-InstallerClean existe en 16 langues, chacune couvrant l'ensemble : l'application, le programme d'installation, la ligne de commande et ce README. Dans l'application, le programme d'installation et la ligne de commande, le japonais et le néerlandais ont été fournis complets par coolvitto et RijckAlex, et l'italien est ma propre traduction automatique corrigée et approuvée par bovirus, tous trois locuteurs natifs ; le reste est constitué de mes propres traductions automatiques. Tous les README sont les miens, dans toutes les langues. J'y ai mis beaucoup de soin, mais ils ne seront pas parfaits, et j'ai choisi de les publier tels quels plutôt que de les retenir jusqu'à ce qu'un locuteur natif puisse les vérifier un par un. Si vous parlez l'anglais et l'une de ces langues et que vous repérez quoi que ce soit qui pourrait être amélioré, je serais ravi de le savoir, dans un [ticket](../../issues/new?template=translation_review.md), une pull request ou une [discussion](../../discussions).
+InstallerClean existe en 17 langues, chacune couvrant l'ensemble : l'application, le programme d'installation, la ligne de commande et ce README. Dans l'application, le programme d'installation et la ligne de commande, le japonais et le néerlandais ont été fournis complets par coolvitto et RijckAlex, et l'italien est ma propre traduction automatique corrigée et approuvée par bovirus, tous trois locuteurs natifs ; le reste est constitué de mes propres traductions automatiques. Tous les README sont les miens, dans toutes les langues. J'y ai mis beaucoup de soin, mais ils ne seront pas parfaits, et j'ai choisi de les publier tels quels plutôt que de les retenir jusqu'à ce qu'un locuteur natif puisse les vérifier un par un. Si vous parlez l'anglais et l'une de ces langues et que vous repérez quoi que ce soit qui pourrait être amélioré, je serais ravi de le savoir, dans un [ticket](../../issues/new?template=translation_review.md), une pull request ou une [discussion](../../discussions).
 
 ## Soutenir le projet
 

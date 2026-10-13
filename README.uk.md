@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <strong>Українська</strong> · <a href="README.nl.md">Nederlands</a>
+  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.ar.md">العربية</a> · <a href="README.ja.md">日本語</a> · <a href="README.pt-BR.md">Português (BR)</a> · <a href="README.pl.md">Polski</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.ko.md">한국어</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.de.md">Deutsch</a> · <a href="README.id.md">Bahasa Indonesia</a> · <a href="README.vi.md">Tiếng Việt</a> · <strong>Українська</strong> · <a href="README.nl.md">Nederlands</a>
 </p>
 
 <p align="center">
@@ -41,6 +41,8 @@
 - **Чи це безпечно:** Так. InstallerClean чіпає лише файли в `C:\Windows\Installer`. Він запитує у Windows Installer, що ще потрібно, і читає ті самі записи ще й з реєстру. InstallerClean пропонує файл лише тоді, коли на нього не претендує жодна встановлена тут програма, або коли його замінило новіше виправлення і жодна програма тут не змогла б повернутися до старого. Усе, щодо чого InstallerClean не дістає прямої відповіді, він притримує. [Докладніше нижче](#як-це-працює).
 - **Нічого про вас:** Відкритий вихідний код (Apache 2.0). Без облікового запису, без реклами, без відстеження, нічого не працює у фоні. Під час запуску InstallerClean перевіряє на GitHub, чи немає новішої версії, і це можна вимкнути, а після свого першого завершеного запуску на комп'ютері надсилає один анонімний звіт про те, як усе пройшло, якщо тільки ви не знімете прапорець на екрані з результатом.
 - **Звідки взяти:** [Завантажте найновіший реліз](../../releases/latest). Запустіть; пройдіть через [будь-яке попередження Windows](#unknown-publisher) і [запит на права адміністратора](#admin). Перемістіть або видаліть те, що InstallerClean знайде. Готово.
+
+[![Підтримайте мене на Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nofaff)
 
 ## Зміст
 
@@ -466,7 +468,7 @@ dotnet test src/InstallerClean.Tests/
 
 Знайшли помилку чи маєте пропозицію? [Створіть issue](../../issues) або розпочніть [обговорення](../../discussions). Pull requests вітаються. Будь ласка, запустіть `dotnet test` перед поданням.
 
-InstallerClean доступний 16 мовами, і кожна охоплює його цілком: сам застосунок, інсталятор, командний рядок і цей README. У застосунку, інсталяторі та командному рядку японську й нідерландську повністю надали coolvitto і RijckAlex, а італійська — це мій власний машинний переклад, виправлений і схвалений bovirus, усі троє носії мови; решта — мої власні машинні переклади. Кожен README — мій власний, усіма мовами. Я вклав у них багато зусиль, але бездоганні вони не будуть, і я вирішив випустити їх як є, а не тримати, доки носій мови зможе перевірити кожен. Якщо ви знаєте англійську й одну з цих мов і помітите щось, що можна покращити, я буду радий про це почути, в [issue](../../issues/new?template=translation_review.md), pull request чи [обговоренні](../../discussions).
+InstallerClean доступний 17 мовами, і кожна охоплює його цілком: сам застосунок, інсталятор, командний рядок і цей README. У застосунку, інсталяторі та командному рядку японську й нідерландську повністю надали coolvitto і RijckAlex, а італійська — це мій власний машинний переклад, виправлений і схвалений bovirus, усі троє носії мови; решта — мої власні машинні переклади. Кожен README — мій власний, усіма мовами. Я вклав у них багато зусиль, але бездоганні вони не будуть, і я вирішив випустити їх як є, а не тримати, доки носій мови зможе перевірити кожен. Якщо ви знаєте англійську й одну з цих мов і помітите щось, що можна покращити, я буду радий про це почути, в [issue](../../issues/new?template=translation_review.md), pull request чи [обговоренні](../../discussions).
 
 ## Підтримати проєкт
 
