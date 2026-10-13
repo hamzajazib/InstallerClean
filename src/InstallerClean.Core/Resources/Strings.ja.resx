@@ -1315,7 +1315,7 @@ InstallerClean はすでに管理者として実行されていたため、同�
        situations with different answers, and this count is what tells
        them apart. Zero is a real value and reads correctly: "it read 0
        programs". -->
-  <data name="Error.MsiNonSuccess" xml:space="preserve"><value>Windows Installer は InstallerClean に、読み取り可能なインストール済みプログラムの一覧を渡せませんでした。{1} {2} を読み取ったのち、項目が 1 件読み取り不能で返されました (エラーコード{0})。一部しか読めていない一覧を使うのではなく、InstallerClean は中止しました。何も削除していません。</value></data>
+  <data name="Error.MsiNonSuccess" xml:space="preserve"><value>Windows Installer は InstallerClean に、読み取り可能なインストール済みプログラムの一覧を渡せませんでした。{1} 個の {2} を読み取ったのち、項目が 1 件読み取り不能で返されました (エラーコード{0})。一部しか読めていない一覧を使うのではなく、InstallerClean は中止しました。何も削除していません。</value></data>
   <!-- The index cap, which is a different condition from the unreadable
        entry above and must not borrow that string: the enumeration ran out
        of budget rather than failing, so 0 = the cap reached (not a failure
@@ -1327,7 +1327,7 @@ InstallerClean はすでに管理者として実行されていたため、同�
        reason: how far the enumeration got is the fact somebody helping needs,
        and it is as worth having when the budget runs out as when an
        unreadable entry stops the walk. -->
-  <data name="Error.MsiEnumerationNeverEnded" xml:space="preserve"><value>Windows Installer がインストール済みプログラムの一覧の終わりを最後まで知らせませんでした。InstallerClean は {2} {3} を読み取ったのち、{0} 件で打ち切りました (最後のエラーコード{1})。終わりのない一覧は信頼できないため、InstallerClean は中止しました。何も削除していません。</value></data>
+  <data name="Error.MsiEnumerationNeverEnded" xml:space="preserve"><value>Windows Installer がインストール済みプログラムの一覧の終わりを最後まで知らせませんでした。InstallerClean は {2} 個の {3} を読み取ったのち、{0} 件で打ち切りました (最後のエラーコード{1})。終わりのない一覧は信頼できないため、InstallerClean は中止しました。何も削除していません。</value></data>
   <!-- The patch-loop sibling of Error.MsiEnumerationNeverEnded, same cap
        condition and the same four placeholders.
 
@@ -1335,7 +1335,7 @@ InstallerClean はすでに管理者として実行されていたため、同�
        walks one program's patches, so 2 counts patches read cleanly and 3 is
        the patch noun. Borrowing the sibling's noun would report a count of
        patches as a count of programs. -->
-  <data name="Error.MsiPatchEnumerationNeverEnded" xml:space="preserve"><value>Windows Installer がひとつのプログラムのパッチ一覧の終わりを最後まで知らせませんでした。InstallerClean は {2} {3} を読み取ったのち、{0} 件で打ち切りました (最後のエラーコード{1})。終わりのない一覧は信頼できないため、InstallerClean は中止しました。何も削除していません。</value></data>
+  <data name="Error.MsiPatchEnumerationNeverEnded" xml:space="preserve"><value>Windows Installer がひとつのプログラムのパッチ一覧の終わりを最後まで知らせませんでした。InstallerClean は {2} 個の {3} を読み取ったのち、{0} 件で打ち切りました (最後のエラーコード{1})。終わりのない一覧は信頼できないため、InstallerClean は中止しました。何も削除していません。</value></data>
   <!-- Shown when what Windows still registers and what is in the cache folder
        cannot be reconciled: a sign the correlation broke, not a real list of
        removable files. "Nearly" and "almost" are what the gate actually

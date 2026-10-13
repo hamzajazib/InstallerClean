@@ -1315,7 +1315,7 @@ InstallerClean은 이미 관리자 권한으로 실행 중이었으므로 그런
        situations with different answers, and this count is what tells
        them apart. Zero is a real value and reads correctly: "it read 0
        programs". -->
-  <data name="Error.MsiNonSuccess" xml:space="preserve"><value>Windows Installer가 InstallerClean에게 읽을 수 있는 설치된 프로그램 목록을 주지 못했습니다. {1} {2}을(를) 읽은 다음 항목 하나가 읽을 수 없는 상태로 돌아왔습니다(오류 코드 {0}). 일부만 읽은 목록으로 작업하는 대신 InstallerClean은 멈췄습니다. 아무것도 제거되지 않았습니다.</value></data>
+  <data name="Error.MsiNonSuccess" xml:space="preserve"><value>Windows Installer가 InstallerClean에게 읽을 수 있는 설치된 프로그램 목록을 주지 못했습니다. {2} {1}개를 읽은 다음 항목 하나가 읽을 수 없는 상태로 돌아왔습니다(오류 코드 {0}). 일부만 읽은 목록으로 작업하는 대신 InstallerClean은 멈췄습니다. 아무것도 제거되지 않았습니다.</value></data>
   <!-- The index cap, which is a different condition from the unreadable
        entry above and must not borrow that string: the enumeration ran out
        of budget rather than failing, so 0 = the cap reached (not a failure
@@ -1327,7 +1327,7 @@ InstallerClean은 이미 관리자 권한으로 실행 중이었으므로 그런
        reason: how far the enumeration got is the fact somebody helping needs,
        and it is as worth having when the budget runs out as when an
        unreadable entry stops the walk. -->
-  <data name="Error.MsiEnumerationNeverEnded" xml:space="preserve"><value>Windows Installer가 설치된 프로그램 목록의 끝을 끝내 알리지 않았습니다. InstallerClean은 {2} {3}을(를) 읽은 다음 {0}개 항목에서 포기했습니다(마지막 오류 코드 {1}). 끝이 없는 목록은 믿을 수 없으므로 InstallerClean은 멈췄습니다. 아무것도 제거되지 않았습니다.</value></data>
+  <data name="Error.MsiEnumerationNeverEnded" xml:space="preserve"><value>Windows Installer가 설치된 프로그램 목록의 끝을 끝내 알리지 않았습니다. InstallerClean은 {3} {2}개를 읽은 다음 {0}개 항목에서 포기했습니다(마지막 오류 코드 {1}). 끝이 없는 목록은 믿을 수 없으므로 InstallerClean은 멈췄습니다. 아무것도 제거되지 않았습니다.</value></data>
   <!-- The patch-loop sibling of Error.MsiEnumerationNeverEnded, same cap
        condition and the same four placeholders.
 
@@ -1335,7 +1335,7 @@ InstallerClean은 이미 관리자 권한으로 실행 중이었으므로 그런
        walks one program's patches, so 2 counts patches read cleanly and 3 is
        the patch noun. Borrowing the sibling's noun would report a count of
        patches as a count of programs. -->
-  <data name="Error.MsiPatchEnumerationNeverEnded" xml:space="preserve"><value>Windows Installer가 한 프로그램의 패치 목록의 끝을 끝내 알리지 않았습니다. InstallerClean은 {2} {3}을(를) 읽은 다음 {0}개 항목에서 포기했습니다(마지막 오류 코드 {1}). 끝이 없는 목록은 믿을 수 없으므로 InstallerClean은 멈췄습니다. 아무것도 제거되지 않았습니다.</value></data>
+  <data name="Error.MsiPatchEnumerationNeverEnded" xml:space="preserve"><value>Windows Installer가 한 프로그램의 패치 목록의 끝을 끝내 알리지 않았습니다. InstallerClean은 {3} {2}개를 읽은 다음 {0}개 항목에서 포기했습니다(마지막 오류 코드 {1}). 끝이 없는 목록은 믿을 수 없으므로 InstallerClean은 멈췄습니다. 아무것도 제거되지 않았습니다.</value></data>
   <!-- Shown when what Windows still registers and what is in the cache folder
        cannot be reconciled: a sign the correlation broke, not a real list of
        removable files. "Nearly" and "almost" are what the gate actually
