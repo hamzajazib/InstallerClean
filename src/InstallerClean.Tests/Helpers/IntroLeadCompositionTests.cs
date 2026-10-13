@@ -5,7 +5,7 @@ using InstallerClean.Resources;
 namespace InstallerClean.Tests.Helpers;
 
 /// <summary>
-/// The main window's first line, across all sixteen languages.
+/// The main window's first line, across every language.
 ///
 /// MainViewModel.IntroLead picks one of seven strings and the window binds it as
 /// the TextBlock's text. None of the seven carries a square bracket, in any

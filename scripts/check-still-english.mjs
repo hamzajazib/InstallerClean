@@ -86,7 +86,7 @@ const isMachineCliKey = (key) =>
 
 // Universal keeps: the product name and the pure-placeholder announcement string,
 // byte-identical to English in every language on purpose. Mirrors KEEP_ENGLISH in
-// every gen-strings-<code>.mjs (they are identical across all fifteen; the template
+// every gen-strings-<code>.mjs (they are identical across all of them; the template
 // carries seven more and says why in its own comment).
 //
 // The five size suffixes and the two elapsed suffixes are not here and are not
@@ -102,24 +102,25 @@ const KEEP_ENGLISH = new Set([
 // Per-language keeps: a word a language deliberately renders identically to
 // English (a naturalised loanword such as German "Patches" or "Details"). Mirrors
 // each generator's ALSO_KEEP. Languages with an empty ALSO_KEEP are omitted.
-// Display.ListSeparator is the odd one and is in thirteen of them: it is ", ",
-// a punctuation mark rather than a word, and thirteen languages separate a list
+// Display.ListSeparator is the odd one and is in most of them: it is ", ",
+// a punctuation mark rather than a word, and most languages separate a list
 // exactly as English does. It could neither be translated nor left failing, so
-// it is a keep everywhere except ja and zh-Hans, which take the ideographic
-// comma and have a real value.
+// it is a keep everywhere except ja, zh-Hans and zh-Hant, which take the
+// ideographic comma and have a real value.
 //
 // Display.SentenceSeparator is the same shape and sits beside it in the same
-// thirteen. It is the stop that joins a dialog heading to its body in the single
+// languages. It is the stop that joins a dialog heading to its body in the single
 // line a screen reader announces, ". " in the languages that end a sentence as
-// English does, and the ideographic full stop with no space after it in ja and
-// zh-Hans, which is why those two are absent here and carry a real value.
+// English does, and the ideographic full stop with no space after it in ja,
+// zh-Hans and zh-Hant, which is why those three are absent here and carry a real
+// value.
 //
-// The unit suffixes are here in the same shape. Twelve languages
+// The unit suffixes are here in the same shape. Most languages
 // abbreviate a size exactly as English does and keep all seven; French keeps only
 // the two elapsed ones, "ms" and "s" being the SI symbols it writes unchanged
 // while To/Go/Mo/Ko/o are abbreviated French words; Russian and Ukrainian keep none,
-// taking ТБ/ГБ/МБ/КБ/Б and мс/с. So ja and zh-Hans have an entry here where they had
-// none, and ru and uk keep only the separator.
+// taking ТБ/ГБ/МБ/КБ/Б and мс/с. So ja, zh-Hans and zh-Hant keep only the units,
+// and ru and uk keep only the separators.
 const SIZE_UNITS = ['Display.Size.TB', 'Display.Size.GB', 'Display.Size.MB', 'Display.Size.KB', 'Display.Size.B'];
 const ELAPSED_UNITS = ['Display.Elapsed.Ms', 'Display.Elapsed.S'];
 const UNITS = [...SIZE_UNITS, ...ELAPSED_UNITS];
@@ -140,6 +141,7 @@ const ALSO_KEEP = {
   uk: ['Display.ListSeparator', 'Display.SentenceSeparator'],
   vi: ['Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
   'zh-Hans': [...UNITS],
+  'zh-Hant': [...UNITS],
 };
 
 const neutral = parse('Strings.resx');

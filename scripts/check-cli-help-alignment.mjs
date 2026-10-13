@@ -44,7 +44,7 @@ const dir = 'src/InstallerClean.Core/Resources';
 // Priority order, matching SupportedLanguages.CultureNames. The neutral is
 // checked too, and is also this file's control: see below.
 const LANGS = ['en-GB', 'zh-Hans', 'ru', 'es', 'ja', 'pt-BR', 'pl', 'tr',
-  'ko', 'fr', 'it', 'de', 'id', 'vi', 'uk', 'nl'];
+  'ko', 'fr', 'it', 'de', 'id', 'vi', 'uk', 'nl', 'zh-Hant'];
 
 // UAX #11 East Asian Wide (W) and Fullwidth (F): the code points a fixed-pitch
 // console draws two cells wide.

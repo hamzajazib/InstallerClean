@@ -971,6 +971,7 @@ public partial class MainWindow : Window
         ["uk"] = "Українська",
         ["ja"] = "日本語",
         ["zh-Hans"] = "简体中文",
+        ["zh-Hant"] = "繁體中文",
         ["ko"] = "한국어",
     };
 
@@ -1047,7 +1048,7 @@ public partial class MainWindow : Window
                 Command = _vm.Chrome.SetLanguageCommand,
                 CommandParameter = culture,
                 // Mark the active language as checked so a screen reader is told
-                // which of the sixteen is current through the UIA Toggle pattern,
+                // which language is current through the UIA Toggle pattern,
                 // rather than only by the tick glyph in the header, which is a
                 // Segoe MDL2 private-use codepoint with no accessible text. The
                 // app's MenuItem template (Components.xaml) draws no check mark of

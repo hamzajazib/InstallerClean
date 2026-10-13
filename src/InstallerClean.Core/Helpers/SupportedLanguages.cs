@@ -23,14 +23,15 @@ public static class SupportedLanguages
     public static readonly IReadOnlyList<string> CultureNames = new[]
     {
         Neutral, "zh-Hans", "ru", "es", "ja", "pt-BR", "pl", "tr",
-        "ko", "fr", "it", "de", "id", "vi", "uk", "nl",
+        "ko", "fr", "it", "de", "id", "vi", "uk", "nl", "zh-Hant",
     };
 
     /// <summary>
     /// The supported-language name the app is actually displaying for
     /// <paramref name="uiCulture"/>: the first entry on the culture's parent
     /// chain, the same chain satellite resolution probes (it-CH falls back to
-    /// <c>"it"</c>; zh-CN to zh-Hans, so it maps to <c>"zh-Hans"</c>), else
+    /// <c>"it"</c>; zh-CN to zh-Hans, so it maps to <c>"zh-Hans"</c>, and zh-TW
+    /// to zh-Hant), else
     /// <see cref="Neutral"/>, which every culture without a satellite
     /// resolves to. A two-letter comparison is not enough: zh-CN's ISO
     /// language name is "zh", which matches no entry, yet its resources

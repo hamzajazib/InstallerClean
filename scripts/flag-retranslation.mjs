@@ -118,7 +118,7 @@ const neutralValue = (key) => {
 //
 // The unknown-key refusal below is not this and does not cover it: it is per-key,
 // so it stops a key that could not be found and stays silent about every key the
-// run did not ask for. This tool rewrites fifteen generators with no undo, so a
+// run did not ask for. This tool rewrites every satellite generator with no undo, so a
 // neutral it cannot wholly read is one it must not act on at all.
 const parseControl = (file, xml, parsed) => {
   const raw = (xml.match(/<data\b/g) || []).length;
@@ -242,7 +242,7 @@ const langOf = (file) => file.replace(/^gen-strings-/, '').replace(/\.mjs$/, '')
 for (const p of plans) for (const s of p.skipped) console.error(`  ${p.file}: ${s}`);
 
 // --- What is about to go, or what has just gone. One block per key, because the
-// English replacing it is the same in every language and printing it fifteen times
+// English replacing it is the same in every language and printing it once per language
 // says nothing the once does not.
 //
 // THE OLD VALUE IS PRINTED, NOT JUST THE KEY NAME. Then this output is itself a

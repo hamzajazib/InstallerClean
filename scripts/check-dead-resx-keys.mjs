@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Fails (exit 1) when a neutral Strings.resx key has no consumer in the app
 // source, so a string that has fallen out of use is caught before it accretes as
-// dead weight the fifteen languages all still carry a translation for.
+// dead weight every language still carries a translation for.
 //
 // This is the gate half of scripts/list-unused-resources.sh, which is a read-only
 // report: this guard reuses that script's exact detection rules and adds a
@@ -51,9 +51,9 @@ const ALLOWLIST = new Set([
   'Status.DeleteCancelled.Partial',
 
   // ---- Retired in 3.0.0 with the identity check, and RETIRED IS NOT DEAD ----
-  // THE TWO BELOW ARE IN ALL FIFTEEN SATELLITES, which is what makes keeping them
+  // THE TWO BELOW ARE IN EVERY SATELLITE, which is what makes keeping them
   // worth something and is the same reason as the pair above: deleting the English
-  // would throw away fifteen translations of the only wording this project has for
+  // would throw away every translation of the only wording this project has for
   // the condition they describe.
 
   // Two of the five held-back causes on the completion overlay, both produced only

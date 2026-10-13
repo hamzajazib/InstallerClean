@@ -72,7 +72,7 @@ const dir = 'src/InstallerClean.Core/Resources';
 //
 // This gate catches an unreadable file through its own comparison in every case
 // but ONE, and the exception is the reason the control is here rather than left
-// to luck: when all sixteen files go together an empty set is in parity with an
+// to luck: when every file goes together an empty set is in parity with an
 // empty set, and it reported every satellite OK and exited 0.
 const parseControl = (file, xml, parsed) => {
   const raw = (xml.match(/<data\b/g) || []).length;

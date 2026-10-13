@@ -6,7 +6,7 @@ using InstallerClean.Resources;
 namespace InstallerClean.Tests.Helpers;
 
 /// <summary>
-/// The delete confirmation's body, across all sixteen languages.
+/// The delete confirmation's body, across every language.
 ///
 /// ConfirmDeleteWindow takes one of the two count forms from
 /// DisplayHelpers.Pluralise and paints it as the card's body. No form carries a

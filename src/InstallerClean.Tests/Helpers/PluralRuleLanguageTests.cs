@@ -13,14 +13,14 @@ namespace InstallerClean.Tests.Helpers;
 /// chain gets the English neutral. The rule is chosen by two-letter code, and that
 /// switch has arms for the languages the app ships and for their whole two-letter
 /// family alike. So taking it from the REQUESTED culture would apply one language's
-/// arm to a sentence written in another: Traditional Chinese (zh-TW, zh-HK, zh-MO,
-/// zh-Hant and bare zh) displays English, and the "zh" arm answers Other at every
-/// count, which would spell "1 files"; European Portuguese (pt-PT and bare pt, the
+/// arm to a sentence written in another: bare zh, which names no script and so
+/// reaches neither Chinese satellite, displays English, and the "zh" arm answers
+/// Other at every count, which would spell "1 files"; European Portuguese (pt-PT and bare pt, the
 /// satellite being pt-BR, which is not on their chain) displays English, and the "pt"
 /// arm makes zero singular, which would spell "0 file".
 ///
 /// WHICH CULTURES DISPLAY ENGLISH IS ALREADY PINNED, in SupportedLanguagesTests, which
-/// puts zh-TW and pt-PT in the same theory with a comment on each saying so. This file
+/// puts bare zh and pt-PT in the same theory with a comment on each saying so. This file
 /// is the other half of that: what the plural rule then does with them.
 ///
 /// WHY IT ITERATES WHAT IT ITERATES, WHICH IS THE PART TO CARRY FORWARD. Every other
@@ -140,8 +140,8 @@ public class PluralRuleLanguageTests
         // rule picked. The_neutral_defines_no_override pins that.
         string[] displaysEnglish =
         {
-            "zh-TW", "zh-HK", "zh-MO", "zh-Hant", "zh", // Traditional Chinese: no satellite ships
-            "pt-PT", "pt",                              // the Portuguese satellite is pt-BR only
+            "zh",           // names no script, so neither Chinese satellite is on its chain
+            "pt-PT", "pt",  // the Portuguese satellite is pt-BR only
         };
 
         foreach (var name in displaysEnglish)
@@ -159,12 +159,15 @@ public class PluralRuleLanguageTests
     }
 
     [Theory]
-    // Simplified Chinese resolves through the zh-Hans parent, so these DO display
-    // Chinese and keep the no-inflection rule. They are one parent hop from the family
-    // above and take the opposite answer, which is why the rule cannot be a two-letter
-    // comparison in either direction.
+    // Simplified Chinese resolves through the zh-Hans parent and Traditional Chinese
+    // through zh-Hant, so these DO display Chinese and keep the no-inflection rule. They
+    // are one parent hop from bare zh above and take the opposite answer, which is why
+    // the rule cannot be a two-letter comparison in either direction.
     [InlineData("zh-CN", "zh-Hans")]
     [InlineData("zh-SG", "zh-Hans")]
+    [InlineData("zh-TW", "zh-Hant")]
+    [InlineData("zh-HK", "zh-Hant")]
+    [InlineData("zh-MO", "zh-Hant")]
     [InlineData("pt-BR", "pt-BR")]
     [InlineData("fr-CA", "fr")]
     [InlineData("it-CH", "it")]

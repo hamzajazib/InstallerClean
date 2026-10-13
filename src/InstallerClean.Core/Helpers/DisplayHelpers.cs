@@ -306,7 +306,7 @@ internal static class DisplayHelpers
     /// reads exactly like one that covers it.
     ///
     /// CountedStringTests calls this for every counted prefix the app passes, and
-    /// renders the cardinality ones in all sixteen languages, so an unclassified or
+    /// renders the cardinality ones in every language, so an unclassified or
     /// misfiled prefix fails a push rather than a user's screen. The throw is the
     /// backstop under those tests, not the detector.
     /// </summary>
@@ -439,10 +439,10 @@ internal static class DisplayHelpers
     /// code, so taking the rule from the requested culture would apply one language's
     /// arm to a sentence written in another.
     ///
-    /// TWO FAMILIES SIT ON THAT LINE. Traditional Chinese (zh-TW, zh-HK, zh-MO,
-    /// zh-Hant and bare zh) reaches no satellite and displays English while its code
-    /// stays "zh", whose arm answers Other at every count, so that arm would spell an
-    /// English sentence "1 files". European Portuguese (pt-PT, and bare pt: the
+    /// TWO FAMILIES SIT ON THAT LINE. Bare zh, which names no script, reaches neither
+    /// Chinese satellite and displays English while its code stays "zh", whose arm
+    /// answers Other at every count, so that arm would spell an English sentence
+    /// "1 files". European Portuguese (pt-PT, and bare pt: the
     /// satellite is pt-BR, which is not on their fallback chain) displays English while
     /// its arm makes 0 singular as well as 1, which would spell "0 file". Five of the
     /// counted prefixes are noun slots, so the noun they pick is quoted by other
@@ -451,7 +451,7 @@ internal static class DisplayHelpers
     /// <see cref="SupportedLanguages.Active"/> walks the same parent chain the
     /// ResourceManager probes, which is why it is the right answer and not merely a
     /// closer one, and it is the reason this is not simply the culture's own parent:
-    /// zh-CN resolves through zh-Hans and does render Chinese.
+    /// zh-CN resolves through zh-Hans and zh-TW through zh-Hant, and both render Chinese.
     /// </summary>
     private static CultureInfo DisplayedLanguage =>
         CultureInfo.GetCultureInfo(SupportedLanguages.Active(Localisation.UiCulture));

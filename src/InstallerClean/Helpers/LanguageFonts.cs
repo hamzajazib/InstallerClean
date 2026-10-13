@@ -15,7 +15,7 @@ namespace InstallerClean.Helpers;
 /// in the list, times the text size. Poppins sets 1.5 and 1.1, and the bundled
 /// Montserrat files carry the same values (scripts/fonts/make-montserrat.py
 /// writes them). The Windows fonts set their own, between 1.27 and 1.33, and
-/// cannot be edited, so each of those three is a composite family built here
+/// cannot be edited, so each of those is a composite family built here
 /// with its LineSpacing and Baseline taken from the theme family. WPF lets the
 /// app set those two only on a composite. So a line is the same height in
 /// every language.
@@ -47,6 +47,7 @@ public static class LanguageFonts
     private static readonly Dictionary<string, string> WindowsFamilies = new(StringComparer.OrdinalIgnoreCase)
     {
         ["zh-Hans"] = "Microsoft YaHei UI, Segoe UI",
+        ["zh-Hant"] = "Microsoft JhengHei UI, Segoe UI",
         ["ja"] = "Yu Gothic UI, Segoe UI",
         ["ko"] = "Malgun Gothic, Segoe UI",
     };

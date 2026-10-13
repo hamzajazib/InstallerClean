@@ -9,6 +9,7 @@ public class SupportedLanguagesTests
     [InlineData("en-GB", "en-GB")]
     [InlineData("pt-BR", "pt-BR")]
     [InlineData("zh-Hans", "zh-Hans")]
+    [InlineData("zh-Hant", "zh-Hant")]
     public void Active_matches_a_shipped_name_exactly(string culture, string expected)
         => Assert.Equal(expected, SupportedLanguages.Active(CultureInfo.GetCultureInfo(culture)));
 
@@ -24,17 +25,21 @@ public class SupportedLanguagesTests
     // zh-CN's ISO language name is "zh", which matches no shipped entry, yet
     // its resources resolve through the zh-Hans parent and render Chinese; the
     // reported language has to walk the same chain or the globe menu ticks
-    // English on a Chinese UI and treats a click on English as a no-op.
+    // English on a Chinese UI and treats a click on English as a no-op. The
+    // Traditional cultures reach zh-Hant the same way.
     [Theory]
     [InlineData("zh-CN", "zh-Hans")]
     [InlineData("zh-SG", "zh-Hans")]
+    [InlineData("zh-TW", "zh-Hant")]
+    [InlineData("zh-HK", "zh-Hant")]
+    [InlineData("zh-MO", "zh-Hant")]
     public void Active_matches_through_the_script_level_parent(string culture, string expected)
         => Assert.Equal(expected, SupportedLanguages.Active(CultureInfo.GetCultureInfo(culture)));
 
     [Theory]
     [InlineData("en-US")] // no en satellite; the neutral resx is the display
     [InlineData("pt-PT")] // pt-BR is not on pt-PT's fallback chain
-    [InlineData("zh-TW")] // Traditional Chinese is not shipped
+    [InlineData("zh")] // bare Chinese names no script, so neither satellite is on its chain
     [InlineData("sv-SE")] // no Swedish translation at all
     public void Active_reports_neutral_for_a_culture_that_displays_English(string culture)
         => Assert.Equal(SupportedLanguages.Neutral, SupportedLanguages.Active(CultureInfo.GetCultureInfo(culture)));

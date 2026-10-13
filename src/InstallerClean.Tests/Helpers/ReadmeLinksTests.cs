@@ -21,13 +21,16 @@ public class ReadmeLinksTests
     [InlineData("pt-BR", "README.pt-BR.md")]
     [InlineData("zh-CN", "README.zh-CN.md")] // zh-Hans satellite pairs with the zh-CN README
     [InlineData("zh-Hans", "README.zh-CN.md")]
+    [InlineData("zh-TW", "README.zh-TW.md")] // zh-Hant satellite pairs with the zh-TW README
+    [InlineData("zh-HK", "README.zh-TW.md")]
+    [InlineData("zh-Hant", "README.zh-TW.md")]
     public void For_links_the_displayed_languages_readme(string culture, string readme)
         => Assert.Equal(
             $"https://github.com/no-faff/InstallerClean/blob/main/{readme}#recovery",
             ReadmeLinks.For("recovery", CultureInfo.GetCultureInfo(culture)));
 
     // Home is the About window's guide link: the whole document rather than
-    // one section of it. For the fifteen translations that is For's URL
+    // one section of it. For every translation that is For's URL
     // without the fragment; English is the one language where the two
     // differ, because an anchor works from the repository home and an
     // unanchored landing there does not (see ReadmeLinks.Home).
@@ -48,6 +51,8 @@ public class ReadmeLinksTests
     [InlineData("pt-BR", "README.pt-BR.md")]
     [InlineData("zh-CN", "README.zh-CN.md")]
     [InlineData("zh-Hans", "README.zh-CN.md")]
+    [InlineData("zh-TW", "README.zh-TW.md")]
+    [InlineData("zh-Hant", "README.zh-TW.md")]
     public void Home_links_the_displayed_languages_readme(string culture, string readme)
         => Assert.Equal(
             $"https://github.com/no-faff/InstallerClean/blob/main/{readme}",

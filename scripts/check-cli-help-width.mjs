@@ -72,7 +72,7 @@ const columns = (s) => {
 // over InstallerCacheHelpers.InstallerFolder, which is SpecialFolder.Windows +
 // "Installer"), so Cli.Help.Header is three columns wider on screen than in the
 // file. A machine whose Windows lives somewhere else draws it wider again: the
-// widest of the sixteen headers is 56 columns substituted, so that path would
+// widest header is 56 columns substituted, so that path would
 // have to run 18 characters past C:\Windows\Installer before the budget bit.
 const FOLDER = 'C:\\Windows\\Installer';
 const printed = (value) => value

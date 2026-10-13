@@ -10,6 +10,7 @@ public class LanguageFontsTests
     private static readonly Dictionary<string, string> EastAsian = new()
     {
         ["zh-Hans"] = "Microsoft YaHei UI, Segoe UI",
+        ["zh-Hant"] = "Microsoft JhengHei UI, Segoe UI",
         ["ja"] = "Yu Gothic UI, Segoe UI",
         ["ko"] = "Malgun Gothic, Segoe UI",
     };

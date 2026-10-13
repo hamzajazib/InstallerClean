@@ -149,7 +149,7 @@ public class DisplayHelpersTests
         // inventory being silently short. "Test.FlatOverload" was invented here and
         // could never have exercised the override lookup this test describes, since
         // no satellite has ever held a key by that name in any form. This one is
-        // passed by the app, carries no override in any of the fifteen languages,
+        // passed by the app, carries no override in any language,
         // and so falls back in every category exactly as the comment above says.
         const string flat = "Found {0} registered {1}.";
         const string prefix = "Completion.MoveCancelledSummary";

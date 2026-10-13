@@ -113,9 +113,11 @@ public partial class App : Application
         // below. A tag matching no map takes the maps carrying no language at all,
         // and those lead with Yu Gothic UI, Meiryo UI and Meiryo over the Han
         // block, the kana and CJK punctuation block and the fullwidth forms:
-        // Japanese faces. Under zh-Hans its Chinese maps apply instead, leading
-        // with Microsoft YaHei UI, and Han unification makes the two different
-        // characters rather than a different style. Japanese reaches the same
+        // Japanese faces. Under zh-Hans its Simplified Chinese maps apply instead,
+        // leading with Microsoft YaHei UI, and under zh-Hant its Traditional
+        // Chinese maps, leading with Microsoft JhengHei UI; Han unification makes
+        // the Japanese and Chinese forms different characters rather than a
+        // different style. Japanese reaches the same
         // faces either way, its maps being identical to the unlanguaged ones over
         // kana and the fullwidth block and leading with the same three over Han,
         // and Hangul has one map with no language on it at all, so what the tag
@@ -128,7 +130,7 @@ public partial class App : Application
         // neutral en-GB text, and tagging that English prose Swedish would be a
         // fresh instance of the same fault. Active() walks the parent chain the
         // satellite resolution walks and answers en-GB when nothing matches, so
-        // the value is always one of the sixteen the app ships: all ASCII, all
+        // the value is always one of the languages the app ships: all ASCII, all
         // inside RFC 3066, so none of them can reach
         // XmlLanguage.GetLanguage's throw.
         //

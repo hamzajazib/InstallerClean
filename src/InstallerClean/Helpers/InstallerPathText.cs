@@ -30,7 +30,7 @@ namespace InstallerClean.Helpers;
 /// by its backslashes rather than matched.
 ///
 /// Why here rather than in the strings: this is presentation, and every resx
-/// value in sixteen languages stays exactly as the translators wrote it. It
+/// value in every language stays exactly as the translators wrote it. It
 /// also puts the transform out of the CLI's reach by construction. Some of the
 /// strings naming the folder are console output, one of them machine-read, and
 /// an invisible character in a console line is a liability with no upside; the
@@ -58,8 +58,8 @@ namespace InstallerClean.Helpers;
 /// TextFormatterImp formatting a line with <c>LineFlags.None</c>; and the one
 /// culture-sensitive break input it supplies is the hyphenator, which needs
 /// IsHyphenationEnabled. So the language tag <c>App.OnStartup</c> puts on every
-/// element cannot move a break, and a break falls the same way under all sixteen
-/// languages. A TextBlock on WPF's simple-text fast path has no break opportunity
+/// element cannot move a break, and a break falls the same way in every
+/// language. A TextBlock on WPF's simple-text fast path has no break opportunity
 /// inside the path to suppress.
 ///
 /// Applied wherever this project turns a resource string into text that gets

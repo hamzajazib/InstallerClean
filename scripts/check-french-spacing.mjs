@@ -11,7 +11,7 @@
 // to be a no-break space for the same reason: the mark belongs to the words it
 // encloses and must not be left stranded at the end of a line.
 //
-// Of the spacing-and-punctuation rules the fifteen languages between them need,
+// Of the spacing-and-punctuation rules the translations between them need,
 // these are the ones a machine can check without drowning the result in false
 // positives.
 //

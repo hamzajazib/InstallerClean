@@ -46,6 +46,7 @@ const INNO_TO_CULTURE = {
   russian: 'ru',
   ukrainian: 'uk',
   japanese: 'ja',
+  chinesetraditional: 'zh-Hant',
   chinesesimplified: 'zh-Hans',
   korean: 'ko',
 };

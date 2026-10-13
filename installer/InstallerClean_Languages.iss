@@ -20,6 +20,7 @@ Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl"
 Name: "japanese"; MessagesFile: "Languages\Japanese.isl"
+Name: "chinesetraditional"; MessagesFile: "Languages\ChineseTraditional.isl"
 Name: "chinesesimplified"; MessagesFile: "Languages\ChineseSimplified.isl"
 Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"
 
@@ -85,6 +86,10 @@ japanese.FinishedHeadingLabel=セットアップ完了
 japanese.FinishedLabel=InstallerClean がお使いのコンピューターにインストールされました。
 japanese.ClickFinish=セットアップを終了するには「完了」を選択してください。
 
+chinesetraditional.FinishedHeadingLabel=安裝完成
+chinesetraditional.FinishedLabel=InstallerClean 已安裝在您的電腦上。
+chinesetraditional.ClickFinish=按「完成」以結束安裝程式。
+
 chinesesimplified.FinishedHeadingLabel=安装完成
 chinesesimplified.FinishedLabel=InstallerClean 已安装在您的计算机上。
 chinesesimplified.ClickFinish=单击“完成”以关闭安装程序。
@@ -98,7 +103,7 @@ korean.ClickFinish=설치를 마치려면 '마침'을 클릭하세요.
 ; "running" with nothing visible on screen: a command-line or scheduled-task run
 ; holds the same mutex. Inno's default text only says "close all instances", which
 ; strands the user in that case, so these overrides name both processes and point
-; at Task Manager. Kept here rather than in each .isl so all 16 stay in one place.
+; at Task Manager. Kept here rather than in each .isl so every language stays in one place.
 english.SetupAppRunningError=InstallerClean is still running, so Setup cannot continue.%n%nThis may be the app window, or a command-line or scheduled-task run working in the background. Close the window, or end InstallerClean.exe and installerclean-cli.exe in Task Manager, then click OK to continue, or Cancel to exit.
 english.UninstallAppRunningError=InstallerClean is still running, so it cannot be removed.%n%nThis may be the app window, or a command-line or scheduled-task run working in the background. Close the window, or end InstallerClean.exe and installerclean-cli.exe in Task Manager, then click OK to continue, or Cancel to exit.
 
@@ -140,6 +145,9 @@ ukrainian.UninstallAppRunningError=InstallerClean все ще працює, то
 
 japanese.SetupAppRunningError=InstallerClean がまだ実行中のため、セットアップを続行できません。%n%nアプリのウィンドウのほか、コマンドラインやスケジュールされたタスクによるバックグラウンド処理の可能性もあります。ウィンドウを閉じるか、タスク マネージャーで InstallerClean.exe と installerclean-cli.exe を終了してから、「OK」を選択して続行するか、「キャンセル」を選択して終了してください。
 japanese.UninstallAppRunningError=InstallerClean がまだ実行中のため、アンインストールできません。%n%nアプリのウィンドウのほか、コマンドラインやスケジュールされたタスクによるバックグラウンド処理の可能性もあります。ウィンドウを閉じるか、タスク マネージャーで InstallerClean.exe と installerclean-cli.exe を終了してから、「OK」を選択して続行するか、「キャンセル」を選択して終了してください。
+
+chinesetraditional.SetupAppRunningError=InstallerClean 仍在執行，因此安裝無法繼續。%n%n這可能是應用程式視窗，也可能是在背景執行的命令列或排定的工作。請關閉該視窗，或在工作管理員中結束 InstallerClean.exe 和 installerclean-cli.exe，然後按「確定」繼續，或按「取消」離開。
+chinesetraditional.UninstallAppRunningError=InstallerClean 仍在執行，因此無法解除安裝。%n%n這可能是應用程式視窗，也可能是在背景執行的命令列或排定的工作。請關閉該視窗，或在工作管理員中結束 InstallerClean.exe 和 installerclean-cli.exe，然後按「確定」繼續，或按「取消」離開。
 
 chinesesimplified.SetupAppRunningError=InstallerClean 仍在运行，因此安装无法继续。%n%n这可能是应用程序窗口，也可能是在后台运行的命令行或计划任务进程。请关闭该窗口，或在任务管理器中结束 InstallerClean.exe 和 installerclean-cli.exe，然后点击“确定”继续，或点击“取消”退出。
 chinesesimplified.UninstallAppRunningError=InstallerClean 仍在运行，因此无法卸载。%n%n这可能是应用程序窗口，也可能是在后台运行的命令行或计划任务进程。请关闭该窗口，或在任务管理器中结束 InstallerClean.exe 和 installerclean-cli.exe，然后点击“确定”继续，或点击“取消”退出。
@@ -189,6 +197,9 @@ ukrainian.LaunchApp=Запустити InstallerClean
 
 japanese.UninstallApp=InstallerClean をアンインストール
 japanese.LaunchApp=InstallerClean を起動
+
+chinesetraditional.UninstallApp=解除安裝 InstallerClean
+chinesetraditional.LaunchApp=啟動 InstallerClean
 
 chinesesimplified.UninstallApp=卸载 InstallerClean
 chinesesimplified.LaunchApp=启动 InstallerClean

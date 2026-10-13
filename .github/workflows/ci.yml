@@ -411,7 +411,7 @@ jobs:
         run: |
           # Each generator's status is kept as the loop goes. A command
           # substitution around the whole loop carries only the last one's, so
-          # fifteen of the sixteen would have nowhere to report from.
+          # all but the last would have nowhere to report from.
           #
           # The check on them runs before the diff because a generator that stops
           # early leaves its satellite untouched, so the diff has nothing to say

@@ -41,12 +41,16 @@ public static class ReadmeLinks
         if (string.Equals(active, SupportedLanguages.Neutral, StringComparison.OrdinalIgnoreCase))
             return anchor is null ? $"{Repo}/blob/main/README.md" : $"{Repo}{fragment}";
 
-        // The one name mismatch is deliberate: the zh-Hans satellite pairs
-        // with README.zh-CN.md, because the README family is named by
-        // locale and the satellites by script.
-        var readme = string.Equals(active, "zh-Hans", StringComparison.OrdinalIgnoreCase)
-            ? "zh-CN"
-            : active;
+        // The two Chinese names differ on purpose: the zh-Hans satellite
+        // pairs with README.zh-CN.md and the zh-Hant satellite with
+        // README.zh-TW.md, because the README family is named by locale and
+        // the satellites by script.
+        var readme = active.ToLowerInvariant() switch
+        {
+            "zh-hans" => "zh-CN",
+            "zh-hant" => "zh-TW",
+            _ => active,
+        };
         return $"{Repo}/blob/main/README.{readme}.md{fragment}";
     }
 }

@@ -24,7 +24,7 @@ const GUI = 'src/InstallerClean';
 // checked too: en-GB's own pairs were only ever settled by hand, and it is the
 // language every satellite was generated from.
 const LANGS = ['en-GB', 'zh-Hans', 'ru', 'es', 'ja', 'pt-BR', 'pl', 'tr',
-  'ko', 'fr', 'it', 'de', 'id', 'vi', 'uk', 'nl'];
+  'ko', 'fr', 'it', 'de', 'id', 'vi', 'uk', 'nl', 'zh-Hant'];
 
 // ---------------------------------------------------------------------------
 // Rule 1. A control's spoken name says the same thing as its visible label.
@@ -410,7 +410,7 @@ const values = (path) => {
 };
 
 // The wording, with the access-key apparatus taken off. The Latin languages
-// underline a letter inside the word ("Buy me a _cuppa"); ja, ko and zh-Hans
+// underline a letter inside the word ("Buy me a _cuppa"); ja, ko and Chinese
 // append a parenthesised Latin letter ("...(_B)"), their scripts having no
 // letter to underline. That group is drawn but never spoken, so it comes off
 // whole, while the inline marker leaves its letter behind. A doubled underscore

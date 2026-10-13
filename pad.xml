@@ -25,7 +25,7 @@
     <Program_Release_Status>Major Update</Program_Release_Status>
     <Program_Install_Support>Install and Uninstall</Program_Install_Support>
     <Program_OS_Support>Win10x64,Win11</Program_OS_Support>
-    <Program_Language>English, Simplified Chinese, Russian, Spanish, Japanese, Brazilian Portuguese, Polish, Turkish, Korean, French, Italian, German, Indonesian, Vietnamese, Ukrainian, Dutch</Program_Language>
+    <Program_Language>English, Simplified Chinese, Russian, Spanish, Japanese, Brazilian Portuguese, Polish, Turkish, Korean, French, Italian, German, Indonesian, Vietnamese, Ukrainian, Dutch, Traditional Chinese</Program_Language>
     <Program_Change_Info>InstallerClean no longer holds a file back for a day after it changes, and offers more of the files it held back for programs with no saved installer.</Program_Change_Info>
     <Program_Specific_Category>System</Program_Specific_Category>
     <Program_Category_Class>System &amp; Desktop Utilities::File &amp; Disk Management</Program_Category_Class>

@@ -164,21 +164,28 @@ under Poppins above.
 Inno Setup translation files
 -------------------------------------------------------------------------------
 
-InstallerClean-<version>-setup.exe is built with Inno Setup. Four of its wizard
+InstallerClean-<version>-setup.exe is built with Inno Setup. Five of its wizard
 languages come from Inno Setup's collection of user-contributed translations at
 https://jrsoftware.org/files/istrans/ and are carried in this repository under
 installer/Languages/. Japanese is carried there too, and is described after the
-four. The other eleven come with Inno Setup itself and are not files in this
+five. The rest come with Inno Setup itself and are not files in this
 repository. All of them are compiled into the setup rather than installed with
 it.
 
-Each of the four keeps its own header, including its translator's contact
+Each of the five keeps its own header, including its translator's contact
 details. The attributions in them:
 
   ChineseSimplified.isl
     *** Inno Setup version 6.5.0+ Chinese Simplified messages ***
     Maintainer: Zhenghan Yang (Kira)
     Github: https://github.com/kira-96/Inno-Setup-Chinese-Simplified-Translation
+    Translation based on network resource
+
+  ChineseTraditional.isl
+    *** Inno Setup version 6.5.0+ Chinese Traditional messages ***
+    Name: GoneTone
+    Based on translations by: Anbang LI, Enfong Tsao
+    Based on 5.5.3+ translations by Samuel Lee
     Translation based on network resource
 
   Indonesian.isl

@@ -6,8 +6,7 @@ using InstallerClean.Resources;
 namespace InstallerClean.Tests.Helpers;
 
 /// <summary>
-/// Every sentence the app renders with a link inside it, across all sixteen
-/// languages.
+/// Every sentence the app renders with a link inside it, in every language.
 ///
 /// Two windows hand a resx value to CompositionParsing.SplitAtBracketedPhrase and
 /// hyperlink the phrase wrapped in <c>[ ]</c>. The brackets are ordinary characters

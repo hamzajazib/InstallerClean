@@ -28,7 +28,7 @@ public class TranslateExtensionTests
 {
     private const char Wj = (char)0x2060;
 
-    // Two keys whose value names the installer folder in all sixteen languages,
+    // Two keys whose value names the installer folder in every language,
     // so the assertions below hold whatever culture the test run resolves
     // against. They name it through {InstallerFolder}, and the joiner work
     // depends on the order the extension does its two jobs in: Strings.Get

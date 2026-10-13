@@ -28,7 +28,8 @@
       "tr": "0966c8ff994be978",
       "uk": "0966c8ff994be978",
       "vi": "0966c8ff994be978",
-      "zh-Hans": "0966c8ff994be978"
+      "zh-Hans": "0966c8ff994be978",
+      "zh-Hant": "0966c8ff994be978"
     },
     "Window.About.Title": {
       "de": "4efca0d10c5feb8e",
@@ -45,7 +46,8 @@
       "tr": "4efca0d10c5feb8e",
       "uk": "4efca0d10c5feb8e",
       "vi": "4efca0d10c5feb8e",
-      "zh-Hans": "4efca0d10c5feb8e"
+      "zh-Hans": "4efca0d10c5feb8e",
+      "zh-Hant": "4efca0d10c5feb8e"
     },
     "Window.Registered.Title": {
       "de": "06ab604865c83ec0",
@@ -62,7 +64,8 @@
       "tr": "06ab604865c83ec0",
       "uk": "06ab604865c83ec0",
       "vi": "06ab604865c83ec0",
-      "zh-Hans": "06ab604865c83ec0"
+      "zh-Hans": "06ab604865c83ec0",
+      "zh-Hant": "06ab604865c83ec0"
     },
     "Window.Orphaned.Title": {
       "de": "9b9c962dd743779d",
@@ -79,7 +82,8 @@
       "tr": "9b9c962dd743779d",
       "uk": "9b9c962dd743779d",
       "vi": "9b9c962dd743779d",
-      "zh-Hans": "9b9c962dd743779d"
+      "zh-Hans": "9b9c962dd743779d",
+      "zh-Hant": "9b9c962dd743779d"
     },
     "Section.Registered.Patches": {
       "de": "6aa13a4e3dda4076",
@@ -96,7 +100,8 @@
       "tr": "6aa13a4e3dda4076",
       "uk": "6aa13a4e3dda4076",
       "vi": "6aa13a4e3dda4076",
-      "zh-Hans": "6aa13a4e3dda4076"
+      "zh-Hans": "6aa13a4e3dda4076",
+      "zh-Hant": "6aa13a4e3dda4076"
     },
     "Section.Registered.Details": {
       "de": "46aab76275a6992c",
@@ -113,7 +118,8 @@
       "tr": "46aab76275a6992c",
       "uk": "46aab76275a6992c",
       "vi": "46aab76275a6992c",
-      "zh-Hans": "46aab76275a6992c"
+      "zh-Hans": "46aab76275a6992c",
+      "zh-Hant": "46aab76275a6992c"
     },
     "Section.Backup.Folder": {
       "de": "177f86dbf8576f96",
@@ -130,7 +136,8 @@
       "tr": "177f86dbf8576f96",
       "uk": "177f86dbf8576f96",
       "vi": "177f86dbf8576f96",
-      "zh-Hans": "177f86dbf8576f96"
+      "zh-Hans": "177f86dbf8576f96",
+      "zh-Hant": "177f86dbf8576f96"
     },
     "Section.SayThanks": {
       "de": "d974f291f3d04cbf",
@@ -147,7 +154,8 @@
       "tr": "d974f291f3d04cbf",
       "uk": "d974f291f3d04cbf",
       "vi": "d974f291f3d04cbf",
-      "zh-Hans": "d974f291f3d04cbf"
+      "zh-Hans": "d974f291f3d04cbf",
+      "zh-Hant": "d974f291f3d04cbf"
     },
     "Field.Reason": {
       "de": "f81ab834de5f8491",
@@ -164,7 +172,8 @@
       "tr": "f81ab834de5f8491",
       "uk": "f81ab834de5f8491",
       "vi": "f81ab834de5f8491",
-      "zh-Hans": "f81ab834de5f8491"
+      "zh-Hans": "f81ab834de5f8491",
+      "zh-Hant": "f81ab834de5f8491"
     },
     "Field.Author": {
       "de": "d95082a2ee57f3e4",
@@ -181,7 +190,8 @@
       "tr": "d95082a2ee57f3e4",
       "uk": "d95082a2ee57f3e4",
       "vi": "d95082a2ee57f3e4",
-      "zh-Hans": "d95082a2ee57f3e4"
+      "zh-Hans": "d95082a2ee57f3e4",
+      "zh-Hant": "d95082a2ee57f3e4"
     },
     "Field.Application": {
       "de": "e7ad522ea327e5ba",
@@ -198,7 +208,8 @@
       "tr": "e7ad522ea327e5ba",
       "uk": "e7ad522ea327e5ba",
       "vi": "e7ad522ea327e5ba",
-      "zh-Hans": "e7ad522ea327e5ba"
+      "zh-Hans": "e7ad522ea327e5ba",
+      "zh-Hant": "e7ad522ea327e5ba"
     },
     "Field.Title": {
       "de": "7e8cd2056da73a7f",
@@ -215,7 +226,8 @@
       "tr": "7e8cd2056da73a7f",
       "uk": "7e8cd2056da73a7f",
       "vi": "7e8cd2056da73a7f",
-      "zh-Hans": "7e8cd2056da73a7f"
+      "zh-Hans": "7e8cd2056da73a7f",
+      "zh-Hant": "7e8cd2056da73a7f"
     },
     "Field.Subject": {
       "de": "68971283841aecdf",
@@ -232,7 +244,8 @@
       "tr": "68971283841aecdf",
       "uk": "68971283841aecdf",
       "vi": "68971283841aecdf",
-      "zh-Hans": "68971283841aecdf"
+      "zh-Hans": "68971283841aecdf",
+      "zh-Hant": "68971283841aecdf"
     },
     "Field.Keywords": {
       "de": "8bfdb93cafaa9147",
@@ -249,7 +262,8 @@
       "tr": "8bfdb93cafaa9147",
       "uk": "8bfdb93cafaa9147",
       "vi": "8bfdb93cafaa9147",
-      "zh-Hans": "8bfdb93cafaa9147"
+      "zh-Hans": "8bfdb93cafaa9147",
+      "zh-Hant": "8bfdb93cafaa9147"
     },
     "Field.SigningCertificate": {
       "de": "cc00e0508b5e97d6",
@@ -266,7 +280,8 @@
       "tr": "cc00e0508b5e97d6",
       "uk": "cc00e0508b5e97d6",
       "vi": "cc00e0508b5e97d6",
-      "zh-Hans": "cc00e0508b5e97d6"
+      "zh-Hans": "cc00e0508b5e97d6",
+      "zh-Hant": "cc00e0508b5e97d6"
     },
     "Field.FileSize": {
       "de": "ff0442941bd8348f",
@@ -283,7 +298,8 @@
       "tr": "ff0442941bd8348f",
       "uk": "ff0442941bd8348f",
       "vi": "ff0442941bd8348f",
-      "zh-Hans": "ff0442941bd8348f"
+      "zh-Hans": "ff0442941bd8348f",
+      "zh-Hant": "ff0442941bd8348f"
     },
     "Field.Comment": {
       "de": "44f5e3fbec57be75",
@@ -300,7 +316,8 @@
       "tr": "44f5e3fbec57be75",
       "uk": "44f5e3fbec57be75",
       "vi": "44f5e3fbec57be75",
-      "zh-Hans": "44f5e3fbec57be75"
+      "zh-Hans": "44f5e3fbec57be75",
+      "zh-Hant": "44f5e3fbec57be75"
     },
     "Field.ProductName": {
       "de": "bfa93eb4d4fef9df",
@@ -317,7 +334,8 @@
       "tr": "bfa93eb4d4fef9df",
       "uk": "bfa93eb4d4fef9df",
       "vi": "bfa93eb4d4fef9df",
-      "zh-Hans": "bfa93eb4d4fef9df"
+      "zh-Hans": "bfa93eb4d4fef9df",
+      "zh-Hant": "bfa93eb4d4fef9df"
     },
     "Field.File": {
       "de": "50009ce1da4d15e1",
@@ -334,7 +352,8 @@
       "tr": "50009ce1da4d15e1",
       "uk": "50009ce1da4d15e1",
       "vi": "50009ce1da4d15e1",
-      "zh-Hans": "50009ce1da4d15e1"
+      "zh-Hans": "50009ce1da4d15e1",
+      "zh-Hant": "50009ce1da4d15e1"
     },
     "Field.Size": {
       "de": "1af851907331c0ed",
@@ -351,7 +370,8 @@
       "tr": "1af851907331c0ed",
       "uk": "1af851907331c0ed",
       "vi": "1af851907331c0ed",
-      "zh-Hans": "1af851907331c0ed"
+      "zh-Hans": "1af851907331c0ed",
+      "zh-Hant": "1af851907331c0ed"
     },
     "Field.Patches": {
       "de": "1c22815500b5c18b",
@@ -368,7 +388,8 @@
       "tr": "1c22815500b5c18b",
       "uk": "1c22815500b5c18b",
       "vi": "1c22815500b5c18b",
-      "zh-Hans": "1c22815500b5c18b"
+      "zh-Hans": "1c22815500b5c18b",
+      "zh-Hant": "1c22815500b5c18b"
     },
     "Field.UnknownProductName": {
       "de": "8fe7794d43e70acc",
@@ -385,7 +406,8 @@
       "tr": "8fe7794d43e70acc",
       "uk": "8fe7794d43e70acc",
       "vi": "8fe7794d43e70acc",
-      "zh-Hans": "8fe7794d43e70acc"
+      "zh-Hans": "8fe7794d43e70acc",
+      "zh-Hant": "8fe7794d43e70acc"
     },
     "Display.ListSeparator": {
       "de": "0a07f659461970d8",
@@ -402,7 +424,8 @@
       "tr": "0a07f659461970d8",
       "uk": "0a07f659461970d8",
       "vi": "0a07f659461970d8",
-      "zh-Hans": "0a07f659461970d8"
+      "zh-Hans": "0a07f659461970d8",
+      "zh-Hant": "0a07f659461970d8"
     },
     "Field.PatchesOnly": {
       "de": "d15b5ec4f15eef4a",
@@ -419,7 +442,8 @@
       "tr": "d15b5ec4f15eef4a",
       "uk": "d15b5ec4f15eef4a",
       "vi": "d15b5ec4f15eef4a",
-      "zh-Hans": "d15b5ec4f15eef4a"
+      "zh-Hans": "d15b5ec4f15eef4a",
+      "zh-Hant": "d15b5ec4f15eef4a"
     },
     "Field.Missing": {
       "de": "ffa63583dfa6706b",
@@ -436,7 +460,8 @@
       "tr": "ffa63583dfa6706b",
       "uk": "ffa63583dfa6706b",
       "vi": "ffa63583dfa6706b",
-      "zh-Hans": "ffa63583dfa6706b"
+      "zh-Hans": "ffa63583dfa6706b",
+      "zh-Hant": "ffa63583dfa6706b"
     },
     "Action.About": {
       "de": "579b0a6b1024ea0b",
@@ -453,7 +478,8 @@
       "tr": "579b0a6b1024ea0b",
       "uk": "579b0a6b1024ea0b",
       "vi": "579b0a6b1024ea0b",
-      "zh-Hans": "579b0a6b1024ea0b"
+      "zh-Hans": "579b0a6b1024ea0b",
+      "zh-Hant": "579b0a6b1024ea0b"
     },
     "Action.Copy": {
       "de": "e21f935f11d7e966",
@@ -470,7 +496,8 @@
       "tr": "e21f935f11d7e966",
       "uk": "e21f935f11d7e966",
       "vi": "e21f935f11d7e966",
-      "zh-Hans": "e21f935f11d7e966"
+      "zh-Hans": "e21f935f11d7e966",
+      "zh-Hant": "e21f935f11d7e966"
     },
     "Action.Cut": {
       "de": "1f45f02561f41db9",
@@ -487,7 +514,8 @@
       "tr": "1f45f02561f41db9",
       "uk": "1f45f02561f41db9",
       "vi": "1f45f02561f41db9",
-      "zh-Hans": "1f45f02561f41db9"
+      "zh-Hans": "1f45f02561f41db9",
+      "zh-Hant": "1f45f02561f41db9"
     },
     "Action.Paste": {
       "de": "f3380f7b44bd70af",
@@ -504,7 +532,8 @@
       "tr": "f3380f7b44bd70af",
       "uk": "f3380f7b44bd70af",
       "vi": "f3380f7b44bd70af",
-      "zh-Hans": "f3380f7b44bd70af"
+      "zh-Hans": "f3380f7b44bd70af",
+      "zh-Hant": "f3380f7b44bd70af"
     },
     "Action.SelectAll": {
       "de": "1fc9a387654d410f",
@@ -521,7 +550,8 @@
       "tr": "1fc9a387654d410f",
       "uk": "1fc9a387654d410f",
       "vi": "1fc9a387654d410f",
-      "zh-Hans": "1fc9a387654d410f"
+      "zh-Hans": "1fc9a387654d410f",
+      "zh-Hant": "1fc9a387654d410f"
     },
     "Action.Browse": {
       "de": "4d9210b5d4430762",
@@ -538,7 +568,8 @@
       "tr": "4d9210b5d4430762",
       "uk": "4d9210b5d4430762",
       "vi": "4d9210b5d4430762",
-      "zh-Hans": "4d9210b5d4430762"
+      "zh-Hans": "4d9210b5d4430762",
+      "zh-Hant": "4d9210b5d4430762"
     },
     "Action.Cancel": {
       "de": "4ce3f5980497dfdf",
@@ -555,7 +586,8 @@
       "tr": "4ce3f5980497dfdf",
       "uk": "4ce3f5980497dfdf",
       "vi": "4ce3f5980497dfdf",
-      "zh-Hans": "4ce3f5980497dfdf"
+      "zh-Hans": "4ce3f5980497dfdf",
+      "zh-Hant": "4ce3f5980497dfdf"
     },
     "Action.CheckForUpdates": {
       "de": "2447743933a962b4",
@@ -572,7 +604,8 @@
       "tr": "2447743933a962b4",
       "uk": "2447743933a962b4",
       "vi": "2447743933a962b4",
-      "zh-Hans": "2447743933a962b4"
+      "zh-Hans": "2447743933a962b4",
+      "zh-Hant": "2447743933a962b4"
     },
     "Action.Close": {
       "de": "29b7344a039678c2",
@@ -589,7 +622,8 @@
       "tr": "29b7344a039678c2",
       "uk": "29b7344a039678c2",
       "vi": "29b7344a039678c2",
-      "zh-Hans": "29b7344a039678c2"
+      "zh-Hans": "29b7344a039678c2",
+      "zh-Hant": "29b7344a039678c2"
     },
     "Action.DeletePermanently": {
       "de": "fe36cebe08081db2",
@@ -606,7 +640,8 @@
       "tr": "fe36cebe08081db2",
       "uk": "fe36cebe08081db2",
       "vi": "fe36cebe08081db2",
-      "zh-Hans": "fe36cebe08081db2"
+      "zh-Hans": "fe36cebe08081db2",
+      "zh-Hant": "fe36cebe08081db2"
     },
     "Action.Done": {
       "de": "39c0a3db00803d0d",
@@ -623,7 +658,8 @@
       "tr": "39c0a3db00803d0d",
       "uk": "39c0a3db00803d0d",
       "vi": "39c0a3db00803d0d",
-      "zh-Hans": "39c0a3db00803d0d"
+      "zh-Hans": "39c0a3db00803d0d",
+      "zh-Hant": "39c0a3db00803d0d"
     },
     "Action.Details": {
       "de": "45989de49fb7f66d",
@@ -640,7 +676,8 @@
       "tr": "45989de49fb7f66d",
       "uk": "45989de49fb7f66d",
       "vi": "45989de49fb7f66d",
-      "zh-Hans": "45989de49fb7f66d"
+      "zh-Hans": "45989de49fb7f66d",
+      "zh-Hant": "45989de49fb7f66d"
     },
     "Action.BuyMeACuppa": {
       "de": "66f556b69d6c5348",
@@ -657,7 +694,8 @@
       "tr": "66f556b69d6c5348",
       "uk": "66f556b69d6c5348",
       "vi": "66f556b69d6c5348",
-      "zh-Hans": "66f556b69d6c5348"
+      "zh-Hans": "66f556b69d6c5348",
+      "zh-Hant": "66f556b69d6c5348"
     },
     "Action.LeaveStarOnGitHub": {
       "de": "66f4ec6b037c413f",
@@ -674,7 +712,8 @@
       "tr": "66f4ec6b037c413f",
       "uk": "66f4ec6b037c413f",
       "vi": "66f4ec6b037c413f",
-      "zh-Hans": "66f4ec6b037c413f"
+      "zh-Hans": "66f4ec6b037c413f",
+      "zh-Hant": "66f4ec6b037c413f"
     },
     "Action.Licence": {
       "de": "5d315419c2889fc2",
@@ -691,7 +730,8 @@
       "tr": "5d315419c2889fc2",
       "uk": "5d315419c2889fc2",
       "vi": "5d315419c2889fc2",
-      "zh-Hans": "5d315419c2889fc2"
+      "zh-Hans": "5d315419c2889fc2",
+      "zh-Hant": "5d315419c2889fc2"
     },
     "Action.Move": {
       "de": "53ca7bff9a36f436",
@@ -708,7 +748,8 @@
       "tr": "53ca7bff9a36f436",
       "uk": "53ca7bff9a36f436",
       "vi": "53ca7bff9a36f436",
-      "zh-Hans": "53ca7bff9a36f436"
+      "zh-Hans": "53ca7bff9a36f436",
+      "zh-Hant": "53ca7bff9a36f436"
     },
     "Action.BackupFolderPlaceholder": {
       "de": "3c63c98cba585375",
@@ -725,7 +766,8 @@
       "tr": "3c63c98cba585375",
       "uk": "3c63c98cba585375",
       "vi": "3c63c98cba585375",
-      "zh-Hans": "3c63c98cba585375"
+      "zh-Hans": "3c63c98cba585375",
+      "zh-Hant": "3c63c98cba585375"
     },
     "Action.OpenReleasePage": {
       "de": "a5362c7a45868f26",
@@ -742,7 +784,8 @@
       "tr": "a5362c7a45868f26",
       "uk": "a5362c7a45868f26",
       "vi": "a5362c7a45868f26",
-      "zh-Hans": "a5362c7a45868f26"
+      "zh-Hans": "a5362c7a45868f26",
+      "zh-Hant": "a5362c7a45868f26"
     },
     "Action.Rescan": {
       "de": "534bf4e81d6b6f60",
@@ -759,7 +802,8 @@
       "tr": "534bf4e81d6b6f60",
       "uk": "534bf4e81d6b6f60",
       "vi": "534bf4e81d6b6f60",
-      "zh-Hans": "534bf4e81d6b6f60"
+      "zh-Hans": "534bf4e81d6b6f60",
+      "zh-Hant": "534bf4e81d6b6f60"
     },
     "About.Link.Guide": {
       "de": "cf3fcd564ab3dabc",
@@ -776,7 +820,8 @@
       "tr": "cf3fcd564ab3dabc",
       "uk": "cf3fcd564ab3dabc",
       "vi": "cf3fcd564ab3dabc",
-      "zh-Hans": "cf3fcd564ab3dabc"
+      "zh-Hans": "cf3fcd564ab3dabc",
+      "zh-Hant": "cf3fcd564ab3dabc"
     },
     "About.Link.ReportProblem": {
       "de": "53de38dec81e7ec0",
@@ -793,7 +838,8 @@
       "tr": "53de38dec81e7ec0",
       "uk": "53de38dec81e7ec0",
       "vi": "53de38dec81e7ec0",
-      "zh-Hans": "53de38dec81e7ec0"
+      "zh-Hans": "53de38dec81e7ec0",
+      "zh-Hant": "53de38dec81e7ec0"
     },
     "About.AutoUpdateCheck": {
       "de": "04fd6c4d82cdb2ee",
@@ -810,7 +856,8 @@
       "tr": "04fd6c4d82cdb2ee",
       "uk": "04fd6c4d82cdb2ee",
       "vi": "04fd6c4d82cdb2ee",
-      "zh-Hans": "04fd6c4d82cdb2ee"
+      "zh-Hans": "04fd6c4d82cdb2ee",
+      "zh-Hant": "04fd6c4d82cdb2ee"
     },
     "Automation.BuyMeACuppa.About": {
       "de": "c91ee0f2799df915",
@@ -827,7 +874,8 @@
       "tr": "c91ee0f2799df915",
       "uk": "c91ee0f2799df915",
       "vi": "c91ee0f2799df915",
-      "zh-Hans": "c91ee0f2799df915"
+      "zh-Hans": "c91ee0f2799df915",
+      "zh-Hant": "c91ee0f2799df915"
     },
     "Automation.CancelOperation": {
       "de": "b64a0d4fb79a36e6",
@@ -844,7 +892,8 @@
       "tr": "b64a0d4fb79a36e6",
       "uk": "b64a0d4fb79a36e6",
       "vi": "b64a0d4fb79a36e6",
-      "zh-Hans": "b64a0d4fb79a36e6"
+      "zh-Hans": "b64a0d4fb79a36e6",
+      "zh-Hant": "b64a0d4fb79a36e6"
     },
     "Automation.CancelScan": {
       "de": "298360e0b166f75d",
@@ -861,7 +910,8 @@
       "tr": "298360e0b166f75d",
       "uk": "298360e0b166f75d",
       "vi": "298360e0b166f75d",
-      "zh-Hans": "298360e0b166f75d"
+      "zh-Hans": "298360e0b166f75d",
+      "zh-Hant": "298360e0b166f75d"
     },
     "Automation.CancelStartupScan": {
       "de": "8f5231ebeea66979",
@@ -878,7 +928,8 @@
       "tr": "8f5231ebeea66979",
       "uk": "8f5231ebeea66979",
       "vi": "8f5231ebeea66979",
-      "zh-Hans": "8f5231ebeea66979"
+      "zh-Hans": "8f5231ebeea66979",
+      "zh-Hant": "8f5231ebeea66979"
     },
     "Automation.Close": {
       "de": "7d9eb7acb13e2462",
@@ -895,7 +946,8 @@
       "tr": "7d9eb7acb13e2462",
       "uk": "7d9eb7acb13e2462",
       "vi": "7d9eb7acb13e2462",
-      "zh-Hans": "7d9eb7acb13e2462"
+      "zh-Hans": "7d9eb7acb13e2462",
+      "zh-Hant": "7d9eb7acb13e2462"
     },
     "Automation.CloseWindow": {
       "de": "8b9de9c0c0a0b3b3",
@@ -912,7 +964,8 @@
       "tr": "8b9de9c0c0a0b3b3",
       "uk": "8b9de9c0c0a0b3b3",
       "vi": "8b9de9c0c0a0b3b3",
-      "zh-Hans": "8b9de9c0c0a0b3b3"
+      "zh-Hans": "8b9de9c0c0a0b3b3",
+      "zh-Hant": "8b9de9c0c0a0b3b3"
     },
     "Automation.CloseResult": {
       "de": "55e1d62f9986717b",
@@ -929,7 +982,8 @@
       "tr": "55e1d62f9986717b",
       "uk": "55e1d62f9986717b",
       "vi": "55e1d62f9986717b",
-      "zh-Hans": "55e1d62f9986717b"
+      "zh-Hans": "55e1d62f9986717b",
+      "zh-Hant": "55e1d62f9986717b"
     },
     "Automation.LeaveStarOnGitHub.About": {
       "de": "75ec978c88cb7710",
@@ -946,7 +1000,8 @@
       "tr": "75ec978c88cb7710",
       "uk": "75ec978c88cb7710",
       "vi": "75ec978c88cb7710",
-      "zh-Hans": "75ec978c88cb7710"
+      "zh-Hans": "75ec978c88cb7710",
+      "zh-Hant": "75ec978c88cb7710"
     },
     "Automation.Minimise": {
       "de": "20f082e96e6f93f0",
@@ -963,7 +1018,8 @@
       "tr": "20f082e96e6f93f0",
       "uk": "20f082e96e6f93f0",
       "vi": "20f082e96e6f93f0",
-      "zh-Hans": "20f082e96e6f93f0"
+      "zh-Hans": "20f082e96e6f93f0",
+      "zh-Hant": "20f082e96e6f93f0"
     },
     "Automation.ConfirmDelete": {
       "de": "fe06d41382775e83",
@@ -980,7 +1036,8 @@
       "tr": "fe06d41382775e83",
       "uk": "fe06d41382775e83",
       "vi": "fe06d41382775e83",
-      "zh-Hans": "fe06d41382775e83"
+      "zh-Hans": "fe06d41382775e83",
+      "zh-Hant": "fe06d41382775e83"
     },
     "Automation.ConfirmMove": {
       "de": "f3bcb87f33587048",
@@ -997,7 +1054,8 @@
       "tr": "f3bcb87f33587048",
       "uk": "f3bcb87f33587048",
       "vi": "f3bcb87f33587048",
-      "zh-Hans": "f3bcb87f33587048"
+      "zh-Hans": "f3bcb87f33587048",
+      "zh-Hant": "f3bcb87f33587048"
     },
     "Automation.SayThanks": {
       "de": "1d0c1eca7e161fc5",
@@ -1014,7 +1072,8 @@
       "tr": "1d0c1eca7e161fc5",
       "uk": "1d0c1eca7e161fc5",
       "vi": "1d0c1eca7e161fc5",
-      "zh-Hans": "1d0c1eca7e161fc5"
+      "zh-Hans": "1d0c1eca7e161fc5",
+      "zh-Hant": "1d0c1eca7e161fc5"
     },
     "Automation.CheckForUpdates": {
       "de": "f26f3275e735bdf6",
@@ -1031,7 +1090,8 @@
       "tr": "f26f3275e735bdf6",
       "uk": "f26f3275e735bdf6",
       "vi": "f26f3275e735bdf6",
-      "zh-Hans": "f26f3275e735bdf6"
+      "zh-Hans": "f26f3275e735bdf6",
+      "zh-Hant": "f26f3275e735bdf6"
     },
     "Automation.CheckForUpdates.HelpText": {
       "de": "40fbca334461012e",
@@ -1048,7 +1108,8 @@
       "tr": "40fbca334461012e",
       "uk": "40fbca334461012e",
       "vi": "40fbca334461012e",
-      "zh-Hans": "40fbca334461012e"
+      "zh-Hans": "40fbca334461012e",
+      "zh-Hant": "40fbca334461012e"
     },
     "Automation.About.Guide.HelpText": {
       "de": "e38247bc714a5ab6",
@@ -1065,7 +1126,8 @@
       "tr": "e38247bc714a5ab6",
       "uk": "e38247bc714a5ab6",
       "vi": "e38247bc714a5ab6",
-      "zh-Hans": "e38247bc714a5ab6"
+      "zh-Hans": "e38247bc714a5ab6",
+      "zh-Hant": "e38247bc714a5ab6"
     },
     "Automation.About.ReportProblem.HelpText": {
       "de": "affe235fc2150778",
@@ -1082,7 +1144,8 @@
       "tr": "affe235fc2150778",
       "uk": "affe235fc2150778",
       "vi": "affe235fc2150778",
-      "zh-Hans": "affe235fc2150778"
+      "zh-Hans": "affe235fc2150778",
+      "zh-Hant": "affe235fc2150778"
     },
     "Automation.AutoUpdateCheck.HelpText": {
       "de": "4898bf0688708f9a",
@@ -1099,7 +1162,8 @@
       "tr": "4898bf0688708f9a",
       "uk": "4898bf0688708f9a",
       "vi": "4898bf0688708f9a",
-      "zh-Hans": "4898bf0688708f9a"
+      "zh-Hans": "4898bf0688708f9a",
+      "zh-Hant": "4898bf0688708f9a"
     },
     "Automation.UpdateAvailable.HelpText": {
       "de": "a673a51519092f03",
@@ -1116,7 +1180,8 @@
       "tr": "a673a51519092f03",
       "uk": "a673a51519092f03",
       "vi": "a673a51519092f03",
-      "zh-Hans": "a673a51519092f03"
+      "zh-Hans": "a673a51519092f03",
+      "zh-Hant": "a673a51519092f03"
     },
     "Automation.Licence.HelpText": {
       "de": "1a5f07bc62342174",
@@ -1133,7 +1198,8 @@
       "tr": "1a5f07bc62342174",
       "uk": "1a5f07bc62342174",
       "vi": "1a5f07bc62342174",
-      "zh-Hans": "1a5f07bc62342174"
+      "zh-Hans": "1a5f07bc62342174",
+      "zh-Hant": "1a5f07bc62342174"
     },
     "Automation.Section.BackupFolder": {
       "de": "fb2647f443e8fa0d",
@@ -1150,7 +1216,8 @@
       "tr": "fb2647f443e8fa0d",
       "uk": "fb2647f443e8fa0d",
       "vi": "fb2647f443e8fa0d",
-      "zh-Hans": "fb2647f443e8fa0d"
+      "zh-Hans": "fb2647f443e8fa0d",
+      "zh-Hant": "fb2647f443e8fa0d"
     },
     "Automation.Section.Patches": {
       "de": "1c22815500b5c18b",
@@ -1167,7 +1234,8 @@
       "tr": "1c22815500b5c18b",
       "uk": "1c22815500b5c18b",
       "vi": "1c22815500b5c18b",
-      "zh-Hans": "1c22815500b5c18b"
+      "zh-Hans": "1c22815500b5c18b",
+      "zh-Hant": "1c22815500b5c18b"
     },
     "Automation.Section.ProductDetails": {
       "de": "fd294f8ad38350bf",
@@ -1184,7 +1252,8 @@
       "tr": "fd294f8ad38350bf",
       "uk": "fd294f8ad38350bf",
       "vi": "fd294f8ad38350bf",
-      "zh-Hans": "fd294f8ad38350bf"
+      "zh-Hans": "fd294f8ad38350bf",
+      "zh-Hant": "fd294f8ad38350bf"
     },
     "Automation.BackupFolder": {
       "de": "fb2647f443e8fa0d",
@@ -1201,7 +1270,8 @@
       "tr": "fb2647f443e8fa0d",
       "uk": "fb2647f443e8fa0d",
       "vi": "fb2647f443e8fa0d",
-      "zh-Hans": "fb2647f443e8fa0d"
+      "zh-Hans": "fb2647f443e8fa0d",
+      "zh-Hant": "fb2647f443e8fa0d"
     },
     "Automation.OperationProgress": {
       "de": "50bec72aa86eaf9f",
@@ -1218,7 +1288,8 @@
       "tr": "50bec72aa86eaf9f",
       "uk": "50bec72aa86eaf9f",
       "vi": "50bec72aa86eaf9f",
-      "zh-Hans": "50bec72aa86eaf9f"
+      "zh-Hans": "50bec72aa86eaf9f",
+      "zh-Hant": "50bec72aa86eaf9f"
     },
     "Automation.RescanInstaller": {
       "de": "d99dc35ce3ec4934",
@@ -1235,7 +1306,8 @@
       "tr": "d99dc35ce3ec4934",
       "uk": "d99dc35ce3ec4934",
       "vi": "d99dc35ce3ec4934",
-      "zh-Hans": "d99dc35ce3ec4934"
+      "zh-Hans": "d99dc35ce3ec4934",
+      "zh-Hant": "d99dc35ce3ec4934"
     },
     "Automation.ScanningProgress": {
       "de": "c4d71de30535309e",
@@ -1252,7 +1324,8 @@
       "tr": "c4d71de30535309e",
       "uk": "c4d71de30535309e",
       "vi": "c4d71de30535309e",
-      "zh-Hans": "c4d71de30535309e"
+      "zh-Hans": "c4d71de30535309e",
+      "zh-Hant": "c4d71de30535309e"
     },
     "Automation.StartupScanProgress": {
       "de": "74e0c9edbbd3dbbd",
@@ -1269,7 +1342,8 @@
       "tr": "74e0c9edbbd3dbbd",
       "uk": "74e0c9edbbd3dbbd",
       "vi": "74e0c9edbbd3dbbd",
-      "zh-Hans": "74e0c9edbbd3dbbd"
+      "zh-Hans": "74e0c9edbbd3dbbd",
+      "zh-Hant": "74e0c9edbbd3dbbd"
     },
     "Automation.ViewOrphanedFiles": {
       "de": "92ecfabf662b49f3",
@@ -1286,7 +1360,8 @@
       "tr": "92ecfabf662b49f3",
       "uk": "92ecfabf662b49f3",
       "vi": "92ecfabf662b49f3",
-      "zh-Hans": "92ecfabf662b49f3"
+      "zh-Hans": "92ecfabf662b49f3",
+      "zh-Hant": "92ecfabf662b49f3"
     },
     "Automation.ViewOrphanedFiles.HelpText": {
       "de": "be4337a957050bba",
@@ -1303,7 +1378,8 @@
       "tr": "be4337a957050bba",
       "uk": "be4337a957050bba",
       "vi": "be4337a957050bba",
-      "zh-Hans": "be4337a957050bba"
+      "zh-Hans": "be4337a957050bba",
+      "zh-Hant": "be4337a957050bba"
     },
     "Automation.ViewRegisteredFiles": {
       "de": "95e4268d5be4b879",
@@ -1320,7 +1396,8 @@
       "tr": "95e4268d5be4b879",
       "uk": "95e4268d5be4b879",
       "vi": "95e4268d5be4b879",
-      "zh-Hans": "95e4268d5be4b879"
+      "zh-Hans": "95e4268d5be4b879",
+      "zh-Hant": "95e4268d5be4b879"
     },
     "Automation.ViewRegisteredFiles.HelpText": {
       "de": "321da989c979fd6e",
@@ -1337,7 +1414,8 @@
       "tr": "321da989c979fd6e",
       "uk": "321da989c979fd6e",
       "vi": "321da989c979fd6e",
-      "zh-Hans": "321da989c979fd6e"
+      "zh-Hans": "321da989c979fd6e",
+      "zh-Hant": "321da989c979fd6e"
     },
     "Automation.SortStatus.Ascending": {
       "de": "a449f4df7f797036",
@@ -1354,7 +1432,8 @@
       "tr": "a449f4df7f797036",
       "uk": "a449f4df7f797036",
       "vi": "a449f4df7f797036",
-      "zh-Hans": "a449f4df7f797036"
+      "zh-Hans": "a449f4df7f797036",
+      "zh-Hant": "a449f4df7f797036"
     },
     "Automation.SortStatus.Descending": {
       "de": "513e9468b3c54a9b",
@@ -1371,7 +1450,8 @@
       "tr": "513e9468b3c54a9b",
       "uk": "513e9468b3c54a9b",
       "vi": "513e9468b3c54a9b",
-      "zh-Hans": "513e9468b3c54a9b"
+      "zh-Hans": "513e9468b3c54a9b",
+      "zh-Hant": "513e9468b3c54a9b"
     },
     "Automation.Scroll.ScanResults": {
       "de": "b5e09d8b7d1e4139",
@@ -1388,7 +1468,8 @@
       "tr": "b5e09d8b7d1e4139",
       "uk": "b5e09d8b7d1e4139",
       "vi": "b5e09d8b7d1e4139",
-      "zh-Hans": "b5e09d8b7d1e4139"
+      "zh-Hans": "b5e09d8b7d1e4139",
+      "zh-Hant": "b5e09d8b7d1e4139"
     },
     "Automation.Scroll.ResultDetails": {
       "de": "f412b71c54bf7cd3",
@@ -1405,7 +1486,8 @@
       "tr": "f412b71c54bf7cd3",
       "uk": "f412b71c54bf7cd3",
       "vi": "f412b71c54bf7cd3",
-      "zh-Hans": "f412b71c54bf7cd3"
+      "zh-Hans": "f412b71c54bf7cd3",
+      "zh-Hant": "f412b71c54bf7cd3"
     },
     "Automation.Scroll.FileDetails": {
       "de": "1c55b4b480437b49",
@@ -1422,7 +1504,8 @@
       "tr": "1c55b4b480437b49",
       "uk": "1c55b4b480437b49",
       "vi": "1c55b4b480437b49",
-      "zh-Hans": "1c55b4b480437b49"
+      "zh-Hans": "1c55b4b480437b49",
+      "zh-Hant": "1c55b4b480437b49"
     },
     "Automation.Scroll.ProductDetails": {
       "de": "fd294f8ad38350bf",
@@ -1439,7 +1522,8 @@
       "tr": "fd294f8ad38350bf",
       "uk": "fd294f8ad38350bf",
       "vi": "fd294f8ad38350bf",
-      "zh-Hans": "fd294f8ad38350bf"
+      "zh-Hans": "fd294f8ad38350bf",
+      "zh-Hant": "fd294f8ad38350bf"
     },
     "Automation.Scroll.DialogBody": {
       "de": "80e01a49845c1605",
@@ -1456,7 +1540,8 @@
       "tr": "80e01a49845c1605",
       "uk": "80e01a49845c1605",
       "vi": "80e01a49845c1605",
-      "zh-Hans": "80e01a49845c1605"
+      "zh-Hans": "80e01a49845c1605",
+      "zh-Hant": "80e01a49845c1605"
     },
     "Automation.ScanResultAnnouncement": {
       "de": "fa1e7180cf6c8ea6",
@@ -1473,7 +1558,8 @@
       "tr": "fa1e7180cf6c8ea6",
       "uk": "fa1e7180cf6c8ea6",
       "vi": "fa1e7180cf6c8ea6",
-      "zh-Hans": "fa1e7180cf6c8ea6"
+      "zh-Hans": "fa1e7180cf6c8ea6",
+      "zh-Hant": "fa1e7180cf6c8ea6"
     },
     "Automation.CompletionErrors": {
       "de": "fb829920ed981868",
@@ -1490,7 +1576,8 @@
       "tr": "fb829920ed981868",
       "uk": "fb829920ed981868",
       "vi": "fb829920ed981868",
-      "zh-Hans": "fb829920ed981868"
+      "zh-Hans": "fb829920ed981868",
+      "zh-Hant": "fb829920ed981868"
     },
     "Automation.RegisteredMissingSeeAlso": {
       "de": "847c236d99673de3",
@@ -1507,7 +1594,8 @@
       "tr": "847c236d99673de3",
       "uk": "847c236d99673de3",
       "vi": "847c236d99673de3",
-      "zh-Hans": "847c236d99673de3"
+      "zh-Hans": "847c236d99673de3",
+      "zh-Hant": "847c236d99673de3"
     },
     "Tooltip.BuyMeACuppa.About": {
       "de": "0dec11974eca510e",
@@ -1524,7 +1612,8 @@
       "tr": "0dec11974eca510e",
       "uk": "0dec11974eca510e",
       "vi": "0dec11974eca510e",
-      "zh-Hans": "0dec11974eca510e"
+      "zh-Hans": "0dec11974eca510e",
+      "zh-Hant": "0dec11974eca510e"
     },
     "Tooltip.CancellingPending": {
       "de": "6240b164da0e0189",
@@ -1541,7 +1630,8 @@
       "tr": "6240b164da0e0189",
       "uk": "6240b164da0e0189",
       "vi": "6240b164da0e0189",
-      "zh-Hans": "6240b164da0e0189"
+      "zh-Hans": "6240b164da0e0189",
+      "zh-Hant": "6240b164da0e0189"
     },
     "Tooltip.Close": {
       "de": "7d9eb7acb13e2462",
@@ -1558,7 +1648,8 @@
       "tr": "7d9eb7acb13e2462",
       "uk": "7d9eb7acb13e2462",
       "vi": "7d9eb7acb13e2462",
-      "zh-Hans": "7d9eb7acb13e2462"
+      "zh-Hans": "7d9eb7acb13e2462",
+      "zh-Hant": "7d9eb7acb13e2462"
     },
     "Tooltip.LeaveStarOnGitHub.About": {
       "de": "a52241bc4c3568f8",
@@ -1575,7 +1666,8 @@
       "tr": "a52241bc4c3568f8",
       "uk": "a52241bc4c3568f8",
       "vi": "a52241bc4c3568f8",
-      "zh-Hans": "a52241bc4c3568f8"
+      "zh-Hans": "a52241bc4c3568f8",
+      "zh-Hant": "a52241bc4c3568f8"
     },
     "Tooltip.Minimise": {
       "de": "20f082e96e6f93f0",
@@ -1592,7 +1684,8 @@
       "tr": "20f082e96e6f93f0",
       "uk": "20f082e96e6f93f0",
       "vi": "20f082e96e6f93f0",
-      "zh-Hans": "20f082e96e6f93f0"
+      "zh-Hans": "20f082e96e6f93f0",
+      "zh-Hant": "20f082e96e6f93f0"
     },
     "Tooltip.Move": {
       "de": "27b02a8aacadc103",
@@ -1609,7 +1702,8 @@
       "tr": "27b02a8aacadc103",
       "uk": "27b02a8aacadc103",
       "vi": "27b02a8aacadc103",
-      "zh-Hans": "27b02a8aacadc103"
+      "zh-Hans": "27b02a8aacadc103",
+      "zh-Hant": "27b02a8aacadc103"
     },
     "Tooltip.MoveNeedsDestination": {
       "de": "27950d59df9913a1",
@@ -1626,7 +1720,8 @@
       "tr": "27950d59df9913a1",
       "uk": "27950d59df9913a1",
       "vi": "27950d59df9913a1",
-      "zh-Hans": "27950d59df9913a1"
+      "zh-Hans": "27950d59df9913a1",
+      "zh-Hant": "27950d59df9913a1"
     },
     "Tooltip.MoveSameDrive": {
       "de": "248cf0bdc5115981",
@@ -1643,7 +1738,8 @@
       "tr": "248cf0bdc5115981",
       "uk": "248cf0bdc5115981",
       "vi": "248cf0bdc5115981",
-      "zh-Hans": "248cf0bdc5115981"
+      "zh-Hans": "248cf0bdc5115981",
+      "zh-Hant": "248cf0bdc5115981"
     },
     "Tooltip.Delete": {
       "de": "2776413046e4b889",
@@ -1660,7 +1756,8 @@
       "tr": "2776413046e4b889",
       "uk": "2776413046e4b889",
       "vi": "2776413046e4b889",
-      "zh-Hans": "2776413046e4b889"
+      "zh-Hans": "2776413046e4b889",
+      "zh-Hant": "2776413046e4b889"
     },
     "Tooltip.SigningCertificate": {
       "de": "599e83f00588a401",
@@ -1677,7 +1774,8 @@
       "tr": "599e83f00588a401",
       "uk": "599e83f00588a401",
       "vi": "599e83f00588a401",
-      "zh-Hans": "599e83f00588a401"
+      "zh-Hans": "599e83f00588a401",
+      "zh-Hant": "599e83f00588a401"
     },
     "Body.MainExplanation.Lead": {
       "de": "a9e54d01784cc4df",
@@ -1694,7 +1792,8 @@
       "tr": "a9e54d01784cc4df",
       "uk": "a9e54d01784cc4df",
       "vi": "a9e54d01784cc4df",
-      "zh-Hans": "a9e54d01784cc4df"
+      "zh-Hans": "a9e54d01784cc4df",
+      "zh-Hant": "a9e54d01784cc4df"
     },
     "Body.MainExplanation.Why": {
       "de": "e589af6059d8bb69",
@@ -1711,7 +1810,8 @@
       "tr": "e589af6059d8bb69",
       "uk": "e589af6059d8bb69",
       "vi": "e589af6059d8bb69",
-      "zh-Hans": "e589af6059d8bb69"
+      "zh-Hans": "e589af6059d8bb69",
+      "zh-Hant": "e589af6059d8bb69"
     },
     "Body.MainExplanation.Action": {
       "de": "10bbcb7cdc4ca2a4",
@@ -1728,7 +1828,8 @@
       "tr": "10bbcb7cdc4ca2a4",
       "uk": "10bbcb7cdc4ca2a4",
       "vi": "10bbcb7cdc4ca2a4",
-      "zh-Hans": "10bbcb7cdc4ca2a4"
+      "zh-Hans": "10bbcb7cdc4ca2a4",
+      "zh-Hant": "10bbcb7cdc4ca2a4"
     },
     "Body.NotScanned.Lead": {
       "de": "4fc154ff7b64320a",
@@ -1745,7 +1846,8 @@
       "tr": "4fc154ff7b64320a",
       "uk": "4fc154ff7b64320a",
       "vi": "4fc154ff7b64320a",
-      "zh-Hans": "4fc154ff7b64320a"
+      "zh-Hans": "4fc154ff7b64320a",
+      "zh-Hant": "4fc154ff7b64320a"
     },
     "Body.NotScanned.Why": {
       "de": "9fda4db55f6a4b2d",
@@ -1762,7 +1864,8 @@
       "tr": "9fda4db55f6a4b2d",
       "uk": "9fda4db55f6a4b2d",
       "vi": "9fda4db55f6a4b2d",
-      "zh-Hans": "9fda4db55f6a4b2d"
+      "zh-Hans": "9fda4db55f6a4b2d",
+      "zh-Hant": "9fda4db55f6a4b2d"
     },
     "Body.PendingReboot.Lead": {
       "de": "02500d8527b4b0a3",
@@ -1779,7 +1882,8 @@
       "tr": "02500d8527b4b0a3",
       "uk": "02500d8527b4b0a3",
       "vi": "02500d8527b4b0a3",
-      "zh-Hans": "02500d8527b4b0a3"
+      "zh-Hans": "02500d8527b4b0a3",
+      "zh-Hant": "02500d8527b4b0a3"
     },
     "Body.PendingReboot.MsiExecuteMutex": {
       "de": "bc5c6a7bce23a267",
@@ -1796,7 +1900,8 @@
       "tr": "bc5c6a7bce23a267",
       "uk": "bc5c6a7bce23a267",
       "vi": "bc5c6a7bce23a267",
-      "zh-Hans": "bc5c6a7bce23a267"
+      "zh-Hans": "bc5c6a7bce23a267",
+      "zh-Hant": "bc5c6a7bce23a267"
     },
     "Body.PendingReboot.InstallerInProgress": {
       "de": "7aea1801fa6b533f",
@@ -1813,7 +1918,8 @@
       "tr": "7aea1801fa6b533f",
       "uk": "7aea1801fa6b533f",
       "vi": "7aea1801fa6b533f",
-      "zh-Hans": "7aea1801fa6b533f"
+      "zh-Hans": "7aea1801fa6b533f",
+      "zh-Hant": "7aea1801fa6b533f"
     },
     "Body.PendingReboot.PendingRenameInCache": {
       "de": "a58a84629d7bbf3e",
@@ -1830,7 +1936,8 @@
       "tr": "a58a84629d7bbf3e",
       "uk": "a58a84629d7bbf3e",
       "vi": "a58a84629d7bbf3e",
-      "zh-Hans": "a58a84629d7bbf3e"
+      "zh-Hans": "a58a84629d7bbf3e",
+      "zh-Hant": "a58a84629d7bbf3e"
     },
     "Body.PendingReboot.Other": {
       "de": "ea13cbbf4cc35434",
@@ -1847,7 +1954,8 @@
       "tr": "ea13cbbf4cc35434",
       "uk": "ea13cbbf4cc35434",
       "vi": "ea13cbbf4cc35434",
-      "zh-Hans": "ea13cbbf4cc35434"
+      "zh-Hans": "ea13cbbf4cc35434",
+      "zh-Hant": "ea13cbbf4cc35434"
     },
     "Body.NoFileSelected": {
       "de": "261e1ac6744ca40f",
@@ -1864,7 +1972,8 @@
       "tr": "261e1ac6744ca40f",
       "uk": "261e1ac6744ca40f",
       "vi": "261e1ac6744ca40f",
-      "zh-Hans": "261e1ac6744ca40f"
+      "zh-Hans": "261e1ac6744ca40f",
+      "zh-Hant": "261e1ac6744ca40f"
     },
     "Body.NoProductSelected": {
       "de": "ed398b4d561ebc06",
@@ -1881,7 +1990,8 @@
       "tr": "ed398b4d561ebc06",
       "uk": "ed398b4d561ebc06",
       "vi": "ed398b4d561ebc06",
-      "zh-Hans": "ed398b4d561ebc06"
+      "zh-Hans": "ed398b4d561ebc06",
+      "zh-Hant": "ed398b4d561ebc06"
     },
     "Body.NoMetadata": {
       "de": "c6bab2c3ce9ad039",
@@ -1898,7 +2008,8 @@
       "tr": "c6bab2c3ce9ad039",
       "uk": "c6bab2c3ce9ad039",
       "vi": "c6bab2c3ce9ad039",
-      "zh-Hans": "c6bab2c3ce9ad039"
+      "zh-Hans": "c6bab2c3ce9ad039",
+      "zh-Hant": "c6bab2c3ce9ad039"
     },
     "Body.RegisteredMissingFromDisk": {
       "de": "c99eecb9e7b314a2",
@@ -1915,7 +2026,8 @@
       "tr": "c99eecb9e7b314a2",
       "uk": "c99eecb9e7b314a2",
       "vi": "c99eecb9e7b314a2",
-      "zh-Hans": "c99eecb9e7b314a2"
+      "zh-Hans": "c99eecb9e7b314a2",
+      "zh-Hant": "c99eecb9e7b314a2"
     },
     "Body.RegisteredMissingFromDisk.SeeAlso": {
       "de": "55a5ef1dc241ae7f",
@@ -1932,7 +2044,8 @@
       "tr": "55a5ef1dc241ae7f",
       "uk": "55a5ef1dc241ae7f",
       "vi": "55a5ef1dc241ae7f",
-      "zh-Hans": "55a5ef1dc241ae7f"
+      "zh-Hans": "55a5ef1dc241ae7f",
+      "zh-Hant": "55a5ef1dc241ae7f"
     },
     "Body.NoPatches": {
       "de": "552e423045fcbd94",
@@ -1949,7 +2062,8 @@
       "tr": "552e423045fcbd94",
       "uk": "552e423045fcbd94",
       "vi": "552e423045fcbd94",
-      "zh-Hans": "552e423045fcbd94"
+      "zh-Hans": "552e423045fcbd94",
+      "zh-Hant": "552e423045fcbd94"
     },
     "Reason.Orphaned": {
       "de": "8d8278071d8e9645",
@@ -1966,7 +2080,8 @@
       "tr": "8d8278071d8e9645",
       "uk": "8d8278071d8e9645",
       "vi": "8d8278071d8e9645",
-      "zh-Hans": "8d8278071d8e9645"
+      "zh-Hans": "8d8278071d8e9645",
+      "zh-Hant": "8d8278071d8e9645"
     },
     "Reason.Superseded": {
       "de": "e5830d265452f1ed",
@@ -1983,7 +2098,8 @@
       "tr": "e5830d265452f1ed",
       "uk": "e5830d265452f1ed",
       "vi": "e5830d265452f1ed",
-      "zh-Hans": "e5830d265452f1ed"
+      "zh-Hans": "e5830d265452f1ed",
+      "zh-Hant": "e5830d265452f1ed"
     },
     "Reason.Obsoleted": {
       "de": "f652789d2e4d840f",
@@ -2000,7 +2116,8 @@
       "tr": "f652789d2e4d840f",
       "uk": "f652789d2e4d840f",
       "vi": "f652789d2e4d840f",
-      "zh-Hans": "f652789d2e4d840f"
+      "zh-Hans": "f652789d2e4d840f",
+      "zh-Hant": "f652789d2e4d840f"
     },
     "Status.Scanning": {
       "de": "a83820eba2a593e5",
@@ -2017,7 +2134,8 @@
       "tr": "a83820eba2a593e5",
       "uk": "a83820eba2a593e5",
       "vi": "a83820eba2a593e5",
-      "zh-Hans": "a83820eba2a593e5"
+      "zh-Hans": "a83820eba2a593e5",
+      "zh-Hant": "a83820eba2a593e5"
     },
     "Status.Cancelling": {
       "de": "7b26131098bb18b2",
@@ -2034,7 +2152,8 @@
       "tr": "7b26131098bb18b2",
       "uk": "7b26131098bb18b2",
       "vi": "7b26131098bb18b2",
-      "zh-Hans": "7b26131098bb18b2"
+      "zh-Hans": "7b26131098bb18b2",
+      "zh-Hant": "7b26131098bb18b2"
     },
     "Status.StartingScan": {
       "de": "2caf4a6b4a2004e9",
@@ -2051,7 +2170,8 @@
       "tr": "2caf4a6b4a2004e9",
       "uk": "2caf4a6b4a2004e9",
       "vi": "2caf4a6b4a2004e9",
-      "zh-Hans": "2caf4a6b4a2004e9"
+      "zh-Hans": "2caf4a6b4a2004e9",
+      "zh-Hant": "2caf4a6b4a2004e9"
     },
     "Status.QueryingApi": {
       "de": "c35afe7674682027",
@@ -2068,7 +2188,8 @@
       "tr": "c35afe7674682027",
       "uk": "c35afe7674682027",
       "vi": "c35afe7674682027",
-      "zh-Hans": "c35afe7674682027"
+      "zh-Hans": "c35afe7674682027",
+      "zh-Hant": "c35afe7674682027"
     },
     "Status.ScanningCache": {
       "de": "b56fba1af31a1603",
@@ -2085,7 +2206,8 @@
       "tr": "b56fba1af31a1603",
       "uk": "b56fba1af31a1603",
       "vi": "b56fba1af31a1603",
-      "zh-Hans": "b56fba1af31a1603"
+      "zh-Hans": "b56fba1af31a1603",
+      "zh-Hant": "b56fba1af31a1603"
     },
     "Status.CheckingRegistry": {
       "de": "1941f0fafdf6b8d5",
@@ -2102,7 +2224,8 @@
       "tr": "1941f0fafdf6b8d5",
       "uk": "1941f0fafdf6b8d5",
       "vi": "1941f0fafdf6b8d5",
-      "zh-Hans": "1941f0fafdf6b8d5"
+      "zh-Hans": "1941f0fafdf6b8d5",
+      "zh-Hant": "1941f0fafdf6b8d5"
     },
     "Status.RegisteredPackagesFound": {
       "de": "f69821d525882032",
@@ -2119,7 +2242,8 @@
       "tr": "f69821d525882032",
       "uk": "f69821d525882032",
       "vi": "f69821d525882032",
-      "zh-Hans": "f69821d525882032"
+      "zh-Hans": "f69821d525882032",
+      "zh-Hant": "f69821d525882032"
     },
     "Status.ScanComplete": {
       "de": "afd7e52a2b8fa4c2",
@@ -2136,7 +2260,8 @@
       "tr": "afd7e52a2b8fa4c2",
       "uk": "afd7e52a2b8fa4c2",
       "vi": "afd7e52a2b8fa4c2",
-      "zh-Hans": "afd7e52a2b8fa4c2"
+      "zh-Hans": "afd7e52a2b8fa4c2",
+      "zh-Hant": "afd7e52a2b8fa4c2"
     },
     "Status.FoundUnused": {
       "de": "9abc18a5185dcc3f",
@@ -2153,7 +2278,8 @@
       "tr": "9abc18a5185dcc3f",
       "uk": "9abc18a5185dcc3f",
       "vi": "9abc18a5185dcc3f",
-      "zh-Hans": "9abc18a5185dcc3f"
+      "zh-Hans": "9abc18a5185dcc3f",
+      "zh-Hant": "9abc18a5185dcc3f"
     },
     "Status.PreparingDestination": {
       "de": "64a86f40b29a9e24",
@@ -2170,7 +2296,8 @@
       "tr": "64a86f40b29a9e24",
       "uk": "64a86f40b29a9e24",
       "vi": "64a86f40b29a9e24",
-      "zh-Hans": "64a86f40b29a9e24"
+      "zh-Hans": "64a86f40b29a9e24",
+      "zh-Hant": "64a86f40b29a9e24"
     },
     "Status.Moving": {
       "de": "88204bebdaed1adf",
@@ -2187,7 +2314,8 @@
       "tr": "88204bebdaed1adf",
       "uk": "88204bebdaed1adf",
       "vi": "88204bebdaed1adf",
-      "zh-Hans": "88204bebdaed1adf"
+      "zh-Hans": "88204bebdaed1adf",
+      "zh-Hant": "88204bebdaed1adf"
     },
     "Status.Deleting": {
       "de": "f9d9922d97eff6cb",
@@ -2204,7 +2332,8 @@
       "tr": "f9d9922d97eff6cb",
       "uk": "f9d9922d97eff6cb",
       "vi": "f9d9922d97eff6cb",
-      "zh-Hans": "f9d9922d97eff6cb"
+      "zh-Hans": "f9d9922d97eff6cb",
+      "zh-Hant": "f9d9922d97eff6cb"
     },
     "Status.MoveCancelled.Partial": {
       "de": "8ad1895303e77277",
@@ -2221,7 +2350,8 @@
       "tr": "8ad1895303e77277",
       "uk": "8ad1895303e77277",
       "vi": "8ad1895303e77277",
-      "zh-Hans": "8ad1895303e77277"
+      "zh-Hans": "8ad1895303e77277",
+      "zh-Hant": "8ad1895303e77277"
     },
     "Status.DeleteCancelled.Partial": {
       "de": "b9520a0aa999e506",
@@ -2238,7 +2368,8 @@
       "tr": "b9520a0aa999e506",
       "uk": "b9520a0aa999e506",
       "vi": "b9520a0aa999e506",
-      "zh-Hans": "b9520a0aa999e506"
+      "zh-Hans": "b9520a0aa999e506",
+      "zh-Hant": "b9520a0aa999e506"
     },
     "Status.MoveFailed": {
       "de": "26308831dffd9324",
@@ -2255,7 +2386,8 @@
       "tr": "26308831dffd9324",
       "uk": "26308831dffd9324",
       "vi": "26308831dffd9324",
-      "zh-Hans": "26308831dffd9324"
+      "zh-Hans": "26308831dffd9324",
+      "zh-Hant": "26308831dffd9324"
     },
     "Status.MoveFailed.NoLog": {
       "de": "47a265d55b8e9869",
@@ -2272,7 +2404,8 @@
       "tr": "47a265d55b8e9869",
       "uk": "47a265d55b8e9869",
       "vi": "47a265d55b8e9869",
-      "zh-Hans": "47a265d55b8e9869"
+      "zh-Hans": "47a265d55b8e9869",
+      "zh-Hant": "47a265d55b8e9869"
     },
     "Status.DeleteFailed": {
       "de": "26308831dffd9324",
@@ -2289,7 +2422,8 @@
       "tr": "26308831dffd9324",
       "uk": "26308831dffd9324",
       "vi": "26308831dffd9324",
-      "zh-Hans": "26308831dffd9324"
+      "zh-Hans": "26308831dffd9324",
+      "zh-Hant": "26308831dffd9324"
     },
     "Status.DeleteFailed.NoLog": {
       "de": "47a265d55b8e9869",
@@ -2306,7 +2440,8 @@
       "tr": "47a265d55b8e9869",
       "uk": "47a265d55b8e9869",
       "vi": "47a265d55b8e9869",
-      "zh-Hans": "47a265d55b8e9869"
+      "zh-Hans": "47a265d55b8e9869",
+      "zh-Hant": "47a265d55b8e9869"
     },
     "Status.ScanAccessDenied": {
       "de": "ffeb02edd22deec3",
@@ -2323,7 +2458,8 @@
       "tr": "ffeb02edd22deec3",
       "uk": "ffeb02edd22deec3",
       "vi": "ffeb02edd22deec3",
-      "zh-Hans": "ffeb02edd22deec3"
+      "zh-Hans": "ffeb02edd22deec3",
+      "zh-Hant": "ffeb02edd22deec3"
     },
     "Status.ScanCancelled": {
       "de": "cc6b212aedc7d034",
@@ -2340,7 +2476,8 @@
       "tr": "cc6b212aedc7d034",
       "uk": "cc6b212aedc7d034",
       "vi": "cc6b212aedc7d034",
-      "zh-Hans": "cc6b212aedc7d034"
+      "zh-Hans": "cc6b212aedc7d034",
+      "zh-Hant": "cc6b212aedc7d034"
     },
     "Status.Ready": {
       "de": "5fa7aac5375c5815",
@@ -2357,7 +2494,8 @@
       "tr": "5fa7aac5375c5815",
       "uk": "5fa7aac5375c5815",
       "vi": "5fa7aac5375c5815",
-      "zh-Hans": "5fa7aac5375c5815"
+      "zh-Hans": "5fa7aac5375c5815",
+      "zh-Hant": "5fa7aac5375c5815"
     },
     "Status.ScanFailedDetails": {
       "de": "9278d09db3341fa1",
@@ -2374,7 +2512,8 @@
       "tr": "9278d09db3341fa1",
       "uk": "9278d09db3341fa1",
       "vi": "9278d09db3341fa1",
-      "zh-Hans": "9278d09db3341fa1"
+      "zh-Hans": "9278d09db3341fa1",
+      "zh-Hant": "9278d09db3341fa1"
     },
     "Status.ScanFailedDetails.NoLog": {
       "de": "bde740da802d2187",
@@ -2391,7 +2530,8 @@
       "tr": "bde740da802d2187",
       "uk": "bde740da802d2187",
       "vi": "bde740da802d2187",
-      "zh-Hans": "bde740da802d2187"
+      "zh-Hans": "bde740da802d2187",
+      "zh-Hant": "bde740da802d2187"
     },
     "Completion.AllClean": {
       "de": "2cea1a4feee910d5",
@@ -2408,7 +2548,8 @@
       "tr": "2cea1a4feee910d5",
       "uk": "2cea1a4feee910d5",
       "vi": "2cea1a4feee910d5",
-      "zh-Hans": "2cea1a4feee910d5"
+      "zh-Hans": "2cea1a4feee910d5",
+      "zh-Hant": "2cea1a4feee910d5"
     },
     "Completion.NothingToCleanUp": {
       "de": "a1533a6964bf30d6",
@@ -2425,7 +2566,8 @@
       "tr": "a1533a6964bf30d6",
       "uk": "a1533a6964bf30d6",
       "vi": "a1533a6964bf30d6",
-      "zh-Hans": "a1533a6964bf30d6"
+      "zh-Hans": "a1533a6964bf30d6",
+      "zh-Hant": "a1533a6964bf30d6"
     },
     "Completion.NothingToCleanUpReceipt": {
       "de": "c0c56b92946f4582",
@@ -2442,7 +2584,8 @@
       "tr": "c0c56b92946f4582",
       "uk": "c0c56b92946f4582",
       "vi": "c0c56b92946f4582",
-      "zh-Hans": "c0c56b92946f4582"
+      "zh-Hans": "c0c56b92946f4582",
+      "zh-Hant": "c0c56b92946f4582"
     },
     "Completion.NothingOffered": {
       "de": "f516c0026aaeffbd",
@@ -2459,7 +2602,8 @@
       "tr": "f516c0026aaeffbd",
       "uk": "f516c0026aaeffbd",
       "vi": "f516c0026aaeffbd",
-      "zh-Hans": "f516c0026aaeffbd"
+      "zh-Hans": "f516c0026aaeffbd",
+      "zh-Hant": "f516c0026aaeffbd"
     },
     "Completion.NothingOfferedBody.Singular": {
       "de": "62ba595024ed2b33",
@@ -2476,7 +2620,8 @@
       "tr": "62ba595024ed2b33",
       "uk": "62ba595024ed2b33",
       "vi": "62ba595024ed2b33",
-      "zh-Hans": "62ba595024ed2b33"
+      "zh-Hans": "62ba595024ed2b33",
+      "zh-Hant": "62ba595024ed2b33"
     },
     "Completion.NothingOfferedBody.Plural": {
       "de": "2ad70bc17b41ebe8",
@@ -2493,7 +2638,8 @@
       "tr": "2ad70bc17b41ebe8",
       "uk": "2ad70bc17b41ebe8",
       "vi": "2ad70bc17b41ebe8",
-      "zh-Hans": "2ad70bc17b41ebe8"
+      "zh-Hans": "2ad70bc17b41ebe8",
+      "zh-Hant": "2ad70bc17b41ebe8"
     },
     "Completion.Freed": {
       "de": "b20a643ed3bb432c",
@@ -2510,7 +2656,8 @@
       "tr": "b20a643ed3bb432c",
       "uk": "b20a643ed3bb432c",
       "vi": "b20a643ed3bb432c",
-      "zh-Hans": "b20a643ed3bb432c"
+      "zh-Hans": "b20a643ed3bb432c",
+      "zh-Hant": "b20a643ed3bb432c"
     },
     "Completion.Moved": {
       "de": "696a19a0327553be",
@@ -2527,7 +2674,8 @@
       "tr": "696a19a0327553be",
       "uk": "696a19a0327553be",
       "vi": "696a19a0327553be",
-      "zh-Hans": "696a19a0327553be"
+      "zh-Hans": "696a19a0327553be",
+      "zh-Hant": "696a19a0327553be"
     },
     "Completion.NothingMoved": {
       "de": "6d38a72b6c1d22db",
@@ -2544,7 +2692,8 @@
       "tr": "6d38a72b6c1d22db",
       "uk": "6d38a72b6c1d22db",
       "vi": "6d38a72b6c1d22db",
-      "zh-Hans": "6d38a72b6c1d22db"
+      "zh-Hans": "6d38a72b6c1d22db",
+      "zh-Hant": "6d38a72b6c1d22db"
     },
     "Completion.NothingDeleted": {
       "de": "c3a9e04b427a1169",
@@ -2561,7 +2710,8 @@
       "tr": "c3a9e04b427a1169",
       "uk": "c3a9e04b427a1169",
       "vi": "c3a9e04b427a1169",
-      "zh-Hans": "c3a9e04b427a1169"
+      "zh-Hans": "c3a9e04b427a1169",
+      "zh-Hant": "c3a9e04b427a1169"
     },
     "Completion.FailedCount.Singular": {
       "de": "3a75754b31d48bbc",
@@ -2578,7 +2728,8 @@
       "tr": "3a75754b31d48bbc",
       "uk": "3a75754b31d48bbc",
       "vi": "3a75754b31d48bbc",
-      "zh-Hans": "3a75754b31d48bbc"
+      "zh-Hans": "3a75754b31d48bbc",
+      "zh-Hant": "3a75754b31d48bbc"
     },
     "Completion.FailedCount.Plural": {
       "de": "5e5af279a4698f92",
@@ -2595,7 +2746,8 @@
       "tr": "5e5af279a4698f92",
       "uk": "5e5af279a4698f92",
       "vi": "5e5af279a4698f92",
-      "zh-Hans": "5e5af279a4698f92"
+      "zh-Hans": "5e5af279a4698f92",
+      "zh-Hant": "5e5af279a4698f92"
     },
     "Completion.FailedCountDelete.Singular": {
       "de": "1a293e935b24ea2e",
@@ -2612,7 +2764,8 @@
       "tr": "1a293e935b24ea2e",
       "uk": "1a293e935b24ea2e",
       "vi": "1a293e935b24ea2e",
-      "zh-Hans": "1a293e935b24ea2e"
+      "zh-Hans": "1a293e935b24ea2e",
+      "zh-Hant": "1a293e935b24ea2e"
     },
     "Completion.FailedCountDelete.Plural": {
       "de": "c6cdf54c0310c39c",
@@ -2629,7 +2782,8 @@
       "tr": "c6cdf54c0310c39c",
       "uk": "c6cdf54c0310c39c",
       "vi": "c6cdf54c0310c39c",
-      "zh-Hans": "c6cdf54c0310c39c"
+      "zh-Hans": "c6cdf54c0310c39c",
+      "zh-Hant": "c6cdf54c0310c39c"
     },
     "Completion.MoveSummary.Singular": {
       "de": "62b0c72fa122d8dc",
@@ -2646,7 +2800,8 @@
       "tr": "62b0c72fa122d8dc",
       "uk": "62b0c72fa122d8dc",
       "vi": "62b0c72fa122d8dc",
-      "zh-Hans": "62b0c72fa122d8dc"
+      "zh-Hans": "62b0c72fa122d8dc",
+      "zh-Hant": "62b0c72fa122d8dc"
     },
     "Completion.MoveSummary.Plural": {
       "de": "62b0c72fa122d8dc",
@@ -2663,7 +2818,8 @@
       "tr": "62b0c72fa122d8dc",
       "uk": "62b0c72fa122d8dc",
       "vi": "62b0c72fa122d8dc",
-      "zh-Hans": "62b0c72fa122d8dc"
+      "zh-Hans": "62b0c72fa122d8dc",
+      "zh-Hant": "62b0c72fa122d8dc"
     },
     "Completion.ReverifyIdentityClaimed": {
       "de": "083ccfd6f0533634",
@@ -2680,7 +2836,8 @@
       "tr": "083ccfd6f0533634",
       "uk": "083ccfd6f0533634",
       "vi": "083ccfd6f0533634",
-      "zh-Hans": "083ccfd6f0533634"
+      "zh-Hans": "083ccfd6f0533634",
+      "zh-Hant": "083ccfd6f0533634"
     },
     "Completion.ReverifyIdentityUnreadable": {
       "de": "d6d4a4e6beb61afe",
@@ -2697,7 +2854,8 @@
       "tr": "d6d4a4e6beb61afe",
       "uk": "d6d4a4e6beb61afe",
       "vi": "d6d4a4e6beb61afe",
-      "zh-Hans": "d6d4a4e6beb61afe"
+      "zh-Hans": "d6d4a4e6beb61afe",
+      "zh-Hant": "d6d4a4e6beb61afe"
     },
     "Completion.MoveCancelledSummary": {
       "de": "bd0e4acae6b294b9",
@@ -2714,7 +2872,8 @@
       "tr": "bd0e4acae6b294b9",
       "uk": "bd0e4acae6b294b9",
       "vi": "bd0e4acae6b294b9",
-      "zh-Hans": "bd0e4acae6b294b9"
+      "zh-Hans": "bd0e4acae6b294b9",
+      "zh-Hant": "bd0e4acae6b294b9"
     },
     "Completion.PermanentDeleteCancelledSummary": {
       "de": "c98a48fe45aeac80",
@@ -2731,7 +2890,8 @@
       "tr": "c98a48fe45aeac80",
       "uk": "c98a48fe45aeac80",
       "vi": "c98a48fe45aeac80",
-      "zh-Hans": "c98a48fe45aeac80"
+      "zh-Hans": "c98a48fe45aeac80",
+      "zh-Hant": "c98a48fe45aeac80"
     },
     "Completion.PermanentDeleteSummary.Singular": {
       "de": "a769bca16d6f78ab",
@@ -2748,7 +2908,8 @@
       "tr": "a769bca16d6f78ab",
       "uk": "a769bca16d6f78ab",
       "vi": "a769bca16d6f78ab",
-      "zh-Hans": "a769bca16d6f78ab"
+      "zh-Hans": "a769bca16d6f78ab",
+      "zh-Hant": "a769bca16d6f78ab"
     },
     "Completion.PermanentDeleteSummary.Plural": {
       "de": "a769bca16d6f78ab",
@@ -2765,7 +2926,8 @@
       "tr": "a769bca16d6f78ab",
       "uk": "a769bca16d6f78ab",
       "vi": "a769bca16d6f78ab",
-      "zh-Hans": "a769bca16d6f78ab"
+      "zh-Hans": "a769bca16d6f78ab",
+      "zh-Hant": "a769bca16d6f78ab"
     },
     "Completion.DonateAsk": {
       "de": "0dec11974eca510e",
@@ -2782,7 +2944,8 @@
       "tr": "0dec11974eca510e",
       "uk": "0dec11974eca510e",
       "vi": "0dec11974eca510e",
-      "zh-Hans": "0dec11974eca510e"
+      "zh-Hans": "0dec11974eca510e",
+      "zh-Hant": "0dec11974eca510e"
     },
     "Summary.RegisteredStillUsed.Singular": {
       "de": "456d0894779e0d60",
@@ -2799,7 +2962,8 @@
       "tr": "456d0894779e0d60",
       "uk": "456d0894779e0d60",
       "vi": "456d0894779e0d60",
-      "zh-Hans": "456d0894779e0d60"
+      "zh-Hans": "456d0894779e0d60",
+      "zh-Hant": "456d0894779e0d60"
     },
     "Summary.RegisteredStillUsed.Plural": {
       "de": "66b6e16c3d6f0bee",
@@ -2816,7 +2980,8 @@
       "tr": "66b6e16c3d6f0bee",
       "uk": "66b6e16c3d6f0bee",
       "vi": "66b6e16c3d6f0bee",
-      "zh-Hans": "66b6e16c3d6f0bee"
+      "zh-Hans": "66b6e16c3d6f0bee",
+      "zh-Hant": "66b6e16c3d6f0bee"
     },
     "Summary.OrphanedToCleanUp.Singular": {
       "de": "b1e757a6d600bbb0",
@@ -2833,7 +2998,8 @@
       "tr": "b1e757a6d600bbb0",
       "uk": "b1e757a6d600bbb0",
       "vi": "b1e757a6d600bbb0",
-      "zh-Hans": "b1e757a6d600bbb0"
+      "zh-Hans": "b1e757a6d600bbb0",
+      "zh-Hant": "b1e757a6d600bbb0"
     },
     "Summary.OrphanedToCleanUp.Plural": {
       "de": "4a2fea98e3323a52",
@@ -2850,7 +3016,8 @@
       "tr": "4a2fea98e3323a52",
       "uk": "4a2fea98e3323a52",
       "vi": "4a2fea98e3323a52",
-      "zh-Hans": "4a2fea98e3323a52"
+      "zh-Hans": "4a2fea98e3323a52",
+      "zh-Hant": "4a2fea98e3323a52"
     },
     "Summary.MissingFromDisk.Singular": {
       "de": "1a2980d9e3a2a3cb",
@@ -2867,7 +3034,8 @@
       "tr": "1a2980d9e3a2a3cb",
       "uk": "1a2980d9e3a2a3cb",
       "vi": "1a2980d9e3a2a3cb",
-      "zh-Hans": "1a2980d9e3a2a3cb"
+      "zh-Hans": "1a2980d9e3a2a3cb",
+      "zh-Hant": "1a2980d9e3a2a3cb"
     },
     "Summary.MissingFromDisk.Plural": {
       "de": "1fb15e38015bda04",
@@ -2884,7 +3052,8 @@
       "tr": "1fb15e38015bda04",
       "uk": "1fb15e38015bda04",
       "vi": "1fb15e38015bda04",
-      "zh-Hans": "1fb15e38015bda04"
+      "zh-Hans": "1fb15e38015bda04",
+      "zh-Hant": "1fb15e38015bda04"
     },
     "Summary.MissingFromDisk.OtherPrograms.Singular": {
       "de": "b2272a81d613e1e9",
@@ -2901,7 +3070,8 @@
       "tr": "b2272a81d613e1e9",
       "uk": "b2272a81d613e1e9",
       "vi": "b2272a81d613e1e9",
-      "zh-Hans": "b2272a81d613e1e9"
+      "zh-Hans": "b2272a81d613e1e9",
+      "zh-Hant": "b2272a81d613e1e9"
     },
     "Summary.MissingFromDisk.OtherPrograms.Plural": {
       "de": "799ba00220418f66",
@@ -2918,7 +3088,8 @@
       "tr": "799ba00220418f66",
       "uk": "799ba00220418f66",
       "vi": "799ba00220418f66",
-      "zh-Hans": "799ba00220418f66"
+      "zh-Hans": "799ba00220418f66",
+      "zh-Hant": "799ba00220418f66"
     },
     "Summary.MissingFromDisk.Unnamed.Singular": {
       "de": "07bed06b5f2636c7",
@@ -2935,7 +3106,8 @@
       "tr": "07bed06b5f2636c7",
       "uk": "07bed06b5f2636c7",
       "vi": "07bed06b5f2636c7",
-      "zh-Hans": "07bed06b5f2636c7"
+      "zh-Hans": "07bed06b5f2636c7",
+      "zh-Hant": "07bed06b5f2636c7"
     },
     "Summary.MissingFromDisk.Unnamed.Plural": {
       "de": "af8a328bb59947f8",
@@ -2952,7 +3124,8 @@
       "tr": "af8a328bb59947f8",
       "uk": "af8a328bb59947f8",
       "vi": "af8a328bb59947f8",
-      "zh-Hans": "af8a328bb59947f8"
+      "zh-Hans": "af8a328bb59947f8",
+      "zh-Hant": "af8a328bb59947f8"
     },
     "Summary.OperationFiles": {
       "de": "e5b71ca0c71c6726",
@@ -2969,7 +3142,8 @@
       "tr": "e5b71ca0c71c6726",
       "uk": "e5b71ca0c71c6726",
       "vi": "e5b71ca0c71c6726",
-      "zh-Hans": "e5b71ca0c71c6726"
+      "zh-Hans": "e5b71ca0c71c6726",
+      "zh-Hant": "e5b71ca0c71c6726"
     },
     "Summary.OrphanedWindow": {
       "de": "b27f7ea88f142491",
@@ -2986,7 +3160,8 @@
       "tr": "b27f7ea88f142491",
       "uk": "b27f7ea88f142491",
       "vi": "b27f7ea88f142491",
-      "zh-Hans": "b27f7ea88f142491"
+      "zh-Hans": "b27f7ea88f142491",
+      "zh-Hant": "b27f7ea88f142491"
     },
     "Summary.RegisteredWindow.Singular": {
       "de": "0c29e24a5f46d59f",
@@ -3003,7 +3178,8 @@
       "tr": "0c29e24a5f46d59f",
       "uk": "0c29e24a5f46d59f",
       "vi": "0c29e24a5f46d59f",
-      "zh-Hans": "0c29e24a5f46d59f"
+      "zh-Hans": "0c29e24a5f46d59f",
+      "zh-Hant": "0c29e24a5f46d59f"
     },
     "Summary.RegisteredWindow.Plural": {
       "de": "b40b0019a45fac60",
@@ -3020,7 +3196,8 @@
       "tr": "b40b0019a45fac60",
       "uk": "b40b0019a45fac60",
       "vi": "b40b0019a45fac60",
-      "zh-Hans": "b40b0019a45fac60"
+      "zh-Hans": "b40b0019a45fac60",
+      "zh-Hant": "b40b0019a45fac60"
     },
     "Confirm.MoveTitle": {
       "de": "81218f79152627ab",
@@ -3037,7 +3214,8 @@
       "tr": "81218f79152627ab",
       "uk": "81218f79152627ab",
       "vi": "81218f79152627ab",
-      "zh-Hans": "81218f79152627ab"
+      "zh-Hans": "81218f79152627ab",
+      "zh-Hant": "81218f79152627ab"
     },
     "Confirm.DeleteTitle": {
       "de": "90d19fa08ea9f09c",
@@ -3054,7 +3232,8 @@
       "tr": "90d19fa08ea9f09c",
       "uk": "90d19fa08ea9f09c",
       "vi": "90d19fa08ea9f09c",
-      "zh-Hans": "90d19fa08ea9f09c"
+      "zh-Hans": "90d19fa08ea9f09c",
+      "zh-Hant": "90d19fa08ea9f09c"
     },
     "Confirm.DeletePermanently.Singular": {
       "de": "1e36617406ebd9a7",
@@ -3071,7 +3250,8 @@
       "tr": "1e36617406ebd9a7",
       "uk": "1e36617406ebd9a7",
       "vi": "1e36617406ebd9a7",
-      "zh-Hans": "1e36617406ebd9a7"
+      "zh-Hans": "1e36617406ebd9a7",
+      "zh-Hant": "1e36617406ebd9a7"
     },
     "Confirm.DeletePermanently.Plural": {
       "de": "fbfa3272e29aaff5",
@@ -3088,7 +3268,8 @@
       "tr": "fbfa3272e29aaff5",
       "uk": "fbfa3272e29aaff5",
       "vi": "fbfa3272e29aaff5",
-      "zh-Hans": "fbfa3272e29aaff5"
+      "zh-Hans": "fbfa3272e29aaff5",
+      "zh-Hant": "fbfa3272e29aaff5"
     },
     "Confirm.MoveSameDrive": {
       "de": "2a956eab5804a858",
@@ -3105,7 +3286,8 @@
       "tr": "2a956eab5804a858",
       "uk": "2a956eab5804a858",
       "vi": "2a956eab5804a858",
-      "zh-Hans": "2a956eab5804a858"
+      "zh-Hans": "2a956eab5804a858",
+      "zh-Hant": "2a956eab5804a858"
     },
     "Error.AdminRequiredTitle": {
       "de": "cc11d415d9326ccc",
@@ -3122,7 +3304,8 @@
       "tr": "cc11d415d9326ccc",
       "uk": "cc11d415d9326ccc",
       "vi": "cc11d415d9326ccc",
-      "zh-Hans": "cc11d415d9326ccc"
+      "zh-Hans": "cc11d415d9326ccc",
+      "zh-Hant": "cc11d415d9326ccc"
     },
     "Error.AdminRequiredBody": {
       "de": "ff22d1178099b5ac",
@@ -3139,7 +3322,8 @@
       "tr": "ff22d1178099b5ac",
       "uk": "ff22d1178099b5ac",
       "vi": "ff22d1178099b5ac",
-      "zh-Hans": "ff22d1178099b5ac"
+      "zh-Hans": "ff22d1178099b5ac",
+      "zh-Hant": "ff22d1178099b5ac"
     },
     "Error.ScanFailedTitle": {
       "de": "4a490e4bdcc95463",
@@ -3156,7 +3340,8 @@
       "tr": "4a490e4bdcc95463",
       "uk": "4a490e4bdcc95463",
       "vi": "4a490e4bdcc95463",
-      "zh-Hans": "4a490e4bdcc95463"
+      "zh-Hans": "4a490e4bdcc95463",
+      "zh-Hant": "4a490e4bdcc95463"
     },
     "Error.InstallerDbEmpty": {
       "de": "d4a4b81a767968b2",
@@ -3173,7 +3358,8 @@
       "tr": "d4a4b81a767968b2",
       "uk": "d4a4b81a767968b2",
       "vi": "d4a4b81a767968b2",
-      "zh-Hans": "d4a4b81a767968b2"
+      "zh-Hans": "d4a4b81a767968b2",
+      "zh-Hant": "d4a4b81a767968b2"
     },
     "Error.MsiAccessDenied": {
       "de": "875a71b4eb725294",
@@ -3190,7 +3376,8 @@
       "tr": "875a71b4eb725294",
       "uk": "875a71b4eb725294",
       "vi": "875a71b4eb725294",
-      "zh-Hans": "875a71b4eb725294"
+      "zh-Hans": "875a71b4eb725294",
+      "zh-Hant": "875a71b4eb725294"
     },
     "Error.MsiNonSuccess": {
       "de": "83ad6409a38d4046",
@@ -3207,7 +3394,8 @@
       "tr": "83ad6409a38d4046",
       "uk": "83ad6409a38d4046",
       "vi": "83ad6409a38d4046",
-      "zh-Hans": "83ad6409a38d4046"
+      "zh-Hans": "83ad6409a38d4046",
+      "zh-Hant": "83ad6409a38d4046"
     },
     "Error.MsiEnumerationNeverEnded": {
       "de": "dcfa24a4513e9bab",
@@ -3224,7 +3412,8 @@
       "tr": "dcfa24a4513e9bab",
       "uk": "dcfa24a4513e9bab",
       "vi": "dcfa24a4513e9bab",
-      "zh-Hans": "dcfa24a4513e9bab"
+      "zh-Hans": "dcfa24a4513e9bab",
+      "zh-Hant": "dcfa24a4513e9bab"
     },
     "Error.MsiPatchEnumerationNeverEnded": {
       "de": "8477cf3c5a9248e8",
@@ -3241,7 +3430,8 @@
       "tr": "8477cf3c5a9248e8",
       "uk": "8477cf3c5a9248e8",
       "vi": "8477cf3c5a9248e8",
-      "zh-Hans": "8477cf3c5a9248e8"
+      "zh-Hans": "8477cf3c5a9248e8",
+      "zh-Hant": "8477cf3c5a9248e8"
     },
     "Error.ScanCorrelationFailed": {
       "de": "39a2dd105482fa5e",
@@ -3258,7 +3448,8 @@
       "tr": "39a2dd105482fa5e",
       "uk": "39a2dd105482fa5e",
       "vi": "39a2dd105482fa5e",
-      "zh-Hans": "39a2dd105482fa5e"
+      "zh-Hans": "39a2dd105482fa5e",
+      "zh-Hant": "39a2dd105482fa5e"
     },
     "Error.ScanNoRegisteredFileInFolder": {
       "de": "b7ab2eff3aed5d18",
@@ -3275,7 +3466,8 @@
       "tr": "b7ab2eff3aed5d18",
       "uk": "b7ab2eff3aed5d18",
       "vi": "b7ab2eff3aed5d18",
-      "zh-Hans": "b7ab2eff3aed5d18"
+      "zh-Hans": "b7ab2eff3aed5d18",
+      "zh-Hant": "b7ab2eff3aed5d18"
     },
     "Error.ScanRecordsUnreadable": {
       "de": "9a4652b27fb9ffff",
@@ -3292,7 +3484,8 @@
       "tr": "9a4652b27fb9ffff",
       "uk": "9a4652b27fb9ffff",
       "vi": "9a4652b27fb9ffff",
-      "zh-Hans": "9a4652b27fb9ffff"
+      "zh-Hans": "9a4652b27fb9ffff",
+      "zh-Hant": "9a4652b27fb9ffff"
     },
     "Error.ScanCacheRootUnresolved": {
       "de": "39c0270505af6dee",
@@ -3309,7 +3502,8 @@
       "tr": "39c0270505af6dee",
       "uk": "39c0270505af6dee",
       "vi": "39c0270505af6dee",
-      "zh-Hans": "39c0270505af6dee"
+      "zh-Hans": "39c0270505af6dee",
+      "zh-Hant": "39c0270505af6dee"
     },
     "Error.InstallerLockUnavailableTitle": {
       "de": "c3a9e04b427a1169",
@@ -3326,7 +3520,8 @@
       "tr": "c3a9e04b427a1169",
       "uk": "c3a9e04b427a1169",
       "vi": "c3a9e04b427a1169",
-      "zh-Hans": "c3a9e04b427a1169"
+      "zh-Hans": "c3a9e04b427a1169",
+      "zh-Hant": "c3a9e04b427a1169"
     },
     "Error.MoveInstallerLockUnavailableTitle": {
       "de": "6d38a72b6c1d22db",
@@ -3343,7 +3538,8 @@
       "tr": "6d38a72b6c1d22db",
       "uk": "6d38a72b6c1d22db",
       "vi": "6d38a72b6c1d22db",
-      "zh-Hans": "6d38a72b6c1d22db"
+      "zh-Hans": "6d38a72b6c1d22db",
+      "zh-Hant": "6d38a72b6c1d22db"
     },
     "Error.InstallerLockUnavailable": {
       "de": "7d7b1260336a1ad0",
@@ -3360,7 +3556,8 @@
       "tr": "7d7b1260336a1ad0",
       "uk": "7d7b1260336a1ad0",
       "vi": "7d7b1260336a1ad0",
-      "zh-Hans": "7d7b1260336a1ad0"
+      "zh-Hans": "7d7b1260336a1ad0",
+      "zh-Hant": "7d7b1260336a1ad0"
     },
     "Error.MoveInstallerLockUnavailable": {
       "de": "41b61a787800dcb8",
@@ -3377,7 +3574,8 @@
       "tr": "41b61a787800dcb8",
       "uk": "41b61a787800dcb8",
       "vi": "41b61a787800dcb8",
-      "zh-Hans": "41b61a787800dcb8"
+      "zh-Hans": "41b61a787800dcb8",
+      "zh-Hant": "41b61a787800dcb8"
     },
     "Error.InvalidDestinationTitle": {
       "de": "14f03ffaafda5afc",
@@ -3394,7 +3592,8 @@
       "tr": "14f03ffaafda5afc",
       "uk": "14f03ffaafda5afc",
       "vi": "14f03ffaafda5afc",
-      "zh-Hans": "14f03ffaafda5afc"
+      "zh-Hans": "14f03ffaafda5afc",
+      "zh-Hant": "14f03ffaafda5afc"
     },
     "Error.DestinationWriteFailedTitle": {
       "de": "1892b382dec79c88",
@@ -3411,7 +3610,8 @@
       "tr": "1892b382dec79c88",
       "uk": "1892b382dec79c88",
       "vi": "1892b382dec79c88",
-      "zh-Hans": "1892b382dec79c88"
+      "zh-Hans": "1892b382dec79c88",
+      "zh-Hant": "1892b382dec79c88"
     },
     "Error.MoveFailedTitle": {
       "de": "55185d67bf51c3f1",
@@ -3428,7 +3628,8 @@
       "tr": "55185d67bf51c3f1",
       "uk": "55185d67bf51c3f1",
       "vi": "55185d67bf51c3f1",
-      "zh-Hans": "55185d67bf51c3f1"
+      "zh-Hans": "55185d67bf51c3f1",
+      "zh-Hant": "55185d67bf51c3f1"
     },
     "Error.DeleteFailedTitle": {
       "de": "8727e2ba364c2c46",
@@ -3445,7 +3646,8 @@
       "tr": "8727e2ba364c2c46",
       "uk": "8727e2ba364c2c46",
       "vi": "8727e2ba364c2c46",
-      "zh-Hans": "8727e2ba364c2c46"
+      "zh-Hans": "8727e2ba364c2c46",
+      "zh-Hant": "8727e2ba364c2c46"
     },
     "Error.SettingNotSavedTitle": {
       "de": "705300e7ee7eac7e",
@@ -3462,7 +3664,8 @@
       "tr": "705300e7ee7eac7e",
       "uk": "705300e7ee7eac7e",
       "vi": "705300e7ee7eac7e",
-      "zh-Hans": "705300e7ee7eac7e"
+      "zh-Hans": "705300e7ee7eac7e",
+      "zh-Hant": "705300e7ee7eac7e"
     },
     "Error.SettingNotSavedBody": {
       "de": "10549ffe83f535da",
@@ -3479,7 +3682,8 @@
       "tr": "10549ffe83f535da",
       "uk": "10549ffe83f535da",
       "vi": "10549ffe83f535da",
-      "zh-Hans": "10549ffe83f535da"
+      "zh-Hans": "10549ffe83f535da",
+      "zh-Hant": "10549ffe83f535da"
     },
     "Error.DestinationInsideInstaller": {
       "de": "b0ec61b06e947fd0",
@@ -3496,7 +3700,8 @@
       "tr": "b0ec61b06e947fd0",
       "uk": "b0ec61b06e947fd0",
       "vi": "b0ec61b06e947fd0",
-      "zh-Hans": "b0ec61b06e947fd0"
+      "zh-Hans": "b0ec61b06e947fd0",
+      "zh-Hant": "b0ec61b06e947fd0"
     },
     "Error.DestinationInSystemFolder": {
       "de": "ae3e82e5a0899d2d",
@@ -3513,7 +3718,8 @@
       "tr": "ae3e82e5a0899d2d",
       "uk": "ae3e82e5a0899d2d",
       "vi": "ae3e82e5a0899d2d",
-      "zh-Hans": "ae3e82e5a0899d2d"
+      "zh-Hans": "ae3e82e5a0899d2d",
+      "zh-Hant": "ae3e82e5a0899d2d"
     },
     "Error.NotEnoughSpaceTitle": {
       "de": "c5f8c45598347af7",
@@ -3530,7 +3736,8 @@
       "tr": "c5f8c45598347af7",
       "uk": "c5f8c45598347af7",
       "vi": "c5f8c45598347af7",
-      "zh-Hans": "c5f8c45598347af7"
+      "zh-Hans": "c5f8c45598347af7",
+      "zh-Hant": "c5f8c45598347af7"
     },
     "Error.NotEnoughSpaceBody": {
       "de": "7d6c6443fb22544f",
@@ -3547,7 +3754,8 @@
       "tr": "7d6c6443fb22544f",
       "uk": "7d6c6443fb22544f",
       "vi": "7d6c6443fb22544f",
-      "zh-Hans": "7d6c6443fb22544f"
+      "zh-Hans": "7d6c6443fb22544f",
+      "zh-Hant": "7d6c6443fb22544f"
     },
     "Error.AccessDeniedDestination": {
       "de": "272c1238245b5056",
@@ -3564,7 +3772,8 @@
       "tr": "272c1238245b5056",
       "uk": "272c1238245b5056",
       "vi": "272c1238245b5056",
-      "zh-Hans": "272c1238245b5056"
+      "zh-Hans": "272c1238245b5056",
+      "zh-Hant": "272c1238245b5056"
     },
     "Error.PathTooLong": {
       "de": "f295285a44c031a7",
@@ -3581,7 +3790,8 @@
       "tr": "f295285a44c031a7",
       "uk": "f295285a44c031a7",
       "vi": "f295285a44c031a7",
-      "zh-Hans": "f295285a44c031a7"
+      "zh-Hans": "f295285a44c031a7",
+      "zh-Hant": "f295285a44c031a7"
     },
     "Error.DestinationMissing": {
       "de": "7cb06ca0dbb95b6d",
@@ -3598,7 +3808,8 @@
       "tr": "7cb06ca0dbb95b6d",
       "uk": "7cb06ca0dbb95b6d",
       "vi": "7cb06ca0dbb95b6d",
-      "zh-Hans": "7cb06ca0dbb95b6d"
+      "zh-Hans": "7cb06ca0dbb95b6d",
+      "zh-Hant": "7cb06ca0dbb95b6d"
     },
     "Error.IOWriteDestination": {
       "de": "6f6050864d5cc03d",
@@ -3615,7 +3826,8 @@
       "tr": "6f6050864d5cc03d",
       "uk": "6f6050864d5cc03d",
       "vi": "6f6050864d5cc03d",
-      "zh-Hans": "6f6050864d5cc03d"
+      "zh-Hans": "6f6050864d5cc03d",
+      "zh-Hant": "6f6050864d5cc03d"
     },
     "Error.IOWriteDestination.NoLog": {
       "de": "60601c32153d3734",
@@ -3632,7 +3844,8 @@
       "tr": "60601c32153d3734",
       "uk": "60601c32153d3734",
       "vi": "60601c32153d3734",
-      "zh-Hans": "60601c32153d3734"
+      "zh-Hans": "60601c32153d3734",
+      "zh-Hant": "60601c32153d3734"
     },
     "Error.WriteDestination": {
       "de": "da089814bd9d8a72",
@@ -3649,7 +3862,8 @@
       "tr": "da089814bd9d8a72",
       "uk": "da089814bd9d8a72",
       "vi": "da089814bd9d8a72",
-      "zh-Hans": "da089814bd9d8a72"
+      "zh-Hans": "da089814bd9d8a72",
+      "zh-Hant": "da089814bd9d8a72"
     },
     "Error.WriteDestination.NoLog": {
       "de": "6a2fef6586471aa2",
@@ -3666,7 +3880,8 @@
       "tr": "6a2fef6586471aa2",
       "uk": "6a2fef6586471aa2",
       "vi": "6a2fef6586471aa2",
-      "zh-Hans": "6a2fef6586471aa2"
+      "zh-Hans": "6a2fef6586471aa2",
+      "zh-Hant": "6a2fef6586471aa2"
     },
     "Error.MissingSourceFile": {
       "de": "b61b01809fe25e16",
@@ -3683,7 +3898,8 @@
       "tr": "b61b01809fe25e16",
       "uk": "b61b01809fe25e16",
       "vi": "b61b01809fe25e16",
-      "zh-Hans": "b61b01809fe25e16"
+      "zh-Hans": "b61b01809fe25e16",
+      "zh-Hant": "b61b01809fe25e16"
     },
     "Error.SourceIsReparsePoint": {
       "de": "d9569b86cff295bd",
@@ -3700,7 +3916,8 @@
       "tr": "d9569b86cff295bd",
       "uk": "d9569b86cff295bd",
       "vi": "d9569b86cff295bd",
-      "zh-Hans": "d9569b86cff295bd"
+      "zh-Hans": "d9569b86cff295bd",
+      "zh-Hant": "d9569b86cff295bd"
     },
     "Error.CandidateOutsideCache": {
       "de": "3f72407d7657d45d",
@@ -3717,7 +3934,8 @@
       "tr": "3f72407d7657d45d",
       "uk": "3f72407d7657d45d",
       "vi": "3f72407d7657d45d",
-      "zh-Hans": "3f72407d7657d45d"
+      "zh-Hans": "3f72407d7657d45d",
+      "zh-Hant": "3f72407d7657d45d"
     },
     "Error.AccessDenied.Singular": {
       "de": "73628601fc588040",
@@ -3734,7 +3952,8 @@
       "tr": "73628601fc588040",
       "uk": "73628601fc588040",
       "vi": "73628601fc588040",
-      "zh-Hans": "73628601fc588040"
+      "zh-Hans": "73628601fc588040",
+      "zh-Hant": "73628601fc588040"
     },
     "Error.AccessDenied.Plural": {
       "de": "af940ed9e4424a67",
@@ -3751,7 +3970,8 @@
       "tr": "af940ed9e4424a67",
       "uk": "af940ed9e4424a67",
       "vi": "af940ed9e4424a67",
-      "zh-Hans": "af940ed9e4424a67"
+      "zh-Hans": "af940ed9e4424a67",
+      "zh-Hant": "af940ed9e4424a67"
     },
     "Error.FileInUse.Singular": {
       "de": "17a1c1141321ac62",
@@ -3768,7 +3988,8 @@
       "tr": "17a1c1141321ac62",
       "uk": "17a1c1141321ac62",
       "vi": "17a1c1141321ac62",
-      "zh-Hans": "17a1c1141321ac62"
+      "zh-Hans": "17a1c1141321ac62",
+      "zh-Hant": "17a1c1141321ac62"
     },
     "Error.FileInUse.Plural": {
       "de": "96eb29fd8dcd3d6f",
@@ -3785,7 +4006,8 @@
       "tr": "96eb29fd8dcd3d6f",
       "uk": "96eb29fd8dcd3d6f",
       "vi": "96eb29fd8dcd3d6f",
-      "zh-Hans": "96eb29fd8dcd3d6f"
+      "zh-Hans": "96eb29fd8dcd3d6f",
+      "zh-Hant": "96eb29fd8dcd3d6f"
     },
     "Error.IOFailure.Singular": {
       "de": "04ca80df4b265450",
@@ -3802,7 +4024,8 @@
       "tr": "04ca80df4b265450",
       "uk": "04ca80df4b265450",
       "vi": "04ca80df4b265450",
-      "zh-Hans": "04ca80df4b265450"
+      "zh-Hans": "04ca80df4b265450",
+      "zh-Hant": "04ca80df4b265450"
     },
     "Error.IOFailure.Plural": {
       "de": "363d0a39a17a37ca",
@@ -3819,7 +4042,8 @@
       "tr": "363d0a39a17a37ca",
       "uk": "363d0a39a17a37ca",
       "vi": "363d0a39a17a37ca",
-      "zh-Hans": "363d0a39a17a37ca"
+      "zh-Hans": "363d0a39a17a37ca",
+      "zh-Hant": "363d0a39a17a37ca"
     },
     "Error.UnknownError.Singular": {
       "de": "080c1192557e13ff",
@@ -3836,7 +4060,8 @@
       "tr": "080c1192557e13ff",
       "uk": "080c1192557e13ff",
       "vi": "080c1192557e13ff",
-      "zh-Hans": "080c1192557e13ff"
+      "zh-Hans": "080c1192557e13ff",
+      "zh-Hant": "080c1192557e13ff"
     },
     "Error.UnknownError.Plural": {
       "de": "1f673401aac113de",
@@ -3853,7 +4078,8 @@
       "tr": "1f673401aac113de",
       "uk": "1f673401aac113de",
       "vi": "1f673401aac113de",
-      "zh-Hans": "1f673401aac113de"
+      "zh-Hans": "1f673401aac113de",
+      "zh-Hant": "1f673401aac113de"
     },
     "Error.MoveIntoInstaller": {
       "de": "b650debd52216273",
@@ -3870,7 +4096,8 @@
       "tr": "b650debd52216273",
       "uk": "b650debd52216273",
       "vi": "b650debd52216273",
-      "zh-Hans": "b650debd52216273"
+      "zh-Hans": "b650debd52216273",
+      "zh-Hant": "b650debd52216273"
     },
     "Error.DestinationNotFullyQualified": {
       "de": "f4df53013f38aeb5",
@@ -3887,7 +4114,8 @@
       "tr": "f4df53013f38aeb5",
       "uk": "f4df53013f38aeb5",
       "vi": "f4df53013f38aeb5",
-      "zh-Hans": "f4df53013f38aeb5"
+      "zh-Hans": "f4df53013f38aeb5",
+      "zh-Hant": "f4df53013f38aeb5"
     },
     "BrowserLaunch.FailedTitle": {
       "de": "be59395456c6557a",
@@ -3904,7 +4132,8 @@
       "tr": "be59395456c6557a",
       "uk": "be59395456c6557a",
       "vi": "be59395456c6557a",
-      "zh-Hans": "be59395456c6557a"
+      "zh-Hans": "be59395456c6557a",
+      "zh-Hant": "be59395456c6557a"
     },
     "UpdateCheck.Title": {
       "de": "f26f3275e735bdf6",
@@ -3921,7 +4150,8 @@
       "tr": "f26f3275e735bdf6",
       "uk": "f26f3275e735bdf6",
       "vi": "f26f3275e735bdf6",
-      "zh-Hans": "f26f3275e735bdf6"
+      "zh-Hans": "f26f3275e735bdf6",
+      "zh-Hant": "f26f3275e735bdf6"
     },
     "UpdateCheck.Status.Checking": {
       "de": "2e5f79bb94a8c40b",
@@ -3938,7 +4168,8 @@
       "tr": "2e5f79bb94a8c40b",
       "uk": "2e5f79bb94a8c40b",
       "vi": "2e5f79bb94a8c40b",
-      "zh-Hans": "2e5f79bb94a8c40b"
+      "zh-Hans": "2e5f79bb94a8c40b",
+      "zh-Hant": "2e5f79bb94a8c40b"
     },
     "UpdateCheck.Status.UpToDate": {
       "de": "50620fd9619f77e6",
@@ -3955,7 +4186,8 @@
       "tr": "50620fd9619f77e6",
       "uk": "50620fd9619f77e6",
       "vi": "50620fd9619f77e6",
-      "zh-Hans": "50620fd9619f77e6"
+      "zh-Hans": "50620fd9619f77e6",
+      "zh-Hant": "50620fd9619f77e6"
     },
     "UpdateCheck.Status.UpdateAvailable": {
       "de": "874abce61e73d04f",
@@ -3972,7 +4204,8 @@
       "tr": "874abce61e73d04f",
       "uk": "874abce61e73d04f",
       "vi": "874abce61e73d04f",
-      "zh-Hans": "874abce61e73d04f"
+      "zh-Hans": "874abce61e73d04f",
+      "zh-Hant": "874abce61e73d04f"
     },
     "UpdateCheck.UpdateAvailable.Title": {
       "de": "ff8b555d818f0b25",
@@ -3989,7 +4222,8 @@
       "tr": "ff8b555d818f0b25",
       "uk": "ff8b555d818f0b25",
       "vi": "ff8b555d818f0b25",
-      "zh-Hans": "ff8b555d818f0b25"
+      "zh-Hans": "ff8b555d818f0b25",
+      "zh-Hant": "ff8b555d818f0b25"
     },
     "UpdateCheck.UpdateAvailable.Body": {
       "de": "2753490bcac2c097",
@@ -4006,7 +4240,8 @@
       "tr": "2753490bcac2c097",
       "uk": "2753490bcac2c097",
       "vi": "2753490bcac2c097",
-      "zh-Hans": "2753490bcac2c097"
+      "zh-Hans": "2753490bcac2c097",
+      "zh-Hant": "2753490bcac2c097"
     },
     "UpdateCheck.Failed.NetworkUnavailable": {
       "de": "05a0be5cbbf0ec4a",
@@ -4023,7 +4258,8 @@
       "tr": "05a0be5cbbf0ec4a",
       "uk": "05a0be5cbbf0ec4a",
       "vi": "05a0be5cbbf0ec4a",
-      "zh-Hans": "05a0be5cbbf0ec4a"
+      "zh-Hans": "05a0be5cbbf0ec4a",
+      "zh-Hant": "05a0be5cbbf0ec4a"
     },
     "UpdateCheck.Failed.ServerError": {
       "de": "e6b5a9e8857db98d",
@@ -4040,7 +4276,8 @@
       "tr": "e6b5a9e8857db98d",
       "uk": "e6b5a9e8857db98d",
       "vi": "e6b5a9e8857db98d",
-      "zh-Hans": "e6b5a9e8857db98d"
+      "zh-Hans": "e6b5a9e8857db98d",
+      "zh-Hant": "e6b5a9e8857db98d"
     },
     "UpdateCheck.Failed.ResponseParseError": {
       "de": "814e6790fbd8361b",
@@ -4057,7 +4294,8 @@
       "tr": "814e6790fbd8361b",
       "uk": "814e6790fbd8361b",
       "vi": "814e6790fbd8361b",
-      "zh-Hans": "814e6790fbd8361b"
+      "zh-Hans": "814e6790fbd8361b",
+      "zh-Hant": "814e6790fbd8361b"
     },
     "UpdateCheck.Failed.Timeout": {
       "de": "af45b4c8f90b0e43",
@@ -4074,7 +4312,8 @@
       "tr": "af45b4c8f90b0e43",
       "uk": "af45b4c8f90b0e43",
       "vi": "af45b4c8f90b0e43",
-      "zh-Hans": "af45b4c8f90b0e43"
+      "zh-Hans": "af45b4c8f90b0e43",
+      "zh-Hant": "af45b4c8f90b0e43"
     },
     "UpdateCheck.Failed.Unknown": {
       "de": "7c74f6b8342c2f01",
@@ -4091,7 +4330,8 @@
       "tr": "7c74f6b8342c2f01",
       "uk": "7c74f6b8342c2f01",
       "vi": "7c74f6b8342c2f01",
-      "zh-Hans": "7c74f6b8342c2f01"
+      "zh-Hans": "7c74f6b8342c2f01",
+      "zh-Hant": "7c74f6b8342c2f01"
     },
     "BrowserLaunch.ClipboardOk": {
       "de": "8367848a0c37f200",
@@ -4108,7 +4348,8 @@
       "tr": "8367848a0c37f200",
       "uk": "8367848a0c37f200",
       "vi": "8367848a0c37f200",
-      "zh-Hans": "8367848a0c37f200"
+      "zh-Hans": "8367848a0c37f200",
+      "zh-Hant": "8367848a0c37f200"
     },
     "BrowserLaunch.ClipboardFailed": {
       "de": "68c233409185fe84",
@@ -4125,7 +4366,8 @@
       "tr": "68c233409185fe84",
       "uk": "68c233409185fe84",
       "vi": "68c233409185fe84",
-      "zh-Hans": "68c233409185fe84"
+      "zh-Hans": "68c233409185fe84",
+      "zh-Hant": "68c233409185fe84"
     },
     "Error.DestinationChangedMidBatch": {
       "de": "73fdb9c02a668e90",
@@ -4142,7 +4384,8 @@
       "tr": "73fdb9c02a668e90",
       "uk": "73fdb9c02a668e90",
       "vi": "73fdb9c02a668e90",
-      "zh-Hans": "73fdb9c02a668e90"
+      "zh-Hans": "73fdb9c02a668e90",
+      "zh-Hant": "73fdb9c02a668e90"
     },
     "Error.CannotWriteFolder": {
       "de": "c3a847f4b2e70972",
@@ -4159,7 +4402,8 @@
       "tr": "c3a847f4b2e70972",
       "uk": "c3a847f4b2e70972",
       "vi": "c3a847f4b2e70972",
-      "zh-Hans": "c3a847f4b2e70972"
+      "zh-Hans": "c3a847f4b2e70972",
+      "zh-Hant": "c3a847f4b2e70972"
     },
     "Error.DestinationCollision": {
       "de": "564e4af451b77c75",
@@ -4176,7 +4420,8 @@
       "tr": "564e4af451b77c75",
       "uk": "564e4af451b77c75",
       "vi": "564e4af451b77c75",
-      "zh-Hans": "564e4af451b77c75"
+      "zh-Hans": "564e4af451b77c75",
+      "zh-Hant": "564e4af451b77c75"
     },
     "Startup.AlreadyRunningTitle": {
       "de": "0966c8ff994be978",
@@ -4193,7 +4438,8 @@
       "tr": "0966c8ff994be978",
       "uk": "0966c8ff994be978",
       "vi": "0966c8ff994be978",
-      "zh-Hans": "0966c8ff994be978"
+      "zh-Hans": "0966c8ff994be978",
+      "zh-Hant": "0966c8ff994be978"
     },
     "Startup.AlreadyRunningBody": {
       "de": "a4adcc7ffa22ff1b",
@@ -4210,7 +4456,8 @@
       "tr": "a4adcc7ffa22ff1b",
       "uk": "a4adcc7ffa22ff1b",
       "vi": "a4adcc7ffa22ff1b",
-      "zh-Hans": "a4adcc7ffa22ff1b"
+      "zh-Hans": "a4adcc7ffa22ff1b",
+      "zh-Hant": "a4adcc7ffa22ff1b"
     },
     "Startup.UnhandledTitle": {
       "de": "0966c8ff994be978",
@@ -4227,7 +4474,8 @@
       "tr": "0966c8ff994be978",
       "uk": "0966c8ff994be978",
       "vi": "0966c8ff994be978",
-      "zh-Hans": "0966c8ff994be978"
+      "zh-Hans": "0966c8ff994be978",
+      "zh-Hant": "0966c8ff994be978"
     },
     "Startup.UnhandledBody": {
       "de": "163bcc446a82f19a",
@@ -4244,7 +4492,8 @@
       "tr": "163bcc446a82f19a",
       "uk": "163bcc446a82f19a",
       "vi": "163bcc446a82f19a",
-      "zh-Hans": "163bcc446a82f19a"
+      "zh-Hans": "163bcc446a82f19a",
+      "zh-Hant": "163bcc446a82f19a"
     },
     "Startup.UnhandledBody.NoLog": {
       "de": "50a7490cd5afa42b",
@@ -4261,7 +4510,8 @@
       "tr": "50a7490cd5afa42b",
       "uk": "50a7490cd5afa42b",
       "vi": "50a7490cd5afa42b",
-      "zh-Hans": "50a7490cd5afa42b"
+      "zh-Hans": "50a7490cd5afa42b",
+      "zh-Hant": "50a7490cd5afa42b"
     },
     "Startup.ErrorTitle": {
       "de": "c8066297dd1f9a8f",
@@ -4278,7 +4528,8 @@
       "tr": "c8066297dd1f9a8f",
       "uk": "c8066297dd1f9a8f",
       "vi": "c8066297dd1f9a8f",
-      "zh-Hans": "c8066297dd1f9a8f"
+      "zh-Hans": "c8066297dd1f9a8f",
+      "zh-Hant": "c8066297dd1f9a8f"
     },
     "Startup.FailedToStart": {
       "de": "46ffc1022e76f1bf",
@@ -4295,7 +4546,8 @@
       "tr": "46ffc1022e76f1bf",
       "uk": "46ffc1022e76f1bf",
       "vi": "46ffc1022e76f1bf",
-      "zh-Hans": "46ffc1022e76f1bf"
+      "zh-Hans": "46ffc1022e76f1bf",
+      "zh-Hant": "46ffc1022e76f1bf"
     },
     "Startup.FailedToStart.NoLog": {
       "de": "74bbc1088b345b43",
@@ -4312,7 +4564,8 @@
       "tr": "74bbc1088b345b43",
       "uk": "74bbc1088b345b43",
       "vi": "74bbc1088b345b43",
-      "zh-Hans": "74bbc1088b345b43"
+      "zh-Hans": "74bbc1088b345b43",
+      "zh-Hant": "74bbc1088b345b43"
     },
     "FilePicker.ChooseDestinationTitle": {
       "de": "5cad61f4e6a97fd1",
@@ -4329,7 +4582,8 @@
       "tr": "5cad61f4e6a97fd1",
       "uk": "5cad61f4e6a97fd1",
       "vi": "5cad61f4e6a97fd1",
-      "zh-Hans": "5cad61f4e6a97fd1"
+      "zh-Hans": "5cad61f4e6a97fd1",
+      "zh-Hant": "5cad61f4e6a97fd1"
     },
     "Version.Display": {
       "de": "9699394c50806fce",
@@ -4346,7 +4600,8 @@
       "tr": "9699394c50806fce",
       "uk": "9699394c50806fce",
       "vi": "9699394c50806fce",
-      "zh-Hans": "9699394c50806fce"
+      "zh-Hans": "9699394c50806fce",
+      "zh-Hant": "9699394c50806fce"
     },
     "Plural.File.Singular": {
       "de": "3b9c358f36f0a31b",
@@ -4363,7 +4618,8 @@
       "tr": "3b9c358f36f0a31b",
       "uk": "3b9c358f36f0a31b",
       "vi": "3b9c358f36f0a31b",
-      "zh-Hans": "3b9c358f36f0a31b"
+      "zh-Hans": "3b9c358f36f0a31b",
+      "zh-Hant": "3b9c358f36f0a31b"
     },
     "Plural.File.Plural": {
       "de": "3d7db37d08f9140f",
@@ -4380,7 +4636,8 @@
       "tr": "3d7db37d08f9140f",
       "uk": "3d7db37d08f9140f",
       "vi": "3d7db37d08f9140f",
-      "zh-Hans": "3d7db37d08f9140f"
+      "zh-Hans": "3d7db37d08f9140f",
+      "zh-Hant": "3d7db37d08f9140f"
     },
     "Plural.Error.Singular": {
       "de": "ca00fccfb408989e",
@@ -4397,7 +4654,8 @@
       "tr": "ca00fccfb408989e",
       "uk": "ca00fccfb408989e",
       "vi": "ca00fccfb408989e",
-      "zh-Hans": "ca00fccfb408989e"
+      "zh-Hans": "ca00fccfb408989e",
+      "zh-Hant": "ca00fccfb408989e"
     },
     "Plural.Error.Plural": {
       "de": "be4bd56772770471",
@@ -4414,7 +4672,8 @@
       "tr": "be4bd56772770471",
       "uk": "be4bd56772770471",
       "vi": "be4bd56772770471",
-      "zh-Hans": "be4bd56772770471"
+      "zh-Hans": "be4bd56772770471",
+      "zh-Hant": "be4bd56772770471"
     },
     "Plural.Package.Singular": {
       "de": "bc4a71180870f794",
@@ -4431,7 +4690,8 @@
       "tr": "bc4a71180870f794",
       "uk": "bc4a71180870f794",
       "vi": "bc4a71180870f794",
-      "zh-Hans": "bc4a71180870f794"
+      "zh-Hans": "bc4a71180870f794",
+      "zh-Hant": "bc4a71180870f794"
     },
     "Plural.Package.Plural": {
       "de": "b28b1ed9821f38c6",
@@ -4448,7 +4708,8 @@
       "tr": "b28b1ed9821f38c6",
       "uk": "b28b1ed9821f38c6",
       "vi": "b28b1ed9821f38c6",
-      "zh-Hans": "b28b1ed9821f38c6"
+      "zh-Hans": "b28b1ed9821f38c6",
+      "zh-Hant": "b28b1ed9821f38c6"
     },
     "Plural.Product.Singular": {
       "de": "a8792157cb4f27fb",
@@ -4465,7 +4726,8 @@
       "tr": "a8792157cb4f27fb",
       "uk": "a8792157cb4f27fb",
       "vi": "a8792157cb4f27fb",
-      "zh-Hans": "a8792157cb4f27fb"
+      "zh-Hans": "a8792157cb4f27fb",
+      "zh-Hant": "a8792157cb4f27fb"
     },
     "Plural.Product.Plural": {
       "de": "0a3e27b8ca818264",
@@ -4482,7 +4744,8 @@
       "tr": "0a3e27b8ca818264",
       "uk": "0a3e27b8ca818264",
       "vi": "0a3e27b8ca818264",
-      "zh-Hans": "0a3e27b8ca818264"
+      "zh-Hans": "0a3e27b8ca818264",
+      "zh-Hant": "0a3e27b8ca818264"
     },
     "Plural.Patch.Singular": {
       "de": "a4895eb44afc336f",
@@ -4499,7 +4762,8 @@
       "tr": "a4895eb44afc336f",
       "uk": "a4895eb44afc336f",
       "vi": "a4895eb44afc336f",
-      "zh-Hans": "a4895eb44afc336f"
+      "zh-Hans": "a4895eb44afc336f",
+      "zh-Hant": "a4895eb44afc336f"
     },
     "Plural.Patch.Plural": {
       "de": "42ef841dc27fe0b5",
@@ -4516,7 +4780,8 @@
       "tr": "42ef841dc27fe0b5",
       "uk": "42ef841dc27fe0b5",
       "vi": "42ef841dc27fe0b5",
-      "zh-Hans": "42ef841dc27fe0b5"
+      "zh-Hans": "42ef841dc27fe0b5",
+      "zh-Hant": "42ef841dc27fe0b5"
     },
     "Display.Size.GB": {
       "de": "ed585b7be7262410",
@@ -4533,7 +4798,8 @@
       "tr": "ed585b7be7262410",
       "uk": "ed585b7be7262410",
       "vi": "ed585b7be7262410",
-      "zh-Hans": "ed585b7be7262410"
+      "zh-Hans": "ed585b7be7262410",
+      "zh-Hant": "ed585b7be7262410"
     },
     "Display.Size.MB": {
       "de": "a698208f1c3ae9af",
@@ -4550,7 +4816,8 @@
       "tr": "a698208f1c3ae9af",
       "uk": "a698208f1c3ae9af",
       "vi": "a698208f1c3ae9af",
-      "zh-Hans": "a698208f1c3ae9af"
+      "zh-Hans": "a698208f1c3ae9af",
+      "zh-Hant": "a698208f1c3ae9af"
     },
     "Display.Size.KB": {
       "de": "92083c699bd07fde",
@@ -4567,7 +4834,8 @@
       "tr": "92083c699bd07fde",
       "uk": "92083c699bd07fde",
       "vi": "92083c699bd07fde",
-      "zh-Hans": "92083c699bd07fde"
+      "zh-Hans": "92083c699bd07fde",
+      "zh-Hant": "92083c699bd07fde"
     },
     "Display.Size.B": {
       "de": "72db0f883f7a16b3",
@@ -4584,7 +4852,8 @@
       "tr": "72db0f883f7a16b3",
       "uk": "72db0f883f7a16b3",
       "vi": "72db0f883f7a16b3",
-      "zh-Hans": "72db0f883f7a16b3"
+      "zh-Hans": "72db0f883f7a16b3",
+      "zh-Hant": "72db0f883f7a16b3"
     },
     "Display.Elapsed.Ms": {
       "de": "186c7e41a44c2274",
@@ -4601,7 +4870,8 @@
       "tr": "186c7e41a44c2274",
       "uk": "186c7e41a44c2274",
       "vi": "186c7e41a44c2274",
-      "zh-Hans": "186c7e41a44c2274"
+      "zh-Hans": "186c7e41a44c2274",
+      "zh-Hant": "186c7e41a44c2274"
     },
     "Display.Elapsed.S": {
       "de": "c904081219e903db",
@@ -4618,7 +4888,8 @@
       "tr": "c904081219e903db",
       "uk": "c904081219e903db",
       "vi": "c904081219e903db",
-      "zh-Hans": "c904081219e903db"
+      "zh-Hans": "c904081219e903db",
+      "zh-Hant": "c904081219e903db"
     },
     "Display.ElapsedLong.LessThanASecond": {
       "de": "8e648335605cad83",
@@ -4635,7 +4906,8 @@
       "tr": "8e648335605cad83",
       "uk": "8e648335605cad83",
       "vi": "8e648335605cad83",
-      "zh-Hans": "8e648335605cad83"
+      "zh-Hans": "8e648335605cad83",
+      "zh-Hant": "8e648335605cad83"
     },
     "Display.ElapsedLong.Seconds": {
       "de": "3ce0882a4588f4fa",
@@ -4652,7 +4924,8 @@
       "tr": "3ce0882a4588f4fa",
       "uk": "3ce0882a4588f4fa",
       "vi": "3ce0882a4588f4fa",
-      "zh-Hans": "3ce0882a4588f4fa"
+      "zh-Hans": "3ce0882a4588f4fa",
+      "zh-Hant": "3ce0882a4588f4fa"
     },
     "Cli.UnknownArgument": {
       "de": "57c33289d032dcb8",
@@ -4669,7 +4942,8 @@
       "tr": "57c33289d032dcb8",
       "uk": "57c33289d032dcb8",
       "vi": "57c33289d032dcb8",
-      "zh-Hans": "57c33289d032dcb8"
+      "zh-Hans": "57c33289d032dcb8",
+      "zh-Hant": "57c33289d032dcb8"
     },
     "Cli.TooManyArguments": {
       "de": "d76c4d626ac5f9ca",
@@ -4686,7 +4960,8 @@
       "tr": "d76c4d626ac5f9ca",
       "uk": "d76c4d626ac5f9ca",
       "vi": "d76c4d626ac5f9ca",
-      "zh-Hans": "d76c4d626ac5f9ca"
+      "zh-Hans": "d76c4d626ac5f9ca",
+      "zh-Hant": "d76c4d626ac5f9ca"
     },
     "Cli.TooManyArgumentsNoPath": {
       "de": "116a914420cd32f6",
@@ -4703,7 +4978,8 @@
       "tr": "116a914420cd32f6",
       "uk": "116a914420cd32f6",
       "vi": "116a914420cd32f6",
-      "zh-Hans": "116a914420cd32f6"
+      "zh-Hans": "116a914420cd32f6",
+      "zh-Hant": "116a914420cd32f6"
     },
     "Cli.Cancelling": {
       "de": "7b26131098bb18b2",
@@ -4720,7 +4996,8 @@
       "tr": "7b26131098bb18b2",
       "uk": "7b26131098bb18b2",
       "vi": "7b26131098bb18b2",
-      "zh-Hans": "7b26131098bb18b2"
+      "zh-Hans": "7b26131098bb18b2",
+      "zh-Hant": "7b26131098bb18b2"
     },
     "Cli.Cancelled": {
       "de": "4b5ea033faf01811",
@@ -4737,7 +5014,8 @@
       "tr": "4b5ea033faf01811",
       "uk": "4b5ea033faf01811",
       "vi": "4b5ea033faf01811",
-      "zh-Hans": "4b5ea033faf01811"
+      "zh-Hans": "4b5ea033faf01811",
+      "zh-Hant": "4b5ea033faf01811"
     },
     "Cli.GenericError": {
       "de": "fc7e628b77a03ea9",
@@ -4754,7 +5032,8 @@
       "tr": "fc7e628b77a03ea9",
       "uk": "fc7e628b77a03ea9",
       "vi": "fc7e628b77a03ea9",
-      "zh-Hans": "fc7e628b77a03ea9"
+      "zh-Hans": "fc7e628b77a03ea9",
+      "zh-Hant": "fc7e628b77a03ea9"
     },
     "Cli.GenericError.NoLog": {
       "de": "138de8327a78f919",
@@ -4771,7 +5050,8 @@
       "tr": "138de8327a78f919",
       "uk": "138de8327a78f919",
       "vi": "138de8327a78f919",
-      "zh-Hans": "138de8327a78f919"
+      "zh-Hans": "138de8327a78f919",
+      "zh-Hant": "138de8327a78f919"
     },
     "Cli.ScanningInstaller": {
       "de": "194cfbea27c34e18",
@@ -4788,7 +5068,8 @@
       "tr": "194cfbea27c34e18",
       "uk": "194cfbea27c34e18",
       "vi": "194cfbea27c34e18",
-      "zh-Hans": "194cfbea27c34e18"
+      "zh-Hans": "194cfbea27c34e18",
+      "zh-Hant": "194cfbea27c34e18"
     },
     "Cli.FoundOrphans": {
       "de": "3d1766c663bf079a",
@@ -4805,7 +5086,8 @@
       "tr": "3d1766c663bf079a",
       "uk": "3d1766c663bf079a",
       "vi": "3d1766c663bf079a",
-      "zh-Hans": "3d1766c663bf079a"
+      "zh-Hans": "3d1766c663bf079a",
+      "zh-Hant": "3d1766c663bf079a"
     },
     "Cli.FoundNoOrphans": {
       "de": "a4ce0585660c6236",
@@ -4822,7 +5104,8 @@
       "tr": "a4ce0585660c6236",
       "uk": "a4ce0585660c6236",
       "vi": "a4ce0585660c6236",
-      "zh-Hans": "a4ce0585660c6236"
+      "zh-Hans": "a4ce0585660c6236",
+      "zh-Hant": "a4ce0585660c6236"
     },
     "Cli.NothingOffered.Singular": {
       "de": "62ba595024ed2b33",
@@ -4839,7 +5122,8 @@
       "tr": "62ba595024ed2b33",
       "uk": "62ba595024ed2b33",
       "vi": "62ba595024ed2b33",
-      "zh-Hans": "62ba595024ed2b33"
+      "zh-Hans": "62ba595024ed2b33",
+      "zh-Hant": "62ba595024ed2b33"
     },
     "Cli.NothingOffered.Plural": {
       "de": "2ad70bc17b41ebe8",
@@ -4856,7 +5140,8 @@
       "tr": "2ad70bc17b41ebe8",
       "uk": "2ad70bc17b41ebe8",
       "vi": "2ad70bc17b41ebe8",
-      "zh-Hans": "2ad70bc17b41ebe8"
+      "zh-Hans": "2ad70bc17b41ebe8",
+      "zh-Hant": "2ad70bc17b41ebe8"
     },
     "Cli.MissingFromDisk.Singular": {
       "de": "d443c29a49185ed3",
@@ -4873,7 +5158,8 @@
       "tr": "d443c29a49185ed3",
       "uk": "d443c29a49185ed3",
       "vi": "d443c29a49185ed3",
-      "zh-Hans": "d443c29a49185ed3"
+      "zh-Hans": "d443c29a49185ed3",
+      "zh-Hant": "d443c29a49185ed3"
     },
     "Cli.MissingFromDisk.Plural": {
       "de": "88a2ed420f09143d",
@@ -4890,7 +5176,8 @@
       "tr": "88a2ed420f09143d",
       "uk": "88a2ed420f09143d",
       "vi": "88a2ed420f09143d",
-      "zh-Hans": "88a2ed420f09143d"
+      "zh-Hans": "88a2ed420f09143d",
+      "zh-Hant": "88a2ed420f09143d"
     },
     "Cli.DeletingFiles": {
       "de": "148cfcf5e4553a95",
@@ -4907,7 +5194,8 @@
       "tr": "148cfcf5e4553a95",
       "uk": "148cfcf5e4553a95",
       "vi": "148cfcf5e4553a95",
-      "zh-Hans": "148cfcf5e4553a95"
+      "zh-Hans": "148cfcf5e4553a95",
+      "zh-Hant": "148cfcf5e4553a95"
     },
     "Cli.DeletedFiles": {
       "de": "c1a3a5fa2d51b644",
@@ -4924,7 +5212,8 @@
       "tr": "c1a3a5fa2d51b644",
       "uk": "c1a3a5fa2d51b644",
       "vi": "c1a3a5fa2d51b644",
-      "zh-Hans": "c1a3a5fa2d51b644"
+      "zh-Hans": "c1a3a5fa2d51b644",
+      "zh-Hant": "c1a3a5fa2d51b644"
     },
     "Cli.NoMoveDestination": {
       "de": "251ffa7a65b0e938",
@@ -4941,7 +5230,8 @@
       "tr": "251ffa7a65b0e938",
       "uk": "251ffa7a65b0e938",
       "vi": "251ffa7a65b0e938",
-      "zh-Hans": "251ffa7a65b0e938"
+      "zh-Hans": "251ffa7a65b0e938",
+      "zh-Hant": "251ffa7a65b0e938"
     },
     "Cli.MoveDestinationInsideInstaller": {
       "de": "c2b7a86526e70620",
@@ -4958,7 +5248,8 @@
       "tr": "c2b7a86526e70620",
       "uk": "c2b7a86526e70620",
       "vi": "c2b7a86526e70620",
-      "zh-Hans": "c2b7a86526e70620"
+      "zh-Hans": "c2b7a86526e70620",
+      "zh-Hant": "c2b7a86526e70620"
     },
     "Cli.MoveDestinationRelative": {
       "de": "6040905cc8217e40",
@@ -4975,7 +5266,8 @@
       "tr": "6040905cc8217e40",
       "uk": "6040905cc8217e40",
       "vi": "6040905cc8217e40",
-      "zh-Hans": "6040905cc8217e40"
+      "zh-Hans": "6040905cc8217e40",
+      "zh-Hant": "6040905cc8217e40"
     },
     "Cli.MoveDestinationInSystemFolder": {
       "de": "c9d746e98f2f7a30",
@@ -4992,7 +5284,8 @@
       "tr": "c9d746e98f2f7a30",
       "uk": "c9d746e98f2f7a30",
       "vi": "c9d746e98f2f7a30",
-      "zh-Hans": "c9d746e98f2f7a30"
+      "zh-Hans": "c9d746e98f2f7a30",
+      "zh-Hant": "c9d746e98f2f7a30"
     },
     "Cli.MoveNotEnoughSpace": {
       "de": "5d488c861aad2f33",
@@ -5009,7 +5302,8 @@
       "tr": "5d488c861aad2f33",
       "uk": "5d488c861aad2f33",
       "vi": "5d488c861aad2f33",
-      "zh-Hans": "5d488c861aad2f33"
+      "zh-Hans": "5d488c861aad2f33",
+      "zh-Hant": "5d488c861aad2f33"
     },
     "Cli.PendingRebootBlocked.MsiExecuteMutex": {
       "de": "f5a0cd80cbb243da",
@@ -5026,7 +5320,8 @@
       "tr": "f5a0cd80cbb243da",
       "uk": "f5a0cd80cbb243da",
       "vi": "f5a0cd80cbb243da",
-      "zh-Hans": "f5a0cd80cbb243da"
+      "zh-Hans": "f5a0cd80cbb243da",
+      "zh-Hant": "f5a0cd80cbb243da"
     },
     "Cli.PendingRebootBlocked.InstallerInProgress": {
       "de": "eaa3caf255292a54",
@@ -5043,7 +5338,8 @@
       "tr": "eaa3caf255292a54",
       "uk": "eaa3caf255292a54",
       "vi": "eaa3caf255292a54",
-      "zh-Hans": "eaa3caf255292a54"
+      "zh-Hans": "eaa3caf255292a54",
+      "zh-Hant": "eaa3caf255292a54"
     },
     "Cli.PendingRebootBlocked.PendingRenameInCache": {
       "de": "a7ea2319277d13f6",
@@ -5060,7 +5356,8 @@
       "tr": "a7ea2319277d13f6",
       "uk": "a7ea2319277d13f6",
       "vi": "a7ea2319277d13f6",
-      "zh-Hans": "a7ea2319277d13f6"
+      "zh-Hans": "a7ea2319277d13f6",
+      "zh-Hant": "a7ea2319277d13f6"
     },
     "Cli.PendingRebootBlocked.Other": {
       "de": "e84900ef7f4305a0",
@@ -5077,7 +5374,8 @@
       "tr": "e84900ef7f4305a0",
       "uk": "e84900ef7f4305a0",
       "vi": "e84900ef7f4305a0",
-      "zh-Hans": "e84900ef7f4305a0"
+      "zh-Hans": "e84900ef7f4305a0",
+      "zh-Hant": "e84900ef7f4305a0"
     },
     "Cli.InstallerLockUnavailable": {
       "de": "3491166b70c63d52",
@@ -5094,7 +5392,8 @@
       "tr": "3491166b70c63d52",
       "uk": "3491166b70c63d52",
       "vi": "3491166b70c63d52",
-      "zh-Hans": "3491166b70c63d52"
+      "zh-Hans": "3491166b70c63d52",
+      "zh-Hant": "3491166b70c63d52"
     },
     "Cli.MoveInstallerLockUnavailable": {
       "de": "93353641796006a4",
@@ -5111,7 +5410,8 @@
       "tr": "93353641796006a4",
       "uk": "93353641796006a4",
       "vi": "93353641796006a4",
-      "zh-Hans": "93353641796006a4"
+      "zh-Hans": "93353641796006a4",
+      "zh-Hant": "93353641796006a4"
     },
     "Cli.MovingFiles": {
       "de": "ea6224d40987ff75",
@@ -5128,7 +5428,8 @@
       "tr": "ea6224d40987ff75",
       "uk": "ea6224d40987ff75",
       "vi": "ea6224d40987ff75",
-      "zh-Hans": "ea6224d40987ff75"
+      "zh-Hans": "ea6224d40987ff75",
+      "zh-Hant": "ea6224d40987ff75"
     },
     "Cli.MovedFiles": {
       "de": "6c84695df41dcaff",
@@ -5145,7 +5446,8 @@
       "tr": "6c84695df41dcaff",
       "uk": "6c84695df41dcaff",
       "vi": "6c84695df41dcaff",
-      "zh-Hans": "6c84695df41dcaff"
+      "zh-Hans": "6c84695df41dcaff",
+      "zh-Hant": "6c84695df41dcaff"
     },
     "Cli.DestinationChangedMidBatch": {
       "de": "dd3463de51a3146b",
@@ -5162,7 +5464,8 @@
       "tr": "dd3463de51a3146b",
       "uk": "dd3463de51a3146b",
       "vi": "dd3463de51a3146b",
-      "zh-Hans": "dd3463de51a3146b"
+      "zh-Hans": "dd3463de51a3146b",
+      "zh-Hant": "dd3463de51a3146b"
     },
     "Cli.MutexBlocked": {
       "de": "bfe83a16fdc902e9",
@@ -5179,7 +5482,8 @@
       "tr": "bfe83a16fdc902e9",
       "uk": "bfe83a16fdc902e9",
       "vi": "bfe83a16fdc902e9",
-      "zh-Hans": "bfe83a16fdc902e9"
+      "zh-Hans": "bfe83a16fdc902e9",
+      "zh-Hant": "bfe83a16fdc902e9"
     },
     "Cli.EventLogUnavailable": {
       "de": "f43a0df9ba8346fb",
@@ -5196,7 +5500,8 @@
       "tr": "f43a0df9ba8346fb",
       "uk": "f43a0df9ba8346fb",
       "vi": "f43a0df9ba8346fb",
-      "zh-Hans": "f43a0df9ba8346fb"
+      "zh-Hans": "f43a0df9ba8346fb",
+      "zh-Hant": "f43a0df9ba8346fb"
     },
     "CrashLog.PrivacyHeader": {
       "de": "b1638458bb0362ee",
@@ -5213,7 +5518,8 @@
       "tr": "b1638458bb0362ee",
       "uk": "b1638458bb0362ee",
       "vi": "b1638458bb0362ee",
-      "zh-Hans": "b1638458bb0362ee"
+      "zh-Hans": "b1638458bb0362ee",
+      "zh-Hant": "b1638458bb0362ee"
     },
     "Cli.Help.Header": {
       "de": "0559e74ca983f6d6",
@@ -5230,7 +5536,8 @@
       "tr": "0559e74ca983f6d6",
       "uk": "0559e74ca983f6d6",
       "vi": "0559e74ca983f6d6",
-      "zh-Hans": "0559e74ca983f6d6"
+      "zh-Hans": "0559e74ca983f6d6",
+      "zh-Hant": "0559e74ca983f6d6"
     },
     "Cli.Help.Summary": {
       "de": "911e98e0458d6551",
@@ -5247,7 +5554,8 @@
       "tr": "911e98e0458d6551",
       "uk": "911e98e0458d6551",
       "vi": "911e98e0458d6551",
-      "zh-Hans": "911e98e0458d6551"
+      "zh-Hans": "911e98e0458d6551",
+      "zh-Hant": "911e98e0458d6551"
     },
     "Cli.Help.Elevation": {
       "de": "6c79f2e18262b7c5",
@@ -5264,7 +5572,8 @@
       "tr": "6c79f2e18262b7c5",
       "uk": "6c79f2e18262b7c5",
       "vi": "6c79f2e18262b7c5",
-      "zh-Hans": "6c79f2e18262b7c5"
+      "zh-Hans": "6c79f2e18262b7c5",
+      "zh-Hant": "6c79f2e18262b7c5"
     },
     "Cli.Help.Usage": {
       "de": "2bad3eeaf33caffe",
@@ -5281,7 +5590,8 @@
       "tr": "2bad3eeaf33caffe",
       "uk": "2bad3eeaf33caffe",
       "vi": "2bad3eeaf33caffe",
-      "zh-Hans": "2bad3eeaf33caffe"
+      "zh-Hans": "2bad3eeaf33caffe",
+      "zh-Hant": "2bad3eeaf33caffe"
     },
     "Cli.Help.Help": {
       "de": "6e0f60b980b6d88e",
@@ -5298,7 +5608,8 @@
       "tr": "6e0f60b980b6d88e",
       "uk": "6e0f60b980b6d88e",
       "vi": "6e0f60b980b6d88e",
-      "zh-Hans": "6e0f60b980b6d88e"
+      "zh-Hans": "6e0f60b980b6d88e",
+      "zh-Hant": "6e0f60b980b6d88e"
     },
     "Cli.Help.Version": {
       "de": "4d9c740dfa5eb033",
@@ -5315,7 +5626,8 @@
       "tr": "4d9c740dfa5eb033",
       "uk": "4d9c740dfa5eb033",
       "vi": "4d9c740dfa5eb033",
-      "zh-Hans": "4d9c740dfa5eb033"
+      "zh-Hans": "4d9c740dfa5eb033",
+      "zh-Hant": "4d9c740dfa5eb033"
     },
     "Cli.Help.ScanOnly": {
       "de": "2e9c9a1bfd1763b9",
@@ -5332,7 +5644,8 @@
       "tr": "2e9c9a1bfd1763b9",
       "uk": "2e9c9a1bfd1763b9",
       "vi": "2e9c9a1bfd1763b9",
-      "zh-Hans": "2e9c9a1bfd1763b9"
+      "zh-Hans": "2e9c9a1bfd1763b9",
+      "zh-Hant": "2e9c9a1bfd1763b9"
     },
     "Cli.Help.Delete": {
       "de": "60884ffb45491886",
@@ -5349,7 +5662,8 @@
       "tr": "60884ffb45491886",
       "uk": "60884ffb45491886",
       "vi": "60884ffb45491886",
-      "zh-Hans": "60884ffb45491886"
+      "zh-Hans": "60884ffb45491886",
+      "zh-Hant": "60884ffb45491886"
     },
     "Cli.Help.MoveDefault": {
       "de": "7432e100540237df",
@@ -5366,7 +5680,8 @@
       "tr": "7432e100540237df",
       "uk": "7432e100540237df",
       "vi": "7432e100540237df",
-      "zh-Hans": "7432e100540237df"
+      "zh-Hans": "7432e100540237df",
+      "zh-Hant": "7432e100540237df"
     },
     "Cli.Help.MovePath": {
       "de": "9fdc7ecd7c6d6ad9",
@@ -5383,7 +5698,8 @@
       "tr": "9fdc7ecd7c6d6ad9",
       "uk": "9fdc7ecd7c6d6ad9",
       "vi": "9fdc7ecd7c6d6ad9",
-      "zh-Hans": "9fdc7ecd7c6d6ad9"
+      "zh-Hans": "9fdc7ecd7c6d6ad9",
+      "zh-Hant": "9fdc7ecd7c6d6ad9"
     },
     "Cli.Help.NoteLine1": {
       "de": "01f7657071aa518f",
@@ -5400,7 +5716,8 @@
       "tr": "01f7657071aa518f",
       "uk": "01f7657071aa518f",
       "vi": "01f7657071aa518f",
-      "zh-Hans": "01f7657071aa518f"
+      "zh-Hans": "01f7657071aa518f",
+      "zh-Hant": "01f7657071aa518f"
     },
     "Cli.Help.MoveScheduledNote": {
       "de": "2bd6ca1caa7ff7e1",
@@ -5417,7 +5734,8 @@
       "tr": "2bd6ca1caa7ff7e1",
       "uk": "2bd6ca1caa7ff7e1",
       "vi": "2bd6ca1caa7ff7e1",
-      "zh-Hans": "2bd6ca1caa7ff7e1"
+      "zh-Hans": "2bd6ca1caa7ff7e1",
+      "zh-Hant": "2bd6ca1caa7ff7e1"
     },
     "Cli.Help.ExitCodesHeader": {
       "de": "bf5b2cca7e23eaa7",
@@ -5434,7 +5752,8 @@
       "tr": "bf5b2cca7e23eaa7",
       "uk": "bf5b2cca7e23eaa7",
       "vi": "bf5b2cca7e23eaa7",
-      "zh-Hans": "bf5b2cca7e23eaa7"
+      "zh-Hans": "bf5b2cca7e23eaa7",
+      "zh-Hant": "bf5b2cca7e23eaa7"
     },
     "Cli.Help.ExitCodeOk": {
       "de": "40b91d584de9f95d",
@@ -5451,7 +5770,8 @@
       "tr": "40b91d584de9f95d",
       "uk": "40b91d584de9f95d",
       "vi": "40b91d584de9f95d",
-      "zh-Hans": "40b91d584de9f95d"
+      "zh-Hans": "40b91d584de9f95d",
+      "zh-Hant": "40b91d584de9f95d"
     },
     "Cli.Help.ExitCodeError": {
       "de": "92a7749fb92ef7f7",
@@ -5468,7 +5788,8 @@
       "tr": "92a7749fb92ef7f7",
       "uk": "92a7749fb92ef7f7",
       "vi": "92a7749fb92ef7f7",
-      "zh-Hans": "92a7749fb92ef7f7"
+      "zh-Hans": "92a7749fb92ef7f7",
+      "zh-Hant": "92a7749fb92ef7f7"
     },
     "Cli.Help.ExitCodePartial": {
       "de": "16b402bba28117df",
@@ -5485,7 +5806,8 @@
       "tr": "16b402bba28117df",
       "uk": "16b402bba28117df",
       "vi": "16b402bba28117df",
-      "zh-Hans": "16b402bba28117df"
+      "zh-Hans": "16b402bba28117df",
+      "zh-Hant": "16b402bba28117df"
     },
     "Cli.Help.ExitCodeTransient": {
       "de": "2e63acc8adc87bb2",
@@ -5502,7 +5824,8 @@
       "tr": "2e63acc8adc87bb2",
       "uk": "2e63acc8adc87bb2",
       "vi": "2e63acc8adc87bb2",
-      "zh-Hans": "2e63acc8adc87bb2"
+      "zh-Hans": "2e63acc8adc87bb2",
+      "zh-Hant": "2e63acc8adc87bb2"
     },
     "Cli.Help.ExitCodeCancelled": {
       "de": "8335fda1f00261fa",
@@ -5519,7 +5842,8 @@
       "tr": "8335fda1f00261fa",
       "uk": "8335fda1f00261fa",
       "vi": "8335fda1f00261fa",
-      "zh-Hans": "8335fda1f00261fa"
+      "zh-Hans": "8335fda1f00261fa",
+      "zh-Hant": "8335fda1f00261fa"
     },
     "Tooltip.ChangeLanguage": {
       "de": "15fcb664014130cb",
@@ -5536,7 +5860,8 @@
       "tr": "15fcb664014130cb",
       "uk": "15fcb664014130cb",
       "vi": "15fcb664014130cb",
-      "zh-Hans": "15fcb664014130cb"
+      "zh-Hans": "15fcb664014130cb",
+      "zh-Hant": "15fcb664014130cb"
     },
     "Automation.ChangeLanguage": {
       "de": "009ed110badf6e7b",
@@ -5553,7 +5878,8 @@
       "tr": "009ed110badf6e7b",
       "uk": "009ed110badf6e7b",
       "vi": "009ed110badf6e7b",
-      "zh-Hans": "009ed110badf6e7b"
+      "zh-Hans": "009ed110badf6e7b",
+      "zh-Hant": "009ed110badf6e7b"
     },
     "Automation.ChangeLanguage.HelpText": {
       "de": "b5f9c458177fed40",
@@ -5570,7 +5896,8 @@
       "tr": "b5f9c458177fed40",
       "uk": "b5f9c458177fed40",
       "vi": "b5f9c458177fed40",
-      "zh-Hans": "b5f9c458177fed40"
+      "zh-Hans": "b5f9c458177fed40",
+      "zh-Hant": "b5f9c458177fed40"
     },
     "Cli.EventLogScanFound": {
       "ja": "9bf78849d05c2741"
@@ -5629,7 +5956,8 @@
       "tr": "a5fe99752ff7a949",
       "uk": "a5fe99752ff7a949",
       "vi": "a5fe99752ff7a949",
-      "zh-Hans": "a5fe99752ff7a949"
+      "zh-Hans": "a5fe99752ff7a949",
+      "zh-Hant": "a5fe99752ff7a949"
     },
     "Cli.SupersededHeldBack.Singular": {
       "de": "0ac3622f70bc2516",
@@ -5646,7 +5974,8 @@
       "tr": "0ac3622f70bc2516",
       "uk": "0ac3622f70bc2516",
       "vi": "0ac3622f70bc2516",
-      "zh-Hans": "0ac3622f70bc2516"
+      "zh-Hans": "0ac3622f70bc2516",
+      "zh-Hant": "0ac3622f70bc2516"
     },
     "Completion.HeldBack.Plural": {
       "de": "d1bc73467a24ad8e",
@@ -5663,7 +5992,8 @@
       "tr": "d1bc73467a24ad8e",
       "uk": "d1bc73467a24ad8e",
       "vi": "d1bc73467a24ad8e",
-      "zh-Hans": "d1bc73467a24ad8e"
+      "zh-Hans": "d1bc73467a24ad8e",
+      "zh-Hant": "d1bc73467a24ad8e"
     },
     "Completion.HeldBack.Singular": {
       "de": "2285e07cb60c23f3",
@@ -5680,7 +6010,8 @@
       "tr": "2285e07cb60c23f3",
       "uk": "2285e07cb60c23f3",
       "vi": "2285e07cb60c23f3",
-      "zh-Hans": "2285e07cb60c23f3"
+      "zh-Hans": "2285e07cb60c23f3",
+      "zh-Hant": "2285e07cb60c23f3"
     },
     "Error.ScanStoppedDetails": {
       "de": "66b835786c5f0a5d",
@@ -5697,7 +6028,8 @@
       "tr": "66b835786c5f0a5d",
       "uk": "66b835786c5f0a5d",
       "vi": "66b835786c5f0a5d",
-      "zh-Hans": "66b835786c5f0a5d"
+      "zh-Hans": "66b835786c5f0a5d",
+      "zh-Hant": "66b835786c5f0a5d"
     },
     "Cli.DeletingFiles.One": {
       "de": "148cfcf5e4553a95",
@@ -5847,7 +6179,8 @@
       "tr": "6d2b981159169cba",
       "uk": "6d2b981159169cba",
       "vi": "6d2b981159169cba",
-      "zh-Hans": "6d2b981159169cba"
+      "zh-Hans": "6d2b981159169cba",
+      "zh-Hant": "6d2b981159169cba"
     },
     "Cli.MoveRestoreHint": {
       "de": "6452087736aa983c",
@@ -5864,7 +6197,8 @@
       "tr": "6452087736aa983c",
       "uk": "6452087736aa983c",
       "vi": "6452087736aa983c",
-      "zh-Hans": "6452087736aa983c"
+      "zh-Hans": "6452087736aa983c",
+      "zh-Hant": "6452087736aa983c"
     },
     "Cli.NothingListed.Plural": {
       "de": "48d6927355a72429",
@@ -5881,7 +6215,8 @@
       "tr": "48d6927355a72429",
       "uk": "48d6927355a72429",
       "vi": "48d6927355a72429",
-      "zh-Hans": "48d6927355a72429"
+      "zh-Hans": "48d6927355a72429",
+      "zh-Hant": "48d6927355a72429"
     },
     "Cli.NothingListed.Singular": {
       "de": "62ba595024ed2b33",
@@ -5898,7 +6233,8 @@
       "tr": "62ba595024ed2b33",
       "uk": "62ba595024ed2b33",
       "vi": "62ba595024ed2b33",
-      "zh-Hans": "62ba595024ed2b33"
+      "zh-Hans": "62ba595024ed2b33",
+      "zh-Hant": "62ba595024ed2b33"
     },
     "Cli.PendingRebootBlocked.PendingRenameUnresolved": {
       "de": "c421f239c8bcce01",
@@ -5915,7 +6251,8 @@
       "tr": "c421f239c8bcce01",
       "uk": "c421f239c8bcce01",
       "vi": "c421f239c8bcce01",
-      "zh-Hans": "c421f239c8bcce01"
+      "zh-Hans": "c421f239c8bcce01",
+      "zh-Hant": "c421f239c8bcce01"
     },
     "Cli.WithheldReasons.FileIdentity": {
       "de": "dbda9f3479fc53db",
@@ -5932,7 +6269,8 @@
       "tr": "dbda9f3479fc53db",
       "uk": "dbda9f3479fc53db",
       "vi": "dbda9f3479fc53db",
-      "zh-Hans": "dbda9f3479fc53db"
+      "zh-Hans": "dbda9f3479fc53db",
+      "zh-Hant": "dbda9f3479fc53db"
     },
     "Cli.WithheldReasons.Header": {
       "de": "8b04f6483928df8c",
@@ -5949,7 +6287,8 @@
       "tr": "8b04f6483928df8c",
       "uk": "8b04f6483928df8c",
       "vi": "8b04f6483928df8c",
-      "zh-Hans": "8b04f6483928df8c"
+      "zh-Hans": "8b04f6483928df8c",
+      "zh-Hant": "8b04f6483928df8c"
     },
     "Cli.WithheldReasons.RecordedPath": {
       "de": "58cd455f4aaa0a46",
@@ -5966,7 +6305,8 @@
       "tr": "58cd455f4aaa0a46",
       "uk": "58cd455f4aaa0a46",
       "vi": "58cd455f4aaa0a46",
-      "zh-Hans": "58cd455f4aaa0a46"
+      "zh-Hans": "58cd455f4aaa0a46",
+      "zh-Hant": "58cd455f4aaa0a46"
     },
     "Cli.WithheldReasons.SecondInstance": {
       "de": "aaaf5b03ea1e1444",
@@ -5983,7 +6323,8 @@
       "tr": "aaaf5b03ea1e1444",
       "uk": "aaaf5b03ea1e1444",
       "vi": "aaaf5b03ea1e1444",
-      "zh-Hans": "aaaf5b03ea1e1444"
+      "zh-Hans": "aaaf5b03ea1e1444",
+      "zh-Hant": "aaaf5b03ea1e1444"
     },
     "Completion.MoveRestoreHint": {
       "de": "def8e7631cb6d812",
@@ -6000,7 +6341,8 @@
       "tr": "def8e7631cb6d812",
       "uk": "def8e7631cb6d812",
       "vi": "def8e7631cb6d812",
-      "zh-Hans": "def8e7631cb6d812"
+      "zh-Hans": "def8e7631cb6d812",
+      "zh-Hant": "def8e7631cb6d812"
     },
     "Completion.MoveRestoreHintSameDrive": {
       "de": "d99138fea6235b15",
@@ -6017,7 +6359,8 @@
       "tr": "d99138fea6235b15",
       "uk": "d99138fea6235b15",
       "vi": "d99138fea6235b15",
-      "zh-Hans": "d99138fea6235b15"
+      "zh-Hans": "d99138fea6235b15",
+      "zh-Hant": "d99138fea6235b15"
     },
     "Confirm.MoveDestination.Plural": {
       "de": "8c6bdb471ed62ae4",
@@ -6034,7 +6377,8 @@
       "tr": "8c6bdb471ed62ae4",
       "uk": "8c6bdb471ed62ae4",
       "vi": "8c6bdb471ed62ae4",
-      "zh-Hans": "8c6bdb471ed62ae4"
+      "zh-Hans": "8c6bdb471ed62ae4",
+      "zh-Hant": "8c6bdb471ed62ae4"
     },
     "Confirm.MoveDestination.Singular": {
       "de": "d1455009656d64e1",
@@ -6051,7 +6395,8 @@
       "tr": "d1455009656d64e1",
       "uk": "d1455009656d64e1",
       "vi": "d1455009656d64e1",
-      "zh-Hans": "d1455009656d64e1"
+      "zh-Hans": "d1455009656d64e1",
+      "zh-Hant": "d1455009656d64e1"
     },
     "Cli.SupersededHeldBack.Few": {
       "pl": "a5fe99752ff7a949",
@@ -6081,7 +6426,8 @@
       "tr": "5262311c25e1f813",
       "uk": "5262311c25e1f813",
       "vi": "5262311c25e1f813",
-      "zh-Hans": "5262311c25e1f813"
+      "zh-Hans": "5262311c25e1f813",
+      "zh-Hant": "5262311c25e1f813"
     },
     "Cli.NothingListedPerFile.Singular": {
       "de": "16cff5a94787189a",
@@ -6098,7 +6444,8 @@
       "tr": "16cff5a94787189a",
       "uk": "16cff5a94787189a",
       "vi": "16cff5a94787189a",
-      "zh-Hans": "16cff5a94787189a"
+      "zh-Hans": "16cff5a94787189a",
+      "zh-Hant": "16cff5a94787189a"
     },
     "Cli.NothingOfferedPerFile.Plural": {
       "de": "b55842c1848d4433",
@@ -6115,7 +6462,8 @@
       "tr": "b55842c1848d4433",
       "uk": "b55842c1848d4433",
       "vi": "b55842c1848d4433",
-      "zh-Hans": "b55842c1848d4433"
+      "zh-Hans": "b55842c1848d4433",
+      "zh-Hant": "b55842c1848d4433"
     },
     "Cli.NothingOfferedPerFile.Singular": {
       "de": "6fc3e769364170a2",
@@ -6132,7 +6480,8 @@
       "tr": "6fc3e769364170a2",
       "uk": "6fc3e769364170a2",
       "vi": "6fc3e769364170a2",
-      "zh-Hans": "6fc3e769364170a2"
+      "zh-Hans": "6fc3e769364170a2",
+      "zh-Hant": "6fc3e769364170a2"
     },
     "Cli.WithheldReasons.CandidateIdentity": {
       "de": "e60061bc2b67067a",
@@ -6149,7 +6498,8 @@
       "tr": "e60061bc2b67067a",
       "uk": "e60061bc2b67067a",
       "vi": "e60061bc2b67067a",
-      "zh-Hans": "e60061bc2b67067a"
+      "zh-Hans": "e60061bc2b67067a",
+      "zh-Hant": "e60061bc2b67067a"
     },
     "Cli.WithheldReasons.DeclaredProductUnestablished": {
       "de": "6e4dca2787e6aed9",
@@ -6166,7 +6516,8 @@
       "tr": "6e4dca2787e6aed9",
       "uk": "6e4dca2787e6aed9",
       "vi": "6e4dca2787e6aed9",
-      "zh-Hans": "6e4dca2787e6aed9"
+      "zh-Hans": "6e4dca2787e6aed9",
+      "zh-Hant": "6e4dca2787e6aed9"
     },
     "Cli.WithheldReasons.ScreenUnanswered": {
       "de": "dbe23f4911d501fa",
@@ -6183,7 +6534,8 @@
       "tr": "dbe23f4911d501fa",
       "uk": "dbe23f4911d501fa",
       "vi": "dbe23f4911d501fa",
-      "zh-Hans": "dbe23f4911d501fa"
+      "zh-Hans": "dbe23f4911d501fa",
+      "zh-Hant": "dbe23f4911d501fa"
     },
     "Completion.NothingOfferedPerFileBody.Plural": {
       "de": "b55842c1848d4433",
@@ -6200,7 +6552,8 @@
       "tr": "b55842c1848d4433",
       "uk": "b55842c1848d4433",
       "vi": "b55842c1848d4433",
-      "zh-Hans": "b55842c1848d4433"
+      "zh-Hans": "b55842c1848d4433",
+      "zh-Hant": "b55842c1848d4433"
     },
     "Completion.NothingOfferedPerFileBody.Singular": {
       "de": "6fc3e769364170a2",
@@ -6217,7 +6570,8 @@
       "tr": "6fc3e769364170a2",
       "uk": "6fc3e769364170a2",
       "vi": "6fc3e769364170a2",
-      "zh-Hans": "6fc3e769364170a2"
+      "zh-Hans": "6fc3e769364170a2",
+      "zh-Hant": "6fc3e769364170a2"
     },
     "Field.NoNamedProduct": {
       "pl": "f6609b048c2dd142",
@@ -6234,7 +6588,8 @@
       "ja": "f6609b048c2dd142",
       "ko": "f6609b048c2dd142",
       "nl": "f6609b048c2dd142",
-      "pt-BR": "f6609b048c2dd142"
+      "pt-BR": "f6609b048c2dd142",
+      "zh-Hant": "f6609b048c2dd142"
     },
     "Body.PendingReboot.RegistryCheckUnreadable": {
       "pl": "7d9a3a0b00af3184",
@@ -6251,7 +6606,8 @@
       "ja": "7d9a3a0b00af3184",
       "ko": "7d9a3a0b00af3184",
       "nl": "7d9a3a0b00af3184",
-      "pt-BR": "7d9a3a0b00af3184"
+      "pt-BR": "7d9a3a0b00af3184",
+      "zh-Hant": "7d9a3a0b00af3184"
     },
     "Cli.PendingRebootBlocked.RegistryCheckUnreadable": {
       "pl": "7e68cb2ebc881ffe",
@@ -6268,7 +6624,8 @@
       "ja": "7e68cb2ebc881ffe",
       "ko": "7e68cb2ebc881ffe",
       "nl": "7e68cb2ebc881ffe",
-      "pt-BR": "7e68cb2ebc881ffe"
+      "pt-BR": "7e68cb2ebc881ffe",
+      "zh-Hant": "7e68cb2ebc881ffe"
     },
     "Error.MoveStoppedTitle": {
       "pl": "10cfdc61ab6d46ca",
@@ -6285,7 +6642,8 @@
       "ja": "10cfdc61ab6d46ca",
       "ko": "10cfdc61ab6d46ca",
       "nl": "10cfdc61ab6d46ca",
-      "pt-BR": "10cfdc61ab6d46ca"
+      "pt-BR": "10cfdc61ab6d46ca",
+      "zh-Hant": "10cfdc61ab6d46ca"
     },
     "Completion.MoveCancelledRestoreHint": {
       "pl": "9ccdd05a48d00b64",
@@ -6302,7 +6660,8 @@
       "ja": "9ccdd05a48d00b64",
       "ko": "9ccdd05a48d00b64",
       "nl": "9ccdd05a48d00b64",
-      "pt-BR": "9ccdd05a48d00b64"
+      "pt-BR": "9ccdd05a48d00b64",
+      "zh-Hant": "9ccdd05a48d00b64"
     },
     "Cli.MoveCancelledRestoreHint": {
       "pl": "13b883305bd9696c",
@@ -6319,7 +6678,8 @@
       "ja": "13b883305bd9696c",
       "ko": "13b883305bd9696c",
       "nl": "13b883305bd9696c",
-      "pt-BR": "13b883305bd9696c"
+      "pt-BR": "13b883305bd9696c",
+      "zh-Hant": "13b883305bd9696c"
     },
     "Error.InstallerLockAccessRefused": {
       "pl": "ccff057a178fecd6",
@@ -6336,7 +6696,8 @@
       "ja": "ccff057a178fecd6",
       "ko": "ccff057a178fecd6",
       "nl": "ccff057a178fecd6",
-      "pt-BR": "ccff057a178fecd6"
+      "pt-BR": "ccff057a178fecd6",
+      "zh-Hant": "ccff057a178fecd6"
     },
     "Error.MoveInstallerLockAccessRefused": {
       "pl": "851d25a0e398c384",
@@ -6353,7 +6714,8 @@
       "ja": "851d25a0e398c384",
       "ko": "851d25a0e398c384",
       "nl": "851d25a0e398c384",
-      "pt-BR": "851d25a0e398c384"
+      "pt-BR": "851d25a0e398c384",
+      "zh-Hant": "851d25a0e398c384"
     },
     "Cli.InstallerLockAccessRefused": {
       "pl": "17afa34662220ace",
@@ -6370,7 +6732,8 @@
       "ja": "17afa34662220ace",
       "ko": "17afa34662220ace",
       "nl": "17afa34662220ace",
-      "pt-BR": "17afa34662220ace"
+      "pt-BR": "17afa34662220ace",
+      "zh-Hant": "17afa34662220ace"
     },
     "Cli.MoveInstallerLockAccessRefused": {
       "pl": "5a9a0bd63b0f1744",
@@ -6387,7 +6750,8 @@
       "ja": "5a9a0bd63b0f1744",
       "ko": "5a9a0bd63b0f1744",
       "nl": "5a9a0bd63b0f1744",
-      "pt-BR": "5a9a0bd63b0f1744"
+      "pt-BR": "5a9a0bd63b0f1744",
+      "zh-Hant": "5a9a0bd63b0f1744"
     },
     "Summary.RegisteredWindow.Missing.Singular": {
       "pl": "19f9fbfd4d5fd205",
@@ -6404,7 +6768,8 @@
       "ja": "19f9fbfd4d5fd205",
       "ko": "19f9fbfd4d5fd205",
       "nl": "19f9fbfd4d5fd205",
-      "pt-BR": "19f9fbfd4d5fd205"
+      "pt-BR": "19f9fbfd4d5fd205",
+      "zh-Hant": "19f9fbfd4d5fd205"
     },
     "Summary.RegisteredWindow.Missing.Plural": {
       "pl": "19f9fbfd4d5fd205",
@@ -6421,7 +6786,8 @@
       "ja": "19f9fbfd4d5fd205",
       "ko": "19f9fbfd4d5fd205",
       "nl": "19f9fbfd4d5fd205",
-      "pt-BR": "19f9fbfd4d5fd205"
+      "pt-BR": "19f9fbfd4d5fd205",
+      "zh-Hant": "19f9fbfd4d5fd205"
     },
     "UpdateCheck.Failed.Unknown.NoLog": {
       "pl": "bba737db610a8c3c",
@@ -6438,7 +6804,8 @@
       "ja": "bba737db610a8c3c",
       "ko": "bba737db610a8c3c",
       "nl": "bba737db610a8c3c",
-      "pt-BR": "bba737db610a8c3c"
+      "pt-BR": "bba737db610a8c3c",
+      "zh-Hant": "bba737db610a8c3c"
     },
     "Summary.RegisteredWindow.Missing.Few": {
       "pl": "19f9fbfd4d5fd205",
@@ -6459,7 +6826,8 @@
       "tr": "8dccf256f6d5783e",
       "uk": "8dccf256f6d5783e",
       "vi": "8dccf256f6d5783e",
-      "zh-Hans": "8dccf256f6d5783e"
+      "zh-Hans": "8dccf256f6d5783e",
+      "zh-Hant": "8dccf256f6d5783e"
     },
     "Display.Size.TB": {
       "de": "e440cbd7e5b49242",
@@ -6476,7 +6844,8 @@
       "tr": "e440cbd7e5b49242",
       "uk": "e440cbd7e5b49242",
       "vi": "e440cbd7e5b49242",
-      "zh-Hans": "e440cbd7e5b49242"
+      "zh-Hans": "e440cbd7e5b49242",
+      "zh-Hant": "e440cbd7e5b49242"
     },
     "Body.PendingReboot.MsiExecuteMutexAccessRefused": {
       "de": "7513635677f59dab",
@@ -6493,7 +6862,8 @@
       "tr": "7513635677f59dab",
       "uk": "7513635677f59dab",
       "vi": "7513635677f59dab",
-      "zh-Hans": "7513635677f59dab"
+      "zh-Hans": "7513635677f59dab",
+      "zh-Hant": "7513635677f59dab"
     },
     "Cli.WithheldReasons.DeclaredPatchUnestablished": {
       "de": "e810a37de4911290",
@@ -6510,7 +6880,8 @@
       "tr": "e810a37de4911290",
       "uk": "e810a37de4911290",
       "vi": "e810a37de4911290",
-      "zh-Hans": "e810a37de4911290"
+      "zh-Hans": "e810a37de4911290",
+      "zh-Hant": "e810a37de4911290"
     },
     "Error.StoppedTitle": {
       "de": "37e2a1633a1e861c",
@@ -6527,7 +6898,8 @@
       "tr": "37e2a1633a1e861c",
       "uk": "37e2a1633a1e861c",
       "vi": "37e2a1633a1e861c",
-      "zh-Hans": "37e2a1633a1e861c"
+      "zh-Hans": "37e2a1633a1e861c",
+      "zh-Hant": "37e2a1633a1e861c"
     },
     "Status.ScanStopped": {
       "de": "16e69e6a7ead1c2a",
@@ -6544,7 +6916,8 @@
       "tr": "16e69e6a7ead1c2a",
       "uk": "16e69e6a7ead1c2a",
       "vi": "16e69e6a7ead1c2a",
-      "zh-Hans": "16e69e6a7ead1c2a"
+      "zh-Hans": "16e69e6a7ead1c2a",
+      "zh-Hant": "16e69e6a7ead1c2a"
     },
     "Error.ScanInstallerFolderElsewhere": {
       "de": "49ce4fd4042b1544",
@@ -6561,7 +6934,8 @@
       "tr": "49ce4fd4042b1544",
       "uk": "49ce4fd4042b1544",
       "vi": "49ce4fd4042b1544",
-      "zh-Hans": "49ce4fd4042b1544"
+      "zh-Hans": "49ce4fd4042b1544",
+      "zh-Hant": "49ce4fd4042b1544"
     },
     "Startup.AdminRightsNeededTitle": {
       "de": "5e305ce53a53f240",
@@ -6578,7 +6952,8 @@
       "tr": "5e305ce53a53f240",
       "uk": "5e305ce53a53f240",
       "vi": "5e305ce53a53f240",
-      "zh-Hans": "5e305ce53a53f240"
+      "zh-Hans": "5e305ce53a53f240",
+      "zh-Hant": "5e305ce53a53f240"
     },
     "Startup.AdminRightsNeededBody": {
       "de": "049d22b1c6d54e3c",
@@ -6595,7 +6970,8 @@
       "tr": "049d22b1c6d54e3c",
       "uk": "049d22b1c6d54e3c",
       "vi": "049d22b1c6d54e3c",
-      "zh-Hans": "049d22b1c6d54e3c"
+      "zh-Hans": "049d22b1c6d54e3c",
+      "zh-Hant": "049d22b1c6d54e3c"
     },
     "Cli.AdminRightsNeeded": {
       "de": "27f1aa4f90eb9c79",
@@ -6612,7 +6988,8 @@
       "tr": "27f1aa4f90eb9c79",
       "uk": "27f1aa4f90eb9c79",
       "vi": "27f1aa4f90eb9c79",
-      "zh-Hans": "27f1aa4f90eb9c79"
+      "zh-Hans": "27f1aa4f90eb9c79",
+      "zh-Hant": "27f1aa4f90eb9c79"
     },
     "Error.ScanInstallerFolderNotFound": {
       "de": "2a07290d25f49e6c",
@@ -6629,7 +7006,8 @@
       "tr": "2a07290d25f49e6c",
       "uk": "2a07290d25f49e6c",
       "vi": "2a07290d25f49e6c",
-      "zh-Hans": "2a07290d25f49e6c"
+      "zh-Hans": "2a07290d25f49e6c",
+      "zh-Hant": "2a07290d25f49e6c"
     },
     "Error.ScanInstallerFolderListFailed": {
       "de": "7cb900a9d0fc486f",
@@ -6646,7 +7024,8 @@
       "tr": "7cb900a9d0fc486f",
       "uk": "7cb900a9d0fc486f",
       "vi": "7cb900a9d0fc486f",
-      "zh-Hans": "7cb900a9d0fc486f"
+      "zh-Hans": "7cb900a9d0fc486f",
+      "zh-Hant": "7cb900a9d0fc486f"
     },
     "Body.RescanNotFinished.Lead": {
       "de": "abd86cf715f888c0",
@@ -6663,7 +7042,8 @@
       "tr": "abd86cf715f888c0",
       "uk": "abd86cf715f888c0",
       "vi": "abd86cf715f888c0",
-      "zh-Hans": "abd86cf715f888c0"
+      "zh-Hans": "abd86cf715f888c0",
+      "zh-Hant": "abd86cf715f888c0"
     },
     "Body.RescanNotFinished.Why": {
       "de": "895191e631daebf0",
@@ -6680,7 +7060,8 @@
       "tr": "895191e631daebf0",
       "uk": "895191e631daebf0",
       "vi": "895191e631daebf0",
-      "zh-Hans": "895191e631daebf0"
+      "zh-Hans": "895191e631daebf0",
+      "zh-Hant": "895191e631daebf0"
     },
     "Body.RescanNotFinished.Recorded": {
       "de": "bd08d52f2e9fbb70",
@@ -6697,7 +7078,8 @@
       "tr": "bd08d52f2e9fbb70",
       "uk": "bd08d52f2e9fbb70",
       "vi": "bd08d52f2e9fbb70",
-      "zh-Hans": "bd08d52f2e9fbb70"
+      "zh-Hans": "bd08d52f2e9fbb70",
+      "zh-Hant": "bd08d52f2e9fbb70"
     },
     "Status.MatchingCount": {
       "de": "9fea8201753aa74d",
@@ -6714,7 +7096,8 @@
       "tr": "9fea8201753aa74d",
       "uk": "9fea8201753aa74d",
       "vi": "9fea8201753aa74d",
-      "zh-Hans": "9fea8201753aa74d"
+      "zh-Hans": "9fea8201753aa74d",
+      "zh-Hant": "9fea8201753aa74d"
     },
     "Status.CheckingRemaining": {
       "de": "b16df54b729614d8",
@@ -6731,7 +7114,8 @@
       "tr": "b16df54b729614d8",
       "uk": "b16df54b729614d8",
       "vi": "b16df54b729614d8",
-      "zh-Hans": "b16df54b729614d8"
+      "zh-Hans": "b16df54b729614d8",
+      "zh-Hant": "b16df54b729614d8"
     },
     "Status.WaitingForDrive": {
       "de": "14a0a23a2e499f62",
@@ -6748,7 +7132,8 @@
       "tr": "14a0a23a2e499f62",
       "uk": "14a0a23a2e499f62",
       "vi": "14a0a23a2e499f62",
-      "zh-Hans": "14a0a23a2e499f62"
+      "zh-Hans": "14a0a23a2e499f62",
+      "zh-Hant": "14a0a23a2e499f62"
     },
     "Status.WaitingForPath": {
       "de": "8670b7c62c3564e9",
@@ -6765,7 +7150,8 @@
       "tr": "8670b7c62c3564e9",
       "uk": "8670b7c62c3564e9",
       "vi": "8670b7c62c3564e9",
-      "zh-Hans": "8670b7c62c3564e9"
+      "zh-Hans": "8670b7c62c3564e9",
+      "zh-Hant": "8670b7c62c3564e9"
     },
     "Action.DonateSmall": {
       "de": "c91ee0f2799df915",
@@ -6782,7 +7168,8 @@
       "tr": "c91ee0f2799df915",
       "uk": "c91ee0f2799df915",
       "vi": "c91ee0f2799df915",
-      "zh-Hans": "c91ee0f2799df915"
+      "zh-Hans": "c91ee0f2799df915",
+      "zh-Hant": "c91ee0f2799df915"
     },
     "Automation.DonateSmall": {
       "de": "c91ee0f2799df915",
@@ -6799,7 +7186,8 @@
       "tr": "c91ee0f2799df915",
       "uk": "c91ee0f2799df915",
       "vi": "c91ee0f2799df915",
-      "zh-Hans": "c91ee0f2799df915"
+      "zh-Hans": "c91ee0f2799df915",
+      "zh-Hant": "c91ee0f2799df915"
     },
     "Action.StopWaiting": {
       "de": "3a5b5fdb77549fb0",
@@ -6816,7 +7204,8 @@
       "tr": "3a5b5fdb77549fb0",
       "uk": "3a5b5fdb77549fb0",
       "vi": "3a5b5fdb77549fb0",
-      "zh-Hans": "3a5b5fdb77549fb0"
+      "zh-Hans": "3a5b5fdb77549fb0",
+      "zh-Hant": "3a5b5fdb77549fb0"
     },
     "Automation.StopWaitingForDrive": {
       "de": "0dd954f716e17e39",
@@ -6833,7 +7222,8 @@
       "tr": "0dd954f716e17e39",
       "uk": "0dd954f716e17e39",
       "vi": "0dd954f716e17e39",
-      "zh-Hans": "0dd954f716e17e39"
+      "zh-Hans": "0dd954f716e17e39",
+      "zh-Hant": "0dd954f716e17e39"
     },
     "Automation.StopWaitingForPath": {
       "de": "7cdc8d4827460453",
@@ -6850,7 +7240,8 @@
       "tr": "7cdc8d4827460453",
       "uk": "7cdc8d4827460453",
       "vi": "7cdc8d4827460453",
-      "zh-Hans": "7cdc8d4827460453"
+      "zh-Hans": "7cdc8d4827460453",
+      "zh-Hant": "7cdc8d4827460453"
     },
     "Status.StopWaitingLeavesAlone": {
       "de": "55cb71a2c38db86c",
@@ -6867,7 +7258,8 @@
       "tr": "55cb71a2c38db86c",
       "uk": "55cb71a2c38db86c",
       "vi": "55cb71a2c38db86c",
-      "zh-Hans": "55cb71a2c38db86c"
+      "zh-Hans": "55cb71a2c38db86c",
+      "zh-Hant": "55cb71a2c38db86c"
     },
     "Automation.WaitingLineWithStopKey": {
       "de": "47241c19833eebf9",
@@ -6884,7 +7276,8 @@
       "tr": "47241c19833eebf9",
       "uk": "47241c19833eebf9",
       "vi": "47241c19833eebf9",
-      "zh-Hans": "47241c19833eebf9"
+      "zh-Hans": "47241c19833eebf9",
+      "zh-Hant": "47241c19833eebf9"
     },
     "Display.DriveName": {
       "de": "1b0c89d95b674ae4",
@@ -6901,7 +7294,8 @@
       "tr": "1b0c89d95b674ae4",
       "uk": "1b0c89d95b674ae4",
       "vi": "1b0c89d95b674ae4",
-      "zh-Hans": "1b0c89d95b674ae4"
+      "zh-Hans": "1b0c89d95b674ae4",
+      "zh-Hant": "1b0c89d95b674ae4"
     },
     "Summary.SourceGivenUp.Drive": {
       "de": "5f0128441c95c451",
@@ -6918,7 +7312,8 @@
       "tr": "5f0128441c95c451",
       "uk": "5f0128441c95c451",
       "vi": "5f0128441c95c451",
-      "zh-Hans": "5f0128441c95c451"
+      "zh-Hans": "5f0128441c95c451",
+      "zh-Hant": "5f0128441c95c451"
     },
     "Summary.SourceGivenUp.Path": {
       "de": "b10b7105b85c8c5d",
@@ -6935,7 +7330,8 @@
       "tr": "b10b7105b85c8c5d",
       "uk": "b10b7105b85c8c5d",
       "vi": "b10b7105b85c8c5d",
-      "zh-Hans": "b10b7105b85c8c5d"
+      "zh-Hans": "b10b7105b85c8c5d",
+      "zh-Hant": "b10b7105b85c8c5d"
     },
     "Summary.SourcesGivenUp": {
       "de": "e64df5100c02ed6f",
@@ -6952,7 +7348,8 @@
       "tr": "e64df5100c02ed6f",
       "uk": "e64df5100c02ed6f",
       "vi": "e64df5100c02ed6f",
-      "zh-Hans": "e64df5100c02ed6f"
+      "zh-Hans": "e64df5100c02ed6f",
+      "zh-Hant": "e64df5100c02ed6f"
     },
     "Cli.SourceGivenUp.Drive": {
       "de": "5ef5331cd5a69f55",
@@ -6969,7 +7366,8 @@
       "tr": "5ef5331cd5a69f55",
       "uk": "5ef5331cd5a69f55",
       "vi": "5ef5331cd5a69f55",
-      "zh-Hans": "5ef5331cd5a69f55"
+      "zh-Hans": "5ef5331cd5a69f55",
+      "zh-Hant": "5ef5331cd5a69f55"
     },
     "Cli.SourceGivenUp.Path": {
       "de": "84914b2378113c2f",
@@ -6986,7 +7384,8 @@
       "tr": "84914b2378113c2f",
       "uk": "84914b2378113c2f",
       "vi": "84914b2378113c2f",
-      "zh-Hans": "84914b2378113c2f"
+      "zh-Hans": "84914b2378113c2f",
+      "zh-Hant": "84914b2378113c2f"
     },
     "Cli.SourcesGivenUp": {
       "de": "2442ca5243498609",
@@ -7003,7 +7402,8 @@
       "tr": "2442ca5243498609",
       "uk": "2442ca5243498609",
       "vi": "2442ca5243498609",
-      "zh-Hans": "2442ca5243498609"
+      "zh-Hans": "2442ca5243498609",
+      "zh-Hant": "2442ca5243498609"
     },
     "Action.Donate": {
       "de": "5b8632bd4464a613",
@@ -7020,7 +7420,8 @@
       "tr": "5b8632bd4464a613",
       "uk": "5b8632bd4464a613",
       "vi": "5b8632bd4464a613",
-      "zh-Hans": "5b8632bd4464a613"
+      "zh-Hans": "5b8632bd4464a613",
+      "zh-Hant": "5b8632bd4464a613"
     },
     "Automation.Donate": {
       "de": "54b1f731a2c3d510",
@@ -7037,7 +7438,8 @@
       "tr": "54b1f731a2c3d510",
       "uk": "54b1f731a2c3d510",
       "vi": "54b1f731a2c3d510",
-      "zh-Hans": "54b1f731a2c3d510"
+      "zh-Hans": "54b1f731a2c3d510",
+      "zh-Hant": "54b1f731a2c3d510"
     },
     "Action.CloseWithoutDonating": {
       "de": "ee3989bb88f6b1e2",
@@ -7054,7 +7456,8 @@
       "tr": "ee3989bb88f6b1e2",
       "uk": "ee3989bb88f6b1e2",
       "vi": "ee3989bb88f6b1e2",
-      "zh-Hans": "ee3989bb88f6b1e2"
+      "zh-Hans": "ee3989bb88f6b1e2",
+      "zh-Hant": "ee3989bb88f6b1e2"
     },
     "Tooltip.Donate": {
       "de": "cf7bb78de7a69a49",
@@ -7071,7 +7474,8 @@
       "tr": "cf7bb78de7a69a49",
       "uk": "cf7bb78de7a69a49",
       "vi": "cf7bb78de7a69a49",
-      "zh-Hans": "cf7bb78de7a69a49"
+      "zh-Hans": "cf7bb78de7a69a49",
+      "zh-Hant": "cf7bb78de7a69a49"
     },
     "Cli.DonateAsk": {
       "de": "f53f01aaeddda714",
@@ -7088,7 +7492,8 @@
       "tr": "f53f01aaeddda714",
       "uk": "f53f01aaeddda714",
       "vi": "f53f01aaeddda714",
-      "zh-Hans": "f53f01aaeddda714"
+      "zh-Hans": "f53f01aaeddda714",
+      "zh-Hant": "f53f01aaeddda714"
     },
     "Completion.SendReport": {
       "de": "27c1ee404b99efb3",
@@ -7105,7 +7510,8 @@
       "tr": "27c1ee404b99efb3",
       "uk": "27c1ee404b99efb3",
       "vi": "27c1ee404b99efb3",
-      "zh-Hans": "27c1ee404b99efb3"
+      "zh-Hans": "27c1ee404b99efb3",
+      "zh-Hant": "27c1ee404b99efb3"
     },
     "Completion.ReportPanel.Intro": {
       "de": "4b179d0bf6f86f01",
@@ -7122,7 +7528,8 @@
       "tr": "4b179d0bf6f86f01",
       "uk": "4b179d0bf6f86f01",
       "vi": "4b179d0bf6f86f01",
-      "zh-Hans": "4b179d0bf6f86f01"
+      "zh-Hans": "4b179d0bf6f86f01",
+      "zh-Hant": "4b179d0bf6f86f01"
     },
     "Completion.ReportPanel.Freed": {
       "de": "42894ded40cdcf6d",
@@ -7139,7 +7546,8 @@
       "tr": "42894ded40cdcf6d",
       "uk": "42894ded40cdcf6d",
       "vi": "42894ded40cdcf6d",
-      "zh-Hans": "42894ded40cdcf6d"
+      "zh-Hans": "42894ded40cdcf6d",
+      "zh-Hant": "42894ded40cdcf6d"
     },
     "Completion.ReportPanel.Destination": {
       "de": "9adba548056f2272",
@@ -7156,7 +7564,8 @@
       "tr": "9adba548056f2272",
       "uk": "9adba548056f2272",
       "vi": "9adba548056f2272",
-      "zh-Hans": "9adba548056f2272"
+      "zh-Hans": "9adba548056f2272",
+      "zh-Hant": "9adba548056f2272"
     },
     "Completion.ReportPanel.Durations": {
       "de": "b2bd2a4dd99866ea",
@@ -7173,7 +7582,8 @@
       "tr": "b2bd2a4dd99866ea",
       "uk": "b2bd2a4dd99866ea",
       "vi": "b2bd2a4dd99866ea",
-      "zh-Hans": "b2bd2a4dd99866ea"
+      "zh-Hans": "b2bd2a4dd99866ea",
+      "zh-Hant": "b2bd2a4dd99866ea"
     },
     "Completion.ReportPanel.InstallerFiles": {
       "de": "3a3e91cd06a86382",
@@ -7190,7 +7600,8 @@
       "tr": "3a3e91cd06a86382",
       "uk": "3a3e91cd06a86382",
       "vi": "3a3e91cd06a86382",
-      "zh-Hans": "3a3e91cd06a86382"
+      "zh-Hans": "3a3e91cd06a86382",
+      "zh-Hant": "3a3e91cd06a86382"
     },
     "Completion.ReportPanel.LeftAlone": {
       "de": "587352f46226d2a5",
@@ -7207,7 +7618,8 @@
       "tr": "587352f46226d2a5",
       "uk": "587352f46226d2a5",
       "vi": "587352f46226d2a5",
-      "zh-Hans": "587352f46226d2a5"
+      "zh-Hans": "587352f46226d2a5",
+      "zh-Hant": "587352f46226d2a5"
     },
     "Completion.ReportPanel.Waits": {
       "de": "4bc8a305704b162e",
@@ -7224,7 +7636,8 @@
       "tr": "4bc8a305704b162e",
       "uk": "4bc8a305704b162e",
       "vi": "4bc8a305704b162e",
-      "zh-Hans": "4bc8a305704b162e"
+      "zh-Hans": "4bc8a305704b162e",
+      "zh-Hant": "4bc8a305704b162e"
     },
     "Completion.ReportPanel.Records": {
       "de": "c1d395682b32df30",
@@ -7241,7 +7654,8 @@
       "tr": "c1d395682b32df30",
       "uk": "c1d395682b32df30",
       "vi": "c1d395682b32df30",
-      "zh-Hans": "c1d395682b32df30"
+      "zh-Hans": "c1d395682b32df30",
+      "zh-Hant": "c1d395682b32df30"
     },
     "Completion.ReportPanel.ShortNames": {
       "de": "5bbb995f061bb5b8",
@@ -7258,7 +7672,8 @@
       "tr": "5bbb995f061bb5b8",
       "uk": "5bbb995f061bb5b8",
       "vi": "5bbb995f061bb5b8",
-      "zh-Hans": "5bbb995f061bb5b8"
+      "zh-Hans": "5bbb995f061bb5b8",
+      "zh-Hant": "5bbb995f061bb5b8"
     },
     "Completion.ReportPanel.Windows": {
       "de": "95ae0570e750a373",
@@ -7275,7 +7690,8 @@
       "tr": "95ae0570e750a373",
       "uk": "95ae0570e750a373",
       "vi": "95ae0570e750a373",
-      "zh-Hans": "95ae0570e750a373"
+      "zh-Hans": "95ae0570e750a373",
+      "zh-Hant": "95ae0570e750a373"
     },
     "Completion.ReportPanel.AppVersion": {
       "de": "bfc61def33b1a109",
@@ -7292,7 +7708,8 @@
       "tr": "bfc61def33b1a109",
       "uk": "bfc61def33b1a109",
       "vi": "bfc61def33b1a109",
-      "zh-Hans": "bfc61def33b1a109"
+      "zh-Hans": "bfc61def33b1a109",
+      "zh-Hant": "bfc61def33b1a109"
     },
     "Completion.ReportPanel.Errors": {
       "de": "d593da3c26426b54",
@@ -7309,7 +7726,8 @@
       "tr": "d593da3c26426b54",
       "uk": "d593da3c26426b54",
       "vi": "d593da3c26426b54",
-      "zh-Hans": "d593da3c26426b54"
+      "zh-Hans": "d593da3c26426b54",
+      "zh-Hant": "d593da3c26426b54"
     },
     "Completion.ReportPanel.Closing": {
       "de": "8a5f7764632ebce9",
@@ -7326,7 +7744,8 @@
       "tr": "8a5f7764632ebce9",
       "uk": "8a5f7764632ebce9",
       "vi": "8a5f7764632ebce9",
-      "zh-Hans": "8a5f7764632ebce9"
+      "zh-Hans": "8a5f7764632ebce9",
+      "zh-Hant": "8a5f7764632ebce9"
     },
     "Automation.ReportInfo": {
       "de": "d8c200aa93ea07f2",
@@ -7343,7 +7762,8 @@
       "tr": "d8c200aa93ea07f2",
       "uk": "d8c200aa93ea07f2",
       "vi": "d8c200aa93ea07f2",
-      "zh-Hans": "d8c200aa93ea07f2"
+      "zh-Hans": "d8c200aa93ea07f2",
+      "zh-Hant": "d8c200aa93ea07f2"
     },
     "Automation.Scroll.ReportContents": {
       "de": "d8c200aa93ea07f2",
@@ -7360,7 +7780,8 @@
       "tr": "d8c200aa93ea07f2",
       "uk": "d8c200aa93ea07f2",
       "vi": "d8c200aa93ea07f2",
-      "zh-Hans": "d8c200aa93ea07f2"
+      "zh-Hans": "d8c200aa93ea07f2",
+      "zh-Hant": "d8c200aa93ea07f2"
     },
     "Completion.ReportPanel.SeeReport": {
       "de": "cc7f06d8a7387168",
@@ -7377,7 +7798,8 @@
       "tr": "cc7f06d8a7387168",
       "uk": "cc7f06d8a7387168",
       "vi": "cc7f06d8a7387168",
-      "zh-Hans": "cc7f06d8a7387168"
+      "zh-Hans": "cc7f06d8a7387168",
+      "zh-Hant": "cc7f06d8a7387168"
     },
     "Window.Report.Title": {
       "de": "fb94805dd1bc9f86",
@@ -7394,7 +7816,8 @@
       "tr": "fb94805dd1bc9f86",
       "uk": "fb94805dd1bc9f86",
       "vi": "fb94805dd1bc9f86",
-      "zh-Hans": "fb94805dd1bc9f86"
+      "zh-Hans": "fb94805dd1bc9f86",
+      "zh-Hant": "fb94805dd1bc9f86"
     },
     "Window.Report.Unreadable": {
       "de": "8e5a9e94ed3a3291",
@@ -7411,7 +7834,8 @@
       "tr": "8e5a9e94ed3a3291",
       "uk": "8e5a9e94ed3a3291",
       "vi": "8e5a9e94ed3a3291",
-      "zh-Hans": "8e5a9e94ed3a3291"
+      "zh-Hans": "8e5a9e94ed3a3291",
+      "zh-Hant": "8e5a9e94ed3a3291"
     },
     "Automation.Scroll.Waiting": {
       "de": "8f0a2f9c78ece3b6",
@@ -7428,7 +7852,8 @@
       "tr": "8f0a2f9c78ece3b6",
       "uk": "8f0a2f9c78ece3b6",
       "vi": "8f0a2f9c78ece3b6",
-      "zh-Hans": "8f0a2f9c78ece3b6"
+      "zh-Hans": "8f0a2f9c78ece3b6",
+      "zh-Hant": "8f0a2f9c78ece3b6"
     },
     "Body.PendingReboot.MsiExecuteMutexUnreadable": {
       "de": "6b04e321382425d7",
@@ -7445,7 +7870,8 @@
       "tr": "6b04e321382425d7",
       "uk": "6b04e321382425d7",
       "vi": "6b04e321382425d7",
-      "zh-Hans": "6b04e321382425d7"
+      "zh-Hans": "6b04e321382425d7",
+      "zh-Hant": "6b04e321382425d7"
     },
     "Body.PendingReboot.MsiExecuteMutexUnreadableWindowsError": {
       "de": "f26f968524651af7",
@@ -7462,7 +7888,8 @@
       "tr": "f26f968524651af7",
       "uk": "f26f968524651af7",
       "vi": "f26f968524651af7",
-      "zh-Hans": "f26f968524651af7"
+      "zh-Hans": "f26f968524651af7",
+      "zh-Hant": "f26f968524651af7"
     },
     "Completion.RecentChange.Singular": {
       "de": "68a6a082886aedb7",
@@ -7479,7 +7906,8 @@
       "tr": "68a6a082886aedb7",
       "uk": "68a6a082886aedb7",
       "vi": "68a6a082886aedb7",
-      "zh-Hans": "68a6a082886aedb7"
+      "zh-Hans": "68a6a082886aedb7",
+      "zh-Hant": "68a6a082886aedb7"
     },
     "Completion.RecentChange.Plural": {
       "de": "269a8d88d5b78829",
@@ -7496,7 +7924,8 @@
       "tr": "269a8d88d5b78829",
       "uk": "269a8d88d5b78829",
       "vi": "269a8d88d5b78829",
-      "zh-Hans": "269a8d88d5b78829"
+      "zh-Hans": "269a8d88d5b78829",
+      "zh-Hant": "269a8d88d5b78829"
     },
     "Summary.ScanSignal.Busy": {
       "de": "cfe7f9ebd2d18044",
@@ -7513,7 +7942,8 @@
       "tr": "cfe7f9ebd2d18044",
       "uk": "cfe7f9ebd2d18044",
       "vi": "cfe7f9ebd2d18044",
-      "zh-Hans": "cfe7f9ebd2d18044"
+      "zh-Hans": "cfe7f9ebd2d18044",
+      "zh-Hant": "cfe7f9ebd2d18044"
     },
     "Summary.ScanSignal.Suspended": {
       "de": "a1ac587e3cc21bfa",
@@ -7530,7 +7960,8 @@
       "tr": "a1ac587e3cc21bfa",
       "uk": "a1ac587e3cc21bfa",
       "vi": "a1ac587e3cc21bfa",
-      "zh-Hans": "a1ac587e3cc21bfa"
+      "zh-Hans": "a1ac587e3cc21bfa",
+      "zh-Hant": "a1ac587e3cc21bfa"
     },
     "Summary.ScanSignal.RenameInCache": {
       "de": "f7055159d11d7a81",
@@ -7547,7 +7978,8 @@
       "tr": "f7055159d11d7a81",
       "uk": "f7055159d11d7a81",
       "vi": "f7055159d11d7a81",
-      "zh-Hans": "f7055159d11d7a81"
+      "zh-Hans": "f7055159d11d7a81",
+      "zh-Hant": "f7055159d11d7a81"
     },
     "Summary.ScanSignal.RenameUnresolved": {
       "de": "e9e3a2df9941ace2",
@@ -7564,7 +7996,8 @@
       "tr": "e9e3a2df9941ace2",
       "uk": "e9e3a2df9941ace2",
       "vi": "e9e3a2df9941ace2",
-      "zh-Hans": "e9e3a2df9941ace2"
+      "zh-Hans": "e9e3a2df9941ace2",
+      "zh-Hant": "e9e3a2df9941ace2"
     },
     "Summary.ScanSignal.AccessRefused": {
       "de": "9d1e4ef617b39158",
@@ -7581,7 +8014,8 @@
       "tr": "9d1e4ef617b39158",
       "uk": "9d1e4ef617b39158",
       "vi": "9d1e4ef617b39158",
-      "zh-Hans": "9d1e4ef617b39158"
+      "zh-Hans": "9d1e4ef617b39158",
+      "zh-Hant": "9d1e4ef617b39158"
     },
     "Summary.ScanSignal.RegistryUnreadable": {
       "de": "4d4675480bb66be0",
@@ -7598,7 +8032,8 @@
       "tr": "4d4675480bb66be0",
       "uk": "4d4675480bb66be0",
       "vi": "4d4675480bb66be0",
-      "zh-Hans": "4d4675480bb66be0"
+      "zh-Hans": "4d4675480bb66be0",
+      "zh-Hant": "4d4675480bb66be0"
     },
     "Summary.ScanSignal.LockUnreadable": {
       "de": "1a11de223a047ddb",
@@ -7615,7 +8050,8 @@
       "tr": "1a11de223a047ddb",
       "uk": "1a11de223a047ddb",
       "vi": "1a11de223a047ddb",
-      "zh-Hans": "1a11de223a047ddb"
+      "zh-Hans": "1a11de223a047ddb",
+      "zh-Hant": "1a11de223a047ddb"
     },
     "Summary.ScanSignal.LockUnreadableWindowsError": {
       "de": "f7ad45ea877a779e",
@@ -7632,7 +8068,8 @@
       "tr": "f7ad45ea877a779e",
       "uk": "f7ad45ea877a779e",
       "vi": "f7ad45ea877a779e",
-      "zh-Hans": "f7ad45ea877a779e"
+      "zh-Hans": "f7ad45ea877a779e",
+      "zh-Hant": "f7ad45ea877a779e"
     },
     "Summary.ScanSignal.Other": {
       "de": "c41e3d4da6e54c6f",
@@ -7649,7 +8086,8 @@
       "tr": "c41e3d4da6e54c6f",
       "uk": "c41e3d4da6e54c6f",
       "vi": "c41e3d4da6e54c6f",
-      "zh-Hans": "c41e3d4da6e54c6f"
+      "zh-Hans": "c41e3d4da6e54c6f",
+      "zh-Hant": "c41e3d4da6e54c6f"
     },
     "Summary.ScanSignal.ClockSetBack": {
       "de": "a87ad3824c1f3676",
@@ -7666,7 +8104,8 @@
       "tr": "a87ad3824c1f3676",
       "uk": "a87ad3824c1f3676",
       "vi": "a87ad3824c1f3676",
-      "zh-Hans": "a87ad3824c1f3676"
+      "zh-Hans": "a87ad3824c1f3676",
+      "zh-Hant": "a87ad3824c1f3676"
     },
     "Cli.PendingRebootBlocked.MsiExecuteMutexUnreadable": {
       "de": "48a4f41973b8b7b5",
@@ -7683,7 +8122,8 @@
       "tr": "48a4f41973b8b7b5",
       "uk": "48a4f41973b8b7b5",
       "vi": "48a4f41973b8b7b5",
-      "zh-Hans": "48a4f41973b8b7b5"
+      "zh-Hans": "48a4f41973b8b7b5",
+      "zh-Hant": "48a4f41973b8b7b5"
     },
     "Cli.PendingRebootBlocked.MsiExecuteMutexUnreadableWindowsError": {
       "de": "2545cf5e8c192635",
@@ -7700,7 +8140,8 @@
       "tr": "2545cf5e8c192635",
       "uk": "2545cf5e8c192635",
       "vi": "2545cf5e8c192635",
-      "zh-Hans": "2545cf5e8c192635"
+      "zh-Hans": "2545cf5e8c192635",
+      "zh-Hant": "2545cf5e8c192635"
     },
     "Cli.ScanSignal.Busy": {
       "de": "11d7d3c204864de0",
@@ -7717,7 +8158,8 @@
       "tr": "11d7d3c204864de0",
       "uk": "11d7d3c204864de0",
       "vi": "11d7d3c204864de0",
-      "zh-Hans": "11d7d3c204864de0"
+      "zh-Hans": "11d7d3c204864de0",
+      "zh-Hant": "11d7d3c204864de0"
     },
     "Cli.ScanSignal.Suspended": {
       "de": "a8cb99eb7142ca58",
@@ -7734,7 +8176,8 @@
       "tr": "a8cb99eb7142ca58",
       "uk": "a8cb99eb7142ca58",
       "vi": "a8cb99eb7142ca58",
-      "zh-Hans": "a8cb99eb7142ca58"
+      "zh-Hans": "a8cb99eb7142ca58",
+      "zh-Hant": "a8cb99eb7142ca58"
     },
     "Cli.ScanSignal.RenameInCache": {
       "de": "337f1eb3c87c911d",
@@ -7751,7 +8194,8 @@
       "tr": "337f1eb3c87c911d",
       "uk": "337f1eb3c87c911d",
       "vi": "337f1eb3c87c911d",
-      "zh-Hans": "337f1eb3c87c911d"
+      "zh-Hans": "337f1eb3c87c911d",
+      "zh-Hant": "337f1eb3c87c911d"
     },
     "Cli.ScanSignal.RenameUnresolved": {
       "de": "a7c91d1433eb466e",
@@ -7768,7 +8212,8 @@
       "tr": "a7c91d1433eb466e",
       "uk": "a7c91d1433eb466e",
       "vi": "a7c91d1433eb466e",
-      "zh-Hans": "a7c91d1433eb466e"
+      "zh-Hans": "a7c91d1433eb466e",
+      "zh-Hant": "a7c91d1433eb466e"
     },
     "Cli.ScanSignal.AccessRefused": {
       "de": "e576bcc0fae1278e",
@@ -7785,7 +8230,8 @@
       "tr": "e576bcc0fae1278e",
       "uk": "e576bcc0fae1278e",
       "vi": "e576bcc0fae1278e",
-      "zh-Hans": "e576bcc0fae1278e"
+      "zh-Hans": "e576bcc0fae1278e",
+      "zh-Hant": "e576bcc0fae1278e"
     },
     "Cli.ScanSignal.RegistryUnreadable": {
       "de": "22e68384c9f04b0a",
@@ -7802,7 +8248,8 @@
       "tr": "22e68384c9f04b0a",
       "uk": "22e68384c9f04b0a",
       "vi": "22e68384c9f04b0a",
-      "zh-Hans": "22e68384c9f04b0a"
+      "zh-Hans": "22e68384c9f04b0a",
+      "zh-Hant": "22e68384c9f04b0a"
     },
     "Cli.ScanSignal.LockUnreadable": {
       "de": "9cb4477f6432aff9",
@@ -7819,7 +8266,8 @@
       "tr": "9cb4477f6432aff9",
       "uk": "9cb4477f6432aff9",
       "vi": "9cb4477f6432aff9",
-      "zh-Hans": "9cb4477f6432aff9"
+      "zh-Hans": "9cb4477f6432aff9",
+      "zh-Hant": "9cb4477f6432aff9"
     },
     "Cli.ScanSignal.LockUnreadableWindowsError": {
       "de": "082053989018bc52",
@@ -7836,7 +8284,8 @@
       "tr": "082053989018bc52",
       "uk": "082053989018bc52",
       "vi": "082053989018bc52",
-      "zh-Hans": "082053989018bc52"
+      "zh-Hans": "082053989018bc52",
+      "zh-Hant": "082053989018bc52"
     },
     "Cli.ScanSignal.Other": {
       "de": "42257752e99aa4d8",
@@ -7853,7 +8302,8 @@
       "tr": "42257752e99aa4d8",
       "uk": "42257752e99aa4d8",
       "vi": "42257752e99aa4d8",
-      "zh-Hans": "42257752e99aa4d8"
+      "zh-Hans": "42257752e99aa4d8",
+      "zh-Hant": "42257752e99aa4d8"
     },
     "Cli.ScanSignal.ClockSetBack": {
       "de": "c4a74f48b429b812",
@@ -7870,7 +8320,8 @@
       "tr": "c4a74f48b429b812",
       "uk": "c4a74f48b429b812",
       "vi": "c4a74f48b429b812",
-      "zh-Hans": "c4a74f48b429b812"
+      "zh-Hans": "c4a74f48b429b812",
+      "zh-Hant": "c4a74f48b429b812"
     }
   }
 }

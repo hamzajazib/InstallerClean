@@ -271,7 +271,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// per Reason label so that a translator edits the column labels in one place
     /// and the copy follows. Two kinds of file reach the list, orphaned and
     /// superseded, so the neutral spends the first two slots and no satellite
-    /// spends the third: read out of the neutral and all fifteen, not one contains
+    /// spends the third: read out of the neutral and every satellite, not one contains
     /// {2}.
     ///
     /// IT STAYS, AND WHAT IT GUARDS IS THE OTHER DIRECTION. string.Format ignores a

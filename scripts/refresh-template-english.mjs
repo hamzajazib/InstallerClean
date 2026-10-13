@@ -3,7 +3,7 @@
 // current English neutral, for named keys.
 //
 // THIS IS NOT flag-retranslation.mjs AND IT IS NOT THE SAME OPERATION. The
-// fifteen gen-strings-<code>.mjs files hold TRANSLATIONS, which go stale when
+// satellites' gen-strings-<code>.mjs files hold TRANSLATIONS, which go stale when
 // the English moves and which only a human can bring forward; flagging one sets
 // it back to English on purpose, so the generator's self-check fails loudly
 // until somebody translates it. gen-strings-template.mjs holds THE ENGLISH
@@ -14,10 +14,10 @@
 //
 // WHY IT HAD TO EXIST AT ALL. flag-retranslation.mjs discovers its targets with
 //   .filter((f) => /^gen-strings-.+\.mjs$/.test(f) && f !== 'gen-strings-template.mjs')
-// so it reaches fifteen generators and never the sixteenth, by an explicit name
-// test somebody wrote deliberately. So a flag run resets the fifteen and leaves
-// the template holding whatever English it held before, and the template is what
-// a seventeenth language would be copied from. This is what puts the current
+// so it reaches every satellite generator and never the template, by an explicit
+// name test somebody wrote deliberately. So a flag run resets the satellites and
+// leaves the template holding whatever English it held before, and the template is
+// what a new language is copied from. This is what puts the current
 // English into it.
 //
 // TWO STATES, AND THEY ARE NOT THE SAME JOB. A key whose English was reworded has a

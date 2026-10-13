@@ -5,8 +5,8 @@ using InstallerClean.Resources;
 namespace InstallerClean.Tests.Helpers;
 
 /// <summary>
-/// The report panel's spoken line, and the space it puts between sentences, in all
-/// sixteen languages.
+/// The report panel's spoken line, and the space it puts between sentences, in every
+/// language.
 ///
 /// The line joins whole sentences that carry their own punctuation: the opening sentence
 /// ends in a colon and the closing line in a stop. Where a language spaces its sentences
@@ -30,10 +30,11 @@ public class ReportPanelTextTests
     /// sentences, so a run over a shorter list cannot pass without reaching them.
     /// </summary>
     [Fact]
-    public void The_languages_include_the_two_that_do_not_space_their_sentences()
+    public void The_languages_include_the_ones_that_do_not_space_their_sentences()
     {
         Assert.Contains("ja", SupportedLanguages.CultureNames);
         Assert.Contains("zh-Hans", SupportedLanguages.CultureNames);
+        Assert.Contains("zh-Hant", SupportedLanguages.CultureNames);
     }
 
     [Theory]
@@ -42,6 +43,7 @@ public class ReportPanelTextTests
     [InlineData("ko", " ")]
     [InlineData("ja", "")]
     [InlineData("zh-Hans", "")]
+    [InlineData("zh-Hant", "")]
     public void The_space_after_a_sentence_is_what_the_separator_ends_with(string cultureName, string expected)
     {
         using var scope = new LocalisationScope(CultureInfo.GetCultureInfo(cultureName));

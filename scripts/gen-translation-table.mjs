@@ -9,13 +9,13 @@
 // resx; re-run it whenever a satellite changes.
 //
 // USAGE  node scripts/gen-translation-table.mjs <code>       write one table
-//        node scripts/gen-translation-table.mjs --check      verify all fifteen
+//        node scripts/gen-translation-table.mjs --check      verify every table
 //        node scripts/gen-translation-table.mjs --check <code>
 //   <code> is a satellite code: zh-Hans, de, ko, es, it, ja, pt-BR, ru, fr, pl,
-//   tr, id, vi, uk, nl.
+//   tr, id, vi, uk, nl, zh-Hant.
 // It reads the English neutral Strings.resx and Strings.<code>.resx, pairs them by
 // key, and writes docs/translations/<code>.md (LF). The human-facing Cli.* keys are
-// translated and shown in their own group; the 20 machine-contract Cli.EventLog*
+// translated and shown in their own group; the machine-contract Cli.EventLog*
 // keys (bar Cli.EventLogUnavailable) stay English by contract, so they are skipped
 // here whether or not the satellite carries them (ja does). Only the machine set
 // is counted, because it is closed by that contract while the human set grows
@@ -46,6 +46,7 @@ const LANGS = {
   'vi':      { en: 'Vietnamese',            endo: 'Tiếng Việt' },
   'uk':      { en: 'Ukrainian',             endo: 'Українська' },
   'nl':      { en: 'Dutch',                 endo: 'Nederlands' },
+  'zh-Hant': { en: 'Traditional Chinese',   endo: '繁體中文' },
 };
 
 const args = process.argv.slice(2);
@@ -198,7 +199,7 @@ if (!checkMode) {
 
 // --check: rebuild and compare, never write. The summary counts differing lines
 // rather than printing a diff, because every line here is a full UI string and
-// fifteen tables' worth would bury the one fact that matters, which language
+// every table's worth would bury the one fact that matters, which language
 // and how far out of step.
 const codes = code ? [code] : Object.keys(LANGS);
 let stale = 0;

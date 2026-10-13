@@ -17,13 +17,13 @@ namespace InstallerClean.Tests.Helpers;
 ///
 /// A keyPrefix is a bare string passed alongside the resx forms, so one that
 /// does not match its key spells no error anywhere: the override lookup simply
-/// misses, and all fifteen languages keep the uninflected form at once. The
+/// misses, and every language keeps the uninflected form at once. The
 /// first test walks the whole inventory against the shipped resources.
 ///
 /// The mirror of it is an override whose prefix matches nothing the code passes.
 /// A translator writing "Completion.HeldBak.One" adds a key that parity
 /// accepts, that nothing reads and that can never be selected. The last test
-/// walks every override in all fifteen satellites back to a prefix in the
+/// walks every override in every satellite back to a prefix in the
 /// inventory, so an orphan names itself.
 /// </summary>
 public class CountedStringTests
@@ -47,7 +47,7 @@ public class CountedStringTests
     ///
     /// EVERY THEORY DRIVEN OFF THIS LIST COVERS EXACTLY WHAT THE LIST HOLDS AND NO MORE,
     /// so a prefix missing from here is missing from all of them at once, including the
-    /// sixteen-language cardinality theory, and none of them can say so. A switch's arms
+    /// every-language cardinality theory, and none of them can say so. A switch's arms
     /// are not enumerable at runtime, so nothing inside the test run can compare this
     /// list with <see cref="DisplayHelpers.QuestionFor"/> either.
     /// <c>scripts/check-counted-string-inventory.mjs</c> is what holds the two together:
