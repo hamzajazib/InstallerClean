@@ -214,7 +214,7 @@ const MAP = {
   'Status.ScanFailedDetails.NoLog': `掃描失敗（{0}）。無法寫入當機記錄檔。`,
   'Completion.AllClean': `乾乾淨淨`,
   'Completion.NothingToCleanUp': `{InstallerFolder} 中沒有需要清理的內容`,
-  'Completion.NothingToCleanUpReceipt': `掃描了 {0} 個{1}，費時 {2}`,
+  'Completion.NothingToCleanUpReceipt': `掃描了 {0} 個{1}，費時：{2}`,
   'Completion.Freed': `已釋放 {0}`,
   'Completion.Moved': `已移動 {0}`,
   // Heading for the outcome where the operation acted on no file at all, then
@@ -490,7 +490,7 @@ const MAP = {
   'Automation.StopWaitingForDrive': `不再等候，繼續進行，磁碟機 {0}`,
   'Automation.StopWaitingForPath': `不再等候，繼續進行，{0}`,
   'Status.StopWaitingLeavesAlone': `仍需與它核對的檔案都會原樣保留。`,
-  'Automation.WaitingLineWithStopKey': `{0} 按 Alt+{1} 即可不再等候，繼續進行。{2}`,
+  'Automation.WaitingLineWithStopKey': `{0}按 Alt+{1} 即可不再等候，繼續進行。{2}`,
   'Summary.SourceGivenUp.Drive': `InstallerClean 已不再等候磁碟機 {0}，繼續進行，並將仍需與它核對的檔案都原樣保留。等它恢復正常回應後，請按「重新掃描」。`,
   'Summary.SourceGivenUp.Path': `InstallerClean 已不再等候 {0}，繼續進行，並將仍需與它核對的檔案都原樣保留。等它恢復正常回應後，請按「重新掃描」。`,
   'Summary.SourcesGivenUp': `InstallerClean 已不再等候多個磁碟機或共用資料夾（{0}），繼續進行，並將仍需與其中任何一個核對的檔案都原樣保留。等它們恢復正常回應後，請按「重新掃描」。`,

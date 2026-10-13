@@ -639,7 +639,7 @@
        (Status.WaitingForDrive or Status.WaitingForPath), 1 = the access key of
        Action.StopWaiting, read from that label at run time, 2 =
        Status.StopWaitingLeavesAlone. -->
-  <data name="Automation.WaitingLineWithStopKey" xml:space="preserve"><value>{0} 按 Alt+{1} 即可不再等候，繼續進行。{2}</value></data>
+  <data name="Automation.WaitingLineWithStopKey" xml:space="preserve"><value>{0}按 Alt+{1} 即可不再等候，繼續進行。{2}</value></data>
   <!-- 0 = elapsed time text (e.g. "1.2s") -->
   <data name="Status.ScanComplete" xml:space="preserve"><value>掃描完成（{0}）</value></data>
   <!-- 0 = file count, 1 = pluralised noun ("file"/"files") -->
@@ -710,7 +710,7 @@
        completion overlay so the all-clean state has the same heading +
        summary + smaller-receipt shape as the post-Move and post-Delete
        states. -->
-  <data name="Completion.NothingToCleanUpReceipt" xml:space="preserve"><value>掃描了 {0} 個{1}，費時 {2}</value></data>
+  <data name="Completion.NothingToCleanUpReceipt" xml:space="preserve"><value>掃描了 {0} 個{1}，費時：{2}</value></data>
   <!-- THE SCREEN FOR A RUN THAT OFFERED NOTHING AND HELD BACK FILES IT COULD NOT
        ESTABLISH ARE UNNEEDED, which is a different finding from a folder with nothing in
        it to remove and must not share a screen with one. Completion.AllClean over

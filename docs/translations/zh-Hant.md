@@ -161,7 +161,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | --- | --- |
 | All clean | 乾乾淨淨 |
 | Nothing to clean up in {InstallerFolder} | {InstallerFolder} 中沒有需要清理的內容 |
-| Scanned {0} {1} in {2} | 掃描了 {0} 個{1}，費時 {2} |
+| Scanned {0} {1} in {2} | 掃描了 {0} 個{1}，費時：{2} |
 | Nothing offered on this PC | 這台電腦上沒有可提供的檔案 |
 | InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back the one file ({2}) rather than offering it. | InstallerClean 無法確定快取中的哪些檔案屬於這裡安裝的程式，因此沒有提供那 1 個檔案（{2}），而是把它保留了下來。 |
 | InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back all {0} {1} ({2}) rather than offering them. | InstallerClean 無法確定快取中的哪些檔案屬於這裡安裝的程式，因此沒有提供全部 {0} 個{1}（{2}），而是把它們保留了下來。 |
@@ -423,7 +423,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | 無法處理的檔案 |
 | Explains this folder, and how to recover a file, in the README | README 中說明了這個資料夾，以及如何復原檔案 |
-| {0} Press Alt+{1} to carry on without it. {2} | {0} 按 Alt+{1} 即可不再等候，繼續進行。{2} |
+| {0} Press Alt+{1} to carry on without it. {2} | {0}按 Alt+{1} 即可不再等候，繼續進行。{2} |
 | What the report holds | 報告包含哪些內容 |
 | What the report holds | 報告包含哪些內容 |
 | Change language | 變更語言 |

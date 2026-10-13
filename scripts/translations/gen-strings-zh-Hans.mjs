@@ -206,7 +206,7 @@ const MAP = {
   'Status.ScanFailedDetails.NoLog': `扫描失败（{0}）。无法写入崩溃日志。`,
   'Completion.AllClean': `干干净净`,
   'Completion.NothingToCleanUp': `{InstallerFolder} 中没有需要清理的内容`,
-  'Completion.NothingToCleanUpReceipt': `扫描了 {0} 个{1}，用时 {2}`,
+  'Completion.NothingToCleanUpReceipt': `扫描了 {0} 个{1}，用时：{2}`,
   'Completion.Freed': `已释放 {0}`,
   'Completion.Moved': `已移动 {0}`,
   // Heading for the outcome where the operation acted on no file at all, then
@@ -482,7 +482,7 @@ const MAP = {
   'Automation.StopWaitingForDrive': `不再等待并继续，驱动器 {0}`,
   'Automation.StopWaitingForPath': `不再等待并继续，{0}`,
   'Status.StopWaitingLeavesAlone': `仍需与其核对的文件都将原样保留。`,
-  'Automation.WaitingLineWithStopKey': `{0} 按 Alt+{1} 可不再等待并继续。{2}`,
+  'Automation.WaitingLineWithStopKey': `{0}按 Alt+{1} 可不再等待并继续。{2}`,
   'Summary.SourceGivenUp.Drive': `InstallerClean 已在没有驱动器 {0} 的情况下继续，并将仍需与其核对的文件都原样保留。待它恢复正常响应后，请点击“重新扫描”。`,
   'Summary.SourceGivenUp.Path': `InstallerClean 已在没有 {0} 的情况下继续，并将仍需与其核对的文件都原样保留。待它恢复正常响应后，请点击“重新扫描”。`,
   'Summary.SourcesGivenUp': `InstallerClean 已在没有多个驱动器或共享（{0}）的情况下继续，并将仍需与其中某一个核对的文件都原样保留。待它们恢复正常响应后，请点击“重新扫描”。`,

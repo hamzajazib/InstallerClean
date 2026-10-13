@@ -161,7 +161,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | --- | --- |
 | All clean | 干干净净 |
 | Nothing to clean up in {InstallerFolder} | {InstallerFolder} 中没有需要清理的内容 |
-| Scanned {0} {1} in {2} | 扫描了 {0} 个{1}，用时 {2} |
+| Scanned {0} {1} in {2} | 扫描了 {0} 个{1}，用时：{2} |
 | Nothing offered on this PC | 在这台电脑上没有提供任何内容 |
 | InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back the one file ({2}) rather than offering it. | InstallerClean 无法确定缓存中的哪些文件属于这里安装的程序，因此没有提供那 1 个文件（{2}），而是把它保留了下来。 |
 | InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back all {0} {1} ({2}) rather than offering them. | InstallerClean 无法确定缓存中的哪些文件属于这里安装的程序，因此没有提供全部 {0} 个{1}（{2}），而是把它们保留了下来。 |
@@ -423,7 +423,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} ({1}) | {0} ({1}) |
 | Files that could not be processed | 无法处理的文件 |
 | Explains this folder, and how to recover a file, in the README | 在 README 中解释了这个文件夹，以及如何恢复文件 |
-| {0} Press Alt+{1} to carry on without it. {2} | {0} 按 Alt+{1} 可不再等待并继续。{2} |
+| {0} Press Alt+{1} to carry on without it. {2} | {0}按 Alt+{1} 可不再等待并继续。{2} |
 | What the report holds | 报告包含哪些内容 |
 | What the report holds | 报告包含哪些内容 |
 | Change language | 更改语言 |
