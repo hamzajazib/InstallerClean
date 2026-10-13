@@ -32,6 +32,10 @@ public interface IRemovableReverifier
     /// from the batch and reported as held back. An empty input short-circuits
     /// without querying. Propagates any exception the enumeration raises: an
     /// inability to re-verify stops the batch rather than passing it.
+    ///
+    /// It reads Windows Installer's in-progress signals too and hands the read back on
+    /// <see cref="ReverifyResult.InstallerActivity"/>. Where that read is blocked the
+    /// caller acts on nothing, whatever <see cref="ReverifyResult.Surviving"/> holds.
     /// </summary>
     /// <param name="progress">
     /// Told each wait the declared-product screen makes on a source folder, as the scan
@@ -394,6 +398,18 @@ public record UnderLeaseRecheck(
 /// (<see cref="DeclaredProductScreening.WaitCount"/>). Counted whether or not the check used
 /// the screen's answer, and nought where the screen did not run.
 /// </param>
+/// <param name="InstallerActivity">
+/// Windows Installer's in-progress signals as this check read them, just after its clock:
+/// the same read, through the same service, as the pending-reboot gate each host makes before
+/// the check. Null where the check reads no signals, and where it had no files to check.
+///
+/// A BLOCKED READ STOPS THE WHOLE BATCH, AND EACH HOST STOPS IT, as each stops on its gate:
+/// the window paints the gate's banner and the command line ends as the gate ends it. A
+/// caller acting on <see cref="Surviving"/> tests this member first, as both hosts do. The
+/// check itself holds only the files no registration names (as
+/// <see cref="HeldBackReason.FileNotConfirmed"/>), so a superseded patch in the same batch is
+/// still in <see cref="Surviving"/> on a blocked read.
+/// </param>
 public record ReverifyResult(
     IReadOnlyList<string> Surviving,
     IReadOnlyList<string> Dropped,
@@ -401,7 +417,8 @@ public record ReverifyResult(
     IReadOnlyList<PatchClaim>? SurvivingPatchClaims = null,
     IReadOnlyList<PatchClaim>? SiblingPatchClaims = null,
     IReadOnlyList<SourceRootGivenUp>? SourceRootsGivenUp = null,
-    int SourceWaitCount = 0)
+    int SourceWaitCount = 0,
+    PendingRebootResult? InstallerActivity = null)
 {
     /// <summary>Never null: an absent list reads as nothing to re-read rather than as a fault.</summary>
     public IReadOnlyList<PatchClaim> SurvivingPatchClaims { get; init; }

@@ -1163,12 +1163,12 @@ public static class ShortNameCreationLabels
 /// still means what it meant.
 /// </param>
 /// <param name="ClockSetBackCount">
-/// Candidates the age check kept back because the system clock went back while the scan
-/// read their times
+/// Candidates the age check kept back because the system clock went back or lost time while
+/// the scan read their times
 /// (<see cref="Services.CachedFileAge.ClockWentBack(TimeProvider, Services.WallClockReading)"/>),
 /// their own times having been before the scan's clock and every other decision having let
 /// them through.
-/// Where the clock went back, every candidate reaching the age check is kept: the ones
+/// Where it did, every candidate reaching the age check is kept: the ones
 /// whose times kept them are counted in <see cref="NotBeforeTheClockCount"/> and
 /// <see cref="AgeUnestablishedCount"/>, and the rest here.
 ///

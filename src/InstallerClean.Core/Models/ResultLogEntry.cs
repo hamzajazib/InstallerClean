@@ -121,7 +121,7 @@ public sealed record ResultLogEntry(
     /// (<see cref="ScanInfo.DeclaredInstalledIsItsCachedPackageCount"/> to
     /// <see cref="ScanInfo.DeclaredInstalledByNameCount"/>). Last come the counts of the files
     /// held because one of Windows Installer's in-progress signals was set as the scan began, and
-    /// because the system clock went back while the scan read the files' times
+    /// because the system clock went back or lost time while the scan read the files' times
     /// (<see cref="ScanInfo.WithheldScanSignalCount"/>, <see cref="ScanInfo.WithheldClockSetBackCount"/>).
     /// <c>scan.withheldUnderADayOldCount</c> IS <c>scan.withheldChangedSinceScanStartCount</c> FROM
     /// 8, in the same place, counting the files whose latest time is not before the scan's clock
@@ -1448,10 +1448,11 @@ public sealed record MachineInfo(
 /// file. Appended last, as the split's arms added after the first eleven are.
 /// </param>
 /// <param name="WithheldClockSetBackCount">
-/// Candidates the age check kept back because the system clock went back while the scan
-/// read their times, their own times having passed: <c>ScanResult.WithheldBy.ClockSetBackCount</c>,
-/// an arm of the split of <see cref="WithheldCandidateCount"/>. Both hosts' held-back sentences
-/// count them, and both say in a line of its own that the clock went back.
+/// Candidates the age check kept back because the system clock went back or lost time while
+/// the scan read their times, their own times having passed:
+/// <c>ScanResult.WithheldBy.ClockSetBackCount</c>, an arm of the split of
+/// <see cref="WithheldCandidateCount"/>. Both hosts' held-back sentences count them, and both say
+/// in a line of its own that the clock went back or lost time.
 ///
 /// NOT TO BE ADDED TO <see cref="WithheldScanSignalCount"/>: that one is a finding about Windows
 /// Installer, and this one is a finding about the system clock. Appended last, as the split's arms

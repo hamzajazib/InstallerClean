@@ -42,7 +42,9 @@ public sealed class RemovableReverifier : IRemovableReverifier
     /// <see cref="IInstallerQueryService"/> offers a whole enumeration and nothing
     /// narrower, and an enumeration is kept outside the machine-wide installer lock.
     /// The three readers, the clock and the in-progress signals are the scan's own, for
-    /// the steps this pass re-runs on a file no registration names.
+    /// the steps this pass re-runs on a file no registration names. The signals' read is
+    /// also handed back on the result, where a blocked one stops the whole batch in each
+    /// host (<see cref="ReverifyResult.InstallerActivity"/>).
     /// </summary>
     public RemovableReverifier(IInstallerQueryService queryService, Interop.IMsiApi msi,
         IFileIdentityReader fileIdentities, IDeclaredProductCheck declaredProducts,
@@ -75,9 +77,12 @@ public sealed class RemovableReverifier : IRemovableReverifier
     /// constructors take one. The guard still asks the real filesystem.
     /// </param>
     /// <param name="installerActivity">
-    /// What the age check reads Windows Installer's in-progress signals through, just after
-    /// this pass's clock. Null reads nothing, and the age check then judges every file by
-    /// its times alone.
+    /// What this pass reads Windows Installer's in-progress signals through, just after its
+    /// clock. A blocked read holds every file no registration names at the age check, and
+    /// the read goes back on the result as <see cref="ReverifyResult.InstallerActivity"/>,
+    /// which is what each host stops the whole batch on. Null reads nothing: the age check
+    /// then judges every file by its times alone, and the result carries no read, so no
+    /// host has one to stop on.
     /// </param>
     internal RemovableReverifier(IInstallerQueryService queryService, Interop.IMsiApi msi,
         IFileIdentityReader? fileIdentities, IDeclaredProductCheck? declaredProducts,
@@ -103,8 +108,9 @@ public sealed class RemovableReverifier : IRemovableReverifier
 
     /// <summary>
     /// Whether this pass reads Windows Installer's in-progress signals after its clock, for
-    /// the test that holds the hosts' pass to reading them. Both test constructors can
-    /// leave it off.
+    /// the test that holds the hosts' pass to reading them: without the read, neither the
+    /// age check's hold nor the hosts' stop on a blocked read has anything to act on. Both
+    /// test constructors can leave it off.
     /// </summary>
     internal bool ReadsInstallerActivity => _installerActivity is not null;
 
@@ -128,7 +134,9 @@ public sealed class RemovableReverifier : IRemovableReverifier
         // own in that order (FileSystemScanService.ScanAsync), and off the calling thread
         // as the scan reads them, the window awaiting this from its dispatcher. The
         // wall-clock reading taken just before the clock is what the age check measures the
-        // wall clock's own advance from, and comes first, as the scan's does.
+        // wall clock's own advance from, and comes first, as the scan's does. The signals'
+        // read goes back on the result too, where a blocked one stops the whole batch in
+        // each host (ReverifyResult.InstallerActivity).
         var wallAtStart = CachedFileAge.ReadWallClock(_clock);
         var clock = _clock.GetUtcNow();
         var installerActivity = _installerActivity is null
@@ -267,7 +275,8 @@ public sealed class RemovableReverifier : IRemovableReverifier
             .ToList();
 
         return new ReverifyResult(surviving.AsReadOnly(), dropped.AsReadOnly(), reasons,
-            survivingClaims.AsReadOnly(), siblingClaims.AsReadOnly(), sourceRootsGivenUp, sourceWaitCount);
+            survivingClaims.AsReadOnly(), siblingClaims.AsReadOnly(), sourceRootsGivenUp, sourceWaitCount,
+            installerActivity);
     }
 
     /// <summary>

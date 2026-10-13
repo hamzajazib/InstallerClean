@@ -1052,6 +1052,23 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 return;
             }
 
+            // A Windows Installer transaction that started after the gate re-check above
+            // and was under way when the re-verify read the in-progress signals stops the
+            // whole batch, as that gate stops it: the banner paints and both commands drop
+            // out through HasPendingReboot. The re-verify itself holds back only the files no
+            // record names on such a read, and a superseded patch in the same batch is
+            // stopped here. It comes ahead of the all-held arm below so a batch the
+            // re-verify emptied ends here too, under the banner rather than the held-back
+            // card. Nothing has been touched, so there is no rescan; the finally below ends
+            // the operation and takes the overlay down.
+            if (reverify.InstallerActivity is { IsBlocked: true } installerActivity)
+            {
+                _scan.PendingRebootResult = installerActivity;
+                OperationProgress = string.Empty;
+                if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+                return;
+            }
+
             var survivingSet = new HashSet<string>(reverify.Surviving, StringComparer.OrdinalIgnoreCase);
             var survivingFiles = removableFiles.Where(f => survivingSet.Contains(f.FullPath)).ToList();
 
@@ -1491,6 +1508,15 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 return;
             }
 
+            // A blocked read of the in-progress signals at the re-verify stops the whole
+            // batch, ahead of the all-held arm, as on the Move path.
+            if (reverify.InstallerActivity is { IsBlocked: true } installerActivity)
+            {
+                _scan.PendingRebootResult = installerActivity;
+                OperationProgress = string.Empty;
+                return;
+            }
+
             var survivingSet = new HashSet<string>(reverify.Surviving, StringComparer.OrdinalIgnoreCase);
             var survivingFiles = ctx.RemovableFiles.Where(f => survivingSet.Contains(f.FullPath)).ToList();
 
@@ -1769,12 +1795,12 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
 
         var condemned = new HashSet<string>(heldBack, StringComparer.OrdinalIgnoreCase);
         // A WITH-EXPRESSION RATHER THAN A REBUILD, and that is the whole of why
-        // SiblingPatchClaims is still here. A positional form naming four of the
-        // record's five members leaves the fifth at its default, which is a batch
-        // with no siblings: the exact pairing UnderLeaseClaims exists to make
-        // unconstructible. This form carries whatever the author did not name, so a
-        // member added to ReverifyResult later arrives here without anybody having
-        // to remember it.
+        // SiblingPatchClaims is still here. A positional form naming only some of the
+        // record's members leaves the rest at their defaults, the sibling list among
+        // them, which is a batch with no siblings: the exact pairing UnderLeaseClaims
+        // exists to make unconstructible. This form carries whatever the author did
+        // not name, so a member added to ReverifyResult later arrives here without
+        // anybody having to remember it.
         //
         // AND THE SIBLING LIST PASSES THROUGH UNFILTERED, WHICH IS NOT AN OVERSIGHT
         // AND IS THE THING TO GET WRONG HERE. The surviving claims are keyed by

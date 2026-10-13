@@ -2519,6 +2519,113 @@ public class MainViewModelTests
         Assert.False(vm.Completion.IsComplete);
     }
 
+    // The gate is clean at the click and a transaction is under way by the time the
+    // re-verify reads the in-progress signals. The whole batch stops as it does at the
+    // gate: the banner paints with the re-verify's own read, neither service is called,
+    // nothing is rescanned and no card is shown. With every file confirmed, the batch
+    // stands for one holding a superseded patch, which the re-verify confirms whatever
+    // the signals say; with none confirmed, for one the re-verify emptied, which still
+    // ends under the banner rather than the held-back card.
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task A_blocked_signal_read_at_the_re_verify_stops_the_whole_batch_and_paints_the_banner(
+        bool deleting, bool reverifyConfirmsNone)
+    {
+        var vm = CreateViewModel();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2));
+        _confirmationService.ConfirmMove(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
+        await vm.Scan.ScanWithProgressAsync(null);
+        var dest = Path.Combine(Path.GetTempPath(), "ic-test-reverify-signal-blocked");
+        vm.Cleanup.MoveDestination = dest;
+
+        var blocked = PendingRebootResult.Block(PendingRebootReason.InstallerInProgressMarker);
+        bool? destinationThere = null;
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
+            .Returns(ci =>
+            {
+                destinationThere = _fileSystem.Directory.Exists(dest);
+                var batch = (IReadOnlyList<string>)ci[0]!;
+                return reverifyConfirmsNone
+                    ? new ReverifyResult(Array.Empty<string>(), batch,
+                        new HeldBackReasons(FileNotConfirmed: batch.Count), InstallerActivity: blocked)
+                    : new ReverifyResult(batch, Array.Empty<string>(), InstallerActivity: blocked);
+            });
+
+        if (deleting) await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+        else await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        Assert.Same(blocked, vm.Scan.PendingRebootResult);
+        Assert.True(vm.Scan.HasPendingReboot);
+        Assert.False(vm.Cleanup.MoveAllCommand.CanExecute(null));
+        Assert.False(vm.Cleanup.DeleteAllCommand.CanExecute(null));
+        await _moveService.DidNotReceive().MoveFilesAsync(
+            Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
+            Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
+        await _deleteService.DidNotReceive().DeleteFilesAsync(
+            Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+            Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
+        await _scanService.Received(1).ScanAsync(
+            Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>());
+        await _resultLogService.DidNotReceive().WriteAsync(
+            Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
+        Assert.False(vm.Completion.IsComplete);
+        Assert.False(vm.Cleanup.IsOperating);
+        Assert.Equal(string.Empty, vm.Cleanup.OperationProgress);
+        if (!deleting)
+        {
+            // The pre-flight made the folder before the re-verify ran, and it is gone.
+            Assert.True(destinationThere);
+            Assert.False(_fileSystem.Directory.Exists(dest));
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_clean_signal_read_at_the_re_verify_goes_on_to_the_batch(bool deleting)
+    {
+        var vm = CreateViewModel();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2));
+        _confirmationService.ConfirmMove(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
+        _moveService.MoveFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new MoveResult(2, Array.Empty<FileOperationError>()));
+        _deleteService.DeleteFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new DeleteResult(2, Array.Empty<FileOperationError>()));
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = Path.Combine(Path.GetTempPath(), "ic-test-reverify-signal-clean");
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
+            .Returns(ci => new ReverifyResult((IReadOnlyList<string>)ci[0]!, Array.Empty<string>(),
+                InstallerActivity: PendingRebootResult.Clean));
+
+        if (deleting) await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+        else await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        Assert.False(vm.Scan.HasPendingReboot);
+        if (deleting)
+            await _deleteService.Received(1).DeleteFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
+        else
+            await _moveService.Received(1).MoveFilesAsync(
+                Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
+        Assert.True(vm.Completion.IsComplete);
+    }
+
     // The pair below covers the one case in which Check() throws rather than
     // answering: a read of Windows Installer's in-progress file that failed in a
     // way it has no reading for. At the click that throw arrives before anything

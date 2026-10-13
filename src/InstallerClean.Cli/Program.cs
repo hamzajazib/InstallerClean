@@ -816,6 +816,15 @@ internal static class Program
             var checkSourcesGivenUp = reverify.SourceRootsGivenUpKeepingFiles;
             NoteSourcesGivenUp(arg, checkSourcesGivenUp, duringTheCheck: true);
 
+            // A Windows Installer transaction under way when the re-verify read the
+            // in-progress signals refuses the run as the gate above refuses it, with the same
+            // line, entry and exit code. The re-verify itself holds back only the files no
+            // record names on such a read, and a superseded patch in the same batch is
+            // stopped here. Block + null Reason is unreachable, as at the gate.
+            if (reverify.InstallerActivity is { IsBlocked: true } installerActivity)
+                return EmitPendingRebootBlocked(arg, installerActivity.Reason!.Value,
+                    installerActivity.Detail, installerActivity.WindowsError);
+
             var survivingSet = new HashSet<string>(reverify.Surviving, StringComparer.OrdinalIgnoreCase);
             var survivingFiles = scanResult.RemovableFiles
                 .Where(f => survivingSet.Contains(f.FullPath)).ToList();

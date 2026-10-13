@@ -182,6 +182,44 @@ public class CliPendingRebootOutcomeTests
     }
 
     /// <summary>
+    /// A transaction under way when the re-verify reads the in-progress signals refuses the
+    /// run exactly as the gate refuses it when the transaction is already under way at the
+    /// gate: the same exit code, the same output and the same entry, for every reason, and
+    /// neither run reaches an action service. Both files survive the re-verify, so the run
+    /// that goes on to act is one where nothing but the read stops it.
+    /// </summary>
+    [Theory]
+    [InlineData("/d")]
+    [InlineData("/m")]
+    public async Task A_blocked_signal_read_at_the_re_verify_ends_the_run_as_the_gate_does(string arg)
+    {
+        var wrong = new List<string>();
+
+        foreach (var reason in Enum.GetValues<PendingRebootReason>())
+        {
+            var blocked = PendingRebootResult.Block(reason);
+            var atGate = await RunToTheEnd(arg, blocked, metAtAcquire: null, atReverify: null);
+            var atReverify = await RunToTheEnd(arg, PendingRebootResult.Clean, metAtAcquire: null, atReverify: blocked);
+
+            if (atReverify.ExitCode != atGate.ExitCode)
+                wrong.Add($"{reason}: exit {atReverify.ExitCode} at the re-verify, {atGate.ExitCode} at the gate");
+            if (atReverify.Stdout != atGate.Stdout)
+                wrong.Add($"{reason}: output differs from the gate's");
+            if (!atReverify.Entries.SequenceEqual(atGate.Entries))
+                wrong.Add($"{reason}: entries differ from the gate's");
+            if (atReverify.Acted || atGate.Acted)
+                wrong.Add($"{reason}: an action service was called");
+        }
+
+        // The control: a clean read at the re-verify goes on to the action service.
+        var clean = await RunToTheEnd(arg, PendingRebootResult.Clean, metAtAcquire: null,
+            atReverify: PendingRebootResult.Clean);
+        if (!clean.Acted) wrong.Add("a clean read at the re-verify did not reach the action service");
+
+        Assert.True(wrong.Count == 0, string.Join("; ", wrong));
+    }
+
+    /// <summary>
     /// A move destination fully qualified on either host and outside both forbidden
     /// sets, so the destination gates pass it. Nothing is created there: the move
     /// service is a substitute.
@@ -199,6 +237,18 @@ public class CliPendingRebootOutcomeTests
     private static async Task<(int ExitCode, string Stdout, IReadOnlyList<(CliEventClass Class, string Text)> Entries)> Run(
         string arg, PendingRebootResult gate, PendingRebootReason? metAtAcquire)
     {
+        var (exitCode, stdout, entries, _) = await RunToTheEnd(arg, gate, metAtAcquire, atReverify: null);
+        return (exitCode, stdout, entries);
+    }
+
+    /// <summary>
+    /// <see cref="Run"/>, with the re-verify handing back <paramref name="atReverify"/> as its
+    /// read of the in-progress signals (none where null), and whether the run reached either
+    /// action service.
+    /// </summary>
+    private static async Task<(int ExitCode, string Stdout, IReadOnlyList<(CliEventClass Class, string Text)> Entries, bool Acted)> RunToTheEnd(
+        string arg, PendingRebootResult gate, PendingRebootReason? metAtAcquire, PendingRebootResult? atReverify)
+    {
         // The gate sits after the scan, so the offer has to be non-empty or the run
         // returns on "nothing to do" before ever reaching it.
         var scan = Substitute.For<IFileSystemScanService>();
@@ -215,7 +265,8 @@ public class CliPendingRebootOutcomeTests
         // action service with a batch to act on.
         var reverifier = Substitute.For<IRemovableReverifier>();
         reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
-            .Returns(new ReverifyResult(new[] { OfferA, OfferB }, Array.Empty<string>()));
+            .Returns(new ReverifyResult(new[] { OfferA, OfferB }, Array.Empty<string>(),
+                InstallerActivity: atReverify));
 
         var busy = metAtAcquire == PendingRebootReason.MsiExecuteMutexHeld;
         var refused = metAtAcquire == PendingRebootReason.MsiExecuteMutexAccessRefused;
@@ -247,7 +298,8 @@ public class CliPendingRebootOutcomeTests
             Console.SetOut(buffer);
             EventLogRecorder.Clear();
             var exitCode = await Program.RunWorkAsync(arg, invocation, CancellationToken.None, services);
-            return (exitCode, buffer.ToString(), EventLogRecorder.Entries);
+            var acted = delete.ReceivedCalls().Any() || move.ReceivedCalls().Any();
+            return (exitCode, buffer.ToString(), EventLogRecorder.Entries, acted);
         }
         finally
         {

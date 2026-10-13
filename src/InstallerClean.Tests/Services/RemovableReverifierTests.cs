@@ -295,6 +295,62 @@ public class RemovableReverifierTests
             () => svc.ReverifyAsync(new[] { @"C:\Windows\Installer\x.msi" }));
     }
 
+    // ---- The in-progress signals' read, handed back to the host ----------
+    //
+    // These build the pass with the signals' reader and none of the file readers, so
+    // no file is opened and the age check does not run: what is held is the read on
+    // the result, which is what each host stops the batch on.
+
+    private static RemovableReverifier ReadingSignals(IInstallerQueryService query, IPendingRebootService signals) =>
+        new(query, Substitute.For<InstallerClean.Interop.IMsiApi>(), null, null, null, null, null, signals);
+
+    private static IPendingRebootService Signals(PendingRebootResult answer)
+    {
+        var signals = Substitute.For<IPendingRebootService>();
+        signals.Check().Returns(answer);
+        return signals;
+    }
+
+    [Fact]
+    public async Task A_blocked_signal_read_is_handed_back_beside_a_superseded_patch_the_pass_confirms()
+    {
+        // The batch's superseded patch is judged by its own registration, which is still
+        // removable, so the pass confirms it whatever the signals say. The read on the
+        // result is what keeps it from the Move or Delete.
+        const string superseded = @"C:\Windows\Installer\superseded.msp";
+        var blocked = PendingRebootResult.Block(PendingRebootReason.InstallerInProgressMarker);
+        var svc = ReadingSignals(Query(Removable(superseded)), Signals(blocked));
+
+        var result = await svc.ReverifyAsync(new[] { superseded });
+
+        Assert.Equal(new[] { superseded }, result.Surviving);
+        Assert.Same(blocked, result.InstallerActivity);
+    }
+
+    [Fact]
+    public async Task A_clean_signal_read_is_handed_back_as_clean()
+    {
+        const string superseded = @"C:\Windows\Installer\superseded.msp";
+        var svc = ReadingSignals(Query(Removable(superseded)), Signals(PendingRebootResult.Clean));
+
+        var result = await svc.ReverifyAsync(new[] { superseded });
+
+        Assert.Equal(new[] { superseded }, result.Surviving);
+        Assert.NotNull(result.InstallerActivity);
+        Assert.False(result.InstallerActivity!.IsBlocked);
+    }
+
+    [Fact]
+    public async Task A_pass_reading_no_signals_hands_back_no_read()
+    {
+        const string superseded = @"C:\Windows\Installer\superseded.msp";
+        var svc = Reverifier(Query(Removable(superseded)));
+
+        var result = await svc.ReverifyAsync(new[] { superseded });
+
+        Assert.Null(result.InstallerActivity);
+    }
+
     // ---- The under-lease re-read ----------------------------------------
     //
     // The pre-lease pass above answers with a whole enumeration. This one
