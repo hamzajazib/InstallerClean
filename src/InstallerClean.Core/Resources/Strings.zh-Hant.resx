@@ -174,7 +174,7 @@
        window, as Action.Done does on every other card, and like Done it has the
        focus and answers Enter when the card appears. Its access key must differ
        from Action.Donate's, the two being on that card together. -->
-  <data name="Action.CloseWithoutDonating" xml:space="preserve"><value>不捐款，直接關閉(_C)</value></data>
+  <data name="Action.CloseWithoutDonating" xml:space="preserve"><value>不贊助，直接關閉(_C)</value></data>
   <!-- The label on both delete surfaces: the main window's button and the
        confirmation dialog's. It says "permanently" because Delete here does
        not mean what Delete means elsewhere in Windows, and the label is the
@@ -187,18 +187,18 @@
        keyboard shortcut. -->
   <data name="Action.Done" xml:space="preserve"><value>完成(_D)</value></data>
   <data name="Action.Details" xml:space="preserve"><value>詳細資料</value></data>
-  <data name="Action.BuyMeACuppa" xml:space="preserve"><value>捐款(_D)</value></data>
+  <data name="Action.BuyMeACuppa" xml:space="preserve"><value>贊助(_D)</value></data>
   <!-- The label on the large donate button on the completion card after a Move or
        Delete that moved or deleted files, where it and Action.CloseWithoutDonating
        stand in place of Done. The amount is in US dollars, written the way the
        language writes a dollar amount. Its access key must differ from
        Action.CloseWithoutDonating's, the two being on that card together. -->
-  <data name="Action.Donate" xml:space="preserve"><value>捐款 3 美元(_D)</value></data>
+  <data name="Action.Donate" xml:space="preserve"><value>贊助 3 美元(_D)</value></data>
   <!-- The label on the small donate button under Done, on every completion card
        that carries Done. It takes no access key: Done is on screen beside it. The
        button shows this text as written, so an underscore here would appear on
        screen rather than become one. -->
-  <data name="Action.DonateSmall" xml:space="preserve"><value>捐款</value></data>
+  <data name="Action.DonateSmall" xml:space="preserve"><value>贊助</value></data>
   <data name="Action.LeaveStarOnGitHub" xml:space="preserve"><value>在 GitHub 上給個星星(_S)</value></data>
   <data name="Action.Licence" xml:space="preserve"><value>Apache 2.0 授權條款</value></data>
   <data name="Action.Move" xml:space="preserve"><value>移動(_M)</value></data>
@@ -232,15 +232,15 @@
        button says on screen: a window name in the spoken value would be an
        internal note read out to somebody who can only be in that window to hear
        it. -->
-  <data name="Automation.BuyMeACuppa.About" xml:space="preserve"><value>捐款</value></data>
+  <data name="Automation.BuyMeACuppa.About" xml:space="preserve"><value>贊助</value></data>
   <!-- The spoken name of the button Action.Donate labels. Its content is a heart
        beside a label rather than a string, so WPF derives no name from it and
        this is the name; it says what the button says on screen, without the
        access-key marker. -->
-  <data name="Automation.Donate" xml:space="preserve"><value>捐款 3 美元</value></data>
+  <data name="Automation.Donate" xml:space="preserve"><value>贊助 3 美元</value></data>
   <!-- The spoken name of the button Action.DonateSmall labels, for the same
        reason as Automation.Donate's. -->
-  <data name="Automation.DonateSmall" xml:space="preserve"><value>捐款</value></data>
+  <data name="Automation.DonateSmall" xml:space="preserve"><value>贊助</value></data>
   <data name="Automation.CancelOperation" xml:space="preserve"><value>取消作業</value></data>
   <data name="Automation.CancelScan" xml:space="preserve"><value>取消掃描</value></data>
   <data name="Automation.CancelStartupScan" xml:space="preserve"><value>取消啟動時的掃描</value></data>
@@ -384,13 +384,13 @@
 
   <!-- Tooltips -->
   <data name="Tooltip.BuyMeACuppa.About" xml:space="preserve">
-    <value>任何小額捐款都非常感謝。</value>
+    <value>任何小額贊助都非常感謝。</value>
     <comment>Tooltip and screen-reader help on the About window's donate pill. The button it hangs on already reads Donate (Action.BuyMeACuppa), so the tooltip says what the ask is rather than naming the action a second time.</comment>
   </data>
   <data name="Tooltip.CancellingPending" xml:space="preserve"><value>已要求取消。InstallerClean 正在等候目前的步驟到達可以停下來的地方。在大量 I/O 或 MSI 資料庫呼叫期間，這可能需要幾秒鐘。</value></data>
   <data name="Tooltip.Close" xml:space="preserve"><value>關閉</value></data>
   <data name="Tooltip.Donate" xml:space="preserve">
-    <value>InstallerClean 花了我大量心血，我其實應該收費，但我希望它保持免費，好幫助越多人越好。您的捐款讓這一切值得，我非常感激。</value>
+    <value>InstallerClean 花了我大量心血，我其實應該收費，但我希望它保持免費，好幫助越多人越好。您的贊助讓這一切值得，我非常感激。</value>
     <comment>Tooltip and screen-reader help on Action.Donate's button. The space before each hyphen is a no-break space, so a narrow tooltip never starts a line with the hyphen; a translation punctuates the aside the way its own language does.</comment>
   </data>
   <data name="Tooltip.LeaveStarOnGitHub.About" xml:space="preserve">
@@ -554,7 +554,7 @@
   <data name="Body.RegisteredMissingFromDisk" xml:space="preserve">
     <value>這個安裝程式檔案不見了。它現在不會造成任何問題，要等到有一天您嘗試更新或解除安裝它所屬的程式時才會。到時這個步驟可能會失敗，因為 Windows 會尋找這個檔案，而它不在那裡。
 
-要把它放回去，您需要目前所用版本的安裝程式。請向該程式的開發者取得，並在現有的程式上執行它。較新的版本不行：新版本必須先移除您現有的版本，而需要這個檔案的正是這個步驟。先解除安裝也行不通，原因相同。這應該會復原這個檔案並保留您的設定，但 Microsoft 並不保證。</value>
+要把它放回去，您需要目前所用版本的安裝程式。請向該程式的開發者取得，然後直接執行它，覆蓋安裝現有的程式。較新的版本不行：新版本必須先移除您現有的版本，而需要這個檔案的正是這個步驟。先解除安裝也行不通，原因相同。這應該會復原這個檔案並保留您的設定，但 Microsoft 並不保證。</value>
     <comment>Shown in the Registered Files details pane when a selected product's installer file is gone from disk. Generic with no product name interpolated: the recovery advice is identical for every program, and a possessive on a name ending in s reads wrongly.</comment>
   </data>
   <!-- The missing-file note's closing sentence, rendered as a TextBlock
@@ -1006,7 +1006,7 @@
   <data name="Completion.PermanentDeleteSummary.Singular" xml:space="preserve"><value>已永久刪除 {0} 個{1}</value></data>
   <data name="Completion.PermanentDeleteSummary.Plural" xml:space="preserve"><value>已永久刪除 {0} 個{1}</value></data>
   <data name="Completion.DonateAsk" xml:space="preserve">
-    <value>任何小額捐款都非常感謝。</value>
+    <value>任何小額贊助都非常感謝。</value>
     <comment>Tooltip and screen-reader help on the small donate button under Done (Action.DonateSmall), which stands on every completion card that carries Done, including a scan that found nothing to clean up. Keep it plain, with no word putting the reader under an obligation.</comment>
   </data>
   <data name="Completion.SendReport" xml:space="preserve">
@@ -2012,8 +2012,8 @@ InstallerClean 本來就是以系統管理員身分執行，所以再用這種�
        THE COLON IS NEW AND FRENCH NEEDS A NARROW NO-BREAK SPACE BEFORE IT
        (U+202F), which the Edit tool silently flattens; check-french-spacing
        holds it. -->
-  <data name="Cli.MissingFromDisk.Singular" xml:space="preserve"><value>Windows 記錄了 {0} 個不在 {InstallerFolder} 中的檔案：{1}。平常使用不會有問題，但該程式的更新或解除安裝可能會失敗。要把這個檔案放回去，您需要目前所用版本的安裝程式。請向該程式的開發者取得，並在現有的程式上執行它。較新的版本不行：新版本必須先移除您現有的版本，而需要這個檔案的正是這個步驟。先解除安裝也行不通，原因相同。這應該會復原這個檔案並保留您的設定，但 Microsoft 並不保證。</value></data>
-  <data name="Cli.MissingFromDisk.Plural" xml:space="preserve"><value>Windows 記錄了 {0} 個不在 {InstallerFolder} 中的檔案：{1}。平常使用不會有問題，但這些程式的更新或解除安裝可能會失敗。要把某個檔案放回去，您需要該程式目前所用版本的安裝程式。請向該程式的開發者取得，並在現有的程式上執行它。較新的版本不行：新版本必須先移除您現有的版本，而需要該檔案的正是這個步驟。先解除安裝也行不通，原因相同。這應該會復原該檔案並保留您的設定，但 Microsoft 並不保證。</value></data>
+  <data name="Cli.MissingFromDisk.Singular" xml:space="preserve"><value>Windows 記錄了 {0} 個不在 {InstallerFolder} 中的檔案：{1}。平常使用不會有問題，但該程式的更新或解除安裝可能會失敗。要把這個檔案放回去，您需要目前所用版本的安裝程式。請向該程式的開發者取得，然後直接執行它，覆蓋安裝現有的程式。較新的版本不行：新版本必須先移除您現有的版本，而需要這個檔案的正是這個步驟。先解除安裝也行不通，原因相同。這應該會復原這個檔案並保留您的設定，但 Microsoft 並不保證。</value></data>
+  <data name="Cli.MissingFromDisk.Plural" xml:space="preserve"><value>Windows 記錄了 {0} 個不在 {InstallerFolder} 中的檔案：{1}。平常使用不會有問題，但這些程式的更新或解除安裝可能會失敗。要把某個檔案放回去，您需要該程式目前所用版本的安裝程式。請向該程式的開發者取得，然後直接執行它，覆蓋安裝現有的程式。較新的版本不行：新版本必須先移除您現有的版本，而需要該檔案的正是這個步驟。先解除安裝也行不通，原因相同。這應該會復原該檔案並保留您的設定，但 Microsoft 並不保證。</value></data>
   <!-- Superseded files this run held back. 0 = files held back. The one-form spends
        no placeholder and names the file instead of the numeral, as the other one-forms
        here do.
@@ -2326,7 +2326,7 @@ InstallerClean 本來就是以系統管理員身分執行，所以再用這種�
        a blank line, printed only to a console somebody is watching and never to the
        Application log. 0 = the donation page's address, printed as written. The
        amount is in US dollars, written the way the language writes a dollar amount. -->
-  <data name="Cli.DonateAsk" xml:space="preserve"><value>InstallerClean 是免費的。如果它幫上了忙，請捐款 3 美元：{0}</value></data>
+  <data name="Cli.DonateAsk" xml:space="preserve"><value>InstallerClean 是免費的。如果它幫上了忙，請贊助 3 美元：{0}</value></data>
   <!-- The line a cancelled Move prints instead of the one above, where the window's
        card carries Completion.MoveCancelledRestoreHint. A run that went the distance
        leaves the reader deciding when to delete the backup; a run somebody stopped
@@ -2419,12 +2419,12 @@ InstallerClean 本來就是以系統管理員身分執行，所以再用這種�
        the header. Stored as one multi-line block; the C# side reads
        it verbatim and normalises line endings to the host platform. -->
   <data name="CrashLog.PrivacyHeader" xml:space="preserve"><value># crash.log 記錄 InstallerClean 未處理的例外狀況。
-# 在提高權限執行時，架構的例外狀況訊息可能包含目前工作階段中
-# 的檔案路徑（包括 Windows Installer 查詢所列舉的其他使用者的設定
-# 檔）。更新檢查或結果記錄上傳的網路失敗訊息，可能包含目的地 URL
-# 以及解析出的 IP 或 Proxy 位址。關於無法讀取的 Windows Installer
-# 記錄的項目，可能包含 Windows 帳戶 SID（S-1-5-21-...）以及已安裝
-# 軟體的產品代碼。
+# 在提高權限執行時，架構的例外狀況訊息可能包含目前工作階段中的
+# 檔案路徑（包括 Windows Installer 查詢所列舉的其他使用者的設定檔）。
+# 更新檢查或結果記錄上傳的網路失敗訊息，可能包含目的地 URL 以及
+# 解析出的 IP 或 Proxy 位址。關於無法讀取的 Windows Installer 記錄
+# 的項目，可能包含 Windows 帳戶 SID（S-1-5-21-...）以及已安裝軟體的
+# 產品代碼。
 # 將這個檔案附加到公開的錯誤報告之前，請先刪除這三類資訊。
 </value></data>
 

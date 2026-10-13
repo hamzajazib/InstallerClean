@@ -46,8 +46,8 @@ const KEEP_ENGLISH = new Set([
   'Automation.ScanResultAnnouncement', // {0} ({1})
 ]);
 
-// Per-language keeps: empty for Simplified Chinese, which translates every
-// translatable token (patch -> 补丁), so nothing beyond KEEP_ENGLISH stays English.
+// Per-language keeps. Simplified Chinese translates every word, so the only
+// values left as the English are the unit suffixes below.
 const ALSO_KEEP = [
   // The size and elapsed unit suffixes. Simplified Chinese abbreviates them exactly as
   // English does, so there is nothing to translate and nothing to get wrong.
@@ -173,7 +173,7 @@ const MAP = {
   'Body.NoFileSelected': `选择一个文件以查看详情。`,
   'Body.NoProductSelected': `选择一个产品以查看详情。`,
   'Body.NoMetadata': `没有可用的元数据。`,
-  'Body.RegisteredMissingFromDisk': `这个安装文件不见了。现在不会造成任何麻烦，直到有一天您尝试更新或卸载它所属的程序为止。到那时这一步可能会失败，因为 Windows 会寻找这个文件而找不到它。\n\n要把它放回去，您需要您当前所用版本的安装程序。请从程序的制作方获取，并在现有副本上运行它。更新的版本不行：新版本必须先移除您现有的版本，而正是这一步需要这个文件。先卸载同样行不通，原因相同。这应当会恢复该文件并保持您的设置不变，但 Microsoft 并不保证。`,
+  'Body.RegisteredMissingFromDisk': `这个安装文件不见了。现在不会造成任何麻烦，直到有一天您尝试更新或卸载它所属的程序为止。到那时这一步可能会失败，因为 Windows 会寻找这个文件而找不到它。\n\n要把它放回去，您需要您当前所用版本的安装程序。请向该程序的开发者获取，然后直接运行它，覆盖安装现有的程序。更新的版本不行：新版本必须先移除您现有的版本，而正是这一步需要这个文件。先卸载同样行不通，原因相同。这应当会恢复该文件并保持您的设置不变，但 Microsoft 并不保证。`,
   'Body.RegisteredMissingFromDisk.SeeAlso': `README 用 Microsoft 自己的原话[解释了这个文件夹]，以及如何恢复文件。`,
   'Body.NoPatches': `（无）`,
   'Reason.Orphaned': `孤立`,
@@ -204,7 +204,7 @@ const MAP = {
   'Status.Ready': `就绪`,
   'Status.ScanFailedDetails': `扫描失败（{0}）。详情见 {1}。`,
   'Status.ScanFailedDetails.NoLog': `扫描失败（{0}）。无法写入崩溃日志。`,
-  'Completion.AllClean': `全部干净`,
+  'Completion.AllClean': `干干净净`,
   'Completion.NothingToCleanUp': `{InstallerFolder} 中没有需要清理的内容`,
   'Completion.NothingToCleanUpReceipt': `扫描了 {0} 个{1}，用时 {2}`,
   'Completion.Freed': `已释放 {0}`,
@@ -344,7 +344,7 @@ const MAP = {
   'Cli.MovedFiles': `已移动 {0} 个不需要的{1}。`,
   'Cli.MutexBlocked': `另一个 InstallerClean 进程正持有单实例锁（GUI 或另一次 CLI 运行）。退出代码 75（暂时性）；稍后可安全重试。`,
   'Cli.EventLogUnavailable': `注意：事件日志写入失败。请检查应用程序日志的权限或组策略。`,
-  'CrashLog.PrivacyHeader': `# crash.log 记录 InstallerClean 未处理的异常。\n# 在提升权限的情况下，框架的异常消息可能包含当前会话中的文件路径\n#（包括 Windows Installer 查询所枚举的其他用户的配置文件）。更新\n# 检查或结果日志上传的网络故障消息，可能包含目标 URL 以及解析出的\n# IP 或代理地址。关于无法读取的 Windows Installer 记录的条目，可能\n# 包含 Windows 账户 SID（S-1-5-21-...）以及已安装软件的产品代码。\n# 把此文件附到公开的错误报告之前，请先删除这三类信息。\n`,
+  'CrashLog.PrivacyHeader': `# crash.log 记录 InstallerClean 未处理的异常。\n# 在提升权限的情况下，框架的异常消息可能包含当前会话中的文件路径\n# （包括 Windows Installer 查询所枚举的其他用户的配置文件）。\n# 更新检查或结果日志上传的网络故障消息，可能包含目标 URL 以及\n# 解析出的 IP 或代理地址。关于无法读取的 Windows Installer 记录的\n# 条目，可能包含 Windows 账户 SID（S-1-5-21-...）以及已安装软件的\n# 产品代码。\n# 把此文件附到公开的错误报告之前，请先删除这三类信息。\n`,
   'Cli.Help.Header': `InstallerClean - 清理 {InstallerFolder}`,
   'Cli.Help.Usage': `用法：`,
   'Cli.Help.Help': `  installerclean-cli --help     显示此帮助（也接受 /?、-h）`,
@@ -357,7 +357,7 @@ const MAP = {
   'Cli.Help.ExitCodesHeader': `退出代码：`,
   'Cli.Help.ExitCodeOk': `  0   成功：本次运行做了要求的事`,
   'Cli.Help.ExitCodeError': `  1   没有处理任何内容：本次运行失败或被拒绝`,
-  'Cli.Help.ExitCodePartial': `  2   部分：部分已处理，部分未处理（失败或 Ctrl+C）`,
+  'Cli.Help.ExitCodePartial': `  2   部分：部分已处理，部分未处理（失败或中途按了 Ctrl+C）`,
   'Cli.Help.ExitCodeTransient': `  75  暂时性：临时状况阻止了本次运行（见相关消息）`,
   'Cli.Help.ExitCodeCancelled': `  130 已取消（Ctrl+C）`,
   'Tooltip.ChangeLanguage': `更改语言。程序会重启。`,
@@ -391,8 +391,8 @@ const MAP = {
   'Automation.Scroll.ProductDetails': `产品详情`,
   'Body.PendingReboot.Other': `Windows Installer 有操作正在进行，因此移动和删除已暂停。InstallerClean 不会在 {InstallerFolder} 变动时去碰它。等结束后重新扫描，两者就会恢复。`,
   'Cli.TooManyArgumentsNoPath': `错误：出现意外的多余参数“{0}”。/s 和 /d 不接受其他参数，每次运行也只能使用一个开关。`,
-  'Cli.MissingFromDisk.Singular': `Windows 有 {0} 个不在 {InstallerFolder} 中的文件的记录：{1}。日常使用不会有问题，但该程序的更新或卸载可能会失败。要把该文件放回去，您需要您当前所用版本的安装程序。请从程序的制作方获取，并在现有副本上运行它。更新的版本不行：新版本必须先移除您现有的版本，而正是这一步需要这个文件。先卸载同样行不通，原因相同。这应当会恢复该文件并保持您的设置不变，但 Microsoft 并不保证。`,
-  'Cli.MissingFromDisk.Plural': `Windows 有 {0} 个不在 {InstallerFolder} 中的文件的记录：{1}。日常使用不会有问题，但这些程序的更新或卸载可能会失败。要把某个文件放回去，您需要该程序当前所用版本的安装程序。请从程序的制作方获取，并在现有副本上运行它。更新的版本不行：新版本必须先移除您现有的版本，而正是这一步需要该文件。先卸载同样行不通，原因相同。这应当会恢复该文件并保持您的设置不变，但 Microsoft 并不保证。`,
+  'Cli.MissingFromDisk.Singular': `Windows 有 {0} 个不在 {InstallerFolder} 中的文件的记录：{1}。日常使用不会有问题，但该程序的更新或卸载可能会失败。要把该文件放回去，您需要您当前所用版本的安装程序。请向该程序的开发者获取，然后直接运行它，覆盖安装现有的程序。更新的版本不行：新版本必须先移除您现有的版本，而正是这一步需要这个文件。先卸载同样行不通，原因相同。这应当会恢复该文件并保持您的设置不变，但 Microsoft 并不保证。`,
+  'Cli.MissingFromDisk.Plural': `Windows 有 {0} 个不在 {InstallerFolder} 中的文件的记录：{1}。日常使用不会有问题，但这些程序的更新或卸载可能会失败。要把某个文件放回去，您需要该程序当前所用版本的安装程序。请向该程序的开发者获取，然后直接运行它，覆盖安装现有的程序。更新的版本不行：新版本必须先移除您现有的版本，而正是这一步需要该文件。先卸载同样行不通，原因相同。这应当会恢复该文件并保持您的设置不变，但 Microsoft 并不保证。`,
   'Cli.MoveNotEnoughSpace': `错误：{0} 上的空间不足。移动这些文件需要 {1}，而可用空间为 {2}。没有移动任何内容。`,
   'Cli.PendingRebootBlocked.Other': `错误：Windows Installer 有操作正在进行，因此 /m 和 /d 会被阻止。InstallerClean 不会在 {InstallerFolder} 变动时去碰它。等结束后再试。`,
   'Cli.ScanSignal.Busy': `扫描开始时有程序正在使用 Windows Installer，比如 Windows 更新或正在安装的程序，因此 InstallerClean 没有提供 {InstallerFolder} 中任何已安装程序的记录都未提及的文件，而是把它们保留了下来。等它结束后，请重新运行该命令。`,

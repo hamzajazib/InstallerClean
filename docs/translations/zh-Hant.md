@@ -40,13 +40,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Carry on _without it | 不再等候，繼續進行(_W) |
 | Check for _updates | 檢查更新(_U) |
 | _Close | 關閉(_C) |
-| _Close without donating | 不捐款，直接關閉(_C) |
+| _Close without donating | 不贊助，直接關閉(_C) |
 | _Delete permanently | 永久刪除(_D) |
 | _Done | 完成(_D) |
 | Details | 詳細資料 |
-| _Donate | 捐款(_D) |
-| _Donate $3 | 捐款 3 美元(_D) |
-| Donate | 捐款 |
+| _Donate | 贊助(_D) |
+| _Donate $3 | 贊助 3 美元(_D) |
+| Donate | 贊助 |
 | Leave a _star on GitHub | 在 GitHub 上給個星星(_S) |
 | Apache 2.0 licence | Apache 2.0 授權條款 |
 | _Move | 移動(_M) |
@@ -143,7 +143,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Select a file to view details. | 選取一個檔案以檢視詳細資料。 |
 | Select a product to view details. | 選取一個產品以檢視詳細資料。 |
 | No metadata available. | 沒有可用的中繼資料。 |
-| This installer file is missing. It causes no trouble now, and won't until the day you try to update or uninstall the program it belongs to. That step can then fail, because Windows looks for this file and it isn't there.<br><br>To put it back, you need the installer for the version you already have. Get it from the program's maker and run it over your existing copy. A newer version won't do: it has to remove the one you've got first, and that's the step that needs this file. Uninstalling first won't work either, for the same reason. This should restore the file and leave your settings alone, but Microsoft doesn't guarantee it. | 這個安裝程式檔案不見了。它現在不會造成任何問題，要等到有一天您嘗試更新或解除安裝它所屬的程式時才會。到時這個步驟可能會失敗，因為 Windows 會尋找這個檔案，而它不在那裡。<br><br>要把它放回去，您需要目前所用版本的安裝程式。請向該程式的開發者取得，並在現有的程式上執行它。較新的版本不行：新版本必須先移除您現有的版本，而需要這個檔案的正是這個步驟。先解除安裝也行不通，原因相同。這應該會復原這個檔案並保留您的設定，但 Microsoft 並不保證。 |
+| This installer file is missing. It causes no trouble now, and won't until the day you try to update or uninstall the program it belongs to. That step can then fail, because Windows looks for this file and it isn't there.<br><br>To put it back, you need the installer for the version you already have. Get it from the program's maker and run it over your existing copy. A newer version won't do: it has to remove the one you've got first, and that's the step that needs this file. Uninstalling first won't work either, for the same reason. This should restore the file and leave your settings alone, but Microsoft doesn't guarantee it. | 這個安裝程式檔案不見了。它現在不會造成任何問題，要等到有一天您嘗試更新或解除安裝它所屬的程式時才會。到時這個步驟可能會失敗，因為 Windows 會尋找這個檔案，而它不在那裡。<br><br>要把它放回去，您需要目前所用版本的安裝程式。請向該程式的開發者取得，然後直接執行它，覆蓋安裝現有的程式。較新的版本不行：新版本必須先移除您現有的版本，而需要這個檔案的正是這個步驟。先解除安裝也行不通，原因相同。這應該會復原這個檔案並保留您的設定，但 Microsoft 並不保證。 |
 | The README [explains this folder], and how to recover a file, in Microsoft's own words. | README 以 Microsoft 自己的原話[說明了這個資料夾]，以及如何復原檔案。 |
 | (none) | （無） |
 
@@ -190,7 +190,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's simple to undo. Move them back into {InstallerFolder} and everything will be back to how it was. | 要復原很簡單。把它們移回 {InstallerFolder}，一切就會恢復原狀。 |
 | {0} {1} permanently deleted | 已永久刪除 {0} 個{1} |
 | {0} {1} permanently deleted | 已永久刪除 {0} 個{1} |
-| Any small donation is much appreciated. | 任何小額捐款都非常感謝。 |
+| Any small donation is much appreciated. | 任何小額贊助都非常感謝。 |
 | Send _anonymous report | 傳送匿名報告(_A) |
 | The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | 報告會以完全匿名的方式，把您的結果加到 GitHub 上的[這張圖表]，讓大家看到 InstallerClean 在實際使用中釋放了多少空間。報告也包含匿名的技術細節，幫助我發現程式錯誤： |
 | How much space was freed, and how many files were moved or deleted | 釋放了多少空間，以及移動或刪除了多少個檔案 |
@@ -354,16 +354,16 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Failed to start ({0}). The crash log could not be written. | 無法啟動（{0}）。無法寫入當機記錄檔。 |
 | Administrator rights needed | 需要系統管理員權限 |
 | InstallerClean needs administrator rights to see every program installed on this PC, and it isn't running as administrator, so it won't scan. Nothing has been changed.<br><br>Run InstallerClean again as administrator. | InstallerClean 需要系統管理員權限才能看到這台電腦上安裝的每個程式，但它目前不是以系統管理員身分執行，所以不會掃描。沒有做任何變更。<br><br>請以系統管理員身分重新執行 InstallerClean。 |
-| # crash.log captures unhandled exceptions from InstallerClean.<br># Under elevation the framework's exception messages can include<br># file paths from the running session (including other users'<br># profiles enumerated by Windows Installer queries). Network-<br># failure messages from the update check or result-log POST can<br># include the destination URL and the resolved IP / proxy address.<br># Entries about unreadable Windows Installer records can include a<br># Windows account SID (S-1-5-21-...) and the product codes of<br># installed software.<br># Redact all three classes of detail before attaching this file to<br># a public bug report.<br> | # crash.log 記錄 InstallerClean 未處理的例外狀況。<br># 在提高權限執行時，架構的例外狀況訊息可能包含目前工作階段中<br># 的檔案路徑（包括 Windows Installer 查詢所列舉的其他使用者的設定<br># 檔）。更新檢查或結果記錄上傳的網路失敗訊息，可能包含目的地 URL<br># 以及解析出的 IP 或 Proxy 位址。關於無法讀取的 Windows Installer<br># 記錄的項目，可能包含 Windows 帳戶 SID（S-1-5-21-...）以及已安裝<br># 軟體的產品代碼。<br># 將這個檔案附加到公開的錯誤報告之前，請先刪除這三類資訊。<br> |
+| # crash.log captures unhandled exceptions from InstallerClean.<br># Under elevation the framework's exception messages can include<br># file paths from the running session (including other users'<br># profiles enumerated by Windows Installer queries). Network-<br># failure messages from the update check or result-log POST can<br># include the destination URL and the resolved IP / proxy address.<br># Entries about unreadable Windows Installer records can include a<br># Windows account SID (S-1-5-21-...) and the product codes of<br># installed software.<br># Redact all three classes of detail before attaching this file to<br># a public bug report.<br> | # crash.log 記錄 InstallerClean 未處理的例外狀況。<br># 在提高權限執行時，架構的例外狀況訊息可能包含目前工作階段中的<br># 檔案路徑（包括 Windows Installer 查詢所列舉的其他使用者的設定檔）。<br># 更新檢查或結果記錄上傳的網路失敗訊息，可能包含目的地 URL 以及<br># 解析出的 IP 或 Proxy 位址。關於無法讀取的 Windows Installer 記錄<br># 的項目，可能包含 Windows 帳戶 SID（S-1-5-21-...）以及已安裝軟體的<br># 產品代碼。<br># 將這個檔案附加到公開的錯誤報告之前，請先刪除這三類資訊。<br> |
 
 ## Tooltips (hover text)
 
 | English | 繁體中文 |
 | --- | --- |
-| Any small donation is much appreciated. | 任何小額捐款都非常感謝。 |
+| Any small donation is much appreciated. | 任何小額贊助都非常感謝。 |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | 已要求取消。InstallerClean 正在等候目前的步驟到達可以停下來的地方。在大量 I/O 或 MSI 資料庫呼叫期間，這可能需要幾秒鐘。 |
 | Close | 關閉 |
-| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | InstallerClean 花了我大量心血，我其實應該收費，但我希望它保持免費，好幫助越多人越好。您的捐款讓這一切值得，我非常感激。 |
+| I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | InstallerClean 花了我大量心血，我其實應該收費，但我希望它保持免費，好幫助越多人越好。您的贊助讓這一切值得，我非常感激。 |
 | A star helps other people find it. | 給個星星，能幫助更多人找到它。 |
 | Minimise | 最小化 |
 | Move the unneeded files to the backup folder. | 將不需要的檔案移到備份資料夾。 |
@@ -377,9 +377,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 
 | English | 繁體中文 |
 | --- | --- |
-| Donate | 捐款 |
-| Donate $3 | 捐款 3 美元 |
-| Donate | 捐款 |
+| Donate | 贊助 |
+| Donate $3 | 贊助 3 美元 |
+| Donate | 贊助 |
 | Cancel operation | 取消作業 |
 | Cancel scan | 取消掃描 |
 | Cancel startup scan | 取消啟動時的掃描 |
@@ -503,8 +503,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   Either a file wouldn't say which program it belongs to, or Windows wouldn't give a clear answer about that program. |   可能是某個檔案沒有說明它屬於哪個程式，也可能是 Windows 對該程式沒有給出明確的答覆。 |
 |   A check on which programs the files belong to gave answers that didn't line up with the files it was handed. |   一項檢查這些檔案屬於哪些程式的作業，給出的答覆與交給它的檔案對不上。 |
 |   Either a patch file wouldn't say which patch it is, or it wouldn't say which programs it's for, or Windows wouldn't say in full which programs have that patch. |   可能是某個修補程式檔案沒有說明它是哪個修補程式，或沒有說明它適用於哪些程式，也可能是 Windows 沒有完整說明哪些程式套用了該修補程式。 |
-| Windows has a record for {0} file that is not in {InstallerFolder}: {1}. It causes no trouble day to day, but an update or uninstall of that program can fail. To put the file back, you need the installer for the version you already have. Get it from the program's maker and run it over your existing copy. A newer version won't do: it has to remove the one you've got first, and that's the step that needs this file. Uninstalling first won't work either, for the same reason. This should restore the file and leave your settings alone, but Microsoft doesn't guarantee it. | Windows 記錄了 {0} 個不在 {InstallerFolder} 中的檔案：{1}。平常使用不會有問題，但該程式的更新或解除安裝可能會失敗。要把這個檔案放回去，您需要目前所用版本的安裝程式。請向該程式的開發者取得，並在現有的程式上執行它。較新的版本不行：新版本必須先移除您現有的版本，而需要這個檔案的正是這個步驟。先解除安裝也行不通，原因相同。這應該會復原這個檔案並保留您的設定，但 Microsoft 並不保證。 |
-| Windows has records for {0} files that are not in {InstallerFolder}: {1}. They cause no trouble day to day, but an update or uninstall of those programs can fail. To put a file back, you need the installer for the version you already have of that program. Get it from the program's maker and run it over your existing copy. A newer version won't do: it has to remove the one you've got first, and that's the step that needs the file. Uninstalling first won't work either, for the same reason. This should restore the file and leave your settings alone, but Microsoft doesn't guarantee it. | Windows 記錄了 {0} 個不在 {InstallerFolder} 中的檔案：{1}。平常使用不會有問題，但這些程式的更新或解除安裝可能會失敗。要把某個檔案放回去，您需要該程式目前所用版本的安裝程式。請向該程式的開發者取得，並在現有的程式上執行它。較新的版本不行：新版本必須先移除您現有的版本，而需要該檔案的正是這個步驟。先解除安裝也行不通，原因相同。這應該會復原該檔案並保留您的設定，但 Microsoft 並不保證。 |
+| Windows has a record for {0} file that is not in {InstallerFolder}: {1}. It causes no trouble day to day, but an update or uninstall of that program can fail. To put the file back, you need the installer for the version you already have. Get it from the program's maker and run it over your existing copy. A newer version won't do: it has to remove the one you've got first, and that's the step that needs this file. Uninstalling first won't work either, for the same reason. This should restore the file and leave your settings alone, but Microsoft doesn't guarantee it. | Windows 記錄了 {0} 個不在 {InstallerFolder} 中的檔案：{1}。平常使用不會有問題，但該程式的更新或解除安裝可能會失敗。要把這個檔案放回去，您需要目前所用版本的安裝程式。請向該程式的開發者取得，然後直接執行它，覆蓋安裝現有的程式。較新的版本不行：新版本必須先移除您現有的版本，而需要這個檔案的正是這個步驟。先解除安裝也行不通，原因相同。這應該會復原這個檔案並保留您的設定，但 Microsoft 並不保證。 |
+| Windows has records for {0} files that are not in {InstallerFolder}: {1}. They cause no trouble day to day, but an update or uninstall of those programs can fail. To put a file back, you need the installer for the version you already have of that program. Get it from the program's maker and run it over your existing copy. A newer version won't do: it has to remove the one you've got first, and that's the step that needs the file. Uninstalling first won't work either, for the same reason. This should restore the file and leave your settings alone, but Microsoft doesn't guarantee it. | Windows 記錄了 {0} 個不在 {InstallerFolder} 中的檔案：{1}。平常使用不會有問題，但這些程式的更新或解除安裝可能會失敗。要把某個檔案放回去，您需要該程式目前所用版本的安裝程式。請向該程式的開發者取得，然後直接執行它，覆蓋安裝現有的程式。較新的版本不行：新版本必須先移除您現有的版本，而需要該檔案的正是這個步驟。先解除安裝也行不通，原因相同。這應該會復原該檔案並保留您的設定，但 Microsoft 並不保證。 |
 | InstallerClean couldn't be certain that the one superseded file is no longer needed, so it has held it back. | InstallerClean 無法確定那一個已被取代的檔案已不再需要，因此保留了它。 |
 | InstallerClean couldn't be certain that {0} superseded files are no longer needed, so it has held them back. | InstallerClean 無法確定 {0} 個已被取代的檔案已不再需要，因此保留了它們。 |
 | InstallerClean stopped waiting for drive {0} and left alone any file still to be checked against it. Once it's responding normally, run the command again. | InstallerClean 已不再等候磁碟機 {0}，並將仍需與它核對的檔案都原樣保留。等它恢復正常回應後，請再執行一次命令。 |
@@ -542,7 +542,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moving {0} unneeded {1} to {2}... | 正在將 {0} 個不需要的{1}移到 {2}... |
 | Moved {0} unneeded {1}. | 已移動 {0} 個不需要的{1}。 |
 | Check that your programs still update and uninstall as normal, then delete {0}. | 請確認您的程式仍能照常更新和解除安裝，然後刪除 {0}。 |
-| InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean 是免費的。如果它幫上了忙，請捐款 3 美元：{0} |
+| InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean 是免費的。如果它幫上了忙，請贊助 3 美元：{0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | 要復原很簡單。把它們從 {0} 移回 {InstallerFolder}，一切就會恢復原狀。 |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean 已無法確認備份資料夾，因此沒有再繼續。請檢查 {0}，然後再執行一次命令。 |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | 另一個 InstallerClean 處理程序正持有單一執行個體鎖定（圖形介面或另一次 CLI 執行）。結束代碼 75（暫時性）；稍後可安全地重試。 |

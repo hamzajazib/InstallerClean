@@ -554,7 +554,7 @@
   <data name="Body.RegisteredMissingFromDisk" xml:space="preserve">
     <value>这个安装文件不见了。现在不会造成任何麻烦，直到有一天您尝试更新或卸载它所属的程序为止。到那时这一步可能会失败，因为 Windows 会寻找这个文件而找不到它。
 
-要把它放回去，您需要您当前所用版本的安装程序。请从程序的制作方获取，并在现有副本上运行它。更新的版本不行：新版本必须先移除您现有的版本，而正是这一步需要这个文件。先卸载同样行不通，原因相同。这应当会恢复该文件并保持您的设置不变，但 Microsoft 并不保证。</value>
+要把它放回去，您需要您当前所用版本的安装程序。请向该程序的开发者获取，然后直接运行它，覆盖安装现有的程序。更新的版本不行：新版本必须先移除您现有的版本，而正是这一步需要这个文件。先卸载同样行不通，原因相同。这应当会恢复该文件并保持您的设置不变，但 Microsoft 并不保证。</value>
     <comment>Shown in the Registered Files details pane when a selected product's installer file is gone from disk. Generic with no product name interpolated: the recovery advice is identical for every program, and a possessive on a name ending in s reads wrongly.</comment>
   </data>
   <!-- The missing-file note's closing sentence, rendered as a TextBlock
@@ -698,7 +698,7 @@
   <data name="Status.ScanFailedDetails.NoLog" xml:space="preserve"><value>扫描失败（{0}）。无法写入崩溃日志。</value></data>
 
   <!-- Completion screen -->
-  <data name="Completion.AllClean" xml:space="preserve"><value>全部干净</value></data>
+  <data name="Completion.AllClean" xml:space="preserve"><value>干干净净</value></data>
   <data name="Completion.NothingToCleanUp" xml:space="preserve"><value>{InstallerFolder} 中没有需要清理的内容</value></data>
   <!-- 0 = how many cached files the scan accounted for, 1 = pluralised
        "file"/"files" (Plural.File), 2 = natural-phrasing duration
@@ -2012,8 +2012,8 @@ InstallerClean 本来就以管理员身份运行，所以再那样启动一次�
        THE COLON IS NEW AND FRENCH NEEDS A NARROW NO-BREAK SPACE BEFORE IT
        (U+202F), which the Edit tool silently flattens; check-french-spacing
        holds it. -->
-  <data name="Cli.MissingFromDisk.Singular" xml:space="preserve"><value>Windows 有 {0} 个不在 {InstallerFolder} 中的文件的记录：{1}。日常使用不会有问题，但该程序的更新或卸载可能会失败。要把该文件放回去，您需要您当前所用版本的安装程序。请从程序的制作方获取，并在现有副本上运行它。更新的版本不行：新版本必须先移除您现有的版本，而正是这一步需要这个文件。先卸载同样行不通，原因相同。这应当会恢复该文件并保持您的设置不变，但 Microsoft 并不保证。</value></data>
-  <data name="Cli.MissingFromDisk.Plural" xml:space="preserve"><value>Windows 有 {0} 个不在 {InstallerFolder} 中的文件的记录：{1}。日常使用不会有问题，但这些程序的更新或卸载可能会失败。要把某个文件放回去，您需要该程序当前所用版本的安装程序。请从程序的制作方获取，并在现有副本上运行它。更新的版本不行：新版本必须先移除您现有的版本，而正是这一步需要该文件。先卸载同样行不通，原因相同。这应当会恢复该文件并保持您的设置不变，但 Microsoft 并不保证。</value></data>
+  <data name="Cli.MissingFromDisk.Singular" xml:space="preserve"><value>Windows 有 {0} 个不在 {InstallerFolder} 中的文件的记录：{1}。日常使用不会有问题，但该程序的更新或卸载可能会失败。要把该文件放回去，您需要您当前所用版本的安装程序。请向该程序的开发者获取，然后直接运行它，覆盖安装现有的程序。更新的版本不行：新版本必须先移除您现有的版本，而正是这一步需要这个文件。先卸载同样行不通，原因相同。这应当会恢复该文件并保持您的设置不变，但 Microsoft 并不保证。</value></data>
+  <data name="Cli.MissingFromDisk.Plural" xml:space="preserve"><value>Windows 有 {0} 个不在 {InstallerFolder} 中的文件的记录：{1}。日常使用不会有问题，但这些程序的更新或卸载可能会失败。要把某个文件放回去，您需要该程序当前所用版本的安装程序。请向该程序的开发者获取，然后直接运行它，覆盖安装现有的程序。更新的版本不行：新版本必须先移除您现有的版本，而正是这一步需要该文件。先卸载同样行不通，原因相同。这应当会恢复该文件并保持您的设置不变，但 Microsoft 并不保证。</value></data>
   <!-- Superseded files this run held back. 0 = files held back. The one-form spends
        no placeholder and names the file instead of the numeral, as the other one-forms
        here do.
@@ -2420,10 +2420,11 @@ InstallerClean 本来就以管理员身份运行，所以再那样启动一次�
        it verbatim and normalises line endings to the host platform. -->
   <data name="CrashLog.PrivacyHeader" xml:space="preserve"><value># crash.log 记录 InstallerClean 未处理的异常。
 # 在提升权限的情况下，框架的异常消息可能包含当前会话中的文件路径
-#（包括 Windows Installer 查询所枚举的其他用户的配置文件）。更新
-# 检查或结果日志上传的网络故障消息，可能包含目标 URL 以及解析出的
-# IP 或代理地址。关于无法读取的 Windows Installer 记录的条目，可能
-# 包含 Windows 账户 SID（S-1-5-21-...）以及已安装软件的产品代码。
+# （包括 Windows Installer 查询所枚举的其他用户的配置文件）。
+# 更新检查或结果日志上传的网络故障消息，可能包含目标 URL 以及
+# 解析出的 IP 或代理地址。关于无法读取的 Windows Installer 记录的
+# 条目，可能包含 Windows 账户 SID（S-1-5-21-...）以及已安装软件的
+# 产品代码。
 # 把此文件附到公开的错误报告之前，请先删除这三类信息。
 </value></data>
 
@@ -2481,7 +2482,7 @@ InstallerClean 本来就以管理员身份运行，所以再那样启动一次�
   <data name="Cli.Help.ExitCodeError" xml:space="preserve"><value>  1   没有处理任何内容：本次运行失败或被拒绝</value></data>
   <!-- A Ctrl+C part way through exits 2 with nothing failed at all, so this
        cannot say that some files failed. -->
-  <data name="Cli.Help.ExitCodePartial" xml:space="preserve"><value>  2   部分：部分已处理，部分未处理（失败或 Ctrl+C）</value></data>
+  <data name="Cli.Help.ExitCodePartial" xml:space="preserve"><value>  2   部分：部分已处理，部分未处理（失败或中途按了 Ctrl+C）</value></data>
   <data name="Cli.Help.ExitCodeTransient" xml:space="preserve"><value>  75  暂时性：临时状况阻止了本次运行（见相关消息）</value></data>
   <data name="Cli.Help.ExitCodeCancelled" xml:space="preserve"><value>  130 已取消（Ctrl+C）</value></data>
   <data name="Tooltip.ChangeLanguage" xml:space="preserve"><value>更改语言。程序会重启。</value></data>
