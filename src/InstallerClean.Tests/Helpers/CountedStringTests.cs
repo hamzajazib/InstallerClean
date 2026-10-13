@@ -8,8 +8,8 @@ namespace InstallerClean.Tests.Helpers;
 /// <summary>
 /// The counted strings: every sentence whose wording changes with a number, and
 /// the satellite-only CLDR overrides that inflect it. DisplayHelpersTests covers
-/// which category a count falls in; nothing covered whether that category then
-/// resolves to anything, which is where this file sits.
+/// which category a count falls in; this file covers whether that category then
+/// resolves to anything.
 ///
 /// Two failure modes drive it, and neither reaches a build error, a parity
 /// failure (check-resx-parity.mjs reads key presence and placeholder arity) or
@@ -145,10 +145,8 @@ public class CountedStringTests
         // other test reaches. The Russian base form is the impersonal plural, so
         // without the override a single file reads with the wrong agreement.
         //
-        // IT WAS WRITTEN AGAINST Completion.ReverifySkipped, WHOSE OVERRIDE WENT
-        // WITH THE HELD-BACK COLLAPSE. Cli.FoundOrphans is the same shape and not a
-        // convenience: a flat key, grammatical, and carrying a Russian .One that
-        // differs from its base form, which is what the assertion below needs.
+        // Cli.FoundOrphans has the shape the assertion below needs: a flat key,
+        // grammatical, and carrying a Russian .One that differs from its base form.
         using var scope = new LocalisationScope(Russian);
 
         var overridden = Strings.Find("Cli.FoundOrphans.One");
@@ -247,8 +245,7 @@ public class CountedStringTests
     {
         // QuestionFor has no default arm, so this is the whole test: an unclassified
         // prefix throws here rather than being absorbed into one class or the other.
-        // Without it the inventory would have the shape that has caught this project
-        // out repeatedly, a list that is silently short and reports success anyway.
+        // Without it the inventory could be silently short and still report success.
         var question = DisplayHelpers.QuestionFor(prefix);
 
         Assert.True(Enum.IsDefined(question), $"{prefix}: classified as {(int)question}");
@@ -434,8 +431,7 @@ public class CountedStringTests
     {
         // These seven reach a screen without going through string.Format, so an
         // override written with a {0} in it would put the braces themselves in front
-        // of a reader. Nothing carries one today, and that is currently an accident of
-        // nobody having written one; this is what makes it a rule.
+        // of a reader. Nothing carries one, and this test keeps it that way.
         var satellite = Strings.ResourceManager.GetResourceSet(
             CultureInfo.GetCultureInfo(cultureName), createIfNotExists: true, tryParents: false);
         Assert.NotNull(satellite);
