@@ -366,24 +366,31 @@ public sealed class RemovableReverifier : IRemovableReverifier
             standing = ScreenByWhatTheyDeclare(
                 standing, held, cacheRoot, query.Installations, cancellationToken, progress, out givenUp, out waitCount);
 
-        // The age check, as the scan runs it: every file held where an in-progress signal
-        // was set just after the clock, and otherwise every file whose times are not before
-        // the clock, and then every file left where the clock went back while the times were
-        // read (CachedFileAge.ClockWentBack).
+        // The age check, as the scan runs it: every file held, and no file's times read, where
+        // an in-progress signal was set just after the clock, and otherwise every file whose
+        // times are not before the clock, and then every file left where the clock went back
+        // while the times were read (CachedFileAge.ClockWentBack).
         if (_fileTimes is not null && standing.Count > 0)
         {
-            standing = Keep(standing, held, path =>
+            if (installerActivity?.IsBlocked == true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (installerActivity?.IsBlocked == true) return HeldBackReason.FileNotConfirmed;
-                var outcome = _fileTimes.ReadOutcome(path, out var times);
-                return CachedFileAge.IsBeforeTheClock(outcome, times, clock)
-                    ? null
-                    : HeldBackReason.FileNotConfirmed;
-            });
-
-            if (standing.Count > 0 && CachedFileAge.ClockWentBack(_clock, wallAtStart))
                 _ = Keep(standing, held, _ => HeldBackReason.FileNotConfirmed);
+            }
+            else
+            {
+                standing = Keep(standing, held, path =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var outcome = _fileTimes.ReadOutcome(path, out var times);
+                    return CachedFileAge.IsBeforeTheClock(outcome, times, clock)
+                        ? null
+                        : HeldBackReason.FileNotConfirmed;
+                });
+
+                if (standing.Count > 0 && CachedFileAge.ClockWentBack(_clock, wallAtStart))
+                    _ = Keep(standing, held, _ => HeldBackReason.FileNotConfirmed);
+            }
         }
 
         return (givenUp, waitCount);

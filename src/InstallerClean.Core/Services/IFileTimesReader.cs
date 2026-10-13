@@ -145,14 +145,32 @@ public static class CachedFileAge
     /// <summary>
     /// How far the wall clock may run slow against the monotonic one, as a share of the
     /// time that passed, before <see cref="ClockWentBack(TimeProvider, WallClockReading)"/>
-    /// answers true: one part in a thousand. It absorbs the rate at which a system clock left
-    /// to itself drifts from the monotonic one, awake or across a sleep, and the widths of two
-    /// readings no wider than <see cref="NarrowReading"/>. Windows Time slewing a clock that is
-    /// ahead runs it slow, on some settings by more than this, and the check then answers true
-    /// and the files are held: the wall clock lost that time. A larger share lets a larger
-    /// step back through; a smaller one holds files where the wall clock has only drifted.
+    /// answers true: one part in a thousand, up to <see cref="FallBehindLimit"/>, which it
+    /// reaches in a pass of a hundred seconds. In a shorter pass it absorbs the rate at which a
+    /// system clock left to itself drifts from the monotonic one, awake or across a sleep, and
+    /// the widths of two readings no wider than <see cref="NarrowReading"/>. Windows Time
+    /// slewing a clock that is ahead runs it slow, on some settings by more than this, and the
+    /// check then answers true and the files are held: the wall clock lost that time. A larger
+    /// share lets a larger step back through in such a pass; a smaller one holds files where
+    /// the wall clock has only drifted.
     /// </summary>
     public const double SlowRateAllowance = 0.001;
+
+    /// <summary>
+    /// The most the wall clock may stand behind the monotonic one at the second reading,
+    /// measured from the first, however long the pass ran, before
+    /// <see cref="ClockWentBack(TimeProvider, WallClockReading)"/> answers true: a tenth of a
+    /// second. <see cref="SlowRateAllowance"/> grows with the pass and this stops it there, so
+    /// in a long pass a clock stepped back by more than a tenth of a second, and still that far
+    /// back at the second reading, answers true as it does in a short one. Windows Time steps
+    /// the clock only where it is out by more than its MaxAllowedPhaseOffset, by default one
+    /// second outside a domain and five minutes within one, and slews it otherwise; the
+    /// reference NTP daemon steps it, by default, where it is out by more than 0.128 seconds.
+    /// A pass long enough to fall behind by this much through drift alone holds its files, as
+    /// a clock slewed slow does. A larger limit lets a larger step back through in a long
+    /// pass; a smaller one holds files in long passes where the clock only drifted.
+    /// </summary>
+    public static readonly TimeSpan FallBehindLimit = TimeSpan.FromMilliseconds(100);
 
     /// <summary>
     /// How long a wall-clock reading may take, from the monotonic timestamp before it to the
@@ -226,7 +244,8 @@ public static class CachedFileAge
     /// <summary>
     /// Whether the wall clock advanced less between <paramref name="atStart"/> and
     /// <paramref name="atEnd"/> than the most time that can have passed between the two
-    /// readings, by more than <see cref="SlowRateAllowance"/> of that time.
+    /// readings, by more than <see cref="SlowRateAllowance"/> of that time or
+    /// <see cref="FallBehindLimit"/>, whichever is less.
     ///
     /// THE MOST TIME, TAKEN OUTSIDE BOTH READINGS: from the timestamp before the first to
     /// the timestamp after the second. A step back larger than the allowance therefore
@@ -239,7 +258,9 @@ public static class CachedFileAge
     {
         var elapsed = clock.GetElapsedTime(atStart.TimestampBefore, atEnd.TimestampAfter);
         var wallAdvance = atEnd.Wall - atStart.Wall;
-        return elapsed - wallAdvance > elapsed * SlowRateAllowance;
+        var allowed = elapsed * SlowRateAllowance;
+        if (allowed > FallBehindLimit) allowed = FallBehindLimit;
+        return elapsed - wallAdvance > allowed;
     }
 
     /// <summary>

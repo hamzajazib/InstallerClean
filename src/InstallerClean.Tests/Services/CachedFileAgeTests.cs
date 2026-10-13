@@ -198,10 +198,18 @@ public class CachedFileAgeTests
     // Ten seconds: a thousandth of it is ten milliseconds.
     [InlineData(10, 100_000, false)]
     [InlineData(10, 100_001, true)]
-    // Five minutes, as a scan waiting on a slow share runs: three tenths of a second.
-    [InlineData(300, 3_000_000, false)]
-    [InlineData(300, 3_000_001, true)]
-    public void The_wall_clock_may_fall_behind_by_a_thousandth_of_the_time_that_passed(
+    // A hundred seconds: a thousandth of it is the tenth of a second the limit allows.
+    [InlineData(100, 1_000_000, false)]
+    [InlineData(100, 1_000_001, true)]
+    // Five minutes, as a scan waiting on a slow share runs: a thousandth of it is three
+    // tenths of a second, and the limit holds it to one.
+    [InlineData(300, 1_000_000, false)]
+    [InlineData(300, 1_000_001, true)]
+    [InlineData(300, 3_000_000, true)]
+    // An hour, as a scan across a sleep runs.
+    [InlineData(3_600, 1_000_000, false)]
+    [InlineData(3_600, 1_000_001, true)]
+    public void The_wall_clock_may_fall_behind_by_a_thousandth_of_the_time_that_passed_up_to_a_tenth_of_a_second(
         int seconds, long behindTicks, bool wentBack)
     {
         var elapsed = TimeSpan.FromSeconds(seconds);
@@ -214,6 +222,12 @@ public class CachedFileAgeTests
     public void The_allowance_is_a_thousandth_of_the_time_that_passed()
     {
         Assert.Equal(0.001, CachedFileAge.SlowRateAllowance);
+    }
+
+    [Fact]
+    public void The_most_the_wall_clock_may_fall_behind_is_a_tenth_of_a_second()
+    {
+        Assert.Equal(TimeSpan.FromMilliseconds(100), CachedFileAge.FallBehindLimit);
     }
 
     [Fact]
