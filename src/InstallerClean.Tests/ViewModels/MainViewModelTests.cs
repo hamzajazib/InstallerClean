@@ -2586,6 +2586,48 @@ public class MainViewModelTests
         }
     }
 
+    // Nothing runs on the operation's source once the re-verify has returned a blocked
+    // read, so Cancel is out of use by the time the banner's result is set, which on a
+    // Move is before the folder the pre-flight made is removed.
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Cancel_is_out_of_use_once_a_blocked_signal_read_at_the_re_verify_stops_the_batch(bool deleting)
+    {
+        var vm = CreateViewModel();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2));
+        _confirmationService.ConfirmMove(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>()).Returns(true);
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(true);
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = Path.Combine(Path.GetTempPath(), "ic-test-reverify-signal-blocked-cancel");
+
+        var blocked = PendingRebootResult.Block(PendingRebootReason.InstallerInProgressMarker);
+        _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
+            .Returns(ci => new ReverifyResult(
+                (IReadOnlyList<string>)ci[0]!, Array.Empty<string>(), InstallerActivity: blocked));
+
+        var button = new CancelButtonState(vm.Cleanup);
+        bool? operating = null, canCancel = null, live = null;
+        vm.Scan.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(ScanViewModel.PendingRebootResult)
+                || !ReferenceEquals(vm.Scan.PendingRebootResult, blocked)) return;
+            operating = vm.Cleanup.IsOperating;
+            canCancel = vm.Cleanup.CancelOperationCommand.CanExecute(null);
+            live = button.Live;
+        };
+
+        if (deleting) await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+        else await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        Assert.True(operating);
+        Assert.False(canCancel);
+        Assert.False(live);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

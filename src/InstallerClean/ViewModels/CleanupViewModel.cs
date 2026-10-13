@@ -1060,9 +1060,12 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // stopped here. It comes ahead of the all-held arm below so a batch the
             // re-verify emptied ends here too, under the banner rather than the held-back
             // card. Nothing has been touched, so there is no rescan; the finally below ends
-            // the operation and takes the overlay down.
+            // the operation and takes the overlay down. Nothing is left running on the
+            // operation's source, so it goes first, and Cancel is out of use while the
+            // folder the pre-flight made is removed.
             if (reverify.InstallerActivity is { IsBlocked: true } installerActivity)
             {
+                ReleaseOperationSource();
                 _scan.PendingRebootResult = installerActivity;
                 OperationProgress = string.Empty;
                 if (createdDestination) await RemoveCreatedDestinationAsync(dest);
@@ -1509,9 +1512,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             }
 
             // A blocked read of the in-progress signals at the re-verify stops the whole
-            // batch, ahead of the all-held arm, as on the Move path.
+            // batch, ahead of the all-held arm, as on the Move path, its source going first.
             if (reverify.InstallerActivity is { IsBlocked: true } installerActivity)
             {
+                ReleaseOperationSource();
                 _scan.PendingRebootResult = installerActivity;
                 OperationProgress = string.Empty;
                 return;
@@ -2024,9 +2028,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// a Move or a Delete calls this, including the pre-flight's early returns, so
     /// the operation's state is torn down in one place.
     ///
-    /// On every path past the batch this finds no source left and the flags are
+    /// On every path past the re-verify this finds no source left and the flags are
     /// all it clears: the batch lets go of the operation's source as it returns, a
-    /// re-verify that fails lets go of it before its dialog, and
+    /// re-verify that fails lets go of it before its dialog, one that finds Windows
+    /// Installer busy lets go of it before the banner, and
     /// <see cref="RefreshAfterBatchAsync"/> lets go of the one it installs as it
     /// returns (<see cref="ReleaseOperationSource"/>).
     ///
@@ -2059,9 +2064,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// Lets go of the operation's cancellation source once nothing is left
     /// running on it, which takes Cancel and Esc out of use
     /// (<see cref="CanCancelOperation"/>) until <see cref="RefreshAfterBatchAsync"/>
-    /// installs a source for the rescan. The source is taken off before it is
-    /// disposed, as in <see cref="EndOperation"/>, and taking it off is what
-    /// tells the button (<see cref="OperationSource"/>).
+    /// installs a source for the rescan, on the paths that rescan. The source is
+    /// taken off before it is disposed, as in <see cref="EndOperation"/>, and
+    /// taking it off is what tells the button (<see cref="OperationSource"/>).
     /// </summary>
     private void ReleaseOperationSource()
     {
