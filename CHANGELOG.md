@@ -2,6 +2,30 @@
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - Unreleased
+
+### Added
+
+- InstallerClean can now be shown in Traditional Chinese, written for Taiwan's usage with the words Windows itself uses there: every window, dialog, tooltip, button and screen-reader label, the command-line tool's text and the setup wizard. A Windows set to Traditional Chinese shows it automatically, and it can be picked from the main-window language menu. Like the other machine-drafted languages it is published beside the English in `docs/translations/zh-Hant.md` for anyone who reads it to check, and the README has a Traditional Chinese edition, which the app's README links open. Where the languages stand:
+
+  | Natively done | Live machine-translated | README only \* |
+  | --- | --- | --- |
+  | English · Italian · Japanese · Dutch | Simplified Chinese · Traditional Chinese · Russian · Spanish · Brazilian Portuguese · Polish · Turkish · Korean · French · German · Indonesian · Vietnamese · Ukrainian | Arabic |
+
+  \* README only means the README is translated while the interface stays English.
+
+### Changed
+
+- The Simplified Chinese heading on the All clean card reads 干干净净 ("spotless"), as the Traditional Chinese one does.
+
+### Fixed
+
+- The three messages shown when Windows Installer's list of installed programs, or one program's list of patches, cannot be read to the end give the number read with the counter word that Simplified Chinese, Japanese and Korean each put with a number. They placed the number straight against the noun.
+- Where a file Windows Installer needs is missing, the Simplified Chinese advice, in the window and on the command line, tells you to get the installer from the program's developer and run it to install over the existing program. It said to run it on the existing copy, without saying that it installs over the program.
+- The Simplified Chinese command-line help for exit code 2 says the Ctrl+C it covers is one pressed part way through, as the English does. It said only Ctrl+C.
+- The privacy header at the top of the crash log breaks its Simplified Chinese lines between words, each line starting with a space after the `#`. One word was split across two lines, and one line had no space after the `#`.
+- In Simplified Chinese, the All clean card gives the scan time after a colon, so it reads correctly whether the time is a number or "less than a second", and the sentence a screen reader speaks while InstallerClean waits for a drive runs straight on to the key to press. Both put a space before a word, where Chinese uses none.
+
 ## [3.2.0] - 2026-10-13
 
 ### Fixed
