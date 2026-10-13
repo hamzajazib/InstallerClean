@@ -103,49 +103,49 @@
 ## 截图
 
 <p>
-  <img src="docs/screenshots/zh/01-initial-scan.webp" alt="启动画面，扫描进行时显示 InstallerClean 徽标" width="900"><br>
+  <img src="docs/screenshots/zh-CN/01-initial-scan.webp" alt="启动画面，扫描进行时显示 InstallerClean 徽标" width="900"><br>
   <em>初始扫描，非常快。</em>
   <br><br>
 </p>
 
 <p>
-  <img src="docs/screenshots/zh/02-main-window.webp" alt="主窗口，显示“77 个不需要的文件可清理”（2.88 GB）和“149 个文件原样保留”（3.07 GB），还有一个备份文件夹输入框，以及“永久删除”和“移动”按钮" width="900"><br>
+  <img src="docs/screenshots/zh-CN/02-main-window.webp" alt="主窗口，显示“77 个不需要的文件可清理”（2.88 GB）和“149 个文件原样保留”（3.07 GB），还有一个备份文件夹输入框，以及“永久删除”和“移动”按钮" width="900"><br>
   <em>结果：有多少可以清除，有多少原样保留。</em>
   <br><br>
 </p>
 
 <p>
-  <img src="docs/screenshots/zh/03-details-safe-to-delete.webp" alt="“不需要的文件，可安全删除”窗口，按大小排序列出可清除的文件，给出每个文件可清除的原因，并显示所选文件的详情" width="900"><br>
+  <img src="docs/screenshots/zh-CN/03-details-safe-to-delete.webp" alt="“不需要的文件，可安全删除”窗口，按大小排序列出可清除的文件，给出每个文件可清除的原因，并显示所选文件的详情" width="900"><br>
   <em>可以清掉的那些文件的详情：每一个为什么不再需要，以及文件自己是怎么说的。</em>
   <br><br>
 </p>
 
 <p>
-  <img src="docs/screenshots/zh/04-details-left-alone.webp" alt="“原样保留的文件”窗口，列出已安装的程序，并显示所选程序包自己带着的详情" width="900"><br>
+  <img src="docs/screenshots/zh-CN/04-details-left-alone.webp" alt="“原样保留的文件”窗口，列出已安装的程序，并显示所选程序包自己带着的详情" width="900"><br>
   <em>原样保留的那些文件的详情：Windows 说每一个属于哪个程序，以及文件自己是怎么说的。</em>
   <br><br>
 </p>
 
 <p>
-  <img src="docs/screenshots/zh/05-move-dialog.webp" alt="移动确认框，询问是否把 77 个文件（2.88 GB）移动到选定的备份文件夹" width="900"><br>
+  <img src="docs/screenshots/zh-CN/05-move-dialog.webp" alt="移动确认框，询问是否把 77 个文件（2.88 GB）移动到选定的备份文件夹" width="900"><br>
   <em>两种操作之前都会确认。移动会把文件备份到您选择的文件夹。或者直接永久删除。</em>
   <br><br>
 </p>
 
 <p>
-  <img src="docs/screenshots/zh/06-moving.webp" alt="移动进行中的进度界面：77 个文件中已完成 41 个（53%）、正在移动的那个文件，以及“取消”按钮" width="900"><br>
+  <img src="docs/screenshots/zh-CN/06-moving.webp" alt="移动进行中的进度界面：77 个文件中已完成 41 个（53%）、正在移动的那个文件，以及“取消”按钮" width="900"><br>
   <em>移动进行中。移到同一个驱动器上是瞬间完成的。移到另一个驱动器上，GB 越多花的时间越长。</em>
   <br><br>
 </p>
 
 <p>
-  <img src="docs/screenshots/zh/07-success-done.webp" alt="成功界面，显示已释放 2.88 GB，77 个文件已移动到备份文件夹，并提示等一切正常时再删除那个文件夹" width="900"><br>
+  <img src="docs/screenshots/zh-CN/07-success-done.webp" alt="成功界面，显示已释放 2.88 GB，77 个文件已移动到备份文件夹，并提示等一切正常时再删除那个文件夹" width="900"><br>
   <em>完成。空间回来了。文件先备份着，等您确信一切正常为止。然后把备份文件夹删掉。</em>
   <br><br>
 </p>
 
 <p>
-  <img src="docs/screenshots/zh/08-scanned-again-all-clean.webp" alt="再次扫描后的“全部干净”界面：C:\Windows\Installer 中没有需要清理的内容" width="900"><br>
+  <img src="docs/screenshots/zh-CN/08-scanned-again-all-clean.webp" alt="再次扫描后的“全部干净”界面：C:\Windows\Installer 中没有需要清理的内容" width="900"><br>
   <em>再次扫描之后。已经没有什么可清理的了。</em>
   <br><br>
 </p>
