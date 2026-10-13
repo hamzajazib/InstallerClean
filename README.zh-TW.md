@@ -201,7 +201,7 @@ InstallerClean 判定這兩者的方向正好相反，而且只有前一種才�
 
 從 2.2.0 起，安裝版和可攜版的檔名都帶有版本號，下載下來的副本永遠說得清自己是哪一版；命令列版則保留單純的 `installerclean-cli.exe` 檔名，這樣指向它的排程工作和指令碼在更新後依然能用。
 
-從[發行頁面](../../releases/latest)下載，然後執行。它沒有簽章，所以 Windows 會顯示「未知的發行者」警告；[常見問題](#unknown-publisher)說明了您會看到什麼，以及為什麼這麼做是安全的。
+從[發行頁面](../../releases/latest)下載，然後執行。它沒有簽章，所以 Windows 會顯示「發行者不明」警告；[常見問題](#unknown-publisher)說明了您會看到什麼，以及為什麼這麼做是安全的。
 
 應用程式啟動時會自動掃描。檢查結果，然後按「**移動**」或「**永久刪除**」。
 
@@ -237,7 +237,7 @@ InstallerClean 沒有簽章。在執行它之前，您可以檢查這些：
 
 <a id="unknown-publisher"></a>
 
-**為什麼 Windows 說「未知的發行者」？** InstallerClean 沒有程式碼簽章，而 Windows 會替從網路下載的檔案加上標記，所以第一次執行時，SmartScreen 通常會顯示「Windows 已保護您的電腦」，發行者則列為未知。付費的簽章憑證每年都要花錢，我寧可讓應用程式保持免費，也不想花這筆錢，所以我向免費替開源軟體簽章的 SignPath Foundation 提出申請，InstallerClean 也已獲准（請見[程式碼簽署原則](#程式碼簽署原則)）。憑證還沒有核發，所以目前請按「**其他資訊**」，再按「**仍要執行**」。這麼做是安全的：原始碼是公開的，每個版本都有 VirusTotal 連結和 SHA-256 雜湊值，您可以先檢查。
+**為什麼 Windows 說「發行者不明」？** InstallerClean 沒有程式碼簽章，而 Windows 會替從網路下載的檔案加上標記，所以第一次執行時，SmartScreen 通常會顯示「Windows 已保護您的電腦」，發行者則列為不明。付費的簽章憑證每年都要花錢，我寧可讓應用程式保持免費，也不想花這筆錢，所以我向免費替開源軟體簽章的 SignPath Foundation 提出申請，InstallerClean 也已獲准（請見[程式碼簽署原則](#程式碼簽署原則)）。憑證還沒有核發，所以目前請按「**其他資訊**」，再按「**仍要執行**」。這麼做是安全的：原始碼是公開的，每個版本都有 VirusTotal 連結和 SHA-256 雜湊值，您可以先檢查。
 
 **能在 Windows 7 或 8 上使用嗎？** 不能。它需要 Windows 10 版本 1607 或更新版本，這是 .NET 10 執行階段支援的最舊版本。安裝程式在更舊的系統上會拒絕安裝，可攜版也無法啟動。
 
@@ -346,7 +346,7 @@ InstallerClean 的設計目標，是完全可以只用鍵盤和螢幕閱讀程�
 
 ## 程式碼簽署原則
 
-InstallerClean 已獲 [SignPath Foundation](https://signpath.org) 接受，可以免費取得程式碼簽章。這是一項替開源軟體簽章的計畫，簽章之後，軟體到您電腦上時就不會再顯示為未知的發行者。憑證本身還沒有核發，所以這裡的下載目前都沒有簽章，Windows 會對它們發出警告。
+InstallerClean 已獲 [SignPath Foundation](https://signpath.org) 接受，可以免費取得程式碼簽章。這是一項替開源軟體簽章的計畫，簽章之後，軟體到您電腦上時就不會再顯示發行者不明。憑證本身還沒有核發，所以這裡的下載目前都沒有簽章，Windows 會對它們發出警告。
 
 憑證核發之後，每個發行版本都會附上 SignPath 要求的那行字：free code signing provided by SignPath.io, certificate by SignPath Foundation。憑證屬於基金會而不是我，因為憑證必須核發給一個法律實體，而一個人的專案不是。這並不表示 InstallerClean 是他們的，也不表示除了簽章之外他們還參與了什麼。
 
