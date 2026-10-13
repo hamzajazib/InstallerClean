@@ -32,6 +32,7 @@ public sealed class RemovableReverifier : IRemovableReverifier
     private readonly IFileIdentityReader? _fileIds;
     private readonly IDeclaredProductCheck? _declaredProducts;
     private readonly IFileTimesReader? _fileTimes;
+    private readonly IPendingRebootService? _installerActivity;
     private readonly TimeProvider _clock;
     private readonly string? _installerFolderOverride;
 
@@ -40,13 +41,14 @@ public sealed class RemovableReverifier : IRemovableReverifier
     /// raw API the under-lease one, two seams rather than one because
     /// <see cref="IInstallerQueryService"/> offers a whole enumeration and nothing
     /// narrower, and an enumeration is kept outside the machine-wide installer lock.
-    /// The three readers and the clock are the scan's own, for the steps this pass
-    /// re-runs on a file no registration names.
+    /// The three readers, the clock and the in-progress signals are the scan's own, for
+    /// the steps this pass re-runs on a file no registration names.
     /// </summary>
     public RemovableReverifier(IInstallerQueryService queryService, Interop.IMsiApi msi,
         IFileIdentityReader fileIdentities, IDeclaredProductCheck declaredProducts,
-        IFileTimesReader fileTimes, TimeProvider clock)
-        : this(queryService, msi, fileIdentities, declaredProducts, fileTimes, clock, null) { }
+        IFileTimesReader fileTimes, TimeProvider clock, IPendingRebootService installerActivity)
+        : this(queryService, msi, fileIdentities, declaredProducts, fileTimes, clock, null,
+            installerActivity) { }
 
     /// <summary>
     /// Test constructor for the tests whose subject is the registrations: no file
@@ -55,7 +57,7 @@ public sealed class RemovableReverifier : IRemovableReverifier
     /// built with its readers, never more.
     /// </summary>
     internal RemovableReverifier(IInstallerQueryService queryService, Interop.IMsiApi msi)
-        : this(queryService, msi, null, null, null, null, null) { }
+        : this(queryService, msi, null, null, null, null, null, null) { }
 
     /// <summary>
     /// Test constructor for the steps that open a file.
@@ -72,15 +74,22 @@ public sealed class RemovableReverifier : IRemovableReverifier
     /// A real folder standing in for <c>C:\Windows\Installer</c>, as the scan's test
     /// constructors take one. The guard still asks the real filesystem.
     /// </param>
+    /// <param name="installerActivity">
+    /// What the age check reads Windows Installer's in-progress signals through, just after
+    /// this pass's clock. Null reads nothing, and the age check then judges every file by
+    /// its times alone.
+    /// </param>
     internal RemovableReverifier(IInstallerQueryService queryService, Interop.IMsiApi msi,
         IFileIdentityReader? fileIdentities, IDeclaredProductCheck? declaredProducts,
-        IFileTimesReader? fileTimes, TimeProvider? clock, string? installerFolderOverride)
+        IFileTimesReader? fileTimes, TimeProvider? clock, string? installerFolderOverride,
+        IPendingRebootService? installerActivity = null)
     {
         _queryService = queryService;
         _msi = msi;
         _fileIds = fileIdentities;
         _declaredProducts = declaredProducts;
         _fileTimes = fileTimes;
+        _installerActivity = installerActivity;
         _clock = clock ?? TimeProvider.System;
         _installerFolderOverride = installerFolderOverride;
     }
@@ -92,6 +101,19 @@ public sealed class RemovableReverifier : IRemovableReverifier
     internal bool ChecksFiles =>
         _fileIds is not null && _declaredProducts is not null && _fileTimes is not null;
 
+    /// <summary>
+    /// Whether this pass reads Windows Installer's in-progress signals after its clock, for
+    /// the test that holds the hosts' pass to reading them. Both test constructors can
+    /// leave it off.
+    /// </summary>
+    internal bool ReadsInstallerActivity => _installerActivity is not null;
+
+    /// <summary>
+    /// Whether this pass judges file times against <see cref="FileStampClock"/>, as the
+    /// scan does, for the test that holds the hosts' pass to it.
+    /// </summary>
+    internal bool JudgesOnTheFileStampClock => _clock is FileStampClock;
+
     public async Task<ReverifyResult> ReverifyAsync(
         IReadOnlyList<string> candidatePaths,
         CancellationToken cancellationToken = default,
@@ -102,8 +124,16 @@ public sealed class RemovableReverifier : IRemovableReverifier
 
         // The age check's clock, read once and before anything else is read, as the
         // scan reads its own: a file created or changed while this pass runs is later
-        // than it.
+        // than it. The in-progress signals follow it, for the reason the scan reads its
+        // own in that order (FileSystemScanService.ScanAsync), and off the calling thread
+        // as the scan reads them, the window awaiting this from its dispatcher. The
+        // wall-clock reading taken just before the clock is what the age check measures the
+        // wall clock's own advance from, and comes first, as the scan's does.
+        var wallAtStart = CachedFileAge.ReadWallClock(_clock);
         var clock = _clock.GetUtcNow();
+        var installerActivity = _installerActivity is null
+            ? null
+            : await Task.Run(_installerActivity.Check, cancellationToken).ConfigureAwait(false);
 
         // ConfigureAwait(false): Core has no thread affinity; the caller runs this
         // off the dispatcher (behind the operating overlay), exactly as the scan does.
@@ -174,7 +204,8 @@ public sealed class RemovableReverifier : IRemovableReverifier
         }
 
         var (sourceRootsGivenUp, sourceWaitCount) =
-            HoldWalkDerivedFilesTheScanWouldHold(walkDerived, query, clock, held, cancellationToken, progress);
+            HoldWalkDerivedFilesTheScanWouldHold(
+                walkDerived, query, clock, wallAtStart, installerActivity, held, cancellationToken, progress);
 
         // In the order the batch was handed over, so the two lists read as the batch
         // does.
@@ -271,6 +302,8 @@ public sealed class RemovableReverifier : IRemovableReverifier
         List<string> walkDerived,
         InstallerQueryResult query,
         DateTimeOffset clock,
+        WallClockReading wallAtStart,
+        PendingRebootResult? installerActivity,
         Dictionary<string, HeldBackReason> held,
         CancellationToken cancellationToken,
         IProgress<ScanProgressUpdate>? progress)
@@ -324,15 +357,25 @@ public sealed class RemovableReverifier : IRemovableReverifier
             standing = ScreenByWhatTheyDeclare(
                 standing, held, cacheRoot, query.Installations, cancellationToken, progress, out givenUp, out waitCount);
 
+        // The age check, as the scan runs it: every file held where an in-progress signal
+        // was set just after the clock, and otherwise every file whose times are not before
+        // the clock, and then every file left where the clock went back while the times were
+        // read (CachedFileAge.ClockWentBack).
         if (_fileTimes is not null && standing.Count > 0)
-            _ = Keep(standing, held, path =>
+        {
+            standing = Keep(standing, held, path =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (installerActivity?.IsBlocked == true) return HeldBackReason.FileNotConfirmed;
                 var outcome = _fileTimes.ReadOutcome(path, out var times);
-                return CachedFileAge.Judge(outcome, times, clock) == CachedFileAgeVerdict.ShownADayOld
+                return CachedFileAge.IsBeforeTheClock(outcome, times, clock)
                     ? null
                     : HeldBackReason.FileNotConfirmed;
             });
+
+            if (standing.Count > 0 && CachedFileAge.ClockWentBack(_clock, wallAtStart))
+                _ = Keep(standing, held, _ => HeldBackReason.FileNotConfirmed);
+        }
 
         return (givenUp, waitCount);
     }

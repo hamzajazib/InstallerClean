@@ -108,23 +108,29 @@ public partial class CompletionViewModel : ObservableObject
     [ObservableProperty] private string _skipped = string.Empty;
 
     /// <summary>
-    /// The line saying how many files the scan held back for being less than a day old,
-    /// and when a scan can probably offer them
-    /// (<see cref="UnderADayOldReport.Line(ScanResult, Func{TimeZoneInfo})"/>), shown under
-    /// <see cref="Skipped"/>. Empty on every card whose scan held no file back for that
-    /// reason, which collapses the bound TextBlock, on the all-clear, whose scan never does,
-    /// and on the nothing-offered card where the line is the body
-    /// (<see cref="ShowNothingOffered"/>). Each card that carries it works it out as it is
-    /// revealed (<see cref="UnderADayOldLine"/>), and every other card clears it, because the
-    /// view-model instance is reused across operations.
+    /// The lines saying why a scan held files back for something about the scan itself,
+    /// shown under <see cref="Skipped"/>: how many files changed after it began
+    /// (<see cref="RecentChangeReport.Line(ScanResult)"/>), and, after a Move or Delete, that
+    /// it held back every file from the folder because Windows Installer was busy as it
+    /// began or the clock went back while it ran (<see cref="ScanSignalReport.WindowLine(ScanResult)"/>).
+    /// Each reason that applies has its own line. A scan that held files for a signal read
+    /// no file's times, so the signal's line never meets the first; the clock's line can, and
+    /// then both are shown. Empty on every card whose scan held no file back for any of them,
+    /// which collapses the bound TextBlock, and on the all-clear, whose scan never does. Each
+    /// card that carries it works it out as it is revealed, and every other card clears it,
+    /// because the view-model instance is reused across operations.
+    ///
+    /// ON THE NOTHING-OFFERED CARD IT IS ONLY EVER THE FIRST, and empty where that line is
+    /// the body (<see cref="ShowNothingOffered"/>), whose body carries the signal's or the
+    /// clock's line itself.
     ///
     /// AFTER A MOVE OR DELETE IT SPEAKS FOR THE SCAN THAT RAN WHEN THE OPERATION FINISHED,
-    /// not the one the operation started from. That scan is the one on the window behind
-    /// the card (<see cref="ScanViewModel.LastScanResult"/>, read through the constructor's
-    /// <c>lastScan</c>), and a file that turned a day old while the operation ran is on offer
-    /// there rather than counted here.
+    /// not the one the operation started from (<see cref="AfterTheOperationLine"/>). That
+    /// scan is the one on the window behind the card
+    /// (<see cref="ScanViewModel.LastScanResult"/>, read through the constructor's
+    /// <c>lastScan</c>).
     /// </summary>
-    [ObservableProperty] private string _underADayOld = string.Empty;
+    [ObservableProperty] private string _scanStartLine = string.Empty;
 
     /// <summary>
     /// Puts the large Donate and Close without donating on the completion card in
@@ -196,7 +202,6 @@ public partial class CompletionViewModel : ObservableObject
     private readonly IWindowsRegion _windowsRegion;
     private readonly IWindowService _windowService;
     private readonly Func<ScanResult?> _lastScan;
-    private readonly Func<TimeZoneInfo> _zone;
 
     /// <summary>
     /// True once this sitting has had the PC's first run: a card took the report,
@@ -243,9 +248,6 @@ public partial class CompletionViewModel : ObservableObject
     /// way its box starts. <paramref name="windowService"/> opens the donate page and
     /// the report window. <paramref name="lastScan"/> answers with the scan the window
     /// shows at the moment it is asked, which the card after a Move or Delete speaks for.
-    /// <paramref name="zone"/> answers with the time zone the line about files under a day
-    /// old gives its time in, and is the PC's own as it is at that moment where it is not
-    /// given (<see cref="CurrentZone"/>).
     /// </summary>
     public CompletionViewModel(
         IResultLogService resultLogService,
@@ -254,8 +256,7 @@ public partial class CompletionViewModel : ObservableObject
         IFirstRunMark firstRunMark,
         IWindowsRegion windowsRegion,
         IWindowService windowService,
-        Func<ScanResult?> lastScan,
-        Func<TimeZoneInfo>? zone = null)
+        Func<ScanResult?> lastScan)
     {
         _resultLogService = resultLogService;
         _settingsService = settingsService;
@@ -264,7 +265,6 @@ public partial class CompletionViewModel : ObservableObject
         _windowsRegion = windowsRegion;
         _windowService = windowService;
         _lastScan = lastScan;
-        _zone = zone ?? CurrentZone;
     }
 
     /// <summary>Shows the "All clean" state after a scan finds no orphans.
@@ -294,7 +294,7 @@ public partial class CompletionViewModel : ObservableObject
             DisplayHelpers.FormatElapsedLong(TimeSpan.FromMilliseconds(scanDurationMs)));
         Errors = string.Empty;
         Skipped = string.Empty;
-        UnderADayOld = string.Empty;
+        ScanStartLine = string.Empty;
         AsksForDonation = false;
         IsComplete = true;
     }
@@ -313,8 +313,9 @@ public partial class CompletionViewModel : ObservableObject
     /// chooses between them through <see cref="ScanResult.IsAllClear"/>. A file kept
     /// because Windows holds a record of the program or patch it declares does not
     /// choose this screen, except where its check stopped at a drive or share the scan
-    /// gave up. Every other file held back chooses it, a file under a day old, a file the
-    /// containment check refused or could not answer for and a superseded patch
+    /// gave up. Every other file held back chooses it, a file whose times are not before
+    /// the scan's clock, a file the scan held because an in-progress signal was set, a file
+    /// the containment check refused or could not answer for and a superseded patch
     /// included.
     ///
     /// ONE SCREEN WITH TWO BODIES, CHOSEN ON THE SCAN RESULT AND NOT HERE.
@@ -328,10 +329,10 @@ public partial class CompletionViewModel : ObservableObject
     /// Several conditions reach each of them, they are different facts about a machine,
     /// and a sentence naming one of them is false of the files the others contribute.
     ///
-    /// THE LINE ABOUT FILES UNDER A DAY OLD NAMES ITS CAUSE, AND IT IS TRUE OF EVERY FILE IT
-    /// COUNTS, which are the files one decision kept for one reason. Where the scan says
-    /// they are every file the body would count
-    /// (<see cref="ScanResult.UnderADayOldLineCoversUnsettledHeldBack"/>), the line stands
+    /// THE LINE ABOUT RECENTLY CHANGED FILES SAYS WHAT THEIR TIMES SHOW, AND IT IS TRUE OF
+    /// EVERY FILE IT COUNTS, which are the files one decision kept for one reason. Where the
+    /// scan says they are every file the body would count
+    /// (<see cref="ScanResult.RecentChangeLineCoversUnsettledHeldBack"/>), the line stands
     /// in the body's place. Anywhere else the body counts every file and the line is shown
     /// under the card's other lines.
     ///
@@ -341,7 +342,7 @@ public partial class CompletionViewModel : ObservableObject
     /// </summary>
     /// <param name="result">
     /// The scan the screen is for. Everything the body says is read off it here, so the
-    /// count, the size and the line about files under a day old come from one scan.
+    /// count, the size and the line about recently changed files come from one scan.
     ///
     /// <see cref="ScanResult.UnsettledHeldBackIsWholesale"/> says whether the wholesale
     /// body is true of every file this screen counts. The wholesale sentence names a cause,
@@ -353,17 +354,23 @@ public partial class CompletionViewModel : ObservableObject
     /// <see cref="ScanResult.UnsettledHeldBackCount"/> and
     /// <see cref="ScanResult.UnsettledHeldBackBytes"/> are how many files the body speaks
     /// of and their size. A FILE THE DECLARED-PRODUCT-INSTALLED OR
-    /// DECLARED-PATCH-REGISTERED ARM KEPT IS NOT AMONG THEM. A file under a day old, a file
-    /// whose age was not established, a file the containment check refused or could not
+    /// DECLARED-PATCH-REGISTERED ARM KEPT IS NOT AMONG THEM. A file whose times are not
+    /// before the scan's clock, a file held because an in-progress signal was set, a file
+    /// whose times were not established, a file the containment check refused or could not
     /// answer for and a superseded patch the scan held back are.
     ///
-    /// THE COMMAND LINE COUNTS THESE FILES IN TWO SENTENCES RATHER THAN ONE, and leaves a
-    /// file under a day old out of both, so its figures for one machine need not match
-    /// this screen's.
+    /// THE COMMAND LINE COUNTS THESE FILES IN TWO SENTENCES RATHER THAN ONE, and leaves the
+    /// files the line about recently changed files counts out of both, so its figures for
+    /// one machine need not match this screen's.
     ///
-    /// The line about files under a day old (<see cref="UnderADayOldLine"/>) is the body
-    /// where <see cref="ScanResult.UnderADayOldLineCoversUnsettledHeldBack"/> is true, and
-    /// <see cref="UnderADayOld"/> otherwise.
+    /// A FILE HELD BECAUSE A SIGNAL WAS SET, OR BECAUSE THE CLOCK WENT BACK, IS COUNTED IN
+    /// THE BODY, and the line saying which follows the body (<see cref="ScanSignalReport.WindowLine(ScanResult)"/>),
+    /// read off <paramref name="result"/> as the window behind the card reads it
+    /// (<see cref="ScanViewModel.ScanSignalText"/>).
+    ///
+    /// The line about recently changed files (<see cref="RecentChangeLine"/>) is the body
+    /// where <see cref="ScanResult.RecentChangeLineCoversUnsettledHeldBack"/> is true, and
+    /// <see cref="ScanStartLine"/> otherwise.
     /// </param>
     /// <param name="scannedFileCount">
     /// The receipt's own count, on the terms <see cref="ShowAllClear"/> sets out: how
@@ -390,22 +397,23 @@ public partial class CompletionViewModel : ObservableObject
         ScanResult result, int scannedFileCount, long scanDurationMs, string sourcesGivenUp)
     {
         var heldBackCount = result.UnsettledHeldBackCount;
-        var underADayOld = UnderADayOldLine(result);
+        var recentChange = RecentChangeLine(result);
+        var scanSignal = ScanSignalReport.WindowLine(result);
         HeadingIsWarning = false;
         Heading = Strings.Completion_NothingOffered;
         FailedCount = string.Empty;
         SummaryDestination = string.Empty;
-        // WHERE THE DAY-OLD LINE COUNTS EVERY FILE THE BODY WOULD, IT IS THE BODY. It says
-        // why each was held and when a scan can probably offer it, so the body's sentence
-        // would only repeat the count. Anywhere else the body counts files the line does
-        // not, so both are shown.
-        var dayOldIsTheBody = result.UnderADayOldLineCoversUnsettledHeldBack;
+        // WHERE THE LINE ABOUT RECENTLY CHANGED FILES COUNTS EVERY FILE THE BODY WOULD, IT
+        // IS THE BODY. It says why each was held and when to scan again, so the body's
+        // sentence would only repeat the count. Anywhere else the body counts files the line
+        // does not, so both are shown.
+        var recentChangeIsTheBody = result.RecentChangeLineCoversUnsettledHeldBack;
         Summary = JoinLines(
-            dayOldIsTheBody ? underADayOld
+            recentChangeIsTheBody ? recentChange
                 : heldBackCount == 0 ? string.Empty
                 : NothingOfferedBody(result.UnsettledHeldBackIsWholesale, heldBackCount,
                     result.UnsettledHeldBackBytes),
-            sourcesGivenUp);
+            JoinLines(scanSignal, sourcesGivenUp));
         Restore = string.Format(
             Strings.Completion_NothingToCleanUpReceipt,
             DisplayHelpers.FormatCount(scannedFileCount),
@@ -413,7 +421,7 @@ public partial class CompletionViewModel : ObservableObject
             DisplayHelpers.FormatElapsedLong(TimeSpan.FromMilliseconds(scanDurationMs)));
         Errors = string.Empty;
         Skipped = string.Empty;
-        UnderADayOld = dayOldIsTheBody ? string.Empty : underADayOld;
+        ScanStartLine = recentChangeIsTheBody ? string.Empty : recentChange;
         AsksForDonation = false;
         IsComplete = true;
     }
@@ -620,7 +628,7 @@ public partial class CompletionViewModel : ObservableObject
             : HeadingIsWarning ? string.Empty : MoveRestoreText(space);
         Errors = errors.Count > 0 ? FormatErrorBreakdown(errors) : string.Empty;
         Skipped = SkippedText(reverify);
-        UnderADayOld = UnderADayOldLine(_lastScan());
+        ScanStartLine = AfterTheOperationLine(_lastScan());
         // The card after a Move the app stopped keeps Done.
         AsksForDonation = movedBytes > 0 && !stopped;
         IsComplete = true;
@@ -661,7 +669,7 @@ public partial class CompletionViewModel : ObservableObject
         Restore = string.Empty;
         Errors = errors.Count > 0 ? FormatErrorBreakdown(errors) : string.Empty;
         Skipped = SkippedText(reverify);
-        UnderADayOld = UnderADayOldLine(_lastScan());
+        ScanStartLine = AfterTheOperationLine(_lastScan());
         AsksForDonation = deletedBytes > 0;
         IsComplete = true;
     }
@@ -735,7 +743,7 @@ public partial class CompletionViewModel : ObservableObject
         Restore = movedCount == 0 ? string.Empty : Strings.Completion_MoveCancelledRestoreHint;
         Errors = errors.Count > 0 ? FormatErrorBreakdown(errors) : string.Empty;
         Skipped = SkippedText(reverify);
-        UnderADayOld = UnderADayOldLine(_lastScan());
+        ScanStartLine = AfterTheOperationLine(_lastScan());
         AsksForDonation = movedBytes > 0;
         IsComplete = true;
     }
@@ -773,7 +781,7 @@ public partial class CompletionViewModel : ObservableObject
         Restore = string.Empty;
         Errors = errors.Count > 0 ? FormatErrorBreakdown(errors) : string.Empty;
         Skipped = SkippedText(reverify);
-        UnderADayOld = UnderADayOldLine(_lastScan());
+        ScanStartLine = AfterTheOperationLine(_lastScan());
         AsksForDonation = deletedBytes > 0;
         IsComplete = true;
     }
@@ -820,41 +828,32 @@ public partial class CompletionViewModel : ObservableObject
         Restore = string.Empty;
         Errors = string.Empty;
         Skipped = string.Empty;
-        UnderADayOld = UnderADayOldLine(_lastScan());
+        ScanStartLine = AfterTheOperationLine(_lastScan());
         AsksForDonation = false;
         IsComplete = true;
     }
 
     /// <summary>
-    /// The line about files <paramref name="scan"/> held back for being under a day old
-    /// (<see cref="UnderADayOldReport.Line(ScanResult, Func{TimeZoneInfo})"/>), or empty.
-    /// Every card that carries it gets it here, as the card is revealed: "Nothing offered on
-    /// this PC" for its own scan, and the card after a Move or Delete for the scan the window
-    /// shows then, which is empty where there is none, as on a window that is closing.
+    /// The line about files <paramref name="scan"/> held back because their times are not
+    /// before the moment it began (<see cref="RecentChangeReport.Line(ScanResult)"/>), or
+    /// empty. "Nothing offered on this PC" gets it here for its own scan.
+    /// </summary>
+    private static string RecentChangeLine(ScanResult? scan) => RecentChangeReport.Line(scan);
+
+    /// <summary>
+    /// <see cref="ScanStartLine"/> for a card after a Move or Delete: the line saying
+    /// Windows Installer was busy as <paramref name="scan"/> began, or that the clock went
+    /// back while it ran, where it held files back for that, then the line about files
+    /// changed after it began, each where it applies, or empty. The scan is the one the
+    /// window shows as the card is revealed, which is empty where there is none, as on a
+    /// window that is closing.
     ///
     /// A CARD AFTER A MOVE OR DELETE IS SHOWN AFTER THE REFRESH THAT ENDS THE BATCH
     /// (<see cref="CleanupViewModel"/>'s <c>RefreshAfterBatchAsync</c>). Shown before it, the
     /// card would speak for the scan the operation started from.
-    ///
-    /// The time is in the zone the constructor's <c>zone</c> answers with as the card is
-    /// revealed. The line is handed that function uncalled and calls it only where the card
-    /// carries the line, because asking for the PC's own zone empties the cache
-    /// <see cref="CurrentZone"/> sets out.
     /// </summary>
-    private string UnderADayOldLine(ScanResult? scan) => UnderADayOldReport.Line(scan, _zone);
-
-    /// <summary>
-    /// The PC's time zone as Windows has it now. .NET answers
-    /// <see cref="TimeZoneInfo.Local"/> from a cache it fills once and keeps until
-    /// <see cref="TimeZoneInfo.ClearCachedData"/> empties it, so the cache is emptied first
-    /// and a zone changed while the window is open is the one the next card gives its time
-    /// in.
-    /// </summary>
-    private static TimeZoneInfo CurrentZone()
-    {
-        TimeZoneInfo.ClearCachedData();
-        return TimeZoneInfo.Local;
-    }
+    private static string AfterTheOperationLine(ScanResult? scan) =>
+        JoinLines(ScanSignalReport.WindowLine(scan), RecentChangeLine(scan));
 
     /// <summary>
     /// Whether the card about to be revealed can carry the report: false at once where

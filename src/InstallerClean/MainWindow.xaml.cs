@@ -318,6 +318,8 @@ public partial class MainWindow : Window
         {
             Announce(string.Format(Strings.Automation_ScanResultAnnouncement,
                 _vm.Scan.OrphanedSummaryText, _vm.Scan.OrphanedSizeDisplay));
+            if (_vm.Scan.HasScanSignal)
+                AnnounceLiveRegions(ScanSignalText);
             if (_vm.Scan.HasSourcesGivenUp)
                 AnnounceLiveRegions(SourcesGivenUpText);
         }
@@ -805,7 +807,7 @@ public partial class MainWindow : Window
     // is up, so this one raise is the only time it is read. The failure count and
     // the kept-back count are empty on a clean run, which collapses the element,
     // and so are the summary, the restore line, the skipped line and the line about
-    // files under a day old on the cards that carry none.
+    // the moment the scan began on the cards that carry none.
     //
     // The per-file error list stays unraised, and that is a separate decision:
     // it is a list to read at leisure rather than an outcome, and it is reached
@@ -819,7 +821,7 @@ public partial class MainWindow : Window
     {
         AnnounceLiveRegions(CompletionHeadingText, CompletionFailedCountText,
             CompletionSummaryText, CompletionRestoreText, CompletionSkippedText,
-            CompletionUnderADayOldText);
+            CompletionScanStartText);
         if (_vm.Completion.OffersReport)
             AnnounceLiveRegion(CompletionReportBox, () => _vm.Completion.OffersReport);
     }

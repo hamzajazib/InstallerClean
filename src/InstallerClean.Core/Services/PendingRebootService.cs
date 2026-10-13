@@ -1,9 +1,11 @@
+using InstallerClean.Helpers;
+
 namespace InstallerClean.Services;
 
 /// <summary>
 /// Returns Block when any of four signals says the MSI cache is at risk or cannot be
-/// shown not to be: the _MSIExecute mutex, held or refusing this process the rights to
-/// open it; the Installer\InProgress key; Windows Installer's in-progress file in the
+/// shown not to be: the _MSIExecute mutex, held, refusing this process the rights to
+/// open it, or not sampled; the Installer\InProgress key; Windows Installer's in-progress file in the
 /// cache folder, there or refusing the read; or any PendingFileRenameOperations entry,
 /// source or destination, that names a path under %SystemRoot%\Installer or that the
 /// app cannot place at all.
@@ -64,22 +66,29 @@ public sealed class PendingRebootService : IPendingRebootService
         // A refused open is read here too and stops the run just as early: the
         // action services' acquire asks for the same rights, so a refusal standing
         // now refuses the batch later whatever the other two signals say.
-        MutexSample mutex;
+        MutexSampling mutex;
         try
         {
             mutex = _mutex.Sample(MsiExecuteMutexName);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
         {
-            // OOM and StackOverflow propagate, matching RegistryReader / MutexProbe:
-            // swallowing them here would downgrade a real memory-pressure failure to
-            // "no signal" and let the gate report Clean while an install is in flight.
-            mutex = MutexSample.NotHeld;
+            // A throw is a sample that did not happen, so it answers what the probe's
+            // own failure return does. OOM and StackOverflow propagate, matching
+            // RegistryReader and MutexProbe.
+            mutex = new MutexSampling(MutexSample.Unestablished, WindowsErrors.Of(ex));
         }
-        if (mutex is MutexSample.Held)
+        if (mutex.State is MutexSample.Held)
             return PendingRebootResult.Block(PendingRebootReason.MsiExecuteMutexHeld);
-        if (mutex is MutexSample.AccessRefused)
+        if (mutex.State is MutexSample.AccessRefused)
             return PendingRebootResult.Block(PendingRebootReason.MsiExecuteMutexAccessRefused);
+
+        // NOT HELD IS THE ONLY SAMPLE THAT LETS THE CHECK FINISH CLEAN, on the rule the
+        // reads below follow, so a sample that did not establish the mutex's state, or a
+        // member added to the enum later, blocks. The other three signals are still read
+        // first: one of them that blocks names what is happening, where this can say only
+        // that the mutex was not sampled.
+        var mutexUnestablished = mutex.State is not MutexSample.NotHeld;
 
         // IRegistryReader documents "never throws", but the unit tests deliberately
         // substitute throwing fakes to exercise what a non-conforming implementation
@@ -142,7 +151,7 @@ public sealed class PendingRebootService : IPendingRebootService
         // A value that is not there is a machine with nothing queued, and that is the
         // ordinary reading on a machine at rest.
         if (renames.State is RegistryMultiStringState.Absent)
-            return PendingRebootResult.Clean;
+            return CleanUnlessTheMutexWasUnestablished(mutexUnestablished, mutex.WindowsError);
 
         // Everything that is not a read array is a value whose contents this does not
         // have: refused, faulted, or written in a form it does not read. A value
@@ -182,8 +191,20 @@ public sealed class PendingRebootService : IPendingRebootService
 
         return anyUnplaceable
             ? PendingRebootResult.Block(PendingRebootReason.PendingRenameUnresolved)
-            : PendingRebootResult.Clean;
+            : CleanUnlessTheMutexWasUnestablished(mutexUnestablished, mutex.WindowsError);
     }
+
+    /// <summary>
+    /// The answer once every other signal has read clear: Clean where the mutex was
+    /// sampled and found not held, and a block naming the mutex where it was not
+    /// sampled, carrying the Windows error the sample failed on where there was one.
+    /// </summary>
+    private static PendingRebootResult CleanUnlessTheMutexWasUnestablished(
+        bool mutexUnestablished, int? windowsError) =>
+        mutexUnestablished
+            ? PendingRebootResult.Block(
+                PendingRebootReason.MsiExecuteMutexUnreadable, windowsError: windowsError)
+            : PendingRebootResult.Clean;
 
     /// <summary>Where one queued entry points, as far as this can establish it.</summary>
     private enum EntryLocation

@@ -102,7 +102,7 @@ public sealed record ResultLogEntry(
     /// screen found with no package for Windows Installer to open
     /// (<see cref="ScanInfo.SecondCopyReleasedOpensNoPackageCount"/>).
     ///
-    /// SCHEMA 8 ADDS KEYS UNDER <c>scan</c> AND TAKES NONE AWAY. First, what the declared-product
+    /// SCHEMA 8 ADDS KEYS UNDER <c>scan</c> AND RENAMES ONE. First, what the declared-product
     /// screen found of the installations recording no cached package that set the hold or would
     /// have (<see cref="ScanInfo.SecondCopyReleasedBySourcesCount"/> to
     /// <see cref="ScanInfo.SecondCopyKeepNoneRecordedSourcesNotRuledOutCount"/>): those it released
@@ -119,7 +119,13 @@ public sealed record ResultLogEntry(
     /// step that stopped the read. After those come the keys saying why the screen kept each file
     /// counted in <c>scan.withheldDeclaredProductInstalledCount</c>, one key to a file
     /// (<see cref="ScanInfo.DeclaredInstalledIsItsCachedPackageCount"/> to
-    /// <see cref="ScanInfo.DeclaredInstalledByNameCount"/>).
+    /// <see cref="ScanInfo.DeclaredInstalledByNameCount"/>). Last come the counts of the files
+    /// held because one of Windows Installer's in-progress signals was set as the scan began, and
+    /// because the system clock went back while the scan read the files' times
+    /// (<see cref="ScanInfo.WithheldScanSignalCount"/>, <see cref="ScanInfo.WithheldClockSetBackCount"/>).
+    /// <c>scan.withheldUnderADayOldCount</c> IS <c>scan.withheldChangedSinceScanStartCount</c> FROM
+    /// 8, in the same place, counting the files whose latest time is not before the scan's clock
+    /// (<see cref="ScanInfo.WithheldNotBeforeTheClockCount"/>).
     ///
     /// A receiver that does not recognise a version stores the report under a
     /// lenient v&lt;n&gt;-unknown/ prefix rather than rejecting it, so a bump
@@ -969,20 +975,26 @@ public sealed record MachineInfo(
 /// the screen reached about a file; this is the screen having reached none, and filing
 /// it under either would state a cause that was never established.
 /// </param>
-/// <param name="WithheldUnderADayOldCount">
-/// Candidates the age check kept back because their times show them to be under a day
-/// old: <c>ScanResult.WithheldBy.UnderADayOldCount</c>. The command line's held-back
-/// sentence does not count them and the window's finished screen does; either way they
-/// are among the files left alone.
+/// <param name="WithheldNotBeforeTheClockCount">
+/// Candidates the age check kept back because the latest of their times is not before
+/// the scan's clock, Windows Installer's in-progress signals having read clear just after
+/// it: <c>ScanResult.WithheldBy.NotBeforeTheClockCount</c>. A time equal to the clock is
+/// among them. The window's finished screen counts them, and both hosts give them a line
+/// of their own. They are among the files left alone.
+///
+/// SERIALISED AS <c>withheldChangedSinceScanStartCount</c>. The member keeps the name of
+/// the arm it carries, as every arm's member here does: the test that walks the split's
+/// arms into this record finds each member by that name.
 /// </param>
 /// <param name="WithheldAgeUnestablishedCount">
-/// Candidates the age check kept back because their age was not established:
+/// Candidates the age check kept back because their times were not established:
 /// <c>ScanResult.WithheldBy.AgeUnestablishedCount</c>. Both hosts' held-back sentences
 /// count them, and no reason line names them.
 ///
-/// A DIFFERENT FINDING FROM THE ONE ABOVE AND THE TWO MUST NOT BE ADDED. That one is an
-/// age the scan established; this is an age it did not, and a total over the pair would
-/// say the files were new when some of them were never shown to be.
+/// A DIFFERENT FINDING FROM THE ONE ABOVE AND THE TWO MUST NOT BE ADDED. Where that one
+/// counts files for their times, the scan read the times; this counts files whose times it
+/// could not read or place, and a total over the pair would say the files were changed
+/// around the scan when some of them were never shown to be.
 /// </param>
 /// <param name="WithheldDeclaredPatchRegisteredCount">
 /// Patch copies the declared-product screen kept back because Windows holds a
@@ -1423,6 +1435,28 @@ public sealed record MachineInfo(
 /// name, where that package could not be ruled out, one under a drive or share the screen gave up
 /// among them (<see cref="DeclaredProductInstalledCauses.ByName"/>).
 /// </param>
+/// <param name="WithheldScanSignalCount">
+/// Candidates the age check kept back because one of Windows Installer's in-progress signals
+/// was set when the scan read them just after its clock: <c>ScanResult.WithheldBy.ScanSignalCount</c>,
+/// an arm of the split of <see cref="WithheldCandidateCount"/>. Where a signal was set every
+/// candidate reaching the age check is counted here, so on one scan this and
+/// <see cref="WithheldNotBeforeTheClockCount"/> are never both above nought. Both hosts' held-back
+/// sentences count them, and both give the signal's reason in a line of its own.
+///
+/// NOT TO BE ADDED TO <see cref="WithheldNotBeforeTheClockCount"/>: that one is a finding about each
+/// file's times, and this one is a finding about the machine at one moment, made without reading any
+/// file. Appended last, as the split's arms added after the first eleven are.
+/// </param>
+/// <param name="WithheldClockSetBackCount">
+/// Candidates the age check kept back because the system clock went back while the scan
+/// read their times, their own times having passed: <c>ScanResult.WithheldBy.ClockSetBackCount</c>,
+/// an arm of the split of <see cref="WithheldCandidateCount"/>. Both hosts' held-back sentences
+/// count them, and both say in a line of its own that the clock went back.
+///
+/// NOT TO BE ADDED TO <see cref="WithheldScanSignalCount"/>: that one is a finding about Windows
+/// Installer, and this one is a finding about the system clock. Appended last, as the split's arms
+/// added after the first eleven are.
+/// </param>
 public sealed record ScanInfo(
     long DurationMs,
     int RegisteredCount,
@@ -1448,7 +1482,7 @@ public sealed record ScanInfo(
     int WithheldDeclaredProductInstalledCount,
     int WithheldDeclaredProductUnestablishedCount,
     int WithheldScreenUnansweredCount,
-    int WithheldUnderADayOldCount,
+    [property: JsonPropertyName("withheldChangedSinceScanStartCount")] int WithheldNotBeforeTheClockCount,
     int WithheldAgeUnestablishedCount,
     int WithheldDeclaredPatchRegisteredCount,
     int WithheldDeclaredPatchUnestablishedCount,
@@ -1516,7 +1550,9 @@ public sealed record ScanInfo(
     int DeclaredInstalledSourcePackageNotRuledOutCount,
     int DeclaredInstalledMissingSparePackageCodeUnreadCount,
     int DeclaredInstalledMissingSpareIsItCount,
-    int DeclaredInstalledByNameCount)
+    int DeclaredInstalledByNameCount,
+    int WithheldScanSignalCount,
+    int WithheldClockSetBackCount)
 {
     public static ScanInfo From(ScanResult scan, long durationMs)
     {
@@ -1578,7 +1614,7 @@ public sealed record ScanInfo(
             scan.WithheldBy.DeclaredProductInstalledCount,
             scan.WithheldBy.DeclaredProductUnestablishedCount,
             scan.WithheldBy.ScreenUnansweredCount,
-            scan.WithheldBy.UnderADayOldCount,
+            scan.WithheldBy.NotBeforeTheClockCount,
             scan.WithheldBy.AgeUnestablishedCount,
             scan.WithheldBy.DeclaredPatchRegisteredCount,
             scan.WithheldBy.DeclaredPatchUnestablishedCount,
@@ -1660,7 +1696,11 @@ public sealed record ScanInfo(
             installedBy.SourcePackageNotRuledOut,
             installedBy.MissingSparePackageCodeUnread,
             installedBy.MissingSpareIsIt,
-            installedBy.ByName);
+            installedBy.ByName,
+            // The thirteenth and fourteenth arms of the split of the withheld count,
+            // appended last for the reason the twelfth was.
+            scan.WithheldBy.ScanSignalCount,
+            scan.WithheldBy.ClockSetBackCount);
     }
 }
 

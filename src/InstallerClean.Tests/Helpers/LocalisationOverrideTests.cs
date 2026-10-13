@@ -88,67 +88,50 @@ public class LocalisationOverrideTests
 
     // ---- A language picked in the app ----
 
-    // 16:40 UTC, read in UTC, so every time below is 16:40 or 4:40 PM.
-    private static readonly DateTime SixteenForty = new(2030, 6, 16, 16, 40, 0, DateTimeKind.Utc);
-
     // 1,023.9 KB: a figure with both a group and a decimal separator in it.
     private const long JustUnderAMegabyte = 1_048_474;
 
     [Fact]
-    public void English_picked_on_a_US_regional_format_keeps_US_times_and_dates()
+    public void English_picked_on_a_US_regional_format_keeps_US_numbers()
     {
         using var thread = new CultureScope(UnitedStates);
         using var pick = new PickedLanguageScope(British);
 
-        var (time, date) = DisplayHelpers.FormatTimeAndDate(SixteenForty, TimeZoneInfo.Utc);
-
         Assert.Equal(British, Localisation.UiCulture);
         Assert.Same(UnitedStates, Localisation.FormatCulture);
-        Assert.Contains("4:40", time);
-        Assert.Contains("PM", time);
-        Assert.Equal("June 16", date);
         Assert.StartsWith("1,023.9", DisplayHelpers.FormatSize(JustUnderAMegabyte));
     }
 
     [Fact]
     public void A_pick_keeps_the_regional_format_as_the_user_has_customised_it()
     {
-        // A US format switched to a 24-hour clock in Windows: the culture the
+        // A US format with its decimal separator changed in Windows: the culture the
         // thread holds carries the change, and a culture looked up by name does not.
         var customised = (CultureInfo)UnitedStates.Clone();
-        customised.DateTimeFormat.ShortTimePattern = "HH:mm";
+        customised.NumberFormat.NumberDecimalSeparator = "_";
         using var thread = new CultureScope(customised);
         using var pick = new PickedLanguageScope(British);
 
-        var (time, date) = DisplayHelpers.FormatTimeAndDate(SixteenForty, TimeZoneInfo.Utc);
-
-        Assert.Equal("16:40", time);
-        Assert.Equal("June 16", date);
+        Assert.Same(customised, Localisation.FormatCulture);
+        Assert.StartsWith("1,023_9", DisplayHelpers.FormatSize(JustUnderAMegabyte));
     }
 
     [Fact]
-    public void German_picked_on_a_US_regional_format_writes_US_numbers_and_German_dates()
+    public void German_picked_on_a_US_regional_format_writes_US_numbers()
     {
         using var thread = new CultureScope(UnitedStates);
         using var pick = new PickedLanguageScope(German);
 
-        var (time, date) = DisplayHelpers.FormatTimeAndDate(SixteenForty, TimeZoneInfo.Utc);
-
-        Assert.Equal("16:40", time);
-        Assert.Equal("16. Juni", date);
+        Assert.Equal(German, Localisation.UiCulture);
         Assert.StartsWith("1,023.9", DisplayHelpers.FormatSize(JustUnderAMegabyte));
     }
 
     [Fact]
-    public void English_picked_on_a_German_regional_format_writes_German_numbers_and_English_dates()
+    public void English_picked_on_a_German_regional_format_writes_German_numbers()
     {
         using var thread = new CultureScope(Germany);
         using var pick = new PickedLanguageScope(British);
 
-        var (time, date) = DisplayHelpers.FormatTimeAndDate(SixteenForty, TimeZoneInfo.Utc);
-
-        Assert.Equal("16:40", time);
-        Assert.Equal("16 June", date);
         Assert.StartsWith("1.023,9", DisplayHelpers.FormatSize(JustUnderAMegabyte));
         Assert.StartsWith("1,5", DisplayHelpers.FormatElapsedLong(TimeSpan.FromSeconds(1.5)));
     }

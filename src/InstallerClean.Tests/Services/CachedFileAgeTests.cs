@@ -3,8 +3,9 @@ using InstallerClean.Services;
 namespace InstallerClean.Tests.Services;
 
 /// <summary>
-/// The rule that decides whether a cached file has been shown to be a day old, which
-/// a file the folder walk found must be before the scan offers it.
+/// The rule that decides whether a cached file was last created, written and changed
+/// before the scan's clock, which a file the folder walk found must have been before the
+/// scan offers it.
 ///
 /// EVERY FIXTURE STATES ITS TIMES AGAINST ONE CLOCK, so each test varies one time and
 /// the reader can see which one moved the answer.
@@ -21,72 +22,71 @@ public class CachedFileAgeTests
     // ---- What lets a file through ----
 
     [Fact]
-    public void A_file_whose_three_times_are_two_days_old_is_shown_a_day_old()
+    public void A_file_whose_three_times_are_two_days_before_the_clock_is_before_it()
     {
-        Assert.True(CachedFileAge.ShownADayOld(FileTimesRead.Read, AllAt(TwoDaysBefore), Clock));
+        Assert.True(CachedFileAge.IsBeforeTheClock(FileTimesRead.Read, AllAt(TwoDaysBefore), Clock));
     }
 
     [Fact]
-    public void A_file_whose_latest_time_is_exactly_a_day_old_is_shown_a_day_old()
+    public void A_file_whose_latest_time_is_a_tick_before_the_clock_is_before_it()
     {
-        // "Under a day" keeps the file, so exactly a day lets it through. The tick
-        // either side is the next test.
-        Assert.True(CachedFileAge.ShownADayOld(
-            FileTimesRead.Read, AllAt(Clock.UtcDateTime - CachedFileAge.MinimumAge), Clock));
+        // Nothing about the file's age is asked beyond that: a tick before the clock is
+        // as good as a year.
+        Assert.True(CachedFileAge.IsBeforeTheClock(
+            FileTimesRead.Read, AllAt(Clock.UtcDateTime - TimeSpan.FromTicks(1)), Clock));
+        Assert.True(CachedFileAge.IsBeforeTheClock(
+            FileTimesRead.Read, AllAt(Clock.UtcDateTime.AddMinutes(-1)), Clock));
     }
 
     // ---- What keeps a file back ----
 
     [Fact]
-    public void A_file_one_tick_short_of_a_day_old_is_not()
+    public void A_file_whose_latest_time_is_the_clock_is_not()
     {
-        Assert.False(CachedFileAge.ShownADayOld(
-            FileTimesRead.Read,
-            AllAt(Clock.UtcDateTime - CachedFileAge.MinimumAge + TimeSpan.FromTicks(1)),
-            Clock));
+        Assert.False(CachedFileAge.IsBeforeTheClock(FileTimesRead.Read, AllAt(Clock.UtcDateTime), Clock));
     }
 
     [Fact]
-    public void A_recent_change_time_keeps_a_file_whose_creation_and_last_write_are_old()
+    public void A_late_change_time_keeps_a_file_whose_creation_and_last_write_are_old()
     {
         // A copy given its source's creation and last-write times, whose change
         // time is its own.
         var times = new FileTimes(
             CreationUtc: TwoDaysBefore.AddYears(-5),
             LastWriteUtc: TwoDaysBefore.AddYears(-5),
-            ChangeUtc: Clock.UtcDateTime.AddMinutes(-5));
+            ChangeUtc: Clock.UtcDateTime.AddSeconds(5));
 
-        Assert.False(CachedFileAge.ShownADayOld(FileTimesRead.Read, times, Clock));
+        Assert.False(CachedFileAge.IsBeforeTheClock(FileTimesRead.Read, times, Clock));
     }
 
     [Fact]
-    public void A_recent_creation_time_keeps_a_file_whose_last_write_and_change_are_old()
+    public void A_late_creation_time_keeps_a_file_whose_last_write_and_change_are_old()
     {
         // A copy given its source's last-write and change times, whose creation time
         // is its own.
         var times = new FileTimes(
-            CreationUtc: Clock.UtcDateTime.AddMinutes(-5),
+            CreationUtc: Clock.UtcDateTime.AddSeconds(5),
             LastWriteUtc: TwoDaysBefore.AddYears(-5),
             ChangeUtc: TwoDaysBefore.AddYears(-5));
 
-        Assert.False(CachedFileAge.ShownADayOld(FileTimesRead.Read, times, Clock));
+        Assert.False(CachedFileAge.IsBeforeTheClock(FileTimesRead.Read, times, Clock));
     }
 
     [Fact]
-    public void A_recent_last_write_keeps_a_file_whose_creation_and_change_are_old()
+    public void A_late_last_write_keeps_a_file_whose_creation_and_change_are_old()
     {
         var times = new FileTimes(
             CreationUtc: TwoDaysBefore,
-            LastWriteUtc: Clock.UtcDateTime.AddMinutes(-5),
+            LastWriteUtc: Clock.UtcDateTime.AddSeconds(5),
             ChangeUtc: TwoDaysBefore);
 
-        Assert.False(CachedFileAge.ShownADayOld(FileTimesRead.Read, times, Clock));
+        Assert.False(CachedFileAge.IsBeforeTheClock(FileTimesRead.Read, times, Clock));
     }
 
     [Fact]
     public void A_time_later_than_the_scan_clock_keeps_the_file()
     {
-        Assert.False(CachedFileAge.ShownADayOld(
+        Assert.False(CachedFileAge.IsBeforeTheClock(
             FileTimesRead.Read, AllAt(Clock.UtcDateTime.AddDays(3)), Clock));
     }
 
@@ -97,7 +97,7 @@ public class CachedFileAgeTests
         // be refusing on the outcome and not on the times. A member added later
         // keeps the file by default, and this is where that is held.
         var permitting = Enum.GetValues<FileTimesRead>()
-            .Where(o => CachedFileAge.ShownADayOld(o, AllAt(TwoDaysBefore), Clock))
+            .Where(o => CachedFileAge.IsBeforeTheClock(o, AllAt(TwoDaysBefore), Clock))
             .ToArray();
 
         Assert.Equal(new[] { FileTimesRead.Read }, permitting);
@@ -106,47 +106,49 @@ public class CachedFileAgeTests
     // ---- Which of the two keeping verdicts ----
 
     [Fact]
-    public void A_latest_time_a_day_after_the_clock_is_under_a_day_old()
+    public void A_latest_time_the_ahead_limit_after_the_clock_is_not_before_it()
     {
-        // A copy written just before the clock was set back reads as ahead of it, and
-        // is new. A day ahead is still that.
-        Assert.Equal(CachedFileAgeVerdict.UnderADayOld, CachedFileAge.Judge(
-            FileTimesRead.Read, AllAt(Clock.UtcDateTime + CachedFileAge.MinimumAge), Clock));
+        // A copy written just before the clock was set back reads as ahead of it. A day
+        // ahead is still a time the scan can place.
+        Assert.Equal(CachedFileAgeVerdict.NotBeforeTheClock, CachedFileAge.Judge(
+            FileTimesRead.Read, AllAt(Clock.UtcDateTime + CachedFileAge.AheadLimit), Clock));
     }
 
     [Fact]
-    public void A_latest_time_more_than_a_day_after_the_clock_is_not_an_age()
+    public void A_latest_time_more_than_the_ahead_limit_after_the_clock_is_not_established()
     {
         Assert.Equal(CachedFileAgeVerdict.Unestablished, CachedFileAge.Judge(
             FileTimesRead.Read,
-            AllAt(Clock.UtcDateTime + CachedFileAge.MinimumAge + TimeSpan.FromTicks(1)),
+            AllAt(Clock.UtcDateTime + CachedFileAge.AheadLimit + TimeSpan.FromTicks(1)),
             Clock));
     }
 
     [Fact]
-    public void A_file_read_as_under_a_day_before_the_clock_is_under_a_day_old()
+    public void A_latest_time_at_the_clock_is_not_before_it_and_a_tick_earlier_is()
     {
-        Assert.Equal(CachedFileAgeVerdict.UnderADayOld, CachedFileAge.Judge(
-            FileTimesRead.Read, AllAt(Clock.UtcDateTime.AddHours(-1)), Clock));
+        Assert.Equal(CachedFileAgeVerdict.NotBeforeTheClock, CachedFileAge.Judge(
+            FileTimesRead.Read, AllAt(Clock.UtcDateTime), Clock));
+        Assert.Equal(CachedFileAgeVerdict.BeforeTheClock, CachedFileAge.Judge(
+            FileTimesRead.Read, AllAt(Clock.UtcDateTime - TimeSpan.FromTicks(1)), Clock));
     }
 
     [Fact]
-    public void Every_answer_but_a_read_is_an_age_not_established()
+    public void Every_answer_but_a_read_is_times_not_established()
     {
-        // Times that would read as under a day old, so the verdict has to come from
+        // Times that would read as not before the clock, so the verdict has to come from
         // the outcome.
         var notEstablished = Enum.GetValues<FileTimesRead>()
-            .Where(o => CachedFileAge.Judge(o, AllAt(Clock.UtcDateTime.AddHours(-1)), Clock)
+            .Where(o => CachedFileAge.Judge(o, AllAt(Clock.UtcDateTime.AddSeconds(5)), Clock)
                 == CachedFileAgeVerdict.Unestablished)
             .ToArray();
 
         Assert.Equal(Enum.GetValues<FileTimesRead>().Where(o => o != FileTimesRead.Read), notEstablished);
     }
 
-    // ---- Which time the age is taken from ----
+    // ---- Which time is read ----
 
     [Fact]
-    public void The_latest_of_the_three_is_the_one_the_age_is_taken_from()
+    public void The_latest_of_the_three_is_the_one_read()
     {
         var early = TwoDaysBefore.AddDays(-10);
         var mid = TwoDaysBefore.AddDays(-5);
@@ -157,37 +159,173 @@ public class CachedFileAgeTests
         Assert.Equal(late, CachedFileAge.Latest(new FileTimes(mid, early, late)));
     }
 
-    // ---- The instant a file is a day old ----
+    [Fact]
+    public void The_ahead_limit_is_one_day()
+    {
+        Assert.Equal(TimeSpan.FromDays(1), CachedFileAge.AheadLimit);
+    }
+
+    // ---- Whether the wall clock went back while the times were read ----
 
     [Fact]
-    public void A_file_is_a_day_old_a_minimum_age_after_its_latest_time()
+    public void A_wall_clock_that_kept_pace_did_not_go_back()
     {
-        var late = Clock.UtcDateTime.AddHours(-3);
-        var times = new FileTimes(late.AddDays(-4), late, late.AddHours(-1));
+        var clock = new SteppingClock(Clock, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
 
-        Assert.Equal(late + CachedFileAge.MinimumAge, CachedFileAge.ADayOldAtUtc(times));
+        Assert.False(ClockWentBack(clock));
+    }
+
+    [Fact]
+    public void A_wall_clock_that_ran_ahead_did_not_go_back()
+    {
+        var clock = new SteppingClock(Clock, TimeSpan.FromHours(1), TimeSpan.FromSeconds(2));
+
+        Assert.False(ClockWentBack(clock));
+    }
+
+    [Fact]
+    public void A_wall_clock_set_back_before_any_time_passed_went_back()
+    {
+        var clock = new SteppingClock(Clock, TimeSpan.FromSeconds(-1), TimeSpan.Zero);
+
+        Assert.True(ClockWentBack(clock));
     }
 
     [Theory]
-    [InlineData(-3)]
-    [InlineData(5)]
-    public void The_judgement_turns_at_the_instant_the_file_is_a_day_old(int hoursFromClock)
+    // One second: a thousandth of it is one millisecond.
+    [InlineData(1, 10_000, false)]
+    [InlineData(1, 10_001, true)]
+    // Ten seconds: a thousandth of it is ten milliseconds.
+    [InlineData(10, 100_000, false)]
+    [InlineData(10, 100_001, true)]
+    // Five minutes, as a scan waiting on a slow share runs: three tenths of a second.
+    [InlineData(300, 3_000_000, false)]
+    [InlineData(300, 3_000_001, true)]
+    public void The_wall_clock_may_fall_behind_by_a_thousandth_of_the_time_that_passed(
+        int seconds, long behindTicks, bool wentBack)
     {
-        // A latest time before the scan's clock and one after it: in both, the verdict
-        // is under a day old a tick before the instant and shown a day old at it.
-        var times = AllAt(Clock.UtcDateTime.AddHours(hoursFromClock));
-        var at = new DateTimeOffset(CachedFileAge.ADayOldAtUtc(times), TimeSpan.Zero);
+        var elapsed = TimeSpan.FromSeconds(seconds);
+        var clock = new SteppingClock(Clock, elapsed - TimeSpan.FromTicks(behindTicks), elapsed);
 
-        Assert.Equal(CachedFileAgeVerdict.UnderADayOld, CachedFileAge.Judge(
-            FileTimesRead.Read, times, at - TimeSpan.FromTicks(1)));
-        Assert.Equal(CachedFileAgeVerdict.ShownADayOld, CachedFileAge.Judge(
-            FileTimesRead.Read, times, at));
+        Assert.Equal(wentBack, ClockWentBack(clock));
     }
 
     [Fact]
-    public void The_minimum_age_is_one_day()
+    public void The_allowance_is_a_thousandth_of_the_time_that_passed()
     {
-        Assert.Equal(TimeSpan.FromDays(1), CachedFileAge.MinimumAge);
+        Assert.Equal(0.001, CachedFileAge.SlowRateAllowance);
+    }
+
+    [Fact]
+    public void A_step_back_is_measured_against_the_most_time_the_two_readings_allow()
+    {
+        // The first reading took fifty milliseconds, so the wall clock was read somewhere in
+        // them. Ten milliseconds behind over the whole second is beyond a thousandth of it,
+        // though the wall clock is ahead of the least time that can have passed between the
+        // two, and of the time halfway through the first reading.
+        var clock = new SteppingClock(Clock, TimeSpan.Zero, TimeSpan.Zero);
+        var atStart = new WallClockReading(0, Clock, TimeSpan.FromMilliseconds(50).Ticks, 1);
+        var atEnd = new WallClockReading(
+            TimeSpan.FromSeconds(1).Ticks, Clock + TimeSpan.FromMilliseconds(990), TimeSpan.FromSeconds(1).Ticks, 1);
+
+        Assert.True(CachedFileAge.ClockWentBack(clock, atStart, atEnd));
+    }
+
+    // ---- Reading the wall clock ----
+
+    [Fact]
+    public void A_wall_clock_reading_takes_the_precise_time_between_two_timestamps()
+    {
+        var clock = new ScriptedTimestamps(Clock, Clock.AddSeconds(-30), 5, 6);
+
+        var reading = CachedFileAge.ReadWallClock(clock);
+
+        Assert.Equal(new WallClockReading(5, Clock.AddSeconds(-30), 6, 1), reading);
+    }
+
+    [Fact]
+    public void A_clock_with_no_precise_time_gives_its_own()
+    {
+        var clock = new FixedTimestampsOnly(Clock);
+
+        Assert.Equal(Clock, CachedFileAge.ReadWallClock(clock).Wall);
+    }
+
+    [Fact]
+    public void A_reading_that_took_too_long_is_taken_again()
+    {
+        // The first reading was interrupted for a millisecond; the second took none.
+        var wide = TimeSpan.FromMilliseconds(1).Ticks;
+        var clock = new ScriptedTimestamps(Clock, Clock, 0, wide, wide + 10, wide + 10);
+
+        var reading = CachedFileAge.ReadWallClock(clock);
+
+        Assert.Equal(2, reading.Tries);
+        Assert.Equal(wide + 10, reading.TimestampBefore);
+        Assert.Equal(TimeSpan.Zero, reading.Width(clock));
+    }
+
+    [Fact]
+    public void A_reading_no_try_could_make_narrow_keeps_the_narrowest_of_every_try()
+    {
+        // Every reading took at least a millisecond; the fifth took the least.
+        var timestamps = new List<long>();
+        long at = 0;
+        for (var i = 1; i <= CachedFileAge.WallClockTries; i++)
+        {
+            var width = TimeSpan.FromMilliseconds(i == 5 ? 1 : 2).Ticks;
+            timestamps.Add(at);
+            timestamps.Add(at + width);
+            at += width + 1;
+        }
+        var clock = new ScriptedTimestamps(Clock, Clock, timestamps.ToArray());
+
+        var reading = CachedFileAge.ReadWallClock(clock);
+
+        Assert.Equal(CachedFileAge.WallClockTries, reading.Tries);
+        Assert.Equal(TimeSpan.FromMilliseconds(1), reading.Width(clock));
+        Assert.Equal(timestamps[8], reading.TimestampBefore);
+    }
+
+    [Fact]
+    public void A_reading_is_kept_at_once_where_it_took_no_longer_than_twenty_microseconds()
+    {
+        Assert.Equal(TimeSpan.FromMicroseconds(20), CachedFileAge.NarrowReading);
+        Assert.Equal(16, CachedFileAge.WallClockTries);
+    }
+
+    /// <summary>
+    /// <see cref="CachedFileAge.ClockWentBack(TimeProvider, WallClockReading)"/> asked as the
+    /// scan asks it: the wall clock read first, then the question.
+    /// </summary>
+    private static bool ClockWentBack(TimeProvider clock) =>
+        CachedFileAge.ClockWentBack(clock, CachedFileAge.ReadWallClock(clock));
+
+    /// <summary>
+    /// A clock whose own time is <paramref name="own"/>, whose precise time is
+    /// <paramref name="precise"/>, and whose timestamps are <paramref name="timestamps"/> in
+    /// turn, in ticks, the last repeating.
+    /// </summary>
+    private sealed class ScriptedTimestamps(DateTimeOffset own, DateTimeOffset precise, params long[] timestamps)
+        : TimeProvider, IPreciseWallClock
+    {
+        private int _next;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override long GetTimestamp() => timestamps[Math.Min(_next++, timestamps.Length - 1)];
+
+        public override DateTimeOffset GetUtcNow() => own;
+
+        public DateTimeOffset GetPreciseUtcNow() => precise;
+    }
+
+    /// <summary>A clock with no precise time of its own and a timestamp that stands still.</summary>
+    private sealed class FixedTimestampsOnly(DateTimeOffset now) : TimeProvider
+    {
+        public override long GetTimestamp() => 0;
+
+        public override DateTimeOffset GetUtcNow() => now;
     }
 
     // ---- The volume root the reader builds on ----

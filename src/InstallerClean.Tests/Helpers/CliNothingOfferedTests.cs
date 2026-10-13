@@ -17,7 +17,7 @@ namespace InstallerClean.Tests.Helpers;
 /// emptied the walk-derived offer in one go; or the files were judged one at a time and
 /// none could be cleared.
 /// The clean line is printed for the first alone, and there only where neither a line
-/// about files under a day old nor a line naming a drive or share given up is printed.
+/// about recently changed files nor a line naming a drive or share given up is printed.
 /// The two withholding sentences each name something the other's machine did not meet.
 ///
 /// THE FIXTURES ARE WHAT THIS FILE IS. The branch below is taken only where the scan
@@ -276,19 +276,19 @@ public class CliNothingOfferedTests
     [Theory]
     [InlineData(2, 0)]
     [InlineData(1, 1)]
-    public async Task A_run_holding_files_for_their_age_says_when_to_scan_again_in_place_of_the_clean_line(
-        int underADayOld, int forAnInstalledProgram)
+    public async Task A_run_holding_files_for_their_times_says_when_to_scan_again_in_place_of_the_clean_line(
+        int forTheirTimes, int forAnInstalledProgram)
     {
-        // Kept for their age with their age read, alone or beside a file kept for a program
-        // Windows still has installed: no held-back sentence and no reasons, and the line
-        // saying when a scan can probably offer them where the clean line would be.
+        // Kept for their times with the signals clear, alone or beside a file kept for a
+        // program Windows still has installed: no held-back sentence and no reasons, and
+        // the line about recently changed files where the clean line would be.
         var result = Scan(
             withheld: 2,
             split: new WithholdingSplit(
-                UnderADayOldCount: underADayOld, DeclaredProductInstalledCount: forAnInstalledProgram),
+                NotBeforeTheClockCount: forTheirTimes, DeclaredProductInstalledCount: forAnInstalledProgram),
             positiveBytes: 1024 * forAnInstalledProgram,
-            underADayOldBytes: 1024 * underADayOld,
-            underADayOldAllADayOldAt: new DateTime(2030, 6, 16, 9, 40, 0, DateTimeKind.Utc));
+            notBeforeTheClockBytes: 1024 * forTheirTimes,
+            atScan: PendingRebootResult.Clean);
 
         var (exit, stdout) = await Run(result);
 
@@ -297,30 +297,61 @@ public class CliNothingOfferedTests
         Assert.DoesNotContain(Opening(Strings.Cli_NothingOfferedPerFile_Plural), stdout, StringComparison.Ordinal);
         Assert.DoesNotContain(Strings.Cli_WithheldReasons_Header, stdout, StringComparison.Ordinal);
 
-        var line = UnderADayOldReport.Line(result, TimeZoneInfo.Local);
+        var line = RecentChangeReport.Line(result);
         Assert.NotEqual(string.Empty, line);
         Assert.Equal(1, Occurrences(stdout, line));
     }
 
-    [Fact]
-    public async Task A_run_holding_files_for_their_age_with_no_time_to_give_gets_the_clean_line()
+    [Theory]
+    [InlineData(PendingRebootReason.MsiExecuteMutexHeld)]
+    [InlineData(PendingRebootReason.InstallerInProgress)]
+    [InlineData(PendingRebootReason.PendingRenameInCache)]
+    [InlineData(PendingRebootReason.RegistryCheckUnreadable)]
+    [InlineData(PendingRebootReason.MsiExecuteMutexUnreadable)]
+    public async Task A_run_whose_walked_files_were_held_for_a_signal_gets_the_per_file_line_and_the_signal_s_line(
+        PendingRebootReason reason)
     {
-        // The count with no instant gives no sentence about age, so the clean line is what
-        // follows the scanning line.
+        // Every walked file held because a signal was set just after the scan's clock: the
+        // per-file sentence counts them, the signal's own line says why, and neither the
+        // clean line nor the line about recently changed files is printed.
         var result = Scan(
             withheld: 2,
-            split: new WithholdingSplit(UnderADayOldCount: 2),
-            underADayOldBytes: 2048);
+            split: new WithholdingSplit(ScanSignalCount: 2),
+            atScan: PendingRebootResult.Block(reason));
 
         var (exit, stdout) = await Run(result);
 
         Assert.Equal(CliExitCode.Ok, exit);
-        Assert.Equal(string.Empty, UnderADayOldReport.Line(result, TimeZoneInfo.Local));
-        Assert.Contains(Strings.Cli_FoundNoOrphans, stdout, StringComparison.Ordinal);
+        Assert.Contains(Expected(Strings.Cli_NothingOfferedPerFile_Plural, 2), stdout, StringComparison.Ordinal);
+        Assert.Equal(1, Occurrences(stdout, ScanSignalReport.CommandLine(reason)));
+        Assert.DoesNotContain(Strings.Cli_FoundNoOrphans, stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain(Strings.Cli_WithheldReasons_Header, stdout, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, RecentChangeReport.Line(result));
     }
 
     [Fact]
-    public async Task A_run_holding_no_file_for_its_age_says_nothing_about_age()
+    public async Task A_run_whose_walked_files_were_held_for_the_clock_gets_the_per_file_line_and_the_clock_s_line()
+    {
+        // The system clock went back while the scan read the files' times, so every walked
+        // file its times passed was held for that. The per-file sentence counts them and the
+        // clock's own line says why, with no signal's line beside it.
+        var result = Scan(
+            withheld: 2,
+            split: new WithholdingSplit(ClockSetBackCount: 2),
+            atScan: PendingRebootResult.Clean);
+
+        var (exit, stdout) = await Run(result);
+
+        Assert.Equal(CliExitCode.Ok, exit);
+        Assert.Contains(Expected(Strings.Cli_NothingOfferedPerFile_Plural, 2), stdout, StringComparison.Ordinal);
+        Assert.Equal(1, Occurrences(stdout, Strings.Cli_ScanSignal_ClockSetBack));
+        Assert.Equal(Strings.Cli_ScanSignal_ClockSetBack, ScanSignalReport.CommandLine(result));
+        Assert.DoesNotContain(Strings.Cli_ScanSignal_Other, stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain(Strings.Cli_WithheldReasons_Header, stdout, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_run_holding_no_file_for_its_times_says_nothing_about_times()
     {
         // The same reader of the split, on a run whose held files were kept for another
         // reason, so the absence is of the line and not of a run.
@@ -329,9 +360,9 @@ public class CliNothingOfferedTests
             split: new WithholdingSplit(DeclaredProductUnestablishedCount: 2)));
 
         Assert.Contains(Opening(Strings.Cli_NothingOfferedPerFile_Plural), stdout, StringComparison.Ordinal);
-        // The words between the size and the time, which no count, size or time changes.
-        var dayOld = Strings.Completion_UnderADayOld_Plural;
-        var words = dayOld[(dayOld.IndexOf("({2})", StringComparison.Ordinal) + 5)..dayOld.IndexOf("{3}", StringComparison.Ordinal)];
+        // The words after the size, which no count or size changes.
+        var line = Strings.Completion_RecentChange_Plural;
+        var words = line[(line.IndexOf("({2})", StringComparison.Ordinal) + 5)..];
         Assert.NotEqual(string.Empty, words.Trim());
         Assert.DoesNotContain(words, stdout, StringComparison.Ordinal);
     }
@@ -466,15 +497,15 @@ public class CliNothingOfferedTests
     private static ScanResult Scan(
         int withheld, WithholdingSplit split,
         EnumerationCensus census = default, long positiveBytes = 0,
-        long underADayOldBytes = 0, long patchBytes = 0, DateTime? underADayOldAllADayOldAt = null) =>
+        long notBeforeTheClockBytes = 0, long patchBytes = 0, PendingRebootResult? atScan = null) =>
         new(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
             Census: census,
             WithheldFiles: Held(withheld),
             WithheldBy: split,
             WithheldDeclaredProductInstalledBytes: positiveBytes,
-            WithheldUnderADayOldBytes: underADayOldBytes,
+            WithheldNotBeforeTheClockBytes: notBeforeTheClockBytes,
             WithheldDeclaredPatchRegisteredBytes: patchBytes,
-            WithheldUnderADayOldAllADayOldAtUtc: underADayOldAllADayOldAt);
+            InstallerActivityAtScan: atScan);
 
     private static OrphanedFile[] Held(int n) =>
         n switch

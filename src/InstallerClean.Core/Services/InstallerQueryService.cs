@@ -3344,12 +3344,20 @@ public sealed class InstallerQueryService : IInstallerQueryService
     /// bitness.
     ///
     /// The per-SID and per-key try/catch is deliberate and must not be collapsed
-    /// back into one outer try: this fallback is the second of the app's two
-    /// independent "still needed" sources, and a single try spanning every SID
-    /// once let one corrupt subkey or unreadable DACL abandon the entire
-    /// remaining fallback, turning every registration only it would have
-    /// contributed into an orphan candidate. Scoping the catch to each key read
-    /// costs one entry per bad key, never the net.
+    /// into one outer try: this fallback is the second of the app's two independent
+    /// "still needed" sources, and a single try spanning every SID would let one
+    /// corrupt subkey or unreadable DACL abandon the entire remaining fallback,
+    /// turning every registration only it would have contributed into an orphan
+    /// candidate. Scoping the catch to each key read costs one entry per bad key,
+    /// never the net.
+    ///
+    /// EVERY PATH THE REGISTRY RECORDS IS CLAIMED, ON EVERY SCAN, WHATEVER THE API
+    /// ENUMERATION RETURNED. While a Windows Installer session is installing a product,
+    /// the product's LocalPackage value can be in UserData before the API lists the
+    /// product with it, so an enumeration that ran to a clean end can be short of a
+    /// cached copy the registry already names. The claim here is what keeps that copy off
+    /// the folder walk's candidates. Read only where the API reported itself short, this
+    /// fallback would leave such a copy unclaimed, and nothing after it would name it.
     /// </summary>
     private static FallbackRead ReadRegistryFallback(
         Dictionary<string, RegisteredPackage> claimed,
@@ -3642,8 +3650,9 @@ public sealed class InstallerQueryService : IInstallerQueryService
                                 var path = NormaliseLocalPackagePath(localPkg, pathCensus);
                                 packageRecords.Add(new RegistryPackageRecord(path, IsPatch: false, unpacked, sidName));
                                 // Short-circuited on purpose: the disk is asked about
-                                // only the paths the API left unclaimed, which on a
-                                // whole enumeration is none of them.
+                                // only the paths the API left unclaimed, which is none
+                                // of them where the API listed every product the
+                                // registry records.
                                 if (MergeClaim(claimed, new RegisteredPackage(path, "", ""),
                                         ClaimSource.RegistryFallback)
                                     && File.Exists(path))

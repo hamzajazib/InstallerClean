@@ -19,8 +19,11 @@ public interface IPendingRebootService
     /// The mutex answers on its own terms, stated on <see cref="IMutexProbe.Sample"/>:
     /// a held mutex blocks as <see cref="PendingRebootReason.MsiExecuteMutexHeld"/>, an
     /// existing mutex whose security refuses the probe blocks as
-    /// <see cref="PendingRebootReason.MsiExecuteMutexAccessRefused"/>, and a mutex that
-    /// is not there and a probe that fails for any other reason count as not held.
+    /// <see cref="PendingRebootReason.MsiExecuteMutexAccessRefused"/>, and a probe that
+    /// fails any other way blocks as
+    /// <see cref="PendingRebootReason.MsiExecuteMutexUnreadable"/> unless another signal
+    /// blocks with a reason of its own. Only a mutex that is not there, unowned or
+    /// abandoned counts as not held.
     /// </summary>
     PendingRebootResult Check();
 }

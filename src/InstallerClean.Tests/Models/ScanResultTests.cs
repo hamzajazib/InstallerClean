@@ -1,5 +1,6 @@
 using InstallerClean.Models;
 using InstallerClean.Resources;
+using InstallerClean.Services;
 using Xunit;
 
 namespace InstallerClean.Tests.Models;
@@ -214,14 +215,15 @@ public class ScanResultTests
     }
 
     [Fact]
-    public void Files_all_kept_for_their_age_have_nothing_to_report()
+    public void Files_all_kept_for_their_times_have_nothing_to_report()
     {
-        // Files read as under a day old take the same reading as those kept for an
-        // installed program, and leave the held-back sentences nothing to count.
+        // Files whose times are not before the scan's clock take the same reading as those
+        // kept for an installed program, and leave the held-back sentences nothing to
+        // count: the line about recently changed files speaks for them.
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msp", 2048)],
-            WithheldBy: new WithholdingSplit(UnderADayOldCount: 2),
-            WithheldUnderADayOldBytes: 3072);
+            WithheldBy: new WithholdingSplit(NotBeforeTheClockCount: 2),
+            WithheldNotBeforeTheClockBytes: 3072);
 
         Assert.Equal(WithholdingAccount.KeptWithoutNotice, result.Withholding);
         Assert.False(result.HasWithholdingToReport);
@@ -236,9 +238,9 @@ public class ScanResultTests
         // Two of the silent arms between them account for the list.
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1, UnderADayOldCount: 1),
+            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1, NotBeforeTheClockCount: 1),
             WithheldDeclaredProductInstalledBytes: 1024,
-            WithheldUnderADayOldBytes: 2048);
+            WithheldNotBeforeTheClockBytes: 2048);
 
         Assert.Equal(WithholdingAccount.KeptWithoutNotice, result.Withholding);
         Assert.False(result.HasWithholdingToReport);
@@ -270,9 +272,9 @@ public class ScanResultTests
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048), File("c.msp", 4096)],
             WithheldBy: new WithholdingSplit(
-                DeclaredProductInstalledCount: 1, UnderADayOldCount: 1, DeclaredPatchRegisteredCount: 1),
+                DeclaredProductInstalledCount: 1, NotBeforeTheClockCount: 1, DeclaredPatchRegisteredCount: 1),
             WithheldDeclaredProductInstalledBytes: 1024,
-            WithheldUnderADayOldBytes: 2048,
+            WithheldNotBeforeTheClockBytes: 2048,
             WithheldDeclaredPatchRegisteredBytes: 4096);
 
         Assert.Equal(WithholdingAccount.KeptWithoutNotice, result.Withholding);
@@ -396,8 +398,8 @@ public class ScanResultTests
         // count and size leave the other out.
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-            WithheldBy: new WithholdingSplit(UnderADayOldCount: 1, DeclaredProductUnestablishedCount: 1),
-            WithheldUnderADayOldBytes: 1024);
+            WithheldBy: new WithholdingSplit(NotBeforeTheClockCount: 1, DeclaredProductUnestablishedCount: 1),
+            WithheldNotBeforeTheClockBytes: 1024);
 
         Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
         Assert.True(result.HasWithholdingToReport);
@@ -414,8 +416,8 @@ public class ScanResultTests
         // and a file none of them counted keeps the run per-file.
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-            WithheldBy: new WithholdingSplit(UnderADayOldCount: 1),
-            WithheldUnderADayOldBytes: 1024);
+            WithheldBy: new WithholdingSplit(NotBeforeTheClockCount: 1),
+            WithheldNotBeforeTheClockBytes: 1024);
 
         Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
         Assert.Equal(1, result.UnestablishedWithheldCount);
@@ -452,8 +454,8 @@ public class ScanResultTests
         // One of each. The sentence counts and sizes the second alone.
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-            WithheldBy: new WithholdingSplit(UnderADayOldCount: 1, AgeUnestablishedCount: 1),
-            WithheldUnderADayOldBytes: 1024);
+            WithheldBy: new WithholdingSplit(NotBeforeTheClockCount: 1, AgeUnestablishedCount: 1),
+            WithheldNotBeforeTheClockBytes: 1024);
 
         Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
         Assert.Equal(1, result.UnestablishedWithheldCount);
@@ -464,12 +466,12 @@ public class ScanResultTests
     [Fact]
     public void The_named_conditions_cover_a_run_whose_every_counted_file_has_a_line()
     {
-        // The screen's unsettled file has a line; the file under a day old is not in
+        // The screen's unsettled file has a line; the file kept for its times is not in
         // the count at all. So the reasons account for everything the sentence counts.
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-            WithheldBy: new WithholdingSplit(UnderADayOldCount: 1, DeclaredProductUnestablishedCount: 1),
-            WithheldUnderADayOldBytes: 1024);
+            WithheldBy: new WithholdingSplit(NotBeforeTheClockCount: 1, DeclaredProductUnestablishedCount: 1),
+            WithheldNotBeforeTheClockBytes: 1024);
 
         Assert.True(result.NamedConditionsCoverEveryHeldBackFile);
     }
@@ -665,12 +667,12 @@ public class ScanResultTests
     }
 
     [Fact]
-    public void Files_under_a_day_old_are_counted_on_the_finished_screen_and_not_by_the_command_line()
+    public void Files_kept_for_their_times_are_counted_on_the_finished_screen_and_not_by_the_command_line()
     {
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-            WithheldBy: new WithholdingSplit(UnderADayOldCount: 2),
-            WithheldUnderADayOldBytes: 3072);
+            WithheldBy: new WithholdingSplit(NotBeforeTheClockCount: 2),
+            WithheldNotBeforeTheClockBytes: 3072);
 
         Assert.Equal(2, result.UnsettledHeldBackCount);
         Assert.Equal(3072, result.UnsettledHeldBackBytes);
@@ -683,75 +685,97 @@ public class ScanResultTests
         Assert.Equal(0, result.UnestablishedWithheldBytes);
     }
 
-    private static readonly DateTime ADayOldAt = new(2030, 6, 16, 9, 40, 0, DateTimeKind.Utc);
+    private static readonly PendingRebootResult SignalSet =
+        PendingRebootResult.Block(PendingRebootReason.MsiExecuteMutexHeld);
 
     [Theory]
     [InlineData("nothing held back", false)]
-    [InlineData("under a day old, with no time from which they are a day old", false)]
-    [InlineData("under a day old", true)]
-    public void A_scan_has_a_line_about_files_under_a_day_old_where_it_held_one_and_knows_when_they_are_a_day_old(
+    [InlineData("kept for their times", true)]
+    [InlineData("kept for their times, the signals read clear", true)]
+    [InlineData("kept because a signal was set", false)]
+    public void A_scan_has_a_line_about_recently_changed_files_where_it_held_one_for_its_times(
         string run, bool hasLine)
     {
         var result = run switch
         {
             "nothing held back" => new ScanResult([], [], 0),
-            // A count with no instant has no time to give, so there is no line, and the
+            "kept for their times" => new ScanResult([], [], 0,
+                WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+                WithheldBy: new WithholdingSplit(NotBeforeTheClockCount: 2),
+                WithheldNotBeforeTheClockBytes: 3072),
+            "kept for their times, the signals read clear" => new ScanResult([], [], 0,
+                WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
+                WithheldBy: new WithholdingSplit(NotBeforeTheClockCount: 2),
+                WithheldNotBeforeTheClockBytes: 3072,
+                InstallerActivityAtScan: PendingRebootResult.Clean),
+            // The signal's reason speaks for these files, so there is no line, and the
             // command line's clean line reads the same answer.
-            "under a day old, with no time from which they are a day old" => new ScanResult([], [], 0,
+            "kept because a signal was set" => new ScanResult([], [], 0,
                 WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-                WithheldBy: new WithholdingSplit(UnderADayOldCount: 2),
-                WithheldUnderADayOldBytes: 3072),
-            "under a day old" => new ScanResult([], [], 0,
-                WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-                WithheldBy: new WithholdingSplit(UnderADayOldCount: 2),
-                WithheldUnderADayOldBytes: 3072,
-                WithheldUnderADayOldAllADayOldAtUtc: ADayOldAt),
+                WithheldBy: new WithholdingSplit(ScanSignalCount: 2),
+                InstallerActivityAtScan: SignalSet),
             _ => throw new ArgumentOutOfRangeException(nameof(run), run, null),
         };
 
-        Assert.Equal(hasLine, result.HasUnderADayOldLine);
+        Assert.Equal(hasLine, result.HasRecentChangeLine);
+    }
+
+    [Fact]
+    public void Files_kept_because_a_signal_was_set_are_counted_by_every_held_back_sentence()
+    {
+        var result = new ScanResult([], [], 0,
+            WithheldFiles: [File("a.msi", 1024), File("b.msp", 2048)],
+            WithheldBy: new WithholdingSplit(ScanSignalCount: 2),
+            InstallerActivityAtScan: SignalSet);
+
+        Assert.True(result.InstallerActivityAtScanBlocked);
+        Assert.Equal(0, result.WithheldBy.NotBeforeTheClockCount);
+        Assert.Equal(0, result.WithheldNotBeforeTheClockBytes);
+        Assert.Equal(2, result.UnestablishedWithheldCount);
+        Assert.Equal(3072, result.UnestablishedWithheldBytes);
+        Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
+        Assert.True(result.HasWithholdingToReport);
+        Assert.Equal(2, result.UnsettledHeldBackCount);
+        Assert.Equal(3072, result.UnsettledHeldBackBytes);
+        Assert.False(result.RecentChangeLineCoversUnsettledHeldBack);
     }
 
     [Theory]
-    [InlineData("under a day old", true)]
-    [InlineData("under a day old, beside one kept for an installed program", true)]
-    [InlineData("under a day old, with no time from which they are a day old", false)]
-    [InlineData("under a day old, beside a superseded file held back", false)]
-    [InlineData("under a day old, beside one the scan could not settle", false)]
+    [InlineData("kept for their times", true)]
+    [InlineData("kept for their times, beside one kept for an installed program", true)]
+    [InlineData("kept because a signal was set", false)]
+    [InlineData("kept for their times, beside a superseded file held back", false)]
+    [InlineData("kept for their times, beside one the scan could not settle", false)]
     [InlineData("nothing held back", false)]
     [InlineData("wholesale", false)]
-    public void The_line_about_files_under_a_day_old_covers_the_held_back_files_only_where_it_counts_every_one(
+    public void The_line_about_recently_changed_files_covers_the_held_back_files_only_where_it_counts_every_one(
         string run, bool covers)
     {
         var result = run switch
         {
-            "under a day old" => new ScanResult([], [], 0,
+            "kept for their times" => new ScanResult([], [], 0,
                 WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-                WithheldBy: new WithholdingSplit(UnderADayOldCount: 2),
-                WithheldUnderADayOldBytes: 3072,
-                WithheldUnderADayOldAllADayOldAtUtc: ADayOldAt),
-            "under a day old, beside one kept for an installed program" => new ScanResult([], [], 0,
+                WithheldBy: new WithholdingSplit(NotBeforeTheClockCount: 2),
+                WithheldNotBeforeTheClockBytes: 3072),
+            "kept for their times, beside one kept for an installed program" => new ScanResult([], [], 0,
                 WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-                WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1, UnderADayOldCount: 1),
+                WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1, NotBeforeTheClockCount: 1),
                 WithheldDeclaredProductInstalledBytes: 1024,
-                WithheldUnderADayOldBytes: 2048,
-                WithheldUnderADayOldAllADayOldAtUtc: ADayOldAt),
-            "under a day old, with no time from which they are a day old" => new ScanResult([], [], 0,
+                WithheldNotBeforeTheClockBytes: 2048),
+            "kept because a signal was set" => new ScanResult([], [], 0,
                 WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-                WithheldBy: new WithholdingSplit(UnderADayOldCount: 2),
-                WithheldUnderADayOldBytes: 3072),
-            "under a day old, beside a superseded file held back" => new ScanResult([], [], 0,
+                WithheldBy: new WithholdingSplit(ScanSignalCount: 2),
+                InstallerActivityAtScan: SignalSet),
+            "kept for their times, beside a superseded file held back" => new ScanResult([], [], 0,
                 WithheldCount: 1,
                 WithheldFiles: [File("a.msi", 1024)],
-                WithheldBy: new WithholdingSplit(UnderADayOldCount: 1),
-                WithheldUnderADayOldBytes: 1024,
-                SupersededWithheldBytes: 2048,
-                WithheldUnderADayOldAllADayOldAtUtc: ADayOldAt),
-            "under a day old, beside one the scan could not settle" => new ScanResult([], [], 0,
+                WithheldBy: new WithholdingSplit(NotBeforeTheClockCount: 1),
+                WithheldNotBeforeTheClockBytes: 1024,
+                SupersededWithheldBytes: 2048),
+            "kept for their times, beside one the scan could not settle" => new ScanResult([], [], 0,
                 WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-                WithheldBy: new WithholdingSplit(DeclaredProductUnestablishedCount: 1, UnderADayOldCount: 1),
-                WithheldUnderADayOldBytes: 2048,
-                WithheldUnderADayOldAllADayOldAtUtc: ADayOldAt),
+                WithheldBy: new WithholdingSplit(DeclaredProductUnestablishedCount: 1, NotBeforeTheClockCount: 1),
+                WithheldNotBeforeTheClockBytes: 2048),
             "nothing held back" => new ScanResult([], [], 0),
             "wholesale" => new ScanResult([], [], 0,
                 WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
@@ -759,17 +783,17 @@ public class ScanResultTests
             _ => throw new ArgumentOutOfRangeException(nameof(run), run, null),
         };
 
-        Assert.Equal(covers, result.UnderADayOldLineCoversUnsettledHeldBack);
+        Assert.Equal(covers, result.RecentChangeLineCoversUnsettledHeldBack);
     }
 
     [Fact]
-    public void A_file_under_a_day_old_is_counted_beside_one_kept_for_an_installed_program()
+    public void A_file_kept_for_its_times_is_counted_beside_one_kept_for_an_installed_program()
     {
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1, UnderADayOldCount: 1),
+            WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1, NotBeforeTheClockCount: 1),
             WithheldDeclaredProductInstalledBytes: 1024,
-            WithheldUnderADayOldBytes: 2048);
+            WithheldNotBeforeTheClockBytes: 2048);
 
         Assert.Equal(1, result.UnsettledHeldBackCount);
         Assert.Equal(2048, result.UnsettledHeldBackBytes);
@@ -777,12 +801,12 @@ public class ScanResultTests
     }
 
     [Fact]
-    public void A_file_under_a_day_old_is_counted_beside_a_patch_copy_kept_for_its_patch_s_registrations()
+    public void A_file_kept_for_its_times_is_counted_beside_a_patch_copy_kept_for_its_patch_s_registrations()
     {
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msp", 1024), File("b.msi", 4096)],
-            WithheldBy: new WithholdingSplit(UnderADayOldCount: 1, DeclaredPatchRegisteredCount: 1),
-            WithheldUnderADayOldBytes: 4096,
+            WithheldBy: new WithholdingSplit(NotBeforeTheClockCount: 1, DeclaredPatchRegisteredCount: 1),
+            WithheldNotBeforeTheClockBytes: 4096,
             WithheldDeclaredPatchRegisteredBytes: 1024);
 
         Assert.Equal(1, result.UnsettledHeldBackCount);
@@ -790,7 +814,7 @@ public class ScanResultTests
     }
 
     [Fact]
-    public void A_file_whose_age_was_not_established_is_counted_on_the_finished_screen()
+    public void A_file_whose_times_were_not_established_is_counted_on_the_finished_screen()
     {
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024)],

@@ -40,9 +40,7 @@ public static class Localisation
     /// thread's own culture as this is called, which carries the user's Windows
     /// customisations (a culture looked up by name does not). Numbers therefore
     /// keep the regional format whatever language is picked, as they do on
-    /// Automatic. Times and dates take the regional format only where it is a
-    /// culture of the picked language (<see cref="DisplayHelpers.FormatTimeAndDate"/>).
-    /// Call it before anything sets the thread's culture.
+    /// Automatic. Call it before anything sets the thread's culture.
     /// </summary>
     public static void SetPickedLanguage(CultureInfo language) =>
         Set(language, CultureInfo.CurrentCulture);

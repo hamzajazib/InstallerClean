@@ -8,14 +8,19 @@ public interface IMutexProbe
     /// <see cref="MutexSample.Held"/> when it exists and another thread owns it.
     /// <see cref="MutexSample.AccessRefused"/> when it exists and its security
     /// refuses this process the rights to open it, so whether anything owns it was
-    /// never sampled. <see cref="MutexSample.NotHeld"/> for a mutex that is not
-    /// there, one that is there and unowned, an abandoned one, and a probe that
-    /// fails any other non-fatal way.
+    /// never sampled. <see cref="MutexSample.Unestablished"/> when the probe fails any
+    /// other non-fatal way, so nothing about the mutex was learned.
+    /// <see cref="MutexSample.NotHeld"/> for a mutex that is not there, one that is
+    /// there and unowned, and an abandoned one.
     ///
     /// The open asks for exactly the rights <see cref="TryAcquire"/> asks for, so an
     /// object that refuses one refuses the other.
+    ///
+    /// An <see cref="MutexSample.Unestablished"/> answer carries the Windows error number
+    /// the failure was raised for, where it was raised for one
+    /// (<see cref="MutexSampling.WindowsError"/>).
     /// </summary>
-    MutexSample Sample(string name);
+    MutexSampling Sample(string name);
 
     /// <summary>
     /// Acquires the named mutex with a zero wait, creating it if it does not
@@ -49,21 +54,34 @@ public interface IMutexProbe
 }
 
 /// <summary>
-/// What a zero-wait sample of a named mutex found. The two answers that stop a
+/// A sample's answer (<see cref="State"/>) and, where the sample failed on an error
+/// Windows reported, that error's number (<see cref="WindowsError"/>), which is null on
+/// every other answer.
+///
+/// A <see cref="MutexSample"/> converts to one carrying no number, which is every answer
+/// but a failure on a Windows error.
+/// </summary>
+public readonly record struct MutexSampling(MutexSample State, int? WindowsError = null)
+{
+    public static implicit operator MutexSampling(MutexSample state) => new(state);
+}
+
+/// <summary>
+/// What a zero-wait sample of a named mutex found. The three answers that stop a
 /// caller are kept apart because they are different facts about the machine: one
-/// says another thread owns the mutex, the other says this process was not allowed
-/// to look.
+/// says another thread owns the mutex, one says this process was not allowed to
+/// look, and one says the look failed.
 ///
 /// NotHeld stays the first member: it is what <c>default(MutexSample)</c> and an
 /// unconfigured test substitute return, and every other member stops a caller. A
-/// member added here reads as not held to <see cref="PendingRebootService"/> until it
-/// takes an arm of its own there.
+/// member added here blocks <see cref="PendingRebootService"/> as
+/// <see cref="Unestablished"/> does until it takes an arm of its own there.
 /// </summary>
 public enum MutexSample
 {
     /// <summary>
-    /// Nothing was seen owning the mutex: it is not there, it is there and unowned, it
-    /// was abandoned, or the probe failed some other non-fatal way.
+    /// Nothing owns the mutex: it is not there, it is there and unowned, or it was
+    /// abandoned.
     /// </summary>
     NotHeld,
 
@@ -75,6 +93,13 @@ public enum MutexSample
     /// to open it, so whether anything owns it was never sampled.
     /// </summary>
     AccessRefused,
+
+    /// <summary>
+    /// The probe failed some other non-fatal way, so whether anything owns the mutex
+    /// was not established. A failure after a zero wait took the mutex lands here
+    /// too, which is the cautious side of a sample that did not finish.
+    /// </summary>
+    Unestablished,
 }
 
 /// <summary>

@@ -377,7 +377,7 @@ public class WithholdingSplitTests
 
         var clock = new DateTimeOffset(2030, 6, 15, 12, 0, 0, TimeSpan.Zero);
         var times = new ScriptedFileTimes();
-        var recent = clock.UtcDateTime.AddHours(-1);
+        var recent = clock.UtcDateTime.AddSeconds(5);
         var old = clock.UtcDateTime.AddDays(-2);
         times.Reads($@"{Folder}\fresh.msi", recent, recent, recent);
         times.Reads($@"{Folder}\old.msi", old, old, old);
@@ -390,7 +390,7 @@ public class WithholdingSplitTests
             clock: new FixedClock(clock));
 
         Assert.Equal(1, result.WithheldBy.DeclaredProductInstalledCount);
-        Assert.Equal(1, result.WithheldBy.UnderADayOldCount);
+        Assert.Equal(1, result.WithheldBy.NotBeforeTheClockCount);
         Assert.Equal($@"{Folder}\old.msi", Assert.Single(result.RemovableFiles).FullPath);
         AssertPartitions(result);
     }

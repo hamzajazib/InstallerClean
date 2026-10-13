@@ -20,6 +20,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
     private readonly IFileIdentityReader? _fileIds;
     private readonly IDeclaredProductCheck? _declaredProducts;
     private readonly IFileTimesReader? _fileTimes;
+    private readonly IPendingRebootService? _installerActivity;
     private readonly TimeProvider _clock;
     private readonly IEnumerable<string>? _overrideFiles;
     private readonly string? _installerFolderOverride;
@@ -49,9 +50,10 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// </remarks>
     public FileSystemScanService(IInstallerQueryService queryService, IFileSystem fileSystem,
         IShortNameCreationProbe shortNames, IFileIdentityReader fileIdentities,
-        IDeclaredProductCheck declaredProducts, IFileTimesReader fileTimes, TimeProvider clock)
+        IDeclaredProductCheck declaredProducts, IFileTimesReader fileTimes, TimeProvider clock,
+        IPendingRebootService installerActivity)
         : this(queryService, fileSystem, shortNames, null, null, fileIdentities, declaredProducts,
-            fileTimes, clock) { }
+            fileTimes, clock, installerActivity) { }
 
     /// <summary>
     /// Test constructor. Injects a filesystem and nothing else, for the tests
@@ -116,7 +118,14 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// pinning test for the default is beside them. Production always supplies one.
     /// </param>
     /// <param name="clock">
-    /// The clock the age check judges against. Null means the system clock.
+    /// The clock the age check judges against. Null means the system clock; the hosts
+    /// pass <see cref="FileStampClock"/>.
+    /// </param>
+    /// <param name="installerActivity">
+    /// What the scan reads Windows Installer's in-progress signals through, just after its
+    /// clock. Null reads nothing, and the age check then judges every file by its times
+    /// alone, on the terms <paramref name="fileTimes"/> sets out. Production always
+    /// supplies one.
     /// </param>
     internal FileSystemScanService(IInstallerQueryService queryService, IFileSystem fileSystem,
         IShortNameCreationProbe? shortNames,
@@ -124,7 +133,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
         IFileIdentityReader? fileIdentities,
         IDeclaredProductCheck? declaredProducts = null,
         IFileTimesReader? fileTimes = null,
-        TimeProvider? clock = null)
+        TimeProvider? clock = null,
+        IPendingRebootService? installerActivity = null)
     {
         _queryService = queryService;
         _fs = fileSystem;
@@ -132,6 +142,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         _fileIds = fileIdentities;
         _declaredProducts = declaredProducts;
         _fileTimes = fileTimes;
+        _installerActivity = installerActivity;
         _clock = clock ?? TimeProvider.System;
         _overrideFiles = overrideFiles;
         _installerFolderOverride = installerFolderOverride;
@@ -142,6 +153,20 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// to running it. Every test constructor defaults the reader to null.
     /// </summary>
     internal bool ChecksAge => _fileTimes is not null;
+
+    /// <summary>
+    /// Whether this scan reads Windows Installer's in-progress signals after its clock,
+    /// for the test that holds the hosts' scan to reading them. Every test constructor
+    /// defaults the reader to null.
+    /// </summary>
+    internal bool ReadsInstallerActivity => _installerActivity is not null;
+
+    /// <summary>
+    /// Whether this scan judges file times against <see cref="FileStampClock"/>, for the
+    /// test that holds the hosts' scan to it. Every test constructor takes a clock of its
+    /// own or the system's.
+    /// </summary>
+    internal bool JudgesOnTheFileStampClock => _clock is FileStampClock;
 
     /// <summary>
     /// Whether this scan puts candidates to the declared-product screen, for the test
@@ -156,8 +181,28 @@ public sealed class FileSystemScanService : IFileSystemScanService
     {
         // The age check's clock, read once and before the walk, so every candidate is
         // judged against the same instant and a file created or changed while the
-        // scan runs is later than it.
+        // scan runs is later than it. The wall-clock reading taken just before it is what
+        // the age check measures the wall clock's own advance from once every file's times
+        // are read (CachedFileAge.ClockWentBack). It comes first: taken after the clock, it
+        // would start after a step back falling between the two, which the age check would
+        // then not see while the files stamped after it read as before the clock.
+        var wallAtStart = CachedFileAge.ReadWallClock(_clock);
         var scanClock = _clock.GetUtcNow();
+
+        // WINDOWS INSTALLER'S IN-PROGRESS SIGNALS, READ AFTER THE CLOCK AND NEVER BEFORE
+        // IT. A session running at the clock is either still running here, and every file
+        // the walk finds is kept, or it has ended, having written the records naming every
+        // copy it kept. Read the other way round, a session starting between the two reads
+        // could put a copy in the folder with a time before the clock and no signal seen.
+        // The same four signals hold a Move or Delete (IPendingRebootService), and a queued
+        // restart rename naming the folder is among them because it can put a file there
+        // under a cached package's name at the restart. Check throws in the one case its
+        // own summary names, which leaves through the caller's error path before anything
+        // is walked. Task.Run keeps its registry, file and volume reads off the calling
+        // thread, for the reason the walk below gives.
+        var installerActivity = _installerActivity is null
+            ? null
+            : await Task.Run(_installerActivity.Check, cancellationToken).ConfigureAwait(false);
 
         progress?.Report(new ScanProgressUpdate(Strings.Status_ScanningCache));
 
@@ -204,9 +249,9 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // rather than leaving it lazy. A package cached after the walk finishes
         // is then simply absent from the candidate set. A file the walk found
         // that is registered while the scan runs meets the age check, which keeps
-        // a file created, written or changed within a day, and then the check
-        // made just before a Move or Delete, which reads the records again and
-        // re-runs this decision on it. Task.Run keeps
+        // a file created, written or changed at or after the clock, and then the
+        // check made just before a Move or Delete, which reads the records again
+        // and re-runs this decision on it. Task.Run keeps
         // the walk off the calling thread: the GUI calls ScanAsync from the
         // dispatcher, and a synchronous directory walk here would freeze the very
         // window the scan keeps free.
@@ -642,8 +687,9 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // Run after the screen rather than before it, so the screen's own verdicts
         // are counted where they always were and this counts only what it kept
         // back from the offer.
-        WithholdCandidatesNotShownADayOld(
-            unclaimedByPath, withheld, withheldBy, scanClock, cancellationToken);
+        WithholdCandidatesNotShownSettled(
+            unclaimedByPath, withheld, withheldBy, scanClock, wallAtStart, installerActivity,
+            cancellationToken);
 
         removable.AddRange(unclaimedByPath);
 
@@ -1088,7 +1134,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
             // is reported by none of them.
             withheldBy.Taken(),
             withheldBy.DeclaredProductInstalledBytes,
-            withheldBy.UnderADayOldBytes,
+            withheldBy.NotBeforeTheClockBytes,
             withheldBy.DeclaredPatchRegisteredBytes,
             withheldCostBytes,
             supersededContained.RefusedCount,
@@ -1097,8 +1143,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
             sourceRootsGivenUp,
             sourceWaitCount,
             cachedPackageCensus,
-            withheldBy.UnderADayOldAllADayOldAtUtc,
-            withheldBy.DeclaredProductInstalledCauses);
+            withheldBy.DeclaredProductInstalledCauses,
+            installerActivity);
     }
 
     /// <summary>
@@ -1189,9 +1235,10 @@ public sealed class FileSystemScanService : IFileSystemScanService
         private long _declaredProductInstalledBytes;
         private int _declaredProductUnestablished;
         private int _screenUnanswered;
-        private int _underADayOld;
-        private long _underADayOldBytes;
-        private DateTime? _underADayOldAllADayOldAtUtc;
+        private int _notBeforeTheClock;
+        private long _notBeforeTheClockBytes;
+        private int _scanSignal;
+        private int _clockSetBack;
         private int _ageUnestablished;
         private int _declaredPatchRegistered;
         private long _declaredPatchRegisteredBytes;
@@ -1203,28 +1250,23 @@ public sealed class FileSystemScanService : IFileSystemScanService
 
         internal void IdentityUnestablished() => _identityUnestablished++;
 
-        internal void UnderADayOld(long sizeBytes, DateTime aDayOldAtUtc)
+        internal void NotBeforeTheClock(long sizeBytes)
         {
-            _underADayOld++;
-            _underADayOldBytes += sizeBytes;
-            if (_underADayOldAllADayOldAtUtc is not { } latest || aDayOldAtUtc > latest)
-                _underADayOldAllADayOldAtUtc = aDayOldAtUtc;
+            _notBeforeTheClock++;
+            _notBeforeTheClockBytes += sizeBytes;
         }
 
-        /// <summary>
-        /// The latest of the instants (<see cref="CachedFileAge.ADayOldAtUtc"/>) at which
-        /// the files counted under the under-a-day-old arm are a day old, so the instant
-        /// from which every one of them is. Null where the arm counted none.
-        /// </summary>
-        internal DateTime? UnderADayOldAllADayOldAtUtc => _underADayOldAllADayOldAtUtc;
+        internal void ScanSignal(int count) => _scanSignal += count;
+
+        internal void ClockSetBack(int count) => _clockSetBack += count;
 
         internal void AgeUnestablished() => _ageUnestablished++;
 
         /// <summary>
-        /// The size of the files counted under the under-a-day-old arm, carried beside
-        /// the split for the reason <see cref="DeclaredProductInstalledBytes"/> is.
+        /// The size of the files counted under the not-before-the-clock arm, carried
+        /// beside the split for the reason <see cref="DeclaredProductInstalledBytes"/> is.
         /// </summary>
-        internal long UnderADayOldBytes => _underADayOldBytes;
+        internal long NotBeforeTheClockBytes => _notBeforeTheClockBytes;
 
         internal void Wholesale(int count) => _wholesale += count;
 
@@ -1339,13 +1381,15 @@ public sealed class FileSystemScanService : IFileSystemScanService
             _declaredProductInstalled,
             _declaredProductUnestablished,
             _screenUnanswered,
-            _underADayOld,
+            _notBeforeTheClock,
             _ageUnestablished,
             _declaredPatchRegistered,
             _declaredPatchUnestablished,
             _containment.RefusedCount,
             _containment.UnestablishedCount,
-            _secondCopyUnestablished);
+            _secondCopyUnestablished,
+            _scanSignal,
+            _clockSetBack);
     }
 
     /// <summary>
@@ -1518,18 +1562,32 @@ public sealed class FileSystemScanService : IFileSystemScanService
 
     /// <summary>
     /// Moves out of <paramref name="candidates"/> and into
-    /// <paramref name="withheld"/> every file not shown, by times read on a local NTFS
-    /// volume, to have been created, written and changed at least a day before
-    /// <paramref name="scanClock"/>. Both lists keep walk order.
+    /// <paramref name="withheld"/> every file not shown to have been last created,
+    /// written and changed before a moment at which Windows Installer had nothing in
+    /// progress, and every file where the system clock went back while the scan read
+    /// their times. Both lists keep walk order.
     ///
     /// WHAT IT IS FOR. Windows Installer writes a package's new copy into this folder
     /// before any record names it, and until a record does, no comparison with the
     /// records can tell that copy from a spare: it declares its product like any other
     /// copy, and where the product is already installed its records name a different
-    /// file that is present. So a file here is offered only once it was created,
-    /// written and changed a day or more before the scan, which is read off the file
-    /// rather than out of any record. See <see cref="CachedFileAge"/> for how the age
-    /// is taken and why from three times.
+    /// file that is present. So a file here is offered only where the in-progress
+    /// signals read just after <paramref name="scanClock"/> were clear
+    /// (<paramref name="installerActivity"/>) and the file's times, read on a local NTFS
+    /// volume, are before that clock. See <see cref="CachedFileAge"/> for how the times
+    /// are read and why that pair of facts is enough.
+    ///
+    /// WHERE A SIGNAL WAS SET, EVERY CANDIDATE IS KEPT AND NO FILE'S TIMES ARE READ. Each is
+    /// kept on a fact about the machine, counted in an arm of its own
+    /// (<see cref="WithholdingSplit.ScanSignalCount"/>), and the hosts give the signal's
+    /// own reason for them. A signal read that did not answer is a signal set: Check
+    /// returns a block for it.
+    ///
+    /// WHERE THE CLOCK WENT BACK, EVERY CANDIDATE IS KEPT TOO
+    /// (<see cref="CachedFileAge.ClockWentBack(TimeProvider, WallClockReading)"/>,
+    /// <paramref name="wallAtStart"/> being the wall-clock reading taken just before
+    /// <paramref name="scanClock"/>), the ones its times passed counted in an arm of their
+    /// own (<see cref="WithholdingSplit.ClockSetBackCount"/>).
     ///
     /// EVERY CANDIDATE, INSTALLATION PACKAGE AND PATCH ALIKE. A patch's cached copy
     /// arrives the same way, before any registration names it, and no comparison with
@@ -1542,25 +1600,36 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// age check, and nothing it returns adds a file or clears a withholding made
     /// anywhere else.
     /// </summary>
-    private void WithholdCandidatesNotShownADayOld(
+    private void WithholdCandidatesNotShownSettled(
         List<OrphanedFile> candidates,
         List<OrphanedFile> withheld,
         WithholdingSplitTally withheldBy,
         DateTimeOffset scanClock,
+        WallClockReading wallAtStart,
+        PendingRebootResult? installerActivity,
         CancellationToken cancellationToken)
     {
         if (_fileTimes is null || candidates.Count == 0) return;
 
+        if (installerActivity?.IsBlocked == true)
+        {
+            withheld.AddRange(candidates);
+            withheldBy.ScanSignal(candidates.Count);
+            candidates.Clear();
+            return;
+        }
+
         // Partitioned forward into a second list for the reason the screen's pass
         // gives: both sides keep walk order without either being reversed.
         var survivors = new List<OrphanedFile>(candidates.Count);
+        var firstHeldHere = withheld.Count;
         foreach (var candidate in candidates)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             var outcome = _fileTimes.ReadOutcome(candidate.FullPath, out var times);
             var verdict = CachedFileAge.Judge(outcome, times, scanClock);
-            if (verdict == CachedFileAgeVerdict.ShownADayOld)
+            if (verdict == CachedFileAgeVerdict.BeforeTheClock)
             {
                 survivors.Add(candidate);
                 continue;
@@ -1568,15 +1637,27 @@ public sealed class FileSystemScanService : IFileSystemScanService
 
             // Counted by which of the two keeping verdicts it was. The opt-in report
             // carries the two counts apart. The command line's held-back sentence counts
-            // a file whose age was not established and leaves out a file under a day
-            // old, whose size is summed here so that the sentence's size can leave it
-            // out too. The window's finished screen counts both. The instant a file
-            // under a day old is a day old goes to the tally too, which keeps the latest.
+            // a file whose times were not established and leaves out a file not before the
+            // clock, whose size is summed here so that the sentence's size can leave it out
+            // too. The window's finished screen counts both.
             withheld.Add(candidate);
-            if (verdict == CachedFileAgeVerdict.UnderADayOld)
-                withheldBy.UnderADayOld(candidate.SizeBytes, CachedFileAge.ADayOldAtUtc(times));
+            if (verdict == CachedFileAgeVerdict.NotBeforeTheClock)
+                withheldBy.NotBeforeTheClock(candidate.SizeBytes);
             else
                 withheldBy.AgeUnestablished();
+        }
+
+        // THE CLOCK, ASKED ONCE THE LAST FILE'S TIMES ARE READ. Where it went back after it
+        // was read, a time before it no longer shows a file was written before it, so every
+        // file that passed on its times is kept, counted in an arm of its own
+        // (WithholdingSplit.ClockSetBackCount). The files already kept for their times keep
+        // their own arms, and the list is rebuilt from the candidates so it keeps walk order.
+        if (survivors.Count > 0 && CachedFileAge.ClockWentBack(_clock, wallAtStart))
+        {
+            withheld.RemoveRange(firstHeldHere, withheld.Count - firstHeldHere);
+            withheld.AddRange(candidates);
+            withheldBy.ClockSetBack(survivors.Count);
+            survivors.Clear();
         }
 
         candidates.Clear();

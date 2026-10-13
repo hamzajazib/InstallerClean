@@ -54,18 +54,21 @@ public class WithholdingSplitTallyTests
             DeclaredProductInstalledCount: 9,
             DeclaredProductUnestablishedCount: 27,
             ScreenUnansweredCount: 81,
-            UnderADayOldCount: 243,
+            NotBeforeTheClockCount: 243,
             AgeUnestablishedCount: 729,
             DeclaredPatchRegisteredCount: 2187,
             DeclaredPatchUnestablishedCount: 6561,
             ContainmentRefusedCount: 19683,
-            ContainmentUnestablishedCount: 59049);
+            ContainmentUnestablishedCount: 59049,
+            SecondCopyUnestablishedCount: 177147,
+            ScanSignalCount: 531441,
+            ClockSetBackCount: 1594323);
 
         // Distinct powers of three, so any member left out of the sum or counted twice
         // changes the answer rather than happening to cancel: with every member taken
         // nought, once or twice, the sum has one spelling in base three, and it is all
         // ones only where every member is taken once.
-        Assert.Equal(88573, split.Total);
+        Assert.Equal(2391484, split.Total);
     }
 
     [Fact]
@@ -109,6 +112,8 @@ public class WithholdingSplitTallyTests
         tally.Contained(CandidateGuard.RemovalSafety.Unproven);
         tally.Contained(CandidateGuard.RemovalSafety.Unproven);
         tally.Contained(CandidateGuard.RemovalSafety.Unproven);
+        tally.ScanSignal(8);
+        tally.ClockSetBack(9);
 
         var split = tally.Taken();
 
@@ -121,7 +126,9 @@ public class WithholdingSplitTallyTests
         Assert.Equal(4, split.DeclaredPatchUnestablishedCount);
         Assert.Equal(5, split.ContainmentRefusedCount);
         Assert.Equal(6, split.ContainmentUnestablishedCount);
-        Assert.Equal(34, split.Total);
+        Assert.Equal(8, split.ScanSignalCount);
+        Assert.Equal(9, split.ClockSetBackCount);
+        Assert.Equal(51, split.Total);
     }
 
     [Fact]
@@ -332,18 +339,15 @@ public class WithholdingSplitTallyTests
     }
 
     [Fact]
-    public void The_instant_every_file_under_a_day_old_is_a_day_old_is_the_latest_counted()
+    public void The_not_before_the_clock_arm_counts_its_files_and_sums_their_size()
     {
         var tally = new FileSystemScanService.WithholdingSplitTally();
-        Assert.Null(tally.UnderADayOldAllADayOldAtUtc);
 
-        var first = new DateTime(2030, 6, 16, 9, 0, 0, DateTimeKind.Utc);
-        tally.UnderADayOld(1024, first);
-        tally.UnderADayOld(2048, first.AddHours(5));
-        tally.UnderADayOld(4096, first.AddHours(-2));
+        tally.NotBeforeTheClock(1024);
+        tally.NotBeforeTheClock(2048);
+        tally.NotBeforeTheClock(4096);
 
-        Assert.Equal(first.AddHours(5), tally.UnderADayOldAllADayOldAtUtc);
-        Assert.Equal(3, tally.Taken().UnderADayOldCount);
-        Assert.Equal(7168, tally.UnderADayOldBytes);
+        Assert.Equal(3, tally.Taken().NotBeforeTheClockCount);
+        Assert.Equal(7168, tally.NotBeforeTheClockBytes);
     }
 }

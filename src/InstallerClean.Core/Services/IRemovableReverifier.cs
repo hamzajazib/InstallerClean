@@ -249,8 +249,9 @@ public enum HeldBackReason
     /// not let the file through: the containment guard did not answer Safe, its own
     /// identity would not read or matches only registrations that are still
     /// removable, the declared-product screen kept it on any verdict but
-    /// <see cref="DeclaredProductOutcome.SecondCopyUnestablished"/>, or its age was not
-    /// shown to be a day old.
+    /// <see cref="DeclaredProductOutcome.SecondCopyUnestablished"/>, or the age check
+    /// did not show it last changed before a moment Windows Installer had nothing in
+    /// progress.
     ///
     /// IT IS ABOUT THE FILE AND NOT ABOUT A REGISTRATION NAMING ITS PATH, which is what
     /// separates it from the first three, and it is about one file where

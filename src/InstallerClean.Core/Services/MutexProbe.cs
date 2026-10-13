@@ -1,3 +1,4 @@
+using InstallerClean.Helpers;
 using System.Threading;
 
 namespace InstallerClean.Services;
@@ -15,7 +16,7 @@ namespace InstallerClean.Services;
 /// </summary>
 internal sealed class MutexProbe : IMutexProbe
 {
-    public MutexSample Sample(string name)
+    public MutexSampling Sample(string name)
     {
         try
         {
@@ -57,11 +58,11 @@ internal sealed class MutexProbe : IMutexProbe
         }
         catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
         {
-            // PendingRebootService treats NotHeld as "not blocked".
-            // Folding OOM into that return would silently route a real
-            // "MSI install in flight" condition through the gate as
-            // Clean, so only benign failures take this path.
-            return MutexSample.NotHeld;
+            // Nothing was learned about the mutex, which the gate holds on
+            // as it does on a signal it could not read, giving the Windows
+            // error where the failure was raised for one. OOM and
+            // StackOverflow are not caught at all.
+            return new MutexSampling(MutexSample.Unestablished, WindowsErrors.Of(ex));
         }
     }
 

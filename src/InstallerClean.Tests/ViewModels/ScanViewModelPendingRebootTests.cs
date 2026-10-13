@@ -1,3 +1,4 @@
+using InstallerClean.Helpers;
 using InstallerClean.Models;
 using InstallerClean.Resources;
 using InstallerClean.Services;
@@ -88,8 +89,8 @@ public class ScanViewModelPendingRebootTests
     [Fact]
     public void A_reason_with_no_banner_of_its_own_still_says_something()
     {
-        // Cast past the enum's members deliberately: this is the state a fourth
-        // reason would arrive in before anyone wrote its line, and it must reach
+        // Cast past the enum's members deliberately: this is the state a reason added
+        // later would arrive in before anyone wrote its line, and it must reach
         // the user as a sentence rather than as the blank banner a throw out of
         // a bound property produces.
         var vm = NewViewModel();
@@ -104,6 +105,21 @@ public class ScanViewModelPendingRebootTests
     // they were protecting, that a blocked machine is never recorded as clean, is
     // now protected by there being nothing to record: the state reaches the screen
     // through the banner above, and both action paths take their own fresh probe.
+
+    [Fact]
+    public void A_lock_whose_check_failed_on_a_Windows_error_gives_that_error_and_one_that_did_not_gives_no_cause()
+    {
+        var vm = NewViewModel();
+
+        vm.PendingRebootResult = PendingRebootResult.Block(PendingRebootReason.MsiExecuteMutexUnreadable, windowsError: 8);
+        Assert.Equal(
+            string.Format(Strings.Body_PendingReboot_MsiExecuteMutexUnreadableWindowsError,
+                WindowsErrors.MessageFor(8), "8"),
+            vm.PendingRebootBannerText);
+
+        vm.PendingRebootResult = PendingRebootResult.Block(PendingRebootReason.MsiExecuteMutexUnreadable);
+        Assert.Equal(Strings.Body_PendingReboot_MsiExecuteMutexUnreadable, vm.PendingRebootBannerText);
+    }
 
     [Fact]
     public void No_block_leaves_the_banner_empty()

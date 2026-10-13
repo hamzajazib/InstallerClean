@@ -22,7 +22,7 @@ internal sealed class NullMutexProbe : IMutexProbe
 {
     internal static readonly NullMutexProbe Instance = new();
 
-    public MutexSample Sample(string name) => MutexSample.NotHeld;
+    public MutexSampling Sample(string name) => MutexSample.NotHeld;
 
     public IMutexLease? TryAcquire(string name, out MutexAcquireOutcome outcome)
     {

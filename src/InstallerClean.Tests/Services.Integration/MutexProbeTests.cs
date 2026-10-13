@@ -158,7 +158,7 @@ public class MutexProbeTests
         // A name nothing has ever created: Sample opens with TryOpenExisting,
         // which does not create, so this exercises the name-does-not-exist
         // miss rather than the exists-but-unheld answer.
-        Assert.Equal(MutexSample.NotHeld, new MutexProbe().Sample(_name));
+        Assert.Equal(MutexSample.NotHeld, new MutexProbe().Sample(_name).State);
     }
 
     [Fact]
@@ -173,14 +173,14 @@ public class MutexProbeTests
         // zero-wait acquire is what tells the two apart.
         using var existsUnheld = new Mutex(initiallyOwned: false, _name);
 
-        Assert.Equal(MutexSample.NotHeld, new MutexProbe().Sample(_name));
+        Assert.Equal(MutexSample.NotHeld, new MutexProbe().Sample(_name).State);
     }
 
     [Fact]
     public void Sample_is_held_while_another_thread_holds_the_name()
     {
         WithNameHeldElsewhere(_name,
-            () => Assert.Equal(MutexSample.Held, new MutexProbe().Sample(_name)));
+            () => Assert.Equal(MutexSample.Held, new MutexProbe().Sample(_name).State));
     }
 
     [Fact]
@@ -197,7 +197,7 @@ public class MutexProbeTests
         // The answer that decides which banner the window paints and which sentence
         // and exit code the command line gives. Held would tell the user something
         // is installing, which nothing here has seen.
-        Assert.Equal(MutexSample.AccessRefused, new MutexProbe().Sample(_name));
+        Assert.Equal(MutexSample.AccessRefused, new MutexProbe().Sample(_name).State);
     }
 
     [Fact]
@@ -216,7 +216,7 @@ public class MutexProbeTests
         Assert.Equal(MutexAcquireOutcome.AccessRefused, outcome);
         // And the sample of the same object agrees with it, which is what lets the
         // pending-reboot gate meet a standing refusal before the action does.
-        Assert.Equal(MutexSample.AccessRefused, probe.Sample(_name));
+        Assert.Equal(MutexSample.AccessRefused, probe.Sample(_name).State);
     }
 
     /// <summary>

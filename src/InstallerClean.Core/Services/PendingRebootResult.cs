@@ -7,19 +7,30 @@ public sealed record PendingRebootResult
     public PendingRebootReason? Reason { get; }
     public string? Detail { get; }
 
-    private PendingRebootResult(PendingRebootVerdict verdict, PendingRebootReason? reason, string? detail)
+    /// <summary>
+    /// The Windows error number the check failed on, where it failed on one: set only on
+    /// a <see cref="PendingRebootReason.MsiExecuteMutexUnreadable"/> block whose failure
+    /// Windows raised, and null on every other result. The sentences for that reason give
+    /// it with the text Windows gives for it, and say nothing about a cause where it is null.
+    /// </summary>
+    public int? WindowsError { get; }
+
+    private PendingRebootResult(
+        PendingRebootVerdict verdict, PendingRebootReason? reason, string? detail, int? windowsError)
     {
         Verdict = verdict;
         Reason = reason;
         Detail = detail;
+        WindowsError = windowsError;
     }
 
     public static PendingRebootResult Clean { get; } =
-        new(PendingRebootVerdict.Clean, null, null);
+        new(PendingRebootVerdict.Clean, null, null, null);
 
     /// <summary>Construct a Block verdict. Reason is required so the type cannot represent Block-with-null-Reason.</summary>
-    public static PendingRebootResult Block(PendingRebootReason reason, string? detail = null) =>
-        new(PendingRebootVerdict.Block, reason, detail);
+    public static PendingRebootResult Block(
+        PendingRebootReason reason, string? detail = null, int? windowsError = null) =>
+        new(PendingRebootVerdict.Block, reason, detail, windowsError);
 
     /// <summary>True when the verdict is Block.</summary>
     public bool IsBlocked => Verdict == PendingRebootVerdict.Block;
@@ -118,4 +129,18 @@ public enum PendingRebootReason
     /// own name, and a scheduler is told what that reason tells it.
     /// </summary>
     InstallerInProgressMarkerAccessRefused,
+
+    /// <summary>
+    /// The sample of Global\_MSIExecute failed in a way that is neither a refusal nor
+    /// a finding, so whether a Windows Installer transaction holds it was not
+    /// established. The gate gives it only where every other signal read clear, since
+    /// any of them blocking names what is happening.
+    ///
+    /// IT IS A SEPARATE VERDICT FROM <see cref="MsiExecuteMutexAccessRefused"/>, whose
+    /// sentences say Windows refused the app permission to look, which is false of
+    /// this; and from <see cref="RegistryCheckUnreadable"/>, whose sentences name a
+    /// registry value. The action services' acquire meets the same kind of failure as
+    /// <see cref="MutexAcquireOutcome.NotAcquired"/> and refuses the batch on it.
+    /// </summary>
+    MsiExecuteMutexUnreadable,
 }

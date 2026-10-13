@@ -54,7 +54,7 @@ internal sealed class FakeMutexProbe : IMutexProbe
     /// sample too, the two asking for the same rights. Every other mode reads as not
     /// held.
     /// </summary>
-    public MutexSample Sample(string name) => _mode switch
+    public MutexSampling Sample(string name) => _mode switch
     {
         Mode.HeldByAnother => MutexSample.Held,
         Mode.AccessRefused => MutexSample.AccessRefused,

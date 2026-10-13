@@ -103,31 +103,147 @@ public interface IFileTimesReader
 }
 
 /// <summary>
-/// Whether a cached file has been shown to be at least a day old, which a file the
-/// folder walk found must be before the scan offers it.
+/// Whether a cached file the folder walk found was last created, written and changed
+/// before the scan's clock, which it must have been before the scan offers it.
 ///
 /// WHAT IT IS FOR. Windows Installer puts a new copy of a package into the folder
 /// before any of its records names that copy, and while no record names it the copy
-/// looks exactly like a spare. So a file is kept back unless its times show it was
-/// created, written and changed a day or more before the scan.
+/// looks exactly like a spare. The scan reads Windows Installer's in-progress signals
+/// just after its clock and keeps every file the walk found where any is set. Where
+/// none is, a session that was running at the clock has ended, and its records were
+/// written as part of it, so a copy it made and kept is named by the time the scan
+/// reads the records. This check takes care of the files no such reading can speak
+/// for: one created, written or changed at or after the clock, by a session that
+/// started after the signals were read, is kept.
 ///
-/// THE AGE IS TAKEN FROM THE LATEST OF THREE TIMES, because a copy can take some of
-/// its times from its source. Given its source's creation and last-write times, a
-/// copy has a change time from when they were set; given its source's last-write and
-/// change times, it has a creation time from when it was made. No one of the three is
-/// the copy's own in both cases, and the latest of them is.
+/// THE TIME IS THE LATEST OF THREE, because a copy can take some of its times from
+/// its source. Given its source's creation and last-write times, a copy has a change
+/// time from when they were set; given its source's last-write and change times, it
+/// has a creation time from when it was made. No one of the three is the copy's own in
+/// both cases, and the latest of them is.
+///
+/// THE CLOCK IS READ IN THE STEPS FILE TIMES ARE STAMPED IN (<see cref="FileStampClock"/>).
+/// Read from the precise system time instead, it could stand up to a tick past a time
+/// stamped after it, and a copy written in that moment would read as before it.
 ///
 /// EVERYTHING BUT A POSITIVE ANSWER KEEPS THE FILE, written as the one case that
-/// lets it through: a time that could not be read, a volume that is not local NTFS,
-/// a time later than the scan's own clock and a time less than a day before it.
+/// lets it through: a time that could not be read, a volume that is not local NTFS
+/// and a time that is not before the clock.
 /// </summary>
 public static class CachedFileAge
 {
-    /// <summary>How long ago a file must last have been created, written or changed.</summary>
-    public static readonly TimeSpan MinimumAge = TimeSpan.FromDays(1);
+    /// <summary>
+    /// How far after the clock a file's latest time can be and still be taken as a time
+    /// at all. Within it the file is <see cref="CachedFileAgeVerdict.NotBeforeTheClock"/>,
+    /// and a copy written a moment before the clock was set back reads as a little way
+    /// ahead of it. Beyond it the time is not one the scan can place, and the file is
+    /// <see cref="CachedFileAgeVerdict.Unestablished"/>. Both keep the file; this decides
+    /// only which count it is in.
+    /// </summary>
+    public static readonly TimeSpan AheadLimit = TimeSpan.FromDays(1);
 
     /// <summary>
-    /// The latest of the three times, which is the one the age is taken from.
+    /// How far the wall clock may run slow against the monotonic one, as a share of the
+    /// time that passed, before <see cref="ClockWentBack(TimeProvider, WallClockReading)"/>
+    /// answers true: one part in a thousand. It absorbs the rate at which a system clock left
+    /// to itself drifts from the monotonic one, awake or across a sleep, and the widths of two
+    /// readings no wider than <see cref="NarrowReading"/>. Windows Time slewing a clock that is
+    /// ahead runs it slow, on some settings by more than this, and the check then answers true
+    /// and the files are held: the wall clock lost that time. A larger share lets a larger
+    /// step back through; a smaller one holds files where the wall clock has only drifted.
+    /// </summary>
+    public const double SlowRateAllowance = 0.001;
+
+    /// <summary>
+    /// How long a wall-clock reading may take, from the monotonic timestamp before it to the
+    /// one after it, and be kept at the first try: 20 microseconds. A reading that takes
+    /// longer is taken again (<see cref="ReadWallClock"/>). Two readings this wide come within
+    /// <see cref="SlowRateAllowance"/> of any pass longer than forty milliseconds, which is
+    /// twice this limit divided by the allowance.
+    /// </summary>
+    public static readonly TimeSpan NarrowReading = TimeSpan.FromMicroseconds(20);
+
+    /// <summary>
+    /// How many times <see cref="ReadWallClock"/> takes a reading before it keeps the
+    /// narrowest of them: sixteen.
+    /// </summary>
+    public const int WallClockTries = 16;
+
+    /// <summary>
+    /// The precise wall clock read between two monotonic timestamps, the reading the scan
+    /// and the check made just before a Move or Delete take before their own clock and
+    /// again once they have read the last file's times
+    /// (<see cref="ClockWentBack(TimeProvider, WallClockReading)"/>).
+    ///
+    /// THE PRECISE TIME AND NOT THE ONE FILES ARE JUDGED AGAINST. <see cref="FileStampClock"/>
+    /// answers with the time as it stood at the last tick of the system clock, which stands
+    /// behind the time that passed by however long ago that tick was, at each reading. The
+    /// precise time moves between ticks with the monotonic clock, so the two keep pace
+    /// wherever the system clock is not stepped or slewed. A clock that is not a
+    /// <see cref="IPreciseWallClock"/> answers with its own time, which for
+    /// <see cref="TimeProvider.System"/> is the precise time.
+    ///
+    /// UP TO <see cref="WallClockTries"/> READINGS, keeping the first no wider than
+    /// <see cref="NarrowReading"/>, or else the narrowest. Every gap between the wall clock
+    /// and the timestamps either side of it widens the time
+    /// <see cref="ClockWentBack(TimeProvider, WallClockReading, WallClockReading)"/> measures
+    /// against, which moves it only towards answering true.
+    /// </summary>
+    public static WallClockReading ReadWallClock(TimeProvider clock)
+    {
+        WallClockReading narrowest = default;
+        for (var tries = 1; tries <= WallClockTries; tries++)
+        {
+            var before = clock.GetTimestamp();
+            var wall = clock is IPreciseWallClock precise ? precise.GetPreciseUtcNow() : clock.GetUtcNow();
+            var after = clock.GetTimestamp();
+            var reading = new WallClockReading(before, wall, after, tries);
+
+            narrowest = tries == 1 || reading.Width(clock) < narrowest.Width(clock)
+                ? reading
+                : narrowest with { Tries = tries };
+            if (narrowest.Width(clock) <= NarrowReading) break;
+        }
+
+        return narrowest;
+    }
+
+    /// <summary>
+    /// Whether the wall clock has fallen behind the monotonic one since
+    /// <paramref name="atStart"/>, read again now (<see cref="ReadWallClock"/>).
+    ///
+    /// WHAT IT IS FOR. While the system clock runs forward, a file written after the scan's
+    /// clock is read carries a time at or after it. Where the clock is set back after it is
+    /// read, a file written in the moments that follow is stamped before it, and
+    /// <see cref="Judge"/> reads it as before the clock. So the scan and the check made just
+    /// before a Move or Delete take <paramref name="atStart"/> before their clock, ask this
+    /// once they have read the last file's times, and hold every file that passed where it
+    /// answers true.
+    /// </summary>
+    public static bool ClockWentBack(TimeProvider clock, WallClockReading atStart) =>
+        ClockWentBack(clock, atStart, ReadWallClock(clock));
+
+    /// <summary>
+    /// Whether the wall clock advanced less between <paramref name="atStart"/> and
+    /// <paramref name="atEnd"/> than the most time that can have passed between the two
+    /// readings, by more than <see cref="SlowRateAllowance"/> of that time.
+    ///
+    /// THE MOST TIME, TAKEN OUTSIDE BOTH READINGS: from the timestamp before the first to
+    /// the timestamp after the second. A step back larger than the allowance therefore
+    /// answers true however long either reading took.
+    ///
+    /// A WALL CLOCK THAT RAN AHEAD ANSWERS FALSE: a time stamped after a step forward is
+    /// later still.
+    /// </summary>
+    public static bool ClockWentBack(TimeProvider clock, WallClockReading atStart, WallClockReading atEnd)
+    {
+        var elapsed = clock.GetElapsedTime(atStart.TimestampBefore, atEnd.TimestampAfter);
+        var wallAdvance = atEnd.Wall - atStart.Wall;
+        return elapsed - wallAdvance > elapsed * SlowRateAllowance;
+    }
+
+    /// <summary>
+    /// The latest of the three times, which is the one the check reads.
     /// </summary>
     public static DateTime Latest(FileTimes times)
     {
@@ -138,71 +254,78 @@ public static class CachedFileAge
     }
 
     /// <summary>
-    /// The instant a file with these times is a day old: the latest of them plus
-    /// <see cref="MinimumAge"/>. <see cref="Judge"/> answers
-    /// <see cref="CachedFileAgeVerdict.ShownADayOld"/> against a clock standing there
-    /// or later, and <see cref="CachedFileAgeVerdict.UnderADayOld"/> against one a tick
-    /// earlier.
-    ///
-    /// A latest time within <see cref="MinimumAge"/> of <see cref="DateTime.MaxValue"/>
-    /// throws. The scan asks only of a file judged under a day old, whose latest time is
-    /// at most <see cref="MinimumAge"/> after the scan's clock.
+    /// True only where <see cref="Judge"/> answers <see cref="CachedFileAgeVerdict.BeforeTheClock"/>.
     /// </summary>
-    public static DateTime ADayOldAtUtc(FileTimes times) => Latest(times) + MinimumAge;
+    public static bool IsBeforeTheClock(FileTimesRead outcome, FileTimes times, DateTimeOffset scanClock) =>
+        Judge(outcome, times, scanClock) == CachedFileAgeVerdict.BeforeTheClock;
 
     /// <summary>
-    /// True only where <see cref="Judge"/> answers <see cref="CachedFileAgeVerdict.ShownADayOld"/>.
-    /// </summary>
-    public static bool ShownADayOld(FileTimesRead outcome, FileTimes times, DateTimeOffset scanClock) =>
-        Judge(outcome, times, scanClock) == CachedFileAgeVerdict.ShownADayOld;
-
-    /// <summary>
-    /// What the file's times establish about its age against <paramref name="scanClock"/>.
+    /// What the file's times establish against <paramref name="scanClock"/>.
     ///
-    /// <see cref="CachedFileAgeVerdict.ShownADayOld"/> where the reader answered
-    /// <see cref="FileTimesRead.Read"/> and the latest of the three times is at least
-    /// <see cref="MinimumAge"/> before the clock.
-    /// <see cref="CachedFileAgeVerdict.UnderADayOld"/> where it is less than that
-    /// before the clock, or after the clock by no more than <see cref="MinimumAge"/>: a
-    /// copy written a moment before the clock was set back reads as a little way ahead
-    /// of it and is simply new.
+    /// <see cref="CachedFileAgeVerdict.BeforeTheClock"/> where the reader answered
+    /// <see cref="FileTimesRead.Read"/> and the latest of the three times is before the
+    /// clock.
+    /// <see cref="CachedFileAgeVerdict.NotBeforeTheClock"/> where it is at the clock, or
+    /// after it by no more than <see cref="AheadLimit"/>.
     /// <see cref="CachedFileAgeVerdict.Unestablished"/> for every other answer from the
-    /// reader, and for a latest time more than <see cref="MinimumAge"/> after the clock,
-    /// which is not an age.
+    /// reader, and for a latest time more than <see cref="AheadLimit"/> after the clock.
     /// </summary>
     public static CachedFileAgeVerdict Judge(FileTimesRead outcome, FileTimes times, DateTimeOffset scanClock)
     {
         if (outcome != FileTimesRead.Read) return CachedFileAgeVerdict.Unestablished;
 
-        var age = scanClock.UtcDateTime - Latest(times);
-        if (age >= MinimumAge) return CachedFileAgeVerdict.ShownADayOld;
-        return -age > MinimumAge ? CachedFileAgeVerdict.Unestablished : CachedFileAgeVerdict.UnderADayOld;
+        var beforeTheClock = scanClock.UtcDateTime - Latest(times);
+        if (beforeTheClock > TimeSpan.Zero) return CachedFileAgeVerdict.BeforeTheClock;
+        return -beforeTheClock > AheadLimit
+            ? CachedFileAgeVerdict.Unestablished
+            : CachedFileAgeVerdict.NotBeforeTheClock;
     }
 }
 
 /// <summary>
-/// What <see cref="CachedFileAge.Judge"/> established about one file's age. Only
-/// <see cref="ShownADayOld"/> lets the file through.
+/// A wall-clock reading taken by <see cref="CachedFileAge.ReadWallClock"/>: the monotonic
+/// timestamp just before it, the wall clock, the monotonic timestamp just after it, and how
+/// many readings were taken to get it.
+/// </summary>
+public readonly record struct WallClockReading(long TimestampBefore, DateTimeOffset Wall, long TimestampAfter, int Tries)
+{
+    /// <summary>How long the reading took, on <paramref name="clock"/>'s monotonic clock.</summary>
+    public TimeSpan Width(TimeProvider clock) => clock.GetElapsedTime(TimestampBefore, TimestampAfter);
+}
+
+/// <summary>
+/// A clock that gives the precise system time apart from the time it answers with, for
+/// <see cref="CachedFileAge.ReadWallClock"/>.
+/// </summary>
+internal interface IPreciseWallClock
+{
+    /// <summary>The system time, moving between ticks of the system clock.</summary>
+    DateTimeOffset GetPreciseUtcNow();
+}
+
+/// <summary>
+/// What <see cref="CachedFileAge.Judge"/> established about one file's times. Only
+/// <see cref="BeforeTheClock"/> lets the file through.
 ///
 /// THE TWO THAT KEEP IT ARE COUNTED APART. The opt-in report carries the two counts
-/// separately, and the command line's held-back sentence counts a file whose age was not
-/// established and leaves out a file under a day old. The window's finished screen counts
-/// both among the files it held back.
+/// separately, and the command line's held-back sentence counts a file whose times were
+/// not established and leaves out a file not before the clock, which has a line of its
+/// own. The window's finished screen counts both among the files it held back.
 /// </summary>
 public enum CachedFileAgeVerdict
 {
     /// <summary>
-    /// The age was not established. The zero, so a verdict nobody set keeps the file
+    /// The times were not established. The zero, so a verdict nobody set keeps the file
     /// and is spoken of.
     /// </summary>
     Unestablished,
 
-    /// <summary>The latest of the file's times is a day or more before the scan's clock.</summary>
-    ShownADayOld,
+    /// <summary>The latest of the file's times is before the scan's clock.</summary>
+    BeforeTheClock,
 
     /// <summary>
-    /// The latest of the file's times is less than a day before the scan's clock, or
-    /// no more than a day after it.
+    /// The latest of the file's times is at the scan's clock, or after it by no more than
+    /// <see cref="CachedFileAge.AheadLimit"/>.
     /// </summary>
-    UnderADayOld,
+    NotBeforeTheClock,
 }

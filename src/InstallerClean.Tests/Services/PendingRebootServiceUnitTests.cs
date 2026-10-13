@@ -598,8 +598,58 @@ public class PendingRebootServiceUnitTests
         Assert.Equal(PendingRebootReason.RegistryCheckUnreadable, result.Reason);
     }
 
+    /// <summary>
+    /// A sample that did not establish the mutex's state blocks the check on its own,
+    /// where every other signal reads clear.
+    /// </summary>
     [Fact]
-    public void Mutex_probe_throws_fails_open_continues_to_other_checks()
+    public void An_unestablished_mutex_sample_blocks_a_quiet_machine()
+    {
+        _mutex.Sample(PendingRebootService.MsiExecuteMutexName).Returns(MutexSample.Unestablished);
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootVerdict.Block, result.Verdict);
+        Assert.Equal(PendingRebootReason.MsiExecuteMutexUnreadable, result.Reason);
+    }
+
+    /// <summary>
+    /// The same where the rename queue holds entries and none of them names the cache,
+    /// the other way the check reaches its last answer.
+    /// </summary>
+    [Fact]
+    public void An_unestablished_mutex_sample_blocks_when_every_queued_rename_lands_elsewhere()
+    {
+        _mutex.Sample(PendingRebootService.MsiExecuteMutexName).Returns(MutexSample.Unestablished);
+        Queued(new[] { @"\??\C:\Temp\a.tmp", "" });
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootReason.MsiExecuteMutexUnreadable, result.Reason);
+    }
+
+    /// <summary>
+    /// A probe that throws has not sampled anything, and Check reads the throw as the
+    /// probe's own failure return: the check blocks on a quiet machine.
+    /// </summary>
+    [Fact]
+    public void A_mutex_probe_that_throws_blocks_a_quiet_machine()
+    {
+        _mutex.Sample(Arg.Any<string>())
+            .Returns(_ => throw new InvalidOperationException("transient"));
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootVerdict.Block, result.Verdict);
+        Assert.Equal(PendingRebootReason.MsiExecuteMutexUnreadable, result.Reason);
+    }
+
+    /// <summary>
+    /// A signal that blocks with a reason of its own is reported over a mutex that was
+    /// not sampled, since it names what is happening.
+    /// </summary>
+    [Fact]
+    public void A_mutex_probe_that_throws_still_reports_a_suspended_transaction()
     {
         _mutex.Sample(Arg.Any<string>())
             .Returns(_ => throw new InvalidOperationException("transient"));
@@ -611,15 +661,66 @@ public class PendingRebootServiceUnitTests
         Assert.Equal(PendingRebootReason.InstallerInProgress, result.Reason);
     }
 
+    [Fact]
+    public void An_unestablished_sample_carries_its_Windows_error_to_the_block()
+    {
+        _mutex.Sample(PendingRebootService.MsiExecuteMutexName)
+            .Returns(new MutexSampling(MutexSample.Unestablished, 8));
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootReason.MsiExecuteMutexUnreadable, result.Reason);
+        Assert.Equal(8, result.WindowsError);
+    }
+
+    [Fact]
+    public void A_probe_that_throws_for_a_Windows_error_carries_its_number_and_one_that_does_not_carries_none()
+    {
+        _mutex.Sample(Arg.Any<string>())
+            .Returns(_ => throw new IOException("any text", unchecked((int)0x80070008)));
+        Assert.Equal(8, Build().Check().WindowsError);
+
+        _mutex.Sample(Arg.Any<string>())
+            .Returns(_ => throw new InvalidOperationException("transient"));
+        Assert.Null(Build().Check().WindowsError);
+    }
+
+    [Fact]
+    public void Only_the_unsampled_lock_carries_a_Windows_error()
+    {
+        _mutex.Sample(PendingRebootService.MsiExecuteMutexName)
+            .Returns(new MutexSampling(MutexSample.Unestablished, 8));
+        InProgress(RegistryKeyPresence.Present);
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootReason.InstallerInProgress, result.Reason);
+        Assert.Null(result.WindowsError);
+    }
+
+    /// <summary>
+    /// A sample answer added to the enum later blocks, as an unestablished one does,
+    /// until somebody gives it an arm of its own.
+    /// </summary>
+    [Fact]
+    public void A_mutex_sample_nobody_handles_blocks()
+    {
+        _mutex.Sample(PendingRebootService.MsiExecuteMutexName).Returns((MutexSample)99);
+
+        var result = Build().Check();
+
+        Assert.Equal(PendingRebootReason.MsiExecuteMutexUnreadable, result.Reason);
+    }
+
     /// <summary>
     /// The probe's contract answers a refused open with
     /// <see cref="MutexSample.AccessRefused"/> rather than throwing, which the test
     /// above for that answer covers. A probe that throws the refusal instead has not
-    /// answered at all, and Check reads any throw from the probe as not held, so the
-    /// other two signals still run.
+    /// answered at all, so the signals after it are still read and one that blocks
+    /// names the reason.
     /// </summary>
     [Fact]
-    public void Mutex_probe_throwing_access_denied_fails_open_continues_to_other_checks()
+    public void A_mutex_probe_throwing_access_denied_still_reports_a_rename_into_the_cache()
     {
         _mutex.Sample(Arg.Any<string>())
             .Returns(_ => throw new UnauthorizedAccessException("denied"));

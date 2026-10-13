@@ -20,11 +20,11 @@ namespace InstallerClean.Models;
 /// knowing before anybody reasons about how a file gets here. A recorded path is
 /// compared with the walk as text; then by the file each names, so a registration
 /// spelled in a form the walk never produces is still matched; then the candidate
-/// package itself is asked which product it declares it belongs to and that code is
-/// put to Windows; then the file's own times are read, and it is offered only once
-/// it was created, written and changed a day or more before the scan. The third and
-/// fourth only ever keep a file back, and the third runs on installation packages
-/// alone.
+/// itself is asked which product, or which patch, it declares itself to be and that
+/// code is put to Windows; then the file's own times are read, and it is offered only
+/// where it was last created, written and changed before the scan's clock with
+/// Windows Installer's in-progress signals clear just after it. The third and fourth
+/// only ever keep a file back.
 ///
 /// AN OBSOLETED PATCH (PatchState 4) IS NOT OFFERED AT ALL. It is not a pathway and
 /// never becomes one; see <see cref="IsObsoleted"/> for why that is a decision

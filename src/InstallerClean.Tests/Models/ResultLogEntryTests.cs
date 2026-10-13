@@ -75,7 +75,7 @@ public class ResultLogEntryTests
         WithheldDeclaredProductInstalledCount: 0,
         WithheldDeclaredProductUnestablishedCount: 0,
         WithheldScreenUnansweredCount: 0,
-        WithheldUnderADayOldCount: 0,
+        WithheldNotBeforeTheClockCount: 0,
         WithheldAgeUnestablishedCount: 0,
         WithheldDeclaredPatchRegisteredCount: 0,
         WithheldDeclaredPatchUnestablishedCount: 0,
@@ -143,7 +143,9 @@ public class ResultLogEntryTests
         DeclaredInstalledSourcePackageNotRuledOutCount: 0,
         DeclaredInstalledMissingSparePackageCodeUnreadCount: 0,
         DeclaredInstalledMissingSpareIsItCount: 0,
-        DeclaredInstalledByNameCount: 0);
+        DeclaredInstalledByNameCount: 0,
+        WithheldScanSignalCount: 0,
+        WithheldClockSetBackCount: 0);
 
     private static MachineInfo SampleMachine() => new(
         ShortNameCreation: ShortNameCreationLabels.NoVolumes,
@@ -316,19 +318,18 @@ public class ResultLogEntryTests
                 // there. Three withheld figures over three different populations;
                 // adding any two of them would answer no question.
                 "withheldTotalBytes", "registeredWithheldCount",
-                // Eleven of the twelve counts that split withheldCandidateCount, appended
-                // in the order the split declares them; the twelfth is last in the
-                // object. Together they add up to it. Each is one finding about one
-                // machine and nothing may add any two of them: the screen's four
-                // verdicts, that screen having answered about nothing, a per-file
-                // identity read that gave up, the whole walk-derived offer going at once
-                // on a fact about the machine, the age check's two, and the containment
-                // check's two.
+                // Eleven of the counts that split withheldCandidateCount, appended in the
+                // order the split declares them; the twelfth to the fourteenth follow further
+                // down. Together they add up to it. Each is one finding about one machine
+                // and nothing may add any two of them: the screen's four verdicts, that
+                // screen having answered about nothing, a per-file identity read that gave
+                // up, the whole walk-derived offer going at once on a fact about the
+                // machine, two of the age check's arms, and the containment check's two.
                 "withheldIdentityUnestablishedCount", "withheldWholesaleCount",
                 "withheldDeclaredProductInstalledCount",
                 "withheldDeclaredProductUnestablishedCount",
                 "withheldScreenUnansweredCount",
-                "withheldUnderADayOldCount", "withheldAgeUnestablishedCount",
+                "withheldChangedSinceScanStartCount", "withheldAgeUnestablishedCount",
                 "withheldDeclaredPatchRegisteredCount",
                 "withheldDeclaredPatchUnestablishedCount",
                 "withheldContainmentRefusedCount", "withheldContainmentUnestablishedCount",
@@ -409,6 +410,13 @@ public class ResultLogEntryTests
                 "declaredInstalledSourcePackageNotRuledOutCount",
                 "declaredInstalledMissingSparePackageCodeUnreadCount", "declaredInstalledMissingSpareIsItCount",
                 "declaredInstalledByNameCount",
+                // The thirteenth arm of the split of withheldCandidateCount: files from the
+                // walk held because one of Windows Installer's in-progress signals was set
+                // when the scan read them just after its clock.
+                "withheldScanSignalCount",
+                // The fourteenth: files from the walk whose times passed, held because the
+                // system clock went back while the scan read them.
+                "withheldClockSetBackCount",
             ],
             root.GetProperty("scan").EnumerateObject().Select(p => p.Name));
 
@@ -1309,7 +1317,7 @@ public class ResultLogEntryTests
                 UnattributedPatchFileCount: 36),
             RegisteredWithheldCount: 19,
             WithheldFiles: withheld,
-            WithheldBy: new WithholdingSplit(20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 37),
+            WithheldBy: new WithholdingSplit(20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 37, 38, 39),
             SupersededContainmentRefusedCount: 32,
             SupersededContainmentUnestablishedCount: 33);
 
@@ -1339,7 +1347,7 @@ public class ResultLogEntryTests
         Assert.Equal(22, info.WithheldDeclaredProductInstalledCount);
         Assert.Equal(23, info.WithheldDeclaredProductUnestablishedCount);
         Assert.Equal(24, info.WithheldScreenUnansweredCount);
-        Assert.Equal(25, info.WithheldUnderADayOldCount);
+        Assert.Equal(25, info.WithheldNotBeforeTheClockCount);
         Assert.Equal(26, info.WithheldAgeUnestablishedCount);
         Assert.Equal(27, info.WithheldDeclaredPatchRegisteredCount);
         Assert.Equal(28, info.WithheldDeclaredPatchUnestablishedCount);
@@ -1353,6 +1361,8 @@ public class ResultLogEntryTests
         Assert.Equal(36, info.UnattributedPatchFileCount);
         Assert.Equal(7, info.SupersededScanWideWithheldCount);
         Assert.Equal(37, info.WithheldSecondCopyUnestablishedCount);
+        Assert.Equal(38, info.WithheldScanSignalCount);
+        Assert.Equal(39, info.WithheldClockSetBackCount);
     }
 
     [Fact]

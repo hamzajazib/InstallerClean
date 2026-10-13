@@ -77,7 +77,7 @@ public class CountedStringTests
         "Summary.OrphanedToCleanUp", "Summary.RegisteredStillUsed",
         "Summary.RegisteredWindow", "Summary.RegisteredWindow.Missing",
         "Cli.SupersededHeldBack",
-        "Completion.UnderADayOld",
+        "Completion.RecentChange",
     };
 
     /// <summary>
@@ -103,7 +103,7 @@ public class CountedStringTests
         "Summary.RegisteredStillUsed", "Summary.RegisteredWindow",
         "Summary.RegisteredWindow.Missing",
         "Cli.SupersededHeldBack",
-        "Completion.UnderADayOld",
+        "Completion.RecentChange",
     };
 
     private static readonly string[] CategorySuffixes = { ".One", ".Few", ".Many" };

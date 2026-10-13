@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Runtime.CompilerServices;
 using NSubstitute;
 using InstallerClean.Helpers;
 using InstallerClean.Models;
@@ -597,21 +596,17 @@ public class CompletionViewModelTests
             vm.Summary);
     }
 
-    // The line about files held back for being under a day old. The card places the
-    // sentence UnderADayOldReport.Line gives for the scan it speaks for, in the zone
-    // TestCompletion gives it, UTC unless a test says otherwise, and
-    // UnderADayOldReportTests pins that sentence, so these compare with what it returns.
+    // The line about files held back because their times are not before the scan's clock.
+    // The card places the sentence RecentChangeReport.Line gives for the scan it speaks for,
+    // and RecentChangeReportTests pins that sentence, so these compare with what it returns.
 
-    private static readonly DateTime DayOldAt = new(2030, 6, 16, 9, 40, 0, DateTimeKind.Utc);
-
-    private static string DayOldLineOf(ScanResult scan) => UnderADayOldReport.Line(scan, TimeZoneInfo.Utc);
+    private static string LineOf(ScanResult scan) => RecentChangeReport.Line(scan);
 
     [Fact]
-    public void Nothing_offered_keeps_its_body_and_adds_the_day_old_line_where_other_files_are_held_too()
+    public void Nothing_offered_keeps_its_body_and_adds_the_line_where_other_files_are_held_too()
     {
         var vm = TestCompletion.Create();
-        var scan = HeldBack(5, new WithholdingSplit(DeclaredProductUnestablishedCount: 2, UnderADayOldCount: 3),
-            DayOldAt);
+        var scan = HeldBack(5, new WithholdingSplit(DeclaredProductUnestablishedCount: 2, NotBeforeTheClockCount: 3));
 
         vm.ShowNothingOffered(scan, scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: string.Empty);
 
@@ -620,40 +615,80 @@ public class CompletionViewModelTests
                 Strings.Completion_NothingOfferedPerFileBody_Plural,
                 5, DisplayHelpers.PluraliseFile(5), DisplayHelpers.FormatSize(5120)),
             vm.Summary);
-        Assert.NotEqual(string.Empty, DayOldLineOf(scan));
-        Assert.Equal(DayOldLineOf(scan), vm.UnderADayOld);
+        Assert.NotEqual(string.Empty, LineOf(scan));
+        Assert.Equal(LineOf(scan), vm.ScanStartLine);
     }
 
     [Fact]
-    public void Nothing_offered_shows_the_day_old_line_as_its_body_where_those_are_every_file_it_counts()
+    public void Nothing_offered_shows_the_line_as_its_body_where_those_are_every_file_it_counts()
     {
         // Shown once, in the body's place, with the line naming a drive or share still
         // under it, and nothing left in the zone below.
         var vm = TestCompletion.Create();
-        var scan = HeldBack(3, new WithholdingSplit(UnderADayOldCount: 3), DayOldAt);
+        var scan = HeldBack(3, new WithholdingSplit(NotBeforeTheClockCount: 3));
 
         vm.ShowNothingOffered(scan, scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: "Drive line.");
 
-        Assert.NotEqual(string.Empty, DayOldLineOf(scan));
-        Assert.Equal(DayOldLineOf(scan) + Environment.NewLine + "Drive line.", vm.Summary);
-        Assert.Equal(string.Empty, vm.UnderADayOld);
+        Assert.NotEqual(string.Empty, LineOf(scan));
+        Assert.Equal(LineOf(scan) + Environment.NewLine + "Drive line.", vm.Summary);
+        Assert.Equal(string.Empty, vm.ScanStartLine);
     }
 
     [Fact]
-    public void Nothing_offered_counts_files_under_a_day_old_in_its_body_where_the_scan_gives_no_time_for_them()
+    public void Nothing_offered_counts_files_held_for_a_signal_in_its_body_and_gives_the_signal_s_line()
     {
-        // With no time to give there is no day-old line, so the body counts the files.
+        // A signal was set just after the scan's clock, so every walked file was held for
+        // it. The card counts them and says which signal, before the given-up line.
         var vm = TestCompletion.Create();
-        var scan = HeldBack(2, new WithholdingSplit(UnderADayOldCount: 2));
+        var scan = HeldBack(2, new WithholdingSplit(ScanSignalCount: 2),
+            PendingRebootResult.Block(PendingRebootReason.MsiExecuteMutexHeld));
 
-        vm.ShowNothingOffered(scan, scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: string.Empty);
+        vm.ShowNothingOffered(scan, scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: "Drive line.");
 
         Assert.Equal(
             string.Format(
                 Strings.Completion_NothingOfferedPerFileBody_Plural,
-                2, DisplayHelpers.PluraliseFile(2), DisplayHelpers.FormatSize(2048)),
+                2, DisplayHelpers.PluraliseFile(2), DisplayHelpers.FormatSize(2048))
+            + Environment.NewLine + Strings.Summary_ScanSignal_Busy
+            + Environment.NewLine + "Drive line.",
             vm.Summary);
-        Assert.Equal(string.Empty, vm.UnderADayOld);
+        Assert.Equal(string.Empty, vm.ScanStartLine);
+    }
+
+    [Fact]
+    public void Nothing_offered_counts_files_held_for_the_clock_in_its_body_and_gives_the_clock_s_line()
+    {
+        // The system clock went back while the scan read the files' times, so every walked
+        // file its times passed was held for that. The card counts them and says so, before
+        // the given-up line, and the line about files changed after the scan started is not
+        // the body.
+        var vm = TestCompletion.Create();
+        var scan = HeldBack(2, new WithholdingSplit(ClockSetBackCount: 2), PendingRebootResult.Clean);
+
+        vm.ShowNothingOffered(scan, scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: "Drive line.");
+
+        Assert.Equal(
+            string.Format(
+                Strings.Completion_NothingOfferedPerFileBody_Plural,
+                2, DisplayHelpers.PluraliseFile(2), DisplayHelpers.FormatSize(2048))
+            + Environment.NewLine + Strings.Summary_ScanSignal_ClockSetBack
+            + Environment.NewLine + "Drive line.",
+            vm.Summary);
+        Assert.Equal(string.Empty, vm.ScanStartLine);
+    }
+
+    [Fact]
+    public void Nothing_offered_gives_no_signal_line_where_no_file_was_held_for_it()
+    {
+        // The signal was set and nothing from the walk reached the age check, so no file
+        // was held on it and the line would be false.
+        var vm = TestCompletion.Create();
+        var scan = HeldBack(2, PerFile(2),
+            PendingRebootResult.Block(PendingRebootReason.MsiExecuteMutexHeld));
+
+        vm.ShowNothingOffered(scan, scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: string.Empty);
+
+        Assert.DoesNotContain(Strings.Summary_ScanSignal_Busy, vm.Summary, StringComparison.Ordinal);
     }
 
     public static TheoryData<string> CardsAfterAMoveOrDelete() => new()
@@ -692,16 +727,82 @@ public class CompletionViewModelTests
 
     [Theory]
     [MemberData(nameof(CardsAfterAMoveOrDelete))]
-    public void Every_card_after_a_Move_or_Delete_carries_the_day_old_line_of_the_scan_the_window_shows(string card)
+    public void Every_card_after_a_Move_or_Delete_carries_the_line_of_the_scan_the_window_shows(string card)
     {
-        var scan = HeldBack(2, new WithholdingSplit(UnderADayOldCount: 2), DayOldAt);
+        var scan = HeldBack(2, new WithholdingSplit(NotBeforeTheClockCount: 2));
         var vm = TestCompletion.Create(lastScan: () => scan);
 
         ShowCard(vm, card);
 
         Assert.True(vm.IsComplete);
-        Assert.NotEqual(string.Empty, DayOldLineOf(scan));
-        Assert.Equal(DayOldLineOf(scan), vm.UnderADayOld);
+        Assert.NotEqual(string.Empty, LineOf(scan));
+        Assert.Equal(LineOf(scan), vm.ScanStartLine);
+    }
+
+    [Theory]
+    [MemberData(nameof(CardsAfterAMoveOrDelete))]
+    public void Every_card_after_a_Move_or_Delete_says_Windows_Installer_was_busy_where_the_scan_held_files_for_it(string card)
+    {
+        // A Windows Update started during the operation, so the scan that ended the batch
+        // found the lock held and held every walked file for it.
+        var scan = HeldBack(2, new WithholdingSplit(ScanSignalCount: 2),
+            PendingRebootResult.Block(PendingRebootReason.MsiExecuteMutexHeld));
+        var vm = TestCompletion.Create(lastScan: () => scan);
+
+        ShowCard(vm, card);
+
+        Assert.Equal(Strings.Summary_ScanSignal_Busy, vm.ScanStartLine);
+    }
+
+    [Theory]
+    [MemberData(nameof(CardsAfterAMoveOrDelete))]
+    public void Every_card_after_a_Move_or_Delete_says_the_clock_went_back_where_the_scan_held_files_for_it(string card)
+    {
+        // The system clock went back while the scan that ended the batch read the files'
+        // times, so it held every walked file its times passed.
+        var scan = HeldBack(2, new WithholdingSplit(ClockSetBackCount: 2), PendingRebootResult.Clean);
+        var vm = TestCompletion.Create(lastScan: () => scan);
+
+        ShowCard(vm, card);
+
+        Assert.Equal(Strings.Summary_ScanSignal_ClockSetBack, vm.ScanStartLine);
+    }
+
+    [Theory]
+    [MemberData(nameof(CardsAfterAMoveOrDelete))]
+    public void Every_card_after_a_Move_or_Delete_gives_the_clock_s_line_and_the_changed_files_line_where_the_scan_held_files_for_both(string card)
+    {
+        // The scan that ended the batch held one file whose times were after its clock, and
+        // then the clock went back, so it held the files its times passed as well. Each
+        // reason has its own line, the clock's first.
+        var scan = HeldBack(3, new WithholdingSplit(NotBeforeTheClockCount: 1, ClockSetBackCount: 2),
+            PendingRebootResult.Clean);
+        var vm = TestCompletion.Create(lastScan: () => scan);
+
+        ShowCard(vm, card);
+
+        Assert.NotEqual(string.Empty, LineOf(scan));
+        Assert.Equal(Strings.Summary_ScanSignal_ClockSetBack + Environment.NewLine + LineOf(scan),
+            vm.ScanStartLine);
+    }
+
+    [Fact]
+    public void Nothing_offered_gives_the_clock_s_line_and_the_changed_files_line_where_the_scan_held_files_for_both()
+    {
+        var vm = TestCompletion.Create();
+        var scan = HeldBack(3, new WithholdingSplit(NotBeforeTheClockCount: 1, ClockSetBackCount: 2),
+            PendingRebootResult.Clean);
+
+        vm.ShowNothingOffered(scan, scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: string.Empty);
+
+        Assert.Equal(
+            string.Format(
+                Strings.Completion_NothingOfferedPerFileBody_Plural,
+                3, DisplayHelpers.PluraliseFile(3), DisplayHelpers.FormatSize(3072))
+            + Environment.NewLine + Strings.Summary_ScanSignal_ClockSetBack,
+            vm.Summary);
+        Assert.NotEqual(string.Empty, LineOf(scan));
+        Assert.Equal(LineOf(scan), vm.ScanStartLine);
     }
 
     [Theory]
@@ -709,140 +810,57 @@ public class CompletionViewModelTests
     public void A_card_reads_the_scan_as_it_is_revealed_and_clears_a_line_the_scan_no_longer_has(string card)
     {
         // The view model is reused across operations, and the scan behind the card changes
-        // between them, so a card whose scan held no file back for its age takes the
+        // between them, so a card whose scan held no file back for its times takes the
         // previous card's line away.
-        ScanResult? scan = HeldBack(2, new WithholdingSplit(UnderADayOldCount: 2), DayOldAt);
+        ScanResult? scan = HeldBack(2, new WithholdingSplit(NotBeforeTheClockCount: 2));
         var vm = TestCompletion.Create(lastScan: () => scan);
         vm.ShowDeleteSummary(1, 1024, []);
-        Assert.NotEqual(string.Empty, vm.UnderADayOld);
+        Assert.NotEqual(string.Empty, vm.ScanStartLine);
 
         scan = HeldBack(2, PerFile(2));
         ShowCard(vm, card);
 
-        Assert.Equal(string.Empty, vm.UnderADayOld);
-    }
-
-    [Fact]
-    public void The_day_old_line_gives_its_time_in_the_zone_as_it_is_when_the_card_is_revealed()
-    {
-        // The zone moves between two cards on one view model, as it does when somebody
-        // changes it with the window open, and each card gives the time in the zone of
-        // its own moment. Both screens that carry the line are walked.
-        var sevenAhead = TimeZoneInfo.CreateCustomTimeZone("Test+7", TimeSpan.FromHours(7), "Test+7", "Test+7");
-        var zone = TimeZoneInfo.Utc;
-        var scan = HeldBack(2, new WithholdingSplit(UnderADayOldCount: 2), DayOldAt);
-        var vm = TestCompletion.Create(lastScan: () => scan, zone: () => zone);
-
-        vm.ShowDeleteSummary(1, 1024, []);
-        var inUtc = vm.UnderADayOld;
-        zone = sevenAhead;
-        vm.ShowDeleteSummary(1, 1024, []);
-        var afterTheChange = vm.UnderADayOld;
-        vm.ShowNothingOffered(scan, scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: string.Empty);
-
-        Assert.Equal(UnderADayOldReport.Line(scan, TimeZoneInfo.Utc), inUtc);
-        Assert.Equal(UnderADayOldReport.Line(scan, sevenAhead), afterTheChange);
-        Assert.NotEqual(inUtc, afterTheChange);
-        Assert.Equal(UnderADayOldReport.Line(scan, sevenAhead), vm.Summary);
-    }
-
-    [Fact]
-    public void The_all_clear_clears_the_day_old_line()
-    {
-        var scan = HeldBack(2, new WithholdingSplit(UnderADayOldCount: 2), DayOldAt);
-        var vm = TestCompletion.Create(lastScan: () => scan);
-        vm.ShowDeleteSummary(1, 1024, []);
-        Assert.NotEqual(string.Empty, vm.UnderADayOld);
-
-        vm.ShowAllClear(scannedFileCount: 5, scanDurationMs: 10);
-
-        Assert.Equal(string.Empty, vm.UnderADayOld);
-    }
-
-    public static TheoryData<string> CardsThatCanCarryTheDayOldLine()
-    {
-        var cards = new TheoryData<string> { "nothing offered" };
-        foreach (var card in CardsAfterAMoveOrDelete()) cards.Add(card);
-        return cards;
-    }
-
-    private static void ShowCardFor(CompletionViewModel vm, string card, ScanResult scan)
-    {
-        if (card == "nothing offered")
-            vm.ShowNothingOffered(scan, scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: string.Empty);
-        else
-            ShowCard(vm, card);
-    }
-
-    /// <summary>
-    /// A view model whose zone counts how many times it is asked for, in
-    /// <paramref name="asked"/>.
-    /// </summary>
-    private static CompletionViewModel CountingZoneAsks(Func<ScanResult?> lastScan, StrongBox<int> asked) =>
-        TestCompletion.Create(lastScan: lastScan, zone: () =>
-        {
-            asked.Value++;
-            return TimeZoneInfo.Utc;
-        });
-
-    [Theory]
-    [MemberData(nameof(CardsThatCanCarryTheDayOldLine))]
-    public void A_card_without_the_day_old_line_does_not_ask_for_the_time_zone(string card)
-    {
-        // Asking for the PC's zone empties .NET's cached one, so only a card that shows the
-        // line asks.
-        var scan = HeldBack(2, PerFile(2));
-        var asked = new StrongBox<int>();
-        var vm = CountingZoneAsks(() => scan, asked);
-
-        ShowCardFor(vm, card, scan);
-
-        Assert.True(vm.IsComplete);
-        Assert.Equal(string.Empty, vm.UnderADayOld);
-        Assert.Equal(0, asked.Value);
+        Assert.Equal(string.Empty, vm.ScanStartLine);
     }
 
     [Theory]
     [MemberData(nameof(CardsAfterAMoveOrDelete))]
-    public void A_card_with_no_scan_behind_it_does_not_ask_for_the_time_zone(string card)
+    public void A_card_with_no_scan_behind_it_carries_no_line(string card)
     {
-        var asked = new StrongBox<int>();
-        var vm = CountingZoneAsks(() => null, asked);
+        var vm = TestCompletion.Create(lastScan: () => null);
 
         ShowCard(vm, card);
 
         Assert.True(vm.IsComplete);
-        Assert.Equal(string.Empty, vm.UnderADayOld);
-        Assert.Equal(0, asked.Value);
+        Assert.Equal(string.Empty, vm.ScanStartLine);
     }
 
-    [Theory]
-    [MemberData(nameof(CardsThatCanCarryTheDayOldLine))]
-    public void A_card_with_the_day_old_line_asks_for_the_time_zone_once(string card)
+    [Fact]
+    public void The_all_clear_clears_the_line()
     {
-        var scan = HeldBack(2, new WithholdingSplit(UnderADayOldCount: 2), DayOldAt);
-        var asked = new StrongBox<int>();
-        var vm = CountingZoneAsks(() => scan, asked);
+        var scan = HeldBack(2, new WithholdingSplit(NotBeforeTheClockCount: 2));
+        var vm = TestCompletion.Create(lastScan: () => scan);
+        vm.ShowDeleteSummary(1, 1024, []);
+        Assert.NotEqual(string.Empty, vm.ScanStartLine);
 
-        ShowCardFor(vm, card, scan);
+        vm.ShowAllClear(scannedFileCount: 5, scanDurationMs: 10);
 
-        Assert.True(vm.IsComplete);
-        Assert.Equal(1, asked.Value);
+        Assert.Equal(string.Empty, vm.ScanStartLine);
     }
 
     /// <summary>
     /// A scan that offered nothing and held back <paramref name="files"/> files of 1 KB
-    /// each, counted by <paramref name="split"/>, the files under a day old all a day old
-    /// at <paramref name="allADayOldAtUtc"/>.
+    /// each, counted by <paramref name="split"/>, with <paramref name="atScan"/> as what it
+    /// read of Windows Installer's in-progress signals.
     /// </summary>
-    private static ScanResult HeldBack(int files, WithholdingSplit split, DateTime? allADayOldAtUtc = null) =>
+    private static ScanResult HeldBack(int files, WithholdingSplit split, PendingRebootResult? atScan = null) =>
         new(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
             WithheldFiles: Enumerable.Range(0, files)
                 .Select(i => new OrphanedFile($@"C:\Windows\Installer\{i}.msi", 1024, false, false, false, "unclaimed"))
                 .ToArray(),
             WithheldBy: split,
-            WithheldUnderADayOldBytes: 1024L * split.UnderADayOldCount,
-            WithheldUnderADayOldAllADayOldAtUtc: allADayOldAtUtc);
+            WithheldNotBeforeTheClockBytes: 1024L * split.NotBeforeTheClockCount,
+            InstallerActivityAtScan: atScan);
 
     /// <summary>Every held file kept by the rule about the machine's records, in one go.</summary>
     private static WithholdingSplit Wholesale(int files) => new(WholesaleCount: files);

@@ -270,9 +270,11 @@ namespace InstallerClean.Models;
 /// not settle, or a patch whose declared patch Windows holds a registration of
 /// without every registration recording another present copy, or whose declaration
 /// this scan could not settle; or the age check kept a candidate everything
-/// else let through, its age not being shown to be a day or more
-/// (<see cref="WithholdingSplit.UnderADayOldCount"/> and
-/// <see cref="WithholdingSplit.AgeUnestablishedCount"/>). A run can hold files put here
+/// else let through, it not being shown to have last changed before a moment Windows
+/// Installer had nothing in progress (<see cref="WithholdingSplit.ScanSignalCount"/>,
+/// <see cref="WithholdingSplit.NotBeforeTheClockCount"/>,
+/// <see cref="WithholdingSplit.AgeUnestablishedCount"/> and
+/// <see cref="WithholdingSplit.ClockSetBackCount"/>). A run can hold files put here
 /// by any of the five, and a reader of this list may assume none of them.
 ///
 /// NO SURFACE STATES A CAUSE OVER IT AND NONE MAY START. The main window counts these
@@ -342,10 +344,10 @@ namespace InstallerClean.Models;
 /// <see cref="UnsettledHeldBackBytes"/> can each leave them out. Carried here rather
 /// than on the split, which holds counts and nothing else.
 /// </param>
-/// <param name="WithheldUnderADayOldBytes">
-/// The size of the files <see cref="WithholdingSplit.UnderADayOldCount"/> counts, so
+/// <param name="WithheldNotBeforeTheClockBytes">
+/// The size of the files <see cref="WithholdingSplit.NotBeforeTheClockCount"/> counts, so
 /// that <see cref="UnestablishedWithheldBytes"/> can leave them out and
-/// <see cref="Helpers.UnderADayOldReport"/> can give their size, carried the same way.
+/// <see cref="Helpers.RecentChangeReport"/> can give their size, carried the same way.
 /// </param>
 /// <param name="WithheldDeclaredPatchRegisteredBytes">
 /// The size of the files <see cref="WithholdingSplit.DeclaredPatchRegisteredCount"/>
@@ -414,28 +416,23 @@ namespace InstallerClean.Models;
 /// (<see cref="Services.DeclaredProductScreening.CachedPackages"/>). A pass that looked at no
 /// installation where the screen did not run, looked at none, or its answer was not used.
 /// </param>
-/// <param name="WithheldUnderADayOldAllADayOldAtUtc">
-/// The instant, in UTC, from which every file <see cref="WithholdingSplit.UnderADayOldCount"/>
-/// counts is a day old: the latest of their <see cref="Services.CachedFileAge.ADayOldAtUtc"/>
-/// instants. A scan whose clock stands there or later judges none of them under a day old
-/// while their times are unchanged, and every other check still applies to each. Null where
-/// that count is nought.
-///
-/// IT IS AFTER THIS SCAN'S CLOCK AND NO MORE THAN TWO DAYS AFTER IT, because a file is under
-/// a day old only where its latest time is less than a day before that clock or no more than
-/// a day after it.
-///
-/// APPENDED AFTER <see cref="CachedPackageCensus"/>, so a positional construction of the
-/// members above still means what it meant.
-/// </param>
 /// <param name="WithheldDeclaredProductInstalledCauses">
 /// The files <see cref="WithholdingSplit.DeclaredProductInstalledCount"/> counts, by why the
 /// declared-product screen kept each one (<see cref="Services.DeclaredProductScreening.InstalledCauses"/>).
 /// None counted where the screen did not run, kept no file for that reason, or its answer was not
 /// used.
 ///
-/// APPENDED AFTER <see cref="WithheldUnderADayOldAllADayOldAtUtc"/>, so a positional construction
-/// of the members above still means what it meant.
+/// APPENDED AFTER <see cref="CachedPackageCensus"/>, so a positional construction of the
+/// members above still means what it meant.
+/// </param>
+/// <param name="InstallerActivityAtScan">
+/// What the scan read of Windows Installer's in-progress signals just after its clock: a
+/// block where any was set, and every file from the folder walk the age check is handed
+/// is then held back in the arm <see cref="WithholdingSplit.ScanSignalCount"/> counts.
+/// Null where the scan read none, which no production scan does.
+///
+/// APPENDED AFTER <see cref="WithheldDeclaredProductInstalledCauses"/>, so a positional
+/// construction of the members above still means what it meant.
 /// </param>
 public record ScanResult(
     IReadOnlyList<OrphanedFile> RemovableFiles,
@@ -460,7 +457,7 @@ public record ScanResult(
     FileIdentityReadTally CandidateIdentityReads = default,
     WithholdingSplit WithheldBy = default,
     long WithheldDeclaredProductInstalledBytes = 0,
-    long WithheldUnderADayOldBytes = 0,
+    long WithheldNotBeforeTheClockBytes = 0,
     long WithheldDeclaredPatchRegisteredBytes = 0,
     long SupersededWithheldBytes = 0,
     int SupersededContainmentRefusedCount = 0,
@@ -469,8 +466,8 @@ public record ScanResult(
     IReadOnlyList<SourceRootGivenUp>? SourceRootsGivenUp = null,
     int SourceWaitCount = 0,
     CachedPackageCensus? CachedPackageCensus = null,
-    DateTime? WithheldUnderADayOldAllADayOldAtUtc = null,
-    DeclaredProductInstalledCauses? WithheldDeclaredProductInstalledCauses = null)
+    DeclaredProductInstalledCauses? WithheldDeclaredProductInstalledCauses = null,
+    Services.PendingRebootResult? InstallerActivityAtScan = null)
 {
     /// <summary>Never null: a result built without the list reads as one that gave nothing up.</summary>
     public IReadOnlyList<SourceRootGivenUp> SourceRootsGivenUp { get; init; }
@@ -525,34 +522,45 @@ public record ScanResult(
         WithheldFiles?.Sum(f => f.SizeBytes) ?? 0;
 
     /// <summary>
+    /// Whether the scan found one of Windows Installer's in-progress signals set when it
+    /// read them just after its clock (<see cref="InstallerActivityAtScan"/>). Where it
+    /// did, every file from the folder walk the age check was handed was held back
+    /// (<see cref="WithholdingSplit.ScanSignalCount"/>), and where that was at least one
+    /// file both hosts give the signal's own reason in a line of its own
+    /// (<see cref="Helpers.ScanSignalReport"/>).
+    /// </summary>
+    public bool InstallerActivityAtScanBlocked => InstallerActivityAtScan?.IsBlocked == true;
+
+    /// <summary>
     /// How many withheld files the command line's held-back sentences speak of: every
     /// withheld file except those
     /// <see cref="WithholdingSplit.DeclaredProductInstalledCount"/>,
-    /// <see cref="WithholdingSplit.UnderADayOldCount"/> and
+    /// <see cref="WithholdingSplit.NotBeforeTheClockCount"/> and
     /// <see cref="WithholdingSplit.DeclaredPatchRegisteredCount"/> count.
     /// <see cref="UnestablishedWithheldBytes"/> is their size.
     ///
-    /// IT IS THE LIST LESS THOSE THREE ARMS, NOT A SUM OF THE OTHERS, so a withheld
-    /// file no arm counted, or one counted by an arm added to
-    /// <see cref="WithholdingSplit"/> later, is counted here.
+    /// IT IS THE LIST LESS THOSE THREE, NOT A SUM OF THE OTHERS, so a withheld file no
+    /// arm counted, or one counted by an arm added to <see cref="WithholdingSplit"/>
+    /// later, is counted here. A file the scan held because an in-progress signal was set
+    /// is counted here too, and the command line prints that signal's reason beside it.
     /// </summary>
     public int UnestablishedWithheldCount =>
         Math.Max(0, (WithheldFiles?.Count ?? 0)
             - WithheldBy.DeclaredProductInstalledCount
-            - WithheldBy.UnderADayOldCount
+            - WithheldBy.NotBeforeTheClockCount
             - WithheldBy.DeclaredPatchRegisteredCount);
 
     /// <summary>
     /// The size of the files <see cref="UnestablishedWithheldCount"/> counts, on the same
     /// reading: the whole withheld list's size less that of the files kept because they
     /// declare a program Windows still has installed or an installed program opens them,
-    /// that of the files kept because they are under a day old, and that of the patch copies kept because Windows holds
-    /// a registration of the patch they declare.
+    /// that of the files <see cref="WithholdingSplit.NotBeforeTheClockCount"/> counts, and that of the
+    /// patch copies kept because Windows holds a registration of the patch they declare.
     /// </summary>
     public long UnestablishedWithheldBytes =>
         Math.Max(0, WithheldTotalBytes
             - WithheldDeclaredProductInstalledBytes
-            - WithheldUnderADayOldBytes
+            - WithheldNotBeforeTheClockBytes
             - WithheldDeclaredPatchRegisteredBytes);
 
     /// <summary>
@@ -609,11 +617,11 @@ public record ScanResult(
     /// every held file. An offered superseded patch comes from its own registration and
     /// not from the folder, so it does not count against the wholesale reading.
     ///
-    /// A RUN WHOSE WITHHELD FILES WERE ALL COUNTED BY THE DECLARED-PRODUCT-INSTALLED,
-    /// UNDER-A-DAY-OLD AND DECLARED-PATCH-REGISTERED ARMS READS AS
+    /// A RUN WHOSE WITHHELD FILES WERE ALL COUNTED BY THE DECLARED-PRODUCT-INSTALLED AND
+    /// DECLARED-PATCH-REGISTERED ARMS AND <see cref="WithholdingSplit.NotBeforeTheClockCount"/> READS AS
     /// <see cref="WithholdingAccount.KeptWithoutNotice"/>. The test is that those three
-    /// arms account for the whole list, never that no other arm fired, so a file no
-    /// arm counted, or one counted by an arm added later, keeps the run on the per-file
+    /// account for the whole list, never that no other arm fired, so a file no arm
+    /// counted, or one counted by an arm added later, keeps the run on the per-file
     /// sentence.
     ///
     /// IT IS DERIVED AND NOT CARRIED, so nothing can set it apart from the two values
@@ -631,7 +639,7 @@ public record ScanResult(
                 return WithholdingAccount.WholeWalkOffer;
 
             return WithheldBy.DeclaredProductInstalledCount
-                + WithheldBy.UnderADayOldCount
+                + WithheldBy.NotBeforeTheClockCount
                 + WithheldBy.DeclaredPatchRegisteredCount == withheld
                     ? WithholdingAccount.KeptWithoutNotice
                     : WithholdingAccount.PerFile;
@@ -656,8 +664,9 @@ public record ScanResult(
     ///
     /// WHERE IT IS FALSE, A LIST OF REASONS UNDER THE HELD-BACK SENTENCE WOULD BE SHORT
     /// OF THE FILES THAT SENTENCE COUNTS, so the command line prints the sentence on its
-    /// own. The age-unestablished arm and the two containment arms have no reason line
-    /// and are the arms that make it false; a file no arm counted makes it false too.
+    /// own. The scan-signal arm, the clock-set-back arm, the age-unestablished arm and the
+    /// two containment arms have no line in that list and are the arms that make it false; a file no arm
+    /// counted makes it false too.
     ///
     /// WRITTEN AS THE NAMED ARMS ADDING UP TO THE COUNT, so an arm added to
     /// <see cref="WithholdingSplit"/> later without a reason line makes it false rather
@@ -683,8 +692,9 @@ public record ScanResult(
     /// THE TWO ARMS LEFT OUT KEEP A FILE BECAUSE WINDOWS HOLDS A RECORD OF THE PROGRAM OR
     /// PATCH IT DECLARES, OR OF A PROGRAM THAT OPENS IT AS ITS PACKAGE. Every other file
     /// held back, and every superseded file <see cref="SupersededHeldBackCount"/> counts,
-    /// was kept without the scan establishing that anything needs it: a file under a day old, a file whose age was not
-    /// established, a file the containment check refused or could not answer for, a
+    /// was kept without the scan establishing that anything needs it: a file not shown to
+    /// have last changed before a moment Windows Installer had nothing in progress, a file
+    /// whose times were not established, a file the containment check refused or could not answer for, a
     /// superseded patch the scan held back, and a file kept on any other verdict alike.
     ///
     /// IT IS THE LIST LESS THOSE TWO ARMS, NOT A SUM OF THE OTHERS, so a walk-derived file
@@ -693,7 +703,8 @@ public record ScanResult(
     ///
     /// THE COMMAND LINE DOES NOT READ IT. It speaks
     /// <see cref="UnestablishedWithheldCount"/> and <see cref="SupersededHeldBackCount"/> in
-    /// separate sentences, and the first of those leaves out a file under a day old.
+    /// separate sentences, and the first of those leaves out the files
+    /// <see cref="WithholdingSplit.NotBeforeTheClockCount"/> counts.
     /// </summary>
     public int UnsettledHeldBackCount =>
         Math.Max(0, (WithheldFiles?.Count ?? 0)
@@ -804,34 +815,30 @@ public record ScanResult(
         UnsettledHeldBackCount > 0 && WithheldBy.WholesaleCount == UnsettledHeldBackCount;
 
     /// <summary>
-    /// Whether this scan held back at least one file for being under a day old and knows the
-    /// instant from which every such file is a day old. The scan records that instant with
-    /// every such file it counts. Where this is true, the line about those files
-    /// (<see cref="Helpers.UnderADayOldReport.Line(ScanResult, Func{TimeZoneInfo})"/>) gives the
-    /// instant as a time and date; the command line prints its clean line only where this is
-    /// false.
+    /// Whether this scan has a line to give about recently changed files
+    /// (<see cref="Helpers.RecentChangeReport.Line(ScanResult)"/>): it held back at least
+    /// one file whose times are not before its clock, with Windows Installer's in-progress
+    /// signals clear when it read them. The command line prints its clean line only where
+    /// this is false.
     /// </summary>
-    public bool HasUnderADayOldLine =>
-        WithheldBy.UnderADayOldCount > 0 && WithheldUnderADayOldAllADayOldAtUtc is not null;
+    public bool HasRecentChangeLine => WithheldBy.NotBeforeTheClockCount > 0;
 
     /// <summary>
-    /// Whether the line about files under a day old
-    /// (<see cref="Helpers.UnderADayOldReport.Line(ScanResult, Func{TimeZoneInfo})"/>) counts
-    /// every file <see cref="UnsettledHeldBackCount"/> counts: every one was held back for
-    /// being under a day old, and the time from which every one of them is a day old is known
-    /// (<see cref="HasUnderADayOldLine"/>). Where it does, the window's finished screen on a
-    /// run that offered nothing gives that line in place of the sentence counting the files
-    /// held back.
+    /// Whether the line about recently changed files
+    /// (<see cref="Helpers.RecentChangeReport.Line(ScanResult)"/>) counts every file
+    /// <see cref="UnsettledHeldBackCount"/> counts. Where it does, the window's finished
+    /// screen on a run that offered nothing gives that line in place of the sentence
+    /// counting the files held back.
     ///
-    /// FALSE WHERE NOTHING IS COUNTED, AND WHERE THE TIME IS NOT KNOWN. Without a time there is
-    /// no line, so the screen keeps the sentence counting the files.
+    /// FALSE WHERE NOTHING IS COUNTED, AND WHERE A SIGNAL WAS SET. Without a line the
+    /// screen keeps the sentence counting the files.
     ///
-    /// THE COMMAND LINE DOES NOT READ IT. Its sentences counting files held back leave out a
-    /// file under a day old, so its line about them is printed beside those sentences and
-    /// never in place of one.
+    /// THE COMMAND LINE DOES NOT READ IT. Its sentences counting files held back leave out
+    /// the files the line counts, so its line about them is printed beside those sentences
+    /// and never in place of one.
     /// </summary>
-    public bool UnderADayOldLineCoversUnsettledHeldBack =>
-        WithheldBy.UnderADayOldCount == UnsettledHeldBackCount && HasUnderADayOldLine;
+    public bool RecentChangeLineCoversUnsettledHeldBack =>
+        HasRecentChangeLine && WithheldBy.NotBeforeTheClockCount == UnsettledHeldBackCount;
 }
 
 /// <summary>
@@ -866,7 +873,7 @@ public enum WithholdingAccount
     WholeWalkOffer,
 
     /// <summary>
-    /// Files were kept back and neither the wholesale arm nor the three arms read as
+    /// Files were kept back and neither the wholesale arm nor the three counts read as
     /// <see cref="KeptWithoutNotice"/> account for all of them, so the only sentence
     /// true of every file this reading counts is that the scan could not establish they
     /// were unneeded. A run that kept files back both ways reads as this, the wholesale
@@ -874,30 +881,29 @@ public enum WithholdingAccount
     ///
     /// THE COMMAND LINE'S SENTENCE COUNTS
     /// <see cref="ScanResult.UnestablishedWithheldCount"/>, NOT THE WHOLE LIST, so a file
-    /// any of those three arms kept is left out of it. A file the age check kept because
-    /// its age was not established is in it, and so is a file the containment check
-    /// refused or could not answer for.
+    /// any of those three counts is left out of it. A file the age check kept because its
+    /// times were not established is in it, so is a file held because an in-progress
+    /// signal was set, and so is a file the containment check refused or could not answer
+    /// for.
     /// </summary>
     PerFile,
 
     /// <summary>
-    /// Every file kept back was counted by the declared-product-installed arm, the
-    /// under-a-day-old arm or the declared-patch-registered arm. The first is a file
-    /// that declares a program Windows still has installed, where at least one
-    /// installation of that program opens a package, its cached copy or its original at
-    /// a source, that the check could not show is a different file. The second is a file
-    /// whose times were read and show it was created, written or changed less than a day
-    /// before the scan, or no more than a day after it, which every later scan judges
-    /// afresh. The third is a patch copy whose declared patch Windows holds a
-    /// registration of, where at least one registration records no cached copy the
-    /// check could show is a different file. The command line prints no held-back sentence
-    /// for these files, as on a run that kept nothing back, and the files stay among those
-    /// left alone; where any is under a day old and the scan knows the time from which every
-    /// such file is a day old (<see cref="ScanResult.HasUnderADayOldLine"/>), it prints the
-    /// line about those files (<see cref="Helpers.UnderADayOldReport"/>), which stands in
-    /// place of its clean line where nothing is offered. The window's finished screen counts
-    /// a file under a day old among those held back, through
-    /// <see cref="ScanResult.UnsettledHeldBackCount"/>.
+    /// Every file kept back was counted by the declared-product-installed arm,
+    /// <see cref="WithholdingSplit.NotBeforeTheClockCount"/> or the declared-patch-registered
+    /// arm. The first is a file that declares a program Windows still has installed, where
+    /// at least one installation of that program opens a package, its cached copy or its
+    /// original at a source, that the check could not show is a different file. The second
+    /// is a file whose times were read and are not before the scan's clock, with Windows
+    /// Installer's in-progress signals clear just after it, which every later scan judges
+    /// afresh. The third is a patch copy whose declared patch Windows holds a registration
+    /// of, where at least one registration records no cached copy the check could show is a
+    /// different file. The command line prints no held-back sentence for these files, as on
+    /// a run that kept nothing back, and the files stay among those left alone; where any is
+    /// of the second kind, it prints the line about those files
+    /// (<see cref="Helpers.RecentChangeReport"/>), which stands in place of its clean line
+    /// where nothing is offered. The window's finished screen counts a file of the second
+    /// kind among those held back, through <see cref="ScanResult.UnsettledHeldBackCount"/>.
     /// </summary>
     KeptWithoutNotice,
 }
@@ -1035,7 +1041,7 @@ public static class ShortNameCreationLabels
 /// What kept each file on <see cref="ScanResult.WithheldFiles"/> back.
 ///
 /// EXACTLY FIVE DECISIONS PUT A FILE ON THAT LIST AND THEY ARE MUTUALLY EXCLUSIVE
-/// PER FILE, so this is a partition of it rather than twelve overlapping views. The
+/// PER FILE, so this is a partition of it rather than overlapping views. The
 /// containment check keeps a file the path comparison left unclaimed, before the
 /// identity comparison sees it, counted in two arms by whether the check refused it or
 /// could not answer; the identity comparison keeps one candidate at a time; the
@@ -1043,46 +1049,50 @@ public static class ShortNameCreationLabels
 /// age check are skipped entirely; the screen keeps a candidate on its own verdict,
 /// counted in an arm per withholding verdict, except that the screen counts a candidate
 /// whose own identity it could not read, or which had gone by the time it read it, in
-/// the identity comparison's arm; and the age check keeps a candidate the
-/// screen let through that has not been shown to be a day old, counted in two arms by
-/// whether its age was established. A file an earlier decision has already taken is off
-/// the list a later one is handed, so nothing lands twice.
+/// the identity comparison's arm; and the age check keeps a candidate the screen let
+/// through that it has not shown to have last changed before a moment Windows Installer
+/// had nothing in progress, counted in three arms: every such candidate where a signal
+/// was set just after the scan's clock, and otherwise by whether its times were
+/// established. A file an earlier decision has already taken is off the list a later one
+/// is handed, so nothing lands twice.
 ///
 /// THE COUNTS ARE CARRIED APART BECAUSE THEY ARE READ APART. Each member is one fact
 /// about one machine, and nothing may add any two of them and call the result a
 /// cause: what is true of every file on the list is only that the scan declined to
-/// offer it. The opt-in report carries all twelve, each under its own key, and a member
-/// added here goes there too. Inside the app, the declared-product-installed,
-/// under-a-day-old and declared-patch-registered counts are read by
+/// offer it. The opt-in report carries every member, each under its own key, and a
+/// member added here goes there too. Inside the app, the declared-product-installed,
+/// not-before-the-clock and declared-patch-registered counts are read by
 /// <see cref="ScanResult.UnestablishedWithheldCount"/> and
 /// <see cref="ScanResult.Withholding"/>, and the first and last of those three by
 /// <see cref="ScanResult.UnsettledHeldBackCount"/> as well. The wholesale count is read
 /// by <see cref="ScanResult.Withholding"/>,
 /// <see cref="ScanResult.NamedConditionsCoverEveryHeldBackFile"/> and
-/// <see cref="ScanResult.UnsettledHeldBackIsWholesale"/>. The age-unestablished and the
-/// two containment counts are read by <see cref="Total"/> alone, and the other five by
-/// <see cref="ArmsFired"/> and <see cref="ScanResult.NamedConditionsCoverEveryHeldBackFile"/>.
+/// <see cref="ScanResult.UnsettledHeldBackIsWholesale"/>. The scan-signal, the
+/// clock-set-back, the age-unestablished and the two containment counts are read by <see cref="Total"/>
+/// alone, and the remaining five by <see cref="ArmsFired"/> and
+/// <see cref="ScanResult.NamedConditionsCoverEveryHeldBackFile"/>.
 ///
 /// <see cref="Total"/> IS WHAT HOLDS THE PARTITION HONEST, and it is asserted against
 /// the list's own length rather than trusted. A partition is a partition until
-/// somebody adds a branch, and a thirteenth arm arriving later would appear in none of
-/// these twelve while the list grew underneath them.
+/// somebody adds a branch, and an arm arriving later without a member here would appear
+/// in none of these counts while the list grew underneath them.
 /// </summary>
-/// <param name="UnderADayOldCount">
-/// Candidates the age check kept back as under a day old: every other decision let the
-/// file through, its times were read on a local NTFS volume, and the latest of them is
-/// less than <see cref="Services.CachedFileAge.MinimumAge"/> before the scan's own
-/// clock, or no more than that after it. See <see cref="Services.CachedFileAge.Judge"/>.
+/// <param name="NotBeforeTheClockCount">
+/// Candidates the age check kept back because their times were read on a local NTFS
+/// volume and the latest of them is not before the scan's clock
+/// (<see cref="Services.CachedFileAgeVerdict.NotBeforeTheClock"/>), every other decision
+/// having let the file through and Windows Installer's in-progress signals having read
+/// clear just after the clock. See <see cref="Services.CachedFileAge"/>.
 ///
 /// APPENDED AFTER THE OTHER FIVE, so a positional construction of the first five still
 /// means what it meant.
 /// </param>
 /// <param name="AgeUnestablishedCount">
-/// Candidates the age check kept back because their age was not established: the
+/// Candidates the age check kept back because their times were not established: the
 /// reader answered anything but <see cref="Services.FileTimesRead.Read"/>, so the
 /// times could not be read, or were not read on a local, fixed NTFS volume; or the
-/// latest of them is more than <see cref="Services.CachedFileAge.MinimumAge"/> after
-/// the scan's own clock, which is not an age.
+/// latest of them is more than <see cref="Services.CachedFileAge.AheadLimit"/> after
+/// the scan's own clock, which is not a time the scan can place.
 /// </param>
 /// <param name="DeclaredPatchRegisteredCount">
 /// Patch copies the screen kept back because Windows holds a registration of the patch
@@ -1137,27 +1147,63 @@ public static class ShortNameCreationLabels
 /// APPENDED AFTER THE OTHER ELEVEN, so a positional construction of the first eleven
 /// still means what it meant.
 /// </param>
+/// <param name="ScanSignalCount">
+/// Candidates the age check kept back because one of Windows Installer's in-progress
+/// signals was set when the scan read them just after its clock
+/// (<see cref="ScanResult.InstallerActivityAtScan"/>), every other decision having let
+/// the file through. Where a signal was set, every candidate reaching the age check is
+/// counted here and no file's times are read, so on one scan this and
+/// <see cref="NotBeforeTheClockCount"/> are never both above nought.
+///
+/// NOT TO BE ADDED TO <see cref="NotBeforeTheClockCount"/>. That one is a finding about
+/// each file's times; this is a finding about the machine at one moment, made without
+/// reading any file's times.
+///
+/// APPENDED AFTER THE OTHER TWELVE, so a positional construction of the first twelve
+/// still means what it meant.
+/// </param>
+/// <param name="ClockSetBackCount">
+/// Candidates the age check kept back because the system clock went back while the scan
+/// read their times
+/// (<see cref="Services.CachedFileAge.ClockWentBack(TimeProvider, Services.WallClockReading)"/>),
+/// their own times having been before the scan's clock and every other decision having let
+/// them through.
+/// Where the clock went back, every candidate reaching the age check is kept: the ones
+/// whose times kept them are counted in <see cref="NotBeforeTheClockCount"/> and
+/// <see cref="AgeUnestablishedCount"/>, and the rest here.
+///
+/// NOT TO BE ADDED TO <see cref="ScanSignalCount"/>. That one is a finding about Windows
+/// Installer; this is a finding about the system clock, and a total over the pair would
+/// say Windows Installer was busy when it was not. The two are never both above nought
+/// on one scan: where a signal was set, no file's times are read.
+///
+/// APPENDED AFTER THE OTHER THIRTEEN, so a positional construction of the first thirteen
+/// still means what it meant.
+/// </param>
 public readonly record struct WithholdingSplit(
     int IdentityUnestablishedCount = 0,
     int WholesaleCount = 0,
     int DeclaredProductInstalledCount = 0,
     int DeclaredProductUnestablishedCount = 0,
     int ScreenUnansweredCount = 0,
-    int UnderADayOldCount = 0,
+    int NotBeforeTheClockCount = 0,
     int AgeUnestablishedCount = 0,
     int DeclaredPatchRegisteredCount = 0,
     int DeclaredPatchUnestablishedCount = 0,
     int ContainmentRefusedCount = 0,
     int ContainmentUnestablishedCount = 0,
-    int SecondCopyUnestablishedCount = 0)
+    int SecondCopyUnestablishedCount = 0,
+    int ScanSignalCount = 0,
+    int ClockSetBackCount = 0)
 {
     /// <summary>
-    /// Every file the twelve account for. It equals <see cref="ScanResult.WithheldFiles"/>'s
-    /// own length on any scan that filled both, and a test holds it there.
+    /// Every file the members account for. It equals
+    /// <see cref="ScanResult.WithheldFiles"/>'s own length on any scan that filled both,
+    /// and a test holds it there.
     ///
-    /// IT IS A COUNT AND NEVER A CAUSE. The twelve members are twelve different findings
-    /// about a machine, so this figure answers "how many were held back" and nothing
-    /// whatever about why.
+    /// IT IS A COUNT AND NEVER A CAUSE. The members are different findings about a
+    /// machine, so this figure answers "how many were held back" and nothing whatever
+    /// about why.
     /// </summary>
     public int Total =>
         IdentityUnestablishedCount
@@ -1165,13 +1211,15 @@ public readonly record struct WithholdingSplit(
         + DeclaredProductInstalledCount
         + DeclaredProductUnestablishedCount
         + ScreenUnansweredCount
-        + UnderADayOldCount
+        + NotBeforeTheClockCount
         + AgeUnestablishedCount
         + DeclaredPatchRegisteredCount
         + DeclaredPatchUnestablishedCount
         + ContainmentRefusedCount
         + ContainmentUnestablishedCount
-        + SecondCopyUnestablishedCount;
+        + SecondCopyUnestablishedCount
+        + ScanSignalCount
+        + ClockSetBackCount;
 
     /// <summary>
     /// Which of the per-file decisions the scan could not settle kept anything back,
@@ -1184,14 +1232,18 @@ public readonly record struct WithholdingSplit(
     /// conditions held. A line built on the count would say less than the legs do and
     /// would say it a second time.
     ///
-    /// NOR ARE THE DECLARED-PRODUCT-INSTALLED, UNDER-A-DAY-OLD, DECLARED-PATCH-REGISTERED,
-    /// AGE-UNESTABLISHED AND TWO CONTAINMENT ARMS, so the command line names no reason for
-    /// the files those six count. It says nothing of the first three. The other three are
-    /// spoken of in its per-file sentence with no line of their own, and
+    /// NOR ARE THE DECLARED-PRODUCT-INSTALLED, NOT-BEFORE-THE-CLOCK,
+    /// DECLARED-PATCH-REGISTERED, SCAN-SIGNAL, CLOCK-SET-BACK, AGE-UNESTABLISHED AND TWO
+    /// CONTAINMENT ARMS, so the command line's list of reasons names none of them. It says
+    /// nothing of the first three in its held-back sentences; the second has a line of its
+    /// own (<see cref="Helpers.RecentChangeReport"/>). The others are spoken of in its
+    /// per-file sentence, the scan-signal and clock-set-back arms' files with a line of their
+    /// own beside it (<see cref="Helpers.ScanSignalReport"/>), and
     /// <see cref="ScanResult.NamedConditionsCoverEveryHeldBackFile"/> is what tells it
     /// that such files are among those the sentence counts. The window's finished screen
-    /// names no reasons at all, and counts the under-a-day-old, age-unestablished and
-    /// containment arms' files among those it says were held back.
+    /// names no reasons in its count, and counts the not-before-the-clock, scan-signal,
+    /// clock-set-back, age-unestablished and containment arms' files among those it says
+    /// were held back.
     ///
     /// A MEMBER MEANS ONE DECISION KEPT AT LEAST ONE FILE, AND NEVER A CAUSE FOR ANY
     /// PARTICULAR ONE. Any combination of them can hold at once, so nothing sums over
@@ -1223,9 +1275,9 @@ public readonly record struct WithholdingSplit(
 /// <summary>
 /// The per-file withholding decisions the scan could not settle, one member per arm of
 /// <see cref="WithholdingSplit"/> that speaks for itself. The wholesale arm is spoken
-/// for by the legs, and the declared-product-installed, under-a-day-old,
-/// declared-patch-registered, age-unestablished and two containment arms have no reason
-/// line, so none of the seven has a member.
+/// for by the legs, and the declared-product-installed, not-before-the-clock,
+/// declared-patch-registered, scan-signal, clock-set-back, age-unestablished and two
+/// containment arms have no line in that list, so none of them has a member.
 ///
 /// ONE MEMBER PER ARM RATHER THAN ONE PER CAUSE. They are different inabilities, so
 /// nothing may add them together or write one sentence over them that names a cause.

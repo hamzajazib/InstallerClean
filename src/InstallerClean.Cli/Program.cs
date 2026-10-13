@@ -593,21 +593,20 @@ internal static class Program
             // THREE OUTCOMES WHERE NOTHING IS OFFERED, AND WHICH ONE IS THE SCAN
             // RESULT'S ANSWER RATHER THAN THIS HOST'S. An empty offer has three
             // meanings: the folder holds nothing this scan can offer, or holds only
-            // files it kept for a program Windows still has installed, for being under
-            // a day old or for their patch's registrations; a rule about the machine's
+            // files it kept for a program Windows still has installed, for their times
+            // or for their patch's registrations; a rule about the machine's
             // records emptied the walk-derived offer in one go; or the scan judged the
             // files one at a time and could not clear them. "Found no unneeded files"
             // is printed for the first machine only, and the two withholding
             // sentences say different things that are each false of the other's
             // machine. On all three, the lines ReportScanSignals returns follow, with the
-            // line about files held back for being under a day old wherever the scan held
-            // any.
+            // line about files held back for their times wherever the scan held any.
             //
             // AND THE FIRST MACHINE GETS IT ONLY WHERE THAT LINE IS NOT PRINTED. The line
-            // says a later scan will probably be able to offer those files, and it stands
-            // in the clean line's place here as it does on the window's nothing-offered
-            // screen for the same run. Whether it is printed is the scan's answer
-            // (HasUnderADayOldLine), the same one ReportScanSignals spends.
+            // says those files were held and when to scan again, and it stands in the clean
+            // line's place here as it does on the window's nothing-offered screen for the
+            // same run. Whether it is printed is the scan's answer (HasRecentChangeLine),
+            // the same one ReportScanSignals spends.
             //
             // AND THE FIRST MACHINE GETS IT ONLY WHERE THE SCAN STOPPED WAITING FOR NO
             // DRIVE OR SHARE WHILE FILES STILL HAD TO BE CHECKED AGAINST IT. Where it did,
@@ -626,14 +625,14 @@ internal static class Program
             //
             // The count and the size are UnestablishedWithheldCount and
             // UnestablishedWithheldBytes, which leave out any file kept because it
-            // declares an installed program, is under a day old or is a copy of a
-            // patch Windows holds a registration of. Superseded files held back are
-            // printed in a line of their own. The window's finished screen counts
-            // differently: its one sentence also takes in a file under a day old and a
-            // superseded file, and on a run that offered nothing, where every file it would
-            // count is under a day old and the time from which they are all a day old is
-            // known (ScanResult.UnderADayOldLineCoversUnsettledHeldBack), it gives the line
-            // about those files in that sentence's place.
+            // declares an installed program, for its times (ScanResult.WithheldBy.NotBeforeTheClockCount)
+            // or as a copy of a patch Windows holds a registration of. Superseded files
+            // held back are printed in a line of their own. The window's finished screen
+            // counts differently: its one sentence also takes in a file kept for its times
+            // and a superseded file, and on a run that offered nothing, where every file it
+            // would count was kept for its times
+            // (ScanResult.RecentChangeLineCoversUnsettledHeldBack), it gives the line about
+            // those files in that sentence's place.
             var withheldCount = scanResult.UnestablishedWithheldCount;
 
             // The one-form names the size and not the numeral ("the one file"), so it
@@ -730,7 +729,7 @@ internal static class Program
                     : HeldBackLine(
                         Strings.Cli_NothingOfferedPerFile_Singular,
                         Strings.Cli_NothingOfferedPerFile_Plural, "Cli.NothingOfferedPerFile"));
-            else if (sourcesGivenUp.Count == 0 && !scanResult.HasUnderADayOldLine)
+            else if (sourcesGivenUp.Count == 0 && !scanResult.HasRecentChangeLine)
                 Console.WriteLine(Strings.Cli_FoundNoOrphans);
 
             notices.ForEach(Console.WriteLine);
@@ -740,9 +739,8 @@ internal static class Program
                 // The audit line follows the same split as stdout, so a monitoring
                 // tool watching the Application channel is not told a machine is
                 // clean when the scan could not judge it. The first machine takes the
-                // clean entry whether or not files were held back for being under a day
-                // old: the line saying when a scan can probably offer them is on stdout
-                // alone.
+                // clean entry whether or not files were held back for their times: the
+                // line about them is on stdout alone.
                 //
                 // ONE EVENT CLASS FOR ALL OF THEM. The run did its job on each of these
                 // machines, so each entry belongs in the outcome band, and the notice
@@ -780,7 +778,8 @@ internal static class Program
                 return EndScanOnly(arg, output, NothingOfferedSummary);
             }
 
-            // /s reads only, so it skips the gate.
+            // /s acts on nothing, so it skips the gate here. The scan's own read of the same
+            // signals, made on every mode, is in the scan.
             if (arg is "/d" or "/m")
             {
                 var rebootService = services.GetRequiredService<IPendingRebootService>();
@@ -788,7 +787,8 @@ internal static class Program
                 if (rebootCheck.IsBlocked)
                     // Block + null Reason is unreachable per the PendingRebootResult.Block
                     // factory contract; .Value is safe inside this IsBlocked branch.
-                    return EmitPendingRebootBlocked(arg, rebootCheck.Reason!.Value, rebootCheck.Detail);
+                    return EmitPendingRebootBlocked(
+                        arg, rebootCheck.Reason!.Value, rebootCheck.Detail, rebootCheck.WindowsError);
             }
 
             // Re-verify the removable set immediately before acting: the Windows
@@ -1393,7 +1393,9 @@ internal static class Program
     /// drives and shares the scan stopped waiting for while files still had to be
     /// checked against them (<paramref name="sourcesGivenUp"/>, the scan's
     /// <see cref="ScanResult.SourceRootsGivenUpKeepingFiles"/> as the caller read
-    /// it), superseded files kept back, files kept back for being under a day old,
+    /// it), superseded files kept back, every file the folder walk found where the scan found
+    /// an in-progress signal set, files kept back because their times are not before the
+    /// moment the scan began,
     /// records the scan could not fully read, and registrations naming a file that is
     /// not there.
     ///
@@ -1440,10 +1442,10 @@ internal static class Program
         // is what a number in the 3000 band is for. See CliEventClass.
         //
         // NOTHING IS REPORTED HERE FOR A RUN WHOSE EVERY HELD FILE WAS KEPT FOR A
-        // PROGRAM WINDOWS STILL HAS INSTALLED, FOR BEING UNDER A DAY OLD OR FOR ITS
-        // PATCH'S REGISTRATIONS, the three arms WithholdingAccount.KeptWithoutNotice
-        // names: HasWithholdingToReport is false for it. A file under a day old has a
-        // line of its own further down.
+        // PROGRAM WINDOWS STILL HAS INSTALLED, FOR ITS TIMES OR FOR ITS PATCH'S
+        // REGISTRATIONS, the three WithholdingAccount.KeptWithoutNotice names:
+        // HasWithholdingToReport is false for it. A file kept for its times has a line of
+        // its own further down.
         if (scanResult.HasWithholdingToReport)
         {
             // WHICH OF THE TWO SENTENCES, ASKED ONCE AND SPENT BY BOTH THE AUDIT LINE
@@ -1516,6 +1518,16 @@ internal static class Program
                     lines.Add(line);
             }
         }
+
+        // WHY EVERY FILE THE FOLDER WALK FOUND WAS HELD BACK, WHERE THE SCAN FOUND ONE OF
+        // WINDOWS INSTALLER'S IN-PROGRESS SIGNALS SET JUST AFTER ITS CLOCK, OR THE SYSTEM
+        // CLOCK WENT BACK WHILE IT READ THE FILES' TIMES. On every mode and on stdout alone:
+        // the held-back lines above already count those files, and their notice is the
+        // Application log's record of them. This says which signal, in the terms the gate's
+        // own sentences use, or that the clock went back, and refuses nothing: where anything
+        // is offered, /d and /m read the gate again before acting and stop where it is set.
+        var scanSignal = ScanSignalReport.CommandLine(scanResult);
+        if (scanSignal.Length > 0) lines.Add(scanSignal);
 
         // THE DRIVES AND SHARES THE SCAN STOPPED WAITING FOR WHILE FILES STILL HAD TO BE
         // CHECKED AGAINST THEM, on stdout and as Event ID 3004. After the held-back lines
@@ -1620,15 +1632,14 @@ internal static class Program
                     arg, scanResult.MissingAffectedCount));
         }
 
-        // FILES HELD BACK FOR BEING UNDER A DAY OLD, AND WHEN A SCAN CAN PROBABLY OFFER
-        // THEM: the sentence the window's cards carry (UnderADayOldReport.Line), printed
-        // wherever the scan held at least one file back for that reason, on every mode and
-        // whatever else was offered. It is on stdout only, for whoever reads the console;
-        // no Application-log entry carries it. The time is in the PC's own time zone, the
-        // one a scheduled task's trigger is set in.
-        var underADayOld = UnderADayOldReport.Line(scanResult, TimeZoneInfo.Local);
-        if (underADayOld.Length > 0)
-            lines.Add(underADayOld);
+        // FILES HELD BACK BECAUSE THEIR TIMES ARE NOT BEFORE THE MOMENT THE SCAN BEGAN: the
+        // sentence the window's cards carry (RecentChangeReport.Line), printed wherever the
+        // scan held at least one file back for that reason, on every mode and whatever
+        // else was offered. It is on stdout only, for whoever reads the console; no
+        // Application-log entry carries it.
+        var recentChange = RecentChangeReport.Line(scanResult);
+        if (recentChange.Length > 0)
+            lines.Add(recentChange);
 
         return lines;
     }
@@ -2040,7 +2051,8 @@ internal static class Program
     /// lock prints the sentence the action services' refusal prints, which closes by
     /// naming what did not happen to the files and so comes in a /d and a /m form.
     /// </summary>
-    internal static string PendingRebootBlockedMessage(string arg, PendingRebootReason reason, string? detail) =>
+    internal static string PendingRebootBlockedMessage(
+        string arg, PendingRebootReason reason, string? detail, int? windowsError = null) =>
         reason switch
         {
             PendingRebootReason.MsiExecuteMutexHeld =>
@@ -2069,6 +2081,11 @@ internal static class Program
             // Installer was busy, which is as true of this read as of the mutex's.
             PendingRebootReason.InstallerInProgressMarkerAccessRefused =>
                 InstallerLockAccessRefusedLine(arg),
+            // Given with the Windows error the check failed on, where it failed on one.
+            PendingRebootReason.MsiExecuteMutexUnreadable =>
+                WindowsErrors.Sentence(windowsError,
+                    Strings.Cli_PendingRebootBlocked_MsiExecuteMutexUnreadable,
+                    Strings.Cli_PendingRebootBlocked_MsiExecuteMutexUnreadableWindowsError),
             // What a reason with no line of its own gets: a sentence true of the
             // whole family, where a throw would reach the generic catch and report
             // a held run as an unexpected crash. It cannot fire for a null reason
@@ -2112,6 +2129,8 @@ internal static class Program
                 nameof(PendingRebootReason.InstallerInProgressMarker),
             PendingRebootReason.InstallerInProgressMarkerAccessRefused =>
                 nameof(PendingRebootReason.InstallerInProgressMarkerAccessRefused),
+            PendingRebootReason.MsiExecuteMutexUnreadable =>
+                Strings.Cli_EventLogReason_MsiExecuteMutexUnreadable,
             _ => reason.ToString(),
         };
 
@@ -2125,27 +2144,34 @@ internal static class Program
     /// this line back without doing both.
     ///
     /// WHAT THE FIXED HALF SAYS, AND WHY IT SAYS SO LITTLE. The label is the whole of
-    /// what the line claims about the condition. Of the eight, one is an installer
-    /// running right now, one a lock the app was refused permission to open, one a
-    /// suspended transaction, two are operations queued for the next restart, one is
-    /// a registry value the check could not read, one is Windows Installer's
-    /// in-progress file and one is a read of that file Windows refused, so nothing
-    /// shorter than the label is true of all eight.
+    /// what the line claims about the condition. The reasons run from an installer
+    /// running right now, through a suspended transaction and operations queued for the
+    /// next restart, to checks the app was refused or could not make, so nothing shorter
+    /// than the label is true of all of them.
     ///
     /// The detail arrives carrying its own separator, which is why the template ends
     /// in a placeholder with no space in front of it: the reasons that never carry a
-    /// detail would otherwise each log a line with a space hanging off it.
+    /// detail would otherwise each log a line with a space hanging off it. A Windows error
+    /// the check failed on is the detail where there is one, as its number alone
+    /// (<c>Cli.EventLogWindowsError</c>): the text Windows gives for it is in the language Windows
+    /// is shown in, and this channel is English.
     ///
     /// CALL IT FROM INSIDE THE EVENT-LOG SCOPE, for the reason
     /// <see cref="PendingRebootEventLogReason"/> gives: it reads through the ordinary
     /// door, so it answers in whatever culture is current when it runs.
     /// </summary>
-    internal static string PendingRebootEventLogLine(string arg, PendingRebootReason reason, string? detail) =>
-        string.Format(
+    internal static string PendingRebootEventLogLine(
+        string arg, PendingRebootReason reason, string? detail, int? windowsError = null)
+    {
+        var logged = windowsError is { } number
+            ? string.Format(Strings.Cli_EventLogWindowsError, WindowsErrors.Number(number))
+            : detail;
+        return string.Format(
             Strings.Cli_EventLogPendingRebootBlocked,
             arg,
             PendingRebootEventLogReason(reason),
-            string.IsNullOrEmpty(detail) ? string.Empty : " " + detail);
+            string.IsNullOrEmpty(logged) ? string.Empty : " " + logged);
+    }
 
     /// <summary>
     /// Emits the pending-reboot-blocked outcome: the localised stdout reason
@@ -2167,9 +2193,10 @@ internal static class Program
     /// terms, so one refusal carries one sentence and one exit code wherever it is
     /// met.
     /// </summary>
-    private static int EmitPendingRebootBlocked(string arg, PendingRebootReason reason, string? detail)
+    private static int EmitPendingRebootBlocked(
+        string arg, PendingRebootReason reason, string? detail, int? windowsError = null)
     {
-        Console.WriteLine(PendingRebootBlockedMessage(arg, reason, detail));
+        Console.WriteLine(PendingRebootBlockedMessage(arg, reason, detail, windowsError));
 
         // WHAT A SCHEDULER IS TOLD, DECIDED FROM THE REASON AND TAKEN AS A PAIR.
         // The exit code and the entry class are one statement about this run said to
@@ -2177,15 +2204,16 @@ internal static class Program
         // "come back later" beside an entry classed as a run that failed outright
         // would leave the machine contract disagreeing with itself.
         //
-        // THE FIVE THAT ASSERT SOMETHING IS IN FLIGHT TAKE THE TRANSIENT CODE. An
+        // THE REASONS THAT ASSERT SOMETHING IS IN FLIGHT TAKE THE TRANSIENT CODE. An
         // install holding the mutex, a suspended transaction, Windows Installer's
         // in-progress file, a queued rename: each of those ends by itself, so a
         // scheduler that comes back finds the machine in a different state.
         //
         // A READ THE APP COULD NOT MAKE IS NOT ONE OF THEM, and this is the arm the
-        // default falls to. Nothing about waiting says the value will read next
-        // time, and the sentence this run prints tells the operator that if it still
-        // will not read, this is not a machine InstallerClean can clean. A code
+        // default falls to. A sample of the lock that failed is such a read. Nothing
+        // about waiting says the read will succeed next time, and the sentence this run
+        // prints tells the operator that if it still fails, this is not a machine
+        // InstallerClean can clean. A code
         // meaning "temporary, retry" under those words has a nightly task coming
         // back for ever. The code it takes instead claims only what is true of the
         // run: nothing was processed. A reason added to the enum later lands here
@@ -2216,7 +2244,7 @@ internal static class Program
         // label is resolved INSIDE the scope below, which is what makes it en-GB
         // rather than the OS language, so the call stays in the lambda.
         MachineContract.WriteEventLog(entryClass, () =>
-            PendingRebootEventLogLine(arg, reason, detail));
+            PendingRebootEventLogLine(arg, reason, detail, windowsError));
         return exitCode;
     }
 

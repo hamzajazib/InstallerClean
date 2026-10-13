@@ -45,8 +45,10 @@ public class RemovableReverifierWalkDerivedTests
     }
 
     private static RemovableReverifier Reverifier(
-        IInstallerQueryService query, IFileIdentityReader ids, IDeclaredProductCheck screen, IFileTimesReader times) =>
-        new(query, Substitute.For<IMsiApi>(), ids, screen, times, new FixedClock(Now), null);
+        IInstallerQueryService query, IFileIdentityReader ids, IDeclaredProductCheck screen, IFileTimesReader times,
+        IPendingRebootService? activity = null, TimeProvider? clock = null) =>
+        new(query, Substitute.For<IMsiApi>(), ids, screen, times, clock ?? new FixedClock(Now),
+            installerFolderOverride: null, installerActivity: activity);
 
     /// <summary>
     /// A screen that keeps the files named in <paramref name="kept"/> and lets every
@@ -76,6 +78,14 @@ public class RemovableReverifierWalkDerivedTests
             .ToList();
 
     private static RegisteredPackage Live(string path) => new(path, "Product", Product);
+
+    /// <summary>A reader that opens each of <paramref name="paths"/> as a file of its own.</summary>
+    private static ScriptedFileIdentities IdentitiesFor(params string[] paths)
+    {
+        var ids = new ScriptedFileIdentities();
+        for (var i = 0; i < paths.Length; i++) ids.Opens(paths[i], 100 + (ulong)i);
+        return ids;
+    }
 
     private static ScriptedFileTimes OldTimes(params string[] paths)
     {
@@ -325,7 +335,7 @@ public class RemovableReverifierWalkDerivedTests
     // ---- The age check ----
 
     [Fact]
-    public async Task A_file_not_shown_a_day_old_at_the_check_is_held_back()
+    public async Task A_file_changed_after_the_check_s_clock_is_held_back()
     {
         const string fresh = Folder + @"\fresh.msi";
         const string unread = Folder + @"\unread.msi";
@@ -337,8 +347,8 @@ public class RemovableReverifierWalkDerivedTests
         ids.Opens(unread, 3);
         ids.Opens(spare, 4);
         var times = OldTimes(spare);
-        var recent = Now.UtcDateTime.AddHours(-12);
-        times.Reads(fresh, Old, Old, recent);
+        var late = Now.UtcDateTime.AddSeconds(5);
+        times.Reads(fresh, Old, Old, late);
         times.Answers(unread, FileTimesRead.OpenRefused);
 
         var result = await Reverifier(Query(Live(registered)), ids, Screen(), times)
@@ -347,6 +357,132 @@ public class RemovableReverifierWalkDerivedTests
         Assert.Equal(new[] { spare }, result.Surviving);
         Assert.Equal(new[] { fresh, unread }, result.Dropped);
         Assert.Equal(new HeldBackReasons(FileNotConfirmed: 2), result.Reasons);
+    }
+
+    [Fact]
+    public async Task A_file_changed_an_hour_before_the_check_s_clock_survives()
+    {
+        const string hour = Folder + @"\hour.msi";
+        var ids = IdentitiesFor(hour);
+        var times = new ScriptedFileTimes();
+        times.Reads(hour, Old, Now.UtcDateTime.AddHours(-1), Old);
+
+        var result = await Reverifier(Query(), ids, Screen(), times,
+            new ScriptedInstallerActivity(PendingRebootResult.Clean))
+            .ReverifyAsync(new[] { hour });
+
+        Assert.Equal(new[] { hour }, result.Surviving);
+    }
+
+    [Fact]
+    public async Task A_clock_set_back_during_the_check_holds_every_walk_derived_file_its_times_passed()
+    {
+        // Ten seconds behind after two seconds: the wall clock was set back while the times
+        // were read, so a time before the clock shows nothing.
+        const string spare = Folder + @"\spare.msi";
+        const string fresh = Folder + @"\fresh.msi";
+        var times = OldTimes(spare);
+        times.Reads(fresh, Old, Old, Now.UtcDateTime.AddSeconds(5));
+        var clock = new SteppingClock(Now, TimeSpan.FromSeconds(-8), TimeSpan.FromSeconds(2));
+
+        var result = await Reverifier(Query(), IdentitiesFor(spare, fresh), Screen(), times,
+            new ScriptedInstallerActivity(PendingRebootResult.Clean), clock)
+            .ReverifyAsync(new[] { spare, fresh });
+
+        Assert.Equal(new[] { spare, fresh }, times.Asked);
+        Assert.Empty(result.Surviving);
+        Assert.Equal(new[] { spare, fresh }, result.Dropped);
+        Assert.Equal(new HeldBackReasons(FileNotConfirmed: 2), result.Reasons);
+    }
+
+    [Fact]
+    public async Task A_wall_clock_that_ran_ahead_during_the_check_holds_nothing_its_times_passed()
+    {
+        const string spare = Folder + @"\spare.msi";
+        var clock = new SteppingClock(Now, TimeSpan.FromHours(1), TimeSpan.FromSeconds(2));
+
+        var result = await Reverifier(Query(), IdentitiesFor(spare), Screen(), OldTimes(spare),
+            new ScriptedInstallerActivity(PendingRebootResult.Clean), clock)
+            .ReverifyAsync(new[] { spare });
+
+        Assert.Equal(new[] { spare }, result.Surviving);
+    }
+
+    [Fact]
+    public async Task A_wall_clock_within_the_allowance_holds_nothing_its_times_passed()
+    {
+        // Half a millisecond behind after one second, inside a thousandth of it.
+        const string spare = Folder + @"\spare.msi";
+        var clock = new SteppingClock(Now, TimeSpan.FromMicroseconds(999_500), TimeSpan.FromSeconds(1));
+
+        var result = await Reverifier(Query(), IdentitiesFor(spare), Screen(), OldTimes(spare),
+            new ScriptedInstallerActivity(PendingRebootResult.Clean), clock)
+            .ReverifyAsync(new[] { spare });
+
+        Assert.Equal(new[] { spare }, result.Surviving);
+        Assert.Equal(new HeldBackReasons(), result.Reasons);
+    }
+
+    [Fact]
+    public async Task A_check_cancelled_before_its_signal_read_ends_as_a_cancel_and_reads_nothing()
+    {
+        const string spare = Folder + @"\spare.msi";
+        var activity = new ScriptedInstallerActivity(PendingRebootResult.Clean);
+        var times = OldTimes(spare);
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            Reverifier(Query(), IdentitiesFor(spare), Screen(), times, activity)
+                .ReverifyAsync(new[] { spare }, cancelled.Token));
+
+        Assert.Empty(activity.ClockReadsAtEachCheck);
+        Assert.Empty(times.Asked);
+    }
+
+    [Fact]
+    public async Task A_signal_set_just_after_the_check_s_clock_holds_every_walk_derived_file_and_reads_no_times()
+    {
+        // The reader throws on any path, so this fails if a time is read.
+        const string a = Folder + @"\a.msi";
+        const string b = Folder + @"\b.msp";
+        var times = new ScriptedFileTimes();
+
+        var result = await Reverifier(Query(), IdentitiesFor(a, b), Screen(), times,
+            new ScriptedInstallerActivity(PendingRebootResult.Block(PendingRebootReason.InstallerInProgressMarker)))
+            .ReverifyAsync(new[] { a, b });
+
+        Assert.Empty(times.Asked);
+        Assert.Empty(result.Surviving);
+        Assert.Equal(new[] { a, b }, result.Dropped);
+        Assert.Equal(new HeldBackReasons(FileNotConfirmed: 2), result.Reasons);
+    }
+
+    [Fact]
+    public async Task The_check_reads_the_signals_once_and_after_its_clock()
+    {
+        const string spare = Folder + @"\spare.msi";
+        var clock = new FixedClock(Now);
+        var activity = new ScriptedInstallerActivity(PendingRebootResult.Clean, clock);
+
+        await Reverifier(Query(), IdentitiesFor(spare), Screen(), OldTimes(spare), activity, clock)
+            .ReverifyAsync(new[] { spare });
+
+        Assert.Equal(new[] { 1 }, activity.ClockReadsAtEachCheck);
+    }
+
+    [Fact]
+    public async Task The_check_reads_the_wall_clock_for_its_clock_check_before_its_clock()
+    {
+        const string spare = Folder + @"\spare.msi";
+        var clock = new FixedClock(Now);
+
+        await Reverifier(Query(), IdentitiesFor(spare), Screen(), OldTimes(spare),
+                new ScriptedInstallerActivity(PendingRebootResult.Clean), clock)
+            .ReverifyAsync(new[] { spare });
+
+        Assert.Equal(1, clock.PreciseReadsBeforeTheFirstRead);
+        Assert.Equal(1, clock.Reads);
     }
 
     // ---- The identity comparison ----
@@ -577,5 +713,7 @@ public class RemovableReverifierWalkDerivedTests
         var reverifier = Assert.IsType<RemovableReverifier>(services.GetRequiredService<IRemovableReverifier>());
 
         Assert.True(reverifier.ChecksFiles);
+        Assert.True(reverifier.ReadsInstallerActivity);
+        Assert.True(reverifier.JudgesOnTheFileStampClock);
     }
 }

@@ -345,6 +345,31 @@
                             AutomationProperties.HelpText="{loc:Translate Automation.ViewRegisteredFiles.HelpText}"/>
                 </Grid>
 
+                <!-- Why the scan held back every file in the folder no record names, where
+                     one of Windows Installer's in-progress signals was set when it read them
+                     just after its clock, or the system clock went back while it read the
+                     files' times. A footnote under the left-alone count, which counts
+                     those files, in the form of the line below. Move and Delete do not follow
+                     it: they follow the read after the scan, which the warning banner speaks
+                     for. The text goes through the converter so the folder's path cannot wrap
+                     part-way, and the screen-reader name is the line as composed. The
+                     code-behind raises it after the scan's headline. -->
+                <DockPanel Margin="{StaticResource GapTop.Sm}"
+                           Visibility="{Binding Scan.HasScanSignal, Converter={StaticResource BoolToVis}}">
+                    <Path Data="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM118,98a10,10,0,0,1,20,0v46a10,10,0,0,1,-20,0Zm10,96a14,14,0,1,1,14,-14A14,14,0,0,1,128,194Z"
+                          Fill="{StaticResource Status.Warning}" Stretch="Uniform"
+                          Width="{a11y:TextScaled 16}" Height="{a11y:TextScaled 16}"
+                          DockPanel.Dock="Left" VerticalAlignment="Top" Margin="{StaticResource GapRight.Icon}"/>
+                    <TextBlock x:Name="ScanSignalText"
+                               Text="{Binding Scan.ScanSignalText, Converter={StaticResource KeepInstallerPathWhole}}"
+                               TextWrapping="Wrap"
+                               Foreground="{StaticResource Text.Muted}"
+                               FontSize="{DynamicResource Type.Caption}"
+                               VerticalAlignment="Center"
+                               AutomationProperties.Name="{Binding Scan.ScanSignalText}"
+                               AutomationProperties.LiveSetting="Polite"/>
+                </DockPanel>
+
                 <!-- The drives and shares this scan carried on without while files
                      still had to be checked against them. Sits as a footnote under the
                      left-alone count, which counts those files, in the form of the
@@ -1179,12 +1204,15 @@
                         </TextBlock.Style>
                     </TextBlock>
 
-                    <!-- How many files the scan held back for being less than a day old,
-                         and when a scan can probably offer them; empty (and collapsed) on
-                         every card whose scan held none back for that reason. LiveSetting
+                    <!-- Why the scan held files back for something about the scan itself:
+                         files changed after it began, or Windows Installer busy as it began,
+                         or the clock going back while it ran. Empty (and collapsed) on every card whose scan held none back
+                         for either. Through the converter, since the second names the
+                         folder; the screen-reader name is the line as composed. LiveSetting
                          so it is announced with the outcome. -->
-                    <TextBlock x:Name="CompletionUnderADayOldText"
-                               Text="{Binding Completion.UnderADayOld}"
+                    <TextBlock x:Name="CompletionScanStartText"
+                               Text="{Binding Completion.ScanStartLine, Converter={StaticResource KeepInstallerPathWhole}}"
+                               AutomationProperties.Name="{Binding Completion.ScanStartLine}"
                                Foreground="{StaticResource Text.Muted}" FontSize="{DynamicResource Type.Body}"
                                HorizontalAlignment="Center" TextAlignment="Center"
                                TextWrapping="Wrap" Margin="{StaticResource GapBottom.Xl}"
@@ -1193,7 +1221,7 @@
                             <Style TargetType="TextBlock">
                                 <Setter Property="Visibility" Value="Visible"/>
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Completion.UnderADayOld}" Value="">
+                                    <DataTrigger Binding="{Binding Completion.ScanStartLine}" Value="">
                                         <Setter Property="Visibility" Value="Collapsed"/>
                                     </DataTrigger>
                                 </Style.Triggers>

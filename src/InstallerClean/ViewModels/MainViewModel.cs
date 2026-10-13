@@ -370,8 +370,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // THE SCREEN COUNTS ScanResult.UnsettledHeldBackCount: every file held back
             // except those kept for a program Windows still has installed or for their
             // patch's registrations, together with the superseded patches the scan held
-            // back. A file under a day old, a file whose age could not be established and
-            // a file the containment check refused or could not answer for are in it.
+            // back. A file whose times are not before the scan's clock, a file held
+            // because an in-progress signal was set or because the clock went back, a
+            // file whose times could not be established and a file the containment check
+            // refused or could not answer for are in it.
             // HasUnsettledHeldBack is that count above zero. ScanResult.IsAllClear adds
             // the drives and shares given up, a file kept at one of them being outside
             // that count where its own program is installed, and the all-clear is the

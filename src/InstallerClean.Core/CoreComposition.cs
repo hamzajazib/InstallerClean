@@ -73,8 +73,10 @@ public static class CoreComposition
         // Reads a cached file's times and the file system that keeps them, for the
         // scan's age check. Stateless in the same way.
         services.AddSingleton<IFileTimesReader, FileTimesReader>();
-        // The clock the age check judges against.
-        services.AddSingleton(TimeProvider.System);
+        // The clock the age check judges against, read in the steps file times are
+        // stamped in (FileStampClock). The scan and the check before a Move or Delete
+        // are the only consumers of the registered TimeProvider.
+        services.AddSingleton<TimeProvider, FileStampClock>();
         // Re-checks a batch just before a Move or Delete: the records again, and
         // the scan's own steps on every file no record names, which is why it
         // takes the scan's readers.

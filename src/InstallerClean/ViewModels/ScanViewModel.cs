@@ -166,11 +166,6 @@ public partial class ScanViewModel : ObservableObject
     /// <summary>True when the last probe returned Block.</summary>
     public bool HasPendingReboot => PendingRebootResult?.IsBlocked == true;
 
-    // A non-localised PendingRebootLabel lived here for the result-log payload
-    // and went with that field in schema 4. Nothing else ever read it: the state
-    // reaches the screen through PendingRebootBannerText below and reaches both
-    // action paths through their own fresh probe, neither of which wants a label.
-
     /// <summary>
     /// Localised banner text for the current Block reason; empty otherwise.
     ///
@@ -203,6 +198,11 @@ public partial class ScanViewModel : ObservableObject
         // Windows refused the read of the in-progress file: the refused-permission
         // sentence is as true of that read as of the mutex's.
         PendingRebootReason.InstallerInProgressMarkerAccessRefused => Strings.Body_PendingReboot_MsiExecuteMutexAccessRefused,
+        // Given with the Windows error the check failed on, where it failed on one.
+        PendingRebootReason.MsiExecuteMutexUnreadable => WindowsErrors.Sentence(
+            PendingRebootResult.WindowsError,
+            Strings.Body_PendingReboot_MsiExecuteMutexUnreadable,
+            Strings.Body_PendingReboot_MsiExecuteMutexUnreadableWindowsError),
         null => string.Empty,
         _ => Strings.Body_PendingReboot_Other,
     };
@@ -255,6 +255,29 @@ public partial class ScanViewModel : ObservableObject
 
     /// <summary>Whether <see cref="SourcesGivenUpText"/> has a line to show.</summary>
     public bool HasSourcesGivenUp => SourcesGivenUpText.Length > 0;
+
+    /// <summary>
+    /// The line saying the scan held back every file in the folder no record names,
+    /// because one of Windows Installer's in-progress signals was set when it read them
+    /// just after its clock, or because the system clock went back while it read the files'
+    /// times (<see cref="ScanSignalReport.WindowLine(ScanResult)"/>), shown under the
+    /// left-alone line, whose count takes those files in. Empty where neither held a file,
+    /// which collapses the line.
+    ///
+    /// IT DOES NOT TOUCH MOVE AND DELETE. Those follow the read made after the scan
+    /// (<see cref="PendingRebootResult"/>), as the command line's /d and /m follow theirs,
+    /// and the files this line speaks of are not on the list either way. Where that later
+    /// read is set too, the warning banner says so as well, and both are true.
+    ///
+    /// The finished card reads the same line off the same result where the scan offered
+    /// nothing (<see cref="CompletionViewModel.ShowNothingOffered"/>).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasScanSignal))]
+    private string _scanSignalText = string.Empty;
+
+    /// <summary>Whether <see cref="ScanSignalText"/> has a line to show.</summary>
+    public bool HasScanSignal => ScanSignalText.Length > 0;
 
     /// <summary>
     /// The result the main window is showing, from the most recent scan that
@@ -413,6 +436,7 @@ public partial class ScanViewModel : ObservableObject
             var missingPrograms = MissingFilesReport.Inline(
                 MissingFilesReport.Products(result.RegisteredPackages));
             var sourcesGivenUp = SourcesGivenUpReport.WindowLine(result.SourceRootsGivenUpKeepingFiles);
+            var scanSignal = ScanSignalReport.WindowLine(result);
 
             PendingRebootResult = pendingRebootResult;
             LastScanResult = result;
@@ -429,6 +453,7 @@ public partial class ScanViewModel : ObservableObject
             MissingFromDiskCount = result.MissingAffectedCount;
             MissingFromDiskPrograms = missingPrograms;
             SourcesGivenUpText = sourcesGivenUp;
+            ScanSignalText = scanSignal;
             HasScanned = true;
         }
         finally
@@ -566,6 +591,7 @@ public partial class ScanViewModel : ObservableObject
         MissingFromDiskCount = 0;
         MissingFromDiskPrograms = string.Empty;
         SourcesGivenUpText = string.Empty;
+        ScanSignalText = string.Empty;
         PendingRebootResult = null;
         HasScanned = false;
     }

@@ -37,14 +37,13 @@ public class MainViewModelTests
     private readonly MockFileSystem _fileSystem = new();
 
     [Fact]
-    public async Task The_card_after_a_Delete_gives_the_day_old_line_of_the_scan_the_refresh_ran()
+    public async Task The_card_after_a_Delete_gives_the_line_about_recently_changed_files_of_the_scan_the_refresh_ran()
     {
-        // The Delete starts from a scan holding one file back for its age and ends with a
-        // refresh holding two, at a later time. The card is revealed over the second scan
-        // and speaks for it.
+        // The Delete starts from a scan holding one file back for its times and ends with a
+        // refresh holding two. The card is revealed over the second scan and speaks for it.
         var vm = CreateViewModel();
-        var before = DayOldScan(ScanResultWithOrphans(1), held: 1, new DateTime(2030, 6, 16, 9, 40, 0, DateTimeKind.Utc));
-        var after = DayOldScan(EmptyScanResult(), held: 2, new DateTime(2030, 6, 16, 11, 5, 0, DateTimeKind.Utc));
+        var before = RecentChangeScan(ScanResultWithOrphans(1), held: 1);
+        var after = RecentChangeScan(EmptyScanResult(), held: 2);
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(before, after);
         _deleteService.DeleteFilesAsync(
@@ -56,27 +55,26 @@ public class MainViewModelTests
         await vm.Scan.ScanWithProgressAsync(null);
         await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
 
-        var afterLine = UnderADayOldReport.Line(after, TimeZoneInfo.Local);
+        var afterLine = RecentChangeReport.Line(after);
         Assert.True(vm.Completion.IsComplete);
         Assert.Same(after, vm.Scan.LastScanResult);
         Assert.NotEqual(string.Empty, afterLine);
-        Assert.NotEqual(UnderADayOldReport.Line(before, TimeZoneInfo.Local), afterLine);
-        Assert.Equal(afterLine, vm.Completion.UnderADayOld);
+        Assert.NotEqual(RecentChangeReport.Line(before), afterLine);
+        Assert.Equal(afterLine, vm.Completion.ScanStartLine);
     }
 
     /// <summary>
-    /// <paramref name="scan"/> holding <paramref name="held"/> files of 1 KB back for being
-    /// under a day old, all a day old at <paramref name="allADayOldAtUtc"/>.
+    /// <paramref name="scan"/> holding <paramref name="held"/> files of 1 KB back because
+    /// their times are not before the scan's clock.
     /// </summary>
-    private static ScanResult DayOldScan(ScanResult scan, int held, DateTime allADayOldAtUtc) =>
+    private static ScanResult RecentChangeScan(ScanResult scan, int held) =>
         scan with
         {
             WithheldFiles = Enumerable.Range(0, held)
                 .Select(i => new OrphanedFile($@"C:\Windows\Installer\young{i}.msi", 1024, false, false, false, Orphaned))
                 .ToList(),
-            WithheldBy = new WithholdingSplit(UnderADayOldCount: held),
-            WithheldUnderADayOldBytes = 1024L * held,
-            WithheldUnderADayOldAllADayOldAtUtc = allADayOldAtUtc,
+            WithheldBy = new WithholdingSplit(NotBeforeTheClockCount: held),
+            WithheldNotBeforeTheClockBytes = 1024L * held,
         };
 
     private MainViewModel CreateViewModel() => CreateViewModel(new AppSettings());
@@ -649,26 +647,61 @@ public class MainViewModelTests
     }
 
     // THE FILES THE SCREEN COUNTS THAT THE COMMAND LINE'S HELD-BACK SENTENCE DOES NOT. A
-    // file under a day old and a superseded patch the scan held back are both counted
+    // file kept for its times and a superseded patch the scan held back are both counted
     // here, and each fixture gives every figure a different value, so a reading that
     // dropped an addend or subtracted the wrong arm lands on a number no assertion
     // accepts.
 
     [Fact]
-    public async Task Files_under_a_day_old_get_the_per_file_screen_and_not_the_all_clear()
+    public async Task Files_kept_for_their_times_are_counted_by_the_per_file_screen_beside_their_own_line()
+    {
+        // Two files kept for their times and one whose times would not read: the body
+        // counts all three, and the line about the first two is shown under it.
+        var vm = CreateViewModel();
+        var withheld = new List<OrphanedFile>
+        {
+            new(@"C:\Windows\Installer\a.msi", 1024, false, false, false, Orphaned),
+            new(@"C:\Windows\Installer\b.msi", 2048, false, false, false, Orphaned),
+            new(@"C:\Windows\Installer\c.msi", 4096, false, false, false, Orphaned),
+        };
+        var result = new ScanResult(
+            Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
+            WithheldFiles: withheld,
+            WithheldBy: new WithholdingSplit(NotBeforeTheClockCount: 2, AgeUnestablishedCount: 1),
+            WithheldNotBeforeTheClockBytes: 3072);
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(result);
+
+        await vm.Scan.ScanWithProgressAsync(null);
+
+        Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
+        Assert.Equal(
+            string.Format(
+                Strings.Completion_NothingOfferedPerFileBody_Plural,
+                DisplayHelpers.FormatCount(3), DisplayHelpers.PluraliseFile(3),
+                DisplayHelpers.FormatSize(7168)),
+            vm.Completion.Summary);
+        Assert.Equal(RecentChangeReport.Line(result), vm.Completion.ScanStartLine);
+    }
+
+    [Fact]
+    public async Task A_file_kept_for_its_times_is_counted_and_a_file_kept_for_an_installed_program_is_not()
     {
         var vm = CreateViewModel();
         var withheld = new List<OrphanedFile>
         {
             new(@"C:\Windows\Installer\a.msi", 1024, false, false, false, Orphaned),
             new(@"C:\Windows\Installer\b.msi", 2048, false, false, false, Orphaned),
+            new(@"C:\Windows\Installer\c.msi", 4096, false, false, false, Orphaned),
         };
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(new ScanResult(
                 Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
                 WithheldFiles: withheld,
-                WithheldBy: new WithholdingSplit(UnderADayOldCount: 2),
-                WithheldUnderADayOldBytes: 3072));
+                WithheldBy: new WithholdingSplit(
+                    DeclaredProductInstalledCount: 1, NotBeforeTheClockCount: 1, AgeUnestablishedCount: 1),
+                WithheldDeclaredProductInstalledBytes: 1024,
+                WithheldNotBeforeTheClockBytes: 2048));
 
         await vm.Scan.ScanWithProgressAsync(null);
 
@@ -677,35 +710,7 @@ public class MainViewModelTests
             string.Format(
                 Strings.Completion_NothingOfferedPerFileBody_Plural,
                 DisplayHelpers.FormatCount(2), DisplayHelpers.PluraliseFile(2),
-                DisplayHelpers.FormatSize(3072)),
-            vm.Completion.Summary);
-    }
-
-    [Fact]
-    public async Task A_file_under_a_day_old_is_counted_and_a_file_kept_for_an_installed_program_is_not()
-    {
-        var vm = CreateViewModel();
-        var withheld = new List<OrphanedFile>
-        {
-            new(@"C:\Windows\Installer\a.msi", 1024, false, false, false, Orphaned),
-            new(@"C:\Windows\Installer\b.msi", 2048, false, false, false, Orphaned),
-        };
-        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
-            .Returns(new ScanResult(
-                Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
-                WithheldFiles: withheld,
-                WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1, UnderADayOldCount: 1),
-                WithheldDeclaredProductInstalledBytes: 1024,
-                WithheldUnderADayOldBytes: 2048));
-
-        await vm.Scan.ScanWithProgressAsync(null);
-
-        Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedPerFileBody_Singular,
-                DisplayHelpers.FormatCount(1), DisplayHelpers.PluraliseFile(1),
-                DisplayHelpers.FormatSize(2048)),
+                DisplayHelpers.FormatSize(6144)),
             vm.Completion.Summary);
     }
 

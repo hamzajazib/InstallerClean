@@ -1,3 +1,4 @@
+using InstallerClean.Helpers;
 using InstallerClean.Cli;
 using InstallerClean.Resources;
 using InstallerClean.Services;
@@ -93,6 +94,25 @@ public class CliPendingRebootStringsTests
         Assert.NotEqual(Strings.Cli_PendingRebootBlocked_MsiExecuteMutex, move);
     }
 
+    [Theory]
+    [InlineData("/d")]
+    [InlineData("/m")]
+    public void A_lock_whose_check_failed_on_a_Windows_error_prints_and_logs_it(string arg)
+    {
+        var line = Program.PendingRebootBlockedMessage(
+            arg, PendingRebootReason.MsiExecuteMutexUnreadable, detail: null, windowsError: 8);
+        var logged = MachineContract.English(() => Program.PendingRebootEventLogLine(
+            arg, PendingRebootReason.MsiExecuteMutexUnreadable, detail: null, windowsError: 8));
+
+        Assert.Equal(
+            string.Format(Strings.Cli_PendingRebootBlocked_MsiExecuteMutexUnreadableWindowsError,
+                WindowsErrors.MessageFor(8), "8"),
+            line);
+        // The number alone in the English channel: the text Windows gives is in the language Windows is shown in.
+        Assert.EndsWith(" (Windows error 8)", logged, StringComparison.Ordinal);
+        Assert.DoesNotContain(WindowsErrors.MessageFor(8), logged, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Every_reason_has_an_event_log_label_of_its_own()
     {
@@ -148,11 +168,10 @@ public class CliPendingRebootStringsTests
             var line = MachineContract.English(
                 () => Program.PendingRebootEventLogLine("/m", reason, detail: null));
 
-            // Only two of the six are a restart waiting to happen. One is an
-            // installer running right now, one a lock the app was refused permission
-            // to open, one a suspended transaction, and one a registry value the
-            // check could not read, which is the check saying it cannot answer
-            // rather than an answer.
+            // Only the two queued-rename reasons are a restart waiting to happen. The
+            // others are an installer running right now, a suspended transaction, or a
+            // check the app was refused or could not make, which is the check saying it
+            // cannot answer rather than an answer.
             Assert.DoesNotContain(
                 "pending reboot detected", line, StringComparison.OrdinalIgnoreCase);
             // Beside the absence, so the absence is attributable: a line that had

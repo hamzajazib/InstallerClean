@@ -218,49 +218,6 @@ internal static class DisplayHelpers
             ? Strings.Display_ElapsedLong_LessThanASecond
             : string.Format(Localisation.FormatCulture, Strings.Display_ElapsedLong_Seconds, elapsed.TotalSeconds);
 
-    /// <summary>
-    /// <paramref name="utc"/> in <paramref name="zone"/>, as a short time ("16:40",
-    /// "4:40 PM") and a day and month ("16 June", "June 16", "6月16日"), for a sentence that
-    /// names a moment within the next few days.
-    ///
-    /// THE PC'S REGIONAL FORMAT WHERE IT IS A FORMAT FOR THE LANGUAGE THE SENTENCE IS IN, and
-    /// that language's own conventions otherwise (<see cref="SentenceFormatCulture"/>). With the
-    /// app in English, United States formats give "4:40 PM" and "June 16"; German formats give
-    /// "16:40" and "16 June", because a month name and a morning or afternoon marker are
-    /// words of the sentence and the German ones would put German words into English.
-    /// </summary>
-    internal static (string Time, string Date) FormatTimeAndDate(DateTime utc, TimeZoneInfo zone)
-    {
-        var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), zone);
-        var culture = SentenceFormatCulture;
-        return (local.ToString("t", culture), local.ToString("M", culture));
-    }
-
-    /// <summary>
-    /// <see cref="Localisation.FormatCulture"/> where it is a culture of the language being
-    /// displayed, and <see cref="DisplayedLanguage"/> otherwise.
-    ///
-    /// BOTH TESTS ARE NEEDED. The two-letter language alone takes Traditional Chinese formats
-    /// into a Simplified Chinese sentence. <see cref="SupportedLanguages.Active"/> alone maps
-    /// every culture with no satellite to the English neutral, so it takes Arabic formats
-    /// into an English sentence. Together they take a regional format only where the app
-    /// would display that culture in the very language it is displaying.
-    /// </summary>
-    private static CultureInfo SentenceFormatCulture
-    {
-        get
-        {
-            var format = Localisation.FormatCulture;
-            var language = DisplayedLanguage;
-            return string.Equals(format.TwoLetterISOLanguageName, language.TwoLetterISOLanguageName,
-                       StringComparison.OrdinalIgnoreCase)
-                && string.Equals(SupportedLanguages.Active(format), language.Name,
-                       StringComparison.OrdinalIgnoreCase)
-                ? format
-                : language;
-        }
-    }
-
     internal enum PluralCategory { One, Few, Many, Other }
 
     /// <summary>
@@ -398,7 +355,7 @@ internal static class DisplayHelpers
             or "Error.AccessDenied" or "Error.FileInUse" or "Error.IOFailure"
             or "Error.UnknownError"
             or "Cli.SupersededHeldBack"
-            or "Completion.UnderADayOld"
+            or "Completion.RecentChange"
             => CountQuestion.Cardinality,
 
         _ => throw new ArgumentOutOfRangeException(nameof(keyPrefix), keyPrefix,

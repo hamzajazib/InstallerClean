@@ -257,6 +257,21 @@ internal static partial class Kernel32
     }
 
     /// <summary>
+    /// The system time as it stood at the last tick of the system clock, as a
+    /// FILETIME in UTC. It moves only at a tick, so it stands behind the time
+    /// <see cref="GetSystemTimePreciseAsFileTime"/> returns between ticks.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "GetSystemTimeAsFileTime")]
+    public static partial void GetSystemTimeAsFileTime(out long lpSystemTimeAsFileTime);
+
+    /// <summary>
+    /// The system time as a FILETIME in UTC, carried forward from the last tick of the
+    /// system clock by the performance counter, so it moves between ticks.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "GetSystemTimePreciseAsFileTime")]
+    public static partial void GetSystemTimePreciseAsFileTime(out long lpSystemTimeAsFileTime);
+
+    /// <summary>
     /// Whether the volume mounted at <paramref name="lpRootPathName"/> is fixed,
     /// removable, remote or something else. A TRAILING BACKSLASH IS REQUIRED,
     /// which Win32 states outright and which

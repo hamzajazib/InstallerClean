@@ -42,6 +42,7 @@ public class CliPendingRebootOutcomeTests
         [PendingRebootReason.RegistryCheckUnreadable] = (CliExitCode.Error, CliEventClass.HardError),
         [PendingRebootReason.InstallerInProgressMarker] = (CliExitCode.Transient, CliEventClass.TransientSkip),
         [PendingRebootReason.InstallerInProgressMarkerAccessRefused] = (CliExitCode.Error, CliEventClass.HardError),
+        [PendingRebootReason.MsiExecuteMutexUnreadable] = (CliExitCode.Error, CliEventClass.HardError),
     };
 
     [Fact]

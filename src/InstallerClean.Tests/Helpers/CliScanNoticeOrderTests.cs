@@ -10,7 +10,7 @@ namespace InstallerClean.Tests.Helpers;
 /// <summary>
 /// Where the command line prints the scan's notices: the files held back and why, the
 /// drives and shares given up, the superseded files held back, the files missing from the
-/// folder and the files held back for being under a day old. A /s that lists files prints
+/// folder and the files held back for their times. A /s that lists files prints
 /// them ahead of the line counting the files, so the list is the last thing printed; every
 /// other run prints them after the line saying what the scan found, or after the scanning
 /// line where no such line is printed. Driven through the real work method.
@@ -25,7 +25,6 @@ public class CliScanNoticeOrderTests
     private const string OfferA = @"C:\Windows\Installer\offer-a.msi";
     private const string OfferB = @"C:\Windows\Installer\offer-b.msi";
     private static readonly SourceRootGivenUp DriveE = new("E:", SourceRootGiveUpRoute.NoAnswer, 1);
-    private static readonly DateTime ADayOldAt = new(2030, 6, 16, 9, 40, 0, DateTimeKind.Utc);
 
     [Fact]
     public async Task A_scan_that_lists_files_prints_its_notices_ahead_of_the_count_line_and_ends_on_the_list()
@@ -231,7 +230,8 @@ public class CliScanNoticeOrderTests
 
     /// <summary>
     /// An offer of two files beside one file held back because its program could not be
-    /// established, one held back for being under a day old, one superseded file held back,
+    /// established, one held back because its times are not before the scan's clock, one
+    /// superseded file held back,
     /// a drive given up keeping a file and a registration whose file is missing.
     /// </summary>
     private static ScanResult EveryNotice() =>
@@ -243,9 +243,8 @@ public class CliScanNoticeOrderTests
                 new OrphanedFile(@"C:\Windows\Installer\held-a.msi", 1024, false, false, false, "unclaimed"),
                 new OrphanedFile(@"C:\Windows\Installer\held-b.msi", 1024, false, false, false, "unclaimed"),
             ],
-            WithheldBy: new WithholdingSplit(DeclaredProductUnestablishedCount: 1, UnderADayOldCount: 1),
-            WithheldUnderADayOldBytes: 1024,
-            WithheldUnderADayOldAllADayOldAtUtc: ADayOldAt,
+            WithheldBy: new WithholdingSplit(DeclaredProductUnestablishedCount: 1, NotBeforeTheClockCount: 1),
+            WithheldNotBeforeTheClockBytes: 1024,
             SourceRootsGivenUp: [DriveE])
         with { MissingAffectedCount = 1 };
 
@@ -253,7 +252,7 @@ public class CliScanNoticeOrderTests
     /// The opening of each notice <paramref name="scan"/> prints, in the order they are
     /// printed: the sentence counting the files held back beside the offer, the heading
     /// over its reasons, the drive given up, the superseded files, the missing files and
-    /// the files under a day old.
+    /// the files held back for their times.
     /// </summary>
     private static string[] NoticeOpenings(ScanResult scan) =>
     [
@@ -262,7 +261,7 @@ public class CliScanNoticeOrderTests
         SourcesGivenUpReport.CommandLine([DriveE]),
         Strings.Cli_SupersededHeldBack_Singular,
         Opening(Strings.Cli_MissingFromDisk_Singular),
-        UnderADayOldReport.Line(scan, TimeZoneInfo.Local),
+        RecentChangeReport.Line(scan),
     ];
 
     /// <summary>
