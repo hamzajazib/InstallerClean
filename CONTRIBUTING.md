@@ -44,8 +44,9 @@ If you find a bug or have a feature idea, open an issue. Please include:
 
 ## Translations
 
-InstallerClean ships in 16 languages: the app, the installer and the command-line
-tool. The README is in 17, those 16 and Arabic.
+The app, the installer and the command-line tool are translated into every
+language in the app's language menu, and the README is in each of those and in
+Arabic too.
 
 To read a translation, the string tables in
 [`docs/translations/`](docs/translations/) show every line in English beside each

@@ -57,12 +57,13 @@ const ALSO_KEEP = [
   'Field.File',
   // The list separator Indonesian uses is the one English uses. A punctuation
   // mark rather than a word, so there is nothing to translate and nothing to
-  // get wrong; only ja and zh-Hans differ, taking the ideographic comma.
+  // get wrong; only Japanese and Chinese differ, taking the ideographic
+  // comma.
   'Display.ListSeparator',       // ", "
   // The stop that ends a heading before the body is the one English uses. A
   // punctuation mark rather than a word, so there is nothing to translate and
-  // nothing to get wrong; only ja and zh-Hans differ, taking the ideographic
-  // full stop, which carries no space after it.
+  // nothing to get wrong; only Japanese and Chinese differ, taking the
+  // ideographic full stop, which carries no space after it.
   'Display.SentenceSeparator',   // ". "
   // The size and elapsed unit suffixes. Indonesian abbreviates them exactly as
   // English does, so there is nothing to translate and nothing to get wrong.

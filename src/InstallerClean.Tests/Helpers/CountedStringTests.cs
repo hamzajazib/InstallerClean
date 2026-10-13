@@ -36,14 +36,11 @@ public class CountedStringTests
     /// taken from the call sites rather than from the resx, because the prefix
     /// is what the lookup is built from.
     ///
-    /// A COUNT OF HOW MANY ARRIVE BY WHICH ROUTE USED TO STAND HERE AND WENT STALE
-    /// TWICE, once when a release cut two held-back causes and added one, and again
-    /// when the four collapsed into Completion.HeldBack. The warning it carried is
-    /// what matters and is kept without the figure: a prefix that reaches Pluralise
-    /// in a LOCAL rather than as a literal at the call site is invisible to a sweep
-    /// of the call expressions, which is how this list once ran four prefixes short
-    /// with nothing failing. Walk the resx for Singular and Plural pairs as well as
-    /// the call sites.
+    /// A prefix that reaches Pluralise in a LOCAL rather than as a literal at the
+    /// call site is invisible to a sweep of the call expressions, so walk the resx
+    /// for Singular and Plural pairs as well as the call sites. Do not add a count of
+    /// how many prefixes arrive by which route: it goes stale whenever a counted
+    /// string comes or goes.
     ///
     /// EVERY THEORY DRIVEN OFF THIS LIST COVERS EXACTLY WHAT THE LIST HOLDS AND NO MORE,
     /// so a prefix missing from here is missing from all of them at once, including the
@@ -291,11 +288,10 @@ public class CountedStringTests
     public void A_cardinality_string_takes_its_singular_at_one_and_at_no_other_count(
         string cultureName, string prefix)
     {
-        // The two faults this file could not see, in every language at once. Before
-        // the split, id/tr/vi/ko/ja/zh-Hans could never reach the singular at all and
-        // read "these files will be permanently deleted" over a single file, while
-        // ru/uk reached it at 21, 31 and 41 and told the reader one file was going
-        // when twenty-one were.
+        // Every language at once. A cardinality one-form says there is a single file,
+        // so it renders at a count of one and at no other: a language with no count
+        // inflection still reaches it at one, and East Slavic, whose plural rule puts
+        // 21, 31 and 41 in its "one" category, does not take it there.
         using var scope = new LocalisationScope(CultureInfo.GetCultureInfo(cultureName));
         var (singular, plural) = Forms(prefix);
 
@@ -322,9 +318,10 @@ public class CountedStringTests
     public void At_twenty_one_East_Slavic_takes_the_plural_sentence_and_the_singular_noun(
         string cultureName)
     {
-        // The fix and the thing the fix must not break, pinned side by side, because
-        // the tempting way to fix the sentence is to change CategoryFor, and that
-        // would render "21 файлов" where the language wants "21 файл".
+        // The sentence and the noun, pinned side by side. At 21 the sentence takes
+        // its plural form and the noun its singular. Do not move the sentence by
+        // changing CategoryFor: the noun's form is read from it, so the noun would
+        // render "21 файлов" where the language wants "21 файл".
         using var scope = new LocalisationScope(CultureInfo.GetCultureInfo(cultureName));
 
         foreach (var prefix in CountedPrefixes.Where(IsCardinality))
@@ -396,13 +393,13 @@ public class CountedStringTests
     [MemberData(nameof(EveryCulture))]
     public void The_two_selectors_differ_at_exactly_the_counts_the_language_says(string cultureName)
     {
-        // The whole change, characterised rather than sampled: every count from 0 to
-        // 200, and the complete list of the ones where asking "is it exactly one"
-        // parts company with asking "what form does the noun take".
+        // Characterised rather than sampled: every count from 0 to 200, and the
+        // complete list of the ones where asking "is it exactly one" parts company
+        // with asking "what form does the noun take".
         //
         // Polish is the control and it is the empty case. Its CLDR one is already
-        // strictly n == 1, so the split must not move it at any count, and if it ever
-        // does this reads as a difference where the language expects none.
+        // strictly n == 1, so the two selectors agree at every count, and if they
+        // ever part this reads as a difference where the language expects none.
         var culture = CultureInfo.GetCultureInfo(cultureName);
         var counts = Enumerable.Range(0, 201).ToList();
 
@@ -421,8 +418,8 @@ public class CountedStringTests
             // French and Portuguese take the singular at zero, which is a rule about a
             // numeral in front of a noun and not about there being one of something.
             "fr" or "pt" => new[] { 0 },
-            // No count inflection at all, so the one-form was unreachable at every
-            // count, one included.
+            // No count inflection at all, so the noun's form never takes the one
+            // category, not even at one.
             "id" or "ja" or "ko" or "tr" or "vi" or "zh" => new[] { 1 },
             _ => Array.Empty<int>(),
         };
