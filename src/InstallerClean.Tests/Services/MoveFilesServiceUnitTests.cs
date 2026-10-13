@@ -627,6 +627,69 @@ public class MoveFilesServiceUnitTests
         Assert.IsType<IOFailure>(error);
     }
 
+    [Fact]
+    public async Task A_source_that_goes_as_the_move_reaches_it_is_filed_as_no_longer_there()
+    {
+        // The file is there for the existence check and gone when File.Move reaches
+        // it, as when Windows Installer removes a copy it has finished with. The
+        // generic file error says the file was left in place, which it was not.
+        var source = $@"{SourceDir}\a.msi";
+        var gone = false;
+        var (fs, file) = FileSystemReporting(source);
+        file.Exists(Arg.Any<string>()).Returns(ci => (string?)ci[0] == source && !gone);
+        file.When(f => f.Move(source, Arg.Any<string>())).Do(_ =>
+        {
+            gone = true;
+            throw new FileNotFoundException("gone", source);
+        });
+
+        var svc = new MoveFilesService(fs);
+        var result = await svc.MoveFilesAsync(new[] { source }, DestDir, UnderLeaseClaims.None);
+
+        Assert.IsType<MissingSourceFile>(Assert.Single(result.Errors));
+        Assert.Equal(0, result.MovedCount);
+    }
+
+    [Fact]
+    public async Task A_not_found_from_the_move_with_a_copy_in_the_destination_is_a_file_error()
+    {
+        // The source is gone and a file stands under its name in the backup folder, as
+        // after a move to another drive that copied the file and then failed. "No longer
+        // exists" would leave that copy out of the account, so it is the file error.
+        var source = $@"{SourceDir}\a.msi";
+        var gone = false;
+        var (fs, file) = FileSystemReporting(source);
+        var dest = fs.Path.Combine(DestDir, fs.Path.GetFileName(source));
+        file.Exists(Arg.Any<string>()).Returns(ci =>
+            (string?)ci[0] == source ? !gone : (string?)ci[0] == dest && gone);
+        file.When(f => f.Move(source, Arg.Any<string>())).Do(_ =>
+        {
+            gone = true;
+            throw new FileNotFoundException("gone", source);
+        });
+
+        var svc = new MoveFilesService(fs);
+        var result = await svc.MoveFilesAsync(new[] { source }, DestDir, UnderLeaseClaims.None);
+
+        Assert.IsType<IOFailure>(Assert.Single(result.Errors));
+        Assert.Equal(0, result.MovedCount);
+    }
+
+    [Fact]
+    public async Task A_not_found_from_the_move_with_the_source_still_there_is_a_file_error()
+    {
+        // The not-found arm needs the source confirmed gone. With the file still in
+        // the folder, "no longer exists" would be false, so it is the file error.
+        var source = $@"{SourceDir}\a.msi";
+        var fs = FileSystemThatFailsMove(source, new FileNotFoundException("not found", source));
+
+        var svc = new MoveFilesService(fs);
+        var result = await svc.MoveFilesAsync(new[] { source }, DestDir, UnderLeaseClaims.None);
+
+        Assert.IsType<IOFailure>(Assert.Single(result.Errors));
+        Assert.Equal(0, result.MovedCount);
+    }
+
     // The five below drive the state Win32 documents and nothing else in the
     // suite can reach: a File.Move that returns success having copied the file
     // and left the original where it was. See HalfMoveFileSystem.

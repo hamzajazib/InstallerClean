@@ -493,6 +493,20 @@ public sealed class MoveFilesService : IMoveFilesService
                     else
                         errors.Add(halfMove);
                 }
+                // A source that goes between the existence check above and the move,
+                // as when Windows Installer removes a copy it has finished with, is
+                // filed as that check files it: the file is no longer there. The arm
+                // takes a not-found only once the source is confirmed gone and nothing
+                // stands under its name in the destination, so a move to another drive
+                // that copied the file before failing is filed below with every other
+                // file error, as is a missing destination folder, which raises
+                // DirectoryNotFoundException.
+                catch (FileNotFoundException) when (
+                    !_fs.File.Exists(sourcePath)
+                    && !_fs.File.Exists(_fs.Path.Combine(destinationFolder, _fs.Path.GetFileName(sourcePath))))
+                {
+                    errors.Add(new MissingSourceFile(sourcePath));
+                }
                 // Framework exceptions carry detail that exists nowhere else once
                 // the category has been filed, so without this a move that failed
                 // for an unforeseen reason leaves no trace at all. A destination
