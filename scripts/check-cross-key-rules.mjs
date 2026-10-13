@@ -185,6 +185,11 @@ const QUOTES_A_LABEL = [
   { sentence: 'Summary.SourceGivenUp.Drive', label: 'Action.Rescan' },
   { sentence: 'Summary.SourceGivenUp.Path', label: 'Action.Rescan' },
   { sentence: 'Summary.SourcesGivenUp', label: 'Action.Rescan' },
+  // The line saying why a scan held back the files no record names ends, for every
+  // reason, by saying which button to press.
+  ...['Busy', 'Suspended', 'RenameInCache', 'RenameUnresolved', 'AccessRefused',
+    'RegistryUnreadable', 'LockUnreadable', 'LockUnreadableWindowsError', 'Other',
+    'ClockSetBack'].map((reason) => ({ sentence: `Summary.ScanSignal.${reason}`, label: 'Action.Rescan' })),
 ];
 
 // ---------------------------------------------------------------------------

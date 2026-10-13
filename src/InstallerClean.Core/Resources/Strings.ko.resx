@@ -506,6 +506,20 @@
        one, as Body.PendingReboot.RegistryCheckUnreadable does for its own read. "Re-scan"
        is the button's own label. -->
   <data name="Body.PendingReboot.MsiExecuteMutexAccessRefused" xml:space="preserve"><value>Windows가 InstallerClean에 Windows Installer가 사용 중인지 확인할 권한을 주지 않아, 이동과 삭제가 일시 중지되었고 InstallerClean은 {InstallerFolder}를 건드리지 않습니다. Windows를 다시 시작한 뒤 다시 검사하세요. 그래도 Windows가 거부한다면, 이 PC는 InstallerClean이 정리할 수 있는 PC가 아닙니다.</value></data>
+  <!-- The banner for a sample of the Windows Installer lock that failed in a way that is
+       neither a refusal nor a finding. Names the folder with the {InstallerFolder} token
+       like the rest of the family. It says only that the check could not be made: nothing
+       has been seen using Windows Installer, and Windows did not refuse anything, so the
+       two banners above would each be untrue here. Shown only where every other signal
+       read clear. The restart and the last sentence follow
+       Body.PendingReboot.RegistryCheckUnreadable, for a check of its own.
+
+       THE WINDOWSERROR FORM IS SHOWN WHERE WINDOWS GAVE AN ERROR FOR THE FAILURE, and this
+       one, which gives no cause, where it gave none. 0 = the text Windows gives for the error,
+       in the language Windows is shown in, without its full stop; 1 = its number, in
+       decimal. Cli.PendingRebootBlocked.MsiExecuteMutexUnreadable has the same pair. -->
+  <data name="Body.PendingReboot.MsiExecuteMutexUnreadable" xml:space="preserve"><value>InstallerClean이 Windows Installer가 사용 중인지 확인할 수 없어서, 이동과 삭제가 일시 중지되었고 InstallerClean은 {InstallerFolder}를 건드리지 않습니다. Windows를 다시 시작한 뒤 다시 검사하세요. 그래도 확인할 수 없다면, 이 PC는 InstallerClean이 정리할 수 있는 PC가 아닙니다.</value></data>
+  <data name="Body.PendingReboot.MsiExecuteMutexUnreadableWindowsError" xml:space="preserve"><value>Windows가 오류를 반환해서 InstallerClean이 Windows Installer가 사용 중인지 확인할 수 없었습니다: {0}(오류 {1}). 이동과 삭제가 일시 중지되었고 InstallerClean은 {InstallerFolder}를 건드리지 않습니다. Windows를 다시 시작한 뒤 다시 검사하세요. 그래도 확인할 수 없다면, 이 PC는 InstallerClean이 정리할 수 있는 PC가 아닙니다.</value></data>
   <data name="Body.PendingReboot.InstallerInProgress" xml:space="preserve"><value>이 컴퓨터에 이전 Windows Installer 트랜잭션이 중단된 채 남아 있습니다. {InstallerFolder}를 정리하기 전에 그 설치를 계속하거나 되돌리세요(또는 Windows를 다시 시작하세요).</value></data>
   <data name="Body.PendingReboot.PendingRenameInCache" xml:space="preserve"><value>Windows가 다음 재시작 때 처리할 파일 이름 변경을 대기열에 넣어 두었고, 그 대상이 {InstallerFolder}입니다. 정리하기 전에 Windows를 다시 시작하세요.</value></data>
   <!-- The banner for an entry the gate cannot place. Names the folder with the
@@ -767,11 +781,11 @@
   <data name="Completion.NothingOfferedBody.Singular" xml:space="preserve"><value>InstallerClean이 캐시에 있는 어떤 파일이 여기 설치된 프로그램에 속하는지 확실히 알 수 없어서, 파일 하나({2})를 제시하지 않고 보류했습니다.</value></data>
   <data name="Completion.NothingOfferedBody.Plural" xml:space="preserve"><value>InstallerClean이 캐시에 있는 어떤 파일이 여기 설치된 프로그램에 속하는지 확실히 알 수 없어서, {1} {0}개({2}) 전부를 제시하지 않고 보류했습니다.</value></data>
   <!-- The same screen's body for every run the pair above does not cover: files the
-       scan judged one at a time, a file under a day old, a superseded patch the scan
-       held back, and any mix of those with the finding about the records, whose sentence
-       is false of every file that finding did not take. It states only what is true of
-       all of them. Where every file it would count was held back for being under a day
-       old, Completion.UnderADayOld is shown in its place.
+       scan judged one at a time, a file whose times are not before the scan's clock, a
+       superseded patch the scan held back, and any mix of those with the finding about
+       the records, whose sentence is false of every file that finding did not take. It
+       states only what is true of all of them. Where every file it would count was held
+       back for its times, Completion.RecentChange is shown in its place.
 
        0 = files held back, 1 = pluralised "file"/"files", 2 = their size, and the
        one-form names the size rather than the numeral, exactly as the pair above
@@ -780,26 +794,25 @@
        Cli.NothingListedPerFile, says "some". -->
   <data name="Completion.NothingOfferedPerFileBody.Singular" xml:space="preserve"><value>InstallerClean이 찾은 캐시 파일이 필요 없다는 것을 확인하지 못해서, 그 파일 하나({2})를 제시하지 않고 보류했습니다.</value></data>
   <data name="Completion.NothingOfferedPerFileBody.Plural" xml:space="preserve"><value>InstallerClean이 찾은 캐시 파일 중 어느 것도 필요 없다는 것을 확인하지 못해서, {1} {0}개({2}) 전부를 제시하지 않고 보류했습니다.</value></data>
-  <!-- Files the scan held back for being less than a day old, and when a scan can first
-       offer the newest of them. The window's finished cards, its "Nothing offered on this
-       PC" screen and the command line all print it, from UnderADayOldReport.Line, and only
-       where at least one file was held back for that reason.
+  <!-- Files the scan held back because the latest of their times, as Windows records
+       them, is at or after the moment the scan began. The window's finished cards, its
+       "Nothing offered on this PC" screen and the command line all print it, from
+       RecentChangeReport.Line, and only where at least one file was held back for that
+       reason on a scan that found Windows Installer's in-progress signals clear. A file
+       the scan held because one of those signals was set is spoken of through that
+       signal's own line instead (Summary.ScanSignal.* on the window, Cli.ScanSignal.* on
+       the command line).
 
-       0 = files held back for their age, 1 = pluralised "file"/"files", 2 = their size,
-       3 = a time and 4 = a date. Together 3 and 4 are the instant from which every one of
-       these files is a day old, rounded up to the next whole minute and given in the PC's
-       own time zone: 3 is a short time ("16:40", "4:40 PM", "오후 4:40") and 4 a day and
-       month ("16 June", "June 16", "16. Juni", "6月16日"). Both are written in the PC's
-       regional format where that is a format of the language the sentence is in, and in
-       that language's own conventions otherwise, so a month name is never another
-       language's. They are separate slots so a language can put them in its own order and
-       the words around them ("Uhr", "pukul") where its grammar wants them. No year: the instant is always within two days of the
-       scan.
+       IT SAYS WHAT THE FILE'S TIMES SHOW AND GIVES AN INSTALL AS A POSSIBILITY, and must
+       not say an install was running or usually is: a clock set back puts a file here as
+       well.
 
-       THE ONE-FORM NAMES THE SIZE AND NOT THE NUMERAL, as Completion.NothingOfferedPerFileBody
-       does, so it spends 2, 3 and 4 and leaves 0 and 1 unused. -->
-  <data name="Completion.UnderADayOld.Singular" xml:space="preserve"><value>파일 하나({2})는 아직 하루가 지나지 않아 보류했습니다. 설치나 업데이트가 아직 사용하고 있을 수 있습니다. {4} {3} 이후에 다시 검사하면 InstallerClean이 아마 이 파일을 제시할 수 있을 것입니다.</value></data>
-  <data name="Completion.UnderADayOld.Plural" xml:space="preserve"><value>{1} {0}개({2})는 아직 하루가 지나지 않아 보류했습니다. 설치나 업데이트가 아직 사용하고 있을 수 있습니다. {4} {3} 이후에 다시 검사하면 InstallerClean이 아마 이 파일들을 제시할 수 있을 것입니다.</value></data>
+       0 = files held back for their times, 1 = pluralised "file"/"files", 2 = their size.
+       THE ONE-FORM NAMES THE SIZE AND NOT THE NUMERAL, as
+       Completion.NothingOfferedPerFileBody does, so it spends 2 and leaves 0 and 1
+       unused. -->
+  <data name="Completion.RecentChange.Singular" xml:space="preserve"><value>파일 하나({2})는 InstallerClean이 검사를 시작한 뒤에 변경된 것으로 Windows에 나타나 보류했습니다. 프로그램이 설치나 업데이트 중이었다면, 끝난 뒤에 다시 검사하면 InstallerClean이 이 파일을 다시 확인합니다.</value></data>
+  <data name="Completion.RecentChange.Plural" xml:space="preserve"><value>{1} {0}개({2})는 InstallerClean이 검사를 시작한 뒤에 변경된 것으로 Windows에 나타나 보류했습니다. 프로그램이 설치나 업데이트 중이었다면, 끝난 뒤에 다시 검사하면 InstallerClean이 이 파일들을 다시 확인합니다.</value></data>
   <!-- The line under the post-Move summary, in its two forms: the backup folder
        is on another drive, or on the drive the files came from. Delete has no
        counterpart, and deliberately: nothing is left in a folder after a delete,
@@ -1138,6 +1151,31 @@
        it carries no "and", which a list joined in code cannot place in every
        language. -->
   <data name="Summary.SourcesGivenUp" xml:space="preserve"><value>InstallerClean이 여러 드라이브 또는 공유 ({0}) 없이 계속 진행했으며, 아직 그중 하나와 대조해야 했던 파일은 모두 그대로 두었습니다. 정상적으로 응답하게 되면 다시 검사를 누르세요.</value></data>
+  <!-- The window's line under the left-alone count, where the scan found one of the
+       signals the Body.PendingReboot.* banners name set when it read them just after its
+       clock, and so held back every file in the folder no record names. One line per
+       reason, as Cli.ScanSignal.* has them and with the same placeholders, ending with
+       the Re-scan button's label rather than with running a command again. The "Nothing
+       offered on this PC" card carries the same line.
+
+       IN THE PAST TENSE, AND IT IS SHOWN WHETHER OR NOT THE SIGNAL IS STILL SET. Where it
+       is, the warning banner above says so in the present, and both are true. -->
+  <data name="Summary.ScanSignal.Busy" xml:space="preserve"><value>검사가 시작될 때 Windows 업데이트나 설치 중인 프로그램 같은 무언가가 Windows Installer를 사용하고 있어서, InstallerClean은 설치된 어떤 프로그램의 기록에도 이름이 없는 {InstallerFolder}의 파일을 제시하지 않고 보류했습니다. 그 작업이 끝나면 다시 검사를 누르세요.</value></data>
+  <data name="Summary.ScanSignal.Suspended" xml:space="preserve"><value>검사가 시작될 때 이 컴퓨터에 Windows Installer 트랜잭션이 중단된 채 남아 있어서, InstallerClean은 설치된 어떤 프로그램의 기록에도 이름이 없는 {InstallerFolder}의 파일을 제시하지 않고 보류했습니다. 그 설치를 계속하거나 되돌리거나 Windows를 다시 시작한 다음, 다시 검사를 누르세요.</value></data>
+  <data name="Summary.ScanSignal.RenameInCache" xml:space="preserve"><value>검사가 시작될 때 Windows가 다음 재시작 때 처리할 파일 이름 변경을 대기열에 넣어 두었고 그 대상이 {InstallerFolder}여서, InstallerClean은 설치된 어떤 프로그램의 기록에도 이름이 없는 그곳의 파일을 제시하지 않고 보류했습니다. Windows를 다시 시작한 다음 다시 검사를 누르세요.</value></data>
+  <data name="Summary.ScanSignal.RenameUnresolved" xml:space="preserve"><value>검사가 시작될 때 다음 재시작을 위해 예약된 파일 작업이 있었는데 InstallerClean은 그 작업이 어떤 파일을 가리키는지 알 수 없어서, 설치된 어떤 프로그램의 기록에도 이름이 없는 {InstallerFolder}의 파일을 제시하지 않고 보류했습니다. Windows를 다시 시작한 다음 다시 검사를 누르세요.</value></data>
+  <data name="Summary.ScanSignal.AccessRefused" xml:space="preserve"><value>검사가 시작될 때 Windows가 InstallerClean에 Windows Installer가 사용 중인지 확인할 권한을 주지 않아서, InstallerClean은 설치된 어떤 프로그램의 기록에도 이름이 없는 {InstallerFolder}의 파일을 제시하지 않고 보류했습니다. Windows를 다시 시작한 뒤 다시 검사를 누르세요.</value></data>
+  <data name="Summary.ScanSignal.RegistryUnreadable" xml:space="preserve"><value>검사가 시작될 때 InstallerClean이 확인하는 Windows 설정 중 하나를 읽을 수 없어서, 설치 작업이 실행 중인지 재시작을 기다리는지 알 수 없었고, 그래서 설치된 어떤 프로그램의 기록에도 이름이 없는 {InstallerFolder}의 파일을 제시하지 않고 보류했습니다. Windows를 다시 시작한 뒤 다시 검사를 누르세요.</value></data>
+  <data name="Summary.ScanSignal.LockUnreadable" xml:space="preserve"><value>검사가 시작될 때 InstallerClean이 Windows Installer가 사용 중인지 확인할 수 없어서, 설치된 어떤 프로그램의 기록에도 이름이 없는 {InstallerFolder}의 파일을 제시하지 않고 보류했습니다. Windows를 다시 시작한 뒤 다시 검사를 누르세요.</value></data>
+  <data name="Summary.ScanSignal.LockUnreadableWindowsError" xml:space="preserve"><value>검사가 시작될 때 Windows가 오류를 반환해서 InstallerClean이 Windows Installer가 사용 중인지 확인할 수 없었습니다: {0}(오류 {1}). 그래서 설치된 어떤 프로그램의 기록에도 이름이 없는 {InstallerFolder}의 파일을 제시하지 않고 보류했습니다. Windows를 다시 시작한 뒤 다시 검사를 누르세요.</value></data>
+  <data name="Summary.ScanSignal.Other" xml:space="preserve"><value>검사가 시작될 때 Windows Installer에 진행 중이거나 대기 중인 작업이 있어서, InstallerClean은 설치된 어떤 프로그램의 기록에도 이름이 없는 {InstallerFolder}의 파일을 제시하지 않고 보류했습니다. 그 작업이 정리되면 다시 검사를 누르세요.</value></data>
+  <!-- The window's line in the same place, where the system clock went back while the
+       scan read the files' times (the wall clock advanced less than a monotonic timer by
+       more than a small allowance), so the scan held back every file in the folder no
+       record names. "Went back or lost time" covers a clock set back and one slowed
+       beyond the allowance. Never shown beside a Summary.ScanSignal.* line above: where a
+       signal was set, no file's times are read. -->
+  <data name="Summary.ScanSignal.ClockSetBack" xml:space="preserve"><value>검사하는 동안 이 PC의 시계가 뒤로 돌아가거나 느려져서, InstallerClean은 설치된 어떤 프로그램의 기록에도 이름이 없는 {InstallerFolder}의 파일을 제시하지 않고 보류했습니다. 다시 검사를 누르세요.</value></data>
   <!-- 0 = current file count, 1 = total count, 2 = pluralised noun. -->
   <data name="Summary.OperationFiles" xml:space="preserve"><value>{2} {1}개 중 {0}개</value></data>
   <!-- Orphaned-window footer summary. 0 = file count, 1 = pluralised
@@ -1815,8 +1853,8 @@ InstallerClean을 관리자 권한으로 다시 실행하세요.</value></data>
        cause it cannot support for the other's files.
 
        Files kept by the declared-product-installed, declared-patch-registered,
-       under-a-day-old and age-unestablished arms have no line here:
-       WithholdingSplit.ArmsFired leaves those arms out.
+       not-before-the-clock, scan-signal, clock-set-back and age-unestablished arms have no
+       line here: WithholdingSplit.ArmsFired leaves those arms out.
 
        The second-copy arm has no line here either. It prints
        Cli.WithheldReasons.SecondInstance, above, which is true of its files too: a
@@ -2144,6 +2182,12 @@ InstallerClean을 관리자 권한으로 다시 실행하세요.</value></data>
        reader here being the person who typed the switch. Names neither read, for the
        reason the banner does not. No placeholder. -->
   <data name="Cli.PendingRebootBlocked.RegistryCheckUnreadable" xml:space="preserve"><value>오류: InstallerClean이 {InstallerFolder}를 건드리기 전에 확인하는 레지스트리 값 중 하나를 읽을 수 없어서, 진행 중이거나 다음 재시작을 위해 예약된 Windows Installer 작업을 배제할 수 없습니다. /m과 /d가 차단되었습니다. Windows를 다시 시작한 뒤 다시 시도하세요. 그래도 읽기에 실패하면, 이 PC는 InstallerClean이 정리할 수 있는 PC가 아닙니다.</value></data>
+  <!-- The command line's sentence for a sample of the Windows Installer lock that failed
+       in a way that is neither a refusal nor a finding, the twin of
+       Body.PendingReboot.MsiExecuteMutexUnreadable. Shaped like
+       Cli.PendingRebootBlocked.RegistryCheckUnreadable above. -->
+  <data name="Cli.PendingRebootBlocked.MsiExecuteMutexUnreadable" xml:space="preserve"><value>오류: InstallerClean이 Windows Installer가 사용 중인지 확인할 수 없어서, 진행 중인 설치를 배제할 수 없습니다. /m과 /d가 차단되었습니다. Windows를 다시 시작한 뒤 다시 시도하세요. 그래도 확인에 실패하면, 이 PC는 InstallerClean이 정리할 수 있는 PC가 아닙니다.</value></data>
+  <data name="Cli.PendingRebootBlocked.MsiExecuteMutexUnreadableWindowsError" xml:space="preserve"><value>오류: Windows가 오류를 반환해서 InstallerClean이 Windows Installer가 사용 중인지 확인할 수 없었습니다: {0}(오류 {1}). 그래서 진행 중인 설치를 배제할 수 없습니다. /m과 /d가 차단되었습니다. Windows를 다시 시작한 뒤 다시 시도하세요. 그래도 확인에 실패하면, 이 PC는 InstallerClean이 정리할 수 있는 PC가 아닙니다.</value></data>
   <!-- What a blocking reason with no line of its own gets, so a reason added
        later cannot leave the command line reporting an unexpected crash for a
        run that was merely held. The command-line twin of Body.PendingReboot.Other,
@@ -2151,6 +2195,43 @@ InstallerClean을 관리자 권한으로 다시 실행하세요.</value></data>
        button names, "blocked" rather than "paused" to match them, and no Re-scan,
        there being nothing to re-scan on a command line. -->
   <data name="Cli.PendingRebootBlocked.Other" xml:space="preserve"><value>오류: Windows Installer가 진행 중인 작업이 있어 /m과 /d가 차단되었습니다. InstallerClean은 변경 중인 {InstallerFolder}를 건드리지 않습니다. 끝나면 다시 시도하세요.</value></data>
+  <!-- What the command line prints, on every mode, where the scan found one of the
+       signals the Cli.PendingRebootBlocked.* lines name set when it read them just
+       after its clock, and so held back every file in the folder no record names. They report and
+       do not refuse, so none opens "Error: ", and none names a switch: /s, /d and /m
+       all print them. No placeholders but in LockUnreadableWindowsError.
+
+       One line per reason the Body.PendingReboot.* banners tell apart, each saying what
+       that banner says, in the past tense:
+       Busy: the Windows Installer lock was held.
+       Suspended: the InProgress key was there.
+       RenameInCache: a file rename queued for the next restart names the folder.
+       RenameUnresolved: a file operation queued for the next restart could not be placed.
+       AccessRefused: Windows refused the lock or the in-progress file to the check.
+       RegistryUnreadable: a registry value the check reads would not read.
+       LockUnreadable: the lock's check failed, with no Windows error to give.
+       LockUnreadableWindowsError: the same, where Windows gave an error. 0 = the text
+       Windows gives for it, in the language Windows is shown in, without its full stop; 1 = its
+       number, in decimal.
+
+       Every line speaks of the moment the scan started, in the past tense: the signal
+       may have cleared by the time it is read. "The files ... that no installed
+       program's records name" is what the scan holds back, every one of them, and it
+       leaves out the superseded patches still listed, which a record names.
+       Other: Windows Installer's in-progress file was there, or a reason with no line of
+       its own, which reads true of the whole family. -->
+  <data name="Cli.ScanSignal.Busy" xml:space="preserve"><value>검사가 시작될 때 Windows 업데이트나 설치 중인 프로그램 같은 무언가가 Windows Installer를 사용하고 있어서, InstallerClean은 설치된 어떤 프로그램의 기록에도 이름이 없는 {InstallerFolder}의 파일을 제시하지 않고 보류했습니다. 그 작업이 끝나면 명령을 다시 실행하세요.</value></data>
+  <data name="Cli.ScanSignal.Suspended" xml:space="preserve"><value>검사가 시작될 때 이 컴퓨터에 Windows Installer 트랜잭션이 중단된 채 남아 있어서, InstallerClean은 설치된 어떤 프로그램의 기록에도 이름이 없는 {InstallerFolder}의 파일을 제시하지 않고 보류했습니다. 그 설치를 계속하거나 되돌리거나 Windows를 다시 시작한 다음, 명령을 다시 실행하세요.</value></data>
+  <data name="Cli.ScanSignal.RenameInCache" xml:space="preserve"><value>검사가 시작될 때 Windows가 다음 재시작 때 처리할 파일 이름 변경을 대기열에 넣어 두었고 그 대상이 {InstallerFolder}여서, InstallerClean은 설치된 어떤 프로그램의 기록에도 이름이 없는 그곳의 파일을 제시하지 않고 보류했습니다. Windows를 다시 시작한 다음 명령을 다시 실행하세요.</value></data>
+  <data name="Cli.ScanSignal.RenameUnresolved" xml:space="preserve"><value>검사가 시작될 때 다음 재시작을 위해 예약된 파일 작업이 있었는데 InstallerClean은 그 작업이 어떤 파일을 가리키는지 알 수 없어서, 설치된 어떤 프로그램의 기록에도 이름이 없는 {InstallerFolder}의 파일을 제시하지 않고 보류했습니다. Windows를 다시 시작한 다음 명령을 다시 실행하세요.</value></data>
+  <data name="Cli.ScanSignal.AccessRefused" xml:space="preserve"><value>검사가 시작될 때 Windows가 InstallerClean에 Windows Installer가 사용 중인지 확인할 권한을 주지 않아서, InstallerClean은 설치된 어떤 프로그램의 기록에도 이름이 없는 {InstallerFolder}의 파일을 제시하지 않고 보류했습니다. Windows를 다시 시작한 뒤 명령을 다시 실행하세요.</value></data>
+  <data name="Cli.ScanSignal.RegistryUnreadable" xml:space="preserve"><value>검사가 시작될 때 InstallerClean이 확인하는 Windows 설정 중 하나를 읽을 수 없어서, 설치 작업이 실행 중인지 재시작을 기다리는지 알 수 없었고, 그래서 설치된 어떤 프로그램의 기록에도 이름이 없는 {InstallerFolder}의 파일을 제시하지 않고 보류했습니다. Windows를 다시 시작한 뒤 명령을 다시 실행하세요.</value></data>
+  <data name="Cli.ScanSignal.LockUnreadable" xml:space="preserve"><value>검사가 시작될 때 InstallerClean이 Windows Installer가 사용 중인지 확인할 수 없어서, 설치된 어떤 프로그램의 기록에도 이름이 없는 {InstallerFolder}의 파일을 제시하지 않고 보류했습니다. Windows를 다시 시작한 뒤 명령을 다시 실행하세요.</value></data>
+  <data name="Cli.ScanSignal.LockUnreadableWindowsError" xml:space="preserve"><value>검사가 시작될 때 Windows가 오류를 반환해서 InstallerClean이 Windows Installer가 사용 중인지 확인할 수 없었습니다: {0}(오류 {1}). 그래서 설치된 어떤 프로그램의 기록에도 이름이 없는 {InstallerFolder}의 파일을 제시하지 않고 보류했습니다. Windows를 다시 시작한 뒤 명령을 다시 실행하세요.</value></data>
+  <data name="Cli.ScanSignal.Other" xml:space="preserve"><value>검사가 시작될 때 Windows Installer에 진행 중이거나 대기 중인 작업이 있어서, InstallerClean은 설치된 어떤 프로그램의 기록에도 이름이 없는 {InstallerFolder}의 파일을 제시하지 않고 보류했습니다. 그 작업이 정리되면 명령을 다시 실행하세요.</value></data>
+  <!-- The command line's form of Summary.ScanSignal.ClockSetBack, printed where a
+       Cli.ScanSignal.* line would be, ending with running it again. -->
+  <data name="Cli.ScanSignal.ClockSetBack" xml:space="preserve"><value>검사하는 동안 이 PC의 시계가 뒤로 돌아가거나 느려져서, InstallerClean은 설치된 어떤 프로그램의 기록에도 이름이 없는 {InstallerFolder}의 파일을 제시하지 않고 보류했습니다. 명령을 다시 실행하세요.</value></data>
   <!-- The command line's twin of Error.InstallerLockUnavailable, and a separate
        string rather than a shared one because this whole family is: all five
        Cli.PendingRebootBlocked.* values open "Error: " and go lower case after
@@ -2176,14 +2257,19 @@ InstallerClean을 관리자 권한으로 다시 실행하세요.</value></data>
        unknown and that nothing was moved or deleted, naming both actions because the
        line covers both modes. The line it completes is the one a refused lock writes
        wherever it is met, at the pending-reboot check or at the acquire. -->
+  <!-- The detail Cli.EventLogPendingRebootBlocked carries where the Windows Installer
+       lock's check failed on a Windows error: its number, in decimal, and not the text
+       Windows gives for it, which is in the language Windows is shown in. English-only like every
+       Cli.EventLog* entry. 0 = the number. -->
   <!-- 0 = arg ("/d" or "/m"), 1 = short reason label from Cli.EventLogReason.*,
-       2 = detail (matched path for PendingRenameInCache, otherwise empty).
+       2 = detail: the matched path for PendingRenameInCache, Cli.EventLogWindowsError
+       for MsiExecuteMutexUnreadable where Windows gave an error, otherwise empty.
 
        The reason label is the whole of what this line says about the condition,
-       and it is why the line names none of its own: the six labels cover an
-       installer running now, a lock the app was refused permission to open, a
-       suspended transaction, two queued post-restart renames and a registry read
-       that could not answer, and no one phrase is true of all six. The label
+       and it is why the line names none of its own: the labels run from an
+       installer running now, through a suspended transaction and queued
+       post-restart renames, to checks the app was refused or could not make, and no
+       one phrase is true of all of them. The label
        carries the difference, so the fixed half carries nothing but the mode and
        the fact that the run stopped.
 
