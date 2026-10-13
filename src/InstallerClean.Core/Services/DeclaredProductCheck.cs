@@ -357,7 +357,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                 if (AsAMissingPackage(candidatePath, answer.MissingPackageCodes) is var missing
                     && missing != DeclaredProductInstalledCause.None)
                 {
-                    // One that opens as a package its own product's installations open is counted as that package.
+                    // One that opens as a package its own product's installations open is counted as that package,
+                    // and any other, whose identity does not read or matches none of those packages, as the missing
+                    // package it is or could be.
                     _ = CompareWithOpened(
                         candidatePath, packages, answer.Cached ?? [], [], [],
                         DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, out var opened);

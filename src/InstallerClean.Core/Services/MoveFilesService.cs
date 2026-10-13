@@ -493,8 +493,7 @@ public sealed class MoveFilesService : IMoveFilesService
                     else
                         errors.Add(halfMove);
                 }
-                // A source that goes between the existence check above and the move,
-                // as when Windows Installer removes a copy it has finished with, is
+                // A source that goes between the existence check above and the move is
                 // filed as that check files it: the file is no longer there. The arm
                 // takes a not-found only once the source is confirmed gone and nothing
                 // stands under its name in the destination, so a move to another drive
