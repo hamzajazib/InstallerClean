@@ -20,6 +20,12 @@ Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl"
 Name: "japanese"; MessagesFile: "Languages\Japanese.isl"
+; Where no entry carries the exact language Windows displays, Inno takes the
+; first entry with the same primary language, and for Chinese only one whose
+; default ANSI code page also matches: 936 for Simplified (China, Singapore),
+; 950 for Traditional (Taiwan, Hong Kong, Macau). So Chinese (Singapore) gets
+; Simplified, and Hong Kong and Macau get Traditional, in either order of these
+; two lines.
 Name: "chinesetraditional"; MessagesFile: "Languages\ChineseTraditional.isl"
 Name: "chinesesimplified"; MessagesFile: "Languages\ChineseSimplified.isl"
 Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"

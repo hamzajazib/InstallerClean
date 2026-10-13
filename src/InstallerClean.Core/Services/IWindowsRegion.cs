@@ -1,7 +1,7 @@
 namespace InstallerClean.Services;
 
 /// <summary>
-/// The Country or region set in Windows' settings for the account running the app.
+/// The Country or region set in Windows for the account running the app.
 /// </summary>
 public interface IWindowsRegion
 {

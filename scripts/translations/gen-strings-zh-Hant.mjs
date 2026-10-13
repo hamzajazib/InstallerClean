@@ -18,12 +18,12 @@
 // both members and come out identical.
 //
 // Register: 您 throughout, dropped on imperatives, as Windows writes it. Quoted
-// names of buttons take 「」. Platform terms from Windows' own Traditional
-// Chinese, Windows Installer's message file (msimsg.dll) included: About = 關於,
-// Run as administrator = 以系統管理員身分執行, registry = 登錄, patch = 修補程式,
-// package = 封裝, roll back = 復原, restart = 重新啟動, removable drive =
-// 抽取式磁碟機, Event Log / Application log / Group Policy = 事件記錄檔 /
-// 應用程式記錄檔 / 群組原則.
+// names of buttons take 「」. Platform terms are the ones Windows uses in
+// Traditional Chinese, Windows Installer's message file (msimsg.dll) included:
+// About = 關於, Run as administrator = 以系統管理員身分執行, registry = 登錄,
+// patch = 修補程式, package = 封裝, roll back = 復原, restart = 重新啟動,
+// removable drive = 抽取式磁碟機, Event Log / Application log / Group Policy =
+// 事件記錄檔 / 應用程式記錄檔 / 群組原則.
 //
 // MAP values are the committed Strings.zh-Hant.resx <value> bytes verbatim: \\
 // is one backslash (the paths), \n is a real newline (the multi-line values),

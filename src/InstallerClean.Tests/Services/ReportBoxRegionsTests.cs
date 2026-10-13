@@ -4,7 +4,7 @@ namespace InstallerClean.Tests.Services;
 
 /// <summary>
 /// The regions where the report box on the PC's first card starts unticked, and the
-/// rule that reads Windows' answer against them.
+/// rule that reads the region Windows gives against them.
 /// </summary>
 public class ReportBoxRegionsTests
 {
