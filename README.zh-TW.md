@@ -109,7 +109,7 @@
 </p>
 
 <p>
-  <img src="docs/screenshots/zh-TW/02-main-window.webp" alt="主視窗，顯示「77 個不需要的檔案可清理」（2.88 GB）和「149 個檔案原樣保留」（3.07 GB），還有一個備份資料夾方塊，以及「永久刪除」和「移動」按鈕" width="900"><br>
+  <img src="docs/screenshots/zh-TW/02-main-window.webp" alt="主視窗，顯示「107 個不需要的檔案可清理」（4.78 GB）和「150 個檔案原樣保留」（3.09 GB），還有一個備份資料夾方塊，以及「永久刪除」和「移動」按鈕" width="900"><br>
   <em>結果：有多少可以清除，有多少原樣保留。</em>
   <br><br>
 </p>
@@ -127,19 +127,19 @@
 </p>
 
 <p>
-  <img src="docs/screenshots/zh-TW/05-move-dialog.webp" alt="移動確認方塊，詢問是否要把 77 個檔案（2.88 GB）移到所選的備份資料夾" width="900"><br>
+  <img src="docs/screenshots/zh-TW/05-move-dialog.webp" alt="移動確認方塊，詢問是否要把 107 個檔案（4.78 GB）移到所選的備份資料夾" width="900"><br>
   <em>兩種動作之前都會先確認。「移動」會把檔案備份到您選擇的資料夾。或者直接永久刪除。</em>
   <br><br>
 </p>
 
 <p>
-  <img src="docs/screenshots/zh-TW/06-moving.webp" alt="移動進行中的進度畫面：77 個檔案中已完成 40 個（52%）、目前正在移動的檔案，以及「取消」按鈕" width="900"><br>
+  <img src="docs/screenshots/zh-TW/06-moving.webp" alt="移動進行中的進度畫面：107 個檔案中已完成 60 個（56%）、目前正在移動的檔案，以及「取消」按鈕" width="900"><br>
   <em>移動進行中。移到同一個磁碟機上是一瞬間的事。移到另一個磁碟機上，GB 越多，花的時間越久。</em>
   <br><br>
 </p>
 
 <p>
-  <img src="docs/screenshots/zh-TW/07-success-done.webp" alt="完成畫面，顯示已釋放 2.88 GB，77 個檔案已移到備份資料夾，並提醒等一切正常後再刪除那個資料夾" width="900"><br>
+  <img src="docs/screenshots/zh-TW/07-success-done.webp" alt="完成畫面，顯示已釋放 4.78 GB，107 個檔案已移到備份資料夾，並提醒等一切正常後再刪除那個資料夾，下方是「贊助」按鈕和「傳送匿名報告」方塊" width="900"><br>
   <em>完成。空間拿回來了。檔案先備份著，等您確定一切正常為止。然後把備份資料夾刪掉。</em>
   <br><br>
 </p>
