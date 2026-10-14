@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using InstallerClean.Helpers;
 using InstallerClean.Interop.Native;
 
 namespace InstallerClean.Services;
@@ -18,9 +19,23 @@ namespace InstallerClean.Services;
 internal sealed class FileIdentityReader : IFileIdentityReader
 {
     /// <inheritdoc />
-    public FileIdentityRead ReadOutcome(string path, out FileIdentity identity)
+    public FileIdentityRead ReadOutcome(string path, out FileIdentity identity) =>
+        Read(path, withVolume: false, out identity, out _);
+
+    /// <inheritdoc />
+    public FileIdentityRead ReadOutcomeWithVolume(
+        string path, out FileIdentity identity, out VolumeName? volume) =>
+        Read(path, withVolume: true, out identity, out volume);
+
+    /// <summary>
+    /// <see cref="ReadOutcome"/>, with the volume the file is on named off the same handle where
+    /// the file gives no id and <paramref name="withVolume"/> asks for it, and null otherwise.
+    /// </summary>
+    private static FileIdentityRead Read(
+        string path, bool withVolume, out FileIdentity identity, out VolumeName? volume)
     {
         identity = default;
+        volume = null;
         if (string.IsNullOrEmpty(path)) return FileIdentityRead.NotAPath;
 
         try
@@ -43,6 +58,10 @@ internal sealed class FileIdentityReader : IFileIdentityReader
             // candidate file and is therefore harmless. The Installer-folder test in
             // InstallerCacheHelpers opens folders through this reader, and without
             // the flag every folder it asks about answers null.
+            //
+            // NO CRITICAL-ERROR BOX for this thread while the path is opened, so a path on a
+            // drive with no disc in it answers with an error rather than Windows asking for one.
+            using var noBox = StorageHelpers.WithNoCriticalErrorBox();
             using var handle = Kernel32.CreateFile(
                 path,
                 0,
@@ -82,6 +101,7 @@ internal sealed class FileIdentityReader : IFileIdentityReader
                 // GetFileInformationByHandle can collide on ReFS, and a comparison
                 // that can collide would claim two files are one, which is the one
                 // error direction that costs a file rather than an offer.
+                if (withVolume) volume = NameOf(handle);
                 return FileIdentityRead.IdentityUnavailable;
             }
 
@@ -107,7 +127,8 @@ internal sealed class FileIdentityReader : IFileIdentityReader
         try
         {
             // Opened as ReadOutcome opens a path, so the volume named is the one the file
-            // that read reached sits on. Both halves of the name are read off this one handle.
+            // that read reached sits on.
+            using var noBox = StorageHelpers.WithNoCriticalErrorBox();
             using var handle = Kernel32.CreateFile(
                 path,
                 0,
@@ -117,16 +138,22 @@ internal sealed class FileIdentityReader : IFileIdentityReader
                 Kernel32.FILE_FLAG_BACKUP_SEMANTICS,
                 IntPtr.Zero);
 
-            if (handle.IsInvalid || FileTimesReader.VolumeOf(handle) is not { } guidPath) return null;
-
-            return Kernel32.GetVolumeSerialNumberByHandle(
-                handle, IntPtr.Zero, 0, out var serialNumber, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 0)
-                ? new VolumeName(guidPath, serialNumber)
-                : null;
+            return handle.IsInvalid ? null : NameOf(handle);
         }
         catch
         {
             return null;
         }
     }
+
+    /// <summary>
+    /// The volume holding the file behind <paramref name="handle"/>, its GUID path and its serial
+    /// number both read off that handle; null where either does not read.
+    /// </summary>
+    private static VolumeName? NameOf(Microsoft.Win32.SafeHandles.SafeFileHandle handle) =>
+        FileTimesReader.VolumeOf(handle) is { } guidPath
+        && Kernel32.GetVolumeSerialNumberByHandle(
+            handle, IntPtr.Zero, 0, out var serialNumber, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 0)
+            ? new VolumeName(guidPath, serialNumber)
+            : null;
 }

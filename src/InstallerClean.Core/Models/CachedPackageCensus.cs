@@ -28,16 +28,15 @@ namespace InstallerClean.Models;
 /// THE SECOND CONDITION IS READ ONLY WHERE NO INSTALLATION SETS THE HOLD: an installation the
 /// caller could not rule out as a second copy of a program whose packages cannot all be seen.
 /// The check reads those installations one at a time, the first time an installation package
-/// the answer about its own product lets through reaches that step, and stops at the first
-/// one whose packages it cannot see. That installation is counted in one of the nine members
-/// from <see cref="UnseenPathUnreadable"/> to <see cref="UnseenSourceNotRuledOut"/> by the step
-/// that stopped it, so at most one of them is above zero. This count too is taken before any
-/// file's verdict. A package compared by name, in a folder on the network, under a drive letter
-/// at which Windows reports no drive, on an optical or removable drive that answers that it is
-/// not ready, or
-/// looked for by the media search, is looked at later, for each
-/// file whose name it could be, and <see cref="UnseenByNameFiles"/> counts the files held back
-/// where one cannot be ruled out.
+/// the answer about its own product lets through reaches that step, and stops at the first one
+/// whose packages it cannot see. That installation is counted in one of the nine members from
+/// <see cref="UnseenPathUnreadable"/> to <see cref="UnseenSourceNotRuledOut"/> by the step that
+/// stopped it, so at most one of them is above zero. This count too is taken before any file's
+/// verdict. A package compared by name, in a folder on the network, under a drive letter at
+/// which Windows reports no drive, on an optical or removable drive that answers that it is not
+/// ready, or looked for by the media search, is looked at later, for each file whose name it
+/// could be, and <see cref="UnseenByNameFiles"/> counts the files held back where one cannot be
+/// ruled out.
 ///
 /// A check built without its file readers reads no cached package and no second copy's
 /// packages, and counts nothing. A check with them that cannot read sources counts that

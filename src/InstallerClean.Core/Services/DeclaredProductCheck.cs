@@ -11,46 +11,41 @@ using Microsoft.Win32;
 namespace InstallerClean.Services;
 
 /// <summary>
-/// Production <see cref="IDeclaredProductCheck"/>. For each candidate installation
-/// package it reads the package's own ProductCode through
-/// <see cref="IPackageIdentityReader"/>, puts it to Windows through the same keyed
-/// enumeration the patch-target route uses, and for an installed product reads the
-/// <c>LocalPackage</c> each installation records, the package each one's source list
-/// points at and the package in the folder each one records as its
-/// <c>InstallSource</c>. A package compared by name, in a folder on the network, under a
-/// drive letter at which Windows reports no drive or an optical or removable drive that answers
-/// that it is not ready, or one the media search looks for, is looked at only for a candidate whose name it
-/// could be (<see cref="AddSourcePackages"/>). Every answer
-/// about a product is held against the installations
-/// the caller's own enumeration listed, and one leaving out any of them keeps the file.
-/// The cached package of each of those installations is read too, and a candidate is
-/// also put to every installation whose cached package declares the candidate's code
-/// while the installation is registered under another, read by the code it is registered
-/// under. Every candidate installation package is compared as well with the packages
-/// each installation the caller could not rule out as a second copy of a program opens,
-/// its cached package and the packages its sources name, and where those cannot all be
-/// seen every candidate installation package is kept. So is every one where an
-/// installation's cached package does not say which product it declares, unless its own
-/// record shows it to be an ordinary installation, or it records no cached package and
-/// has no source list, by the API's answer and in the registry, and its <c>InstallProperties</c>
-/// key, where it has one, records no cached package and no folder it was installed from that
-/// could be the Installer folder, so that Windows Installer has no package to open for it. An
-/// installation that records
-/// no cached package and has a package to open is judged by its sources, and every
-/// candidate is compared with the packages they name where its <c>InstallProperties</c> key
-/// records no cached package either and they can all be seen. An installation whose recorded
-/// cached package names nothing is judged by its sources as well, and a candidate carrying
-/// the package code it records, read through the API and from the registry alike, is kept
-/// as that missing package, as is one whose own package code does not read.
-/// For each candidate patch it reads the patch's own code and the products its Template
-/// names, finds the registrations of that patch through the machine-wide patch
-/// enumeration and the keyed patch read, and reads the <c>LocalPackage</c> each
-/// registration records. A product's source list in another account's per-user-unmanaged
-/// context is not read, and an installation in one keeps the file; one in the account this
-/// process runs as is read like any other. Every source list it does read is read twice,
-/// through the API and from the registry key that holds it, and a list the two do not
-/// agree on keeps the file. Every <c>InstallSource</c> it reads is read
-/// the same two ways, and one the two do not agree on keeps the file too.
+/// Production <see cref="IDeclaredProductCheck"/>. For each candidate installation package it reads
+/// the package's own ProductCode through <see cref="IPackageIdentityReader"/>, puts it to Windows
+/// through the same keyed enumeration the patch-target route uses, and for an installed product
+/// reads the <c>LocalPackage</c> each installation records, the package each one's source list
+/// points at and the package in the folder each one records as its <c>InstallSource</c>. A package
+/// compared by name, in a folder on the network, under a drive letter at which Windows reports no
+/// drive or an optical or removable drive that answers that it is not ready, or one the media
+/// search looks for, is looked at only for a candidate whose name it could be
+/// (<see cref="AddSourcePackages"/>). Every answer about a product is held against the
+/// installations the caller's own enumeration listed, and one leaving out any of them keeps the
+/// file. The cached package of each of those installations is read too, and a candidate is also put
+/// to every installation whose cached package declares the candidate's code while the installation
+/// is registered under another, read by the code it is registered under. Every candidate
+/// installation package is compared as well with the packages each installation the caller could
+/// not rule out as a second copy of a program opens, its cached package and the packages its
+/// sources name, and where those cannot all be seen every candidate installation package is kept.
+/// So is every one where an installation's cached package does not say which product it declares,
+/// unless its own record shows it to be an ordinary installation, or it records no cached package
+/// and has no source list, by the API's answer and in the registry, and its
+/// <c>InstallProperties</c> key, where it has one, records no cached package and no folder it was
+/// installed from that could be the Installer folder, so that Windows Installer has no package to
+/// open for it. An installation that records no cached package and has a package to open is judged
+/// by its sources, and every candidate is compared with the packages they name where its
+/// <c>InstallProperties</c> key records no cached package either and they can all be seen. An
+/// installation whose recorded cached package names nothing is judged by its sources as well, and a
+/// candidate carrying the package code it records, read through the API and from the registry
+/// alike, is kept as that missing package, as is one whose own package code does not read. For each
+/// candidate patch it reads the patch's own code and the products its Template names, finds the
+/// registrations of that patch through the machine-wide patch enumeration and the keyed patch read,
+/// and reads the <c>LocalPackage</c> each registration records. A product's source list in another
+/// account's per-user-unmanaged context is not read, and an installation in one keeps the file; one
+/// in the account this process runs as is read like any other. Every source list it does read is
+/// read twice, through the API and from the registry key that holds it, and a list the two do not
+/// agree on keeps the file. Every <c>InstallSource</c> it reads is read the same two ways, and one
+/// the two do not agree on keeps the file too.
 ///
 /// IT COMPOSES THINGS THAT ALREADY EXIST. The reading of each file, package or
 /// patch, is the reader's. The asking is
@@ -956,16 +951,15 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// is opened. <paramref name="reading"/> says what was found, its
     /// <see cref="NoPackageReading.GivenUp"/> naming the root where such a refusal answered false.
     ///
-    /// AN ANSWER FINDING A PACKAGE TO OPEN STANDS FOR THE PASS, AND ONE FINDING NONE IS ASKED
-    /// AGAIN AT THE NEXT CALL (<see cref="PassAnswers.OpensNoPackageOf"/>), the folder's own answer
-    /// being taken from the pass. Once any of the three
-    /// steps finds a package to open for an installation, whatever the case of the code's letters,
-    /// every later step of the pass takes that answer, and the root it names, without asking.
-    /// <see cref="LinksOf"/> and
+    /// AN ANSWER FINDING A PACKAGE TO OPEN STANDS FOR THE PASS, AND ONE FINDING NONE IS ASKED AGAIN
+    /// AT THE NEXT CALL (<see cref="PassAnswers.OpensNoPackageOf"/>), the folder's own answer being
+    /// taken from the pass. Once any of the three steps finds a package to open for an
+    /// installation, whatever the case of the code's letters, every later step of the pass takes
+    /// that answer, and the root it names, without asking. <see cref="LinksOf"/> and
     /// <see cref="PackagesSecondCopiesOpen"/> each reach their conclusion once in a pass, and
-    /// <see cref="PackagesOpenedBy"/> once for each declared code, and every later candidate
-    /// takes that conclusion without a further call. A source list that appears while the pass
-    /// runs is found by the next step that asks, and that step reads the sources it names.
+    /// <see cref="PackagesOpenedBy"/> once for each declared code, and every later candidate takes
+    /// that conclusion without a further call. A source list that appears while the pass runs is
+    /// found by the next step that asks, and that step reads the sources it names.
     /// </summary>
     private bool OpensNoPackage(
         string code, string? sid, MsiInstallContext context, PassAnswers pass, out NoPackageReading reading)
@@ -984,7 +978,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (context != MsiInstallContext.Machine || sid is not null || _registry is null)
             return new NoPackageReading(NoPackageAnswer.NotAsked);
 
-        return pass.OpensNoPackageOf(code, sid, context, () => AsksAndFindsNoPackage(code, sid, context, pass, _registry));
+        return pass.OpensNoPackageOf(
+            code, sid, context, () => AsksAndFindsNoPackage(code, sid, context, pass, _registry));
     }
 
     /// <summary>The questions <see cref="OpensNoPackage"/> puts, for one installation it has not yet asked about.</summary>
@@ -1015,7 +1010,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         // this PC. A folder is asked whether it is the Installer folder itself, on every root: with
         // no package name there is no file of the installation's own to compare by identity.
         var folder = InstallSourceIn(key, code, sid, context, out var refusal);
-        if (folder is null) return new NoPackageReading(NoPackageAnswer.InstallSourceNotRuledOut, answered, Refusal: refusal);
+        if (folder is null)
+        {
+            return new NoPackageReading(
+                NoPackageAnswer.InstallSourceNotRuledOut, answered, Refusal: refusal);
+        }
+
         if (folder.Length == 0) return new NoPackageReading(NoPackageAnswer.OpensNone, answered);
 
         return IsNotTheInstallerFolder(folder, pass, out var givenUp)
@@ -1040,11 +1040,17 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         givenUp = null;
         if (pass.IsTheInstallerFolder is not { } isTheInstallerFolder) return false;
 
+        // A definite answer, that the folder is the Installer folder or that it is not, is the
+        // read answering, and only an answer of null counts as a read that failed under its root.
         if (!pass.InstallSourceFolders.TryGetValue(folder, out var asked))
         {
-            var settled = ReadUnderRoot(
-                folder, () => (isTheInstallerFolder(folder) is false, (FileIdentity?)null), pass, out _, out var refusedFor);
-            pass.InstallSourceFolders[folder] = asked = (settled, refusedFor);
+            var answered = ReadUnderRoot(
+                folder,
+                () => isTheInstallerFolder(folder) is { } isIt ? (true, !isIt) : (false, false),
+                pass,
+                out var notIt,
+                out var refusedFor);
+            pass.InstallSourceFolders[folder] = asked = (answered && notIt, refusedFor);
         }
 
         givenUp = asked.GivenUp;
@@ -2004,11 +2010,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     }
 
     /// <summary>
-    /// The reads <see cref="AddSourcePackages"/> makes of an installation's sources once it is
-    /// one whose list is read, answering as that does: the package name, the list through the
-    /// API and from <paramref name="registry"/>, the media package path and whether the list
-    /// holds a media source (<see cref="HasNoMediaSource"/>), the source used last
-    /// and the <c>InstallSource</c>, and the package in each folder compared.
+    /// The reads <see cref="AddSourcePackages"/> makes of an installation's sources once it is one
+    /// whose list is read, answering as that does: the package name, the list through the API and
+    /// from <paramref name="registry"/>, the media package path and whether the list holds a media
+    /// source (<see cref="HasNoMediaSource"/>), the source used last and the <c>InstallSource</c>,
+    /// and the package in each folder compared.
     /// </summary>
     private bool AddPackagesAtSources(
         string code,
@@ -2248,11 +2254,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                 if (namesAFileInInstallerFolder is not null && namesAFileInInstallerFolder(package) is not false)
                     return (false, null);
 
-                return identities.ReadOutcome(package, out var read) switch
+                return identities.ReadOutcomeWithVolume(package, out var read, out var volume) switch
                 {
                     FileIdentityRead.Read => (true, read),
                     FileIdentityRead.NamesNothing => (true, (FileIdentity?)null),
-                    FileIdentityRead.IdentityUnavailable when OnAnotherVolume(package, identities, pass) =>
+                    FileIdentityRead.IdentityUnavailable when OnAnotherVolume(volume, pass) =>
                         (true, (FileIdentity?)null),
                     _ => (false, null),
                 };
@@ -2264,23 +2270,24 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
     /// <summary>
     /// Makes <paramref name="read"/>, a read of <paramref name="path"/>, under the rules a read
-    /// under its root takes: true where it settled, with the identity it gave, and false where it
-    /// did not, or did not answer in time, or its root is given up for the pass. A source folder's
-    /// package (<see cref="ReadSourcePackage"/>) and an <c>InstallSource</c> folder
-    /// (<see cref="IsNotTheInstallerFolder"/>) are read this way.
+    /// under its root takes: true where it settled, with the value it gave in
+    /// <paramref name="value"/>, and false where it did not, or did not answer in time, or its
+    /// root is given up for the pass. A read that does not settle is a read that failed, and
+    /// counts as one against its root. A source folder's package (<see cref="ReadSourcePackage"/>)
+    /// and an <c>InstallSource</c> folder (<see cref="IsNotTheInstallerFolder"/>) are read this way.
     ///
     /// THE READ IS WAITED FOR UP TO THE TIME LIMIT (<see cref="AnswersWithin"/>). A source
     /// folder can be on a server that does not answer, or on a drive that does not, and an
     /// open there waits until Windows gives up; the open itself takes no time limit.
     ///
-    /// A ROOT THAT DOES NOT ANSWER COSTS A PASS ONE WAIT. The root, a share, a drive or a path
-    /// of any other form (<see cref="RootOf"/>), is given up for the rest of the pass once a
-    /// read under it has not answered within the limit, or has answered false only after
-    /// waiting longer than <see cref="SourceFolderSlowFailure"/>. Such a read waited on the
-    /// root itself, as one on a server that Windows gives up on does. Every later path under a
-    /// root given up answers false without being read, so no further read is started there. A drive whose kind has not answered within the limit is given up the same way
-    /// (<see cref="KindOf"/>), and so is a root the pass's caller has stopped waiting for
-    /// (<see cref="PassAnswers.StopFor"/>).
+    /// A ROOT THAT DOES NOT ANSWER COSTS A PASS ONE WAIT. The root, a share, a drive or a path of
+    /// any other form (<see cref="RootOf"/>), is given up for the rest of the pass once a read
+    /// under it has not answered within the limit, or has answered false only after waiting longer
+    /// than <see cref="SourceFolderSlowFailure"/>. Such a read waited on the root itself, as one on
+    /// a server that Windows gives up on does. Every later path under a root given up answers false
+    /// without being read, so no further read is started there. A drive whose kind has not answered
+    /// within the limit is given up the same way (<see cref="KindOf"/>), and so is a root the
+    /// pass's caller has stopped waiting for (<see cref="PassAnswers.StopFor"/>).
     ///
     /// READS THAT FAIL ADD UP. A read that answers false within
     /// <see cref="SourceFolderSlowFailure"/> adds the time it took to its root's total of
@@ -2289,14 +2296,13 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// A read that fails at once adds next to nothing, so the total is the time actually spent
     /// on reads that failed.
     ///
-    /// AND SO DO ALL THE READS UNDER A ROOT, WHATEVER EACH ANSWERED. Every read adds the time
-    /// it took to a second total (<see cref="PassAnswers.TimeReading"/>), and the root is given
-    /// up the same way once that total passes <see cref="SourceFolderReadBudget"/>
-    /// (<see cref="AnswersWithin"/>). A read that settles adds to this total and not to the
-    /// first, so a drive or a share slow to answer every read has its paths read one after
-    /// another until those reads add up past the budget,
-    /// and each wait is told to the pass's caller, which can stop waiting for the root.
-    /// Cancelling the pass ends the wait at once.
+    /// AND SO DO ALL THE READS UNDER A ROOT, WHATEVER EACH ANSWERED. Every read adds the time it
+    /// took to a second total (<see cref="PassAnswers.TimeReading"/>), and the root is given up the
+    /// same way once that total passes <see cref="SourceFolderReadBudget"/>
+    /// (<see cref="AnswersWithin"/>). A read that settles adds to this total and not to the first,
+    /// so a drive or a share slow to answer every read has its paths read one after another until
+    /// those reads add up past the budget, and each wait is told to the pass's caller, which can
+    /// stop waiting for the root. Cancelling the pass ends the wait at once.
     ///
     /// WHERE FALSE COMES FROM THE ROOT BEING GIVEN UP, <paramref name="givenUp"/> IS THE ROOT:
     /// for a path under a root already given up, a read that has not answered within the
@@ -2306,14 +2312,14 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// false sooner gave its own answer, and so did the read that takes its root's reads past
     /// either total.
     /// </summary>
-    private bool ReadUnderRoot(
+    private bool ReadUnderRoot<T>(
         string path,
-        Func<(bool Settled, FileIdentity? Identity)> read,
+        Func<(bool Settled, T Value)> read,
         PassAnswers pass,
-        out FileIdentity? identity,
+        out T? value,
         out string? givenUp)
     {
-        identity = null;
+        value = default;
         givenUp = null;
 
         var root = RootOf(path);
@@ -2345,23 +2351,24 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             if (failing > SourceFolderFailedWaitBudget) pass.GiveUp(root, SourceRootGiveUpRoute.FailedReadsAddUp);
         }
 
-        identity = answer.Identity;
+        value = answer.Value;
         return answer.Settled;
     }
 
     /// <summary>
-    /// Whether the file <paramref name="package"/> opens is on another volume than the
-    /// Installer folder (<see cref="PassAnswers.InstallerFolderVolume"/>): both volumes named
-    /// by their GUID paths and serial numbers (<see cref="IFileIdentityReader.VolumeOf"/>), and
-    /// the two different in both (<see cref="VolumeName.IsAnotherVolumeThan"/>). Every candidate
-    /// is a file directly in the Installer folder, and a file is on one volume only, so a
-    /// package on another volume is none of them. Where either volume cannot be named, or the
-    /// two share a GUID path or a serial number, the answer is false.
+    /// Whether <paramref name="volume"/>, the volume a package's file is on, named off the handle
+    /// that read the file (<see cref="IFileIdentityReader.ReadOutcomeWithVolume"/>), is another
+    /// volume than the Installer folder's (<see cref="PassAnswers.InstallerFolderVolume"/>): the
+    /// two different in both their GUID paths and their serial numbers
+    /// (<see cref="VolumeName.IsAnotherVolumeThan"/>). Every candidate is a file directly in the
+    /// Installer folder, and a file is on one volume only, so a package on another volume is none
+    /// of them. Where either volume cannot be named, or the two share a GUID path or a serial
+    /// number, the answer is false.
     /// </summary>
-    private static bool OnAnotherVolume(string package, IFileIdentityReader identities, PassAnswers pass) =>
-        pass.InstallerFolderVolume.Value is { } installerFolder
-        && identities.VolumeOf(package) is { } volume
-        && volume.IsAnotherVolumeThan(installerFolder);
+    private static bool OnAnotherVolume(VolumeName? volume, PassAnswers pass) =>
+        volume is { } packageVolume
+        && pass.InstallerFolderVolume.Value is { } installerFolder
+        && packageVolume.IsAnotherVolumeThan(installerFolder);
 
     /// <summary>
     /// Runs <paramref name="read"/>, a read under <paramref name="root"/>, on a thread of its

@@ -464,6 +464,23 @@ public class InstallerCacheHelpersResolveTests
     }
 
     [Fact]
+    public void IsTheInstallerFolder_opens_a_volume_root_with_its_separator()
+    {
+        // Without it the root's spelling would name the current folder on that drive.
+        WithCacheSandbox(root =>
+        {
+            var cacheRoot = InstallerCacheRoot.Resolve(root);
+            var volumeRoot = Path.GetPathRoot(cacheRoot.Resolved)!;
+            var reader = new ScriptedFileIdentities();
+            reader.Opens(volumeRoot, 7);
+            reader.Opens(cacheRoot.Resolved, 8);
+
+            Assert.False(InstallerCacheHelpers.IsTheInstallerFolder(volumeRoot, cacheRoot, reader));
+            Assert.Equal([volumeRoot, cacheRoot.Resolved], reader.Reads);
+        });
+    }
+
+    [Fact]
     public void IsTheInstallerFolder_reads_two_real_folders_as_two_folders()
     {
         // The production reader, which opens a folder as it opens a file.

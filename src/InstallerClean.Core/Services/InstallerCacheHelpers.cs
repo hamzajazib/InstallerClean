@@ -236,7 +236,9 @@ internal static class InstallerCacheHelpers
         if (!root.Proven) return null;
         if (ResolveFinalPathOutcome(folder, out var resolved) != PathResolution.Resolved) return null;
 
-        var input = resolved.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        // One trailing separator comes off, and none comes off a volume or share root: "C:\"
+        // without it is "C:", which names the current folder on that drive rather than its root.
+        var input = Path.TrimEndingDirectorySeparator(resolved);
         if (input.Equals(root.Resolved, StringComparison.OrdinalIgnoreCase)) return true;
 
         return OpensAsTheRoot(input, root, identities);

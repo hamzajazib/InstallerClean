@@ -130,12 +130,12 @@ public static class FileIdentityReadOutcomes
 /// changes nothing, an identity that matches wrongly keeps a file back, and a failure
 /// keeps files back.
 ///
-/// <see cref="VolumeOf"/> IS THE ONE ANSWER THAT LETS A FILE GO. Two volumes that differ in
-/// both their GUID paths and their serial numbers rule a package out as any file on the
-/// other volume, so an implementation that answered a name other than that of the volume
-/// the file is on would let a package that is a candidate go. It answers what
-/// <c>GetFinalPathNameByHandle</c> and <c>GetVolumeInformationByHandleW</c> name for one
-/// handle, and null for anything else.
+/// THE VOLUME <see cref="VolumeOf"/> AND <see cref="ReadOutcomeWithVolume"/> NAME IS THE ONE
+/// ANSWER THAT LETS A FILE GO. Two volumes that differ in both their GUID paths and their
+/// serial numbers rule a package out as any file on the other volume, so an implementation
+/// that answered a name other than that of the volume the file is on would let a package
+/// that is a candidate go. Each answers what <c>GetFinalPathNameByHandle</c> and
+/// <c>GetVolumeInformationByHandleW</c> name for one handle, and null for anything else.
 /// </summary>
 public interface IFileIdentityReader
 {
@@ -164,6 +164,20 @@ public interface IFileIdentityReader
     /// </summary>
     sealed bool TryRead(string path, out FileIdentity identity) =>
         ReadOutcome(path, out identity) == FileIdentityRead.Read;
+
+    /// <summary>
+    /// <see cref="ReadOutcome"/>, and where the file opens and gives no id
+    /// (<see cref="FileIdentityRead.IdentityUnavailable"/>), the volume it is on in
+    /// <paramref name="volume"/>, named off the handle that read opened, as <see cref="VolumeOf"/>
+    /// names one; null for every other answer, and where the volume cannot be named. A reader
+    /// that names no volumes answers null.
+    /// </summary>
+    FileIdentityRead ReadOutcomeWithVolume(
+        string path, out FileIdentity identity, out VolumeName? volume)
+    {
+        volume = null;
+        return ReadOutcome(path, out identity);
+    }
 
     /// <summary>
     /// The volume holding the file or folder <paramref name="path"/> names, opened as

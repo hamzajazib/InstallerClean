@@ -5870,6 +5870,29 @@ public class DeclaredProductCheckTests
         Assert.Empty(f.Files.Reads);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void A_folder_test_that_answers_after_a_wait_gives_its_root_up_only_where_it_did_not_say(bool says)
+    {
+        // An answer that the folder is the Installer folder is the read answering, however long
+        // it took; an answer of null is a read that failed, and a slow one gives its root up.
+        var f = ARegistrationWithNoSourceListInstalledFrom(InstallerFolder + @"\");
+
+        var screening = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            { SourceFolderSlowFailure = TimeSpan.Zero, DriveKindOf = FixedDrive, NamesInFolderOf = NameOnly }
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder,
+                isTheInstallerFolder: folder =>
+                {
+                    Thread.Sleep(20);
+                    return says ? IsInstallerFolder(folder) : null;
+                });
+
+        Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
+        if (says) Assert.Empty(screening.RootsGivenUp);
+        else Assert.Equal(["C:"], screening.RootsGivenUp.Select(given => given.Root));
+    }
+
     [Fact]
     public void A_registration_with_no_source_list_is_asked_about_the_folder_it_was_installed_from_once_in_a_pass()
     {
@@ -10320,6 +10343,17 @@ internal sealed class ScriptedFileIdentities : IFileIdentityReader
     /// <summary>The path is on the volume <paramref name="volume"/> names.</summary>
     public void OnVolume(string path, VolumeName volume) => _volumes[path] = volume;
 
+    /// <summary>
+    /// <see cref="ReadOutcome"/>, with the scripted volume where the path gives no file id, as
+    /// <see cref="VolumeOf"/> answers it and counted among its reads.
+    /// </summary>
+    public FileIdentityRead ReadOutcomeWithVolume(string path, out FileIdentity identity, out VolumeName? volume)
+    {
+        var outcome = ReadOutcome(path, out identity);
+        volume = outcome == FileIdentityRead.IdentityUnavailable ? VolumeOf(path) : null;
+        return outcome;
+    }
+
     /// <summary>The scripted volume, or null, which names none, for a path no test scripted one for.</summary>
     public VolumeName? VolumeOf(string path)
     {
@@ -10381,6 +10415,13 @@ internal sealed class HeldFileIdentities(ScriptedFileIdentities answers) : IFile
     }
 
     public VolumeName? VolumeOf(string path) => answers.VolumeOf(path);
+
+    public FileIdentityRead ReadOutcomeWithVolume(string path, out FileIdentity identity, out VolumeName? volume)
+    {
+        var outcome = ReadOutcome(path, out identity);
+        volume = outcome == FileIdentityRead.IdentityUnavailable ? answers.VolumeOf(path) : null;
+        return outcome;
+    }
 
     public void Dispose() => _released.Set();
 }

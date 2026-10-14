@@ -255,21 +255,58 @@ internal static class StorageHelpers
 
     /// <summary>
     /// Whether the drive whose root is <paramref name="driveRoot"/>, a drive letter, its colon
-    /// and a backslash, answers that it is not ready (<see cref="Kernel32.ERROR_NOT_READY"/>),
-    /// as an optical drive with no disc in it and a card reader with no card do. False for
-    /// every other answer, a call that throws included.
+    /// and a backslash, answers that it is not ready (<see cref="Kernel32.ERROR_NOT_READY"/>) or
+    /// that there is no media in it (<see cref="Kernel32.ERROR_NO_MEDIA_IN_DRIVE"/>), as an
+    /// optical drive with no disc in it and a card reader with no card do. False for every other
+    /// answer, a call that throws included. Asked with no critical-error box
+    /// (<see cref="WithNoCriticalErrorBox"/>).
     /// </summary>
     internal static bool IsNotReady(string driveRoot)
     {
         try
         {
+            using var _ = WithNoCriticalErrorBox();
             return !Kernel32.GetVolumeInformation(
                     driveRoot, IntPtr.Zero, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 0)
-                && System.Runtime.InteropServices.Marshal.GetLastWin32Error() == Kernel32.ERROR_NOT_READY;
+                && System.Runtime.InteropServices.Marshal.GetLastWin32Error()
+                    is Kernel32.ERROR_NOT_READY or Kernel32.ERROR_NO_MEDIA_IN_DRIVE;
         }
         catch
         {
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Turns off, for the calling thread, the box Windows shows when a read reaches a drive with
+    /// no disc or card in it (<see cref="Kernel32.SEM_FAILCRITICALERRORS"/>), so the read answers
+    /// with an error instead of waiting on the person; disposing the answer puts the thread's own
+    /// mode back. The process's mode and every other thread's are left as they are. Where the call
+    /// fails or cannot be made, nothing is changed and nothing is put back.
+    /// </summary>
+    internal static NoCriticalErrorBox WithNoCriticalErrorBox()
+    {
+        try
+        {
+            return Kernel32.SetThreadErrorMode(Kernel32.SEM_FAILCRITICALERRORS, out var old)
+                ? new NoCriticalErrorBox(old, set: true)
+                : default;
+        }
+        catch
+        {
+            return default;
+        }
+    }
+
+    /// <summary>
+    /// The thread's error mode as <see cref="WithNoCriticalErrorBox"/> found it, put back on dispose
+    /// where that call set a new one. Disposed on the thread that made it.
+    /// </summary>
+    internal readonly struct NoCriticalErrorBox(uint old, bool set) : IDisposable
+    {
+        public void Dispose()
+        {
+            if (set) Kernel32.SetThreadErrorMode(old, out _);
         }
     }
 

@@ -131,9 +131,9 @@ public sealed record ResultLogEntry(
     /// <c>scan.declaredInstalledSourcesFormNotComparedCount</c> by the form the screen met on the
     /// file's program's sources, and add up to it
     /// (<see cref="ScanInfo.DeclaredInstalledSourcesFormUrlCount"/> to
-    /// <see cref="ScanInfo.DeclaredInstalledSourcesFormOtherCount"/>). Two count the running
-    /// account's own per-user-unmanaged installations whose source lists the screen read, by
-    /// whether every package each names was seen or left to be compared by name
+    /// <see cref="ScanInfo.DeclaredInstalledSourcesFormOtherCount"/>). Two count the running account's
+    /// own per-user-unmanaged installations whose source lists the screen read, by whether every
+    /// package each names was seen or left to be compared by name
     /// (<see cref="ScanInfo.DeclaredSourcesOwnPerUserReadCount"/>,
     /// <see cref="ScanInfo.DeclaredSourcesOwnPerUserKeptCount"/>).
     /// <c>scan.secondCopyKeepNoneRecordedRegistryDisagreesCount</c> NARROWS AT 9, AND
@@ -147,11 +147,12 @@ public sealed record ResultLogEntry(
     /// <c>scan.secondCopyReleasedBySourcesCount</c> WIDEN AT 9, AND
     /// <c>scan.declaredInstalledSourcesFormNotComparedCount</c> NARROWS. From 9 a source under a
     /// drive letter at which Windows reports no drive to the screen or on an optical or removable
-    /// drive that answers that it is not ready, and the package the media search looks for on a source list with
-    /// a media source, are compared by name as a folder on the network is, and a source used last that is a media
-    /// source is compared as a folder, so a file kept for one of them is counted in the first or
-    /// the second, an installation released with one in the third, and only a media package path
-    /// while Windows follows a symbolic link reached through a network path in the fourth.
+    /// drive that answers that it is not ready, and the package the media search looks for on a
+    /// source list with a media source, are compared by name as a folder on the network is, and a
+    /// source used last that is a media source is compared as a folder, so a file kept for one of
+    /// them is counted in the first or the second, an installation released with one in the third,
+    /// and only a media package path while Windows follows a symbolic link reached through a
+    /// network path in the fourth.
     ///
     /// A receiver that does not recognise a version stores the report under a
     /// lenient v&lt;n&gt;-unknown/ prefix rather than rejecting it, so a bump
@@ -1305,11 +1306,11 @@ public sealed record MachineInfo(
 /// </param>
 /// <param name="SecondCopyUnseenByNameFileCount">
 /// Files held back because a package compared by name (in a folder on the network, under a drive
-/// letter at which Windows reports no drive, on an optical or removable drive that answers that
-/// it is not ready, or looked for by the media search), which the sources of an
-/// installation not ruled out as a second copy name, or those of an installation recording no
-/// cached package whose record does not show an ordinary installation, and which the file could
-/// be by its name, could not be ruled out. Each is also counted in
+/// letter at which Windows reports no drive, on an optical or removable drive that answers that it
+/// is not ready, or looked for by the media search), which the sources of an installation not ruled
+/// out as a second copy name, or those of an installation recording no cached package whose record
+/// does not show an ordinary installation, and which the file could be by its name, could not be
+/// ruled out. Each is also counted in
 /// <paramref name="WithheldSecondCopyUnestablishedCount"/>.
 /// </param>
 /// <param name="SecondCopyReleasedOpensNoPackageCount">
@@ -1472,9 +1473,8 @@ public sealed record MachineInfo(
 /// Those a package compared by name, at a source of their own program, could be by their name,
 /// where that package could not be ruled out: one in a folder on the network, one under a drive
 /// letter at which Windows reports no drive to the screen or on an optical or removable drive that
-/// answers that it is not ready, or the package the media search looks for,
-/// one under a drive or share the screen gave up among them
-/// (<see cref="DeclaredProductInstalledCauses.ByName"/>).
+/// answers that it is not ready, or the package the media search looks for, one under a drive or
+/// share the screen gave up among them (<see cref="DeclaredProductInstalledCauses.ByName"/>).
 /// </param>
 /// <param name="WithheldScanSignalCount">
 /// Candidates the age check kept back because one of Windows Installer's in-progress signals

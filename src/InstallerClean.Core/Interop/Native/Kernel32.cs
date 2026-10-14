@@ -296,6 +296,22 @@ internal static partial class Kernel32
     public static partial uint GetDriveType(string lpRootPathName);
 
     /// <summary>
+    /// Sets the error mode of the calling thread alone to <paramref name="dwNewMode"/>, with the
+    /// mode it replaces in <paramref name="lpOldMode"/>. With <see cref="SEM_FAILCRITICALERRORS"/>
+    /// Windows shows no critical-error box for a read the thread makes, such as one of a drive
+    /// with no disc in it, and sends the error to the thread instead.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "SetThreadErrorMode", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetThreadErrorMode(uint dwNewMode, out uint lpOldMode);
+
+    /// <summary>
+    /// The error mode under which the system shows no critical-error box
+    /// (<see cref="SetThreadErrorMode"/>).
+    /// </summary>
+    public const uint SEM_FAILCRITICALERRORS = 0x0001;
+
+    /// <summary>
     /// Asks the volume at the root <paramref name="lpRootPathName"/>, a drive letter, its
     /// colon and a backslash, for its details. Declared for the answer alone: every output
     /// is passed as a null pointer, and a caller reads only whether the call succeeded and,
@@ -576,6 +592,9 @@ internal static partial class Kernel32
     // The code a drive answers with when it is not ready, as an optical drive with no disc
     // in it and a card reader with no card do.
     public const int ERROR_NOT_READY = 21;
+
+    // "No media in drive", in Microsoft's list of system error codes.
+    public const int ERROR_NO_MEDIA_IN_DRIVE = 1112;
 
     // The two the volume enumeration and the mount-point query answer with, and
     // both are ordinary rather than faults: ERROR_NO_MORE_FILES ends a volume
