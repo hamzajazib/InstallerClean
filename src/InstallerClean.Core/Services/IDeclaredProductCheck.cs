@@ -228,6 +228,14 @@ public interface IDeclaredProductCheck
     /// null, or where either volume cannot be named, it keeps every candidate as any package
     /// that will not identify does.
     /// </param>
+    /// <param name="isTheInstallerFolder">
+    /// Whether a folder, once the kernel has expanded it, is the Installer folder itself: true,
+    /// false, or null where that was not established. Handed in by the scan and by the check
+    /// before a Move or Delete, as <paramref name="namesAFileInInstallerFolder"/> is. It is asked
+    /// of the folder an installation with no source list was installed from; without it, such an
+    /// installation whose <c>InstallProperties</c> key records that folder keeps every candidate
+    /// it would otherwise let through.
+    /// </param>
     DeclaredProductScreening Screen(
         IReadOnlyList<OrphanedFile> candidates,
         IReadOnlyList<ListedInstallation> installations,
@@ -236,7 +244,8 @@ public interface IDeclaredProductCheck
         Func<string, bool?>? namesAFileInInstallerFolder = null,
         Action<int>? candidateReached = null,
         Action<SourceFolderWait?>? waitingOn = null,
-        string? installerFolder = null);
+        string? installerFolder = null,
+        Func<string, bool?>? isTheInstallerFolder = null);
 }
 
 /// <summary>

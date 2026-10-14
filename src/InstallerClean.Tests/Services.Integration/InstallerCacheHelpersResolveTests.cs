@@ -375,6 +375,102 @@ public class InstallerCacheHelpersResolveTests
                 Path.Combine(other, "c.msi"), InstallerCacheRoot.Resolve(root))));
     }
 
+    // ---- Whether a folder is the Installer folder itself ----
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void IsTheInstallerFolder_answers_true_for_the_root_spelling_without_reading_an_identity(bool trailingSeparator)
+    {
+        WithCacheSandbox(root =>
+        {
+            var reader = new ScriptedFileIdentities();
+            var folder = trailingSeparator ? root + Path.DirectorySeparatorChar : root;
+
+            Assert.True(InstallerCacheHelpers.IsTheInstallerFolder(folder, InstallerCacheRoot.Resolve(root), reader));
+            Assert.Empty(reader.Reads);
+        });
+    }
+
+    [Fact]
+    public void IsTheInstallerFolder_answers_true_for_another_spelling_of_the_root()
+    {
+        WithTwoFolders((root, other) =>
+        {
+            var reader = new ScriptedFileIdentities();
+            reader.Opens(InstallerCacheHelpers.ResolveFinalPath(other), 7);
+            reader.Opens(InstallerCacheRoot.Resolve(root).Resolved, 7);
+
+            Assert.True(InstallerCacheHelpers.IsTheInstallerFolder(other, InstallerCacheRoot.Resolve(root), reader));
+        });
+    }
+
+    [Fact]
+    public void IsTheInstallerFolder_answers_false_for_another_folder_and_opens_nothing_inside_it()
+    {
+        WithTwoFolders((root, other) =>
+        {
+            File.WriteAllText(Path.Combine(other, "package.msi"), "");
+            var reader = new ScriptedFileIdentities();
+            reader.Opens(InstallerCacheHelpers.ResolveFinalPath(other), 7);
+            reader.Opens(InstallerCacheRoot.Resolve(root).Resolved, 8);
+
+            Assert.False(InstallerCacheHelpers.IsTheInstallerFolder(other, InstallerCacheRoot.Resolve(root), reader));
+            Assert.Equal(
+                [InstallerCacheHelpers.ResolveFinalPath(other), InstallerCacheRoot.Resolve(root).Resolved], reader.Reads);
+        });
+    }
+
+    [Fact]
+    public void IsTheInstallerFolder_answers_false_for_a_folder_that_is_not_there()
+    {
+        WithTwoFolders((root, other) =>
+        {
+            var folder = Path.Combine(other, "gone");
+            var reader = new ScriptedFileIdentities();
+            reader.Answers(InstallerCacheHelpers.ResolveFinalPath(folder), FileIdentityRead.NamesNothing);
+
+            Assert.False(InstallerCacheHelpers.IsTheInstallerFolder(folder, InstallerCacheRoot.Resolve(root), reader));
+        });
+    }
+
+    [Theory]
+    [InlineData(FileIdentityRead.OpenRefused)]
+    [InlineData(FileIdentityRead.IdentityUnavailable)]
+    [InlineData(FileIdentityRead.Faulted)]
+    [InlineData(FileIdentityRead.NotAPath)]
+    public void IsTheInstallerFolder_answers_null_where_the_folder_will_not_identify(FileIdentityRead outcome)
+    {
+        WithTwoFolders((root, other) =>
+        {
+            var reader = new ScriptedFileIdentities();
+            reader.Answers(InstallerCacheHelpers.ResolveFinalPath(other), outcome);
+
+            Assert.Null(InstallerCacheHelpers.IsTheInstallerFolder(other, InstallerCacheRoot.Resolve(root), reader));
+        });
+    }
+
+    [Fact]
+    public void IsTheInstallerFolder_answers_null_where_the_root_will_not_identify()
+    {
+        WithTwoFolders((root, other) =>
+        {
+            var reader = new ScriptedFileIdentities();
+            reader.Opens(InstallerCacheHelpers.ResolveFinalPath(other), 7);
+            reader.Answers(InstallerCacheRoot.Resolve(root).Resolved, FileIdentityRead.OpenRefused);
+
+            Assert.Null(InstallerCacheHelpers.IsTheInstallerFolder(other, InstallerCacheRoot.Resolve(root), reader));
+        });
+    }
+
+    [Fact]
+    public void IsTheInstallerFolder_reads_two_real_folders_as_two_folders()
+    {
+        // The production reader, which opens a folder as it opens a file.
+        WithTwoFolders((root, other) =>
+            Assert.False(InstallerCacheHelpers.IsTheInstallerFolder(other, InstallerCacheRoot.Resolve(root))));
+    }
+
     /// <summary>
     /// The folder <see cref="InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder"/>
     /// opens for <paramref name="path"/>: the parent of its resolved spelling.

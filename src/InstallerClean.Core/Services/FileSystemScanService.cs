@@ -1524,7 +1524,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
             path => InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(path, cacheRoot),
             Reached,
             wait => progress?.Report(ScanProgressUpdate.Waiting(wait)),
-            cacheRoot.Proven ? cacheRoot.Resolved : null);
+            cacheRoot.Proven ? cacheRoot.Resolved : null,
+            folder => InstallerCacheHelpers.IsTheInstallerFolder(folder, cacheRoot));
         var outcomes = screening.Outcomes;
 
         // Read beside the verdicts only where there is one cause for each, so no cause is read

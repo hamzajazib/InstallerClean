@@ -214,8 +214,44 @@ internal static class InstallerCacheHelpers
             resolved.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         if (string.IsNullOrEmpty(folder)) return false;
 
+        return OpensAsTheRoot(folder, root, identities);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="folder"/>, not yet resolved, is the Installer folder itself once
+    /// the kernel has expanded it: true or false where the comparison was made, and null where it
+    /// could not be. Asked on the terms <see cref="NamesAFileDirectlyInInstallerFolder"/> asks of
+    /// the folder a path's file sits in: only a proven location is compared, the root's own
+    /// spelling answers true without an identity being read, and any other folder is opened
+    /// beside the root and compared by identity, a folder that is not there answering false. No
+    /// file inside the folder is opened.
+    /// </summary>
+    /// <param name="identities">
+    /// Identifies the two folders. Null in production, which reads the real filesystem as the
+    /// resolution does.
+    /// </param>
+    internal static bool? IsTheInstallerFolder(
+        string folder, InstallerCacheRoot root, IFileIdentityReader? identities = null)
+    {
+        if (!root.Proven) return null;
+        if (ResolveFinalPathOutcome(folder, out var resolved) != PathResolution.Resolved) return null;
+
+        var input = resolved.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (input.Equals(root.Resolved, StringComparison.OrdinalIgnoreCase)) return true;
+
+        return OpensAsTheRoot(input, root, identities);
+    }
+
+    /// <summary>
+    /// Whether the folder at <paramref name="resolvedFolder"/>, already resolved, opens as the
+    /// Installer folder: the same identity answers true and a different one false, a folder that
+    /// is not there answers false, since the root is there, and any other failure to read either
+    /// identity answers null.
+    /// </summary>
+    private static bool? OpensAsTheRoot(string resolvedFolder, InstallerCacheRoot root, IFileIdentityReader? identities)
+    {
         identities ??= FolderIdentities;
-        var read = identities.ReadOutcome(folder, out var folderIdentity);
+        var read = identities.ReadOutcome(resolvedFolder, out var folderIdentity);
         if (read == FileIdentityRead.NamesNothing) return false;
         if (read != FileIdentityRead.Read) return null;
 

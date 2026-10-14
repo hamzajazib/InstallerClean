@@ -316,7 +316,8 @@ public class ScanProgressAgainstTheScanTests
         var screen = Substitute.For<IDeclaredProductCheck>();
         screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
                 Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(), Arg.Any<Func<string, bool?>?>(),
-                Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>(), Arg.Any<string?>())
+                Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>(), Arg.Any<string?>(),
+                Arg.Any<Func<string, bool?>?>())
             .Returns(call =>
             {
                 var waitingOn = call.ArgAt<Action<SourceFolderWait?>?>(6);

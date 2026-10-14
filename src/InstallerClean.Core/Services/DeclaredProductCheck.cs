@@ -138,7 +138,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         Func<string, bool?>? namesAFileInInstallerFolder = null,
         Action<int>? candidateReached = null,
         Action<SourceFolderWait?>? waitingOn = null,
-        string? installerFolder = null)
+        string? installerFolder = null,
+        Func<string, bool?>? isTheInstallerFolder = null)
     {
         var outcomes = new DeclaredProductOutcome[candidates.Count];
         var causes = new DeclaredProductInstalledCause[candidates.Count];
@@ -164,6 +165,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                 () => installerFolder is null || _fileIdentities is null
                     ? null
                     : _fileIdentities.VolumeOf(installerFolder)),
+            IsTheInstallerFolder = isTheInstallerFolder,
         };
 
         for (var i = 0; i < candidates.Count; i++)
@@ -630,28 +632,27 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         // An installation recording no cached package opens what its sources name, read once its
         // InstallProperties key shows it records none as well, and nothing where it has no
-        // package to open at all (OpensNoPackage). Where its sources keep the file, and its
-        // InstallSource folder is not ruled out because the folder's root is given up, that root is
-        // the one the file counts towards.
+        // package to open at all (OpensNoPackage). One whose InstallSource keeps the file has no
+        // source list, and none is read; where the folder's root is given up, that root is the one
+        // the file counts towards.
         var path = read.Value.TrimEnd('\0');
         if (path.Length == 0)
         {
-            if (OpensNoPackage(installation.ProductCode, installation.UserSid, context, pass,
-                    namesAFileInInstallerFolder, out var installSourceGivenUp))
+            if (OpensNoPackage(installation.ProductCode, installation.UserSid, context, pass, out var noPackage))
             {
                 reading = SecondCopyReading.Seen;
                 return true;
             }
 
-            var seen = AddSourcePackages(installation.ProductCode, installation.UserSid, context, noneRecorded: true,
-                pass, namesAFileInInstallerFolder, opened, byName, out givenUp, out var noneRefusal);
-            if (!seen && givenUp is null && installSourceGivenUp is not null)
+            if (noPackage.Answer == NoPackageAnswer.InstallSourceNotRuledOut)
             {
-                givenUp = installSourceGivenUp;
-                reading = SecondCopyReading.SourcesGivenUp;
+                givenUp = noPackage.GivenUp;
+                reading = givenUp is null ? SecondCopyReading.SourceNotRuledOut : SecondCopyReading.SourcesGivenUp;
                 return false;
             }
 
+            var seen = AddSourcePackages(installation.ProductCode, installation.UserSid, context, noneRecorded: true,
+                pass, namesAFileInInstallerFolder, opened, byName, out givenUp, out var noneRefusal);
             reading = SecondCopyReadingOf(noneRefusal);
             return seen;
         }
@@ -762,8 +763,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             if (declared is null)
             {
                 var noPackage = reading == CachedPackageReading.NoneRecorded
-                    ? NoPackageReadingOf(
-                        installation.ProductCode, installation.UserSid, context, pass, namesAFileInInstallerFolder)
+                    ? NoPackageReadingOf(installation.ProductCode, installation.UserSid, context, pass)
                     : default(NoPackageReading?);
                 if (noPackage?.Answer == NoPackageAnswer.OpensNone)
                 {
@@ -776,11 +776,15 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                 {
                     if (noPackage is { } found)
                     {
+                        // One whose InstallSource keeps the file has no source list, and none is read.
+                        string? sourceGivenUp = null;
+                        var refusal = SourceRefusal.None;
                         List<FileIdentity> itsPackages = [];
                         List<PackageByName> itsByName = [];
-                        if (AddSourcePackages(installation.ProductCode, installation.UserSid, context,
+                        if (found.Answer != NoPackageAnswer.InstallSourceNotRuledOut
+                            && AddSourcePackages(installation.ProductCode, installation.UserSid, context,
                                 noneRecorded: true, pass, namesAFileInInstallerFolder, itsPackages, itsByName,
-                                out var sourceGivenUp, out var refusal))
+                                out sourceGivenUp, out refusal))
                         {
                             opened.AddRange(itsPackages);
                             byName.AddRange(itsByName);
@@ -925,8 +929,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// its <c>InstallSource</c>, the folder it was installed from, which the check compares
     /// with the folders on the source list wherever it reads them
     /// (<see cref="AddSourcePackages"/>). With no source list there is no package name to look
-    /// for in it, so the folder itself is put to the Installer-folder test, and a folder that
-    /// could be the Installer folder answers false here.
+    /// for in it, so the folder itself is asked whether it is the Installer folder, and a folder
+    /// that could be answers false here.
     ///
     /// TRUE ONLY WHERE ALL OF THESE HOLD, and anything short of them answers false
     /// (<see cref="NoPackageReadingOf"/> says which):
@@ -938,21 +942,23 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     ///   records no cached package (<see cref="RecordsNoCachedPackage"/>), a key that will not
     ///   read answering false;
     /// - where that key is there, its <c>InstallSource</c>, read through the API and from the key
-    ///   alike (<see cref="InstallSourceOf"/>), is none or a web address, or names a folder that
-    ///   a path inside it shows not to be the Installer folder, on a local drive as on any other
-    ///   root (<see cref="ReadSourcePackage"/>).
+    ///   alike (<see cref="InstallSourceOf"/>), is none or a web address, or names a folder shown
+    ///   not to be the Installer folder itself, on a local drive as on any other root
+    ///   (<see cref="IsNotTheInstallerFolder"/>).
     /// The API is asked first, so a registry read is made only for an installation whose
     /// source list the API has already answered for. A check built without its registry
-    /// reader answers false for every installation, and so does one without the
-    /// Installer-folder test for an installation whose <c>InstallProperties</c> key is there.
+    /// reader answers false for every installation, and so does one without the test for the
+    /// Installer folder for an installation whose <c>InstallProperties</c> key is there.
     ///
-    /// THE FOLDER IS READ AS A SOURCE FOLDER'S PACKAGE IS, waited for up to
-    /// <see cref="SourceFolderTimeLimit"/> and refused under a root given up for the pass, and
-    /// <paramref name="givenUp"/> is that root where such a refusal answered false. It is null
-    /// for every other answer.
+    /// THE FOLDER IS ASKED ABOUT UNDER THE RULES A SOURCE FOLDER'S PACKAGE IS READ UNDER, waited
+    /// for up to <see cref="SourceFolderTimeLimit"/> and refused under a root given up for the
+    /// pass (<see cref="ReadUnderRoot"/>), and its answer is kept for the pass. No file inside it
+    /// is opened. <paramref name="reading"/> says what was found, its
+    /// <see cref="NoPackageReading.GivenUp"/> naming the root where such a refusal answered false.
     ///
     /// AN ANSWER FINDING A PACKAGE TO OPEN STANDS FOR THE PASS, AND ONE FINDING NONE IS ASKED
-    /// AGAIN AT THE NEXT CALL (<see cref="PassAnswers.OpensNoPackageOf"/>). Once any of the three
+    /// AGAIN AT THE NEXT CALL (<see cref="PassAnswers.OpensNoPackageOf"/>), the folder's own answer
+    /// being taken from the pass. Once any of the three
     /// steps finds a package to open for an installation, whatever the case of the code's letters,
     /// every later step of the pass takes that answer, and the root it names, without asking.
     /// <see cref="LinksOf"/> and
@@ -962,11 +968,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// runs is found by the next step that asks, and that step reads the sources it names.
     /// </summary>
     private bool OpensNoPackage(
-        string code, string? sid, MsiInstallContext context, PassAnswers pass,
-        Func<string, bool?>? namesAFileInInstallerFolder, out string? givenUp)
+        string code, string? sid, MsiInstallContext context, PassAnswers pass, out NoPackageReading reading)
     {
-        var reading = NoPackageReadingOf(code, sid, context, pass, namesAFileInInstallerFolder);
-        givenUp = reading.GivenUp;
+        reading = NoPackageReadingOf(code, sid, context, pass);
         return reading.Answer == NoPackageAnswer.OpensNone;
     }
 
@@ -975,21 +979,17 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// package: <see cref="NoPackageAnswer.OpensNone"/> where it answers true, and otherwise
     /// the first of its conditions that does not hold.
     /// </summary>
-    private NoPackageReading NoPackageReadingOf(
-        string code, string? sid, MsiInstallContext context, PassAnswers pass,
-        Func<string, bool?>? namesAFileInInstallerFolder)
+    private NoPackageReading NoPackageReadingOf(string code, string? sid, MsiInstallContext context, PassAnswers pass)
     {
         if (context != MsiInstallContext.Machine || sid is not null || _registry is null)
             return new NoPackageReading(NoPackageAnswer.NotAsked);
 
-        return pass.OpensNoPackageOf(
-            code, sid, context, () => AsksAndFindsNoPackage(code, sid, context, pass, namesAFileInInstallerFolder));
+        return pass.OpensNoPackageOf(code, sid, context, () => AsksAndFindsNoPackage(code, sid, context, pass, _registry));
     }
 
     /// <summary>The questions <see cref="OpensNoPackage"/> puts, for one installation it has not yet asked about.</summary>
     private NoPackageReading AsksAndFindsNoPackage(
-        string code, string? sid, MsiInstallContext context, PassAnswers pass,
-        Func<string, bool?>? namesAFileInInstallerFolder)
+        string code, string? sid, MsiInstallContext context, PassAnswers pass, IRegistryReader registry)
     {
         uint length = 0;
         var answered = _msi.GetSourceListInfo(code, sid, context, MsiSourceListOptions.Product,
@@ -1003,34 +1003,53 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             || SourceListKeyPath(code, sid, context) is not { } listKey)
             return new NoPackageReading(NoPackageAnswer.RegistryDisagrees, answered);
 
-        var key = _registry!.LocalMachineValues(properties);
-        if (!RecordsNoCachedPackage(key) || ValuesOf(listKey).Presence != RegistryKeyPresence.Absent)
+        var key = registry.LocalMachineValues(properties);
+        if (!RecordsNoCachedPackage(key) || ValuesOf(registry, listKey).Presence != RegistryKeyPresence.Absent)
             return new NoPackageReading(NoPackageAnswer.RegistryDisagrees, answered);
 
         if (key.Presence == RegistryKeyPresence.Absent)
             return new NoPackageReading(NoPackageAnswer.OpensNone, answered);
 
-        // The key is there and records no cached package. An InstallSource that is none, or a
-        // web address, names no folder on this PC. A folder is put to the Installer-folder test
-        // through a path inside it, on every root: with no package name there is no file of the
-        // installation's own to compare by identity.
-        var folder = InstallSourceOf(_registry, code, sid, context, out _);
-        if (folder is { Length: 0 }) return new NoPackageReading(NoPackageAnswer.OpensNone, answered);
-        if (folder is null || namesAFileInInstallerFolder is null)
-            return new NoPackageReading(NoPackageAnswer.InstallSourceNotRuledOut, answered);
+        // The key is there and records no cached package, and its InstallSource is read from this
+        // same reading of it. An InstallSource that is none, or a web address, names no folder on
+        // this PC. A folder is asked whether it is the Installer folder itself, on every root: with
+        // no package name there is no file of the installation's own to compare by identity.
+        var folder = InstallSourceIn(key, code, sid, context, out var refusal);
+        if (folder is null) return new NoPackageReading(NoPackageAnswer.InstallSourceNotRuledOut, answered, Refusal: refusal);
+        if (folder.Length == 0) return new NoPackageReading(NoPackageAnswer.OpensNone, answered);
 
-        var inFolder = (folder.EndsWith('\\') ? folder : folder + '\\') + FileNamedInTheInstallSource;
-        return ReadSourcePackage(inFolder, pass, namesAFileInInstallerFolder, out _, out var givenUp)
+        return IsNotTheInstallerFolder(folder, pass, out var givenUp)
             ? new NoPackageReading(NoPackageAnswer.OpensNone, answered)
-            : new NoPackageReading(NoPackageAnswer.InstallSourceNotRuledOut, answered, givenUp);
+            : new NoPackageReading(NoPackageAnswer.InstallSourceNotRuledOut, answered, givenUp,
+                givenUp is null ? SourceRefusal.PackageNotRuledOut : SourceRefusal.GivenUp);
     }
 
     /// <summary>
-    /// The name of the file <see cref="AsksAndFindsNoPackage"/> puts to the Installer-folder test
-    /// inside an <c>InstallSource</c> folder. The test answers about the folder the path's file
-    /// would be in, whether or not a file of this name is there.
+    /// Whether <paramref name="folder"/>, the folder an installation with no source list was
+    /// installed from, is shown not to be the Installer folder itself, by the test the pass's
+    /// caller hands in (<see cref="PassAnswers.IsTheInstallerFolder"/>): true only where it
+    /// answers false. Asked under the rules a source folder's package is read under, within
+    /// <see cref="SourceFolderTimeLimit"/> and not under a root given up for the pass
+    /// (<see cref="ReadUnderRoot"/>), and <paramref name="givenUp"/> is that root where a
+    /// refusal for it answered false. Asked once per folder per pass, by its spelling, case
+    /// included, and that answer kept for every later ask. A pass with no such test answers
+    /// false.
     /// </summary>
-    internal const string FileNamedInTheInstallSource = "package.msi";
+    private bool IsNotTheInstallerFolder(string folder, PassAnswers pass, out string? givenUp)
+    {
+        givenUp = null;
+        if (pass.IsTheInstallerFolder is not { } isTheInstallerFolder) return false;
+
+        if (!pass.InstallSourceFolders.TryGetValue(folder, out var asked))
+        {
+            var settled = ReadUnderRoot(
+                folder, () => (isTheInstallerFolder(folder) is false, (FileIdentity?)null), pass, out _, out var refusedFor);
+            pass.InstallSourceFolders[folder] = asked = (settled, refusedFor);
+        }
+
+        givenUp = asked.GivenUp;
+        return asked.NotIt;
+    }
 
     /// <summary>
     /// Whether the registry shows that one installation records no cached package: whether its
@@ -1072,8 +1091,16 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// where that is what answered (<see cref="NoPackageAnswer.InstallSourceNotRuledOut"/>), and
     /// null otherwise.
     /// </param>
+    /// <param name="Refusal">
+    /// Where the installation's <c>InstallSource</c> is what answered, the kind of check that kept
+    /// it: the one <see cref="InstallSourceIn"/> refused it for, <see cref="SourceRefusal.GivenUp"/>
+    /// where the folder's root is given up, and otherwise <see cref="SourceRefusal.PackageNotRuledOut"/>,
+    /// the folder not being shown not to be the Installer folder. <see cref="SourceRefusal.None"/>
+    /// for every other answer.
+    /// </param>
     private readonly record struct NoPackageReading(
-        NoPackageAnswer Answer, uint Error = MsiError.Success, string? GivenUp = null);
+        NoPackageAnswer Answer, uint Error = MsiError.Success, string? GivenUp = null,
+        SourceRefusal Refusal = SourceRefusal.None);
 
     /// <summary>Which of the conditions of <see cref="OpensNoPackage"/> answered for one installation.</summary>
     private enum NoPackageAnswer
@@ -1113,9 +1140,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// there and records no cached package, but its <c>InstallSource</c> is not shown to be none,
         /// a web address or a folder other than the Installer folder: it would not read, is held
         /// otherwise than Windows Installer answers it or is in a form not compared
-        /// (<see cref="InstallSourceOf"/>), the folder could be the Installer folder or is not
+        /// (<see cref="InstallSourceIn"/>), the folder could be the Installer folder or is not
         /// established not to be, its read did not answer in time, or its root is given up for the
-        /// pass (<see cref="NoPackageReading.GivenUp"/>), or the check has no Installer-folder test.
+        /// pass (<see cref="NoPackageReading.GivenUp"/>), or the check has no test for the Installer
+        /// folder (<see cref="IsNotTheInstallerFolder"/>).
         /// Counted with the installations its sources keep (<see cref="CensusTally.NoneRecordedKept"/>).
         /// </summary>
         InstallSourceNotRuledOut,
@@ -1364,7 +1392,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// <summary>
         /// A package at a source would not identify and was not shown to be on another volume
         /// than the Installer folder, could be a file directly in the Installer folder, or could
-        /// not be established not to be one.
+        /// not be established not to be one; or, for an installation with no source list, the
+        /// folder it was installed from was not shown not to be the Installer folder itself.
         /// </summary>
         PackageNotRuledOut,
     }
@@ -1597,29 +1626,25 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
             // An installation recording no cached package adds the packages its sources name,
             // read once its InstallProperties key shows it records none as well, and nothing
-            // where it has no package to open at all (OpensNoPackage). Where its sources keep the
-            // file, and its InstallSource folder is not ruled out because the folder's root is
-            // given up, the file is kept for that root.
+            // where it has no package to open at all (OpensNoPackage). One whose InstallSource keeps
+            // the file has no source list, and none is read: the file is kept for what kept the
+            // InstallSource, and for the folder's root where that is given up.
             var path = read.Value.TrimEnd('\0');
             if (path.Length == 0)
             {
-                if (OpensNoPackage(registeredCode, sid, context, pass, namesAFileInInstallerFolder,
-                        out var installSourceGivenUp))
-                    continue;
+                if (OpensNoPackage(registeredCode, sid, context, pass, out var noPackage)) continue;
+
+                if (noPackage.Answer == NoPackageAnswer.InstallSourceNotRuledOut)
+                {
+                    givenUp = noPackage.GivenUp;
+                    cause = CauseOf(noPackage.Refusal);
+                    return null;
+                }
 
                 if (!AddSourcePackages(registeredCode, sid, context, noneRecorded: true,
                         pass, namesAFileInInstallerFolder, identities, byName, out givenUp, out var noneRefusal))
                 {
-                    if (givenUp is null && installSourceGivenUp is not null)
-                    {
-                        givenUp = installSourceGivenUp;
-                        cause = DeclaredProductInstalledCause.SourcesGivenUp;
-                    }
-                    else
-                    {
-                        cause = CauseOf(noneRefusal);
-                    }
-
+                    cause = CauseOf(noneRefusal);
                     return null;
                 }
 
@@ -1795,7 +1820,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (read.Unreadable || PackageIdentityReader.Canonicalise(read.Value.TrimEnd('\0')) is not { } answered)
             return null;
 
-        var key = ValuesOf(productKey);
+        var key = ValuesOf(_registry, productKey);
         if (key.Presence != RegistryKeyPresence.Present || key.Values is null) return null;
 
         // The key holds the value under the name the API reads it by.
@@ -2035,7 +2060,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (SourceListKeyPath(code, sid, context) is not { } listKey)
             return Refuse(SourceRefusal.WouldNotRead, out refusal);
 
-        var sourceList = ValuesOf(listKey);
+        var sourceList = ValuesOf(registry, listKey);
         if (sourceList.Presence != RegistryKeyPresence.Present || sourceList.Values is null)
             return Refuse(KeyRefusal(sourceList), out refusal);
 
@@ -2045,13 +2070,13 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (!HoldsThePackageName(sourceList.Values, packageName))
             return Refuse(SourceRefusal.RegistryDiffers, out refusal);
 
-        var net = ValuesOf(listKey.Below("Net"));
+        var net = ValuesOf(registry, listKey.Below("Net"));
         if (!IsTheList(net, sources)) return Refuse(KeyRefusal(net), out refusal);
 
-        var urlKey = ValuesOf(listKey.Below("URL"));
+        var urlKey = ValuesOf(registry, listKey.Below("URL"));
         if (!IsTheList(urlKey, urls)) return Refuse(KeyRefusal(urlKey), out refusal);
 
-        var media = ValuesOf(listKey.Below("Media"));
+        var media = ValuesOf(registry, listKey.Below("Media"));
         var mediaPath = MediaPackagePathOf(code, sid, context, media, out refusal);
         if (mediaPath is null) return false;
 
@@ -2203,43 +2228,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// keeps that candidate. A package on a local drive is never left to be read by name
     /// (<see cref="ComparedByName"/>), so it is read for one of the others.
     ///
-    /// THE READ IS WAITED FOR UP TO THE TIME LIMIT (<see cref="AnswersWithin"/>). A source
-    /// folder can be on a server that does not answer, or on a drive that does not, and an
-    /// open there waits until Windows gives up; the open itself takes no time limit.
-    ///
-    /// A ROOT THAT DOES NOT ANSWER COSTS A PASS ONE WAIT. The root, a share, a drive or a path
-    /// of any other form (<see cref="RootOf"/>), is given up for the rest of the pass once a
-    /// read under it has not answered within the limit, or has answered false only after
-    /// waiting longer than <see cref="SourceFolderSlowFailure"/>. Such a read waited on the
-    /// root itself, as one on a server that Windows gives up on does. Every later package
-    /// under a root given up answers false without being read, so no further read is started
-    /// there. A drive whose kind has not answered within the limit is given up the same way
-    /// (<see cref="KindOf"/>), and so is a root the pass's caller has stopped waiting for
-    /// (<see cref="PassAnswers.StopFor"/>).
-    ///
-    /// READS THAT FAIL ADD UP. A read that answers false within
-    /// <see cref="SourceFolderSlowFailure"/> adds the time it took to its root's total of
-    /// reads that fail (<see cref="PassAnswers.TimeFailing"/>), however short, and the root is
-    /// given up the same way once that total passes <see cref="SourceFolderFailedWaitBudget"/>.
-    /// A read that fails at once adds next to nothing, so the total is the time actually spent
-    /// on reads that failed.
-    ///
-    /// AND SO DO ALL THE READS UNDER A ROOT, WHATEVER EACH ANSWERED. Every read adds the time
-    /// it took to a second total (<see cref="PassAnswers.TimeReading"/>), and the root is given
-    /// up the same way once that total passes <see cref="SourceFolderReadBudget"/>
-    /// (<see cref="AnswersWithin"/>). A read that opens its package, or finds no file there,
-    /// adds to this total and not to the first, so a drive or a share slow to answer every
-    /// read has its packages read one after another until those reads add up past the budget,
-    /// and each wait is told to the pass's caller, which can stop waiting for the root.
-    /// Cancelling the pass ends the wait at once.
-    ///
-    /// WHERE FALSE COMES FROM THE ROOT BEING GIVEN UP, <paramref name="givenUp"/> IS THE ROOT:
-    /// for a package under a root already given up, a read that has not answered within the
-    /// time limit, a read the caller's stop refused or ended before it answered, and a read
-    /// that answered false only after waiting longer than <see cref="SourceFolderSlowFailure"/>,
-    /// which waited on the root itself. For every other answer it is null. A read that answers
-    /// false sooner gave its own answer, and so did the read that takes its root's reads past
-    /// either total.
+    /// THE READ IS MADE UNDER ITS ROOT'S RULES (<see cref="ReadUnderRoot"/>): waited for up to the
+    /// time limit, and refused for a root given up for the pass.
     /// </summary>
     private bool ReadSourcePackage(
         string package,
@@ -2248,18 +2238,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         out FileIdentity? identity,
         out string? givenUp)
     {
-        identity = null;
-        givenUp = null;
-
-        var root = RootOf(package);
-        if (pass.IsGivenUp(root))
-        {
-            givenUp = root;
-            return false;
-        }
-
         var identities = _fileIdentities!;
-        var answered = AnswersWithin(
+        return ReadUnderRoot(
+            package,
             () =>
             {
                 // Where the test is given, a package that would be a file directly in the
@@ -2276,10 +2257,73 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                     _ => (false, null),
                 };
             },
-            root,
             pass,
-            out (bool Settled, FileIdentity? Identity) answer,
-            out var took);
+            out identity,
+            out givenUp);
+    }
+
+    /// <summary>
+    /// Makes <paramref name="read"/>, a read of <paramref name="path"/>, under the rules a read
+    /// under its root takes: true where it settled, with the identity it gave, and false where it
+    /// did not, or did not answer in time, or its root is given up for the pass. A source folder's
+    /// package (<see cref="ReadSourcePackage"/>) and an <c>InstallSource</c> folder
+    /// (<see cref="IsNotTheInstallerFolder"/>) are read this way.
+    ///
+    /// THE READ IS WAITED FOR UP TO THE TIME LIMIT (<see cref="AnswersWithin"/>). A source
+    /// folder can be on a server that does not answer, or on a drive that does not, and an
+    /// open there waits until Windows gives up; the open itself takes no time limit.
+    ///
+    /// A ROOT THAT DOES NOT ANSWER COSTS A PASS ONE WAIT. The root, a share, a drive or a path
+    /// of any other form (<see cref="RootOf"/>), is given up for the rest of the pass once a
+    /// read under it has not answered within the limit, or has answered false only after
+    /// waiting longer than <see cref="SourceFolderSlowFailure"/>. Such a read waited on the
+    /// root itself, as one on a server that Windows gives up on does. Every later path under a
+    /// root given up answers false without being read, so no further read is started there. A drive whose kind has not answered within the limit is given up the same way
+    /// (<see cref="KindOf"/>), and so is a root the pass's caller has stopped waiting for
+    /// (<see cref="PassAnswers.StopFor"/>).
+    ///
+    /// READS THAT FAIL ADD UP. A read that answers false within
+    /// <see cref="SourceFolderSlowFailure"/> adds the time it took to its root's total of
+    /// reads that fail (<see cref="PassAnswers.TimeFailing"/>), however short, and the root is
+    /// given up the same way once that total passes <see cref="SourceFolderFailedWaitBudget"/>.
+    /// A read that fails at once adds next to nothing, so the total is the time actually spent
+    /// on reads that failed.
+    ///
+    /// AND SO DO ALL THE READS UNDER A ROOT, WHATEVER EACH ANSWERED. Every read adds the time
+    /// it took to a second total (<see cref="PassAnswers.TimeReading"/>), and the root is given
+    /// up the same way once that total passes <see cref="SourceFolderReadBudget"/>
+    /// (<see cref="AnswersWithin"/>). A read that settles adds to this total and not to the
+    /// first, so a drive or a share slow to answer every read has its paths read one after
+    /// another until those reads add up past the budget,
+    /// and each wait is told to the pass's caller, which can stop waiting for the root.
+    /// Cancelling the pass ends the wait at once.
+    ///
+    /// WHERE FALSE COMES FROM THE ROOT BEING GIVEN UP, <paramref name="givenUp"/> IS THE ROOT:
+    /// for a path under a root already given up, a read that has not answered within the
+    /// time limit, a read the caller's stop refused or ended before it answered, and a read
+    /// that answered false only after waiting longer than <see cref="SourceFolderSlowFailure"/>,
+    /// which waited on the root itself. For every other answer it is null. A read that answers
+    /// false sooner gave its own answer, and so did the read that takes its root's reads past
+    /// either total.
+    /// </summary>
+    private bool ReadUnderRoot(
+        string path,
+        Func<(bool Settled, FileIdentity? Identity)> read,
+        PassAnswers pass,
+        out FileIdentity? identity,
+        out string? givenUp)
+    {
+        identity = null;
+        givenUp = null;
+
+        var root = RootOf(path);
+        if (pass.IsGivenUp(root))
+        {
+            givenUp = root;
+            return false;
+        }
+
+        var answered = AnswersWithin(read, root, pass, out var answer, out var took);
 
         if (!answered)
         {
@@ -2902,16 +2946,25 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     private string? InstallSourceOf(
         IRegistryReader registry, string code, string? sid, MsiInstallContext context, out SourceRefusal refusal)
     {
+        var path = InstallPropertiesKeyPath(code, sid, context);
+        if (path is null) return Refused(SourceRefusal.WouldNotRead, out refusal);
+
+        return InstallSourceIn(registry.LocalMachineValues(path), code, sid, context, out refusal);
+    }
+
+    /// <summary>
+    /// <see cref="InstallSourceOf"/> with the installation's <c>InstallProperties</c> key already
+    /// read, as <paramref name="properties"/>, and answered on the same terms.
+    /// </summary>
+    private string? InstallSourceIn(
+        RegistryKeyValues properties, string code, string? sid, MsiInstallContext context, out SourceRefusal refusal)
+    {
         var read = InstallerQueryService.ReadProductProperty(
             _msi, code, sid, context, MsiInstallProperty.InstallSource);
         if (read.Unreadable) return Refused(SourceRefusal.WouldNotRead, out refusal);
 
         var folder = read.Value.TrimEnd('\0');
 
-        var path = InstallPropertiesKeyPath(code, sid, context);
-        if (path is null) return Refused(SourceRefusal.WouldNotRead, out refusal);
-
-        var properties = registry.LocalMachineValues(path);
         if (properties.Presence != RegistryKeyPresence.Present || properties.Values is null)
             return Refused(KeyRefusal(properties), out refusal);
 
@@ -3096,13 +3149,13 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     }
 
     /// <summary>
-    /// Every value of <paramref name="key"/>, read from HKLM or from its account's hive as it
-    /// says. Called only where the check has its registry reader.
+    /// Every value of <paramref name="key"/>, read through <paramref name="registry"/> from HKLM
+    /// or from its account's hive as it says.
     /// </summary>
-    private RegistryKeyValues ValuesOf(KeyAt key) =>
+    private static RegistryKeyValues ValuesOf(IRegistryReader registry, KeyAt key) =>
         key.Account is null
-            ? _registry!.LocalMachineValues(key.Path)
-            : _registry!.UserValues(key.Account, key.Path);
+            ? registry.LocalMachineValues(key.Path)
+            : registry.UserValues(key.Account, key.Path);
 
     /// <summary>
     /// The HKLM path this check reads a product installation's <c>InstallProperties</c>
@@ -3670,6 +3723,22 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// on two threads ask for it together.
         /// </summary>
         internal Lazy<VolumeName?> InstallerFolderVolume { get; init; } = new(() => null);
+
+        /// <summary>
+        /// Whether a folder, not yet resolved, is the Installer folder itself: true, false, or null
+        /// where that was not established; null where the pass's caller gave no such test
+        /// (<see cref="DeclaredProductCheck.IsNotTheInstallerFolder"/>).
+        /// </summary>
+        internal Func<string, bool?>? IsTheInstallerFolder { get; init; }
+
+        /// <summary>
+        /// Each <c>InstallSource</c> folder the pass has asked about, by its spelling, case
+        /// included: whether it was shown not to be the Installer folder, and the root whose
+        /// give-up refused it where that is what answered
+        /// (<see cref="DeclaredProductCheck.IsNotTheInstallerFolder"/>).
+        /// </summary>
+        internal Dictionary<string, (bool NotIt, string? GivenUp)> InstallSourceFolders { get; } =
+            new(StringComparer.Ordinal);
 
         /// <summary>The pass's links, once the first declared code has been asked about.</summary>
         internal InstallationLinks? Links { get; set; }

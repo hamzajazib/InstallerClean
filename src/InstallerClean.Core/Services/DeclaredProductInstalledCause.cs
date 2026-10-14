@@ -158,7 +158,9 @@ public enum DeclaredProductInstalledCause
     /// <summary>
     /// A package at one of an installation's sources will not identify and is not shown to be on
     /// another volume than the Installer folder, or could be a file directly in the Installer
-    /// folder or is not established not to be one.
+    /// folder or is not established not to be one; or an installation with no source list was
+    /// installed from a folder that could be the Installer folder itself or is not established not
+    /// to be it.
     /// </summary>
     SourcePackageNotRuledOut,
 

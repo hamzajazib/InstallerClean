@@ -5739,7 +5739,7 @@ public class DeclaredProductCheckTests
     /// <see cref="ACopyBesideOfficesFeatureRegistration"/> with the registration's
     /// InstallProperties key there and recording no cached package, and its InstallSource
     /// <paramref name="folder"/>, through the API and in the key alike, or none where it is null.
-    /// The path inside a folder that the check reads names nothing.
+    /// No file inside the folder is scripted, so a read of one throws.
     /// </summary>
     private static (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
         ScriptedFileIdentities Files, MockFileSystem Disk, ListedInstallation[] Listed)
@@ -5751,17 +5751,18 @@ public class DeclaredProductCheckTests
         {
             f.Msi.RecordsInstallSource(OfficeFeatures, null, MsiInstallContext.Machine, folder);
             values = [.. values, Sz(MsiInstallProperty.InstallSource, folder)];
-            if (!folder.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                f.Files.Answers(InTheFolder(folder), FileIdentityRead.NamesNothing);
         }
 
         f.Msi.Registry.Holds(OfficeFeaturesInstallProperties, values);
         return f;
     }
 
-    /// <summary>The path inside an InstallSource folder that the check puts to the Installer-folder test.</summary>
-    private static string InTheFolder(string folder) =>
-        (folder.EndsWith('\\') ? folder : folder + '\\') + DeclaredProductCheck.FileNamedInTheInstallSource;
+    /// <summary>
+    /// The scan's answer to whether a folder is the Installer folder itself, on the spelling
+    /// alone, a trailing '\' or not.
+    /// </summary>
+    private static bool? IsInstallerFolder(string folder) =>
+        folder.TrimEnd('\\').Equals(InstallerFolder, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>A share whose every read waits <see cref="HeldFor"/> before the Installer-folder test answers.</summary>
     private const string StalledShare = @"\\nas\setup\";
@@ -5774,6 +5775,16 @@ public class DeclaredProductCheckTests
     {
         if (path.StartsWith(StalledShare, StringComparison.OrdinalIgnoreCase)) Thread.Sleep(HeldFor);
         return InInstallerFolder(path);
+    }
+
+    /// <summary>
+    /// <see cref="IsInstallerFolder"/>, waiting <see cref="HeldFor"/> first for a folder on
+    /// <see cref="StalledShare"/>.
+    /// </summary>
+    private static bool? IsInstallerFolderWithAStalledShare(string folder)
+    {
+        if (folder.StartsWith(StalledShare, StringComparison.OrdinalIgnoreCase)) Thread.Sleep(HeldFor);
+        return IsInstallerFolder(folder);
     }
 
     [Theory]
@@ -5790,15 +5801,14 @@ public class DeclaredProductCheckTests
         var recorded = new List<Exception>();
 
         var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
-            .Screen([Package(Candidate)], f.Listed, default, (ex, _) => recorded.Add(ex), InInstallerFolder);
+            .Screen([Package(Candidate)], f.Listed, default, (ex, _) => recorded.Add(ex), InInstallerFolder, isTheInstallerFolder: IsInstallerFolder);
 
         Assert.Equal(DeclaredProductOutcome.DeclaredProductNotInstalled, screening.Outcomes[0]);
         Assert.Empty(recorded);
         Assert.Equal(Census(opensNoPackage: 1), screening.CachedPackages);
-        // Its sources are not read, having no package to open, and only a folder is looked in.
+        // Its sources are not read, having no package to open, and no file in the folder is opened.
         Assert.Empty(f.Msi.PackageNameReads);
-        if (folder is null || folder.StartsWith("http", StringComparison.Ordinal)) Assert.Empty(f.Files.Reads);
-        else Assert.Contains(InTheFolder(folder), f.Files.Reads);
+        Assert.Empty(f.Files.Reads);
     }
 
     [Theory]
@@ -5812,7 +5822,7 @@ public class DeclaredProductCheckTests
         var recorded = new List<string>();
 
         var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
-            .Screen([Package(Candidate)], f.Listed, default, (_, note) => recorded.Add(note), InInstallerFolder);
+            .Screen([Package(Candidate)], f.Listed, default, (_, note) => recorded.Add(note), InInstallerFolder, isTheInstallerFolder: IsInstallerFolder);
 
         Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
         Assert.Equal(Census(noneRecorded: 1, packageCodeUnanswered: 1, perMachine: 1, keptSourcesNotRuledOut: 1),
@@ -5833,7 +5843,7 @@ public class DeclaredProductCheckTests
         var f = ARegistrationWithNoSourceListInstalledFrom(SetupFolder);
 
         var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
-            .Screen([Package(Candidate)], f.Listed, default, null, _ => null);
+            .Screen([Package(Candidate)], f.Listed, default, null, _ => null, isTheInstallerFolder: _ => null);
 
         Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
         Assert.Equal(Census(noneRecorded: 1, packageCodeUnanswered: 1, perMachine: 1, keptSourcesNotRuledOut: 1),
@@ -5841,17 +5851,46 @@ public class DeclaredProductCheckTests
     }
 
     [Fact]
-    public void A_registration_with_no_source_list_installed_from_a_folder_that_will_not_identify_keeps_every_installation_package()
+    public void A_registration_with_no_source_list_installed_from_a_drive_letter_with_no_drive_keeps_every_installation_package()
     {
-        var f = ARegistrationWithNoSourceListInstalledFrom(SetupFolder);
-        f.Files.Answers(InTheFolder(SetupFolder), FileIdentityRead.OpenRefused);
+        // A folder under a letter at which Windows reports no drive resolves to nothing, so
+        // whether it is the Installer folder is not established, and with no package name there
+        // is nothing to compare by name.
+        var f = ARegistrationWithNoSourceListInstalledFrom(@"E:\Setup\");
 
         var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
-            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder,
+                isTheInstallerFolder: folder => folder.StartsWith("E:", StringComparison.OrdinalIgnoreCase)
+                    ? null
+                    : IsInstallerFolder(folder));
 
         Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
         Assert.Equal(Census(noneRecorded: 1, packageCodeUnanswered: 1, perMachine: 1, keptSourcesNotRuledOut: 1),
             screening.CachedPackages);
+        Assert.Empty(f.Files.Reads);
+    }
+
+    [Fact]
+    public void A_registration_with_no_source_list_is_asked_about_the_folder_it_was_installed_from_once_in_a_pass()
+    {
+        // The registration is read for the pass's links and again for the code its copy
+        // declares, and the folder is asked about once.
+        var f = ARegistrationWithNoSourceListInstalledFrom(SetupFolder);
+        f.Packages.Declares(Candidate, OfficeFeatures);
+        f.Msi.Installed(OfficeFeatures);
+        f.Msi.AnswersItsOwnRecord(OfficeFeatures, null, MsiInstallContext.Machine);
+        var asked = new List<string>();
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder,
+                isTheInstallerFolder: folder =>
+                {
+                    asked.Add(folder);
+                    return IsInstallerFolder(folder);
+                });
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, screening.Outcomes[0]);
+        Assert.Equal([SetupFolder], asked);
     }
 
     /// <summary>
@@ -5920,7 +5959,7 @@ public class DeclaredProductCheckTests
         }
 
         var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
-            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder, isTheInstallerFolder: IsInstallerFolder);
 
         Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
         Assert.Equal(Census(noneRecorded: 1, packageCodeUnanswered: 1, perMachine: 1, keptSourcesNotRuledOut: 1),
@@ -5937,7 +5976,7 @@ public class DeclaredProductCheckTests
         f.Msi.AnswersItsOwnRecord(OfficeFeatures, null, MsiInstallContext.Machine);
 
         var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
-            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder, isTheInstallerFolder: IsInstallerFolder);
 
         Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, screening.Outcomes[0]);
         Assert.Equal(Census(opensNoPackage: 1), screening.CachedPackages);
@@ -5952,11 +5991,31 @@ public class DeclaredProductCheckTests
         f.Msi.AnswersItsOwnRecord(OfficeFeatures, null, MsiInstallContext.Machine);
 
         var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
-            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder, isTheInstallerFolder: IsInstallerFolder);
 
-        Assert.Equal((DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.SourcesWouldNotRead),
+        Assert.Equal((DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.SourcePackageNotRuledOut),
             (screening.Outcomes[0], screening.InstalledCauses[0]));
         Assert.Empty(screening.RootsGivenUp);
+        Assert.Empty(f.Msi.PackageNameReads);
+    }
+
+    [Theory]
+    [InlineData(@"%SystemDrive%\Setup\", DeclaredProductInstalledCause.SourcesFormVariable)]
+    [InlineData(@"Setup\", DeclaredProductInstalledCause.SourcesFormOther)]
+    public void A_copy_declaring_the_code_of_a_registration_with_no_source_list_is_kept_for_what_its_InstallSource_holds(
+        string folder, DeclaredProductInstalledCause cause)
+    {
+        var f = ARegistrationWithNoSourceListInstalledFrom(folder);
+        f.Packages.Declares(Candidate, OfficeFeatures);
+        f.Msi.Installed(OfficeFeatures);
+        f.Msi.AnswersItsOwnRecord(OfficeFeatures, null, MsiInstallContext.Machine);
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder, isTheInstallerFolder: IsInstallerFolder);
+
+        Assert.Equal((DeclaredProductOutcome.DeclaredProductInstalled, cause),
+            (screening.Outcomes[0], screening.InstalledCauses[0]));
+        Assert.Empty(f.Msi.PackageNameReads);
     }
 
     [Fact]
@@ -5969,7 +6028,7 @@ public class DeclaredProductCheckTests
 
         var screening = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
             { SourceFolderTimeLimit = ShortLimit, DriveKindOf = FixedDrive, NamesInFolderOf = NameOnly }
-            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolderWithAStalledShare);
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolderWithAStalledShare, isTheInstallerFolder: IsInstallerFolderWithAStalledShare);
 
         Assert.Equal((DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.SourcesGivenUp),
             (screening.Outcomes[0], screening.InstalledCauses[0]));
@@ -5985,7 +6044,7 @@ public class DeclaredProductCheckTests
 
         var screening = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
             { SourceFolderTimeLimit = ShortLimit, DriveKindOf = FixedDrive, NamesInFolderOf = NameOnly }
-            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolderWithAStalledShare);
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolderWithAStalledShare, isTheInstallerFolder: IsInstallerFolderWithAStalledShare);
 
         Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
         Assert.Equal(Census(noneRecorded: 1, packageCodeUnanswered: 1, perMachine: 1, keptSourcesNotRuledOut: 1),
@@ -6006,7 +6065,7 @@ public class DeclaredProductCheckTests
 
         var screening = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
             { SourceFolderTimeLimit = ShortLimit, DriveKindOf = FixedDrive, NamesInFolderOf = NameOnly }
-            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolderWithAStalledShare);
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolderWithAStalledShare, isTheInstallerFolder: IsInstallerFolderWithAStalledShare);
 
         switch (folder)
         {
