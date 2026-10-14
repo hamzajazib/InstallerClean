@@ -639,13 +639,86 @@ public class DeclaredProductCheckTests
             ScreenTheCopy(f, runningAccount: new Account(UserSid)));
     }
 
+    // ---- The running account's own per-user source lists, counted for the report ----
+
+    /// <summary>
+    /// Screens the copy beside <paramref name="f"/>'s installations as the account
+    /// <paramref name="runningAs"/>, handing the screen <paramref name="installations"/>.
+    /// </summary>
+    private static DeclaredProductScreening ScreenAs(
+        (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+            ScriptedFileIdentities Files, MockFileSystem Disk) f,
+        string? runningAs,
+        IReadOnlyList<ListedInstallation>? installations = null) =>
+        ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry,
+                runningAs is null ? null : new Account(runningAs))
+            .Screen(new[] { Package(Candidate) }, installations ?? [], default, null, InInstallerFolder);
+
+    [Fact]
+    public void The_running_accounts_own_list_read_with_every_package_seen_is_counted_as_read()
+    {
+        var screening = ScreenAs(ACopyBesideAPerUserUnmanagedInstallation(), UserSid);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, screening.Outcomes[0]);
+        Assert.Equal(new OwnPerUserSourceLists(Read: 1, Kept: 0), screening.OwnPerUserLists);
+    }
+
+    [Fact]
+    public void The_running_accounts_own_list_that_keeps_the_copy_is_counted_as_kept()
+    {
+        var f = ACopyBesideAPerUserUnmanagedInstallation();
+        f.Msi.RecordsUrls(ProductA, isPatch: false, UserSid, MsiInstallContext.UserUnmanaged, "file:///D:/Other/");
+
+        var screening = ScreenAs(f, UserSid);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, screening.Outcomes[0]);
+        Assert.Equal(new OwnPerUserSourceLists(Read: 0, Kept: 1), screening.OwnPerUserLists);
+    }
+
+    [Theory]
+    [InlineData(OtherUserSid)]
+    [InlineData(null)]
+    public void Another_accounts_list_is_counted_neither_way(string? runningAs)
+    {
+        var screening = ScreenAs(ACopyBesideAPerUserUnmanagedInstallation(), runningAs);
+
+        Assert.Equal(OwnPerUserSourceLists.None, screening.OwnPerUserLists);
+    }
+
+    [Fact]
+    public void A_per_machine_list_is_counted_neither_way()
+    {
+        var screening = ScreenAs(ACopyBesideTheRecordedPackage(), UserSid);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, screening.Outcomes[0]);
+        Assert.Equal(OwnPerUserSourceLists.None, screening.OwnPerUserLists);
+    }
+
+    [Fact]
+    public void The_running_accounts_own_list_read_twice_in_a_pass_is_counted_once()
+    {
+        // Listed as not ruled out as a second copy, so its sources are read for product A's
+        // answer and again as a second copy's.
+        var f = ACopyBesideAPerUserUnmanagedInstallation();
+        var listed = new[]
+        {
+            new ListedInstallation(ProductA, null, (int)MsiInstallContext.Machine, SecondCopyNotRuledOut: false),
+            new ListedInstallation(ProductA, UserSid, (int)MsiInstallContext.UserUnmanaged, SecondCopyNotRuledOut: true),
+        };
+
+        var screening = ScreenAs(f, UserSid, listed);
+
+        Assert.Equal(2, f.Msi.SourceListWalks.Count(walk => walk.Context == MsiInstallContext.UserUnmanaged));
+        Assert.Equal(new OwnPerUserSourceLists(Read: 1, Kept: 0), screening.OwnPerUserLists);
+    }
+
     [Fact]
     public void A_copy_is_kept_when_the_running_accounts_own_source_list_holds_a_url_that_is_no_web_address()
     {
         var f = ACopyBesideAPerUserUnmanagedInstallation();
         f.Msi.RecordsUrls(ProductA, isPatch: false, UserSid, MsiInstallContext.UserUnmanaged, "file:///D:/Other/");
 
-        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormNotCompared, f, runningAccount: new Account(UserSid));
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormUrl, f, runningAccount: new Account(UserSid));
     }
 
     [Theory]
@@ -1699,7 +1772,7 @@ public class DeclaredProductCheckTests
         f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, SetupName, entry);
         f.Files.Answers(entry + SetupName, FileIdentityRead.NamesNothing);
 
-        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormNotCompared, f);
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormVariable, f);
     }
 
     [Fact]
@@ -1717,7 +1790,7 @@ public class DeclaredProductCheckTests
         var f = ACopyBesideTheRecordedPackage();
         f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, "", SetupFolder);
 
-        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormNotCompared, f);
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormPackageName, f);
     }
 
     [Fact]
@@ -1835,7 +1908,7 @@ public class DeclaredProductCheckTests
         Environment.SetEnvironmentVariable(Variable, @"D:\Setup");
         try
         {
-            AssertKeptFor(DeclaredProductInstalledCause.SourcesFormNotCompared, f);
+            AssertKeptFor(DeclaredProductInstalledCause.SourcesFormVariable, f);
         }
         finally
         {
@@ -1860,7 +1933,7 @@ public class DeclaredProductCheckTests
         f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, SetupName, SetupFolder, entry);
         f.Files.Answers(package, FileIdentityRead.NamesNothing);
 
-        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormNotCompared, f);
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormOther, f);
         Assert.DoesNotContain(SetupPackage, f.Files.Reads);
     }
 
@@ -1877,7 +1950,7 @@ public class DeclaredProductCheckTests
         f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, packageName, SetupFolder);
         f.Files.Answers(SetupFolder + packageName, FileIdentityRead.NamesNothing);
 
-        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormNotCompared, f);
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormPackageName, f);
     }
 
     // ---- The registry key holding the list ----
@@ -2133,7 +2206,7 @@ public class DeclaredProductCheckTests
         var f = ACopyBesideTheRecordedPackage();
         f.Msi.RecordsUrls(ProductA, isPatch: false, null, MsiInstallContext.Machine, url);
 
-        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormNotCompared, f);
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormUrl, f);
     }
 
     [Fact]
@@ -2143,7 +2216,7 @@ public class DeclaredProductCheckTests
         f.Msi.RecordsUrls(ProductA, isPatch: false, null, MsiInstallContext.Machine,
             "https://example.com/setup/", "file:///D:/Other/");
 
-        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormNotCompared, f);
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormUrl, f);
     }
 
     [Fact]
@@ -2216,15 +2289,15 @@ public class DeclaredProductCheckTests
     }
 
     [Theory]
-    [InlineData("u", "file:///D:/Other/")]
-    [InlineData("u", "ftp://server/setup/")]
-    [InlineData("m", @"E:\")]
-    [InlineData("u", SetupFolder)]
-    [InlineData("x", SetupFolder)]
-    [InlineData("n", "http://localhost/setup/")]
-    [InlineData("m", "http://localhost/setup/")]
+    [InlineData("u", "file:///D:/Other/", DeclaredProductInstalledCause.SourcesFormUrl)]
+    [InlineData("u", "ftp://server/setup/", DeclaredProductInstalledCause.SourcesFormUrl)]
+    [InlineData("m", @"E:\", DeclaredProductInstalledCause.SourcesFormMedia)]
+    [InlineData("u", SetupFolder, DeclaredProductInstalledCause.SourcesFormUrl)]
+    [InlineData("x", SetupFolder, DeclaredProductInstalledCause.SourcesFormOther)]
+    [InlineData("n", "http://localhost/setup/", DeclaredProductInstalledCause.SourcesFormOther)]
+    [InlineData("m", "http://localhost/setup/", DeclaredProductInstalledCause.SourcesFormMedia)]
     public void A_copy_is_kept_when_the_source_used_last_is_neither_a_network_source_nor_a_web_address(
-        string type, string source)
+        string type, string source, DeclaredProductInstalledCause cause)
     {
         var f = ACopyBesideTheRecordedPackage();
         f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
@@ -2232,7 +2305,24 @@ public class DeclaredProductCheckTests
         f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
             MsiInstallProperty.LastUsedSource, source);
 
-        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormNotCompared, f);
+        AssertKeptFor(cause, f);
+    }
+
+    [Fact]
+    public void A_copy_is_kept_as_media_when_the_source_used_last_is_a_media_source_with_no_text()
+    {
+        // The key holds the type and the index with no text after them, as the API answers it,
+        // so only the media type keeps the copy.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedType, "m");
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedSource, "");
+        f.Msi.Registry.Holds(ProductAKey,
+            Sz(MsiInstallProperty.PackageName, SetupName),
+            ExpandSz(MsiInstallProperty.LastUsedSource, "m;1;"));
+
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormMedia, f);
     }
 
     [Theory]
@@ -2334,11 +2424,12 @@ public class DeclaredProductCheckTests
     }
 
     [Theory]
-    [InlineData(@"%TEMP%\Setup\")]
-    [InlineData("D:\\Set\0up\\")]
-    [InlineData(@"Setup\")]
-    [InlineData(@"D:Setup\")]
-    public void A_copy_is_kept_when_the_folder_used_last_is_one_the_check_does_not_compare(string folder)
+    [InlineData(@"%TEMP%\Setup\", DeclaredProductInstalledCause.SourcesFormVariable)]
+    [InlineData("D:\\Set\0up\\", DeclaredProductInstalledCause.SourcesFormOther)]
+    [InlineData(@"Setup\", DeclaredProductInstalledCause.SourcesFormOther)]
+    [InlineData(@"D:Setup\", DeclaredProductInstalledCause.SourcesFormOther)]
+    public void A_copy_is_kept_when_the_folder_used_last_is_one_the_check_does_not_compare(
+        string folder, DeclaredProductInstalledCause cause)
     {
         // A folder naming an environment variable, one holding a null, a relative folder
         // and one relative to a drive's current folder. The package in none of them is
@@ -2346,7 +2437,7 @@ public class DeclaredProductCheckTests
         // copy is kept without any of them being read.
         var f = ACopyWithTheSourceUsedLast(folder);
 
-        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormNotCompared, f);
+        AssertKeptFor(cause, f);
     }
 
     [Fact]
@@ -2518,7 +2609,7 @@ public class DeclaredProductCheckTests
             MsiInstallProperty.MediaPackagePath, "disk1");
         f.Msi.Registry.Holds(ProductAKey + @"\Media", Sz("1", ";"));
 
-        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormNotCompared, f);
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormMedia, f);
     }
 
     [Theory]
@@ -2861,9 +2952,10 @@ public class DeclaredProductCheckTests
     }
 
     [Theory]
-    [InlineData(@"D:\%SETUP%\")]
-    [InlineData("D:\\Set\0up\\")]
-    public void A_copy_is_kept_when_the_folder_its_product_was_installed_from_holds_a_variable_or_a_null(string folder)
+    [InlineData(@"D:\%SETUP%\", DeclaredProductInstalledCause.SourcesFormVariable)]
+    [InlineData("D:\\Set\0up\\", DeclaredProductInstalledCause.SourcesFormOther)]
+    public void A_copy_is_kept_when_the_folder_its_product_was_installed_from_holds_a_variable_or_a_null(
+        string folder, DeclaredProductInstalledCause cause)
     {
         // Each is a folder on a drive holding no package, so only the '%' or the null keeps
         // the copy.
@@ -2871,7 +2963,7 @@ public class DeclaredProductCheckTests
         f.Msi.RecordsInstallSource(ProductA, null, MsiInstallContext.Machine, folder);
         f.Files.Answers(folder + SetupName, FileIdentityRead.NamesNothing);
 
-        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormNotCompared, f);
+        AssertKeptFor(cause, f);
     }
 
     [Theory]
@@ -2890,7 +2982,7 @@ public class DeclaredProductCheckTests
         f.Msi.RecordsInstallSource(ProductA, null, MsiInstallContext.Machine, folder);
         f.Files.Answers(package, FileIdentityRead.NamesNothing);
 
-        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormNotCompared, f);
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormOther, f);
     }
 
     // ---- A patch copy and its patch's registrations ----
@@ -5368,7 +5460,7 @@ public class DeclaredProductCheckTests
 
         var screening = ScreenBesideIt(f);
 
-        Assert.Equal((DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.SourcesFormNotCompared),
+        Assert.Equal((DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.SourcesFormUrl),
             (screening.Outcomes[0], screening.InstalledCauses[0]));
     }
 

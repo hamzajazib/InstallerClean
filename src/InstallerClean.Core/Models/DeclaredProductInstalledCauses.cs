@@ -27,7 +27,11 @@ namespace InstallerClean.Models;
 /// <param name="SourcesGivenUp">The files kept for <see cref="DeclaredProductInstalledCause.SourcesGivenUp"/>.</param>
 /// <param name="SourcesWouldNotRead">The files kept for <see cref="DeclaredProductInstalledCause.SourcesWouldNotRead"/>.</param>
 /// <param name="SourcesRegistryDiffers">The files kept for <see cref="DeclaredProductInstalledCause.SourcesRegistryDiffers"/>.</param>
-/// <param name="SourcesFormNotCompared">The files kept for <see cref="DeclaredProductInstalledCause.SourcesFormNotCompared"/>.</param>
+/// <param name="SourcesFormUrl">The files kept for <see cref="DeclaredProductInstalledCause.SourcesFormUrl"/>.</param>
+/// <param name="SourcesFormMedia">The files kept for <see cref="DeclaredProductInstalledCause.SourcesFormMedia"/>.</param>
+/// <param name="SourcesFormVariable">The files kept for <see cref="DeclaredProductInstalledCause.SourcesFormVariable"/>.</param>
+/// <param name="SourcesFormPackageName">The files kept for <see cref="DeclaredProductInstalledCause.SourcesFormPackageName"/>.</param>
+/// <param name="SourcesFormOther">The files kept for <see cref="DeclaredProductInstalledCause.SourcesFormOther"/>.</param>
 /// <param name="SourcePackageNotRuledOut">The files kept for <see cref="DeclaredProductInstalledCause.SourcePackageNotRuledOut"/>.</param>
 /// <param name="MissingSparePackageCodeUnread">The files kept for <see cref="DeclaredProductInstalledCause.MissingSparePackageCodeUnread"/>.</param>
 /// <param name="MissingSpareIsIt">The files kept for <see cref="DeclaredProductInstalledCause.MissingSpareIsIt"/>.</param>
@@ -48,7 +52,11 @@ public sealed record DeclaredProductInstalledCauses(
     int SourcesGivenUp,
     int SourcesWouldNotRead,
     int SourcesRegistryDiffers,
-    int SourcesFormNotCompared,
+    int SourcesFormUrl,
+    int SourcesFormMedia,
+    int SourcesFormVariable,
+    int SourcesFormPackageName,
+    int SourcesFormOther,
     int SourcePackageNotRuledOut,
     int MissingSparePackageCodeUnread,
     int MissingSpareIsIt,
@@ -56,5 +64,14 @@ public sealed record DeclaredProductInstalledCauses(
 {
     /// <summary>A scan that kept no file for this reason.</summary>
     public static DeclaredProductInstalledCauses None { get; } =
-        new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+    /// <summary>
+    /// The files kept because their program's sources hold a form the check does not compare,
+    /// whichever form it was: the sum of <see cref="SourcesFormUrl"/>,
+    /// <see cref="SourcesFormMedia"/>, <see cref="SourcesFormVariable"/>,
+    /// <see cref="SourcesFormPackageName"/> and <see cref="SourcesFormOther"/>.
+    /// </summary>
+    public int SourcesFormNotCompared =>
+        SourcesFormUrl + SourcesFormMedia + SourcesFormVariable + SourcesFormPackageName + SourcesFormOther;
 }

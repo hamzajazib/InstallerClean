@@ -145,7 +145,14 @@ public class ResultLogEntryTests
         DeclaredInstalledMissingSpareIsItCount: 0,
         DeclaredInstalledByNameCount: 0,
         WithheldScanSignalCount: 0,
-        WithheldClockSetBackCount: 0);
+        WithheldClockSetBackCount: 0,
+        DeclaredInstalledSourcesFormUrlCount: 0,
+        DeclaredInstalledSourcesFormMediaCount: 0,
+        DeclaredInstalledSourcesFormVariableCount: 0,
+        DeclaredInstalledSourcesFormPackageNameCount: 0,
+        DeclaredInstalledSourcesFormOtherCount: 0,
+        DeclaredSourcesOwnPerUserReadCount: 0,
+        DeclaredSourcesOwnPerUserKeptCount: 0);
 
     private static MachineInfo SampleMachine() => new(
         ShortNameCreation: ShortNameCreationLabels.NoVolumes,
@@ -219,15 +226,15 @@ public class ResultLogEntryTests
     }
 
     [Fact]
-    public void Schema_version_is_eight()
+    public void Schema_version_is_nine()
     {
         // The receiving Edge Function field-validates per version and holds each version a
         // release sends to its exact set of keys, every count in it required; a version it
         // does not know goes to its lenient v<n>-unknown/ path. So a key added to or taken
         // from what a version carries moves the version once a release sends it, and this
-        // pin makes that move a deliberate, reviewed act. Schema 8 is schema 7 with keys
-        // appended under scan, from secondCopyReleasedBySourcesCount.
-        Assert.Equal(8, ResultLogEntry.CurrentSchemaVersion);
+        // pin makes that move a deliberate, reviewed act. Schema 9 is schema 8 with seven keys
+        // appended under scan, from declaredInstalledSourcesFormUrlCount.
+        Assert.Equal(9, ResultLogEntry.CurrentSchemaVersion);
     }
 
     [Fact]
@@ -417,6 +424,14 @@ public class ResultLogEntryTests
                 // The fourteenth: files from the walk whose times passed, held because the
                 // system clock went back while the scan read them.
                 "withheldClockSetBackCount",
+                // declaredInstalledSourcesFormNotComparedCount split by the form the screen
+                // met, adding up to it.
+                "declaredInstalledSourcesFormUrlCount", "declaredInstalledSourcesFormMediaCount",
+                "declaredInstalledSourcesFormVariableCount", "declaredInstalledSourcesFormPackageNameCount",
+                "declaredInstalledSourcesFormOtherCount",
+                // The running account's own per-user source lists the screen read, by whether
+                // every package each names was seen.
+                "declaredSourcesOwnPerUserReadCount", "declaredSourcesOwnPerUserKeptCount",
             ],
             root.GetProperty("scan").EnumerateObject().Select(p => p.Name));
 
@@ -768,13 +783,15 @@ public class ResultLogEntryTests
                 IsAtAnotherInstallationsSources: 4, PathUnreadable: 5, NoneRecordedRegistryDisagrees: 6,
                 NotThereUnestablished: 7, MissingPackageCodeUnread: 8, WouldNotIdentify: 9, WouldNotRead: 10,
                 NotThisProduct: 11, SourcesPerUserUnmanaged: 12, SourcesGivenUp: 13, SourcesWouldNotRead: 14,
-                SourcesRegistryDiffers: 15, SourcesFormNotCompared: 16, SourcePackageNotRuledOut: 17,
-                MissingSparePackageCodeUnread: 18, MissingSpareIsIt: 19, ByName: 20));
+                SourcesRegistryDiffers: 15, SourcesFormUrl: 21, SourcesFormMedia: 22, SourcesFormVariable: 23,
+                SourcesFormPackageName: 24, SourcesFormOther: 25, SourcePackageNotRuledOut: 17,
+                MissingSparePackageCodeUnread: 18, MissingSpareIsIt: 19, ByName: 20),
+            OwnPerUserSourceLists: new OwnPerUserSourceLists(Read: 26, Kept: 27));
 
         var info = ScanInfo.From(scan, 10);
 
         Assert.Equal(
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 115, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27],
             [
                 info.DeclaredInstalledIsItsCachedPackageCount, info.DeclaredInstalledIsAtItsSourcesCount,
                 info.DeclaredInstalledIsAnotherCachedPackageCount,
@@ -790,6 +807,10 @@ public class ResultLogEntryTests
                 info.DeclaredInstalledSourcePackageNotRuledOutCount,
                 info.DeclaredInstalledMissingSparePackageCodeUnreadCount, info.DeclaredInstalledMissingSpareIsItCount,
                 info.DeclaredInstalledByNameCount,
+                info.DeclaredInstalledSourcesFormUrlCount, info.DeclaredInstalledSourcesFormMediaCount,
+                info.DeclaredInstalledSourcesFormVariableCount, info.DeclaredInstalledSourcesFormPackageNameCount,
+                info.DeclaredInstalledSourcesFormOtherCount,
+                info.DeclaredSourcesOwnPerUserReadCount, info.DeclaredSourcesOwnPerUserKeptCount,
             ]);
 
         using var doc = JsonDocument.Parse(JsonSerializer.Serialize(info, JsonOptions));
@@ -800,6 +821,10 @@ public class ResultLogEntryTests
         Assert.Equal(18, doc.RootElement.GetProperty("declaredInstalledMissingSparePackageCodeUnreadCount").GetInt32());
         Assert.Equal(19, doc.RootElement.GetProperty("declaredInstalledMissingSpareIsItCount").GetInt32());
         Assert.Equal(20, doc.RootElement.GetProperty("declaredInstalledByNameCount").GetInt32());
+        Assert.Equal(115, doc.RootElement.GetProperty("declaredInstalledSourcesFormNotComparedCount").GetInt32());
+        Assert.Equal(22, doc.RootElement.GetProperty("declaredInstalledSourcesFormMediaCount").GetInt32());
+        Assert.Equal(26, doc.RootElement.GetProperty("declaredSourcesOwnPerUserReadCount").GetInt32());
+        Assert.Equal(27, doc.RootElement.GetProperty("declaredSourcesOwnPerUserKeptCount").GetInt32());
     }
 
     [Fact]
@@ -824,6 +849,10 @@ public class ResultLogEntryTests
                 info.DeclaredInstalledSourcePackageNotRuledOutCount,
                 info.DeclaredInstalledMissingSparePackageCodeUnreadCount, info.DeclaredInstalledMissingSpareIsItCount,
                 info.DeclaredInstalledByNameCount,
+                info.DeclaredInstalledSourcesFormUrlCount, info.DeclaredInstalledSourcesFormMediaCount,
+                info.DeclaredInstalledSourcesFormVariableCount, info.DeclaredInstalledSourcesFormPackageNameCount,
+                info.DeclaredInstalledSourcesFormOtherCount,
+                info.DeclaredSourcesOwnPerUserReadCount, info.DeclaredSourcesOwnPerUserKeptCount,
             ],
             count => Assert.Equal(0, count));
     }

@@ -222,7 +222,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             if (givenUp is not null && outcomes[i].Withholds()) pass.CountKept(givenUp);
         }
 
-        return new DeclaredProductScreening(outcomes, pass.GivenUp(), pass.WaitCount, pass.Census.Census(), causes);
+        return new DeclaredProductScreening(
+            outcomes, pass.GivenUp(), pass.WaitCount, pass.Census.Census(), causes, pass.OwnPerUserLists());
     }
 
     /// <summary>
@@ -1237,13 +1238,31 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         RegistryDiffers,
 
         /// <summary>
-        /// The sources hold something not compared: a URL other than a web address
-        /// (<see cref="IsWebAddress"/>), a media package path, a package name that is empty or
-        /// holds a '\', a '/', a ':', a '%' or a null, or an entry, a source used last or an
-        /// <c>InstallSource</c> naming a variable, holding a null or in a form not compared, or a
-        /// source used last that is neither a network folder nor a web address.
+        /// The list holds a URL other than a web address (<see cref="IsWebAddress"/>), or the
+        /// source used last is a URL source other than a web address.
         /// </summary>
-        FormNotCompared,
+        FormUrl,
+
+        /// <summary>
+        /// The list names a media package path, or the source used last is a media source.
+        /// </summary>
+        FormMedia,
+
+        /// <summary>
+        /// A list entry, the source used last or the <c>InstallSource</c> holds a '%', naming a
+        /// variable.
+        /// </summary>
+        FormVariable,
+
+        /// <summary>The package name is empty or holds a '\', a '/', a ':', a '%' or a null.</summary>
+        FormPackageName,
+
+        /// <summary>
+        /// A list entry, the source used last or the <c>InstallSource</c> holds a null or is in a
+        /// form not compared, the source used last is of a kind other than a network, URL or
+        /// media source, or is a network source with no folder.
+        /// </summary>
+        FormOther,
 
         /// <summary>
         /// A package at a source would not identify, could be a file directly in the Installer
@@ -1688,7 +1707,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         SourceRefusal.CachedPackageNotRuledOut => DeclaredProductInstalledCause.NoneRecordedRegistryDisagrees,
         SourceRefusal.WouldNotRead => DeclaredProductInstalledCause.SourcesWouldNotRead,
         SourceRefusal.RegistryDiffers => DeclaredProductInstalledCause.SourcesRegistryDiffers,
-        SourceRefusal.FormNotCompared => DeclaredProductInstalledCause.SourcesFormNotCompared,
+        SourceRefusal.FormUrl => DeclaredProductInstalledCause.SourcesFormUrl,
+        SourceRefusal.FormMedia => DeclaredProductInstalledCause.SourcesFormMedia,
+        SourceRefusal.FormVariable => DeclaredProductInstalledCause.SourcesFormVariable,
+        SourceRefusal.FormPackageName => DeclaredProductInstalledCause.SourcesFormPackageName,
+        SourceRefusal.FormOther => DeclaredProductInstalledCause.SourcesFormOther,
         SourceRefusal.PackageNotRuledOut => DeclaredProductInstalledCause.SourcePackageNotRuledOut,
         _ => DeclaredProductInstalledCause.None,
     };
@@ -1758,6 +1781,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// first put to the Installer-folder test, and one that would be a file directly in the
     /// Installer folder keeps every copy.
     ///
+    /// THE RUNNING ACCOUNT'S OWN PER-USER-UNMANAGED LIST IS COUNTED FOR THE PASS once it is
+    /// read, by whether every package it names was seen
+    /// (<see cref="PassAnswers.OwnPerUserListRead"/>). A list stopped by the gates before the
+    /// read is not counted.
+    ///
     /// FALSE, WHICH KEEPS THE FILE, for: no way to compare against the Installer folder
     /// or to read the registry; where <paramref name="noneRecorded"/> says the installation's
     /// cached package read as none, an <c>InstallProperties</c> key that does not show it records
@@ -1818,12 +1846,37 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (context == MsiInstallContext.UserUnmanaged && !ReadsItsOwnRecord(sid, context))
             return Refuse(SourceRefusal.PerUserUnmanaged, out refusal);
 
+        var seen = AddPackagesAtSources(
+            code, sid, context, pass, namesAFileInInstallerFolder, _registry, opened, byName, out givenUp, out refusal);
+        if (context == MsiInstallContext.UserUnmanaged) pass.OwnPerUserListRead(code, sid, seen);
+        return seen;
+    }
+
+    /// <summary>
+    /// The reads <see cref="AddSourcePackages"/> makes of an installation's sources once it is
+    /// one whose list is read, answering as that does: the package name, the list through the
+    /// API and from <paramref name="registry"/>, the media package path, the source used last
+    /// and the <c>InstallSource</c>, and the package in each folder compared.
+    /// </summary>
+    private bool AddPackagesAtSources(
+        string code,
+        string? sid,
+        MsiInstallContext context,
+        PassAnswers pass,
+        Func<string, bool?> namesAFileInInstallerFolder,
+        IRegistryReader registry,
+        List<FileIdentity> opened,
+        List<NetworkPackage> byName,
+        out string? givenUp,
+        out SourceRefusal refusal)
+    {
+        givenUp = null;
         var name = InstallerQueryService.ReadProductProperty(
             _msi, code, sid, context, MsiInstallProperty.PackageName);
         if (name.Unreadable) return Refuse(SourceRefusal.WouldNotRead, out refusal);
 
         var packageName = name.Value.TrimEnd('\0');
-        if (packageName.Length == 0) return Refuse(SourceRefusal.FormNotCompared, out refusal);
+        if (packageName.Length == 0) return Refuse(SourceRefusal.FormPackageName, out refusal);
 
         // A package name holding a '\', a '/' or a ':' names a folder, a drive or a stream
         // as well as a file, so the file it opens need not be the one its last part spells,
@@ -1833,7 +1886,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         // own environment, and one holding a null is cut short at the null wherever it is read
         // as a path. Both keep the copy as well.
         if (packageName.IndexOfAny(['\\', '/', ':', '%', '\0']) >= 0)
-            return Refuse(SourceRefusal.FormNotCompared, out refusal);
+            return Refuse(SourceRefusal.FormPackageName, out refusal);
 
         var sources = SourcesOf(code, sid, context, MsiSourceListOptions.Network);
         if (sources is null) return Refuse(SourceRefusal.WouldNotRead, out refusal);
@@ -1843,14 +1896,16 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         // A web address on the list is not compared, and any other URL keeps the copy.
         foreach (var url in urls)
-            if (!IsWebAddress(url)) return Refuse(SourceRefusal.FormNotCompared, out refusal);
+            if (!IsWebAddress(url)) return Refuse(SourceRefusal.FormUrl, out refusal);
 
         // An entry naming an environment variable keeps the copy, and so does one holding
         // a null, which would cut the entry short wherever it is read as a path, and one of
         // a form this check does not compare.
         foreach (var entry in sources)
-            if (entry.Contains('%') || entry.Contains('\0') || !IsOnADriveOrAShare(entry))
-                return Refuse(SourceRefusal.FormNotCompared, out refusal);
+        {
+            if (entry.Contains('%')) return Refuse(SourceRefusal.FormVariable, out refusal);
+            if (entry.Contains('\0') || !IsOnADriveOrAShare(entry)) return Refuse(SourceRefusal.FormOther, out refusal);
+        }
 
         if (SourceListKeyPath(code, sid, context) is not { } listKey)
             return Refuse(SourceRefusal.WouldNotRead, out refusal);
@@ -1877,7 +1932,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var usedLast = SourceUsedLastOf(code, sid, context, sourceList.Values, out refusal);
         if (usedLast is null) return false;
 
-        var installSource = InstallSourceOf(_registry, code, sid, context, out refusal);
+        var installSource = InstallSourceOf(registry, code, sid, context, out refusal);
         if (installSource is null) return false;
 
         // The source used last and the InstallSource join the folders compared, each
@@ -1895,7 +1950,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             // separator is the host's.
             var package = folder.EndsWith('\\') ? folder + packageName : folder + '\\' + packageName;
 
-            if (ComparedByName(package, _registry, pass))
+            if (ComparedByName(package, registry, pass))
             {
                 byName.Add(new NetworkPackage(package, packageName));
                 continue;
@@ -2499,7 +2554,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var answered = InstallerQueryService.ReadSourceListProperty(
             _msi, code, sid, context, MsiSourceListOptions.Product, MsiInstallProperty.MediaPackagePath);
         if (answered.Unreadable) return Refuse(SourceRefusal.WouldNotRead, out refusal);
-        if (answered.Value.TrimEnd('\0').Length > 0) return Refuse(SourceRefusal.FormNotCompared, out refusal);
+        if (answered.Value.TrimEnd('\0').Length > 0) return Refuse(SourceRefusal.FormMedia, out refusal);
 
         if (media.Presence != RegistryKeyPresence.Absent)
         {
@@ -2579,12 +2634,17 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             return string.Empty;
         }
 
-        if (folder.Length == 0
-            || !string.Equals(folderType, "n", StringComparison.Ordinal)
-            || folder.Contains('%')
-            || folder.Contains('\0')
-            || !IsOnADriveOrAShare(folder))
-            return Refused(SourceRefusal.FormNotCompared, out refusal);
+        if (!string.Equals(folderType, "n", StringComparison.Ordinal))
+            return Refused(folderType switch
+            {
+                "u" => SourceRefusal.FormUrl,
+                "m" => SourceRefusal.FormMedia,
+                _ => SourceRefusal.FormOther,
+            }, out refusal);
+
+        if (folder.Contains('%')) return Refused(SourceRefusal.FormVariable, out refusal);
+        if (folder.Length == 0 || folder.Contains('\0') || !IsOnADriveOrAShare(folder))
+            return Refused(SourceRefusal.FormOther, out refusal);
 
         refusal = SourceRefusal.None;
         return folder;
@@ -2640,8 +2700,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             return string.Empty;
         }
 
-        if (folder.Length > 0 && (folder.Contains('%') || folder.Contains('\0') || !IsOnADriveOrAShare(folder)))
-            return Refused(SourceRefusal.FormNotCompared, out refusal);
+        if (folder.Contains('%')) return Refused(SourceRefusal.FormVariable, out refusal);
+        if (folder.Length > 0 && (folder.Contains('\0') || !IsOnADriveOrAShare(folder)))
+            return Refused(SourceRefusal.FormOther, out refusal);
 
         refusal = SourceRefusal.None;
         return folder;
@@ -3361,6 +3422,31 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         /// <summary>The pass's links, once the first declared code has been asked about.</summary>
         internal InstallationLinks? Links { get; set; }
+
+        /// <summary>
+        /// The running account's own per-user-unmanaged installations whose lists the pass has
+        /// read, each keyed by its code and account joined by a space, which neither holds, and
+        /// compared without case, as codes and accounts are; with whether every package its
+        /// sources name was seen the first time it was read.
+        /// </summary>
+        private readonly Dictionary<string, bool> _ownPerUserLists = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Counts one of the running account's own per-user-unmanaged lists as read
+        /// (<see cref="AddSourcePackages"/>), with <paramref name="seen"/>, whether every package
+        /// its sources name was seen. An installation read again in the pass, for another
+        /// declared code or as a second copy, is counted by its first reading only.
+        /// </summary>
+        internal void OwnPerUserListRead(string code, string? sid, bool seen) =>
+            _ownPerUserLists.TryAdd(code + " " + sid, seen);
+
+        /// <summary>
+        /// The running account's own per-user-unmanaged lists the pass read
+        /// (<see cref="OwnPerUserListRead"/>), by whether every package each names was seen.
+        /// </summary>
+        internal OwnPerUserSourceLists OwnPerUserLists() => new(
+            Read: _ownPerUserLists.Values.Count(seen => seen),
+            Kept: _ownPerUserLists.Values.Count(seen => !seen));
 
         /// <summary>
         /// What the pass has found about the two conditions that hold back every installation

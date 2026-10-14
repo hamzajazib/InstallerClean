@@ -380,11 +380,13 @@ public sealed class FileSystemScanService : IFileSystemScanService
         var candidateIdentityReads = default(FileIdentityReadTally);
 
         // And the drives and shares the declared-product screen gives up, the waits it
-        // makes and what it reads of each listed installation's cached package, which the
-        // result built after the block below carries.
+        // makes, what it reads of each listed installation's cached package and the running
+        // account's own per-user source lists it reads, which the result built after the
+        // block below carries.
         IReadOnlyList<SourceRootGivenUp> sourceRootsGivenUp = [];
         var sourceWaitCount = 0;
         var cachedPackageCensus = CachedPackageCensus.None;
+        var ownPerUserSourceLists = OwnPerUserSourceLists.None;
 
         // The closing entry is owed on every exit, not just the clean one: a
         // cancel and the correlation gate both leave through here, and the gate
@@ -679,7 +681,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // bar by the milestones divides it the same way on every machine.
         progress?.Report(new ScanProgressUpdate(Strings.Status_CheckingRemaining));
 
-        (sourceRootsGivenUp, sourceWaitCount, cachedPackageCensus) = WithholdCandidatesByWhatTheyDeclare(
+        (sourceRootsGivenUp, sourceWaitCount, cachedPackageCensus, ownPerUserSourceLists) = WithholdCandidatesByWhatTheyDeclare(
             unclaimedByPath, withheld, withheldBy, cacheRoot, query.Installations, cancellationToken,
             (ex, cause) => refusalLog.Record(ex, cause), progress);
 
@@ -1144,7 +1146,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
             sourceWaitCount,
             cachedPackageCensus,
             withheldBy.DeclaredProductInstalledCauses,
-            installerActivity);
+            installerActivity,
+            ownPerUserSourceLists);
     }
 
     /// <summary>
@@ -1354,7 +1357,11 @@ public sealed class FileSystemScanService : IFileSystemScanService
             SourcesGivenUp: By(DeclaredProductInstalledCause.SourcesGivenUp),
             SourcesWouldNotRead: By(DeclaredProductInstalledCause.SourcesWouldNotRead),
             SourcesRegistryDiffers: By(DeclaredProductInstalledCause.SourcesRegistryDiffers),
-            SourcesFormNotCompared: By(DeclaredProductInstalledCause.SourcesFormNotCompared),
+            SourcesFormUrl: By(DeclaredProductInstalledCause.SourcesFormUrl),
+            SourcesFormMedia: By(DeclaredProductInstalledCause.SourcesFormMedia),
+            SourcesFormVariable: By(DeclaredProductInstalledCause.SourcesFormVariable),
+            SourcesFormPackageName: By(DeclaredProductInstalledCause.SourcesFormPackageName),
+            SourcesFormOther: By(DeclaredProductInstalledCause.SourcesFormOther),
             SourcePackageNotRuledOut: By(DeclaredProductInstalledCause.SourcePackageNotRuledOut),
             MissingSparePackageCodeUnread: By(DeclaredProductInstalledCause.MissingSparePackageCodeUnread),
             MissingSpareIsIt: By(DeclaredProductInstalledCause.MissingSpareIsIt),
@@ -1474,9 +1481,12 @@ public sealed class FileSystemScanService : IFileSystemScanService
     /// a host showing the waits having shown each of them, and what the screen found of the
     /// conditions that hold back every file it would otherwise let through
     /// (<see cref="DeclaredProductScreening.CachedPackages"/>), a pass that looked at no
-    /// installation where it handed the screen nothing or did not use its answer.
+    /// installation where it handed the screen nothing or did not use its answer, and the
+    /// running account's own per-user source lists the screen read
+    /// (<see cref="DeclaredProductScreening.OwnPerUserLists"/>), none on the same terms.
     /// </summary>
-    private (IReadOnlyList<SourceRootGivenUp> RootsGivenUp, int WaitCount, CachedPackageCensus CachedPackages)
+    private (IReadOnlyList<SourceRootGivenUp> RootsGivenUp, int WaitCount, CachedPackageCensus CachedPackages,
+        OwnPerUserSourceLists OwnPerUserLists)
         WithholdCandidatesByWhatTheyDeclare(
         List<OrphanedFile> candidates,
         List<OrphanedFile> withheld,
@@ -1487,7 +1497,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
         Action<Exception, string>? recordRefusal = null,
         IProgress<ScanProgressUpdate>? progress = null)
     {
-        if (_declaredProducts is null || candidates.Count == 0) return ([], 0, CachedPackageCensus.None);
+        if (_declaredProducts is null || candidates.Count == 0)
+            return ([], 0, CachedPackageCensus.None, OwnPerUserSourceLists.None);
 
         // Reported on the same stride rule as the matching count, and the last candidate
         // whatever the stride, so the position ends on the total.
@@ -1532,7 +1543,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
             withheld.AddRange(candidates);
             withheldBy.ScreenUnanswered(candidates.Count);
             candidates.Clear();
-            return ([], screening.WaitCount, CachedPackageCensus.None);
+            return ([], screening.WaitCount, CachedPackageCensus.None, OwnPerUserSourceLists.None);
         }
 
         // Partitioned forward into a second list rather than removed in place from
@@ -1557,7 +1568,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
 
         candidates.Clear();
         candidates.AddRange(survivors);
-        return (screening.RootsGivenUp, screening.WaitCount, screening.CachedPackages);
+        return (screening.RootsGivenUp, screening.WaitCount, screening.CachedPackages, screening.OwnPerUserLists);
     }
 
     /// <summary>

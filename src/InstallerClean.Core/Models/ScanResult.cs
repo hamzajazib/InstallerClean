@@ -434,6 +434,15 @@ namespace InstallerClean.Models;
 /// APPENDED AFTER <see cref="WithheldDeclaredProductInstalledCauses"/>, so a positional
 /// construction of the members above still means what it meant.
 /// </param>
+/// <param name="OwnPerUserSourceLists">
+/// The source lists of the running account's own per-user-unmanaged installations the
+/// declared-product screen read in this scan, each installation once
+/// (<see cref="Services.DeclaredProductScreening.OwnPerUserLists"/>). None where the screen did
+/// not run, read no such list, or its answer was not used.
+///
+/// APPENDED AFTER <see cref="InstallerActivityAtScan"/>, so a positional construction of the
+/// members above still means what it meant.
+/// </param>
 public record ScanResult(
     IReadOnlyList<OrphanedFile> RemovableFiles,
     IReadOnlyList<RegisteredPackage> RegisteredPackages,
@@ -467,8 +476,13 @@ public record ScanResult(
     int SourceWaitCount = 0,
     CachedPackageCensus? CachedPackageCensus = null,
     DeclaredProductInstalledCauses? WithheldDeclaredProductInstalledCauses = null,
-    Services.PendingRebootResult? InstallerActivityAtScan = null)
+    Services.PendingRebootResult? InstallerActivityAtScan = null,
+    Services.OwnPerUserSourceLists? OwnPerUserSourceLists = null)
 {
+    /// <summary>Never null: a result built without them reads as a scan that read no such list.</summary>
+    public Services.OwnPerUserSourceLists OwnPerUserSourceLists { get; init; }
+        = OwnPerUserSourceLists ?? Services.OwnPerUserSourceLists.None;
+
     /// <summary>Never null: a result built without the list reads as one that gave nothing up.</summary>
     public IReadOnlyList<SourceRootGivenUp> SourceRootsGivenUp { get; init; }
         = SourceRootsGivenUp ?? Array.Empty<SourceRootGivenUp>();

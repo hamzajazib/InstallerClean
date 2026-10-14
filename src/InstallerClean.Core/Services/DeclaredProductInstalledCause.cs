@@ -120,12 +120,39 @@ public enum DeclaredProductInstalledCause
     SourcesRegistryDiffers,
 
     /// <summary>
-    /// An installation's sources hold something the check does not compare: a URL other than an
-    /// http or https address, a media package path, an entry, a package name, a source used last
-    /// or an <c>InstallSource</c> naming a variable, holding a null or in a form not compared, or
-    /// a source used last that is neither a network source nor an http or https address.
+    /// An installation's source list holds a URL other than an http or https address, or the
+    /// source it used last is a URL source other than one. The first of the five forms the check
+    /// does not compare, which, with <see cref="SourcesFormMedia"/>,
+    /// <see cref="SourcesFormVariable"/>, <see cref="SourcesFormPackageName"/> and
+    /// <see cref="SourcesFormOther"/>, take a file by the first such form the check met on its
+    /// program's sources.
     /// </summary>
-    SourcesFormNotCompared,
+    SourcesFormUrl,
+
+    /// <summary>
+    /// An installation's source list names a media package path, or the source it used last is a
+    /// media source.
+    /// </summary>
+    SourcesFormMedia,
+
+    /// <summary>
+    /// An entry on an installation's source list, the source it used last or its
+    /// <c>InstallSource</c> names a variable, holding a '%'.
+    /// </summary>
+    SourcesFormVariable,
+
+    /// <summary>
+    /// An installation's package name is empty, or names a folder, a drive, a stream or a variable,
+    /// or holds a null.
+    /// </summary>
+    SourcesFormPackageName,
+
+    /// <summary>
+    /// An entry on an installation's source list, the source it used last or its
+    /// <c>InstallSource</c> holds a null or is in a form not compared, or the source it used last is
+    /// a network source with no folder or a source of any other kind.
+    /// </summary>
+    SourcesFormOther,
 
     /// <summary>
     /// A package at one of an installation's sources will not identify, or could be a file

@@ -127,6 +127,16 @@ public sealed record ResultLogEntry(
     /// 8, in the same place, counting the files whose latest time is not before the scan's clock
     /// (<see cref="ScanInfo.WithheldNotBeforeTheClockCount"/>).
     ///
+    /// SCHEMA 9 ADDS SEVEN KEYS UNDER <c>scan</c> AND TAKES NONE AWAY. Five split
+    /// <c>scan.declaredInstalledSourcesFormNotComparedCount</c> by the form the screen met on the
+    /// file's program's sources, and add up to it
+    /// (<see cref="ScanInfo.DeclaredInstalledSourcesFormUrlCount"/> to
+    /// <see cref="ScanInfo.DeclaredInstalledSourcesFormOtherCount"/>). Two count the running
+    /// account's own per-user-unmanaged installations whose source lists the screen read, by
+    /// whether every package each names was seen
+    /// (<see cref="ScanInfo.DeclaredSourcesOwnPerUserReadCount"/>,
+    /// <see cref="ScanInfo.DeclaredSourcesOwnPerUserKeptCount"/>).
+    ///
     /// A receiver that does not recognise a version stores the report under a
     /// lenient v&lt;n&gt;-unknown/ prefix rather than rejecting it, so a bump
     /// never loses data even if the allowlist has not caught up. THAT LENIENCE
@@ -135,7 +145,7 @@ public sealed record ResultLogEntry(
     /// <c>machine</c> arriving before the receiving end knows the name is a
     /// rejected report and a user told sending failed. The receiver ships first.
     /// </summary>
-    public const int CurrentSchemaVersion = 8;
+    public const int CurrentSchemaVersion = 9;
 
     // Each factory takes windowsRegion as IWindowsRegion.Read returned it for the
     // report box, so the report carries the value the box started from.
@@ -1417,7 +1427,9 @@ public sealed record MachineInfo(
 /// Those whose program has an installation whose sources hold something the screen does not
 /// compare: a URL other than an http or https address, a media package path, a variable, a form
 /// not compared, or a source used last that is neither a network folder nor an http or https
-/// address (<see cref="DeclaredProductInstalledCauses.SourcesFormNotCompared"/>).
+/// address (<see cref="DeclaredProductInstalledCauses.SourcesFormNotCompared"/>). The sum of
+/// <see cref="DeclaredInstalledSourcesFormUrlCount"/> to
+/// <see cref="DeclaredInstalledSourcesFormOtherCount"/>.
 /// </param>
 /// <param name="DeclaredInstalledSourcePackageNotRuledOutCount">
 /// Those whose program has an installation with a package at a source that would not identify or
@@ -1460,6 +1472,40 @@ public sealed record MachineInfo(
 /// NOT TO BE ADDED TO <see cref="WithheldScanSignalCount"/>: that one is a finding about Windows
 /// Installer, and this one is a finding about the system clock. Appended last, as the split's arms
 /// added after the first eleven are.
+/// </param>
+/// <param name="DeclaredInstalledSourcesFormUrlCount">
+/// The files <see cref="DeclaredInstalledSourcesFormNotComparedCount"/> counts whose program's
+/// sources held a URL other than an http or https address, on the list or as the source used last
+/// (<see cref="DeclaredProductInstalledCauses.SourcesFormUrl"/>). Each of those files is counted in
+/// one of this and the four after it, by the first such form the screen met on its program's
+/// sources, so the five add up to that count. Appended after the age check's arms.
+/// </param>
+/// <param name="DeclaredInstalledSourcesFormMediaCount">
+/// Those whose program's sources named a media package path, or were last used from a media source
+/// (<see cref="DeclaredProductInstalledCauses.SourcesFormMedia"/>).
+/// </param>
+/// <param name="DeclaredInstalledSourcesFormVariableCount">
+/// Those whose program's source list entry, source used last or <c>InstallSource</c> named a
+/// variable (<see cref="DeclaredProductInstalledCauses.SourcesFormVariable"/>).
+/// </param>
+/// <param name="DeclaredInstalledSourcesFormPackageNameCount">
+/// Those whose program's package name was empty, or named a folder, a drive, a stream or a variable,
+/// or held a null (<see cref="DeclaredProductInstalledCauses.SourcesFormPackageName"/>).
+/// </param>
+/// <param name="DeclaredInstalledSourcesFormOtherCount">
+/// Those whose program's source list entry, source used last or <c>InstallSource</c> held a null or
+/// was in a form not compared, or whose source used last was a network source with no folder or a
+/// source of any other kind (<see cref="DeclaredProductInstalledCauses.SourcesFormOther"/>).
+/// </param>
+/// <param name="DeclaredSourcesOwnPerUserReadCount">
+/// The running account's own per-user-unmanaged installations whose source lists the screen read
+/// with every package they name seen, each installation once
+/// (<see cref="Services.OwnPerUserSourceLists.Read"/>). Installations, not files, and part of no
+/// count above.
+/// </param>
+/// <param name="DeclaredSourcesOwnPerUserKeptCount">
+/// The same installations whose source lists the screen read and could not all see, so each kept
+/// the files its packages could be (<see cref="Services.OwnPerUserSourceLists.Kept"/>).
 /// </param>
 public sealed record ScanInfo(
     long DurationMs,
@@ -1556,7 +1602,14 @@ public sealed record ScanInfo(
     int DeclaredInstalledMissingSpareIsItCount,
     int DeclaredInstalledByNameCount,
     int WithheldScanSignalCount,
-    int WithheldClockSetBackCount)
+    int WithheldClockSetBackCount,
+    int DeclaredInstalledSourcesFormUrlCount,
+    int DeclaredInstalledSourcesFormMediaCount,
+    int DeclaredInstalledSourcesFormVariableCount,
+    int DeclaredInstalledSourcesFormPackageNameCount,
+    int DeclaredInstalledSourcesFormOtherCount,
+    int DeclaredSourcesOwnPerUserReadCount,
+    int DeclaredSourcesOwnPerUserKeptCount)
 {
     public static ScanInfo From(ScanResult scan, long durationMs)
     {
@@ -1704,7 +1757,16 @@ public sealed record ScanInfo(
             // The thirteenth and fourteenth arms of the split of the withheld count,
             // appended last for the reason the twelfth was.
             scan.WithheldBy.ScanSignalCount,
-            scan.WithheldBy.ClockSetBackCount);
+            scan.WithheldBy.ClockSetBackCount,
+            // The form-not-compared count split by form, appended after the age check's arms,
+            // and the running account's own per-user source lists the screen read.
+            installedBy.SourcesFormUrl,
+            installedBy.SourcesFormMedia,
+            installedBy.SourcesFormVariable,
+            installedBy.SourcesFormPackageName,
+            installedBy.SourcesFormOther,
+            scan.OwnPerUserSourceLists.Read,
+            scan.OwnPerUserSourceLists.Kept);
     }
 }
 

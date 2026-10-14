@@ -256,18 +256,45 @@ public interface IDeclaredProductCheck
 /// (<see cref="DeclaredProductInstalledCause"/>). Empty from a screening that gives none, which
 /// a caller reads as no cause for any candidate.
 /// </param>
+/// <param name="OwnPerUserLists">
+/// The source lists of the running account's own per-user-unmanaged installations the pass
+/// read, each installation once (<see cref="OwnPerUserSourceLists"/>).
+/// </param>
 public sealed record DeclaredProductScreening(
     IReadOnlyList<DeclaredProductOutcome> Outcomes,
     IReadOnlyList<SourceRootGivenUp> RootsGivenUp,
     int WaitCount,
     CachedPackageCensus? CachedPackages = null,
-    IReadOnlyList<DeclaredProductInstalledCause>? InstalledCauses = null)
+    IReadOnlyList<DeclaredProductInstalledCause>? InstalledCauses = null,
+    OwnPerUserSourceLists? OwnPerUserLists = null)
 {
     /// <summary>Never null: a screening built without one reads as a pass that read no installation.</summary>
     public CachedPackageCensus CachedPackages { get; init; } = CachedPackages ?? CachedPackageCensus.None;
 
     /// <summary>Never null: a screening built without them reads as one giving no cause for any candidate.</summary>
     public IReadOnlyList<DeclaredProductInstalledCause> InstalledCauses { get; init; } = InstalledCauses ?? [];
+
+    /// <summary>Never null: a screening built without them reads as a pass that read no such list.</summary>
+    public OwnPerUserSourceLists OwnPerUserLists { get; init; } = OwnPerUserLists ?? OwnPerUserSourceLists.None;
+}
+
+/// <summary>
+/// The source lists of the running account's own per-user-unmanaged installations one pass of
+/// the declared-product check read, counting installations and not files, each installation
+/// once, by its first reading in the pass. A list is counted where the check went on to read it:
+/// another account's list, which is not read, is in neither count, and so is one whose
+/// installation records no cached package while its <c>InstallProperties</c> key does not show
+/// it records none.
+/// </summary>
+/// <param name="Read">The lists read with every package they name seen.</param>
+/// <param name="Kept">
+/// The lists read that could not all be seen, so each kept the files its installation's
+/// packages could be.
+/// </param>
+public sealed record OwnPerUserSourceLists(int Read, int Kept)
+{
+    /// <summary>A pass that read no such list.</summary>
+    public static OwnPerUserSourceLists None { get; } = new(0, 0);
 }
 
 /// <summary>
