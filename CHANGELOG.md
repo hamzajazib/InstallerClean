@@ -2,6 +2,21 @@
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0] - Unreleased
+
+### Changed
+
+- InstallerClean can offer the spare installers of a program installed without administrator rights for the Windows account it runs as. It reads that program's sources, through Windows Installer and from the account's own registry, and judges its spares as it judges any other program's. It held back every spare of such a program. Such a program installed by another account keeps its spares held back, since Microsoft documents that an administrator cannot list another user's sources for an installation of this kind, and InstallerClean run with another administrator's credentials counts as that administrator.
+- InstallerClean no longer holds back a program's spare installers because one of its sources is an http or https web address: Windows Installer downloads a package from such an address rather than opening a file in `C:\Windows\Installer`, so the spares are judged by the program's other sources. A source recorded as any other kind of address, a `file:` address included, still holds them back.
+- InstallerClean can offer the spare installers of a program installed for every user that records no cached installer and no source list, where its record names no folder it was installed from, names an http or https web address, or names a folder shown not to be the Installer folder. It held back every spare of such a program.
+- InstallerClean can offer the spare installers of a program installed from a CD, a DVD, a disc image or a USB stick, whether or not the disc or stick is in the drive during the scan. It keeps a spare whose name could be the program's own installer, since that is the name Windows Installer looks for on the disc, and it judges a program whose recorded source is on a drive letter that is not there the same way. It held back every spare of such a program.
+- Where a program's installer at one of its sources is on a volume that gives no file ID, InstallerClean compares that volume with the one holding `C:\Windows\Installer`, by its GUID path and its serial number. Where both differ, the installer there is none of the files in the Installer folder, and the program's spare installers go on to the rest of the check. It held back every spare of such a program.
+- The anonymous report is in a new format, version 9. Where a program's sources hold something the check does not compare, it says which kind held back the program's spare installers: a web address other than http or https, installation media, a name holding an environment variable, an unusual package name, or another form. It counts the programs installed for the account InstallerClean runs as whose source lists were read, and how many of those still held a file back, and its counts of programs installed for one account whose source lists were not read cover only other accounts' programs.
+
+### Fixed
+
+- When InstallerClean reads a path on a disc drive or card reader with nothing in it, anywhere in the app, whether a program's source, a cached installer recorded there or any other read, it tells Windows not to show its own box asking for a disc, so the read answers at once. Such a read could put that box up and wait until it was answered, holding up the scan or a Move with it.
+
 ## [3.3.0] - 2026-10-13
 
 ### Added
