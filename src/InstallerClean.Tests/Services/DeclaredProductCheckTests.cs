@@ -2662,14 +2662,15 @@ public class DeclaredProductCheckTests
 
     // ---- A disc or a stick: a media source, a media package path, and a drive letter with no drive ----
     //
-    // A program installed from a disc or a stick records the folder it came from as its
-    // source used last, of the media type, and as its InstallSource, and the folder's path
-    // below the drive's root as its media package path. The folder used last is compared as
-    // a network source's folder is. The media package path names no one folder, so it keeps
-    // only a copy whose name the package name could be, and so does a list with a media source
-    // and no media package path. A drive letter at which Windows reports no drive, a stick taken
-    // out or a disc image no longer mounted among them, and an optical or removable drive that
-    // answers that it is not ready, are compared by name as a folder on the network is.
+    // A program installed from a disc or a stick records the folder it came from as its source
+    // used last, of the media type, and as its InstallSource, and the folder's path below the
+    // drive's root as its media package path. The folder used last is compared as a network
+    // source's folder is. The media package path names no one folder, so it keeps only a copy
+    // whose name the package name could be, and so does a list with a media source and no media
+    // package path. A drive letter at which Windows reports no drive, a stick taken out or a
+    // disc image no longer mounted among them, and an optical or removable drive that answers
+    // that it is not ready or has no media in it, are compared by name as a folder on the
+    // network is.
 
     private const string DiscFolder = @"E:\sub\";
 
@@ -5873,24 +5874,28 @@ public class DeclaredProductCheckTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void A_folder_test_that_answers_after_a_wait_gives_its_root_up_only_where_it_did_not_say(bool says)
+    [InlineData(null)]
+    public void A_folder_test_that_answers_after_a_wait_gives_its_root_up_only_where_it_did_not_say(bool? isIt)
     {
-        // An answer that the folder is the Installer folder is the read answering, however long
-        // it took; an answer of null is a read that failed, and a slow one gives its root up.
+        // A definite answer, that the folder is the Installer folder or that it is not, is the
+        // read answering, however long it took; an answer of null is a read that failed, and a
+        // slow one gives its root up.
         var f = ARegistrationWithNoSourceListInstalledFrom(InstallerFolder + @"\");
 
         var screening = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
             { SourceFolderSlowFailure = TimeSpan.Zero, DriveKindOf = FixedDrive, NamesInFolderOf = NameOnly }
             .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder,
-                isTheInstallerFolder: folder =>
+                isTheInstallerFolder: _ =>
                 {
                     Thread.Sleep(20);
-                    return says ? IsInstallerFolder(folder) : null;
+                    return isIt;
                 });
 
-        Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
-        if (says) Assert.Empty(screening.RootsGivenUp);
-        else Assert.Equal(["C:"], screening.RootsGivenUp.Select(given => given.Root));
+        Assert.Equal(
+            isIt is false ? DeclaredProductOutcome.DeclaredProductNotInstalled : DeclaredProductOutcome.SecondCopyUnestablished,
+            screening.Outcomes[0]);
+        if (isIt is null) Assert.Equal(["C:"], screening.RootsGivenUp.Select(given => given.Root));
+        else Assert.Empty(screening.RootsGivenUp);
     }
 
     [Fact]

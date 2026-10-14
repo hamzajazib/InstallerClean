@@ -1,4 +1,5 @@
 using System.Buffers;
+using InstallerClean.Helpers;
 using InstallerClean.Interop.Native;
 using Microsoft.Win32.SafeHandles;
 
@@ -548,9 +549,9 @@ internal interface IFinalPathKernel
 }
 
 /// <summary>
-/// <see cref="IFinalPathKernel"/> over Win32. The open asks for no access, shares
-/// everything and takes <c>FILE_FLAG_BACKUP_SEMANTICS</c> so a directory opens as well
-/// as a file; the name is read in the <c>VOLUME_NAME_DOS</c> form.
+/// <see cref="IFinalPathKernel"/> over Win32. The open is the metadata open
+/// (<see cref="StorageHelpers.OpenForMetadata"/>), so a directory opens as well as a file;
+/// the name is read in the <c>VOLUME_NAME_DOS</c> form.
 /// </summary>
 internal sealed class Win32FinalPathKernel : IFinalPathKernel
 {
@@ -558,15 +559,7 @@ internal sealed class Win32FinalPathKernel : IFinalPathKernel
 
     private Win32FinalPathKernel() { }
 
-    public SafeFileHandle Open(string path) =>
-        Kernel32.CreateFile(
-            path,
-            0,
-            Kernel32.FILE_SHARE_ALL,
-            IntPtr.Zero,
-            Kernel32.OPEN_EXISTING,
-            Kernel32.FILE_FLAG_BACKUP_SEMANTICS,
-            IntPtr.Zero);
+    public SafeFileHandle Open(string path) => StorageHelpers.OpenForMetadata(path, out _);
 
     public uint GetFinalName(SafeFileHandle handle, char[] buffer, uint length) =>
         Kernel32.GetFinalPathNameByHandle(handle, buffer, length, Kernel32.VOLUME_NAME_DOS);

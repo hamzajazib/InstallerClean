@@ -169,15 +169,12 @@ public interface IFileIdentityReader
     /// <see cref="ReadOutcome"/>, and where the file opens and gives no id
     /// (<see cref="FileIdentityRead.IdentityUnavailable"/>), the volume it is on in
     /// <paramref name="volume"/>, named off the handle that read opened, as <see cref="VolumeOf"/>
-    /// names one; null for every other answer, and where the volume cannot be named. A reader
-    /// that names no volumes answers null.
+    /// names one; null for every other answer, and where the volume cannot be named. Give it no
+    /// default answer: one answering null would keep every package on another volume that gives
+    /// no file id, and no build would say so.
     /// </summary>
     FileIdentityRead ReadOutcomeWithVolume(
-        string path, out FileIdentity identity, out VolumeName? volume)
-    {
-        volume = null;
-        return ReadOutcome(path, out identity);
-    }
+        string path, out FileIdentity identity, out VolumeName? volume);
 
     /// <summary>
     /// The volume holding the file or folder <paramref name="path"/> names, opened as

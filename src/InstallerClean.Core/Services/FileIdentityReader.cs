@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using InstallerClean.Helpers;
 using InstallerClean.Interop.Native;
 
@@ -40,43 +39,16 @@ internal sealed class FileIdentityReader : IFileIdentityReader
 
         try
         {
-            // No access bits at all, matching InstallerCacheHelpers.TryResolveFinalPath:
-            // the metadata this asks for needs none, and requesting read access
-            // would fail on a file another process has open without sharing it,
-            // which for this folder means anything msiexec is working on.
-            //
-            // FILE_SHARE_ALL for the other half of that: an installer holding its
-            // own cached package must not make this call fail, because a failure
-            // here is a withholding given up and now costs the scan its whole
-            // walk-derived offer.
-            //
-            // NO FILE_FLAG_OPEN_REPARSE_POINT, which is the whole point: links are
-            // followed so a registration that reaches its package through a
-            // junction resolves to the package. FILE_FLAG_BACKUP_SEMANTICS is
-            // present so a path that turns out to name a directory opens rather
-            // than failing; such a path yields an identity that matches no
-            // candidate file and is therefore harmless. The Installer-folder test in
-            // InstallerCacheHelpers opens folders through this reader, and without
-            // the flag every folder it asks about answers null.
-            //
-            // NO CRITICAL-ERROR BOX for this thread while the path is opened, so a path on a
-            // drive with no disc in it answers with an error rather than Windows asking for one.
-            using var noBox = StorageHelpers.WithNoCriticalErrorBox();
-            using var handle = Kernel32.CreateFile(
-                path,
-                0,
-                Kernel32.FILE_SHARE_ALL,
-                IntPtr.Zero,
-                Kernel32.OPEN_EXISTING,
-                Kernel32.FILE_FLAG_BACKUP_SEMANTICS,
-                IntPtr.Zero);
+            // The metadata open, with no critical-error box while it runs: its flags, and why
+            // each is set, are on StorageHelpers.OpenForMetadata. A refused open here is a
+            // withholding given up and costs the scan its whole walk-derived offer, so an
+            // installer holding its own cached package must not refuse it, and with no access
+            // asked for and every share mode given it cannot. Links are followed, so a
+            // registration that reaches its package through a junction resolves to the package.
+            using var handle = StorageHelpers.OpenForMetadata(path, out var error);
 
             if (handle.IsInvalid)
             {
-                // Read before anything else can overwrite it, and read ONLY on the
-                // failing branch: the value after a successful call is whatever the
-                // last failure anywhere left behind.
-                //
                 // THE TWO ABSENCE CODES ARE THE WHOLE OF THE EXEMPTION AND
                 // EVERYTHING ELSE WITHHOLDS. A registration whose cached file has
                 // gone is ordinary, and on a large share of machines it is common,
@@ -84,7 +56,6 @@ internal sealed class FileIdentityReader : IFileIdentityReader
                 // over a file that was not there to be claimed. Any other code
                 // means something IS there and this call did not get to it, which
                 // is the case the app cannot be sure about.
-                var error = Marshal.GetLastWin32Error();
                 return error is Kernel32.ERROR_FILE_NOT_FOUND or Kernel32.ERROR_PATH_NOT_FOUND
                     ? FileIdentityRead.NamesNothing
                     : FileIdentityRead.OpenRefused;
@@ -128,15 +99,7 @@ internal sealed class FileIdentityReader : IFileIdentityReader
         {
             // Opened as ReadOutcome opens a path, so the volume named is the one the file
             // that read reached sits on.
-            using var noBox = StorageHelpers.WithNoCriticalErrorBox();
-            using var handle = Kernel32.CreateFile(
-                path,
-                0,
-                Kernel32.FILE_SHARE_ALL,
-                IntPtr.Zero,
-                Kernel32.OPEN_EXISTING,
-                Kernel32.FILE_FLAG_BACKUP_SEMANTICS,
-                IntPtr.Zero);
+            using var handle = StorageHelpers.OpenForMetadata(path, out _);
 
             return handle.IsInvalid ? null : NameOf(handle);
         }

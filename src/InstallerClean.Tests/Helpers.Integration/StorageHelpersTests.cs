@@ -184,4 +184,42 @@ public class StorageHelpersTests
 
         Assert.Null(result);
     }
+
+    /// <summary>
+    /// The guard adds the flag that turns off the critical-error box to the thread's own mode,
+    /// keeps the thread's other flags while it is in force, and puts the mode it found back on
+    /// dispose. Run on a thread of its own, so the test thread's mode is never touched.
+    /// </summary>
+    [Fact]
+    public void WithNoCriticalErrorBox_keeps_the_threads_other_flags_and_puts_its_mode_back()
+    {
+        // SEM_NOGPFAULTERRORBOX, a flag the guard does not set and must keep.
+        const uint OtherFlag = 0x0002;
+        uint before = 0, during = 0, after = 0;
+        Exception? fault = null;
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                Kernel32.SetThreadErrorMode(OtherFlag, out _);
+                before = Kernel32.GetThreadErrorMode();
+                using (StorageHelpers.WithNoCriticalErrorBox())
+                    during = Kernel32.GetThreadErrorMode();
+                after = Kernel32.GetThreadErrorMode();
+            }
+            catch (Exception ex)
+            {
+                fault = ex;
+            }
+        });
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(fault);
+
+        Assert.Equal(OtherFlag, before);
+        Assert.Equal(OtherFlag | Kernel32.SEM_FAILCRITICALERRORS, during);
+        Assert.Equal(OtherFlag, after);
+    }
 }

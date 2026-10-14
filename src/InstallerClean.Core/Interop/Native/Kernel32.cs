@@ -305,6 +305,10 @@ internal static partial class Kernel32
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool SetThreadErrorMode(uint dwNewMode, out uint lpOldMode);
 
+    /// <summary>The error mode of the calling thread (<see cref="SetThreadErrorMode"/>).</summary>
+    [LibraryImport(Library, EntryPoint = "GetThreadErrorMode")]
+    public static partial uint GetThreadErrorMode();
+
     /// <summary>
     /// The error mode under which the system shows no critical-error box
     /// (<see cref="SetThreadErrorMode"/>).
@@ -315,7 +319,8 @@ internal static partial class Kernel32
     /// Asks the volume at the root <paramref name="lpRootPathName"/>, a drive letter, its
     /// colon and a backslash, for its details. Declared for the answer alone: every output
     /// is passed as a null pointer, and a caller reads only whether the call succeeded and,
-    /// where it did not, the last error (<see cref="ERROR_NOT_READY"/>).
+    /// where it did not, the last error (<see cref="ERROR_NOT_READY"/>,
+    /// <see cref="ERROR_NO_MEDIA_IN_DRIVE"/>).
     /// </summary>
     [LibraryImport(Library, EntryPoint = "GetVolumeInformationW", SetLastError = true,
                    StringMarshalling = StringMarshalling.Utf16)]

@@ -54,26 +54,27 @@ namespace InstallerClean.Services;
 /// or a network drive, is one of those only for a file whose name or short name its package
 /// name could be, since Windows Installer looks in a source folder for that name alone, and so
 /// is a source under a drive letter at which Windows reports no drive to this check, or on an
-/// optical or removable drive that answers that it is not ready, whose folder cannot be read.
-/// While Windows is set to follow a symbolic link reached through a network path to this PC or
-/// to another network path, each is one for every file. A source list with a media source keeps
-/// every file whose name or short name its package name could be, the media search looking for
-/// that name alone at the list's media package path, the package's folder on its installation
-/// media; while Windows is set to follow such a link, a list naming a media package path keeps
-/// every file. The folder an installation records as its <c>InstallSource</c>, the one its
-/// package was installed from, counts as a source whether or not the list still holds it. So it
-/// is while a source list holds something the check does not compare, a URL other than an http
-/// or https address, an entry naming an environment variable or a package name naming a folder,
-/// a drive, a stream or a variable, or holding a null; while the source used last is neither a
-/// network or media source nor an http or https address; and while the registry key holding the
-/// list does not hold what the API returned for it, package name included, or holds that name
-/// as anything but a REG_SZ. So it is while an installation's <c>InstallSource</c> will not
-/// read, is held in the registry otherwise than the API answers it or as anything but a REG_SZ,
-/// or, being no http or https address, names an environment variable or starts neither with a
-/// drive letter, a ':' and a '\' nor with two '\'. The package at an http or https address is
-/// one Windows Installer downloads from a web server, so the address is not compared and keeps
-/// nothing. An installation in the per-user-unmanaged context of an account other than the one
-/// this check runs as keeps it as well, its source list not being read.
+/// optical or removable drive that answers that it is not ready or has no media in it, whose
+/// folder cannot be read. While Windows is set to follow a symbolic link reached through a
+/// network path to this PC or to another network path, each is one for every file. A source
+/// list with a media source keeps every file whose name or short name its package name could
+/// be, the media search looking for that name alone at the list's media package path, the
+/// package's folder on its installation media; while Windows is set to follow such a link, a
+/// list naming a media package path keeps every file. The folder an installation records as its
+/// <c>InstallSource</c>, the one its package was installed from, counts as a source whether or
+/// not the list still holds it. So it is while a source list holds something the check does not
+/// compare, a URL other than an http or https address, an entry naming an environment variable
+/// or a package name naming a folder, a drive, a stream or a variable, or holding a null; while
+/// the source used last is neither a network or media source nor an http or https address; and
+/// while the registry key holding the list does not hold what the API returned for it, package
+/// name included, or holds that name as anything but a REG_SZ. So it is while an installation's
+/// <c>InstallSource</c> will not read, is held in the registry otherwise than the API answers
+/// it or as anything but a REG_SZ, or, being no http or https address, names an environment
+/// variable or starts neither with a drive letter, a ':' and a '\' nor with two '\'. The
+/// package at an http or https address is one Windows Installer downloads from a web server, so
+/// the address is not compared and keeps nothing. An installation in the per-user-unmanaged
+/// context of an account other than the one this check runs as keeps it as well, its source
+/// list not being read.
 ///
 /// A REGISTERED PATCH DOES NOT ON ITS OWN MAKE THIS FILE A COPY OF IT WINDOWS OPENS
 /// EITHER.
@@ -414,13 +415,14 @@ public enum DeclaredProductOutcome
     /// https address, names an environment variable or starts neither with a drive letter, a
     /// ':' and a '\' nor with two '\'. A source or an <c>InstallSource</c> in a folder on the
     /// network, under a drive letter at which Windows reports no drive to this check or on an
-    /// optical or removable drive that answers that it is not ready, and the package the media
-    /// search looks for, cover this only where the package name could be this file's name or
-    /// short name, or where Windows is set to follow a symbolic link reached through a network
-    /// path to this PC or to another network path. In each of them this file is, or could be,
-    /// the package that installation opens. A check constructed without its two file readers or
-    /// its registry reader, or screening without the Installer folder to compare against,
-    /// answers this for every installed product, having no way to look.
+    /// optical or removable drive that answers that it is not ready or has no media in it, and
+    /// the package the media search looks for, cover this only where the package name could be
+    /// this file's name or short name, or where Windows is set to follow a symbolic link
+    /// reached through a network path to this PC or to another network path. In each of them
+    /// this file is, or could be, the package that installation opens. A check constructed
+    /// without its two file readers or its registry reader, or screening without the Installer
+    /// folder to compare against, answers this for every installed product, having no way to
+    /// look.
     ///
     /// Where every package was seen and this file's own identity does not read, the
     /// answer is <see cref="CandidateIdentityUnestablished"/> instead.
@@ -441,14 +443,14 @@ public enum DeclaredProductOutcome
     /// root other than a local drive, would be a file directly in the Installer folder, a
     /// package compared by name, in a folder on the network, under a drive letter at which
     /// Windows reports no drive to this check, on an optical or removable drive that answers
-    /// that it is not ready, or looked for by the media search, counting only where its package
-    /// name could be this file's name. Every installation's source list is held in the registry
-    /// as the API returns it, with its package name as a REG_SZ, and so is its
-    /// <c>InstallSource</c> where there is one, which starts with a drive letter, a ':' and a
-    /// '\', or with two '\', or is an http or https address. Every source list holds no URL but
-    /// http or https addresses and no entry naming an environment variable, names a media
-    /// package path only while Windows follows no symbolic link reached through a network path,
-    /// has a package name naming a file alone, and was last used from a network or media
+    /// that it is not ready or has no media in it, or looked for by the media search, counting
+    /// only where its package name could be this file's name. Every installation's source list
+    /// is held in the registry as the API returns it, with its package name as a REG_SZ, and so
+    /// is its <c>InstallSource</c> where there is one, which starts with a drive letter, a ':'
+    /// and a '\', or with two '\', or is an http or https address. Every source list holds no
+    /// URL but http or https addresses and no entry naming an environment variable, names a
+    /// media package path only while Windows follows no symbolic link reached through a network
+    /// path, has a package name naming a file alone, and was last used from a network or media
     /// source, from an http or https address or not at all. Every installation the caller could
     /// not rule out as a second copy opens packages the check saw, and this file is a different
     /// file from all of them too. The candidate goes on being decided by everything else.

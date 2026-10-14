@@ -17,8 +17,8 @@ namespace InstallerClean.Services;
 /// reads the <c>LocalPackage</c> each installation records, the package each one's source list
 /// points at and the package in the folder each one records as its <c>InstallSource</c>. A package
 /// compared by name, in a folder on the network, under a drive letter at which Windows reports no
-/// drive or an optical or removable drive that answers that it is not ready, or one the media
-/// search looks for, is looked at only for a candidate whose name it could be
+/// drive or an optical or removable drive that answers that it is not ready or has no media in it,
+/// or one the media search looks for, is looked at only for a candidate whose name it could be
 /// (<see cref="AddSourcePackages"/>). Every answer about a product is held against the
 /// installations the caller's own enumeration listed, and one leaving out any of them keeps the
 /// file. The cached package of each of those installations is read too, and a candidate is also put
@@ -1031,9 +1031,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// answers false. Asked under the rules a source folder's package is read under, within
     /// <see cref="SourceFolderTimeLimit"/> and not under a root given up for the pass
     /// (<see cref="ReadUnderRoot"/>), and <paramref name="givenUp"/> is that root where a
-    /// refusal for it answered false. Asked once per folder per pass, by its spelling, case
-    /// included, and that answer kept for every later ask. A pass with no such test answers
-    /// false.
+    /// refusal for it answered false. A definite answer, true or false, is the read answering,
+    /// however long it took; only a test that answers null counts against the folder's root as a
+    /// read that failed. Asked once per folder per pass, by its spelling, case included, and that
+    /// answer kept for every later ask. A pass with no such test answers false.
     /// </summary>
     private bool IsNotTheInstallerFolder(string folder, PassAnswers pass, out string? givenUp)
     {
@@ -1912,20 +1913,20 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// path (<see cref="WithPackagesItCouldBe"/>). A list naming no media package path is given
     /// the same entry unless it is shown to hold no media source (<see cref="HasNoMediaSource"/>).
     ///
-    /// A PACKAGE IN A FOLDER ON THE NETWORK IS READ ONLY FOR A CANDIDATE WHOSE NAME IT
-    /// COULD BE (<see cref="WithPackagesItCouldBe"/>). Windows Installer looks in each
-    /// source folder for the file named by <c>PackageName</c> and for no other. A folder on
-    /// the network can be this PC's Installer folder reached through a share, and the file
-    /// found there by that name is the one with that name or that short name
-    /// (<see cref="CandidateNames.CouldBe"/>). A package in a local folder is read here for
-    /// every candidate whatever its name, since a symbolic link there, which Windows
-    /// follows by default, can carry the package's name and point at any file. So is a
-    /// package on the network while Windows is set to follow a symbolic link reached
+    /// A PACKAGE IN A FOLDER ON THE NETWORK IS READ ONLY FOR A CANDIDATE WHOSE NAME IT COULD BE
+    /// (<see cref="WithPackagesItCouldBe"/>). Windows Installer looks in each source folder for the
+    /// file named by <c>PackageName</c> and for no other. A folder on the network can be this PC's
+    /// Installer folder reached through a share, and the file found there by that name is the one
+    /// with that name or that short name (<see cref="CandidateNames.CouldBe"/>). A package in a
+    /// local folder is read here for every candidate whatever its name, since a symbolic link
+    /// there, which Windows follows by default, can carry the package's name and point at any file.
+    /// So is a package on the network while Windows is set to follow a symbolic link reached
     /// through a network path to this PC or to another network path
-    /// (<see cref="RemoteLinksCanBeFollowed"/>). A package under a drive letter at which
-    /// Windows reports no drive to this process, or on an optical or removable drive that
-    /// answers that it is not ready, whose folder cannot be read now, is left for a candidate whose name it
-    /// could be in the same way and under the same setting (<see cref="ComparedByName"/>).
+    /// (<see cref="RemoteLinksCanBeFollowed"/>). A package under a drive letter at which Windows
+    /// reports no drive to this process, or on an optical or removable drive that answers that it
+    /// is not ready or has no media in it, whose folder cannot be read now, is left for a candidate
+    /// whose name it could be in the same way and under the same setting
+    /// (<see cref="ComparedByName"/>).
     ///
     /// A PACKAGE ON A LOCAL DRIVE IS COMPARED BY ITS IDENTITY ALONE, in the Installer folder
     /// as in any other folder (<see cref="IsLocalDrive"/>). The identity read follows a link,
@@ -2534,26 +2535,26 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         kind is DriveType.Fixed or DriveType.Removable or DriveType.CDRom or DriveType.Ram;
 
     /// <summary>
-    /// Whether the package at <paramref name="package"/> is left to be read for each
-    /// candidate whose name it could be (<see cref="WithPackagesItCouldBe"/>): whether it
-    /// is in a folder on the network, under a drive letter at which Windows reports no
-    /// drive, or on an optical or removable drive that answers that it is not ready, and Windows is set to
-    /// follow no symbolic link reached through a network path to this PC or to another network
+    /// Whether the package at <paramref name="package"/> is left to be read for each candidate
+    /// whose name it could be (<see cref="WithPackagesItCouldBe"/>): whether it is in a folder on
+    /// the network, under a drive letter at which Windows reports no drive, or on an optical or
+    /// removable drive that answers that it is not ready or has no media in it, and Windows is set
+    /// to follow no symbolic link reached through a network path to this PC or to another network
     /// path (<see cref="RemoteLinksCanBeFollowed"/>).
     ///
     /// A FOLDER ON THE NETWORK IS A SHARE OR A NETWORK DRIVE. A share is known by its
     /// spelling, <c>\\server\share</c> in any form <see cref="RootOf"/> reads. A drive letter
     /// is on the network where Windows reports it as a network drive (<see cref="KindOf"/>).
     ///
-    /// A DRIVE LETTER AT WHICH WINDOWS REPORTS NO DRIVE TO THIS PROCESS, such as a stick
-    /// taken out, a disc image no longer mounted, a drive since removed, or a letter that names
-    /// a drive in another logon session only, a network drive or a substituted folder mapped
+    /// A DRIVE LETTER AT WHICH WINDOWS REPORTS NO DRIVE TO THIS PROCESS, such as a stick taken
+    /// out, a disc image no longer mounted, a drive since removed, or a letter that names a
+    /// drive in another logon session only, a network drive or a substituted folder mapped
     /// without elevation, has a folder that cannot be read now, and the package Windows
     /// Installer opens in a folder is the file there named by <c>PackageName</c>, so it is left
     /// for a candidate whose name it could be. So is a package on a drive Windows reports as
-    /// optical or removable that answers that it is not ready (<see cref="IsNotReady"/>), as a
-    /// disc drive with no disc in it and a card reader with no card do: its folder cannot be
-    /// read now either, whatever the reason.
+    /// optical or removable that answers that it is not ready or has no media in it
+    /// (<see cref="IsNotReady"/>), as a disc drive with no disc in it and a card reader with no
+    /// card do: its folder cannot be read now either, whatever the reason.
     ///
     /// A drive letter Windows reports as any other kind is read for every candidate, and so
     /// is a path of any other form and an optical or removable drive that gives any other
@@ -2576,9 +2577,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
     /// <summary>
     /// Whether the drive <paramref name="drive"/>, a drive letter and its colon, answers within
-    /// the time limit that it is not ready (<see cref="DriveIsNotReadyOf"/>). Asked once per
-    /// drive per pass, and waited for as <see cref="KindOf"/> waits: a drive that has not
-    /// answered by then is given up for the rest of the pass, and answers false here.
+    /// the time limit that it is not ready or has no media in it
+    /// (<see cref="DriveIsNotReadyOf"/>). Asked once per drive per pass, and waited for as
+    /// <see cref="KindOf"/> waits: a drive that has not answered by then is given up for the
+    /// rest of the pass, and answers false here.
     /// </summary>
     private bool IsNotReady(string drive, PassAnswers pass)
     {
@@ -2668,8 +2670,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         StorageHelpers.GetDriveKind(drive + @"\");
 
     /// <summary>
-    /// Whether the drive letter <c>X:</c> given names a drive that answers that it is not
-    /// ready, as Windows reports it to this process (<see cref="StorageHelpers.IsNotReady"/>).
+    /// Whether the drive letter <c>X:</c> given names a drive that answers that it is not ready
+    /// or has no media in it, as Windows reports it to this process
+    /// (<see cref="StorageHelpers.IsNotReady"/>).
     /// </summary>
     internal Func<string, bool> DriveIsNotReadyOf { get; init; } = drive =>
         StorageHelpers.IsNotReady(drive + @"\");
@@ -3540,11 +3543,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <summary>
     /// A package compared by name: only a candidate whose name could be
     /// <paramref name="Name"/> can be it, so it is looked at for such a candidate alone
-    /// (<see cref="WithPackagesItCouldBe"/>). A package in a folder on the network, under a
-    /// drive letter this process finds no drive at, or on an optical or removable drive that
-    /// answers that it is not ready, has a <paramref name="Path"/> to read (<see cref="ComparedByName"/>). The
-    /// package the media search opens has none (<see cref="MediaPackagePathOf"/>), and keeps
-    /// every candidate whose name it could be.
+    /// (<see cref="WithPackagesItCouldBe"/>). A package in a folder on the network, under a drive
+    /// letter this process finds no drive at, or on an optical or removable drive that answers that
+    /// it is not ready or has no media in it, has a <paramref name="Path"/> to read
+    /// (<see cref="ComparedByName"/>). The package the media search opens has none
+    /// (<see cref="MediaPackagePathOf"/>), and keeps every candidate whose name it could be.
     /// </summary>
     /// <param name="Path">
     /// The path Windows Installer opens, the source folder and the package name; null for the
@@ -3924,8 +3927,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         internal Dictionary<string, DriveType?> DriveKinds { get; } = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
-        /// Whether each optical or removable drive asked about answered that it is not ready, by
-        /// its letter and colon (<see cref="DeclaredProductCheck.IsNotReady"/>).
+        /// Whether each optical or removable drive asked about answered that it is not ready or
+        /// has no media in it, by its letter and colon
+        /// (<see cref="DeclaredProductCheck.IsNotReady"/>).
         /// </summary>
         internal Dictionary<string, bool> DrivesNotReady { get; } = new(StringComparer.OrdinalIgnoreCase);
 

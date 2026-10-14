@@ -256,9 +256,9 @@ internal static class StorageHelpers
     /// <summary>
     /// Whether the drive whose root is <paramref name="driveRoot"/>, a drive letter, its colon
     /// and a backslash, answers that it is not ready (<see cref="Kernel32.ERROR_NOT_READY"/>) or
-    /// that there is no media in it (<see cref="Kernel32.ERROR_NO_MEDIA_IN_DRIVE"/>), as an
-    /// optical drive with no disc in it and a card reader with no card do. False for every other
-    /// answer, a call that throws included. Asked with no critical-error box
+    /// that it has no media in it (<see cref="Kernel32.ERROR_NO_MEDIA_IN_DRIVE"/>), as an optical
+    /// drive with no disc in it and a card reader with no card do. False for every other answer,
+    /// a call that throws included. Asked with no critical-error box
     /// (<see cref="WithNoCriticalErrorBox"/>).
     /// </summary>
     internal static bool IsNotReady(string driveRoot)
@@ -268,8 +268,7 @@ internal static class StorageHelpers
             using var _ = WithNoCriticalErrorBox();
             return !Kernel32.GetVolumeInformation(
                     driveRoot, IntPtr.Zero, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 0)
-                && System.Runtime.InteropServices.Marshal.GetLastWin32Error()
-                    is Kernel32.ERROR_NOT_READY or Kernel32.ERROR_NO_MEDIA_IN_DRIVE;
+                && IsNotReadyAnswer(System.Runtime.InteropServices.Marshal.GetLastWin32Error());
         }
         catch
         {
@@ -278,17 +277,62 @@ internal static class StorageHelpers
     }
 
     /// <summary>
+    /// Whether <paramref name="error"/>, the error a drive answered, is one <see cref="IsNotReady"/>
+    /// takes as the drive not being ready: <see cref="Kernel32.ERROR_NOT_READY"/> or
+    /// <see cref="Kernel32.ERROR_NO_MEDIA_IN_DRIVE"/>, and no other.
+    /// </summary>
+    internal static bool IsNotReadyAnswer(int error) =>
+        error is Kernel32.ERROR_NOT_READY or Kernel32.ERROR_NO_MEDIA_IN_DRIVE;
+
+    /// <summary>
+    /// Opens <paramref name="path"/> for its metadata alone, with no critical-error box on the
+    /// calling thread while it opens (<see cref="WithNoCriticalErrorBox"/>), so a path on a drive
+    /// with no disc or card in it answers with an error rather than Windows asking for one.
+    /// <paramref name="error"/> is the error the open answered where the handle is invalid, read
+    /// before anything else on the thread can overwrite it, and 0 where it opened: the last error
+    /// after a successful open is whatever the last failure anywhere left behind. Every open of a
+    /// path for its identity, its volume or its final name is made here.
+    /// </summary>
+    /// <remarks>
+    /// NO ACCESS BITS AT ALL. The metadata a caller asks for needs none, and requesting read
+    /// access would fail on a file another process has open without sharing it, which for the
+    /// Installer folder means anything msiexec is working on. FILE_SHARE_ALL for the other half of
+    /// that: an installer holding its own cached package must not make this open fail.
+    ///
+    /// NO FILE_FLAG_OPEN_REPARSE_POINT: links are followed, so a path that reaches a file through
+    /// a junction opens the file. FILE_FLAG_BACKUP_SEMANTICS so a path that names a directory
+    /// opens rather than failing; a caller comparing files reads such a handle as a file no
+    /// candidate is, and a caller asking about a folder needs it to open.
+    /// </remarks>
+    internal static SafeFileHandle OpenForMetadata(string path, out int error)
+    {
+        using var noBox = WithNoCriticalErrorBox();
+        var handle = Kernel32.CreateFile(
+            path,
+            0,
+            Kernel32.FILE_SHARE_ALL,
+            IntPtr.Zero,
+            Kernel32.OPEN_EXISTING,
+            Kernel32.FILE_FLAG_BACKUP_SEMANTICS,
+            IntPtr.Zero);
+        error = handle.IsInvalid ? System.Runtime.InteropServices.Marshal.GetLastWin32Error() : 0;
+        return handle;
+    }
+
+    /// <summary>
     /// Turns off, for the calling thread, the box Windows shows when a read reaches a drive with
     /// no disc or card in it (<see cref="Kernel32.SEM_FAILCRITICALERRORS"/>), so the read answers
     /// with an error instead of waiting on the person; disposing the answer puts the thread's own
-    /// mode back. The process's mode and every other thread's are left as they are. Where the call
-    /// fails or cannot be made, nothing is changed and nothing is put back.
+    /// mode back. The thread's other error-mode flags are kept as they are, and the process's mode
+    /// and every other thread's are left alone. Where the call fails or cannot be made, nothing is
+    /// changed and nothing is put back.
     /// </summary>
     internal static NoCriticalErrorBox WithNoCriticalErrorBox()
     {
         try
         {
-            return Kernel32.SetThreadErrorMode(Kernel32.SEM_FAILCRITICALERRORS, out var old)
+            var old = Kernel32.GetThreadErrorMode();
+            return Kernel32.SetThreadErrorMode(old | Kernel32.SEM_FAILCRITICALERRORS, out _)
                 ? new NoCriticalErrorBox(old, set: true)
                 : default;
         }

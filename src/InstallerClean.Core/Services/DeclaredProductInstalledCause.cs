@@ -177,12 +177,12 @@ public enum DeclaredProductInstalledCause
     MissingSpareIsIt,
 
     /// <summary>
-    /// A package compared by name that one of its own program's installations has as a source,
-    /// and that the file could be by its name, could not be ruled out: one in a folder on the
-    /// network, one under a drive letter at which Windows reports no drive to the check or on an
-    /// optical or removable drive that answers that it is not ready, whose folder cannot be read, or the package
-    /// the media search looks for on each drive it tries; a package under a drive or share given
-    /// up for the pass among them.
+    /// A package compared by name that one of its own program's installations has as a source, and
+    /// that the file could be by its name, could not be ruled out: one in a folder on the network,
+    /// one under a drive letter at which Windows reports no drive to the check or on an optical or
+    /// removable drive that answers that it is not ready or has no media in it, whose folder cannot
+    /// be read, or the package the media search looks for on each drive it tries; a package under a
+    /// drive or share given up for the pass among them.
     /// </summary>
     ByName,
 }
