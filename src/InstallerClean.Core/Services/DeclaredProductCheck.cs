@@ -17,8 +17,9 @@ namespace InstallerClean.Services;
 /// enumeration the patch-target route uses, and for an installed product reads the
 /// <c>LocalPackage</c> each installation records, the package each one's source list
 /// points at and the package in the folder each one records as its
-/// <c>InstallSource</c>. A package in a folder on the network is read only for a
-/// candidate whose name it could be (<see cref="AddSourcePackages"/>). Every answer
+/// <c>InstallSource</c>. A package compared by name, in a folder on the network, under a
+/// drive letter at which Windows reports no drive, or at a media package path, is looked at
+/// only for a candidate whose name it could be (<see cref="AddSourcePackages"/>). Every answer
 /// about a product is held against the installations
 /// the caller's own enumeration listed, and one leaving out any of them keeps the file.
 /// The cached package of each of those installations is read too, and a candidate is
@@ -312,10 +313,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// opens as where it opens as one. Every other candidate goes on to the comparisons
     /// below.
     ///
-    /// A PACKAGE IN A FOLDER ON THE NETWORK IS READ HERE, FOR THIS CANDIDATE, and only
+    /// A PACKAGE COMPARED BY NAME IS LOOKED AT HERE, FOR THIS CANDIDATE, and only
     /// where its package name could be this candidate's name
-    /// (<see cref="WithPackagesItCouldBe"/>). One that cannot be ruled out keeps this
-    /// candidate, with the verdict a package read for every candidate gives them all:
+    /// (<see cref="WithPackagesItCouldBe"/>, <see cref="PackageByName"/>). One that cannot be
+    /// ruled out keeps this candidate, with the verdict a package read for every candidate gives them all:
     /// <see cref="DeclaredProductOutcome.DeclaredProductInstalled"/> among its own
     /// product's packages, and
     /// <see cref="DeclaredProductOutcome.SecondCopyUnestablished"/> among a second copy's.
@@ -334,7 +335,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <paramref name="cause"/> is why a candidate given
     /// <see cref="DeclaredProductOutcome.DeclaredProductInstalled"/> is kept, and
     /// <see cref="DeclaredProductInstalledCause.None"/> for every other verdict: the package it
-    /// opens as (<see cref="CompareWithOpened"/>), a package in a folder on the network it could be
+    /// opens as (<see cref="CompareWithOpened"/>), a package compared by name it could be
     /// by its name (<see cref="DeclaredProductInstalledCause.ByName"/>), the missing package it is or
     /// could be where it opens as none of its own product's packages (<see cref="AsAMissingPackage"/>),
     /// or the step that could not see its own product's packages (<see cref="DeclarationAnswer.Cause"/>).
@@ -518,9 +519,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// The identity of every package opened by an installation the caller listed and
     /// could not rule out as a second copy of a program
     /// (<see cref="ListedInstallation.SecondCopyNotRuledOut"/>): the cached package each
-    /// records, and the original package at each folder its sources name, a package in a
-    /// folder on the network being left to be read for each candidate whose name it could
-    /// be (<see cref="OpenedPackages.ByName"/>); with them, the packages the sources name of
+    /// records, and the original package at each folder its sources name, a package
+    /// compared by name being left for each candidate whose name it could be
+    /// (<see cref="OpenedPackages.ByName"/>); with them, the packages the sources name of
     /// each installation recording no cached package whose record does not show an ordinary
     /// installation, read for the pass's links (<see cref="InstallationLinks.Opened"/>). Those
     /// alone where no such installation is listed, and null where any package read here
@@ -559,7 +560,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         givenUp = null;
         List<FileIdentity>? identities = [.. links.Opened.Identities];
-        List<NetworkPackage> byName = [.. links.Opened.ByName];
+        List<PackageByName> byName = [.. links.Opened.ByName];
         List<FileIdentity> cached = [.. links.Opened.Cached];
         foreach (var installation in pass.Installations)
         {
@@ -586,8 +587,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// Adds to <paramref name="opened"/> the identity of the cached package one
     /// installation records, and to <paramref name="cached"/> as well, and of the package at
     /// each folder its sources name, and answers false where any of them cannot be seen. A
-    /// package in a folder on the network goes into <paramref name="byName"/> instead
-    /// (<see cref="AddSourcePackages"/>).
+    /// package compared by name goes into <paramref name="byName"/> instead
+    /// (<see cref="AddSourcePackages"/>, <see cref="PackageByName"/>).
     /// The cached package has to be a file that is there, that identifies, and that
     /// yields a product code: a value naming anything else shows nothing about which
     /// package the installation opens. An installation that records none adds the packages
@@ -604,7 +605,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         PassAnswers pass,
         Func<string, bool?>? namesAFileInInstallerFolder,
         List<FileIdentity> opened,
-        List<NetworkPackage> byName,
+        List<PackageByName> byName,
         List<FileIdentity> cached,
         out string? givenUp,
         out SecondCopyReading reading)
@@ -738,7 +739,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             new Dictionary<string, List<(string RegisteredCode, string? Sid, MsiInstallContext Context)>>(
                 StringComparer.Ordinal);
         List<FileIdentity> opened = [];
-        List<NetworkPackage> byName = [];
+        List<PackageByName> byName = [];
         string? unread = null;
         string? givenUp = null;
         var keptOtherwise = false;
@@ -768,7 +769,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                     if (noPackage is { } found)
                     {
                         List<FileIdentity> itsPackages = [];
-                        List<NetworkPackage> itsByName = [];
+                        List<PackageByName> itsByName = [];
                         if (AddSourcePackages(installation.ProductCode, installation.UserSid, context,
                                 noneRecorded: true, pass, namesAFileInInstallerFolder, itsPackages, itsByName,
                                 out var sourceGivenUp, out var refusal))
@@ -1331,7 +1332,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         FormUrl,
 
         /// <summary>
-        /// The list names a media package path, or the source used last is a media source.
+        /// The list names a media package path while Windows is set to follow a symbolic link
+        /// reached through a network path (<see cref="RemoteLinksCanBeFollowed"/>).
         /// </summary>
         FormMedia,
 
@@ -1347,7 +1349,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// <summary>
         /// A list entry, the source used last or the <c>InstallSource</c> holds a null or is in a
         /// form not compared, the source used last is of a kind other than a network, URL or
-        /// media source, or is a network source with no folder.
+        /// media source, or is a network or media source with no folder.
         /// </summary>
         FormOther,
 
@@ -1472,7 +1474,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         }
 
         /// <summary>
-        /// A file held back because a package in a folder on the network, which a second copy's
+        /// A file held back because a package compared by name, which a second copy's
         /// sources name, or those of an installation released by its sources, and which the file
         /// could be by its name, could not be ruled out.
         /// </summary>
@@ -1519,10 +1521,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <summary>
     /// The identity of every file the installations answering for <paramref name="code"/>
     /// open as their package: the cached package each installation records, and the
-    /// original package at each folder on its source list that holds one, a package in a
-    /// folder on the network being left to be read for each candidate whose name it could
-    /// be (<see cref="OpenedPackages.ByName"/>). Null where any package read here cannot
-    /// be seen.
+    /// original package at each folder on its source list that holds one, a package
+    /// compared by name being left for each candidate whose name it could be
+    /// (<see cref="OpenedPackages.ByName"/>). Null where any package read here cannot be
+    /// seen.
     ///
     /// EACH INSTALLATION IS READ BY THE CODE IT IS REGISTERED UNDER, which for a second
     /// copy is not <paramref name="code"/>, and its cached package has to declare
@@ -1571,7 +1573,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (_fileIdentities is null || _fileSystem is null) return null;
 
         var identities = new List<FileIdentity>(installations.Count);
-        var byName = new List<NetworkPackage>();
+        var byName = new List<PackageByName>();
         var cached = new List<FileIdentity>(installations.Count);
         List<string>? missing = null;
         foreach (var (registeredCode, sid, context) in installations)
@@ -1821,16 +1823,16 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <summary>
     /// Adds to <paramref name="opened"/> the identity of the original package at each
     /// folder one installation of a product has as a source, and answers false where
-    /// those sources cannot be ruled out. A package in a folder on the network is not
-    /// read here and goes into <paramref name="byName"/> (<see cref="ComparedByName"/>).
+    /// those sources cannot be ruled out. A package compared by name is not read here and
+    /// goes into <paramref name="byName"/> (<see cref="PackageByName"/>).
     ///
     /// WHAT IT COMPARES, AND WHAT KEEPS THE COPY INSTEAD. When Windows Installer needs a
     /// product's original package rather than its cached copy, a repair among other
     /// things, it tries the source it used last and then the sources on the product's
     /// source list, network folders, media and URLs, looking in each for the file named
     /// by <c>PackageName</c>. The folders compared are the network sources, the source
-    /// used last where it is a network source (<see cref="SourceUsedLastOf"/>), and the
-    /// folder the installation records as its <c>InstallSource</c>, the one its package
+    /// used last where it is a network or a media source (<see cref="SourceUsedLastOf"/>),
+    /// and the folder the installation records as its <c>InstallSource</c>, the one its package
     /// was installed from. Windows Installer puts that folder on the list when it
     /// installs the product, and the list can change afterwards, so the folder is
     /// compared whether or not the list still holds it (<see cref="InstallSourceOf"/>).
@@ -1856,12 +1858,19 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     ///   the numbering or anywhere else, keeps the copy. So does a package name the key
     ///   holds otherwise than the API answers it, or holds as a REG_EXPAND_SZ
     ///   (<see cref="HoldsThePackageName"/>).
-    /// - A SOURCE USED LAST THAT IS NEITHER A NETWORK SOURCE NOR A WEB ADDRESS, it being the
-    ///   one Windows Installer tries first, or that the registry holds differently
+    /// - A SOURCE USED LAST THAT IS NEITHER A NETWORK OR MEDIA SOURCE NOR A WEB ADDRESS, it
+    ///   being the one Windows Installer tries first, or that the registry holds differently
     ///   (<see cref="SourceUsedLastOf"/>).
-    /// - A MEDIA PACKAGE PATH, the package's path on the installation media
-    ///   (<see cref="NamesNoMediaPackagePath"/>). No media source is compared, and a list
-    ///   naming a path on one keeps the copy.
+    /// - A MEDIA PACKAGE PATH, the package's folder on its installation media
+    ///   (<see cref="MediaPackagePathOf"/>), while Windows is set to follow a symbolic link
+    ///   reached through a network path (<see cref="RemoteLinksCanBeFollowed"/>), or one the
+    ///   registry holds differently.
+    ///
+    /// A MEDIA PACKAGE PATH KEEPS ONLY A CANDIDATE WHOSE NAME THE PACKAGE COULD BE, while
+    /// Windows follows no such link. The media search looks on each drive it tries for the
+    /// file named by <c>PackageName</c> at that path, which has no one folder to read, so the
+    /// package goes into <paramref name="byName"/> with no path
+    /// (<see cref="WithPackagesItCouldBe"/>).
     ///
     /// A PACKAGE IN A FOLDER ON THE NETWORK IS READ ONLY FOR A CANDIDATE WHOSE NAME IT
     /// COULD BE (<see cref="WithPackagesItCouldBe"/>). Windows Installer looks in each
@@ -1873,7 +1882,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// follows by default, can carry the package's name and point at any file. So is a
     /// package on the network while Windows is set to follow a symbolic link reached
     /// through a network path to this PC or to another network path
-    /// (<see cref="RemoteLinksCanBeFollowed"/>).
+    /// (<see cref="RemoteLinksCanBeFollowed"/>). A package under a drive letter at which
+    /// Windows reports no drive to this process, whose folder cannot be read now, is left for
+    /// a candidate whose name it could be in the same way and under the same setting
+    /// (<see cref="ComparedByName"/>).
     ///
     /// A PACKAGE ON A LOCAL DRIVE IS COMPARED BY ITS IDENTITY ALONE, in the Installer folder
     /// as in any other folder (<see cref="IsLocalDrive"/>). The identity read follows a link,
@@ -1884,7 +1896,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// Installer folder keeps every copy.
     ///
     /// THE RUNNING ACCOUNT'S OWN PER-USER-UNMANAGED LIST IS COUNTED FOR THE PASS once it is
-    /// read, by whether every package it names was seen
+    /// read, by whether every package it names was read or left to be compared by name
     /// (<see cref="PassAnswers.OwnPerUserListRead"/>). A list stopped by the gates before the
     /// read is not counted.
     ///
@@ -1919,7 +1931,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         PassAnswers pass,
         Func<string, bool?>? namesAFileInInstallerFolder,
         List<FileIdentity> opened,
-        List<NetworkPackage> byName,
+        List<PackageByName> byName,
         out string? givenUp,
         out SourceRefusal refusal)
     {
@@ -1968,7 +1980,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         Func<string, bool?> namesAFileInInstallerFolder,
         IRegistryReader registry,
         List<FileIdentity> opened,
-        List<NetworkPackage> byName,
+        List<PackageByName> byName,
         out string? givenUp,
         out SourceRefusal refusal)
     {
@@ -1982,11 +1994,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         // A package name holding a '\', a '/' or a ':' names a folder, a drive or a stream
         // as well as a file, so the file it opens need not be the one its last part spells,
-        // and it keeps the copy. On a media source with no media package path such a name
-        // reaches below the root of the volume, and no media source is compared. A package
-        // name holding a '%' names a variable, which whoever reads the name may expand in its
-        // own environment, and one holding a null is cut short at the null wherever it is read
-        // as a path. Both keep the copy as well.
+        // and it keeps the copy. A package name holding a '%' names a variable, which whoever
+        // reads the name may expand in its own environment, and one holding a null is cut short
+        // at the null wherever it is read as a path. Both keep the copy as well.
         if (packageName.IndexOfAny(['\\', '/', ':', '%', '\0']) >= 0)
             return Refuse(SourceRefusal.FormPackageName, out refusal);
 
@@ -2028,8 +2038,18 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var urlKey = ValuesOf(listKey.Below("URL"));
         if (!IsTheList(urlKey, urls)) return Refuse(KeyRefusal(urlKey), out refusal);
 
-        if (!NamesNoMediaPackagePath(code, sid, context, ValuesOf(listKey.Below("Media")), out refusal))
-            return false;
+        var mediaPath = MediaPackagePathOf(code, sid, context, ValuesOf(listKey.Below("Media")), out refusal);
+        if (mediaPath is null) return false;
+
+        // The media search opens the file named by the package name at the media package path
+        // on each drive it tries, so a list naming one keeps every candidate whose name the
+        // package could be, and no other, while Windows follows no symbolic link reached
+        // through a network path. While it follows one, the list keeps every copy.
+        if (mediaPath.Length > 0)
+        {
+            if (RemoteLinksCanBeFollowed(registry, pass)) return Refuse(SourceRefusal.FormMedia, out refusal);
+            byName.Add(new PackageByName(null, packageName));
+        }
 
         var usedLast = SourceUsedLastOf(code, sid, context, sourceList.Values, out refusal);
         if (usedLast is null) return false;
@@ -2054,7 +2074,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
             if (ComparedByName(package, registry, pass))
             {
-                byName.Add(new NetworkPackage(package, packageName));
+                byName.Add(new PackageByName(package, packageName));
                 continue;
             }
 
@@ -2071,7 +2091,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
     /// <summary>
     /// False, with <paramref name="refusal"/> set to <paramref name="reason"/>: the answer of a
-    /// check that refuses (<see cref="AddSourcePackages"/>, <see cref="NamesNoMediaPackagePath"/>).
+    /// check that refuses (<see cref="AddSourcePackages"/>).
     /// </summary>
     private static bool Refuse(SourceRefusal reason, out SourceRefusal refusal)
     {
@@ -2094,7 +2114,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// every candidate, with the identity of each package in <paramref name="byName"/> this
     /// candidate could be by its name (<see cref="CandidateNames.CouldBe"/>); null where one
     /// of those cannot be ruled out, which keeps the candidate. A package it could not be by
-    /// its name is not read for it.
+    /// its name is not read for it. A package with no path to read, the one at a media
+    /// package path, cannot be ruled out for a candidate it could be by its name.
     ///
     /// Each package is read once per pass (<see cref="ReadSourcePackage"/>), and its answer is
     /// kept for every candidate after it, with the root, where there is one, whose give-up
@@ -2104,7 +2125,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     private IReadOnlyList<FileIdentity>? WithPackagesItCouldBe(
         CandidateNames candidate,
         IReadOnlyList<FileIdentity> identities,
-        IReadOnlyList<NetworkPackage> byName,
+        IReadOnlyList<PackageByName> byName,
         PassAnswers pass,
         Func<string, bool?>? namesAFileInInstallerFolder,
         out string? givenUp)
@@ -2119,11 +2140,15 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             pass.CancellationToken.ThrowIfCancellationRequested();
             if (!candidate.CouldBe(package.Name)) continue;
 
-            if (!pass.NetworkPackageReads.TryGetValue(package.Path, out var read))
+            // The package at a media package path has no one path to read, so a candidate it
+            // could be by its name is kept.
+            if (package.Path is null) return null;
+
+            if (!pass.ByNameReads.TryGetValue(package.Path, out var read))
             {
                 var settled = ReadSourcePackage(
                     package.Path, pass, namesAFileInInstallerFolder, out var identity, out var refusedFor);
-                pass.NetworkPackageReads[package.Path] = read = (settled, identity, refusedFor);
+                pass.ByNameReads[package.Path] = read = (settled, identity, refusedFor);
             }
 
             if (!read.Settled)
@@ -2141,7 +2166,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <summary>
     /// Reads the package at <paramref name="package"/>, a path built from a source folder,
     /// for <see cref="AddSourcePackages"/>, or for <see cref="WithPackagesItCouldBe"/> where
-    /// the folder is on the network: true with its identity where it opens, true with null
+    /// the package is compared by name: true with its identity where it opens, true with null
     /// where no file is there, and false where the package cannot be ruled out.
     ///
     /// FALSE for a package that exists and will not identify; a read that has not answered
@@ -2427,24 +2452,32 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <summary>
     /// Whether the package at <paramref name="package"/> is left to be read for each
     /// candidate whose name it could be (<see cref="WithPackagesItCouldBe"/>): whether it
-    /// is in a folder on the network, and Windows is set to follow no symbolic link
-    /// reached through a network path to this PC or to another network path
-    /// (<see cref="RemoteLinksCanBeFollowed"/>).
+    /// is in a folder on the network or under a drive letter at which Windows reports no
+    /// drive, and Windows is set to follow no symbolic link reached through a network path
+    /// to this PC or to another network path (<see cref="RemoteLinksCanBeFollowed"/>).
     ///
     /// A FOLDER ON THE NETWORK IS A SHARE OR A NETWORK DRIVE. A share is known by its
     /// spelling, <c>\\server\share</c> in any form <see cref="RootOf"/> reads. A drive letter
-    /// is on the network where Windows reports it as a network drive
-    /// (<see cref="KindOf"/>); one it reports as anything else is read for every candidate,
-    /// and so is a path of any other form. A drive whose kind does not answer within the
-    /// time limit is given up for the pass, and its packages are kept without being read.
+    /// is on the network where Windows reports it as a network drive (<see cref="KindOf"/>).
+    ///
+    /// A DRIVE LETTER AT WHICH WINDOWS REPORTS NO DRIVE TO THIS PROCESS, such as a disc or a
+    /// stick taken out, a drive since removed, or a letter that names a drive in another logon
+    /// session only, a network drive or a substituted folder mapped without elevation, has a
+    /// folder that cannot be read now, and the package Windows Installer opens in a
+    /// folder is the file there named by <c>PackageName</c>, so it is left for a candidate
+    /// whose name it could be.
+    ///
+    /// A drive letter Windows reports as any other kind is read for every candidate, and so
+    /// is a path of any other form. A drive whose kind does not answer within the time limit
+    /// is given up for the pass, and its packages are kept without being read.
     /// </summary>
     private bool ComparedByName(string package, IRegistryReader registry, PassAnswers pass)
     {
         var root = RootOf(package);
-        var onTheNetwork = root.StartsWith(@"\\", StringComparison.Ordinal)
-            || (IsDriveLetter(root) && KindOf(root, pass) == DriveType.Network);
+        var byName = root.StartsWith(@"\\", StringComparison.Ordinal)
+            || (IsDriveLetter(root) && KindOf(root, pass) is DriveType.Network or DriveType.NoRootDirectory);
 
-        return onTheNetwork && !RemoteLinksCanBeFollowed(registry, pass);
+        return byName && !RemoteLinksCanBeFollowed(registry, pass);
     }
 
     /// <summary>
@@ -2641,34 +2674,43 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     }
 
     /// <summary>
-    /// Whether neither the API nor the registry gives an installation's source list a
-    /// media package path: the API's answer for
-    /// <see cref="MsiInstallProperty.MediaPackagePath"/> and the <c>MediaPackage</c>
-    /// value of the list's <c>Media</c> key, <paramref name="media"/>. A key that is not
-    /// there names none. A read of the property that fails, a key that will not read and
-    /// a value of a type other than a string all answer false, which keeps the file.
-    /// <paramref name="refusal"/> says which kind of check answered false, and is
-    /// <see cref="SourceRefusal.None"/> where the answer is true.
+    /// The media package path of an installation's source list, the package's folder on its
+    /// installation media: the path, where the API's answer for
+    /// <see cref="MsiInstallProperty.MediaPackagePath"/> and the <c>MediaPackage</c> value of
+    /// the list's <c>Media</c> key, <paramref name="media"/>, both hold it; an empty string
+    /// where neither names one, a key that is not there naming none; or null, which keeps the
+    /// file, for a read of the property that fails, a key that will not read, a value of a
+    /// type other than a string, and a value holding other text than the API's.
+    /// <paramref name="refusal"/> says which kind of check answered null, and is
+    /// <see cref="SourceRefusal.None"/> for every other answer.
     /// </summary>
-    private bool NamesNoMediaPackagePath(
+    private string? MediaPackagePathOf(
         string code, string? sid, MsiInstallContext context, RegistryKeyValues media, out SourceRefusal refusal)
     {
         var answered = InstallerQueryService.ReadSourceListProperty(
             _msi, code, sid, context, MsiSourceListOptions.Product, MsiInstallProperty.MediaPackagePath);
-        if (answered.Unreadable) return Refuse(SourceRefusal.WouldNotRead, out refusal);
-        if (answered.Value.TrimEnd('\0').Length > 0) return Refuse(SourceRefusal.FormMedia, out refusal);
+        if (answered.Unreadable) return Refused(SourceRefusal.WouldNotRead, out refusal);
 
+        var path = answered.Value.TrimEnd('\0');
+        var stored = string.Empty;
         if (media.Presence != RegistryKeyPresence.Absent)
         {
             if (media.Presence != RegistryKeyPresence.Present || media.Values is null)
-                return Refuse(SourceRefusal.WouldNotRead, out refusal);
+                return Refused(SourceRefusal.WouldNotRead, out refusal);
 
-            var stored = ValueNamed(media.Values, "MediaPackage", out var count)?.Text;
-            if (count != 0 && stored is not { Length: 0 }) return Refuse(SourceRefusal.RegistryDiffers, out refusal);
+            var value = ValueNamed(media.Values, "MediaPackage", out var count);
+            if (count != 0)
+            {
+                if (value?.Text is null) return Refused(SourceRefusal.RegistryDiffers, out refusal);
+                stored = value.Value.Text;
+            }
         }
 
+        if (!string.Equals(stored, path, StringComparison.Ordinal))
+            return Refused(SourceRefusal.RegistryDiffers, out refusal);
+
         refusal = SourceRefusal.None;
-        return true;
+        return path;
     }
 
     /// <summary>
@@ -2689,8 +2731,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// spelling Windows Installer recorded, case included, the file that path opens is the
     /// one compared.
     ///
+    /// A NETWORK SOURCE AND A MEDIA SOURCE ARE COMPARED ALIKE, each naming a folder.
+    ///
     /// NULL for: a read through the API that fails; a URL source other than a web address,
-    /// a media source, or a source of any other kind; one the registry holds differently;
+    /// or a source of any kind but those three; one the registry holds differently;
     /// and a folder holding a '%' or a null, or starting neither with a drive letter, a ':'
     /// and a '\' nor with two '\', for the reasons a list entry like it keeps the file. A
     /// source is taken as a web address only where the registry agrees with the API on
@@ -2736,13 +2780,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             return string.Empty;
         }
 
-        if (!string.Equals(folderType, "n", StringComparison.Ordinal))
-            return Refused(folderType switch
-            {
-                "u" => SourceRefusal.FormUrl,
-                "m" => SourceRefusal.FormMedia,
-                _ => SourceRefusal.FormOther,
-            }, out refusal);
+        // A media source names a folder too, on the disc or stick the installation came from,
+        // and it is compared as a network source's folder is.
+        if (folderType is not ("n" or "m"))
+            return Refused(folderType == "u" ? SourceRefusal.FormUrl : SourceRefusal.FormOther, out refusal);
 
         if (folder.Contains('%')) return Refused(SourceRefusal.FormVariable, out refusal);
         if (folder.Length == 0 || folder.Contains('\0') || !IsOnADriveOrAShare(folder))
@@ -3296,8 +3337,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// other verdict.
     /// </param>
     /// <param name="ByName">
-    /// Beside <paramref name="RecordedPackages"/> for an installed product, every package in
-    /// a folder on the network an installation opens, read only for a candidate whose name
+    /// Beside <paramref name="RecordedPackages"/> for an installed product, every package an
+    /// installation opens that is compared by name, looked at only for a candidate whose name
     /// it could be (<see cref="OpenedPackages.ByName"/>). Null for every other verdict.
     /// </param>
     /// <param name="GivenUp">
@@ -3324,7 +3365,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     private readonly record struct DeclarationAnswer(
         DeclaredProductOutcome Outcome,
         IReadOnlyList<FileIdentity>? RecordedPackages,
-        IReadOnlyList<NetworkPackage>? ByName = null,
+        IReadOnlyList<PackageByName>? ByName = null,
         string? GivenUp = null,
         IReadOnlyList<FileIdentity>? Cached = null,
         DeclaredProductInstalledCause Cause = DeclaredProductInstalledCause.None,
@@ -3332,8 +3373,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
     /// <param name="Identities">The identity of every package read for every candidate.</param>
     /// <param name="ByName">
-    /// Every package in a folder on the network, read only for a candidate whose name it
-    /// could be (<see cref="WithPackagesItCouldBe"/>).
+    /// Every package compared by name, looked at only for a candidate whose name it could be
+    /// (<see cref="WithPackagesItCouldBe"/>).
     /// </param>
     /// <param name="Cached">
     /// The cached packages among <paramref name="Identities"/>, each the <c>LocalPackage</c> an
@@ -3346,13 +3387,25 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// </param>
     private sealed record OpenedPackages(
         IReadOnlyList<FileIdentity> Identities,
-        IReadOnlyList<NetworkPackage> ByName,
+        IReadOnlyList<PackageByName> ByName,
         IReadOnlyList<FileIdentity> Cached,
         IReadOnlyList<string>? MissingPackageCodes = null);
 
-    /// <param name="Path">The path Windows Installer opens: the source folder and the package name.</param>
+    /// <summary>
+    /// A package compared by name: only a candidate whose name could be
+    /// <paramref name="Name"/> can be it, so it is looked at for such a candidate alone
+    /// (<see cref="WithPackagesItCouldBe"/>). A package in a folder on the network, or under
+    /// a drive letter this process finds no drive at, has a <paramref name="Path"/> to read
+    /// (<see cref="ComparedByName"/>). The package the media search opens has none
+    /// (<see cref="MediaPackagePathOf"/>), and keeps every candidate whose name it could be.
+    /// </summary>
+    /// <param name="Path">
+    /// The path Windows Installer opens, the source folder and the package name; null for the
+    /// package at a media package path, which the media search looks for at that path on each
+    /// drive it tries.
+    /// </param>
     /// <param name="Name">The package name.</param>
-    private readonly record struct NetworkPackage(string Path, string Name);
+    private readonly record struct PackageByName(string? Path, string Name);
 
     /// <summary>
     /// The names one candidate has, for comparing with a package name: the last component
@@ -3529,22 +3582,24 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// The running account's own per-user-unmanaged installations whose lists the pass has
         /// read, each keyed by its code and account joined by a space, which neither holds, and
         /// compared without case, as codes and accounts are; with whether every package its
-        /// sources name was seen the first time it was read.
+        /// sources name was read or left to be compared by name the first time it was read.
         /// </summary>
         private readonly Dictionary<string, bool> _ownPerUserLists = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Counts one of the running account's own per-user-unmanaged lists as read
         /// (<see cref="AddSourcePackages"/>), with <paramref name="seen"/>, whether every package
-        /// its sources name was seen. An installation read again in the pass, for another
-        /// declared code or as a second copy, is counted by its first reading only.
+        /// its sources name was read or left to be compared by name (<see cref="PackageByName"/>).
+        /// An installation read again in the pass, for another declared code or as a second copy,
+        /// is counted by its first reading only.
         /// </summary>
         internal void OwnPerUserListRead(string code, string? sid, bool seen) =>
             _ownPerUserLists.TryAdd(code + " " + sid, seen);
 
         /// <summary>
         /// The running account's own per-user-unmanaged lists the pass read
-        /// (<see cref="OwnPerUserListRead"/>), by whether every package each names was seen.
+        /// (<see cref="OwnPerUserListRead"/>), by whether every package each names was read or
+        /// left to be compared by name.
         /// </summary>
         internal OwnPerUserSourceLists OwnPerUserLists() => new(
             Read: _ownPerUserLists.Values.Count(seen => seen),
@@ -3703,11 +3758,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         internal bool? RemoteLinksFollowed { get; set; }
 
         /// <summary>
-        /// Each package on the network read for a candidate, keyed by its path, with what
+        /// Each package compared by name read for a candidate, keyed by its path, with what
         /// <see cref="ReadSourcePackage"/> answered and the root whose give-up refused it,
         /// where one did.
         /// </summary>
-        internal Dictionary<string, (bool Settled, FileIdentity? Identity, string? GivenUp)> NetworkPackageReads { get; } =
+        internal Dictionary<string, (bool Settled, FileIdentity? Identity, string? GivenUp)> ByNameReads { get; } =
             new(StringComparer.Ordinal);
 
         /// <summary>Each declared patch's answer, keyed by patch code and target list.</summary>

@@ -56,14 +56,18 @@ namespace InstallerClean.Services;
 /// (<see cref="SourceFolderWait.StopWaiting"/>). A source in a folder on the network, a
 /// share or a network drive, is one of those only for a file whose name or short name
 /// its package name could be, since Windows Installer looks in a source folder for that
-/// name alone. While Windows is set to follow a symbolic link reached through a network
-/// path to this PC or to another network path, it is one for every file. The folder an
-/// installation records as its <c>InstallSource</c>, the one its package was installed
-/// from, counts as a source whether or not the list still holds it. So it is while a
+/// name alone, and so is a source under a drive letter at which Windows reports no drive
+/// to this check, whose folder cannot be read. While Windows is set to follow a symbolic
+/// link reached through a network path to this PC or to another network path, each is one
+/// for every file. A media package path, the package's folder on its installation media,
+/// keeps every file whose name or short name its package name could be, the media search
+/// looking for that name alone; while Windows is set to follow such a link, it keeps every
+/// file. The folder an installation records as its <c>InstallSource</c>, the one its package
+/// was installed from, counts as a source whether or not the list still holds it. So it is while a
 /// source list holds something the check does not compare, a URL other than an http or
-/// https address, an entry naming an environment variable, a media package path or a
-/// package name naming a folder, a drive, a stream or a variable, or holding a null; while
-/// the source used last is neither a network source nor an http or https address; and
+/// https address, an entry naming an environment variable or a package name naming a
+/// folder, a drive, a stream or a variable, or holding a null; while the source used last
+/// is neither a network or media source nor an http or https address; and
 /// while the registry key holding the list does not hold what the API returned for it,
 /// package name included, or holds that name as anything but a REG_SZ. So it is while an
 /// installation's <c>InstallSource</c> will not read, is held in the registry otherwise
@@ -129,8 +133,8 @@ namespace InstallerClean.Services;
 /// let through is compared by file identity with the packages each such installation
 /// opens, its cached package and the packages its sources name, and one it opens as is
 /// kept. Where those packages cannot all be seen, every such installation package is
-/// kept, a package in a folder on the network that cannot be seen keeping only a file
-/// whose name it could be.
+/// kept, a package compared by name that cannot be ruled out keeping only a file whose
+/// name it could be.
 ///
 /// IT ONLY EVER WITHHOLDS. No answer it can give puts a file on the list, clears
 /// one another gate kept, or weakens anything upstream: a candidate it lets
@@ -287,7 +291,10 @@ public sealed record DeclaredProductScreening(
 /// installation records no cached package while its <c>InstallProperties</c> key does not show
 /// it records none.
 /// </summary>
-/// <param name="Read">The lists read with every package they name seen.</param>
+/// <param name="Read">
+/// The lists read with every package they name read, or left to be compared by name for a
+/// file whose name it could be.
+/// </param>
 /// <param name="Kept">
 /// The lists read that could not all be seen, so each kept the files its installation's
 /// packages could be.
@@ -382,23 +389,25 @@ public enum DeclaredProductOutcome
     /// account other than the one this check runs as, whose source list is not read. It
     /// covers a source list holding a URL other than an http or https address, an entry naming
     /// an environment variable or starting neither with a drive letter, a ':' and a '\' nor
-    /// with two '\', a media package path or a package name naming a folder, a drive, a stream
-    /// or a variable, or holding a null, one whose source used last is neither a network source
-    /// nor an http or https address, and one whose registry key does not hold what the API
-    /// returned for it, package name included, or holds that name as anything but a REG_SZ. It
+    /// with two '\', a media package path while Windows is set to follow a symbolic link
+    /// reached through a network path, or a package name naming a folder, a drive, a stream
+    /// or a variable, or holding a null, one whose source used last is neither a network or
+    /// media source nor an http or https address, and one whose registry key does not hold
+    /// what the API returned for it, package name included, or holds that name as anything but a REG_SZ. It
     /// covers an <c>InstallSource</c> whose package is this file, will not identify or does not
     /// answer within the time limit, one on a drive or share the check has stopped reading, one
     /// not on a local drive that is the Installer folder itself, and one that will not read,
     /// that the registry holds otherwise than the API answers it or as anything but a REG_SZ,
     /// or that, being no http or https address, names an environment variable or starts neither
     /// with a drive letter, a ':' and a '\' nor with two '\'. A source or an
-    /// <c>InstallSource</c> in a folder on the network covers this only where its package name
-    /// could be this file's name or short name, or where Windows is set to follow a symbolic
-    /// link reached through a network path to this PC or to another network path. In each of
-    /// them this file is, or could be, the package that installation opens. A check constructed
-    /// without its two file readers or its registry reader, or screening without the Installer
-    /// folder to compare against, answers this for every installed product, having no way to
-    /// look.
+    /// <c>InstallSource</c> in a folder on the network, or under a drive letter at which
+    /// Windows reports no drive to this check, and a media package path, cover this only where
+    /// the package name could be this file's name or short name, or where Windows is set to
+    /// follow a symbolic link reached through a network path to this PC or to another network
+    /// path. In each of them this file is, or could be, the package that installation opens.
+    /// A check constructed without its two file readers or its registry reader, or screening
+    /// without the Installer folder to compare against, answers this for every installed
+    /// product, having no way to look.
     ///
     /// Where every package was seen and this file's own identity does not read, the
     /// answer is <see cref="CandidateIdentityUnestablished"/> instead.
@@ -417,15 +426,17 @@ public enum DeclaredProductOutcome
     /// account other than the one this check runs as,
     /// and no package in a folder on an installation's source list, in the folder it used last as a
     /// source or in its <c>InstallSource</c> is this file or, on a root other than a local
-    /// drive, would be a file directly in the Installer folder, a package in a folder on
-    /// the network counting only where its package name could be this file's name. Every
-    /// installation's source list is held in the registry as the API returns it, with its
-    /// package name as a REG_SZ, and so is its <c>InstallSource</c> where there is one,
-    /// which starts with a drive letter, a ':' and a '\', or with two '\', or is an http or
-    /// https address. Every source list holds no URL but http or https addresses and no
-    /// entry naming an environment variable, names no media package path, has a package
-    /// name naming a file alone, and was last used from a network source, from an http or
-    /// https address or not at all. Every installation the caller could not rule out as a
+    /// drive, would be a file directly in the Installer folder, a package compared by name,
+    /// in a folder on the network, under a drive letter at which Windows reports no drive to
+    /// this check or at a media package path, counting only where its package name could be
+    /// this file's name. Every installation's source list is held in the registry as the API
+    /// returns it, with its package name as a REG_SZ, and so is its <c>InstallSource</c> where
+    /// there is one, which starts with a drive letter, a ':' and a '\', or with two '\', or is
+    /// an http or https address. Every source list holds no URL but http or https addresses and no
+    /// entry naming an environment variable, names a media package path only while Windows
+    /// follows no symbolic link reached through a network path, has a package name naming a
+    /// file alone, and was last used from a network or media source, from an http or https
+    /// address or not at all. Every installation the caller could not rule out as a
     /// second copy opens packages the check saw, and this file is a different file from
     /// all of them too. The candidate goes on being decided by everything else.
     ///
@@ -581,8 +592,8 @@ public enum DeclaredProductOutcome
     /// packages need not declare any code this file could be linked to it by, so any
     /// installation package could be one it opens. So every candidate the answer would
     /// let through is given this verdict, on the same pass, whatever it declares. A
-    /// package in a folder on the network that cannot be seen gives it only to a file
-    /// whose name that package's name could be.
+    /// package compared by name that cannot be ruled out gives it only to a file whose name
+    /// that package's name could be.
     ///
     /// Where a single installation's packages cannot all be seen it covers what
     /// <see cref="DeclaredProductInstalled"/> covers for one: a cached package that will

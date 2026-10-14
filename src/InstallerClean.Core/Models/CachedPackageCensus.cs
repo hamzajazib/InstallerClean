@@ -32,9 +32,10 @@ namespace InstallerClean.Models;
 /// one whose packages it cannot see. That installation is counted in one of the nine members
 /// from <see cref="UnseenPathUnreadable"/> to <see cref="UnseenSourceNotRuledOut"/> by the step
 /// that stopped it, so at most one of them is above zero. This count too is taken before any
-/// file's verdict. A package in a folder on the network is read later, for each file whose name
-/// it could be, and <see cref="UnseenByNameFiles"/> counts the files held back where one cannot
-/// be ruled out.
+/// file's verdict. A package compared by name, in a folder on the network, under a drive letter
+/// at which Windows reports no drive or at a media package path, is looked at later, for each
+/// file whose name it could be, and <see cref="UnseenByNameFiles"/> counts the files held back
+/// where one cannot be ruled out.
 ///
 /// A check built without its file readers reads no cached package and no second copy's
 /// packages, and counts nothing. A check with them that cannot read sources counts that
@@ -134,7 +135,7 @@ namespace InstallerClean.Models;
 /// above zero and that installation is per-machine, and none otherwise.
 /// </param>
 /// <param name="UnseenByNameFiles">
-/// Files held back because a package in a folder on the network, which the sources of an
+/// Files held back because a package compared by name, which the sources of an
 /// installation not ruled out as a second copy name, or of one counted in
 /// <see cref="ReleasedBySources"/>, and which the file could be by its name, could not be ruled
 /// out.
@@ -149,8 +150,9 @@ namespace InstallerClean.Models;
 /// <param name="ReleasedBySources">
 /// Installations recording no cached package, with a package to open and a record that does not
 /// show an ordinary installation, which do not set the hold because their <c>InstallProperties</c>
-/// key records none as well and every package their sources name was seen. Every installation
-/// package the answer about its own product lets through is compared with those packages instead.
+/// key records none as well and every package their sources name was seen or left to be compared
+/// by name. Every installation package the answer about its own product lets through is compared
+/// with those packages instead.
 /// </param>
 /// <param name="KeptNoneRecordedOtherAnswer">
 /// Of the installations counted in <see cref="KeptNoneRecorded"/>, those per machine for which the

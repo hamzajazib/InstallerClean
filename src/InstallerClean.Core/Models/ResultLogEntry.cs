@@ -133,7 +133,7 @@ public sealed record ResultLogEntry(
     /// (<see cref="ScanInfo.DeclaredInstalledSourcesFormUrlCount"/> to
     /// <see cref="ScanInfo.DeclaredInstalledSourcesFormOtherCount"/>). Two count the running
     /// account's own per-user-unmanaged installations whose source lists the screen read, by
-    /// whether every package each names was seen
+    /// whether every package each names was seen or left to be compared by name
     /// (<see cref="ScanInfo.DeclaredSourcesOwnPerUserReadCount"/>,
     /// <see cref="ScanInfo.DeclaredSourcesOwnPerUserKeptCount"/>).
     /// <c>scan.secondCopyKeepNoneRecordedRegistryDisagreesCount</c> NARROWS AT 9, AND
@@ -143,6 +143,14 @@ public sealed record ResultLogEntry(
     /// <c>InstallProperties</c> key is there and records no cached package, is counted in the
     /// second where its <c>InstallSource</c> is none, a web address or a folder shown not to be the
     /// Installer folder, and in the third otherwise, and never in the first.
+    /// <c>scan.declaredInstalledByNameCount</c>, <c>scan.secondCopyUnseenByNameFileCount</c> AND
+    /// <c>scan.secondCopyReleasedBySourcesCount</c> WIDEN AT 9, AND
+    /// <c>scan.declaredInstalledSourcesFormNotComparedCount</c> NARROWS. From 9 a source under a
+    /// drive letter at which Windows reports no drive to the screen, and a media package path, are
+    /// compared by name as a folder on the network is, and a source used last that is a media
+    /// source is compared as a folder, so a file kept for one of them is counted in the first or
+    /// the second, an installation released with one in the third, and only a media package path
+    /// while Windows follows a symbolic link reached through a network path in the fourth.
     ///
     /// A receiver that does not recognise a version stores the report under a
     /// lenient v&lt;n&gt;-unknown/ prefix rather than rejecting it, so a bump
@@ -1295,7 +1303,8 @@ public sealed record MachineInfo(
 /// the read did not stop.
 /// </param>
 /// <param name="SecondCopyUnseenByNameFileCount">
-/// Files held back because a package in a folder on the network, which the sources of an
+/// Files held back because a package compared by name (in a folder on the network, under a drive
+/// letter at which Windows reports no drive, or at a media package path), which the sources of an
 /// installation not ruled out as a second copy name, or those of an installation recording no
 /// cached package whose record does not show an ordinary installation, and which the file could
 /// be by its name, could not be ruled out. Each is also counted in
@@ -1316,8 +1325,8 @@ public sealed record MachineInfo(
 /// <param name="SecondCopyReleasedBySourcesCount">
 /// Installations recording no cached package, with a package to open and a record that does not
 /// show an ordinary installation, which do not set the hold because their <c>InstallProperties</c>
-/// key records none as well and every package their sources name was seen
-/// (<see cref="CachedPackageCensus.ReleasedBySources"/>). Every installation package
+/// key records none as well and every package their sources name was seen or left to be compared
+/// by name (<see cref="CachedPackageCensus.ReleasedBySources"/>). Every installation package
 /// the screen would otherwise let through is compared with those packages instead. Each is also
 /// counted in <paramref name="SecondCopyListedCheckedCount"/>, and in none of the keys from
 /// <paramref name="SecondCopyKeepPathUnreadableCount"/> to
@@ -1434,9 +1443,10 @@ public sealed record MachineInfo(
 /// </param>
 /// <param name="DeclaredInstalledSourcesFormNotComparedCount">
 /// Those whose program has an installation whose sources hold something the screen does not
-/// compare: a URL other than an http or https address, a media package path, a variable, a form
-/// not compared, or a source used last that is neither a network folder nor an http or https
-/// address (<see cref="DeclaredProductInstalledCauses.SourcesFormNotCompared"/>). The sum of
+/// compare: a URL other than an http or https address, a media package path while Windows follows
+/// a symbolic link reached through a network path, a variable, a form not compared, or a source
+/// used last that is neither a network or media folder nor an http or https address
+/// (<see cref="DeclaredProductInstalledCauses.SourcesFormNotCompared"/>). The sum of
 /// <see cref="DeclaredInstalledSourcesFormUrlCount"/> to
 /// <see cref="DeclaredInstalledSourcesFormOtherCount"/>.
 /// </param>
@@ -1455,9 +1465,11 @@ public sealed record MachineInfo(
 /// names nothing (<see cref="DeclaredProductInstalledCauses.MissingSpareIsIt"/>).
 /// </param>
 /// <param name="DeclaredInstalledByNameCount">
-/// Those a package in a folder on the network, at a source of their own program, could be by their
-/// name, where that package could not be ruled out, one under a drive or share the screen gave up
-/// among them (<see cref="DeclaredProductInstalledCauses.ByName"/>).
+/// Those a package compared by name, at a source of their own program, could be by their name,
+/// where that package could not be ruled out: one in a folder on the network, one under a drive
+/// letter at which Windows reports no drive to the screen, or the package at a media package path,
+/// one under a drive or share the screen gave up among them
+/// (<see cref="DeclaredProductInstalledCauses.ByName"/>).
 /// </param>
 /// <param name="WithheldScanSignalCount">
 /// Candidates the age check kept back because one of Windows Installer's in-progress signals
@@ -1490,7 +1502,8 @@ public sealed record MachineInfo(
 /// sources, so the five add up to that count. Appended after the age check's arms.
 /// </param>
 /// <param name="DeclaredInstalledSourcesFormMediaCount">
-/// Those whose program's sources named a media package path, or were last used from a media source
+/// Those whose program's sources named a media package path while Windows was set to follow a
+/// symbolic link reached through a network path
 /// (<see cref="DeclaredProductInstalledCauses.SourcesFormMedia"/>).
 /// </param>
 /// <param name="DeclaredInstalledSourcesFormVariableCount">
@@ -1503,12 +1516,13 @@ public sealed record MachineInfo(
 /// </param>
 /// <param name="DeclaredInstalledSourcesFormOtherCount">
 /// Those whose program's source list entry, source used last or <c>InstallSource</c> held a null or
-/// was in a form not compared, or whose source used last was a network source with no folder or a
-/// source of any other kind (<see cref="DeclaredProductInstalledCauses.SourcesFormOther"/>).
+/// was in a form not compared, or whose source used last was a network or media source with no
+/// folder or a source of any other kind
+/// (<see cref="DeclaredProductInstalledCauses.SourcesFormOther"/>).
 /// </param>
 /// <param name="DeclaredSourcesOwnPerUserReadCount">
 /// The running account's own per-user-unmanaged installations whose source lists the screen read
-/// with every package they name seen, each installation once
+/// with every package they name seen or left to be compared by name, each installation once
 /// (<see cref="Services.OwnPerUserSourceLists.Read"/>). Installations, not files, and part of no
 /// count above.
 /// </param>

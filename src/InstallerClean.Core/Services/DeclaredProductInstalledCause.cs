@@ -10,8 +10,8 @@ namespace InstallerClean.Services;
 ///
 /// ONE CAUSE FOR EACH SUCH FILE, so the counts of the members other than <see cref="None"/> add
 /// up to the files kept with that verdict. A file that is a package an installation opens has
-/// that as its cause, and so does a file a package in a folder on the network could be by its
-/// name, except a file that is, or could be, a missing cached package of its own program and
+/// that as its cause, and so does a file a package compared by name could be by its name,
+/// except a file that is, or could be, a missing cached package of its own program and
 /// opens as none of that program's packages, which has that as its cause. A file whose own
 /// program's packages could not all be seen has the step that stopped the read of them, at the
 /// first installation of the program that could not be seen, and every file declaring that
@@ -131,8 +131,8 @@ public enum DeclaredProductInstalledCause
     SourcesFormUrl,
 
     /// <summary>
-    /// An installation's source list names a media package path, or the source it used last is a
-    /// media source.
+    /// An installation's source list names a media package path while Windows is set to follow a
+    /// symbolic link reached through a network path to this PC or to another network path.
     /// </summary>
     SourcesFormMedia,
 
@@ -174,9 +174,12 @@ public enum DeclaredProductInstalledCause
     MissingSpareIsIt,
 
     /// <summary>
-    /// A package in a folder on the network that one of its own program's installations has as a
-    /// source, and that the file could be by its name, could not be ruled out, a package under a
-    /// drive or share given up for the pass among them.
+    /// A package compared by name that one of its own program's installations has as a source,
+    /// and that the file could be by its name, could not be ruled out: one in a folder on the
+    /// network, one under a drive letter at which Windows reports no drive to the check, whose
+    /// folder cannot be read, or the package at a media package path, which the media search
+    /// looks for on each drive it tries; a package under a drive or share given up for the pass
+    /// among them.
     /// </summary>
     ByName,
 }

@@ -2291,12 +2291,13 @@ public class DeclaredProductCheckTests
     [Theory]
     [InlineData("u", "file:///D:/Other/", DeclaredProductInstalledCause.SourcesFormUrl)]
     [InlineData("u", "ftp://server/setup/", DeclaredProductInstalledCause.SourcesFormUrl)]
-    [InlineData("m", @"E:\", DeclaredProductInstalledCause.SourcesFormMedia)]
     [InlineData("u", SetupFolder, DeclaredProductInstalledCause.SourcesFormUrl)]
     [InlineData("x", SetupFolder, DeclaredProductInstalledCause.SourcesFormOther)]
     [InlineData("n", "http://localhost/setup/", DeclaredProductInstalledCause.SourcesFormOther)]
-    [InlineData("m", "http://localhost/setup/", DeclaredProductInstalledCause.SourcesFormMedia)]
-    public void A_copy_is_kept_when_the_source_used_last_is_neither_a_network_source_nor_a_web_address(
+    [InlineData("m", "http://localhost/setup/", DeclaredProductInstalledCause.SourcesFormOther)]
+    [InlineData("m", "ftp://server/setup/", DeclaredProductInstalledCause.SourcesFormOther)]
+    [InlineData("m", @"%TEMP%\Setup\", DeclaredProductInstalledCause.SourcesFormVariable)]
+    public void A_copy_is_kept_when_the_source_used_last_is_no_folder_the_check_compares_nor_a_web_address(
         string type, string source, DeclaredProductInstalledCause cause)
     {
         var f = ACopyBesideTheRecordedPackage();
@@ -2309,10 +2310,10 @@ public class DeclaredProductCheckTests
     }
 
     [Fact]
-    public void A_copy_is_kept_as_media_when_the_source_used_last_is_a_media_source_with_no_text()
+    public void A_copy_is_kept_when_the_source_used_last_is_a_media_source_with_no_text()
     {
         // The key holds the type and the index with no text after them, as the API answers it,
-        // so only the media type keeps the copy.
+        // so only the missing folder keeps the copy.
         var f = ACopyBesideTheRecordedPackage();
         f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
             MsiInstallProperty.LastUsedType, "m");
@@ -2322,7 +2323,7 @@ public class DeclaredProductCheckTests
             Sz(MsiInstallProperty.PackageName, SetupName),
             ExpandSz(MsiInstallProperty.LastUsedSource, "m;1;"));
 
-        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormMedia, f);
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormOther, f);
     }
 
     [Theory]
@@ -2600,16 +2601,31 @@ public class DeclaredProductCheckTests
         AssertKeptFor(DeclaredProductInstalledCause.SourcesRegistryDiffers, f);
     }
 
-    [Fact]
-    public void A_copy_is_kept_when_the_API_answers_a_media_package_path()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_copy_is_kept_when_the_API_answers_a_media_package_path_the_media_key_does_not_hold(bool keyThere)
     {
-        // The registry's Media key names none, so only the API's answer keeps the copy.
+        // The registry's Media key names none, or is not there, so only the API's answer keeps
+        // the copy.
         var f = ACopyBesideTheRecordedPackage();
         f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
             MsiInstallProperty.MediaPackagePath, "disk1");
-        f.Msi.Registry.Holds(ProductAKey + @"\Media", Sz("1", ";"));
+        if (keyThere) f.Msi.Registry.Holds(ProductAKey + @"\Media", Sz("1", ";"));
+        else f.Msi.Registry.Answers(ProductAKey + @"\Media", RegistryKeyPresence.Absent);
 
-        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormMedia, f);
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesRegistryDiffers, f);
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_media_key_holds_another_media_package_path_than_the_API_answers()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.MediaPackagePath, @"\disk1\");
+        f.Msi.Registry.Holds(ProductAKey + @"\Media", Sz("1", ";"), Sz("MediaPackage", @"\disk2\"));
+
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesRegistryDiffers, f);
     }
 
     [Theory]
@@ -2642,6 +2658,268 @@ public class DeclaredProductCheckTests
         f.Msi.Registry.Answers(ProductAKey + @"\Media", RegistryKeyPresence.Absent);
 
         Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+    }
+
+    // ---- A disc or a stick: a media source, a media package path, and a drive letter with no drive ----
+    //
+    // A program installed from a disc or a stick records the folder it came from as its
+    // source used last, of the media type, and as its InstallSource, and the folder's path
+    // below the drive's root as its media package path. The folder used last is compared as
+    // a network source's folder is. The media package path names no one folder, so it keeps
+    // only a copy whose name the package name could be. A drive letter at which Windows
+    // reports no drive, a disc or a stick taken out among them, is compared by name as a
+    // folder on the network is.
+
+    private const string DiscFolder = @"E:\sub\";
+
+    /// <summary>The check over <paramref name="f"/>, with E: answering <paramref name="eKind"/> and every other drive as fixed.</summary>
+    private static DeclaredProductCheck CheckWithDriveE(
+        (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+            ScriptedFileIdentities Files, MockFileSystem Disk) f,
+        DriveType eKind) =>
+        new(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+        {
+            DriveKindOf = drive => drive.StartsWith('E') ? eKind : DriveType.Fixed,
+            NamesInFolderOf = NameOnly,
+        };
+
+    /// <summary>
+    /// The scan's answer for a path under a drive letter with no drive: whether it names a file
+    /// in the Installer folder cannot be established, as a path with no existing folder above it
+    /// resolves to nothing. Every other path as <see cref="InInstallerFolder"/>.
+    /// </summary>
+    private static bool? InInstallerFolderWithNoDriveE(string path) =>
+        path.StartsWith("E:", StringComparison.OrdinalIgnoreCase) ? null : InInstallerFolder(path);
+
+    /// <summary><see cref="ACopyBesideTheRecordedPackage"/> with the media source used last <paramref name="folder"/>.</summary>
+    private static (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+        ScriptedFileIdentities Files, MockFileSystem Disk) ACopyWithAMediaSourceUsedLast(string folder)
+    {
+        var f = ACopyWithTheSourceUsedLast(folder);
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedType, "m");
+        return f;
+    }
+
+    [Fact]
+    public void A_copy_is_let_through_when_the_package_in_a_media_folder_used_last_is_another_file()
+    {
+        var f = ACopyWithAMediaSourceUsedLast(OtherFolder);
+        f.Files.Opens(OtherPackage, 9);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+        Assert.Contains(OtherPackage, f.Files.Reads);
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_package_in_a_media_folder_used_last_is_the_copy_itself()
+    {
+        var f = ACopyWithAMediaSourceUsedLast(OtherFolder);
+        f.Files.Opens(OtherPackage, 1);
+
+        AssertKeptFor(DeclaredProductInstalledCause.IsAtItsSources, f);
+    }
+
+    /// <summary>
+    /// <see cref="ACopyBesideTheRecordedPackage"/> installed under the package name c.msi, with
+    /// the media package path <paramref name="mediaPath"/>, and <see cref="SecondCandidate"/>,
+    /// named c.msi, a second copy of product A.
+    /// </summary>
+    private static (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+        ScriptedFileIdentities Files, MockFileSystem Disk) TwoCopiesBesideAMediaPackagePath(string mediaPath)
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, "c.msi", SetupFolder);
+        f.Files.Answers(SetupFolder + "c.msi", FileIdentityRead.NamesNothing);
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.MediaPackagePath, mediaPath);
+        AddSecondCandidate(f);
+        return f;
+    }
+
+    [Theory]
+    [InlineData(@"\sub\")]
+    [InlineData(@"\Windows\Installer\")]
+    public void A_media_package_path_keeps_only_the_copy_the_package_could_be_by_its_name(string mediaPath)
+    {
+        // Nothing at a media package path is read, on any drive.
+        var f = TwoCopiesBesideAMediaPackagePath(mediaPath);
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+            .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null, InInstallerFolder);
+
+        Assert.Equal(
+            new[] { DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, DeclaredProductOutcome.DeclaredProductInstalled },
+            screening.Outcomes);
+        Assert.Equal(new[] { DeclaredProductInstalledCause.None, DeclaredProductInstalledCause.ByName }, screening.InstalledCauses);
+        Assert.DoesNotContain(f.Files.Reads, read => read.Contains(@"\sub\", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void A_media_package_path_keeps_a_copy_its_package_name_could_be_by_the_copy_s_short_name()
+    {
+        var f = TwoCopiesBesideAMediaPackagePath(@"\sub\");
+        f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, "SETUP~1.MSI", SetupFolder);
+        f.Files.Answers(SetupFolder + "SETUP~1.MSI", FileIdentityRead.NamesNothing);
+
+        var screening = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+            {
+                DriveKindOf = FixedDrive,
+                NamesInFolderOf = path => path.EndsWith("c.msi", StringComparison.Ordinal) ? ["c.msi", "SETUP~1.MSI"] : NameOnly(path),
+            }
+            .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null, InInstallerFolder);
+
+        Assert.Equal(new[] { DeclaredProductInstalledCause.None, DeclaredProductInstalledCause.ByName }, screening.InstalledCauses);
+    }
+
+    [Fact]
+    public void A_media_package_path_keeps_every_copy_while_Windows_follows_links_reached_through_a_network_path()
+    {
+        var f = TwoCopiesBesideAMediaPackagePath(@"\sub\");
+        f.Msi.Registry.HoldsLinkSetting(ScriptedSourceListRegistry.LinkSettingsKey,
+            ScriptedSourceListRegistry.RemoteToLocal, new RegistryDwordRead(RegistryDwordState.Read, 1));
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+            .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null, InInstallerFolder);
+
+        Assert.All(screening.InstalledCauses, cause => Assert.Equal(DeclaredProductInstalledCause.SourcesFormMedia, cause));
+    }
+
+    /// <summary>
+    /// <see cref="ACopyBesideTheRecordedPackage"/> installed from <see cref="DiscFolder"/> under
+    /// <paramref name="packageName"/>, the folder recorded at <paramref name="where"/>: on the
+    /// list, as the InstallSource alone, or as the media source used last alone. The package there
+    /// will not identify, so a read of it keeps the copy.
+    /// </summary>
+    private static (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+        ScriptedFileIdentities Files, MockFileSystem Disk) ACopyInstalledFromDriveE(string where, string packageName)
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        switch (where)
+        {
+            case "list":
+                f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, packageName, DiscFolder);
+                break;
+            case "install source":
+                f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, packageName, SetupFolder);
+                f.Files.Answers(SetupFolder + packageName, FileIdentityRead.NamesNothing);
+                f.Msi.RecordsInstallSource(ProductA, null, MsiInstallContext.Machine, DiscFolder);
+                break;
+            default:
+                f.Msi.RecordsSources(ProductA, null, MsiInstallContext.Machine, packageName, SetupFolder);
+                f.Files.Answers(SetupFolder + packageName, FileIdentityRead.NamesNothing);
+                f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+                    MsiInstallProperty.LastUsedSource, DiscFolder);
+                f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+                    MsiInstallProperty.LastUsedType, "m");
+                break;
+        }
+
+        f.Files.Answers(DiscFolder + packageName, FileIdentityRead.OpenRefused);
+        return f;
+    }
+
+    [Theory]
+    [InlineData("list")]
+    [InlineData("install source")]
+    [InlineData("used last")]
+    public void A_package_under_a_drive_letter_with_no_drive_named_otherwise_than_the_copy_is_not_read(string where)
+    {
+        var f = ACopyInstalledFromDriveE(where, SetupName);
+
+        var outcome = CheckWithDriveE(f, DriveType.NoRootDirectory)
+            .Screen([Package(Candidate)], [], default, null, InInstallerFolderWithNoDriveE).Outcomes[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome);
+        Assert.DoesNotContain(DiscFolder + SetupName, f.Files.Reads);
+    }
+
+    [Theory]
+    [InlineData("list")]
+    [InlineData("install source")]
+    [InlineData("used last")]
+    public void A_package_under_a_drive_letter_with_no_drive_keeps_only_the_copy_it_could_be_by_its_name(string where)
+    {
+        var f = ACopyInstalledFromDriveE(where, "c.msi");
+        AddSecondCandidate(f);
+
+        var screening = CheckWithDriveE(f, DriveType.NoRootDirectory)
+            .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null, InInstallerFolderWithNoDriveE);
+
+        Assert.Equal(
+            new[] { DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, DeclaredProductOutcome.DeclaredProductInstalled },
+            screening.Outcomes);
+        Assert.Equal(new[] { DeclaredProductInstalledCause.None, DeclaredProductInstalledCause.ByName }, screening.InstalledCauses);
+        Assert.Empty(screening.RootsGivenUp);
+    }
+
+    [Fact]
+    public void A_package_under_a_drive_letter_with_no_drive_keeps_every_copy_while_Windows_follows_links_reached_through_a_network_path()
+    {
+        var f = ACopyInstalledFromDriveE("list", "c.msi");
+        AddSecondCandidate(f);
+        f.Msi.Registry.HoldsLinkSetting(ScriptedSourceListRegistry.LinkSettingsKey,
+            ScriptedSourceListRegistry.RemoteToLocal, new RegistryDwordRead(RegistryDwordState.Read, 1));
+
+        var screening = CheckWithDriveE(f, DriveType.NoRootDirectory)
+            .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null, InInstallerFolderWithNoDriveE);
+
+        Assert.All(screening.InstalledCauses, cause => Assert.Equal(DeclaredProductInstalledCause.SourcePackageNotRuledOut, cause));
+    }
+
+    [Theory]
+    [InlineData(DriveType.Unknown)]
+    [InlineData(DriveType.CDRom)]
+    [InlineData(DriveType.Removable)]
+    public void A_package_on_a_drive_of_another_kind_that_will_not_answer_keeps_every_copy(DriveType eKind)
+    {
+        // A drive Windows reports as of no kind it names, and an empty disc drive or card
+        // reader, whose package will not identify.
+        var f = ACopyInstalledFromDriveE("list", "c.msi");
+        AddSecondCandidate(f);
+
+        var screening = CheckWithDriveE(f, eKind)
+            .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null, InInstallerFolderWithNoDriveE);
+
+        Assert.All(screening.InstalledCauses, cause => Assert.Equal(DeclaredProductInstalledCause.SourcePackageNotRuledOut, cause));
+    }
+
+    [Fact]
+    public void A_disc_put_back_before_the_check_made_just_before_a_Move_is_read_for_every_copy()
+    {
+        // The scan finds no drive at E: and lets the copy through; the next pass finds the disc
+        // in, whose package is the copy itself, and keeps it.
+        var f = ACopyInstalledFromDriveE("list", SetupName);
+
+        var scan = CheckWithDriveE(f, DriveType.NoRootDirectory)
+            .Screen([Package(Candidate)], [], default, null, InInstallerFolderWithNoDriveE);
+        f.Files.Opens(DiscFolder + SetupName, 1);
+        var check = CheckWithDriveE(f, DriveType.CDRom)
+            .Screen([Package(Candidate)], [], default, null, InInstallerFolderWithNoDriveE);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, scan.Outcomes[0]);
+        Assert.Equal((DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.IsAtItsSources),
+            (check.Outcomes[0], check.InstalledCauses[0]));
+    }
+
+    [Fact]
+    public void A_file_kept_beside_a_second_copy_installed_from_a_drive_letter_with_no_drive_is_counted_by_name()
+    {
+        var f = AMarkedSecondCopy();
+        f.Msi.RecordsSources(SecondCopy, null, MsiInstallContext.Machine, CandidateName, DiscFolder);
+        f.Files.Answers(DiscFolder + CandidateName, FileIdentityRead.OpenRefused);
+
+        var screening = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+            {
+                DriveKindOf = drive => drive.StartsWith('E') ? DriveType.NoRootDirectory : DriveType.Fixed,
+                NamesInFolderOf = NameOnly,
+            }
+            .Screen([Package(Candidate), Package(OtherCandidate)], f.Listed, default, null, InInstallerFolderWithNoDriveE);
+
+        Assert.Equal(
+            new[] { DeclaredProductOutcome.SecondCopyUnestablished, DeclaredProductOutcome.DeclaredProductNotInstalled },
+            screening.Outcomes);
+        Assert.Equal(Census(unruled: 1, unseenByName: 1), screening.CachedPackages);
     }
 
     [Fact]
@@ -8348,14 +8626,15 @@ public class DeclaredProductCheckTests
     [InlineData(@"\\localhost\C$\Windows\Installer\", DriveType.Fixed, true)]
     [InlineData(@"Z:\", DriveType.Network, true)]
     [InlineData(@"Z:\", DriveType.Unknown, false)]
-    [InlineData(@"Z:\", DriveType.NoRootDirectory, false)]
+    [InlineData(@"Z:\", DriveType.NoRootDirectory, true)]
     [InlineData(@"\\?\GLOBALROOT\Device\Mup\localhost\C$\Windows\Installer\", DriveType.Fixed, false)]
     public void Every_copy_is_kept_when_a_package_read_for_every_copy_and_not_on_a_local_drive_is_in_the_Installer_folder(
         string folder, DriveType driveKind, bool remoteLinksFollowed)
     {
-        // A share onto the Installer folder, and a network drive, while Windows may follow a
-        // link reached through a network path; a drive Windows reports as neither local nor on
-        // the network; and a path through the network redirector's device. Each package is read
+        // A share onto the Installer folder, a network drive and a drive letter with no drive,
+        // while Windows may follow a link reached through a network path; a drive Windows
+        // reports as neither local nor on the network; and a path through the network
+        // redirector's device. Each package is read
         // for every copy, is in the Installer folder as the scan's test answers, and opens as
         // the second copy. The first copy is kept as well, and the package is not opened.
         var f = ACopyBesideTheRecordedPackage();
@@ -8483,7 +8762,7 @@ public class DeclaredProductCheckTests
     [InlineData(DriveType.Fixed)]
     [InlineData(DriveType.Removable)]
     [InlineData(DriveType.Unknown)]
-    [InlineData(DriveType.NoRootDirectory)]
+    [InlineData(DriveType.CDRom)]
     public void A_package_on_a_drive_Windows_does_not_report_as_a_network_drive_is_read_whatever_its_name(
         DriveType driveKind)
     {
