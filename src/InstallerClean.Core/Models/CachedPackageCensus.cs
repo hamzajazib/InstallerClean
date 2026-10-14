@@ -33,7 +33,9 @@ namespace InstallerClean.Models;
 /// from <see cref="UnseenPathUnreadable"/> to <see cref="UnseenSourceNotRuledOut"/> by the step
 /// that stopped it, so at most one of them is above zero. This count too is taken before any
 /// file's verdict. A package compared by name, in a folder on the network, under a drive letter
-/// at which Windows reports no drive or at a media package path, is looked at later, for each
+/// at which Windows reports no drive, on an optical or removable drive that answers that it is
+/// not ready, or
+/// looked for by the media search, is looked at later, for each
 /// file whose name it could be, and <see cref="UnseenByNameFiles"/> counts the files held back
 /// where one cannot be ruled out.
 ///

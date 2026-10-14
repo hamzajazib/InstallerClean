@@ -254,6 +254,26 @@ internal static class StorageHelpers
     }
 
     /// <summary>
+    /// Whether the drive whose root is <paramref name="driveRoot"/>, a drive letter, its colon
+    /// and a backslash, answers that it is not ready (<see cref="Kernel32.ERROR_NOT_READY"/>),
+    /// as an optical drive with no disc in it and a card reader with no card do. False for
+    /// every other answer, a call that throws included.
+    /// </summary>
+    internal static bool IsNotReady(string driveRoot)
+    {
+        try
+        {
+            return !Kernel32.GetVolumeInformation(
+                    driveRoot, IntPtr.Zero, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 0)
+                && System.Runtime.InteropServices.Marshal.GetLastWin32Error() == Kernel32.ERROR_NOT_READY;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// The names the folder's entry for the file at <paramref name="path"/> holds: its
     /// name, and its 8.3 short name where it has one other than that name. Null where
     /// Windows does not answer.

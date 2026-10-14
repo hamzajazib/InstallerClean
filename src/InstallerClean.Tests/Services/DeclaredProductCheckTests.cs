@@ -2666,20 +2666,32 @@ public class DeclaredProductCheckTests
     // source used last, of the media type, and as its InstallSource, and the folder's path
     // below the drive's root as its media package path. The folder used last is compared as
     // a network source's folder is. The media package path names no one folder, so it keeps
-    // only a copy whose name the package name could be. A drive letter at which Windows
-    // reports no drive, a disc or a stick taken out among them, is compared by name as a
-    // folder on the network is.
+    // only a copy whose name the package name could be, and so does a list with a media source
+    // and no media package path. A drive letter at which Windows reports no drive, a stick taken
+    // out or a disc image no longer mounted among them, and an optical or removable drive that
+    // answers that it is not ready, are compared by name as a folder on the network is.
 
     private const string DiscFolder = @"E:\sub\";
 
-    /// <summary>The check over <paramref name="f"/>, with E: answering <paramref name="eKind"/> and every other drive as fixed.</summary>
+    /// <summary>
+    /// The check over <paramref name="f"/>, with E: answering <paramref name="eKind"/>, and that
+    /// it is not ready where <paramref name="eNotReady"/>, and every other drive as fixed and
+    /// ready. Every drive asked whether it is ready is added to <paramref name="askedIfReady"/>.
+    /// </summary>
     private static DeclaredProductCheck CheckWithDriveE(
         (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
             ScriptedFileIdentities Files, MockFileSystem Disk) f,
-        DriveType eKind) =>
+        DriveType eKind,
+        bool eNotReady = false,
+        List<string>? askedIfReady = null) =>
         new(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
         {
             DriveKindOf = drive => drive.StartsWith('E') ? eKind : DriveType.Fixed,
+            DriveIsNotReadyOf = drive =>
+            {
+                askedIfReady?.Add(drive);
+                return drive.StartsWith('E') && eNotReady;
+            },
             NamesInFolderOf = NameOnly,
         };
 
@@ -2785,6 +2797,77 @@ public class DeclaredProductCheckTests
         Assert.All(screening.InstalledCauses, cause => Assert.Equal(DeclaredProductInstalledCause.SourcesFormMedia, cause));
     }
 
+    /// <summary>One way a list naming no media package path shows a media source, or does not show it has none.</summary>
+    public enum MediaSourceShown
+    {
+        BothHoldADisk,
+        OnlyTheKeyHoldsADisk,
+        OnlyTheApiAnswersADisk,
+        TheApiAnswersAnError,
+    }
+
+    [Theory]
+    [InlineData(MediaSourceShown.BothHoldADisk)]
+    [InlineData(MediaSourceShown.OnlyTheKeyHoldsADisk)]
+    [InlineData(MediaSourceShown.OnlyTheApiAnswersADisk)]
+    [InlineData(MediaSourceShown.TheApiAnswersAnError)]
+    public void A_list_with_a_media_source_and_no_media_package_path_keeps_only_the_copy_the_package_could_be_by_its_name(
+        MediaSourceShown shown)
+    {
+        // A media source of disk 1 with no label and no prompt, "1" = ";" in the Media key.
+        var f = TwoCopiesBesideAMediaPackagePath(string.Empty);
+        const MsiInstallContext Machine = MsiInstallContext.Machine;
+        switch (shown)
+        {
+            case MediaSourceShown.BothHoldADisk:
+                f.Msi.HoldsMediaDisk(ProductA, null, Machine);
+                break;
+            case MediaSourceShown.OnlyTheKeyHoldsADisk:
+                f.Msi.Registry.Holds(ProductAKey + @"\Media", Sz("1", ";"));
+                break;
+            case MediaSourceShown.OnlyTheApiAnswersADisk:
+                f.Msi.HoldsMediaDisk(ProductA, null, Machine);
+                f.Msi.Registry.Answers(ProductAKey + @"\Media", RegistryKeyPresence.Absent);
+                break;
+            case MediaSourceShown.TheApiAnswersAnError:
+                f.Msi.MediaDisksAnswer(ProductA, null, Machine, MsiError.AccessDenied);
+                break;
+        }
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+            .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null, InInstallerFolder);
+
+        Assert.Equal(
+            new[] { DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, DeclaredProductOutcome.DeclaredProductInstalled },
+            screening.Outcomes);
+        Assert.Equal(new[] { DeclaredProductInstalledCause.None, DeclaredProductInstalledCause.ByName }, screening.InstalledCauses);
+    }
+
+    [Fact]
+    public void A_list_shown_to_hold_no_media_source_keeps_no_copy_by_its_name()
+    {
+        var f = TwoCopiesBesideAMediaPackagePath(string.Empty);
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+            .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null, InInstallerFolder);
+
+        Assert.All(screening.Outcomes, outcome => Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome));
+    }
+
+    [Fact]
+    public void A_list_with_a_media_source_and_no_media_package_path_keeps_no_more_while_Windows_follows_links_reached_through_a_network_path()
+    {
+        var f = TwoCopiesBesideAMediaPackagePath(string.Empty);
+        f.Msi.HoldsMediaDisk(ProductA, null, MsiInstallContext.Machine);
+        f.Msi.Registry.HoldsLinkSetting(ScriptedSourceListRegistry.LinkSettingsKey,
+            ScriptedSourceListRegistry.RemoteToLocal, new RegistryDwordRead(RegistryDwordState.Read, 1));
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+            .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null, InInstallerFolder);
+
+        Assert.Equal(new[] { DeclaredProductInstalledCause.None, DeclaredProductInstalledCause.ByName }, screening.InstalledCauses);
+    }
+
     /// <summary>
     /// <see cref="ACopyBesideTheRecordedPackage"/> installed from <see cref="DiscFolder"/> under
     /// <paramref name="packageName"/>, the folder recorded at <paramref name="where"/>: on the
@@ -2873,8 +2956,8 @@ public class DeclaredProductCheckTests
     [InlineData(DriveType.Removable)]
     public void A_package_on_a_drive_of_another_kind_that_will_not_answer_keeps_every_copy(DriveType eKind)
     {
-        // A drive Windows reports as of no kind it names, and an empty disc drive or card
-        // reader, whose package will not identify.
+        // A drive Windows reports as of no kind it names, and a disc drive or card reader that is
+        // ready, whose package will not identify.
         var f = ACopyInstalledFromDriveE("list", "c.msi");
         AddSecondCandidate(f);
 
@@ -2882,6 +2965,103 @@ public class DeclaredProductCheckTests
             .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null, InInstallerFolderWithNoDriveE);
 
         Assert.All(screening.InstalledCauses, cause => Assert.Equal(DeclaredProductInstalledCause.SourcePackageNotRuledOut, cause));
+    }
+
+    [Theory]
+    [InlineData("list", DriveType.CDRom)]
+    [InlineData("install source", DriveType.CDRom)]
+    [InlineData("used last", DriveType.CDRom)]
+    [InlineData("list", DriveType.Removable)]
+    public void A_package_on_an_empty_disc_drive_or_card_reader_named_otherwise_than_the_copy_is_not_read(
+        string where, DriveType eKind)
+    {
+        var f = ACopyInstalledFromDriveE(where, SetupName);
+
+        var outcome = CheckWithDriveE(f, eKind, eNotReady: true)
+            .Screen([Package(Candidate)], [], default, null, InInstallerFolderWithNoDriveE).Outcomes[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome);
+        Assert.DoesNotContain(DiscFolder + SetupName, f.Files.Reads);
+    }
+
+    [Theory]
+    [InlineData(DriveType.CDRom)]
+    [InlineData(DriveType.Removable)]
+    public void An_empty_disc_drive_or_card_reader_keeps_only_the_copy_its_package_could_be_by_its_name(DriveType eKind)
+    {
+        // Two packages under E:, on the list and as the folder used last, and the drive is asked
+        // once whether it is ready.
+        var f = ACopyInstalledFromDriveE("list", "c.msi");
+        AddSecondCandidate(f);
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedSource, @"E:\other\");
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedType, "m");
+        var asked = new List<string>();
+
+        var screening = CheckWithDriveE(f, eKind, eNotReady: true, askedIfReady: asked)
+            .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null, InInstallerFolderWithNoDriveE);
+
+        Assert.Equal(
+            new[] { DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, DeclaredProductOutcome.DeclaredProductInstalled },
+            screening.Outcomes);
+        Assert.Equal(new[] { DeclaredProductInstalledCause.None, DeclaredProductInstalledCause.ByName }, screening.InstalledCauses);
+        Assert.Equal(["E:"], asked);
+        Assert.Empty(screening.RootsGivenUp);
+    }
+
+    [Theory]
+    [InlineData(DriveType.Fixed)]
+    [InlineData(DriveType.Unknown)]
+    public void A_drive_of_another_kind_is_not_asked_whether_it_is_ready_and_is_read_for_every_copy(DriveType eKind)
+    {
+        var f = ACopyInstalledFromDriveE("list", "c.msi");
+        AddSecondCandidate(f);
+        var asked = new List<string>();
+
+        var screening = CheckWithDriveE(f, eKind, eNotReady: true, askedIfReady: asked)
+            .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null, InInstallerFolderWithNoDriveE);
+
+        Assert.All(screening.InstalledCauses, cause => Assert.Equal(DeclaredProductInstalledCause.SourcePackageNotRuledOut, cause));
+        Assert.Empty(asked);
+    }
+
+    [Fact]
+    public void An_empty_disc_drive_keeps_every_copy_while_Windows_follows_links_reached_through_a_network_path()
+    {
+        var f = ACopyInstalledFromDriveE("list", "c.msi");
+        AddSecondCandidate(f);
+        f.Msi.Registry.HoldsLinkSetting(ScriptedSourceListRegistry.LinkSettingsKey,
+            ScriptedSourceListRegistry.RemoteToLocal, new RegistryDwordRead(RegistryDwordState.Read, 1));
+
+        var screening = CheckWithDriveE(f, DriveType.CDRom, eNotReady: true)
+            .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null, InInstallerFolderWithNoDriveE);
+
+        Assert.All(screening.InstalledCauses, cause => Assert.Equal(DeclaredProductInstalledCause.SourcePackageNotRuledOut, cause));
+    }
+
+    [Fact]
+    public void A_disc_drive_that_does_not_say_within_the_time_limit_whether_it_is_ready_is_given_up()
+    {
+        var f = ACopyInstalledFromDriveE("list", SetupName);
+
+        var screening = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry)
+        {
+            SourceFolderTimeLimit = ShortLimit,
+            DriveKindOf = drive => drive.StartsWith('E') ? DriveType.CDRom : DriveType.Fixed,
+            DriveIsNotReadyOf = drive =>
+            {
+                if (drive.StartsWith('E')) Thread.Sleep(HeldFor);
+                return true;
+            },
+            NamesInFolderOf = NameOnly,
+        }.Screen([Package(Candidate)], [], default, null, InInstallerFolderWithNoDriveE);
+
+        Assert.Equal(
+            (DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.SourcesGivenUp),
+            (screening.Outcomes[0], screening.InstalledCauses[0]));
+        Assert.Equal([("E:", 1)], screening.RootsGivenUp.Select(given => (given.Root, given.FilesKept)));
+        Assert.DoesNotContain(DiscFolder + SetupName, f.Files.Reads);
     }
 
     [Fact]
@@ -9556,6 +9736,51 @@ internal sealed class ScriptedMsiProducts : IMsiApi
         string property, string value) =>
         _listProperties[(code, isPatch, sid, context, property)] = (MsiError.Success, value);
 
+    private readonly Dictionary<(string Code, string? Sid, MsiInstallContext Context), uint> _mediaDisks = new();
+
+    /// <summary>
+    /// The product's source list holds a media source, disk 1 with no label and no prompt: its
+    /// <c>Media</c> key holds "1" = ";", and <see cref="EnumMediaDisks"/> answers disk 1 at the
+    /// first index. A list with a media package path holds it without this; any other list holds
+    /// no media source.
+    /// </summary>
+    public void HoldsMediaDisk(string code, string? sid, MsiInstallContext context) =>
+        _mediaDisks[(code, sid, context)] = MsiError.Success;
+
+    /// <summary>What <see cref="EnumMediaDisks"/> answers at the first index for the product, in place of a disk.</summary>
+    public void MediaDisksAnswer(string code, string? sid, MsiInstallContext context, uint error) =>
+        _mediaDisks[(code, sid, context)] = error;
+
+    /// <summary>Whether the product's source list holds a media source, as <see cref="HoldsMediaDisk"/> says.</summary>
+    private bool HasAMediaDisk(string code, string? sid, MsiInstallContext context) =>
+        _mediaDisks.TryGetValue((code, sid, context), out var answer)
+            ? answer == MsiError.Success
+            : ListPropertyOf(code, isPatch: false, sid, context, MsiInstallProperty.MediaPackagePath) is
+                { Error: MsiError.Success, Value.Length: > 0 };
+
+    /// <summary>
+    /// Answers whether the product's source list holds a disk at <paramref name="index"/>: disk 1
+    /// at the first index where it holds a media source (<see cref="HoldsMediaDisk"/>), the
+    /// scripted error where <see cref="MediaDisksAnswer"/> gives one, and the end of the list
+    /// otherwise. AN UNSCRIPTED LIST THROWS, as every other read of it does.
+    /// </summary>
+    public uint EnumMediaDisks(string productCodeOrPatchCode, string? userSid, MsiInstallContext context,
+        uint options, uint index, out uint diskId)
+    {
+        diskId = 0;
+        if (options != MsiSourceListOptions.Product)
+            throw new InvalidOperationException(
+                $"the declared-product check reads a product's media disks, and was asked with options {options}");
+
+        if (_mediaDisks.TryGetValue((productCodeOrPatchCode, userSid, context), out var scripted)
+            && scripted != MsiError.Success)
+            return scripted;
+
+        if (index > 0 || !HasAMediaDisk(productCodeOrPatchCode, userSid, context)) return MsiError.NoMoreItems;
+        diskId = 1;
+        return MsiError.Success;
+    }
+
     /// <summary>What reading one of those three properties returns instead of a value.</summary>
     public void ListPropertyAnswers(string code, bool isPatch, string? sid, MsiInstallContext context,
         string property, uint error) =>
@@ -9723,6 +9948,7 @@ internal sealed class ScriptedMsiProducts : IMsiApi
                     : Array.Empty<string>());
             case "Media":
             {
+                if (isPatch || !HasAMediaDisk(code, sid, context)) return new RegistryKeyValues(RegistryKeyPresence.Absent, null);
                 var media = new List<RegistryValue> { new("1", RegistryValueKind.String, ";") };
                 var packagePath = ListPropertyOf(code, isPatch, sid, context, MsiInstallProperty.MediaPackagePath);
                 if (packagePath.Error == MsiError.Success && packagePath.Value.Length > 0)

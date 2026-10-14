@@ -64,6 +64,18 @@ public interface IMsiApi
         ref uint sourceLength);
 
     /// <summary>
+    /// Wraps <c>MsiSourceListEnumMediaDisksW</c>, asking for the disk ID alone. See
+    /// <c>Msi.MsiSourceListEnumMediaDisks</c>.
+    /// </summary>
+    uint EnumMediaDisks(
+        string productCodeOrPatchCode,
+        string? userSid,
+        MsiInstallContext context,
+        uint options,
+        uint index,
+        out uint diskId);
+
+    /// <summary>
     /// Wraps <c>MsiSourceListGetInfoW</c>. See <c>Msi.MsiSourceListGetInfo</c>.
     /// </summary>
     uint GetSourceListInfo(

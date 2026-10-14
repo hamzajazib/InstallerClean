@@ -61,6 +61,17 @@ internal sealed class MsiApi : IMsiApi
         Msi.MsiSourceListEnumSources(
             productCodeOrPatchCode, userSid, context, options, index, source, ref sourceLength);
 
+    public uint EnumMediaDisks(
+        string productCodeOrPatchCode,
+        string? userSid,
+        MsiInstallContext context,
+        uint options,
+        uint index,
+        out uint diskId) =>
+        Msi.MsiSourceListEnumMediaDisks(
+            productCodeOrPatchCode, userSid, context, options, index, out diskId,
+            IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+
     public uint GetSourceListInfo(
         string productCodeOrPatchCode,
         string? userSid,

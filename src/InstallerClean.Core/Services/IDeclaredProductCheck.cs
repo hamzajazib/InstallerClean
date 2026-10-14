@@ -57,12 +57,13 @@ namespace InstallerClean.Services;
 /// share or a network drive, is one of those only for a file whose name or short name
 /// its package name could be, since Windows Installer looks in a source folder for that
 /// name alone, and so is a source under a drive letter at which Windows reports no drive
-/// to this check, whose folder cannot be read. While Windows is set to follow a symbolic
-/// link reached through a network path to this PC or to another network path, each is one
-/// for every file. A media package path, the package's folder on its installation media,
-/// keeps every file whose name or short name its package name could be, the media search
-/// looking for that name alone; while Windows is set to follow such a link, it keeps every
-/// file. The folder an installation records as its <c>InstallSource</c>, the one its package
+/// to this check, or on an optical or removable drive that answers that it is not ready, whose
+/// folder cannot be read. While Windows is set to follow a symbolic link reached through a network path to
+/// this PC or to another network path, each is one for every file. A source list with a media
+/// source keeps every file whose name or short name its package name could be, the media
+/// search looking for that name alone at the list's media package path, the package's folder
+/// on its installation media; while Windows is set to follow such a link, a list naming a
+/// media package path keeps every file. The folder an installation records as its <c>InstallSource</c>, the one its package
 /// was installed from, counts as a source whether or not the list still holds it. So it is while a
 /// source list holds something the check does not compare, a URL other than an http or
 /// https address, an entry naming an environment variable or a package name naming a
@@ -410,8 +411,10 @@ public enum DeclaredProductOutcome
     /// that the registry holds otherwise than the API answers it or as anything but a REG_SZ,
     /// or that, being no http or https address, names an environment variable or starts neither
     /// with a drive letter, a ':' and a '\' nor with two '\'. A source or an
-    /// <c>InstallSource</c> in a folder on the network, or under a drive letter at which
-    /// Windows reports no drive to this check, and a media package path, cover this only where
+    /// <c>InstallSource</c> in a folder on the network, under a drive letter at which Windows
+    /// reports no drive to this check or on an optical or removable drive that answers that it
+    /// is not ready,
+    /// and the package the media search looks for, cover this only where
     /// the package name could be this file's name or short name, or where Windows is set to
     /// follow a symbolic link reached through a network path to this PC or to another network
     /// path. In each of them this file is, or could be, the package that installation opens.
@@ -438,7 +441,9 @@ public enum DeclaredProductOutcome
     /// source or in its <c>InstallSource</c> is this file or, on a root other than a local
     /// drive, would be a file directly in the Installer folder, a package compared by name,
     /// in a folder on the network, under a drive letter at which Windows reports no drive to
-    /// this check or at a media package path, counting only where its package name could be
+    /// this check, on an optical or removable drive that answers that it is not ready, or looked
+    /// for by the
+    /// media search, counting only where its package name could be
     /// this file's name. Every installation's source list is held in the registry as the API
     /// returns it, with its package name as a REG_SZ, and so is its <c>InstallSource</c> where
     /// there is one, which starts with a drive letter, a ':' and a '\', or with two '\', or is

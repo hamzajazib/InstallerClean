@@ -289,6 +289,10 @@ internal sealed class FakeMsiApi : IMsiApi
         uint index, char[]? source, ref uint sourceLength) =>
         throw new InvalidOperationException("the query service reads no source lists");
 
+    public uint EnumMediaDisks(string productCodeOrPatchCode, string? userSid, MsiInstallContext context,
+        uint options, uint index, out uint diskId) =>
+        throw new InvalidOperationException("the query service reads no source lists");
+
     public uint GetSourceListInfo(string productCodeOrPatchCode, string? userSid, MsiInstallContext context,
         uint options, string property, char[]? value, ref uint valueLength) =>
         throw new InvalidOperationException("the query service reads no source lists");

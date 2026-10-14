@@ -1074,6 +1074,10 @@ public class RemovableReverifierTests
             char[]? source, ref uint sourceLength) =>
             throw new InvalidOperationException("The under-lease re-read must not read source lists.");
 
+        public uint EnumMediaDisks(string productCodeOrPatchCode, string? userSid,
+            InstallerClean.Interop.MsiInstallContext context, uint options, uint index, out uint diskId) =>
+            throw new InvalidOperationException("The under-lease re-read must not read source lists.");
+
         public uint GetSourceListInfo(string productCodeOrPatchCode, string? userSid,
             InstallerClean.Interop.MsiInstallContext context, uint options, string property,
             char[]? value, ref uint valueLength) =>

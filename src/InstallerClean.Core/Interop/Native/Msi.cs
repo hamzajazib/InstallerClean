@@ -112,6 +112,29 @@ internal static partial class Msi
         ref uint pcchValue);
 
     /// <summary>
+    /// Reads one disk of the media sources Windows Installer holds for a product or a patch
+    /// in one account and context, at <paramref name="dwIndex"/>, with its disk ID in
+    /// <paramref name="pdwDiskId"/>. Declared for whether there is a disk at an index alone:
+    /// the volume label and disk prompt, and their lengths, are passed as null pointers,
+    /// which the function accepts for each pair together. <paramref name="szUserSid"/> is null
+    /// for a per-machine installation. The walk keeps its position between calls, as
+    /// <see cref="MsiSourceListEnumSources"/>'s does, and a call at index 0 starts it again.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "MsiSourceListEnumMediaDisksW",
+                   StringMarshalling = StringMarshalling.Utf16)]
+    public static partial uint MsiSourceListEnumMediaDisks(
+        string szProductCodeOrPatchCode,
+        string? szUserSid,
+        MsiInstallContext dwContext,
+        uint dwOptions,
+        uint dwIndex,
+        out uint pdwDiskId,
+        IntPtr szVolumeLabel,
+        IntPtr pcchVolumeLabel,
+        IntPtr szDiskPrompt,
+        IntPtr pcchDiskPrompt);
+
+    /// <summary>
     /// Enumerates patches against a product, returning patch and
     /// product-target GUIDs plus the user SID context.
     /// </summary>

@@ -296,6 +296,25 @@ internal static partial class Kernel32
     public static partial uint GetDriveType(string lpRootPathName);
 
     /// <summary>
+    /// Asks the volume at the root <paramref name="lpRootPathName"/>, a drive letter, its
+    /// colon and a backslash, for its details. Declared for the answer alone: every output
+    /// is passed as a null pointer, and a caller reads only whether the call succeeded and,
+    /// where it did not, the last error (<see cref="ERROR_NOT_READY"/>).
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "GetVolumeInformationW", SetLastError = true,
+                   StringMarshalling = StringMarshalling.Utf16)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetVolumeInformation(
+        string lpRootPathName,
+        IntPtr lpVolumeNameBuffer,
+        uint nVolumeNameSize,
+        IntPtr lpVolumeSerialNumber,
+        IntPtr lpMaximumComponentLength,
+        IntPtr lpFileSystemFlags,
+        IntPtr lpFileSystemNameBuffer,
+        uint nFileSystemNameSize);
+
+    /// <summary>
     /// Reads basic file metadata (attributes, size, timestamps) from an
     /// open handle. Used to detect whether a CreateFile-with-OPEN_REPARSE_POINT
     /// handle is pointing at a reparse point or a real file.
@@ -553,6 +572,10 @@ internal static partial class Kernel32
     // into two quite different answers.
     public const int ERROR_FILE_NOT_FOUND = 2;
     public const int ERROR_PATH_NOT_FOUND = 3;
+
+    // The code a drive answers with when it is not ready, as an optical drive with no disc
+    // in it and a card reader with no card do.
+    public const int ERROR_NOT_READY = 21;
 
     // The two the volume enumeration and the mount-point query answer with, and
     // both are ordinary rather than faults: ERROR_NO_MORE_FILES ends a volume
