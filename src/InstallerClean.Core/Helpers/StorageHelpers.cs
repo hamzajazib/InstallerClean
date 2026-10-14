@@ -295,8 +295,8 @@ internal static class StorageHelpers
     /// returns, which answers about the call that put the thread's mode back.
     ///
     /// <c>FileIdentityReader</c>'s reads of a path's identity and its volume, and the final-path
-    /// resolution <see cref="InstallerCacheHelpers"/> makes (<c>Win32FinalPathKernel</c>), open
-    /// here. Every other read in the app runs under the process's error mode, which each host sets
+    /// resolution <see cref="InstallerClean.Services.InstallerCacheHelpers"/> makes
+    /// (<c>Win32FinalPathKernel</c>), open here. Every other read in the app runs under the process's error mode, which each host sets
     /// as it starts so that no critical-error box is shown
     /// (<see cref="TurnOffCriticalErrorBoxForTheProcess"/>). This open sets the thread's own mode
     /// as well, so it shows no box where Core runs without a host.
