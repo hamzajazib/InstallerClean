@@ -136,7 +136,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         Action<Exception, string>? recordRefusal = null,
         Func<string, bool?>? namesAFileInInstallerFolder = null,
         Action<int>? candidateReached = null,
-        Action<SourceFolderWait?>? waitingOn = null)
+        Action<SourceFolderWait?>? waitingOn = null,
+        string? installerFolder = null)
     {
         var outcomes = new DeclaredProductOutcome[candidates.Count];
         var causes = new DeclaredProductInstalledCause[candidates.Count];
@@ -156,7 +157,13 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         // by both halves, for the same reason and with the same lifetime, and the
         // installations the caller's enumeration listed, which every answer about a
         // product is held against.
-        var pass = new PassAnswers(_msi, installations, cancellationToken, waitingOn);
+        var pass = new PassAnswers(_msi, installations, cancellationToken, waitingOn)
+        {
+            InstallerFolderVolume = new Lazy<string?>(
+                () => installerFolder is null || _fileIdentities is null
+                    ? null
+                    : _fileIdentities.VolumeOf(installerFolder)),
+        };
 
         for (var i = 0; i < candidates.Count; i++)
         {
@@ -1354,8 +1361,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         FormOther,
 
         /// <summary>
-        /// A package at a source would not identify, could be a file directly in the Installer
-        /// folder, or could not be established not to be one.
+        /// A package at a source would not identify and was not shown to be on another volume
+        /// than the Installer folder, could be a file directly in the Installer folder, or could
+        /// not be established not to be one.
         /// </summary>
         PackageNotRuledOut,
     }
@@ -1891,7 +1899,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// as in any other folder (<see cref="IsLocalDrive"/>). The identity read follows a link,
     /// a short name or another spelling of the folder to the file the path opens, so the
     /// candidate that opens as that file is the one kept, and every other copy of the
-    /// product goes on to the rest of the check. A package read here on any other root is
+    /// product goes on to the rest of the check. A package whose file opens and will not give
+    /// its id is ruled out where it is on another volume than the Installer folder
+    /// (<see cref="OnAnotherVolume"/>), and keeps every copy otherwise. A package read here on any other root is
     /// first put to the Installer-folder test, and one that would be a file directly in the
     /// Installer folder keeps every copy.
     ///
@@ -1912,8 +1922,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <see cref="SourceUsedLastOf"/> answers null for; an <c>InstallSource</c> that
     /// <see cref="InstallSourceOf"/> answers null for; and, for a package read
     /// here, one not on a local drive that would be a file directly in the Installer
-    /// folder or where that cannot be established, one that exists and will not identify,
-    /// one whose read has not answered within the time limit, and one under a drive, a share
+    /// folder or where that cannot be established, one that exists and will not identify
+    /// where it is not shown to be on another volume than the Installer folder, one whose
+    /// read has not answered within the time limit, and one under a drive, a share
     /// or any other root (<see cref="RootOf"/>) given up for the pass
     /// (<see cref="ReadSourcePackage"/>). A source package that is not there is skipped,
     /// being no file.
@@ -2169,9 +2180,13 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// the package is compared by name: true with its identity where it opens, true with null
     /// where no file is there, and false where the package cannot be ruled out.
     ///
-    /// FALSE for a package that exists and will not identify; a read that has not answered
-    /// within <see cref="SourceFolderTimeLimit"/>; a package under a root given up for the
-    /// pass, which is not read; and, where <paramref name="namesAFileInInstallerFolder"/> is
+    /// A PACKAGE WHOSE FILE OPENS AND WILL NOT GIVE ITS ID is true with null where it is on
+    /// another volume than the Installer folder (<see cref="OnAnotherVolume"/>), being none of
+    /// the candidates.
+    ///
+    /// FALSE for a package that exists and will not identify otherwise; a read that has not
+    /// answered within <see cref="SourceFolderTimeLimit"/>; a package under a root given up
+    /// for the pass, which is not read; and, where <paramref name="namesAFileInInstallerFolder"/> is
     /// given, a package that would be a file directly in the Installer folder, or where that
     /// cannot be established. It is given for every package but one on a local drive, which
     /// is compared by its identity alone (<see cref="AddSourcePackages"/>).
@@ -2254,6 +2269,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                 {
                     FileIdentityRead.Read => (true, read),
                     FileIdentityRead.NamesNothing => (true, (FileIdentity?)null),
+                    FileIdentityRead.IdentityUnavailable when OnAnotherVolume(package, identities, pass) =>
+                        (true, (FileIdentity?)null),
                     _ => (false, null),
                 };
             },
@@ -2285,6 +2302,19 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         identity = answer.Identity;
         return answer.Settled;
     }
+
+    /// <summary>
+    /// Whether the file <paramref name="package"/> opens is on another volume than the
+    /// Installer folder (<see cref="PassAnswers.InstallerFolderVolume"/>): both volumes named
+    /// by their GUID paths (<see cref="IFileIdentityReader.VolumeOf"/>), and the two different.
+    /// Every candidate is a file directly in the Installer folder, and a file is on one volume
+    /// only, so a package on another volume is none of them. Where either volume cannot be
+    /// named, or the two are the same, the answer is false.
+    /// </summary>
+    private static bool OnAnotherVolume(string package, IFileIdentityReader identities, PassAnswers pass) =>
+        pass.InstallerFolderVolume.Value is { } installerFolder
+        && identities.VolumeOf(package) is { } volume
+        && !string.Equals(volume, installerFolder, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Runs <paramref name="read"/>, a read under <paramref name="root"/>, on a thread of its
@@ -3574,6 +3604,15 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         // on it with Task.WaitAny, which the runtime wakes from the caller's thread all the same.
         private TaskCompletionSource<string> StopOf(string root) =>
             _stops.GetOrAdd(root, _ => new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously));
+
+        /// <summary>
+        /// The GUID path of the volume the Installer folder is on, from its final path as the
+        /// scan resolved it, asked the first time a package read here needs it and kept for the
+        /// pass; null where the folder was not resolved or its volume cannot be named
+        /// (<see cref="IFileIdentityReader.VolumeOf"/>). Its value is made once even where reads
+        /// on two threads ask for it together.
+        /// </summary>
+        internal Lazy<string?> InstallerFolderVolume { get; init; } = new(() => null);
 
         /// <summary>The pass's links, once the first declared code has been asked about.</summary>
         internal InstallationLinks? Links { get; set; }

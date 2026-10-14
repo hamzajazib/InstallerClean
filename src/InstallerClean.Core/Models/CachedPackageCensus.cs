@@ -126,8 +126,8 @@ namespace InstallerClean.Models;
 /// The read stopped at an installation whose sources could not be ruled out for any other
 /// reason: the check had no way to read them; its package name, source list or installed-from
 /// folder would not read, held a form the check does not compare, or differed from what the
-/// registry holds; or a package there would not identify, or could be a file directly in the
-/// Installer folder.
+/// registry holds; or a package there would not identify and was not shown to be on another
+/// volume than the Installer folder, or could be a file directly in the Installer folder.
 /// </param>
 /// <param name="UnseenPerMachine">
 /// The read stopped at an installation in the per-machine context: one, where one of the nine

@@ -126,9 +126,15 @@ public static class FileIdentityReadOutcomes
 /// <c>RegistrationIdentityMatch.Compare</c>, and each of the four failures keeps
 /// files back.
 ///
-/// A WRONG ANSWER IN HERE CAN ONLY EVER COST AN OFFER: an identity that matches
-/// nothing changes nothing, an identity that matches wrongly keeps a file back, and
-/// a failure keeps files back. Nothing in here can put a file on the offer.
+/// A WRONG IDENTITY CAN ONLY EVER COST AN OFFER: an identity that matches nothing
+/// changes nothing, an identity that matches wrongly keeps a file back, and a failure
+/// keeps files back.
+///
+/// <see cref="VolumeOf"/> IS THE ONE ANSWER THAT LETS A FILE GO. Two different GUID
+/// paths rule a package out as any file on the other volume, so an implementation that
+/// answered a GUID path other than the one the kernel names for the file would let a
+/// package that is a candidate go. It answers what <c>GetFinalPathNameByHandle</c>
+/// names, and null for anything else.
 /// </summary>
 public interface IFileIdentityReader
 {
@@ -157,6 +163,15 @@ public interface IFileIdentityReader
     /// </summary>
     sealed bool TryRead(string path, out FileIdentity identity) =>
         ReadOutcome(path, out identity) == FileIdentityRead.Read;
+
+    /// <summary>
+    /// The GUID path of the volume holding the file or folder <paramref name="path"/> names,
+    /// <c>\\?\Volume{guid}\</c>, opened as <see cref="ReadOutcome"/> opens it, links followed;
+    /// or null where it does not open or yields no GUID path. Two different GUID paths are two
+    /// different volumes, so a file on one is no file on the other, whether or not either
+    /// volume answers <see cref="ReadOutcome"/>. A reader that names no volumes answers null.
+    /// </summary>
+    string? VolumeOf(string path) => null;
 }
 
 /// <summary>

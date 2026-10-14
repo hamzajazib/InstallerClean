@@ -128,7 +128,7 @@ public class WithholdingSplitTests
         var screen = Substitute.For<IDeclaredProductCheck>();
         screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
                 Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(),
-                Arg.Any<Func<string, bool?>?>(), Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>())
+                Arg.Any<Func<string, bool?>?>(), Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>(), Arg.Any<string?>())
             .Returns(new DeclaredProductScreening([DeclaredProductOutcome.DeclaredProductNotInstalled], [], WaitCount: 0));
 
         var result = await Scan(
@@ -153,7 +153,7 @@ public class WithholdingSplitTests
         var screen = Substitute.For<IDeclaredProductCheck>();
         screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
                 Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(),
-                Arg.Any<Func<string, bool?>?>(), Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>())
+                Arg.Any<Func<string, bool?>?>(), Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>(), Arg.Any<string?>())
             .Returns(call =>
             {
                 var handed = call.ArgAt<IReadOnlyList<OrphanedFile>>(0).Count;
@@ -208,7 +208,7 @@ public class WithholdingSplitTests
         var screen = Substitute.For<IDeclaredProductCheck>();
         screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
                 Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(),
-                Arg.Any<Func<string, bool?>?>(), Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>())
+                Arg.Any<Func<string, bool?>?>(), Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>(), Arg.Any<string?>())
             .Returns(call => new DeclaredProductScreening(
                 [.. Enumerable.Repeat(DeclaredProductOutcome.SecondCopyUnestablished,
                     call.ArgAt<IReadOnlyList<OrphanedFile>>(0).Count)],
@@ -235,7 +235,7 @@ public class WithholdingSplitTests
         var screen = Substitute.For<IDeclaredProductCheck>();
         screen.Screen(Arg.Any<IReadOnlyList<OrphanedFile>>(), Arg.Any<IReadOnlyList<ListedInstallation>>(),
                 Arg.Any<CancellationToken>(), Arg.Any<Action<Exception, string>?>(),
-                Arg.Any<Func<string, bool?>?>(), Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>())
+                Arg.Any<Func<string, bool?>?>(), Arg.Any<Action<int>?>(), Arg.Any<Action<SourceFolderWait?>?>(), Arg.Any<string?>())
             .Returns(new DeclaredProductScreening(
                 [
                     DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductOutcome.DeclaredProductInstalled,

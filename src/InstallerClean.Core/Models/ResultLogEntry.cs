@@ -1451,8 +1451,9 @@ public sealed record MachineInfo(
 /// <see cref="DeclaredInstalledSourcesFormOtherCount"/>.
 /// </param>
 /// <param name="DeclaredInstalledSourcePackageNotRuledOutCount">
-/// Those whose program has an installation with a package at a source that would not identify or
-/// could be a file directly in the Installer folder
+/// Those whose program has an installation with a package at a source that would not identify,
+/// where it was not shown to be on another volume than the Installer folder, or could be a file
+/// directly in the Installer folder
 /// (<see cref="DeclaredProductInstalledCauses.SourcePackageNotRuledOut"/>).
 /// </param>
 /// <param name="DeclaredInstalledMissingSparePackageCodeUnreadCount">

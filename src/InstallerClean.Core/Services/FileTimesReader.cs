@@ -180,7 +180,7 @@ internal sealed class FileTimesReader : IFileTimesReader
     /// A local volume has one. A call that fails, and an answer of any other shape,
     /// both come back null, and the file is kept.
     /// </summary>
-    private static string? VolumeOf(Microsoft.Win32.SafeHandles.SafeFileHandle handle)
+    internal static string? VolumeOf(Microsoft.Win32.SafeHandles.SafeFileHandle handle)
     {
         var buffer = new char[FinalPathBufferLength];
         var length = Kernel32.GetFinalPathNameByHandle(

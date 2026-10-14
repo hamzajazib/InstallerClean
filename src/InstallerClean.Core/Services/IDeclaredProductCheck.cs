@@ -220,6 +220,13 @@ public interface IDeclaredProductCheck
     /// the pass ends is not told. Handed in by the scan and by the check before a Move or
     /// Delete, which show the wait while it lasts.
     /// </param>
+    /// <param name="installerFolder">
+    /// The Installer folder's final path, as the scan resolved it for the run, or null where
+    /// the kernel did not resolve it. A package at a source on a local drive whose file will
+    /// not give its id is ruled out where it sits on another volume than this folder; with
+    /// null, or where either volume cannot be named, it keeps every candidate as any package
+    /// that will not identify does.
+    /// </param>
     DeclaredProductScreening Screen(
         IReadOnlyList<OrphanedFile> candidates,
         IReadOnlyList<ListedInstallation> installations,
@@ -227,7 +234,8 @@ public interface IDeclaredProductCheck
         Action<Exception, string>? recordRefusal = null,
         Func<string, bool?>? namesAFileInInstallerFolder = null,
         Action<int>? candidateReached = null,
-        Action<SourceFolderWait?>? waitingOn = null);
+        Action<SourceFolderWait?>? waitingOn = null,
+        string? installerFolder = null);
 }
 
 /// <summary>
@@ -379,7 +387,8 @@ public enum DeclaredProductOutcome
     /// <c>InstallProperties</c> key recording a cached package or a folder it was installed from
     /// that could be the Installer folder.
     /// It covers a source list or package name that will not read, a source whose package
-    /// is this file, will not identify or does not answer within the check's time limit, a
+    /// is this file, will not identify while not shown to be on another volume than the
+    /// Installer folder, or does not answer within the check's time limit, a
     /// source on a drive or share the check has stopped reading for the pass (a read there
     /// did not answer within that limit or failed only after a long wait, the reads that
     /// failed there took more time between them than the check allows, or all the reads
@@ -393,10 +402,11 @@ public enum DeclaredProductOutcome
     /// reached through a network path, or a package name naming a folder, a drive, a stream
     /// or a variable, or holding a null, one whose source used last is neither a network or
     /// media source nor an http or https address, and one whose registry key does not hold
-    /// what the API returned for it, package name included, or holds that name as anything but a REG_SZ. It
-    /// covers an <c>InstallSource</c> whose package is this file, will not identify or does not
-    /// answer within the time limit, one on a drive or share the check has stopped reading, one
-    /// not on a local drive that is the Installer folder itself, and one that will not read,
+    /// what the API returned for it, package name included, or holds that name as anything
+    /// but a REG_SZ. It covers an <c>InstallSource</c> whose package is this file, will not
+    /// identify while not shown to be on another volume than the Installer folder, or does
+    /// not answer within the time limit, one on a drive or share the check has stopped
+    /// reading, one not on a local drive that is the Installer folder itself, and one that will not read,
     /// that the registry holds otherwise than the API answers it or as anything but a REG_SZ,
     /// or that, being no http or https address, names an environment variable or starts neither
     /// with a drive letter, a ':' and a '\' nor with two '\'. A source or an

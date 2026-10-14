@@ -156,8 +156,9 @@ public enum DeclaredProductInstalledCause
     SourcesFormOther,
 
     /// <summary>
-    /// A package at one of an installation's sources will not identify, or could be a file
-    /// directly in the Installer folder or is not established not to be one.
+    /// A package at one of an installation's sources will not identify and is not shown to be on
+    /// another volume than the Installer folder, or could be a file directly in the Installer
+    /// folder or is not established not to be one.
     /// </summary>
     SourcePackageNotRuledOut,
 

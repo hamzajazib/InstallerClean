@@ -446,7 +446,8 @@ public sealed class RemovableReverifier : IRemovableReverifier
             var screening = _declaredProducts!.Screen(
                 files, installations, cancellationToken, (ex, cause) => refusalLog.Record(ex, cause),
                 path => InstallerCacheHelpers.NamesAFileDirectlyInInstallerFolder(path, cacheRoot),
-                waitingOn: wait => progress?.Report(ScanProgressUpdate.Waiting(wait)));
+                waitingOn: wait => progress?.Report(ScanProgressUpdate.Waiting(wait)),
+                installerFolder: cacheRoot.Proven ? cacheRoot.Resolved : null);
             var outcomes = screening.Outcomes;
             waitCount = screening.WaitCount;
 

@@ -2922,6 +2922,117 @@ public class DeclaredProductCheckTests
         Assert.Equal(Census(unruled: 1, unseenByName: 1), screening.CachedPackages);
     }
 
+    // ---- A package in the drive whose file opens and gives no file id ----
+    //
+    // Such a package is ruled out where it is on another volume than the Installer folder,
+    // both named by their GUID paths, and keeps every copy otherwise.
+
+    private const string InstallerVolume = @"\\?\Volume{0c0c0c0c-0000-0000-0000-000000000001}\";
+    private const string DiscVolume = @"\\?\Volume{0e0e0e0e-0000-0000-0000-000000000002}\";
+
+    /// <summary>
+    /// <see cref="ACopyInstalledFromDriveE"/> with E: in the drive, its package giving
+    /// <paramref name="answer"/>, on <paramref name="discVolume"/>, and the Installer folder on
+    /// <paramref name="installerVolume"/>.
+    /// </summary>
+    private static (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+        ScriptedFileIdentities Files, MockFileSystem Disk) ACopyBesideADiscInTheDrive(
+        string where, string packageName, FileIdentityRead answer, string? discVolume, string? installerVolume)
+    {
+        var f = ACopyInstalledFromDriveE(where, packageName);
+        f.Files.Answers(DiscFolder + packageName, answer);
+        if (discVolume is not null) f.Files.OnVolume(DiscFolder + packageName, discVolume);
+        if (installerVolume is not null) f.Files.OnVolume(InstallerFolder, installerVolume);
+        return f;
+    }
+
+    [Theory]
+    [InlineData("list", DriveType.CDRom)]
+    [InlineData("install source", DriveType.CDRom)]
+    [InlineData("used last", DriveType.CDRom)]
+    [InlineData("list", DriveType.Removable)]
+    public void A_package_in_the_drive_that_gives_no_file_id_on_another_volume_lets_the_copy_through(
+        string where, DriveType eKind)
+    {
+        var f = ACopyBesideADiscInTheDrive(where, SetupName, FileIdentityRead.IdentityUnavailable, DiscVolume, InstallerVolume);
+
+        var outcome = CheckWithDriveE(f, eKind)
+            .Screen([Package(Candidate)], [], default, null, InInstallerFolder, installerFolder: InstallerFolder)
+            .Outcomes[0];
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome);
+        Assert.Contains(DiscFolder + SetupName, f.Files.VolumeReads);
+        Assert.Contains(InstallerFolder, f.Files.VolumeReads);
+    }
+
+    [Theory]
+    [InlineData(InstallerVolume, InstallerVolume)]
+    [InlineData(@"\\?\volume{0c0c0c0c-0000-0000-0000-000000000001}\", InstallerVolume)]
+    [InlineData(null, InstallerVolume)]
+    [InlineData(DiscVolume, null)]
+    public void A_package_in_the_drive_that_gives_no_file_id_keeps_every_copy_unless_shown_on_another_volume(
+        string? discVolume, string? installerVolume)
+    {
+        // The same volume, in either spelling of its GUID path, and a volume that cannot be named
+        // on either side.
+        var f = ACopyBesideADiscInTheDrive("list", SetupName, FileIdentityRead.IdentityUnavailable, discVolume, installerVolume);
+
+        var screening = CheckWithDriveE(f, DriveType.CDRom)
+            .Screen([Package(Candidate)], [], default, null, InInstallerFolder, installerFolder: InstallerFolder);
+
+        Assert.Equal((DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.SourcePackageNotRuledOut),
+            (screening.Outcomes[0], screening.InstalledCauses[0]));
+    }
+
+    [Fact]
+    public void A_package_in_the_drive_that_gives_no_file_id_keeps_every_copy_where_the_Installer_folder_is_not_given()
+    {
+        var f = ACopyBesideADiscInTheDrive("list", SetupName, FileIdentityRead.IdentityUnavailable, DiscVolume, InstallerVolume);
+
+        var screening = CheckWithDriveE(f, DriveType.CDRom)
+            .Screen([Package(Candidate)], [], default, null, InInstallerFolder);
+
+        Assert.Equal((DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.SourcePackageNotRuledOut),
+            (screening.Outcomes[0], screening.InstalledCauses[0]));
+        Assert.DoesNotContain(InstallerFolder, f.Files.VolumeReads);
+    }
+
+    [Theory]
+    [InlineData(FileIdentityRead.OpenRefused)]
+    [InlineData(FileIdentityRead.Faulted)]
+    [InlineData(FileIdentityRead.NotAPath)]
+    public void A_package_in_the_drive_that_will_not_open_keeps_every_copy_whatever_volume_it_is_on(FileIdentityRead answer)
+    {
+        var f = ACopyBesideADiscInTheDrive("list", SetupName, answer, DiscVolume, InstallerVolume);
+
+        var screening = CheckWithDriveE(f, DriveType.CDRom)
+            .Screen([Package(Candidate)], [], default, null, InInstallerFolder, installerFolder: InstallerFolder);
+
+        Assert.Equal((DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.SourcePackageNotRuledOut),
+            (screening.Outcomes[0], screening.InstalledCauses[0]));
+        Assert.Empty(f.Files.VolumeReads);
+    }
+
+    [Fact]
+    public void A_disc_in_the_drive_lets_every_copy_through_but_the_one_named_like_the_package()
+    {
+        // Installed from the disc, whose package gives no file id, with a media package path;
+        // the second copy carries the package's own name.
+        var f = ACopyBesideADiscInTheDrive("list", "c.msi", FileIdentityRead.IdentityUnavailable, DiscVolume, InstallerVolume);
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.MediaPackagePath, @"\sub\");
+        AddSecondCandidate(f);
+
+        var screening = CheckWithDriveE(f, DriveType.CDRom)
+            .Screen([Package(Candidate), Package(SecondCandidate)], [], default, null, InInstallerFolder,
+                installerFolder: InstallerFolder);
+
+        Assert.Equal(
+            new[] { DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, DeclaredProductOutcome.DeclaredProductInstalled },
+            screening.Outcomes);
+        Assert.Equal(new[] { DeclaredProductInstalledCause.None, DeclaredProductInstalledCause.ByName }, screening.InstalledCauses);
+    }
+
     [Fact]
     public void A_per_user_managed_installation_s_list_is_read_under_its_account()
     {
@@ -9908,6 +10019,21 @@ internal sealed class ScriptedFileIdentities : IFileIdentityReader
 
     public void Answers(string path, FileIdentityRead outcome) => _byPath[path] = (outcome, default);
 
+    private readonly Dictionary<string, string> _volumes = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Every path this reader was asked the volume of, in order.</summary>
+    public List<string> VolumeReads { get; } = new();
+
+    /// <summary>The path is on the volume whose GUID path is <paramref name="volume"/>.</summary>
+    public void OnVolume(string path, string volume) => _volumes[path] = volume;
+
+    /// <summary>The scripted volume, or null, which names none, for a path no test scripted one for.</summary>
+    public string? VolumeOf(string path)
+    {
+        VolumeReads.Add(path);
+        return _volumes.TryGetValue(path, out var volume) ? volume : null;
+    }
+
     public FileIdentityRead ReadOutcome(string path, out FileIdentity identity)
     {
         Reads.Add(path);
@@ -9960,6 +10086,8 @@ internal sealed class HeldFileIdentities(ScriptedFileIdentities answers) : IFile
 
         return answers.ReadOutcome(path, out identity);
     }
+
+    public string? VolumeOf(string path) => answers.VolumeOf(path);
 
     public void Dispose() => _released.Set();
 }

@@ -98,4 +98,30 @@ internal sealed class FileIdentityReader : IFileIdentityReader
             return FileIdentityRead.Faulted;
         }
     }
+
+    /// <inheritdoc />
+    public string? VolumeOf(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return null;
+
+        try
+        {
+            // Opened as ReadOutcome opens a path, so the volume named is the one the file
+            // that read reached sits on.
+            using var handle = Kernel32.CreateFile(
+                path,
+                0,
+                Kernel32.FILE_SHARE_ALL,
+                IntPtr.Zero,
+                Kernel32.OPEN_EXISTING,
+                Kernel32.FILE_FLAG_BACKUP_SEMANTICS,
+                IntPtr.Zero);
+
+            return handle.IsInvalid ? null : FileTimesReader.VolumeOf(handle);
+        }
+        catch
+        {
+            return null;
+        }
+    }
 }
