@@ -159,7 +159,7 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         // product is held against.
         var pass = new PassAnswers(_msi, installations, cancellationToken, waitingOn)
         {
-            InstallerFolderVolume = new Lazy<string?>(
+            InstallerFolderVolume = new Lazy<VolumeName?>(
                 () => installerFolder is null || _fileIdentities is null
                     ? null
                     : _fileIdentities.VolumeOf(installerFolder)),
@@ -2306,15 +2306,16 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <summary>
     /// Whether the file <paramref name="package"/> opens is on another volume than the
     /// Installer folder (<see cref="PassAnswers.InstallerFolderVolume"/>): both volumes named
-    /// by their GUID paths (<see cref="IFileIdentityReader.VolumeOf"/>), and the two different.
-    /// Every candidate is a file directly in the Installer folder, and a file is on one volume
-    /// only, so a package on another volume is none of them. Where either volume cannot be
-    /// named, or the two are the same, the answer is false.
+    /// by their GUID paths and serial numbers (<see cref="IFileIdentityReader.VolumeOf"/>), and
+    /// the two different in both (<see cref="VolumeName.IsAnotherVolumeThan"/>). Every candidate
+    /// is a file directly in the Installer folder, and a file is on one volume only, so a
+    /// package on another volume is none of them. Where either volume cannot be named, or the
+    /// two share a GUID path or a serial number, the answer is false.
     /// </summary>
     private static bool OnAnotherVolume(string package, IFileIdentityReader identities, PassAnswers pass) =>
         pass.InstallerFolderVolume.Value is { } installerFolder
         && identities.VolumeOf(package) is { } volume
-        && !string.Equals(volume, installerFolder, StringComparison.OrdinalIgnoreCase);
+        && volume.IsAnotherVolumeThan(installerFolder);
 
     /// <summary>
     /// Runs <paramref name="read"/>, a read under <paramref name="root"/>, on a thread of its
@@ -3606,13 +3607,13 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             _stops.GetOrAdd(root, _ => new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously));
 
         /// <summary>
-        /// The GUID path of the volume the Installer folder is on, from its final path as the
-        /// scan resolved it, asked the first time a package read here needs it and kept for the
-        /// pass; null where the folder was not resolved or its volume cannot be named
+        /// The volume the Installer folder is on, from its final path as the scan resolved it,
+        /// asked the first time a package read here needs it and kept for the pass; null where
+        /// the folder was not resolved or its volume cannot be named
         /// (<see cref="IFileIdentityReader.VolumeOf"/>). Its value is made once even where reads
         /// on two threads ask for it together.
         /// </summary>
-        internal Lazy<string?> InstallerFolderVolume { get; init; } = new(() => null);
+        internal Lazy<VolumeName?> InstallerFolderVolume { get; init; } = new(() => null);
 
         /// <summary>The pass's links, once the first declared code has been asked about.</summary>
         internal InstallationLinks? Links { get; set; }

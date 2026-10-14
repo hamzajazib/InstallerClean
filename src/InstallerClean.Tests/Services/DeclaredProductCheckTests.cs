@@ -2925,24 +2925,30 @@ public class DeclaredProductCheckTests
     // ---- A package in the drive whose file opens and gives no file id ----
     //
     // Such a package is ruled out where it is on another volume than the Installer folder,
-    // both named by their GUID paths, and keeps every copy otherwise.
+    // both named by their GUID paths and serial numbers and the two different in both, and
+    // keeps every copy otherwise.
 
     private const string InstallerVolume = @"\\?\Volume{0c0c0c0c-0000-0000-0000-000000000001}\";
     private const string DiscVolume = @"\\?\Volume{0e0e0e0e-0000-0000-0000-000000000002}\";
+    private const uint InstallerSerial = 0x11111111;
+    private const uint DiscSerial = 0x22222222;
 
     /// <summary>
     /// <see cref="ACopyInstalledFromDriveE"/> with E: in the drive, its package giving
-    /// <paramref name="answer"/>, on <paramref name="discVolume"/>, and the Installer folder on
-    /// <paramref name="installerVolume"/>.
+    /// <paramref name="answer"/>, on the volume <paramref name="discVolume"/> with the serial
+    /// number <paramref name="discSerial"/>, and the Installer folder on
+    /// <paramref name="installerVolume"/> with <see cref="InstallerSerial"/>. A volume given as
+    /// null is one the reader cannot name.
     /// </summary>
     private static (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
         ScriptedFileIdentities Files, MockFileSystem Disk) ACopyBesideADiscInTheDrive(
-        string where, string packageName, FileIdentityRead answer, string? discVolume, string? installerVolume)
+        string where, string packageName, FileIdentityRead answer, string? discVolume, string? installerVolume,
+        uint discSerial = DiscSerial)
     {
         var f = ACopyInstalledFromDriveE(where, packageName);
         f.Files.Answers(DiscFolder + packageName, answer);
-        if (discVolume is not null) f.Files.OnVolume(DiscFolder + packageName, discVolume);
-        if (installerVolume is not null) f.Files.OnVolume(InstallerFolder, installerVolume);
+        if (discVolume is not null) f.Files.OnVolume(DiscFolder + packageName, new VolumeName(discVolume, discSerial));
+        if (installerVolume is not null) f.Files.OnVolume(InstallerFolder, new VolumeName(installerVolume, InstallerSerial));
         return f;
     }
 
@@ -2966,16 +2972,18 @@ public class DeclaredProductCheckTests
     }
 
     [Theory]
-    [InlineData(InstallerVolume, InstallerVolume)]
-    [InlineData(@"\\?\volume{0c0c0c0c-0000-0000-0000-000000000001}\", InstallerVolume)]
-    [InlineData(null, InstallerVolume)]
-    [InlineData(DiscVolume, null)]
+    [InlineData(InstallerVolume, InstallerVolume, DiscSerial)]
+    [InlineData(@"\\?\volume{0c0c0c0c-0000-0000-0000-000000000001}\", InstallerVolume, DiscSerial)]
+    [InlineData(DiscVolume, InstallerVolume, InstallerSerial)]
+    [InlineData(null, InstallerVolume, DiscSerial)]
+    [InlineData(DiscVolume, null, DiscSerial)]
     public void A_package_in_the_drive_that_gives_no_file_id_keeps_every_copy_unless_shown_on_another_volume(
-        string? discVolume, string? installerVolume)
+        string? discVolume, string? installerVolume, uint discSerial)
     {
-        // The same volume, in either spelling of its GUID path, and a volume that cannot be named
-        // on either side.
-        var f = ACopyBesideADiscInTheDrive("list", SetupName, FileIdentityRead.IdentityUnavailable, discVolume, installerVolume);
+        // The same GUID path, in either spelling, with another serial number; another GUID path
+        // with the same serial number; and a volume that cannot be named on either side.
+        var f = ACopyBesideADiscInTheDrive(
+            "list", SetupName, FileIdentityRead.IdentityUnavailable, discVolume, installerVolume, discSerial);
 
         var screening = CheckWithDriveE(f, DriveType.CDRom)
             .Screen([Package(Candidate)], [], default, null, InInstallerFolder, installerFolder: InstallerFolder);
@@ -10019,16 +10027,16 @@ internal sealed class ScriptedFileIdentities : IFileIdentityReader
 
     public void Answers(string path, FileIdentityRead outcome) => _byPath[path] = (outcome, default);
 
-    private readonly Dictionary<string, string> _volumes = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, VolumeName> _volumes = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Every path this reader was asked the volume of, in order.</summary>
     public List<string> VolumeReads { get; } = new();
 
-    /// <summary>The path is on the volume whose GUID path is <paramref name="volume"/>.</summary>
-    public void OnVolume(string path, string volume) => _volumes[path] = volume;
+    /// <summary>The path is on the volume <paramref name="volume"/> names.</summary>
+    public void OnVolume(string path, VolumeName volume) => _volumes[path] = volume;
 
     /// <summary>The scripted volume, or null, which names none, for a path no test scripted one for.</summary>
-    public string? VolumeOf(string path)
+    public VolumeName? VolumeOf(string path)
     {
         VolumeReads.Add(path);
         return _volumes.TryGetValue(path, out var volume) ? volume : null;
@@ -10087,7 +10095,7 @@ internal sealed class HeldFileIdentities(ScriptedFileIdentities answers) : IFile
         return answers.ReadOutcome(path, out identity);
     }
 
-    public string? VolumeOf(string path) => answers.VolumeOf(path);
+    public VolumeName? VolumeOf(string path) => answers.VolumeOf(path);
 
     public void Dispose() => _released.Set();
 }

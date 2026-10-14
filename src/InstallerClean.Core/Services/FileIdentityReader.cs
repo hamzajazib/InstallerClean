@@ -100,14 +100,14 @@ internal sealed class FileIdentityReader : IFileIdentityReader
     }
 
     /// <inheritdoc />
-    public string? VolumeOf(string path)
+    public VolumeName? VolumeOf(string path)
     {
         if (string.IsNullOrEmpty(path)) return null;
 
         try
         {
             // Opened as ReadOutcome opens a path, so the volume named is the one the file
-            // that read reached sits on.
+            // that read reached sits on. Both halves of the name are read off this one handle.
             using var handle = Kernel32.CreateFile(
                 path,
                 0,
@@ -117,7 +117,12 @@ internal sealed class FileIdentityReader : IFileIdentityReader
                 Kernel32.FILE_FLAG_BACKUP_SEMANTICS,
                 IntPtr.Zero);
 
-            return handle.IsInvalid ? null : FileTimesReader.VolumeOf(handle);
+            if (handle.IsInvalid || FileTimesReader.VolumeOf(handle) is not { } guidPath) return null;
+
+            return Kernel32.GetVolumeSerialNumberByHandle(
+                handle, IntPtr.Zero, 0, out var serialNumber, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 0)
+                ? new VolumeName(guidPath, serialNumber)
+                : null;
         }
         catch
         {

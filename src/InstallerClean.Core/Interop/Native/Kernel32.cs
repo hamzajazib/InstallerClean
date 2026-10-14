@@ -436,6 +436,24 @@ internal static partial class Kernel32
         [MarshalUsing(CountElementName = nameof(nFileSystemNameSize))] char[] lpFileSystemNameBuffer,
         uint nFileSystemNameSize);
 
+    /// <summary>
+    /// The serial number of the volume that holds the file behind <paramref name="hFile"/>,
+    /// asked of the handle for the reason <see cref="GetVolumeInformationByHandle"/> gives. The
+    /// same entry point, with the serial number the only output asked for and every other
+    /// passed as a null pointer.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "GetVolumeInformationByHandleW", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetVolumeSerialNumberByHandle(
+        SafeFileHandle hFile,
+        IntPtr lpVolumeNameBuffer,
+        uint nVolumeNameSize,
+        out uint lpVolumeSerialNumber,
+        IntPtr lpMaximumComponentLength,
+        IntPtr lpFileSystemFlags,
+        IntPtr lpFileSystemNameBuffer,
+        uint nFileSystemNameSize);
+
     [StructLayout(LayoutKind.Sequential)]
     public struct FILETIME
     {
