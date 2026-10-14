@@ -120,10 +120,10 @@ public enum DeclaredProductInstalledCause
     SourcesRegistryDiffers,
 
     /// <summary>
-    /// An installation's sources hold something the check does not compare: a URL, a media
-    /// package path, an entry, a package name, a source used last or an <c>InstallSource</c>
-    /// naming a variable, holding a null or in a form not compared, or a source used last that is
-    /// not a network source.
+    /// An installation's sources hold something the check does not compare: a URL other than an
+    /// http or https address, a media package path, an entry, a package name, a source used last
+    /// or an <c>InstallSource</c> naming a variable, holding a null or in a form not compared, or
+    /// a source used last that is neither a network source nor an http or https address.
     /// </summary>
     SourcesFormNotCompared,
 

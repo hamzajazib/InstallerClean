@@ -1237,10 +1237,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         RegistryDiffers,
 
         /// <summary>
-        /// The sources hold something not compared: a URL, a media package path, a package name
-        /// that is empty or holds a '\', a '/', a ':', a '%' or a null, or an entry, a source used
-        /// last or an <c>InstallSource</c> naming a variable, holding a null or in a form not
-        /// compared, or a source used last that is not a network folder.
+        /// The sources hold something not compared: a URL other than a web address
+        /// (<see cref="IsWebAddress"/>), a media package path, a package name that is empty or
+        /// holds a '\', a '/', a ':', a '%' or a null, or an entry, a source used last or an
+        /// <c>InstallSource</c> naming a variable, holding a null or in a form not compared, or a
+        /// source used last that is neither a network folder nor a web address.
         /// </summary>
         FormNotCompared,
 
@@ -1712,8 +1713,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// spelling, case included.
     /// Everything else on the list is read to decide whether the copy is kept, and it is
     /// kept for any of these:
-    /// - A URL ENTRY, WHATEVER ITS SCHEME. A web address can name this PC as well as any
-    ///   other. No URL is compared, and one on the list keeps the copy.
+    /// - A URL ENTRY OTHER THAN A WEB ADDRESS (<see cref="IsWebAddress"/>). The package at a
+    ///   web address is one Windows Installer downloads from a web server, so the address is
+    ///   not compared and keeps nothing. A FILE address names a path in a spelling this check
+    ///   does not compare, and it keeps the copy, as an address of any other scheme does.
     /// - AN ENTRY NAMING AN ENVIRONMENT VARIABLE, one holding a '%'. Whoever reads the
     ///   entry may expand the variable in its own environment, so the folder Windows
     ///   Installer looks in need not be the text compared.
@@ -1728,8 +1731,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     ///   the numbering or anywhere else, keeps the copy. So does a package name the key
     ///   holds otherwise than the API answers it, or holds as a REG_EXPAND_SZ
     ///   (<see cref="HoldsThePackageName"/>).
-    /// - A SOURCE USED LAST THAT IS NOT A NETWORK SOURCE, it being the one Windows
-    ///   Installer tries first, or that the registry holds differently
+    /// - A SOURCE USED LAST THAT IS NEITHER A NETWORK SOURCE NOR A WEB ADDRESS, it being the
+    ///   one Windows Installer tries first, or that the registry holds differently
     ///   (<see cref="SourceUsedLastOf"/>).
     /// - A MEDIA PACKAGE PATH, the package's path on the installation media
     ///   (<see cref="NamesNoMediaPackagePath"/>). No media source is compared, and a list
@@ -1837,7 +1840,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         var urls = SourcesOf(code, sid, context, MsiSourceListOptions.Url);
         if (urls is null) return Refuse(SourceRefusal.WouldNotRead, out refusal);
-        if (urls.Count > 0) return Refuse(SourceRefusal.FormNotCompared, out refusal);
+
+        // A web address on the list is not compared, and any other URL keeps the copy.
+        foreach (var url in urls)
+            if (!IsWebAddress(url)) return Refuse(SourceRefusal.FormNotCompared, out refusal);
 
         // An entry naming an environment variable keeps the copy, and so does one holding
         // a null, which would cut the entry short wherever it is read as a path, and one of
@@ -2512,7 +2518,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// The folder Windows Installer used last as the source of one installation of a
     /// product, the one it tries first: the folder; an empty string where the API and the
     /// registry agree that there is none, Windows Installer then going straight to the
-    /// list; or null, which keeps the file.
+    /// list, or that it is a web address (<see cref="IsWebAddress"/>), which has no folder
+    /// to compare; or null, which keeps the file.
     ///
     /// THE REGISTRY HOLDS IT AS ONE VALUE of the <c>SourceList</c> key,
     /// <paramref name="sourceList"/>: the source's type, its index on the list and its
@@ -2525,10 +2532,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// spelling Windows Installer recorded, case included, the file that path opens is the
     /// one compared.
     ///
-    /// NULL for: a read through the API that fails; a URL or a media source, or a source
-    /// of any other kind; one the registry holds differently; and a folder holding a '%'
-    /// or a null, or starting neither with a drive letter, a ':' and a '\' nor with two
-    /// '\', for the reasons a list entry like it keeps the file. <paramref name="refusal"/>
+    /// NULL for: a read through the API that fails; a URL source other than a web address,
+    /// a media source, or a source of any other kind; one the registry holds differently;
+    /// and a folder holding a '%' or a null, or starting neither with a drive letter, a ':'
+    /// and a '\' nor with two '\', for the reasons a list entry like it keeps the file. A
+    /// source is taken as a web address only where the registry agrees with the API on
+    /// its type and its text, and the API gives it the URL type. <paramref name="refusal"/>
     /// says which kind of check answered null, and is <see cref="SourceRefusal.None"/> for
     /// every other answer.
     /// </summary>
@@ -2564,6 +2573,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             || !string.Equals(parts[2], folder, StringComparison.Ordinal))
             return Refused(SourceRefusal.RegistryDiffers, out refusal);
 
+        if (string.Equals(folderType, "u", StringComparison.Ordinal) && IsWebAddress(folder))
+        {
+            refusal = SourceRefusal.None;
+            return string.Empty;
+        }
+
         if (folder.Length == 0
             || !string.Equals(folderType, "n", StringComparison.Ordinal)
             || folder.Contains('%')
@@ -2579,7 +2594,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// The folder one installation of a product records as its <c>InstallSource</c>, read
     /// through the API and from the installation's <c>InstallProperties</c> key
     /// (<see cref="InstallPropertiesKeyPath"/>): the folder; an empty string where the
-    /// two agree that there is none; or null, which keeps the file.
+    /// two agree that there is none, or that it is a web address
+    /// (<see cref="IsWebAddress"/>), which has no folder to compare; or null, which keeps
+    /// the file.
     ///
     /// NULL for: a read through the API that fails; a key that is not there or will not
     /// read, and a context or account that will not make its path; a key whose
@@ -2588,7 +2605,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// starts neither with a drive letter, a ':' and a '\' nor with two '\'. A
     /// REG_EXPAND_SZ is refused even where its text is the same, being a value its reader
     /// may expand in the reader's own environment. Only those two forms of folder are
-    /// compared, so a URL and any form not named here keep the file.
+    /// compared, so a URL other than a web address and any form not named here keep the
+    /// file. A web address is taken as one only where the key agrees with the API.
     /// <paramref name="refusal"/> says which kind of check answered null, and is
     /// <see cref="SourceRefusal.None"/> for every other answer.
     /// </summary>
@@ -2615,6 +2633,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                 && stored is { Kind: RegistryValueKind.String } value
                 && string.Equals(value.Text, folder, StringComparison.Ordinal);
         if (!agrees) return Refused(SourceRefusal.RegistryDiffers, out refusal);
+
+        if (IsWebAddress(folder))
+        {
+            refusal = SourceRefusal.None;
+            return string.Empty;
+        }
 
         if (folder.Length > 0 && (folder.Contains('%') || folder.Contains('\0') || !IsOnADriveOrAShare(folder)))
             return Refused(SourceRefusal.FormNotCompared, out refusal);
@@ -2643,6 +2667,27 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     private static bool IsOnADriveOrAShare(string folder) =>
         (folder.Length >= 3 && char.IsAsciiLetter(folder[0]) && folder[1] == ':' && folder[2] == '\\')
         || folder.StartsWith(@"\\", StringComparison.Ordinal);
+
+    /// <summary>
+    /// Whether <paramref name="source"/> is a web address: text starting with "http://" or
+    /// "https://", the scheme's letters in either case and ASCII only. Windows Installer
+    /// downloads the package at such an address to a cache location of its own before it
+    /// uses it (Microsoft, "Downloading an Installation from the Internet"), so the package
+    /// is whatever the web server there sends, and no folder is compared for it. A '%' or a
+    /// null after the scheme leaves it an address on a web server, so neither is tested for
+    /// here. Text in any other form is not one, a FILE address included, which is a path in
+    /// another spelling.
+    /// </summary>
+    private static bool IsWebAddress(string source) =>
+        StartsWithAsciiIgnoringCase(source, "http://") || StartsWithAsciiIgnoringCase(source, "https://");
+
+    /// <summary>
+    /// Whether <paramref name="text"/> starts with <paramref name="prefix"/>, ASCII letters
+    /// compared without case and every other character as it is, so only a scheme spelt in
+    /// ASCII matches.
+    /// </summary>
+    private static bool StartsWithAsciiIgnoringCase(string text, string prefix) =>
+        text.Length >= prefix.Length && Ascii.EqualsIgnoreCase(text.AsSpan(0, prefix.Length), prefix);
 
     /// <summary>
     /// Whether <paramref name="key"/> holds exactly <paramref name="entries"/>: values

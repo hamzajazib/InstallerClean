@@ -25,7 +25,7 @@ namespace InstallerClean.Tests.Services;
 /// installation of that product recording a package that is present and is another
 /// file, with none of them per user and unmanaged and no source of it reaching the
 /// file. Every source list read has to be held in the registry as the API returns it and
-/// hold no URL. For a patch the same two: a POSITIVE answer that Windows holds no
+/// hold no URL but http or https addresses. For a patch the same two: a POSITIVE answer that Windows holds no
 /// registration of the declared patch, and every registration of it recording a cached
 /// copy that is present and is another file. Every inability keeps the file.
 ///
@@ -628,11 +628,22 @@ public class DeclaredProductCheckTests
     }
 
     [Fact]
-    public void A_copy_is_kept_when_the_running_accounts_own_source_list_holds_a_url()
+    public void A_copy_is_let_through_when_the_running_accounts_own_source_list_holds_a_web_address()
     {
-        // The list is judged as any other is once it is read, and a URL on it keeps the copy.
+        // The list is judged as any other is once it is read, and a web address on it is not
+        // compared.
         var f = ACopyBesideAPerUserUnmanagedInstallation();
         f.Msi.RecordsUrls(ProductA, isPatch: false, UserSid, MsiInstallContext.UserUnmanaged, "https://example.com/setup/");
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile,
+            ScreenTheCopy(f, runningAccount: new Account(UserSid)));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_running_accounts_own_source_list_holds_a_url_that_is_no_web_address()
+    {
+        var f = ACopyBesideAPerUserUnmanagedInstallation();
+        f.Msi.RecordsUrls(ProductA, isPatch: false, UserSid, MsiInstallContext.UserUnmanaged, "file:///D:/Other/");
 
         AssertKeptFor(DeclaredProductInstalledCause.SourcesFormNotCompared, f, runningAccount: new Account(UserSid));
     }
@@ -2090,14 +2101,72 @@ public class DeclaredProductCheckTests
 
     [Theory]
     [InlineData("http://localhost/setup/")]
-    [InlineData("file:///D:/Other/")]
-    [InlineData("ftp://server/setup/")]
-    public void A_copy_is_kept_when_its_list_holds_a_URL(string url)
+    [InlineData("https://example.com/setup/")]
+    [InlineData("HTTPS://Example.com/Setup/")]
+    [InlineData("Http://server/set%20up/")]
+    [InlineData("http://server/set\0up/")]
+    public void A_copy_is_let_through_when_its_list_holds_a_web_address(string url)
     {
+        // A web address is not compared and no package is read for it, so the copy is decided
+        // by the rest of its sources.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsUrls(ProductA, isPatch: false, null, MsiInstallContext.Machine, url);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+        Assert.DoesNotContain(f.Files.Reads, read => read.Contains("//", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("file:///D:/Other/")]
+    [InlineData("file://localhost/C:/Windows/Installer/")]
+    [InlineData("ftp://server/setup/")]
+    [InlineData("gopher://server/setup/")]
+    [InlineData("http:/server/setup/")]
+    [InlineData("http:\\server\\setup\\")]
+    [InlineData(" http://server/setup/")]
+    [InlineData("http\u017F://server/setup/")]
+    [InlineData(@"\\server\setup\")]
+    public void A_copy_is_kept_when_its_list_holds_a_URL_that_is_no_web_address(string url)
+    {
+        // The last but one is "https" with a long s, which only a case rule beyond ASCII would
+        // read as an "s". The last is a share's spelling on the URL list.
         var f = ACopyBesideTheRecordedPackage();
         f.Msi.RecordsUrls(ProductA, isPatch: false, null, MsiInstallContext.Machine, url);
 
         AssertKeptFor(DeclaredProductInstalledCause.SourcesFormNotCompared, f);
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_its_list_holds_a_web_address_and_a_URL_that_is_no_web_address()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsUrls(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            "https://example.com/setup/", "file:///D:/Other/");
+
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormNotCompared, f);
+    }
+
+    [Fact]
+    public void A_copy_is_let_through_when_its_list_holds_two_web_addresses()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsUrls(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            "http://localhost/setup/", "https://example.com/setup/");
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_its_list_holds_a_web_address_and_the_folder_it_was_installed_from_holds_the_copy()
+    {
+        // The web address keeps nothing, so the rest of the sources are read as they are for
+        // any list, and the package in the folder it was installed from is the copy.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsUrls(ProductA, isPatch: false, null, MsiInstallContext.Machine, "https://example.com/setup/");
+        f.Msi.RecordsInstallSource(ProductA, null, MsiInstallContext.Machine, OtherFolder);
+        f.Files.Opens(OtherPackage, 1);
+
+        AssertKeptFor(DeclaredProductInstalledCause.IsAtItsSources, f);
     }
 
     [Fact]
@@ -2147,11 +2216,15 @@ public class DeclaredProductCheckTests
     }
 
     [Theory]
-    [InlineData("u", "http://localhost/setup/")]
+    [InlineData("u", "file:///D:/Other/")]
+    [InlineData("u", "ftp://server/setup/")]
     [InlineData("m", @"E:\")]
     [InlineData("u", SetupFolder)]
     [InlineData("x", SetupFolder)]
-    public void A_copy_is_kept_when_the_source_used_last_is_not_a_network_source(string type, string source)
+    [InlineData("n", "http://localhost/setup/")]
+    [InlineData("m", "http://localhost/setup/")]
+    public void A_copy_is_kept_when_the_source_used_last_is_neither_a_network_source_nor_a_web_address(
+        string type, string source)
     {
         var f = ACopyBesideTheRecordedPackage();
         f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
@@ -2160,6 +2233,37 @@ public class DeclaredProductCheckTests
             MsiInstallProperty.LastUsedSource, source);
 
         AssertKeptFor(DeclaredProductInstalledCause.SourcesFormNotCompared, f);
+    }
+
+    [Theory]
+    [InlineData("http://localhost/setup/")]
+    [InlineData("HTTPS://Example.com/Set%20up/")]
+    public void A_copy_is_let_through_when_the_source_used_last_is_a_web_address(string source)
+    {
+        // No folder is compared for it, so no package is read there.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedType, "u");
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedSource, source);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+        Assert.DoesNotContain(f.Files.Reads, read => read.Contains("//", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_registry_holds_a_web_address_used_last_otherwise_than_the_API_answers()
+    {
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedType, "u");
+        f.Msi.ListProperty(ProductA, isPatch: false, null, MsiInstallContext.Machine,
+            MsiInstallProperty.LastUsedSource, "http://localhost/setup/");
+        f.Msi.Registry.Holds(ProductAKey,
+            Sz(MsiInstallProperty.PackageName, SetupName),
+            ExpandSz(MsiInstallProperty.LastUsedSource, "u;1;http://elsewhere/setup/"));
+
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesRegistryDiffers, f);
     }
 
     [Fact]
@@ -2711,14 +2815,30 @@ public class DeclaredProductCheckTests
         AssertKeptFor(DeclaredProductInstalledCause.SourcesRegistryDiffers, f);
     }
 
-    [Fact]
-    public void A_copy_is_kept_when_the_InstallProperties_key_holds_the_InstallSource_as_a_REG_EXPAND_SZ()
+    [Theory]
+    [InlineData(SetupFolder)]
+    [InlineData("http://localhost/setup/")]
+    public void A_copy_is_kept_when_the_InstallProperties_key_holds_the_InstallSource_as_a_REG_EXPAND_SZ(string folder)
     {
         // The API's own text, so only the type keeps the copy.
         var f = ACopyBesideTheRecordedPackage();
-        f.Msi.Registry.Holds(ProductAProperties, ExpandSz(MsiInstallProperty.InstallSource, SetupFolder));
+        f.Msi.RecordsInstallSource(ProductA, null, MsiInstallContext.Machine, folder);
+        f.Msi.Registry.Holds(ProductAProperties, ExpandSz(MsiInstallProperty.InstallSource, folder));
 
         AssertKeptFor(DeclaredProductInstalledCause.SourcesRegistryDiffers, f);
+    }
+
+    [Theory]
+    [InlineData("http://localhost/setup/")]
+    [InlineData("https://server/set%25up/")]
+    public void A_copy_is_let_through_when_the_folder_its_product_was_installed_from_is_a_web_address(string folder)
+    {
+        // No folder is compared for it, so no package is read there.
+        var f = ACopyBesideTheRecordedPackage();
+        f.Msi.RecordsInstallSource(ProductA, null, MsiInstallContext.Machine, folder);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f));
+        Assert.DoesNotContain(f.Files.Reads, read => read.Contains("//", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -2755,8 +2875,8 @@ public class DeclaredProductCheckTests
     }
 
     [Theory]
-    [InlineData("http://localhost/setup/")]
     [InlineData("file:///D:/Other/")]
+    [InlineData("ftp://server/setup/")]
     [InlineData(@"Other\")]
     [InlineData(@"D:Other\")]
     [InlineData(@"\Other\")]
@@ -5033,8 +5153,8 @@ public class DeclaredProductCheckTests
     /// <summary>A second installation of the same shape, registered under another code.</summary>
     private const string AnotherWithNoCachedPackage = "{BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB}";
 
-    /// <summary>A URL entry, which no source list read here can rule out.</summary>
-    private const string SetupUrl = "https://example.com/setup/";
+    /// <summary>A URL entry that is no web address, which no source list read here can rule out.</summary>
+    private const string SetupUrl = "ftp://example.com/setup/";
 
     /// <summary>
     /// The candidate declares product A, which is not installed. The one installation listed is

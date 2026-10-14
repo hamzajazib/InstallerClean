@@ -1415,8 +1415,9 @@ public sealed record MachineInfo(
 /// </param>
 /// <param name="DeclaredInstalledSourcesFormNotComparedCount">
 /// Those whose program has an installation whose sources hold something the screen does not
-/// compare: a URL, a media package path, a variable, a form not compared, or a source used last
-/// that is not a network folder (<see cref="DeclaredProductInstalledCauses.SourcesFormNotCompared"/>).
+/// compare: a URL other than an http or https address, a media package path, a variable, a form
+/// not compared, or a source used last that is neither a network folder nor an http or https
+/// address (<see cref="DeclaredProductInstalledCauses.SourcesFormNotCompared"/>).
 /// </param>
 /// <param name="DeclaredInstalledSourcePackageNotRuledOutCount">
 /// Those whose program has an installation with a package at a source that would not identify or
