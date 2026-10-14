@@ -31,6 +31,11 @@ internal static class Program
 
     public static int Main(string[] args)
     {
+        // No critical-error box for the whole run: a read reaching a drive with no disc or card in
+        // it answers with an error rather than waiting on a box that a scheduled task has nobody
+        // to dismiss.
+        StorageHelpers.TurnOffCriticalErrorBoxForTheProcess();
+
         // A throw out of Run (a name or ACL clash constructing the single-instance
         // mutex, say) would otherwise reach the runtime's default handler:
         // ex.ToString() to stderr (a cross-profile path leak under elevation), no

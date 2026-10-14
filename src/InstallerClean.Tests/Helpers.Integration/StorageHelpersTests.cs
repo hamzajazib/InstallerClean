@@ -222,4 +222,29 @@ public class StorageHelpersTests
         Assert.Equal(OtherFlag | Kernel32.SEM_FAILCRITICALERRORS, during);
         Assert.Equal(OtherFlag, after);
     }
+
+    /// <summary>
+    /// The call each host makes as it starts adds the flag that turns off the critical-error box
+    /// to the process's mode and keeps the process's other flags. The process's mode is put back
+    /// afterwards, so no other test runs under a mode this one set.
+    /// </summary>
+    [Fact]
+    public void TurnOffCriticalErrorBoxForTheProcess_adds_the_flag_and_keeps_the_others()
+    {
+        // SEM_NOGPFAULTERRORBOX, a flag the call does not set and must keep.
+        const uint OtherFlag = 0x0002;
+        var original = Kernel32.GetErrorMode();
+        try
+        {
+            Kernel32.SetErrorMode(OtherFlag);
+
+            StorageHelpers.TurnOffCriticalErrorBoxForTheProcess();
+
+            Assert.Equal(OtherFlag | Kernel32.SEM_FAILCRITICALERRORS, Kernel32.GetErrorMode());
+        }
+        finally
+        {
+            Kernel32.SetErrorMode(original);
+        }
+    }
 }

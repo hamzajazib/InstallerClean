@@ -61,7 +61,7 @@ internal sealed class FileTimesReader : IFileTimesReader
 
             if (handle.IsInvalid)
             {
-                // Read at once and only on this branch; see FileIdentityReader.
+                // Read at once and only on this branch; StorageHelpers.OpenForMetadata says why.
                 var error = Marshal.GetLastWin32Error();
                 return error is Kernel32.ERROR_FILE_NOT_FOUND or Kernel32.ERROR_PATH_NOT_FOUND
                     ? FileTimesRead.NamesNothing

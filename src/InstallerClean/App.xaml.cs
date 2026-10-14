@@ -54,6 +54,10 @@ public partial class App : Application
     /// </remarks>
     protected override async void OnStartup(StartupEventArgs e)
     {
+        // No critical-error box for the whole session: a read reaching a drive with no disc or
+        // card in it answers with an error rather than stopping on a box.
+        StorageHelpers.TurnOffCriticalErrorBoxForTheProcess();
+
         base.OnStartup(e);
 
         // Apply the saved UI-language preference before anything reads a

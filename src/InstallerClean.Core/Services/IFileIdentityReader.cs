@@ -180,10 +180,10 @@ public interface IFileIdentityReader
     /// The volume holding the file or folder <paramref name="path"/> names, opened as
     /// <see cref="ReadOutcome"/> opens it, links followed, and named by its GUID path and its
     /// serial number read off that one handle (<see cref="VolumeName"/>); or null where it does
-    /// not open, or yields no GUID path or no serial number. A reader that names no volumes
-    /// answers null.
+    /// not open, or yields no GUID path or no serial number. Give it no default answer, for the
+    /// reason <see cref="ReadOutcomeWithVolume"/> has none.
     /// </summary>
-    VolumeName? VolumeOf(string path) => null;
+    VolumeName? VolumeOf(string path);
 }
 
 /// <summary>

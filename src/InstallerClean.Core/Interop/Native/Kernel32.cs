@@ -310,8 +310,19 @@ internal static partial class Kernel32
     public static partial uint GetThreadErrorMode();
 
     /// <summary>
-    /// The error mode under which the system shows no critical-error box
-    /// (<see cref="SetThreadErrorMode"/>).
+    /// Sets the error mode of the process to <paramref name="uMode"/> and answers the mode it
+    /// replaces. A thread's own mode (<see cref="SetThreadErrorMode"/>) is set apart from it.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "SetErrorMode")]
+    public static partial uint SetErrorMode(uint uMode);
+
+    /// <summary>The error mode of the process (<see cref="SetErrorMode"/>).</summary>
+    [LibraryImport(Library, EntryPoint = "GetErrorMode")]
+    public static partial uint GetErrorMode();
+
+    /// <summary>
+    /// The error mode under which the system shows no critical-error box, for a thread
+    /// (<see cref="SetThreadErrorMode"/>) or for the process (<see cref="SetErrorMode"/>).
     /// </summary>
     public const uint SEM_FAILCRITICALERRORS = 0x0001;
 

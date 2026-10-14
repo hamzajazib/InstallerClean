@@ -290,8 +290,16 @@ internal static class StorageHelpers
     /// with no disc or card in it answers with an error rather than Windows asking for one.
     /// <paramref name="error"/> is the error the open answered where the handle is invalid, read
     /// before anything else on the thread can overwrite it, and 0 where it opened: the last error
-    /// after a successful open is whatever the last failure anywhere left behind. Every open of a
-    /// path for its identity, its volume or its final name is made here.
+    /// after a successful open is whatever the last failure anywhere left behind. Read the error
+    /// from <paramref name="error"/> and never from <c>Marshal.GetLastWin32Error</c> after this
+    /// returns, which answers about the call that put the thread's mode back.
+    ///
+    /// <c>FileIdentityReader</c>'s reads of a path's identity and its volume, and the final-path
+    /// resolution <see cref="InstallerCacheHelpers"/> makes (<c>Win32FinalPathKernel</c>), open
+    /// here. Every other read in the app runs under the process's error mode, which each host sets
+    /// as it starts so that no critical-error box is shown
+    /// (<see cref="TurnOffCriticalErrorBoxForTheProcess"/>). This open sets the thread's own mode
+    /// as well, so it shows no box where Core runs without a host.
     /// </summary>
     /// <remarks>
     /// NO ACCESS BITS AT ALL. The metadata a caller asks for needs none, and requesting read
@@ -317,6 +325,26 @@ internal static class StorageHelpers
             IntPtr.Zero);
         error = handle.IsInvalid ? System.Runtime.InteropServices.Marshal.GetLastWin32Error() : 0;
         return handle;
+    }
+
+    /// <summary>
+    /// Turns off, for the whole process, the box Windows shows when a read reaches a drive with
+    /// no disc or card in it (<see cref="Kernel32.SEM_FAILCRITICALERRORS"/>), keeping the process's
+    /// other error-mode flags, so a read the app makes of such a drive answers with an error
+    /// instead of waiting on the person. Each host calls it once, first thing as it starts;
+    /// nothing in Core calls it, so Core run without a host changes no process state. A call that
+    /// cannot be made changes nothing.
+    /// </summary>
+    internal static void TurnOffCriticalErrorBoxForTheProcess()
+    {
+        try
+        {
+            Kernel32.SetErrorMode(Kernel32.GetErrorMode() | Kernel32.SEM_FAILCRITICALERRORS);
+        }
+        catch
+        {
+            // Not on Windows: there is no box to turn off.
+        }
     }
 
     /// <summary>
