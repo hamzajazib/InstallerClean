@@ -67,8 +67,9 @@ namespace InstallerClean.Services;
 /// anything but a REG_SZ. So it is while an installation's <c>InstallSource</c> will
 /// not read, is held in the registry otherwise than the API answers it or as anything
 /// but a REG_SZ, names an environment variable, or starts neither with a drive letter,
-/// a ':' and a '\' nor with two '\'. An installation in a per-user-unmanaged context
-/// keeps it as well, its source list not being read.
+/// a ':' and a '\' nor with two '\'. An installation in the per-user-unmanaged context
+/// of an account other than the one this check runs as keeps it as well, its source list
+/// not being read.
 ///
 /// A REGISTERED PATCH DOES NOT ON ITS OWN MAKE THIS FILE A COPY OF IT WINDOWS OPENS
 /// EITHER.
@@ -328,8 +329,8 @@ public enum DeclaredProductOutcome
     /// that is not there is covered unless it is a plain path on a drive Windows reports as
     /// local, the identity read answers that it names nothing, and the installation's
     /// <c>InstallProperties</c> key holds that same text; it is covered for an installation
-    /// in a per-user-unmanaged context, or of an account other than the one this check runs
-    /// as, where the installation's package code does not read through the API and from the
+    /// of an account other than the one this check runs as, where the installation's package
+    /// code does not read through the API and from the
     /// registry alike, where this file carries that package code or its own does not read,
     /// and otherwise through the installation's sources, below. An
     /// empty value is covered where the installation's <c>InstallProperties</c> key holds a
@@ -343,10 +344,11 @@ public enum DeclaredProductOutcome
     /// failed there took more time between them than the check allows, or all the reads
     /// there took more time between them than the check allows one drive or share, whatever
     /// each answered), a source not on a local drive that is the Installer folder itself or
-    /// cannot be resolved, and an installation in a per-user-unmanaged context, whose
-    /// source list is not read. It covers a source list holding a URL, an entry naming an
-    /// environment variable or starting neither with a drive letter, a ':' and a '\' nor
-    /// with two '\', a media package path or a package name naming a folder, a drive, a
+    /// cannot be resolved, and an installation in the per-user-unmanaged context of an
+    /// account other than the one this check runs as, whose source list is not read. It
+    /// covers a source list holding a URL, an entry naming an environment variable or
+    /// starting neither with a drive letter, a ':' and a '\' nor with two '\', a media
+    /// package path or a package name naming a folder, a drive, a
     /// stream or a variable, or holding a null, one whose source used last is not a network
     /// source, and one whose registry key does not hold what the API returned for it,
     /// package name included, or holds that name as anything but a REG_SZ. It covers an
@@ -377,7 +379,8 @@ public enum DeclaredProductOutcome
     /// installation whose cached package declares it, every such installation records a
     /// cached package that is present, is a different file, and itself declares the
     /// same product, or records one that names nothing and a package code this file does not
-    /// carry, or records none, no installation is in a per-user-unmanaged context,
+    /// carry, or records none, no installation is in the per-user-unmanaged context of an
+    /// account other than the one this check runs as,
     /// and no package in a folder on an installation's source list, in the folder it used last as a
     /// source or in its <c>InstallSource</c> is this file or, on a root other than a local
     /// drive, would be a file directly in the Installer folder, a package in a folder on
@@ -546,10 +549,10 @@ public enum DeclaredProductOutcome
     /// Where a single installation's packages cannot all be seen it covers what
     /// <see cref="DeclaredProductInstalled"/> covers for one: a cached package that will
     /// not read, names nothing identifiable or yields no product code, and every source the
-    /// check cannot rule out, a per-user-unmanaged context and a source in the Installer
-    /// folder among them. An installation recording no cached package is read by its sources
-    /// alone, and only where its <c>InstallProperties</c> key shows it records none; a key that
-    /// does not is covered too. A check constructed without its two file
+    /// check cannot rule out, another account's per-user-unmanaged context and a source in
+    /// the Installer folder among them. An installation recording no cached package is read by
+    /// its sources alone, and only where its <c>InstallProperties</c> key shows it records none;
+    /// a key that does not is covered too. A check constructed without its two file
     /// readers or its registry reader, or screening without the Installer folder to
     /// compare against, answers this beside every such installation, having no way to
     /// look.

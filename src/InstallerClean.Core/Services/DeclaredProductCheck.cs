@@ -41,10 +41,11 @@ namespace InstallerClean.Services;
 /// For each candidate patch it reads the patch's own code and the products its Template
 /// names, finds the registrations of that patch through the machine-wide patch
 /// enumeration and the keyed patch read, and reads the <c>LocalPackage</c> each
-/// registration records. A product's source list in a per-user-unmanaged context is
-/// not read, and an installation in one keeps the file. Every source list it does read
-/// is read twice, through the API and from the registry key that holds it, and a list
-/// the two do not agree on keeps the file. Every <c>InstallSource</c> it reads is read
+/// registration records. A product's source list in another account's per-user-unmanaged
+/// context is not read, and an installation in one keeps the file; one in the account this
+/// process runs as is read like any other. Every source list it does read is read twice,
+/// through the API and from the registry key that holds it, and a list the two do not
+/// agree on keeps the file. Every <c>InstallSource</c> it reads is read
 /// the same two ways, and one the two do not agree on keeps the file too.
 ///
 /// IT COMPOSES THINGS THAT ALREADY EXIST. The reading of each file, package or
@@ -527,12 +528,12 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// installation's packages can fail to be seen reaches it: a <c>LocalPackage</c> read
     /// that failed, a value that names nothing, names a folder, will not open to an
     /// identity, or names a file that yields no product code; any source
-    /// <see cref="AddSourcePackages"/> cannot rule out, a per-user-unmanaged context among
-    /// them, an installation recording no cached package being judged by its sources alone
-    /// unless it has no package to open at all (<see cref="OpensNoPackage"/>), and only where
-    /// its <c>InstallProperties</c> key records none as well; and a check built without its
-    /// file readers, having no way to look. One such installation is
-    /// enough, because any candidate could be the package it opens.
+    /// <see cref="AddSourcePackages"/> cannot rule out, another account's per-user-unmanaged
+    /// context among them, an installation recording no cached package being judged by its
+    /// sources alone unless it has no package to open at all (<see cref="OpensNoPackage"/>),
+    /// and only where its <c>InstallProperties</c> key records none as well; and a check built
+    /// without its file readers, having no way to look. One such installation is enough,
+    /// because any candidate could be the package it opens.
     ///
     /// EACH INSTALLATION IS READ BY THE CODE IT IS REGISTERED UNDER, in its own account
     /// and context, and its cached package is not required to declare that code.
@@ -946,9 +947,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         var properties = InstallPropertiesKeyPath(code, sid, context);
         var sourceList = SourceListKeyPath(code, sid, context);
         return properties is not null
-            && sourceList is not null
+            && sourceList is { } listKey
             && _registry!.LocalMachineValues(properties).Presence == RegistryKeyPresence.Absent
-            && _registry.LocalMachineValues(sourceList).Presence == RegistryKeyPresence.Absent
+            && ValuesOf(listKey).Presence == RegistryKeyPresence.Absent
                 ? new NoPackageReading(NoPackageAnswer.OpensNone, answered)
                 : new NoPackageReading(NoPackageAnswer.RegistryDisagrees, answered);
     }
@@ -1176,7 +1177,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// </summary>
         NoProductCode,
 
-        /// <summary>It is in the per-user unmanaged context, whose source list is not read.</summary>
+        /// <summary>
+        /// It is in another account's per-user unmanaged context, whose source list is not read.
+        /// </summary>
         PerUserUnmanaged,
 
         /// <summary>A package its sources name is under a root given up for the pass.</summary>
@@ -1198,7 +1201,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// <summary>Every package the sources name was read, or left to be read by name.</summary>
         None,
 
-        /// <summary>The per-user unmanaged context, whose source list is not read.</summary>
+        /// <summary>
+        /// Another account's per-user unmanaged context, whose source list is not read.
+        /// </summary>
         PerUserUnmanaged,
 
         /// <summary>A package read refused for a root given up for the pass.</summary>
@@ -1425,15 +1430,15 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// goes into <see cref="OpenedPackages.MissingPackageCodes"/>: a candidate is kept where it
     /// carries that code or its own does not read (<see cref="AsAMissingPackage"/>).
     /// The value has to be shown to name nothing (<see cref="NamesNothing"/>), the package code
-    /// has to read (<see cref="RecordedPackageCode"/>), and the installation must not be in a
-    /// per-user-unmanaged context.
+    /// has to read (<see cref="RecordedPackageCode"/>), and the installation must not be in
+    /// another account's per-user-unmanaged context.
     ///
     /// NULL IS THE ANSWER THAT KEEPS THE FILE, and every way an installation's package
     /// can fail to be seen reaches it: a <c>LocalPackage</c> read that failed; a value that
     /// names a folder, will not open to an identity, or names a file that does not declare
     /// <paramref name="code"/>; a value naming no file that is there where it is not shown to
-    /// name nothing, where the installation is per user and unmanaged, or where its package
-    /// code does not read; an empty value beside an
+    /// name nothing, where the installation is another account's per user and unmanaged, or
+    /// where its package code does not read; an empty value beside an
     /// <c>InstallProperties</c> key that does not show the installation records none; and any
     /// source the check cannot rule out, which <see cref="AddSourcePackages"/> sets out. One
     /// such installation is enough, because its package is the one this candidate could be.
@@ -1499,11 +1504,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                 // is what says which package that is (AsAMissingPackage). Anything short of a
                 // recorded path shown to name nothing, a package code read two ways and
                 // agreeing, and sources that can all be seen keeps every candidate, and so does
-                // a per-user-unmanaged installation, whose sources are not read
+                // another account's per-user-unmanaged installation, whose sources are not read
                 // (AddSourcePackages). The files kept are counted against a drive only where
                 // the check stopped at a read the pass refused there (NamesNothing).
                 string? pathGivenUp = null;
-                if (context == MsiInstallContext.UserUnmanaged
+                if ((context == MsiInstallContext.UserUnmanaged && !ReadsItsOwnRecord(sid, context))
                     || !NamesNothing(path, registeredCode, sid, context, pass, out pathGivenUp))
                 {
                     givenUp = pathGivenUp;
@@ -1643,21 +1648,21 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     ///
     /// NULL, WHICH KEEPS EVERY CANDIDATE, where either read fails, is empty or is not a
     /// GUID, where the key holds the value more than once or as anything but a REG_SZ,
-    /// where the two disagree, where the context has no key this check reads (per user
-    /// and unmanaged), for a per-user installation not shown to be the running account's
-    /// (<see cref="ReadsItsOwnRecord"/>), and for a check built without its registry reader.
+    /// where the two disagree, for a per-user installation not shown to be the running
+    /// account's (<see cref="ReadsItsOwnRecord"/>), and for a check built without its registry
+    /// reader.
     /// </summary>
     private string? RecordedPackageCode(string code, string? sid, MsiInstallContext context)
     {
         if (_registry is null || !ReadsItsOwnRecord(sid, context)
-            || ProductKeyPath(code, sid, context) is not { } keyPath)
+            || ProductKeyPath(code, sid, context) is not { } productKey)
             return null;
 
         var read = InstallerQueryService.ReadProductProperty(_msi, code, sid, context, MsiInstallProperty.PackageCode);
         if (read.Unreadable || PackageIdentityReader.Canonicalise(read.Value.TrimEnd('\0')) is not { } answered)
             return null;
 
-        var key = _registry.LocalMachineValues(keyPath);
+        var key = ValuesOf(productKey);
         if (key.Presence != RegistryKeyPresence.Present || key.Values is null) return null;
 
         // The key holds the value under the name the API reads it by.
@@ -1754,7 +1759,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// or to read the registry; where <paramref name="noneRecorded"/> says the installation's
     /// cached package read as none, an <c>InstallProperties</c> key that does not show it records
     /// none (<see cref="RegistryRecordsNoCachedPackage"/>), no source then being read; a
-    /// per-user-unmanaged account and context, whose list is not read; a package
+    /// per-user-unmanaged context in an account other than the one this process runs as
+    /// (<see cref="ReadsItsOwnRecord"/>), whose list is not read; a package
     /// name, a source list or a property of the list that will not read; an empty package
     /// name, or one holding a '\', a '/', a ':', a '%' or a null;
     /// each of the six above; a source entry holding a null; a source used last that
@@ -1792,19 +1798,22 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         // where its InstallProperties key records none as well. A key holding a cached package,
         // or one that will not read, keeps the copy, and no source of it is read. This comes
         // before the per-user-unmanaged refusal below, so such an installation is counted by
-        // what its key holds whatever its context.
+        // what its key holds whatever its context and account.
         if (noneRecorded && !RegistryRecordsNoCachedPackage(code, sid, context))
             return Refuse(SourceRefusal.CachedPackageNotRuledOut, out refusal);
 
-        // A PER-USER-UNMANAGED SOURCE LIST IS NOT READ, IN ANY ACCOUNT, AND THE COPY IS
-        // KEPT. Microsoft documents that an administrator cannot enumerate another
-        // user's per-user-unmanaged installations, and not what the call answers in their
-        // place, so a list read there with no network source on it cannot be told from a
-        // list that was never read. So no answer from such a list is used, and the copy
-        // is kept whatever the list would say. The account this process runs as is not
-        // compared with the installation's, so its own per-user-unmanaged installations
-        // are kept the same way.
-        if (context == MsiInstallContext.UserUnmanaged) return Refuse(SourceRefusal.PerUserUnmanaged, out refusal);
+        // ANOTHER ACCOUNT'S PER-USER-UNMANAGED SOURCE LIST IS NOT READ, AND THE COPY IS KEPT.
+        // Microsoft documents, for MsiSourceListEnumSources, that an administrator cannot
+        // enumerate the sources of another user's per-user-unmanaged installation, and not what
+        // the call answers in their place, so a list read there with no network source on it
+        // cannot be told from a list that was never read. So no answer from such a list is
+        // used, and the copy is kept whatever the list would say. The same remarks document
+        // that an administrator can enumerate them for its own per-user-unmanaged
+        // installations, so the list of the account this process runs as is read through the
+        // API and from the SourceList key in its own hive, and judged as every other list is
+        // (ReadsItsOwnRecord, SourceListKeyPath).
+        if (context == MsiInstallContext.UserUnmanaged && !ReadsItsOwnRecord(sid, context))
+            return Refuse(SourceRefusal.PerUserUnmanaged, out refusal);
 
         var name = InstallerQueryService.ReadProductProperty(
             _msi, code, sid, context, MsiInstallProperty.PackageName);
@@ -1837,10 +1846,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             if (entry.Contains('%') || entry.Contains('\0') || !IsOnADriveOrAShare(entry))
                 return Refuse(SourceRefusal.FormNotCompared, out refusal);
 
-        var path = SourceListKeyPath(code, sid, context);
-        if (path is null) return Refuse(SourceRefusal.WouldNotRead, out refusal);
+        if (SourceListKeyPath(code, sid, context) is not { } listKey)
+            return Refuse(SourceRefusal.WouldNotRead, out refusal);
 
-        var sourceList = _registry.LocalMachineValues(path);
+        var sourceList = ValuesOf(listKey);
         if (sourceList.Presence != RegistryKeyPresence.Present || sourceList.Values is null)
             return Refuse(KeyRefusal(sourceList), out refusal);
 
@@ -1850,13 +1859,13 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (!HoldsThePackageName(sourceList.Values, packageName))
             return Refuse(SourceRefusal.RegistryDiffers, out refusal);
 
-        var net = _registry.LocalMachineValues(path + @"\Net");
+        var net = ValuesOf(listKey.Below("Net"));
         if (!IsTheList(net, sources)) return Refuse(KeyRefusal(net), out refusal);
 
-        var urlKey = _registry.LocalMachineValues(path + @"\URL");
+        var urlKey = ValuesOf(listKey.Below("URL"));
         if (!IsTheList(urlKey, urls)) return Refuse(KeyRefusal(urlKey), out refusal);
 
-        if (!NamesNoMediaPackagePath(code, sid, context, _registry.LocalMachineValues(path + @"\Media"), out refusal))
+        if (!NamesNoMediaPackagePath(code, sid, context, ValuesOf(listKey.Below("Media")), out refusal))
             return false;
 
         var usedLast = SourceUsedLastOf(code, sid, context, sourceList.Values, out refusal);
@@ -2695,45 +2704,70 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     }
 
     /// <summary>
-    /// The HKLM path this check reads a product's <c>SourceList</c> key from, in one
-    /// account and context. Per machine, <c>SOFTWARE\Classes\Installer\Products</c>, then
-    /// the code in its packed form, then <c>SourceList</c>; per user and managed, the
-    /// same below
-    /// <c>SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Managed\&lt;SID&gt;\Installer</c>.
+    /// Where this check reads a product's <c>SourceList</c> key from, in one account and
+    /// context: the product's key (<see cref="ProductKeyPath"/>), then <c>SourceList</c>.
     /// The network entries are read from its <c>Net</c> key and the URL entries from its
-    /// <c>URL</c> key, each value named by the entry's number from 1. A key not found at
-    /// this path keeps the file.
-    ///
-    /// NULL, WHICH KEEPS THE FILE, for any other context, per machine with an account,
-    /// per user and managed without one, and a code or an account that will not make a
-    /// key name. An account is taken only as 'S-' followed by digits and hyphens, so no
-    /// account names a key outside its own.
+    /// <c>URL</c> key, each value named by the entry's number from 1. A key not found there
+    /// keeps the file. Null, which keeps the file, wherever <see cref="ProductKeyPath"/> is.
     /// </summary>
-    private static string? SourceListKeyPath(string code, string? sid, MsiInstallContext context) =>
-        ProductKeyPath(code, sid, context) is { } key ? key + @"\SourceList" : null;
+    private static KeyAt? SourceListKeyPath(string code, string? sid, MsiInstallContext context) =>
+        ProductKeyPath(code, sid, context)?.Below("SourceList");
 
     /// <summary>
-    /// The HKLM path of the key a product is published under, in one account and context,
-    /// which holds its <c>PackageCode</c> and its <c>SourceList</c> key
-    /// (<see cref="SourceListKeyPath"/>): per machine, <c>SOFTWARE\Classes\Installer\Products</c>
-    /// and the code in its packed form; per user and managed, the same below
-    /// <c>SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Managed\&lt;SID&gt;\Installer</c>.
-    /// Null, which keeps the file, for any other context, per machine with an account, per
-    /// user and managed without one, and a code or an account that will not make a key name.
+    /// Where the key a product is published under is, in one account and context, which
+    /// holds its <c>PackageCode</c> and its <c>SourceList</c> key
+    /// (<see cref="SourceListKeyPath"/>). Per machine, in HKLM,
+    /// <c>SOFTWARE\Classes\Installer\Products</c> and the code in its packed form; per user
+    /// and managed, the same below
+    /// <c>SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Managed\&lt;SID&gt;\Installer</c>
+    /// in HKLM; per user and unmanaged, <c>Software\Microsoft\Installer\Products</c> and the
+    /// code in its packed form in the account's own hive, which Windows Installer keeps there
+    /// and not in HKLM.
+    ///
+    /// NULL, WHICH KEEPS THE FILE, for any other context, per machine with an account, per
+    /// user without one, and a code or an account that will not make a key name. An account is
+    /// taken only as 'S-' followed by digits and hyphens, so no account names a key outside its
+    /// own. Which account's hive is read is not decided here: a per-user-unmanaged key is read
+    /// only for the account this process runs as (<see cref="AddSourcePackages"/>,
+    /// <see cref="RecordedPackageCode"/>).
     /// </summary>
-    private static string? ProductKeyPath(string code, string? sid, MsiInstallContext context)
+    private static KeyAt? ProductKeyPath(string code, string? sid, MsiInstallContext context)
     {
         var packed = InstallerQueryService.PackRegistryCode(code);
         if (packed is null) return null;
 
         if (context == MsiInstallContext.Machine && sid is null)
-            return $@"SOFTWARE\Classes\Installer\Products\{packed}";
+            return new KeyAt(null, $@"SOFTWARE\Classes\Installer\Products\{packed}");
 
         if (context == MsiInstallContext.UserManaged && InstallerQueryService.IsAccount(sid))
-            return $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Managed\{sid}\Installer\Products\{packed}";
+            return new KeyAt(
+                null, $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Managed\{sid}\Installer\Products\{packed}");
+
+        if (context == MsiInstallContext.UserUnmanaged && InstallerQueryService.IsAccount(sid))
+            return new KeyAt(sid, $@"Software\Microsoft\Installer\Products\{packed}");
 
         return null;
     }
+
+    /// <summary>
+    /// A registry key this check reads: <see cref="Path"/> in HKLM where <see cref="Account"/> is
+    /// null, and in that account's own hive, under HKEY_USERS, where it is not
+    /// (<see cref="ValuesOf"/>).
+    /// </summary>
+    private readonly record struct KeyAt(string? Account, string Path)
+    {
+        /// <summary>The subkey <paramref name="name"/> of this key, in the same hive.</summary>
+        public KeyAt Below(string name) => this with { Path = Path + @"\" + name };
+    }
+
+    /// <summary>
+    /// Every value of <paramref name="key"/>, read from HKLM or from its account's hive as it
+    /// says. Called only where the check has its registry reader.
+    /// </summary>
+    private RegistryKeyValues ValuesOf(KeyAt key) =>
+        key.Account is null
+            ? _registry!.LocalMachineValues(key.Path)
+            : _registry!.UserValues(key.Account, key.Path);
 
     /// <summary>
     /// The HKLM path this check reads a product installation's <c>InstallProperties</c>
@@ -2745,9 +2779,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     ///
     /// NULL, WHICH KEEPS THE FILE, per machine with an account, per user without one, and
     /// for a code or an account that will not make a key name. A per-user unmanaged
-    /// installation has a path here: <see cref="AddSourcePackages"/> reads its key where its
-    /// cached package reads as none, and keeps the file for that context before it reads an
-    /// <c>InstallSource</c>.
+    /// installation's key is here in HKLM, whichever account it is in:
+    /// <see cref="AddSourcePackages"/> reads it where its cached package reads as none, and for
+    /// another account's installation keeps the file before it reads an <c>InstallSource</c>.
     /// </summary>
     private static string? InstallPropertiesKeyPath(string code, string? sid, MsiInstallContext context)
     {

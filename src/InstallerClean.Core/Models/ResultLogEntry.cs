@@ -1262,7 +1262,8 @@ public sealed record MachineInfo(
 /// reads as a patch.
 /// </param>
 /// <param name="SecondCopyUnseenPerUserUnmanagedCount">
-/// The installation is in the per-user unmanaged context, whose source list is not read.
+/// The installation is in another account's per-user unmanaged context, whose source list is not
+/// read.
 /// </param>
 /// <param name="SecondCopyUnseenSourcesGivenUpCount">
 /// A package in a folder its sources name was refused for a drive or share given up for the
@@ -1327,8 +1328,8 @@ public sealed record MachineInfo(
 /// <param name="SecondCopyKeepNoneRecordedSourcesNotRuledOutCount">
 /// The rest of them: per user, or per machine where Windows Installer answered with the package
 /// name, and in each case, the <c>InstallProperties</c> key recording none as well, a source the
-/// screen could not rule out, a per-user unmanaged installation and a drive or share given up for
-/// the scan included.
+/// screen could not rule out, another account's per-user unmanaged installation and a drive or
+/// share given up for the scan included.
 /// </param>
 /// <param name="DeclaredInstalledIsItsCachedPackageCount">
 /// Of the files in <paramref name="WithheldDeclaredProductInstalledCount"/>, those that open as the
@@ -1369,8 +1370,9 @@ public sealed record MachineInfo(
 /// </param>
 /// <param name="DeclaredInstalledNotThereUnestablishedCount">
 /// Those whose program has an installation whose cached package's path names no file that is
-/// there, a folder included, and is not shown to name nothing, or whose installation is per user
-/// and unmanaged (<see cref="DeclaredProductInstalledCauses.NotThereUnestablished"/>).
+/// there, a folder included, and is not shown to name nothing, or whose installation is another
+/// account's per user and unmanaged
+/// (<see cref="DeclaredProductInstalledCauses.NotThereUnestablished"/>).
 /// </param>
 /// <param name="DeclaredInstalledMissingPackageCodeUnreadCount">
 /// Those whose program has an installation whose cached package's path is shown to name nothing,
@@ -1391,9 +1393,9 @@ public sealed record MachineInfo(
 /// product's or a patch (<see cref="DeclaredProductInstalledCauses.NotThisProduct"/>).
 /// </param>
 /// <param name="DeclaredInstalledSourcesPerUserUnmanagedCount">
-/// Those whose program has a per-user unmanaged installation, whose source list is not read,
-/// and which, where it records no cached package, has an <c>InstallProperties</c> key recording
-/// none as well (<see cref="DeclaredProductInstalledCauses.SourcesPerUserUnmanaged"/>).
+/// Those whose program has another account's per-user unmanaged installation, whose source list
+/// is not read, and which, where it records no cached package, has an <c>InstallProperties</c>
+/// key recording none as well (<see cref="DeclaredProductInstalledCauses.SourcesPerUserUnmanaged"/>).
 /// </param>
 /// <param name="DeclaredInstalledSourcesGivenUpCount">
 /// Those whose program has an installation with a package at a source, read for every file

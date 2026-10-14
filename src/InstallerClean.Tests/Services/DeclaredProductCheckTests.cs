@@ -531,14 +531,14 @@ public class DeclaredProductCheckTests
         Assert.Equal(2, f.Msi.SourceListWalks.Count);
     }
 
-    [Fact]
-    public void A_copy_is_kept_when_an_installation_is_per_user_unmanaged_whatever_its_source_list_holds()
+    /// <summary>
+    /// <see cref="ACopyBesideTheRecordedPackage"/> with a second installation of product A, per
+    /// user and unmanaged in <see cref="UserSid"/>'s account, recording another present package
+    /// declaring the product, and with a source list pointing only at a folder holding no package.
+    /// </summary>
+    private static (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+        ScriptedFileIdentities Files, MockFileSystem Disk) ACopyBesideAPerUserUnmanagedInstallation()
     {
-        // The copy that is let through above, with the second installation per user and
-        // unmanaged. It records another present package declaring the product, and its
-        // source list, were it read, points only at a folder holding no package. The
-        // source list in that context is not read, whichever account it is in, so the
-        // package that installation opens cannot be ruled out and this copy is kept.
         const string UsersPackage = @"C:\Windows\Installer\c.msi";
         var f = ACopyBesideTheRecordedPackage();
         f.Msi.Installed(ProductA,
@@ -549,12 +549,92 @@ public class DeclaredProductCheckTests
         f.Packages.Declares(UsersPackage, ProductA);
         f.Files.Opens(UsersPackage, 3);
         f.Disk.AddFile(UsersPackage, new MockFileData(new byte[100]));
+        return f;
+    }
 
-        AssertKeptFor(DeclaredProductInstalledCause.SourcesPerUserUnmanaged, f);
-        // The machine's list was read and the user's was not.
+    /// <summary>
+    /// The <c>SourceList</c> key of product A per user and unmanaged, in <see cref="UserSid"/>'s
+    /// own hive, as the scripted registry spells it.
+    /// </summary>
+    private static readonly string UsersSourceList = ScriptedSourceListRegistry.InHive(
+        UserSid, @"Software\Microsoft\Installer\Products\11111111111111111111111111111111\SourceList");
+
+    [Fact]
+    public void A_copy_is_let_through_beside_a_per_user_unmanaged_installation_of_the_running_account()
+    {
+        // The copy that is let through above, with the second installation per user and
+        // unmanaged in the account the check runs as. Its list is read through the API and from
+        // the SourceList key in that account's own hive, and every package it names is seen.
+        var f = ACopyBesideAPerUserUnmanagedInstallation();
+
+        var outcome = ScreenTheCopy(f, runningAccount: new Account(UserSid));
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, outcome);
+        var both = new[]
+        {
+            (ProductA, (string?)null, MsiInstallContext.Machine),
+            (ProductA, (string?)UserSid, MsiInstallContext.UserUnmanaged),
+        };
+        Assert.Equal(both, f.Msi.PackageNameReads);
+        Assert.Equal(both, f.Msi.SourceListWalks);
+        Assert.Contains(UsersSourceList, f.Msi.Registry.Reads);
+        Assert.Contains(UsersSourceList + @"\Net", f.Msi.Registry.Reads);
+        Assert.Contains(UsersSourceList + @"\URL", f.Msi.Registry.Reads);
+        Assert.Contains(UsersSourceList + @"\Media", f.Msi.Registry.Reads);
+    }
+
+    [Theory]
+    [InlineData(OtherUserSid)]
+    [InlineData(null)]
+    public void A_copy_is_kept_beside_another_accounts_per_user_unmanaged_installation_whatever_its_source_list_holds(
+        string? runningAs)
+    {
+        // The same installation, with the check running as another account, as it does under
+        // elevation with another administrator's credentials, or knowing no account. That list
+        // is not read, so the package the installation opens cannot be ruled out and this copy
+        // is kept.
+        var f = ACopyBesideAPerUserUnmanagedInstallation();
+
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesPerUserUnmanaged, f,
+            runningAccount: runningAs is null ? null : new Account(runningAs));
+        // The machine's list was read and the user's was not, through the API or the registry.
         var machineOnly = new[] { (ProductA, (string?)null, MsiInstallContext.Machine) };
         Assert.Equal(machineOnly, f.Msi.PackageNameReads);
         Assert.Equal(machineOnly, f.Msi.SourceListWalks);
+        Assert.DoesNotContain(f.Msi.Registry.Reads, read => read.StartsWith("HKEY_USERS", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData(RegistryKeyPresence.Absent, DeclaredProductInstalledCause.SourcesRegistryDiffers)]
+    [InlineData(RegistryKeyPresence.Unreadable, DeclaredProductInstalledCause.SourcesWouldNotRead)]
+    public void A_copy_is_kept_when_the_running_accounts_own_hive_does_not_hold_its_source_list(
+        RegistryKeyPresence presence, DeclaredProductInstalledCause cause)
+    {
+        // The API answers the list, and the account's own hive has no key there, as a hive that
+        // is not loaded reads, or will not read.
+        var f = ACopyBesideAPerUserUnmanagedInstallation();
+        f.Msi.Registry.Answers(UsersSourceList, presence);
+
+        AssertKeptFor(cause, f, runningAccount: new Account(UserSid));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_running_accounts_own_hive_holds_its_source_list_otherwise()
+    {
+        var f = ACopyBesideAPerUserUnmanagedInstallation();
+        f.Msi.Registry.Holds(UsersSourceList + @"\Net", ExpandSz("1", @"E:\Elsewhere\"));
+
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesRegistryDiffers, f, runningAccount: new Account(UserSid));
+    }
+
+    [Fact]
+    public void A_copy_is_kept_when_the_running_accounts_own_source_list_holds_a_url()
+    {
+        // The list is judged as any other is once it is read, and a URL on it keeps the copy.
+        var f = ACopyBesideAPerUserUnmanagedInstallation();
+        f.Msi.RecordsUrls(ProductA, isPatch: false, UserSid, MsiInstallContext.UserUnmanaged, "https://example.com/setup/");
+
+        AssertKeptFor(DeclaredProductInstalledCause.SourcesFormNotCompared, f, runningAccount: new Account(UserSid));
     }
 
     [Theory]
@@ -925,10 +1005,10 @@ public class DeclaredProductCheckTests
     }
 
     [Fact]
-    public void Every_copy_is_kept_beside_a_missing_per_user_unmanaged_package()
+    public void Every_copy_is_kept_beside_a_missing_package_of_another_accounts_per_user_unmanaged_installation()
     {
-        // A per-user unmanaged installation's product key is not one this check reads, and
-        // its source list is not read either.
+        // The check runs as no account it knows, so the per-user unmanaged installation is
+        // another account's: its product key is not read, and its source list is not read either.
         const string UsersPackage = @"C:\Windows\Installer\c.msi";
         var f = ACopyBesideARecordedPackageThatNamesNothing();
         f.Msi.Installed(ProductA,
@@ -940,6 +1020,35 @@ public class DeclaredProductCheckTests
         f.Files.Answers(UsersPackage, FileIdentityRead.NamesNothing);
 
         AssertKeptFor(DeclaredProductInstalledCause.NotThereUnestablished, f);
+    }
+
+    [Fact]
+    public void A_missing_package_of_the_running_accounts_per_user_unmanaged_installation_is_judged_by_its_package_code()
+    {
+        // The same installation in the account the check runs as. Its package code is read
+        // through the API and from the product's key in that account's own hive, and its sources
+        // are read, so a copy carrying another package code goes on and one carrying that code is
+        // kept as the missing package.
+        const string UsersPackage = @"C:\Windows\Installer\c.msi";
+        var f = ACopyBesideARecordedPackageThatNamesNothing();
+        f.Msi.Installed(ProductA,
+            (null, MsiInstallContext.Machine),
+            (UserSid, MsiInstallContext.UserUnmanaged));
+        f.Msi.RecordsPackage(ProductA, UserSid, MsiInstallContext.UserUnmanaged, UsersPackage);
+        f.Msi.RecordsSources(ProductA, UserSid, MsiInstallContext.UserUnmanaged, SetupName, SetupFolder);
+        f.Msi.PackageCodeAnswers(ProductA, UserSid, MsiInstallContext.UserUnmanaged, MsiError.Success, MissingPackageCode);
+        f.Files.Answers(UsersPackage, FileIdentityRead.NamesNothing);
+        var owner = new Account(UserSid);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, ScreenTheCopy(f, runningAccount: owner));
+        Assert.Contains(
+            ScriptedSourceListRegistry.InHive(
+                UserSid, @"Software\Microsoft\Installer\Products\" + ScriptedMsiProducts.PackedForTheFake(ProductA)),
+            f.Msi.Registry.Reads);
+        Assert.Contains(UsersSourceList, f.Msi.Registry.Reads);
+
+        CarriesPackageCode(f.Packages, Candidate, MissingPackageCode);
+        AssertKeptFor(DeclaredProductInstalledCause.MissingSpareIsIt, f, runningAccount: owner);
     }
 
     [Fact]
@@ -4357,7 +4466,7 @@ public class DeclaredProductCheckTests
         f.Msi.PackageNameAnswers(ProductB, null, MsiInstallContext.Machine, MsiError.UnknownProduct);
         f = f with { Listed = [.. f.Listed, ListedPerMachine(ProductB)] };
 
-        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, SomebodyElse)
             .Screen([Package(Candidate), Package(OtherCandidate)], f.Listed, default, null, InInstallerFolder);
 
         Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[1]);
@@ -4703,25 +4812,26 @@ public class DeclaredProductCheckTests
     [Fact]
     public void Every_other_installation_of_the_registrations_code_is_still_read()
     {
-        // A second installation of the same code, per user and unmanaged, whose source list
-        // is not read, so the candidate is kept for it whatever the registration opens.
+        // A second installation of the same code, in another account's per-user unmanaged
+        // context, whose source list is not read, so the candidate is kept for it whatever the
+        // registration opens.
         const string OthersPackage = @"C:\Windows\Installer\other.msi";
         var f = ACopyBesideOfficesFeatureRegistration();
         f.Packages.Declares(Candidate, OfficeFeatures);
         f.Packages.Declares(OthersPackage, OfficeFeatures);
-        f.Msi.Installed(OfficeFeatures, (null, MsiInstallContext.Machine), (OtherUserSid, MsiInstallContext.UserUnmanaged));
-        f.Msi.RecordsPackage(OfficeFeatures, OtherUserSid, MsiInstallContext.UserUnmanaged, OthersPackage);
+        f.Msi.Installed(OfficeFeatures, (null, MsiInstallContext.Machine), (UserSid, MsiInstallContext.UserUnmanaged));
+        f.Msi.RecordsPackage(OfficeFeatures, UserSid, MsiInstallContext.UserUnmanaged, OthersPackage);
         f.Files.Opens(OthersPackage, 2);
         f.Disk.AddFile(OthersPackage, new MockFileData(new byte[100]));
         f = f with
         {
-            Listed = [.. f.Listed, new ListedInstallation(OfficeFeatures, OtherUserSid, (int)MsiInstallContext.UserUnmanaged, false)],
+            Listed = [.. f.Listed, new ListedInstallation(OfficeFeatures, UserSid, (int)MsiInstallContext.UserUnmanaged, false)],
         };
 
         var outcome = ScreenBesideTheSecondCopy(f, account: TheOwner)[0];
 
         Assert.Equal(DeclaredProductOutcome.DeclaredProductInstalled, outcome);
-        Assert.Contains((OfficeFeatures, (string?)OtherUserSid, MsiInstallContext.UserUnmanaged), f.Msi.PackageReads);
+        Assert.Contains((OfficeFeatures, (string?)UserSid, MsiInstallContext.UserUnmanaged), f.Msi.PackageReads);
     }
 
     [Theory]
@@ -5835,12 +5945,28 @@ public class DeclaredProductCheckTests
     [Fact]
     public void A_per_user_unmanaged_second_copy_is_counted_as_that_and_not_as_per_machine()
     {
+        // Another account's, whose source list is not read.
         var f = AMarkedSecondCopy(MsiInstallContext.UserUnmanaged);
 
         var census = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, SomebodyElse)
             .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder).CachedPackages;
 
         Assert.Equal(Census(unruled: 1, unseenPerUserUnmanaged: 1), census);
+    }
+
+    [Fact]
+    public void A_per_user_unmanaged_second_copy_of_the_running_account_has_its_packages_compared()
+    {
+        // The same second copy in the account the check runs as. Its source list is read from its
+        // own hive, every package it opens is seen, and the candidate, being none of them, goes on.
+        var f = AMarkedSecondCopy(MsiInstallContext.UserUnmanaged);
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductNotInstalled, screening.Outcomes[0]);
+        Assert.Equal(Census(unruled: 1), screening.CachedPackages);
+        Assert.Contains(f.Msi.Registry.Reads, read => read.StartsWith(@"HKEY_USERS\" + OtherUserSid, StringComparison.Ordinal));
     }
 
     [Theory]
@@ -5870,27 +5996,34 @@ public class DeclaredProductCheckTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void A_per_user_unmanaged_second_copy_with_no_cached_package_is_counted_by_what_its_key_holds(
+    public void A_per_user_unmanaged_second_copy_of_the_running_account_with_no_cached_package_is_read_by_its_sources(
         bool keyHoldsOne)
     {
         // The account the check runs as owns it and its record reads as ordinary, so it sets no
-        // hold and its packages are read for every candidate.
+        // hold and its packages are read for every candidate. Where its key records no cached
+        // package either, its sources are read from its own hive, every package they name is seen
+        // and the candidate, being none of them, goes on; where the key holds one, it is kept.
         var f = AMarkedSecondCopy(MsiInstallContext.UserUnmanaged);
         Break(f, CachedPackageFault.NamesNoPackage, OtherUserSid, MsiInstallContext.UserUnmanaged);
         f.Msi.AnswersItsOwnRecord(SecondCopy, OtherUserSid, MsiInstallContext.UserUnmanaged);
         if (keyHoldsOne)
             PropertiesShow(f.Msi.Registry, SecondCopysProperties(OtherUserSid), PropertiesFault.HoldsACachedPackage);
+        else
+            f.Msi.Registry.Holds(SecondCopysProperties(OtherUserSid), Sz(MsiInstallProperty.InstallSource, SetupFolder));
 
         var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
             .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
 
-        Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
+        Assert.Equal(
+            keyHoldsOne ? DeclaredProductOutcome.SecondCopyUnestablished : DeclaredProductOutcome.DeclaredProductNotInstalled,
+            screening.Outcomes[0]);
         Assert.Equal(
             keyHoldsOne
                 ? Census(released: 1, unruled: 1, unseenNoneRecorded: 1)
-                : Census(released: 1, unruled: 1, unseenPerUserUnmanaged: 1),
+                : Census(released: 1, unruled: 1),
             screening.CachedPackages);
     }
+
 
     [Fact]
     public void A_per_user_managed_second_copy_whose_source_package_will_not_identify_is_not_counted_as_per_machine()
@@ -8575,26 +8708,59 @@ internal sealed class ScriptedMsiProducts : IMsiApi
     }
 
     /// <summary>
+    /// Where a product or patch is published: per machine, per user and managed under the
+    /// account (<c>sid</c>), both in HKLM, or per user and unmanaged in the account's own hive
+    /// (<c>owner</c>), which <see cref="ScriptedSourceListRegistry.UserValues"/> spells from
+    /// <c>HKEY_USERS</c>.
+    /// </summary>
+    private const string PublishedUnder =
+        @"^(?:SOFTWARE\\(?:Classes\\Installer|Microsoft\\Windows\\CurrentVersion\\Installer\\Managed\\(?<sid>S-[0-9-]+)\\Installer)"
+        + @"|HKEY_USERS\\(?<owner>S-[0-9-]+)\\Software\\Microsoft\\Installer)";
+
+    /// <summary>
     /// A <c>SourceList</c> key, or its <c>Net</c>, <c>URL</c> or <c>Media</c> key, per
-    /// machine or per user and managed.
+    /// machine, per user and managed, or per user and unmanaged.
     /// </summary>
     private static readonly Regex SourceListKey = new(
-        @"^SOFTWARE\\(?:Classes\\Installer|Microsoft\\Windows\\CurrentVersion\\Installer\\Managed\\(?<sid>S-[0-9-]+)\\Installer)"
+        PublishedUnder
         + @"\\(?<kind>Products|Patches)\\(?<packed>[0-9A-F]{32})\\SourceList(?:\\(?<key>Net|URL|Media))?$",
         RegexOptions.CultureInvariant);
 
     /// <summary>
-    /// The key a product is published under, per machine or per user and managed, which
-    /// holds its <c>PackageCode</c>.
+    /// The key a product is published under, per machine, per user and managed, or per user
+    /// and unmanaged, which holds its <c>PackageCode</c>.
     /// </summary>
     private static readonly Regex ProductKey = new(
-        @"^SOFTWARE\\(?:Classes\\Installer|Microsoft\\Windows\\CurrentVersion\\Installer\\Managed\\(?<sid>S-[0-9-]+)\\Installer)"
-        + @"\\Products\\(?<packed>[0-9A-F]{32})$",
+        PublishedUnder + @"\\Products\\(?<packed>[0-9A-F]{32})$",
         RegexOptions.CultureInvariant);
+
+    /// <summary>The account and context a key <see cref="PublishedUnder"/> belongs to.</summary>
+    private static (string? Sid, MsiInstallContext Context) PublishedFor(Match key) =>
+        key.Groups["owner"].Success ? (key.Groups["owner"].Value, MsiInstallContext.UserUnmanaged)
+        : key.Groups["sid"].Success ? (key.Groups["sid"].Value, MsiInstallContext.UserManaged)
+        : (null, MsiInstallContext.Machine);
+
+    /// <summary>
+    /// The per-user context an account's <c>InstallProperties</c> key under <c>UserData</c>
+    /// belongs to, which the key's path does not say: per user and unmanaged where the product
+    /// is installed for <paramref name="sid"/> in that context, or a test scripted its cached
+    /// package or its InstallSource there, and per user and managed otherwise.
+    /// </summary>
+    private MsiInstallContext PerUserContextOf(string productCode, string sid)
+    {
+        var unmanaged = (productCode, (string?)sid, MsiInstallContext.UserUnmanaged);
+        return (_instances.TryGetValue(productCode, out var listed)
+                && listed.Any(i => i.Context == MsiInstallContext.UserUnmanaged
+                    && string.Equals(i.Sid, sid, StringComparison.OrdinalIgnoreCase)))
+            || _localPackages.ContainsKey(unmanaged)
+            || _installSources.ContainsKey(unmanaged)
+                ? MsiInstallContext.UserUnmanaged
+                : MsiInstallContext.UserManaged;
+    }
 
     /// <summary>
     /// An installation's <c>InstallProperties</c> key, per machine under <c>S-1-5-18</c>
-    /// or per user and managed under the account.
+    /// or per user under the account (<see cref="PerUserContextOf"/>).
     /// </summary>
     private static readonly Regex InstallPropertiesKey = new(
         @"^SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\(?<sid>S-[0-9-]+)"
@@ -8620,8 +8786,7 @@ internal sealed class ScriptedMsiProducts : IMsiApi
         var product = ProductKey.Match(path);
         if (product.Success)
         {
-            var productSid = product.Groups["sid"].Success ? product.Groups["sid"].Value : null;
-            var productContext = productSid is null ? MsiInstallContext.Machine : MsiInstallContext.UserManaged;
+            var (productSid, productContext) = PublishedFor(product);
             if (!_packageCodes.TryGetValue(
                     (UnpackedForTheFake(product.Groups["packed"].Value), productSid, productContext), out var scripted))
                 throw new InvalidOperationException(
@@ -8641,10 +8806,10 @@ internal sealed class ScriptedMsiProducts : IMsiApi
         if (properties.Success)
         {
             var account = properties.Groups["sid"].Value;
+            var installedCode = UnpackedForTheFake(properties.Groups["packed"].Value);
             var (installSid, installContext) = account == "S-1-5-18"
                 ? ((string?)null, MsiInstallContext.Machine)
-                : (account, MsiInstallContext.UserManaged);
-            var installedCode = UnpackedForTheFake(properties.Groups["packed"].Value);
+                : (account, PerUserContextOf(installedCode, account));
             var values = new List<RegistryValue>();
             if (_localPackages.TryGetValue((installedCode, installSid, installContext), out var localPackage)
                 && localPackage.Error == MsiError.Success && localPackage.Value.Length > 0)
@@ -8663,8 +8828,7 @@ internal sealed class ScriptedMsiProducts : IMsiApi
                 $"the fake registry was asked for {path}, which is neither a source-list key nor an InstallProperties key");
 
         var isPatch = match.Groups["kind"].Value == "Patches";
-        var sid = match.Groups["sid"].Success ? match.Groups["sid"].Value : null;
-        var context = sid is null ? MsiInstallContext.Machine : MsiInstallContext.UserManaged;
+        var (sid, context) = PublishedFor(match);
         var code = UnpackedForTheFake(match.Groups["packed"].Value);
 
         if (!(isPatch ? _patchSources : _sources).TryGetValue((code, sid, context), out var list))
@@ -9113,6 +9277,15 @@ internal sealed class ScriptedSourceListRegistry : IRegistryReader
         Reads.Add(keyPath);
         return _keys.TryGetValue(keyPath, out var scripted) ? scripted : _msi.MirroredKey(keyPath);
     }
+
+    /// <summary>
+    /// A key in an account's own hive, spelled from <c>HKEY_USERS</c> (<see cref="InHive"/>) in
+    /// <see cref="Reads"/>, in a scripted key's path and in the path mirrored.
+    /// </summary>
+    public RegistryKeyValues UserValues(string sid, string keyPath) => LocalMachineValues(InHive(sid, keyPath));
+
+    /// <summary>The spelling of <paramref name="keyPath"/> in the hive of <paramref name="sid"/>.</summary>
+    public static string InHive(string sid, string keyPath) => $@"HKEY_USERS\{sid}\{keyPath}";
 
     public RegistryKeyPresence LocalMachineKeyPresence(string relativePath) =>
         throw new InvalidOperationException($"the declared-product check reads values, and was asked whether {relativePath} is there");

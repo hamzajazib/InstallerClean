@@ -64,8 +64,9 @@ public enum DeclaredProductInstalledCause
     /// An installation's cached-package path names no file that is there, a folder included, and
     /// is not shown to name nothing: it is not a plain path on a drive Windows reports as local,
     /// the file identity read does not answer that it names nothing, or the installation's
-    /// <c>InstallProperties</c> key does not hold the same path. A per-user unmanaged installation
-    /// whose cached-package path names no file that is there gives this as well.
+    /// <c>InstallProperties</c> key does not hold the same path. Another account's per-user
+    /// unmanaged installation whose cached-package path names no file that is there gives this as
+    /// well.
     /// </summary>
     NotThereUnestablished,
 
@@ -90,8 +91,10 @@ public enum DeclaredProductInstalledCause
     NotThisProduct,
 
     /// <summary>
-    /// An installation is per user and unmanaged, a context whose source list is not read, and,
-    /// where it records no cached package, its <c>InstallProperties</c> key records none as well.
+    /// An installation is in another account's per-user unmanaged context, whose source list is
+    /// not read, and, where it records no cached package, its <c>InstallProperties</c> key records
+    /// none as well. The source list of one in the account the check runs as is read like any
+    /// other.
     /// One whose key does not show that gives <see cref="NoneRecordedRegistryDisagrees"/>.
     /// </summary>
     SourcesPerUserUnmanaged,

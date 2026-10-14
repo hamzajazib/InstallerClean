@@ -3,7 +3,8 @@ using Microsoft.Win32;
 
 namespace InstallerClean.Services;
 
-/// <summary>Production IRegistryReader: opens HKLM Registry64 and reports the
+/// <summary>Production IRegistryReader: opens HKLM Registry64, or for
+/// <see cref="UserValues"/> HKEY_USERS Registry64, and reports the
 /// documented failure modes (SecurityException, IOException,
 /// UnauthorizedAccessException, ObjectDisposedException) as the state that says
 /// the read did not answer, so a caller acting on the answer can tell that apart
@@ -86,11 +87,16 @@ internal sealed class RegistryReader : IRegistryReader
         catch (ObjectDisposedException) { return new RegistryDwordRead(RegistryDwordState.Unreadable); }
     }
 
-    public RegistryKeyValues LocalMachineValues(string keyPath)
+    public RegistryKeyValues LocalMachineValues(string keyPath) => ValuesOf(RegistryHive.LocalMachine, keyPath);
+
+    public RegistryKeyValues UserValues(string sid, string keyPath) =>
+        ValuesOf(RegistryHive.Users, sid + @"\" + keyPath);
+
+    private static RegistryKeyValues ValuesOf(RegistryHive root, string keyPath)
     {
         try
         {
-            using var hive = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
+            using var hive = RegistryKey.OpenBaseKey(root, RegistryView.Registry64);
             using var key = hive.OpenSubKey(keyPath);
             if (key is null) return new RegistryKeyValues(RegistryKeyPresence.Absent);
 

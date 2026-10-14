@@ -2,7 +2,11 @@ using Microsoft.Win32;
 
 namespace InstallerClean.Services;
 
-/// <summary>Registry-read abstraction. All reads target HKLM in the 64-bit (Registry64) view; the keys checked are unwowed.</summary>
+/// <summary>
+/// Registry-read abstraction. Every read is in the 64-bit (Registry64) view, and the keys checked are
+/// unwowed. Every read but <see cref="UserValues"/> targets HKLM; that one reads one account's own hive
+/// under HKEY_USERS.
+/// </summary>
 public interface IRegistryReader
 {
     /// <summary>
@@ -40,6 +44,14 @@ public interface IRegistryReader
     /// an answer, and a key nobody could read is the absence of one.
     /// </summary>
     RegistryKeyValues LocalMachineValues(string keyPath);
+
+    /// <summary>
+    /// Every value of one key in the hive of the account <paramref name="sid"/>, at
+    /// <c>HKEY_USERS\&lt;sid&gt;\</c><paramref name="keyPath"/>, read as
+    /// <see cref="LocalMachineValues"/> reads one. An account whose hive is not loaded there reads
+    /// as a key that is not there.
+    /// </summary>
+    RegistryKeyValues UserValues(string sid, string keyPath);
 }
 
 /// <summary>

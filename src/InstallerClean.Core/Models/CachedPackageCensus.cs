@@ -114,8 +114,8 @@ namespace InstallerClean.Models;
 /// that is not a well-formed GUID, or read as a patch.
 /// </param>
 /// <param name="UnseenPerUserUnmanaged">
-/// The read stopped at an installation in the per-user unmanaged context, whose source list is
-/// not read.
+/// The read stopped at an installation in another account's per-user unmanaged context, whose
+/// source list is not read.
 /// </param>
 /// <param name="UnseenSourcesGivenUp">
 /// The read stopped at a package in a folder an installation's sources name, refused for a drive
