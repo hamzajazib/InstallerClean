@@ -101,8 +101,9 @@ public enum DeclaredProductInstalledCause
 
     /// <summary>
     /// A package at one of an installation's sources, read for every file declaring its program,
-    /// is under a drive or share given up for the pass. A package read only for the file whose
-    /// name it could be gives <see cref="ByName"/> instead.
+    /// is under a drive or share given up for the pass, or, for an installation recording no
+    /// cached package and having no source list, the folder it was installed from is. A package
+    /// read only for the file whose name it could be gives <see cref="ByName"/> instead.
     /// </summary>
     SourcesGivenUp,
 

@@ -43,7 +43,8 @@ namespace InstallerClean.Services;
 /// what its sources name, so it keeps the file only where its <c>InstallProperties</c> key
 /// does not show that it records none as well, or where a source cannot be ruled out, and
 /// not at all where it is shown to have no source list and no <c>InstallProperties</c> key
-/// either. It is kept too while
+/// recording a cached package or a folder it was installed from that could be the
+/// Installer folder. It is kept too while
 /// some source cannot be ruled out: one in the Installer folder itself, one naming this
 /// file, one that cannot be read, one whose package does not answer within the check's
 /// time limit, and one on a
@@ -138,8 +139,8 @@ namespace InstallerClean.Services;
 /// put, an answer that contradicts the caller's enumeration, an installation whose
 /// cached package does not say which product it declares, unless its own record shows an
 /// ordinary installation or it is shown to record no cached package and either have no
-/// source list or, its <c>InstallProperties</c> key recording none as well, have sources
-/// whose packages can all be seen, an installation not ruled
+/// package to open at all or, its <c>InstallProperties</c> key recording none as well, have
+/// sources whose packages can all be seen, an installation not ruled
 /// out as a second copy whose packages cannot all be seen, a source that answers off the
 /// allowlist and a recorded package it cannot identify all keep the file. For a patch, a
 /// file it cannot read, a registration it cannot list or ask about, an answer about a
@@ -332,9 +333,11 @@ public enum DeclaredProductOutcome
     /// enumeration listed no installation of it, and no cached package the check read,
     /// of the installations it listed, declares it, every one whose cached package did
     /// not read being shown by its own record to be an ordinary installation, or shown to
-    /// record no cached package and have no source list or <c>InstallProperties</c> key, so
-    /// that it opens none, or to record none, in its <c>InstallProperties</c> key as well, and
-    /// open only packages its sources name that the check saw. Every installation
+    /// record no cached package and have no source list and no <c>InstallProperties</c> key
+    /// recording a cached package or a folder it was installed from that could be the
+    /// Installer folder, so that it opens none, or to record none, in its
+    /// <c>InstallProperties</c> key as well, and open only packages its sources name that the
+    /// check saw. Every installation
     /// the caller could not rule out as a second copy opens packages the check saw, and this
     /// file is shown to be a different file from all of those packages. The candidate goes
     /// on being decided by everything else.
@@ -366,7 +369,8 @@ public enum DeclaredProductOutcome
     /// empty value is covered where the installation's <c>InstallProperties</c> key holds a
     /// cached package or will not read, and otherwise through its sources, below; it is not
     /// covered at all for an installation that has no source list and no
-    /// <c>InstallProperties</c> key either.
+    /// <c>InstallProperties</c> key recording a cached package or a folder it was installed from
+    /// that could be the Installer folder.
     /// It covers a source list or package name that will not read, a source whose package
     /// is this file, will not identify or does not answer within the check's time limit, a
     /// source on a drive or share the check has stopped reading for the pass (a read there
@@ -443,8 +447,10 @@ public enum DeclaredProductOutcome
     ///
     /// AN INSTALLATION WITH NEITHER IS LEFT OUT OF ALL OF THIS. A per-machine installation
     /// that records no cached package and has no source list, by the API's answer and in
-    /// the registry alike, and no <c>InstallProperties</c> key, opens no package, so there is
-    /// none for this file to be. Every other installation of the product is read as above.
+    /// the registry alike, and no <c>InstallProperties</c> key recording a cached package or a
+    /// folder it was installed from that could be the Installer folder, opens no package, so
+    /// there is none for this file to be. Every other installation of the product is read as
+    /// above.
     ///
     /// EVERY INSTALLATION, NOT ONE. One code can name a per-machine installation and
     /// per-user installations under several accounts, each recording its own
@@ -565,8 +571,9 @@ public enum DeclaredProductOutcome
     /// of a program opens packages the check could not all see, or an installation's
     /// cached package does not say which product it declares, its own record does not
     /// show it to be an ordinary installation, and it is not shown to record no cached
-    /// package and either have no source list or <c>InstallProperties</c> key or have sources
-    /// whose packages the check saw.
+    /// package and either have no source list and no <c>InstallProperties</c> key recording a
+    /// cached package or a folder it was installed from that could be the Installer folder, or
+    /// have sources whose packages the check saw.
     /// Kept back.
     ///
     /// IT IS ABOUT ANOTHER INSTALLATION AND NOT ABOUT THIS FILE. Such an installation

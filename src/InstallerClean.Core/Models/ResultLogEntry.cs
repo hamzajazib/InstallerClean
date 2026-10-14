@@ -136,6 +136,13 @@ public sealed record ResultLogEntry(
     /// whether every package each names was seen
     /// (<see cref="ScanInfo.DeclaredSourcesOwnPerUserReadCount"/>,
     /// <see cref="ScanInfo.DeclaredSourcesOwnPerUserKeptCount"/>).
+    /// <c>scan.secondCopyKeepNoneRecordedRegistryDisagreesCount</c> NARROWS AT 9, AND
+    /// <c>scan.secondCopyReleasedOpensNoPackageCount</c> AND
+    /// <c>scan.secondCopyKeepNoneRecordedSourcesNotRuledOutCount</c> WIDEN. From 9 a per-machine
+    /// installation recording no cached package and having no source list, whose
+    /// <c>InstallProperties</c> key is there and records no cached package, is counted in the
+    /// second where its <c>InstallSource</c> is none, a web address or a folder shown not to be the
+    /// Installer folder, and in the third otherwise, and never in the first.
     ///
     /// A receiver that does not recognise a version stores the report under a
     /// lenient v&lt;n&gt;-unknown/ prefix rather than rejecting it, so a bump
@@ -1297,8 +1304,9 @@ public sealed record MachineInfo(
 /// <param name="SecondCopyReleasedOpensNoPackageCount">
 /// Installations which do not set the hold because Windows Installer has no package to open
 /// for them, whatever their own record shows: per machine, recording no cached package, with no
-/// <c>InstallProperties</c> key, and with no source list, by the API's answer and in the registry
-/// alike
+/// source list, by the API's answer and in the registry alike, and with no
+/// <c>InstallProperties</c> key, or one recording no cached package whose <c>InstallSource</c> is
+/// none, a web address or a folder shown not to be the Installer folder
 /// (<see cref="CachedPackageCensus.ReleasedOpensNoPackage"/>). Each is also counted in
 /// <paramref name="SecondCopyListedCheckedCount"/>, and in none of the keys from
 /// <paramref name="SecondCopyKeepPathUnreadableCount"/> to
@@ -1331,15 +1339,15 @@ public sealed record MachineInfo(
 /// The same, not counted in <paramref name="SecondCopyKeepNoneRecordedOtherAnswerCount"/>, where
 /// the registry does not agree with Windows Installer: the installation's <c>InstallProperties</c>
 /// key holds a cached package, or, per machine where Windows Installer answered
-/// <c>ERROR_BAD_CONFIGURATION</c>, its <c>InstallProperties</c> key or its <c>SourceList</c> key is
-/// there; or a key could not be read.
+/// <c>ERROR_BAD_CONFIGURATION</c>, its <c>SourceList</c> key is there; or a key could not be read.
 /// Per user as well as per machine.
 /// </param>
 /// <param name="SecondCopyKeepNoneRecordedSourcesNotRuledOutCount">
 /// The rest of them: per user, or per machine where Windows Installer answered with the package
 /// name, and in each case, the <c>InstallProperties</c> key recording none as well, a source the
 /// screen could not rule out, another account's per-user unmanaged installation and a drive or
-/// share given up for the scan included.
+/// share given up for the scan included; or per machine with no source list, where the
+/// <c>InstallSource</c> the key records could not be ruled out as the Installer folder.
 /// </param>
 /// <param name="DeclaredInstalledIsItsCachedPackageCount">
 /// Of the files in <paramref name="WithheldDeclaredProductInstalledCount"/>, those that open as the
@@ -1409,7 +1417,8 @@ public sealed record MachineInfo(
 /// </param>
 /// <param name="DeclaredInstalledSourcesGivenUpCount">
 /// Those whose program has an installation with a package at a source, read for every file
-/// declaring the program, under a drive or share the screen gave up
+/// declaring the program, under a drive or share the screen gave up, or an installation recording
+/// no cached package and having no source list whose <c>InstallSource</c> folder is under one
 /// (<see cref="DeclaredProductInstalledCauses.SourcesGivenUp"/>). Each is also one of the files in
 /// <paramref name="FilesKeptForSourcesGivenUpCount"/>, which counts files of other keys as well.
 /// </param>

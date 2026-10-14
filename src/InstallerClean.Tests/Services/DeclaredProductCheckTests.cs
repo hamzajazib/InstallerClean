@@ -5150,40 +5150,308 @@ public class DeclaredProductCheckTests
         Assert.True(check.KnowsTheRunningAccount);
     }
 
-    [Fact]
-    public void A_registration_with_no_source_list_and_an_InstallProperties_key_keeps_every_installation_package()
+    // ---- A registration with no source list whose InstallProperties key records no cached package ----
+    //
+    // The key can hold the folder the program was installed from. With no source list there is
+    // no package name to look for in it, so the folder is put to the Installer-folder test
+    // through a path inside it, and the registration has no package to open where its
+    // InstallSource is none, a web address or a folder shown not to be the Installer folder.
+    // Anything short of that keeps every installation package, as its sources do.
+
+    /// <summary>
+    /// <see cref="ACopyBesideOfficesFeatureRegistration"/> with the registration's
+    /// InstallProperties key there and recording no cached package, and its InstallSource
+    /// <paramref name="folder"/>, through the API and in the key alike, or none where it is null.
+    /// The path inside a folder that the check reads names nothing.
+    /// </summary>
+    private static (ScriptedPackageIdentities Packages, ScriptedMsiProducts Msi,
+        ScriptedFileIdentities Files, MockFileSystem Disk, ListedInstallation[] Listed)
+        ARegistrationWithNoSourceListInstalledFrom(string? folder, bool marked = false)
     {
-        // The key is there and holds no cached package. Only an absent key, beside an absent
-        // SourceList key, shows that Windows Installer has no package to open for it, so it is
-        // judged by its sources, whose package name Windows Installer does not answer.
-        var f = ACopyBesideOfficesFeatureRegistration();
-        f.Msi.Registry.Holds(OfficeFeaturesInstallProperties,
-            new RegistryValue("DisplayName", RegistryValueKind.String, "Office"));
+        var f = ACopyBesideOfficesFeatureRegistration(marked);
+        RegistryValue[] values = [Sz("DisplayName", "Office")];
+        if (folder is not null)
+        {
+            f.Msi.RecordsInstallSource(OfficeFeatures, null, MsiInstallContext.Machine, folder);
+            values = [.. values, Sz(MsiInstallProperty.InstallSource, folder)];
+            if (!folder.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                f.Files.Answers(InTheFolder(folder), FileIdentityRead.NamesNothing);
+        }
+
+        f.Msi.Registry.Holds(OfficeFeaturesInstallProperties, values);
+        return f;
+    }
+
+    /// <summary>The path inside an InstallSource folder that the check puts to the Installer-folder test.</summary>
+    private static string InTheFolder(string folder) =>
+        (folder.EndsWith('\\') ? folder : folder + '\\') + DeclaredProductCheck.FileNamedInTheInstallSource;
+
+    /// <summary>A share whose every read waits <see cref="HeldFor"/> before the Installer-folder test answers.</summary>
+    private const string StalledShare = @"\\nas\setup\";
+
+    /// <summary>
+    /// <see cref="InInstallerFolder"/>, waiting <see cref="HeldFor"/> first for a path on
+    /// <see cref="StalledShare"/>.
+    /// </summary>
+    private static bool? InInstallerFolderWithAStalledShare(string path)
+    {
+        if (path.StartsWith(StalledShare, StringComparison.OrdinalIgnoreCase)) Thread.Sleep(HeldFor);
+        return InInstallerFolder(path);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("https://example.com/setup/")]
+    [InlineData("http://localhost/setup")]
+    [InlineData(SetupFolder)]
+    [InlineData(@"D:\Setup")]
+    [InlineData(@"\\server\share\setup\")]
+    public void A_registration_with_no_source_list_installed_from_a_folder_that_is_not_the_Installer_folder_keeps_nothing(
+        string? folder)
+    {
+        var f = ARegistrationWithNoSourceListInstalledFrom(folder);
+        var recorded = new List<Exception>();
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, (ex, _) => recorded.Add(ex), InInstallerFolder);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductNotInstalled, screening.Outcomes[0]);
+        Assert.Empty(recorded);
+        Assert.Equal(Census(opensNoPackage: 1), screening.CachedPackages);
+        // Its sources are not read, having no package to open, and only a folder is looked in.
+        Assert.Empty(f.Msi.PackageNameReads);
+        if (folder is null || folder.StartsWith("http", StringComparison.Ordinal)) Assert.Empty(f.Files.Reads);
+        else Assert.Contains(InTheFolder(folder), f.Files.Reads);
+    }
+
+    [Theory]
+    [InlineData(InstallerFolder + @"\")]
+    [InlineData(InstallerFolder)]
+    [InlineData(@"c:\windows\installer\")]
+    public void A_registration_with_no_source_list_installed_from_the_Installer_folder_keeps_every_installation_package(
+        string folder)
+    {
+        var f = ARegistrationWithNoSourceListInstalledFrom(folder);
+        var recorded = new List<string>();
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, (_, note) => recorded.Add(note), InInstallerFolder);
+
+        Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
+        Assert.Equal(Census(noneRecorded: 1, packageCodeUnanswered: 1, perMachine: 1, keptSourcesNotRuledOut: 1),
+            screening.CachedPackages);
+        Assert.Equal(
+            new[]
+            {
+                "the installation records no cached package and has no source list, and the folder it was "
+                + "installed from could not be ruled out as the Installer folder",
+            },
+            recorded);
+        Assert.Empty(screening.RootsGivenUp);
+    }
+
+    [Fact]
+    public void A_registration_with_no_source_list_installed_from_a_folder_the_test_cannot_place_keeps_every_installation_package()
+    {
+        var f = ARegistrationWithNoSourceListInstalledFrom(SetupFolder);
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, _ => null);
+
+        Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
+        Assert.Equal(Census(noneRecorded: 1, packageCodeUnanswered: 1, perMachine: 1, keptSourcesNotRuledOut: 1),
+            screening.CachedPackages);
+    }
+
+    [Fact]
+    public void A_registration_with_no_source_list_installed_from_a_folder_that_will_not_identify_keeps_every_installation_package()
+    {
+        var f = ARegistrationWithNoSourceListInstalledFrom(SetupFolder);
+        f.Files.Answers(InTheFolder(SetupFolder), FileIdentityRead.OpenRefused);
 
         var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
             .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
 
         Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
-        Assert.Equal(Census(noneRecorded: 1, packageCodeUnanswered: 1, perMachine: 1, keptRegistryDisagrees: 1),
+        Assert.Equal(Census(noneRecorded: 1, packageCodeUnanswered: 1, perMachine: 1, keptSourcesNotRuledOut: 1),
             screening.CachedPackages);
-        Assert.Equal(new[] { (OfficeFeatures, (string?)null, MsiInstallContext.Machine) }, f.Msi.PackageNameReads);
+    }
+
+    /// <summary>
+    /// One way the registration's InstallSource falls short of being none, a web address or a
+    /// folder other than the Installer folder.
+    /// </summary>
+    public enum InstallSourceFault
+    {
+        WillNotRead,
+        KeyHoldsItAsExpandSz,
+        KeyHoldsOtherText,
+        KeyHoldsNoneWhileTheApiAnswersOne,
+        KeyHoldsOneWhileTheApiAnswersNone,
+        NamesAVariable,
+        Relative,
+    }
+
+    [Theory]
+    [InlineData(InstallSourceFault.WillNotRead)]
+    [InlineData(InstallSourceFault.KeyHoldsItAsExpandSz)]
+    [InlineData(InstallSourceFault.KeyHoldsOtherText)]
+    [InlineData(InstallSourceFault.KeyHoldsNoneWhileTheApiAnswersOne)]
+    [InlineData(InstallSourceFault.KeyHoldsOneWhileTheApiAnswersNone)]
+    [InlineData(InstallSourceFault.NamesAVariable)]
+    [InlineData(InstallSourceFault.Relative)]
+    public void A_registration_with_no_source_list_whose_InstallSource_is_not_settled_keeps_every_installation_package(
+        InstallSourceFault fault)
+    {
+        var f = ACopyBesideOfficesFeatureRegistration();
+        const MsiInstallContext Machine = MsiInstallContext.Machine;
+        var name = Sz("DisplayName", "Office");
+        switch (fault)
+        {
+            case InstallSourceFault.WillNotRead:
+                f.Msi.InstallSourceAnswers(OfficeFeatures, null, Machine, MsiError.AccessDenied);
+                f.Msi.Registry.Holds(OfficeFeaturesInstallProperties, name);
+                break;
+            case InstallSourceFault.KeyHoldsItAsExpandSz:
+                f.Msi.RecordsInstallSource(OfficeFeatures, null, Machine, SetupFolder);
+                f.Msi.Registry.Holds(OfficeFeaturesInstallProperties, name,
+                    ExpandSz(MsiInstallProperty.InstallSource, SetupFolder));
+                break;
+            case InstallSourceFault.KeyHoldsOtherText:
+                f.Msi.RecordsInstallSource(OfficeFeatures, null, Machine, SetupFolder);
+                f.Msi.Registry.Holds(OfficeFeaturesInstallProperties, name,
+                    Sz(MsiInstallProperty.InstallSource, OtherFolder));
+                break;
+            case InstallSourceFault.KeyHoldsNoneWhileTheApiAnswersOne:
+                f.Msi.RecordsInstallSource(OfficeFeatures, null, Machine, SetupFolder);
+                f.Msi.Registry.Holds(OfficeFeaturesInstallProperties, name);
+                break;
+            case InstallSourceFault.KeyHoldsOneWhileTheApiAnswersNone:
+                f.Msi.Registry.Holds(OfficeFeaturesInstallProperties, name,
+                    Sz(MsiInstallProperty.InstallSource, SetupFolder));
+                break;
+            case InstallSourceFault.NamesAVariable:
+                f.Msi.RecordsInstallSource(OfficeFeatures, null, Machine, @"%SystemDrive%\Setup\");
+                f.Msi.Registry.Holds(OfficeFeaturesInstallProperties, name,
+                    Sz(MsiInstallProperty.InstallSource, @"%SystemDrive%\Setup\"));
+                break;
+            case InstallSourceFault.Relative:
+                f.Msi.RecordsInstallSource(OfficeFeatures, null, Machine, @"Setup\");
+                f.Msi.Registry.Holds(OfficeFeaturesInstallProperties, name,
+                    Sz(MsiInstallProperty.InstallSource, @"Setup\"));
+                break;
+        }
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+
+        Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
+        Assert.Equal(Census(noneRecorded: 1, packageCodeUnanswered: 1, perMachine: 1, keptSourcesNotRuledOut: 1),
+            screening.CachedPackages);
+        Assert.Empty(f.Files.Reads);
     }
 
     [Fact]
-    public void A_copy_declaring_the_code_of_a_registration_with_no_source_list_and_an_InstallProperties_key_is_kept()
+    public void A_copy_declaring_the_code_of_a_registration_with_no_source_list_installed_from_another_folder_is_let_through()
     {
-        var f = ACopyBesideOfficesFeatureRegistration();
+        var f = ARegistrationWithNoSourceListInstalledFrom(SetupFolder);
         f.Packages.Declares(Candidate, OfficeFeatures);
         f.Msi.Installed(OfficeFeatures);
         f.Msi.AnswersItsOwnRecord(OfficeFeatures, null, MsiInstallContext.Machine);
-        f.Msi.Registry.Holds(OfficeFeaturesInstallProperties,
-            new RegistryValue("DisplayName", RegistryValueKind.String, "Office"));
+
+        var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
+
+        Assert.Equal(DeclaredProductOutcome.DeclaredProductCachedAsAnotherFile, screening.Outcomes[0]);
+        Assert.Equal(Census(opensNoPackage: 1), screening.CachedPackages);
+    }
+
+    [Fact]
+    public void A_copy_declaring_the_code_of_a_registration_with_no_source_list_installed_from_the_Installer_folder_is_kept()
+    {
+        var f = ARegistrationWithNoSourceListInstalledFrom(InstallerFolder + @"\");
+        f.Packages.Declares(Candidate, OfficeFeatures);
+        f.Msi.Installed(OfficeFeatures);
+        f.Msi.AnswersItsOwnRecord(OfficeFeatures, null, MsiInstallContext.Machine);
 
         var screening = ScriptedCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
             .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolder);
 
         Assert.Equal((DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.SourcesWouldNotRead),
             (screening.Outcomes[0], screening.InstalledCauses[0]));
+        Assert.Empty(screening.RootsGivenUp);
+    }
+
+    [Fact]
+    public void A_copy_declaring_the_code_of_a_registration_installed_from_a_share_that_does_not_answer_is_counted_against_it()
+    {
+        var f = ARegistrationWithNoSourceListInstalledFrom(StalledShare);
+        f.Packages.Declares(Candidate, OfficeFeatures);
+        f.Msi.Installed(OfficeFeatures);
+        f.Msi.AnswersItsOwnRecord(OfficeFeatures, null, MsiInstallContext.Machine);
+
+        var screening = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            { SourceFolderTimeLimit = ShortLimit, DriveKindOf = FixedDrive, NamesInFolderOf = NameOnly }
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolderWithAStalledShare);
+
+        Assert.Equal((DeclaredProductOutcome.DeclaredProductInstalled, DeclaredProductInstalledCause.SourcesGivenUp),
+            (screening.Outcomes[0], screening.InstalledCauses[0]));
+        Assert.Equal([(@"\\nas\setup", 1)], screening.RootsGivenUp.Select(given => (given.Root, given.FilesKept)));
+    }
+
+    [Fact]
+    public void A_registration_installed_from_a_share_that_does_not_answer_keeps_every_installation_package_for_it()
+    {
+        // Its record does not show an ordinary installation, so it sets the hold, and the root
+        // given up is all that kept it.
+        var f = ARegistrationWithNoSourceListInstalledFrom(StalledShare);
+
+        var screening = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            { SourceFolderTimeLimit = ShortLimit, DriveKindOf = FixedDrive, NamesInFolderOf = NameOnly }
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolderWithAStalledShare);
+
+        Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
+        Assert.Equal(Census(noneRecorded: 1, packageCodeUnanswered: 1, perMachine: 1, keptSourcesNotRuledOut: 1),
+            screening.CachedPackages);
+        Assert.Equal([(@"\\nas\setup", 1)], screening.RootsGivenUp.Select(given => (given.Root, given.FilesKept)));
+    }
+
+    [Theory]
+    [InlineData(SetupFolder)]
+    [InlineData(InstallerFolder + @"\")]
+    [InlineData(StalledShare)]
+    public void A_possible_second_copy_with_no_source_list_is_judged_by_the_folder_it_was_installed_from(string folder)
+    {
+        // Its record reads as ordinary, so it sets no hold, and it is listed as not ruled out as
+        // a second copy, so its packages are read for every candidate.
+        var f = ARegistrationWithNoSourceListInstalledFrom(folder, marked: true);
+        f.Msi.AnswersItsOwnRecord(OfficeFeatures, null, MsiInstallContext.Machine);
+
+        var screening = new DeclaredProductCheck(f.Msi, f.Packages, f.Files, f.Disk, f.Msi.Registry, TheOwner)
+            { SourceFolderTimeLimit = ShortLimit, DriveKindOf = FixedDrive, NamesInFolderOf = NameOnly }
+            .Screen([Package(Candidate)], f.Listed, default, null, InInstallerFolderWithAStalledShare);
+
+        switch (folder)
+        {
+            case SetupFolder:
+                Assert.Equal(DeclaredProductOutcome.DeclaredProductNotInstalled, screening.Outcomes[0]);
+                Assert.Equal(Census(opensNoPackage: 1, unruled: 1), screening.CachedPackages);
+                break;
+            case StalledShare:
+                Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
+                Assert.Equal(
+                    Census(released: 1, unruled: 1, unseenSourcesGivenUp: 1, unseenPerMachine: 1),
+                    screening.CachedPackages);
+                Assert.Equal([(@"\\nas\setup", 1)], screening.RootsGivenUp.Select(given => (given.Root, given.FilesKept)));
+                break;
+            default:
+                Assert.Equal(DeclaredProductOutcome.SecondCopyUnestablished, screening.Outcomes[0]);
+                Assert.Equal(
+                    Census(released: 1, unruled: 1, unseenSourceNotRuledOut: 1, unseenPerMachine: 1),
+                    screening.CachedPackages);
+                Assert.Empty(screening.RootsGivenUp);
+                break;
+        }
     }
 
     [Theory]
@@ -5212,8 +5480,8 @@ public class DeclaredProductCheckTests
         + "source list's package name")]
     [InlineData(NoPackageFault.SourceListThere,
         "the installation records no cached package, and the registry does not agree: it holds a cached "
-        + "package for the installation, or its InstallProperties key or source list where Windows Installer "
-        + "answers that it has no source list, or a key would not read")]
+        + "package for the installation, or a source list where Windows Installer answers that it has none, "
+        + "or a key would not read")]
     [InlineData(NoPackageFault.PackageNameRead,
         "the installation records no cached package, and a source it names could not be ruled out")]
     public void A_registration_with_no_cached_package_is_logged_by_the_answer_that_kept_it(
@@ -5601,8 +5869,8 @@ public class DeclaredProductCheckTests
             new[]
             {
                 "the installation records no cached package, and the registry does not agree: it holds a cached "
-                + "package for the installation, or its InstallProperties key or source list where Windows "
-                + "Installer answers that it has no source list, or a key would not read",
+                + "package for the installation, or a source list where Windows Installer answers that it has "
+                + "none, or a key would not read",
             },
             recorded);
         Assert.Empty(f.Msi.PackageNameReads);

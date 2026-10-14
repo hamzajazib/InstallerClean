@@ -30,8 +30,10 @@ namespace InstallerClean.Services;
 /// seen every candidate installation package is kept. So is every one where an
 /// installation's cached package does not say which product it declares, unless its own
 /// record shows it to be an ordinary installation, or it records no cached package and
-/// has no source list, by the API's answer and in the registry, nor an <c>InstallProperties</c>
-/// key, so that Windows Installer has no package to open for it. An installation that records
+/// has no source list, by the API's answer and in the registry, and its <c>InstallProperties</c>
+/// key, where it has one, records no cached package and no folder it was installed from that
+/// could be the Installer folder, so that Windows Installer has no package to open for it. An
+/// installation that records
 /// no cached package and has a package to open is judged by its sources, and every
 /// candidate is compared with the packages they name where its <c>InstallProperties</c> key
 /// records no cached package either and they can all be seen. An installation whose recorded
@@ -591,7 +593,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// package the installation opens. An installation that records none adds the packages
     /// its sources name, where its <c>InstallProperties</c> key records none as well, and
     /// nothing where it has no package to open at all (<see cref="OpensNoPackage"/>).
-    /// <paramref name="givenUp"/> is as <see cref="AddSourcePackages"/> gives it, and
+    /// <paramref name="givenUp"/> is as <see cref="AddSourcePackages"/> gives it, or, where the
+    /// installation records no cached package and its sources give no root, the root given up
+    /// for the folder it was installed from (<see cref="OpensNoPackage"/>), and
     /// <paramref name="reading"/> says which step answered false, or
     /// <see cref="SecondCopyReading.Seen"/>.
     /// </summary>
@@ -617,11 +621,14 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
         // An installation recording no cached package opens what its sources name, read once its
         // InstallProperties key shows it records none as well, and nothing where it has no
-        // package to open at all (OpensNoPackage).
+        // package to open at all (OpensNoPackage). Where its sources keep the file, and its
+        // InstallSource folder is not ruled out because the folder's root is given up, that root is
+        // the one the file counts towards.
         var path = read.Value.TrimEnd('\0');
         if (path.Length == 0)
         {
-            if (OpensNoPackage(installation.ProductCode, installation.UserSid, context, pass))
+            if (OpensNoPackage(installation.ProductCode, installation.UserSid, context, pass,
+                    namesAFileInInstallerFolder, out var installSourceGivenUp))
             {
                 reading = SecondCopyReading.Seen;
                 return true;
@@ -629,6 +636,13 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
             var seen = AddSourcePackages(installation.ProductCode, installation.UserSid, context, noneRecorded: true,
                 pass, namesAFileInInstallerFolder, opened, byName, out givenUp, out var noneRefusal);
+            if (!seen && givenUp is null && installSourceGivenUp is not null)
+            {
+                givenUp = installSourceGivenUp;
+                reading = SecondCopyReading.SourcesGivenUp;
+                return false;
+            }
+
             reading = SecondCopyReadingOf(noneRefusal);
             return seen;
         }
@@ -739,7 +753,8 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             if (declared is null)
             {
                 var noPackage = reading == CachedPackageReading.NoneRecorded
-                    ? NoPackageReadingOf(installation.ProductCode, installation.UserSid, context, pass)
+                    ? NoPackageReadingOf(
+                        installation.ProductCode, installation.UserSid, context, pass, namesAFileInInstallerFolder)
                     : default(NoPackageReading?);
                 if (noPackage?.Answer == NoPackageAnswer.OpensNone)
                 {
@@ -770,8 +785,9 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
                                 : found;
                         detail = WhyItsSourcesKeep(keptBy);
                         pass.Census.NoneRecordedKept(keptBy.Answer);
-                        if (sourceGivenUp is null) keptOtherwise = true;
-                        else givenUp ??= sourceGivenUp;
+                        var keptFor = sourceGivenUp ?? keptBy.GivenUp;
+                        if (keptFor is null) keptOtherwise = true;
+                        else givenUp ??= keptFor;
                     }
                     else
                     {
@@ -823,8 +839,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
             + " when asked its source list's package name",
         NoPackageAnswer.RegistryDisagrees =>
             "the installation records no cached package, and the registry does not agree: it holds a cached "
-            + "package for the installation, or its InstallProperties key or source list where Windows Installer "
-            + "answers that it has no source list, or a key would not read",
+            + "package for the installation, or a source list where Windows Installer answers that it has none, "
+            + "or a key would not read",
+        NoPackageAnswer.InstallSourceNotRuledOut =>
+            "the installation records no cached package and has no source list, and the folder it was installed "
+            + "from could not be ruled out as the Installer folder",
         _ => "the installation records no cached package, and a source it names could not be ruled out",
     };
 
@@ -883,10 +902,11 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <summary>
     /// Whether Windows Installer has no package to open for one installation that records
     /// no cached package: whether it has no source list either, by the API's answer and by
-    /// the registry alike, and no <c>InstallProperties</c> key. Asked only where the
-    /// installation's <c>LocalPackage</c> has already read as none. An installation for which
-    /// this answers false can open only what its sources name, and is judged by them where its
-    /// <c>InstallProperties</c> key records no cached package either
+    /// the registry alike, and no <c>InstallProperties</c> key, or one recording no cached
+    /// package and no folder it was installed from that could be the Installer folder. Asked
+    /// only where the installation's <c>LocalPackage</c> has already read as none. An
+    /// installation for which this answers false can open only what its sources name, and is
+    /// judged by them where its <c>InstallProperties</c> key records no cached package either
     /// (<see cref="AddSourcePackages"/>).
     ///
     /// WINDOWS INSTALLER OPENS A PRODUCT'S PACKAGE IN TWO WAYS ONLY: the cached copy its
@@ -895,47 +915,72 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// it is no reason to keep one. An installation's <c>InstallProperties</c> key can record
     /// its <c>InstallSource</c>, the folder it was installed from, which the check compares
     /// with the folders on the source list wherever it reads them
-    /// (<see cref="AddSourcePackages"/>), so a key that is there answers false here.
+    /// (<see cref="AddSourcePackages"/>). With no source list there is no package name to look
+    /// for in it, so the folder itself is put to the Installer-folder test, and a folder that
+    /// could be the Installer folder answers false here.
     ///
     /// TRUE ONLY WHERE ALL OF THESE HOLD, and anything short of them answers false
     /// (<see cref="NoPackageReadingOf"/> says which):
     /// - the installation is per machine, with no account;
     /// - <c>MsiSourceListGetInfo</c> answers <see cref="MsiError.BadConfiguration"/> for its
     ///   package name, and no other return;
-    /// - its <c>InstallProperties</c> key (<see cref="InstallPropertiesKeyPath"/>) and its
-    ///   <c>SourceList</c> key (<see cref="SourceListKeyPath"/>) are both absent, a key that will
-    ///   not read answering false.
+    /// - its <c>SourceList</c> key (<see cref="SourceListKeyPath"/>) is absent, and its
+    ///   <c>InstallProperties</c> key (<see cref="InstallPropertiesKeyPath"/>) is absent or
+    ///   records no cached package (<see cref="RecordsNoCachedPackage"/>), a key that will not
+    ///   read answering false;
+    /// - where that key is there, its <c>InstallSource</c>, read through the API and from the key
+    ///   alike (<see cref="InstallSourceOf"/>), is none or a web address, or names a folder that
+    ///   a path inside it shows not to be the Installer folder, on a local drive as on any other
+    ///   root (<see cref="ReadSourcePackage"/>).
     /// The API is asked first, so a registry read is made only for an installation whose
     /// source list the API has already answered for. A check built without its registry
-    /// reader answers false for every installation.
+    /// reader answers false for every installation, and so does one without the
+    /// Installer-folder test for an installation whose <c>InstallProperties</c> key is there.
+    ///
+    /// THE FOLDER IS READ AS A SOURCE FOLDER'S PACKAGE IS, waited for up to
+    /// <see cref="SourceFolderTimeLimit"/> and refused under a root given up for the pass, and
+    /// <paramref name="givenUp"/> is that root where such a refusal answered false. It is null
+    /// for every other answer.
     ///
     /// AN ANSWER FINDING A PACKAGE TO OPEN STANDS FOR THE PASS, AND ONE FINDING NONE IS ASKED
     /// AGAIN AT THE NEXT CALL (<see cref="PassAnswers.OpensNoPackageOf"/>). Once any of the three
     /// steps finds a package to open for an installation, whatever the case of the code's letters,
-    /// every later step of the pass takes that answer without asking. <see cref="LinksOf"/> and
+    /// every later step of the pass takes that answer, and the root it names, without asking.
+    /// <see cref="LinksOf"/> and
     /// <see cref="PackagesSecondCopiesOpen"/> each reach their conclusion once in a pass, and
     /// <see cref="PackagesOpenedBy"/> once for each declared code, and every later candidate
     /// takes that conclusion without a further call. A source list that appears while the pass
     /// runs is found by the next step that asks, and that step reads the sources it names.
     /// </summary>
-    private bool OpensNoPackage(string code, string? sid, MsiInstallContext context, PassAnswers pass) =>
-        NoPackageReadingOf(code, sid, context, pass).Answer == NoPackageAnswer.OpensNone;
+    private bool OpensNoPackage(
+        string code, string? sid, MsiInstallContext context, PassAnswers pass,
+        Func<string, bool?>? namesAFileInInstallerFolder, out string? givenUp)
+    {
+        var reading = NoPackageReadingOf(code, sid, context, pass, namesAFileInInstallerFolder);
+        givenUp = reading.GivenUp;
+        return reading.Answer == NoPackageAnswer.OpensNone;
+    }
 
     /// <summary>
     /// What <see cref="OpensNoPackage"/> finds for one installation that records no cached
     /// package: <see cref="NoPackageAnswer.OpensNone"/> where it answers true, and otherwise
     /// the first of its conditions that does not hold.
     /// </summary>
-    private NoPackageReading NoPackageReadingOf(string code, string? sid, MsiInstallContext context, PassAnswers pass)
+    private NoPackageReading NoPackageReadingOf(
+        string code, string? sid, MsiInstallContext context, PassAnswers pass,
+        Func<string, bool?>? namesAFileInInstallerFolder)
     {
         if (context != MsiInstallContext.Machine || sid is not null || _registry is null)
             return new NoPackageReading(NoPackageAnswer.NotAsked);
 
-        return pass.OpensNoPackageOf(code, sid, context, () => AsksAndFindsNoPackage(code, sid, context));
+        return pass.OpensNoPackageOf(
+            code, sid, context, () => AsksAndFindsNoPackage(code, sid, context, pass, namesAFileInInstallerFolder));
     }
 
     /// <summary>The questions <see cref="OpensNoPackage"/> puts, for one installation it has not yet asked about.</summary>
-    private NoPackageReading AsksAndFindsNoPackage(string code, string? sid, MsiInstallContext context)
+    private NoPackageReading AsksAndFindsNoPackage(
+        string code, string? sid, MsiInstallContext context, PassAnswers pass,
+        Func<string, bool?>? namesAFileInInstallerFolder)
     {
         uint length = 0;
         var answered = _msi.GetSourceListInfo(code, sid, context, MsiSourceListOptions.Product,
@@ -945,15 +990,38 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         if (answered != MsiError.BadConfiguration)
             return new NoPackageReading(NoPackageAnswer.OtherAnswer, answered);
 
-        var properties = InstallPropertiesKeyPath(code, sid, context);
-        var sourceList = SourceListKeyPath(code, sid, context);
-        return properties is not null
-            && sourceList is { } listKey
-            && _registry!.LocalMachineValues(properties).Presence == RegistryKeyPresence.Absent
-            && ValuesOf(listKey).Presence == RegistryKeyPresence.Absent
-                ? new NoPackageReading(NoPackageAnswer.OpensNone, answered)
-                : new NoPackageReading(NoPackageAnswer.RegistryDisagrees, answered);
+        if (InstallPropertiesKeyPath(code, sid, context) is not { } properties
+            || SourceListKeyPath(code, sid, context) is not { } listKey)
+            return new NoPackageReading(NoPackageAnswer.RegistryDisagrees, answered);
+
+        var key = _registry!.LocalMachineValues(properties);
+        if (!RecordsNoCachedPackage(key) || ValuesOf(listKey).Presence != RegistryKeyPresence.Absent)
+            return new NoPackageReading(NoPackageAnswer.RegistryDisagrees, answered);
+
+        if (key.Presence == RegistryKeyPresence.Absent)
+            return new NoPackageReading(NoPackageAnswer.OpensNone, answered);
+
+        // The key is there and records no cached package. An InstallSource that is none, or a
+        // web address, names no folder on this PC. A folder is put to the Installer-folder test
+        // through a path inside it, on every root: with no package name there is no file of the
+        // installation's own to compare by identity.
+        var folder = InstallSourceOf(_registry, code, sid, context, out _);
+        if (folder is { Length: 0 }) return new NoPackageReading(NoPackageAnswer.OpensNone, answered);
+        if (folder is null || namesAFileInInstallerFolder is null)
+            return new NoPackageReading(NoPackageAnswer.InstallSourceNotRuledOut, answered);
+
+        var inFolder = (folder.EndsWith('\\') ? folder : folder + '\\') + FileNamedInTheInstallSource;
+        return ReadSourcePackage(inFolder, pass, namesAFileInInstallerFolder, out _, out var givenUp)
+            ? new NoPackageReading(NoPackageAnswer.OpensNone, answered)
+            : new NoPackageReading(NoPackageAnswer.InstallSourceNotRuledOut, answered, givenUp);
     }
+
+    /// <summary>
+    /// The name of the file <see cref="AsksAndFindsNoPackage"/> puts to the Installer-folder test
+    /// inside an <c>InstallSource</c> folder. The test answers about the folder the path's file
+    /// would be in, whether or not a file of this name is there.
+    /// </summary>
+    internal const string FileNamedInTheInstallSource = "package.msi";
 
     /// <summary>
     /// Whether the registry shows that one installation records no cached package: whether its
@@ -990,7 +1058,13 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
     /// <param name="Error">
     /// What <c>MsiSourceListGetInfo</c> answered for the installation's package name, where it was asked.
     /// </param>
-    private readonly record struct NoPackageReading(NoPackageAnswer Answer, uint Error = MsiError.Success);
+    /// <param name="GivenUp">
+    /// The root whose give-up refused the read of the installation's <c>InstallSource</c> folder,
+    /// where that is what answered (<see cref="NoPackageAnswer.InstallSourceNotRuledOut"/>), and
+    /// null otherwise.
+    /// </param>
+    private readonly record struct NoPackageReading(
+        NoPackageAnswer Answer, uint Error = MsiError.Success, string? GivenUp = null);
 
     /// <summary>Which of the conditions of <see cref="OpensNoPackage"/> answered for one installation.</summary>
     private enum NoPackageAnswer
@@ -1016,13 +1090,26 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// <summary>
         /// The registry does not show what Windows Installer answers. As <see cref="NoPackageReadingOf"/>
         /// answers it, <c>MsiSourceListGetInfo</c> answered <see cref="MsiError.BadConfiguration"/>,
-        /// and the installation's <c>InstallProperties</c> key or its <c>SourceList</c> key is
-        /// there, or either key would not read. <see cref="LinksOf"/>
+        /// and the installation's <c>InstallProperties</c> key holds a cached package, or its
+        /// <c>SourceList</c> key is there, or either key would not read. <see cref="LinksOf"/>
         /// counts under it as well an installation whose sources were not read because its
         /// <c>InstallProperties</c> key does not show it records none
         /// (<see cref="SourceRefusal.CachedPackageNotRuledOut"/>).
         /// </summary>
         RegistryDisagrees,
+
+        /// <summary>
+        /// <c>MsiSourceListGetInfo</c> answered <see cref="MsiError.BadConfiguration"/>, the
+        /// installation's <c>SourceList</c> key is absent, and its <c>InstallProperties</c> key is
+        /// there and records no cached package, but its <c>InstallSource</c> is not shown to be none,
+        /// a web address or a folder other than the Installer folder: it would not read, is held
+        /// otherwise than Windows Installer answers it or is in a form not compared
+        /// (<see cref="InstallSourceOf"/>), the folder could be the Installer folder or is not
+        /// established not to be, its read did not answer in time, or its root is given up for the
+        /// pass (<see cref="NoPackageReading.GivenUp"/>), or the check has no Installer-folder test.
+        /// Counted with the installations its sources keep (<see cref="CensusTally.NoneRecordedKept"/>).
+        /// </summary>
+        InstallSourceNotRuledOut,
     }
 
     /// <summary>
@@ -1327,9 +1414,10 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
         /// <see cref="MsiError.BadConfiguration"/>; the registry disagreeing with Windows
         /// Installer, its <c>InstallProperties</c> key holding a cached package or not being
         /// readable, or, where that API answered <see cref="MsiError.BadConfiguration"/>, its
-        /// <c>InstallProperties</c> key or its <c>SourceList</c> key being there; and otherwise a
-        /// source it names that could not be ruled out. It is counted by what its cached package
-        /// gave and its record showed as well (<see cref="Undeclared"/>).
+        /// <c>SourceList</c> key being there; and otherwise a source it names that could not be
+        /// ruled out, the folder it was installed from among them where it has no source list
+        /// (<see cref="NoPackageAnswer.InstallSourceNotRuledOut"/>). It is counted by what its
+        /// cached package gave and its record showed as well (<see cref="Undeclared"/>).
         /// </summary>
         internal void NoneRecordedKept(NoPackageAnswer answer)
         {
@@ -1498,15 +1586,29 @@ public sealed class DeclaredProductCheck : IDeclaredProductCheck
 
             // An installation recording no cached package adds the packages its sources name,
             // read once its InstallProperties key shows it records none as well, and nothing
-            // where it has no package to open at all (OpensNoPackage).
+            // where it has no package to open at all (OpensNoPackage). Where its sources keep the
+            // file, and its InstallSource folder is not ruled out because the folder's root is
+            // given up, the file is kept for that root.
             var path = read.Value.TrimEnd('\0');
             if (path.Length == 0)
             {
-                if (OpensNoPackage(registeredCode, sid, context, pass)) continue;
+                if (OpensNoPackage(registeredCode, sid, context, pass, namesAFileInInstallerFolder,
+                        out var installSourceGivenUp))
+                    continue;
+
                 if (!AddSourcePackages(registeredCode, sid, context, noneRecorded: true,
                         pass, namesAFileInInstallerFolder, identities, byName, out givenUp, out var noneRefusal))
                 {
-                    cause = CauseOf(noneRefusal);
+                    if (givenUp is null && installSourceGivenUp is not null)
+                    {
+                        givenUp = installSourceGivenUp;
+                        cause = DeclaredProductInstalledCause.SourcesGivenUp;
+                    }
+                    else
+                    {
+                        cause = CauseOf(noneRefusal);
+                    }
+
                     return null;
                 }
 

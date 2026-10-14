@@ -142,8 +142,9 @@ namespace InstallerClean.Models;
 /// <param name="ReleasedOpensNoPackage">
 /// Installations which do not set the hold because Windows Installer has no package to open for
 /// them, whatever their own record shows: per machine, recording no cached package, with no
-/// <c>InstallProperties</c> key, and with no source list, both by the API's answer and in the
-/// registry.
+/// source list, both by the API's answer and in the registry, and with no
+/// <c>InstallProperties</c> key, or one recording no cached package whose <c>InstallSource</c> is
+/// none, a web address or a folder shown not to be the Installer folder.
 /// </param>
 /// <param name="ReleasedBySources">
 /// Installations recording no cached package, with a package to open and a record that does not
@@ -162,7 +163,7 @@ namespace InstallerClean.Models;
 /// <see cref="KeptNoneRecordedOtherAnswer"/>, those whose registry does not agree with Windows
 /// Installer: the installation's <c>InstallProperties</c> key holds a cached package, or, per
 /// machine where the source-list API answered <c>ERROR_BAD_CONFIGURATION</c>, its
-/// <c>InstallProperties</c> key or its <c>SourceList</c> key is there; or a key could not be read.
+/// <c>SourceList</c> key is there; or a key could not be read.
 /// Per user as well as per machine.
 /// </param>
 /// <param name="KeptNoneRecordedSourcesNotRuledOut">
@@ -170,7 +171,8 @@ namespace InstallerClean.Models;
 /// without a registry reader, where the source-list API is not asked, or per machine with a package
 /// name the API answered, and in each case a source that could not be ruled out, a drive or share
 /// given up for the pass included, where the <c>InstallProperties</c> key records none as well or
-/// was not read. The three members from
+/// was not read; or per machine with no source list, where the <c>InstallSource</c> that key
+/// records could not be ruled out as the Installer folder. The three members from
 /// <see cref="KeptNoneRecordedOtherAnswer"/> add up to <see cref="KeptNoneRecorded"/>.
 /// </param>
 public sealed record CachedPackageCensus(
