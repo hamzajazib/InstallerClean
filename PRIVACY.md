@@ -40,7 +40,7 @@ Nothing in it names you, your PC, a file, a folder, a drive or a program.
 
 ## Update check
 
-When you open InstallerClean, it asks GitHub whether there's a newer version. That's one request to github.com. GitHub sees your IP address, as any website does, and a line naming InstallerClean and its version. Nothing is downloaded: if there's a newer version you get a link, and your browser opens only if you click it. You can turn the check off in the About screen. The update button makes the same check, only when you click it.
+When you open InstallerClean, it asks GitHub whether there's a newer version. That's one request to github.com. GitHub sees your IP address, as any website does, and a line naming InstallerClean and its version. If there's a newer version, the main window says so. Nothing is downloaded unless you click Update now, which downloads the newer version from its release on GitHub and installs it. You can turn the check off in the About screen. Check for updates makes the same check, only when you click it.
 
 ## The first-run record
 
