@@ -7,13 +7,18 @@ This file covers the third-party components redistributed inside InstallerClean'
 downloads. Which of them a download carries depends on which download it is, and
 the difference matters:
 
-  InstallerClean-<version>-setup.exe     Poppins, Montserrat, and four
-                                         Inno Setup translation files
-  InstallerClean-<version>-portable.exe  Poppins and Montserrat
-  installerclean-cli.exe                 neither, and nothing on this page
-                                         applies to it: it is built from
-                                         InstallerClean.Core alone, which
-                                         carries no font and no wizard
+  InstallerClean-<version>-setup.exe     Poppins, Montserrat, the Phosphor
+                                         icon and the Inno Setup
+                                         translation files
+  InstallerClean-<version>-portable.exe  Poppins, Montserrat and the
+                                         Phosphor icon
+  InstallerClean-<version>-slim.exe      Poppins, Montserrat and the
+                                         Phosphor icon
+  installerclean-cli.exe                 none of them, and nothing on this
+                                         page applies to it: it is built
+                                         from InstallerClean.Core alone,
+                                         which carries no font, no icon and
+                                         no wizard
 
 The setup installs this file beside LICENSE.txt. The portable and the
 command-line tool are single files with nothing to install alongside, so the
@@ -159,6 +164,41 @@ The licence file in that repository at that commit opens:
 
 Its licence is the SIL Open Font License 1.1, word for word as printed in full
 under Poppins above.
+
+-------------------------------------------------------------------------------
+Phosphor Icons
+-------------------------------------------------------------------------------
+
+The warning triangle drawn beside a warning in several of InstallerClean's
+windows is the "warning" icon from Phosphor Icons, in its fill weight, with the
+exclamation mark inside it redrawn. It is compiled into InstallerClean.exe as
+part of the windows' markup.
+
+  https://github.com/phosphor-icons/core
+
+Its licence, from that repository:
+
+  MIT License
+
+  Copyright (c) 2023 Phosphor Icons
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 -------------------------------------------------------------------------------
 Inno Setup translation files
