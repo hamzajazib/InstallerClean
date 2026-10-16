@@ -6,12 +6,6 @@ namespace InstallerClean.Services;
 
 public sealed class SettingsService : ISettingsService
 {
-    private static readonly string SettingsFolder = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "NoFaff", "InstallerClean");
-
-    private static readonly string DefaultSettingsFile = Path.Combine(SettingsFolder, "settings.json");
-
     // 64KB read cap. The schema is a flat object and the file is
     // normally a few hundred bytes. An oversize settings.json would
     // otherwise be loaded into a single managed string at startup
@@ -41,7 +35,7 @@ public sealed class SettingsService : ISettingsService
     // the update-check opt-out on the dispatcher.
     private readonly object _ioGate = new();
 
-    public SettingsService() : this(DefaultSettingsFile) { }
+    public SettingsService() : this(Path.Combine(AppDataFolder.Location, "settings.json")) { }
 
     internal SettingsService(string settingsFile)
     {

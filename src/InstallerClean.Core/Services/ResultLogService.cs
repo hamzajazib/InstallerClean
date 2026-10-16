@@ -11,7 +11,7 @@ namespace InstallerClean.Services;
 
 /// <summary>
 /// Default <see cref="IResultLogService"/>. Writes the JSON to
-/// <c>%LOCALAPPDATA%\NoFaff\InstallerClean\last-run.json</c> via the
+/// <c>%LOCALAPPDATA%\InstallerClean\last-run.json</c> via the
 /// same atomic-rename pattern <see cref="SettingsService"/> uses, and
 /// POSTs the file's contents to the No Faff result-log endpoint.
 /// </summary>
@@ -20,10 +20,6 @@ public sealed class ResultLogService : IResultLogService
     private const string EndpointUrl = "https://nofaff.netlify.app/api/result-log";
 
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(8);
-
-    private static readonly string DefaultLogFile = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "NoFaff", "InstallerClean", "last-run.json");
 
     private readonly string _logFile;
 
@@ -52,7 +48,7 @@ public sealed class ResultLogService : IResultLogService
         MaxResponseContentBufferSize = 4 * 1024,
     };
 
-    public ResultLogService() : this(DefaultLogFile) { }
+    public ResultLogService() : this(Path.Combine(AppDataFolder.Location, "last-run.json")) { }
 
     /// <summary>
     /// Test seam, mirroring <see cref="SettingsService"/>'s next door: points

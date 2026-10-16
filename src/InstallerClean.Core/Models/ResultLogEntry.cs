@@ -10,7 +10,7 @@ namespace InstallerClean.Models;
 /// <summary>
 /// The report of the PC's first finished run: a Move, a Delete, or a scan
 /// that offered nothing. Written once, as that run's card appears, to
-/// <c>last-run.json</c> in <c>%LOCALAPPDATA%\NoFaff\InstallerClean</c>;
+/// <c>last-run.json</c> in <c>%LOCALAPPDATA%\InstallerClean</c>;
 /// the file's contents are exactly what is POSTed when the card closes
 /// with its report box ticked.
 ///

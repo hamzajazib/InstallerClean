@@ -5,7 +5,7 @@ namespace InstallerClean.Tests.ViewModels;
 public class DescribeWriteFailureTests
 {
     private const string Dest = @"D:\backup\installer";
-    private const string LogPath = @"C:\Users\Test\AppData\Local\NoFaff\InstallerClean\crash.log";
+    private const string LogPath = @"C:\Users\Test\AppData\Local\InstallerClean\crash.log";
 
     [Fact]
     public void UnauthorizedAccess_mentions_permission_and_dest()

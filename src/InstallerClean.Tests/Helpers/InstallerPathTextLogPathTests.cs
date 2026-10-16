@@ -27,8 +27,8 @@ public class InstallerPathTextLogPathTests
     // A path rather than the host's own. The log lives under the profile, so off
     // Windows the real value carries no backslash and no drive letter, and there is
     // nothing in it for these assertions to count. Spelling one out here gives them
-    // seven separators and a drive seam on every machine.
-    private const string Path = @"C:\Users\U-ser\AppData\Local\NoFaff\InstallerClean\crash.log";
+    // six separators and a drive seam on every machine.
+    private const string Path = @"C:\Users\U-ser\AppData\Local\InstallerClean\crash.log";
 
     private static string Treat(string text) =>
         InstallerPathText.AllowFolderBreaksIn(text, Path);
@@ -40,15 +40,15 @@ public class InstallerPathTextLogPathTests
 
         // Written out rather than derived from the path, so a transform that also
         // miscounted could not satisfy it.
-        Assert.Equal(7, Path.Count(c => c == '\\'));
-        Assert.Equal(7, result.Count(c => c == ZeroWidthSpace));
+        Assert.Equal(6, Path.Count(c => c == '\\'));
+        Assert.Equal(6, result.Count(c => c == ZeroWidthSpace));
 
         // Rebuilt rather than reformatted, so stripping the additions gives the
         // original back exactly.
         Assert.Equal($"This is also recorded in {Path}.",
             new string(result.Where(c => c != ZeroWidthSpace && c != WordJoiner).ToArray()));
 
-        // WHERE, not just how many. A transform appending all seven to the end of the
+        // WHERE, not just how many. A transform appending all six to the end of the
         // sentence satisfies both assertions above, and a break opportunity is only
         // worth anything at the seam it belongs to.
         for (int i = 0; i < result.Length; i++)

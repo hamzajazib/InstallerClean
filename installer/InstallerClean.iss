@@ -45,7 +45,7 @@ AppVerName=InstallerClean {#AppVersion}
 ; a "close the running app" prompt when the user upgrades while
 ; InstallerClean.exe or installerclean-cli.exe is holding it.
 AppMutex=Global\InstallerClean_SingleInstance
-; %LOCALAPPDATA%\NoFaff\InstallerClean\ user data (settings.json,
+; %LOCALAPPDATA%\InstallerClean\ user data (settings.json,
 ; last-run.json, settings.json.bad on a corrupt-and-recovered run,
 ; crash.log, crash.log.old once the log has rotated) survives
 ; uninstall by design: the saved move destination, and settings.json's

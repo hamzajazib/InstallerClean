@@ -72,12 +72,16 @@ public class CrashLogTests
     [Fact]
     public void Without_a_folder_set_the_log_is_in_the_app_s_own_folder()
     {
-        // Read without writing, so the PC's own log is untouched.
+        // Read without writing, so the PC's own log is untouched. The folder is asked for
+        // before the suite's log is set aside, so a failure written while it settles goes
+        // to the suite's log.
+        var folder = AppDataFolder.Location;
         var suite = CrashLog.FolderForTests;
         CrashLog.FolderForTests = null;
         try
         {
-            Assert.EndsWith(Path.Combine("NoFaff", "InstallerClean", "crash.log"), CrashLog.LogPath);
+            Assert.Equal(Path.Combine(folder, "crash.log"), CrashLog.LogPath);
+            Assert.EndsWith(Path.Combine("InstallerClean", "crash.log"), CrashLog.LogPath);
         }
         finally
         {

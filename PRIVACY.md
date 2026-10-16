@@ -36,7 +36,7 @@ Nothing in it names you, your PC, a file, a folder, a drive or a program.
   </picture>
 </p>
 
-**On your PC.** The report is saved as `last-run.json` in `%LOCALAPPDATA%\NoFaff\InstallerClean` when that result screen appears, whether or not you leave the box ticked, and that file is exactly what's sent. The "See exactly what's sent" link in the panel the small "i" opens shows it to you.
+**On your PC.** The report is saved as `last-run.json` in `%LOCALAPPDATA%\InstallerClean` when that result screen appears, whether or not you leave the box ticked, and that file is exactly what's sent. The "See exactly what's sent" link in the panel the small "i" opens shows it to you.
 
 ## Update check
 
@@ -52,10 +52,12 @@ It sends nothing and never checks for updates. It writes one summary line per ru
 
 ## Everything else stays on your PC
 
-In `%LOCALAPPDATA%\NoFaff\InstallerClean`, for your Windows account:
+In `%LOCALAPPDATA%\InstallerClean`, for your Windows account:
 
 - `settings.json`: your backup folder, the language you picked, whether the update check is on, and whether your report has been sent or is waiting to be.
 - `crash.log`: details of any error, with the one before kept as `crash.log.old`.
+
+On a PC where an earlier version kept these files in `%LOCALAPPDATA%\NoFaff\InstallerClean`, InstallerClean moves them here the first time it starts.
 
 None of them ever leaves your PC. The buttons for the documentation, the project page and the donate page open your browser, and only when you click them.
 
