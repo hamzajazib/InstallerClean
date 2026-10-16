@@ -8,12 +8,13 @@ downloads. Which of them a download carries depends on which download it is, and
 the difference matters:
 
   InstallerClean-<version>-setup.exe     Poppins, Montserrat, the Phosphor
-                                         icon and the Inno Setup
-                                         translation files
-  InstallerClean-<version>-portable.exe  Poppins, Montserrat and the
-                                         Phosphor icon
-  InstallerClean-<version>-slim.exe      Poppins, Montserrat and the
-                                         Phosphor icon
+                                         icon, the two Material Icons
+                                         and the Inno Setup translation
+                                         files
+  InstallerClean-<version>-portable.exe  Poppins, Montserrat, the Phosphor
+                                         icon and the two Material Icons
+  InstallerClean-<version>-slim.exe      Poppins, Montserrat, the Phosphor
+                                         icon and the two Material Icons
   installerclean-cli.exe                 none of them, and nothing on this
                                          page applies to it: it is built
                                          from InstallerClean.Core alone,
@@ -199,6 +200,22 @@ Its licence, from that repository:
   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
+
+-------------------------------------------------------------------------------
+Material Icons
+-------------------------------------------------------------------------------
+
+Two icons are Google's Material Icons in their filled style, with their path
+data unchanged: the heart on the donate buttons is "favorite" and the tick in a
+ticked checkbox is "check". They are compiled into InstallerClean.exe as part
+of the windows' markup.
+
+  https://github.com/google/material-design-icons
+
+They are src/action/favorite/materialicons/24px.svg and
+src/navigation/check/materialicons/24px.svg in that repository, which
+publishes them under the Apache License, Version 2.0, the licence
+InstallerClean itself is under. Its full text is in LICENSE.
 
 -------------------------------------------------------------------------------
 Inno Setup translation files
