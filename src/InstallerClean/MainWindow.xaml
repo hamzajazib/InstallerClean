@@ -42,8 +42,7 @@
              outside its other three, so it sits in that gap rather than across the
              line. -->
         <!-- The panel the notice saying a newer version is available sits in, at the
-             top of the main window and on the card a scan puts up when it offers
-             nothing: the card surface, edged in the accent. -->
+             top of the main window: the card surface, edged in the accent. -->
         <Style x:Key="UpdateNoticePanel" TargetType="Border">
             <Setter Property="Background" Value="{StaticResource Surface.Card}"/>
             <Setter Property="BorderBrush" Value="{StaticResource Action.Accent.Background}"/>
@@ -136,9 +135,23 @@
              every state, and if the cell ever outgrew MaxWidth a
              clamped stretched element is centred by WPF anyway, so the
              wide-window intent is unchanged. -->
+        <!-- Hidden, not collapsed, while the card saying a newer version is available
+             is up: the dim over it is half-transparent, so the scan would read through
+             it, and the window keeps the size the scan gives it rather than changing
+             size as the card goes. A hidden element is out of the tab order and out of
+             what a screen reader can reach. -->
         <Grid Grid.Row="1" Margin="{StaticResource Margin.MainContent}"
               MaxWidth="{a11y:TextScaled 780}" HorizontalAlignment="Stretch"
               IsEnabled="{Binding IsMainContentInteractive}">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Chrome.IsOfferingUpdate}" Value="True">
+                            <Setter Property="Visibility" Value="Hidden"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
             <!-- The notice saying a newer version is available, the scan results,
                  the separator and the action zone, with no fixed spacer rows between
                  them: the separator and the action zone collapse together when
@@ -1066,7 +1079,6 @@
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <!-- Icon -->
@@ -1283,68 +1295,6 @@
                     </StackPanel>
                     </ScrollViewer>
 
-                    <!-- The notice saying a newer version is available, on the card a
-                         scan puts up when it offers nothing and on no other, between the
-                         card's lines and its buttons, outside the region that scrolls.
-                         The same panel and words as at the top of the main window; read
-                         out with the card's outcome. -->
-                    <Border x:Name="CardUpdateNotice" Grid.Row="3" Margin="{StaticResource GapBottom.Xl}">
-                        <Border.Style>
-                            <Style TargetType="Border" BasedOn="{StaticResource UpdateNoticePanel}">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <MultiDataTrigger>
-                                        <MultiDataTrigger.Conditions>
-                                            <Condition Binding="{Binding Chrome.HasNewerVersion}" Value="True"/>
-                                            <Condition Binding="{Binding Completion.IsScanCard}" Value="True"/>
-                                        </MultiDataTrigger.Conditions>
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </MultiDataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <DockPanel>
-                            <Path DockPanel.Dock="Left" Data="{StaticResource Icon.Update}"
-                                  Stroke="{StaticResource Link.Rest}" StrokeThickness="2" Fill="{x:Null}"
-                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                                  Width="{a11y:TextScaled 20}" Height="{a11y:TextScaled 20}" Stretch="Uniform"
-                                  VerticalAlignment="Top" Margin="{StaticResource GapRight.Sm}"/>
-                            <StackPanel>
-                                <TextBlock x:Name="CardUpdateNoticeLead" Text="{Binding Chrome.UpdateNoticeText}"
-                                           Foreground="{StaticResource Text.Heading}" FontSize="{DynamicResource Type.Heading.Sm}"
-                                           TextWrapping="Wrap"
-                                           AutomationProperties.LiveSetting="Polite"/>
-                                <TextBlock x:Name="CardUpdateNoticeDetail" Text="{loc:Translate UpdateNotice.Recommended}"
-                                           Foreground="{StaticResource Text.Body}" FontSize="{DynamicResource Type.Body}"
-                                           TextWrapping="Wrap" Margin="{StaticResource GapTop.Sm}"
-                                           AutomationProperties.LiveSetting="Polite"/>
-                                <!-- After an update that failed: what failed, in the warning colour,
-                                     read out as it appears. -->
-                                <TextBlock x:Name="CardUpdateNoticeFailure" Text="{Binding Chrome.UpdateFailureText}"
-                                           Foreground="{StaticResource Status.Warning}" FontSize="{DynamicResource Type.Body}"
-                                           TextWrapping="Wrap" Margin="{StaticResource GapTop.Sm}"
-                                           Visibility="{Binding Chrome.HasUpdateFailure, Converter={StaticResource BoolToVis}}"
-                                           AutomationProperties.LiveSetting="Polite"/>
-                                <!-- Update now wherever the app can update itself; the link where it
-                                     cannot, and beside Update now after an update that failed. -->
-                                <WrapPanel Margin="{StaticResource GapTop.Sm}">
-                                    <Button x:Name="CardUpdateNowButton" Style="{StaticResource CompactAccentPill}"
-                                            Content="{loc:Translate UpdateNotice.UpdateNow}"
-                                            Command="{Binding Chrome.UpdateNowCommand}"
-                                            Margin="0,4,16,0" VerticalAlignment="Center"
-                                            Visibility="{Binding Chrome.ShowsUpdateNow, Converter={StaticResource BoolToVis}}"/>
-                                    <TextBlock FontSize="{DynamicResource Type.Body}" TextWrapping="Wrap"
-                                               Margin="0,4,0,0" VerticalAlignment="Center"
-                                               Visibility="{Binding Chrome.ShowsReleaseLink, Converter={StaticResource BoolToVis}}">
-                                        <Hyperlink Command="{Binding Chrome.OpenReleasePageCommand}"
-                                                   Style="{StaticResource SubtleLink}"
-                                                   AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.Download}"><Run Text="{loc:Translate UpdateNotice.Download}"/></Hyperlink>
-                                    </TextBlock>
-                                </WrapPanel>
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-
                     <!-- The card's buttons. Done with a small Donate under it on
                          every card but one, and on that one, the card after a
                          Move or Delete that moved or deleted files, the large Donate
@@ -1363,7 +1313,7 @@
                          card on every card. Alt+D is Done on the cards that
                          carry it and the large Donate on the one that does not, and the
                          small Donate takes no access key. -->
-                    <StackPanel Grid.Row="4" HorizontalAlignment="Center">
+                    <StackPanel Grid.Row="3" HorizontalAlignment="Center">
                         <Button x:Name="CompletionCloseButton"
                                 Content="{loc:Translate Action.Done}" ContentTemplate="{StaticResource WrappingCentredLabel}"
                                 Command="{Binding Completion.DismissCommand}"
@@ -1476,7 +1426,7 @@
                          hairline, its accent fill being its edge, so it does not draw the
                          eye; unticked, it keeps the hairline an empty box needs to be
                          seen. The "i" has no tooltip: it is clicked. -->
-                    <Grid x:Name="CompletionReportLine" Grid.Row="5"
+                    <Grid x:Name="CompletionReportLine" Grid.Row="4"
                           HorizontalAlignment="Center"
                           Margin="{StaticResource GapTop.Sm}"
                           Visibility="{Binding Completion.OffersReport, Converter={StaticResource BoolToVis}}">
@@ -1580,9 +1530,72 @@
             </Border>
         </Grid>
 
+        <!-- The card the window opens with where the check made as the app starts finds
+             a newer version, in front of a window showing nothing of the scan: the two
+             lines of the notice, Update now or the link where the app cannot update
+             itself, and Continue without updating, which takes the card away and shows
+             the scan. After an update that failed it carries the line saying what
+             failed and the link beside Update now. The same dim and card as the scanning
+             overlay; a click on the dim does nothing. The code-behind puts the focus on
+             Update now, or on Continue where there is no Update now, and reads the two
+             lines out as the card appears. Esc is Continue (MainViewModel.HandleEscape). -->
+        <Grid x:Name="UpdateOfferOverlay" Grid.RowSpan="3"
+              Visibility="{Binding Chrome.IsOfferingUpdate, Converter={StaticResource BoolToVis}}"
+              KeyboardNavigation.TabNavigation="Cycle"
+              KeyboardNavigation.ControlTabNavigation="Cycle">
+            <chrome:DecorativeBorder Background="{StaticResource Surface.Overlay}"/>
+            <Border Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.Pill}"
+                    BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}"
+                    Padding="28,22" MaxWidth="{a11y:TextScaled 480}" Margin="{StaticResource GapX.Xl}"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                <StackPanel>
+                    <Path Data="{StaticResource Icon.Update}"
+                          Stroke="{StaticResource Link.Rest}" StrokeThickness="2" Fill="{x:Null}"
+                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                          Width="{a11y:TextScaled 32}" Height="{a11y:TextScaled 32}" Stretch="Uniform"
+                          HorizontalAlignment="Center" Margin="{StaticResource GapBottom.Md}"/>
+                    <TextBlock x:Name="UpdateOfferLead" Text="{Binding Chrome.UpdateNoticeText}"
+                               Foreground="{StaticResource Text.Heading}" FontSize="{DynamicResource Type.Heading.Sm}"
+                               TextWrapping="Wrap" TextAlignment="Center"
+                               AutomationProperties.LiveSetting="Polite"/>
+                    <TextBlock x:Name="UpdateOfferDetail" Text="{loc:Translate UpdateNotice.Recommended}"
+                               Foreground="{StaticResource Text.Body}" FontSize="{DynamicResource Type.Body}"
+                               TextWrapping="Wrap" TextAlignment="Center" Margin="{StaticResource GapTop.Sm}"
+                               AutomationProperties.LiveSetting="Polite"/>
+                    <TextBlock x:Name="UpdateOfferFailure" Text="{Binding Chrome.UpdateFailureText}"
+                               Foreground="{StaticResource Status.Warning}" FontSize="{DynamicResource Type.Body}"
+                               TextWrapping="Wrap" TextAlignment="Center" Margin="{StaticResource GapTop.Sm}"
+                               Visibility="{Binding Chrome.HasUpdateFailure, Converter={StaticResource BoolToVis}}"
+                               AutomationProperties.LiveSetting="Polite"/>
+                    <!-- Update now first, the accent marking it as the step the card
+                         recommends; the two wrap onto two lines where they do not fit
+                         on one. -->
+                    <WrapPanel HorizontalAlignment="Center" Margin="0,12,0,0">
+                        <Button x:Name="UpdateOfferUpdateNowButton" Style="{StaticResource AccentPill}"
+                                Content="{loc:Translate UpdateNotice.UpdateNow}"
+                                Command="{Binding Chrome.UpdateNowCommand}"
+                                Margin="8,8,8,0"
+                                Visibility="{Binding Chrome.ShowsUpdateNow, Converter={StaticResource BoolToVis}}"/>
+                        <Button x:Name="UpdateOfferContinueButton" Style="{StaticResource GhostPill}"
+                                Content="{loc:Translate UpdateNotice.ContinueWithoutUpdating}"
+                                ContentTemplate="{StaticResource WrappingCentredLabel}"
+                                Command="{Binding Chrome.ContinueWithoutUpdatingCommand}"
+                                Margin="8,8,8,0"/>
+                    </WrapPanel>
+                    <TextBlock FontSize="{DynamicResource Type.Body}" TextWrapping="Wrap" TextAlignment="Center"
+                               Margin="0,12,0,0"
+                               Visibility="{Binding Chrome.ShowsReleaseLink, Converter={StaticResource BoolToVis}}">
+                        <Hyperlink Command="{Binding Chrome.OpenReleasePageCommand}"
+                                   Style="{StaticResource SubtleLink}"
+                                   AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.Download}"><Run Text="{loc:Translate UpdateNotice.Download}"/></Hyperlink>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+        </Grid>
+
         <!-- Update overlay: the card shown while Update now downloads the newer version,
-             over everything else, the card a scan put up included, which Update now
-             closes. The same dim and card as the scanning overlay, with a bar that
+             over everything else, the card saying a newer version is available included.
+             The same dim and card as the scanning overlay, with a bar that
              measures where the server gives the download's length and moves without
              measuring where it does not, the line naming the version, and Cancel. It
              stays up as the app hands over and closes. The code-behind moves the focus

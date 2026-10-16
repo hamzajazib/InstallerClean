@@ -374,15 +374,15 @@ public partial class App : Application
             _services = Composition.BuildServiceProvider();
             var viewModel = _services.GetRequiredService<MainViewModel>();
 
-            // Started here rather than after the window shows, and before the
-            // startup scan is awaited rather than after it, because a typical
-            // session is over in seconds: a check queued behind the scan
-            // routinely resolves after the user has closed the window. It runs
-            // beside the scan instead, so the status line is usually already
-            // painted at first paint. Fire-and-forget by contract (it swallows
-            // every outcome, exceptions included), so it cannot fail the splash
-            // path or delay the window; the AutoUpdateCheck setting is read
-            // inside it, so an opted-out install opens no socket.
+            // Started before the startup scan, so it runs beside it and has usually
+            // answered by the time the scan ends. What the scan finds is held until it
+            // has: where a newer version is available, the window opens with the card
+            // saying so in front of the scan rather than with the scan. It swallows
+            // every outcome, exceptions included, so it cannot fail the splash path;
+            // the AutoUpdateCheck setting is read inside it, so an opted-out install
+            // opens no socket.
+            viewModel.HoldResultsForUpdateCheck();
+            var sinceCheckStart = Stopwatch.StartNew();
             viewModel.Chrome.StartAutomaticUpdateCheck();
 
             // Whether the PC has already had its first run, started before the scan so it
@@ -430,25 +430,42 @@ public partial class App : Application
                 cancelled = true;
             }
 
-            // The card a startup scan that offered nothing puts up can be waiting on the
-            // check above, which on a PC's first launch can outlast the scan. Building
-            // the window after it is settled means the card is either up as the window
-            // is constructed, which replays it, or not coming; the wait is the check's
-            // own bound at most.
+            // A cancelled startup scan has nothing to hold, so the window opens at once
+            // and the notice at the top shows whenever the check finds a newer version.
             //
-            // Once the scan has finished, Cancel has nothing left to stop, so the splash
-            // takes it out of use and says "Ready" at once, and the wait for the card runs
-            // beside the rest of the minimum and the close.
+            // Otherwise, once the scan has finished, Cancel has nothing left to stop and
+            // the splash takes it out of use. The splash stays up until the update check
+            // has answered or given up, which its own timeout bounds, and only then says
+            // "Ready". The wait here is held to that timeout and a second more, counted
+            // from the check's start, so a check that never answered could not keep the
+            // splash up.
+            //
+            // The card a startup scan that offered nothing puts up can then be waiting on
+            // the window's start check, which on a PC's first launch can outlast the scan.
+            // Building the window after it is settled means the card is either up as the
+            // window is constructed, which replays it, or not coming; the wait is that
+            // check's own bound at most. Where the window opens with the card saying a
+            // newer version is available there is nothing to wait for: the scan's card
+            // waits for Continue without updating, and the window waits on it then.
             if (cancelled)
             {
+                viewModel.ShowStartupScan(mayOfferUpdate: false);
                 await viewModel.ScanCardDecided;
             }
             else
             {
+                splash.ShowScanEnded();
+                var checkLeft = UpdateCheckService.RequestTimeout + UpdateCheckGrace - sinceCheckStart.Elapsed;
+                if (checkLeft > TimeSpan.Zero)
+                    await Task.WhenAny(viewModel.Chrome.AutomaticCheck, Task.Delay(checkLeft));
+                viewModel.ShowStartupScan(mayOfferUpdate: !StartedAfterLanguageChange(e.Args));
+
                 var floorLeft = splashFloor - sinceScanStart.Elapsed;
                 var ease = (floorLeft > TimeSpan.Zero ? floorLeft : TimeSpan.Zero) + splashClose;
-                splash.ShowScanFinished(ease);
-                await Task.WhenAll(viewModel.ScanCardDecided, Task.Delay(ease));
+                splash.ShowReady(ease);
+                await Task.WhenAll(
+                    viewModel.Chrome.IsOfferingUpdate ? Task.CompletedTask : viewModel.ScanCardDecided,
+                    Task.Delay(ease));
             }
 
             var window = new MainWindow(viewModel);
@@ -721,10 +738,27 @@ public partial class App : Application
 
         var exePath = Environment.ProcessPath;
         if (exePath is not null)
-            Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(exePath, LanguageChangedArgument) { UseShellExecute = true });
 
         Shutdown();
     }
+
+    /// <summary>
+    /// What the language relaunch passes the new process. That start carries on the
+    /// session that changed the language, so it opens without the card saying a newer
+    /// version is available, and the notice at the top of the main window shows instead
+    /// where its check finds one. It changes nothing else.
+    /// </summary>
+    private const string LanguageChangedArgument = "/languagechanged";
+
+    private static bool StartedAfterLanguageChange(string[] args) =>
+        args.Any(a => string.Equals(a, LanguageChangedArgument, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// How much longer than the update check's own timeout the startup waits for it
+    /// before showing the scan anyway.
+    /// </summary>
+    private static readonly TimeSpan UpdateCheckGrace = TimeSpan.FromSeconds(1);
 
     /// <summary>
     /// Hands over to a newer version: releases the single-instance mutex, starts

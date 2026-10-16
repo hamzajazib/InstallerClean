@@ -85,7 +85,7 @@ public class MainViewModelTests
     /// so any future ctor parameter change touches one line, not the
     /// 10-arg <c>new MainViewModel(...)</c> site repeated across tests.
     /// </summary>
-    private MainViewModel CreateViewModel(AppSettings settings)
+    private MainViewModel CreateViewModel(AppSettings settings, IAppUpdater? appUpdater = null)
     {
         _settingsService.Load().Returns(settings);
         // Check() returns Clean or Block, never null (the interface contract);
@@ -103,7 +103,7 @@ public class MainViewModelTests
             _settingsService, _rebootService, _msiInfoService,
             _dialogService, _confirmationService, _windowService,
             _fileSystem, _resultLogService, _updateCheckService, _reverifier,
-            _earlierRunCheck, _firstRunMark, _windowsRegion);
+            _earlierRunCheck, _firstRunMark, _windowsRegion, appUpdater);
     }
 
     /// <summary>
@@ -5284,5 +5284,188 @@ public class MainViewModelTests
 
         // Idle, so the busy check does not block: the relaunch still fires.
         _windowService.Received(1).RelaunchForLanguageChange();
+    }
+
+    // ---- The card saying a newer version is available ----
+
+    /// <summary>
+    /// The startup as App runs it: the scan held, the check started beside the scan,
+    /// and the decision taken once both are done.
+    /// </summary>
+    private static async Task StartAsync(MainViewModel vm, bool mayOfferUpdate = true)
+    {
+        vm.HoldResultsForUpdateCheck();
+        vm.Chrome.StartAutomaticUpdateCheck();
+        await vm.Scan.ScanWithProgressAsync(null);
+        await vm.Chrome.AutomaticCheck;
+        vm.ShowStartupScan(mayOfferUpdate);
+    }
+
+    private void CheckAnswers(UpdateCheckResult result) =>
+        _updateCheckService.CheckAsync(Arg.Any<UpdateCheckOrigin>(), Arg.Any<CancellationToken>())
+            .Returns(result);
+
+    private void ScanFinds(ScanResult result) =>
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(result);
+
+    [Fact]
+    public async Task A_newer_version_puts_the_card_up_and_holds_the_scan_s_card_and_its_report()
+    {
+        var vm = CreateViewModel();
+        ScanFinds(EmptyScanResult());
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+
+        await StartAsync(vm);
+
+        Assert.True(vm.Chrome.IsOfferingUpdate);
+        Assert.False(vm.Completion.IsComplete);
+        Assert.False(vm.IsMainContentInteractive);
+        Assert.False(vm.Scan.ScanCommand.CanExecute(null));
+        // Nothing is taken for the report while the card is up, so an update leaves the
+        // PC's first run to the newer version.
+        await _earlierRunCheck.DidNotReceive().ShowsAnEarlierRunWithinAsync(Arg.Any<TimeSpan>());
+        _firstRunMark.DidNotReceive().Set();
+        Assert.False(vm.ScanCardDecided.IsCompleted);
+    }
+
+    [Fact]
+    public async Task Continue_without_updating_shows_the_scan_s_card_and_takes_the_report()
+    {
+        var vm = CreateViewModel();
+        ScanFinds(EmptyScanResult());
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+        await StartAsync(vm);
+
+        vm.Chrome.ContinueWithoutUpdatingCommand.Execute(null);
+        await vm.ScanCardDecided;
+
+        Assert.False(vm.Chrome.IsOfferingUpdate);
+        Assert.True(vm.Completion.IsComplete);
+        Assert.Equal(Strings.Completion_AllClean, vm.Completion.Heading);
+        Assert.True(vm.Completion.OffersReport);
+        _firstRunMark.Received(1).Set();
+        // The notice at the top stays for the session.
+        Assert.True(vm.Chrome.HasNewerVersion);
+    }
+
+    [Fact]
+    public async Task Esc_on_the_card_is_Continue_without_updating()
+    {
+        var vm = CreateViewModel();
+        ScanFinds(ScanResultWithOrphans(2));
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+        await StartAsync(vm);
+
+        Assert.True(vm.HandleEscape());
+
+        Assert.False(vm.Chrome.IsOfferingUpdate);
+        Assert.True(vm.IsMainContentInteractive);
+        Assert.True(vm.Scan.ScanCommand.CanExecute(null));
+    }
+
+    [Theory]
+    [MemberData(nameof(AnswersThatPutNoCardUp))]
+    public async Task No_newer_version_shows_the_scan_as_soon_as_the_check_has_answered(UpdateCheckResult answer)
+    {
+        var vm = CreateViewModel();
+        ScanFinds(EmptyScanResult());
+        CheckAnswers(answer);
+
+        await StartAsync(vm);
+        await vm.ScanCardDecided;
+
+        Assert.False(vm.Chrome.IsOfferingUpdate);
+        Assert.True(vm.Completion.IsComplete);
+        Assert.True(vm.Completion.OffersReport);
+    }
+
+    public static TheoryData<UpdateCheckResult> AnswersThatPutNoCardUp() =>
+    [
+        new UpToDate("2.1.0"),
+        new CheckFailed(UpdateCheckFailureReason.NetworkUnavailable),
+        new CheckFailed(UpdateCheckFailureReason.Timeout),
+    ];
+
+    [Fact]
+    public async Task The_check_switched_off_shows_the_scan_with_no_card()
+    {
+        var vm = CreateViewModel(new AppSettings { AutoUpdateCheck = false });
+        ScanFinds(EmptyScanResult());
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+
+        await StartAsync(vm);
+        await vm.ScanCardDecided;
+
+        Assert.False(vm.Chrome.IsOfferingUpdate);
+        Assert.True(vm.Completion.IsComplete);
+    }
+
+    [Fact]
+    public async Task Where_the_card_may_not_be_offered_a_newer_version_shows_the_notice_and_the_scan()
+    {
+        var vm = CreateViewModel();
+        ScanFinds(EmptyScanResult());
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+
+        await StartAsync(vm, mayOfferUpdate: false);
+        await vm.ScanCardDecided;
+
+        Assert.False(vm.Chrome.IsOfferingUpdate);
+        Assert.True(vm.Chrome.HasNewerVersion);
+        Assert.True(vm.Completion.IsComplete);
+    }
+
+    [Fact]
+    public async Task A_failed_startup_scan_is_held_behind_the_card_like_a_result()
+    {
+        var vm = CreateViewModel();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<ScanResult>(new InvalidOperationException("failed")));
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+
+        await StartAsync(vm);
+
+        Assert.True(vm.Scan.HasScanError);
+        Assert.True(vm.Chrome.IsOfferingUpdate);
+        Assert.False(vm.IsMainContentInteractive);
+    }
+
+    [Fact]
+    public async Task Update_now_from_the_card_takes_no_report_and_hands_over()
+    {
+        var updater = Substitute.For<IAppUpdater>();
+        updater.CanUpdateItself.Returns(true);
+        var prepared = new PreparedUpdate(@"C:\ProgramData\InstallerClean-update-x\InstallerClean-9.9.9-setup.exe",
+            "/SILENT", () => { });
+        updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(prepared);
+        _windowService.StartUpdateAndCloseAsync(default!, default!).ReturnsForAnyArgs(true);
+        var vm = CreateViewModel(new AppSettings(), updater);
+        ScanFinds(EmptyScanResult());
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+        await StartAsync(vm);
+
+        await vm.Chrome.UpdateNowCommand.ExecuteAsync(null);
+
+        await _windowService.Received(1).StartUpdateAndCloseAsync(prepared.FileToStart, prepared.Arguments);
+        Assert.False(vm.Completion.IsComplete);
+        _firstRunMark.DidNotReceive().Set();
+        await _resultLogService.DidNotReceiveWithAnyArgs().WriteAsync(default!, default);
+    }
+
+    [Fact]
+    public async Task A_rescan_after_Continue_does_not_bring_the_card_back()
+    {
+        var vm = CreateViewModel();
+        ScanFinds(ScanResultWithOrphans(2));
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+        await StartAsync(vm);
+        vm.Chrome.ContinueWithoutUpdatingCommand.Execute(null);
+
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+
+        Assert.False(vm.Chrome.IsOfferingUpdate);
+        Assert.True(vm.Scan.HasScanned);
+        Assert.True(vm.Chrome.HasNewerVersion);
     }
 }

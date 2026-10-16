@@ -325,6 +325,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's strongly recommended to use the latest version. | 强烈建议使用最新版本。 |
 | Download it from GitHub | 从 GitHub 下载 |
 | Update now | 立即更新 |
+| _Continue without updating | 不更新，直接继续(_C) |
 | Downloading InstallerClean {0}... | 正在下载 InstallerClean {0}… |
 | The update couldn't be downloaded. | 无法下载更新。 |
 | The update couldn't be installed. | 无法安装更新。 |

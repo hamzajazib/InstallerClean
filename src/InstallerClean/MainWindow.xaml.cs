@@ -65,75 +65,21 @@ public partial class MainWindow : Window
         Deactivated += OnDeactivatedDuringUpdateCheck;
         Activated += OnActivatedDuringUpdateCheck;
 
-        // The splash-driven startup scan can complete (and Completion
-        // .ShowAllClear() can already have set IsComplete=true) before
-        // this window is constructed. The PropertyChanged subscription
-        // above only catches state changes from now on, so it doesn't
-        // replay the all-clear that already fired. Replay it manually:
-        // if the overlay is already up at construction, route focus into
-        // it so Tab lands inside the overlay (and the overlay's
-        // KeyboardNavigation.TabNavigation="Cycle" keeps it there)
-        // rather than starting on a main-window button behind the
-        // overlay.
-        //
         // The startup scan's two warnings appeared before this window existed, so they
         // are marked to be read here: on closing the card where the scan ended on one,
         // otherwise around the headline the replay below reads. A startup scan that was
         // cancelled or failed has no result, so neither shows.
         _pendingRebootToAnnounce = _vm.Scan.HasPendingReboot;
         _missingFromDiskToAnnounce = _vm.Scan.HasMissingFromDisk;
-        // The automatic update check runs beside the startup scan and has usually found
-        // any newer version by now, so its notice is read here too: with the card's
-        // outcome where the startup card is up, otherwise first, ahead of the replay below.
-        _updateNoticeToAnnounce = _vm.Chrome.HasNewerVersion && !_vm.Completion.IsComplete;
-        if (_vm.Completion.IsComplete)
-        {
-            // The summary has no Text binding, hosting inlines composed in
-            // code, so build it now for the overlay already up at
-            // construction; the PropertyChanged path that normally builds it
-            // never fired for this pre-construction completion (the startup
-            // all-clear set during the splash).
-            BuildCompletionSummaryLine();
-            Dispatcher.BeginInvoke(DispatcherPriority.Input, () => CompletionDismissButton().Focus());
-            // The overlay was never revealed inside this window's lifetime
-            // (the startup all-clear is set during the splash, before
-            // construction), so the PropertyChanged raise path never runs
-            // for it, and a newly shown window announces only its title
-            // and the focused control. Without these raises the most
-            // common outcome of all, the startup scan's "All clean", is
-            // never spoken.
-            AnnounceCompletionOutcome();
-        }
-        else if (!_vm.Scan.IsScanning)
-        {
-            // The startup scan runs during the splash, so it has usually
-            // finished by the time this window is built. When it found orphans
-            // (no all-clear overlay) land focus on the results default rather
-            // than leaving the bare window root unfocused, so a keyboard user
-            // has a visible focus ring on open.
-            Dispatcher.BeginInvoke(DispatcherPriority.Input, () => FocusResultsDefault());
-            // Its ScanCompleted fired during the splash, before this
-            // window existed, so the subscription above never saw it;
-            // replay the result announcement the same way the all-clear
-            // branch replays its raises.
-            OnScanCompleted(this, EventArgs.Empty);
-
-            // Cancelled at the splash: there is no scan to announce, and the
-            // scanning overlay this window normally re-announces the cancel from
-            // was never up inside its lifetime. Say why the window is empty.
-            if (!_vm.Scan.HasScanned && _vm.Scan.LastScanWasCancelled)
-                Announce(Strings.Status_ScanCancelled);
-
-            // A failed startup scan opens the window with the tailored error in the
-            // intro instead of exiting. A newly shown window speaks only its title
-            // and the focused Re-scan button, so announce the diagnosis too. Two
-            // of the diagnoses name the installer cache folder and the announcer
-            // takes them unbound: it is never drawn, so it has no break to protect
-            // and a word joiner there would only ever reach a speech engine. The
-            // same split TranslateExtension makes for an automation property.
-            if (!_vm.Scan.HasScanned && _vm.Scan.HasScanError)
-                Announce(_vm.Scan.LastScanError);
-        }
+        // The automatic update check has answered by now. Where it found a newer
+        // version the window opens with the card saying so, which reads the same two
+        // lines. Otherwise the notice at the top is read first, ahead of the replay
+        // below, or as the startup card closes where one is up.
+        _updateNoticeToAnnounce = _vm.Chrome.HasNewerVersion && !_vm.Chrome.IsOfferingUpdate;
+        if (_vm.Chrome.IsOfferingUpdate)
+            ShowUpdateOffer();
+        else
+            ShowStartupScan();
 
         // Both of the completion card's donate buttons are centred on the card,
         // and each tooltip is centred over its button.
@@ -185,6 +131,109 @@ public partial class MainWindow : Window
 
         this.EnableAltSpaceSystemMenu();
         this.SuppressFocusVisualOnDeactivation();
+    }
+
+    /// <summary>
+    /// Shows the startup scan, which ran in the splash before this window existed: as
+    /// the window opens, or after Continue without updating where the window opened with
+    /// the card saying a newer version is available. The window's PropertyChanged
+    /// subscriptions catch changes from their own start only, so what the scan put up
+    /// is replayed here.
+    ///
+    /// Where the startup card is already up, the focus goes into it so Tab lands inside
+    /// the overlay (and the overlay's KeyboardNavigation.TabNavigation="Cycle" keeps it
+    /// there) rather than starting on a main-window button behind the overlay.
+    /// </summary>
+    private void ShowStartupScan()
+    {
+        if (_vm.Completion.IsComplete)
+        {
+            // The summary has no Text binding, hosting inlines composed in
+            // code, so build it now for the overlay already up at
+            // construction; the PropertyChanged path that normally builds it
+            // never fired for this pre-construction completion (the startup
+            // all-clear set during the splash).
+            BuildCompletionSummaryLine();
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, () => CompletionDismissButton().Focus());
+            // The overlay was never revealed inside this window's lifetime
+            // (the startup all-clear is set during the splash, before
+            // construction), so the PropertyChanged raise path never runs
+            // for it, and a newly shown window announces only its title
+            // and the focused control. Without these raises the most
+            // common outcome of all, the startup scan's "All clean", is
+            // never spoken.
+            AnnounceCompletionOutcome();
+        }
+        else if (!_vm.Scan.IsScanning)
+        {
+            // The startup scan runs during the splash, so it has usually
+            // finished by the time this window is built. When it found orphans
+            // (no all-clear overlay) land focus on the results default rather
+            // than leaving the bare window root unfocused, so a keyboard user
+            // has a visible focus ring on open.
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, () => FocusResultsDefault());
+            // Its ScanCompleted fired during the splash, before this
+            // window existed, so the window's subscription never saw it;
+            // replay the result announcement the same way the all-clear
+            // branch replays its raises.
+            OnScanCompleted(this, EventArgs.Empty);
+
+            // Cancelled at the splash: there is no scan to announce, and the
+            // scanning overlay this window normally re-announces the cancel from
+            // was never up inside its lifetime. Say why the window is empty.
+            if (!_vm.Scan.HasScanned && _vm.Scan.LastScanWasCancelled)
+                Announce(Strings.Status_ScanCancelled);
+
+            // A failed startup scan opens the window with the tailored error in the
+            // intro instead of exiting. A newly shown window speaks only its title
+            // and the focused Re-scan button, so announce the diagnosis too. Two
+            // of the diagnoses name the installer cache folder and the announcer
+            // takes them unbound: it is never drawn, so it has no break to protect
+            // and a word joiner there would only ever reach a speech engine. The
+            // same split TranslateExtension makes for an automation property.
+            if (!_vm.Scan.HasScanned && _vm.Scan.HasScanError)
+                Announce(_vm.Scan.LastScanError);
+        }
+    }
+
+    /// <summary>
+    /// The card saying a newer version is available, up as the window opens: the focus
+    /// goes to Update now, or to Continue without updating where the card has no Update
+    /// now, and the card's two lines are read. A newly shown window speaks only its title
+    /// and the focused control, so without this the card's words are never spoken.
+    /// </summary>
+    private void ShowUpdateOffer()
+    {
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, FocusUpdateOffer);
+        AnnounceLiveRegions(UpdateOfferLead, UpdateOfferDetail);
+    }
+
+    private void FocusUpdateOffer()
+    {
+        if (!UpdateOfferUpdateNowButton.Focus())
+            UpdateOfferContinueButton.Focus();
+    }
+
+    /// <summary>
+    /// Continue without updating: the scan the card stood in front of is shown. Where it
+    /// offered nothing, its card goes up once the report box has been settled and is read
+    /// as any card is (<see cref="OnCompletionPropertyChanged"/>); otherwise what the
+    /// window shows is replayed as at the window's opening. The notice at the top is not
+    /// read again, the card having just said the same. Never throws.
+    /// </summary>
+    private async Task ShowScanAfterUpdateOfferAsync()
+    {
+        try
+        {
+            _updateNoticeToAnnounce = false;
+            await _vm.ScanCardDecided;
+            if (!_vm.Completion.IsComplete)
+                ShowStartupScan();
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+        }
     }
 
     private void ApplyWorkAreaBounds()
@@ -283,14 +332,13 @@ public partial class MainWindow : Window
     /// card instead, and the silent post-operation refresh must stay silent because
     /// the completion outcome is about to speak. In both the two warnings stay marked,
     /// and are read as the card is closed, or as the Move or Delete card goes where no
-    /// card follows it. So does the notice, but where the scan offered nothing the
-    /// card about to go up carries it and reads it.
+    /// card follows it. So does the notice.
     ///
     /// The headline, and the line naming the drives and shares, are read after every
     /// scan that shows them rather than only when they change, so a Re-scan that
     /// finds the same files, or meets the same drive again, says so. The two
     /// warnings are read when they appear and not again while they stay as they are.
-    /// The window's constructor replays this method for the startup scan, so that
+    /// <see cref="ShowStartupScan"/> replays this method for the startup scan, so that
     /// scan's lines are read too.
     /// </summary>
     private void OnScanCompleted(object? sender, EventArgs e)
@@ -308,7 +356,7 @@ public partial class MainWindow : Window
         }
 
         // A completed scan that offered nothing puts its card up after this runs, and
-        // the card reads the notice with its outcome.
+        // the notice is read as that card closes, with the two warnings.
         if (!(_vm.Scan.HasScanned && _vm.Scan.OrphanedFileCount == 0)
             && TakeMark(ref _updateNoticeToAnnounce))
             AnnounceUpdateNotice();
@@ -394,9 +442,6 @@ public partial class MainWindow : Window
 
         if (e.PropertyName == nameof(CompletionViewModel.IsComplete) && _vm.Completion.IsComplete)
         {
-            // A card carrying the notice reads it with its outcome below.
-            if (CardCarriesUpdateNotice())
-                _updateNoticeToAnnounce = false;
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () => CompletionDismissButton().Focus());
             // Focus lands on the button that closes the card, so without an
             // explicit raise a screen reader announces only the button and never
@@ -407,11 +452,8 @@ public partial class MainWindow : Window
         // Overlay dismissed (Done, Close without donating, the large Donate, Esc or a
         // click on the dim margin). The focused button is gone, so move focus to a
         // sensible non-destructive control rather than letting it drop to the window
-        // root. Update now closes the card too, having put its own card up first, which
-        // takes the focus and is read; what is read here waits for that card to go
-        // (OnUpdatingChanged).
-        if (e.PropertyName == nameof(CompletionViewModel.IsComplete) && !_vm.Completion.IsComplete
-            && !_vm.Chrome.IsUpdating)
+        // root.
+        if (e.PropertyName == nameof(CompletionViewModel.IsComplete) && !_vm.Completion.IsComplete)
         {
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () => RescanButton.Focus());
             AnnounceUnfinishedRefresh();
@@ -477,13 +519,18 @@ public partial class MainWindow : Window
 
         if (e.PropertyName == nameof(ChromeViewModel.IsUpdating))
             OnUpdatingChanged();
+
+        if (e.PropertyName == nameof(ChromeViewModel.IsOfferingUpdate) && !_vm.Chrome.IsOfferingUpdate)
+            _ = ShowScanAfterUpdateOfferAsync();
     }
 
     /// <summary>
     /// The card shown while an update downloads. As it appears, the focus moves to its
     /// Cancel and its line is read. As it goes, which it does only where the update was
-    /// cancelled or failed, the focus moves to Update now, and the line saying what
-    /// failed is read, then any warning marked while the card was up.
+    /// cancelled or failed, the focus moves to Update now and the line saying what
+    /// failed is read: on the card saying a newer version is available where that card
+    /// is behind it, with nothing else read until that card goes; otherwise on the
+    /// notice, followed by any warning marked while the card was up.
     /// </summary>
     private void OnUpdatingChanged()
     {
@@ -491,6 +538,14 @@ public partial class MainWindow : Window
         {
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () => UpdateCancelButton.Focus());
             AnnounceLiveRegion(UpdatingText, () => _vm.Chrome.IsUpdating);
+            return;
+        }
+
+        if (_vm.Chrome.IsOfferingUpdate)
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, FocusUpdateOffer);
+            if (_vm.Chrome.HasUpdateFailure)
+                AnnounceLiveRegion(UpdateOfferFailure, () => _vm.Chrome.HasUpdateFailure);
             return;
         }
 
@@ -508,17 +563,13 @@ public partial class MainWindow : Window
     /// <summary>
     /// Reads out the notice each time a check finds a newer version, which the
     /// automatic check does unprompted and the manual check as the answer to a click,
-    /// the notice already showing included. Read where it shows: on the card a scan
-    /// put up, where that card is in front and carries it; at once on the main window
-    /// where nothing stands in front of it; otherwise marked, and read first at the
-    /// next point the window is in front.
+    /// the notice already showing included. Read at once where nothing stands in front
+    /// of it; otherwise marked, and read first at the next point the window is in front.
     /// </summary>
     private void OnNewerVersionFound(object? sender, EventArgs e)
     {
-        if (CardCarriesUpdateNotice())
-            AnnounceLiveRegions(CardUpdateNoticeLead, CardUpdateNoticeDetail);
-        else if (_vm.Completion.IsComplete || _vm.Cleanup.IsOperating || _vm.Scan.IsScanning
-                 || _vm.Chrome.IsUpdating)
+        if (_vm.Completion.IsComplete || _vm.Cleanup.IsOperating || _vm.Scan.IsScanning
+            || _vm.Chrome.IsUpdating)
             _updateNoticeToAnnounce = true;
         else
             AnnounceUpdateNotice();
@@ -530,13 +581,6 @@ public partial class MainWindow : Window
         AnnounceLiveRegion(UpdateNoticeLead, () => _vm.Chrome.HasNewerVersion);
         AnnounceLiveRegion(UpdateNoticeDetail, () => _vm.Chrome.HasNewerVersion);
     }
-
-    /// <summary>
-    /// Whether a card is up and shows the notice, which only the card a scan puts up
-    /// when it offers nothing does.
-    /// </summary>
-    private bool CardCarriesUpdateNotice() =>
-        _vm.Completion.IsComplete && _vm.Completion.IsScanCard && _vm.Chrome.HasNewerVersion;
 
     /// <summary>
     /// Whether the update button held keyboard focus when the manual check
@@ -879,9 +923,6 @@ public partial class MainWindow : Window
     // it is a list to read at leisure rather than an outcome, and it is reached
     // in scan mode. The count above it is what has to be spoken.
     //
-    // The notice saying a newer version is available follows them on the card that
-    // carries it, as it is drawn.
-    //
     // The report box follows the outcome on the card that carries it, which is
     // settled before the card is revealed, so the reader hears that something is
     // sent as the card closes, and whether the box is ticked, without having to
@@ -891,8 +932,6 @@ public partial class MainWindow : Window
         AnnounceLiveRegions(CompletionHeadingText, CompletionFailedCountText,
             CompletionSummaryText, CompletionRestoreText, CompletionSkippedText,
             CompletionScanStartText);
-        if (CardCarriesUpdateNotice())
-            AnnounceLiveRegions(CardUpdateNoticeLead, CardUpdateNoticeDetail);
         if (_vm.Completion.OffersReport)
             AnnounceLiveRegion(CompletionReportBox, () => _vm.Completion.OffersReport);
     }

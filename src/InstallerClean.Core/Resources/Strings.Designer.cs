@@ -547,6 +547,7 @@ public static class Strings
     public static string UpdateCheck_Status_UpToDate => Get("UpdateCheck.Status.UpToDate");
     public static string UpdateCheck_Title => Get("UpdateCheck.Title");
     public static string UpdateNotice_Available => Get("UpdateNotice.Available");
+    public static string UpdateNotice_ContinueWithoutUpdating => Get("UpdateNotice.ContinueWithoutUpdating");
     public static string UpdateNotice_Download => Get("UpdateNotice.Download");
     public static string UpdateNotice_DownloadFailed => Get("UpdateNotice.DownloadFailed");
     public static string UpdateNotice_Downloading => Get("UpdateNotice.Downloading");

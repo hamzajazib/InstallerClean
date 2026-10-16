@@ -619,6 +619,7 @@ const MAP = {
   'UpdateNotice.Downloading': `InstallerClean {0} 내려받는 중...`,
   'UpdateNotice.DownloadFailed': `업데이트를 내려받지 못했습니다.`,
   'UpdateNotice.InstallFailed': `업데이트를 설치하지 못했습니다.`,
+  'UpdateNotice.ContinueWithoutUpdating': `업데이트하지 않고 계속(_C)`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

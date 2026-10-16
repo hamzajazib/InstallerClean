@@ -603,6 +603,7 @@ const MAP = {
   'UpdateNotice.Downloading': `InstallerClean {0} downloaden...`,
   'UpdateNotice.DownloadFailed': `De update kon niet worden gedownload.`,
   'UpdateNotice.InstallFailed': `De update kon niet worden geïnstalleerd.`,
+  'UpdateNotice.ContinueWithoutUpdating': `_Doorgaan zonder bij te werken`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

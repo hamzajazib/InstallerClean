@@ -645,6 +645,7 @@ const MAP = {
   'UpdateNotice.Downloading': `Mengunduh InstallerClean {0}...`,
   'UpdateNotice.DownloadFailed': `Pembaruan tidak dapat diunduh.`,
   'UpdateNotice.InstallFailed': `Pembaruan tidak dapat dipasang.`,
+  'UpdateNotice.ContinueWithoutUpdating': `_Lanjutkan tanpa memperbarui`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

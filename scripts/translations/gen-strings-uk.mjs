@@ -642,6 +642,7 @@ const MAP = {
   'UpdateNotice.Downloading': `Завантаження InstallerClean {0}...`,
   'UpdateNotice.DownloadFailed': `Не вдалося завантажити оновлення.`,
   'UpdateNotice.InstallFailed': `Не вдалося встановити оновлення.`,
+  'UpdateNotice.ContinueWithoutUpdating': `_Продовжити без оновлення`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -1556,23 +1556,28 @@ InstallerClean은 이미 관리자 권한으로 실행 중이었으므로 그런
   <data name="UpdateCheck.Title" xml:space="preserve"><value>업데이트 확인</value></data>
   <data name="UpdateCheck.Status.Checking" xml:space="preserve"><value>확인 중...</value></data>
   <data name="UpdateCheck.Status.UpToDate" xml:space="preserve"><value>최신 버전입니다.</value></data>
-  <!-- The notice at the top of the main window, and on the card a scan puts up
-       when it offers nothing, once a check finds a newer version. -->
+  <!-- The card the main window opens with when the check made as the app starts
+       finds a newer version, and the notice at the top of the main window once a
+       check has found one. -->
   <data name="UpdateNotice.Available" xml:space="preserve">
     <value>InstallerClean {0} 버전을 사용할 수 있습니다.</value>
-    <comment>The notice's first line. {0} = the newer version number, as 3.5.0.</comment>
+    <comment>The first line of the card and of the notice. {0} = the newer version number, as 3.5.0.</comment>
   </data>
   <data name="UpdateNotice.Recommended" xml:space="preserve">
     <value>최신 버전을 사용할 것을 강력히 권장합니다.</value>
-    <comment>The notice's second line, under UpdateNotice.Available.</comment>
+    <comment>The second line of the card and of the notice, under UpdateNotice.Available.</comment>
   </data>
   <data name="UpdateNotice.Download" xml:space="preserve">
     <value>GitHub에서 내려받기</value>
-    <comment>The notice's link, which opens the newest release's page on GitHub in the browser. Shown where the app cannot update itself, and after an update that failed.</comment>
+    <comment>The link on the card and on the notice, which opens the newest release's page on GitHub in the browser. Shown where the app cannot update itself, and after an update that failed.</comment>
   </data>
   <data name="UpdateNotice.UpdateNow" xml:space="preserve">
     <value>지금 업데이트</value>
-    <comment>The notice's button, which downloads the newer version, closes the app and opens the newer version in its place.</comment>
+    <comment>The button on the card and on the notice, which downloads the newer version, closes the app and opens the newer version in its place.</comment>
+  </data>
+  <data name="UpdateNotice.ContinueWithoutUpdating" xml:space="preserve">
+    <value>업데이트하지 않고 계속(_C)</value>
+    <comment>The card's second button, beside UpdateNotice.UpdateNow. It closes the card and shows what the scan found, with this version. The underscore marks the Alt access key.</comment>
   </data>
   <data name="UpdateNotice.Downloading" xml:space="preserve">
     <value>InstallerClean {0} 내려받는 중...</value>
@@ -1580,11 +1585,11 @@ InstallerClean은 이미 관리자 권한으로 실행 중이었으므로 그런
   </data>
   <data name="UpdateNotice.DownloadFailed" xml:space="preserve">
     <value>업데이트를 내려받지 못했습니다.</value>
-    <comment>A third line in the notice, under UpdateNotice.Recommended, after the newer version could not be downloaded. Update now and the link show under it.</comment>
+    <comment>A third line on the card and in the notice, under UpdateNotice.Recommended, after the newer version could not be downloaded. Update now and the link show under it.</comment>
   </data>
   <data name="UpdateNotice.InstallFailed" xml:space="preserve">
     <value>업데이트를 설치하지 못했습니다.</value>
-    <comment>A third line in the notice, under UpdateNotice.Recommended, after the newer version downloaded but could not be put in place or started. Update now and the link show under it.</comment>
+    <comment>A third line on the card and in the notice, under UpdateNotice.Recommended, after the newer version downloaded but could not be put in place or started. Update now and the link show under it.</comment>
   </data>
   <data name="UpdateCheck.Failed.NetworkUnavailable" xml:space="preserve"><value>GitHub에 연결할 수 없습니다. 인터넷 연결을 확인하고 다시 시도하세요.</value></data>
   <data name="UpdateCheck.Failed.ServerError" xml:space="preserve"><value>GitHub가 오류 응답을 반환했습니다. 몇 분 후에 다시 시도하세요.</value></data>

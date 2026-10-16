@@ -1556,23 +1556,28 @@ Détails dans {1}.</value></data>
   <data name="UpdateCheck.Title" xml:space="preserve"><value>Rechercher des mises à jour</value></data>
   <data name="UpdateCheck.Status.Checking" xml:space="preserve"><value>Vérification...</value></data>
   <data name="UpdateCheck.Status.UpToDate" xml:space="preserve"><value>À jour.</value></data>
-  <!-- The notice at the top of the main window, and on the card a scan puts up
-       when it offers nothing, once a check finds a newer version. -->
+  <!-- The card the main window opens with when the check made as the app starts
+       finds a newer version, and the notice at the top of the main window once a
+       check has found one. -->
   <data name="UpdateNotice.Available" xml:space="preserve">
     <value>InstallerClean {0} est disponible.</value>
-    <comment>The notice's first line. {0} = the newer version number, as 3.5.0.</comment>
+    <comment>The first line of the card and of the notice. {0} = the newer version number, as 3.5.0.</comment>
   </data>
   <data name="UpdateNotice.Recommended" xml:space="preserve">
     <value>Il est vivement recommandé d'utiliser la dernière version.</value>
-    <comment>The notice's second line, under UpdateNotice.Available.</comment>
+    <comment>The second line of the card and of the notice, under UpdateNotice.Available.</comment>
   </data>
   <data name="UpdateNotice.Download" xml:space="preserve">
     <value>Le télécharger sur GitHub</value>
-    <comment>The notice's link, which opens the newest release's page on GitHub in the browser. Shown where the app cannot update itself, and after an update that failed.</comment>
+    <comment>The link on the card and on the notice, which opens the newest release's page on GitHub in the browser. Shown where the app cannot update itself, and after an update that failed.</comment>
   </data>
   <data name="UpdateNotice.UpdateNow" xml:space="preserve">
     <value>Mettre à jour</value>
-    <comment>The notice's button, which downloads the newer version, closes the app and opens the newer version in its place.</comment>
+    <comment>The button on the card and on the notice, which downloads the newer version, closes the app and opens the newer version in its place.</comment>
+  </data>
+  <data name="UpdateNotice.ContinueWithoutUpdating" xml:space="preserve">
+    <value>_Continuer sans mettre à jour</value>
+    <comment>The card's second button, beside UpdateNotice.UpdateNow. It closes the card and shows what the scan found, with this version. The underscore marks the Alt access key.</comment>
   </data>
   <data name="UpdateNotice.Downloading" xml:space="preserve">
     <value>Téléchargement d'InstallerClean {0}...</value>
@@ -1580,11 +1585,11 @@ Détails dans {1}.</value></data>
   </data>
   <data name="UpdateNotice.DownloadFailed" xml:space="preserve">
     <value>La mise à jour n'a pas pu être téléchargée.</value>
-    <comment>A third line in the notice, under UpdateNotice.Recommended, after the newer version could not be downloaded. Update now and the link show under it.</comment>
+    <comment>A third line on the card and in the notice, under UpdateNotice.Recommended, after the newer version could not be downloaded. Update now and the link show under it.</comment>
   </data>
   <data name="UpdateNotice.InstallFailed" xml:space="preserve">
     <value>La mise à jour n'a pas pu être installée.</value>
-    <comment>A third line in the notice, under UpdateNotice.Recommended, after the newer version downloaded but could not be put in place or started. Update now and the link show under it.</comment>
+    <comment>A third line on the card and in the notice, under UpdateNotice.Recommended, after the newer version downloaded but could not be put in place or started. Update now and the link show under it.</comment>
   </data>
   <data name="UpdateCheck.Failed.NetworkUnavailable" xml:space="preserve"><value>Impossible de joindre GitHub. Vérifiez votre connexion internet et réessayez.</value></data>
   <data name="UpdateCheck.Failed.ServerError" xml:space="preserve"><value>GitHub a renvoyé une réponse d'erreur. Réessayez dans quelques minutes.</value></data>

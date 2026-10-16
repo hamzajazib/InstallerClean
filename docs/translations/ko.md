@@ -325,6 +325,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's strongly recommended to use the latest version. | 최신 버전을 사용할 것을 강력히 권장합니다. |
 | Download it from GitHub | GitHub에서 내려받기 |
 | Update now | 지금 업데이트 |
+| _Continue without updating | 업데이트하지 않고 계속(_C) |
 | Downloading InstallerClean {0}... | InstallerClean {0} 내려받는 중... |
 | The update couldn't be downloaded. | 업데이트를 내려받지 못했습니다. |
 | The update couldn't be installed. | 업데이트를 설치하지 못했습니다. |

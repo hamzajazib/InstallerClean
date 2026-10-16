@@ -41,7 +41,7 @@ public partial class SplashWindow : Window
     public event EventHandler? CancelRequested;
 
     // What the XAML gives Cancel to show and to be called, which a press replaces and
-    // the end of the scan puts back (ShowScanFinished).
+    // the end of the scan puts back (ShowScanEnded).
     private readonly object _cancelContent;
     private readonly string _cancelName;
 
@@ -120,7 +120,7 @@ public partial class SplashWindow : Window
 
     // The startup scan has finished, so Cancel has nothing left to stop: it goes out
     // of use, and Esc with it, a disabled IsCancel button taking no access key. The
-    // step says "Ready" and the bar eases to full over the time the splash has left.
+    // step line stays as the scan left it until ShowReady.
     //
     // The scan can return after Cancel has been pressed: the press can land during its
     // last step, which does not stop for it, and a scan that fails returns too. What
@@ -128,7 +128,7 @@ public partial class SplashWindow : Window
     // and loses its tooltip and help text, and the bar shows a position again, so
     // nothing on the splash says it is stopping. The press stays recorded
     // (_cancelling), which keeps any progress arriving late off the step text.
-    public void ShowScanFinished(TimeSpan ease)
+    public void ShowScanEnded()
     {
         CancelButton.IsEnabled = false;
         if (_cancelling)
@@ -140,8 +140,11 @@ public partial class SplashWindow : Window
             CancelButton.ClearValue(AutomationProperties.HelpTextProperty);
             SplashProgress.IsIndeterminate = false;
         }
-        UpdateStep(Strings.Status_Ready, 100, ease);
     }
+
+    // The scan has ended and the update check beside it has answered or given up: the
+    // step says "Ready" and the bar eases to full over the time the splash has left.
+    public void ShowReady(TimeSpan ease) => UpdateStep(Strings.Status_Ready, 100, ease);
 
     public void UpdateStep(string message, double progressPercent, TimeSpan? ease = null)
     {

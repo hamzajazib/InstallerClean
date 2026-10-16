@@ -57,7 +57,13 @@ public sealed class UpdateCheckService : IUpdateCheckService
     internal static readonly string UserAgent =
         $"InstallerClean/{Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0"}";
 
-    private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(8);
+    /// <summary>
+    /// How long a check waits for GitHub's answer before it answers as timed out. It
+    /// covers the whole request, the connection included. The window holds what the
+    /// scan found until the check made as the app starts has answered, so this bounds
+    /// that wait too.
+    /// </summary>
+    public static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(8);
 
     /// <summary>
     /// Both what the check asks for and the one page any "there is an update"
@@ -148,6 +154,13 @@ public sealed class UpdateCheckService : IUpdateCheckService
 
         try
         {
+#if DEBUG
+            if (Environment.GetEnvironmentVariable(SlowCheckVariable) is { Length: > 0 })
+            {
+                await Task.Delay(RequestTimeout, cancellationToken).ConfigureAwait(false);
+                return new CheckFailed(UpdateCheckFailureReason.Timeout);
+            }
+#endif
             using var request = new HttpRequestMessage(HttpMethod.Get, ReleasesPageUrl);
             request.Headers.UserAgent.ParseAdd(UserAgent);
 
@@ -364,6 +377,13 @@ public sealed class UpdateCheckService : IUpdateCheckService
     /// there, so no Release build can be told it is another version.
     /// </summary>
     internal const string PretendVersionVariable = "INSTALLERCLEAN_DEBUG_PRETEND_VERSION";
+
+    /// <summary>
+    /// Set to anything, a Debug build's check sends nothing, waits out
+    /// <see cref="RequestTimeout"/> and answers as timed out, as a check on a network
+    /// that never answers does. Held inside <c>#if DEBUG</c> the same way.
+    /// </summary>
+    internal const string SlowCheckVariable = "INSTALLERCLEAN_DEBUG_SLOW_UPDATE_CHECK";
 #endif
 
     private static Version GetCurrentVersion()

@@ -548,6 +548,7 @@ const MAP = {
   'UpdateNotice.Downloading': `InstallerClean {0} をダウンロード中...`,
   'UpdateNotice.DownloadFailed': `更新をダウンロードできませんでした。`,
   'UpdateNotice.InstallFailed': `更新をインストールできませんでした。`,
+  'UpdateNotice.ContinueWithoutUpdating': `更新せずに続行(_C)`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

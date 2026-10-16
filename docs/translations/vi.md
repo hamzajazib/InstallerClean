@@ -325,6 +325,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's strongly recommended to use the latest version. | Chúng tôi đặc biệt khuyên bạn dùng phiên bản mới nhất. |
 | Download it from GitHub | Tải về từ GitHub |
 | Update now | Cập nhật ngay |
+| _Continue without updating | _Tiếp tục mà không cập nhật |
 | Downloading InstallerClean {0}... | Đang tải về InstallerClean {0}... |
 | The update couldn't be downloaded. | Không thể tải về bản cập nhật. |
 | The update couldn't be installed. | Không thể cài đặt bản cập nhật. |

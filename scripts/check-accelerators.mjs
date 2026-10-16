@@ -15,7 +15,7 @@
 // LIVE MEANS ENABLED, NOT MERELY ON SCREEN. AccessKeyManager only targets an
 // element that is both visible and enabled, and the main window's bottom bar is
 // IsEnabled-bound to IsMainContentInteractive (MainWindow.xaml), which is false
-// whenever the scanning, operating or completion overlay is up. So Re-scan,
+// whenever any of the window's overlays is up. So Re-scan,
 // About and Check for updates are dead behind an overlay and cannot clash with
 // the Cancel or Done on top of it. Modelling them as live instead would
 // manufacture clashes (Italian and Polish both put Alt+A on Cancel and on Check
@@ -63,15 +63,16 @@ const SETS = {
   // that wait.
   'MainWindow-scanning': ['Action.Cancel', 'Action.StopWaiting'],
   'MainWindow-operating': ['Action.Cancel', 'Action.StopWaiting'],
+  // The card the window opens with when the check made as the app starts finds a
+  // newer version carries Update now and Continue without updating.
+  'MainWindow-updateCard': ['UpdateNotice.UpdateNow', 'UpdateNotice.ContinueWithoutUpdating'],
   // The card shown while an update downloads carries Cancel alone.
   'MainWindow-updating': ['Action.Cancel'],
   // The completion card carries Done with the small Donate under it, or, after a
   // Move or Delete that moved or deleted files, the large Donate over Close without
   // donating. Never both pairs. Either card, where it is the PC's first, carries
-  // the report box under them. The card a scan puts up when it offers nothing,
-  // which is a Done card, carries the notice and its Update now too.
-  'MainWindow-completion': ['Action.Done', 'Action.DonateSmall', 'Completion.SendReport',
-    'UpdateNotice.UpdateNow'],
+  // the report box under them.
+  'MainWindow-completion': ['Action.Done', 'Action.DonateSmall', 'Completion.SendReport'],
   'MainWindow-completionDonate': ['Action.Donate', 'Action.CloseWithoutDonating', 'Completion.SendReport'],
 
   // The window the startup scan runs in: Cancel, and the same stop-waiting button

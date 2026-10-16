@@ -14,8 +14,9 @@ namespace InstallerClean.ViewModels;
 /// window" commands that take the user from the main scan summary
 /// into the registered- or orphaned-files detail windows, the
 /// update check (the manual button and the once-per-session
-/// automatic check behind <c>AppSettings.AutoUpdateCheck</c>), and the
-/// update from inside the app that the notice's Update now starts.
+/// automatic check behind <c>AppSettings.AutoUpdateCheck</c>), the card the
+/// window opens with where that automatic check finds a newer version, and the
+/// update from inside the app that Update now starts.
 ///
 /// Reads <see cref="ScanViewModel.LastScanResult"/> for the details
 /// commands so the detail windows always show the same scan the main
@@ -49,7 +50,6 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     private readonly TimeSpan _checkCooldown;
     private readonly PropertyChangedEventHandler _scanHandler;
     private readonly IAppUpdater? _updater;
-    private readonly Action _closeScanCard;
     private readonly Action _settleBeforeHandOff;
     private CancellationTokenSource? _updateCts;
     private CancellationTokenSource? _downloadCts;
@@ -70,10 +70,6 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// The update from inside the app. Null in a bare test construction, which
     /// then offers the release page alone, as a build from source does.
     /// </param>
-    /// <param name="closeScanCard">
-    /// Closes the card a scan put up, as Done does, so its report box decides
-    /// before an update starts. Called as Update now is pressed.
-    /// </param>
     /// <param name="settleBeforeHandOff">
     /// Settles what closing the app would settle, the move destination still being
     /// saved and the report still being sent, before the newer version starts and
@@ -89,7 +85,6 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         Func<bool>? isBusy = null,
         TimeSpan? checkCooldownOverride = null,
         IAppUpdater? updater = null,
-        Action? closeScanCard = null,
         Action? settleBeforeHandOff = null)
     {
         _windowService = windowService;
@@ -101,7 +96,6 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         _isBusy = isBusy ?? (() => false);
         _checkCooldown = checkCooldownOverride ?? CheckForUpdatesCooldown;
         _updater = updater;
-        _closeScanCard = closeScanCard ?? (() => { });
         _settleBeforeHandOff = settleBeforeHandOff ?? (() => { });
 
         // Re-evaluate the Details buttons when a scan finishes or its result
@@ -159,11 +153,10 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Set once a check has found a newer version, and held for the session. It
-    /// shows the notice at the top of the main window and on the card a scan puts
-    /// up when it offers nothing. A later check failing leaves it set; only a check
-    /// answering that this build is the newest clears it. A bool because the
-    /// bindings need the positive form of the test: a XAML DataTrigger tests
-    /// equality only.
+    /// shows the notice at the top of the main window. A later check failing leaves
+    /// it set; only a check answering that this build is the newest clears it. A bool
+    /// because the bindings need the positive form of the test: a XAML DataTrigger
+    /// tests equality only.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowsUpdateNow))]
@@ -231,6 +224,18 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _isUpdateProgressKnown;
 
     /// <summary>
+    /// True while the card saying a newer version is available stands in front of the
+    /// main window, which shows nothing of the scan behind it. The window opens with it
+    /// where the check made as the app starts finds a newer version
+    /// (<see cref="OfferUpdate"/>); Continue without updating takes it away, and the scan
+    /// is then shown. Update now leaves it up: a failed or cancelled update comes back to
+    /// it.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ContinueWithoutUpdatingCommand))]
+    private bool _isOfferingUpdate;
+
+    /// <summary>
     /// Raised each time a check finds a newer version, whether or not the notice
     /// was already showing, so the window can read the notice out as the answer to
     /// a click that found the version it already names.
@@ -239,27 +244,46 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Starts the once-per-session automatic check. Called by the App as
-    /// soon as the view-model exists, before the startup scan is awaited,
-    /// so the answer is usually already painted when the window first
-    /// shows: a typical session lasts seconds, and a check that arrived
-    /// later would routinely arrive after the user had gone.
-    /// Fire-and-forget because nothing downstream awaits it and every
-    /// outcome but "newer version found" is deliberately invisible; every
-    /// exception is swallowed, so it cannot disturb the splash path. The
+    /// soon as the view-model exists, before the startup scan, so the check
+    /// runs beside the scan and has usually answered by the time it ends. The
+    /// App holds what the scan found until it has (<see cref="AutomaticCheck"/>).
+    /// Every outcome but "newer version found" is deliberately invisible, and
+    /// every exception is swallowed, so it cannot disturb the splash path. The
     /// enabling setting is read from disk inside the call, before anything
     /// touches the network, so an install that has opted out opens no
     /// socket. That read happens on this startup path, before the main
     /// window and with it the About checkbox exist, so unticking the box
     /// governs the next launch rather than this one.
     /// </summary>
-    public void StartAutomaticUpdateCheck() => _ = RunAutomaticUpdateCheckAsync();
+    public void StartAutomaticUpdateCheck() => AutomaticCheck = RunAutomaticUpdateCheckAsync();
+
+    /// <summary>
+    /// The automatic check, completing once it has answered, given up, found the check
+    /// switched off or been cancelled. It never faults. Completed before
+    /// <see cref="StartAutomaticUpdateCheck"/> is called.
+    /// </summary>
+    public Task AutomaticCheck { get; private set; } = Task.CompletedTask;
+
+    /// <summary>
+    /// Puts up the card saying a newer version is available, where a check has found
+    /// one.
+    /// </summary>
+    public void OfferUpdate()
+    {
+        if (HasNewerVersion)
+            IsOfferingUpdate = true;
+    }
+
+    /// <summary>
+    /// The card's Continue without updating, and Esc while the card is up: the card goes
+    /// and the main window shows the scan. The notice at the top stays.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(IsOfferingUpdate))]
+    private void ContinueWithoutUpdating() => IsOfferingUpdate = false;
 
     /// <summary>
     /// The automatic check's body. Internal rather than private so
-    /// ChromeViewModelTests can await the one path production deliberately
-    /// leaves unawaited; polling the properties after
-    /// <see cref="StartAutomaticUpdateCheck"/> would be a race dressed as a
-    /// test.
+    /// ChromeViewModelTests can run and await one check by itself.
     /// </summary>
     internal async Task RunAutomaticUpdateCheckAsync()
     {
@@ -343,9 +367,9 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Opens the releases page; bound to the link on the notice, in the main
-    /// window and on the card. The CanExecute is the link's tab-order gate, not
-    /// politeness: WPF's keyboard navigation descends into a collapsed TextBlock
+    /// Opens the releases page; bound to the link on the notice at the top of the
+    /// main window and on the card saying a newer version is available. The
+    /// CanExecute is the link's tab-order gate, not politeness: WPF's keyboard navigation descends into a collapsed TextBlock
     /// regardless of visibility (a TextBlock is an IContentHost) and admits a
     /// content element on Focusable, IsTabStop and IsEnabled alone, content
     /// elements having no IsVisible to test, so an always-executable command
@@ -373,16 +397,17 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         HasNewerVersion && CanUpdateItself && !IsUpdating && !_isBusy();
 
     /// <summary>
-    /// Update now: closes the card a scan put up, downloads the newer version as the
-    /// same kind of copy, and hands over to it. The setup's copy runs the newer setup,
+    /// Update now, on the card saying a newer version is available and on the notice:
+    /// downloads the newer version as the same kind of copy, and hands over to it. The setup's copy runs the newer setup,
     /// which starts the app again once it has installed; the other copies start the
     /// newer version from their own path. Either way this app closes, and the newer
     /// version scans as it opens, as every start does.
     ///
-    /// Anything that fails while this app is still open takes the card away and puts
-    /// the line for what failed in the notice, with the link beside Update now, having
-    /// changed nothing on disk. Cancel takes the card away and says nothing. What failed
-    /// goes to crash.log; the screen names only which of the two things it was.
+    /// Anything that fails while this app is still open takes the download card away
+    /// and puts the line for what failed on the card and the notice, with the link
+    /// beside Update now, having changed nothing on disk. Cancel takes the download card
+    /// away and says nothing. What failed goes to crash.log; the screen names only which
+    /// of the two things it was.
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanUpdateNow))]
     private async Task UpdateNowAsync()
@@ -393,10 +418,7 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         UpdateProgressPercent = 0;
         IsUpdateProgressKnown = false;
         UpdatingText = string.Format(Strings.UpdateNotice_Downloading, version);
-        // Up before the card goes, so the window behind never becomes usable between
-        // the two.
         IsUpdating = true;
-        _closeScanCard();
 
         using var cts = new CancellationTokenSource();
         _downloadCts = cts;

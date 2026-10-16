@@ -624,6 +624,7 @@ const MAP = {
   'UpdateNotice.Downloading': `Baixando o InstallerClean {0}...`,
   'UpdateNotice.DownloadFailed': `Não foi possível baixar a atualização.`,
   'UpdateNotice.InstallFailed': `Não foi possível instalar a atualização.`,
+  'UpdateNotice.ContinueWithoutUpdating': `_Continuar sem atualizar`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

@@ -643,6 +643,7 @@ const MAP = {
   'UpdateNotice.Downloading': `Téléchargement d'InstallerClean {0}...`,
   'UpdateNotice.DownloadFailed': `La mise à jour n'a pas pu être téléchargée.`,
   'UpdateNotice.InstallFailed': `La mise à jour n'a pas pu être installée.`,
+  'UpdateNotice.ContinueWithoutUpdating': `_Continuer sans mettre à jour`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

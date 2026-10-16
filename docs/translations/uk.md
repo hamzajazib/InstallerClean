@@ -325,6 +325,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's strongly recommended to use the latest version. | Настійно рекомендуємо використовувати найновішу версію. |
 | Download it from GitHub | Завантажити з GitHub |
 | Update now | Оновити зараз |
+| _Continue without updating | _Продовжити без оновлення |
 | Downloading InstallerClean {0}... | Завантаження InstallerClean {0}... |
 | The update couldn't be downloaded. | Не вдалося завантажити оновлення. |
 | The update couldn't be installed. | Не вдалося встановити оновлення. |

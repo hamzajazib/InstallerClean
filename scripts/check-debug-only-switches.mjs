@@ -4,8 +4,9 @@
 //
 // A switch here is an environment variable a Debug build reads to change what the app
 // does on the developer's own PC. The window's start check has one, which leaves the
-// Application log unread. The update check has one, which compares the newest release
-// with a version it is given. The update from inside the app has two: one has the app
+// Application log unread. The update check has two: one compares the newest release
+// with a version it is given, and one makes the check wait out its own bound and answer
+// as timed out. The update from inside the app has two: one has the app
 // take itself for another kind of copy, and one runs a setup already on disk in place
 // of downloading one. Code between #if DEBUG and its #endif is compiled
 // only where DEBUG is defined, so a switch's name and its read sit there, and nothing
@@ -68,6 +69,11 @@ const SWITCHES = [
   {
     name: 'INSTALLERCLEAN_DEBUG_PRETEND_VERSION',
     constant: 'PretendVersionVariable',
+    home: 'src/InstallerClean.Core/',
+  },
+  {
+    name: 'INSTALLERCLEAN_DEBUG_SLOW_UPDATE_CHECK',
+    constant: 'SlowCheckVariable',
     home: 'src/InstallerClean.Core/',
   },
   {

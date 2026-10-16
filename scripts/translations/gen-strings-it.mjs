@@ -552,6 +552,7 @@ const MAP = {
   'UpdateNotice.Downloading': `Download di InstallerClean {0}...`,
   'UpdateNotice.DownloadFailed': `Non è stato possibile scaricare l'aggiornamento.`,
   'UpdateNotice.InstallFailed': `Non è stato possibile installare l'aggiornamento.`,
+  'UpdateNotice.ContinueWithoutUpdating': `_Continua senza aggiornare`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

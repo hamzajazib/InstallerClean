@@ -290,8 +290,8 @@ public class ChromeViewModelTests
     private readonly List<string> _calls = [];
 
     /// <summary>
-    /// A view model whose copy can update itself, with the card-closing and settling
-    /// steps recorded in the order they are called, and a check that has found 9.9.9.
+    /// A view model whose copy can update itself, with the settling step recorded in
+    /// the order it is called, and a check that has found 9.9.9.
     /// </summary>
     private async Task<ChromeViewModel> CreateUpdatingViewModelAsync()
     {
@@ -304,7 +304,6 @@ public class ChromeViewModelTests
             _updateCheckService, _dialogService, scan,
             checkCooldownOverride: TimeSpan.Zero,
             updater: _updater,
-            closeScanCard: () => _calls.Add("close card"),
             settleBeforeHandOff: () => _calls.Add("settle"));
         await vm.RunAutomaticUpdateCheckAsync();
         return vm;
@@ -349,7 +348,7 @@ public class ChromeViewModelTests
 
         await vm.UpdateNowCommand.ExecuteAsync(null);
 
-        Assert.Equal(["close card", "prepare", "settle", "start"], _calls);
+        Assert.Equal(["prepare", "settle", "start"], _calls);
         // Handed over, the app is closing, and the card stays up until it has.
         Assert.True(vm.IsUpdating);
         Assert.False(vm.HasUpdateFailure);
@@ -460,5 +459,104 @@ public class ChromeViewModelTests
         Assert.False(vm.UpdateNowCommand.CanExecute(null));
         busy = false;
         Assert.True(vm.UpdateNowCommand.CanExecute(null));
+    }
+
+    // ---- The card saying a newer version is available ----
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task The_automatic_check_s_task_completes_whatever_the_check_answers(bool found)
+    {
+        CheckAnswers(found
+            ? new UpdateAvailable("2.1.0", "9.9.9")
+            : new CheckFailed(UpdateCheckFailureReason.Timeout));
+        var vm = CreateViewModel();
+
+        vm.StartAutomaticUpdateCheck();
+        await vm.AutomaticCheck;
+
+        Assert.Equal(found, vm.HasNewerVersion);
+    }
+
+    [Fact]
+    public async Task The_automatic_check_s_task_completes_with_the_check_switched_off()
+    {
+        var vm = CreateViewModel(autoUpdateCheck: false);
+
+        vm.StartAutomaticUpdateCheck();
+        await vm.AutomaticCheck;
+
+        await _updateCheckService.DidNotReceive().CheckAsync(Arg.Any<UpdateCheckOrigin>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task The_automatic_check_s_task_completes_when_a_manual_check_cancels_it()
+    {
+        var calls = 0;
+        _updateCheckService.CheckAsync(Arg.Any<UpdateCheckOrigin>(), Arg.Any<CancellationToken>())
+            .Returns(call => ++calls == 1
+                ? NeverAnswersAsync(call.Arg<CancellationToken>())
+                : Task.FromResult<UpdateCheckResult>(new UpToDate("2.1.0")));
+        var vm = CreateViewModel();
+
+        vm.StartAutomaticUpdateCheck();
+        Assert.False(vm.AutomaticCheck.IsCompleted);
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        await vm.AutomaticCheck;
+        Assert.True(vm.AutomaticCheck.IsCompletedSuccessfully);
+    }
+
+    private static async Task<UpdateCheckResult> NeverAnswersAsync(CancellationToken token)
+    {
+        await Task.Delay(Timeout.Infinite, token);
+        throw new InvalidOperationException("unreachable");
+    }
+
+    [Fact]
+    public void The_card_is_not_put_up_before_a_check_has_found_a_newer_version()
+    {
+        var vm = CreateViewModel();
+
+        vm.OfferUpdate();
+
+        Assert.False(vm.IsOfferingUpdate);
+        Assert.False(vm.ContinueWithoutUpdatingCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Continue_without_updating_takes_the_card_away_and_keeps_the_notice()
+    {
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+        var vm = CreateViewModel();
+        await vm.RunAutomaticUpdateCheckAsync();
+
+        vm.OfferUpdate();
+        Assert.True(vm.IsOfferingUpdate);
+        Assert.True(vm.ContinueWithoutUpdatingCommand.CanExecute(null));
+
+        vm.ContinueWithoutUpdatingCommand.Execute(null);
+
+        Assert.False(vm.IsOfferingUpdate);
+        Assert.False(vm.ContinueWithoutUpdatingCommand.CanExecute(null));
+        Assert.True(vm.HasNewerVersion);
+    }
+
+    [Fact]
+    public async Task An_update_that_fails_from_the_card_leaves_the_card_up_with_the_failure_and_the_link()
+    {
+        var vm = await CreateUpdatingViewModelAsync();
+        vm.OfferUpdate();
+        _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(
+            Task.FromException<PreparedUpdate>(new UpdateFailedException(UpdateFailureStage.Download, "no")));
+
+        await vm.UpdateNowCommand.ExecuteAsync(null);
+
+        Assert.True(vm.IsOfferingUpdate);
+        Assert.Equal(Strings.UpdateNotice_DownloadFailed, vm.UpdateFailureText);
+        Assert.True(vm.ShowsUpdateNow);
+        Assert.True(vm.ShowsReleaseLink);
+        Assert.True(vm.ContinueWithoutUpdatingCommand.CanExecute(null));
     }
 }

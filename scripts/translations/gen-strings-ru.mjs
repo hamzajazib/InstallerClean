@@ -524,6 +524,7 @@ const MAP = {
   'UpdateNotice.Downloading': `Загрузка InstallerClean {0}...`,
   'UpdateNotice.DownloadFailed': `Не удалось скачать обновление.`,
   'UpdateNotice.InstallFailed': `Не удалось установить обновление.`,
+  'UpdateNotice.ContinueWithoutUpdating': `_Продолжить без обновления`,
 };
 
 // Russian CLDR-category overrides beyond the neutral one/other split. They do NOT

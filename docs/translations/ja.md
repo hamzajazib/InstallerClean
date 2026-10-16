@@ -325,6 +325,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's strongly recommended to use the latest version. | 最新バージョンの使用を強くおすすめします。 |
 | Download it from GitHub | GitHubからダウンロード |
 | Update now | 今すぐ更新 |
+| _Continue without updating | 更新せずに続行(_C) |
 | Downloading InstallerClean {0}... | InstallerClean {0} をダウンロード中... |
 | The update couldn't be downloaded. | 更新をダウンロードできませんでした。 |
 | The update couldn't be installed. | 更新をインストールできませんでした。 |

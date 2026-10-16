@@ -548,6 +548,7 @@ Ayrıntılar şuraya yazıldı:
   'UpdateNotice.Downloading': `InstallerClean {0} indiriliyor...`,
   'UpdateNotice.DownloadFailed': `Güncelleştirme indirilemedi.`,
   'UpdateNotice.InstallFailed': `Güncelleştirme yüklenemedi.`,
+  'UpdateNotice.ContinueWithoutUpdating': `Güncellemeden _devam et`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

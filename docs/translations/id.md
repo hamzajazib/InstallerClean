@@ -325,6 +325,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's strongly recommended to use the latest version. | Sangat disarankan untuk memakai versi terbaru. |
 | Download it from GitHub | Unduh dari GitHub |
 | Update now | Perbarui sekarang |
+| _Continue without updating | _Lanjutkan tanpa memperbarui |
 | Downloading InstallerClean {0}... | Mengunduh InstallerClean {0}... |
 | The update couldn't be downloaded. | Pembaruan tidak dapat diunduh. |
 | The update couldn't be installed. | Pembaruan tidak dapat dipasang. |

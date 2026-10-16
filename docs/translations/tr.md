@@ -325,6 +325,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's strongly recommended to use the latest version. | En son sürümü kullanmanız önemle tavsiye edilir. |
 | Download it from GitHub | GitHub'dan indirin |
 | Update now | Şimdi güncelle |
+| _Continue without updating | Güncellemeden _devam et |
 | Downloading InstallerClean {0}... | InstallerClean {0} indiriliyor... |
 | The update couldn't be downloaded. | Güncelleştirme indirilemedi. |
 | The update couldn't be installed. | Güncelleştirme yüklenemedi. |

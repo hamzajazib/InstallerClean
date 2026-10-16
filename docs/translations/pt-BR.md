@@ -325,6 +325,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's strongly recommended to use the latest version. | É altamente recomendável usar a versão mais recente. |
 | Download it from GitHub | Baixe no GitHub |
 | Update now | Atualizar agora |
+| _Continue without updating | _Continuar sem atualizar |
 | Downloading InstallerClean {0}... | Baixando o InstallerClean {0}... |
 | The update couldn't be downloaded. | Não foi possível baixar a atualização. |
 | The update couldn't be installed. | Não foi possível instalar a atualização. |

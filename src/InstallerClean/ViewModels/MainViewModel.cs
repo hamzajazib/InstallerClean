@@ -17,8 +17,11 @@ namespace InstallerClean.ViewModels;
 ///   - A scan completing with no orphans pushes the completion overlay:
 ///     the all-clear, or the screen saying what the scan held back or
 ///     carried on without.
+///   - The startup scan is shown only once the update check made as the app
+///     starts has answered, and behind the card saying a newer version is
+///     available where it found one, until Continue without updating.
 ///   - The Scan command, behind Re-scan and F5, is refused while a Move
-///     or a Delete is in flight and while the completion overlay is up.
+///     or a Delete is in flight and while a card is up.
 ///   - Esc goes to the overlay in front (<see cref="HandleEscape"/>).
 ///   - Closing the app settles the report box on a card still up.
 ///
@@ -41,9 +44,28 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// that it puts none up. A card on the PC's first run waits for the window's start
     /// check, which can still be reading as the startup scan finishes, so App waits on
     /// this before it builds the window: the startup card is then either up as the
-    /// window is constructed, which replays it, or not coming.
+    /// window is constructed, which replays it, or not coming. Where the window opens
+    /// with the card saying a newer version is available, this completes only after
+    /// Continue without updating, and the window waits on it then.
     /// </summary>
     public Task ScanCardDecided { get; private set; } = Task.CompletedTask;
+
+    /// <summary>
+    /// Completes once what the latest scan found may be shown. Completed except between
+    /// <see cref="HoldResultsForUpdateCheck"/> and the startup decision
+    /// (<see cref="ShowStartupScan"/>) and, where that decision is the card saying a newer
+    /// version is available, until Continue without updating. The card a scan puts up,
+    /// with its report box, waits for it, so the report and the PC's first-run mark are
+    /// never taken while the card is up.
+    /// </summary>
+    private TaskCompletionSource _resultsMayShow = Released();
+
+    private static TaskCompletionSource Released()
+    {
+        var released = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        released.SetResult();
+        return released;
+    }
 
     public MainViewModel(
         IFileSystemScanService scanService,
@@ -72,7 +94,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Scan = new ScanViewModel(scanService, rebootService, dialogService,
             isExternallyBlocked: () => Cleanup?.IsOperationInFlight == true
                 || Completion?.IsComplete == true
-                || Chrome?.IsUpdating == true);
+                || Chrome?.IsUpdating == true
+                || Chrome?.IsOfferingUpdate == true);
         Completion = new CompletionViewModel(
             resultLogService, settingsService, earlierRunCheck,
             firstRunMark, windowsRegion, windowService,
@@ -85,7 +108,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
             updateCheckService, dialogService, Scan,
             isBusy: () => IsBusy,
             updater: appUpdater,
-            closeScanCard: CloseCardForUpdate,
             settleBeforeHandOff: SettleBeforeUpdate);
 
         // Surface the completion overlay when a scan finishes with no
@@ -97,10 +119,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         // Drive IsMainContentInteractive off the overlay states.
         // The caption buttons themselves remain IsEnabled=true. The
-        // scanning, operating, completion and update overlays all span the three
-        // grid rows and are drawn over the title bar, so while one is up a
-        // click on the minimise or close button lands on the overlay's dim
-        // Border. That Border inherits WindowChrome.IsHitTestVisibleInChrome
+        // window's overlays all span the three grid rows and are drawn
+        // over the title bar, so while one is up a click on the minimise
+        // or close button lands on the overlay's dim Border. That Border inherits WindowChrome.IsHitTestVisibleInChrome
         // as false, so WindowChrome hands the click to Windows as a click on
         // the window's own title bar and the WPF button never receives it.
         // Esc reaches the overlays through MainWindow.OnPreviewKeyDown and
@@ -129,22 +150,38 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// True iff none of the overlays (scanning, operating, completion, and the card
-    /// saying an update is downloading) is showing. Bound to the main-window body's
-    /// IsEnabled so an active overlay disables Tab/click on every control behind it.
+    /// True iff none of the overlays (scanning, operating, completion, the card saying
+    /// a newer version is available, and the card saying an update is downloading) is
+    /// showing. Bound to the main-window body's IsEnabled so an active overlay disables
+    /// Tab/click on every control behind it.
     /// </summary>
     public bool IsMainContentInteractive =>
-        !Scan.IsScanning && !Cleanup.IsOperating && !Completion.IsComplete && !Chrome.IsUpdating;
+        !Scan.IsScanning && !Cleanup.IsOperating && !Completion.IsComplete
+        && !Chrome.IsOfferingUpdate && !Chrome.IsUpdating;
 
     /// <summary>
-    /// Closes whichever card is up as Update now is pressed on it, as Done does, so its
-    /// report box decides before the update starts. Only the card a scan puts up when it
-    /// offers nothing carries the notice.
+    /// Holds what the startup scan finds until <see cref="ShowStartupScan"/>. Called by
+    /// the App before the scan starts.
     /// </summary>
-    private void CloseCardForUpdate()
+    public void HoldResultsForUpdateCheck() =>
+        _resultsMayShow = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>
+    /// Decides how the startup scan is shown, once the update check made as the app
+    /// starts has answered or given up. Where it found a newer version and
+    /// <paramref name="mayOfferUpdate"/> holds, the card saying so goes up and the scan
+    /// waits behind it for Continue without updating. Otherwise the scan is shown now.
+    /// </summary>
+    /// <param name="mayOfferUpdate">
+    /// False where the startup scan was cancelled, there being nothing to hold, and on
+    /// the start that follows a language change, which carries on the session before it.
+    /// </param>
+    public void ShowStartupScan(bool mayOfferUpdate)
     {
-        if (Completion.IsComplete && Completion.DismissCommand.CanExecute(null))
-            Completion.DismissCommand.Execute(null);
+        if (mayOfferUpdate)
+            Chrome.OfferUpdate();
+        if (!Chrome.IsOfferingUpdate)
+            _resultsMayShow.TrySetResult();
     }
 
     /// <summary>
@@ -176,7 +213,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>
     /// What Esc does on the main window: the overlay in front takes it, and the return
     /// says whether one did. An idle window takes none. The card saying an update is
-    /// downloading is drawn over everything, so it takes Esc first, as Cancel.
+    /// downloading is drawn over everything, so it takes Esc first, as Cancel. The card
+    /// saying a newer version is available comes next, as Continue without updating; no
+    /// other card is up with it.
     ///
     /// The panel saying what the report holds comes before everything, being drawn over
     /// the card it belongs to: Esc closes it and leaves the card up, and the next Esc
@@ -193,6 +232,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             if (Chrome.CancelUpdateCommand.CanExecute(null))
                 Chrome.CancelUpdateCommand.Execute(null);
+            return true;
+        }
+        if (Chrome.IsOfferingUpdate)
+        {
+            Chrome.ContinueWithoutUpdatingCommand.Execute(null);
             return true;
         }
         if (Completion.ReportPanelOpen)
@@ -349,16 +393,21 @@ public partial class MainViewModel : ObservableObject, IDisposable
             e.PropertyName == nameof(CleanupViewModel.IsOperating) ||
             e.PropertyName == nameof(CleanupViewModel.IsOperationInFlight) ||
             e.PropertyName == nameof(CompletionViewModel.IsComplete) ||
+            e.PropertyName == nameof(ChromeViewModel.IsOfferingUpdate) ||
             e.PropertyName == nameof(ChromeViewModel.IsUpdating))
         {
             OnPropertyChanged(nameof(IsMainContentInteractive));
             OnPropertyChanged(nameof(IsBusy));
             // Block F5 / Re-scan while a Move/Delete (its pre-flight included),
-            // a completion or an update is up so a parallel scan can't race it.
+            // a card or an update is up so a parallel scan can't race it.
             Scan.NotifyExternallyBlockedChanged();
             // Update now waits for a scan or a Move or Delete to finish.
             Chrome.NotifyBusyChanged();
         }
+
+        // Continue without updating: the scan the card stood in front of is shown.
+        if (e.PropertyName == nameof(ChromeViewModel.IsOfferingUpdate) && !Chrome.IsOfferingUpdate)
+            _resultsMayShow.TrySetResult();
     }
 
     private void OnScanCompleted(object? sender, EventArgs e)
@@ -378,6 +427,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             if (ScanCardResult() is not { } result) return;
+
+            // The card and its report wait until the scan may be shown.
+            await _resultsMayShow.Task;
+            if (!ReferenceEquals(ScanCardResult(), result)) return;
 
             // Resumes on the dispatcher, which the card needs: revealing it raises the
             // change the window answers by building the summary's inlines. Where the
