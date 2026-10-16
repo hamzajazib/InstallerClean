@@ -140,7 +140,6 @@ const MAP = {
   'Action.Licence': `Lisensi Apache 2.0`,
   'Action.Move': `_Pindahkan`,
   'Action.BackupFolderPlaceholder': `Jalur ke folder jika Anda memindahkan, bukan menghapus.`,
-  'Action.OpenReleasePage': `Buka halaman _rilis`,
   'Action.Rescan': `Pindai _ulang`,
 
   // Automation names (screen reader / accessibility)
@@ -170,7 +169,6 @@ const MAP = {
   'Automation.SayThanks': `Ucapkan terima kasih`,
   'Automation.CheckForUpdates': `Periksa pembaruan`,
   'Automation.CheckForUpdates.HelpText': `Memeriksa halaman rilis github untuk mencari versi yang lebih baru.`,
-  'Automation.UpdateAvailable.HelpText': `Buka halaman rilis untuk mengunduh versi yang lebih baru, atau batalkan untuk tetap memakai versi saat ini.`,
   'Automation.Licence.HelpText': `Membuka file lisensi di github.com melalui browser Anda.`,
   'Automation.Section.BackupFolder': `Folder cadangan`,
   'Automation.Section.Patches': `Patch`,
@@ -374,10 +372,8 @@ const MAP = {
   'UpdateCheck.Title': `Periksa pembaruan`,
   'UpdateCheck.Status.Checking': `Memeriksa...`,
   'UpdateCheck.Status.UpToDate': `Sudah versi terbaru.`,
-  'UpdateCheck.UpdateAvailable.Title': `Pembaruan tersedia`,
 
   // 0 = installed version, 1 = latest version on GitHub
-  'UpdateCheck.UpdateAvailable.Body': `Anda menjalankan versi {0}.&#10;Versi {1} tersedia.`,
   'UpdateCheck.Failed.NetworkUnavailable': `Tidak bisa menjangkau GitHub. Periksa koneksi internet Anda dan coba lagi.`,
   'UpdateCheck.Failed.ServerError': `GitHub mengembalikan respons kesalahan. Coba lagi dalam beberapa menit.`,
   'UpdateCheck.Failed.ResponseParseError': `Respons GitHub tidak memuat rilis yang dikenali. Coba lagi nanti, atau buka halaman rilis langsung.`,
@@ -493,7 +489,6 @@ const MAP = {
   'Error.ScanRecordsUnreadable': `InstallerClean tidak bisa membaca cukup banyak catatan Windows Installer untuk memastikan apa yang masih diperlukan: daftar program terpasang kembali tidak lengkap, dan membaca catatan yang sama langsung dari registri juga menemui kesalahan. Sebuah file bisa tampak terisolasi hanya karena catatan yang menyebutkannya termasuk yang tidak terbaca, jadi InstallerClean berhenti. Tidak ada yang dihapus.`,
   'Error.MsiEnumerationNeverEnded': `Windows Installer tidak pernah menandai akhir daftar program terpasang: InstallerClean membaca {2} {3}, lalu menyerah setelah {0} entri (kode kesalahan terakhir {1}). Daftar yang tidak berujung tidak bisa dipercaya, jadi InstallerClean berhenti. Tidak ada yang dihapus.`,
   'Error.MsiPatchEnumerationNeverEnded': `Windows Installer tidak pernah menandai akhir daftar patch sebuah program: InstallerClean membaca {2} {3}, lalu menyerah setelah {0} entri (kode kesalahan terakhir {1}). Daftar yang tidak berujung tidak bisa dipercaya, jadi InstallerClean berhenti. Tidak ada yang dihapus.`,
-  'UpdateCheck.Status.UpdateAvailable': `Versi {0} tersedia.`,
   'Completion.DonateAsk': `Donasi sekecil apa pun sangat dihargai.`,
   'About.Link.Guide': `Panduan dan FAQ`,
   'About.Link.ReportProblem': `Laporkan masalah`,
@@ -642,6 +637,10 @@ const MAP = {
   'Automation.Scroll.Waiting': `Menunggu drive atau berbagi jaringan`,
   'Completion.RecentChange.Singular': `Satu file ({2}) ditahan karena Windows menunjukkan file itu diubah setelah InstallerClean mulai memindai. Kalau ada program yang sedang dipasang atau diperbarui, pindai lagi setelah selesai dan InstallerClean akan memeriksanya lagi.`,
   'Completion.RecentChange.Plural': `{0} {1} ({2}) ditahan karena Windows menunjukkan file-file itu diubah setelah InstallerClean mulai memindai. Kalau ada program yang sedang dipasang atau diperbarui, pindai lagi setelah selesai dan InstallerClean akan memeriksanya lagi.`,
+  'UpdateNotice.Available': `InstallerClean {0} tersedia.`,
+  'UpdateNotice.Download': `Unduh dari GitHub`,
+  'Automation.UpdateNotice.Download': `Unduh dari github`,
+  'UpdateNotice.Recommended': `Sangat disarankan untuk memakai versi terbaru.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

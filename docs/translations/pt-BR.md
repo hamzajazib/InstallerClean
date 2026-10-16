@@ -51,7 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Apache 2.0 licence | Licença Apache 2.0 |
 | _Move | _Mover |
 | Path to folder if you move rather than delete. | Caminho da pasta se você mover em vez de excluir. |
-| Open _release page | Abrir a página da _versão |
 | _Re-scan | _Reanalisar |
 
 ## About window
@@ -322,9 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Check for updates | Verificar atualizações |
 | Checking... | Verificando... |
 | Up to date. | Tudo atualizado. |
-| Version {0} is available. | A versão {0} está disponível. |
-| Update available | Atualização disponível |
-| You're running version {0}.<br>Version {1} is available. | Você está usando a versão {0}.<br>A versão {1} está disponível. |
+| InstallerClean {0} is available. | O InstallerClean {0} está disponível. |
+| It's strongly recommended to use the latest version. | É altamente recomendável usar a versão mais recente. |
+| Download it from GitHub | Baixe no GitHub |
 | Couldn't reach GitHub. Check your internet connection and try again. | Não foi possível acessar o GitHub. Verifique a sua conexão com a internet e tente de novo. |
 | GitHub returned an error response. Try again in a few minutes. | O GitHub retornou uma resposta de erro. Tente de novo em alguns minutos. |
 | GitHub's response did not contain a recognised release. Try again later, or open the releases page directly. | A resposta do GitHub não continha uma versão reconhecível. Tente de novo mais tarde, ou abra diretamente a página de versões. |
@@ -398,7 +397,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the readme on github in your browser. | Abre o readme no github no seu navegador. |
 | Opens the issue tracker on github.com in your browser. | Abre o rastreador de problemas (Issues) em github.com no seu navegador. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | Se marcada, o InstallerClean consulta o github em busca de uma versão mais recente quando você o executa. |
-| Open the release page to download the newer version, or cancel to keep the current version. | Abra a página da versão para baixar a versão mais recente, ou cancele para manter a versão atual. |
+| Download it from github | Baixe no github |
 | Opens the licence file on github.com in your browser. | Abre o arquivo da licença em github.com no seu navegador. |
 | Backup folder | Pasta de backup |
 | Patches | Patches |

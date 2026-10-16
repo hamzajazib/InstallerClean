@@ -150,7 +150,6 @@ const MAP = {
   'Action.Licence': `Ліцензія Apache 2.0`,
   'Action.Move': `Пере_містити`,
   'Action.BackupFolderPlaceholder': `Шлях до папки, якщо ви переміщуєте, а не видаляєте.`,
-  'Action.OpenReleasePage': `_Відкрити сторінку випуску`,
   'Action.Rescan': `Пов_торити сканування`,
 
   // Automation names (screen reader / accessibility)
@@ -170,7 +169,6 @@ const MAP = {
   'Automation.SayThanks': `Подякувати`,
   'Automation.CheckForUpdates': `Перевірити оновлення`,
   'Automation.CheckForUpdates.HelpText': `Перевіряє на сторінці випусків github, чи є новіша версія.`,
-  'Automation.UpdateAvailable.HelpText': `Відкрийте сторінку випуску, щоб завантажити новішу версію, або скасуйте, щоб лишити поточну версію.`,
   'Automation.Licence.HelpText': `Відкриває файл ліцензії на github.com у вашому браузері.`,
   'Automation.Section.BackupFolder': `Папка резервних копій`,
   'Automation.Section.Patches': `Виправлення`,
@@ -374,10 +372,8 @@ const MAP = {
   'UpdateCheck.Title': `Перевірити оновлення`,
   'UpdateCheck.Status.Checking': `Перевірка...`,
   'UpdateCheck.Status.UpToDate': `Актуальна версія.`,
-  'UpdateCheck.UpdateAvailable.Title': `Доступне оновлення`,
 
   // 0 = installed version, 1 = latest version on GitHub
-  'UpdateCheck.UpdateAvailable.Body': `Ви використовуєте версію {0}.&#10;Доступна версія {1}.`,
   'UpdateCheck.Failed.NetworkUnavailable': `Не вдалося зв'язатися з GitHub. Перевірте інтернет-з'єднання та спробуйте ще раз.`,
   'UpdateCheck.Failed.ServerError': `GitHub повернув повідомлення про помилку. Спробуйте ще раз за кілька хвилин.`,
   'UpdateCheck.Failed.ResponseParseError': `Відповідь GitHub не містила розпізнаного випуску. Спробуйте пізніше або відкрийте сторінку випусків напряму.`,
@@ -490,7 +486,6 @@ const MAP = {
   'Error.ScanRecordsUnreadable': `InstallerClean не зміг прочитати достатньо записів Windows Installer, щоб напевно знати, що ще потрібно: список встановлених програм повернувся неповним, а читання тих самих записів прямо з реєстру теж призвело до помилок. Файл міг видаватися осиротілим лише тому, що запис, який його називає, виявився одним із нечитабельних, тож InstallerClean зупинився. Нічого не було видалено.`,
   'Error.MsiEnumerationNeverEnded': `Windows Installer так і не повідомив про кінець списку встановлених програм: InstallerClean прочитав {2} {3}, а потім припинив спроби після {0} записів (останній код помилки {1}). Списку без кінця довіряти не можна, тож InstallerClean зупинився. Нічого не було видалено.`,
   'Error.MsiPatchEnumerationNeverEnded': `Windows Installer так і не повідомив про кінець списку виправлень однієї програми: InstallerClean прочитав {2} {3}, а потім припинив спроби після {0} записів (останній код помилки {1}). Списку без кінця довіряти не можна, тож InstallerClean зупинився. Нічого не було видалено.`,
-  'UpdateCheck.Status.UpdateAvailable': `Доступна версія {0}.`,
   'Completion.DonateAsk': `Будь-яка, навіть невелика, підтримка дуже цінна.`,
   'About.Link.Guide': `Посібник і поширені запитання`,
   'About.Link.ReportProblem': `Повідомити про проблему`,
@@ -639,6 +634,10 @@ const MAP = {
   'Automation.Scroll.Waiting': `Очікування диска або мережевого ресурсу`,
   'Completion.RecentChange.Singular': `Затримано один файл ({2}), бо, за даними Windows, його було змінено після того, як InstallerClean почав сканування. Якщо в цей час встановлювалася чи оновлювалася програма, повторіть сканування, коли вона завершить, і InstallerClean перевірить його знову.`,
   'Completion.RecentChange.Plural': `InstallerClean затримав {0} {1} ({2}), бо, за даними Windows, їх було змінено після того, як InstallerClean почав сканування. Якщо в цей час встановлювалася чи оновлювалася програма, повторіть сканування, коли вона завершить, і InstallerClean перевірить їх знову.`,
+  'UpdateNotice.Available': `Доступна версія InstallerClean {0}.`,
+  'UpdateNotice.Download': `Завантажити з GitHub`,
+  'Automation.UpdateNotice.Download': `Завантажити з github`,
+  'UpdateNotice.Recommended': `Настійно рекомендуємо використовувати найновішу версію.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

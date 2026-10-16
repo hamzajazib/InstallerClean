@@ -51,7 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Apache 2.0 licence | Apache 2.0 ライセンス |
 | _Move | 移動(_M) |
 | Path to folder if you move rather than delete. | 削除ではなく移動する場合のフォルダーのパス。 |
-| Open _release page | リリースページを開く(_R) |
 | _Re-scan | 再スキャン(_R) |
 
 ## About window
@@ -322,9 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Check for updates | 更新の確認 |
 | Checking... | 確認中... |
 | Up to date. | 最新です。 |
-| Version {0} is available. | バージョン {0} が利用可能です。 |
-| Update available | 更新があります |
-| You're running version {0}.<br>Version {1} is available. | バージョン {0} を実行しています。<br>バージョン {1} が利用可能です。 |
+| InstallerClean {0} is available. | InstallerClean {0} が利用可能です。 |
+| It's strongly recommended to use the latest version. | 最新バージョンの使用を強くおすすめします。 |
+| Download it from GitHub | GitHubからダウンロード |
 | Couldn't reach GitHub. Check your internet connection and try again. | GitHub に到達できませんでした。インターネット接続を確認して再試行してください。 |
 | GitHub returned an error response. Try again in a few minutes. | GitHub がエラーレスポンスを返しました。数分待ってから再試行してください。 |
 | GitHub's response did not contain a recognised release. Try again later, or open the releases page directly. | GitHub のレスポンスに認識可能なリリースが含まれていませんでした。後でもう一度試すか、リリースページを直接開いてください。 |
@@ -398,7 +397,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the readme on github in your browser. | ブラウザで github の readme を開きます。 |
 | Opens the issue tracker on github.com in your browser. | ブラウザで github.com の Issue トラッカーを開きます。 |
 | If ticked, InstallerClean checks github for a newer version when you run it. | チェックを入れると、InstallerClean は起動時に github で新しいバージョンを確認します。 |
-| Open the release page to download the newer version, or cancel to keep the current version. | リリースページを開いて新しいバージョンをダウンロードするか、キャンセルして現在のバージョンを維持します。 |
+| Download it from github | github からダウンロード |
 | Opens the licence file on github.com in your browser. | ブラウザで github.com のライセンスファイルを開きます。 |
 | Backup folder | バックアップフォルダー |
 | Patches | パッチ |

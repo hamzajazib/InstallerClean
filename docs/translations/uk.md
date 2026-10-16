@@ -51,7 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Apache 2.0 licence | Ліцензія Apache 2.0 |
 | _Move | Пере_містити |
 | Path to folder if you move rather than delete. | Шлях до папки, якщо ви переміщуєте, а не видаляєте. |
-| Open _release page | _Відкрити сторінку випуску |
 | _Re-scan | Пов_торити сканування |
 
 ## About window
@@ -322,9 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Check for updates | Перевірити оновлення |
 | Checking... | Перевірка... |
 | Up to date. | Актуальна версія. |
-| Version {0} is available. | Доступна версія {0}. |
-| Update available | Доступне оновлення |
-| You're running version {0}.<br>Version {1} is available. | Ви використовуєте версію {0}.<br>Доступна версія {1}. |
+| InstallerClean {0} is available. | Доступна версія InstallerClean {0}. |
+| It's strongly recommended to use the latest version. | Настійно рекомендуємо використовувати найновішу версію. |
+| Download it from GitHub | Завантажити з GitHub |
 | Couldn't reach GitHub. Check your internet connection and try again. | Не вдалося зв'язатися з GitHub. Перевірте інтернет-з'єднання та спробуйте ще раз. |
 | GitHub returned an error response. Try again in a few minutes. | GitHub повернув повідомлення про помилку. Спробуйте ще раз за кілька хвилин. |
 | GitHub's response did not contain a recognised release. Try again later, or open the releases page directly. | Відповідь GitHub не містила розпізнаного випуску. Спробуйте пізніше або відкрийте сторінку випусків напряму. |
@@ -398,7 +397,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the readme on github in your browser. | Відкриває readme на github у вашому браузері. |
 | Opens the issue tracker on github.com in your browser. | Відкриває список проблем (Issues) на github.com у вашому браузері. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | Якщо позначено, InstallerClean під час запуску перевіряє на github наявність новішої версії. |
-| Open the release page to download the newer version, or cancel to keep the current version. | Відкрийте сторінку випуску, щоб завантажити новішу версію, або скасуйте, щоб лишити поточну версію. |
+| Download it from github | Завантажити з github |
 | Opens the licence file on github.com in your browser. | Відкриває файл ліцензії на github.com у вашому браузері. |
 | Backup folder | Папка резервних копій |
 | Patches | Виправлення |

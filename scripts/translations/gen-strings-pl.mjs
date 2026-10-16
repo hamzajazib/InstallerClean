@@ -163,7 +163,6 @@ const MAP = {
   'Action.Licence': `Licencja Apache 2.0`,
   'Action.Move': `_Przenieś`,
   'Action.BackupFolderPlaceholder': `Ścieżka do folderu, jeśli przenosisz zamiast usuwać.`,
-  'Action.OpenReleasePage': `Otwórz stronę _wydania`,
   'Action.Rescan': `_Skanuj ponownie`,
 
   // Automation names (screen reader / accessibility)
@@ -183,7 +182,6 @@ const MAP = {
   'Automation.SayThanks': `Podziękuj`,
   'Automation.CheckForUpdates': `Sprawdź aktualizacje`,
   'Automation.CheckForUpdates.HelpText': `Sprawdza na stronie wydań githuba, czy jest nowsza wersja.`,
-  'Automation.UpdateAvailable.HelpText': `Otwórz stronę wydania, aby pobrać nowszą wersję, lub anuluj, aby zachować bieżącą.`,
   'Automation.Licence.HelpText': `Otwiera plik licencji na github.com w twojej przeglądarce.`,
   'Automation.Section.BackupFolder': `Folder kopii zapasowej`,
   'Automation.Section.Patches': `Poprawki`,
@@ -387,10 +385,8 @@ const MAP = {
   'UpdateCheck.Title': `Sprawdź aktualizacje`,
   'UpdateCheck.Status.Checking': `Sprawdzanie...`,
   'UpdateCheck.Status.UpToDate': `Wszystko aktualne.`,
-  'UpdateCheck.UpdateAvailable.Title': `Dostępna aktualizacja`,
 
   // 0 = installed version, 1 = latest version on GitHub
-  'UpdateCheck.UpdateAvailable.Body': `Masz zainstalowaną wersję {0}.&#10;Dostępna jest wersja {1}.`,
   'UpdateCheck.Failed.NetworkUnavailable': `Nie udało się połączyć z GitHub. Sprawdź połączenie internetowe i spróbuj ponownie.`,
   'UpdateCheck.Failed.ServerError': `GitHub zwrócił odpowiedź z błędem. Spróbuj ponownie za kilka minut.`,
   'UpdateCheck.Failed.ResponseParseError': `Odpowiedź GitHub nie zawierała rozpoznawalnego wydania. Spróbuj ponownie później lub otwórz stronę wydań bezpośrednio.`,
@@ -509,7 +505,6 @@ const MAP = {
   'Error.ScanRecordsUnreadable': `InstallerClean nie zdołał odczytać dość rekordów Windows Installera, by mieć pewność, co jest jeszcze potrzebne: lista zainstalowanych programów wróciła niepełna, a odczyt tych samych rekordów prosto z rejestru również napotkał błędy. Plik mógłby wyglądać na osierocony tylko dlatego, że rekord, który go wymienia, był jednym z nieczytelnych, więc InstallerClean się zatrzymał. Nic nie zostało usunięte.`,
   'Error.MsiEnumerationNeverEnded': `Windows Installer nigdy nie zasygnalizował końca listy zainstalowanych programów: InstallerClean odczytał {2} {3}, a potem poddał się po {0} wpisach (ostatni kod błędu {1}). Liście bez końca nie można ufać, więc InstallerClean się zatrzymał. Nic nie zostało usunięte.`,
   'Error.MsiPatchEnumerationNeverEnded': `Windows Installer nigdy nie zasygnalizował końca listy poprawek jednego programu: InstallerClean odczytał {2} {3}, a potem poddał się po {0} wpisach (ostatni kod błędu {1}). Liście bez końca nie można ufać, więc InstallerClean się zatrzymał. Nic nie zostało usunięte.`,
-  'UpdateCheck.Status.UpdateAvailable': `Dostępna jest wersja {0}.`,
   'Completion.DonateAsk': `Każde, nawet drobne, wsparcie jest bardzo mile widziane.`,
   'About.Link.Guide': `Przewodnik i FAQ`,
   'About.Link.ReportProblem': `Zgłoś problem`,
@@ -658,6 +653,10 @@ const MAP = {
   'Automation.Scroll.Waiting': `Oczekiwanie na dysk lub udział`,
   'Completion.RecentChange.Singular': `Zatrzymano jeden plik ({2}), ponieważ Windows pokazuje, że został zmieniony po rozpoczęciu skanowania przez InstallerClean. Jeśli jakiś program się instalował lub aktualizował, przeskanuj ponownie, gdy skończy, a InstallerClean sprawdzi go jeszcze raz.`,
   'Completion.RecentChange.Plural': `Zatrzymano {0} {1} ({2}), ponieważ Windows pokazuje, że zostały zmienione po rozpoczęciu skanowania przez InstallerClean. Jeśli jakiś program się instalował lub aktualizował, przeskanuj ponownie, gdy skończy, a InstallerClean sprawdzi je jeszcze raz.`,
+  'UpdateNotice.Available': `Dostępna jest wersja InstallerClean {0}.`,
+  'UpdateNotice.Download': `Pobierz z GitHuba`,
+  'Automation.UpdateNotice.Download': `Pobierz z githuba`,
+  'UpdateNotice.Recommended': `Zdecydowanie zaleca się korzystanie z najnowszej wersji.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

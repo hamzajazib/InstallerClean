@@ -143,7 +143,6 @@ const MAP = {
   'Action.Licence': `Apache-2.0-Lizenz`,
   'Action.Move': `_Verschieben`,
   'Action.BackupFolderPlaceholder': `Pfad zum Ordner, falls du verschiebst statt zu löschen.`,
-  'Action.OpenReleasePage': `_Release-Seite öffnen`,
   'Action.Rescan': `_Neu scannen`,
 
   // Automation names (screen reader / accessibility)
@@ -163,7 +162,6 @@ const MAP = {
   'Automation.SayThanks': `Danke sagen`,
   'Automation.CheckForUpdates': `Nach Updates suchen`,
   'Automation.CheckForUpdates.HelpText': `Sucht auf der Release-Seite von github nach einer neueren Version.`,
-  'Automation.UpdateAvailable.HelpText': `Öffne die Release-Seite, um die neuere Version herunterzuladen, oder brich ab, um die aktuelle Version zu behalten.`,
   'Automation.Licence.HelpText': `Öffnet die Lizenzdatei auf github.com in deinem Browser.`,
   'Automation.Section.BackupFolder': `Sicherungsordner`,
   'Automation.Section.Patches': `Patches`,
@@ -368,10 +366,8 @@ const MAP = {
   'UpdateCheck.Title': `Nach Updates suchen`,
   'UpdateCheck.Status.Checking': `Wird geprüft...`,
   'UpdateCheck.Status.UpToDate': `Auf dem neuesten Stand.`,
-  'UpdateCheck.UpdateAvailable.Title': `Update verfügbar`,
 
   // 0 = installed version, 1 = latest version on GitHub
-  'UpdateCheck.UpdateAvailable.Body': `Du verwendest Version {0}.&#10;Version {1} ist verfügbar.`,
   'UpdateCheck.Failed.NetworkUnavailable': `GitHub war nicht erreichbar. Prüfe deine Internetverbindung und versuch es erneut.`,
   'UpdateCheck.Failed.ServerError': `GitHub hat eine Fehlerantwort zurückgegeben. Versuch es in ein paar Minuten erneut.`,
   'UpdateCheck.Failed.ResponseParseError': `Die Antwort von GitHub enthielt keine erkennbare Version. Versuch es später erneut oder öffne die Releases-Seite direkt.`,
@@ -485,7 +481,6 @@ const MAP = {
   'Error.ScanRecordsUnreadable': `InstallerClean konnte nicht genug von den Einträgen von Windows Installer lesen, um sicher zu sein, was noch gebraucht wird: Die Liste der installierten Programme kam unvollständig zurück, und dieselben Einträge direkt aus der Registrierung zu lesen führte ebenfalls zu Fehlern. Eine Datei könnte allein deshalb verwaist wirken, weil der Eintrag, der sie nennt, zu den unlesbaren gehörte, deshalb hat InstallerClean abgebrochen. Es wurde nichts entfernt.`,
   'Error.MsiEnumerationNeverEnded': `Windows Installer hat das Ende der Liste der installierten Programme nie signalisiert: InstallerClean hat {2} {3} gelesen und dann nach {0} Einträgen aufgegeben (letzter Fehlercode {1}). Einer Liste ohne Ende ist nicht zu trauen, deshalb hat InstallerClean abgebrochen. Es wurde nichts entfernt.`,
   'Error.MsiPatchEnumerationNeverEnded': `Windows Installer hat das Ende der Patch-Liste eines Programms nie signalisiert: InstallerClean hat {2} {3} gelesen und dann nach {0} Einträgen aufgegeben (letzter Fehlercode {1}). Einer Liste ohne Ende ist nicht zu trauen, deshalb hat InstallerClean abgebrochen. Es wurde nichts entfernt.`,
-  'UpdateCheck.Status.UpdateAvailable': `Version {0} ist verfügbar.`,
   'Completion.DonateAsk': `Über jede kleine Spende freue ich mich sehr.`,
   'About.Link.Guide': `Anleitung und FAQ`,
   'About.Link.ReportProblem': `Ein Problem melden`,
@@ -634,6 +629,10 @@ const MAP = {
   'Automation.Scroll.Waiting': `Warten auf ein Laufwerk oder eine Freigabe`,
   'Completion.RecentChange.Singular': `Eine Datei ({2}) wurde zurückgehalten, weil Windows anzeigt, dass sie geändert wurde, nachdem InstallerClean mit dem Scannen begonnen hatte. Falls gerade ein Programm installiert oder aktualisiert wurde, scanne erneut, sobald das fertig ist, dann prüft InstallerClean sie noch einmal.`,
   'Completion.RecentChange.Plural': `{0} {1} ({2}) wurden zurückgehalten, weil Windows anzeigt, dass sie geändert wurden, nachdem InstallerClean mit dem Scannen begonnen hatte. Falls gerade ein Programm installiert oder aktualisiert wurde, scanne erneut, sobald das fertig ist, dann prüft InstallerClean sie noch einmal.`,
+  'UpdateNotice.Available': `InstallerClean {0} ist verfügbar.`,
+  'UpdateNotice.Download': `Von GitHub herunterladen`,
+  'Automation.UpdateNotice.Download': `Von github herunterladen`,
+  'UpdateNotice.Recommended': `Es wird dringend empfohlen, die neueste Version zu verwenden.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

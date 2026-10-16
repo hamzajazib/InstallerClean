@@ -532,6 +532,30 @@ public class CompletionViewModelTests
         Assert.DoesNotContain($"({DisplayHelpers.PluraliseFile(1)})", vm.Summary);
     }
 
+    /// <summary>
+    /// The notice saying a newer version is available shows on the card a scan puts
+    /// up when it offers nothing, and on no card after a Move or Delete.
+    /// </summary>
+    [Fact]
+    public void Only_the_cards_a_scan_puts_up_are_scan_cards()
+    {
+        var vm = TestCompletion.Create();
+
+        vm.ShowAllClear(scannedFileCount: 5, scanDurationMs: 10);
+        Assert.True(vm.IsScanCard);
+
+        vm.ShowDeleteSummary(deletedCount: 2, deletedBytes: 1024, errors: []);
+        Assert.False(vm.IsScanCard);
+
+        vm.ShowNothingOffered(
+            HeldBack(3, Wholesale(3)), scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
+        Assert.True(vm.IsScanCard);
+
+        vm.ShowMoveSummary(movedCount: 1, movedBytes: 1024, destination: @"D:\backup",
+            errors: [], space: MoveSpaceOutcome.FreedSpace);
+        Assert.False(vm.IsScanCard);
+    }
+
     [Fact]
     public void The_wholesale_screen_and_the_all_clear_do_not_share_a_sentence()
     {

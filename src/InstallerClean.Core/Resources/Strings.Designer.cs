@@ -80,7 +80,6 @@ public static class Strings
     public static string Action_LeaveStarOnGitHub => Get("Action.LeaveStarOnGitHub");
     public static string Action_Licence => Get("Action.Licence");
     public static string Action_Move => Get("Action.Move");
-    public static string Action_OpenReleasePage => Get("Action.OpenReleasePage");
     public static string Action_Paste => Get("Action.Paste");
     public static string Action_Rescan => Get("Action.Rescan");
     public static string Action_SelectAll => Get("Action.SelectAll");
@@ -130,7 +129,7 @@ public static class Strings
     public static string Automation_StartupScanProgress => Get("Automation.StartupScanProgress");
     public static string Automation_StopWaitingForDrive => Get("Automation.StopWaitingForDrive");
     public static string Automation_StopWaitingForPath => Get("Automation.StopWaitingForPath");
-    public static string Automation_UpdateAvailable_HelpText => Get("Automation.UpdateAvailable.HelpText");
+    public static string Automation_UpdateNotice_Download => Get("Automation.UpdateNotice.Download");
     public static string Automation_ViewOrphanedFiles => Get("Automation.ViewOrphanedFiles");
     public static string Automation_ViewOrphanedFiles_HelpText => Get("Automation.ViewOrphanedFiles.HelpText");
     public static string Automation_ViewRegisteredFiles => Get("Automation.ViewRegisteredFiles");
@@ -545,11 +544,11 @@ public static class Strings
     public static string UpdateCheck_Failed_Unknown => Get("UpdateCheck.Failed.Unknown");
     public static string UpdateCheck_Failed_Unknown_NoLog => Get("UpdateCheck.Failed.Unknown.NoLog");
     public static string UpdateCheck_Status_Checking => Get("UpdateCheck.Status.Checking");
-    public static string UpdateCheck_Status_UpdateAvailable => Get("UpdateCheck.Status.UpdateAvailable");
     public static string UpdateCheck_Status_UpToDate => Get("UpdateCheck.Status.UpToDate");
     public static string UpdateCheck_Title => Get("UpdateCheck.Title");
-    public static string UpdateCheck_UpdateAvailable_Body => Get("UpdateCheck.UpdateAvailable.Body");
-    public static string UpdateCheck_UpdateAvailable_Title => Get("UpdateCheck.UpdateAvailable.Title");
+    public static string UpdateNotice_Available => Get("UpdateNotice.Available");
+    public static string UpdateNotice_Download => Get("UpdateNotice.Download");
+    public static string UpdateNotice_Recommended => Get("UpdateNotice.Recommended");
     public static string Version_Display => Get("Version.Display");
     public static string Window_About_Title => Get("Window.About.Title");
     public static string Window_Main_Title => Get("Window.Main.Title");

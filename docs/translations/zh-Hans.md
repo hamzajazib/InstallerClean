@@ -51,7 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Apache 2.0 licence | Apache 2.0 许可证 |
 | _Move | 移动(_M) |
 | Path to folder if you move rather than delete. | 若选择移动而非删除，此处填写文件夹路径。 |
-| Open _release page | 打开发布页面(_R) |
 | _Re-scan | 重新扫描(_R) |
 
 ## About window
@@ -322,9 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Check for updates | 检查更新 |
 | Checking... | 正在检查… |
 | Up to date. | 已是最新版本。 |
-| Version {0} is available. | {0} 版现已推出。 |
-| Update available | 有可用更新 |
-| You're running version {0}.<br>Version {1} is available. | 您正在运行 {0} 版。<br>{1} 版现已推出。 |
+| InstallerClean {0} is available. | InstallerClean {0} 版现已推出。 |
+| It's strongly recommended to use the latest version. | 强烈建议使用最新版本。 |
+| Download it from GitHub | 从 GitHub 下载 |
 | Couldn't reach GitHub. Check your internet connection and try again. | 无法连接到 GitHub。请检查您的网络连接后重试。 |
 | GitHub returned an error response. Try again in a few minutes. | GitHub 返回了错误响应。请过几分钟后重试。 |
 | GitHub's response did not contain a recognised release. Try again later, or open the releases page directly. | GitHub 的响应中没有可识别的发布版本。请稍后重试，或直接打开发布页面。 |
@@ -398,7 +397,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the readme on github in your browser. | 在浏览器中打开 github 上的 readme。 |
 | Opens the issue tracker on github.com in your browser. | 在浏览器中打开 github.com 上的问题追踪页面（Issues）。 |
 | If ticked, InstallerClean checks github for a newer version when you run it. | 勾选后，InstallerClean 运行时会在 github 上检查是否有更新版本。 |
-| Open the release page to download the newer version, or cancel to keep the current version. | 打开发布页面以下载更新版本，或取消以保留当前版本。 |
+| Download it from github | 从 github 下载 |
 | Opens the licence file on github.com in your browser. | 在浏览器中打开 github.com 上的许可证文件。 |
 | Backup folder | 备份文件夹 |
 | Patches | 补丁 |

@@ -111,7 +111,6 @@ const MAP = {
   'Action.Licence': `Лицензия Apache 2.0`,
   'Action.Move': `_Переместить`,
   'Action.BackupFolderPlaceholder': `Путь к папке, если вы перемещаете, а не удаляете.`,
-  'Action.OpenReleasePage': `Открыть страницу _выпуска`,
   // Rescan takes Alt+в (not the natural Alt+П): П collides with Move (Переместить) in the
   // results view, where Move is the primary action and keeps П.
   'Action.Rescan': `По_вторить сканирование`,
@@ -141,7 +140,6 @@ const MAP = {
   'Automation.SayThanks': `Поблагодарить`,
   'Automation.CheckForUpdates': `Проверить обновления`,
   'Automation.CheckForUpdates.HelpText': `Проверяет на странице выпусков github, есть ли более новая версия.`,
-  'Automation.UpdateAvailable.HelpText': `Откройте страницу выпуска, чтобы скачать более новую версию, или нажмите «Отмена», чтобы оставить текущую.`,
   'Automation.Licence.HelpText': `Открывает файл лицензии на github.com в вашем браузере.`,
   'Automation.Section.BackupFolder': `Папка резервных копий`,
   'Automation.Section.Patches': `Исправления`,
@@ -347,10 +345,8 @@ const MAP = {
   'UpdateCheck.Title': `Проверка обновлений`,
   'UpdateCheck.Status.Checking': `Проверка...`,
   'UpdateCheck.Status.UpToDate': `Установлена последняя версия.`,
-  'UpdateCheck.UpdateAvailable.Title': `Доступно обновление`,
 
   // 0 = installed version, 1 = latest version on GitHub
-  'UpdateCheck.UpdateAvailable.Body': `У вас установлена версия {0}.&#10;Доступна версия {1}.`,
   'UpdateCheck.Failed.NetworkUnavailable': `Не удалось подключиться к GitHub. Проверьте подключение к интернету и повторите попытку.`,
   'UpdateCheck.Failed.ServerError': `GitHub вернул ответ с ошибкой. Повторите попытку через несколько минут.`,
   'UpdateCheck.Failed.ResponseParseError': `В ответе GitHub не оказалось распознаваемого выпуска. Повторите попытку позже или откройте страницу выпусков напрямую.`,
@@ -424,7 +420,6 @@ const MAP = {
   'Error.ScanRecordsUnreadable': `InstallerClean не смог прочитать достаточно записей Windows Installer, чтобы точно знать, что ещё нужно: список установленных программ вернулся неполным, а чтение тех же записей напрямую из реестра тоже привело к ошибкам. Файл мог выглядеть бесхозным лишь потому, что запись, которая его называет, оказалась одной из нечитаемых, поэтому InstallerClean остановился. Ничего не было удалено.`,
   'Error.MsiEnumerationNeverEnded': `Windows Installer так и не сообщил о конце списка установленных программ: InstallerClean прочитал {2} {3}, а затем прекратил попытки после {0} записей (последний код ошибки {1}). Списку без конца доверять нельзя, поэтому InstallerClean остановился. Ничего не было удалено.`,
   'Error.MsiPatchEnumerationNeverEnded': `Windows Installer так и не сообщил о конце списка исправлений одной программы: InstallerClean прочитал {2} {3}, а затем прекратил попытки после {0} записей (последний код ошибки {1}). Списку без конца доверять нельзя, поэтому InstallerClean остановился. Ничего не было удалено.`,
-  'UpdateCheck.Status.UpdateAvailable': `Доступна версия {0}.`,
   'Completion.DonateAsk': `Любая, даже небольшая, поддержка очень ценна.`,
   'About.Link.Guide': `Руководство и частые вопросы`,
   'About.Link.ReportProblem': `Сообщить о проблеме`,
@@ -521,6 +516,10 @@ const MAP = {
   'Automation.Scroll.Waiting': `Ожидание диска или сетевого ресурса`,
   'Completion.RecentChange.Singular': `Удержан один файл ({2}), потому что, по данным Windows, он был изменён после того, как InstallerClean начал сканирование. Если в это время устанавливалась или обновлялась программа, повторите сканирование, когда она закончит, и InstallerClean проверит его снова.`,
   'Completion.RecentChange.Plural': `InstallerClean удержал {0} {1} ({2}), потому что, по данным Windows, они были изменены после того, как InstallerClean начал сканирование. Если в это время устанавливалась или обновлялась программа, повторите сканирование, когда она закончит, и InstallerClean проверит их снова.`,
+  'UpdateNotice.Available': `Доступна версия InstallerClean {0}.`,
+  'UpdateNotice.Download': `Скачать с GitHub`,
+  'Automation.UpdateNotice.Download': `Скачать с github`,
+  'UpdateNotice.Recommended': `Настоятельно рекомендуется использовать последнюю версию.`,
 };
 
 // Russian CLDR-category overrides beyond the neutral one/other split. They do NOT

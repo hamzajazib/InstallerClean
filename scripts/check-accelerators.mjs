@@ -74,7 +74,6 @@ const SETS = {
     'Action.BuyMeACuppa', 'Action.Close'],
   'ConfirmDelete': ['Action.Cancel', 'Action.DeletePermanently'],
   'ConfirmMove': ['Action.Cancel', 'Action.Move'],
-  'UpdateAvailable': ['Action.Cancel', 'Action.OpenReleasePage'],
 };
 
 // One string, two buttons on the same window (the unneeded and still-needed

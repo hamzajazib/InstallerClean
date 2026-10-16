@@ -115,26 +115,37 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// The line beside the update button: "Checking...", "Up to date." or
-    /// the update-available sentence. Empty at rest, which collapses the
-    /// bound TextBlock.
+    /// The line beside the update button: "Checking..." while the manual check
+    /// runs, and "Up to date." when it answers that way. Empty at rest, which
+    /// collapses the bound TextBlock.
     /// </summary>
     [ObservableProperty] private string _updateStatusText = string.Empty;
 
     /// <summary>
-    /// Set once a check has found a newer version. It picks which of the
-    /// status line's two presentations is live: plain text while false, and
-    /// a hyperlink onto <see cref="UpdateCheckService.ReleasesPageUrl"/>
-    /// once true, so the sentence announcing the update is itself the way
-    /// to get it. A bool rather than the URL because the destination is
-    /// fixed, and because the bindings need the POSITIVE form of the test:
-    /// a XAML DataTrigger tests equality only, so a string could express
-    /// "no link" and never "a link", which is the case the plain line has
-    /// to hide itself in.
+    /// The notice's first line, naming the newer version a check found. Set before
+    /// <see cref="HasNewerVersion"/>, so the line is whole by the time the notice
+    /// shows.
+    /// </summary>
+    [ObservableProperty] private string _updateNoticeText = string.Empty;
+
+    /// <summary>
+    /// Set once a check has found a newer version, and held for the session. It
+    /// shows the notice at the top of the main window and on the card a scan puts
+    /// up when it offers nothing. A later check failing leaves it set; only a check
+    /// answering that this build is the newest clears it. A bool because the
+    /// bindings need the positive form of the test: a XAML DataTrigger tests
+    /// equality only.
     /// </summary>
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(OpenUpdatePageCommand))]
-    private bool _hasUpdateLink;
+    [NotifyCanExecuteChangedFor(nameof(OpenReleasePageCommand))]
+    private bool _hasNewerVersion;
+
+    /// <summary>
+    /// Raised each time a check finds a newer version, whether or not the notice
+    /// was already showing, so the window can read the notice out as the answer to
+    /// a click that found the version it already names.
+    /// </summary>
+    public event EventHandler? NewerVersionFound;
 
     /// <summary>
     /// Starts the once-per-session automatic check. Called by the App as
@@ -189,15 +200,14 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// <summary>
     /// The manual check. Same service call as the automatic path, but
     /// every outcome is shown: the status line while checking and on
-    /// up-to-date, the update dialog on a find, a warning dialog on a
-    /// failure. The command's own execution covers the cooldown, so the
-    /// button stays disabled for the spacing window.
+    /// up-to-date, the notice on a find, a warning dialog on a failure. The
+    /// command's own execution covers the cooldown, so the button stays
+    /// disabled for the spacing window.
     /// </summary>
     [RelayCommand]
     private async Task CheckForUpdatesAsync()
     {
         var token = ResetUpdateCheckToken();
-        HasUpdateLink = false;
         UpdateStatusText = Strings.UpdateCheck_Status_Checking;
 
         UpdateCheckResult result;
@@ -214,13 +224,13 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         switch (result)
         {
             case UpToDate:
+                HasNewerVersion = false;
                 UpdateStatusText = Strings.UpdateCheck_Status_UpToDate;
                 break;
 
             case UpdateAvailable available:
+                UpdateStatusText = string.Empty;
                 ShowUpdateFound(available);
-                if (_windowService.ShowUpdateAvailable(available.CurrentVersion, available.LatestVersion))
-                    _windowService.OpenUrl(UpdateCheckService.ReleasesPageUrl);
                 break;
 
             case CheckFailed failed:
@@ -237,50 +247,35 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         {
             return;
         }
-        // The transient wordings clear once read; the update-available
-        // sentence stays, because it is the one the user still needs after
-        // dismissing the dialog, and it carries the link.
-        if (!HasUpdateLink && UpdateStatusText == Strings.UpdateCheck_Status_UpToDate)
+        // "Up to date." clears once read; the notice a find shows stays.
+        if (UpdateStatusText == Strings.UpdateCheck_Status_UpToDate)
             UpdateStatusText = string.Empty;
     }
 
     /// <summary>
-    /// Opens the releases page; bound to the status hyperlink. The CanExecute
-    /// is the hyperlink's tab-order gate, not politeness: WPF's keyboard
-    /// navigation descends into the collapsed status TextBlock regardless of
-    /// visibility (a TextBlock is an IContentHost) and admits a content
-    /// element on Focusable, IsTabStop and IsEnabled alone, content elements
-    /// having no IsVisible to test, so an always-executable command leaves
-    /// the hidden hyperlink an invisible extra Tab stop between the update
-    /// button and the globe. Disabled while there is no link, it drops out of
-    /// the walk; once the link is shown it is enabled and a real stop. The
-    /// body's guard stays because ICommand.Execute does not consult
-    /// CanExecute.
+    /// Opens the releases page; bound to the link on the notice, in the main
+    /// window and on the card. The CanExecute is the link's tab-order gate, not
+    /// politeness: WPF's keyboard navigation descends into a collapsed TextBlock
+    /// regardless of visibility (a TextBlock is an IContentHost) and admits a
+    /// content element on Focusable, IsTabStop and IsEnabled alone, content
+    /// elements having no IsVisible to test, so an always-executable command
+    /// leaves the hidden link an invisible extra Tab stop. Disabled while there is
+    /// no notice, it drops out of the walk; once the notice shows it is enabled
+    /// and a real stop. The body's guard stays because ICommand.Execute does not
+    /// consult CanExecute.
     /// </summary>
-    [RelayCommand(CanExecute = nameof(HasUpdateLink))]
-    private void OpenUpdatePage()
+    [RelayCommand(CanExecute = nameof(HasNewerVersion))]
+    private void OpenReleasePage()
     {
-        if (HasUpdateLink)
+        if (HasNewerVersion)
             _windowService.OpenUrl(UpdateCheckService.ReleasesPageUrl);
     }
 
     private void ShowUpdateFound(UpdateAvailable available)
     {
-        // Flag before text, and load-bearing. Each assignment's raise runs
-        // MainWindow.OnChromePropertyChanged synchronously, and that handler
-        // queues a live-region announcement for the link as it appears and for
-        // the plain line whenever its text changes while it shows. Setting the
-        // flag first makes the link's line the only one that qualifies. Text
-        // first would pass the plain line's "shown" test on the automatic path
-        // (empty text, no link yet) and queue a second announcement against a
-        // line that the flag then collapses, so a screen reader would be handed
-        // a line that is gone by the time it speaks. What makes either safe is
-        // that the raises are queued at Background priority rather than made
-        // from the setter: by the time they run, both assignments and the
-        // bindings behind them are done.
-        HasUpdateLink = true;
-        UpdateStatusText = string.Format(
-            Strings.UpdateCheck_Status_UpdateAvailable, available.LatestVersion);
+        UpdateNoticeText = string.Format(Strings.UpdateNotice_Available, available.LatestVersion);
+        HasNewerVersion = true;
+        NewerVersionFound?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>

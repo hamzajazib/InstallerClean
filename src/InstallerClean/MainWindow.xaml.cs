@@ -32,6 +32,15 @@ public partial class MainWindow : Window
     private bool _pendingRebootToAnnounce;
     private bool _missingFromDiskToAnnounce;
 
+    /// <summary>
+    /// Whether the notice saying a newer version is available appeared while something
+    /// stood in front of the main window and waits to be read, first, at the next point
+    /// the window is in front, as the two warnings above do. Not set where the card a
+    /// scan puts up carries the notice, since the card reads it out with its outcome.
+    /// See <see cref="OnNewerVersionFound"/>, which sets it.
+    /// </summary>
+    private bool _updateNoticeToAnnounce;
+
     public MainWindow(MainViewModel viewModel)
     {
         InitializeComponent();
@@ -44,6 +53,7 @@ public partial class MainWindow : Window
         _vm.Cleanup.PropertyChanged += OnCleanupPropertyChanged;
         _vm.Scan.PropertyChanged += OnScanPropertyChanged;
         _vm.Chrome.PropertyChanged += OnChromePropertyChanged;
+        _vm.Chrome.NewerVersionFound += OnNewerVersionFound;
         _vm.Scan.ScanCompleted += OnScanCompleted;
         PreviewKeyDown += OnPreviewKeyDown;
         PreviewMouseDown += OnPreviewMouseDownOverReportPanel;
@@ -72,6 +82,10 @@ public partial class MainWindow : Window
         // cancelled or failed has no result, so neither shows.
         _pendingRebootToAnnounce = _vm.Scan.HasPendingReboot;
         _missingFromDiskToAnnounce = _vm.Scan.HasMissingFromDisk;
+        // The automatic update check runs beside the startup scan and has usually found
+        // any newer version by now, so its notice is read here too: with the card's
+        // outcome where the startup card is up, otherwise first, ahead of the replay below.
+        _updateNoticeToAnnounce = _vm.Chrome.HasNewerVersion && !_vm.Completion.IsComplete;
         if (_vm.Completion.IsComplete)
         {
             // The summary has no Text binding, hosting inlines composed in
@@ -121,20 +135,6 @@ public partial class MainWindow : Window
                 Announce(_vm.Scan.LastScanError);
         }
 
-        // Chrome state is replayed for the same reason the states above are. The
-        // automatic update check is started before the startup scan is awaited
-        // (App.OnStartup says why), so in an ordinary session, which is over in
-        // seconds, it has already answered by the time this window is built and
-        // the subscription above never sees the transition. The line paints from
-        // its binding either way, so a sighted user reads it and a screen-reader
-        // user is told nothing at all. Conditions mirror
-        // OnChromePropertyChanged's, so a check that resolved with nothing to say
-        // stays silent.
-        if (_vm.Chrome.HasUpdateLink)
-            AnnounceLiveRegions(UpdateLinkText);
-        else if (_vm.Chrome.UpdateStatusText.Length > 0)
-            AnnounceLiveRegions(UpdateStatusLineText);
-
         // Both of the completion card's donate buttons are centred on the card,
         // and each tooltip is centred over its button.
         CompletionDonateToolTip.CustomPopupPlacementCallback = TooltipPlacement.KeptInsideWindow(
@@ -164,17 +164,15 @@ public partial class MainWindow : Window
         // text scales the bottom nav stays above the taskbar. Both are
         // first assigned here, before the window handle exists, the
         // shape every band-free window in the app uses, and no
-        // constraint sits on the window itself. Sized to content in
-        // both axes instead
-        // (SizeToContent="WidthAndHeight" with work-area limits
-        // re-applied from OnSourceInitialized), the window opened
-        // larger than its arranged content by exactly the standard
-        // caption frame, 37 by 14 device-independent units of unpainted
-        // black along the bottom and right edges (observed 2026-06-13
-        // at 125% monitor scale, custom WindowChrome active). With no
-        // handle yet this resolves against the primary work area, where
-        // CenterScreen opens the window anyway; a live text-scale
-        // change re-resolves against the actual monitor.
+        // constraint sits on the window itself. Sized to content in both
+        // axes instead (SizeToContent="WidthAndHeight" with work-area
+        // limits re-applied from OnSourceInitialized), the window opens
+        // larger than its arranged content by the standard caption frame
+        // under the custom WindowChrome, leaving unpainted black along the
+        // bottom and right edges. With no handle yet this resolves against
+        // the primary work area, where CenterScreen opens the window
+        // anyway; a live text-scale change re-resolves against the actual
+        // monitor.
         ApplyWorkAreaBounds();
         AccessibilitySettings.Current.PropertyChanged += OnAccessibilitySettingsChanged;
 
@@ -192,14 +190,12 @@ public partial class MainWindow : Window
     private void ApplyWorkAreaBounds()
     {
         // Width is assigned directly; SizeToContent is not toggled here. Toggling it
-        // to Manual around the Width assignment opens a fresh high-text-scale
-        // launch NARROW, the enlarged text wrapping cramped (observed
-        // 2026-06-13 at ~199%): the toggle runs in this constructor-time call
-        // and disturbs the first content fit. The plain assignment keeps the
-        // XAML SizeToContent="Height" and the explicit width intact, which
-        // sizes correctly. The trade-off is no live shrink when the text size
-        // is lowered with the app already open; a restart re-fits, which is
-        // acceptable.
+        // to Manual around the Width assignment opens a fresh launch at a large text
+        // size narrow, the enlarged text wrapping cramped: the toggle runs in this
+        // constructor-time call and disturbs the first content fit. The plain
+        // assignment keeps the XAML SizeToContent="Height" and the explicit width
+        // intact, which sizes correctly. A text size lowered with the app open is
+        // fitted to at the next start.
         RootLayout.MaxHeight = DetailWindowSizing.WorkAreaHeightLimit(this);
         Width = DetailWindowSizing.ClampWidthToWorkArea(
             this, 828 * AccessibilitySettings.Current.TextScaleFactor, 0);
@@ -262,6 +258,7 @@ public partial class MainWindow : Window
         _vm.Cleanup.PropertyChanged -= OnCleanupPropertyChanged;
         _vm.Scan.PropertyChanged -= OnScanPropertyChanged;
         _vm.Chrome.PropertyChanged -= OnChromePropertyChanged;
+        _vm.Chrome.NewerVersionFound -= OnNewerVersionFound;
         _vm.Scan.ScanCompleted -= OnScanCompleted;
         PreviewKeyDown -= OnPreviewKeyDown;
         PreviewMouseDown -= OnPreviewMouseDownOverReportPanel;
@@ -278,14 +275,16 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// Reads out what a scan the user can see has put on the main window, in the
-    /// order it is drawn: the pending-reboot line where it has just appeared, the
-    /// headline ("12 unneeded files to clean up (3.2 GB)"), the line naming any
-    /// drive or share the scan carried on without, and the line for files missing
-    /// from disk where it has just appeared. A scan that offered nothing announces
-    /// through the completion card instead, and the silent post-operation refresh
-    /// must stay silent because the completion outcome is about to speak. In both
-    /// the two warnings stay marked, and are read as the card is closed, or as the
-    /// Move or Delete card goes where no card follows it.
+    /// order it is drawn: the notice saying a newer version is available and the
+    /// pending-reboot line, each where it has just appeared, the headline ("12
+    /// unneeded files to clean up (3.2 GB)"), the line naming any drive or share the
+    /// scan carried on without, and the line for files missing from disk where it has
+    /// just appeared. A scan that offered nothing announces through the completion
+    /// card instead, and the silent post-operation refresh must stay silent because
+    /// the completion outcome is about to speak. In both the two warnings stay marked,
+    /// and are read as the card is closed, or as the Move or Delete card goes where no
+    /// card follows it. So does the notice, but where the scan offered nothing the
+    /// card about to go up carries it and reads it.
     ///
     /// The headline, and the line naming the drives and shares, are read after every
     /// scan that shows them rather than only when they change, so a Re-scan that
@@ -308,6 +307,11 @@ public partial class MainWindow : Window
             return;
         }
 
+        // A completed scan that offered nothing puts its card up after this runs, and
+        // the card reads the notice with its outcome.
+        if (!(_vm.Scan.HasScanned && _vm.Scan.OrphanedFileCount == 0)
+            && TakeMark(ref _updateNoticeToAnnounce))
+            AnnounceUpdateNotice();
         if (TakeMark(ref _pendingRebootToAnnounce))
             AnnounceLiveRegion(PendingRebootBannerText, () => _vm.Scan.HasPendingReboot);
         if (_vm.Scan.OrphanedFileCount == 0)
@@ -328,14 +332,16 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Reads out the two warnings still marked from the last scan, pending-reboot
-    /// first as it is drawn, at a point where the main window is in front again with
-    /// no headline to put them around: a card closing, or the Move or Delete card
-    /// going with no card after it. A warning gone by the time its raise runs is not
-    /// read.
+    /// Reads out the notice saying a newer version is available and the two warnings
+    /// still marked from the last scan, in the order they are drawn, at a point where
+    /// the main window is in front again with no headline to put them around: a card
+    /// closing, or the Move or Delete card going with no card after it. A line gone by
+    /// the time its raise runs is not read.
     /// </summary>
     private void AnnounceMarkedWarnings()
     {
+        if (TakeMark(ref _updateNoticeToAnnounce))
+            AnnounceUpdateNotice();
         if (TakeMark(ref _pendingRebootToAnnounce))
             AnnounceLiveRegion(PendingRebootBannerText, () => _vm.Scan.HasPendingReboot);
         if (TakeMark(ref _missingFromDiskToAnnounce))
@@ -388,6 +394,9 @@ public partial class MainWindow : Window
 
         if (e.PropertyName == nameof(CompletionViewModel.IsComplete) && _vm.Completion.IsComplete)
         {
+            // A card carrying the notice reads it with its outcome below.
+            if (CardCarriesUpdateNotice())
+                _updateNoticeToAnnounce = false;
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () => CompletionDismissButton().Focus());
             // Focus lands on the button that closes the card, so without an
             // explicit raise a screen reader announces only the button and never
@@ -451,27 +460,50 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Reads out the update status line, in whichever of its two halves shows. The
-    /// link is read as it appears: the automatic check's find lands unprompted with
-    /// focus wherever the user left it. The plain line is read each time its text
-    /// changes while it shows, because each of its texts answers a click the user is
-    /// waiting on: "Checking..." as the manual check starts, then "Up to date.".
-    /// Its clearing after the cooldown collapses it and reads nothing.
+    /// Reads out the update status line each time its text changes while it shows,
+    /// because each of its texts answers a click the user is waiting on:
+    /// "Checking..." as the manual check starts, then "Up to date.". Its clearing,
+    /// after the cooldown or as a check finds a newer version, collapses it and reads
+    /// nothing.
     /// </summary>
     private void OnChromePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ChromeViewModel.HasUpdateLink) && _vm.Chrome.HasUpdateLink)
-        {
-            AnnounceLiveRegions(UpdateLinkText);
-            return;
-        }
-
-        // Mirrors the plain line's own visibility triggers: it shows when
-        // there is text and no link to show instead.
         if (e.PropertyName == nameof(ChromeViewModel.UpdateStatusText)
-            && !_vm.Chrome.HasUpdateLink && _vm.Chrome.UpdateStatusText.Length > 0)
+            && _vm.Chrome.UpdateStatusText.Length > 0)
             AnnounceLiveRegions(UpdateStatusLineText);
     }
+
+    /// <summary>
+    /// Reads out the notice each time a check finds a newer version, which the
+    /// automatic check does unprompted and the manual check as the answer to a click,
+    /// the notice already showing included. Read where it shows: on the card a scan
+    /// put up, where that card is in front and carries it; at once on the main window
+    /// where nothing stands in front of it; otherwise marked, and read first at the
+    /// next point the window is in front.
+    /// </summary>
+    private void OnNewerVersionFound(object? sender, EventArgs e)
+    {
+        if (CardCarriesUpdateNotice())
+            AnnounceLiveRegions(CardUpdateNoticeLead, CardUpdateNoticeDetail);
+        else if (_vm.Completion.IsComplete || _vm.Cleanup.IsOperating || _vm.Scan.IsScanning)
+            _updateNoticeToAnnounce = true;
+        else
+            AnnounceUpdateNotice();
+    }
+
+    /// <summary>Reads out the notice's two lines at the top of the main window.</summary>
+    private void AnnounceUpdateNotice()
+    {
+        AnnounceLiveRegion(UpdateNoticeLead, () => _vm.Chrome.HasNewerVersion);
+        AnnounceLiveRegion(UpdateNoticeDetail, () => _vm.Chrome.HasNewerVersion);
+    }
+
+    /// <summary>
+    /// Whether a card is up and shows the notice, which only the card a scan puts up
+    /// when it offers nothing does.
+    /// </summary>
+    private bool CardCarriesUpdateNotice() =>
+        _vm.Completion.IsComplete && _vm.Completion.IsScanCard && _vm.Chrome.HasNewerVersion;
 
     /// <summary>
     /// Whether the update button held keyboard focus when the manual check
@@ -488,14 +520,14 @@ public partial class MainWindow : Window
     /// else, where it was put. Both handlers run only while the restore
     /// window is open, which is the same span in which the pressed button
     /// sits disabled and focus is therefore orphaned, so any reactivation
-    /// that lands focus on a control records it: the update dialog's
-    /// dismissal, an Alt+Tab round trip, whatever put activation back. That
-    /// breadth is the point rather than a leak, because in that span the
-    /// choice is always WPF's and never the user's, and undoing WPF's choice
-    /// is what the restore exists for. The comparison earns its keep at the
-    /// other end: focus that comes back to where it already was is not a
-    /// choice at all, so it leaves the record alone, and focus the user
-    /// moved themselves matches nothing and survives.
+    /// that lands focus on a control records it: the dismissal of the warning
+    /// a failed check shows, an Alt+Tab round trip, whatever put activation
+    /// back. That breadth is the point rather than a leak, because in that
+    /// span the choice is always WPF's and never the user's, and undoing WPF's
+    /// choice is what the restore exists for. The comparison earns its keep at
+    /// the other end: focus that comes back to where it already was is not a
+    /// choice at all, so it leaves the record alone, and focus the user moved
+    /// themselves matches nothing and survives.
     /// </summary>
     private IInputElement? _focusBeforeDeactivation;
     private IInputElement? _focusPlacedOnReactivation;
@@ -541,11 +573,12 @@ public partial class MainWindow : Window
     /// done, so a keyboard user who pressed Enter on it is not left ringless
     /// with Tab restarting from the first stop. Restores in two cases, both
     /// of them focus the user did not choose: orphaned, which reads back as
-    /// null or the window itself, and still sitting exactly where the update
-    /// dialog's dismissal dropped it. A check that ends "Up to date." shows
-    /// no dialog and only ever takes the first; a check that finds something
-    /// ends in the dialog and takes the second, several seconds after it is
-    /// dismissed, because the cooldown outlasts it. Focus the user has since
+    /// null or the window itself, and still sitting exactly where the
+    /// dismissal of the warning a failed check shows dropped it. A check that
+    /// ends "Up to date." or finds a newer version shows no dialog and only
+    /// ever takes the first; a check that fails ends in the warning and takes
+    /// the second, several seconds after it is dismissed, because the cooldown
+    /// outlasts it. Focus the user has since
     /// moved elsewhere matches neither and is left alone. The guard on the
     /// disable being this button's own matters as well: the whole bottom bar
     /// is disabled while an overlay is up, and that path has its own focus
@@ -813,6 +846,9 @@ public partial class MainWindow : Window
     // it is a list to read at leisure rather than an outcome, and it is reached
     // in scan mode. The count above it is what has to be spoken.
     //
+    // The notice saying a newer version is available follows them on the card that
+    // carries it, as it is drawn.
+    //
     // The report box follows the outcome on the card that carries it, which is
     // settled before the card is revealed, so the reader hears that something is
     // sent as the card closes, and whether the box is ticked, without having to
@@ -822,6 +858,8 @@ public partial class MainWindow : Window
         AnnounceLiveRegions(CompletionHeadingText, CompletionFailedCountText,
             CompletionSummaryText, CompletionRestoreText, CompletionSkippedText,
             CompletionScanStartText);
+        if (CardCarriesUpdateNotice())
+            AnnounceLiveRegions(CardUpdateNoticeLead, CardUpdateNoticeDetail);
         if (_vm.Completion.OffersReport)
             AnnounceLiveRegion(CompletionReportBox, () => _vm.Completion.OffersReport);
     }

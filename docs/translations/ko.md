@@ -51,7 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Apache 2.0 licence | Apache 2.0 라이선스 |
 | _Move | 이동(_M) |
 | Path to folder if you move rather than delete. | 삭제하지 않고 이동할 경우 사용할 폴더 경로입니다. |
-| Open _release page | 릴리스 페이지 열기(_R) |
 | _Re-scan | 다시 검사(_R) |
 
 ## About window
@@ -322,9 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Check for updates | 업데이트 확인 |
 | Checking... | 확인 중... |
 | Up to date. | 최신 버전입니다. |
-| Version {0} is available. | {0} 버전을 사용할 수 있습니다. |
-| Update available | 업데이트 사용 가능 |
-| You're running version {0}.<br>Version {1} is available. | 현재 {0} 버전을 사용하고 있습니다.<br>{1} 버전을 사용할 수 있습니다. |
+| InstallerClean {0} is available. | InstallerClean {0} 버전을 사용할 수 있습니다. |
+| It's strongly recommended to use the latest version. | 최신 버전을 사용할 것을 강력히 권장합니다. |
+| Download it from GitHub | GitHub에서 내려받기 |
 | Couldn't reach GitHub. Check your internet connection and try again. | GitHub에 연결할 수 없습니다. 인터넷 연결을 확인하고 다시 시도하세요. |
 | GitHub returned an error response. Try again in a few minutes. | GitHub가 오류 응답을 반환했습니다. 몇 분 후에 다시 시도하세요. |
 | GitHub's response did not contain a recognised release. Try again later, or open the releases page directly. | GitHub의 응답에 인식할 수 있는 릴리스가 없습니다. 나중에 다시 시도하거나, 릴리스 페이지를 직접 여세요. |
@@ -398,7 +397,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the readme on github in your browser. | 브라우저에서 github의 readme를 엽니다. |
 | Opens the issue tracker on github.com in your browser. | 브라우저에서 github.com의 이슈 트래커를 엽니다. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | 선택하면 InstallerClean이 실행할 때 github에서 새 버전이 있는지 확인합니다. |
-| Open the release page to download the newer version, or cancel to keep the current version. | 새 버전을 내려받으려면 릴리스 페이지를 열고, 현재 버전을 유지하려면 취소하세요. |
+| Download it from github | github에서 내려받기 |
 | Opens the licence file on github.com in your browser. | 브라우저에서 github.com의 라이선스 파일을 엽니다. |
 | Backup folder | 백업 폴더 |
 | Patches | 패치 |

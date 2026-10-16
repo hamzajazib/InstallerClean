@@ -51,7 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Apache 2.0 licence | Lisensi Apache 2.0 |
 | _Move | _Pindahkan |
 | Path to folder if you move rather than delete. | Jalur ke folder jika Anda memindahkan, bukan menghapus. |
-| Open _release page | Buka halaman _rilis |
 | _Re-scan | Pindai _ulang |
 
 ## About window
@@ -322,9 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Check for updates | Periksa pembaruan |
 | Checking... | Memeriksa... |
 | Up to date. | Sudah versi terbaru. |
-| Version {0} is available. | Versi {0} tersedia. |
-| Update available | Pembaruan tersedia |
-| You're running version {0}.<br>Version {1} is available. | Anda menjalankan versi {0}.<br>Versi {1} tersedia. |
+| InstallerClean {0} is available. | InstallerClean {0} tersedia. |
+| It's strongly recommended to use the latest version. | Sangat disarankan untuk memakai versi terbaru. |
+| Download it from GitHub | Unduh dari GitHub |
 | Couldn't reach GitHub. Check your internet connection and try again. | Tidak bisa menjangkau GitHub. Periksa koneksi internet Anda dan coba lagi. |
 | GitHub returned an error response. Try again in a few minutes. | GitHub mengembalikan respons kesalahan. Coba lagi dalam beberapa menit. |
 | GitHub's response did not contain a recognised release. Try again later, or open the releases page directly. | Respons GitHub tidak memuat rilis yang dikenali. Coba lagi nanti, atau buka halaman rilis langsung. |
@@ -398,7 +397,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the readme on github in your browser. | Membuka readme di github melalui browser Anda. |
 | Opens the issue tracker on github.com in your browser. | Membuka pelacak masalah (Issues) di github.com melalui browser Anda. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | Jika dicentang, InstallerClean memeriksa apakah ada versi yang lebih baru di github saat Anda menjalankannya. |
-| Open the release page to download the newer version, or cancel to keep the current version. | Buka halaman rilis untuk mengunduh versi yang lebih baru, atau batalkan untuk tetap memakai versi saat ini. |
+| Download it from github | Unduh dari github |
 | Opens the licence file on github.com in your browser. | Membuka file lisensi di github.com melalui browser Anda. |
 | Backup folder | Folder cadangan |
 | Patches | Patch |

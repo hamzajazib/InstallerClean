@@ -54,16 +54,6 @@ public sealed class WindowService : IWindowService
         window.ShowDialog();
     }
 
-    public bool ShowUpdateAvailable(string currentVersion, string latestVersion)
-    {
-        if (Application.Current is null) return false;
-        var dialog = new UpdateAvailableWindow(currentVersion, latestVersion)
-        {
-            Owner = Application.Current.MainWindow,
-        };
-        return dialog.ShowDialog() == true;
-    }
-
     public void ShowReport(string? report)
     {
         if (Application.Current is null) return;

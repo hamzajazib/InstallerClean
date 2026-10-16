@@ -11,7 +11,8 @@ namespace InstallerClean.Tests.ViewModels;
 /// The update check's two paths. They call the same service and differ
 /// entirely in what they are allowed to say: the automatic check runs
 /// unasked at every launch, so it reports a newer version and nothing else,
-/// while the manual check is a click that must always answer.
+/// while the manual check is a click that must always answer. A newer version
+/// either finds shows the notice.
 /// </summary>
 public class ChromeViewModelTests
 {
@@ -58,6 +59,10 @@ public class ChromeViewModelTests
         return seen;
     }
 
+    private void CheckAnswers(params UpdateCheckResult[] results) =>
+        _updateCheckService.CheckAsync(Arg.Any<UpdateCheckOrigin>(), Arg.Any<CancellationToken>())
+            .Returns(results[0], results[1..]);
+
     [Fact]
     public async Task Automatic_check_opens_no_socket_when_the_setting_is_off()
     {
@@ -67,38 +72,39 @@ public class ChromeViewModelTests
 
         await _updateCheckService.DidNotReceive().CheckAsync(Arg.Any<UpdateCheckOrigin>(), Arg.Any<CancellationToken>());
         Assert.Equal(string.Empty, vm.UpdateStatusText);
+        Assert.False(vm.HasNewerVersion);
     }
 
     [Fact]
-    public async Task Automatic_check_paints_the_link_when_a_newer_version_exists()
+    public async Task Automatic_check_shows_the_notice_when_a_newer_version_exists()
     {
-        _updateCheckService.CheckAsync(Arg.Any<UpdateCheckOrigin>(), Arg.Any<CancellationToken>())
-            .Returns(new UpdateAvailable("2.1.0", "9.9.9"));
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
         var vm = CreateViewModel();
+        var found = 0;
+        vm.NewerVersionFound += (_, _) => found++;
 
         await vm.RunAutomaticUpdateCheckAsync();
 
-        Assert.Equal(
-            string.Format(Strings.UpdateCheck_Status_UpdateAvailable, "9.9.9"),
-            vm.UpdateStatusText);
-        Assert.True(vm.HasUpdateLink);
-        // A check nobody asked for never opens a window over whatever the
-        // user was doing; the status line is the whole of its voice.
-        _windowService.DidNotReceive().ShowUpdateAvailable(Arg.Any<string>(), Arg.Any<string>());
+        Assert.True(vm.HasNewerVersion);
+        Assert.Equal(string.Format(Strings.UpdateNotice_Available, "9.9.9"), vm.UpdateNoticeText);
+        Assert.Equal(1, found);
+        // A check nobody asked for opens no window over whatever the user was
+        // doing, and the status line beside the button stays empty.
+        Assert.Equal(string.Empty, vm.UpdateStatusText);
         _dialogService.DidNotReceive().ShowWarning(Arg.Any<string>(), Arg.Any<string>());
+        _windowService.DidNotReceive().OpenUrl(Arg.Any<string>());
     }
 
     [Fact]
     public async Task Automatic_check_says_nothing_when_it_fails()
     {
-        _updateCheckService.CheckAsync(Arg.Any<UpdateCheckOrigin>(), Arg.Any<CancellationToken>())
-            .Returns(new CheckFailed(UpdateCheckFailureReason.NetworkUnavailable));
+        CheckAnswers(new CheckFailed(UpdateCheckFailureReason.NetworkUnavailable));
         var vm = CreateViewModel();
 
         await vm.RunAutomaticUpdateCheckAsync();
 
         Assert.Equal(string.Empty, vm.UpdateStatusText);
-        Assert.False(vm.HasUpdateLink);
+        Assert.False(vm.HasNewerVersion);
         _dialogService.DidNotReceive().ShowWarning(Arg.Any<string>(), Arg.Any<string>());
     }
 
@@ -110,8 +116,7 @@ public class ChromeViewModelTests
     [Fact]
     public async Task Automatic_check_tells_the_service_nobody_asked_for_it()
     {
-        _updateCheckService.CheckAsync(Arg.Any<UpdateCheckOrigin>(), Arg.Any<CancellationToken>())
-            .Returns(new CheckFailed(UpdateCheckFailureReason.NetworkUnavailable));
+        CheckAnswers(new CheckFailed(UpdateCheckFailureReason.NetworkUnavailable));
         var vm = CreateViewModel();
 
         await vm.RunAutomaticUpdateCheckAsync();
@@ -123,8 +128,7 @@ public class ChromeViewModelTests
     [Fact]
     public async Task Manual_check_tells_the_service_the_user_is_waiting()
     {
-        _updateCheckService.CheckAsync(Arg.Any<UpdateCheckOrigin>(), Arg.Any<CancellationToken>())
-            .Returns(new CheckFailed(UpdateCheckFailureReason.NetworkUnavailable));
+        CheckAnswers(new CheckFailed(UpdateCheckFailureReason.NetworkUnavailable));
         var vm = CreateViewModel();
 
         await vm.CheckForUpdatesCommand.ExecuteAsync(null);
@@ -136,21 +140,19 @@ public class ChromeViewModelTests
     [Fact]
     public async Task Automatic_check_says_nothing_when_the_build_is_current()
     {
-        _updateCheckService.CheckAsync(Arg.Any<UpdateCheckOrigin>(), Arg.Any<CancellationToken>())
-            .Returns(new UpToDate("2.1.0"));
+        CheckAnswers(new UpToDate("2.1.0"));
         var vm = CreateViewModel();
 
         await vm.RunAutomaticUpdateCheckAsync();
 
         Assert.Equal(string.Empty, vm.UpdateStatusText);
-        Assert.False(vm.HasUpdateLink);
+        Assert.False(vm.HasNewerVersion);
     }
 
     [Fact]
     public async Task Manual_check_reports_up_to_date_then_clears_it()
     {
-        _updateCheckService.CheckAsync(Arg.Any<UpdateCheckOrigin>(), Arg.Any<CancellationToken>())
-            .Returns(new UpToDate("2.1.0"));
+        CheckAnswers(new UpToDate("2.1.0"));
         var vm = CreateViewModel();
         var seen = RecordStatusText(vm);
 
@@ -159,47 +161,75 @@ public class ChromeViewModelTests
         Assert.Contains(Strings.UpdateCheck_Status_Checking, seen);
         Assert.Contains(Strings.UpdateCheck_Status_UpToDate, seen);
         Assert.Equal(string.Empty, vm.UpdateStatusText);
-        Assert.False(vm.HasUpdateLink);
+        Assert.False(vm.HasNewerVersion);
     }
 
     [Fact]
-    public async Task Manual_check_opens_the_release_page_when_the_user_accepts()
+    public async Task Manual_check_shows_the_notice_when_a_newer_version_exists()
     {
-        _updateCheckService.CheckAsync(Arg.Any<UpdateCheckOrigin>(), Arg.Any<CancellationToken>())
-            .Returns(new UpdateAvailable("2.1.0", "9.9.9"));
-        _windowService.ShowUpdateAvailable("2.1.0", "9.9.9").Returns(true);
-        var vm = CreateViewModel();
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+        var vm = CreateViewModel(autoUpdateCheck: false);
+        var seen = RecordStatusText(vm);
 
         await vm.CheckForUpdatesCommand.ExecuteAsync(null);
 
-        _windowService.Received(1).OpenUrl(ReleasesPage);
-        // Both survive the cooldown's clear: the dialog is dismissed by then,
-        // and the line is the only remaining route to the download.
-        Assert.Equal(
-            string.Format(Strings.UpdateCheck_Status_UpdateAvailable, "9.9.9"),
-            vm.UpdateStatusText);
-        Assert.True(vm.HasUpdateLink);
-    }
-
-    [Fact]
-    public async Task Manual_check_leaves_the_release_page_alone_when_the_user_declines()
-    {
-        _updateCheckService.CheckAsync(Arg.Any<UpdateCheckOrigin>(), Arg.Any<CancellationToken>())
-            .Returns(new UpdateAvailable("2.1.0", "9.9.9"));
-        _windowService.ShowUpdateAvailable("2.1.0", "9.9.9").Returns(false);
-        var vm = CreateViewModel();
-
-        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
-
+        Assert.Contains(Strings.UpdateCheck_Status_Checking, seen);
+        Assert.Equal(string.Empty, vm.UpdateStatusText);
+        Assert.True(vm.HasNewerVersion);
+        Assert.Equal(string.Format(Strings.UpdateNotice_Available, "9.9.9"), vm.UpdateNoticeText);
         _windowService.DidNotReceive().OpenUrl(Arg.Any<string>());
-        Assert.True(vm.HasUpdateLink);
+        _dialogService.DidNotReceive().ShowWarning(Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    /// <summary>
+    /// A click that finds the version the notice already names changes nothing on
+    /// screen, so the event is the only answer the window can read out for it.
+    /// </summary>
+    [Fact]
+    public async Task Manual_check_answers_a_click_that_finds_the_version_the_notice_names()
+    {
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"), new UpdateAvailable("2.1.0", "9.9.9"));
+        var vm = CreateViewModel();
+        var found = 0;
+        vm.NewerVersionFound += (_, _) => found++;
+        await vm.RunAutomaticUpdateCheckAsync();
+
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, found);
+        Assert.True(vm.HasNewerVersion);
+    }
+
+    [Fact]
+    public async Task Manual_check_that_fails_keeps_the_notice()
+    {
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"), new CheckFailed(UpdateCheckFailureReason.Timeout));
+        var vm = CreateViewModel();
+        await vm.RunAutomaticUpdateCheckAsync();
+
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        _dialogService.Received(1).ShowWarning(
+            Strings.UpdateCheck_Failed_Timeout, Strings.UpdateCheck_Title);
+        Assert.True(vm.HasNewerVersion);
+    }
+
+    [Fact]
+    public async Task Manual_check_that_finds_this_build_current_takes_the_notice_down()
+    {
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"), new UpToDate("2.1.0"));
+        var vm = CreateViewModel();
+        await vm.RunAutomaticUpdateCheckAsync();
+
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        Assert.False(vm.HasNewerVersion);
     }
 
     [Fact]
     public async Task Manual_check_shows_a_warning_when_it_fails()
     {
-        _updateCheckService.CheckAsync(Arg.Any<UpdateCheckOrigin>(), Arg.Any<CancellationToken>())
-            .Returns(new CheckFailed(UpdateCheckFailureReason.Timeout));
+        CheckAnswers(new CheckFailed(UpdateCheckFailureReason.Timeout));
         var vm = CreateViewModel();
 
         await vm.CheckForUpdatesCommand.ExecuteAsync(null);
@@ -207,52 +237,49 @@ public class ChromeViewModelTests
         _dialogService.Received(1).ShowWarning(
             Strings.UpdateCheck_Failed_Timeout, Strings.UpdateCheck_Title);
         Assert.Equal(string.Empty, vm.UpdateStatusText);
-        Assert.False(vm.HasUpdateLink);
+        Assert.False(vm.HasNewerVersion);
     }
 
     [Fact]
-    public void OpenUpdatePage_does_nothing_before_a_check_has_found_one()
+    public void OpenReleasePage_does_nothing_before_a_check_has_found_one()
     {
         var vm = CreateViewModel();
 
-        vm.OpenUpdatePageCommand.Execute(null);
+        vm.OpenReleasePageCommand.Execute(null);
 
         _windowService.DidNotReceive().OpenUrl(Arg.Any<string>());
     }
 
     /// <summary>
-    /// The CanExecute coupling is what keeps the hidden status hyperlink out
-    /// of the main window's Tab order while there is no update (the why is on
-    /// OpenUpdatePage itself), and the CanExecuteChanged raise is how the
-    /// hyperlink learns to re-query it, so both are contract rather than
-    /// convenience.
+    /// The CanExecute coupling is what keeps the hidden link out of the main
+    /// window's Tab order while there is no notice (the why is on
+    /// OpenReleasePage itself), and the CanExecuteChanged raise is how the link
+    /// learns to re-query it, so both are contract rather than convenience.
     /// </summary>
     [Fact]
-    public async Task OpenUpdatePage_cannot_execute_until_a_check_has_found_one()
+    public async Task OpenReleasePage_cannot_execute_until_a_check_has_found_one()
     {
-        _updateCheckService.CheckAsync(Arg.Any<UpdateCheckOrigin>(), Arg.Any<CancellationToken>())
-            .Returns(new UpdateAvailable("2.1.0", "9.9.9"));
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
         var vm = CreateViewModel();
         var raised = 0;
-        vm.OpenUpdatePageCommand.CanExecuteChanged += (_, _) => raised++;
+        vm.OpenReleasePageCommand.CanExecuteChanged += (_, _) => raised++;
 
-        Assert.False(vm.OpenUpdatePageCommand.CanExecute(null));
+        Assert.False(vm.OpenReleasePageCommand.CanExecute(null));
 
         await vm.RunAutomaticUpdateCheckAsync();
 
-        Assert.True(vm.OpenUpdatePageCommand.CanExecute(null));
+        Assert.True(vm.OpenReleasePageCommand.CanExecute(null));
         Assert.True(raised > 0);
     }
 
     [Fact]
-    public async Task OpenUpdatePage_opens_the_releases_page_after_the_automatic_check()
+    public async Task OpenReleasePage_opens_the_releases_page_after_the_automatic_check()
     {
-        _updateCheckService.CheckAsync(Arg.Any<UpdateCheckOrigin>(), Arg.Any<CancellationToken>())
-            .Returns(new UpdateAvailable("2.1.0", "9.9.9"));
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
         var vm = CreateViewModel();
         await vm.RunAutomaticUpdateCheckAsync();
 
-        vm.OpenUpdatePageCommand.Execute(null);
+        vm.OpenReleasePageCommand.Execute(null);
 
         _windowService.Received(1).OpenUrl(ReleasesPage);
     }

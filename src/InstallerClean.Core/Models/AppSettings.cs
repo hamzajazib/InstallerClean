@@ -58,9 +58,9 @@ public sealed class AppSettings
     /// typical session lasts seconds, so the check races the startup scan
     /// rather than waiting behind it: any delay would routinely land the
     /// answer after the user had closed the window. The check itself stays
-    /// quiet: a newer version paints one status line by the update button;
-    /// an up-to-date result and a failure both say nothing. The off switch
-    /// is the checkbox in the About window; the check reads this file as it
+    /// quiet but for a newer version, which shows the notice at the top of the
+    /// main window; an up-to-date result and a failure both say nothing. The off
+    /// switch is the checkbox in the About window; the check reads this file as it
     /// fires, on the startup path, before there is a window to untick it
     /// from, so a change made in one session governs the next launch and
     /// every one after. It gates the automatic check only: the main

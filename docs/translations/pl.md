@@ -51,7 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Apache 2.0 licence | Licencja Apache 2.0 |
 | _Move | _Przenieś |
 | Path to folder if you move rather than delete. | Ścieżka do folderu, jeśli przenosisz zamiast usuwać. |
-| Open _release page | Otwórz stronę _wydania |
 | _Re-scan | _Skanuj ponownie |
 
 ## About window
@@ -322,9 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Check for updates | Sprawdź aktualizacje |
 | Checking... | Sprawdzanie... |
 | Up to date. | Wszystko aktualne. |
-| Version {0} is available. | Dostępna jest wersja {0}. |
-| Update available | Dostępna aktualizacja |
-| You're running version {0}.<br>Version {1} is available. | Masz zainstalowaną wersję {0}.<br>Dostępna jest wersja {1}. |
+| InstallerClean {0} is available. | Dostępna jest wersja InstallerClean {0}. |
+| It's strongly recommended to use the latest version. | Zdecydowanie zaleca się korzystanie z najnowszej wersji. |
+| Download it from GitHub | Pobierz z GitHuba |
 | Couldn't reach GitHub. Check your internet connection and try again. | Nie udało się połączyć z GitHub. Sprawdź połączenie internetowe i spróbuj ponownie. |
 | GitHub returned an error response. Try again in a few minutes. | GitHub zwrócił odpowiedź z błędem. Spróbuj ponownie za kilka minut. |
 | GitHub's response did not contain a recognised release. Try again later, or open the releases page directly. | Odpowiedź GitHub nie zawierała rozpoznawalnego wydania. Spróbuj ponownie później lub otwórz stronę wydań bezpośrednio. |
@@ -398,7 +397,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the readme on github in your browser. | Otwiera readme na githubie w twojej przeglądarce. |
 | Opens the issue tracker on github.com in your browser. | Otwiera listę zgłoszeń (Issues) na github.com w twojej przeglądarce. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | Jeśli zaznaczone, InstallerClean przy uruchomieniu sprawdza na githubie, czy jest nowsza wersja. |
-| Open the release page to download the newer version, or cancel to keep the current version. | Otwórz stronę wydania, aby pobrać nowszą wersję, lub anuluj, aby zachować bieżącą. |
+| Download it from github | Pobierz z githuba |
 | Opens the licence file on github.com in your browser. | Otwiera plik licencji na github.com w twojej przeglądarce. |
 | Backup folder | Folder kopii zapasowej |
 | Patches | Poprawki |

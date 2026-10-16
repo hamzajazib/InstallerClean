@@ -51,7 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Apache 2.0 licence | Лицензия Apache 2.0 |
 | _Move | _Переместить |
 | Path to folder if you move rather than delete. | Путь к папке, если вы перемещаете, а не удаляете. |
-| Open _release page | Открыть страницу _выпуска |
 | _Re-scan | По_вторить сканирование |
 
 ## About window
@@ -322,9 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Check for updates | Проверка обновлений |
 | Checking... | Проверка... |
 | Up to date. | Установлена последняя версия. |
-| Version {0} is available. | Доступна версия {0}. |
-| Update available | Доступно обновление |
-| You're running version {0}.<br>Version {1} is available. | У вас установлена версия {0}.<br>Доступна версия {1}. |
+| InstallerClean {0} is available. | Доступна версия InstallerClean {0}. |
+| It's strongly recommended to use the latest version. | Настоятельно рекомендуется использовать последнюю версию. |
+| Download it from GitHub | Скачать с GitHub |
 | Couldn't reach GitHub. Check your internet connection and try again. | Не удалось подключиться к GitHub. Проверьте подключение к интернету и повторите попытку. |
 | GitHub returned an error response. Try again in a few minutes. | GitHub вернул ответ с ошибкой. Повторите попытку через несколько минут. |
 | GitHub's response did not contain a recognised release. Try again later, or open the releases page directly. | В ответе GitHub не оказалось распознаваемого выпуска. Повторите попытку позже или откройте страницу выпусков напрямую. |
@@ -398,7 +397,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the readme on github in your browser. | Открывает readme на github в вашем браузере. |
 | Opens the issue tracker on github.com in your browser. | Открывает список проблем (Issues) на github.com в вашем браузере. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | Если флажок установлен, InstallerClean при запуске проверяет на github наличие более новой версии. |
-| Open the release page to download the newer version, or cancel to keep the current version. | Откройте страницу выпуска, чтобы скачать более новую версию, или нажмите «Отмена», чтобы оставить текущую. |
+| Download it from github | Скачать с github |
 | Opens the licence file on github.com in your browser. | Открывает файл лицензии на github.com в вашем браузере. |
 | Backup folder | Папка резервных копий |
 | Patches | Исправления |

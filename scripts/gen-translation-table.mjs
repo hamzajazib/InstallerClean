@@ -117,7 +117,7 @@ const GROUPS = [
   ['Summaries and counts',             ['Summary.']],
   ['Confirmation dialogs',             ['Confirm.']],
   ['Error messages',                   ['Error.']],
-  ['Update check',                     ['UpdateCheck.']],
+  ['Update check',                     ['UpdateCheck.', 'UpdateNotice.']],
   ['Opening links in your browser',    ['BrowserLaunch.']],
   ['Startup and crashes',              ['Startup.', 'CrashLog.']],
   ['Tooltips (hover text)',            ['Tooltip.']],

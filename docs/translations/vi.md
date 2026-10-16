@@ -51,7 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Apache 2.0 licence | Giấy phép Apache 2.0 |
 | _Move | _Chuyển |
 | Path to folder if you move rather than delete. | Đường dẫn thư mục nếu bạn chuyển thay vì xóa. |
-| Open _release page | _Mở trang phát hành |
 | _Re-scan | _Quét lại |
 
 ## About window
@@ -322,9 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Check for updates | Kiểm tra cập nhật |
 | Checking... | Đang kiểm tra... |
 | Up to date. | Đã cập nhật. |
-| Version {0} is available. | Phiên bản {0} đã có. |
-| Update available | Có bản cập nhật |
-| You're running version {0}.<br>Version {1} is available. | Bạn đang dùng phiên bản {0}.<br>Phiên bản {1} đã có. |
+| InstallerClean {0} is available. | Đã có InstallerClean {0}. |
+| It's strongly recommended to use the latest version. | Chúng tôi đặc biệt khuyên bạn dùng phiên bản mới nhất. |
+| Download it from GitHub | Tải về từ GitHub |
 | Couldn't reach GitHub. Check your internet connection and try again. | Không thể kết nối tới GitHub. Hãy kiểm tra kết nối internet và thử lại. |
 | GitHub returned an error response. Try again in a few minutes. | GitHub trả về phản hồi lỗi. Hãy thử lại sau vài phút. |
 | GitHub's response did not contain a recognised release. Try again later, or open the releases page directly. | Phản hồi của GitHub không chứa bản phát hành nào nhận ra được. Hãy thử lại sau, hoặc mở thẳng trang phát hành. |
@@ -398,7 +397,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the readme on github in your browser. | Mở readme trên github trong trình duyệt của bạn. |
 | Opens the issue tracker on github.com in your browser. | Mở trình theo dõi vấn đề (Issues) trên github.com trong trình duyệt của bạn. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | Nếu được đánh dấu, InstallerClean sẽ kiểm tra github xem có phiên bản mới hơn không khi bạn chạy nó. |
-| Open the release page to download the newer version, or cancel to keep the current version. | Mở trang phát hành để tải phiên bản mới hơn, hoặc hủy để giữ phiên bản hiện tại. |
+| Download it from github | Tải về từ github |
 | Opens the licence file on github.com in your browser. | Mở tệp giấy phép trên github.com trong trình duyệt của bạn. |
 | Backup folder | Thư mục sao lưu |
 | Patches | Bản vá |

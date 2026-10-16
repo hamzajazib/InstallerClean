@@ -208,7 +208,6 @@
        takes both verbs in the same form, so they stay parallel. The button
        carries "permanently"; repeating it here would dangle on the clause. -->
   <data name="Action.BackupFolderPlaceholder" xml:space="preserve"><value>Silmek yerine taşıyacaksanız klasörün yolu.</value></data>
-  <data name="Action.OpenReleasePage" xml:space="preserve"><value>_Sürüm sayfasını aç</value></data>
   <data name="Action.Rescan" xml:space="preserve"><value>_Yeniden tara</value></data>
 
   <!-- About window: the two links and the auto-update switch. Kept out of
@@ -317,10 +316,12 @@
     Names the destination and is cased for speech for the reasons
     Automation.CheckForUpdates.HelpText carries.</comment>
   </data>
-  <!-- Window-level description for the update-available modal, read by a
-       screen reader on open. The version numbers are in the body text; this
-       states the choice. -->
-  <data name="Automation.UpdateAvailable.HelpText" xml:space="preserve"><value>Daha yeni sürümü indirmek için sürüm sayfasını açın ya da geçerli sürümü korumak için iptal edin.</value></data>
+  <data name="Automation.UpdateNotice.Download" xml:space="preserve">
+    <value>github'dan indirin</value>
+    <comment>Screen-reader name of the link on the notice saying a newer version is
+    available, the visible UpdateNotice.Download cased for speech for the reason
+    Automation.CheckForUpdates.HelpText carries. The same words as the link.</comment>
+  </data>
   <data name="Automation.Licence.HelpText" xml:space="preserve"><value>github.com üzerindeki lisans dosyasını tarayıcınızda açar.</value></data>
   <!-- Mixed-case AutomationProperties.Name overrides for the all-caps
        Section.* labels (BACKUP FOLDER / PRODUCTS / PATCHES / PRODUCT
@@ -1555,13 +1556,20 @@ Ayrıntılar {1} içinde.</value></data>
   <data name="UpdateCheck.Title" xml:space="preserve"><value>Güncelleştirmeleri denetle</value></data>
   <data name="UpdateCheck.Status.Checking" xml:space="preserve"><value>Denetleniyor...</value></data>
   <data name="UpdateCheck.Status.UpToDate" xml:space="preserve"><value>Güncel.</value></data>
-  <data name="UpdateCheck.Status.UpdateAvailable" xml:space="preserve">
-    <value>{0} sürümü mevcut.</value>
-    <comment>Status line and hyperlink on the main window once a check finds a newer version. {0} = the newer version number. Clicking opens that release's page.</comment>
+  <!-- The notice at the top of the main window, and on the card a scan puts up
+       when it offers nothing, once a check finds a newer version. -->
+  <data name="UpdateNotice.Available" xml:space="preserve">
+    <value>InstallerClean {0} sürümü mevcut.</value>
+    <comment>The notice's first line. {0} = the newer version number, as 3.5.0.</comment>
   </data>
-  <data name="UpdateCheck.UpdateAvailable.Title" xml:space="preserve"><value>Güncelleştirme mevcut</value></data>
-  <!-- 0 = installed version, 1 = latest version on GitHub -->
-  <data name="UpdateCheck.UpdateAvailable.Body" xml:space="preserve"><value>{0} sürümünü çalıştırıyorsunuz.&#10;{1} sürümü mevcut.</value></data>
+  <data name="UpdateNotice.Recommended" xml:space="preserve">
+    <value>En son sürümü kullanmanız önemle tavsiye edilir.</value>
+    <comment>The notice's second line, under UpdateNotice.Available.</comment>
+  </data>
+  <data name="UpdateNotice.Download" xml:space="preserve">
+    <value>GitHub'dan indirin</value>
+    <comment>The notice's link, which opens the newest release's page on GitHub in the browser.</comment>
+  </data>
   <data name="UpdateCheck.Failed.NetworkUnavailable" xml:space="preserve"><value>GitHub'a ulaşılamadı. İnternet bağlantınızı kontrol edip yeniden deneyin.</value></data>
   <data name="UpdateCheck.Failed.ServerError" xml:space="preserve"><value>GitHub bir hata yanıtı döndürdü. Birkaç dakika sonra yeniden deneyin.</value></data>
   <data name="UpdateCheck.Failed.ResponseParseError" xml:space="preserve"><value>GitHub'ın yanıtı tanınan bir sürüm içermiyordu. Daha sonra yeniden deneyin ya da sürümler sayfasını doğrudan açın.</value></data>

@@ -18,14 +18,6 @@ public interface IWindowService
     void ShowAbout();
 
     /// <summary>
-    /// Shows the update-available dialog for a check that found a newer
-    /// version. Returns true when the user chose to open the release
-    /// page; the caller launches the URL, keeping the window layer free
-    /// of the launcher and the view-model free of Window construction.
-    /// </summary>
-    bool ShowUpdateAvailable(string currentVersion, string latestVersion);
-
-    /// <summary>
     /// Shows the report window: <paramref name="report"/> is the text of
     /// <c>last-run.json</c> as it was read, shown as it stands, or null where the
     /// file could not be read, which the window says in place of the report.

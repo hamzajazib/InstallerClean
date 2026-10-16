@@ -51,7 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Apache 2.0 licence | Apache 2.0 lisansı |
 | _Move | _Taşı |
 | Path to folder if you move rather than delete. | Silmek yerine taşıyacaksanız klasörün yolu. |
-| Open _release page | _Sürüm sayfasını aç |
 | _Re-scan | _Yeniden tara |
 
 ## About window
@@ -322,9 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Check for updates | Güncelleştirmeleri denetle |
 | Checking... | Denetleniyor... |
 | Up to date. | Güncel. |
-| Version {0} is available. | {0} sürümü mevcut. |
-| Update available | Güncelleştirme mevcut |
-| You're running version {0}.<br>Version {1} is available. | {0} sürümünü çalıştırıyorsunuz.<br>{1} sürümü mevcut. |
+| InstallerClean {0} is available. | InstallerClean {0} sürümü mevcut. |
+| It's strongly recommended to use the latest version. | En son sürümü kullanmanız önemle tavsiye edilir. |
+| Download it from GitHub | GitHub'dan indirin |
 | Couldn't reach GitHub. Check your internet connection and try again. | GitHub'a ulaşılamadı. İnternet bağlantınızı kontrol edip yeniden deneyin. |
 | GitHub returned an error response. Try again in a few minutes. | GitHub bir hata yanıtı döndürdü. Birkaç dakika sonra yeniden deneyin. |
 | GitHub's response did not contain a recognised release. Try again later, or open the releases page directly. | GitHub'ın yanıtı tanınan bir sürüm içermiyordu. Daha sonra yeniden deneyin ya da sürümler sayfasını doğrudan açın. |
@@ -398,7 +397,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the readme on github in your browser. | github üzerindeki readme'yi tarayıcınızda açar. |
 | Opens the issue tracker on github.com in your browser. | github.com üzerindeki sorun izleyiciyi (Issues) tarayıcınızda açar. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | İşaretliyse InstallerClean, çalıştırdığınızda github üzerinde daha yeni bir sürüm olup olmadığını denetler. |
-| Open the release page to download the newer version, or cancel to keep the current version. | Daha yeni sürümü indirmek için sürüm sayfasını açın ya da geçerli sürümü korumak için iptal edin. |
+| Download it from github | github'dan indirin |
 | Opens the licence file on github.com in your browser. | github.com üzerindeki lisans dosyasını tarayıcınızda açar. |
 | Backup folder | Yedek klasörü |
 | Patches | Yamalar |

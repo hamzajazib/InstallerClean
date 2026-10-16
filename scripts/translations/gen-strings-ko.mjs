@@ -124,7 +124,6 @@ const MAP = {
   'Action.Licence': `Apache 2.0 라이선스`,
   'Action.Move': `이동(_M)`,
   'Action.BackupFolderPlaceholder': `삭제하지 않고 이동할 경우 사용할 폴더 경로입니다.`,
-  'Action.OpenReleasePage': `릴리스 페이지 열기(_R)`,
   'Action.Rescan': `다시 검사(_R)`,
 
   // Automation names (screen reader / accessibility)
@@ -144,7 +143,6 @@ const MAP = {
   'Automation.SayThanks': `감사 인사`,
   'Automation.CheckForUpdates': `업데이트 확인`,
   'Automation.CheckForUpdates.HelpText': `github의 릴리스 페이지에서 새 버전이 있는지 확인합니다.`,
-  'Automation.UpdateAvailable.HelpText': `새 버전을 내려받으려면 릴리스 페이지를 열고, 현재 버전을 유지하려면 취소하세요.`,
   'Automation.Licence.HelpText': `브라우저에서 github.com의 라이선스 파일을 엽니다.`,
   'Automation.Section.BackupFolder': `백업 폴더`,
   'Automation.Section.Patches': `패치`,
@@ -348,10 +346,8 @@ const MAP = {
   'UpdateCheck.Title': `업데이트 확인`,
   'UpdateCheck.Status.Checking': `확인 중...`,
   'UpdateCheck.Status.UpToDate': `최신 버전입니다.`,
-  'UpdateCheck.UpdateAvailable.Title': `업데이트 사용 가능`,
 
   // 0 = installed version, 1 = latest version on GitHub
-  'UpdateCheck.UpdateAvailable.Body': `현재 {0} 버전을 사용하고 있습니다.&#10;{1} 버전을 사용할 수 있습니다.`,
   'UpdateCheck.Failed.NetworkUnavailable': `GitHub에 연결할 수 없습니다. 인터넷 연결을 확인하고 다시 시도하세요.`,
   'UpdateCheck.Failed.ServerError': `GitHub가 오류 응답을 반환했습니다. 몇 분 후에 다시 시도하세요.`,
   'UpdateCheck.Failed.ResponseParseError': `GitHub의 응답에 인식할 수 있는 릴리스가 없습니다. 나중에 다시 시도하거나, 릴리스 페이지를 직접 여세요.`,
@@ -467,7 +463,6 @@ const MAP = {
   'Error.ScanRecordsUnreadable': `InstallerClean이 무엇이 아직 필요한지 확신할 만큼 Windows Installer 기록을 읽지 못했습니다. 설치된 프로그램 목록이 일부 빠진 채로 돌아왔고, 같은 기록을 레지스트리에서 직접 읽는 것도 오류를 만났습니다. 어떤 파일을 가리키는 기록이 읽을 수 없는 것 중 하나였다는 이유만으로 그 파일이 고립된 것처럼 보일 수 있으므로 InstallerClean은 멈췄습니다. 아무것도 제거되지 않았습니다.`,
   'Error.MsiEnumerationNeverEnded': `Windows Installer가 설치된 프로그램 목록의 끝을 끝내 알리지 않았습니다. InstallerClean은 {3} {2}개를 읽은 다음 {0}개 항목에서 포기했습니다(마지막 오류 코드 {1}). 끝이 없는 목록은 믿을 수 없으므로 InstallerClean은 멈췄습니다. 아무것도 제거되지 않았습니다.`,
   'Error.MsiPatchEnumerationNeverEnded': `Windows Installer가 한 프로그램의 패치 목록의 끝을 끝내 알리지 않았습니다. InstallerClean은 {3} {2}개를 읽은 다음 {0}개 항목에서 포기했습니다(마지막 오류 코드 {1}). 끝이 없는 목록은 믿을 수 없으므로 InstallerClean은 멈췄습니다. 아무것도 제거되지 않았습니다.`,
-  'UpdateCheck.Status.UpdateAvailable': `{0} 버전을 사용할 수 있습니다.`,
   'Completion.DonateAsk': `적은 금액의 후원도 정말 감사합니다.`,
   'About.Link.Guide': `안내서 및 자주 묻는 질문`,
   'About.Link.ReportProblem': `문제 신고`,
@@ -616,6 +611,10 @@ const MAP = {
   'Automation.Scroll.Waiting': `드라이브 또는 공유를 기다리는 중`,
   'Completion.RecentChange.Singular': `파일 하나({2})는 InstallerClean이 검사를 시작한 뒤에 변경된 것으로 Windows에 나타나 보류했습니다. 프로그램이 설치나 업데이트 중이었다면, 끝난 뒤에 다시 검사하면 InstallerClean이 이 파일을 다시 확인합니다.`,
   'Completion.RecentChange.Plural': `{1} {0}개({2})는 InstallerClean이 검사를 시작한 뒤에 변경된 것으로 Windows에 나타나 보류했습니다. 프로그램이 설치나 업데이트 중이었다면, 끝난 뒤에 다시 검사하면 InstallerClean이 이 파일들을 다시 확인합니다.`,
+  'UpdateNotice.Available': `InstallerClean {0} 버전을 사용할 수 있습니다.`,
+  'UpdateNotice.Download': `GitHub에서 내려받기`,
+  'Automation.UpdateNotice.Download': `github에서 내려받기`,
+  'UpdateNotice.Recommended': `최신 버전을 사용할 것을 강력히 권장합니다.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

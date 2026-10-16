@@ -132,7 +132,6 @@ const MAP = {
   'Action.Licence': `Licença Apache 2.0`,
   'Action.Move': `_Mover`,
   'Action.BackupFolderPlaceholder': `Caminho da pasta se você mover em vez de excluir.`,
-  'Action.OpenReleasePage': `Abrir a página da _versão`,
   'Action.Rescan': `_Reanalisar`,
 
   // Automation names (screen reader / accessibility)
@@ -152,7 +151,6 @@ const MAP = {
   'Automation.SayThanks': `Agradeça`,
   'Automation.CheckForUpdates': `Verificar atualizações`,
   'Automation.CheckForUpdates.HelpText': `Consulta a página de versões do github em busca de uma versão mais recente.`,
-  'Automation.UpdateAvailable.HelpText': `Abra a página da versão para baixar a versão mais recente, ou cancele para manter a versão atual.`,
   'Automation.Licence.HelpText': `Abre o arquivo da licença em github.com no seu navegador.`,
   'Automation.Section.BackupFolder': `Pasta de backup`,
   'Automation.Section.Patches': `Patches`,
@@ -354,10 +352,8 @@ const MAP = {
   'UpdateCheck.Title': `Verificar atualizações`,
   'UpdateCheck.Status.Checking': `Verificando...`,
   'UpdateCheck.Status.UpToDate': `Tudo atualizado.`,
-  'UpdateCheck.UpdateAvailable.Title': `Atualização disponível`,
 
   // 0 = installed version, 1 = latest version on GitHub
-  'UpdateCheck.UpdateAvailable.Body': `Você está usando a versão {0}.&#10;A versão {1} está disponível.`,
   'UpdateCheck.Failed.NetworkUnavailable': `Não foi possível acessar o GitHub. Verifique a sua conexão com a internet e tente de novo.`,
   'UpdateCheck.Failed.ServerError': `O GitHub retornou uma resposta de erro. Tente de novo em alguns minutos.`,
   'UpdateCheck.Failed.ResponseParseError': `A resposta do GitHub não continha uma versão reconhecível. Tente de novo mais tarde, ou abra diretamente a página de versões.`,
@@ -472,7 +468,6 @@ const MAP = {
   'Error.ScanRecordsUnreadable': `O InstallerClean não conseguiu ler o suficiente dos registros do Windows Installer para ter certeza do que ainda é necessário: a lista de programas instalados voltou incompleta, e ler esses mesmos registros direto do registro do Windows também deu erros. Um arquivo poderia parecer órfão só porque o registro que o nomeia era um dos ilegíveis, então o InstallerClean parou. Nada foi removido.`,
   'Error.MsiEnumerationNeverEnded': `O Windows Installer nunca sinalizou o fim da lista de programas instalados: o InstallerClean leu {2} {3} e depois desistiu após {0} entradas (último código de erro {1}). Não dá para confiar em uma lista sem fim, então o InstallerClean parou. Nada foi removido.`,
   'Error.MsiPatchEnumerationNeverEnded': `O Windows Installer nunca sinalizou o fim da lista de patches de um programa: o InstallerClean leu {2} {3} e depois desistiu após {0} entradas (último código de erro {1}). Não dá para confiar em uma lista sem fim, então o InstallerClean parou. Nada foi removido.`,
-  'UpdateCheck.Status.UpdateAvailable': `A versão {0} está disponível.`,
   'Completion.DonateAsk': `Qualquer doação, por menor que seja, é muito bem-vinda.`,
   'About.Link.Guide': `Guia e perguntas frequentes`,
   'About.Link.ReportProblem': `Relatar um problema`,
@@ -621,6 +616,10 @@ const MAP = {
   'Automation.Scroll.Waiting': `Aguardando uma unidade ou compartilhamento`,
   'Completion.RecentChange.Singular': `Um arquivo ({2}) foi retido porque o Windows mostra que ele foi alterado depois que o InstallerClean começou a análise. Se um programa estava sendo instalado ou atualizado, faça uma nova análise quando ele terminar e o InstallerClean vai verificá-lo de novo.`,
   'Completion.RecentChange.Plural': `{0} {1} ({2}) foram retidos porque o Windows mostra que eles foram alterados depois que o InstallerClean começou a análise. Se um programa estava sendo instalado ou atualizado, faça uma nova análise quando ele terminar e o InstallerClean vai verificá-los de novo.`,
+  'UpdateNotice.Available': `O InstallerClean {0} está disponível.`,
+  'UpdateNotice.Download': `Baixe no GitHub`,
+  'Automation.UpdateNotice.Download': `Baixe no github`,
+  'UpdateNotice.Recommended': `É altamente recomendável usar a versão mais recente.`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

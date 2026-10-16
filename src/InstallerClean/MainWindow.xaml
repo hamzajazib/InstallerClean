@@ -41,6 +41,16 @@
              line above it. The ring is drawn 2 inside the region's top edge and 2
              outside its other three, so it sits in that gap rather than across the
              line. -->
+        <!-- The panel the notice saying a newer version is available sits in, at the
+             top of the main window and on the card a scan puts up when it offers
+             nothing: the card surface, edged in the accent. -->
+        <Style x:Key="UpdateNoticePanel" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource Surface.Card}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Action.Accent.Background}"/>
+            <Setter Property="BorderThickness" Value="{StaticResource BorderThickness.Hairline}"/>
+            <Setter Property="CornerRadius" Value="{StaticResource Radius.Panel}"/>
+            <Setter Property="Padding" Value="16,12"/>
+        </Style>
         <Style x:Key="WaitingRegionFocusVisual">
             <Setter Property="Control.Template">
                 <Setter.Value>
@@ -129,18 +139,55 @@
         <Grid Grid.Row="1" Margin="{StaticResource Margin.MainContent}"
               MaxWidth="{a11y:TextScaled 780}" HorizontalAlignment="Stretch"
               IsEnabled="{Binding IsMainContentInteractive}">
-            <!-- Three rows, not five with fixed 16 and 12 spacer rows between
+            <!-- The notice saying a newer version is available, the scan results,
+                 the separator and the action zone, with no fixed spacer rows between
                  them: the separator and the action zone collapse together when
                  there is nothing to move or delete, and a fixed spacer row
                  holds its height whatever sits in it, so the collapsed pair
                  would leave 28 pixels of dead space above the bottom nav. The
                  separator carries that spacing in its own margin instead, which
-                 goes with it. -->
+                 goes with it, and the notice carries the gap under it the same way. -->
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
+
+            <!-- A newer version than this one is available. Shown once a check has
+                 found one, in every state of the window, above everything else and
+                 outside the region that scrolls, so it stays in view at any text
+                 size. Its link is the first Tab stop in the window's content. The
+                 code-behind reads its two lines out, ahead of the rest of the window
+                 as it is drawn. The link's spoken name is its own words cased for
+                 speech. -->
+            <Border Grid.Row="0" Style="{StaticResource UpdateNoticePanel}"
+                    Margin="{StaticResource GapBottom.Lg}"
+                    Visibility="{Binding Chrome.HasNewerVersion, Converter={StaticResource BoolToVis}}">
+                <DockPanel>
+                    <Path DockPanel.Dock="Left" Data="{StaticResource Icon.Update}"
+                          Stroke="{StaticResource Link.Rest}" StrokeThickness="2" Fill="{x:Null}"
+                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                          Width="{a11y:TextScaled 20}" Height="{a11y:TextScaled 20}" Stretch="Uniform"
+                          VerticalAlignment="Top" Margin="{StaticResource GapRight.Sm}"/>
+                    <StackPanel>
+                        <TextBlock x:Name="UpdateNoticeLead" Text="{Binding Chrome.UpdateNoticeText}"
+                                   Foreground="{StaticResource Text.Heading}" FontSize="{DynamicResource Type.Heading.Sm}"
+                                   TextWrapping="Wrap"
+                                   AutomationProperties.LiveSetting="Polite"/>
+                        <TextBlock x:Name="UpdateNoticeDetail" Text="{loc:Translate UpdateNotice.Recommended}"
+                                   Foreground="{StaticResource Text.Body}" FontSize="{DynamicResource Type.Body}"
+                                   TextWrapping="Wrap" Margin="{StaticResource GapTop.Sm}"
+                                   AutomationProperties.LiveSetting="Polite"/>
+                        <TextBlock FontSize="{DynamicResource Type.Body}" TextWrapping="Wrap"
+                                   Margin="{StaticResource GapTop.Sm}">
+                            <Hyperlink Command="{Binding Chrome.OpenReleasePageCommand}"
+                                       Style="{StaticResource SubtleLink}"
+                                       AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.Download}"><Run Text="{loc:Translate UpdateNotice.Download}"/></Hyperlink>
+                        </TextBlock>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
 
             <!-- Context: scan results. The explanation and counts sit in
                  a star row inside a ScrollViewer (NOT a StackPanel row: a
@@ -162,7 +209,7 @@
                  its ring was cut on both; the 4px of viewport headroom clears it
                  while the pill stays aligned with the orphaned row's "Details"
                  and the action buttons at the content edge. -->
-            <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto"
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled"
                           Style="{StaticResource BodyScrollRegion}"
                           Margin="0,0,-4,0"
@@ -434,12 +481,12 @@
             <!-- Separator. It carries the 16 above and 12 below in its own
                  margin so the spacing collapses with it; fixed spacer rows
                  hold their height whatever sits in them. -->
-            <chrome:DecorativeBorder Grid.Row="1" BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="0,1,0,0"
+            <chrome:DecorativeBorder Grid.Row="2" BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="0,1,0,0"
                                      Margin="0,16,0,12"
                                      Visibility="{Binding ShowActionZone, Converter={StaticResource BoolToVis}}"/>
 
             <!-- Action zone: move/delete -->
-            <Grid Grid.Row="2"
+            <Grid Grid.Row="3"
                   Visibility="{Binding ShowActionZone, Converter={StaticResource BoolToVis}}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -572,9 +619,10 @@
                  fires at launch without a click; this button is for anyone
                  who wants to ask again, and it is the only control that
                  reports an up-to-date result or a failure, because the
-                 automatic path is deliberately silent on both. Its own
-                 execution covers the cooldown, so the pill's disabled paint
-                 is the feedback while it runs. -->
+                 automatic path is deliberately silent on both. A newer version
+                 either check finds shows as the notice at the top of the
+                 window. Its own execution covers the cooldown, so the pill's
+                 disabled paint is the feedback while it runs. -->
             <Button x:Name="UpdateCheckButton" DockPanel.Dock="Left" Style="{StaticResource GhostPill}"
                     KeyboardNavigation.TabIndex="2"
                     Content="{loc:Translate Action.CheckForUpdates}"
@@ -591,12 +639,12 @@
                  slot at the far right first and the status line takes only
                  what is left between the buttons and the globe, which is
                  also what gives the status line a width to ellipsize
-                 against. TabIndex 4 puts it last in the bar's reading order,
-                 after the status hyperlink at 3, rather than at its
-                 declaration position. -->
+                 against. TabIndex 3 puts it last in the bar's reading order,
+                 after the update button, rather than at its declaration
+                 position. -->
             <Button DockPanel.Dock="Right" Style="{StaticResource SmallGhostPill}"
                     x:Name="LanguageButton"
-                    KeyboardNavigation.TabIndex="4"
+                    KeyboardNavigation.TabIndex="3"
                     Click="LanguageButton_Click"
                     AutomationProperties.Name="{loc:Translate Automation.ChangeLanguage}"
                     AutomationProperties.HelpText="{loc:Translate Automation.ChangeLanguage.HelpText}"
@@ -614,25 +662,20 @@
                       Stroke="{StaticResource Text.Muted}" StrokeThickness="2" Fill="{x:Null}"
                       Width="{a11y:TextScaled 18}" Height="{a11y:TextScaled 18}" Stretch="Uniform"/>
             </Button>
-            <!-- Update status line, in two mutually exclusive
-                 presentations of the same sentence. Both dock Left after the
-                 globe so they take the space between the buttons and the
-                 globe, which is also what gives them a width to ellipsize
-                 against; both are live regions, read out by code-behind as
-                 they show and change (OnChromePropertyChanged), so an outcome
-                 that arrives while focus is elsewhere is still spoken (the
-                 automatic check lands unprompted, so it always is).
+            <!-- Update status line: "Checking..." while the manual check runs and
+                 "Up to date." when it answers so, empty and collapsed otherwise. It
+                 docks Left after the globe so it takes the space between the
+                 buttons and the globe, which is also what gives it a width to
+                 ellipsize against. A live region, read out by code-behind each
+                 time its text changes while it shows (OnChromePropertyChanged).
 
-                 They differ on LiveSetting, and it is the transience that
-                 decides it. The plain line is Assertive: a manual check
-                 answers within a second or two of the click, while the
-                 screen reader is typically still reading the button's own
-                 name and help text, and a polite item raised behind that
-                 loses its turn and is gone (the line clears itself after the
-                 cooldown), so "Up to date." goes unspoken. What makes
-                 interrupting acceptable is that only the manual check ever
-                 paints this line: the automatic one sets the link first and
-                 so takes the other presentation, which means an assertive
+                 Assertive, and the transience is what decides it. A manual check
+                 answers within a second or two of the click, while the screen
+                 reader is typically still reading the button's own name and help
+                 text, and a polite item raised behind that loses its turn and is
+                 gone (the line clears itself after the cooldown), so "Up to
+                 date." goes unspoken. What makes interrupting acceptable is that
+                 only the manual check ever paints this line, so an assertive
                  cut-in is always the answer to a click, never something
                  unprompted talking over the user. It can still land in the
                  middle of something else they started, because the check
@@ -640,26 +683,7 @@
                  whole cooldown: press both and "Up to date." cuts into the
                  scanning overlay's polite announcements. Accepted, on the same
                  grounds. The window for it is a few seconds wide and the user
-                 opened it themselves. The link stays Polite because it does
-                 not clear: it is on screen and in the tab order until the
-                 user acts on it, so an announcement that waits its turn
-                 still arrives at something the user can reach, and
-                 interrupting for it would buy nothing.
-
-                 Plain muted text while there is nothing to click
-                 ("Checking...", "Up to date."). A hyperlink once a check has
-                 found a newer version, because at that moment the sentence
-                 announcing the update is also the way to get it. The link
-                 takes the app's one link style, whose indigo is the accent
-                 family's only text-legible step: Action.Accent.Background,
-                 what the accent pills fill with, measures 2.33:1 against
-                 this window's surface and cannot carry type.
-
-                 The plain line's second trigger keys on HasUpdateLink, the
-                 view model's bool, which is what makes the two presentations
-                 exclusive; why that state is a bool rather than something a
-                 DataTrigger would have to interpret is on the property
-                 itself. -->
+                 opened it themselves. -->
             <TextBlock x:Name="UpdateStatusLineText"
                        DockPanel.Dock="Left" Text="{Binding Chrome.UpdateStatusText}"
                        VerticalAlignment="Center" Margin="8,0,0,0"
@@ -674,27 +698,9 @@
                             <DataTrigger Binding="{Binding Chrome.UpdateStatusText}" Value="">
                                 <Setter Property="Visibility" Value="Collapsed"/>
                             </DataTrigger>
-                            <DataTrigger Binding="{Binding Chrome.HasUpdateLink}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </TextBlock.Style>
-            </TextBlock>
-            <TextBlock x:Name="UpdateLinkText" DockPanel.Dock="Left"
-                       VerticalAlignment="Center" Margin="8,0,0,0"
-                       FontSize="{DynamicResource Type.Body}"
-                       TextTrimming="CharacterEllipsis"
-                       Visibility="{Binding Chrome.HasUpdateLink, Converter={StaticResource BoolToVis}}"
-                       AutomationProperties.LiveSetting="Polite">
-                <!-- No AutomationProperties.Name or HelpText: the Run IS the
-                     link's accessible name, and it is already a whole
-                     sentence naming the version, spoken after the "link"
-                     control type. There is nothing left to add that would
-                     not be a second reading of the same words. -->
-                <Hyperlink Command="{Binding Chrome.OpenUpdatePageCommand}"
-                           Style="{StaticResource SubtleLink}"
-                           KeyboardNavigation.TabIndex="3"><Run Text="{Binding Chrome.UpdateStatusText}"/></Hyperlink>
             </TextBlock>
         </DockPanel>
 
@@ -1043,6 +1049,7 @@
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <!-- Icon -->
@@ -1259,6 +1266,51 @@
                     </StackPanel>
                     </ScrollViewer>
 
+                    <!-- The notice saying a newer version is available, on the card a
+                         scan puts up when it offers nothing and on no other, between the
+                         card's lines and its buttons, outside the region that scrolls.
+                         The same panel and words as at the top of the main window; read
+                         out with the card's outcome. -->
+                    <Border x:Name="CardUpdateNotice" Grid.Row="3" Margin="{StaticResource GapBottom.Xl}">
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource UpdateNoticePanel}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding Chrome.HasNewerVersion}" Value="True"/>
+                                            <Condition Binding="{Binding Completion.IsScanCard}" Value="True"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <DockPanel>
+                            <Path DockPanel.Dock="Left" Data="{StaticResource Icon.Update}"
+                                  Stroke="{StaticResource Link.Rest}" StrokeThickness="2" Fill="{x:Null}"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  Width="{a11y:TextScaled 20}" Height="{a11y:TextScaled 20}" Stretch="Uniform"
+                                  VerticalAlignment="Top" Margin="{StaticResource GapRight.Sm}"/>
+                            <StackPanel>
+                                <TextBlock x:Name="CardUpdateNoticeLead" Text="{Binding Chrome.UpdateNoticeText}"
+                                           Foreground="{StaticResource Text.Heading}" FontSize="{DynamicResource Type.Heading.Sm}"
+                                           TextWrapping="Wrap"
+                                           AutomationProperties.LiveSetting="Polite"/>
+                                <TextBlock x:Name="CardUpdateNoticeDetail" Text="{loc:Translate UpdateNotice.Recommended}"
+                                           Foreground="{StaticResource Text.Body}" FontSize="{DynamicResource Type.Body}"
+                                           TextWrapping="Wrap" Margin="{StaticResource GapTop.Sm}"
+                                           AutomationProperties.LiveSetting="Polite"/>
+                                <TextBlock FontSize="{DynamicResource Type.Body}" TextWrapping="Wrap"
+                                           Margin="{StaticResource GapTop.Sm}">
+                                    <Hyperlink Command="{Binding Chrome.OpenReleasePageCommand}"
+                                               Style="{StaticResource SubtleLink}"
+                                               AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.Download}"><Run Text="{loc:Translate UpdateNotice.Download}"/></Hyperlink>
+                                </TextBlock>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
                     <!-- The card's buttons. Done with a small Donate under it on
                          every card but one, and on that one, the card after a
                          Move or Delete that moved or deleted files, the large Donate
@@ -1277,7 +1329,7 @@
                          card on every card. Alt+D is Done on the cards that
                          carry it and the large Donate on the one that does not, and the
                          small Donate takes no access key. -->
-                    <StackPanel Grid.Row="3" HorizontalAlignment="Center">
+                    <StackPanel Grid.Row="4" HorizontalAlignment="Center">
                         <Button x:Name="CompletionCloseButton"
                                 Content="{loc:Translate Action.Done}" ContentTemplate="{StaticResource WrappingCentredLabel}"
                                 Command="{Binding Completion.DismissCommand}"
@@ -1390,7 +1442,7 @@
                          hairline, its accent fill being its edge, so it does not draw the
                          eye; unticked, it keeps the hairline an empty box needs to be
                          seen. The "i" has no tooltip: it is clicked. -->
-                    <Grid x:Name="CompletionReportLine" Grid.Row="4"
+                    <Grid x:Name="CompletionReportLine" Grid.Row="5"
                           HorizontalAlignment="Center"
                           Margin="{StaticResource GapTop.Sm}"
                           Visibility="{Binding Completion.OffersReport, Converter={StaticResource BoolToVis}}">

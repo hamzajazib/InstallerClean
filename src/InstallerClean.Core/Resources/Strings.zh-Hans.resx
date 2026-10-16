@@ -208,7 +208,6 @@
        takes both verbs in the same form, so they stay parallel. The button
        carries "permanently"; repeating it here would dangle on the clause. -->
   <data name="Action.BackupFolderPlaceholder" xml:space="preserve"><value>若选择移动而非删除，此处填写文件夹路径。</value></data>
-  <data name="Action.OpenReleasePage" xml:space="preserve"><value>打开发布页面(_R)</value></data>
   <data name="Action.Rescan" xml:space="preserve"><value>重新扫描(_R)</value></data>
 
   <!-- About window: the two links and the auto-update switch. Kept out of
@@ -317,10 +316,12 @@
     Names the destination and is cased for speech for the reasons
     Automation.CheckForUpdates.HelpText carries.</comment>
   </data>
-  <!-- Window-level description for the update-available modal, read by a
-       screen reader on open. The version numbers are in the body text; this
-       states the choice. -->
-  <data name="Automation.UpdateAvailable.HelpText" xml:space="preserve"><value>打开发布页面以下载更新版本，或取消以保留当前版本。</value></data>
+  <data name="Automation.UpdateNotice.Download" xml:space="preserve">
+    <value>从 github 下载</value>
+    <comment>Screen-reader name of the link on the notice saying a newer version is
+    available, the visible UpdateNotice.Download cased for speech for the reason
+    Automation.CheckForUpdates.HelpText carries. The same words as the link.</comment>
+  </data>
   <data name="Automation.Licence.HelpText" xml:space="preserve"><value>在浏览器中打开 github.com 上的许可证文件。</value></data>
   <!-- Mixed-case AutomationProperties.Name overrides for the all-caps
        Section.* labels (BACKUP FOLDER / PRODUCTS / PATCHES / PRODUCT
@@ -1555,13 +1556,20 @@ InstallerClean 本来就以管理员身份运行，所以再那样启动一次�
   <data name="UpdateCheck.Title" xml:space="preserve"><value>检查更新</value></data>
   <data name="UpdateCheck.Status.Checking" xml:space="preserve"><value>正在检查…</value></data>
   <data name="UpdateCheck.Status.UpToDate" xml:space="preserve"><value>已是最新版本。</value></data>
-  <data name="UpdateCheck.Status.UpdateAvailable" xml:space="preserve">
-    <value>{0} 版现已推出。</value>
-    <comment>Status line and hyperlink on the main window once a check finds a newer version. {0} = the newer version number. Clicking opens that release's page.</comment>
+  <!-- The notice at the top of the main window, and on the card a scan puts up
+       when it offers nothing, once a check finds a newer version. -->
+  <data name="UpdateNotice.Available" xml:space="preserve">
+    <value>InstallerClean {0} 版现已推出。</value>
+    <comment>The notice's first line. {0} = the newer version number, as 3.5.0.</comment>
   </data>
-  <data name="UpdateCheck.UpdateAvailable.Title" xml:space="preserve"><value>有可用更新</value></data>
-  <!-- 0 = installed version, 1 = latest version on GitHub -->
-  <data name="UpdateCheck.UpdateAvailable.Body" xml:space="preserve"><value>您正在运行 {0} 版。&#10;{1} 版现已推出。</value></data>
+  <data name="UpdateNotice.Recommended" xml:space="preserve">
+    <value>强烈建议使用最新版本。</value>
+    <comment>The notice's second line, under UpdateNotice.Available.</comment>
+  </data>
+  <data name="UpdateNotice.Download" xml:space="preserve">
+    <value>从 GitHub 下载</value>
+    <comment>The notice's link, which opens the newest release's page on GitHub in the browser.</comment>
+  </data>
   <data name="UpdateCheck.Failed.NetworkUnavailable" xml:space="preserve"><value>无法连接到 GitHub。请检查您的网络连接后重试。</value></data>
   <data name="UpdateCheck.Failed.ServerError" xml:space="preserve"><value>GitHub 返回了错误响应。请过几分钟后重试。</value></data>
   <data name="UpdateCheck.Failed.ResponseParseError" xml:space="preserve"><value>GitHub 的响应中没有可识别的发布版本。请稍后重试，或直接打开发布页面。</value></data>

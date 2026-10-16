@@ -51,7 +51,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Apache 2.0 licence | Licenza Apache 2.0 |
 | _Move | _Sposta |
 | Path to folder if you move rather than delete. | Percorso della cartella se sposti anziché eliminare. |
-| Open _release page | Apri pagina _release |
 | _Re-scan | _Ripeti scansione |
 
 ## About window
@@ -322,9 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Check for updates | Controlla aggiornamenti |
 | Checking... | Controllo aggiornamenti... |
 | Up to date. | Versione aggiornata. |
-| Version {0} is available. | È disponibile la versione {0}. |
-| Update available | Aggiornamento disponibile |
-| You're running version {0}.<br>Version {1} is available. | La versione in uso è la versione {0}.<br>È disponibile la versione {1}. |
+| InstallerClean {0} is available. | È disponibile InstallerClean {0}. |
+| It's strongly recommended to use the latest version. | Si consiglia vivamente di usare la versione più recente. |
+| Download it from GitHub | Scaricalo da GitHub |
 | Couldn't reach GitHub. Check your internet connection and try again. | Impossibile raggiungere GitHub. Controlla la connessione internet e riprova. |
 | GitHub returned an error response. Try again in a few minutes. | GitHub ha restituito una risposta di errore. Riprova tra qualche minuto. |
 | GitHub's response did not contain a recognised release. Try again later, or open the releases page directly. | La risposta di GitHub non conteneva una release riconoscibile. Riprova più tardi, o apri direttamente la pagina delle release. |
@@ -398,7 +397,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the readme on github in your browser. | Apre readme su github nel browser. |
 | Opens the issue tracker on github.com in your browser. | Apre elenco problemi (issue) in github.com nel browser. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | Se selezionata, all'avvio InstallerClean verifica su github se è disponibile una versione più recente. |
-| Open the release page to download the newer version, or cancel to keep the current version. | Apri pagina release per scaricare la versione più recente, o scegli 'Annulla' per mantenere quella attuale. |
+| Download it from github | Scaricalo da github |
 | Opens the licence file on github.com in your browser. | Apre file licenza in github.com nel browser. |
 | Backup folder | Cartella di backup |
 | Patches | Patch |

@@ -49,6 +49,8 @@ const MUST_AGREE = [
   // Content is a plain string, so the override restates what WPF derives, and can
   // still drift from it in any one language.
   { label: 'Action.CheckForUpdates', name: 'Automation.CheckForUpdates' },
+  // A link whose Run is the label, so the override restates it, cased for speech.
+  { label: 'UpdateNotice.Download', name: 'Automation.UpdateNotice.Download' },
   // Section headings drawn in SmallCaps: the resx value is pre-uppercased so a
   // screen reader never meets the glyph mapping, and the name is the same words
   // in ordinary case. It exists for the casing alone.
@@ -239,6 +241,7 @@ const GITHUB_SPOKEN = [
   'Automation.About.ReportProblem.HelpText',
   'Automation.AutoUpdateCheck.HelpText',
   'Automation.Licence.HelpText',
+  'Automation.UpdateNotice.Download',
 ];
 const GITHUB_DRAWN = [
   'Action.LeaveStarOnGitHub',
@@ -246,6 +249,7 @@ const GITHUB_DRAWN = [
   'UpdateCheck.Failed.ServerError',
   'UpdateCheck.Failed.ResponseParseError',
   'UpdateCheck.Failed.Timeout',
+  'UpdateNotice.Download',
 ];
 
 // ---------------------------------------------------------------------------

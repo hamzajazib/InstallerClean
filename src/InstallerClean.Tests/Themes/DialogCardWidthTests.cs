@@ -16,7 +16,6 @@ public class DialogCardWidthTests
     [InlineData("ThemeXaml.ConfirmDeleteWindow.xaml")]
     [InlineData("ThemeXaml.ConfirmMoveWindow.xaml")]
     [InlineData("ThemeXaml.MessageWindow.xaml")]
-    [InlineData("ThemeXaml.UpdateAvailableWindow.xaml")]
     [InlineData("ThemeXaml.ReportWindow.xaml")]
     public void The_card_is_the_window_and_carries_no_width_of_its_own(string resource)
     {

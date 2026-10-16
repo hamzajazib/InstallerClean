@@ -208,7 +208,6 @@
        takes both verbs in the same form, so they stay parallel. The button
        carries "permanently"; repeating it here would dangle on the clause. -->
   <data name="Action.BackupFolderPlaceholder" xml:space="preserve"><value>Шлях до папки, якщо ви переміщуєте, а не видаляєте.</value></data>
-  <data name="Action.OpenReleasePage" xml:space="preserve"><value>_Відкрити сторінку випуску</value></data>
   <data name="Action.Rescan" xml:space="preserve"><value>Пов_торити сканування</value></data>
 
   <!-- About window: the two links and the auto-update switch. Kept out of
@@ -317,10 +316,12 @@
     Names the destination and is cased for speech for the reasons
     Automation.CheckForUpdates.HelpText carries.</comment>
   </data>
-  <!-- Window-level description for the update-available modal, read by a
-       screen reader on open. The version numbers are in the body text; this
-       states the choice. -->
-  <data name="Automation.UpdateAvailable.HelpText" xml:space="preserve"><value>Відкрийте сторінку випуску, щоб завантажити новішу версію, або скасуйте, щоб лишити поточну версію.</value></data>
+  <data name="Automation.UpdateNotice.Download" xml:space="preserve">
+    <value>Завантажити з github</value>
+    <comment>Screen-reader name of the link on the notice saying a newer version is
+    available, the visible UpdateNotice.Download cased for speech for the reason
+    Automation.CheckForUpdates.HelpText carries. The same words as the link.</comment>
+  </data>
   <data name="Automation.Licence.HelpText" xml:space="preserve"><value>Відкриває файл ліцензії на github.com у вашому браузері.</value></data>
   <!-- Mixed-case AutomationProperties.Name overrides for the all-caps
        Section.* labels (BACKUP FOLDER / PRODUCTS / PATCHES / PRODUCT
@@ -1555,13 +1556,20 @@ InstallerClean уже працював від імені адміністрат�
   <data name="UpdateCheck.Title" xml:space="preserve"><value>Перевірити оновлення</value></data>
   <data name="UpdateCheck.Status.Checking" xml:space="preserve"><value>Перевірка...</value></data>
   <data name="UpdateCheck.Status.UpToDate" xml:space="preserve"><value>Актуальна версія.</value></data>
-  <data name="UpdateCheck.Status.UpdateAvailable" xml:space="preserve">
-    <value>Доступна версія {0}.</value>
-    <comment>Status line and hyperlink on the main window once a check finds a newer version. {0} = the newer version number. Clicking opens that release's page.</comment>
+  <!-- The notice at the top of the main window, and on the card a scan puts up
+       when it offers nothing, once a check finds a newer version. -->
+  <data name="UpdateNotice.Available" xml:space="preserve">
+    <value>Доступна версія InstallerClean {0}.</value>
+    <comment>The notice's first line. {0} = the newer version number, as 3.5.0.</comment>
   </data>
-  <data name="UpdateCheck.UpdateAvailable.Title" xml:space="preserve"><value>Доступне оновлення</value></data>
-  <!-- 0 = installed version, 1 = latest version on GitHub -->
-  <data name="UpdateCheck.UpdateAvailable.Body" xml:space="preserve"><value>Ви використовуєте версію {0}.&#10;Доступна версія {1}.</value></data>
+  <data name="UpdateNotice.Recommended" xml:space="preserve">
+    <value>Настійно рекомендуємо використовувати найновішу версію.</value>
+    <comment>The notice's second line, under UpdateNotice.Available.</comment>
+  </data>
+  <data name="UpdateNotice.Download" xml:space="preserve">
+    <value>Завантажити з GitHub</value>
+    <comment>The notice's link, which opens the newest release's page on GitHub in the browser.</comment>
+  </data>
   <data name="UpdateCheck.Failed.NetworkUnavailable" xml:space="preserve"><value>Не вдалося зв'язатися з GitHub. Перевірте інтернет-з'єднання та спробуйте ще раз.</value></data>
   <data name="UpdateCheck.Failed.ServerError" xml:space="preserve"><value>GitHub повернув повідомлення про помилку. Спробуйте ще раз за кілька хвилин.</value></data>
   <data name="UpdateCheck.Failed.ResponseParseError" xml:space="preserve"><value>Відповідь GitHub не містила розпізнаного випуску. Спробуйте пізніше або відкрийте сторінку випусків напряму.</value></data>

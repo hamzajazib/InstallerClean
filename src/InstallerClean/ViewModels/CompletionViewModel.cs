@@ -147,6 +147,14 @@ public partial class CompletionViewModel : ObservableObject
     [ObservableProperty] private bool _asksForDonation;
 
     /// <summary>
+    /// True on the card a scan puts up when it offered nothing (the all-clear, and
+    /// the card saying what the scan held back), false on every card after a Move or
+    /// Delete. The card carries the notice saying a newer version is available only
+    /// where this is true. Set in each Show* method.
+    /// </summary>
+    [ObservableProperty] private bool _isScanCard;
+
+    /// <summary>
     /// Whether this card carries the "Send anonymous report" box. Set by
     /// <see cref="TakeReport"/> before the card is revealed, so the box is in place
     /// when the card is read out, and cleared as the card closes or where the
@@ -295,6 +303,7 @@ public partial class CompletionViewModel : ObservableObject
         Errors = string.Empty;
         Skipped = string.Empty;
         ScanStartLine = string.Empty;
+        IsScanCard = true;
         AsksForDonation = false;
         IsComplete = true;
     }
@@ -422,6 +431,7 @@ public partial class CompletionViewModel : ObservableObject
         Errors = string.Empty;
         Skipped = string.Empty;
         ScanStartLine = recentChangeIsTheBody ? string.Empty : recentChange;
+        IsScanCard = true;
         AsksForDonation = false;
         IsComplete = true;
     }
@@ -630,6 +640,7 @@ public partial class CompletionViewModel : ObservableObject
         Skipped = SkippedText(reverify);
         ScanStartLine = AfterTheOperationLine(_lastScan());
         // The card after a Move the app stopped keeps Done.
+        IsScanCard = false;
         AsksForDonation = movedBytes > 0 && !stopped;
         IsComplete = true;
     }
@@ -670,6 +681,7 @@ public partial class CompletionViewModel : ObservableObject
         Errors = errors.Count > 0 ? FormatErrorBreakdown(errors) : string.Empty;
         Skipped = SkippedText(reverify);
         ScanStartLine = AfterTheOperationLine(_lastScan());
+        IsScanCard = false;
         AsksForDonation = deletedBytes > 0;
         IsComplete = true;
     }
@@ -744,6 +756,7 @@ public partial class CompletionViewModel : ObservableObject
         Errors = errors.Count > 0 ? FormatErrorBreakdown(errors) : string.Empty;
         Skipped = SkippedText(reverify);
         ScanStartLine = AfterTheOperationLine(_lastScan());
+        IsScanCard = false;
         AsksForDonation = movedBytes > 0;
         IsComplete = true;
     }
@@ -782,6 +795,7 @@ public partial class CompletionViewModel : ObservableObject
         Errors = errors.Count > 0 ? FormatErrorBreakdown(errors) : string.Empty;
         Skipped = SkippedText(reverify);
         ScanStartLine = AfterTheOperationLine(_lastScan());
+        IsScanCard = false;
         AsksForDonation = deletedBytes > 0;
         IsComplete = true;
     }
@@ -829,6 +843,7 @@ public partial class CompletionViewModel : ObservableObject
         Errors = string.Empty;
         Skipped = string.Empty;
         ScanStartLine = AfterTheOperationLine(_lastScan());
+        IsScanCard = false;
         AsksForDonation = false;
         IsComplete = true;
     }

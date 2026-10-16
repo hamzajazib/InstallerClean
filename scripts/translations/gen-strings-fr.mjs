@@ -152,7 +152,6 @@ const MAP = {
   'Action.Licence': `Licence Apache 2.0`,
   'Action.Move': `_Déplacer`,
   'Action.BackupFolderPlaceholder': `Chemin du dossier si vous déplacez plutôt que supprimez.`,
-  'Action.OpenReleasePage': `Ouvrir la page de la _version`,
   'Action.Rescan': `_Réanalyser`,
 
   // Automation names (screen reader / accessibility)
@@ -172,7 +171,6 @@ const MAP = {
   'Automation.SayThanks': `Dire merci`,
   'Automation.CheckForUpdates': `Rechercher des mises à jour`,
   'Automation.CheckForUpdates.HelpText': `Vérifie sur la page des versions de github s'il existe une version plus récente.`,
-  'Automation.UpdateAvailable.HelpText': `Ouvrez la page de la version pour télécharger la version plus récente, ou annulez pour conserver la version actuelle.`,
   'Automation.Licence.HelpText': `Ouvre le fichier de licence sur github.com dans votre navigateur.`,
   'Automation.Section.BackupFolder': `Dossier de sauvegarde`,
   'Automation.Section.Patches': `Correctifs`,
@@ -375,10 +373,8 @@ const MAP = {
   'UpdateCheck.Title': `Rechercher des mises à jour`,
   'UpdateCheck.Status.Checking': `Vérification...`,
   'UpdateCheck.Status.UpToDate': `À jour.`,
-  'UpdateCheck.UpdateAvailable.Title': `Mise à jour disponible`,
 
   // 0 = installed version, 1 = latest version on GitHub
-  'UpdateCheck.UpdateAvailable.Body': `Vous utilisez la version {0}.&#10;La version {1} est disponible.`,
   'UpdateCheck.Failed.NetworkUnavailable': `Impossible de joindre GitHub. Vérifiez votre connexion internet et réessayez.`,
   'UpdateCheck.Failed.ServerError': `GitHub a renvoyé une réponse d'erreur. Réessayez dans quelques minutes.`,
   'UpdateCheck.Failed.ResponseParseError': `La réponse de GitHub ne contenait pas de version reconnaissable. Réessayez plus tard, ou ouvrez directement la page des versions.`,
@@ -491,7 +487,6 @@ const MAP = {
   'Error.ScanRecordsUnreadable': `InstallerClean n'a pas pu lire assez des enregistrements de Windows Installer pour savoir avec certitude ce qui sert encore : la liste des programmes installés est revenue incomplète, et lire ces mêmes enregistrements directement dans le registre a également donné des erreurs. Un fichier pourrait sembler orphelin uniquement parce que l'enregistrement qui le nomme faisait partie des illisibles, donc InstallerClean s'est arrêté. Rien n'a été supprimé.`,
   'Error.MsiEnumerationNeverEnded': `Windows Installer n'a jamais signalé la fin de la liste des programmes installés : InstallerClean a lu {2} {3}, puis a renoncé après {0} entrées (dernier code d'erreur {1}). Une liste sans fin n'est pas fiable, donc InstallerClean s'est arrêté. Rien n'a été supprimé.`,
   'Error.MsiPatchEnumerationNeverEnded': `Windows Installer n'a jamais signalé la fin de la liste des correctifs d'un programme : InstallerClean a lu {2} {3}, puis a renoncé après {0} entrées (dernier code d'erreur {1}). Une liste sans fin n'est pas fiable, donc InstallerClean s'est arrêté. Rien n'a été supprimé.`,
-  'UpdateCheck.Status.UpdateAvailable': `La version {0} est disponible.`,
   'Completion.DonateAsk': `Tout don, même modeste, est très apprécié.`,
   'About.Link.Guide': `Guide et FAQ`,
   'About.Link.ReportProblem': `Signaler un problème`,
@@ -640,6 +635,10 @@ const MAP = {
   'Automation.Scroll.Waiting': `En attente d'un lecteur ou d'un partage`,
   'Completion.RecentChange.Singular': `Un fichier ({2}) a été retenu parce que Windows indique qu'il a été modifié après qu'InstallerClean a commencé l'analyse. Si un programme était en cours d'installation ou de mise à jour, relancez une analyse une fois qu'il a terminé et InstallerClean le vérifiera de nouveau.`,
   'Completion.RecentChange.Plural': `{0} {1} ({2}) ont été retenus parce que Windows indique qu'ils ont été modifiés après qu'InstallerClean a commencé l'analyse. Si un programme était en cours d'installation ou de mise à jour, relancez une analyse une fois qu'il a terminé et InstallerClean les vérifiera de nouveau.`,
+  'UpdateNotice.Available': `InstallerClean {0} est disponible.`,
+  'UpdateNotice.Download': `Le télécharger sur GitHub`,
+  'Automation.UpdateNotice.Download': `Le télécharger sur github`,
+  'UpdateNotice.Recommended': `Il est vivement recommandé d'utiliser la dernière version.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

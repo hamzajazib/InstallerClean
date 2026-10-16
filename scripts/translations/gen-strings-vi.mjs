@@ -127,7 +127,6 @@ const MAP = {
   'Action.Licence': `Giấy phép Apache 2.0`,
   'Action.Move': `_Chuyển`,
   'Action.BackupFolderPlaceholder': `Đường dẫn thư mục nếu bạn chuyển thay vì xóa.`,
-  'Action.OpenReleasePage': `_Mở trang phát hành`,
   'Action.Rescan': `_Quét lại`,
 
   // Automation names (screen reader / accessibility)
@@ -147,7 +146,6 @@ const MAP = {
   'Automation.SayThanks': `Lời cảm ơn`,
   'Automation.CheckForUpdates': `Kiểm tra cập nhật`,
   'Automation.CheckForUpdates.HelpText': `Kiểm tra trang phát hành của github xem có phiên bản mới hơn không.`,
-  'Automation.UpdateAvailable.HelpText': `Mở trang phát hành để tải phiên bản mới hơn, hoặc hủy để giữ phiên bản hiện tại.`,
   'Automation.Licence.HelpText': `Mở tệp giấy phép trên github.com trong trình duyệt của bạn.`,
   'Automation.Section.BackupFolder': `Thư mục sao lưu`,
   'Automation.Section.Patches': `Bản vá`,
@@ -354,10 +352,8 @@ const MAP = {
   'UpdateCheck.Title': `Kiểm tra cập nhật`,
   'UpdateCheck.Status.Checking': `Đang kiểm tra...`,
   'UpdateCheck.Status.UpToDate': `Đã cập nhật.`,
-  'UpdateCheck.UpdateAvailable.Title': `Có bản cập nhật`,
 
   // 0 = installed version, 1 = latest version on GitHub
-  'UpdateCheck.UpdateAvailable.Body': `Bạn đang dùng phiên bản {0}.&#10;Phiên bản {1} đã có.`,
   'UpdateCheck.Failed.NetworkUnavailable': `Không thể kết nối tới GitHub. Hãy kiểm tra kết nối internet và thử lại.`,
   'UpdateCheck.Failed.ServerError': `GitHub trả về phản hồi lỗi. Hãy thử lại sau vài phút.`,
   'UpdateCheck.Failed.ResponseParseError': `Phản hồi của GitHub không chứa bản phát hành nào nhận ra được. Hãy thử lại sau, hoặc mở thẳng trang phát hành.`,
@@ -470,7 +466,6 @@ const MAP = {
   'Error.ScanRecordsUnreadable': `InstallerClean không đọc được đủ các bản ghi Windows Installer để chắc chắn thứ gì vẫn còn cần: danh sách chương trình đã cài trả về thiếu, và việc đọc chính các bản ghi đó trực tiếp từ sổ đăng ký cũng gặp lỗi. Một tệp có thể trông như bị bỏ lại chỉ vì bản ghi nêu tên nó nằm trong số những bản ghi không đọc được, nên InstallerClean đã dừng. Không có gì bị xóa.`,
   'Error.MsiEnumerationNeverEnded': `Windows Installer chưa bao giờ báo hiệu kết thúc danh sách chương trình đã cài: InstallerClean đã đọc {2} {3}, rồi bỏ cuộc sau {0} mục (mã lỗi cuối {1}). Không thể tin một danh sách không có điểm dừng, nên InstallerClean đã dừng. Không có gì bị xóa.`,
   'Error.MsiPatchEnumerationNeverEnded': `Windows Installer chưa bao giờ báo hiệu kết thúc danh sách bản vá của một chương trình: InstallerClean đã đọc {2} {3}, rồi bỏ cuộc sau {0} mục (mã lỗi cuối {1}). Không thể tin một danh sách không có điểm dừng, nên InstallerClean đã dừng. Không có gì bị xóa.`,
-  'UpdateCheck.Status.UpdateAvailable': `Phiên bản {0} đã có.`,
   'Completion.DonateAsk': `Mọi đóng góp dù nhỏ đều rất được trân trọng.`,
   'About.Link.Guide': `Hướng dẫn và câu hỏi thường gặp`,
   'About.Link.ReportProblem': `Báo cáo vấn đề`,
@@ -619,6 +614,10 @@ const MAP = {
   'Automation.Scroll.Waiting': `Đang chờ ổ đĩa hoặc chia sẻ mạng`,
   'Completion.RecentChange.Singular': `Một tệp ({2}) đã bị giữ lại vì Windows cho thấy nó đã bị thay đổi sau khi InstallerClean bắt đầu quét. Nếu khi đó có chương trình đang cài đặt hoặc cập nhật, hãy quét lại khi việc đó xong và InstallerClean sẽ kiểm tra lại tệp này.`,
   'Completion.RecentChange.Plural': `{0} {1} ({2}) đã bị giữ lại vì Windows cho thấy chúng đã bị thay đổi sau khi InstallerClean bắt đầu quét. Nếu khi đó có chương trình đang cài đặt hoặc cập nhật, hãy quét lại khi việc đó xong và InstallerClean sẽ kiểm tra lại chúng.`,
+  'UpdateNotice.Available': `Đã có InstallerClean {0}.`,
+  'UpdateNotice.Download': `Tải về từ GitHub`,
+  'Automation.UpdateNotice.Download': `Tải về từ github`,
+  'UpdateNotice.Recommended': `Chúng tôi đặc biệt khuyên bạn dùng phiên bản mới nhất.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

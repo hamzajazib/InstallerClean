@@ -184,7 +184,6 @@ const MAP = {
   'Action.Licence': `Apache 2.0 licence`,
   'Action.Move': `_Move`,
   'Action.BackupFolderPlaceholder': `Path to folder if you move rather than delete.`,
-  'Action.OpenReleasePage': `Open _release page`,
   'Action.Rescan': `_Re-scan`,
   'About.Link.Guide': `Guide and FAQ`,
   'About.Link.ReportProblem': `Report a problem`,
@@ -209,7 +208,6 @@ const MAP = {
   'Automation.About.Guide.HelpText': `Opens the readme on github in your browser.`,
   'Automation.About.ReportProblem.HelpText': `Opens the issue tracker on github.com in your browser.`,
   'Automation.AutoUpdateCheck.HelpText': `If ticked, InstallerClean checks github for a newer version when you run it.`,
-  'Automation.UpdateAvailable.HelpText': `Open the release page to download the newer version, or cancel to keep the current version.`,
   'Automation.Licence.HelpText': `Opens the licence file on github.com in your browser.`,
   'Automation.Section.BackupFolder': `Backup folder`,
   'Automation.Section.Patches': `Patches`,
@@ -447,11 +445,8 @@ const MAP = {
   'UpdateCheck.Title': `Check for updates`,
   'UpdateCheck.Status.Checking': `Checking...`,
   'UpdateCheck.Status.UpToDate': `Up to date.`,
-  'UpdateCheck.Status.UpdateAvailable': `Version {0} is available.`,
-  'UpdateCheck.UpdateAvailable.Title': `Update available`,
 
   // 0 = installed version, 1 = latest version on GitHub
-  'UpdateCheck.UpdateAvailable.Body': `You're running version {0}.&#10;Version {1} is available.`,
   'UpdateCheck.Failed.NetworkUnavailable': `Couldn't reach GitHub. Check your internet connection and try again.`,
   'UpdateCheck.Failed.ServerError': `GitHub returned an error response. Try again in a few minutes.`,
   'UpdateCheck.Failed.ResponseParseError': `GitHub's response did not contain a recognised release. Try again later, or open the releases page directly.`,
@@ -688,6 +683,10 @@ const MAP = {
   'Automation.Scroll.Waiting': `Waiting for a drive or share`,
   'Completion.RecentChange.Singular': `One file ({2}) was held back because Windows shows it was changed after InstallerClean started scanning. If a program was installing or updating, scan again once it has finished and InstallerClean will check it again.`,
   'Completion.RecentChange.Plural': `{0} {1} ({2}) were held back because Windows shows they were changed after InstallerClean started scanning. If a program was installing or updating, scan again once it has finished and InstallerClean will check them again.`,
+  'UpdateNotice.Available': `InstallerClean {0} is available.`,
+  'UpdateNotice.Download': `Download it from GitHub`,
+  'Automation.UpdateNotice.Download': `Download it from github`,
+  'UpdateNotice.Recommended': `It's strongly recommended to use the latest version.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

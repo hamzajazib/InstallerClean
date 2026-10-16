@@ -69,7 +69,6 @@
     <EmbeddedResource Include="..\InstallerClean\ConfirmDeleteWindow.xaml" LogicalName="ThemeXaml.ConfirmDeleteWindow.xaml" />
     <EmbeddedResource Include="..\InstallerClean\ConfirmMoveWindow.xaml" LogicalName="ThemeXaml.ConfirmMoveWindow.xaml" />
     <EmbeddedResource Include="..\InstallerClean\MessageWindow.xaml" LogicalName="ThemeXaml.MessageWindow.xaml" />
-    <EmbeddedResource Include="..\InstallerClean\UpdateAvailableWindow.xaml" LogicalName="ThemeXaml.UpdateAvailableWindow.xaml" />
     <EmbeddedResource Include="..\InstallerClean\ReportWindow.xaml" LogicalName="ThemeXaml.ReportWindow.xaml" />
   </ItemGroup>
 

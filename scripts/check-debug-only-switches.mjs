@@ -4,9 +4,10 @@
 //
 // A switch here is an environment variable a Debug build reads to change what the app
 // does on the developer's own PC. The window's start check has one, which leaves the
-// Application log unread. Code between #if DEBUG and its #endif is compiled only where
-// DEBUG is defined, so a switch's name and its read sit there, and nothing that builds
-// a Release defines DEBUG. This checks both.
+// Application log unread, and the update check has one, which compares the newest
+// release with a version it is given. Code between #if DEBUG and its #endif is compiled
+// only where DEBUG is defined, so a switch's name and its read sit there, and nothing
+// that builds a Release defines DEBUG. This checks both.
 //
 // THE NAME. Each switch's name, in the code of any C# file under src/ (strings
 // included), has to sit in the #if DEBUG branch itself: not under a compound condition,
@@ -60,6 +61,11 @@ const SWITCHES = [
   {
     name: 'INSTALLERCLEAN_DEBUG_SKIP_APPLICATION_LOG',
     constant: 'SkipApplicationLogVariable',
+    home: 'src/InstallerClean.Core/',
+  },
+  {
+    name: 'INSTALLERCLEAN_DEBUG_PRETEND_VERSION',
+    constant: 'PretendVersionVariable',
     home: 'src/InstallerClean.Core/',
   },
 ];

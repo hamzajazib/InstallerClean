@@ -208,7 +208,6 @@
        takes both verbs in the same form, so they stay parallel. The button
        carries "permanently"; repeating it here would dangle on the clause. -->
   <data name="Action.BackupFolderPlaceholder" xml:space="preserve"><value>Pad naar de map als je verplaatst in plaats van verwijdert.</value></data>
-  <data name="Action.OpenReleasePage" xml:space="preserve"><value>_Releasepagina openen</value></data>
   <data name="Action.Rescan" xml:space="preserve"><value>Opnieuw _scannen</value></data>
 
   <!-- About window: the two links and the auto-update switch. Kept out of
@@ -317,10 +316,12 @@
     Names the destination and is cased for speech for the reasons
     Automation.CheckForUpdates.HelpText carries.</comment>
   </data>
-  <!-- Window-level description for the update-available modal, read by a
-       screen reader on open. The version numbers are in the body text; this
-       states the choice. -->
-  <data name="Automation.UpdateAvailable.HelpText" xml:space="preserve"><value>Open de releasepagina om de nieuwere versie te downloaden, of annuleer om de huidige versie te behouden.</value></data>
+  <data name="Automation.UpdateNotice.Download" xml:space="preserve">
+    <value>Download het van github</value>
+    <comment>Screen-reader name of the link on the notice saying a newer version is
+    available, the visible UpdateNotice.Download cased for speech for the reason
+    Automation.CheckForUpdates.HelpText carries. The same words as the link.</comment>
+  </data>
   <data name="Automation.Licence.HelpText" xml:space="preserve"><value>Opent het licentiebestand op github.com in je browser.</value></data>
   <!-- Mixed-case AutomationProperties.Name overrides for the all-caps
        Section.* labels (BACKUP FOLDER / PRODUCTS / PATCHES / PRODUCT
@@ -1555,13 +1556,20 @@ Details in {1}.</value></data>
   <data name="UpdateCheck.Title" xml:space="preserve"><value>Controleren op updates</value></data>
   <data name="UpdateCheck.Status.Checking" xml:space="preserve"><value>Controleren...</value></data>
   <data name="UpdateCheck.Status.UpToDate" xml:space="preserve"><value>Je bent bij.</value></data>
-  <data name="UpdateCheck.Status.UpdateAvailable" xml:space="preserve">
-    <value>Versie {0} is beschikbaar.</value>
-    <comment>Status line and hyperlink on the main window once a check finds a newer version. {0} = the newer version number. Clicking opens that release's page.</comment>
+  <!-- The notice at the top of the main window, and on the card a scan puts up
+       when it offers nothing, once a check finds a newer version. -->
+  <data name="UpdateNotice.Available" xml:space="preserve">
+    <value>InstallerClean {0} is beschikbaar.</value>
+    <comment>The notice's first line. {0} = the newer version number, as 3.5.0.</comment>
   </data>
-  <data name="UpdateCheck.UpdateAvailable.Title" xml:space="preserve"><value>Update beschikbaar</value></data>
-  <!-- 0 = installed version, 1 = latest version on GitHub -->
-  <data name="UpdateCheck.UpdateAvailable.Body" xml:space="preserve"><value>Je gebruikt versie {0}.&#10;Versie {1} is beschikbaar.</value></data>
+  <data name="UpdateNotice.Recommended" xml:space="preserve">
+    <value>Het wordt sterk aangeraden om de nieuwste versie te gebruiken.</value>
+    <comment>The notice's second line, under UpdateNotice.Available.</comment>
+  </data>
+  <data name="UpdateNotice.Download" xml:space="preserve">
+    <value>Download het van GitHub</value>
+    <comment>The notice's link, which opens the newest release's page on GitHub in the browser.</comment>
+  </data>
   <data name="UpdateCheck.Failed.NetworkUnavailable" xml:space="preserve"><value>Kon GitHub niet bereiken. Controleer je internetverbinding en probeer het opnieuw.</value></data>
   <data name="UpdateCheck.Failed.ServerError" xml:space="preserve"><value>GitHub heeft een foutmelding teruggestuurd. Probeer het over een paar minuten opnieuw.</value></data>
   <data name="UpdateCheck.Failed.ResponseParseError" xml:space="preserve"><value>In het antwoord van GitHub was geen release te herkennen. Probeer het later opnieuw, of open de releasepagina rechtstreeks.</value></data>

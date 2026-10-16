@@ -96,6 +96,10 @@
     <!-- The letter i drawn inside the report box's small round button: a dot
          over a stem, so it is the same shape in every language and font. -->
     <PathGeometry x:Key="Icon.Info" Figures="M12 3.5a1.75 1.75 0 1 1 0 3.5a1.75 1.75 0 1 1 0-3.5z M10.6 9h2.8v11.5h-2.8z"/>
+    <!-- An upward arrow in a circle, on the notice saying a newer version is
+         available. A line drawing, stroked rather than filled, as the globe on the
+         main window is. -->
+    <PathGeometry x:Key="Icon.Update" Figures="M2 12 a10 10 0 1 0 20 0 a10 10 0 1 0 -20 0 M12 17 V7.5 M7.5 11.5 L12 7 L16.5 11.5"/>
     <SolidColorBrush x:Key="Decoration.Star"  Color="{StaticResource Primitive.Amber.400}"/>
 
     <!-- Links. SubtleLink is the app's only link, so these are its two

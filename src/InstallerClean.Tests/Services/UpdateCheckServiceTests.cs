@@ -154,6 +154,31 @@ public class UpdateCheckServiceTests
         Assert.Empty(logged);
     }
 
+#if DEBUG
+    [Fact]
+    public async Task In_a_debug_build_the_environment_variable_sets_the_version_compared()
+    {
+        var (service, _) = Build(() => RedirectToTag("v2.0.0"));
+        var before = Environment.GetEnvironmentVariable(UpdateCheckService.PretendVersionVariable);
+        try
+        {
+            Environment.SetEnvironmentVariable(UpdateCheckService.PretendVersionVariable, "1.5.0");
+            var available = Assert.IsType<UpdateAvailable>(await service.CheckAsync(UpdateCheckOrigin.Manual));
+            Assert.Equal("1.5.0", available.CurrentVersion);
+            Assert.Equal("2.0.0", available.LatestVersion);
+
+            // The control: the same check with the variable cleared compares the
+            // assembly's own version, which is newer than 2.0.0.
+            Environment.SetEnvironmentVariable(UpdateCheckService.PretendVersionVariable, null);
+            Assert.IsType<UpToDate>(await service.CheckAsync(UpdateCheckOrigin.Manual));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(UpdateCheckService.PretendVersionVariable, before);
+        }
+    }
+#endif
+
     [Fact]
     public async Task A_tag_without_the_leading_v_is_still_read()
     {

@@ -61,8 +61,8 @@ public sealed class UpdateCheckService : IUpdateCheckService
 
     /// <summary>
     /// Both what the check asks for and the one page any "there is an update"
-    /// control opens: the status-line link and the update dialog's open button
-    /// both come here. Deliberately the /latest redirect rather than the found
+    /// control opens: the link on the notice saying a newer version is available
+    /// comes here. Deliberately the /latest redirect rather than the found
     /// release's own tag page, so the click lands on whatever is newest at the
     /// moment it happens rather than on the tag this particular check saw.
     /// </summary>
@@ -355,8 +355,25 @@ public sealed class UpdateCheckService : IUpdateCheckService
         return true;
     }
 
-    private static Version GetCurrentVersion() =>
-        Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0);
+#if DEBUG
+    /// <summary>
+    /// Set to a version such as 3.3.0, a Debug build's check compares the newest release
+    /// with that version rather than its own, so a build from source can show what a copy
+    /// behind the newest release shows. The name and its read sit only inside
+    /// <c>#if DEBUG</c> blocks, and <c>scripts/check-debug-only-switches.mjs</c> holds them
+    /// there, so no Release build can be told it is another version.
+    /// </summary>
+    internal const string PretendVersionVariable = "INSTALLERCLEAN_DEBUG_PRETEND_VERSION";
+#endif
+
+    private static Version GetCurrentVersion()
+    {
+#if DEBUG
+        if (Version.TryParse(Environment.GetEnvironmentVariable(PretendVersionVariable), out var pretended))
+            return pretended;
+#endif
+        return Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0);
+    }
 
     private static Version NormaliseToBuild(Version v) =>
         new(v.Major, v.Minor, Math.Max(v.Build, 0));
