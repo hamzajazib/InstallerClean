@@ -324,6 +324,10 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is available. | InstallerClean {0} sürümü mevcut. |
 | It's strongly recommended to use the latest version. | En son sürümü kullanmanız önemle tavsiye edilir. |
 | Download it from GitHub | GitHub'dan indirin |
+| Update now | Şimdi güncelle |
+| Downloading InstallerClean {0}... | InstallerClean {0} indiriliyor... |
+| The update couldn't be downloaded. | Güncelleştirme indirilemedi. |
+| The update couldn't be installed. | Güncelleştirme yüklenemedi. |
 | Couldn't reach GitHub. Check your internet connection and try again. | GitHub'a ulaşılamadı. İnternet bağlantınızı kontrol edip yeniden deneyin. |
 | GitHub returned an error response. Try again in a few minutes. | GitHub bir hata yanıtı döndürdü. Birkaç dakika sonra yeniden deneyin. |
 | GitHub's response did not contain a recognised release. Try again later, or open the releases page directly. | GitHub'ın yanıtı tanınan bir sürüm içermiyordu. Daha sonra yeniden deneyin ya da sürümler sayfasını doğrudan açın. |

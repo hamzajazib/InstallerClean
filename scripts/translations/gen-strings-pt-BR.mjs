@@ -620,6 +620,10 @@ const MAP = {
   'UpdateNotice.Download': `Baixe no GitHub`,
   'Automation.UpdateNotice.Download': `Baixe no github`,
   'UpdateNotice.Recommended': `É altamente recomendável usar a versão mais recente.`,
+  'UpdateNotice.UpdateNow': `Atualizar agora`,
+  'UpdateNotice.Downloading': `Baixando o InstallerClean {0}...`,
+  'UpdateNotice.DownloadFailed': `Não foi possível baixar a atualização.`,
+  'UpdateNotice.InstallFailed': `Não foi possível instalar a atualização.`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

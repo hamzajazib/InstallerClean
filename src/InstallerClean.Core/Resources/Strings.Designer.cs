@@ -548,7 +548,11 @@ public static class Strings
     public static string UpdateCheck_Title => Get("UpdateCheck.Title");
     public static string UpdateNotice_Available => Get("UpdateNotice.Available");
     public static string UpdateNotice_Download => Get("UpdateNotice.Download");
+    public static string UpdateNotice_DownloadFailed => Get("UpdateNotice.DownloadFailed");
+    public static string UpdateNotice_Downloading => Get("UpdateNotice.Downloading");
+    public static string UpdateNotice_InstallFailed => Get("UpdateNotice.InstallFailed");
     public static string UpdateNotice_Recommended => Get("UpdateNotice.Recommended");
+    public static string UpdateNotice_UpdateNow => Get("UpdateNotice.UpdateNow");
     public static string Version_Display => Get("Version.Display");
     public static string Window_About_Title => Get("Window.About.Title");
     public static string Window_Main_Title => Get("Window.Main.Title");

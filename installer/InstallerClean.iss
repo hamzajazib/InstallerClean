@@ -166,3 +166,26 @@ Name: "{group}\{cm:UninstallApp}"; Filename: "{uninstallexe}"
 
 [Run]
 Filename: "{app}\InstallerClean.exe"; Description: "{cm:LaunchApp}"; Flags: nowait postinstall skipifsilent shellexec
+; The app's Update now runs this setup with /SILENT and /UPDATEFROMAPP, having
+; closed itself, and the app opens again once the files are in place. skipifsilent
+; skips the entry above on every silent install, winget's and Chocolatey's
+; included, so this one does the opening, and only where UpdatingFromApp finds the
+; app's own switch on the command line.
+Filename: "{app}\InstallerClean.exe"; Flags: nowait shellexec; Check: UpdatingFromApp
+
+[Code]
+// Whether the setup was started by the app's Update now, which passes
+// /UPDATEFROMAPP. Setup takes no meaning from a switch it does not know and
+// hands it to this code through ParamStr.
+function UpdatingFromApp: Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 1 to ParamCount do
+    if CompareText(ParamStr(I), '/UPDATEFROMAPP') = 0 then
+    begin
+      Result := True;
+      Exit;
+    end;
+end;

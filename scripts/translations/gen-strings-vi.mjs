@@ -618,6 +618,10 @@ const MAP = {
   'UpdateNotice.Download': `Tải về từ GitHub`,
   'Automation.UpdateNotice.Download': `Tải về từ github`,
   'UpdateNotice.Recommended': `Chúng tôi đặc biệt khuyên bạn dùng phiên bản mới nhất.`,
+  'UpdateNotice.UpdateNow': `Cập nhật ngay`,
+  'UpdateNotice.Downloading': `Đang tải về InstallerClean {0}...`,
+  'UpdateNotice.DownloadFailed': `Không thể tải về bản cập nhật.`,
+  'UpdateNotice.InstallFailed': `Không thể cài đặt bản cập nhật.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

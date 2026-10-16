@@ -326,7 +326,8 @@
          Close, its natural finishing act, the same reading that puts
          the accent on the completion overlay's Done), and
          CompactGhostPill mirrors GhostPill for the quiet asks beside
-         it. -->
+         it. The notice saying a newer version is available takes
+         CompactAccentPill for its Update now. -->
 
     <Style x:Key="CompactAccentPill" TargetType="Button">
         <Setter Property="Foreground" Value="{StaticResource Text.Heading}"/>

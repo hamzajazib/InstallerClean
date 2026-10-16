@@ -61,7 +61,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IRemovableReverifier reverifier,
         IEarlierRunCheck earlierRunCheck,
         IFirstRunMark firstRunMark,
-        IWindowsRegion windowsRegion)
+        IWindowsRegion windowsRegion,
+        IAppUpdater? appUpdater = null)
     {
         // Closures read Cleanup / Completion at invocation time, after
         // the ctor runs.
@@ -69,7 +70,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         // both of Cleanup's pre-flights, which would leave Re-scan live while
         // a Move or a Delete was already under way.
         Scan = new ScanViewModel(scanService, rebootService, dialogService,
-            isExternallyBlocked: () => Cleanup?.IsOperationInFlight == true || Completion?.IsComplete == true);
+            isExternallyBlocked: () => Cleanup?.IsOperationInFlight == true
+                || Completion?.IsComplete == true
+                || Chrome?.IsUpdating == true);
         Completion = new CompletionViewModel(
             resultLogService, settingsService, earlierRunCheck,
             firstRunMark, windowsRegion, windowService,
@@ -80,7 +83,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
             Scan, Completion, reverifier);
         Chrome = new ChromeViewModel(windowService, msiInfoService, settingsService,
             updateCheckService, dialogService, Scan,
-            isBusy: () => IsBusy);
+            isBusy: () => IsBusy,
+            updater: appUpdater,
+            closeScanCard: CloseCardForUpdate,
+            settleBeforeHandOff: SettleBeforeUpdate);
 
         // Surface the completion overlay when a scan finishes with no
         // orphans. Cleanup sets IsOperating=false after the post-
@@ -89,9 +95,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _scanCompletedHandler = OnScanCompleted;
         Scan.ScanCompleted += _scanCompletedHandler;
 
-        // Drive IsMainContentInteractive off the three overlay states.
+        // Drive IsMainContentInteractive off the overlay states.
         // The caption buttons themselves remain IsEnabled=true. The
-        // scanning, operating and completion overlays all span the three
+        // scanning, operating, completion and update overlays all span the three
         // grid rows and are drawn over the title bar, so while one is up a
         // click on the minimise or close button lands on the overlay's dim
         // Border. That Border inherits WindowChrome.IsHitTestVisibleInChrome
@@ -103,6 +109,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Scan.PropertyChanged += OnChildPropertyChanged;
         Cleanup.PropertyChanged += OnChildPropertyChanged;
         Completion.PropertyChanged += OnChildPropertyChanged;
+        Chrome.PropertyChanged += OnChildPropertyChanged;
     }
 
     public void Dispose()
@@ -110,6 +117,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Scan.PropertyChanged -= OnChildPropertyChanged;
         Cleanup.PropertyChanged -= OnChildPropertyChanged;
         Completion.PropertyChanged -= OnChildPropertyChanged;
+        Chrome.PropertyChanged -= OnChildPropertyChanged;
         Scan.ScanCompleted -= _scanCompletedHandler;
         Chrome.Dispose();
         Cleanup.Dispose();
@@ -121,13 +129,35 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// True iff none of the three overlays (scanning, operating,
-    /// completion) is showing. Bound to the main-window body's
-    /// IsEnabled so an active overlay disables Tab/click on every
-    /// control behind it.
+    /// True iff none of the overlays (scanning, operating, completion, and the card
+    /// saying an update is downloading) is showing. Bound to the main-window body's
+    /// IsEnabled so an active overlay disables Tab/click on every control behind it.
     /// </summary>
     public bool IsMainContentInteractive =>
-        !Scan.IsScanning && !Cleanup.IsOperating && !Completion.IsComplete;
+        !Scan.IsScanning && !Cleanup.IsOperating && !Completion.IsComplete && !Chrome.IsUpdating;
+
+    /// <summary>
+    /// Closes whichever card is up as Update now is pressed on it, as Done does, so its
+    /// report box decides before the update starts. Only the card a scan puts up when it
+    /// offers nothing carries the notice.
+    /// </summary>
+    private void CloseCardForUpdate()
+    {
+        if (Completion.IsComplete && Completion.DismissCommand.CanExecute(null))
+            Completion.DismissCommand.Execute(null);
+    }
+
+    /// <summary>
+    /// What closing the app settles, done before an update hands over to the newer
+    /// version, which reads the same files as it starts: the move destination still
+    /// being saved, and the report's sends and saves still running, waited for as long
+    /// as closing waits.
+    /// </summary>
+    private void SettleBeforeUpdate()
+    {
+        Cleanup.FlushMoveDestination();
+        Completion.SettleReportOnExit();
+    }
 
     /// <summary>
     /// The single source of truth for "a scan or a destructive operation is in
@@ -145,7 +175,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// What Esc does on the main window: the overlay in front takes it, and the return
-    /// says whether one did. An idle window takes none.
+    /// says whether one did. An idle window takes none. The card saying an update is
+    /// downloading is drawn over everything, so it takes Esc first, as Cancel.
     ///
     /// The panel saying what the report holds comes before everything, being drawn over
     /// the card it belongs to: Esc closes it and leaves the card up, and the next Esc
@@ -158,6 +189,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// </summary>
     public bool HandleEscape()
     {
+        if (Chrome.IsUpdating)
+        {
+            if (Chrome.CancelUpdateCommand.CanExecute(null))
+                Chrome.CancelUpdateCommand.Execute(null);
+            return true;
+        }
         if (Completion.ReportPanelOpen)
         {
             Completion.ReportPanelOpen = false;
@@ -311,13 +348,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
             e.PropertyName == nameof(ScanViewModel.IsScanInFlight) ||
             e.PropertyName == nameof(CleanupViewModel.IsOperating) ||
             e.PropertyName == nameof(CleanupViewModel.IsOperationInFlight) ||
-            e.PropertyName == nameof(CompletionViewModel.IsComplete))
+            e.PropertyName == nameof(CompletionViewModel.IsComplete) ||
+            e.PropertyName == nameof(ChromeViewModel.IsUpdating))
         {
             OnPropertyChanged(nameof(IsMainContentInteractive));
             OnPropertyChanged(nameof(IsBusy));
-            // Block F5 / Re-scan while a Move/Delete (its pre-flight included)
-            // or a completion is up so a parallel scan can't race the operation.
+            // Block F5 / Re-scan while a Move/Delete (its pre-flight included),
+            // a completion or an update is up so a parallel scan can't race it.
             Scan.NotifyExternallyBlockedChanged();
+            // Update now waits for a scan or a Move or Delete to finish.
+            Chrome.NotifyBusyChanged();
         }
     }
 

@@ -544,6 +544,10 @@ const MAP = {
   'UpdateNotice.Download': `GitHubからダウンロード`,
   'Automation.UpdateNotice.Download': `github からダウンロード`,
   'UpdateNotice.Recommended': `最新バージョンの使用を強くおすすめします。`,
+  'UpdateNotice.UpdateNow': `今すぐ更新`,
+  'UpdateNotice.Downloading': `InstallerClean {0} をダウンロード中...`,
+  'UpdateNotice.DownloadFailed': `更新をダウンロードできませんでした。`,
+  'UpdateNotice.InstallFailed': `更新をインストールできませんでした。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

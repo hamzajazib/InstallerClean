@@ -1568,7 +1568,23 @@ InstallerClean уже працював від імені адміністрат�
   </data>
   <data name="UpdateNotice.Download" xml:space="preserve">
     <value>Завантажити з GitHub</value>
-    <comment>The notice's link, which opens the newest release's page on GitHub in the browser.</comment>
+    <comment>The notice's link, which opens the newest release's page on GitHub in the browser. Shown where the app cannot update itself, and after an update that failed.</comment>
+  </data>
+  <data name="UpdateNotice.UpdateNow" xml:space="preserve">
+    <value>Оновити зараз</value>
+    <comment>The notice's button, which downloads the newer version, closes the app and opens the newer version in its place.</comment>
+  </data>
+  <data name="UpdateNotice.Downloading" xml:space="preserve">
+    <value>Завантаження InstallerClean {0}...</value>
+    <comment>The line on the card shown while the newer version downloads, over a progress bar and Cancel. {0} = the newer version number, as 3.5.0.</comment>
+  </data>
+  <data name="UpdateNotice.DownloadFailed" xml:space="preserve">
+    <value>Не вдалося завантажити оновлення.</value>
+    <comment>A third line in the notice, under UpdateNotice.Recommended, after the newer version could not be downloaded. Update now and the link show under it.</comment>
+  </data>
+  <data name="UpdateNotice.InstallFailed" xml:space="preserve">
+    <value>Не вдалося встановити оновлення.</value>
+    <comment>A third line in the notice, under UpdateNotice.Recommended, after the newer version downloaded but could not be put in place or started. Update now and the link show under it.</comment>
   </data>
   <data name="UpdateCheck.Failed.NetworkUnavailable" xml:space="preserve"><value>Не вдалося зв'язатися з GitHub. Перевірте інтернет-з'єднання та спробуйте ще раз.</value></data>
   <data name="UpdateCheck.Failed.ServerError" xml:space="preserve"><value>GitHub повернув повідомлення про помилку. Спробуйте ще раз за кілька хвилин.</value></data>

@@ -639,6 +639,10 @@ const MAP = {
   'UpdateNotice.Download': `Le télécharger sur GitHub`,
   'Automation.UpdateNotice.Download': `Le télécharger sur github`,
   'UpdateNotice.Recommended': `Il est vivement recommandé d'utiliser la dernière version.`,
+  'UpdateNotice.UpdateNow': `Mettre à jour`,
+  'UpdateNotice.Downloading': `Téléchargement d'InstallerClean {0}...`,
+  'UpdateNotice.DownloadFailed': `La mise à jour n'a pas pu être téléchargée.`,
+  'UpdateNotice.InstallFailed': `La mise à jour n'a pas pu être installée.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

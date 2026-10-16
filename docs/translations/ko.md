@@ -324,6 +324,10 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is available. | InstallerClean {0} 버전을 사용할 수 있습니다. |
 | It's strongly recommended to use the latest version. | 최신 버전을 사용할 것을 강력히 권장합니다. |
 | Download it from GitHub | GitHub에서 내려받기 |
+| Update now | 지금 업데이트 |
+| Downloading InstallerClean {0}... | InstallerClean {0} 내려받는 중... |
+| The update couldn't be downloaded. | 업데이트를 내려받지 못했습니다. |
+| The update couldn't be installed. | 업데이트를 설치하지 못했습니다. |
 | Couldn't reach GitHub. Check your internet connection and try again. | GitHub에 연결할 수 없습니다. 인터넷 연결을 확인하고 다시 시도하세요. |
 | GitHub returned an error response. Try again in a few minutes. | GitHub가 오류 응답을 반환했습니다. 몇 분 후에 다시 시도하세요. |
 | GitHub's response did not contain a recognised release. Try again later, or open the releases page directly. | GitHub의 응답에 인식할 수 있는 릴리스가 없습니다. 나중에 다시 시도하거나, 릴리스 페이지를 직접 여세요. |

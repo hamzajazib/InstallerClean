@@ -404,12 +404,15 @@ public partial class MainWindow : Window
             AnnounceCompletionOutcome();
         }
 
-        if (e.PropertyName == nameof(CompletionViewModel.IsComplete) && !_vm.Completion.IsComplete)
+        // Overlay dismissed (Done, Close without donating, the large Donate, Esc or a
+        // click on the dim margin). The focused button is gone, so move focus to a
+        // sensible non-destructive control rather than letting it drop to the window
+        // root. Update now closes the card too, having put its own card up first, which
+        // takes the focus and is read; what is read here waits for that card to go
+        // (OnUpdatingChanged).
+        if (e.PropertyName == nameof(CompletionViewModel.IsComplete) && !_vm.Completion.IsComplete
+            && !_vm.Chrome.IsUpdating)
         {
-            // Overlay dismissed (Done, Close without donating, the large Donate, Esc or a
-            // click on the dim margin). The focused button is
-            // gone, so move focus to a sensible non-destructive control rather
-            // than letting it drop to the window root.
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () => RescanButton.Focus());
             AnnounceUnfinishedRefresh();
             // A warning the card's scan put up is read now, after the card. Where the
@@ -471,6 +474,35 @@ public partial class MainWindow : Window
         if (e.PropertyName == nameof(ChromeViewModel.UpdateStatusText)
             && _vm.Chrome.UpdateStatusText.Length > 0)
             AnnounceLiveRegions(UpdateStatusLineText);
+
+        if (e.PropertyName == nameof(ChromeViewModel.IsUpdating))
+            OnUpdatingChanged();
+    }
+
+    /// <summary>
+    /// The card shown while an update downloads. As it appears, the focus moves to its
+    /// Cancel and its line is read. As it goes, which it does only where the update was
+    /// cancelled or failed, the focus moves to Update now, and the line saying what
+    /// failed is read, then any warning marked while the card was up.
+    /// </summary>
+    private void OnUpdatingChanged()
+    {
+        if (_vm.Chrome.IsUpdating)
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, () => UpdateCancelButton.Focus());
+            AnnounceLiveRegion(UpdatingText, () => _vm.Chrome.IsUpdating);
+            return;
+        }
+
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+        {
+            if (!UpdateNowButton.Focus())
+                RescanButton.Focus();
+        });
+        if (_vm.Chrome.HasUpdateFailure)
+            AnnounceLiveRegion(UpdateNoticeFailure, () => _vm.Chrome.HasUpdateFailure);
+        if (!_vm.Cleanup.IsOperating && !_vm.Completion.IsComplete)
+            AnnounceMarkedWarnings();
     }
 
     /// <summary>
@@ -485,7 +517,8 @@ public partial class MainWindow : Window
     {
         if (CardCarriesUpdateNotice())
             AnnounceLiveRegions(CardUpdateNoticeLead, CardUpdateNoticeDetail);
-        else if (_vm.Completion.IsComplete || _vm.Cleanup.IsOperating || _vm.Scan.IsScanning)
+        else if (_vm.Completion.IsComplete || _vm.Cleanup.IsOperating || _vm.Scan.IsScanning
+                 || _vm.Chrome.IsUpdating)
             _updateNoticeToAnnounce = true;
         else
             AnnounceUpdateNotice();

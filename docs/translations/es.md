@@ -324,6 +324,10 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is available. | Está disponible InstallerClean {0}. |
 | It's strongly recommended to use the latest version. | Se recomienda encarecidamente usar la versión más reciente. |
 | Download it from GitHub | Descárgalo de GitHub |
+| Update now | Actualizar ahora |
+| Downloading InstallerClean {0}... | Descargando InstallerClean {0}... |
+| The update couldn't be downloaded. | No se pudo descargar la actualización. |
+| The update couldn't be installed. | No se pudo instalar la actualización. |
 | Couldn't reach GitHub. Check your internet connection and try again. | No se pudo conectar con GitHub. Comprueba tu conexión a internet y vuelve a intentarlo. |
 | GitHub returned an error response. Try again in a few minutes. | GitHub devolvió una respuesta de error. Vuelve a intentarlo en unos minutos. |
 | GitHub's response did not contain a recognised release. Try again later, or open the releases page directly. | La respuesta de GitHub no contenía una versión reconocible. Vuelve a intentarlo más tarde, o abre directamente la página de versiones. |

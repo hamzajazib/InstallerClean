@@ -46,6 +46,15 @@ internal static class Composition
         services.AddSingleton<IConfirmationService, ConfirmationService>();
         services.AddSingleton<IWindowService, WindowService>();
 
+        // The update from inside the app. The kind of copy is decided once, here, from
+        // this build, the setup's record and the folder the exe is in.
+        services.AddSingleton<UpdateDownloadService>();
+        services.AddSingleton<IAppUpdater>(provider => new AppUpdater(
+            RunningCopy.Kind(provider.GetRequiredService<IRegistryReader>()),
+            Environment.ProcessPath ?? string.Empty,
+            provider.GetRequiredService<UpdateDownloadService>(),
+            UpdateStagingFolder.DefaultRoot));
+
         // View-model graph. MainViewModel constructs the four child
         // VMs internally; the container only needs to know how to
         // resolve MainViewModel itself.

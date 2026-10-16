@@ -48,22 +48,30 @@ const SETS = {
   // first scan the whole action zone is absent), so only results can fail. They
   // are listed separately so a control that later appears in one state alone
   // has a set to be added to.
+  // The notice saying a newer version is available can show over any of them, with
+  // its Update now.
   'MainWindow-results': ['Action.Details', 'Action.Browse', 'Action.DeletePermanently',
-    'Action.Move', 'Action.Rescan', 'Action.About', 'Action.CheckForUpdates'],
-  'MainWindow-notScanned': ['Action.Rescan', 'Action.About', 'Action.CheckForUpdates'],
+    'Action.Move', 'Action.Rescan', 'Action.About', 'Action.CheckForUpdates',
+    'UpdateNotice.UpdateNow'],
+  'MainWindow-notScanned': ['Action.Rescan', 'Action.About', 'Action.CheckForUpdates',
+    'UpdateNotice.UpdateNow'],
   'MainWindow-pendingReboot': ['Action.Details', 'Action.Browse', 'Action.Rescan',
-    'Action.About', 'Action.CheckForUpdates'],
+    'Action.About', 'Action.CheckForUpdates', 'UpdateNotice.UpdateNow'],
   // Overlays. The bar behind each is disabled, so each set is only its own
   // controls. The scanning and operating overlays carry Cancel, and while a line
   // on them names a drive or share the app is waiting for, the button that stops
   // that wait.
   'MainWindow-scanning': ['Action.Cancel', 'Action.StopWaiting'],
   'MainWindow-operating': ['Action.Cancel', 'Action.StopWaiting'],
+  // The card shown while an update downloads carries Cancel alone.
+  'MainWindow-updating': ['Action.Cancel'],
   // The completion card carries Done with the small Donate under it, or, after a
   // Move or Delete that moved or deleted files, the large Donate over Close without
   // donating. Never both pairs. Either card, where it is the PC's first, carries
-  // the report box under them.
-  'MainWindow-completion': ['Action.Done', 'Action.DonateSmall', 'Completion.SendReport'],
+  // the report box under them. The card a scan puts up when it offers nothing,
+  // which is a Done card, carries the notice and its Update now too.
+  'MainWindow-completion': ['Action.Done', 'Action.DonateSmall', 'Completion.SendReport',
+    'UpdateNotice.UpdateNow'],
   'MainWindow-completionDonate': ['Action.Donate', 'Action.CloseWithoutDonating', 'Completion.SendReport'],
 
   // The window the startup scan runs in: Cancel, and the same stop-waiting button

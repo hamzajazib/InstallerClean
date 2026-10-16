@@ -324,6 +324,10 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is available. | InstallerClean {0} が利用可能です。 |
 | It's strongly recommended to use the latest version. | 最新バージョンの使用を強くおすすめします。 |
 | Download it from GitHub | GitHubからダウンロード |
+| Update now | 今すぐ更新 |
+| Downloading InstallerClean {0}... | InstallerClean {0} をダウンロード中... |
+| The update couldn't be downloaded. | 更新をダウンロードできませんでした。 |
+| The update couldn't be installed. | 更新をインストールできませんでした。 |
 | Couldn't reach GitHub. Check your internet connection and try again. | GitHub に到達できませんでした。インターネット接続を確認して再試行してください。 |
 | GitHub returned an error response. Try again in a few minutes. | GitHub がエラーレスポンスを返しました。数分待ってから再試行してください。 |
 | GitHub's response did not contain a recognised release. Try again later, or open the releases page directly. | GitHub のレスポンスに認識可能なリリースが含まれていませんでした。後でもう一度試すか、リリースページを直接開いてください。 |

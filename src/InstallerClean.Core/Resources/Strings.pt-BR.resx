@@ -1568,7 +1568,23 @@ Detalhes em {1}.</value></data>
   </data>
   <data name="UpdateNotice.Download" xml:space="preserve">
     <value>Baixe no GitHub</value>
-    <comment>The notice's link, which opens the newest release's page on GitHub in the browser.</comment>
+    <comment>The notice's link, which opens the newest release's page on GitHub in the browser. Shown where the app cannot update itself, and after an update that failed.</comment>
+  </data>
+  <data name="UpdateNotice.UpdateNow" xml:space="preserve">
+    <value>Atualizar agora</value>
+    <comment>The notice's button, which downloads the newer version, closes the app and opens the newer version in its place.</comment>
+  </data>
+  <data name="UpdateNotice.Downloading" xml:space="preserve">
+    <value>Baixando o InstallerClean {0}...</value>
+    <comment>The line on the card shown while the newer version downloads, over a progress bar and Cancel. {0} = the newer version number, as 3.5.0.</comment>
+  </data>
+  <data name="UpdateNotice.DownloadFailed" xml:space="preserve">
+    <value>Não foi possível baixar a atualização.</value>
+    <comment>A third line in the notice, under UpdateNotice.Recommended, after the newer version could not be downloaded. Update now and the link show under it.</comment>
+  </data>
+  <data name="UpdateNotice.InstallFailed" xml:space="preserve">
+    <value>Não foi possível instalar a atualização.</value>
+    <comment>A third line in the notice, under UpdateNotice.Recommended, after the newer version downloaded but could not be put in place or started. Update now and the link show under it.</comment>
   </data>
   <data name="UpdateCheck.Failed.NetworkUnavailable" xml:space="preserve"><value>Não foi possível acessar o GitHub. Verifique a sua conexão com a internet e tente de novo.</value></data>
   <data name="UpdateCheck.Failed.ServerError" xml:space="preserve"><value>O GitHub retornou uma resposta de erro. Tente de novo em alguns minutos.</value></data>

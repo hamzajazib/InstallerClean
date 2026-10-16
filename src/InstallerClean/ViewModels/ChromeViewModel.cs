@@ -12,9 +12,10 @@ namespace InstallerClean.ViewModels;
 /// Window-management slice. Holds the commands wired to the chrome
 /// (About / Donate / Close), the two "open the details
 /// window" commands that take the user from the main scan summary
-/// into the registered- or orphaned-files detail windows, and the
+/// into the registered- or orphaned-files detail windows, the
 /// update check (the manual button and the once-per-session
-/// automatic check behind <c>AppSettings.AutoUpdateCheck</c>).
+/// automatic check behind <c>AppSettings.AutoUpdateCheck</c>), and the
+/// update from inside the app that the notice's Update now starts.
 ///
 /// Reads <see cref="ScanViewModel.LastScanResult"/> for the details
 /// commands so the detail windows always show the same scan the main
@@ -47,7 +48,14 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     private readonly Func<bool> _isBusy;
     private readonly TimeSpan _checkCooldown;
     private readonly PropertyChangedEventHandler _scanHandler;
+    private readonly IAppUpdater? _updater;
+    private readonly Action _closeScanCard;
+    private readonly Action _settleBeforeHandOff;
     private CancellationTokenSource? _updateCts;
+    private CancellationTokenSource? _downloadCts;
+
+    /// <summary>The newer version the latest find named, which Update now downloads.</summary>
+    private string? _newerVersion;
 
     /// <param name="isBusy">
     /// MainViewModel.IsBusy: a scan or a Move/Delete in flight. Null in a bare
@@ -58,6 +66,19 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// run the manual check to completion without waiting out five real
     /// seconds; production callers pass nothing.
     /// </param>
+    /// <param name="updater">
+    /// The update from inside the app. Null in a bare test construction, which
+    /// then offers the release page alone, as a build from source does.
+    /// </param>
+    /// <param name="closeScanCard">
+    /// Closes the card a scan put up, as Done does, so its report box decides
+    /// before an update starts. Called as Update now is pressed.
+    /// </param>
+    /// <param name="settleBeforeHandOff">
+    /// Settles what closing the app would settle, the move destination still being
+    /// saved and the report still being sent, before the newer version starts and
+    /// reads them.
+    /// </param>
     public ChromeViewModel(
         IWindowService windowService,
         IMsiFileInfoService msiInfoService,
@@ -66,7 +87,10 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         IDialogService dialogs,
         ScanViewModel scan,
         Func<bool>? isBusy = null,
-        TimeSpan? checkCooldownOverride = null)
+        TimeSpan? checkCooldownOverride = null,
+        IAppUpdater? updater = null,
+        Action? closeScanCard = null,
+        Action? settleBeforeHandOff = null)
     {
         _windowService = windowService;
         _msiInfoService = msiInfoService;
@@ -76,6 +100,9 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         _scan = scan;
         _isBusy = isBusy ?? (() => false);
         _checkCooldown = checkCooldownOverride ?? CheckForUpdatesCooldown;
+        _updater = updater;
+        _closeScanCard = closeScanCard ?? (() => { });
+        _settleBeforeHandOff = settleBeforeHandOff ?? (() => { });
 
         // Re-evaluate the Details buttons when a scan finishes or its result
         // is dropped. HasScanned is observable; LastScanResult is a plain
@@ -112,6 +139,8 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         // nothing and stop".
         _updateCts?.Cancel();
         _updateCts?.Dispose();
+        // A download still running stops, and leaves nothing behind.
+        _downloadCts?.Cancel();
     }
 
     /// <summary>
@@ -137,8 +166,69 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// equality only.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsUpdateNow))]
+    [NotifyPropertyChangedFor(nameof(ShowsReleaseLink))]
     [NotifyCanExecuteChangedFor(nameof(OpenReleasePageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(UpdateNowCommand))]
     private bool _hasNewerVersion;
+
+    /// <summary>
+    /// Whether this copy can put a newer version in its own place: every download
+    /// can, and a build from source cannot.
+    /// </summary>
+    public bool CanUpdateItself => _updater?.CanUpdateItself == true;
+
+    /// <summary>Whether the notice carries Update now.</summary>
+    public bool ShowsUpdateNow => HasNewerVersion && CanUpdateItself;
+
+    /// <summary>
+    /// Whether the notice carries the link to the release page: where this copy cannot
+    /// update itself, and after an update that failed, beside Update now.
+    /// </summary>
+    public bool ShowsReleaseLink => HasNewerVersion && (!CanUpdateItself || HasUpdateFailure);
+
+    /// <summary>
+    /// The notice's line saying an update failed, under its first two lines, and empty
+    /// until one does. A press of Update now clears it.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUpdateFailure))]
+    [NotifyPropertyChangedFor(nameof(ShowsReleaseLink))]
+    [NotifyCanExecuteChangedFor(nameof(OpenReleasePageCommand))]
+    private string _updateFailureText = string.Empty;
+
+    /// <summary>Whether the notice shows the line saying an update failed.</summary>
+    public bool HasUpdateFailure => UpdateFailureText.Length > 0;
+
+    /// <summary>
+    /// True from the press of Update now until the download ends: the card saying it is
+    /// downloading stands over the window, with Move, Delete and Re-scan behind it. It
+    /// stays up as the app hands over to the newer version and closes.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(UpdateNowCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CancelUpdateCommand))]
+    private bool _isUpdating;
+
+    /// <summary>
+    /// Set once the download is ready and the app is handing over to it, when there is
+    /// nothing left for Cancel to stop.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CancelUpdateCommand))]
+    private bool _isHandingOver;
+
+    /// <summary>The card's line while it downloads, naming the version.</summary>
+    [ObservableProperty] private string _updatingText = string.Empty;
+
+    /// <summary>How much of the download has arrived, from 0 to 100.</summary>
+    [ObservableProperty] private double _updateProgressPercent;
+
+    /// <summary>
+    /// Whether the server gave the download's length, so the bar can show how far it
+    /// has got. Without it the bar moves without measuring, as the scanning card's does.
+    /// </summary>
+    [ObservableProperty] private bool _isUpdateProgressKnown;
 
     /// <summary>
     /// Raised each time a check finds a newer version, whether or not the notice
@@ -259,24 +349,121 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// regardless of visibility (a TextBlock is an IContentHost) and admits a
     /// content element on Focusable, IsTabStop and IsEnabled alone, content
     /// elements having no IsVisible to test, so an always-executable command
-    /// leaves the hidden link an invisible extra Tab stop. Disabled while there is
-    /// no notice, it drops out of the walk; once the notice shows it is enabled
+    /// leaves the hidden link an invisible extra Tab stop. Disabled wherever the
+    /// link is not shown, it drops out of the walk; where it shows it is enabled
     /// and a real stop. The body's guard stays because ICommand.Execute does not
     /// consult CanExecute.
     /// </summary>
-    [RelayCommand(CanExecute = nameof(HasNewerVersion))]
+    [RelayCommand(CanExecute = nameof(ShowsReleaseLink))]
     private void OpenReleasePage()
     {
-        if (HasNewerVersion)
+        if (ShowsReleaseLink)
             _windowService.OpenUrl(UpdateCheckService.ReleasesPageUrl);
     }
 
     private void ShowUpdateFound(UpdateAvailable available)
     {
+        _newerVersion = available.LatestVersion;
         UpdateNoticeText = string.Format(Strings.UpdateNotice_Available, available.LatestVersion);
         HasNewerVersion = true;
         NewerVersionFound?.Invoke(this, EventArgs.Empty);
     }
+
+    private bool CanUpdateNow() =>
+        HasNewerVersion && CanUpdateItself && !IsUpdating && !_isBusy();
+
+    /// <summary>
+    /// Update now: closes the card a scan put up, downloads the newer version as the
+    /// same kind of copy, and hands over to it. The setup's copy runs the newer setup,
+    /// which starts the app again once it has installed; the other copies start the
+    /// newer version from their own path. Either way this app closes, and the newer
+    /// version scans as it opens, as every start does.
+    ///
+    /// Anything that fails while this app is still open takes the card away and puts
+    /// the line for what failed in the notice, with the link beside Update now, having
+    /// changed nothing on disk. Cancel takes the card away and says nothing. What failed
+    /// goes to crash.log; the screen names only which of the two things it was.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanUpdateNow))]
+    private async Task UpdateNowAsync()
+    {
+        if (!CanUpdateNow() || _updater is null || _newerVersion is not { } version) return;
+
+        UpdateFailureText = string.Empty;
+        UpdateProgressPercent = 0;
+        IsUpdateProgressKnown = false;
+        UpdatingText = string.Format(Strings.UpdateNotice_Downloading, version);
+        // Up before the card goes, so the window behind never becomes usable between
+        // the two.
+        IsUpdating = true;
+        _closeScanCard();
+
+        using var cts = new CancellationTokenSource();
+        _downloadCts = cts;
+        var handedOver = false;
+        try
+        {
+            var progress = new Progress<double?>(fraction =>
+            {
+                IsUpdateProgressKnown = fraction is not null;
+                UpdateProgressPercent = (fraction ?? 0) * 100;
+            });
+            var prepared = await _updater.PrepareAsync(version, progress, cts.Token);
+            if (cts.IsCancellationRequested)
+            {
+                // Cancel pressed as the download finished: put back what was readied.
+                prepared.Undo();
+                return;
+            }
+
+            IsHandingOver = true;
+            _settleBeforeHandOff();
+            handedOver = await _windowService.StartUpdateAndCloseAsync(prepared.FileToStart, prepared.Arguments);
+            if (!handedOver)
+            {
+                prepared.Undo();
+                UpdateFailureText = Strings.UpdateNotice_InstallFailed;
+            }
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        {
+            // Cancel: the card goes and the notice stays as it was.
+        }
+        catch (UpdateFailedException ex)
+        {
+            CrashLog.TryWrite(ex);
+            UpdateFailureText = ex.Stage == UpdateFailureStage.Download
+                ? Strings.UpdateNotice_DownloadFailed
+                : Strings.UpdateNotice_InstallFailed;
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+            UpdateFailureText = Strings.UpdateNotice_InstallFailed;
+        }
+        finally
+        {
+            _downloadCts = null;
+            // Handed over, the app is closing and the card stays up until it has.
+            if (!handedOver)
+            {
+                IsHandingOver = false;
+                IsUpdating = false;
+            }
+        }
+    }
+
+    /// <summary>The download card's Cancel, and Esc while the card is up.</summary>
+    [RelayCommand(CanExecute = nameof(CanCancelUpdate))]
+    private void CancelUpdate() => _downloadCts?.Cancel();
+
+    private bool CanCancelUpdate() => IsUpdating && !IsHandingOver;
+
+    /// <summary>
+    /// Asks Update now's command to re-read whether it can run, which also depends on
+    /// whether a scan or a Move or Delete is in flight.
+    /// </summary>
+    internal void NotifyBusyChanged() => UpdateNowCommand.NotifyCanExecuteChanged();
 
     /// <summary>
     /// Swap-then-dispose, matching CleanupViewModel.ScheduleMoveDestinationSave:

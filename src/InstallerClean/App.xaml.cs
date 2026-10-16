@@ -231,6 +231,10 @@ public partial class App : Application
 
         StartActivationListener();
 
+        // What an update left behind, in the background: the copy it renamed aside, and
+        // the folder a newer setup ran from.
+        _ = Task.Run(RemoveUpdateLeftoversAsync);
+
         DispatcherUnhandledException += (_, args) =>
         {
             // Recursive entry: log silently and bail. A nested handler
@@ -720,5 +724,104 @@ public partial class App : Application
             Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true });
 
         Shutdown();
+    }
+
+    /// <summary>
+    /// Hands over to a newer version: releases the single-instance mutex, starts
+    /// <paramref name="fileToStart"/> and closes the app. Answers false where it could
+    /// not be started, having taken the mutex back, so the app carries on as it was.
+    ///
+    /// The mutex goes first for two reasons. The newer version takes it as it starts,
+    /// and finding it held would send it down the "already running" exit. And the
+    /// setup names it as its AppMutex, so a setup started while it is held stops to
+    /// ask for the app to be closed. The container is not
+    /// disposed first, as the language relaunch disposes it, because a start that
+    /// fails leaves this app running; the caller has already settled what disposing
+    /// would settle.
+    ///
+    /// An antivirus can hold a program it has just seen written for a moment, so a
+    /// start that fails is tried again a few times, half a second apart, before the
+    /// answer is no. This runs on the dispatcher thread, from the notice's button, so
+    /// the release and the retake are on the thread that took the mutex, as the
+    /// owner-thread rule requires.
+    /// </summary>
+    public async Task<bool> StartUpdateAndCloseAsync(string fileToStart, string arguments)
+    {
+        var released = _holdsSingleInstanceMutex;
+        if (released)
+        {
+            _singleInstanceMutex?.ReleaseMutex();
+            _holdsSingleInstanceMutex = false;
+        }
+
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                using var started = Process.Start(new ProcessStartInfo(fileToStart, arguments)
+                {
+                    UseShellExecute = true,
+                    WorkingDirectory = Path.GetDirectoryName(fileToStart) ?? string.Empty,
+                });
+                break;
+            }
+            catch (Exception ex) when (attempt < StartAttempts)
+            {
+                CrashLog.TryWrite(ex);
+                await Task.Delay(StartRetryInterval);
+            }
+            catch (Exception ex)
+            {
+                CrashLog.TryWrite(ex);
+                if (released) RetakeSingleInstanceMutex();
+                return false;
+            }
+        }
+
+        Shutdown();
+        return true;
+    }
+
+    /// <summary>
+    /// Deletes the copy an update renamed aside and removes the folders earlier updates
+    /// downloaded into, trying for ten seconds, because what put each there is usually
+    /// still closing as this copy starts: the copy that renamed itself, or the setup,
+    /// which opens the app before it exits. Whatever will not go by then is tried again
+    /// at the next start. Never throws.
+    /// </summary>
+    private static async Task RemoveUpdateLeftoversAsync()
+    {
+        try
+        {
+            var exePath = Environment.ProcessPath;
+            var foldersGone = false;
+            var oldCopyGone = exePath is null;
+            for (var attempt = 0; attempt < 20; attempt++)
+            {
+                foldersGone = foldersGone || UpdateStagingFolder.RemoveLeftovers(UpdateStagingFolder.DefaultRoot);
+                oldCopyGone = oldCopyGone || SelfReplacement.TryRemoveOldCopy(exePath!);
+                if (foldersGone && oldCopyGone) return;
+                await Task.Delay(500);
+            }
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+        }
+    }
+
+    private const int StartAttempts = 4;
+    private static readonly TimeSpan StartRetryInterval = TimeSpan.FromMilliseconds(500);
+
+    private static void RetakeSingleInstanceMutex()
+    {
+        try
+        {
+            _holdsSingleInstanceMutex = _singleInstanceMutex?.WaitOne(TimeSpan.Zero) == true;
+        }
+        catch (AbandonedMutexException)
+        {
+            _holdsSingleInstanceMutex = true;
+        }
     }
 }

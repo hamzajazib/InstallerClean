@@ -641,6 +641,10 @@ const MAP = {
   'UpdateNotice.Download': `Unduh dari GitHub`,
   'Automation.UpdateNotice.Download': `Unduh dari github`,
   'UpdateNotice.Recommended': `Sangat disarankan untuk memakai versi terbaru.`,
+  'UpdateNotice.UpdateNow': `Perbarui sekarang`,
+  'UpdateNotice.Downloading': `Mengunduh InstallerClean {0}...`,
+  'UpdateNotice.DownloadFailed': `Pembaruan tidak dapat diunduh.`,
+  'UpdateNotice.InstallFailed': `Pembaruan tidak dapat dipasang.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

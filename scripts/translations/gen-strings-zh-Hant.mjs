@@ -532,6 +532,10 @@ const MAP = {
   'UpdateNotice.Download': `從 GitHub 下載`,
   'Automation.UpdateNotice.Download': `從 github 下載`,
   'UpdateNotice.Recommended': `強烈建議使用最新版本。`,
+  'UpdateNotice.UpdateNow': `立即更新`,
+  'UpdateNotice.Downloading': `正在下載 InstallerClean {0}...`,
+  'UpdateNotice.DownloadFailed': `無法下載更新。`,
+  'UpdateNotice.InstallFailed': `無法安裝更新。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -615,6 +615,10 @@ const MAP = {
   'UpdateNotice.Download': `GitHub에서 내려받기`,
   'Automation.UpdateNotice.Download': `github에서 내려받기`,
   'UpdateNotice.Recommended': `최신 버전을 사용할 것을 강력히 권장합니다.`,
+  'UpdateNotice.UpdateNow': `지금 업데이트`,
+  'UpdateNotice.Downloading': `InstallerClean {0} 내려받는 중...`,
+  'UpdateNotice.DownloadFailed': `업데이트를 내려받지 못했습니다.`,
+  'UpdateNotice.InstallFailed': `업데이트를 설치하지 못했습니다.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -157,10 +157,10 @@
             <!-- A newer version than this one is available. Shown once a check has
                  found one, in every state of the window, above everything else and
                  outside the region that scrolls, so it stays in view at any text
-                 size. Its link is the first Tab stop in the window's content. The
-                 code-behind reads its two lines out, ahead of the rest of the window
-                 as it is drawn. The link's spoken name is its own words cased for
-                 speech. -->
+                 size. Its Update now, or its link, is the first Tab stop in the
+                 window's content. The code-behind reads its two lines out, ahead of
+                 the rest of the window as it is drawn. The link's spoken name is its
+                 own words cased for speech. -->
             <Border Grid.Row="0" Style="{StaticResource UpdateNoticePanel}"
                     Margin="{StaticResource GapBottom.Lg}"
                     Visibility="{Binding Chrome.HasNewerVersion, Converter={StaticResource BoolToVis}}">
@@ -179,12 +179,29 @@
                                    Foreground="{StaticResource Text.Body}" FontSize="{DynamicResource Type.Body}"
                                    TextWrapping="Wrap" Margin="{StaticResource GapTop.Sm}"
                                    AutomationProperties.LiveSetting="Polite"/>
-                        <TextBlock FontSize="{DynamicResource Type.Body}" TextWrapping="Wrap"
-                                   Margin="{StaticResource GapTop.Sm}">
-                            <Hyperlink Command="{Binding Chrome.OpenReleasePageCommand}"
-                                       Style="{StaticResource SubtleLink}"
-                                       AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.Download}"><Run Text="{loc:Translate UpdateNotice.Download}"/></Hyperlink>
-                        </TextBlock>
+                        <!-- After an update that failed: what failed, in the warning colour,
+                             read out as it appears. -->
+                        <TextBlock x:Name="UpdateNoticeFailure" Text="{Binding Chrome.UpdateFailureText}"
+                                   Foreground="{StaticResource Status.Warning}" FontSize="{DynamicResource Type.Body}"
+                                   TextWrapping="Wrap" Margin="{StaticResource GapTop.Sm}"
+                                   Visibility="{Binding Chrome.HasUpdateFailure, Converter={StaticResource BoolToVis}}"
+                                   AutomationProperties.LiveSetting="Polite"/>
+                        <!-- Update now wherever the app can update itself; the link where it
+                             cannot, and beside Update now after an update that failed. -->
+                        <WrapPanel Margin="{StaticResource GapTop.Sm}">
+                            <Button x:Name="UpdateNowButton" Style="{StaticResource CompactAccentPill}"
+                                    Content="{loc:Translate UpdateNotice.UpdateNow}"
+                                    Command="{Binding Chrome.UpdateNowCommand}"
+                                    Margin="0,4,16,0" VerticalAlignment="Center"
+                                    Visibility="{Binding Chrome.ShowsUpdateNow, Converter={StaticResource BoolToVis}}"/>
+                            <TextBlock FontSize="{DynamicResource Type.Body}" TextWrapping="Wrap"
+                                       Margin="0,4,0,0" VerticalAlignment="Center"
+                                       Visibility="{Binding Chrome.ShowsReleaseLink, Converter={StaticResource BoolToVis}}">
+                                <Hyperlink Command="{Binding Chrome.OpenReleasePageCommand}"
+                                           Style="{StaticResource SubtleLink}"
+                                           AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.Download}"><Run Text="{loc:Translate UpdateNotice.Download}"/></Hyperlink>
+                            </TextBlock>
+                        </WrapPanel>
                     </StackPanel>
                 </DockPanel>
             </Border>
@@ -1301,12 +1318,29 @@
                                            Foreground="{StaticResource Text.Body}" FontSize="{DynamicResource Type.Body}"
                                            TextWrapping="Wrap" Margin="{StaticResource GapTop.Sm}"
                                            AutomationProperties.LiveSetting="Polite"/>
-                                <TextBlock FontSize="{DynamicResource Type.Body}" TextWrapping="Wrap"
-                                           Margin="{StaticResource GapTop.Sm}">
-                                    <Hyperlink Command="{Binding Chrome.OpenReleasePageCommand}"
-                                               Style="{StaticResource SubtleLink}"
-                                               AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.Download}"><Run Text="{loc:Translate UpdateNotice.Download}"/></Hyperlink>
-                                </TextBlock>
+                                <!-- After an update that failed: what failed, in the warning colour,
+                                     read out as it appears. -->
+                                <TextBlock x:Name="CardUpdateNoticeFailure" Text="{Binding Chrome.UpdateFailureText}"
+                                           Foreground="{StaticResource Status.Warning}" FontSize="{DynamicResource Type.Body}"
+                                           TextWrapping="Wrap" Margin="{StaticResource GapTop.Sm}"
+                                           Visibility="{Binding Chrome.HasUpdateFailure, Converter={StaticResource BoolToVis}}"
+                                           AutomationProperties.LiveSetting="Polite"/>
+                                <!-- Update now wherever the app can update itself; the link where it
+                                     cannot, and beside Update now after an update that failed. -->
+                                <WrapPanel Margin="{StaticResource GapTop.Sm}">
+                                    <Button x:Name="CardUpdateNowButton" Style="{StaticResource CompactAccentPill}"
+                                            Content="{loc:Translate UpdateNotice.UpdateNow}"
+                                            Command="{Binding Chrome.UpdateNowCommand}"
+                                            Margin="0,4,16,0" VerticalAlignment="Center"
+                                            Visibility="{Binding Chrome.ShowsUpdateNow, Converter={StaticResource BoolToVis}}"/>
+                                    <TextBlock FontSize="{DynamicResource Type.Body}" TextWrapping="Wrap"
+                                               Margin="0,4,0,0" VerticalAlignment="Center"
+                                               Visibility="{Binding Chrome.ShowsReleaseLink, Converter={StaticResource BoolToVis}}">
+                                        <Hyperlink Command="{Binding Chrome.OpenReleasePageCommand}"
+                                                   Style="{StaticResource SubtleLink}"
+                                                   AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.Download}"><Run Text="{loc:Translate UpdateNotice.Download}"/></Hyperlink>
+                                    </TextBlock>
+                                </WrapPanel>
                             </StackPanel>
                         </DockPanel>
                     </Border>
@@ -1543,6 +1577,51 @@
                                    TextWrapping="Wrap" Margin="0,6,0,0"/>
                     </StackPanel>
                 </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <!-- Update overlay: the card shown while Update now downloads the newer version,
+             over everything else, the card a scan put up included, which Update now
+             closes. The same dim and card as the scanning overlay, with a bar that
+             measures where the server gives the download's length and moves without
+             measuring where it does not, the line naming the version, and Cancel. It
+             stays up as the app hands over and closes. The code-behind moves the focus
+             to Cancel and reads the line out as the card appears. -->
+        <Grid Grid.RowSpan="3" Visibility="{Binding Chrome.IsUpdating, Converter={StaticResource BoolToVis}}"
+              KeyboardNavigation.TabNavigation="Cycle"
+              KeyboardNavigation.ControlTabNavigation="Cycle">
+            <chrome:DecorativeBorder Background="{StaticResource Surface.Overlay}"/>
+            <Border Background="{StaticResource Surface.Card}" CornerRadius="{StaticResource Radius.Pill}"
+                    BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}"
+                    Padding="28,22" MaxWidth="{a11y:TextScaled 480}" Margin="{StaticResource GapX.Xl}"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                <StackPanel>
+                    <ProgressBar MaxWidth="240" Height="8" Margin="{StaticResource GapBottom.Md}"
+                                 Minimum="0" Maximum="100"
+                                 Value="{Binding Chrome.UpdateProgressPercent}"
+                                 AutomationProperties.Name="{Binding Chrome.UpdatingText}">
+                        <ProgressBar.Style>
+                            <Style TargetType="ProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}">
+                                <Setter Property="IsIndeterminate" Value="True"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Chrome.IsUpdateProgressKnown}" Value="True">
+                                        <Setter Property="IsIndeterminate" Value="False"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ProgressBar.Style>
+                    </ProgressBar>
+                    <TextBlock x:Name="UpdatingText" Text="{Binding Chrome.UpdatingText}"
+                               Foreground="{StaticResource Text.Heading}"
+                               FontSize="{DynamicResource Type.Heading.Sm}" TextWrapping="Wrap" TextAlignment="Center"
+                               Margin="0,0,0,16"
+                               AutomationProperties.LiveSetting="Polite"/>
+                    <Button x:Name="UpdateCancelButton" Style="{StaticResource GhostPill}"
+                            Content="{loc:Translate Action.Cancel}" Command="{Binding Chrome.CancelUpdateCommand}"
+                            MinHeight="28" Padding="16,0" FontSize="{DynamicResource Type.Body}"
+                            HorizontalAlignment="Center"
+                            FocusVisualStyle="{StaticResource SmallPillFocusVisual}"/>
+                </StackPanel>
             </Border>
         </Grid>
     </Grid>

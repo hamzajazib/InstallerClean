@@ -299,6 +299,16 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     {
         _scan.PropertyChanged -= _scanHandler;
         EndOperation();
+        FlushMoveDestination();
+    }
+
+    /// <summary>
+    /// Saves a move destination still waiting out its debounce, now, and stops the
+    /// debounced save. The language relaunch reaches it through <see cref="Dispose"/>;
+    /// an update calls it before the newer version starts and reads the same file.
+    /// </summary>
+    public void FlushMoveDestination()
+    {
         var saveCts = _moveDestinationSaveCts;
         _moveDestinationSaveCts = null;
         saveCts?.Cancel();

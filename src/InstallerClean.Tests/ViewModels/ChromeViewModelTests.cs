@@ -283,4 +283,182 @@ public class ChromeViewModelTests
 
         _windowService.Received(1).OpenUrl(ReleasesPage);
     }
+
+    // ---- Update now ----
+
+    private readonly IAppUpdater _updater = Substitute.For<IAppUpdater>();
+    private readonly List<string> _calls = [];
+
+    /// <summary>
+    /// A view model whose copy can update itself, with the card-closing and settling
+    /// steps recorded in the order they are called, and a check that has found 9.9.9.
+    /// </summary>
+    private async Task<ChromeViewModel> CreateUpdatingViewModelAsync()
+    {
+        _updater.CanUpdateItself.Returns(true);
+        _settingsService.Load().Returns(new AppSettings { AutoUpdateCheck = true });
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+        var scan = new ScanViewModel(_scanService, _rebootService, _dialogService);
+        var vm = new ChromeViewModel(
+            _windowService, _msiInfoService, _settingsService,
+            _updateCheckService, _dialogService, scan,
+            checkCooldownOverride: TimeSpan.Zero,
+            updater: _updater,
+            closeScanCard: () => _calls.Add("close card"),
+            settleBeforeHandOff: () => _calls.Add("settle"));
+        await vm.RunAutomaticUpdateCheckAsync();
+        return vm;
+    }
+
+    private PreparedUpdate Prepared(Action? undo = null) =>
+        new(@"C:\ProgramData\InstallerClean-update-x\InstallerClean-9.9.9-setup.exe", "/SILENT /UPDATEFROMAPP",
+            undo ?? (() => _calls.Add("undo")));
+
+    [Fact]
+    public async Task A_copy_that_can_update_itself_shows_Update_now_and_not_the_link()
+    {
+        var vm = await CreateUpdatingViewModelAsync();
+
+        Assert.True(vm.ShowsUpdateNow);
+        Assert.False(vm.ShowsReleaseLink);
+        Assert.True(vm.UpdateNowCommand.CanExecute(null));
+        Assert.False(vm.OpenReleasePageCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task A_copy_that_cannot_update_itself_shows_the_link_alone()
+    {
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+        var vm = CreateViewModel();
+        await vm.RunAutomaticUpdateCheckAsync();
+
+        Assert.False(vm.ShowsUpdateNow);
+        Assert.True(vm.ShowsReleaseLink);
+        Assert.False(vm.UpdateNowCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Update_now_downloads_the_found_version_settles_and_hands_over()
+    {
+        var vm = await CreateUpdatingViewModelAsync();
+        var prepared = Prepared();
+        _updater.PrepareAsync("9.9.9", Arg.Any<IProgress<double?>>(), Arg.Any<CancellationToken>())
+            .Returns(_ => { _calls.Add("prepare"); return prepared; });
+        _windowService.StartUpdateAndCloseAsync(prepared.FileToStart, prepared.Arguments)
+            .Returns(_ => { _calls.Add("start"); return true; });
+
+        await vm.UpdateNowCommand.ExecuteAsync(null);
+
+        Assert.Equal(["close card", "prepare", "settle", "start"], _calls);
+        // Handed over, the app is closing, and the card stays up until it has.
+        Assert.True(vm.IsUpdating);
+        Assert.False(vm.HasUpdateFailure);
+        Assert.False(vm.CancelUpdateCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task The_card_names_the_version_being_downloaded()
+    {
+        var vm = await CreateUpdatingViewModelAsync();
+        var seen = new List<string>();
+        _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(_ =>
+        {
+            seen.Add(vm.UpdatingText);
+            return Task.FromException<PreparedUpdate>(new UpdateFailedException(UpdateFailureStage.Download, "no"));
+        });
+
+        await vm.UpdateNowCommand.ExecuteAsync(null);
+
+        Assert.Equal([string.Format(Strings.UpdateNotice_Downloading, "9.9.9")], seen);
+    }
+
+    [Fact]
+    public async Task A_start_that_fails_puts_everything_back_and_says_it_could_not_be_installed()
+    {
+        var vm = await CreateUpdatingViewModelAsync();
+        _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(Prepared());
+        _windowService.StartUpdateAndCloseAsync(default!, default!).ReturnsForAnyArgs(false);
+
+        await vm.UpdateNowCommand.ExecuteAsync(null);
+
+        Assert.Contains("undo", _calls);
+        Assert.False(vm.IsUpdating);
+        Assert.Equal(Strings.UpdateNotice_InstallFailed, vm.UpdateFailureText);
+        // Update now stays, so the person can try again, and the link joins it.
+        Assert.True(vm.ShowsUpdateNow);
+        Assert.True(vm.ShowsReleaseLink);
+        Assert.True(vm.OpenReleasePageCommand.CanExecute(null));
+    }
+
+    [Theory]
+    [InlineData(UpdateFailureStage.Download)]
+    [InlineData(UpdateFailureStage.Install)]
+    public async Task A_failed_step_says_which_and_never_starts_anything(UpdateFailureStage stage)
+    {
+        var vm = await CreateUpdatingViewModelAsync();
+        _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(
+            Task.FromException<PreparedUpdate>(new UpdateFailedException(stage, "no")));
+
+        await vm.UpdateNowCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsUpdating);
+        Assert.Equal(
+            stage == UpdateFailureStage.Download ? Strings.UpdateNotice_DownloadFailed : Strings.UpdateNotice_InstallFailed,
+            vm.UpdateFailureText);
+        await _windowService.DidNotReceiveWithAnyArgs().StartUpdateAndCloseAsync(default!, default!);
+        Assert.DoesNotContain("settle", _calls);
+    }
+
+    [Fact]
+    public async Task Cancel_takes_the_card_away_and_says_nothing()
+    {
+        var vm = await CreateUpdatingViewModelAsync();
+        _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(call =>
+        {
+            var token = call.Arg<CancellationToken>();
+            Assert.True(vm.CancelUpdateCommand.CanExecute(null));
+            vm.CancelUpdateCommand.Execute(null);
+            return Task.FromCanceled<PreparedUpdate>(token);
+        });
+
+        await vm.UpdateNowCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsUpdating);
+        Assert.False(vm.HasUpdateFailure);
+        await _windowService.DidNotReceiveWithAnyArgs().StartUpdateAndCloseAsync(default!, default!);
+    }
+
+    [Fact]
+    public async Task A_new_press_clears_the_line_from_the_last_failure()
+    {
+        var vm = await CreateUpdatingViewModelAsync();
+        _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(
+            Task.FromException<PreparedUpdate>(new UpdateFailedException(UpdateFailureStage.Download, "no")),
+            Task.FromResult(Prepared()));
+        _windowService.StartUpdateAndCloseAsync(default!, default!).ReturnsForAnyArgs(true);
+
+        await vm.UpdateNowCommand.ExecuteAsync(null);
+        Assert.True(vm.HasUpdateFailure);
+
+        await vm.UpdateNowCommand.ExecuteAsync(null);
+        Assert.False(vm.HasUpdateFailure);
+    }
+
+    [Fact]
+    public async Task Update_now_waits_while_a_scan_or_a_Move_or_Delete_is_in_flight()
+    {
+        _updater.CanUpdateItself.Returns(true);
+        _settingsService.Load().Returns(new AppSettings { AutoUpdateCheck = true });
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+        var busy = true;
+        var vm = new ChromeViewModel(
+            _windowService, _msiInfoService, _settingsService,
+            _updateCheckService, _dialogService, new ScanViewModel(_scanService, _rebootService, _dialogService),
+            isBusy: () => busy, checkCooldownOverride: TimeSpan.Zero, updater: _updater);
+        await vm.RunAutomaticUpdateCheckAsync();
+
+        Assert.False(vm.UpdateNowCommand.CanExecute(null));
+        busy = false;
+        Assert.True(vm.UpdateNowCommand.CanExecute(null));
+    }
 }

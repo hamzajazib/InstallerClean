@@ -520,6 +520,10 @@ const MAP = {
   'UpdateNotice.Download': `Скачать с GitHub`,
   'Automation.UpdateNotice.Download': `Скачать с github`,
   'UpdateNotice.Recommended': `Настоятельно рекомендуется использовать последнюю версию.`,
+  'UpdateNotice.UpdateNow': `Обновить сейчас`,
+  'UpdateNotice.Downloading': `Загрузка InstallerClean {0}...`,
+  'UpdateNotice.DownloadFailed': `Не удалось скачать обновление.`,
+  'UpdateNotice.InstallFailed': `Не удалось установить обновление.`,
 };
 
 // Russian CLDR-category overrides beyond the neutral one/other split. They do NOT

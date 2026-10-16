@@ -657,6 +657,10 @@ const MAP = {
   'UpdateNotice.Download': `Pobierz z GitHuba`,
   'Automation.UpdateNotice.Download': `Pobierz z githuba`,
   'UpdateNotice.Recommended': `Zdecydowanie zaleca się korzystanie z najnowszej wersji.`,
+  'UpdateNotice.UpdateNow': `Aktualizuj teraz`,
+  'UpdateNotice.Downloading': `Pobieranie InstallerClean {0}...`,
+  'UpdateNotice.DownloadFailed': `Nie udało się pobrać aktualizacji.`,
+  'UpdateNotice.InstallFailed': `Nie udało się zainstalować aktualizacji.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

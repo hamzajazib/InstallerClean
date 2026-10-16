@@ -1568,7 +1568,23 @@ InstallerClean 本来就以管理员身份运行，所以再那样启动一次�
   </data>
   <data name="UpdateNotice.Download" xml:space="preserve">
     <value>从 GitHub 下载</value>
-    <comment>The notice's link, which opens the newest release's page on GitHub in the browser.</comment>
+    <comment>The notice's link, which opens the newest release's page on GitHub in the browser. Shown where the app cannot update itself, and after an update that failed.</comment>
+  </data>
+  <data name="UpdateNotice.UpdateNow" xml:space="preserve">
+    <value>立即更新</value>
+    <comment>The notice's button, which downloads the newer version, closes the app and opens the newer version in its place.</comment>
+  </data>
+  <data name="UpdateNotice.Downloading" xml:space="preserve">
+    <value>正在下载 InstallerClean {0}…</value>
+    <comment>The line on the card shown while the newer version downloads, over a progress bar and Cancel. {0} = the newer version number, as 3.5.0.</comment>
+  </data>
+  <data name="UpdateNotice.DownloadFailed" xml:space="preserve">
+    <value>无法下载更新。</value>
+    <comment>A third line in the notice, under UpdateNotice.Recommended, after the newer version could not be downloaded. Update now and the link show under it.</comment>
+  </data>
+  <data name="UpdateNotice.InstallFailed" xml:space="preserve">
+    <value>无法安装更新。</value>
+    <comment>A third line in the notice, under UpdateNotice.Recommended, after the newer version downloaded but could not be put in place or started. Update now and the link show under it.</comment>
   </data>
   <data name="UpdateCheck.Failed.NetworkUnavailable" xml:space="preserve"><value>无法连接到 GitHub。请检查您的网络连接后重试。</value></data>
   <data name="UpdateCheck.Failed.ServerError" xml:space="preserve"><value>GitHub 返回了错误响应。请过几分钟后重试。</value></data>

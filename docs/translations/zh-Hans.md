@@ -324,6 +324,10 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is available. | InstallerClean {0} 版现已推出。 |
 | It's strongly recommended to use the latest version. | 强烈建议使用最新版本。 |
 | Download it from GitHub | 从 GitHub 下载 |
+| Update now | 立即更新 |
+| Downloading InstallerClean {0}... | 正在下载 InstallerClean {0}… |
+| The update couldn't be downloaded. | 无法下载更新。 |
+| The update couldn't be installed. | 无法安装更新。 |
 | Couldn't reach GitHub. Check your internet connection and try again. | 无法连接到 GitHub。请检查您的网络连接后重试。 |
 | GitHub returned an error response. Try again in a few minutes. | GitHub 返回了错误响应。请过几分钟后重试。 |
 | GitHub's response did not contain a recognised release. Try again later, or open the releases page directly. | GitHub 的响应中没有可识别的发布版本。请稍后重试，或直接打开发布页面。 |

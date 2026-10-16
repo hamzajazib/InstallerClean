@@ -324,6 +324,10 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is available. | Đã có InstallerClean {0}. |
 | It's strongly recommended to use the latest version. | Chúng tôi đặc biệt khuyên bạn dùng phiên bản mới nhất. |
 | Download it from GitHub | Tải về từ GitHub |
+| Update now | Cập nhật ngay |
+| Downloading InstallerClean {0}... | Đang tải về InstallerClean {0}... |
+| The update couldn't be downloaded. | Không thể tải về bản cập nhật. |
+| The update couldn't be installed. | Không thể cài đặt bản cập nhật. |
 | Couldn't reach GitHub. Check your internet connection and try again. | Không thể kết nối tới GitHub. Hãy kiểm tra kết nối internet và thử lại. |
 | GitHub returned an error response. Try again in a few minutes. | GitHub trả về phản hồi lỗi. Hãy thử lại sau vài phút. |
 | GitHub's response did not contain a recognised release. Try again later, or open the releases page directly. | Phản hồi của GitHub không chứa bản phát hành nào nhận ra được. Hãy thử lại sau, hoặc mở thẳng trang phát hành. |

@@ -512,6 +512,35 @@ internal static partial class Kernel32
         public uint dwHighDateTime;
     }
 
+    /// <summary>
+    /// Creates a directory with the security descriptor the attributes carry, and
+    /// fails, with ERROR_ALREADY_EXISTS, where anything already has the name. The
+    /// descriptor is in place from the moment the directory exists, which is what a
+    /// separate create and then set cannot give.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "CreateDirectoryW", SetLastError = true,
+                   StringMarshalling = StringMarshalling.Utf16)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool CreateDirectory(
+        string lpPathName,
+        in SECURITY_ATTRIBUTES lpSecurityAttributes);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SECURITY_ATTRIBUTES
+    {
+        public uint nLength;
+        public IntPtr lpSecurityDescriptor;
+        public int bInheritHandle;
+    }
+
+    /// <summary>
+    /// Frees memory the system allocated for a caller with LocalAlloc, as
+    /// ConvertStringSecurityDescriptorToSecurityDescriptor does for the descriptor it
+    /// returns.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "LocalFree")]
+    public static partial IntPtr LocalFree(IntPtr hMem);
+
     public const uint GENERIC_READ           = 0x80000000;
     public const uint GENERIC_WRITE          = 0x40000000;
 
@@ -619,4 +648,7 @@ internal static partial class Kernel32
     // problem where Win32 was following its own contract.
     public const int ERROR_NO_MORE_FILES = 18;
     public const int ERROR_MORE_DATA = 234;
+
+    // What CreateDirectory answers where something already has the name.
+    public const int ERROR_ALREADY_EXISTS = 183;
 }

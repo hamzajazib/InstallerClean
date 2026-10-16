@@ -73,4 +73,9 @@ public sealed class WindowService : IWindowService
 
     public void RelaunchForLanguageChange()
         => (Application.Current as App)?.RelaunchForLanguageChange();
+
+    public Task<bool> StartUpdateAndCloseAsync(string fileToStart, string arguments)
+        => Application.Current is App app
+            ? app.StartUpdateAndCloseAsync(fileToStart, arguments)
+            : Task.FromResult(false);
 }

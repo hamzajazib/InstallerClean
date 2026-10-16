@@ -544,6 +544,10 @@ Ayrıntılar şuraya yazıldı:
   'UpdateNotice.Download': `GitHub'dan indirin`,
   'Automation.UpdateNotice.Download': `github'dan indirin`,
   'UpdateNotice.Recommended': `En son sürümü kullanmanız önemle tavsiye edilir.`,
+  'UpdateNotice.UpdateNow': `Şimdi güncelle`,
+  'UpdateNotice.Downloading': `InstallerClean {0} indiriliyor...`,
+  'UpdateNotice.DownloadFailed': `Güncelleştirme indirilemedi.`,
+  'UpdateNotice.InstallFailed': `Güncelleştirme yüklenemedi.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

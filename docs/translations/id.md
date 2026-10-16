@@ -324,6 +324,10 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is available. | InstallerClean {0} tersedia. |
 | It's strongly recommended to use the latest version. | Sangat disarankan untuk memakai versi terbaru. |
 | Download it from GitHub | Unduh dari GitHub |
+| Update now | Perbarui sekarang |
+| Downloading InstallerClean {0}... | Mengunduh InstallerClean {0}... |
+| The update couldn't be downloaded. | Pembaruan tidak dapat diunduh. |
+| The update couldn't be installed. | Pembaruan tidak dapat dipasang. |
 | Couldn't reach GitHub. Check your internet connection and try again. | Tidak bisa menjangkau GitHub. Periksa koneksi internet Anda dan coba lagi. |
 | GitHub returned an error response. Try again in a few minutes. | GitHub mengembalikan respons kesalahan. Coba lagi dalam beberapa menit. |
 | GitHub's response did not contain a recognised release. Try again later, or open the releases page directly. | Respons GitHub tidak memuat rilis yang dikenali. Coba lagi nanti, atau buka halaman rilis langsung. |
