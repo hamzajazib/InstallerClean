@@ -42,8 +42,8 @@ public class TooltipPlacementTests
     public void No_box_that_can_fit_is_ever_left_outside_the_window()
     {
         // The About window is a fixed 500 before the text scale multiplies it,
-        // its tooltips wrap at 280 and carry 20 of padding, and the control they
-        // hang on can sit anywhere along the row or drop to a second one. This
+        // its star tooltip wraps at 280 and carries 20 of padding, and the control
+        // it hangs on can sit anywhere along the row or drop to a second one. This
         // walks past every position and every width either of those can produce,
         // rather than pinning the sixteen a particular set of strings happens to
         // give today, which would stop being the real ones the moment one moved.
@@ -60,5 +60,37 @@ public class TooltipPlacementTests
         }
 
         Assert.Empty(failures);
+    }
+
+    [Fact]
+    public void A_box_widened_to_the_window_is_kept_inside_it_wherever_its_control_sits()
+    {
+        // A one-sentence tooltip given the window's width, as the donate tooltips
+        // are, can be as wide as WidthInsideWindow allows, and must still keep both
+        // margins from any position its control can ask for.
+        var failures = new List<string>();
+        for (var windowWidth = 400.0; windowWidth <= 2000; windowWidth += 50)
+        {
+            var widest = TooltipPlacement.WidthInsideWindow(windowWidth, Margin);
+            var widths = new List<double> { widest };
+            for (var popupWidth = 40.0; popupWidth < widest; popupWidth += 20)
+                widths.Add(popupWidth);
+            foreach (var width in widths)
+            for (var preferredLeft = -200.0; preferredLeft <= windowWidth + 200; preferredLeft += 10)
+            {
+                var left = TooltipPlacement.LeftInsideWindow(preferredLeft, width, windowWidth, Margin);
+                if (left < Margin || left + width > windowWidth - Margin)
+                    failures.Add($"w={windowWidth} box={width} wanted={preferredLeft} -> {left}");
+            }
+        }
+
+        Assert.Empty(failures);
+    }
+
+    [Fact]
+    public void The_widest_box_leaves_the_margin_on_both_sides()
+    {
+        Assert.Equal(476, TooltipPlacement.WidthInsideWindow(windowWidth: 500, margin: Margin));
+        Assert.Equal(0, TooltipPlacement.WidthInsideWindow(windowWidth: 10, margin: Margin));
     }
 }

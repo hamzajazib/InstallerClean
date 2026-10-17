@@ -265,6 +265,11 @@ public partial class MainWindow : Window
         RootLayout.MaxHeight = DetailWindowSizing.WorkAreaHeightLimit(this);
         Width = DetailWindowSizing.ClampWidthToWorkArea(
             this, 828 * AccessibilitySettings.Current.TextScaleFactor, 0);
+
+        // The small Donate's tooltip is one sentence and is given the window's width
+        // rather than the accent tooltip's wrap width. The large Donate's is a
+        // paragraph and keeps the wrap width.
+        TooltipPlacement.WidenToWindow(CompletionDonateToolTip, Width, ToolTipEdgeMargin);
     }
 
     private void OnAccessibilitySettingsChanged(object? sender, PropertyChangedEventArgs e)
@@ -285,15 +290,9 @@ public partial class MainWindow : Window
         // hold taken on the other flag would never be released: nothing raises a
         // change notification the close is waiting on.
         //
-        // The window where the two disagree is the Move pre-flight, and it is
-        // not free: the pre-flight creates the destination folder and writes a
-        // probe file into it. Every abandon path removes what it made; a
-        // process exit takes none of them, so a close there can leave an empty
-        // folder the user never made, or a zero-byte file inside it if the
-        // close lands between the probe write and its delete. That is the
-        // accepted cost of a hold that is guaranteed to be released, against a
-        // hold that could strand the window open forever. No file has left the
-        // installer cache in that window, which is the part that matters.
+        // The two differ during the Move pre-flight, which sets IsOperating only
+        // once its probe of the destination has run for 200 ms, so a close before
+        // then is not held. Nothing has left the installer cache at that point.
         if (!_vm.Cleanup.IsOperating) return;
 
         // A Move or a Delete is running. Letting this close through kills the
@@ -304,8 +303,7 @@ public partial class MainWindow : Window
         // MOVEFILE_COPY_ALLOWED, and Win32 documents that flag as a CopyFile
         // plus a DeleteFile), so dying mid-file leaves a truncated .msi in the
         // destination folder with the source still in place: a file that looks
-        // like a recovery copy and is not one, in an app whose whole promise is
-        // that it never leaves you worse off.
+        // like a recovery copy and is not one.
         //
         // So: hold the close, cancel the batch, and take the close when the
         // operation lets go. Cancelling stops it at the next file boundary, so

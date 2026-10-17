@@ -36,6 +36,12 @@ public partial class AboutWindow : Window
         AutoUpdateCheckBox.Checked += AutoUpdateCheckChanged;
         AutoUpdateCheckBox.Unchecked += AutoUpdateCheckChanged;
 
+        // The donate pill sits beside the star at the left of the window. Its tooltip
+        // lines up with the pill's left edge and is pulled inside the window where it
+        // would hang off.
+        DonateToolTip.CustomPopupPlacementCallback = TooltipPlacement.KeptInsideWindow(
+            DonateToolTip, this, ToolTipAnchor.Left, ToolTipEdgeMargin);
+
         ApplyScaledBounds();
         AccessibilitySettings.Current.PropertyChanged += OnAccessibilitySettingsChanged;
         // SizeChanged fires when the height-sized window grows: a live
@@ -65,18 +71,17 @@ public partial class AboutWindow : Window
     /// scale; while the content is shorter than the box the layout's star
     /// spacer row takes up the slack and pins the say-thanks block to the
     /// bottom. MaxHeight caps growth at the work area so a large OS text
-    /// scale cannot push the box past the screen (a fixed height cuts the
-    /// Close row off this way at 208%). The box grows sub-linearly with
+    /// scale cannot push the box past the screen, where a fixed height would
+    /// cut the Close row off. The box grows sub-linearly with
     /// text scale because the margins and gaps are fixed. Width is
     /// explicit; Height itself is never assigned, which would re-pin the
     /// fixed box.
     ///
     /// Height-only is deliberate. SizeToContent="WidthAndHeight" with this
-    /// custom WindowChrome opened the window larger than its arranged
-    /// content by exactly the caption frame, 37 by 14 device-independent
-    /// units of unpainted black along the bottom and right edges (observed
-    /// 2026-06-13 at 125% monitor scale); MainWindow sizes its height the
-    /// same way and for the same reason.
+    /// custom WindowChrome opens the window larger than its arranged
+    /// content by the caption frame, leaving unpainted black along the
+    /// bottom and right edges; MainWindow sizes its height the same way and
+    /// for the same reason.
     ///
     /// The constructor resolves the work area against the owner-to-be (the
     /// main window); a live text-scale change re-resolves against the
@@ -87,6 +92,9 @@ public partial class AboutWindow : Window
         var reference = Owner ?? Application.Current?.MainWindow;
         var factor = AccessibilitySettings.Current.TextScaleFactor;
         Width = DetailWindowSizing.ClampWidthToWorkArea(reference, 500 * factor, 0);
+        // The donate tooltip is one sentence and is given the window's width rather
+        // than the accent tooltip's wrap width. The star's keeps the wrap width.
+        TooltipPlacement.WidenToWindow(DonateToolTip, Width, ToolTipEdgeMargin);
         // MinHeight can never exceed MaxHeight: ClampHeightToWorkArea caps
         // the scaled box at the same work-area limit MaxHeight uses.
         MinHeight = DetailWindowSizing.ClampHeightToWorkArea(reference, 400 * factor, 0);
@@ -101,6 +109,10 @@ public partial class AboutWindow : Window
 
     private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
         => DetailWindowSizing.NudgeIntoWorkArea(this);
+
+    // How close a tooltip may come to either edge of this window, as in the main
+    // window.
+    private const double ToolTipEdgeMargin = 12;
 
     private void CloseClick(object sender, RoutedEventArgs e) => Close();
 

@@ -69,6 +69,24 @@ internal static class TooltipPlacement
     }
 
     /// <summary>
+    /// Lets <paramref name="toolTip"/> grow to the width of a window
+    /// <paramref name="windowWidth"/> wide less <paramref name="margin"/> on each
+    /// side, in place of the wrap width its style sets. A one-sentence tooltip then
+    /// sits on one line wherever the window has room for it, in any language, and
+    /// wraps only where the window itself is narrower than the sentence. Called
+    /// wherever the window's width is assigned, so it follows a text-size change.
+    /// </summary>
+    public static void WidenToWindow(ToolTip toolTip, double windowWidth, double margin) =>
+        toolTip.MaxWidth = WidthInsideWindow(windowWidth, margin);
+
+    /// <summary>
+    /// The widest box <see cref="LeftInsideWindow"/> can keep <paramref name="margin"/>
+    /// clear of both edges of a window <paramref name="windowWidth"/> wide.
+    /// </summary>
+    public static double WidthInsideWindow(double windowWidth, double margin) =>
+        Math.Max(0, windowWidth - 2 * margin);
+
+    /// <summary>
     /// A placement callback that opens <paramref name="toolTip"/> flush above
     /// its control, lined up with <paramref name="anchor"/> where there is room
     /// and pulled inside <paramref name="window"/> where there is not. The
