@@ -8,9 +8,9 @@ namespace InstallerClean.Services;
 
 /// <summary>
 /// Puts a newer version at the running exe's own path, for the copies that update by
-/// replacing their own file: the portable, the slim, Scoop's and the command line's own
-/// download. The command line's copy in the setup's folder moves itself aside here too,
-/// before the setup writes the newer version in its place.
+/// replacing their own file: the portable, the slim and the command line's own download.
+/// The command line's copy in the setup's folder moves itself aside here too, before the
+/// setup writes the newer version in its place.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -19,9 +19,9 @@ namespace InstallerClean.Services;
 /// exe under its name with <see cref="NewSuffix"/> on the end, then the running exe is
 /// renamed to its name with <see cref="OldSuffix"/> on the end, and the newer version is
 /// renamed to the name it had. The newer version, once started, deletes the renamed
-/// one. The path stays the same, so shortcuts, taskbar pins and Scoop's shortcut all
-/// start the newer version. No rename overwrites anything, so a file that appears at
-/// either name in between fails the rename rather than being replaced.
+/// one. The path stays the same, so shortcuts and taskbar pins start the newer version.
+/// No rename overwrites anything, so a file that appears at either name in between fails
+/// the rename rather than being replaced.
 /// </para>
 /// <para>
 /// ONCE THE RUNNING EXE IS RENAMED, IT CAN LOAD NO ASSEMBLY IT HAS NOT LOADED ALREADY. A

@@ -321,6 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's strongly recommended to use the latest version. | Sangat disarankan untuk memakai versi terbaru. |
 | Download it from GitHub | Unduh dari GitHub |
 | Update now | Perbarui sekarang |
+| This copy was installed by Scoop. To update it, close InstallerClean and run: | Salinan ini dipasang oleh Scoop. Untuk memperbaruinya, tutup InstallerClean lalu jalankan: |
+| Copied | Tersalin |
+| Couldn't copy it. Select the command and copy it yourself. | Tidak dapat menyalinnya. Pilih perintahnya lalu salin sendiri. |
 | _Continue without updating | _Lanjutkan tanpa memperbarui |
 | Downloading InstallerClean {0}... | Mengunduh InstallerClean {0}... |
 | The update couldn't be downloaded. | Pembaruan tidak dapat diunduh. |
@@ -399,6 +402,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the issue tracker on github.com in your browser. | Membuka pelacak masalah (Issues) di github.com melalui browser Anda. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | Jika dicentang, InstallerClean memeriksa apakah ada versi yang lebih baru di github saat Anda menjalankannya. |
 | Download it from github | Unduh dari github |
+| Copy the command | Salin perintah |
+| Scoop's update command | Perintah pembaruan Scoop |
 | Opens the licence file on github.com in your browser. | Membuka file lisensi di github.com melalui browser Anda. |
 | Backup folder | Folder cadangan |
 | Patches | Patch |

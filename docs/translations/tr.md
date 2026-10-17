@@ -321,6 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's strongly recommended to use the latest version. | En son sürümü kullanmanız önemle tavsiye edilir. |
 | Download it from GitHub | GitHub'dan indirin |
 | Update now | Şimdi güncelle |
+| This copy was installed by Scoop. To update it, close InstallerClean and run: | Bu kopya Scoop ile yüklendi. Güncellemek için InstallerClean'i kapatıp şunu çalıştırın: |
+| Copied | Kopyalandı |
+| Couldn't copy it. Select the command and copy it yourself. | Kopyalanamadı. Komutu seçip kendiniz kopyalayın. |
 | _Continue without updating | Güncellemeden _devam et |
 | Downloading InstallerClean {0}... | InstallerClean {0} indiriliyor... |
 | The update couldn't be downloaded. | Güncelleştirme indirilemedi. |
@@ -399,6 +402,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the issue tracker on github.com in your browser. | github.com üzerindeki sorun izleyiciyi (Issues) tarayıcınızda açar. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | İşaretliyse InstallerClean, çalıştırdığınızda github üzerinde daha yeni bir sürüm olup olmadığını denetler. |
 | Download it from github | github'dan indirin |
+| Copy the command | Komutu kopyala |
+| Scoop's update command | Scoop güncelleme komutu |
 | Opens the licence file on github.com in your browser. | github.com üzerindeki lisans dosyasını tarayıcınızda açar. |
 | Backup folder | Yedek klasörü |
 | Patches | Yamalar |

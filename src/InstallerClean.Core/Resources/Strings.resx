@@ -322,6 +322,16 @@
     available, the visible UpdateNotice.Download cased for speech for the reason
     Automation.CheckForUpdates.HelpText carries. The same words as the link.</comment>
   </data>
+  <data name="Automation.UpdateNotice.CopyCommand" xml:space="preserve">
+    <value>Copy the command</value>
+    <comment>Screen-reader name of the Copy button beside Scoop's update command on the card and the
+    notice, on a copy installed by Scoop. It stays the same while the button reads UpdateNotice.CommandCopied.</comment>
+  </data>
+  <data name="Automation.UpdateNotice.ScoopCommand" xml:space="preserve">
+    <value>Scoop's update command</value>
+    <comment>Screen-reader name of the box holding Scoop's update command (scoop update installerclean) on
+    the card and the notice, on a copy installed by Scoop. A screen reader reads this, then the command.</comment>
+  </data>
   <data name="Automation.Licence.HelpText" xml:space="preserve"><value>Opens the licence file on github.com in your browser.</value></data>
   <!-- Mixed-case AutomationProperties.Name overrides for the all-caps
        Section.* labels (BACKUP FOLDER / PRODUCTS / PATCHES / PRODUCT
@@ -1500,6 +1510,18 @@ Details in {1}.</value></data>
   <data name="UpdateNotice.UpdateNow" xml:space="preserve">
     <value>Update now</value>
     <comment>The button on the card and on the notice, which downloads the newer version, closes the app and opens the newer version in its place.</comment>
+  </data>
+  <data name="UpdateNotice.Scoop" xml:space="preserve">
+    <value>This copy was installed by Scoop. To update it, close InstallerClean and run:</value>
+    <comment>A third line on the card and in the notice, under UpdateNotice.Recommended, on a copy installed by Scoop, which shows in place of UpdateNotice.UpdateNow. Scoop's update command (scoop update installerclean, never translated) follows it in a box with a Copy button (Action.Copy). Scoop is the name of a program and is not translated.</comment>
+  </data>
+  <data name="UpdateNotice.CommandCopied" xml:space="preserve">
+    <value>Copied</value>
+    <comment>What the Copy button beside Scoop's update command reads for two seconds after it has put the command on the clipboard, before it reads Action.Copy again. Also spoken by a screen reader as the button is pressed. Keep it about as short as Action.Copy, since it takes that button's place.</comment>
+  </data>
+  <data name="UpdateNotice.CopyFailed" xml:space="preserve">
+    <value>Couldn't copy it. Select the command and copy it yourself.</value>
+    <comment>A line in the warning colour under Scoop's update command and its Copy button, shown where the clipboard refused the copy. "It" is the command.</comment>
   </data>
   <data name="UpdateNotice.ContinueWithoutUpdating" xml:space="preserve">
     <value>_Continue without updating</value>

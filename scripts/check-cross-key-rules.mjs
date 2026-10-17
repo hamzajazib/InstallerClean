@@ -73,10 +73,12 @@ const MUST_AGREE = [
 // no rule to write: a path, a count and a version have nothing in common with
 // the words that name them. The Field.* keys label the details panes' values;
 // Window.Main.Title names the About window's version box, whose text is the
-// version.
+// version; Automation.UpdateNotice.ScoopCommand names the box whose text is Scoop's
+// update command.
 const LABELS_A_VALUE = new Set([
   'Automation.BackupFolder',
   'Automation.CompletionErrors',
+  'Automation.UpdateNotice.ScoopCommand',
   'Window.Main.Title',
   'Field.Application', 'Field.Author', 'Field.Comment', 'Field.FileSize',
   'Field.Keywords', 'Field.Reason', 'Field.SigningCertificate',
@@ -95,6 +97,8 @@ const ELABORATES_A_LABEL = [
   { label: 'Action.Cancel', name: 'Automation.CancelStartupScan' },
   { label: 'Action.Details', name: 'Automation.ViewOrphanedFiles' },
   { label: 'Action.Details', name: 'Automation.ViewRegisteredFiles' },
+  // Copy beside Scoop's update command, whose name says what it copies.
+  { label: 'Action.Copy', name: 'Automation.UpdateNotice.CopyCommand' },
 ];
 
 // The same rule for a name built in code rather than resolved in the XAML. The

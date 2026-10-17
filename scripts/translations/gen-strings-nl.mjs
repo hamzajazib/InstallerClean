@@ -613,6 +613,11 @@ const MAP = {
   'Cli.UpdateNotStarted': `InstallerClean {0} is geïnstalleerd, maar kon niet worden gestart. Voer de opdracht opnieuw uit.`,
   'Cli.UpdateDownloadLink': `Download het van GitHub: {0}`,
   'Cli.Help.UpdateNote': `Voor het scannen controleert het of er een nieuwere versie van&#10;InstallerClean is. Start je het zelf, dan vraagt het eerst toestemming.&#10;Draait het zelfstandig, in een geplande taak of een script, dan werkt het&#10;bij zonder te vragen. Voeg /noupdate toe om de controle over te slaan.`,
+  'UpdateNotice.Scoop': `Deze kopie is met Scoop geïnstalleerd. Bijwerken doe je door InstallerClean te sluiten en dit uit te voeren:`,
+  'UpdateNotice.CommandCopied': `Gekopieerd`,
+  'UpdateNotice.CopyFailed': `Kopiëren is niet gelukt. Selecteer de opdracht en kopieer hem zelf.`,
+  'Automation.UpdateNotice.CopyCommand': `De opdracht kopiëren`,
+  'Automation.UpdateNotice.ScoopCommand': `Bijwerkopdracht van Scoop`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

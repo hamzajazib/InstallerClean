@@ -19,7 +19,9 @@ public enum AppCopyKind
     Setup,
 
     /// <summary>
-    /// The portable download as Scoop installs it. It updates as the portable does.
+    /// The portable download as Scoop installs it. Scoop updates it, so the app gives
+    /// Scoop's own update command (<see cref="AppCopy.ScoopUpdateCommand"/>) in place of
+    /// updating itself.
     /// </summary>
     Scoop,
 
@@ -57,6 +59,14 @@ public static class AppCopy
     /// which carries no version in its name.
     /// </summary>
     public const string CommandLineFileName = "installerclean-cli.exe";
+
+    /// <summary>
+    /// The command that updates Scoop's copy. Scoop names an app after its manifest's
+    /// file, and InstallerClean's manifest in the Extras bucket is installerclean.json.
+    /// Scoop refuses to update an app while a copy of it is running, so wherever the
+    /// command is shown, InstallerClean has to be closed before it is run.
+    /// </summary>
+    public const string ScoopUpdateCommand = "scoop update installerclean";
 
     /// <summary>
     /// Where every download is published. A release's files sit under its tag,
@@ -173,7 +183,7 @@ public static class AppCopy
     /// Set to setup, portable, slim or scoop, a Debug build of the window takes itself
     /// for that kind of copy, and set to setup or cli, a Debug build of the command line
     /// takes itself for the setup's copy or its own download, so a build from source can
-    /// take each route an update takes. The name
+    /// show what each kind of copy offers and take each route an update takes. The name
     /// and its read sit only inside <c>#if DEBUG</c> blocks, and
     /// <c>scripts/check-debug-only-switches.mjs</c> holds them there, so no Release
     /// build can be told it is another kind of copy.
@@ -216,29 +226,36 @@ public static class AppCopy
     }
 
     /// <summary>
-    /// Whether this kind of copy can put a newer version in its own place. Only a
-    /// build from source cannot.
+    /// Whether this kind of copy can put a newer version in its own place. A build from
+    /// source has no download to do it with, and Scoop's copy is updated by Scoop.
     /// </summary>
-    public static bool CanUpdateItself(AppCopyKind kind) => kind != AppCopyKind.FromSource;
+    public static bool CanUpdateItself(AppCopyKind kind) =>
+        kind is not (AppCopyKind.FromSource or AppCopyKind.Scoop);
 
     /// <summary>
-    /// The file name of the download a kind updates from, or null for a build from
-    /// source. Scoop installs the portable, so it updates from the portable. The
-    /// command line's own download carries no version in its name; the release it sits
-    /// in says which version it is.
+    /// Whether this kind of copy is updated by Scoop, so a newer version is offered as
+    /// <see cref="ScoopUpdateCommand"/>.
+    /// </summary>
+    public static bool UpdatedByScoop(AppCopyKind kind) => kind == AppCopyKind.Scoop;
+
+    /// <summary>
+    /// The file name of the download a kind updates from, or null for a kind that does
+    /// not update itself: a build from source and Scoop's copy. The command line's own
+    /// download carries no version in its name; the release it sits in says which
+    /// version it is.
     /// </summary>
     public static string? DownloadFileName(AppCopyKind kind, string version) => kind switch
     {
         AppCopyKind.Setup => $"InstallerClean-{version}-setup.exe",
-        AppCopyKind.Portable or AppCopyKind.Scoop => $"InstallerClean-{version}-portable.exe",
+        AppCopyKind.Portable => $"InstallerClean-{version}-portable.exe",
         AppCopyKind.Slim => $"InstallerClean-{version}-slim.exe",
         AppCopyKind.CommandLineDownload => CommandLineFileName,
         _ => null,
     };
 
     /// <summary>
-    /// The address of the download a kind updates from, or null for a build from
-    /// source. The version is the one the update check read off GitHub's answer,
+    /// The address of the download a kind updates from, or null for a kind that does not
+    /// update itself. The version is the one the update check read off GitHub's answer,
     /// which it accepts only as numbers and dots.
     /// </summary>
     public static Uri? DownloadAddress(AppCopyKind kind, string version) =>

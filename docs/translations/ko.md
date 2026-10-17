@@ -321,6 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's strongly recommended to use the latest version. | 최신 버전을 사용할 것을 강력히 권장합니다. |
 | Download it from GitHub | GitHub에서 내려받기 |
 | Update now | 지금 업데이트 |
+| This copy was installed by Scoop. To update it, close InstallerClean and run: | 이 사본은 Scoop으로 설치되었습니다. 업데이트하려면 InstallerClean을 닫고 다음을 실행하세요: |
+| Copied | 복사됨 |
+| Couldn't copy it. Select the command and copy it yourself. | 복사하지 못했습니다. 명령을 선택해 직접 복사하세요. |
 | _Continue without updating | 업데이트하지 않고 계속(_C) |
 | Downloading InstallerClean {0}... | InstallerClean {0} 내려받는 중... |
 | The update couldn't be downloaded. | 업데이트를 내려받지 못했습니다. |
@@ -399,6 +402,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the issue tracker on github.com in your browser. | 브라우저에서 github.com의 이슈 트래커를 엽니다. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | 선택하면 InstallerClean이 실행할 때 github에서 새 버전이 있는지 확인합니다. |
 | Download it from github | github에서 내려받기 |
+| Copy the command | 명령 복사 |
+| Scoop's update command | Scoop 업데이트 명령 |
 | Opens the licence file on github.com in your browser. | 브라우저에서 github.com의 라이선스 파일을 엽니다. |
 | Backup folder | 백업 폴더 |
 | Patches | 패치 |

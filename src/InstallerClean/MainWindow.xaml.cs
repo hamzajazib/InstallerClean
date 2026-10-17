@@ -54,6 +54,7 @@ public partial class MainWindow : Window
         _vm.Scan.PropertyChanged += OnScanPropertyChanged;
         _vm.Chrome.PropertyChanged += OnChromePropertyChanged;
         _vm.Chrome.NewerVersionFound += OnNewerVersionFound;
+        _vm.Chrome.ScoopUpdateCopyAnswered += OnScoopUpdateCopyAnswered;
         _vm.Scan.ScanCompleted += OnScanCompleted;
         PreviewKeyDown += OnPreviewKeyDown;
         PreviewMouseDown += OnPreviewMouseDownOverReportPanel;
@@ -201,23 +202,27 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// The card saying a newer version is available, up as the window opens. Narrator
-    /// announces a window opening by its name and its focused control, so the card's two
-    /// lines go in the window's name, and the focus goes to the card's first step.
+    /// announces a window opening by its name and its focused control, so the card's lines
+    /// go in the window's name, Scoop's line and command included on a copy installed by
+    /// Scoop, and the focus goes to the card's first step.
     /// </summary>
     private void ShowUpdateOffer()
     {
         SpeakWindowAs(DisplayHelpers.SpokenSentences(
-            _vm.Chrome.UpdateNoticeText, Strings.UpdateNotice_Recommended));
+            _vm.Chrome.UpdateNoticeText, Strings.UpdateNotice_Recommended,
+            _vm.Chrome.ShowsScoopCommand ? _vm.Chrome.ScoopUpdateSpoken : string.Empty));
         Dispatcher.BeginInvoke(DispatcherPriority.Input, FocusUpdateOffer);
     }
 
     /// <summary>
-    /// Focuses the card's first step: Update now, or the link where the card has no Update
-    /// now, or Continue without updating where it has neither.
+    /// Focuses the card's first step: Update now, or Copy beside Scoop's update command
+    /// where the card has no Update now, or the link where it has neither, or Continue
+    /// without updating where it has none of them.
     /// </summary>
     private void FocusUpdateOffer()
     {
-        if (!UpdateOfferUpdateNowButton.Focus() && !UpdateOfferDownloadLink.Focus())
+        if (!UpdateOfferUpdateNowButton.Focus() && !UpdateOfferCopyButton.Focus()
+            && !UpdateOfferDownloadLink.Focus())
             UpdateOfferContinueButton.Focus();
     }
 
@@ -323,6 +328,7 @@ public partial class MainWindow : Window
         _vm.Scan.PropertyChanged -= OnScanPropertyChanged;
         _vm.Chrome.PropertyChanged -= OnChromePropertyChanged;
         _vm.Chrome.NewerVersionFound -= OnNewerVersionFound;
+        _vm.Chrome.ScoopUpdateCopyAnswered -= OnScoopUpdateCopyAnswered;
         _vm.Scan.ScanCompleted -= OnScanCompleted;
         PreviewKeyDown -= OnPreviewKeyDown;
         PreviewMouseDown -= OnPreviewMouseDownOverReportPanel;
@@ -591,11 +597,34 @@ public partial class MainWindow : Window
             AnnounceUpdateNotice();
     }
 
-    /// <summary>Reads out the notice's two lines at the top of the main window.</summary>
+    /// <summary>
+    /// Reads out the notice's lines at the top of the main window: its two lines, then on
+    /// a copy installed by Scoop the line saying how to update it, whose spoken name
+    /// carries the command.
+    /// </summary>
     private void AnnounceUpdateNotice()
     {
         AnnounceLiveRegion(UpdateNoticeLead, () => _vm.Chrome.HasNewerVersion);
         AnnounceLiveRegion(UpdateNoticeDetail, () => _vm.Chrome.HasNewerVersion);
+        if (_vm.Chrome.ShowsScoopCommand)
+            AnnounceLiveRegion(UpdateNoticeScoop, () => _vm.Chrome.ShowsScoopCommand);
+    }
+
+    /// <summary>
+    /// Answers each press of Copy beside Scoop's update command: "Copied" through the
+    /// invisible announcer, which reads a repeat of the same word too, or the line saying
+    /// the copy failed, on the card where the card is up and on the notice otherwise. The
+    /// button's spoken name stays the same throughout, so its text turning back to Copy
+    /// reads nothing.
+    /// </summary>
+    private void OnScoopUpdateCopyAnswered(object? sender, bool copied)
+    {
+        if (copied)
+            Announce(Strings.UpdateNotice_CommandCopied);
+        else if (_vm.Chrome.IsOfferingUpdate)
+            AnnounceLiveRegion(UpdateOfferCopyFailure, () => _vm.Chrome.HasScoopUpdateCopyFailed);
+        else
+            AnnounceLiveRegion(UpdateNoticeCopyFailure, () => _vm.Chrome.HasScoopUpdateCopyFailed);
     }
 
     /// <summary>

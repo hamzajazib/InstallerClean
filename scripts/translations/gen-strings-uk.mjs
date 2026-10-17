@@ -649,6 +649,11 @@ const MAP = {
   'Cli.UpdateNotStarted': `Версію InstallerClean {0} встановлено, але запустити її не вдалося. Виконайте команду ще раз.`,
   'Cli.UpdateDownloadLink': `Завантажити з GitHub: {0}`,
   'Cli.Help.UpdateNote': `Перед скануванням перевіряє, чи є новіша версія InstallerClean. Під час&#10;запуску вручну запитує перед оновленням. Під час запуску без участі&#10;людини, у запланованій задачі чи скрипті, оновлюється без запитань.&#10;Додайте /noupdate, щоб пропустити перевірку.`,
+  'UpdateNotice.Scoop': `Цю копію встановлено через Scoop. Щоб оновити її, закрийте InstallerClean і виконайте:`,
+  'UpdateNotice.CommandCopied': `Скопійовано`,
+  'UpdateNotice.CopyFailed': `Не вдалося скопіювати. Виділіть команду й скопіюйте її вручну.`,
+  'Automation.UpdateNotice.CopyCommand': `Копіювати команду`,
+  'Automation.UpdateNotice.ScoopCommand': `Команда оновлення Scoop`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

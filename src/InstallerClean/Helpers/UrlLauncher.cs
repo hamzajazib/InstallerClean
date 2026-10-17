@@ -60,7 +60,11 @@ internal static class UrlLauncher
         MessageDialog.Show(body, Strings.BrowserLaunch_FailedTitle, MessageKind.Warning);
     }
 
-    private static bool TryCopyToClipboard(string text)
+    /// <summary>
+    /// Puts <paramref name="text"/> on the clipboard, and answers false where it could
+    /// not. Called on the dispatcher thread, which the clipboard needs.
+    /// </summary>
+    internal static bool TryCopyToClipboard(string text)
     {
         try
         {

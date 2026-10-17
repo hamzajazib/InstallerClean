@@ -654,6 +654,11 @@ const MAP = {
   'Cli.UpdateNotStarted': `InstallerClean {0} telah terpasang, tetapi tidak dapat dijalankan. Jalankan perintah itu lagi.`,
   'Cli.UpdateDownloadLink': `Unduh dari GitHub: {0}`,
   'Cli.Help.UpdateNote': `Sebelum memindai, alat ini memeriksa versi InstallerClean yang lebih baru.&#10;Jika Anda menjalankannya sendiri, alat ini bertanya sebelum memperbarui.&#10;Jika berjalan otomatis lewat tugas terjadwal atau skrip, ia memperbarui&#10;tanpa bertanya. Tambahkan /noupdate untuk melewati pemeriksaan.`,
+  'UpdateNotice.Scoop': `Salinan ini dipasang oleh Scoop. Untuk memperbaruinya, tutup InstallerClean lalu jalankan:`,
+  'UpdateNotice.CommandCopied': `Tersalin`,
+  'UpdateNotice.CopyFailed': `Tidak dapat menyalinnya. Pilih perintahnya lalu salin sendiri.`,
+  'Automation.UpdateNotice.CopyCommand': `Salin perintah`,
+  'Automation.UpdateNotice.ScoopCommand': `Perintah pembaruan Scoop`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

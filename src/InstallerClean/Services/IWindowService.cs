@@ -4,8 +4,8 @@ namespace InstallerClean.Services;
 
 /// <summary>
 /// Opens the secondary windows (the two Details windows, About and the report
-/// window), opens a link in the browser, relaunches the app, hands over to a newer
-/// version and closes the main window. The interface keeps MainViewModel
+/// window), opens a link in the browser, puts text on the clipboard, relaunches the
+/// app, hands over to a newer version and closes the main window. The interface keeps MainViewModel
 /// free of a direct dependency on Application.Current.MainWindow and on
 /// Window constructors, both of which NRE under xUnit.
 /// </summary>
@@ -27,6 +27,12 @@ public interface IWindowService
     void CloseMainWindow();
 
     void OpenUrl(string url);
+
+    /// <summary>
+    /// Puts <paramref name="text"/> on the clipboard. Answers false where the clipboard
+    /// refused it, as it does while another program holds it open.
+    /// </summary>
+    bool CopyToClipboard(string text);
 
     /// <summary>
     /// Relaunches the app so a newly chosen display-language preference

@@ -614,4 +614,138 @@ public class ChromeViewModelTests
         Assert.True(vm.ShowsReleaseLink);
         Assert.True(vm.ContinueWithoutUpdatingCommand.CanExecute(null));
     }
+
+    // ---- Scoop's copy ----
+
+    /// <summary>
+    /// A view model on a copy installed by Scoop, answering as the real updater answers
+    /// for that kind, with a check that has found 9.9.9 and the time Copy reads "Copied"
+    /// set to <paramref name="copiedFor"/>.
+    /// </summary>
+    private async Task<ChromeViewModel> CreateScoopViewModelAsync(TimeSpan copiedFor)
+    {
+        _updater.Kind.Returns(AppCopyKind.Scoop);
+        _updater.CanUpdateItself.Returns(AppCopy.CanUpdateItself(AppCopyKind.Scoop));
+        _settingsService.Load().Returns(new AppSettings { AutoUpdateCheck = true });
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+        var scan = new ScanViewModel(_scanService, _rebootService, _dialogService);
+        var vm = new ChromeViewModel(
+            _windowService, _msiInfoService, _settingsService,
+            _updateCheckService, _dialogService, scan,
+            checkCooldownOverride: TimeSpan.Zero,
+            updater: _updater,
+            scoopUpdateCopiedForOverride: copiedFor);
+        await vm.RunAutomaticUpdateCheckAsync();
+        return vm;
+    }
+
+    [Fact]
+    public async Task A_copy_installed_by_Scoop_shows_Scoops_command_and_the_link_and_not_Update_now()
+    {
+        var vm = await CreateScoopViewModelAsync(TimeSpan.Zero);
+
+        Assert.True(vm.ShowsScoopCommand);
+        Assert.Equal("scoop update installerclean", vm.ScoopUpdateCommand);
+        Assert.False(vm.ShowsUpdateNow);
+        Assert.False(vm.UpdateNowCommand.CanExecute(null));
+        Assert.True(vm.ShowsReleaseLink);
+        Assert.True(vm.OpenReleasePageCommand.CanExecute(null));
+        Assert.Equal(Strings.Action_Copy, vm.CopyScoopUpdateText);
+        Assert.False(vm.HasScoopUpdateCopyFailed);
+    }
+
+    [Fact]
+    public async Task Scoops_command_waits_for_a_newer_version_and_shows_on_no_other_copy()
+    {
+        _updater.Kind.Returns(AppCopyKind.Scoop);
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+        var scoop = new ChromeViewModel(
+            _windowService, _msiInfoService, _settingsService, _updateCheckService, _dialogService,
+            new ScanViewModel(_scanService, _rebootService, _dialogService), updater: _updater);
+        var raised = new List<string?>();
+        scoop.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        Assert.False(scoop.ShowsScoopCommand);
+        _settingsService.Load().Returns(new AppSettings { AutoUpdateCheck = true });
+        await scoop.RunAutomaticUpdateCheckAsync();
+        Assert.True(scoop.ShowsScoopCommand);
+        Assert.Contains(nameof(ChromeViewModel.ShowsScoopCommand), raised);
+
+        _updater.Kind.Returns(AppCopyKind.Portable);
+        var portable = await CreateUpdatingViewModelAsync();
+        Assert.True(portable.HasNewerVersion);
+        Assert.False(portable.ShowsScoopCommand);
+
+        var fromSource = CreateViewModel();
+        await fromSource.RunAutomaticUpdateCheckAsync();
+        Assert.True(fromSource.HasNewerVersion);
+        Assert.False(fromSource.ShowsScoopCommand);
+    }
+
+    [Fact]
+    public async Task Copy_puts_the_command_on_the_clipboard_and_reads_Copied_until_the_time_is_up()
+    {
+        var vm = await CreateScoopViewModelAsync(TimeSpan.Zero);
+        _windowService.CopyToClipboard(default!).ReturnsForAnyArgs(true);
+        var texts = new List<string>();
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ChromeViewModel.CopyScoopUpdateText))
+                texts.Add(vm.CopyScoopUpdateText);
+        };
+        var answers = new List<bool>();
+        vm.ScoopUpdateCopyAnswered += (_, copied) => answers.Add(copied);
+
+        await vm.CopyScoopUpdateCommand.ExecuteAsync(null);
+
+        _windowService.Received(1).CopyToClipboard("scoop update installerclean");
+        Assert.Equal([Strings.UpdateNotice_CommandCopied, Strings.Action_Copy], texts);
+        Assert.False(vm.IsScoopUpdateCopied);
+        Assert.False(vm.HasScoopUpdateCopyFailed);
+        Assert.Equal([true], answers);
+    }
+
+    [Fact]
+    public async Task A_second_press_while_Copy_reads_Copied_starts_the_time_again()
+    {
+        var vm = await CreateScoopViewModelAsync(TimeSpan.FromMinutes(5));
+        _windowService.CopyToClipboard(default!).ReturnsForAnyArgs(true);
+        var answers = new List<bool>();
+        vm.ScoopUpdateCopyAnswered += (_, copied) => answers.Add(copied);
+
+        var first = vm.CopyScoopUpdateCommand.ExecuteAsync(null);
+        Assert.True(vm.CopyScoopUpdateCommand.CanExecute(null));
+        var second = vm.CopyScoopUpdateCommand.ExecuteAsync(null);
+        await first;
+
+        // The first press's time ended with the second press, and left the button reading
+        // "Copied" for the second press's time.
+        Assert.True(vm.IsScoopUpdateCopied);
+        Assert.Equal(Strings.UpdateNotice_CommandCopied, vm.CopyScoopUpdateText);
+        Assert.False(second.IsCompleted);
+        Assert.Equal([true, true], answers);
+
+        vm.Dispose();
+        await second;
+    }
+
+    [Fact]
+    public async Task A_copy_the_clipboard_refuses_keeps_Copy_and_shows_the_line_until_a_copy_succeeds()
+    {
+        var vm = await CreateScoopViewModelAsync(TimeSpan.Zero);
+        _windowService.CopyToClipboard(default!).ReturnsForAnyArgs(false, true);
+        var answers = new List<bool>();
+        vm.ScoopUpdateCopyAnswered += (_, copied) => answers.Add(copied);
+
+        await vm.CopyScoopUpdateCommand.ExecuteAsync(null);
+
+        Assert.True(vm.HasScoopUpdateCopyFailed);
+        Assert.False(vm.IsScoopUpdateCopied);
+        Assert.Equal(Strings.Action_Copy, vm.CopyScoopUpdateText);
+
+        await vm.CopyScoopUpdateCommand.ExecuteAsync(null);
+
+        Assert.False(vm.HasScoopUpdateCopyFailed);
+        Assert.Equal([false, true], answers);
+    }
 }

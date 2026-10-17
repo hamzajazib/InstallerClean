@@ -559,6 +559,11 @@ const MAP = {
   'Cli.UpdateNotStarted': `InstallerClean {0} をインストールしましたが、起動できませんでした。もう一度コマンドを実行してください。`,
   'Cli.UpdateDownloadLink': `GitHubからダウンロード：{0}`,
   'Cli.Help.UpdateNote': `スキャンの前に、InstallerClean の新しいバージョンがあるか確認します。自分&#10;で実行した場合は、更新する前に確認を求めます。スケジュールされたタスクやス&#10;クリプトで自動実行される場合は、確認なしで更新します。確認を省くには&#10;/noupdate を付けてください。`,
+  'UpdateNotice.Scoop': `このコピーは Scoop でインストールされています。更新するには、InstallerClean を閉じてから次を実行してください：`,
+  'UpdateNotice.CommandCopied': `コピー済み`,
+  'UpdateNotice.CopyFailed': `コピーできませんでした。コマンドを選択して手動でコピーしてください。`,
+  'Automation.UpdateNotice.CopyCommand': `コマンドをコピー`,
+  'Automation.UpdateNotice.ScoopCommand': `Scoop の更新コマンド`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

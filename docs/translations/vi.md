@@ -321,6 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's strongly recommended to use the latest version. | Chúng tôi đặc biệt khuyên bạn dùng phiên bản mới nhất. |
 | Download it from GitHub | Tải về từ GitHub |
 | Update now | Cập nhật ngay |
+| This copy was installed by Scoop. To update it, close InstallerClean and run: | Bản này được cài bằng Scoop. Để cập nhật, hãy đóng InstallerClean rồi chạy: |
+| Copied | Đã sao chép |
+| Couldn't copy it. Select the command and copy it yourself. | Không thể sao chép. Hãy chọn lệnh rồi tự sao chép. |
 | _Continue without updating | _Tiếp tục mà không cập nhật |
 | Downloading InstallerClean {0}... | Đang tải về InstallerClean {0}... |
 | The update couldn't be downloaded. | Không thể tải về bản cập nhật. |
@@ -399,6 +402,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the issue tracker on github.com in your browser. | Mở trình theo dõi vấn đề (Issues) trên github.com trong trình duyệt của bạn. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | Nếu được đánh dấu, InstallerClean sẽ kiểm tra github xem có phiên bản mới hơn không khi bạn chạy nó. |
 | Download it from github | Tải về từ github |
+| Copy the command | Sao chép lệnh |
+| Scoop's update command | Lệnh cập nhật của Scoop |
 | Opens the licence file on github.com in your browser. | Mở tệp giấy phép trên github.com trong trình duyệt của bạn. |
 | Backup folder | Thư mục sao lưu |
 | Patches | Bản vá |

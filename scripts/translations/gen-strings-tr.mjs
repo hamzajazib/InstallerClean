@@ -555,6 +555,11 @@ Ayrıntılar şuraya yazıldı:
   'Cli.UpdateNotStarted': `InstallerClean {0} sürümü yüklendi ancak başlatılamadı. Komutu yeniden çalıştırın.`,
   'Cli.UpdateDownloadLink': `GitHub'dan indirin: {0}`,
   'Cli.Help.UpdateNote': `Taramadan önce InstallerClean'in daha yeni bir sürümü olup olmadığını&#10;denetler. Kendiniz çalıştırdığınızda güncellemeden önce sorar. Zamanlanmış&#10;bir görevde veya betikte kendi kendine çalıştığında sormadan güncellenir.&#10;Denetimi atlamak için /noupdate ekleyin.`,
+  'UpdateNotice.Scoop': `Bu kopya Scoop ile yüklendi. Güncellemek için InstallerClean'i kapatıp şunu çalıştırın:`,
+  'UpdateNotice.CommandCopied': `Kopyalandı`,
+  'UpdateNotice.CopyFailed': `Kopyalanamadı. Komutu seçip kendiniz kopyalayın.`,
+  'Automation.UpdateNotice.CopyCommand': `Komutu kopyala`,
+  'Automation.UpdateNotice.ScoopCommand': `Scoop güncelleme komutu`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

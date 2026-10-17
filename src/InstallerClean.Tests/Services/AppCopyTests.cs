@@ -104,7 +104,6 @@ public class AppCopyTests
     [Theory]
     [InlineData(AppCopyKind.Setup, "https://github.com/no-faff/InstallerClean/releases/download/v3.5.0/InstallerClean-3.5.0-setup.exe")]
     [InlineData(AppCopyKind.Portable, "https://github.com/no-faff/InstallerClean/releases/download/v3.5.0/InstallerClean-3.5.0-portable.exe")]
-    [InlineData(AppCopyKind.Scoop, "https://github.com/no-faff/InstallerClean/releases/download/v3.5.0/InstallerClean-3.5.0-portable.exe")]
     [InlineData(AppCopyKind.Slim, "https://github.com/no-faff/InstallerClean/releases/download/v3.5.0/InstallerClean-3.5.0-slim.exe")]
     public void Each_kind_downloads_its_own_file_from_the_releases_tag(AppCopyKind kind, string expected)
     {
@@ -157,6 +156,17 @@ public class AppCopyTests
         foreach (var folder in new[] { ProgramFilesFolder, ScoopFolder, DownloadsFolder })
             Assert.NotEqual(AppCopyKind.CommandLineDownload,
                 AppCopy.Decide(true, selfContained, folder, ProgramFilesFolder + @"", NoFiles));
+    }
+
+    [Fact]
+    public void Scoops_copy_has_no_download_and_is_updated_by_Scoop()
+    {
+        Assert.Null(AppCopy.DownloadAddress(AppCopyKind.Scoop, "3.5.0"));
+        Assert.Null(AppCopy.DownloadFileName(AppCopyKind.Scoop, "3.5.0"));
+        Assert.False(AppCopy.CanUpdateItself(AppCopyKind.Scoop));
+        Assert.Equal("scoop update installerclean", AppCopy.ScoopUpdateCommand);
+        foreach (var kind in Enum.GetValues<AppCopyKind>())
+            Assert.Equal(kind == AppCopyKind.Scoop, AppCopy.UpdatedByScoop(kind));
     }
 
     [Fact]

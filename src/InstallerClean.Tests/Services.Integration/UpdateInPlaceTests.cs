@@ -405,6 +405,27 @@ public sealed class UpdateInPlaceTests : IDisposable
         Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
     }
 
+    [Theory]
+    [InlineData(AppCopyKind.Scoop)]
+    [InlineData(AppCopyKind.FromSource)]
+    public async Task A_copy_with_no_download_is_refused_before_anything_is_made(AppCopyKind kind)
+    {
+        var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
+        var exe = Path.Combine(_root, "InstallerClean.exe");
+        File.WriteAllBytes(exe, Program(1));
+        var updater = new AppUpdater(kind, exe,
+            new UpdateDownloadService(new OneAnswer(Program(2)), null), stagingRoot,
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => updater.PrepareAsync("3.5.0", null, CancellationToken.None));
+
+        Assert.False(updater.CanUpdateItself);
+        Assert.Equal(Program(1), File.ReadAllBytes(exe));
+        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
+        Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
+    }
+
     [Fact]
     public async Task A_failed_download_changes_nothing_and_leaves_no_staging_folder()
     {

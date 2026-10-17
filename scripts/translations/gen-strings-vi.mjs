@@ -629,6 +629,11 @@ const MAP = {
   'Cli.UpdateNotStarted': `Đã cài đặt InstallerClean {0} nhưng không thể khởi động. Hãy chạy lại lệnh.`,
   'Cli.UpdateDownloadLink': `Tải về từ GitHub: {0}`,
   'Cli.Help.UpdateNote': `Trước khi quét, công cụ kiểm tra xem có phiên bản InstallerClean mới hơn&#10;không. Khi bạn tự chạy, nó hỏi trước khi cập nhật. Khi chạy tự động, trong&#10;một tác vụ theo lịch hoặc một tập lệnh, nó cập nhật mà không hỏi. Thêm&#10;/noupdate để bỏ qua bước kiểm tra.`,
+  'UpdateNotice.Scoop': `Bản này được cài bằng Scoop. Để cập nhật, hãy đóng InstallerClean rồi chạy:`,
+  'UpdateNotice.CommandCopied': `Đã sao chép`,
+  'UpdateNotice.CopyFailed': `Không thể sao chép. Hãy chọn lệnh rồi tự sao chép.`,
+  'Automation.UpdateNotice.CopyCommand': `Sao chép lệnh`,
+  'Automation.UpdateNotice.ScoopCommand': `Lệnh cập nhật của Scoop`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

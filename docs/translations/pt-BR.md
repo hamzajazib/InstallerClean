@@ -321,6 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's strongly recommended to use the latest version. | É altamente recomendável usar a versão mais recente. |
 | Download it from GitHub | Baixe no GitHub |
 | Update now | Atualizar agora |
+| This copy was installed by Scoop. To update it, close InstallerClean and run: | Esta cópia foi instalada pelo Scoop. Para atualizá-la, feche o InstallerClean e execute: |
+| Copied | Copiado |
+| Couldn't copy it. Select the command and copy it yourself. | Não foi possível copiar. Selecione o comando e copie-o manualmente. |
 | _Continue without updating | _Continuar sem atualizar |
 | Downloading InstallerClean {0}... | Baixando o InstallerClean {0}... |
 | The update couldn't be downloaded. | Não foi possível baixar a atualização. |
@@ -399,6 +402,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the issue tracker on github.com in your browser. | Abre o rastreador de problemas (Issues) em github.com no seu navegador. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | Se marcada, o InstallerClean consulta o github em busca de uma versão mais recente quando você o executa. |
 | Download it from github | Baixe no github |
+| Copy the command | Copiar o comando |
+| Scoop's update command | Comando de atualização do Scoop |
 | Opens the licence file on github.com in your browser. | Abre o arquivo da licença em github.com no seu navegador. |
 | Backup folder | Pasta de backup |
 | Patches | Patches |

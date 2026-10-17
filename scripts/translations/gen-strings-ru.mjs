@@ -521,6 +521,11 @@ const MAP = {
   'UpdateNotice.DownloadFailed': `Не удалось скачать обновление.`,
   'UpdateNotice.InstallFailed': `Не удалось установить обновление.`,
   'UpdateNotice.ContinueWithoutUpdating': `_Продолжить без обновления`,
+  'UpdateNotice.Scoop': `Эта копия установлена через Scoop. Чтобы обновить её, закройте InstallerClean и выполните:`,
+  'UpdateNotice.CommandCopied': `Скопировано`,
+  'UpdateNotice.CopyFailed': `Не удалось скопировать. Выделите команду и скопируйте её вручную.`,
+  'Automation.UpdateNotice.CopyCommand': `Копировать команду`,
+  'Automation.UpdateNotice.ScoopCommand': `Команда обновления Scoop`,
 };
 
 // Russian CLDR-category overrides beyond the neutral one/other split. They do NOT

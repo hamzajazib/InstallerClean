@@ -129,7 +129,9 @@ public static class Strings
     public static string Automation_StartupScanProgress => Get("Automation.StartupScanProgress");
     public static string Automation_StopWaitingForDrive => Get("Automation.StopWaitingForDrive");
     public static string Automation_StopWaitingForPath => Get("Automation.StopWaitingForPath");
+    public static string Automation_UpdateNotice_CopyCommand => Get("Automation.UpdateNotice.CopyCommand");
     public static string Automation_UpdateNotice_Download => Get("Automation.UpdateNotice.Download");
+    public static string Automation_UpdateNotice_ScoopCommand => Get("Automation.UpdateNotice.ScoopCommand");
     public static string Automation_ViewOrphanedFiles => Get("Automation.ViewOrphanedFiles");
     public static string Automation_ViewOrphanedFiles_HelpText => Get("Automation.ViewOrphanedFiles.HelpText");
     public static string Automation_ViewRegisteredFiles => Get("Automation.ViewRegisteredFiles");
@@ -557,12 +559,15 @@ public static class Strings
     public static string UpdateCheck_Status_UpToDate => Get("UpdateCheck.Status.UpToDate");
     public static string UpdateCheck_Title => Get("UpdateCheck.Title");
     public static string UpdateNotice_Available => Get("UpdateNotice.Available");
+    public static string UpdateNotice_CommandCopied => Get("UpdateNotice.CommandCopied");
     public static string UpdateNotice_ContinueWithoutUpdating => Get("UpdateNotice.ContinueWithoutUpdating");
+    public static string UpdateNotice_CopyFailed => Get("UpdateNotice.CopyFailed");
     public static string UpdateNotice_Download => Get("UpdateNotice.Download");
     public static string UpdateNotice_DownloadFailed => Get("UpdateNotice.DownloadFailed");
     public static string UpdateNotice_Downloading => Get("UpdateNotice.Downloading");
     public static string UpdateNotice_InstallFailed => Get("UpdateNotice.InstallFailed");
     public static string UpdateNotice_Recommended => Get("UpdateNotice.Recommended");
+    public static string UpdateNotice_Scoop => Get("UpdateNotice.Scoop");
     public static string UpdateNotice_UpdateNow => Get("UpdateNotice.UpdateNow");
     public static string Version_Display => Get("Version.Display");
     public static string Window_About_Title => Get("Window.About.Title");

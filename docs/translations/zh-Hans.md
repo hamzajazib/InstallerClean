@@ -321,6 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's strongly recommended to use the latest version. | 强烈建议使用最新版本。 |
 | Download it from GitHub | 从 GitHub 下载 |
 | Update now | 立即更新 |
+| This copy was installed by Scoop. To update it, close InstallerClean and run: | 此副本由 Scoop 安装。要更新，请关闭 InstallerClean 并运行： |
+| Copied | 已复制 |
+| Couldn't copy it. Select the command and copy it yourself. | 无法复制。请选中该命令并手动复制。 |
 | _Continue without updating | 不更新，直接继续(_C) |
 | Downloading InstallerClean {0}... | 正在下载 InstallerClean {0}… |
 | The update couldn't be downloaded. | 无法下载更新。 |
@@ -399,6 +402,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the issue tracker on github.com in your browser. | 在浏览器中打开 github.com 上的问题追踪页面（Issues）。 |
 | If ticked, InstallerClean checks github for a newer version when you run it. | 勾选后，InstallerClean 运行时会在 github 上检查是否有更新版本。 |
 | Download it from github | 从 github 下载 |
+| Copy the command | 复制命令 |
+| Scoop's update command | Scoop 更新命令 |
 | Opens the licence file on github.com in your browser. | 在浏览器中打开 github.com 上的许可证文件。 |
 | Backup folder | 备份文件夹 |
 | Patches | 补丁 |

@@ -321,6 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's strongly recommended to use the latest version. | Настійно рекомендуємо використовувати найновішу версію. |
 | Download it from GitHub | Завантажити з GitHub |
 | Update now | Оновити зараз |
+| This copy was installed by Scoop. To update it, close InstallerClean and run: | Цю копію встановлено через Scoop. Щоб оновити її, закрийте InstallerClean і виконайте: |
+| Copied | Скопійовано |
+| Couldn't copy it. Select the command and copy it yourself. | Не вдалося скопіювати. Виділіть команду й скопіюйте її вручну. |
 | _Continue without updating | _Продовжити без оновлення |
 | Downloading InstallerClean {0}... | Завантаження InstallerClean {0}... |
 | The update couldn't be downloaded. | Не вдалося завантажити оновлення. |
@@ -399,6 +402,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the issue tracker on github.com in your browser. | Відкриває список проблем (Issues) на github.com у вашому браузері. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | Якщо позначено, InstallerClean під час запуску перевіряє на github наявність новішої версії. |
 | Download it from github | Завантажити з github |
+| Copy the command | Копіювати команду |
+| Scoop's update command | Команда оновлення Scoop |
 | Opens the licence file on github.com in your browser. | Відкриває файл ліцензії на github.com у вашому браузері. |
 | Backup folder | Папка резервних копій |
 | Patches | Виправлення |

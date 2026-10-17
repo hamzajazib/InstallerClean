@@ -104,8 +104,9 @@
 
         <!-- Invisible scan-result announcer. Code-behind writes the
              composed "N unneeded files to clean up (size)" line here
-             after a scan that found files, and, where the scan after a
-             Move or Delete did not finish, why the window has no list, and
+             after a scan that found files, where the scan after a Move or
+             Delete did not finish, why the window has no list, and "Copied"
+             as Copy beside Scoop's update command answers a press, and
              reads each out as it writes it; the visible count rows carry no
              LiveSetting because they rebind on every refresh, including the
              silent post-operation one. Opacity 0, not Collapsed, keeps UI
@@ -170,10 +171,10 @@
             <!-- A newer version than this one is available. Shown once a check has
                  found one, in every state of the window, above everything else and
                  outside the region that scrolls, so it stays in view at any text
-                 size. Its Update now, or its link, is the first Tab stop in the
-                 window's content. The code-behind reads its two lines out, ahead of
-                 the rest of the window as it is drawn. The link's spoken name is its
-                 own words cased for speech. -->
+                 size. Its Update now, Scoop's update command or its link is the first
+                 Tab stop in the window's content. The code-behind reads its lines out,
+                 ahead of the rest of the window as it is drawn. The link's spoken name
+                 is its own words cased for speech. -->
             <Border Grid.Row="0" Style="{StaticResource UpdateNoticePanel}"
                     Margin="{StaticResource GapBottom.Lg}"
                     Visibility="{Binding Chrome.HasNewerVersion, Converter={StaticResource BoolToVis}}">
@@ -198,6 +199,44 @@
                                    Foreground="{StaticResource Status.Warning}" FontSize="{DynamicResource Type.Body}"
                                    TextWrapping="Wrap" Margin="{StaticResource GapTop.Sm}"
                                    Visibility="{Binding Chrome.HasUpdateFailure, Converter={StaticResource BoolToVis}}"
+                                   AutomationProperties.LiveSetting="Polite"/>
+                        <!-- On a copy installed by Scoop, in place of Update now: the line
+                             saying how to update it, Scoop's command in a box it can be
+                             selected and copied from, Copy, and the line saying the copy
+                             failed where the clipboard refused it. The line's spoken name
+                             carries the command, so reading the line out reads the command
+                             too. The box's spoken name says what it holds, and a screen
+                             reader reads the command after it. -->
+                        <TextBlock x:Name="UpdateNoticeScoop" Text="{loc:Translate UpdateNotice.Scoop}"
+                                   Foreground="{StaticResource Text.Body}" FontSize="{DynamicResource Type.Body}"
+                                   TextWrapping="Wrap" Margin="{StaticResource GapTop.Sm}"
+                                   Visibility="{Binding Chrome.ShowsScoopCommand, Converter={StaticResource BoolToVis}}"
+                                   AutomationProperties.Name="{Binding Chrome.ScoopUpdateSpoken}"
+                                   AutomationProperties.LiveSetting="Polite"/>
+                        <WrapPanel Margin="{StaticResource GapTop.Sm}"
+                                   Visibility="{Binding Chrome.ShowsScoopCommand, Converter={StaticResource BoolToVis}}">
+                            <Border Background="{StaticResource Surface.Sidebar}" CornerRadius="{StaticResource Radius.Panel}"
+                                    BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}"
+                                    Padding="10,6" Margin="0,4,12,0" VerticalAlignment="Center">
+                                <TextBox x:Name="UpdateNoticeScoopCommand"
+                                         Style="{StaticResource SelectableText}"
+                                         Text="{Binding Chrome.ScoopUpdateCommand, Mode=OneWay}"
+                                         Foreground="{StaticResource Text.Heading}"
+                                         FontFamily="Consolas, Cascadia Mono, Lucida Console"
+                                         FontSize="{DynamicResource Type.Body}"
+                                         FocusVisualStyle="{StaticResource FlatTextBoxFocusVisual}"
+                                         AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.ScoopCommand}"/>
+                            </Border>
+                            <Button x:Name="UpdateNoticeCopyButton" Style="{StaticResource CompactAccentPill}"
+                                    Content="{Binding Chrome.CopyScoopUpdateText}"
+                                    Command="{Binding Chrome.CopyScoopUpdateCommand}"
+                                    Margin="0,4,0,0" VerticalAlignment="Center"
+                                    AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.CopyCommand}"/>
+                        </WrapPanel>
+                        <TextBlock x:Name="UpdateNoticeCopyFailure" Text="{loc:Translate UpdateNotice.CopyFailed}"
+                                   Foreground="{StaticResource Status.Warning}" FontSize="{DynamicResource Type.Body}"
+                                   TextWrapping="Wrap" Margin="{StaticResource GapTop.Sm}"
+                                   Visibility="{Binding Chrome.HasScoopUpdateCopyFailed, Converter={StaticResource BoolToVis}}"
                                    AutomationProperties.LiveSetting="Polite"/>
                         <!-- Update now wherever the app can update itself; the link where it
                              cannot, and beside Update now after an update that failed. -->
@@ -1534,11 +1573,13 @@
              a newer version, in front of a window showing nothing of the scan: the two
              lines of the notice, Update now or the link where the app cannot update
              itself, and Continue without updating, which takes the card away and shows
-             the scan. After an update that failed it carries the line saying what
-             failed and the link under Update now. The same dim and card as the scanning
-             overlay; a click on the dim does nothing. The code-behind puts the two lines
-             in the window's spoken name while the card is up, and the focus on the
-             card's first step. Esc is Continue (MainViewModel.HandleEscape). -->
+             the scan. On a copy installed by Scoop, Scoop's update command and Copy take
+             Update now's place, with the link under them. After an update that failed it
+             carries the line saying what failed and the link under Update now. The same
+             dim and card as the scanning overlay; a click on the dim does nothing. The
+             code-behind puts the card's lines in the window's spoken name while the card
+             is up, and the focus on the card's first step. Esc is Continue
+             (MainViewModel.HandleEscape). -->
         <Grid x:Name="UpdateOfferOverlay" Grid.RowSpan="3"
               Visibility="{Binding Chrome.IsOfferingUpdate, Converter={StaticResource BoolToVis}}"
               KeyboardNavigation.TabNavigation="Cycle"
@@ -1565,8 +1606,14 @@
                                TextWrapping="Wrap" TextAlignment="Center" Margin="{StaticResource GapTop.Sm}"
                                Visibility="{Binding Chrome.HasUpdateFailure, Converter={StaticResource BoolToVis}}"
                                AutomationProperties.LiveSetting="Polite"/>
+                    <TextBlock Text="{loc:Translate UpdateNotice.Scoop}"
+                               Foreground="{StaticResource Text.Body}" FontSize="{DynamicResource Type.Body}"
+                               TextWrapping="Wrap" TextAlignment="Center" Margin="{StaticResource GapTop.Sm}"
+                               Visibility="{Binding Chrome.ShowsScoopCommand, Converter={StaticResource BoolToVis}}"/>
                     <!-- The steps one under another, each centred on the card: Update now,
-                         the accent marking it as the step the card recommends; the link,
+                         the accent marking it as the step the card recommends, or on a copy
+                         installed by Scoop, Scoop's update command and Copy, which takes the
+                         accent, with the line saying the copy failed under them; the link,
                          as large as Continue; then Continue without updating. -->
                     <StackPanel Margin="0,20,0,0">
                         <Button x:Name="UpdateOfferUpdateNowButton" Style="{StaticResource AccentPill}"
@@ -1574,6 +1621,31 @@
                                 Command="{Binding Chrome.UpdateNowCommand}"
                                 HorizontalAlignment="Center" Margin="0,0,0,8"
                                 Visibility="{Binding Chrome.ShowsUpdateNow, Converter={StaticResource BoolToVis}}"/>
+                        <WrapPanel HorizontalAlignment="Center" Margin="0,0,0,8"
+                                   Visibility="{Binding Chrome.ShowsScoopCommand, Converter={StaticResource BoolToVis}}">
+                            <Border Background="{StaticResource Surface.Sidebar}" CornerRadius="{StaticResource Radius.Panel}"
+                                    BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}"
+                                    Padding="10,6" Margin="0,0,12,0" VerticalAlignment="Center">
+                                <TextBox x:Name="UpdateOfferScoopCommand"
+                                         Style="{StaticResource SelectableText}"
+                                         Text="{Binding Chrome.ScoopUpdateCommand, Mode=OneWay}"
+                                         Foreground="{StaticResource Text.Heading}"
+                                         FontFamily="Consolas, Cascadia Mono, Lucida Console"
+                                         FontSize="{DynamicResource Type.Body}"
+                                         FocusVisualStyle="{StaticResource FlatTextBoxFocusVisual}"
+                                         AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.ScoopCommand}"/>
+                            </Border>
+                            <Button x:Name="UpdateOfferCopyButton" Style="{StaticResource AccentPill}"
+                                    Content="{Binding Chrome.CopyScoopUpdateText}"
+                                    Command="{Binding Chrome.CopyScoopUpdateCommand}"
+                                    VerticalAlignment="Center"
+                                    AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.CopyCommand}"/>
+                        </WrapPanel>
+                        <TextBlock x:Name="UpdateOfferCopyFailure" Text="{loc:Translate UpdateNotice.CopyFailed}"
+                                   Foreground="{StaticResource Status.Warning}" FontSize="{DynamicResource Type.Body}"
+                                   TextWrapping="Wrap" TextAlignment="Center" Margin="0,0,0,8"
+                                   Visibility="{Binding Chrome.HasScoopUpdateCopyFailed, Converter={StaticResource BoolToVis}}"
+                                   AutomationProperties.LiveSetting="Polite"/>
                         <TextBlock FontSize="{DynamicResource Type.Heading.Sm}" FontWeight="Medium"
                                    TextWrapping="Wrap" TextAlignment="Center"
                                    HorizontalAlignment="Center" Margin="0,8,0,8"

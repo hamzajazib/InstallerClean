@@ -630,6 +630,11 @@ const MAP = {
   'Cli.UpdateNotStarted': `InstallerClean {0} 버전이 설치되었지만 시작할 수 없었습니다. 명령을 다시 실행하세요.`,
   'Cli.UpdateDownloadLink': `GitHub에서 내려받기: {0}`,
   'Cli.Help.UpdateNote': `검사하기 전에 InstallerClean의 새 버전이 있는지 확인합니다. 직접 실행하면&#10;업데이트하기 전에 묻습니다. 예약 작업이나 스크립트에서 자동으로 실행되면&#10;묻지 않고 업데이트합니다. 확인을 건너뛰려면 /noupdate를 추가하세요.`,
+  'UpdateNotice.Scoop': `이 사본은 Scoop으로 설치되었습니다. 업데이트하려면 InstallerClean을 닫고 다음을 실행하세요:`,
+  'UpdateNotice.CommandCopied': `복사됨`,
+  'UpdateNotice.CopyFailed': `복사하지 못했습니다. 명령을 선택해 직접 복사하세요.`,
+  'Automation.UpdateNotice.CopyCommand': `명령 복사`,
+  'Automation.UpdateNotice.ScoopCommand': `Scoop 업데이트 명령`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

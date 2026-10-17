@@ -653,6 +653,11 @@ const MAP = {
   'Cli.UpdateNotStarted': `InstallerClean {0} est installé, mais n'a pas pu être lancé. Relancez la commande.`,
   'Cli.UpdateDownloadLink': `Le télécharger sur GitHub : {0}`,
   'Cli.Help.UpdateNote': `Avant l'analyse, il vérifie s'il existe une version plus récente&#10;d'InstallerClean. Lancé par vous, il demande avant de mettre à jour. Lancé&#10;seul, dans une tâche planifiée ou un script, il se met à jour sans&#10;demander. Ajoutez /noupdate pour ignorer la vérification.`,
+  'UpdateNotice.Scoop': `Cette copie a été installée par Scoop. Pour la mettre à jour, fermez InstallerClean et exécutez :`,
+  'UpdateNotice.CommandCopied': `Copié`,
+  'UpdateNotice.CopyFailed': `Impossible de la copier. Sélectionnez la commande et copiez-la vous-même.`,
+  'Automation.UpdateNotice.CopyCommand': `Copier la commande`,
+  'Automation.UpdateNotice.ScoopCommand': `Commande de mise à jour de Scoop`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

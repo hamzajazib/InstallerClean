@@ -15,8 +15,9 @@ namespace InstallerClean.ViewModels;
 /// into the registered- or orphaned-files detail windows, the
 /// update check (the manual button and the once-per-session
 /// automatic check behind <c>AppSettings.AutoUpdateCheck</c>), the card the
-/// window opens with where that automatic check finds a newer version, and the
-/// update from inside the app that Update now starts.
+/// window opens with where that automatic check finds a newer version, the
+/// update from inside the app that Update now starts, and on a copy installed by
+/// Scoop, Scoop's update command and its Copy button in Update now's place.
 ///
 /// Reads <see cref="ScanViewModel.LastScanResult"/> for the details
 /// commands so the detail windows always show the same scan the main
@@ -40,6 +41,12 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// </summary>
     private static readonly TimeSpan CheckForUpdatesCooldown = TimeSpan.FromSeconds(5);
 
+    /// <summary>
+    /// How long the Copy button beside Scoop's update command reads "Copied" once the
+    /// command is on the clipboard, before it reads Copy again.
+    /// </summary>
+    private static readonly TimeSpan ScoopUpdateCopiedFor = TimeSpan.FromSeconds(2);
+
     private readonly IWindowService _windowService;
     private readonly IMsiFileInfoService _msiInfoService;
     private readonly ISettingsService _settings;
@@ -48,11 +55,13 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     private readonly ScanViewModel _scan;
     private readonly Func<bool> _isBusy;
     private readonly TimeSpan _checkCooldown;
+    private readonly TimeSpan _scoopUpdateCopiedFor;
     private readonly PropertyChangedEventHandler _scanHandler;
     private readonly IAppUpdater? _updater;
     private readonly Action _settleBeforeHandOff;
     private CancellationTokenSource? _updateCts;
     private CancellationTokenSource? _downloadCts;
+    private CancellationTokenSource? _scoopUpdateCopiedCts;
 
     /// <summary>The newer version the latest find named, which Update now downloads.</summary>
     private string? _newerVersion;
@@ -75,6 +84,10 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// saved and the report still being sent, before the newer version starts and
     /// reads them.
     /// </param>
+    /// <param name="scoopUpdateCopiedForOverride">
+    /// Replaces <see cref="ScoopUpdateCopiedFor"/>, so a test can see Copy come back
+    /// without waiting two real seconds; production callers pass nothing.
+    /// </param>
     public ChromeViewModel(
         IWindowService windowService,
         IMsiFileInfoService msiInfoService,
@@ -85,7 +98,8 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         Func<bool>? isBusy = null,
         TimeSpan? checkCooldownOverride = null,
         IAppUpdater? updater = null,
-        Action? settleBeforeHandOff = null)
+        Action? settleBeforeHandOff = null,
+        TimeSpan? scoopUpdateCopiedForOverride = null)
     {
         _windowService = windowService;
         _msiInfoService = msiInfoService;
@@ -97,6 +111,7 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         _checkCooldown = checkCooldownOverride ?? CheckForUpdatesCooldown;
         _updater = updater;
         _settleBeforeHandOff = settleBeforeHandOff ?? (() => { });
+        _scoopUpdateCopiedFor = scoopUpdateCopiedForOverride ?? ScoopUpdateCopiedFor;
 
         // Re-evaluate the Details buttons when a scan finishes or its result
         // is dropped. HasScanned is observable; LastScanResult is a plain
@@ -135,6 +150,7 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         _updateCts?.Dispose();
         // A download still running stops, and leaves nothing behind.
         _downloadCts?.Cancel();
+        _scoopUpdateCopiedCts?.Cancel();
     }
 
     /// <summary>
@@ -161,13 +177,14 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowsUpdateNow))]
     [NotifyPropertyChangedFor(nameof(ShowsReleaseLink))]
+    [NotifyPropertyChangedFor(nameof(ShowsScoopCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenReleasePageCommand))]
     [NotifyCanExecuteChangedFor(nameof(UpdateNowCommand))]
     private bool _hasNewerVersion;
 
     /// <summary>
-    /// Whether this copy can put a newer version in its own place: every download
-    /// can, and a build from source cannot.
+    /// Whether this copy can put a newer version in its own place: every download can
+    /// but Scoop's, which Scoop updates, and a build from source cannot.
     /// </summary>
     public bool CanUpdateItself => _updater?.CanUpdateItself == true;
 
@@ -179,6 +196,49 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// update itself, and after an update that failed, beside Update now.
     /// </summary>
     public bool ShowsReleaseLink => HasNewerVersion && (!CanUpdateItself || HasUpdateFailure);
+
+    /// <summary>
+    /// Whether the card and the notice give Scoop's update command, with its Copy
+    /// button, in place of Update now: on a copy installed by Scoop, once a check has
+    /// found a newer version. The link to the release page shows under it.
+    /// </summary>
+    public bool ShowsScoopCommand =>
+        HasNewerVersion && _updater is not null && AppCopy.UpdatedByScoop(_updater.Kind);
+
+    /// <summary>Scoop's update command, in the box beside Copy.</summary>
+    public string ScoopUpdateCommand => AppCopy.ScoopUpdateCommand;
+
+    /// <summary>
+    /// The line above Scoop's update command and the command, as one line for a screen
+    /// reader: the line's spoken name, so reading it out reads the command too.
+    /// </summary>
+    public string ScoopUpdateSpoken =>
+        DisplayHelpers.SpokenSentences(Strings.UpdateNotice_Scoop, AppCopy.ScoopUpdateCommand);
+
+    /// <summary>
+    /// Set for <see cref="ScoopUpdateCopiedFor"/> once Copy has put Scoop's update command
+    /// on the clipboard, while the button reads "Copied".
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CopyScoopUpdateText))]
+    private bool _isScoopUpdateCopied;
+
+    /// <summary>The Copy button's text: "Copied" just after a copy, Copy otherwise.</summary>
+    public string CopyScoopUpdateText =>
+        IsScoopUpdateCopied ? Strings.UpdateNotice_CommandCopied : Strings.Action_Copy;
+
+    /// <summary>
+    /// Set where the clipboard refused Scoop's update command, which shows the line
+    /// saying so under Copy. The next copy that succeeds clears it.
+    /// </summary>
+    [ObservableProperty] private bool _hasScoopUpdateCopyFailed;
+
+    /// <summary>
+    /// Raised after every press of Copy, true where the command went on the clipboard,
+    /// so the window can read out the answer to each press, a repeat of the last
+    /// included.
+    /// </summary>
+    public event EventHandler<bool>? ScoopUpdateCopyAnswered;
 
     /// <summary>
     /// The notice's line saying an update failed, under its first two lines, and empty
@@ -471,6 +531,40 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
                 IsUpdating = false;
             }
         }
+    }
+
+    /// <summary>
+    /// Copy, beside Scoop's update command on the card and the notice: puts the command on
+    /// the clipboard, and the button reads "Copied" for <see cref="ScoopUpdateCopiedFor"/>.
+    /// A press while it reads "Copied" starts that time again. Where the clipboard refuses,
+    /// the button reads Copy and the line saying so shows. Presses are never refused, so
+    /// the button stays enabled while it reads "Copied".
+    /// </summary>
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task CopyScoopUpdateAsync()
+    {
+        var previous = _scoopUpdateCopiedCts;
+        _scoopUpdateCopiedCts = new CancellationTokenSource();
+        previous?.Cancel();
+        previous?.Dispose();
+        var token = _scoopUpdateCopiedCts.Token;
+
+        var copied = _windowService.CopyToClipboard(AppCopy.ScoopUpdateCommand);
+        HasScoopUpdateCopyFailed = !copied;
+        IsScoopUpdateCopied = copied;
+        ScoopUpdateCopyAnswered?.Invoke(this, copied);
+        if (!copied) return;
+
+        try
+        {
+            await Task.Delay(_scoopUpdateCopiedFor, token);
+        }
+        catch (OperationCanceledException)
+        {
+            // A later press took over, or the app is closing.
+            return;
+        }
+        IsScoopUpdateCopied = false;
     }
 
     /// <summary>The download card's Cancel, and Esc while the card is up.</summary>

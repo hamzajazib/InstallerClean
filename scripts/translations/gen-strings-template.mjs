@@ -698,6 +698,11 @@ const MAP = {
   'Cli.UpdateNotStarted': `InstallerClean {0} is installed but couldn't be started. Run the command again.`,
   'Cli.UpdateDownloadLink': `Download it from GitHub: {0}`,
   'Cli.Help.UpdateNote': `Before it scans, it checks for a newer version of InstallerClean.&#10;When you run it yourself, it asks before updating. When it runs on its&#10;own, in a scheduled task or a script, it updates without asking.&#10;Add /noupdate to skip the check.`,
+  'UpdateNotice.Scoop': `This copy was installed by Scoop. To update it, close InstallerClean and run:`,
+  'UpdateNotice.CommandCopied': `Copied`,
+  'UpdateNotice.CopyFailed': `Couldn't copy it. Select the command and copy it yourself.`,
+  'Automation.UpdateNotice.CopyCommand': `Copy the command`,
+  'Automation.UpdateNotice.ScoopCommand': `Scoop's update command`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

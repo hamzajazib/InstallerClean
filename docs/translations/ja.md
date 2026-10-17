@@ -321,6 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's strongly recommended to use the latest version. | 最新バージョンの使用を強くおすすめします。 |
 | Download it from GitHub | GitHubからダウンロード |
 | Update now | 今すぐ更新 |
+| This copy was installed by Scoop. To update it, close InstallerClean and run: | このコピーは Scoop でインストールされています。更新するには、InstallerClean を閉じてから次を実行してください： |
+| Copied | コピー済み |
+| Couldn't copy it. Select the command and copy it yourself. | コピーできませんでした。コマンドを選択して手動でコピーしてください。 |
 | _Continue without updating | 更新せずに続行(_C) |
 | Downloading InstallerClean {0}... | InstallerClean {0} をダウンロード中... |
 | The update couldn't be downloaded. | 更新をダウンロードできませんでした。 |
@@ -399,6 +402,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the issue tracker on github.com in your browser. | ブラウザで github.com の Issue トラッカーを開きます。 |
 | If ticked, InstallerClean checks github for a newer version when you run it. | チェックを入れると、InstallerClean は起動時に github で新しいバージョンを確認します。 |
 | Download it from github | github からダウンロード |
+| Copy the command | コマンドをコピー |
+| Scoop's update command | Scoop の更新コマンド |
 | Opens the licence file on github.com in your browser. | ブラウザで github.com のライセンスファイルを開きます。 |
 | Backup folder | バックアップフォルダー |
 | Patches | パッチ |

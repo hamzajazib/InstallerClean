@@ -321,6 +321,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's strongly recommended to use the latest version. | Het wordt sterk aangeraden om de nieuwste versie te gebruiken. |
 | Download it from GitHub | Download het van GitHub |
 | Update now | Nu bijwerken |
+| This copy was installed by Scoop. To update it, close InstallerClean and run: | Deze kopie is met Scoop geïnstalleerd. Bijwerken doe je door InstallerClean te sluiten en dit uit te voeren: |
+| Copied | Gekopieerd |
+| Couldn't copy it. Select the command and copy it yourself. | Kopiëren is niet gelukt. Selecteer de opdracht en kopieer hem zelf. |
 | _Continue without updating | _Doorgaan zonder bij te werken |
 | Downloading InstallerClean {0}... | InstallerClean {0} downloaden... |
 | The update couldn't be downloaded. | De update kon niet worden gedownload. |
@@ -399,6 +402,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the issue tracker on github.com in your browser. | Opent de issue-tracker op github.com in je browser. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | Als dit is aangevinkt, kijkt InstallerClean bij het starten op github of er een nieuwere versie is. |
 | Download it from github | Download het van github |
+| Copy the command | De opdracht kopiëren |
+| Scoop's update command | Bijwerkopdracht van Scoop |
 | Opens the licence file on github.com in your browser. | Opent het licentiebestand op github.com in je browser. |
 | Backup folder | Back-upmap |
 | Patches | Patches |

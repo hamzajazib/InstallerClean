@@ -5,9 +5,9 @@ using InstallerClean.ViewModels;
 namespace InstallerClean.Services;
 
 /// <summary>
-/// Opens the windows the main window offers: the two Details windows, About, the
-/// update prompt and the report window. Each is owned by the main window and shown
-/// with <c>ShowDialog</c>, so none of them can be reached or used on its own.
+/// Opens the windows the main window offers: the two Details windows, About and the
+/// report window. Each is owned by the main window and shown with <c>ShowDialog</c>, so
+/// none of them can be reached or used on its own.
 ///
 /// That ownership is why each of them carries <c>ShowInTaskbar="False"</c> in its
 /// own XAML, as does every Window in the app bar the main one. Without it a
@@ -70,6 +70,8 @@ public sealed class WindowService : IWindowService
     }
 
     public void OpenUrl(string url) => UrlLauncher.OpenUrl(url);
+
+    public bool CopyToClipboard(string text) => UrlLauncher.TryCopyToClipboard(text);
 
     public void RelaunchForLanguageChange()
         => (Application.Current as App)?.RelaunchForLanguageChange();

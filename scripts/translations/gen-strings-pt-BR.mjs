@@ -634,6 +634,11 @@ const MAP = {
   'Cli.UpdateNotStarted': `O InstallerClean {0} está instalado, mas não foi possível iniciá-lo. Execute o comando novamente.`,
   'Cli.UpdateDownloadLink': `Baixe no GitHub: {0}`,
   'Cli.Help.UpdateNote': `Antes de analisar, ele verifica se há uma versão mais recente do&#10;InstallerClean. Quando você o executa, ele pergunta antes de atualizar.&#10;Quando roda sozinho, em uma tarefa agendada ou um script, ele atualiza sem&#10;perguntar. Adicione /noupdate para pular a verificação.`,
+  'UpdateNotice.Scoop': `Esta cópia foi instalada pelo Scoop. Para atualizá-la, feche o InstallerClean e execute:`,
+  'UpdateNotice.CommandCopied': `Copiado`,
+  'UpdateNotice.CopyFailed': `Não foi possível copiar. Selecione o comando e copie-o manualmente.`,
+  'Automation.UpdateNotice.CopyCommand': `Copiar o comando`,
+  'Automation.UpdateNotice.ScoopCommand': `Comando de atualização do Scoop`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

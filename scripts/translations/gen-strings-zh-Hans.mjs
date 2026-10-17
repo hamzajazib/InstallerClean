@@ -539,6 +539,11 @@ const MAP = {
   'Cli.UpdateNotStarted': `InstallerClean {0} 版已安装，但无法启动。请再次运行该命令。`,
   'Cli.UpdateDownloadLink': `从 GitHub 下载：{0}`,
   'Cli.Help.UpdateNote': `扫描前，它会检查是否有更新版本的 InstallerClean。由您亲自运行时，它会在更&#10;新前询问。在计划任务或脚本中自动运行时，它会直接更新而不询问。添加&#10;/noupdate 可跳过检查。`,
+  'UpdateNotice.Scoop': `此副本由 Scoop 安装。要更新，请关闭 InstallerClean 并运行：`,
+  'UpdateNotice.CommandCopied': `已复制`,
+  'UpdateNotice.CopyFailed': `无法复制。请选中该命令并手动复制。`,
+  'Automation.UpdateNotice.CopyCommand': `复制命令`,
+  'Automation.UpdateNotice.ScoopCommand': `Scoop 更新命令`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,
