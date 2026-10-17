@@ -154,7 +154,8 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
     }
 
     public int? RunNewerVersion(
-        string file, IReadOnlyList<string> arguments, string fromVersion, string toVersion, CancellationToken token)
+        string file, IReadOnlyList<string> arguments, string fromVersion, string toVersion, Action onStarted,
+        CancellationToken token)
     {
         Console.Out.Flush();
         using var process = Start(file, arguments, workingDirectory: null, token);
@@ -165,9 +166,18 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
         // file under it. A throw is written to crash.log. One from the wait itself is
         // answered with the error code, so this run ends with nothing more run, and the
         // newer version writes its own summary.
+        _newerVersionRunning = true;
+        // Said before the Application-log write, which can take a moment the first time.
         try
         {
-            _newerVersionRunning = true;
+            onStarted();
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+        }
+        try
+        {
             MachineContract.WriteEventLog(CliEventClass.UpdatedNotice,
                 () => Program.UpdatedEventLogLine(arg, fromVersion, toVersion, arguments));
         }

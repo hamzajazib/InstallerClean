@@ -139,17 +139,19 @@ internal interface ICommandLineUpdateHost
 
     /// <summary>
     /// Starts the newer version at <paramref name="file"/> with <paramref name="arguments"/>
-    /// in this console, notes in the Application log that this run updated itself from
-    /// <paramref name="fromVersion"/> to <paramref name="toVersion"/> once it is running,
-    /// waits for it to end and answers with its exit code, or null where it could not be
-    /// started. Throws <see cref="OperationCanceledException"/> where
-    /// <paramref name="token"/> is cancelled before it has started. Nothing is thrown once
-    /// it has: the run reads a throw as the newer version not having started, and on a
-    /// swap puts this exe back at the path the newer version runs from. While it runs,
-    /// Ctrl+C is the newer version's to answer.
+    /// in this console, calls <paramref name="onStarted"/> and notes in the Application log
+    /// that this run updated itself from <paramref name="fromVersion"/> to
+    /// <paramref name="toVersion"/> once it is running, waits for it to end and answers with
+    /// its exit code, or null where it could not be started. Throws
+    /// <see cref="OperationCanceledException"/> where <paramref name="token"/> is cancelled
+    /// before it has started. Nothing is thrown once it has, a throw from
+    /// <paramref name="onStarted"/> included: the run reads a throw as the newer version not
+    /// having started, and on a swap puts this exe back at the path the newer version runs
+    /// from. While it runs, Ctrl+C is the newer version's to answer.
     /// </summary>
     int? RunNewerVersion(
-        string file, IReadOnlyList<string> arguments, string fromVersion, string toVersion, CancellationToken token);
+        string file, IReadOnlyList<string> arguments, string fromVersion, string toVersion, Action onStarted,
+        CancellationToken token);
 }
 
 /// <summary>
@@ -410,9 +412,9 @@ internal sealed class CommandLineUpdate
     /// caller says so and carries on, unless Ctrl+C has come. Answers
     /// <see cref="CommandLineUpdateResult.NotStarted"/> or
     /// <see cref="CommandLineUpdateResult.Stopped"/> where a part fails with it no longer
-    /// there. Ctrl+C before the newer version is in place answers
-    /// <see cref="CommandLineUpdateResult.Cancelled"/>, with this exe back at its path and
-    /// nothing changed; Ctrl+C once it is installed answers
+    /// there. Ctrl+C before the newer version is in place, or on a swap before it has
+    /// started, answers <see cref="CommandLineUpdateResult.Cancelled"/>, with this exe back
+    /// at its path and nothing changed; Ctrl+C once the setup has installed it answers
     /// <see cref="CommandLineUpdateResult.UpdatedThenCancelled"/>.
     /// </summary>
     private CommandLineUpdateResult Update(
@@ -519,39 +521,53 @@ internal sealed class CommandLineUpdate
 
         if (token.IsCancellationRequested)
         {
-            // Ctrl+C while the setup ran: the newer version is in place, and this run stops
-            // before it starts. On a swap the newer version has only been renamed in and
-            // nothing has said it is installed, so this exe is put back in its place.
+            // Ctrl+C by now stops the run before the newer version starts. Where the setup ran,
+            // the newer version is in place and stays. On a swap it has only been renamed in
+            // and nothing has said it is installed, so this exe is put back in its place.
             if (!isSetup) return CancelAfterSwap(prepared, exePath, current, latest, putBack);
             SayInstalled(latest);
             return new CommandLineUpdateResult.UpdatedThenCancelled(current, latest);
         }
 
-        SayInstalled(latest);
-        if (canAsk && command == "/d") _host.WriteLine(Strings.Cli_UpdateListsOnlyAfterDelete);
-        if (canAsk && command == "/m") _host.WriteLine(Strings.Cli_UpdateListsOnlyAfterMove);
+        // The setup has installed the newer version whether or not it starts, so its copy
+        // says so now. On a swap it is said once the newer version has started, since until
+        // then a failed start or Ctrl+C puts this exe back wherever it can.
+        if (isSetup) SayInstalledAndWhatRuns();
 
         IReadOnlyList<string> run = canAsk ? ["/s"] : arguments;
         int? exitCode;
         try
         {
-            exitCode = _host.RunNewerVersion(exePath, run, current, latest, token);
+            exitCode = _host.RunNewerVersion(
+                exePath, run, current, latest, isSetup ? () => { } : SayInstalledAndWhatRuns, token);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
-            // Ctrl+C before the newer version started. The line above has said it is
-            // installed, and it is, so it stays in place.
+            // Ctrl+C before the newer version started. On a swap nothing has said it is
+            // installed, and a copy not yet seen to start is not left in this exe's place,
+            // so this exe is put back. The setup's copy has said so, and it stays.
+            if (!isSetup) return CancelAfterSwap(prepared, exePath, current, latest, putBack);
             return new CommandLineUpdateResult.UpdatedThenCancelled(current, latest);
         }
         // A newer version ended for Ctrl+C before it had a handler for it exits with
-        // ControlCExit, and the same Ctrl+C can cancel the token here only after that exit,
-        // so the run waits for it before handing the exit code back.
+        // ControlCExit, and the same Ctrl+C can reach the token here after that exit, so
+        // the run waits for it before handing the exit code back.
         if (exitCode == ControlCExit) token.WaitHandle.WaitOne(_controlCBound);
         if (exitCode is not null)
             return new CommandLineUpdateResult.HandedOver(exitCode.Value, current, latest, string.Join(' ', run));
 
         return EndNotStarted(new UpdateFailedException(UpdateFailureStage.Install, "The newer version could not be started."),
             isSetup, prepared, exePath, current, latest, putBack, token);
+
+        // Says the newer version is installed and, where a person answered yes to a Delete
+        // or a Move, that it runs a scan, unless Ctrl+C has come.
+        void SayInstalledAndWhatRuns()
+        {
+            SayInstalled(latest);
+            if (token.IsCancellationRequested) return;
+            if (canAsk && command == "/d") _host.WriteLine(Strings.Cli_UpdateListsOnlyAfterDelete);
+            if (canAsk && command == "/m") _host.WriteLine(Strings.Cli_UpdateListsOnlyAfterMove);
+        }
     }
 
     /// <summary>

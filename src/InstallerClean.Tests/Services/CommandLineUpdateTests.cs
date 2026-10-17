@@ -151,6 +151,56 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal(new[] { "/s" }, _host.NewerVersionRun!.Value.Arguments);
     }
 
+    [Fact]
+    public void On_a_swap_the_installed_line_comes_once_the_newer_version_has_started()
+    {
+        _host.Answers.Enqueue("y");
+        _host.NewerVersionExitCode = 0;
+
+        Run(Download(), canAsk: true, command: "/d", arguments: ["/d", "D:\\Backup"]);
+
+        Assert.Equal(new[]
+        {
+            string.Format(Strings.Cli_UpdateInstalled, Latest),
+            Strings.Cli_UpdateListsOnlyAfterDelete,
+        }, _host.Output.Skip(_host.LinesBeforeStart!.Value));
+    }
+
+    [Fact]
+    public void Ctrl_C_as_the_swapped_in_version_starts_says_it_is_installed_and_nothing_about_a_scan()
+    {
+        using var cts = new CancellationTokenSource();
+        _host.Answers.Enqueue("y");
+        _host.NewerVersionExitCode = CommandLineUpdate.ControlCExit;
+        _host.OnStarted = cts.Cancel;
+        var updater = Download();
+
+        var result = Run(updater, canAsk: true, command: "/d", arguments: ["/d", "D:\\Backup"], token: cts.Token);
+
+        Assert.Equal(
+            new CommandLineUpdateResult.HandedOver(CommandLineUpdate.ControlCExit, Current, Latest, "/s"), result);
+        Assert.False(updater.Undone);
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.Equal(string.Format(Strings.Cli_UpdateInstalled, Latest), _host.Output[^1]);
+        Assert.DoesNotContain(Strings.Cli_UpdateListsOnlyAfterDelete, _host.Output);
+    }
+
+    [Fact]
+    public void A_swap_whose_newer_version_will_not_start_never_says_it_is_installed()
+    {
+        _host.Answers.Enqueue("y");
+        _host.NewerVersionExitCode = null;
+        var updater = Download();
+
+        var result = Run(updater, canAsk: true, command: "/d", arguments: ["/d", "D:\\Backup"]);
+
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateFailureStage.Install, Current, Latest), result);
+        Assert.Equal("old", File.ReadAllText(_exe));
+        Assert.DoesNotContain(string.Format(Strings.Cli_UpdateInstalled, Latest), _host.Output);
+        Assert.DoesNotContain(Strings.Cli_UpdateListsOnlyAfterDelete, _host.Output);
+        Assert.Equal(string.Format(Strings.Cli_UpdateRunningInstead, "/d", Current), _host.Output[^1]);
+    }
+
     [Theory]
     [InlineData("n")]
     [InlineData("No")]
@@ -358,7 +408,7 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
-    public void A_throw_after_the_swap_and_before_the_start_puts_this_exe_back_and_the_run_carries_on()
+    public void A_swapped_in_version_that_has_started_is_not_put_back_whatever_its_installed_line_does()
     {
         _host.NewerVersionExitCode = 0;
         _host.OnWriteLine = line =>
@@ -369,11 +419,10 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         var result = Run(updater, canAsk: false);
 
-        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateFailureStage.Install, Current, Latest), result);
-        Assert.True(updater.Undone);
-        Assert.Equal("old", File.ReadAllText(_exe));
-        Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
-        Assert.Null(_host.NewerVersionRun);
+        Assert.Equal(new CommandLineUpdateResult.HandedOver(0, Current, Latest, "/s"), result);
+        Assert.False(updater.Undone);
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.NotNull(_host.NewerVersionRun);
     }
 
     [Fact]
@@ -832,16 +881,33 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal(Strings.UpdateNotice_InstallFailed, Assert.Single(_host.Output));
     }
 
-    [Theory]
-    [InlineData(AppCopyKind.CommandLineDownload)]
-    [InlineData(AppCopyKind.Setup)]
-    public void Ctrl_C_before_the_newer_version_starts_leaves_it_installed_and_starts_nothing(AppCopyKind kind)
+    [Fact]
+    public void Ctrl_C_before_the_swapped_in_version_starts_puts_this_exe_back_and_starts_nothing()
     {
         using var cts = new CancellationTokenSource();
-        if (kind == AppCopyKind.Setup) SetupInstalls();
         _host.NewerVersionExitCode = 0;
         _host.OnNewerVersion = cts.Cancel;
-        var updater = kind == AppCopyKind.Setup ? Setup() : Download();
+        var updater = Download();
+
+        var result = Run(updater, canAsk: false, token: cts.Token);
+
+        Assert.IsType<CommandLineUpdateResult.Cancelled>(result);
+        Assert.True(updater.Undone);
+        Assert.Equal("old", File.ReadAllText(_exe));
+        Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
+        Assert.True(_host.HoldsOwnFile);
+        Assert.DoesNotContain(string.Format(Strings.Cli_UpdateInstalled, Latest), _host.Output);
+        Assert.Null(_host.NewerVersionRun);
+    }
+
+    [Fact]
+    public void Ctrl_C_before_the_newer_version_from_the_setup_starts_leaves_it_installed_and_starts_nothing()
+    {
+        using var cts = new CancellationTokenSource();
+        SetupInstalls();
+        _host.NewerVersionExitCode = 0;
+        _host.OnNewerVersion = cts.Cancel;
+        var updater = Setup();
 
         var result = Run(updater, canAsk: false, token: cts.Token);
 
@@ -953,6 +1019,12 @@ public sealed class CommandLineUpdateTests : IDisposable
         public (string File, string[] Arguments, string From, string To, string ExeHeld, bool OwnFileHeld)? NewerVersionRun { get; private set; }
         public bool NewerVersionHeldLock { get; private set; }
 
+        /// <summary>Runs once the newer version has started, before what is said then.</summary>
+        public Action? OnStarted { get; set; }
+
+        /// <summary>How many lines had been written when the newer version started.</summary>
+        public int? LinesBeforeStart { get; private set; }
+
         /// <summary>What the exe's path held at each call to <see cref="PrepareToMoveAside"/>.</summary>
         public List<string> PreparedWhileExeHeld { get; } = [];
 
@@ -1028,13 +1100,25 @@ public sealed class CommandLineUpdateTests : IDisposable
         }
 
         public int? RunNewerVersion(
-            string file, IReadOnlyList<string> arguments, string fromVersion, string toVersion, CancellationToken token)
+            string file, IReadOnlyList<string> arguments, string fromVersion, string toVersion, Action onStarted,
+            CancellationToken token)
         {
             NewerVersionHeldLock = HoldsLock;
             OnNewerVersion?.Invoke();
             token.ThrowIfCancellationRequested();
             if (NewerVersionExitCode is null) return null;
             NewerVersionRun = (file, arguments.ToArray(), fromVersion, toVersion, File.ReadAllText(file), HoldsOwnFile);
+            LinesBeforeStart = Output.Count;
+            OnStarted?.Invoke();
+            // As the console host does, a throw from what is said once it has started goes
+            // no further.
+            try
+            {
+                onStarted();
+            }
+            catch (Exception)
+            {
+            }
             return NewerVersionExitCode;
         }
     }
