@@ -72,7 +72,7 @@ public partial class MainWindow : Window
         _pendingRebootToAnnounce = _vm.Scan.HasPendingReboot;
         _missingFromDiskToAnnounce = _vm.Scan.HasMissingFromDisk;
         // The automatic update check has answered by now. Where it found a newer
-        // version the window opens with the card saying so, which reads the same two
+        // version the window opens with the card saying so, which says the same two
         // lines. Otherwise the notice at the top is read first, ahead of the replay
         // below, or as the startup card closes where one is up.
         _updateNoticeToAnnounce = _vm.Chrome.HasNewerVersion && !_vm.Chrome.IsOfferingUpdate;
@@ -155,14 +155,17 @@ public partial class MainWindow : Window
             // all-clear set during the splash).
             BuildCompletionSummaryLine();
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () => CompletionDismissButton().Focus());
-            // The overlay was never revealed inside this window's lifetime
-            // (the startup all-clear is set during the splash, before
-            // construction), so the PropertyChanged raise path never runs
-            // for it, and a newly shown window announces only its title
-            // and the focused control. Without these raises the most
-            // common outcome of all, the startup scan's "All clean", is
-            // never spoken.
-            AnnounceCompletionOutcome();
+            // Reached only from the constructor, with the card up as the window opens:
+            // after Continue without updating, the card comes up through
+            // OnCompletionPropertyChanged instead. Narrator announces a window opening by
+            // its name and its focused control, so the card's outcome lines go in the
+            // window's name, in the order the card draws them. The box is not a line and
+            // keeps its own raise.
+            SpeakWindowAs(DisplayHelpers.SpokenSentences(
+                _vm.Completion.Heading, _vm.Completion.FailedCount, _vm.Completion.Summary,
+                _vm.Completion.Restore, _vm.Completion.Skipped, _vm.Completion.ScanStartLine));
+            if (_vm.Completion.OffersReport)
+                AnnounceLiveRegion(CompletionReportBox, () => _vm.Completion.OffersReport);
         }
         else if (!_vm.Scan.IsScanning)
         {
@@ -197,22 +200,35 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// The card saying a newer version is available, up as the window opens: the focus
-    /// goes to Update now, or to Continue without updating where the card has no Update
-    /// now, and the card's two lines are read. A newly shown window speaks only its title
-    /// and the focused control, so without this the card's words are never spoken.
+    /// The card saying a newer version is available, up as the window opens. Narrator
+    /// announces a window opening by its name and its focused control, so the card's two
+    /// lines go in the window's name, and the focus goes to the card's first step.
     /// </summary>
     private void ShowUpdateOffer()
     {
+        SpeakWindowAs(DisplayHelpers.SpokenSentences(
+            _vm.Chrome.UpdateNoticeText, Strings.UpdateNotice_Recommended));
         Dispatcher.BeginInvoke(DispatcherPriority.Input, FocusUpdateOffer);
-        AnnounceLiveRegions(UpdateOfferLead, UpdateOfferDetail);
     }
 
+    /// <summary>
+    /// Focuses the card's first step: Update now, or the link where the card has no Update
+    /// now, or Continue without updating where it has neither.
+    /// </summary>
     private void FocusUpdateOffer()
     {
-        if (!UpdateOfferUpdateNowButton.Focus())
+        if (!UpdateOfferUpdateNowButton.Focus() && !UpdateOfferDownloadLink.Focus())
             UpdateOfferContinueButton.Focus();
     }
+
+    /// <summary>
+    /// Names this window, for a screen reader, by <paramref name="name"/> in place of its
+    /// title, while the card it opened with is up. The taskbar and the title bar keep the
+    /// title. <see cref="SpeakWindowAsItsTitle"/> puts the title back as the card goes.
+    /// </summary>
+    private void SpeakWindowAs(string name) => AutomationProperties.SetName(this, name);
+
+    private void SpeakWindowAsItsTitle() => ClearValue(AutomationProperties.NameProperty);
 
     /// <summary>
     /// Continue without updating: the scan the card stood in front of is shown. Where it
@@ -225,6 +241,7 @@ public partial class MainWindow : Window
     {
         try
         {
+            SpeakWindowAsItsTitle();
             _updateNoticeToAnnounce = false;
             await _vm.ScanCardDecided;
             if (!_vm.Completion.IsComplete)
@@ -455,6 +472,7 @@ public partial class MainWindow : Window
         // root.
         if (e.PropertyName == nameof(CompletionViewModel.IsComplete) && !_vm.Completion.IsComplete)
         {
+            SpeakWindowAsItsTitle();
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () => RescanButton.Focus());
             AnnounceUnfinishedRefresh();
             // A warning the card's scan put up is read now, after the card. Where the

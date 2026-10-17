@@ -1535,10 +1535,10 @@
              lines of the notice, Update now or the link where the app cannot update
              itself, and Continue without updating, which takes the card away and shows
              the scan. After an update that failed it carries the line saying what
-             failed and the link beside Update now. The same dim and card as the scanning
-             overlay; a click on the dim does nothing. The code-behind puts the focus on
-             Update now, or on Continue where there is no Update now, and reads the two
-             lines out as the card appears. Esc is Continue (MainViewModel.HandleEscape). -->
+             failed and the link under Update now. The same dim and card as the scanning
+             overlay; a click on the dim does nothing. The code-behind puts the two lines
+             in the window's spoken name while the card is up, and the focus on the
+             card's first step. Esc is Continue (MainViewModel.HandleEscape). -->
         <Grid x:Name="UpdateOfferOverlay" Grid.RowSpan="3"
               Visibility="{Binding Chrome.IsOfferingUpdate, Converter={StaticResource BoolToVis}}"
               KeyboardNavigation.TabNavigation="Cycle"
@@ -1554,41 +1554,41 @@
                           StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
                           Width="{a11y:TextScaled 32}" Height="{a11y:TextScaled 32}" Stretch="Uniform"
                           HorizontalAlignment="Center" Margin="{StaticResource GapBottom.Md}"/>
-                    <TextBlock x:Name="UpdateOfferLead" Text="{Binding Chrome.UpdateNoticeText}"
+                    <TextBlock Text="{Binding Chrome.UpdateNoticeText}"
                                Foreground="{StaticResource Text.Heading}" FontSize="{DynamicResource Type.Heading.Sm}"
-                               TextWrapping="Wrap" TextAlignment="Center"
-                               AutomationProperties.LiveSetting="Polite"/>
-                    <TextBlock x:Name="UpdateOfferDetail" Text="{loc:Translate UpdateNotice.Recommended}"
+                               TextWrapping="Wrap" TextAlignment="Center"/>
+                    <TextBlock Text="{loc:Translate UpdateNotice.Recommended}"
                                Foreground="{StaticResource Text.Body}" FontSize="{DynamicResource Type.Body}"
-                               TextWrapping="Wrap" TextAlignment="Center" Margin="{StaticResource GapTop.Sm}"
-                               AutomationProperties.LiveSetting="Polite"/>
+                               TextWrapping="Wrap" TextAlignment="Center" Margin="{StaticResource GapTop.Sm}"/>
                     <TextBlock x:Name="UpdateOfferFailure" Text="{Binding Chrome.UpdateFailureText}"
                                Foreground="{StaticResource Status.Warning}" FontSize="{DynamicResource Type.Body}"
                                TextWrapping="Wrap" TextAlignment="Center" Margin="{StaticResource GapTop.Sm}"
                                Visibility="{Binding Chrome.HasUpdateFailure, Converter={StaticResource BoolToVis}}"
                                AutomationProperties.LiveSetting="Polite"/>
-                    <!-- Update now first, the accent marking it as the step the card
-                         recommends; the two wrap onto two lines where they do not fit
-                         on one. -->
-                    <WrapPanel HorizontalAlignment="Center" Margin="0,12,0,0">
+                    <!-- The steps one under another, each centred on the card: Update now,
+                         the accent marking it as the step the card recommends; the link,
+                         as large as Continue; then Continue without updating. -->
+                    <StackPanel Margin="0,20,0,0">
                         <Button x:Name="UpdateOfferUpdateNowButton" Style="{StaticResource AccentPill}"
                                 Content="{loc:Translate UpdateNotice.UpdateNow}"
                                 Command="{Binding Chrome.UpdateNowCommand}"
-                                Margin="8,8,8,0"
+                                HorizontalAlignment="Center" Margin="0,0,0,8"
                                 Visibility="{Binding Chrome.ShowsUpdateNow, Converter={StaticResource BoolToVis}}"/>
+                        <TextBlock FontSize="{DynamicResource Type.Heading.Sm}" FontWeight="Medium"
+                                   TextWrapping="Wrap" TextAlignment="Center"
+                                   HorizontalAlignment="Center" Margin="0,8,0,8"
+                                   Visibility="{Binding Chrome.ShowsReleaseLink, Converter={StaticResource BoolToVis}}">
+                            <Hyperlink x:Name="UpdateOfferDownloadLink"
+                                       Command="{Binding Chrome.OpenReleasePageCommand}"
+                                       Style="{StaticResource SubtleLink}"
+                                       AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.Download}"><Run Text="{loc:Translate UpdateNotice.Download}"/></Hyperlink>
+                        </TextBlock>
                         <Button x:Name="UpdateOfferContinueButton" Style="{StaticResource GhostPill}"
                                 Content="{loc:Translate UpdateNotice.ContinueWithoutUpdating}"
                                 ContentTemplate="{StaticResource WrappingCentredLabel}"
                                 Command="{Binding Chrome.ContinueWithoutUpdatingCommand}"
-                                Margin="8,8,8,0"/>
-                    </WrapPanel>
-                    <TextBlock FontSize="{DynamicResource Type.Body}" TextWrapping="Wrap" TextAlignment="Center"
-                               Margin="0,12,0,0"
-                               Visibility="{Binding Chrome.ShowsReleaseLink, Converter={StaticResource BoolToVis}}">
-                        <Hyperlink Command="{Binding Chrome.OpenReleasePageCommand}"
-                                   Style="{StaticResource SubtleLink}"
-                                   AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.Download}"><Run Text="{loc:Translate UpdateNotice.Download}"/></Hyperlink>
-                    </TextBlock>
+                                HorizontalAlignment="Center"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
         </Grid>

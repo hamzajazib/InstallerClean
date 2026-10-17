@@ -179,6 +179,35 @@ internal static class DisplayHelpers
     }
 
     /// <summary>
+    /// The marks a line can end in that close it as a sentence for a screen reader, in the
+    /// half-width and full-width forms the app's languages draw.
+    /// </summary>
+    private const string ClosingMarks = ".!?:…。！？：";
+
+    /// <summary>
+    /// <paramref name="lines"/> as one line for a screen reader to speak as sentences of
+    /// their own, each trimmed and the blank ones left out. A line ending in its own
+    /// closing mark is followed by <see cref="SentenceSpace"/>, and any other by
+    /// <c>Display.SentenceSeparator</c>, which puts in the stop the line does not carry.
+    /// The last line keeps the ending it has.
+    /// </summary>
+    internal static string SpokenSentences(params string[] lines)
+    {
+        var spoken = lines.Select(line => line.Trim()).Where(line => line.Length > 0).ToList();
+        var joined = new System.Text.StringBuilder();
+        for (var i = 0; i < spoken.Count; i++)
+        {
+            joined.Append(spoken[i]);
+            if (i == spoken.Count - 1) break;
+            joined.Append(ClosingMarks.Contains(spoken[i][^1])
+                ? SentenceSpace
+                : Strings.Display_SentenceSeparator);
+        }
+
+        return joined.ToString();
+    }
+
+    /// <summary>
     /// The access key <paramref name="label"/> gives its control, as WPF reads it: the
     /// character after the first underscore that is not doubled, a doubled underscore
     /// being a literal one. Upper case in the language the app is showing, as a key is

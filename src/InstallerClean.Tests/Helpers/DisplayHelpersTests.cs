@@ -395,6 +395,63 @@ public class DisplayHelpersTests
         Assert.Contains(key.Value.ToString(), spoken[line.Length..], StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Spoken_sentences_put_the_language_s_stop_after_a_line_that_carries_none()
+    {
+        using var scope = new LocalisationScope(British, British);
+
+        Assert.Equal(
+            "All clean. Nothing to clean up in C:\\Windows\\Installer. Scanned 151 files in less than a second",
+            DisplayHelpers.SpokenSentences(
+                "All clean", "Nothing to clean up in C:\\Windows\\Installer", "Scanned 151 files in less than a second"));
+    }
+
+    [Fact]
+    public void Spoken_sentences_put_only_a_space_after_a_line_that_carries_its_own_stop()
+    {
+        using var scope = new LocalisationScope(British, British);
+
+        Assert.Equal(
+            "InstallerClean 9.9.9 is available. It's strongly recommended to use the latest version.",
+            DisplayHelpers.SpokenSentences(
+                "InstallerClean 9.9.9 is available.", "It's strongly recommended to use the latest version."));
+        Assert.Equal("Ready? Go", DisplayHelpers.SpokenSentences("Ready?", "Go"));
+        Assert.Equal("Held back (3.6 MB). Next", DisplayHelpers.SpokenSentences("Held back (3.6 MB)", "Next"));
+    }
+
+    [Fact]
+    public void Spoken_sentences_leave_out_blank_lines_and_trim_the_rest()
+    {
+        using var scope = new LocalisationScope(British, British);
+
+        Assert.Equal("All clean. Done", DisplayHelpers.SpokenSentences("", "All clean ", "  ", "\nDone"));
+        Assert.Equal(string.Empty, DisplayHelpers.SpokenSentences("", " "));
+    }
+
+    [Fact]
+    public void Spoken_sentences_in_Japanese_take_its_full_width_stop_and_no_space()
+    {
+        var japanese = CultureInfo.GetCultureInfo("ja");
+        using var scope = new LocalisationScope(japanese, japanese);
+
+        Assert.Equal("すべてクリーン。完了。次", DisplayHelpers.SpokenSentences("すべてクリーン", "完了。", "次"));
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryCulture))]
+    public void Every_language_s_own_stop_closes_a_spoken_sentence(string cultureName)
+    {
+        // A line ending in the stop its own language puts between sentences is followed by
+        // the space alone, so no language hears a second stop after its own.
+        var culture = CultureInfo.GetCultureInfo(cultureName);
+        using var scope = new LocalisationScope(culture, culture);
+        var stop = Strings.Display_SentenceSeparator.TrimEnd();
+
+        Assert.Equal("a" + stop + DisplayHelpers.SentenceSpace + "b",
+            DisplayHelpers.SpokenSentences("a" + stop, "b"));
+        Assert.Equal("a" + Strings.Display_SentenceSeparator + "b", DisplayHelpers.SpokenSentences("a", "b"));
+    }
+
     private static readonly CultureInfo British = CultureInfo.GetCultureInfo("en-GB");
 
     private sealed class CultureScope : IDisposable
