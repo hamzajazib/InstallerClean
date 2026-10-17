@@ -22,7 +22,8 @@ internal abstract record CommandLineUpdateResult
 
     /// <summary>
     /// The newer version ran in this console with <paramref name="ArgumentsRun"/> and has
-    /// finished; <paramref name="ExitCode"/> is its exit code, and so this run's.
+    /// finished; <paramref name="ExitCode"/> is its exit code, which the host ends this run
+    /// with, or reads as Ctrl+C having ended it before it could answer.
     /// </summary>
     public sealed record HandedOver(int ExitCode, string FromVersion, string ToVersion, string ArgumentsRun)
         : CommandLineUpdateResult;

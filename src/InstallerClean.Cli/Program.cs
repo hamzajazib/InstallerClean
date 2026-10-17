@@ -31,6 +31,8 @@ internal static class Program
 
     public static int Main(string[] args)
     {
+        CancelKey.Process.Hook();
+
         // No critical-error box for the whole run: a read reaching a drive with no disc or card in
         // it answers with an error rather than waiting on a box that a scheduled task has nobody
         // to dismiss.
@@ -202,8 +204,8 @@ internal static class Program
         // drives the EventLog mode label and the /d-or-/m mutex check.
         var arg = CliContract.CommandToken(args)!.ToLowerInvariant();
 
-        // A run without administrator rights is refused here, before the Ctrl+C
-        // handler and the single-instance mutex, so it scans nothing and meets no
+        // A run without administrator rights is refused here, before the update and
+        // the single-instance mutex, so it scans nothing and meets no
         // other InstallerClean process. The manifest asks Windows for the rights,
         // and Windows can still start the tool without them, a compatibility setting
         // being one way, so the tool asks its own token; AdministratorRights says
@@ -212,48 +214,53 @@ internal static class Program
         if (!AdministratorRights.Held())
             return RefuseWithoutAdministratorRights(arg);
 
-        // Cancel handler before the update and the mutex: a Ctrl+C in the gap should
-        // print "Cancelling..." rather than terminate via the default
-        // handler.
         using var cts = new CancellationTokenSource();
         var updateHost = new ConsoleUpdateHost(arg);
         // This run's own file is held against renaming for as long as it runs, so another
         // run's update of the same file cannot move it aside under this one.
         updateHost.HoldOwnFile();
-        ConsoleCancelEventHandler cancelHandler = (_, cancelArgs) =>
+
+        // A Ctrl+C from here until the run returns cancels the run, before the update and the
+        // mutex as well as during the work, and one that came before this line does so as it
+        // runs. The registration is released as the run returns.
+        using var onCtrlC = CancelKey.Process.Answer(CancelRun);
+
+        // Runs once, on the console's own control-handler thread or, where Ctrl+C came
+        // before the registration, on this one. Nothing in here may throw: on the
+        // control-handler thread Main's try/catch does not cover it, so an escape is
+        // unhandled, a runtime abort and a stack trace on stderr in place of the
+        // documented exit code and the single Application-log entry, on a surface that
+        // deliberately keeps ex.Message out.
+        void CancelRun()
         {
-            cancelArgs.Cancel = true; // keep the process running long enough to stop gracefully
             // The newer version this run updated to is running in this console and gets the
             // same Ctrl+C. It prints the notice and stops its own work, so this run prints
-            // nothing, and goes on waiting for its exit code and its summary.
-            if (updateHost.NewerVersionRunning) return;
-            // Nothing in here may throw. It runs on the console's own
-            // control-handler thread, which Main's try/catch does not cover, so an
-            // escape is unhandled: a runtime abort and a stack trace on stderr in
-            // place of the documented exit code and the single Application-log
-            // entry, on a surface that deliberately keeps ex.Message out. Cancel
-            // raises ObjectDisposedException once the run has disposed the source,
-            // which it can do mid-invocation, unsubscribing a multicast delegate
-            // not waiting for a handler already running. IsCancellationRequested
-            // stays readable after Dispose, so the guard below is not the hazard.
+            // nothing, and goes on waiting for its exit code and its summary. The token is
+            // cancelled all the same, which is how the run knows the Ctrl+C came if the
+            // newer version is ended by it before it can answer it.
+            if (!updateHost.NewerVersionRunning)
+            {
+                try
+                {
+                    Console.WriteLine();
+                    Console.WriteLine(updateHost.SetupRunning ? Strings.Cli_CancellingAfterUpdate : Strings.Cli_Cancelling);
+                }
+                catch (Exception ex)
+                {
+                    Helpers.CrashLog.TryWrite(ex);
+                }
+            }
+            // Cancelled whether or not the line went out, so the run stops either way. The
+            // run may have returned and disposed the source meanwhile, which throws here.
             try
             {
-                // A second Ctrl+C arriving while the first is still unwinding must
-                // not print the notice again. CancellationTokenSource.Cancel is
-                // already idempotent, so this guard earns its place for the stdout
-                // line alone: the CLI's output is a scraped surface, and one run
-                // reports its cancellation once.
-                if (cts.IsCancellationRequested) return;
-                Console.WriteLine();
-                Console.WriteLine(updateHost.SetupRunning ? Strings.Cli_CancellingAfterUpdate : Strings.Cli_Cancelling);
                 cts.Cancel();
             }
             catch (Exception ex)
             {
                 Helpers.CrashLog.TryWrite(ex);
             }
-        };
-        Console.CancelKeyPress += cancelHandler;
+        }
 
         // What an earlier update left beside this exe: the copy it renamed aside, which
         // could not be deleted while it was still running, and a newer version written
@@ -261,18 +268,14 @@ internal static class Program
         if (Environment.ProcessPath is { Length: > 0 } ownPath)
             SelfReplacement.TryRemoveOldCopy(ownPath);
 
-        if (RunUpdate(arg, args, invocation, updateHost, cts.Token) is int updateExitCode)
-        {
-            try
-            {
-                Console.CancelKeyPress -= cancelHandler;
-            }
-            catch (Exception ex)
-            {
-                Helpers.CrashLog.TryWrite(ex);
-            }
+        if (!cts.IsCancellationRequested
+            && RunUpdate(arg, args, invocation, updateHost, cts.Token) is int updateExitCode)
             return updateExitCode;
-        }
+
+        // A Ctrl+C before the update, one the update did not end the run on, or one that
+        // came where no update was checked for, stops the run here, before the mutex and
+        // the scan.
+        if (cts.IsCancellationRequested) return ReportCancelledBeforeWork(arg);
 
         // Mutate-the-cache operations (/d and /m) take the same singleton
         // mutex the WPF GUI uses, so a CLI invocation cannot race the
@@ -322,7 +325,6 @@ internal static class Program
                 try
                 {
                     mutex.Dispose();
-                    Console.CancelKeyPress -= cancelHandler;
                 }
                 catch (Exception ex)
                 {
@@ -352,13 +354,10 @@ internal static class Program
             // the note about an Application log that refused it, by the time it
             // returns, so nothing in this cleanup may reach Main's catch-all: that
             // writes a second, and one summary per run is what an RMM counts runs by.
-            // The unhook goes last inside the guard because nothing depends on it
-            // having happened.
             try
             {
                 if (holdsMutex) mutex!.ReleaseMutex();
                 mutex?.Dispose();
-                Console.CancelKeyPress -= cancelHandler;
             }
             catch (Exception ex)
             {
@@ -371,7 +370,8 @@ internal static class Program
     /// The update made before a /s, /d or /m (<see cref="CommandLineUpdate"/>). Answers the
     /// exit code where the run ends here: the newer version's, where it ran in this
     /// console; <see cref="ExitCancelled"/> after Ctrl+C at the question, during the
-    /// download, or with the newer version installed and not yet started; or
+    /// download, with the newer version installed and not yet started, or where Ctrl+C
+    /// ended the newer version before it could answer it; or
     /// <see cref="ExitError"/> where the update failed with this version's file no longer
     /// at its path, so nothing ran. Answers null where the run goes on
     /// with this version, having written the notice for an update that failed.
@@ -412,23 +412,21 @@ internal static class Program
 
         switch (result)
         {
+            case CommandLineUpdateResult.HandedOver { ExitCode: ControlCExit } when token.IsCancellationRequested:
+                // The newer version was ended by the Ctrl+C this run took too, while it was
+                // still starting and before it could answer it, so it wrote no summary. This
+                // run writes the one the newer version writes for a Ctrl+C a moment later.
+                // The same exit code from a console closed under it is passed on as it is.
+                return ReportCancelledBeforeWork(arg);
             case CommandLineUpdateResult.HandedOver handedOver:
                 return handedOver.ExitCode;
             case CommandLineUpdateResult.Cancelled:
-                // The same line, entry and code as a run cancelled during its scan.
-                Console.WriteLine(Strings.Cli_Cancelled);
-                MachineContract.WriteEventLog(CliEventClass.TransientSkip,
-                    () => string.Format(Strings.Cli_EventLogCancelledNoWork, arg));
-                NoteEventLogUnavailable();
-                return ExitCancelled;
+                return ReportCancelledBeforeWork(arg);
             case CommandLineUpdateResult.UpdatedThenCancelled updated:
                 // The newer version is in place and nothing ran, so the notice saying so is
                 // the run's one entry.
-                Console.WriteLine(Strings.Cli_Cancelled);
-                MachineContract.WriteEventLog(CliEventClass.UpdatedThenCancelledNotice,
+                return ReportCancelled(CliEventClass.UpdatedThenCancelledNotice,
                     () => UpdatedThenCancelledEventLogLine(arg, updated.FromVersion, updated.ToVersion));
-                NoteEventLogUnavailable();
-                return ExitCancelled;
             case CommandLineUpdateResult.CarriedOn { FailedAt: { } stage, FromVersion: { } from, ToVersion: { } to }:
                 MachineContract.WriteEventLog(CliEventClass.UpdateFailedNotice,
                     () => UpdateFailedEventLogLine(arg, from, to, stage, args));
@@ -447,6 +445,32 @@ internal static class Program
             default:
                 return null;
         }
+    }
+
+    /// <summary>
+    /// The exit code of a console process Windows ended for Ctrl+C because it had no
+    /// handler for it yet, STATUS_CONTROL_C_EXIT.
+    /// </summary>
+    private const int ControlCExit = unchecked((int)0xC000013A);
+
+    /// <summary>
+    /// Ends a run cancelled before any work was done, with the same line, entry and code
+    /// as a run cancelled during its scan.
+    /// </summary>
+    private static int ReportCancelledBeforeWork(string arg) =>
+        ReportCancelled(CliEventClass.TransientSkip, () => string.Format(Strings.Cli_EventLogCancelledNoWork, arg));
+
+    /// <summary>
+    /// Ends a cancelled run that did no work: prints "Cancelled.", writes its one entry,
+    /// of <paramref name="eventClass"/> with <paramref name="line"/>, and answers
+    /// <see cref="ExitCancelled"/>.
+    /// </summary>
+    private static int ReportCancelled(CliEventClass eventClass, Func<string> line)
+    {
+        Console.WriteLine(Strings.Cli_Cancelled);
+        MachineContract.WriteEventLog(eventClass, line);
+        NoteEventLogUnavailable();
+        return ExitCancelled;
     }
 
     /// <summary>

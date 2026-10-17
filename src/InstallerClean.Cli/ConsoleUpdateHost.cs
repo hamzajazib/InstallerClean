@@ -23,17 +23,19 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
     private volatile bool _setupRunning;
 
     /// <summary>
-    /// Whether the newer version has started in this console. The Ctrl+C handler reads
-    /// it: the console sends Ctrl+C to both processes, and while this is true the newer
-    /// version answers it, so this run prints nothing and keeps waiting for its exit code
-    /// and its summary. Until a start succeeds it is false, and a Ctrl+C cancels this run
-    /// as anywhere else, which stops the newer version being started.
+    /// Whether the newer version has started in this console. The run's answer to Ctrl+C
+    /// reads it: the console sends Ctrl+C to both processes, and while this is true the
+    /// newer version answers it, so this run prints nothing and keeps waiting for its exit
+    /// code; the newer version writes the run's summary, unless Ctrl+C ended it before it
+    /// could answer, when this run writes it. Until a start succeeds it is false, and a
+    /// Ctrl+C cancels this run as anywhere else, which stops the newer version being
+    /// started.
     /// </summary>
     public bool NewerVersionRunning => _newerVersionRunning;
 
     /// <summary>
     /// Whether the newer setup is running. This run waits for the setup to end whatever
-    /// Ctrl+C does, so the Ctrl+C handler says the run stops once it has finished.
+    /// Ctrl+C does, so the run's answer to Ctrl+C says it stops once the setup has finished.
     /// </summary>
     public bool SetupRunning => _setupRunning;
 
