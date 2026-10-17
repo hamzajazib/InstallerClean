@@ -550,6 +550,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 新版本會掃描並列出找到的內容，不會刪除任何檔案。如需刪除，請在之後再次執行 /d。 |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 新版本會掃描並列出找到的內容，不會移動任何檔案。如需移動，請在之後再次執行 /m。 |
 | Running {0} with InstallerClean {1} instead. | 改用 InstallerClean {1} 執行 {0}。 |
+| InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} 版已安裝，但無法啟動。請再次執行該命令。 |
 | Download it from GitHub: {0} | 從 GitHub 下載：{0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | 要復原很簡單。把它們從 {0} 移回 {InstallerFolder}，一切就會恢復原狀。 |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean 已無法確認備份資料夾，因此沒有再繼續。請檢查 {0}，然後再執行一次命令。 |

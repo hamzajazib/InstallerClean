@@ -2374,6 +2374,10 @@ Run InstallerClean again as administrator.</value></data>
        with the version it is. 0 = the command given, /s, /d or /m, as typed and left as
        written; 1 = the version that runs it. -->
   <data name="Cli.UpdateRunningInstead" xml:space="preserve"><value>Running {0} with InstallerClean {1} instead.</value></data>
+  <!-- Where the newer version is in place at the command line's path but would not start,
+       so the run ends with nothing run and the next run of the command starts the newer
+       version. 0 = its version. -->
+  <data name="Cli.UpdateNotStarted" xml:space="preserve"><value>InstallerClean {0} is installed but couldn't be started. Run the command again.</value></data>
   <!-- Where a newer version is out and this copy was built from source, so it cannot update
        itself. 0 = the release page's address, printed as written. -->
   <data name="Cli.UpdateDownloadLink" xml:space="preserve"><value>Download it from GitHub: {0}</value></data>
@@ -2433,6 +2437,10 @@ Run InstallerClean again as administrator.</value></data>
        failed. -->
   <data name="Cli.EventLogUpdateDownloadFailed" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (the download failed) and ran {3} with {1}.</value></data>
   <data name="Cli.EventLogUpdateInstallFailed" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (the install failed) and ran {3} with {1}.</value></data>
+  <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
+       ID 3006, the run's only entry, where the newer version is in place but would not
+       start, so nothing ran. -->
+  <data name="Cli.EventLogUpdateNotStarted" xml:space="preserve"><value>{0} mode: InstallerClean updated itself from {1} to {2} but could not start it, so nothing ran.</value></data>
   <!-- Stdout when the CLI cannot acquire the single-instance mutex.
        The GUI variant (Strings.Startup_AlreadyRunningBody) is written
        for a user who tried to launch a second window; the CLI variant

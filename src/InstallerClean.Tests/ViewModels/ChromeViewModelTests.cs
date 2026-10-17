@@ -343,7 +343,7 @@ public class ChromeViewModelTests
         var prepared = Prepared();
         _updater.PrepareAsync("9.9.9", Arg.Any<IProgress<double?>>(), Arg.Any<CancellationToken>())
             .Returns(_ => { _calls.Add("prepare"); return prepared; });
-        _windowService.StartUpdateAndCloseAsync(prepared.FileToStart, prepared.Arguments)
+        _windowService.StartUpdateAndCloseAsync(prepared)
             .Returns(_ => { _calls.Add("start"); return true; });
 
         await vm.UpdateNowCommand.ExecuteAsync(null);
@@ -376,17 +376,72 @@ public class ChromeViewModelTests
     {
         var vm = await CreateUpdatingViewModelAsync();
         _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(Prepared());
-        _windowService.StartUpdateAndCloseAsync(default!, default!).ReturnsForAnyArgs(false);
+        _windowService.StartUpdateAndCloseAsync(default!).ReturnsForAnyArgs(false);
 
         await vm.UpdateNowCommand.ExecuteAsync(null);
 
-        Assert.Contains("undo", _calls);
+        Assert.Equal(["settle", "undo"], _calls);
         Assert.False(vm.IsUpdating);
         Assert.Equal(Strings.UpdateNotice_InstallFailed, vm.UpdateFailureText);
         // Update now stays, so the person can try again, and the link joins it.
         Assert.True(vm.ShowsUpdateNow);
         Assert.True(vm.ShowsReleaseLink);
         Assert.True(vm.OpenReleasePageCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task A_hand_over_that_throws_takes_away_what_was_readied_and_says_it_could_not_be_installed()
+    {
+        var vm = await CreateUpdatingViewModelAsync();
+        _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(Prepared());
+        _windowService.StartUpdateAndCloseAsync(default!).ReturnsForAnyArgs(
+            Task.FromException<bool>(new InvalidOperationException("no")));
+
+        await vm.UpdateNowCommand.ExecuteAsync(null);
+
+        Assert.Equal(["settle", "undo"], _calls);
+        Assert.False(vm.IsUpdating);
+        Assert.Equal(Strings.UpdateNotice_InstallFailed, vm.UpdateFailureText);
+    }
+
+    [Fact]
+    public async Task A_settle_that_throws_takes_away_what_was_readied_and_starts_nothing()
+    {
+        _updater.CanUpdateItself.Returns(true);
+        _settingsService.Load().Returns(new AppSettings { AutoUpdateCheck = true });
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+        var vm = new ChromeViewModel(
+            _windowService, _msiInfoService, _settingsService,
+            _updateCheckService, _dialogService, new ScanViewModel(_scanService, _rebootService, _dialogService),
+            checkCooldownOverride: TimeSpan.Zero, updater: _updater,
+            settleBeforeHandOff: () => throw new IOException("no"));
+        await vm.RunAutomaticUpdateCheckAsync();
+        _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(Prepared());
+
+        await vm.UpdateNowCommand.ExecuteAsync(null);
+
+        Assert.Equal(["undo"], _calls);
+        await _windowService.DidNotReceiveWithAnyArgs().StartUpdateAndCloseAsync(default!);
+        Assert.False(vm.IsUpdating);
+        Assert.Equal(Strings.UpdateNotice_InstallFailed, vm.UpdateFailureText);
+    }
+
+    [Fact]
+    public async Task Cancel_pressed_as_the_download_finishes_takes_away_what_was_readied_once()
+    {
+        var vm = await CreateUpdatingViewModelAsync();
+        _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(_ =>
+        {
+            vm.CancelUpdateCommand.Execute(null);
+            return Prepared();
+        });
+
+        await vm.UpdateNowCommand.ExecuteAsync(null);
+
+        Assert.Equal(["undo"], _calls);
+        await _windowService.DidNotReceiveWithAnyArgs().StartUpdateAndCloseAsync(default!);
+        Assert.False(vm.IsUpdating);
+        Assert.False(vm.HasUpdateFailure);
     }
 
     [Theory]
@@ -404,7 +459,7 @@ public class ChromeViewModelTests
         Assert.Equal(
             stage == UpdateFailureStage.Download ? Strings.UpdateNotice_DownloadFailed : Strings.UpdateNotice_InstallFailed,
             vm.UpdateFailureText);
-        await _windowService.DidNotReceiveWithAnyArgs().StartUpdateAndCloseAsync(default!, default!);
+        await _windowService.DidNotReceiveWithAnyArgs().StartUpdateAndCloseAsync(default!);
         Assert.DoesNotContain("settle", _calls);
     }
 
@@ -424,7 +479,7 @@ public class ChromeViewModelTests
 
         Assert.False(vm.IsUpdating);
         Assert.False(vm.HasUpdateFailure);
-        await _windowService.DidNotReceiveWithAnyArgs().StartUpdateAndCloseAsync(default!, default!);
+        await _windowService.DidNotReceiveWithAnyArgs().StartUpdateAndCloseAsync(default!);
     }
 
     [Fact]
@@ -434,7 +489,7 @@ public class ChromeViewModelTests
         _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(
             Task.FromException<PreparedUpdate>(new UpdateFailedException(UpdateFailureStage.Download, "no")),
             Task.FromResult(Prepared()));
-        _windowService.StartUpdateAndCloseAsync(default!, default!).ReturnsForAnyArgs(true);
+        _windowService.StartUpdateAndCloseAsync(default!).ReturnsForAnyArgs(true);
 
         await vm.UpdateNowCommand.ExecuteAsync(null);
         Assert.True(vm.HasUpdateFailure);

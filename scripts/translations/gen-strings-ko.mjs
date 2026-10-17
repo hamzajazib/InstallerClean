@@ -627,6 +627,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterDelete': `새 버전은 검사하여 찾은 항목을 나열하기만 하고 아무것도 삭제하지 않습니다. 삭제하려면 그 후에 /d를 다시 실행하세요.`,
   'Cli.UpdateListsOnlyAfterMove': `새 버전은 검사하여 찾은 항목을 나열하기만 하고 아무것도 이동하지 않습니다. 이동하려면 그 후에 /m을 다시 실행하세요.`,
   'Cli.UpdateRunningInstead': `대신 InstallerClean {1} 버전으로 {0} 명령을 실행합니다.`,
+  'Cli.UpdateNotStarted': `InstallerClean {0} 버전이 설치되었지만 시작할 수 없었습니다. 명령을 다시 실행하세요.`,
   'Cli.UpdateDownloadLink': `GitHub에서 내려받기: {0}`,
   'Cli.Help.UpdateNote': `검사하기 전에 InstallerClean의 새 버전이 있는지 확인합니다. 직접 실행하면&#10;업데이트하기 전에 묻습니다. 예약 작업이나 스크립트에서 자동으로 실행되면&#10;묻지 않고 업데이트합니다. 확인을 건너뛰려면 /noupdate를 추가하세요.`,
 };

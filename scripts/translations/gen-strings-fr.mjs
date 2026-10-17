@@ -650,6 +650,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterDelete': `La nouvelle version va analyser et lister ce qu'elle trouve, sans rien supprimer. Pour supprimer, relancez /d ensuite.`,
   'Cli.UpdateListsOnlyAfterMove': `La nouvelle version va analyser et lister ce qu'elle trouve, sans rien déplacer. Pour déplacer, relancez /m ensuite.`,
   'Cli.UpdateRunningInstead': `Exécution de {0} avec InstallerClean {1} à la place.`,
+  'Cli.UpdateNotStarted': `InstallerClean {0} est installé, mais n'a pas pu être lancé. Relancez la commande.`,
   'Cli.UpdateDownloadLink': `Le télécharger sur GitHub : {0}`,
   'Cli.Help.UpdateNote': `Avant l'analyse, il vérifie s'il existe une version plus récente&#10;d'InstallerClean. Lancé par vous, il demande avant de mettre à jour. Lancé&#10;seul, dans une tâche planifiée ou un script, il se met à jour sans&#10;demander. Ajoutez /noupdate pour ignorer la vérification.`,
 };

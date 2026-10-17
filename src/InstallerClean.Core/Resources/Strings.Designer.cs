@@ -218,6 +218,7 @@ public static class Strings
     public static string Cli_EventLogUpdated => Get("Cli.EventLogUpdated");
     public static string Cli_EventLogUpdateDownloadFailed => Get("Cli.EventLogUpdateDownloadFailed");
     public static string Cli_EventLogUpdateInstallFailed => Get("Cli.EventLogUpdateInstallFailed");
+    public static string Cli_EventLogUpdateNotStarted => Get("Cli.EventLogUpdateNotStarted");
     public static string Cli_EventLogValidationFailed => Get("Cli.EventLogValidationFailed");
     public static string Cli_EventLogWindowsError => Get("Cli.EventLogWindowsError");
     public static string Cli_FoundNoOrphans => Get("Cli.FoundNoOrphans");
@@ -300,6 +301,7 @@ public static class Strings
     public static string Cli_UpdateInstalled => Get("Cli.UpdateInstalled");
     public static string Cli_UpdateListsOnlyAfterDelete => Get("Cli.UpdateListsOnlyAfterDelete");
     public static string Cli_UpdateListsOnlyAfterMove => Get("Cli.UpdateListsOnlyAfterMove");
+    public static string Cli_UpdateNotStarted => Get("Cli.UpdateNotStarted");
     public static string Cli_UpdatePrompt => Get("Cli.UpdatePrompt");
     public static string Cli_UpdateRunningInstead => Get("Cli.UpdateRunningInstead");
     public static string Cli_WithheldReasons_CandidateIdentity => Get("Cli.WithheldReasons.CandidateIdentity");

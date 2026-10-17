@@ -161,11 +161,14 @@ Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreve
 Source: "..\THIRD-PARTY-NOTICES"; DestDir: "{app}"; DestName: "THIRD-PARTY-NOTICES.txt"; Flags: ignoreversion
 
 [UninstallDelete]
-; The command line updates itself by renaming its running file to this name
-; before this setup writes the newer version, and the newer version deletes it
-; at its next run. Setup's uninstall log does not know the renamed file, so
-; without this an uninstall in between leaves it, and the folder, behind.
+; The command line updates itself by renaming its running file to the first of
+; these names before this setup writes the newer version, and where this setup
+; leaves a file that does not carry the newer version, it renames that file to
+; the second and puts its own file back. The next run deletes both. Setup's
+; uninstall log knows neither name, so without these an uninstall in between
+; leaves them, and the folder, behind.
 Type: files; Name: "{app}\installerclean-cli.exe.old"
+Type: files; Name: "{app}\installerclean-cli.exe.new"
 
 [Icons]
 Name: "{group}\InstallerClean"; Filename: "{app}\InstallerClean.exe"; IconFilename: "{app}\InstallerClean.exe"

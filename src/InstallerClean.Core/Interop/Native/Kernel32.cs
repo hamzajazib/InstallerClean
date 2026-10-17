@@ -541,6 +541,21 @@ internal static partial class Kernel32
     [LibraryImport(Library, EntryPoint = "LocalFree")]
     public static partial IntPtr LocalFree(IntPtr hMem);
 
+    /// <summary>
+    /// The pseudo-handle standing for this process, which needs no closing.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "GetCurrentProcess")]
+    public static partial IntPtr GetCurrentProcess();
+
+    /// <summary>
+    /// Ends the process <paramref name="hProcess"/> names at once, with
+    /// <paramref name="uExitCode"/>. Given this process's own pseudo-handle it runs
+    /// no more of its code: no finaliser, no exit handler and no DLL detach.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "TerminateProcess", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool TerminateProcess(IntPtr hProcess, uint uExitCode);
+
     public const uint GENERIC_READ           = 0x80000000;
     public const uint GENERIC_WRITE          = 0x40000000;
 
@@ -554,6 +569,7 @@ internal static partial class Kernel32
     public const uint FILE_APPEND_DATA       = 0x00000004;
     public const uint FILE_READ_ATTRIBUTES   = 0x00000080;
 
+    public const uint CREATE_NEW             = 1;
     public const uint CREATE_ALWAYS          = 2;
     public const uint OPEN_EXISTING          = 3;
     public const uint OPEN_ALWAYS            = 4;

@@ -48,6 +48,7 @@ const BUILDERS = [
   'SourcesGivenUpNoticeEventLogLine',
   'UpdatedEventLogLine',
   'UpdateFailedEventLogLine',
+  'UpdateNotStartedEventLogLine',
 ];
 const RAW_VALUE = 'Strings\\.Cli_EventLog(?!Unavailable\\b)[A-Za-z0-9_]*';
 const SCOPES = ['MachineContract.English', 'MachineContract.WriteEventLog'];

@@ -550,6 +550,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 새 버전은 검사하여 찾은 항목을 나열하기만 하고 아무것도 삭제하지 않습니다. 삭제하려면 그 후에 /d를 다시 실행하세요. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 새 버전은 검사하여 찾은 항목을 나열하기만 하고 아무것도 이동하지 않습니다. 이동하려면 그 후에 /m을 다시 실행하세요. |
 | Running {0} with InstallerClean {1} instead. | 대신 InstallerClean {1} 버전으로 {0} 명령을 실행합니다. |
+| InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} 버전이 설치되었지만 시작할 수 없었습니다. 명령을 다시 실행하세요. |
 | Download it from GitHub: {0} | GitHub에서 내려받기: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | 되돌리기는 간단합니다. {0}에서 {InstallerFolder}로 다시 옮기면 모든 것이 원래대로 돌아갑니다. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean이 백업 폴더를 더 이상 확인할 수 없어서, 중단했습니다. {0}을(를) 확인한 다음 명령을 다시 실행하세요. |

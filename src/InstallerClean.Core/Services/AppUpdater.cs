@@ -2,7 +2,7 @@ namespace InstallerClean.Services;
 
 /// <summary>
 /// Gets a newer version ready to start: downloaded, and where the copy replaces its
-/// own file, put in place.
+/// own file, written beside it to take its place.
 /// </summary>
 public interface IAppUpdater
 {
@@ -24,41 +24,49 @@ public interface IAppUpdater
 }
 
 /// <summary>
-/// A newer version ready to start, and the step that puts everything back if starting
-/// it fails.
+/// A newer version ready to start, and the step that takes away what getting it ready
+/// left on disk if it is not started.
 /// </summary>
 public sealed class PreparedUpdate
 {
-    private readonly Action _undo;
+    private Action? _undo;
 
-    public PreparedUpdate(string fileToStart, string arguments, Action undo)
+    public PreparedUpdate(string fileToStart, string arguments, Action undo, string? replacement = null)
     {
         FileToStart = fileToStart;
         Arguments = arguments;
+        Replacement = replacement;
         _undo = undo;
     }
 
-    /// <summary>The program to start: the newer setup, or the newer version at the app's own path.</summary>
+    /// <summary>The program to start: the newer setup, or the app's own path, where the newer version is to go.</summary>
     public string FileToStart { get; }
 
     /// <summary>The command line it is started with.</summary>
     public string Arguments { get; }
 
     /// <summary>
-    /// Puts back what getting it ready changed: the running exe's own file, and the
-    /// download. Never throws.
+    /// Where the copy replaces its own file, the newer version written beside it
+    /// (<see cref="SelfReplacement.StageAsync"/>), which <see cref="SelfReplacement.SwapIn"/>
+    /// puts at <see cref="FileToStart"/>. Null for the setup's copy, whose setup does that.
+    /// </summary>
+    public string? Replacement { get; }
+
+    /// <summary>
+    /// Takes away what getting it ready left: the download, or the newer version written
+    /// beside the running exe. Runs once, however often it is called. Never throws.
     /// </summary>
     public void Undo()
     {
-        try { _undo(); }
+        try { Interlocked.Exchange(ref _undo, null)?.Invoke(); }
         catch (Exception ex) { Helpers.CrashLog.TryWrite(ex); }
     }
 }
 
 /// <summary>
 /// The update from inside the app. The setup's copy downloads the newer setup and runs
-/// it; the portable, the slim and Scoop's copy download the newer version of the same
-/// file and put it at their own path.
+/// it; the portable, the slim, Scoop's copy and the command line's own download
+/// download the newer version of the same file and write it beside their own.
 /// </summary>
 public sealed class AppUpdater : IAppUpdater
 {
@@ -159,19 +167,18 @@ public sealed class AppUpdater : IAppUpdater
             });
         }
 
-        Action putBack;
+        string replacement;
         try
         {
-            putBack = SelfReplacement.Replace(_exePath, staged);
+            replacement = await SelfReplacement.StageAsync(_exePath, staged, cancellationToken).ConfigureAwait(false);
         }
-        catch
+        finally
         {
             Helpers.StorageHelpers.TryDeleteTempFile(staged);
             folder.TryRemoveIfEmpty();
-            throw;
         }
-        folder.TryRemoveIfEmpty();
-        return new PreparedUpdate(_exePath, string.Empty, putBack);
+        return new PreparedUpdate(_exePath, string.Empty,
+            () => Helpers.StorageHelpers.TryDeleteTempFile(replacement), replacement);
     }
 
 #if DEBUG

@@ -398,10 +398,11 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Update now, on the card saying a newer version is available and on the notice:
-    /// downloads the newer version as the same kind of copy, and hands over to it. The setup's copy runs the newer setup,
-    /// which starts the app again once it has installed; the other copies start the
-    /// newer version from their own path. Either way this app closes, and the newer
-    /// version scans as it opens, as every start does.
+    /// downloads the newer version as the same kind of copy, and hands over to it. The
+    /// setup's copy runs the newer setup, which starts the app again once it has
+    /// installed; the other copies put the newer version at their own path and start it
+    /// there. Either way this app closes, and the newer version scans as it opens, as
+    /// every start does.
     ///
     /// Anything that fails while this app is still open takes the download card away
     /// and puts the line for what failed on the card and the notice, with the link
@@ -422,6 +423,7 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
 
         using var cts = new CancellationTokenSource();
         _downloadCts = cts;
+        PreparedUpdate? prepared = null;
         var handedOver = false;
         try
         {
@@ -430,22 +432,15 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
                 IsUpdateProgressKnown = fraction is not null;
                 UpdateProgressPercent = (fraction ?? 0) * 100;
             });
-            var prepared = await _updater.PrepareAsync(version, progress, cts.Token);
-            if (cts.IsCancellationRequested)
-            {
-                // Cancel pressed as the download finished: put back what was readied.
-                prepared.Undo();
-                return;
-            }
+            prepared = await _updater.PrepareAsync(version, progress, cts.Token);
+            // Cancel pressed as the download finished: what was readied is taken away below.
+            if (cts.IsCancellationRequested) return;
 
             IsHandingOver = true;
             _settleBeforeHandOff();
-            handedOver = await _windowService.StartUpdateAndCloseAsync(prepared.FileToStart, prepared.Arguments);
+            handedOver = await _windowService.StartUpdateAndCloseAsync(prepared);
             if (!handedOver)
-            {
-                prepared.Undo();
                 UpdateFailureText = Strings.UpdateNotice_InstallFailed;
-            }
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested)
         {
@@ -467,8 +462,11 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         {
             _downloadCts = null;
             // Handed over, the app is closing and the card stays up until it has.
+            // Otherwise what getting the newer version ready left on disk goes, however
+            // the attempt ended.
             if (!handedOver)
             {
+                prepared?.Undo();
                 IsHandingOver = false;
                 IsUpdating = false;
             }

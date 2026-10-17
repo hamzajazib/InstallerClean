@@ -550,6 +550,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Phiên bản mới sẽ quét và liệt kê những gì tìm thấy, không xóa gì cả. Để xóa, hãy chạy lại /d sau đó. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Phiên bản mới sẽ quét và liệt kê những gì tìm thấy, không di chuyển gì cả. Để di chuyển, hãy chạy lại /m sau đó. |
 | Running {0} with InstallerClean {1} instead. | Thay vào đó, chạy {0} bằng InstallerClean {1}. |
+| InstallerClean {0} is installed but couldn't be started. Run the command again. | Đã cài đặt InstallerClean {0} nhưng không thể khởi động. Hãy chạy lại lệnh. |
 | Download it from GitHub: {0} | Tải về từ GitHub: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Hoàn tác rất đơn giản. Hãy chuyển chúng từ {0} trở lại {InstallerFolder} và mọi thứ sẽ như cũ. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean không còn xác nhận được thư mục sao lưu, nên đã dừng lại. Hãy kiểm tra {0}, rồi chạy lại lệnh. |

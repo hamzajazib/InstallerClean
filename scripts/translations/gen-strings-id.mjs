@@ -651,6 +651,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterDelete': `Versi baru akan memindai dan menampilkan daftar temuannya, tanpa menghapus apa pun. Untuk menghapus, jalankan /d lagi setelahnya.`,
   'Cli.UpdateListsOnlyAfterMove': `Versi baru akan memindai dan menampilkan daftar temuannya, tanpa memindahkan apa pun. Untuk memindahkan, jalankan /m lagi setelahnya.`,
   'Cli.UpdateRunningInstead': `Menjalankan {0} dengan InstallerClean {1} sebagai gantinya.`,
+  'Cli.UpdateNotStarted': `InstallerClean {0} telah terpasang, tetapi tidak dapat dijalankan. Jalankan perintah itu lagi.`,
   'Cli.UpdateDownloadLink': `Unduh dari GitHub: {0}`,
   'Cli.Help.UpdateNote': `Sebelum memindai, alat ini memeriksa versi InstallerClean yang lebih baru.&#10;Jika Anda menjalankannya sendiri, alat ini bertanya sebelum memperbarui.&#10;Jika berjalan otomatis lewat tugas terjadwal atau skrip, ia memperbarui&#10;tanpa bertanya. Tambahkan /noupdate untuk melewati pemeriksaan.`,
 };

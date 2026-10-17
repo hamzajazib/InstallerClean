@@ -87,6 +87,28 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
         }
     }
 
+    /// <summary>
+    /// Loads, before this exe is renamed aside, what the run reaches after it: starting
+    /// the setup and the newer version, reading a file's version, the Application-log
+    /// write, which also makes its source check here, and the English machine line, whose
+    /// first lookup in en-GB probes for resources the console's own language never asks
+    /// for.
+    /// </summary>
+    public void PrepareToMoveAside()
+    {
+        SelfReplacement.PrepareToMoveAside(
+            typeof(FileVersionInfo).Assembly, typeof(EventLog).Assembly, typeof(ConsoleUpdateHost).Assembly);
+        EventLogWriter.PrepareForWrites();
+        try
+        {
+            _ = MachineContract.English(() => Program.UpdatedEventLogLine(arg, "0.0.0", "0.0.0", []));
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+        }
+    }
+
     public int? RunSetup(string file, IReadOnlyList<string> arguments)
     {
         using var process = Start(file, arguments, Path.GetDirectoryName(file));

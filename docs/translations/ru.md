@@ -550,6 +550,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Новая версия просканирует и покажет список найденного, ничего не удаляя. Чтобы удалить, затем снова запустите /d. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Новая версия просканирует и покажет список найденного, ничего не перемещая. Чтобы переместить, затем снова запустите /m. |
 | Running {0} with InstallerClean {1} instead. | Вместо этого команда {0} будет выполнена в InstallerClean {1}. |
+| InstallerClean {0} is installed but couldn't be started. Run the command again. | Версия InstallerClean {0} установлена, но запустить её не удалось. Выполните команду ещё раз. |
 | Download it from GitHub: {0} | Скачать с GitHub: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Это легко отменить. Переместите их из {0} обратно в {InstallerFolder}, и всё вернётся как было. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean больше не смог подтвердить папку резервных копий и остановился. Проверьте {0}, затем запустите команду снова. |

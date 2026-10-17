@@ -610,6 +610,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterDelete': `De nieuwe versie scant en toont wat hij vindt, zonder iets te verwijderen. Voer daarna /d opnieuw uit om te verwijderen.`,
   'Cli.UpdateListsOnlyAfterMove': `De nieuwe versie scant en toont wat hij vindt, zonder iets te verplaatsen. Voer daarna /m opnieuw uit om te verplaatsen.`,
   'Cli.UpdateRunningInstead': `In plaats daarvan wordt {0} uitgevoerd met InstallerClean {1}.`,
+  'Cli.UpdateNotStarted': `InstallerClean {0} is geïnstalleerd, maar kon niet worden gestart. Voer de opdracht opnieuw uit.`,
   'Cli.UpdateDownloadLink': `Download het van GitHub: {0}`,
   'Cli.Help.UpdateNote': `Voor het scannen controleert het of er een nieuwere versie van&#10;InstallerClean is. Start je het zelf, dan vraagt het eerst toestemming.&#10;Draait het zelfstandig, in een geplande taak of een script, dan werkt het&#10;bij zonder te vragen. Voeg /noupdate toe om de controle over te slaan.`,
 };

@@ -536,6 +536,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterDelete': `新版本将扫描并列出找到的内容，不会删除任何文件。如需删除，请在之后再次运行 /d。`,
   'Cli.UpdateListsOnlyAfterMove': `新版本将扫描并列出找到的内容，不会移动任何文件。如需移动，请在之后再次运行 /m。`,
   'Cli.UpdateRunningInstead': `改为使用 InstallerClean {1} 运行 {0}。`,
+  'Cli.UpdateNotStarted': `InstallerClean {0} 版已安装，但无法启动。请再次运行该命令。`,
   'Cli.UpdateDownloadLink': `从 GitHub 下载：{0}`,
   'Cli.Help.UpdateNote': `扫描前，它会检查是否有更新版本的 InstallerClean。由您亲自运行时，它会在更&#10;新前询问。在计划任务或脚本中自动运行时，它会直接更新而不询问。添加&#10;/noupdate 可跳过检查。`,
 };

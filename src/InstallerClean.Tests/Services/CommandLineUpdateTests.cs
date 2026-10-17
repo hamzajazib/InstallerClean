@@ -6,8 +6,9 @@ namespace InstallerClean.Tests.Services;
 /// <summary>
 /// The command line's update before its scan: what it asks, what it runs, and what it
 /// leaves behind when a part fails. The console, the mutex and the processes are a
-/// recording host; the running exe is a real file in a temporary folder, since the
-/// setup's copy renames it aside.
+/// recording host; the running exe is a real file in a temporary folder, since each
+/// route renames it aside. A file's version is read off its text: "old" is the running
+/// version and "new" the newer one.
 /// </summary>
 public sealed class CommandLineUpdateTests : IDisposable
 {
@@ -24,7 +25,6 @@ public sealed class CommandLineUpdateTests : IDisposable
         _exe = Path.Combine(_folder, "installerclean-cli.exe");
         _host = new RecordingHost(_exe);
         File.WriteAllText(_exe, "old");
-        _host.Versions[_exe] = new Version(3, 4, 0, 0);
     }
 
     public void Dispose()
@@ -44,12 +44,9 @@ public sealed class CommandLineUpdateTests : IDisposable
         new CommandLineUpdate(check ?? NewerOut, updater, _host, TimeSpan.FromMilliseconds(200))
             .Run(canAsk, command, arguments ?? [command], _exe, token);
 
-    /// <summary>The separate download: the updater has put the newer file at the exe's path.</summary>
-    private FakeUpdater Download() => new(AppCopyKind.CommandLineDownload, _exe, onPrepare: () =>
-    {
-        File.WriteAllText(_exe, "new");
-        _host.Versions[_exe] = new Version(3, 5, 0, 0);
-    });
+    /// <summary>The separate download: the updater has written the newer file beside the exe.</summary>
+    private FakeUpdater Download(string written = "new") => new(AppCopyKind.CommandLineDownload, _exe,
+        onPrepare: () => File.WriteAllText(_exe + SelfReplacement.NewSuffix, written));
 
     private FakeUpdater Setup() => new(AppCopyKind.Setup, Path.Combine(_folder, "InstallerClean-3.5.0-setup.exe"));
 
@@ -59,7 +56,6 @@ public sealed class CommandLineUpdateTests : IDisposable
         _host.OnSetup = () =>
         {
             File.WriteAllText(_exe, "new");
-            _host.Versions[_exe] = new Version(3, 5, 0, 0);
             return 0;
         };
     }
@@ -122,6 +118,9 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal(_exe, run.File);
         Assert.Equal(new[] { "/s" }, run.Arguments);
         Assert.Equal((Current, Latest), (run.From, run.To));
+        Assert.Equal("new", run.ExeHeld);
+        Assert.Equal("old", File.ReadAllText(_exe + SelfReplacement.OldSuffix));
+        Assert.Equal(new[] { "old" }, _host.PreparedWhileExeHeld);
     }
 
     [Fact]
@@ -245,16 +244,18 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
-    public void A_download_that_does_not_carry_the_version_it_was_downloaded_as_is_put_back_and_never_run()
+    public void A_download_that_does_not_carry_the_version_it_was_downloaded_as_is_taken_away_and_never_run()
     {
-        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, _exe, onPrepare: () =>
-            _host.Versions[_exe] = new Version(3, 4, 0, 0));
+        var updater = Download(written: "old");
 
         var result = Run(updater, canAsk: false);
 
         Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateFailureStage.Install, Current, Latest), result);
         Assert.True(updater.Undone);
         Assert.Null(_host.NewerVersionRun);
+        Assert.Equal("old", File.ReadAllText(_exe));
+        Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
+        Assert.Empty(_host.PreparedWhileExeHeld);
     }
 
     [Fact]
@@ -267,6 +268,22 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateFailureStage.Install, Current, Latest), result);
         Assert.True(updater.Undone);
+        Assert.Equal("old", File.ReadAllText(_exe));
+        Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
+        Assert.Equal(string.Format(Strings.Cli_UpdateRunningInstead, "/s", Current), _host.Output[^1]);
+    }
+
+    [Fact]
+    public void A_newer_version_that_will_not_start_and_cannot_be_moved_out_of_the_way_ends_the_run_as_installed()
+    {
+        _host.NewerVersionExitCode = null;
+        _host.OnNewerVersion = () => Directory.CreateDirectory(_exe + SelfReplacement.NewSuffix);
+
+        var result = Run(Download(), canAsk: false);
+
+        Assert.Equal(new CommandLineUpdateResult.NotStarted(Current, Latest), result);
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.Equal(string.Format(Strings.Cli_UpdateNotStarted, Latest), _host.Output[^1]);
     }
 
     [Fact]
@@ -311,6 +328,56 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal("new", File.ReadAllText(_exe));
         Assert.True(updater.Undone);
         Assert.Equal(_exe, _host.NewerVersionRun!.Value.File);
+        Assert.Equal(new[] { "old" }, _host.PreparedWhileExeHeld);
+    }
+
+    [Fact]
+    public void A_setups_newer_version_that_will_not_start_ends_the_run_as_installed_with_nothing_put_back()
+    {
+        SetupInstalls();
+        _host.NewerVersionExitCode = null;
+
+        var result = Run(Setup(), canAsk: false);
+
+        Assert.Equal(new CommandLineUpdateResult.NotStarted(Current, Latest), result);
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.Equal(string.Format(Strings.Cli_UpdateNotStarted, Latest), _host.Output[^1]);
+        Assert.DoesNotContain(string.Format(Strings.Cli_UpdateRunningInstead, "/s", Current), _host.Output);
+    }
+
+    [Fact]
+    public void A_setup_that_leaves_a_file_without_the_newer_version_has_it_moved_aside_and_the_run_carries_on()
+    {
+        _host.OnSetup = () =>
+        {
+            File.WriteAllText(_exe, "unreadable");
+            return 0;
+        };
+
+        var result = Run(Setup(), canAsk: false);
+
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateFailureStage.Install, Current, Latest), result);
+        Assert.Equal("old", File.ReadAllText(_exe));
+        Assert.Equal("unreadable", File.ReadAllText(_exe + SelfReplacement.NewSuffix));
+        Assert.Null(_host.NewerVersionRun);
+    }
+
+    [Fact]
+    public void A_setup_that_fails_with_this_exe_unable_to_go_back_ends_the_run_with_nothing_run()
+    {
+        _host.OnSetup = () =>
+        {
+            File.WriteAllText(_exe, "partial");
+            Directory.CreateDirectory(_exe + SelfReplacement.NewSuffix);
+            return 1;
+        };
+
+        var result = Run(Setup(), canAsk: false);
+
+        var stopped = Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Equal(nameof(UpdateFailedException), stopped.FailureType);
+        Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
+        Assert.Null(_host.NewerVersionRun);
     }
 
     [Theory]
@@ -350,7 +417,6 @@ public sealed class CommandLineUpdateTests : IDisposable
         _host.OnSetup = () =>
         {
             File.WriteAllText(_exe, "new");
-            _host.Versions[_exe] = new Version(3, 5, 0, 0);
             cts.Cancel();
             return 0;
         };
@@ -423,8 +489,9 @@ public sealed class CommandLineUpdateTests : IDisposable
         {
             Prepared = true;
             onPrepare?.Invoke();
-            return Task.FromResult(new PreparedUpdate(
-                fileToStart, kind == AppCopyKind.Setup ? "/VERYSILENT /SP-" : string.Empty, () => Undone = true));
+            return Task.FromResult(kind == AppCopyKind.Setup
+                ? new PreparedUpdate(fileToStart, "/VERYSILENT /SP-", () => Undone = true)
+                : new PreparedUpdate(fileToStart, string.Empty, () => Undone = true, fileToStart + SelfReplacement.NewSuffix));
         }
     }
 
@@ -437,12 +504,15 @@ public sealed class CommandLineUpdateTests : IDisposable
         public bool LockAvailable { get; set; } = true;
         public bool HoldsLock { get; private set; }
         public List<int> LockThreads { get; } = [];
-        public Dictionary<string, Version> Versions { get; } = new(StringComparer.OrdinalIgnoreCase);
         public Func<int?> OnSetup { get; set; } = () => 0;
+        public Action? OnNewerVersion { get; set; }
         public int? NewerVersionExitCode { get; set; }
         public (string File, string[] Arguments, bool HeldLock, bool ExeWasAside)? SetupRun { get; private set; }
-        public (string File, string[] Arguments, string From, string To)? NewerVersionRun { get; private set; }
+        public (string File, string[] Arguments, string From, string To, string ExeHeld)? NewerVersionRun { get; private set; }
         public bool NewerVersionHeldLock { get; private set; }
+
+        /// <summary>What the exe's path held at each call to <see cref="PrepareToMoveAside"/>.</summary>
+        public List<string> PreparedWhileExeHeld { get; } = [];
 
         public void WriteLine(string line) => Output.Add(line);
 
@@ -470,7 +540,15 @@ public sealed class CommandLineUpdateTests : IDisposable
         }
 
         public Version? FileVersion(string path) =>
-            File.Exists(path) && Versions.TryGetValue(path, out var version) ? version : null;
+            !File.Exists(path) ? null : File.ReadAllText(path) switch
+            {
+                "old" => new Version(3, 4, 0, 0),
+                "new" => new Version(3, 5, 0, 0),
+                _ => null,
+            };
+
+        public void PrepareToMoveAside() =>
+            PreparedWhileExeHeld.Add(File.Exists(exe) ? File.ReadAllText(exe) : "(nothing)");
 
         public int? RunSetup(string file, IReadOnlyList<string> arguments)
         {
@@ -482,8 +560,9 @@ public sealed class CommandLineUpdateTests : IDisposable
         public int? RunNewerVersion(string file, IReadOnlyList<string> arguments, string fromVersion, string toVersion)
         {
             NewerVersionHeldLock = HoldsLock;
+            OnNewerVersion?.Invoke();
             if (NewerVersionExitCode is null) return null;
-            NewerVersionRun = (file, arguments.ToArray(), fromVersion, toVersion);
+            NewerVersionRun = (file, arguments.ToArray(), fromVersion, toVersion, File.ReadAllText(file));
             return NewerVersionExitCode;
         }
     }

@@ -37,10 +37,10 @@ public interface IWindowService
     void RelaunchForLanguageChange();
 
     /// <summary>
-    /// Starts <paramref name="fileToStart"/>, the newer setup or the newer version at
-    /// the app's own path, with <paramref name="arguments"/>, and closes the app.
-    /// Answers false where it could not be started, with the app still running as it
-    /// was.
+    /// Hands over to the newer version <paramref name="prepared"/> holds and closes the
+    /// app: runs the newer setup, or puts the newer version written beside the app at its
+    /// own path and starts it. Answers false where it could not be started, with the app
+    /// still running as it was from its own path.
     /// </summary>
-    Task<bool> StartUpdateAndCloseAsync(string fileToStart, string arguments);
+    Task<bool> StartUpdateAndCloseAsync(PreparedUpdate prepared);
 }

@@ -2335,6 +2335,10 @@ Vuelve a ejecutar InstallerClean como administrador.</value></data>
        with the version it is. 0 = the command given, /s, /d or /m, as typed and left as
        written; 1 = the version that runs it. -->
   <data name="Cli.UpdateRunningInstead" xml:space="preserve"><value>En su lugar, se ejecuta {0} con InstallerClean {1}.</value></data>
+  <!-- Where the newer version is in place at the command line's path but would not start,
+       so the run ends with nothing run and the next run of the command starts the newer
+       version. 0 = its version. -->
+  <data name="Cli.UpdateNotStarted" xml:space="preserve"><value>InstallerClean {0} está instalado, pero no se pudo iniciar. Vuelve a ejecutar el comando.</value></data>
   <!-- Where a newer version is out and this copy was built from source, so it cannot update
        itself. 0 = the release page's address, printed as written. -->
   <data name="Cli.UpdateDownloadLink" xml:space="preserve"><value>Descárgalo de GitHub: {0}</value></data>
@@ -2387,6 +2391,9 @@ Vuelve a ejecutar InstallerClean como administrador.</value></data>
        arguments the run was given. Event ID 3006, a notice beside the run's own summary: the
        first where the download failed, the second where putting it in place or starting it
        failed. -->
+  <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
+       ID 3006, the run's only entry, where the newer version is in place but would not
+       start, so nothing ran. -->
   <!-- Stdout when the CLI cannot acquire the single-instance mutex.
        The GUI variant (Strings.Startup_AlreadyRunningBody) is written
        for a user who tried to launch a second window; the CLI variant

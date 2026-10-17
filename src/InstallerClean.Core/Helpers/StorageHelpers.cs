@@ -17,6 +17,8 @@ internal static class StorageHelpers
     ///   <item>OpenExisting: read or read/write an existing real file.</item>
     ///   <item>CreateAlways: create a fresh real file, truncating any
     ///   pre-existing content (e.g. write to a freshly-named temp file).</item>
+    ///   <item>CreateNew: create a file that did not exist, failing where one
+    ///   does. A file created this way takes the folder's inherited permissions.</item>
     /// </list>
     /// </param>
     internal static SafeFileHandle? OpenAtomic(
@@ -33,6 +35,7 @@ internal static class StorageHelpers
         {
             AtomicOpenMode.OpenExisting => Kernel32.OPEN_EXISTING,
             AtomicOpenMode.CreateAlways => Kernel32.CREATE_ALWAYS,
+            AtomicOpenMode.CreateNew => Kernel32.CREATE_NEW,
             _ => Kernel32.OPEN_EXISTING,
         };
         return Open(path, desired, disposition);
@@ -88,6 +91,9 @@ internal static class StorageHelpers
         /// <summary>Always create a fresh file, truncating any
         /// pre-existing content.</summary>
         CreateAlways,
+        /// <summary>Create a file that does not exist yet, and fail where
+        /// one does.</summary>
+        CreateNew,
     }
 
     /// <summary>

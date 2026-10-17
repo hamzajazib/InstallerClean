@@ -253,7 +253,8 @@ internal static class Program
         Console.CancelKeyPress += cancelHandler;
 
         // What an earlier update left beside this exe: the copy it renamed aside, which
-        // could not be deleted while it was still running.
+        // could not be deleted while it was still running, and a newer version written
+        // beside it that never took its place.
         if (Environment.ProcessPath is { Length: > 0 } ownPath)
             SelfReplacement.TryRemoveOldCopy(ownPath);
 
@@ -366,13 +367,15 @@ internal static class Program
     /// <summary>
     /// The update made before a /s, /d or /m (<see cref="CommandLineUpdate"/>). Answers the
     /// exit code where the run ends here: the newer version's, where it ran in this
-    /// console, or <see cref="ExitCancelled"/> after Ctrl+C at the question or during the
-    /// download. Answers null where the run goes on with this version, having written the
-    /// notice for an update that failed.
+    /// console; <see cref="ExitCancelled"/> after Ctrl+C at the question or during the
+    /// download; or <see cref="ExitError"/> where the update failed with this version's
+    /// file no longer at its path, so nothing ran. Answers null where the run goes on
+    /// with this version, having written the notice for an update that failed.
     ///
     /// Nothing is checked where <c>/noupdate</c> was given or this account's settings turn
-    /// the check off. Nothing in here ends the run: a throw from building what the update
-    /// needs goes to crash.log and the run goes on, as it does after any update that fails.
+    /// the check off. A throw from building what the update needs goes to crash.log and
+    /// the run goes on, as it does after an update that fails with this version's file
+    /// at its path.
     /// </summary>
     private static int? RunUpdate(
         string arg, string[] args, CliInvocation invocation, ConsoleUpdateHost host, CancellationToken token)
@@ -418,6 +421,17 @@ internal static class Program
                 MachineContract.WriteEventLog(CliEventClass.UpdateFailedNotice,
                     () => UpdateFailedEventLogLine(arg, from, to, stage, args));
                 return null;
+            case CommandLineUpdateResult.NotStarted notStarted:
+                MachineContract.WriteEventLog(CliEventClass.UpdateFailedNotice,
+                    () => UpdateNotStartedEventLogLine(arg, notStarted.FromVersion, notStarted.ToVersion));
+                NoteEventLogUnavailable();
+                return ExitError;
+            case CommandLineUpdateResult.Stopped stopped:
+                MachineContract.WriteEventLog(CliEventClass.HardError, () => stopped.CrashLogPath is { } path
+                    ? string.Format(Strings.Cli_EventLogHardError, arg, stopped.FailureType, path)
+                    : string.Format(Strings.Cli_EventLogHardError_NoLog, arg, stopped.FailureType));
+                NoteEventLogUnavailable();
+                return ExitError;
             default:
                 return null;
         }
@@ -463,6 +477,19 @@ internal static class Program
                 ? Strings.Cli_EventLogUpdateDownloadFailed
                 : Strings.Cli_EventLogUpdateInstallFailed,
             arg, fromVersion, toVersion, string.Join(' ', arguments));
+
+    /// <summary>
+    /// The Event ID 3006 line where the run ends with nothing run: this run updated
+    /// itself from <paramref name="fromVersion"/> to <paramref name="toVersion"/>, which
+    /// is in place and would not start.
+    /// </summary>
+    /// <remarks>
+    /// Built outside the en-GB scope, like <see cref="AbortedMoveEventLogLine"/>: the
+    /// caller wraps it, so the line renders English in production and in the ambient
+    /// culture anywhere else.
+    /// </remarks>
+    internal static string UpdateNotStartedEventLogLine(string arg, string fromVersion, string toVersion) =>
+        string.Format(Strings.Cli_EventLogUpdateNotStarted, arg, fromVersion, toVersion);
 
     /// <summary>
     /// Prints what a run held back, in the operator's language: ONE counted

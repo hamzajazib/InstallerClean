@@ -550,6 +550,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | A nova versão vai analisar e listar o que encontrar, sem excluir nada. Para excluir, execute /d novamente depois. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | A nova versão vai analisar e listar o que encontrar, sem mover nada. Para mover, execute /m novamente depois. |
 | Running {0} with InstallerClean {1} instead. | Em vez disso, {0} será executado com o InstallerClean {1}. |
+| InstallerClean {0} is installed but couldn't be started. Run the command again. | O InstallerClean {0} está instalado, mas não foi possível iniciá-lo. Execute o comando novamente. |
 | Download it from GitHub: {0} | Baixe no GitHub: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | É simples de desfazer. Mova-os de volta de {0} para {InstallerFolder} e tudo voltará a ser como era. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | O InstallerClean não pôde mais confirmar a pasta de backup, então parou. Verifique {0} e execute o comando de novo. |

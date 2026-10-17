@@ -550,6 +550,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Versi baru akan memindai dan menampilkan daftar temuannya, tanpa menghapus apa pun. Untuk menghapus, jalankan /d lagi setelahnya. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Versi baru akan memindai dan menampilkan daftar temuannya, tanpa memindahkan apa pun. Untuk memindahkan, jalankan /m lagi setelahnya. |
 | Running {0} with InstallerClean {1} instead. | Menjalankan {0} dengan InstallerClean {1} sebagai gantinya. |
+| InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} telah terpasang, tetapi tidak dapat dijalankan. Jalankan perintah itu lagi. |
 | Download it from GitHub: {0} | Unduh dari GitHub: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Mudah untuk dibatalkan. Pindahkan kembali dari {0} ke {InstallerFolder} dan semuanya akan kembali seperti semula. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean tidak bisa lagi memastikan folder cadangan, jadi berhenti. Periksa {0}, lalu jalankan perintahnya lagi. |

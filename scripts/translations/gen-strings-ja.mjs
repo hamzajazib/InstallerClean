@@ -556,6 +556,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterDelete': `新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も削除しません。削除するには、その後もう一度 /d を実行してください。`,
   'Cli.UpdateListsOnlyAfterMove': `新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も移動しません。移動するには、その後もう一度 /m を実行してください。`,
   'Cli.UpdateRunningInstead': `代わりに InstallerClean {1} で {0} を実行します。`,
+  'Cli.UpdateNotStarted': `InstallerClean {0} をインストールしましたが、起動できませんでした。もう一度コマンドを実行してください。`,
   'Cli.UpdateDownloadLink': `GitHubからダウンロード：{0}`,
   'Cli.Help.UpdateNote': `スキャンの前に、InstallerClean の新しいバージョンがあるか確認します。自分&#10;で実行した場合は、更新する前に確認を求めます。スケジュールされたタスクやス&#10;クリプトで自動実行される場合は、確認なしで更新します。確認を省くには&#10;/noupdate を付けてください。`,
 };
@@ -661,6 +662,8 @@ const STRIPPED = new Set([
   'Cli.EventLogUpdated',
   'Cli.EventLogUpdateDownloadFailed',
   'Cli.EventLogUpdateInstallFailed',
+  // The machine Cli key for an update whose newer version would not start, by the same rule.
+  'Cli.EventLogUpdateNotStarted',
 ]);
 let stripped = 0;
 text = text.replace(/[^\S\n]*<data name="(Cli\.[^"]*)"[\s\S]*?<\/data>\n?/g,

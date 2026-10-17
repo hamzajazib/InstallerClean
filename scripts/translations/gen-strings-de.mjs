@@ -644,6 +644,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterDelete': `Die neue Version scannt und listet auf, was sie findet, ohne etwas zu löschen. Zum Löschen führe danach /d erneut aus.`,
   'Cli.UpdateListsOnlyAfterMove': `Die neue Version scannt und listet auf, was sie findet, ohne etwas zu verschieben. Zum Verschieben führe danach /m erneut aus.`,
   'Cli.UpdateRunningInstead': `Stattdessen wird {0} mit InstallerClean {1} ausgeführt.`,
+  'Cli.UpdateNotStarted': `InstallerClean {0} ist installiert, konnte aber nicht gestartet werden. Führe den Befehl erneut aus.`,
   'Cli.UpdateDownloadLink': `Von GitHub herunterladen: {0}`,
   'Cli.Help.UpdateNote': `Vor dem Scannen prüft es, ob es eine neuere Version von InstallerClean&#10;gibt. Wenn du es selbst startest, fragt es vor dem Aktualisieren. Läuft es&#10;von selbst, in einer geplanten Aufgabe oder einem Skript, aktualisiert es&#10;ohne zu fragen. Mit /noupdate wird die Prüfung übersprungen.`,
 };

@@ -683,6 +683,12 @@ public partial class App : Application
             Resources[key] = baseSize * factor;
     }
 
+    /// <summary>
+    /// Update now's hand-over to a newer version written beside the app ends the process
+    /// without running this (<see cref="ReplaceAndCloseAsync"/>). Anything that must
+    /// happen before an update hands over goes in MainViewModel.SettleBeforeUpdate, which
+    /// runs before every hand-over.
+    /// </summary>
     protected override void OnExit(ExitEventArgs e)
     {
         _services?.Dispose();
@@ -761,9 +767,10 @@ public partial class App : Application
     private static readonly TimeSpan UpdateCheckGrace = TimeSpan.FromSeconds(1);
 
     /// <summary>
-    /// Hands over to a newer version: releases the single-instance mutex, starts
-    /// <paramref name="fileToStart"/> and closes the app. Answers false where it could
-    /// not be started, having taken the mutex back, so the app carries on as it was.
+    /// Hands over to the newer version <paramref name="prepared"/> holds: releases the
+    /// single-instance mutex, starts the newer setup or the newer version, and closes the
+    /// app. Answers false where it could not be started, having taken the mutex back, so
+    /// the app carries on as it was.
     ///
     /// The mutex goes first for two reasons. The newer version takes it as it starts,
     /// and finding it held would send it down the "already running" exit. And the
@@ -773,20 +780,23 @@ public partial class App : Application
     /// fails leaves this app running; the caller has already settled what disposing
     /// would settle.
     ///
-    /// An antivirus can hold a program it has just seen written for a moment, so a
-    /// start that fails is tried again a few times, half a second apart, before the
-    /// answer is no. This runs on the dispatcher thread, from the notice's button, so
-    /// the release and the retake are on the thread that took the mutex, as the
-    /// owner-thread rule requires.
+    /// This runs on the dispatcher thread, from Update now, so the release and the
+    /// retake are on the thread that took the mutex, as the owner-thread rule requires.
     /// </summary>
-    public async Task<bool> StartUpdateAndCloseAsync(string fileToStart, string arguments)
+    public Task<bool> StartUpdateAndCloseAsync(PreparedUpdate prepared) =>
+        prepared.Replacement is null
+            ? StartSetupAndCloseAsync(prepared.FileToStart, prepared.Arguments)
+            : ReplaceAndCloseAsync(prepared.FileToStart);
+
+    /// <summary>
+    /// The setup's copy: starts the newer setup, which starts the app again once it has
+    /// installed, and closes the app. An antivirus can hold a program it has just seen
+    /// written for a moment, so a start that fails is tried again a few times, half a
+    /// second apart, before the answer is no.
+    /// </summary>
+    private async Task<bool> StartSetupAndCloseAsync(string fileToStart, string arguments)
     {
-        var released = _holdsSingleInstanceMutex;
-        if (released)
-        {
-            _singleInstanceMutex?.ReleaseMutex();
-            _holdsSingleInstanceMutex = false;
-        }
+        var released = ReleaseSingleInstanceMutex();
 
         for (var attempt = 1; ; attempt++)
         {
@@ -844,8 +854,33 @@ public partial class App : Application
         }
     }
 
+    /// <summary>
+    /// A copy that replaces its own file: loads what the hand-over reaches, on a pool
+    /// thread while the running exe's file is still whole, then on this thread renames
+    /// the newer version into place, starts it and ends the process
+    /// (<see cref="SelfReplacement.HandOverAndEnd"/>). That ends it without
+    /// <see cref="OnExit"/>, so the caller has already settled what closing would.
+    /// </summary>
+    private static async Task<bool> ReplaceAndCloseAsync(string exePath)
+    {
+        await Task.Run(() => SelfReplacement.PrepareToMoveAside());
+        var released = ReleaseSingleInstanceMutex();
+        SelfReplacement.HandOverAndEnd(exePath);
+        if (released) RetakeSingleInstanceMutex();
+        return false;
+    }
+
     private const int StartAttempts = 4;
     private static readonly TimeSpan StartRetryInterval = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>Releases the single-instance mutex where this app holds it, and answers whether it did.</summary>
+    private static bool ReleaseSingleInstanceMutex()
+    {
+        if (!_holdsSingleInstanceMutex) return false;
+        _singleInstanceMutex?.ReleaseMutex();
+        _holdsSingleInstanceMutex = false;
+        return true;
+    }
 
     private static void RetakeSingleInstanceMutex()
     {

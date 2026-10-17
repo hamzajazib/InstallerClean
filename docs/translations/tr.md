@@ -550,6 +550,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi silmeyecek. Silmek için ardından /d komutunu yeniden çalıştırın. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi taşımayacak. Taşımak için ardından /m komutunu yeniden çalıştırın. |
 | Running {0} with InstallerClean {1} instead. | Bunun yerine {0} komutu InstallerClean {1} ile çalıştırılıyor. |
+| InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} sürümü yüklendi ancak başlatılamadı. Komutu yeniden çalıştırın. |
 | Download it from GitHub: {0} | GitHub'dan indirin: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Geri almak kolay. Onları {0} konumundan {InstallerFolder} klasörüne geri taşıyın, her şey eskisi gibi olur. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean yedek klasörünü artık doğrulayamadı, bu yüzden durdu. {0} konumunu denetleyin, sonra komutu yeniden çalıştırın. |

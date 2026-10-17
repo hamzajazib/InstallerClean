@@ -695,6 +695,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterDelete': `The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards.`,
   'Cli.UpdateListsOnlyAfterMove': `The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards.`,
   'Cli.UpdateRunningInstead': `Running {0} with InstallerClean {1} instead.`,
+  'Cli.UpdateNotStarted': `InstallerClean {0} is installed but couldn't be started. Run the command again.`,
   'Cli.UpdateDownloadLink': `Download it from GitHub: {0}`,
   'Cli.Help.UpdateNote': `Before it scans, it checks for a newer version of InstallerClean.&#10;When you run it yourself, it asks before updating. When it runs on its&#10;own, in a scheduled task or a script, it updates without asking.&#10;Add /noupdate to skip the check.`,
 };

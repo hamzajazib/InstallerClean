@@ -5372,7 +5372,7 @@ public class MainViewModelTests
         var prepared = new PreparedUpdate(@"C:\ProgramData\InstallerClean-update-x\InstallerClean-9.9.9-setup.exe",
             "/SILENT", () => { });
         updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(prepared);
-        _windowService.StartUpdateAndCloseAsync(default!, default!).ReturnsForAnyArgs(true);
+        _windowService.StartUpdateAndCloseAsync(default!).ReturnsForAnyArgs(true);
         var vm = CreateViewModel(new AppSettings(), updater);
         ScanFinds(EmptyScanResult());
         CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
@@ -5380,7 +5380,7 @@ public class MainViewModelTests
 
         await vm.Chrome.UpdateNowCommand.ExecuteAsync(null);
 
-        await _windowService.Received(1).StartUpdateAndCloseAsync(prepared.FileToStart, prepared.Arguments);
+        await _windowService.Received(1).StartUpdateAndCloseAsync(prepared);
         Assert.False(vm.ResultsMayShow);
         Assert.False(vm.Completion.IsComplete);
         _firstRunMark.DidNotReceive().Set();
