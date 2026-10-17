@@ -129,6 +129,159 @@ jobs:
           }
           "EXE=$exe" | Add-Content $env:GITHUB_ENV
 
+      # Process creation and exit are audited on the setup's copy, so the Security
+      # log can show when the setup and every process it starts begin and end,
+      # against when the command line reads what the setup left.
+      - name: Audit process starts and exits
+        if: matrix.route == 'setup'
+        run: |
+          auditpol /set /subcategory:'{0CCE922B-69AE-11D9-BED3-505054503030}' /success:enable
+          if ($LASTEXITCODE -ne 0) { throw "auditpol could not turn on Process Creation." }
+          auditpol /set /subcategory:'{0CCE922C-69AE-11D9-BED3-505054503030}' /success:enable
+          if ($LASTEXITCODE -ne 0) { throw "auditpol could not turn on Process Termination." }
+
+      # Process Monitor records every file operation on the command line's path
+      # during the update on the setup's copy: what the setup writes there and
+      # under which names, and whether the command line opens the file when it
+      # reads its version. It is Microsoft's own tool, fetched from its
+      # Sysinternals share and refused unless Microsoft's signature on it is
+      # valid. A run where it cannot start says so and goes on: what it records
+      # explains a result and decides none.
+      - name: Start Process Monitor
+        if: matrix.route == 'setup'
+        continue-on-error: true
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'procmon'
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          $procmon = Join-Path $dir 'Procmon64.exe'
+          Invoke-WebRequest https://live.sysinternals.com/Procmon64.exe -OutFile $procmon
+          $sig = Get-AuthenticodeSignature $procmon
+          if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
+            throw "Procmon64.exe is not validly signed by Microsoft: $($sig.Status), $($sig.SignerCertificate.Subject)"
+          }
+          Start-Process $procmon -ArgumentList '/AcceptEula', '/Quiet', '/Minimized', '/BackingFile', "`"$dir\update.pml`""
+          Start-Process $procmon -ArgumentList '/AcceptEula', '/WaitForIdle' -Wait
+          "PROCMON=$procmon" | Add-Content $env:GITHUB_ENV
+
+      # Standard input and output both redirected, which is what makes the run
+      # one nobody can answer. The newer version is started in the same console
+      # and inherits the output, so it is read to the end of both. The function
+      # is kept in a file for the second run the checks make.
+      - name: Run the update
+        shell: pwsh
+        run: |
+          $helper = Join-Path $env:RUNNER_TEMP 'run.ps1'
+          Set-Content -Path $helper -Value @'
+          function Run([string]$exe) {
+            $info = [System.Diagnostics.ProcessStartInfo]::new($exe, '/s')
+            $info.UseShellExecute = $false
+            $info.RedirectStandardInput = $true
+            $info.RedirectStandardOutput = $true
+            $info.RedirectStandardError = $true
+            $p = [System.Diagnostics.Process]::Start($info)
+            $p.StandardInput.Close()
+            $out = $p.StandardOutput.ReadToEndAsync()
+            $err = $p.StandardError.ReadToEndAsync()
+            $p.WaitForExit()
+            [pscustomobject]@{ ExitCode = $p.ExitCode; Output = $out.Result + $err.Result }
+          }
+          '@
+          . $helper
+          "RUN_STARTED=$((Get-Date).ToUniversalTime().ToString('o'))" | Add-Content $env:GITHUB_ENV
+          $run = Run $env:EXE
+          Set-Content -Path (Join-Path $env:RUNNER_TEMP 'update-run.txt') -Value $run.Output -NoNewline
+          $run.Output
+          "Exit code: $($run.ExitCode)"
+          "UPDATE_EXIT=$($run.ExitCode)" | Add-Content $env:GITHUB_ENV
+
+      # What the update left, read before the checks make their second run,
+      # which changes it. This explains a result and decides none, so it runs
+      # whatever happened and never fails the job.
+      #
+      # Every file beside the exe is described with the release's own command
+      # line and, where the setup can be unpacked without running it, the one
+      # inside the release's setup, so a file that is not the release's shows by
+      # its hash. A waiting .new is read twice, a few seconds apart, from this
+      # process; the command line read it from its own. On the setup's copy the
+      # Security log gives every process start and exit and the Application log
+      # its entries, each to the millisecond, and Process Monitor every
+      # operation on the command line's path.
+      - name: Describe what the update left
+        if: always() && env.EXE != ''
+        continue-on-error: true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          function Stamp([datetime]$t) { $t.ToUniversalTime().ToString('HH:mm:ss.fff') }
+          function Describe([string]$path) {
+            $item = Get-Item -LiteralPath $path
+            $info = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($path)
+            "  $path"
+            "    FileVersion $($info.FileVersion), ProductVersion $($info.ProductVersion)"
+            "    $($item.Length) bytes, last written $(Stamp $item.LastWriteTime) UTC"
+            "    SHA-256 $((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant())"
+          }
+          $exe = $env:EXE
+          $folder = Split-Path $exe
+          $since = [datetime]::Parse($env:RUN_STARTED).ToUniversalTime()
+          "The update run started at $(Stamp $since) UTC."
+
+          "The command line's files beside the exe, read at $(Stamp (Get-Date)) UTC:"
+          Get-ChildItem -LiteralPath $folder -Filter 'installerclean-cli.exe*' | ForEach-Object { Describe $_.FullName }
+
+          if (Test-Path -LiteralPath "$exe.new") {
+            "The waiting file read again from this process:"
+            foreach ($pause in 0, 5) {
+              Start-Sleep -Seconds $pause
+              $info = [System.Diagnostics.FileVersionInfo]::GetVersionInfo("$exe.new")
+              "  at $(Stamp (Get-Date)) UTC: FileVersion $($info.FileVersion), parts $($info.FileMajorPart).$($info.FileMinorPart).$($info.FileBuildPart).$($info.FilePrivatePart)"
+            }
+          }
+
+          $release = Join-Path $env:RUNNER_TEMP 'release'
+          New-Item -ItemType Directory -Force -Path $release | Out-Null
+          gh release download "v$env:LATEST" --repo $env:GITHUB_REPOSITORY --pattern installerclean-cli.exe --dir $release --clobber
+          "The release's own command line:"
+          Describe (Join-Path $release 'installerclean-cli.exe')
+
+          if ('${{ matrix.route }}' -ne 'setup') { return }
+
+          $setup = "InstallerClean-$env:LATEST-setup.exe"
+          gh release download "v$env:LATEST" --repo $env:GITHUB_REPOSITORY --pattern $setup --dir $release --clobber
+          "The command line inside the release's setup:"
+          choco install innoextract --no-progress -y | Out-Null
+          $unpacked = Join-Path $env:RUNNER_TEMP 'unpacked'
+          $output = innoextract --extract --silent --output-dir $unpacked (Join-Path $release $setup) 2>&1
+          $inner = Get-ChildItem -LiteralPath $unpacked -Recurse -Filter 'installerclean-cli.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($inner) { Describe $inner.FullName } else { "  innoextract did not unpack it:"; $output | ForEach-Object { "    $_" } }
+
+          "The Application log, source InstallerClean, from the update run on:"
+          Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'InstallerClean'; StartTime = $since.ToLocalTime() } -ErrorAction SilentlyContinue |
+            Sort-Object TimeCreated | ForEach-Object { "  $(Stamp $_.TimeCreated)  $($_.Id)  $($_.Message)" }
+
+          "Every process started or ended from the update run on, from the Security log:"
+          Get-WinEvent -FilterHashtable @{ LogName = 'Security'; Id = 4688, 4689; StartTime = $since.ToLocalTime() } -ErrorAction SilentlyContinue |
+            Sort-Object TimeCreated | ForEach-Object {
+              $data = @{}
+              foreach ($d in ([xml]$_.ToXml()).Event.EventData.Data) { $data[$d.Name] = $d.'#text' }
+              if ($_.Id -eq 4688) {
+                "  $(Stamp $_.TimeCreated)  start  $($data.NewProcessName) pid $([Convert]::ToInt32($data.NewProcessId, 16)), started by $($data.ParentProcessName) pid $([Convert]::ToInt32($data.ProcessId, 16))"
+              } else {
+                "  $(Stamp $_.TimeCreated)  exit   $($data.ProcessName) pid $([Convert]::ToInt32($data.ProcessId, 16)), status $($data.Status)"
+              }
+            } | Where-Object { $_ -notmatch '\\(conhost|svchost|WmiPrvSE|backgroundTaskHost|RuntimeBroker|auditpol)\.exe' }
+
+          if (-not $env:PROCMON) { "Process Monitor did not start, so there is no record of file operations."; return }
+          $dir = Split-Path $env:PROCMON
+          Start-Process $env:PROCMON -ArgumentList '/Terminate' -Wait
+          $csv = Join-Path $dir 'update.csv'
+          Start-Process $env:PROCMON -ArgumentList '/AcceptEula', '/Quiet', '/OpenLog', "`"$dir\update.pml`"", '/SaveAs', "`"$csv`"" -Wait
+          $rows = @(Import-Csv $csv | Where-Object { $_.Path -like "$folder\installerclean-cli.exe*" -or $_.Path -like "$folder\is-*" })
+          $rows | Export-Csv (Join-Path $dir 'command-line-path.csv') -NoTypeInformation
+          "Process Monitor: $($rows.Count) operations on the command line's path and the setup's temporary files beside it:"
+          $rows | ForEach-Object { "  $($_.'Time of Day')  $($_.'Process Name') $($_.PID)  $($_.Operation)  $($_.Path)  $($_.Result)  $($_.Detail)" }
+
       # Every check runs and prints what it read, and the step fails if any of
       # them did. The lines the command line prints are built from Strings.resx,
       # so a reworded string moves the check with it. The runner's UI language
@@ -143,7 +296,7 @@ jobs:
       # same folder. On the command line's own download that file is the
       # update's own work, written into the folder; on the setup's copy the setup
       # writes it, so there the check reads what the setup leaves.
-      - name: Update and check the result
+      - name: Check the result
         shell: pwsh
         run: |
           $failures = [System.Collections.Generic.List[string]]::new()
@@ -154,22 +307,7 @@ jobs:
               $a.Major -eq $b.Major -and $a.Minor -eq $b.Minor -and [Math]::Max($a.Build, 0) -eq [Math]::Max($b.Build, 0)
           }
 
-          # Standard input and output both redirected, which is what makes the
-          # run one nobody can answer. The newer version is started in the same
-          # console and inherits the output, so it is read to the end of both.
-          function Run([string]$exe) {
-            $info = [System.Diagnostics.ProcessStartInfo]::new($exe, '/s')
-            $info.UseShellExecute = $false
-            $info.RedirectStandardInput = $true
-            $info.RedirectStandardOutput = $true
-            $info.RedirectStandardError = $true
-            $p = [System.Diagnostics.Process]::Start($info)
-            $p.StandardInput.Close()
-            $out = $p.StandardOutput.ReadToEndAsync()
-            $err = $p.StandardError.ReadToEndAsync()
-            $p.WaitForExit()
-            [pscustomobject]@{ ExitCode = $p.ExitCode; Output = $out.Result + $err.Result }
-          }
+          . (Join-Path $env:RUNNER_TEMP 'run.ps1')
 
           $resx = [xml](Get-Content -Raw src/InstallerClean.Core/Resources/Strings.resx)
           function Line([string]$name) {
@@ -183,11 +321,10 @@ jobs:
           $old = $env:OLD_VERSION
           $latest = $env:LATEST
 
-          Write-Host "::group::The update run"
-          $run = Run $exe
-          $run.Output
-          "Exit code: $($run.ExitCode)"
-          Write-Host "::endgroup::"
+          $run = [pscustomobject]@{
+            ExitCode = [int]$env:UPDATE_EXIT
+            Output = Get-Content -Raw (Join-Path $env:RUNNER_TEMP 'update-run.txt')
+          }
 
           "The command line's output:"
           foreach ($expected in @(
@@ -295,3 +432,60 @@ jobs:
         run: |
           $log = Join-Path $env:RUNNER_TEMP 'setup-install.log'
           if (Test-Path $log) { Get-Content $log } else { "No $log." }
+
+      # Whether a process started from a path reads its own version resource,
+      # rather than the file now at that path, when it asks for the version of
+      # that path after renaming itself aside: the command line does exactly that
+      # once the setup has run. Windows PowerShell and PowerShell 7 each stand in
+      # for the command line, the second reading versions through .NET as the
+      # command line does, and the release's command line stands in for the
+      # setup's file. A copy of it at a path no process was started from is read
+      # from inside too, so a split shows it is the path that differs and not the
+      # process. It explains a result and decides none.
+      - name: Read a renamed process's own path from inside it
+        if: always() && matrix.route == 'setup'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $newer = Join-Path $env:RUNNER_TEMP 'release\installerclean-cli.exe'
+          if (-not (Test-Path $newer)) { "No release command line was downloaded, so there is nothing to read."; return }
+          $dir = Join-Path $env:RUNNER_TEMP 'probe'
+          New-Item -ItemType Directory -Force -Path "$dir\control" | Out-Null
+          $control = Join-Path $dir 'control\installerclean-cli.exe'
+          Copy-Item $newer $control
+          $script = Join-Path $dir 'probe.ps1'
+          Set-Content -Path $script -Value @'
+          param([string]$newer, [string]$control)
+          function Version([string]$path) { [System.Diagnostics.FileVersionInfo]::GetVersionInfo($path).FileVersion }
+          $self = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+          "  started from $self, which carries $(Version $self)"
+          Rename-Item -LiteralPath $self -NewName ((Split-Path $self -Leaf) + '.old')
+          Copy-Item -LiteralPath $newer -Destination $self
+          "  read from inside, with the release's command line now at that path: $(Version $self)"
+          "  read from inside, the same file at a path nothing was started from: $(Version $control)"
+          '@
+
+          "Windows PowerShell (.NET Framework):"
+          $probe = Join-Path $dir 'framework\probe.exe'
+          New-Item -ItemType Directory -Force -Path (Split-Path $probe) | Out-Null
+          Copy-Item "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" $probe
+          & $probe -NoProfile -ExecutionPolicy Bypass -File $script $newer $control
+          "  read from outside, at the same path: $([System.Diagnostics.FileVersionInfo]::GetVersionInfo($probe).FileVersion)"
+
+          "PowerShell 7 (.NET):"
+          Copy-Item $PSHOME (Join-Path $dir 'pwsh') -Recurse
+          $probe = Join-Path $dir 'pwsh\pwsh.exe'
+          & $probe -NoProfile -File $script $newer $control
+          "  read from outside, at the same path: $([System.Diagnostics.FileVersionInfo]::GetVersionInfo($probe).FileVersion)"
+
+      - name: Keep the Process Monitor record
+        if: always() && matrix.route == 'setup'
+        continue-on-error: true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: process-monitor-setup
+          path: |
+            ${{ runner.temp }}/procmon/update.pml
+            ${{ runner.temp }}/procmon/command-line-path.csv
+          if-no-files-found: warn
+          retention-days: 14
