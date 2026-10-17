@@ -73,6 +73,9 @@ const ALSO_KEEP = [
   'Display.Size.B',            // {0} B
   'Display.Elapsed.Ms',        // {0:F0}ms
   'Display.Elapsed.S',         // {0:F1}s
+  // The command line's answer letter for no is N, the first letter of this language's
+  // word for no.
+  'Cli.UpdateAnswerNo',
 ];
 
 const MAP = {
@@ -621,6 +624,15 @@ const MAP = {
   'UpdateNotice.DownloadFailed': `Não foi possível baixar a atualização.`,
   'UpdateNotice.InstallFailed': `Não foi possível instalar a atualização.`,
   'UpdateNotice.ContinueWithoutUpdating': `_Continuar sem atualizar`,
+  'Cli.UpdatePrompt': `Atualizar agora? [{0}/{1}]`,
+  'Cli.UpdateAnswerYes': `S`,
+  'Cli.UpdateAnswerNo': `N`,
+  'Cli.UpdateInstalled': `O InstallerClean {0} está instalado.`,
+  'Cli.UpdateListsOnlyAfterDelete': `A nova versão vai analisar e listar o que encontrar, sem excluir nada. Para excluir, execute /d novamente depois.`,
+  'Cli.UpdateListsOnlyAfterMove': `A nova versão vai analisar e listar o que encontrar, sem mover nada. Para mover, execute /m novamente depois.`,
+  'Cli.UpdateRunningInstead': `Em vez disso, {0} será executado com o InstallerClean {1}.`,
+  'Cli.UpdateDownloadLink': `Baixe no GitHub: {0}`,
+  'Cli.Help.UpdateNote': `Antes de analisar, ele verifica se há uma versão mais recente do&#10;InstallerClean. Quando você o executa, ele pergunta antes de atualizar.&#10;Quando roda sozinho, em uma tarefa agendada ou um script, ele atualiza sem&#10;perguntar. Adicione /noupdate para pular a verificação.`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

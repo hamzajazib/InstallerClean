@@ -94,7 +94,11 @@ internal static class MachineContract
     /// left those files alone; the entry names them, says which of the two it was, and
     /// counts the files, so a run whose scan and check each gave one up writes two. The
     /// check's is written as soon as the check returns, so a run refused after it
-    /// carries it too. A notice never replaces the summary and never stands
+    /// carries it too. 3005: the run installed a newer version and ran it, naming both
+    /// versions and what the newer one was started with; that newer version, a process of
+    /// its own, writes the run's summary. 3006: the run could not install a newer version,
+    /// naming both versions and whether the download or the install failed, and went on
+    /// with the version it is. A notice never replaces the summary and never stands
     /// in for one, so counting runs means counting the summary bands, and each
     /// repeats for as long as its own condition holds, so a machine can emit one on
     /// every run for weeks.
@@ -104,7 +108,8 @@ internal static class MachineContract
     /// standing property of the machine from a run that fell short of its job, and
     /// on that question 3001 is the standing property while 3000, 3002, 3003 and 3004
     /// are about the run, which is why 3001 is Information and the other four are
-    /// Warning.
+    /// Warning. 3005 is Information because the run fell short of nothing, and 3006
+    /// Warning because the run went on with an older version than it set out to use.
     /// Nothing here contradicts that: this paragraph says only that a notice is not
     /// the run's SUMMARY entry, which is what a consumer counting runs is asking.
     /// Two questions, near-identical wording, and the sense that travels between

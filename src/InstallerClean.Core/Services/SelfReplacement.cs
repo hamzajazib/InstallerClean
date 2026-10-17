@@ -2,7 +2,9 @@ namespace InstallerClean.Services;
 
 /// <summary>
 /// Puts a newer version at the running exe's own path, for the copies that update by
-/// replacing their own file: the portable, the slim and Scoop's.
+/// replacing their own file: the portable, the slim, Scoop's and the command line's own
+/// download. The command line's copy in the setup's folder moves itself aside here too,
+/// before the setup writes the newer version in its place.
 /// </summary>
 /// <remarks>
 /// Windows keeps a running exe's file open, and the open lets the file be renamed but
@@ -27,17 +29,7 @@ public static class SelfReplacement
     public static Action Replace(string exePath, string newFile)
     {
         var oldPath = exePath + OldSuffix;
-        try
-        {
-            // One left by an earlier update whose newer version could not delete it.
-            if (File.Exists(oldPath)) DeletePlainFile(oldPath);
-            File.Move(exePath, oldPath);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            throw new UpdateFailedException(UpdateFailureStage.Install,
-                "The running copy could not be moved aside.", ex);
-        }
+        MoveAside(exePath);
 
         try
         {
@@ -62,6 +54,35 @@ public static class SelfReplacement
                 return;
             }
             TryMoveBack(oldPath, exePath);
+        };
+    }
+
+    /// <summary>
+    /// Renames the running exe to its own name with <see cref="OldSuffix"/> on the end,
+    /// so the newer version can be written at its path, by <see cref="Replace"/> or by
+    /// the setup, and answers with the step that renames it back. The step renames it
+    /// back only where nothing has been written at the path since, so it never takes
+    /// the place of a newer version. Throws <see cref="UpdateFailedException"/> where the
+    /// rename fails, having changed nothing.
+    /// </summary>
+    public static Action MoveAside(string exePath)
+    {
+        var oldPath = exePath + OldSuffix;
+        try
+        {
+            // One left by an earlier update whose newer version could not delete it.
+            if (File.Exists(oldPath)) DeletePlainFile(oldPath);
+            File.Move(exePath, oldPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            throw new UpdateFailedException(UpdateFailureStage.Install,
+                "The running copy could not be moved aside.", ex);
+        }
+
+        return () =>
+        {
+            if (!File.Exists(exePath)) TryMoveBack(oldPath, exePath);
         };
     }
 

@@ -170,7 +170,8 @@ public sealed class UpdateInPlaceTests : IDisposable
         var exe = Path.Combine(exeFolder, "InstallerClean.exe");
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.Portable, exe,
-            new UpdateDownloadService(new OneAnswer(Program(2)), null), stagingRoot, AdministratorsAndThisAccount);
+            new UpdateDownloadService(new OneAnswer(Program(2)), null), stagingRoot,
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount);
 
         var prepared = await updater.PrepareAsync("3.5.0", null, CancellationToken.None);
 
@@ -191,7 +192,8 @@ public sealed class UpdateInPlaceTests : IDisposable
         var exe = Path.Combine(_root, "InstallerClean.exe");
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.Setup, exe,
-            new UpdateDownloadService(new OneAnswer(Program(3)), null), stagingRoot, AdministratorsAndThisAccount);
+            new UpdateDownloadService(new OneAnswer(Program(3)), null), stagingRoot,
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount);
 
         var prepared = await updater.PrepareAsync("3.5.0", null, CancellationToken.None);
 
@@ -208,13 +210,55 @@ public sealed class UpdateInPlaceTests : IDisposable
     }
 
     [Fact]
+    public async Task The_setup_route_starts_the_downloaded_setup_with_the_arguments_it_was_given()
+    {
+        var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
+        var exe = Path.Combine(_root, "installerclean-cli.exe");
+        File.WriteAllBytes(exe, Program(1));
+        var updater = new AppUpdater(AppCopyKind.Setup, exe,
+            new UpdateDownloadService(new OneAnswer(Program(3)), null), stagingRoot,
+            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount);
+
+        var prepared = await updater.PrepareAsync("3.5.0", null, CancellationToken.None);
+
+        Assert.Equal(CommandLineUpdate.SetupArguments(canAsk: false), prepared.Arguments);
+        Assert.DoesNotContain("/UPDATEFROMAPP", prepared.Arguments);
+
+        prepared.Undo();
+    }
+
+    [Fact]
+    public async Task The_command_lines_own_download_replaces_its_file_as_the_portable_does()
+    {
+        var exeFolder = Directory.CreateDirectory(Path.Combine(_root, "tools")).FullName;
+        var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
+        var exe = Path.Combine(exeFolder, AppCopy.CommandLineFileName);
+        File.WriteAllBytes(exe, Program(1));
+        var updater = new AppUpdater(AppCopyKind.CommandLineDownload, exe,
+            new UpdateDownloadService(new OneAnswer(Program(2)), null), stagingRoot,
+            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount);
+
+        var prepared = await updater.PrepareAsync("3.5.0", null, CancellationToken.None);
+
+        Assert.Equal(exe, prepared.FileToStart);
+        Assert.Equal(Program(2), File.ReadAllBytes(exe));
+        Assert.Equal(Program(1), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
+        Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
+
+        prepared.Undo();
+
+        Assert.Equal(Program(1), File.ReadAllBytes(exe));
+    }
+
+    [Fact]
     public async Task A_failed_download_changes_nothing_and_leaves_no_staging_folder()
     {
         var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
         var exe = Path.Combine(_root, "InstallerClean.exe");
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.Portable, exe,
-            new UpdateDownloadService(new OneAnswer("not a program"u8.ToArray()), null), stagingRoot, AdministratorsAndThisAccount);
+            new UpdateDownloadService(new OneAnswer("not a program"u8.ToArray()), null), stagingRoot,
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount);
 
         var failure = await Assert.ThrowsAsync<UpdateFailedException>(
             () => updater.PrepareAsync("3.5.0", null, CancellationToken.None));

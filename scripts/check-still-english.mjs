@@ -115,6 +115,10 @@ const KEEP_ENGLISH = new Set([
 // zh-Hans and zh-Hant, which is why those three are absent here and carry a real
 // value.
 //
+// The command line's answer letters are here where a language's letter is the English
+// one: N for no wherever its word for no starts with N, Y for yes in Indonesian, and both
+// in Japanese, Korean and Chinese, whose consoles take Y and N.
+//
 // The unit suffixes are here in the same shape. Most languages
 // abbreviate a size exactly as English does and keep all seven; French keeps only
 // the two elapsed ones, "ms" and "s" being the SI symbols it writes unchanged
@@ -126,22 +130,22 @@ const ELAPSED_UNITS = ['Display.Elapsed.Ms', 'Display.Elapsed.S'];
 const UNITS = [...SIZE_UNITS, ...ELAPSED_UNITS];
 
 const ALSO_KEEP = {
-  de: ['Section.Registered.Patches', 'Field.Patches', 'Automation.Section.Patches', 'Action.Details', 'Version.Display', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
-  es: ['Plural.Error.Singular', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
-  fr: ['Field.Application', 'Version.Display', 'Display.ListSeparator', 'Display.SentenceSeparator', ...ELAPSED_UNITS],
-  id: ['Plural.File.Singular', 'Plural.Patch.Singular', 'Field.File', 'Display.ListSeparator', 'Display.SentenceSeparator', 'Display.DriveName', ...UNITS],
-  it: ['Field.File', 'Plural.File.Singular', 'Plural.Patch.Singular', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
-  ja: [...UNITS],
-  ko: ['Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
-  nl: ['Section.Registered.Patches', 'Field.Patches', 'Automation.Section.Patches', 'Action.Details', 'Plural.Product.Singular', 'Plural.Patch.Singular', 'Plural.Patch.Plural', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
-  pl: ['Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
-  'pt-BR': ['Plural.Patch.Singular', 'Plural.Patch.Plural', 'Field.Patches', 'Section.Registered.Patches', 'Automation.Section.Patches', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
+  de: ['Section.Registered.Patches', 'Field.Patches', 'Automation.Section.Patches', 'Action.Details', 'Version.Display', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS, 'Cli.UpdateAnswerNo'],
+  es: ['Plural.Error.Singular', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS, 'Cli.UpdateAnswerNo'],
+  fr: ['Field.Application', 'Version.Display', 'Display.ListSeparator', 'Display.SentenceSeparator', ...ELAPSED_UNITS, 'Cli.UpdateAnswerNo'],
+  id: ['Plural.File.Singular', 'Plural.Patch.Singular', 'Field.File', 'Display.ListSeparator', 'Display.SentenceSeparator', 'Display.DriveName', ...UNITS, 'Cli.UpdateAnswerYes'],
+  it: ['Field.File', 'Plural.File.Singular', 'Plural.Patch.Singular', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS, 'Cli.UpdateAnswerNo'],
+  ja: [...UNITS, 'Cli.UpdateAnswerYes', 'Cli.UpdateAnswerNo'],
+  ko: ['Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS, 'Cli.UpdateAnswerYes', 'Cli.UpdateAnswerNo'],
+  nl: ['Section.Registered.Patches', 'Field.Patches', 'Automation.Section.Patches', 'Action.Details', 'Plural.Product.Singular', 'Plural.Patch.Singular', 'Plural.Patch.Plural', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS, 'Cli.UpdateAnswerNo'],
+  pl: ['Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS, 'Cli.UpdateAnswerNo'],
+  'pt-BR': ['Plural.Patch.Singular', 'Plural.Patch.Plural', 'Field.Patches', 'Section.Registered.Patches', 'Automation.Section.Patches', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS, 'Cli.UpdateAnswerNo'],
   ru: ['Display.ListSeparator', 'Display.SentenceSeparator'],
   tr: ['Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
   uk: ['Display.ListSeparator', 'Display.SentenceSeparator'],
   vi: ['Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
-  'zh-Hans': [...UNITS],
-  'zh-Hant': [...UNITS],
+  'zh-Hans': [...UNITS, 'Cli.UpdateAnswerYes', 'Cli.UpdateAnswerNo'],
+  'zh-Hant': [...UNITS, 'Cli.UpdateAnswerYes', 'Cli.UpdateAnswerNo'],
 };
 
 const neutral = parse('Strings.resx');

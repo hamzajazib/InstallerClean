@@ -543,6 +543,14 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moved {0} unneeded {1}. | {0} overbodige {1} verplaatst. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Controleer of je programma's nog gewoon bijwerken en verwijderen, en verwijder daarna {0}. |
 | InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean is gratis. Heb je er iets aan gehad, doneer dan $ 3: {0} |
+| Update now? [{0}/{1}] | Nu bijwerken? [{0}/{1}] |
+| Y | J |
+| N | N |
+| InstallerClean {0} is installed. | InstallerClean {0} is geïnstalleerd. |
+| The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | De nieuwe versie scant en toont wat hij vindt, zonder iets te verwijderen. Voer daarna /d opnieuw uit om te verwijderen. |
+| The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | De nieuwe versie scant en toont wat hij vindt, zonder iets te verplaatsen. Voer daarna /m opnieuw uit om te verplaatsen. |
+| Running {0} with InstallerClean {1} instead. | In plaats daarvan wordt {0} uitgevoerd met InstallerClean {1}. |
+| Download it from GitHub: {0} | Download het van GitHub: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Het is eenvoudig ongedaan te maken. Verplaats ze vanuit {0} terug naar {InstallerFolder} en alles is weer zoals het was. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean kon de back-upmap niet meer bevestigen en is gestopt. Controleer {0} en voer de opdracht opnieuw uit. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Een ander InstallerClean-proces houdt de single-instance-vergrendeling vast (de GUI of een andere CLI-uitvoering). Exit 75 (tijdelijk); je kunt het later veilig opnieuw proberen. |
@@ -560,6 +568,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m PAD     Verplaatsen naar het opgegeven pad |
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli blokkeert de prompt tot het klaar is, zodat een script<br>of geplande taak erop kan wachten. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Die map geldt per gebruiker; geplande of SYSTEM-taken vereisen /m PAD. |
+| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | Voor het scannen controleert het of er een nieuwere versie van<br>InstallerClean is. Start je het zelf, dan vraagt het eerst toestemming.<br>Draait het zelfstandig, in een geplande taak of een script, dan werkt het<br>bij zonder te vragen. Voeg /noupdate toe om de controle over te slaan. |
 | Exit codes: | Afsluitcodes: |
 |   0   success: the run did what it was asked |   0   geslaagd: de uitvoering deed wat gevraagd was |
 |   1   nothing processed: the run failed or was refused |   1   niets verwerkt: de uitvoering is mislukt of is geweigerd |

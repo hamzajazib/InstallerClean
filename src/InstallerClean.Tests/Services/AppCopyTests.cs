@@ -113,6 +113,53 @@ public class AppCopyTests
     }
 
     [Fact]
+    public void The_command_lines_own_download_updates_from_the_unversioned_file_in_the_releases_tag()
+    {
+        Assert.Equal(
+            new Uri("https://github.com/no-faff/InstallerClean/releases/download/v3.5.0/installerclean-cli.exe"),
+            AppCopy.DownloadAddress(AppCopyKind.CommandLineDownload, "3.5.0"));
+        Assert.True(AppCopy.CanUpdateItself(AppCopyKind.CommandLineDownload));
+    }
+
+    [Fact]
+    public void A_command_line_built_from_source_is_from_source_whatever_else_holds()
+    {
+        Assert.Equal(AppCopyKind.FromSource,
+            AppCopy.DecideCommandLine(isSingleFile: false, ProgramFilesFolder, ProgramFilesFolder + @""));
+    }
+
+    [Theory]
+    [InlineData(@"C:\Program Files\InstallerClean\")]
+    [InlineData(@"c:\program files\installerclean")]
+    public void A_command_line_in_the_folder_the_setup_recorded_is_the_setups(string installLocation)
+    {
+        Assert.Equal(AppCopyKind.Setup,
+            AppCopy.DecideCommandLine(isSingleFile: true, ProgramFilesFolder, installLocation));
+    }
+
+    [Theory]
+    [InlineData(@"C:\Program Files\InstallerClean\")]
+    [InlineData(null)]
+    public void A_command_line_anywhere_else_is_its_own_download(string? installLocation)
+    {
+        // Scoop installs only the window, so even a folder holding Scoop's files is not a
+        // Scoop copy of the command line.
+        Assert.Equal(AppCopyKind.CommandLineDownload,
+            AppCopy.DecideCommandLine(isSingleFile: true, ScoopFolder, installLocation));
+        Assert.Equal(AppCopyKind.CommandLineDownload,
+            AppCopy.DecideCommandLine(isSingleFile: true, DownloadsFolder, installLocation));
+    }
+
+    [Fact]
+    public void The_window_is_never_taken_for_the_command_lines_own_download()
+    {
+        foreach (var selfContained in new[] { true, false })
+        foreach (var folder in new[] { ProgramFilesFolder, ScoopFolder, DownloadsFolder })
+            Assert.NotEqual(AppCopyKind.CommandLineDownload,
+                AppCopy.Decide(true, selfContained, folder, ProgramFilesFolder + @"", NoFiles));
+    }
+
+    [Fact]
     public void A_build_from_source_has_no_download_and_cannot_update_itself()
     {
         Assert.Null(AppCopy.DownloadAddress(AppCopyKind.FromSource, "3.5.0"));

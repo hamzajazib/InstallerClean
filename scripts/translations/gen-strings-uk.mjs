@@ -639,6 +639,15 @@ const MAP = {
   'UpdateNotice.DownloadFailed': `Не вдалося завантажити оновлення.`,
   'UpdateNotice.InstallFailed': `Не вдалося встановити оновлення.`,
   'UpdateNotice.ContinueWithoutUpdating': `_Продовжити без оновлення`,
+  'Cli.UpdatePrompt': `Оновити зараз? [{0}/{1}]`,
+  'Cli.UpdateAnswerYes': `Т`,
+  'Cli.UpdateAnswerNo': `Н`,
+  'Cli.UpdateInstalled': `Версію InstallerClean {0} встановлено.`,
+  'Cli.UpdateListsOnlyAfterDelete': `Нова версія просканує й покаже список знайденого, нічого не видаляючи. Щоб видалити, потім знову запустіть /d.`,
+  'Cli.UpdateListsOnlyAfterMove': `Нова версія просканує й покаже список знайденого, нічого не переміщуючи. Щоб перемістити, потім знову запустіть /m.`,
+  'Cli.UpdateRunningInstead': `Натомість команду {0} буде виконано в InstallerClean {1}.`,
+  'Cli.UpdateDownloadLink': `Завантажити з GitHub: {0}`,
+  'Cli.Help.UpdateNote': `Перед скануванням перевіряє, чи є новіша версія InstallerClean. Під час&#10;запуску вручну запитує перед оновленням. Під час запуску без участі&#10;людини, у запланованій задачі чи скрипті, оновлюється без запитань.&#10;Додайте /noupdate, щоб пропустити перевірку.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

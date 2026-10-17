@@ -63,15 +63,16 @@ public sealed class PreparedUpdate
 public sealed class AppUpdater : IAppUpdater
 {
     /// <summary>
-    /// What the newer setup is started with. /SILENT shows Setup's progress and asks
-    /// nothing, /SP- leaves out the page asking whether to install, and /NORESTART
+    /// What the window starts the newer setup with. /SILENT shows Setup's progress and
+    /// asks nothing, /SP- leaves out the page asking whether to install, and /NORESTART
     /// keeps Setup from restarting Windows. /UPDATEFROMAPP is the app's own: the setup
     /// script starts the app again once it has installed when it sees it, which it
     /// otherwise never does on a silent install.
     /// </summary>
-    internal const string SetupArguments = "/SILENT /SP- /NORESTART /UPDATEFROMAPP";
+    public const string WindowSetupArguments = "/SILENT /SP- /NORESTART /UPDATEFROMAPP";
 
     private readonly string _exePath;
+    private readonly string _setupArguments;
     private readonly UpdateDownloadService _downloader;
     private readonly string _stagingRoot;
     private readonly string _stagingDescriptor;
@@ -83,8 +84,15 @@ public sealed class AppUpdater : IAppUpdater
     /// The folder the download's own folder is made in: %ProgramData% everywhere but
     /// a test.
     /// </param>
-    public AppUpdater(AppCopyKind kind, string exePath, UpdateDownloadService downloader, string stagingRoot)
-        : this(kind, exePath, downloader, stagingRoot, UpdateStagingFolder.AdministratorsOnly) { }
+    /// <param name="setupArguments">
+    /// What the newer setup is started with, where the copy is the setup's:
+    /// <see cref="WindowSetupArguments"/> for the window, and the command line's own,
+    /// which leave the window closed.
+    /// </param>
+    public AppUpdater(
+        AppCopyKind kind, string exePath, UpdateDownloadService downloader, string stagingRoot,
+        string setupArguments)
+        : this(kind, exePath, downloader, stagingRoot, setupArguments, UpdateStagingFolder.AdministratorsOnly) { }
 
     /// <summary>
     /// Test seam: the staging folder's descriptor given as SDDL, so a suite without
@@ -92,10 +100,11 @@ public sealed class AppUpdater : IAppUpdater
     /// </summary>
     internal AppUpdater(
         AppCopyKind kind, string exePath, UpdateDownloadService downloader, string stagingRoot,
-        string stagingDescriptor)
+        string setupArguments, string stagingDescriptor)
     {
         Kind = kind;
         _exePath = exePath;
+        _setupArguments = setupArguments;
         _downloader = downloader;
         _stagingRoot = stagingRoot;
         _stagingDescriptor = stagingDescriptor;
@@ -143,7 +152,7 @@ public sealed class AppUpdater : IAppUpdater
 
         if (Kind == AppCopyKind.Setup)
         {
-            return new PreparedUpdate(staged, SetupArguments, () =>
+            return new PreparedUpdate(staged, _setupArguments, () =>
             {
                 Helpers.StorageHelpers.TryDeleteTempFile(staged);
                 folder.TryRemoveIfEmpty();

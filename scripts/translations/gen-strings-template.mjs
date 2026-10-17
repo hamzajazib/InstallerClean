@@ -688,6 +688,15 @@ const MAP = {
   'UpdateNotice.DownloadFailed': `The update couldn't be downloaded.`,
   'UpdateNotice.InstallFailed': `The update couldn't be installed.`,
   'UpdateNotice.ContinueWithoutUpdating': `_Continue without updating`,
+  'Cli.UpdatePrompt': `Update now? [{0}/{1}]`,
+  'Cli.UpdateAnswerYes': `Y`,
+  'Cli.UpdateAnswerNo': `N`,
+  'Cli.UpdateInstalled': `InstallerClean {0} is installed.`,
+  'Cli.UpdateListsOnlyAfterDelete': `The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards.`,
+  'Cli.UpdateListsOnlyAfterMove': `The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards.`,
+  'Cli.UpdateRunningInstead': `Running {0} with InstallerClean {1} instead.`,
+  'Cli.UpdateDownloadLink': `Download it from GitHub: {0}`,
+  'Cli.Help.UpdateNote': `Before it scans, it checks for a newer version of InstallerClean.&#10;When you run it yourself, it asks before updating. When it runs on its&#10;own, in a scheduled task or a script, it updates without asking.&#10;Add /noupdate to skip the check.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

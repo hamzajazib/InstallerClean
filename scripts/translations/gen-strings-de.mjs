@@ -76,6 +76,9 @@ const ALSO_KEEP = [
   'Display.Size.B',            // {0} B
   'Display.Elapsed.Ms',        // {0:F0}ms
   'Display.Elapsed.S',         // {0:F1}s
+  // The command line's answer letter for no is N, the first letter of this language's
+  // word for no.
+  'Cli.UpdateAnswerNo',
 ];
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.
@@ -634,6 +637,15 @@ const MAP = {
   'UpdateNotice.DownloadFailed': `Das Update konnte nicht heruntergeladen werden.`,
   'UpdateNotice.InstallFailed': `Das Update konnte nicht installiert werden.`,
   'UpdateNotice.ContinueWithoutUpdating': `_Ohne Aktualisierung fortfahren`,
+  'Cli.UpdatePrompt': `Jetzt aktualisieren? [{0}/{1}]`,
+  'Cli.UpdateAnswerYes': `J`,
+  'Cli.UpdateAnswerNo': `N`,
+  'Cli.UpdateInstalled': `InstallerClean {0} ist installiert.`,
+  'Cli.UpdateListsOnlyAfterDelete': `Die neue Version scannt und listet auf, was sie findet, ohne etwas zu löschen. Zum Löschen führe danach /d erneut aus.`,
+  'Cli.UpdateListsOnlyAfterMove': `Die neue Version scannt und listet auf, was sie findet, ohne etwas zu verschieben. Zum Verschieben führe danach /m erneut aus.`,
+  'Cli.UpdateRunningInstead': `Stattdessen wird {0} mit InstallerClean {1} ausgeführt.`,
+  'Cli.UpdateDownloadLink': `Von GitHub herunterladen: {0}`,
+  'Cli.Help.UpdateNote': `Vor dem Scannen prüft es, ob es eine neuere Version von InstallerClean&#10;gibt. Wenn du es selbst startest, fragt es vor dem Aktualisieren. Läuft es&#10;von selbst, in einer geplanten Aufgabe oder einem Skript, aktualisiert es&#10;ohne zu fragen. Mit /noupdate wird die Prüfung übersprungen.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

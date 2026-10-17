@@ -61,6 +61,10 @@ const ALSO_KEEP = [
   'Display.Size.B',            // {0} B
   'Display.Elapsed.Ms',        // {0:F0}ms
   'Display.Elapsed.S',         // {0:F1}s
+  // The command line's answer letters stay Y and N, as a console in this language
+  // conventionally takes them.
+  'Cli.UpdateAnswerYes',
+  'Cli.UpdateAnswerNo',
 ];
 
 const MAP = {
@@ -525,6 +529,15 @@ const MAP = {
   'UpdateNotice.DownloadFailed': `无法下载更新。`,
   'UpdateNotice.InstallFailed': `无法安装更新。`,
   'UpdateNotice.ContinueWithoutUpdating': `不更新，直接继续(_C)`,
+  'Cli.UpdatePrompt': `立即更新？[{0}/{1}]`,
+  'Cli.UpdateAnswerYes': `Y`,
+  'Cli.UpdateAnswerNo': `N`,
+  'Cli.UpdateInstalled': `InstallerClean {0} 版已安装。`,
+  'Cli.UpdateListsOnlyAfterDelete': `新版本将扫描并列出找到的内容，不会删除任何文件。如需删除，请在之后再次运行 /d。`,
+  'Cli.UpdateListsOnlyAfterMove': `新版本将扫描并列出找到的内容，不会移动任何文件。如需移动，请在之后再次运行 /m。`,
+  'Cli.UpdateRunningInstead': `改为使用 InstallerClean {1} 运行 {0}。`,
+  'Cli.UpdateDownloadLink': `从 GitHub 下载：{0}`,
+  'Cli.Help.UpdateNote': `扫描前，它会检查是否有更新版本的 InstallerClean。由您亲自运行时，它会在更&#10;新前询问。在计划任务或脚本中自动运行时，它会直接更新而不询问。添加&#10;/noupdate 可跳过检查。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

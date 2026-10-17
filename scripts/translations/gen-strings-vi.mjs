@@ -619,6 +619,15 @@ const MAP = {
   'UpdateNotice.DownloadFailed': `Không thể tải về bản cập nhật.`,
   'UpdateNotice.InstallFailed': `Không thể cài đặt bản cập nhật.`,
   'UpdateNotice.ContinueWithoutUpdating': `_Tiếp tục mà không cập nhật`,
+  'Cli.UpdatePrompt': `Cập nhật ngay bây giờ? [{0}/{1}]`,
+  'Cli.UpdateAnswerYes': `C`,
+  'Cli.UpdateAnswerNo': `K`,
+  'Cli.UpdateInstalled': `Đã cài đặt InstallerClean {0}.`,
+  'Cli.UpdateListsOnlyAfterDelete': `Phiên bản mới sẽ quét và liệt kê những gì tìm thấy, không xóa gì cả. Để xóa, hãy chạy lại /d sau đó.`,
+  'Cli.UpdateListsOnlyAfterMove': `Phiên bản mới sẽ quét và liệt kê những gì tìm thấy, không di chuyển gì cả. Để di chuyển, hãy chạy lại /m sau đó.`,
+  'Cli.UpdateRunningInstead': `Thay vào đó, chạy {0} bằng InstallerClean {1}.`,
+  'Cli.UpdateDownloadLink': `Tải về từ GitHub: {0}`,
+  'Cli.Help.UpdateNote': `Trước khi quét, công cụ kiểm tra xem có phiên bản InstallerClean mới hơn&#10;không. Khi bạn tự chạy, nó hỏi trước khi cập nhật. Khi chạy tự động, trong&#10;một tác vụ theo lịch hoặc một tập lệnh, nó cập nhật mà không hỏi. Thêm&#10;/noupdate để bỏ qua bước kiểm tra.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

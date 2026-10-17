@@ -67,6 +67,10 @@ const ALSO_KEEP = [
   'Display.Elapsed.Ms',        // {0:F0}ms
   'Display.Elapsed.S',         // {0:F1}s
 
+  // The command line's answer letters stay Y and N, as a console in this language
+  // conventionally takes them.
+  'Cli.UpdateAnswerYes',
+  'Cli.UpdateAnswerNo',
 ];
 
 const MAP = {
@@ -545,6 +549,15 @@ const MAP = {
   'UpdateNotice.DownloadFailed': `更新をダウンロードできませんでした。`,
   'UpdateNotice.InstallFailed': `更新をインストールできませんでした。`,
   'UpdateNotice.ContinueWithoutUpdating': `更新せずに続行(_C)`,
+  'Cli.UpdatePrompt': `今すぐ更新しますか？ [{0}/{1}]`,
+  'Cli.UpdateAnswerYes': `Y`,
+  'Cli.UpdateAnswerNo': `N`,
+  'Cli.UpdateInstalled': `InstallerClean {0} をインストールしました。`,
+  'Cli.UpdateListsOnlyAfterDelete': `新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も削除しません。削除するには、その後もう一度 /d を実行してください。`,
+  'Cli.UpdateListsOnlyAfterMove': `新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も移動しません。移動するには、その後もう一度 /m を実行してください。`,
+  'Cli.UpdateRunningInstead': `代わりに InstallerClean {1} で {0} を実行します。`,
+  'Cli.UpdateDownloadLink': `GitHubからダウンロード：{0}`,
+  'Cli.Help.UpdateNote': `スキャンの前に、InstallerClean の新しいバージョンがあるか確認します。自分&#10;で実行した場合は、更新する前に確認を求めます。スケジュールされたタスクやス&#10;クリプトで自動実行される場合は、確認なしで更新します。確認を省くには&#10;/noupdate を付けてください。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,
@@ -644,6 +657,10 @@ const STRIPPED = new Set([
   // Two more machine Cli keys that postdate the PR, by the same rule.
   'Cli.EventLogReason.MsiExecuteMutexUnreadable',
   'Cli.EventLogWindowsError',
+  // The three update notices' machine Cli keys, which postdate the PR, by the same rule.
+  'Cli.EventLogUpdated',
+  'Cli.EventLogUpdateDownloadFailed',
+  'Cli.EventLogUpdateInstallFailed',
 ]);
 let stripped = 0;
 text = text.replace(/[^\S\n]*<data name="(Cli\.[^"]*)"[\s\S]*?<\/data>\n?/g,

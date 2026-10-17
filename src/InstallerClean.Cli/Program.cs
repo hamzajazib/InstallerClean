@@ -83,7 +83,7 @@ internal static class Program
     /// </summary>
     internal static int ReportRunFailure(string[] args, Exception ex)
     {
-        var exitCode = ReportUnexpectedError(args.Length > 0 ? args[0].ToLowerInvariant() : "(none)", ex);
+        var exitCode = ReportUnexpectedError(CliContract.CommandToken(args)?.ToLowerInvariant() ?? "(none)", ex);
         NoteEventLogUnavailable();
         return exitCode;
     }
@@ -191,7 +191,7 @@ internal static class Program
                 // /d take no path, so the way in is combining flags, which the
                 // quoting advice answers about a flag they did not type. The audit
                 // entry and exit code are identical either way; only the hint moves.
-                var takesAPath = args[0].Equals("/m", StringComparison.OrdinalIgnoreCase);
+                var takesAPath = string.Equals(CliContract.CommandToken(args), "/m", StringComparison.OrdinalIgnoreCase);
                 return ReportBadArguments(invocation, string.Format(
                     takesAPath ? Strings.Cli_TooManyArguments : Strings.Cli_TooManyArgumentsNoPath,
                     invocation.OffendingArgument));
@@ -200,7 +200,7 @@ internal static class Program
 
         // Only the work commands (/s, /d, /m) remain. The lower-cased flag
         // drives the EventLog mode label and the /d-or-/m mutex check.
-        var arg = args[0].ToLowerInvariant();
+        var arg = CliContract.CommandToken(args)!.ToLowerInvariant();
 
         // A run without administrator rights is refused here, before the Ctrl+C
         // handler and the single-instance mutex, so it scans nothing and meets no
@@ -212,13 +212,18 @@ internal static class Program
         if (!AdministratorRights.Held())
             return RefuseWithoutAdministratorRights(arg);
 
-        // Cancel handler before mutex: a Ctrl+C in the gap should
+        // Cancel handler before the update and the mutex: a Ctrl+C in the gap should
         // print "Cancelling..." rather than terminate via the default
         // handler.
         using var cts = new CancellationTokenSource();
+        var updateHost = new ConsoleUpdateHost(arg);
         ConsoleCancelEventHandler cancelHandler = (_, cancelArgs) =>
         {
             cancelArgs.Cancel = true; // keep the process running long enough to stop gracefully
+            // The newer version this run updated to is running in this console and gets the
+            // same Ctrl+C. It prints the notice and stops its own work, so this run prints
+            // nothing, and goes on waiting for its exit code and its summary.
+            if (updateHost.NewerVersionRunning) return;
             // Nothing in here may throw. It runs on the console's own
             // control-handler thread, which Main's try/catch does not cover, so an
             // escape is unhandled: a runtime abort and a stack trace on stderr in
@@ -247,6 +252,24 @@ internal static class Program
         };
         Console.CancelKeyPress += cancelHandler;
 
+        // What an earlier update left beside this exe: the copy it renamed aside, which
+        // could not be deleted while it was still running.
+        if (Environment.ProcessPath is { Length: > 0 } ownPath)
+            SelfReplacement.TryRemoveOldCopy(ownPath);
+
+        if (RunUpdate(arg, args, invocation, updateHost, cts.Token) is int updateExitCode)
+        {
+            try
+            {
+                Console.CancelKeyPress -= cancelHandler;
+            }
+            catch (Exception ex)
+            {
+                Helpers.CrashLog.TryWrite(ex);
+            }
+            return updateExitCode;
+        }
+
         // Mutate-the-cache operations (/d and /m) take the same singleton
         // mutex the WPF GUI uses, so a CLI invocation cannot race the
         // GUI mid-delete or mid-move (and a second concurrent CLI run
@@ -255,7 +278,7 @@ internal static class Program
         var holdsMutex = false;
         if (arg is "/d" or "/m")
         {
-            mutex = new System.Threading.Mutex(initiallyOwned: false, @"Global\InstallerClean_SingleInstance");
+            mutex = new System.Threading.Mutex(initiallyOwned: false, ConsoleUpdateHost.InstanceMutexName);
             try
             {
                 holdsMutex = mutex.WaitOne(TimeSpan.Zero);
@@ -339,6 +362,107 @@ internal static class Program
             }
         }
     }
+
+    /// <summary>
+    /// The update made before a /s, /d or /m (<see cref="CommandLineUpdate"/>). Answers the
+    /// exit code where the run ends here: the newer version's, where it ran in this
+    /// console, or <see cref="ExitCancelled"/> after Ctrl+C at the question or during the
+    /// download. Answers null where the run goes on with this version, having written the
+    /// notice for an update that failed.
+    ///
+    /// Nothing is checked where <c>/noupdate</c> was given or this account's settings turn
+    /// the check off. Nothing in here ends the run: a throw from building what the update
+    /// needs goes to crash.log and the run goes on, as it does after any update that fails.
+    /// </summary>
+    private static int? RunUpdate(
+        string arg, string[] args, CliInvocation invocation, ConsoleUpdateHost host, CancellationToken token)
+    {
+        CommandLineUpdateResult result;
+        try
+        {
+            if (invocation.SkipUpdate || Environment.ProcessPath is not { Length: > 0 } exePath)
+                return null;
+            if (!new SettingsService().Load().AutoUpdateCheck)
+                return null;
+
+            var canAsk = ConsoleCanAsk();
+            var updater = new AppUpdater(
+                AppCopy.DetectRunningCommandLine(exePath, new RegistryReader()),
+                exePath,
+                new UpdateDownloadService(),
+                UpdateStagingFolder.DefaultRoot,
+                CommandLineUpdate.SetupArguments(canAsk));
+            var checker = new UpdateCheckService();
+            result = new CommandLineUpdate(
+                    ct => checker.CheckAsync(UpdateCheckOrigin.Automatic, ct), updater, host)
+                .Run(canAsk, arg, args, exePath, token);
+        }
+        catch (Exception ex)
+        {
+            Helpers.CrashLog.TryWrite(ex);
+            return null;
+        }
+
+        switch (result)
+        {
+            case CommandLineUpdateResult.HandedOver handedOver:
+                return handedOver.ExitCode;
+            case CommandLineUpdateResult.Cancelled:
+                // The same line, entry and code as a run cancelled during its scan.
+                Console.WriteLine(Strings.Cli_Cancelled);
+                MachineContract.WriteEventLog(CliEventClass.TransientSkip,
+                    () => string.Format(Strings.Cli_EventLogCancelledNoWork, arg));
+                NoteEventLogUnavailable();
+                return ExitCancelled;
+            case CommandLineUpdateResult.CarriedOn { FailedAt: { } stage, FromVersion: { } from, ToVersion: { } to }:
+                MachineContract.WriteEventLog(CliEventClass.UpdateFailedNotice,
+                    () => UpdateFailedEventLogLine(arg, from, to, stage, args));
+                return null;
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>
+    /// Whether a person can see this console and answer a question in it: what
+    /// <see cref="ConsoleIsWatched"/> asks, and standard input is not redirected. A run
+    /// nobody can answer takes the update without asking.
+    /// </summary>
+    internal static bool ConsoleCanAsk() => ConsoleIsWatched() && !Console.IsInputRedirected;
+
+    /// <summary>
+    /// The Event ID 3005 line: this run updated itself from <paramref name="fromVersion"/>
+    /// to <paramref name="toVersion"/> and started the newer version with
+    /// <paramref name="arguments"/>.
+    /// </summary>
+    /// <remarks>
+    /// Built outside the en-GB scope, like <see cref="AbortedMoveEventLogLine"/>: the
+    /// caller wraps it, so the line renders English in production and in the ambient
+    /// culture anywhere else.
+    /// </remarks>
+    internal static string UpdatedEventLogLine(
+        string arg, string fromVersion, string toVersion, IReadOnlyList<string> arguments) =>
+        string.Format(Strings.Cli_EventLogUpdated, arg, fromVersion, toVersion, string.Join(' ', arguments));
+
+    /// <summary>
+    /// The Event ID 3006 line: this run could not update itself from
+    /// <paramref name="fromVersion"/> to <paramref name="toVersion"/>, the part named by
+    /// <paramref name="stage"/> having failed, and ran <paramref name="arguments"/> with
+    /// <paramref name="fromVersion"/>.
+    /// </summary>
+    /// <remarks>
+    /// Built outside the en-GB scope, like <see cref="AbortedMoveEventLogLine"/>: the
+    /// caller wraps it, so the line renders English in production and in the ambient
+    /// culture anywhere else.
+    /// </remarks>
+    internal static string UpdateFailedEventLogLine(
+        string arg, string fromVersion, string toVersion, UpdateFailureStage stage,
+        IReadOnlyList<string> arguments) =>
+        string.Format(
+            stage == UpdateFailureStage.Download
+                ? Strings.Cli_EventLogUpdateDownloadFailed
+                : Strings.Cli_EventLogUpdateInstallFailed,
+            arg, fromVersion, toVersion, string.Join(' ', arguments));
 
     /// <summary>
     /// Prints what a run held back, in the operator's language: ONE counted
@@ -2364,6 +2488,8 @@ internal static class Program
         // or service account (SYSTEM) does not share with the interactive user, so
         // a no-path /m there exits 1 every run: say so where /m is documented.
         WriteHelp(Strings.Cli_Help_MoveScheduledNote);
+        Console.WriteLine();
+        WriteHelp(Strings.Cli_Help_UpdateNote);
         Console.WriteLine();
         WriteHelp(Strings.Cli_Help_ExitCodesHeader);
         WriteHelp(Strings.Cli_Help_ExitCodeOk);

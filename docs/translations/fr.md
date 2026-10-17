@@ -543,6 +543,14 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moved {0} unneeded {1}. | {0} {1} inutiles ont été déplacés. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Vérifiez que vos programmes se mettent toujours à jour et se désinstallent normalement, puis supprimez {0}. |
 | InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean est gratuit. S'il vous a été utile, merci de faire un don de 3 $ : {0} |
+| Update now? [{0}/{1}] | Mettre à jour maintenant ? [{0}/{1}] |
+| Y | O |
+| N | N |
+| InstallerClean {0} is installed. | InstallerClean {0} est installé. |
+| The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | La nouvelle version va analyser et lister ce qu'elle trouve, sans rien supprimer. Pour supprimer, relancez /d ensuite. |
+| The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | La nouvelle version va analyser et lister ce qu'elle trouve, sans rien déplacer. Pour déplacer, relancez /m ensuite. |
+| Running {0} with InstallerClean {1} instead. | Exécution de {0} avec InstallerClean {1} à la place. |
+| Download it from GitHub: {0} | Le télécharger sur GitHub : {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | C'est simple à annuler. Redéplacez-les depuis {0} dans {InstallerFolder} et tout redeviendra comme avant. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean n'a plus pu confirmer le dossier de sauvegarde, il s'est donc arrêté. Vérifiez {0}, puis relancez la commande. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Un autre processus InstallerClean détient le verrou d'instance unique (l'interface ou une autre exécution de la CLI). Code de sortie 75 (transitoire) ; vous pouvez réessayer plus tard sans risque. |
@@ -560,6 +568,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m CHEMIN  Déplace vers le chemin spécifié |
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli bloque l'invite jusqu'à la fin, pour qu'un script ou<br>une tâche planifiée puisse l'attendre. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Dossier propre à l'utilisateur ; tâches planifiées ou SYSTEM : /m CHEMIN. |
+| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | Avant l'analyse, il vérifie s'il existe une version plus récente<br>d'InstallerClean. Lancé par vous, il demande avant de mettre à jour. Lancé<br>seul, dans une tâche planifiée ou un script, il se met à jour sans<br>demander. Ajoutez /noupdate pour ignorer la vérification. |
 | Exit codes: | Codes de sortie : |
 |   0   success: the run did what it was asked |   0   succès : l'exécution a fait ce qui lui était demandé |
 |   1   nothing processed: the run failed or was refused |   1   rien de traité : l'exécution a échoué ou a été refusée |

@@ -545,6 +545,15 @@ Ayrıntılar şuraya yazıldı:
   'UpdateNotice.DownloadFailed': `Güncelleştirme indirilemedi.`,
   'UpdateNotice.InstallFailed': `Güncelleştirme yüklenemedi.`,
   'UpdateNotice.ContinueWithoutUpdating': `Güncellemeden _devam et`,
+  'Cli.UpdatePrompt': `Şimdi güncellensin mi? [{0}/{1}]`,
+  'Cli.UpdateAnswerYes': `E`,
+  'Cli.UpdateAnswerNo': `H`,
+  'Cli.UpdateInstalled': `InstallerClean {0} sürümü yüklendi.`,
+  'Cli.UpdateListsOnlyAfterDelete': `Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi silmeyecek. Silmek için ardından /d komutunu yeniden çalıştırın.`,
+  'Cli.UpdateListsOnlyAfterMove': `Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi taşımayacak. Taşımak için ardından /m komutunu yeniden çalıştırın.`,
+  'Cli.UpdateRunningInstead': `Bunun yerine {0} komutu InstallerClean {1} ile çalıştırılıyor.`,
+  'Cli.UpdateDownloadLink': `GitHub'dan indirin: {0}`,
+  'Cli.Help.UpdateNote': `Taramadan önce InstallerClean'in daha yeni bir sürümü olup olmadığını&#10;denetler. Kendiniz çalıştırdığınızda güncellemeden önce sorar. Zamanlanmış&#10;bir görevde veya betikte kendi kendine çalıştığında sormadan güncellenir.&#10;Denetimi atlamak için /noupdate ekleyin.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

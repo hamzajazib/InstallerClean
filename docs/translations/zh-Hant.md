@@ -543,6 +543,14 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moved {0} unneeded {1}. | 已移動 {0} 個不需要的{1}。 |
 | Check that your programs still update and uninstall as normal, then delete {0}. | 請確認您的程式仍能照常更新和解除安裝，然後刪除 {0}。 |
 | InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean 是免費的。如果它幫上了忙，請贊助 3 美元：{0} |
+| Update now? [{0}/{1}] | 立即更新？[{0}/{1}] |
+| Y | Y |
+| N | N |
+| InstallerClean {0} is installed. | InstallerClean {0} 版已安裝。 |
+| The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 新版本會掃描並列出找到的內容，不會刪除任何檔案。如需刪除，請在之後再次執行 /d。 |
+| The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 新版本會掃描並列出找到的內容，不會移動任何檔案。如需移動，請在之後再次執行 /m。 |
+| Running {0} with InstallerClean {1} instead. | 改用 InstallerClean {1} 執行 {0}。 |
+| Download it from GitHub: {0} | 從 GitHub 下載：{0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | 要復原很簡單。把它們從 {0} 移回 {InstallerFolder}，一切就會恢復原狀。 |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean 已無法確認備份資料夾，因此沒有再繼續。請檢查 {0}，然後再執行一次命令。 |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | 另一個 InstallerClean 處理程序正持有單一執行個體鎖定（圖形介面或另一次 CLI 執行）。結束代碼 75（暫時性）；稍後可安全地重試。 |
@@ -560,6 +568,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m 路徑    移到指定的路徑 |
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli 會佔住命令提示字元直到結束，因此指令碼或排定的<br>工作可以等候它完成。 |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | 該資料夾依使用者儲存；排定的工作或 SYSTEM 執行需要 /m 路徑。 |
+| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | 掃描前，它會檢查是否有較新版本的 InstallerClean。由您親自執行時，它會在更<br>新前詢問。在排定的工作或指令碼中自動執行時，它會直接更新而不詢問。加上<br>/noupdate 可略過檢查。 |
 | Exit codes: | 結束代碼： |
 |   0   success: the run did what it was asked |   0   成功：這次執行完成了要求的事 |
 |   1   nothing processed: the run failed or was refused |   1   沒有處理任何內容：這次執行失敗或被拒絕 |

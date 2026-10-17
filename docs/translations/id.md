@@ -543,6 +543,14 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moved {0} unneeded {1}. | {0} {1} yang tidak diperlukan telah dipindahkan. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Pastikan program Anda masih bisa diperbarui dan dicopot seperti biasa, lalu hapus {0}. |
 | InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean gratis. Jika bermanfaat, silakan berdonasi US$3: {0} |
+| Update now? [{0}/{1}] | Perbarui sekarang? [{0}/{1}] |
+| Y | Y |
+| N | T |
+| InstallerClean {0} is installed. | InstallerClean {0} telah terpasang. |
+| The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Versi baru akan memindai dan menampilkan daftar temuannya, tanpa menghapus apa pun. Untuk menghapus, jalankan /d lagi setelahnya. |
+| The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Versi baru akan memindai dan menampilkan daftar temuannya, tanpa memindahkan apa pun. Untuk memindahkan, jalankan /m lagi setelahnya. |
+| Running {0} with InstallerClean {1} instead. | Menjalankan {0} dengan InstallerClean {1} sebagai gantinya. |
+| Download it from GitHub: {0} | Unduh dari GitHub: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Mudah untuk dibatalkan. Pindahkan kembali dari {0} ke {InstallerFolder} dan semuanya akan kembali seperti semula. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean tidak bisa lagi memastikan folder cadangan, jadi berhenti. Periksa {0}, lalu jalankan perintahnya lagi. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Proses InstallerClean lain memegang kunci instans-tunggal (GUI atau proses CLI lain). Kode keluar 75 (sementara); aman untuk dicoba lagi nanti. |
@@ -560,6 +568,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m JALUR   Pindahkan ke jalur yang ditentukan |
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli menahan prompt sampai selesai, sehingga skrip atau<br>tugas terjadwal bisa menunggunya. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Folder disimpan per pengguna; tugas terjadwal atau SYSTEM: /m JALUR. |
+| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | Sebelum memindai, alat ini memeriksa versi InstallerClean yang lebih baru.<br>Jika Anda menjalankannya sendiri, alat ini bertanya sebelum memperbarui.<br>Jika berjalan otomatis lewat tugas terjadwal atau skrip, ia memperbarui<br>tanpa bertanya. Tambahkan /noupdate untuk melewati pemeriksaan. |
 | Exit codes: | Kode keluar: |
 |   0   success: the run did what it was asked |   0   berhasil: menjalankan yang diminta |
 |   1   nothing processed: the run failed or was refused |   1   tidak ada yang diproses: proses gagal atau ditolak |

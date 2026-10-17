@@ -227,6 +227,8 @@ public class CliContractTests
         Assert.Equal(3002, CliContract.EventIdFor(CliEventClass.ScanNothingOfferedNotice));
         Assert.Equal(3003, CliContract.EventIdFor(CliEventClass.ScanSupersededHeldBackNotice));
         Assert.Equal(3004, CliContract.EventIdFor(CliEventClass.SourcesGivenUpNotice));
+        Assert.Equal(3005, CliContract.EventIdFor(CliEventClass.UpdatedNotice));
+        Assert.Equal(3006, CliContract.EventIdFor(CliEventClass.UpdateFailedNotice));
     }
 
     [Fact]
@@ -246,6 +248,8 @@ public class CliContractTests
         Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.ScanNothingOfferedNotice), outcomes);
         Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.ScanSupersededHeldBackNotice), outcomes);
         Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.SourcesGivenUpNotice), outcomes);
+        Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.UpdatedNotice), outcomes);
+        Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.UpdateFailedNotice), outcomes);
     }
 
     [Fact]
@@ -293,7 +297,7 @@ public class CliContractTests
     public void EntryType_the_missing_files_notice_is_information()
     {
         // The run-versus-machine split, which EntryTypeFor's own doc argues.
-        // Every other class is Warning, so this is the arm a tidy-up folds away.
+        // Most classes are Warning, so this is the arm a tidy-up folds away.
         Assert.Equal(EventLogEntryType.Information,
             CliContract.EntryTypeFor(CliEventClass.ScanMissingFilesNotice));
     }
@@ -318,5 +322,66 @@ public class CliContractTests
         // finished checking, and it stops the moment the drive or share answers.
         Assert.Equal(EventLogEntryType.Warning,
             CliContract.EntryTypeFor(CliEventClass.SourcesGivenUpNotice));
+    }
+
+    [Fact]
+    public void EntryType_the_update_notices_split_on_whether_the_update_went_in()
+    {
+        // A run that installed the newer version and ran it fell short of nothing; a run
+        // that could not went on with an older version than it set out to use.
+        Assert.Equal(EventLogEntryType.Information, CliContract.EntryTypeFor(CliEventClass.UpdatedNotice));
+        Assert.Equal(EventLogEntryType.Warning, CliContract.EntryTypeFor(CliEventClass.UpdateFailedNotice));
+    }
+
+    [Theory]
+    [InlineData(new[] { "/s", "/noupdate" }, "ScanOnly", null)]
+    [InlineData(new[] { "/noupdate", "/s" }, "ScanOnly", null)]
+    [InlineData(new[] { "/d", "/NoUpdate" }, "Delete", null)]
+    [InlineData(new[] { "/m", "/noupdate" }, "Move", null)]
+    [InlineData(new[] { "/m", "D:\\Backup", "/noupdate" }, "Move", "D:\\Backup")]
+    [InlineData(new[] { "/m", "/noupdate", "D:\\Backup" }, "Move", "D:\\Backup")]
+    [InlineData(new[] { "/noupdate", "--help" }, "Help", null)]
+    public void ParseArguments_the_no_update_switch_is_taken_out_wherever_it_stands(
+        string[] args, string command, string? destination)
+    {
+        // /m /noupdate is a /m with no path, never a /m to a folder called /noupdate.
+        var invocation = CliContract.ParseArguments(args);
+
+        Assert.Equal(command, invocation.Command.ToString());
+        Assert.Equal(destination, invocation.MoveDestination);
+        Assert.True(invocation.SkipUpdate);
+    }
+
+    [Fact]
+    public void ParseArguments_without_the_switch_the_update_is_on()
+    {
+        Assert.False(CliContract.ParseArguments(["/s"]).SkipUpdate);
+        Assert.False(CliContract.ParseArguments(["/m", "D:\\Backup"]).SkipUpdate);
+    }
+
+    [Fact]
+    public void ParseArguments_the_switch_alone_is_no_command()
+    {
+        Assert.Equal(CliCommand.NoArguments, CliContract.ParseArguments(["/noupdate"]).Command);
+    }
+
+    [Fact]
+    public void ParseArguments_the_switch_still_counts_the_other_tokens()
+    {
+        // Taking the switch out leaves the rest parsed as it would be without it, so /s with
+        // a stray token is still too many arguments, naming that token.
+        var invocation = CliContract.ParseArguments(["/s", "/noupdate", "extra"]);
+
+        Assert.Equal(CliCommand.TooManyArguments, invocation.Command);
+        Assert.Equal("extra", invocation.OffendingArgument);
+    }
+
+    [Fact]
+    public void CommandToken_is_the_first_argument_that_is_not_the_switch()
+    {
+        Assert.Equal("/M", CliContract.CommandToken(["/noupdate", "/M", "D:\\Backup"]));
+        Assert.Equal("/s", CliContract.CommandToken(["/s", "/noupdate"]));
+        Assert.Null(CliContract.CommandToken(["/NOUPDATE"]));
+        Assert.Null(CliContract.CommandToken([]));
     }
 }

@@ -11,13 +11,15 @@ namespace InstallerClean.Services;
 /// </summary>
 /// <remarks>
 /// The HTTP call lives inside the elevated process. CheckAsync is reached
-/// only from ChromeViewModel, from two places: the automatic check, which
-/// runs once per session at launch if <c>AppSettings.AutoUpdateCheck</c> is
-/// set, and the main window's update button, which the user can press any
-/// number of times, each press spaced from the last by the button's own
-/// cooldown. There is no timer and no retry. Which of the two is calling
-/// arrives as <see cref="UpdateCheckOrigin"/> and decides how much of a
-/// failure is worth writing down.
+/// from three places: the window's automatic check, which runs once per
+/// session at launch if <c>AppSettings.AutoUpdateCheck</c> is set; the main
+/// window's update button, which the user can press any number of times,
+/// each press spaced from the last by the button's own cooldown; and the
+/// command line, once before each scan, on the same setting
+/// (<see cref="CommandLineUpdate"/>). There is no timer and no retry. Which
+/// kind of check is calling arrives as <see cref="UpdateCheckOrigin"/> and
+/// decides how much of a failure is worth writing down: the command line's
+/// is automatic.
 ///
 /// The version is read from the redirect rather than from
 /// api.github.com, because that API's anonymous allowance is spent by

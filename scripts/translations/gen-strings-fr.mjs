@@ -71,6 +71,9 @@ const ALSO_KEEP = [
   // words, so those are translated. Russian and Ukrainian localise both.
   'Display.Elapsed.Ms',        // {0:F0}ms
   'Display.Elapsed.S',         // {0:F1}s
+  // The command line's answer letter for no is N, the first letter of this language's
+  // word for no.
+  'Cli.UpdateAnswerNo',
 ];
 
 // Satellite-only CLDR plural overrides: keys absent from the neutral, appended
@@ -640,6 +643,15 @@ const MAP = {
   'UpdateNotice.DownloadFailed': `La mise à jour n'a pas pu être téléchargée.`,
   'UpdateNotice.InstallFailed': `La mise à jour n'a pas pu être installée.`,
   'UpdateNotice.ContinueWithoutUpdating': `_Continuer sans mettre à jour`,
+  'Cli.UpdatePrompt': `Mettre à jour maintenant ? [{0}/{1}]`,
+  'Cli.UpdateAnswerYes': `O`,
+  'Cli.UpdateAnswerNo': `N`,
+  'Cli.UpdateInstalled': `InstallerClean {0} est installé.`,
+  'Cli.UpdateListsOnlyAfterDelete': `La nouvelle version va analyser et lister ce qu'elle trouve, sans rien supprimer. Pour supprimer, relancez /d ensuite.`,
+  'Cli.UpdateListsOnlyAfterMove': `La nouvelle version va analyser et lister ce qu'elle trouve, sans rien déplacer. Pour déplacer, relancez /m ensuite.`,
+  'Cli.UpdateRunningInstead': `Exécution de {0} avec InstallerClean {1} à la place.`,
+  'Cli.UpdateDownloadLink': `Le télécharger sur GitHub : {0}`,
+  'Cli.Help.UpdateNote': `Avant l'analyse, il vérifie s'il existe une version plus récente&#10;d'InstallerClean. Lancé par vous, il demande avant de mettre à jour. Lancé&#10;seul, dans une tâche planifiée ou un script, il se met à jour sans&#10;demander. Ajoutez /noupdate pour ignorer la vérification.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

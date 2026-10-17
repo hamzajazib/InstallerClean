@@ -67,6 +67,9 @@ const ALSO_KEEP = [
   'Display.Size.B',            // {0} B
   'Display.Elapsed.Ms',        // {0:F0}ms
   'Display.Elapsed.S',         // {0:F1}s
+  // The command line's answer letter for no is N, the first letter of this language's
+  // word for no.
+  'Cli.UpdateAnswerNo',
 ];
 
 // Satellite-only CLDR plural overrides: keys absent from the neutral, appended
@@ -549,6 +552,15 @@ const MAP = {
   'UpdateNotice.DownloadFailed': `Non è stato possibile scaricare l'aggiornamento.`,
   'UpdateNotice.InstallFailed': `Non è stato possibile installare l'aggiornamento.`,
   'UpdateNotice.ContinueWithoutUpdating': `_Continua senza aggiornare`,
+  'Cli.UpdatePrompt': `Aggiornare ora? [{0}/{1}]`,
+  'Cli.UpdateAnswerYes': `S`,
+  'Cli.UpdateAnswerNo': `N`,
+  'Cli.UpdateInstalled': `InstallerClean {0} è installato.`,
+  'Cli.UpdateListsOnlyAfterDelete': `La nuova versione eseguirà la scansione ed elencherà ciò che trova, senza eliminare nulla. Per eliminare, esegui di nuovo /d al termine.`,
+  'Cli.UpdateListsOnlyAfterMove': `La nuova versione eseguirà la scansione ed elencherà ciò che trova, senza spostare nulla. Per spostare, esegui di nuovo /m al termine.`,
+  'Cli.UpdateRunningInstead': `Si esegue invece {0} con InstallerClean {1}.`,
+  'Cli.UpdateDownloadLink': `Scaricalo da GitHub: {0}`,
+  'Cli.Help.UpdateNote': `Prima della scansione controlla se esiste una versione più recente di&#10;InstallerClean. Se lo avvii tu, chiede prima di aggiornare. Se viene&#10;eseguito da solo, in un'operazione pianificata o in uno script, si&#10;aggiorna senza chiedere. Aggiungi /noupdate per saltare il controllo.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

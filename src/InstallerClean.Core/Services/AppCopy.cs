@@ -28,6 +28,12 @@ public enum AppCopyKind
 
     /// <summary>The slim download, which runs on the .NET Desktop Runtime installed on the PC.</summary>
     Slim,
+
+    /// <summary>
+    /// The command line as its own download, outside the setup's folder. It updates by
+    /// replacing its own file, as the portable does.
+    /// </summary>
+    CommandLineDownload,
 }
 
 /// <summary>
@@ -45,6 +51,12 @@ public static class AppCopy
 
     /// <summary>The value under <see cref="SetupUninstallKeyPath"/> naming the setup's folder.</summary>
     public const string InstallLocationValueName = "InstallLocation";
+
+    /// <summary>
+    /// The command line's file name, both in the setup's folder and as its own download,
+    /// which carries no version in its name.
+    /// </summary>
+    public const string CommandLineFileName = "installerclean-cli.exe";
 
     /// <summary>
     /// Where every download is published. A release's files sit under its tag,
@@ -87,6 +99,44 @@ public static class AppCopy
     }
 
     /// <summary>
+    /// The kind of command-line copy, in this order: a build that is not a single file
+    /// is from source; a copy in the folder the setup recorded is the setup's; any other
+    /// is the command line's own download. Scoop installs only the window, so no copy of
+    /// the command line is Scoop's.
+    /// </summary>
+    /// <param name="isSingleFile">Whether the running build is a single-file bundle.</param>
+    /// <param name="exeFolder">The folder the running exe is in.</param>
+    /// <param name="setupInstallLocation">
+    /// The setup's InstallLocation, or null where there is no setup install or its
+    /// record cannot be read.
+    /// </param>
+    public static AppCopyKind DecideCommandLine(bool isSingleFile, string exeFolder, string? setupInstallLocation)
+    {
+        if (!isSingleFile) return AppCopyKind.FromSource;
+        if (setupInstallLocation is not null && SameFolder(exeFolder, setupInstallLocation))
+            return AppCopyKind.Setup;
+        return AppCopyKind.CommandLineDownload;
+    }
+
+    /// <summary>
+    /// The kind of the command line running from <paramref name="exePath"/>, from this
+    /// build and the setup's record.
+    /// </summary>
+    /// <param name="exePath">The running exe's path.</param>
+    /// <param name="registry">Reads the setup's record.</param>
+    public static AppCopyKind DetectRunningCommandLine(string exePath, IRegistryReader registry)
+    {
+#if DEBUG
+        if (PretendedCommandLineKind() is { } pretended)
+            return pretended;
+#endif
+        return DecideCommandLine(
+            IsSingleFileBuild(),
+            Path.GetDirectoryName(exePath) ?? string.Empty,
+            ReadSetupInstallLocation(registry));
+    }
+
+    /// <summary>
     /// The kind of the copy running from <paramref name="exePath"/>, from this build,
     /// the setup's record and the folder the exe is in.
     /// </summary>
@@ -120,8 +170,10 @@ public static class AppCopy
 
 #if DEBUG
     /// <summary>
-    /// Set to setup, portable, slim or scoop, a Debug build takes itself for that kind
-    /// of copy, so a build from source can take each route an update takes. The name
+    /// Set to setup, portable, slim or scoop, a Debug build of the window takes itself
+    /// for that kind of copy, and set to setup or cli, a Debug build of the command line
+    /// takes itself for the setup's copy or its own download, so a build from source can
+    /// take each route an update takes. The name
     /// and its read sit only inside <c>#if DEBUG</c> blocks, and
     /// <c>scripts/check-debug-only-switches.mjs</c> holds them there, so no Release
     /// build can be told it is another kind of copy.
@@ -135,6 +187,14 @@ public static class AppCopy
             "portable" => AppCopyKind.Portable,
             "slim" => AppCopyKind.Slim,
             "scoop" => AppCopyKind.Scoop,
+            _ => null,
+        };
+
+    private static AppCopyKind? PretendedCommandLineKind() =>
+        Environment.GetEnvironmentVariable(PretendCopyVariable)?.Trim().ToLowerInvariant() switch
+        {
+            "setup" => AppCopyKind.Setup,
+            "cli" => AppCopyKind.CommandLineDownload,
             _ => null,
         };
 #endif
@@ -163,13 +223,16 @@ public static class AppCopy
 
     /// <summary>
     /// The file name of the download a kind updates from, or null for a build from
-    /// source. Scoop installs the portable, so it updates from the portable.
+    /// source. Scoop installs the portable, so it updates from the portable. The
+    /// command line's own download carries no version in its name; the release it sits
+    /// in says which version it is.
     /// </summary>
     public static string? DownloadFileName(AppCopyKind kind, string version) => kind switch
     {
         AppCopyKind.Setup => $"InstallerClean-{version}-setup.exe",
         AppCopyKind.Portable or AppCopyKind.Scoop => $"InstallerClean-{version}-portable.exe",
         AppCopyKind.Slim => $"InstallerClean-{version}-slim.exe",
+        AppCopyKind.CommandLineDownload => CommandLineFileName,
         _ => null,
     };
 

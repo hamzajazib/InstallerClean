@@ -215,6 +215,9 @@ public static class Strings
     public static string Cli_EventLogSupersededHeldBack_Plural => Get("Cli.EventLogSupersededHeldBack.Plural");
     public static string Cli_EventLogSupersededHeldBack_Singular => Get("Cli.EventLogSupersededHeldBack.Singular");
     public static string Cli_EventLogUnavailable => Get("Cli.EventLogUnavailable");
+    public static string Cli_EventLogUpdated => Get("Cli.EventLogUpdated");
+    public static string Cli_EventLogUpdateDownloadFailed => Get("Cli.EventLogUpdateDownloadFailed");
+    public static string Cli_EventLogUpdateInstallFailed => Get("Cli.EventLogUpdateInstallFailed");
     public static string Cli_EventLogValidationFailed => Get("Cli.EventLogValidationFailed");
     public static string Cli_EventLogWindowsError => Get("Cli.EventLogWindowsError");
     public static string Cli_FoundNoOrphans => Get("Cli.FoundNoOrphans");
@@ -237,6 +240,7 @@ public static class Strings
     public static string Cli_Help_NoteLine1 => Get("Cli.Help.NoteLine1");
     public static string Cli_Help_ScanOnly => Get("Cli.Help.ScanOnly");
     public static string Cli_Help_Summary => Get("Cli.Help.Summary");
+    public static string Cli_Help_UpdateNote => Get("Cli.Help.UpdateNote");
     public static string Cli_Help_Usage => Get("Cli.Help.Usage");
     public static string Cli_Help_Version => Get("Cli.Help.Version");
     public static string Cli_InstallerLockAccessRefused => Get("Cli.InstallerLockAccessRefused");
@@ -290,6 +294,14 @@ public static class Strings
     public static string Cli_TooManyArguments => Get("Cli.TooManyArguments");
     public static string Cli_TooManyArgumentsNoPath => Get("Cli.TooManyArgumentsNoPath");
     public static string Cli_UnknownArgument => Get("Cli.UnknownArgument");
+    public static string Cli_UpdateAnswerNo => Get("Cli.UpdateAnswerNo");
+    public static string Cli_UpdateAnswerYes => Get("Cli.UpdateAnswerYes");
+    public static string Cli_UpdateDownloadLink => Get("Cli.UpdateDownloadLink");
+    public static string Cli_UpdateInstalled => Get("Cli.UpdateInstalled");
+    public static string Cli_UpdateListsOnlyAfterDelete => Get("Cli.UpdateListsOnlyAfterDelete");
+    public static string Cli_UpdateListsOnlyAfterMove => Get("Cli.UpdateListsOnlyAfterMove");
+    public static string Cli_UpdatePrompt => Get("Cli.UpdatePrompt");
+    public static string Cli_UpdateRunningInstead => Get("Cli.UpdateRunningInstead");
     public static string Cli_WithheldReasons_CandidateIdentity => Get("Cli.WithheldReasons.CandidateIdentity");
     public static string Cli_WithheldReasons_DeclaredPatchUnestablished => Get("Cli.WithheldReasons.DeclaredPatchUnestablished");
     public static string Cli_WithheldReasons_DeclaredProductUnestablished => Get("Cli.WithheldReasons.DeclaredProductUnestablished");

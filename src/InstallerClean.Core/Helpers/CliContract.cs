@@ -64,10 +64,15 @@ internal enum CliCommand
 /// (<c>installerclean-cli /m D:\Backup</c>), untrimmed; null when absent so
 /// the host falls back to the saved settings destination.
 /// </param>
+/// <param name="SkipUpdate">
+/// Whether <c>/noupdate</c> was given, which turns off the update check and the update
+/// for this run.
+/// </param>
 internal readonly record struct CliInvocation(
     CliCommand Command,
     string? OffendingArgument,
-    string? MoveDestination);
+    string? MoveDestination,
+    bool SkipUpdate = false);
 
 /// <summary>
 /// The CLI process exit codes, the contract RMM tooling and scheduled tasks
@@ -248,6 +253,21 @@ internal enum CliEventClass
     /// it had not finished checking, so the run fell short of its job by those files.
     /// </summary>
     SourcesGivenUpNotice,
+
+    /// <summary>
+    /// Notice: the run found a newer version, installed it, and ran with it. The newer
+    /// version writes the run's summary, so this entry sits beside a summary written by
+    /// another process. Information, on the rule at <see cref="CliContract.EntryTypeFor"/>:
+    /// the run fell short of nothing.
+    /// </summary>
+    UpdatedNotice,
+
+    /// <summary>
+    /// Notice: the run found a newer version and could not install it, so it ran with the
+    /// version it is. WARNING, on the rule at <see cref="CliContract.EntryTypeFor"/>: the
+    /// run did its job with a version older than the one it set out to use.
+    /// </summary>
+    UpdateFailedNotice,
 }
 
 /// <summary>The exit code and Event-log class chosen for a finished file operation.</summary>
@@ -265,13 +285,34 @@ internal readonly record struct CliOperationOutcome(int ExitCode, CliEventClass 
 internal static class CliContract
 {
     /// <summary>
-    /// Resolves the argument vector to a <see cref="CliInvocation"/>. The
-    /// first token decides the command, lower-cased so the comparison is
-    /// case-insensitive (PowerShell users frequently type <c>/S</c>). The
-    /// offending-argument and destination tokens are returned in their
-    /// original case.
+    /// The switch that turns off the update check and the update for one run. It may
+    /// come anywhere on the command line, in any case.
+    /// </summary>
+    internal const string NoUpdateSwitch = "/noupdate";
+
+    /// <summary>
+    /// Resolves the argument vector to a <see cref="CliInvocation"/>.
+    /// <see cref="NoUpdateSwitch"/> is taken out first, wherever it stands, and what is
+    /// left is parsed: so <c>/m /noupdate</c> is a <c>/m</c> with no path, never a
+    /// <c>/m</c> to a folder of that name. The first token left decides the command,
+    /// lower-cased so the comparison is case-insensitive (PowerShell users frequently
+    /// type <c>/S</c>). The offending-argument and destination tokens are returned in
+    /// their original case.
     /// </summary>
     internal static CliInvocation ParseArguments(string[] args)
+    {
+        var rest = args.Where(a => !a.Equals(NoUpdateSwitch, StringComparison.OrdinalIgnoreCase)).ToArray();
+        return ParseCommand(rest) with { SkipUpdate = rest.Length != args.Length };
+    }
+
+    /// <summary>
+    /// The token naming the command: the first argument that is not
+    /// <see cref="NoUpdateSwitch"/>, as typed, or null where there is none.
+    /// </summary>
+    internal static string? CommandToken(string[] args) =>
+        args.FirstOrDefault(a => !a.Equals(NoUpdateSwitch, StringComparison.OrdinalIgnoreCase));
+
+    private static CliInvocation ParseCommand(string[] args)
     {
         // No argument is a usage error, not a help request: an argless
         // scheduled task must fail visibly rather than silently do nothing.
@@ -360,6 +401,8 @@ internal static class CliContract
         CliEventClass.ScanNothingOfferedNotice => 3002,
         CliEventClass.ScanSupersededHeldBackNotice => 3003,
         CliEventClass.SourcesGivenUpNotice => 3004,
+        CliEventClass.UpdatedNotice => 3005,
+        CliEventClass.UpdateFailedNotice => 3006,
         _ => 0,
     };
 
@@ -385,10 +428,16 @@ internal static class CliContract
     /// files are gone, so at Warning a machine with nothing wrong with it posts
     /// one nightly for ever, and the operator's answer to that is a suppression
     /// rule on Source = InstallerClean, which takes the 4000 band with it.
+    ///
+    /// The two update notices follow the same rule. A run that installed the newer
+    /// version and ran with it fell short of nothing, so its notice is Information; a
+    /// run that could not install it did its job with an older version than it set out
+    /// to use, so its notice is Warning.
     /// </summary>
     internal static EventLogEntryType EntryTypeFor(CliEventClass outcome) => outcome switch
     {
-        CliEventClass.Ok or CliEventClass.ScanMissingFilesNotice => EventLogEntryType.Information,
+        CliEventClass.Ok or CliEventClass.ScanMissingFilesNotice or CliEventClass.UpdatedNotice
+            => EventLogEntryType.Information,
         _ => EventLogEntryType.Warning,
     };
 }

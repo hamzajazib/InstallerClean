@@ -543,6 +543,14 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moved {0} unneeded {1}. | Đã chuyển {0} {1} không cần thiết. |
 | Check that your programs still update and uninstall as normal, then delete {0}. | Hãy kiểm tra xem các chương trình của bạn vẫn cập nhật và gỡ cài đặt bình thường, rồi xóa {0}. |
 | InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean miễn phí. Nếu nó có ích, hãy ủng hộ 3 USD: {0} |
+| Update now? [{0}/{1}] | Cập nhật ngay bây giờ? [{0}/{1}] |
+| Y | C |
+| N | K |
+| InstallerClean {0} is installed. | Đã cài đặt InstallerClean {0}. |
+| The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Phiên bản mới sẽ quét và liệt kê những gì tìm thấy, không xóa gì cả. Để xóa, hãy chạy lại /d sau đó. |
+| The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Phiên bản mới sẽ quét và liệt kê những gì tìm thấy, không di chuyển gì cả. Để di chuyển, hãy chạy lại /m sau đó. |
+| Running {0} with InstallerClean {1} instead. | Thay vào đó, chạy {0} bằng InstallerClean {1}. |
+| Download it from GitHub: {0} | Tải về từ GitHub: {0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Hoàn tác rất đơn giản. Hãy chuyển chúng từ {0} trở lại {InstallerFolder} và mọi thứ sẽ như cũ. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean không còn xác nhận được thư mục sao lưu, nên đã dừng lại. Hãy kiểm tra {0}, rồi chạy lại lệnh. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Một tiến trình InstallerClean khác đang giữ khóa một-thực-thể (GUI hoặc một lần chạy CLI khác). Mã thoát 75 (tạm thời); có thể thử lại sau. |
@@ -560,6 +568,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m ĐƯỜNG_DẪN  Chuyển tới đường dẫn được chỉ định |
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli giữ dấu nhắc cho tới khi xong, để một tập lệnh hoặc<br>một tác vụ theo lịch có thể chờ nó. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Thư mục theo người dùng; tác vụ theo lịch hoặc SYSTEM: /m ĐƯỜNG_DẪN. |
+| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | Trước khi quét, công cụ kiểm tra xem có phiên bản InstallerClean mới hơn<br>không. Khi bạn tự chạy, nó hỏi trước khi cập nhật. Khi chạy tự động, trong<br>một tác vụ theo lịch hoặc một tập lệnh, nó cập nhật mà không hỏi. Thêm<br>/noupdate để bỏ qua bước kiểm tra. |
 | Exit codes: | Mã thoát: |
 |   0   success: the run did what it was asked |   0   thành công: đã làm đúng việc được yêu cầu |
 |   1   nothing processed: the run failed or was refused |   1   không xử lý gì: lần chạy đã thất bại hoặc bị từ chối |

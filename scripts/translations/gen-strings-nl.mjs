@@ -86,6 +86,9 @@ const ALSO_KEEP = [
   'Display.Size.B',            // {0} B
   'Display.Elapsed.Ms',        // {0:F0}ms
   'Display.Elapsed.S',         // {0:F1}s
+  // The command line's answer letter for no is N, the first letter of this language's
+  // word for no.
+  'Cli.UpdateAnswerNo',
 ];
 
 // Satellite-only CLDR plural overrides. All six are the same point of Dutch
@@ -600,6 +603,15 @@ const MAP = {
   'UpdateNotice.DownloadFailed': `De update kon niet worden gedownload.`,
   'UpdateNotice.InstallFailed': `De update kon niet worden geïnstalleerd.`,
   'UpdateNotice.ContinueWithoutUpdating': `_Doorgaan zonder bij te werken`,
+  'Cli.UpdatePrompt': `Nu bijwerken? [{0}/{1}]`,
+  'Cli.UpdateAnswerYes': `J`,
+  'Cli.UpdateAnswerNo': `N`,
+  'Cli.UpdateInstalled': `InstallerClean {0} is geïnstalleerd.`,
+  'Cli.UpdateListsOnlyAfterDelete': `De nieuwe versie scant en toont wat hij vindt, zonder iets te verwijderen. Voer daarna /d opnieuw uit om te verwijderen.`,
+  'Cli.UpdateListsOnlyAfterMove': `De nieuwe versie scant en toont wat hij vindt, zonder iets te verplaatsen. Voer daarna /m opnieuw uit om te verplaatsen.`,
+  'Cli.UpdateRunningInstead': `In plaats daarvan wordt {0} uitgevoerd met InstallerClean {1}.`,
+  'Cli.UpdateDownloadLink': `Download het van GitHub: {0}`,
+  'Cli.Help.UpdateNote': `Voor het scannen controleert het of er een nieuwere versie van&#10;InstallerClean is. Start je het zelf, dan vraagt het eerst toestemming.&#10;Draait het zelfstandig, in een geplande taak of een script, dan werkt het&#10;bij zonder te vragen. Voeg /noupdate toe om de controle over te slaan.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

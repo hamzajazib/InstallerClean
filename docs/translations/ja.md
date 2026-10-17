@@ -543,6 +543,14 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Moved {0} unneeded {1}. | {0} 個の不要な {1} を移動しました。 |
 | Check that your programs still update and uninstall as normal, then delete {0}. | プログラムがこれまでどおり更新およびアンインストールできることを確認してから、{0} を削除してください。 |
 | InstallerClean is free. If it helped, please donate $3: {0} | InstallerClean は無料です。お役に立てたなら、3 ドルのご寄付をお願いします：{0} |
+| Update now? [{0}/{1}] | 今すぐ更新しますか？ [{0}/{1}] |
+| Y | Y |
+| N | N |
+| InstallerClean {0} is installed. | InstallerClean {0} をインストールしました。 |
+| The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も削除しません。削除するには、その後もう一度 /d を実行してください。 |
+| The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も移動しません。移動するには、その後もう一度 /m を実行してください。 |
+| Running {0} with InstallerClean {1} instead. | 代わりに InstallerClean {1} で {0} を実行します。 |
+| Download it from GitHub: {0} | GitHubからダウンロード：{0} |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | 元に戻すのは簡単です。{0} から {InstallerFolder} に戻せば、すべて元どおりになります。 |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean はバックアップフォルダーを確認できなくなったため、停止しました。{0} を確認してから、コマンドをもう一度実行してください。 |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | 別の InstallerClean プロセスが単一インスタンスロックを保持しています (GUIまたは別のCLI実行)。終了コード75 (一時的)。後で再試行しても安全です。 |
@@ -560,6 +568,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m PATH    指定されたパスに移動 |
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli は終了までプロンプトを占有するため、スクリプトや<br>スケジュールされたタスクが完了を待てます。 |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | フォルダーはユーザーごと。予約実行や SYSTEM には /m PATH が必要。 |
+| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | スキャンの前に、InstallerClean の新しいバージョンがあるか確認します。自分<br>で実行した場合は、更新する前に確認を求めます。スケジュールされたタスクやス<br>クリプトで自動実行される場合は、確認なしで更新します。確認を省くには<br>/noupdate を付けてください。 |
 | Exit codes: | 終了コード： |
 |   0   success: the run did what it was asked |   0   成功：求められた処理を行った |
 |   1   nothing processed: the run failed or was refused |   1   何も処理されなかった：実行が失敗したか拒否された |

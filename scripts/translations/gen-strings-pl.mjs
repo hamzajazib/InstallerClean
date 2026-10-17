@@ -66,6 +66,9 @@ const ALSO_KEEP = [
   'Display.Size.B',            // {0} B
   'Display.Elapsed.Ms',        // {0:F0}ms
   'Display.Elapsed.S',         // {0:F1}s
+  // The command line's answer letter for no is N, the first letter of this language's
+  // word for no.
+  'Cli.UpdateAnswerNo',
 ];
 
 // Polish CLDR-category overrides (satellite-only, read by name via ResourceManager
@@ -658,6 +661,15 @@ const MAP = {
   'UpdateNotice.DownloadFailed': `Nie udało się pobrać aktualizacji.`,
   'UpdateNotice.InstallFailed': `Nie udało się zainstalować aktualizacji.`,
   'UpdateNotice.ContinueWithoutUpdating': `_Kontynuuj bez aktualizacji`,
+  'Cli.UpdatePrompt': `Zaktualizować teraz? [{0}/{1}]`,
+  'Cli.UpdateAnswerYes': `T`,
+  'Cli.UpdateAnswerNo': `N`,
+  'Cli.UpdateInstalled': `Wersja InstallerClean {0} jest zainstalowana.`,
+  'Cli.UpdateListsOnlyAfterDelete': `Nowa wersja przeskanuje i wyświetli listę tego, co znajdzie, niczego nie usuwając. Aby usunąć, uruchom potem ponownie /d.`,
+  'Cli.UpdateListsOnlyAfterMove': `Nowa wersja przeskanuje i wyświetli listę tego, co znajdzie, niczego nie przenosząc. Aby przenieść, uruchom potem ponownie /m.`,
+  'Cli.UpdateRunningInstead': `Zamiast tego polecenie {0} zostanie uruchomione w wersji InstallerClean {1}.`,
+  'Cli.UpdateDownloadLink': `Pobierz z GitHuba: {0}`,
+  'Cli.Help.UpdateNote': `Przed skanowaniem sprawdza, czy jest nowsza wersja InstallerClean.&#10;Uruchomiony ręcznie pyta przed aktualizacją. Uruchomiony samodzielnie, w&#10;zadaniu zaplanowanym lub skrypcie, aktualizuje się bez pytania. Dodaj&#10;/noupdate, aby pominąć sprawdzanie.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -2312,6 +2312,32 @@ InstallerClean 本來就是以系統管理員身分執行，所以再用這種�
        Application log. 0 = the donation page's address, printed as written. The
        amount is in US dollars, written the way the language writes a dollar amount. -->
   <data name="Cli.DonateAsk" xml:space="preserve"><value>InstallerClean 是免費的。如果它幫上了忙，請贊助 3 美元：{0}</value></data>
+  <!-- The command line's update, printed before the scan where a newer version is out.
+       The question follows UpdateNotice.Available and UpdateNotice.Recommended, and is
+       asked only where a person can see it and answer it. 0 = the letter for yes, shown
+       in capitals because Enter answers yes; 1 = the letter for no, in lower case. Both
+       come from Cli.UpdateAnswerYes and Cli.UpdateAnswerNo, so the brackets always show
+       the letters the reader takes. -->
+  <data name="Cli.UpdatePrompt" xml:space="preserve"><value>立即更新？[{0}/{1}]</value></data>
+  <!-- One letter each: the first letter of this language's word for yes, and for no. The
+       answer's first letter is compared with them without regard to case, and English Y
+       and N are taken as well in every language. The two must differ. -->
+  <data name="Cli.UpdateAnswerYes" xml:space="preserve"><value>Y</value></data>
+  <data name="Cli.UpdateAnswerNo" xml:space="preserve"><value>N</value></data>
+  <!-- After the newer version is in place, before it runs. 0 = its version. -->
+  <data name="Cli.UpdateInstalled" xml:space="preserve"><value>InstallerClean {0} 版已安裝。</value></data>
+  <!-- After Cli.UpdateInstalled, where the person typed /d or /m and answered yes: the newer
+       version scans and lists, as /s does, and moves or deletes nothing. /d and /m are the
+       commands as typed and stay as written. -->
+  <data name="Cli.UpdateListsOnlyAfterDelete" xml:space="preserve"><value>新版本會掃描並列出找到的內容，不會刪除任何檔案。如需刪除，請在之後再次執行 /d。</value></data>
+  <data name="Cli.UpdateListsOnlyAfterMove" xml:space="preserve"><value>新版本會掃描並列出找到的內容，不會移動任何檔案。如需移動，請在之後再次執行 /m。</value></data>
+  <!-- After UpdateNotice.DownloadFailed or UpdateNotice.InstallFailed, before the run goes on
+       with the version it is. 0 = the command given, /s, /d or /m, as typed and left as
+       written; 1 = the version that runs it. -->
+  <data name="Cli.UpdateRunningInstead" xml:space="preserve"><value>改用 InstallerClean {1} 執行 {0}。</value></data>
+  <!-- Where a newer version is out and this copy was built from source, so it cannot update
+       itself. 0 = the release page's address, printed as written. -->
+  <data name="Cli.UpdateDownloadLink" xml:space="preserve"><value>從 GitHub 下載：{0}</value></data>
   <!-- The line a cancelled Move prints instead of the one above, where the window's
        card carries Completion.MoveCancelledRestoreHint. A run that went the distance
        leaves the reader deciding when to delete the backup; a run somebody stopped
@@ -2353,6 +2379,14 @@ InstallerClean 本來就是以系統管理員身分執行，所以再用這種�
        processed (a cancel during the scan, or before the first delete or
        move), so "each /s, /d or /m run writes one summary entry" holds for
        every run, not only the ones that committed work. -->
+  <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed,
+       3 = the arguments the newer version was started with. Event ID 3005, a notice
+       written once the newer version has started; the newer version writes the run's
+       summary. -->
+  <!-- 0 = mode arg, 1 = the version that ran, 2 = the version it could not install, 3 = the
+       arguments the run was given. Event ID 3006, a notice beside the run's own summary: the
+       first where the download failed, the second where putting it in place or starting it
+       failed. -->
   <!-- Stdout when the CLI cannot acquire the single-instance mutex.
        The GUI variant (Strings.Startup_AlreadyRunningBody) is written
        for a user who tried to launch a second window; the CLI variant
@@ -2434,16 +2468,14 @@ InstallerClean 本來就是以系統管理員身分執行，所以再用這種�
   <data name="Cli.Help.MoveDefault" xml:space="preserve"><value>  installerclean-cli /m         移到已儲存的備份資料夾</value></data>
   <data name="Cli.Help.MovePath" xml:space="preserve"><value>  installerclean-cli /m 路徑    移到指定的路徑</value></data>
   <!-- ONE value carrying TWO printed lines, and the &#10; is where the English
-       breaks rather than where every language must. It was three keys
-       hard-wrapped at English word boundaries, which forced each language to
-       break its own sentence at the same three points and left this note and
-       the exit-1 entry the two worst column-budget overflows of the sixteen.
-       A translation may break anywhere, or not at all if it fits.
-       What went with the other two lines: how to redirect and pipe, which this
-       reader has been doing for twenty years, and that the GUI sits alongside
-       in InstallerClean.exe, which is untrue of the command-line download. -->
+       breaks rather than where every language must. A translation may break
+       anywhere, or not at all if it fits. -->
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli 會佔住命令提示字元直到結束，因此指令碼或排定的&#10;工作可以等候它完成。</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>該資料夾依使用者儲存；排定的工作或 SYSTEM 執行需要 /m 路徑。</value></data>
+  <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the
+       English breaks; a translation may break anywhere within the 74-column cap.
+       /noupdate is the switch as typed and stays as written. -->
+  <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>掃描前，它會檢查是否有較新版本的 InstallerClean。由您親自執行時，它會在更&#10;新前詢問。在排定的工作或指令碼中自動執行時，它會直接更新而不詢問。加上&#10;/noupdate 可略過檢查。</value></data>
   <data name="Cli.Help.ExitCodesHeader" xml:space="preserve"><value>結束代碼：</value></data>
   <!-- 0 IS NOT A STATEMENT THAT WORK HAPPENED AND NOT A STATEMENT THAT NONE IS
        LEFT. Five runs exit 0: the help and version flags (/? and -v), which print

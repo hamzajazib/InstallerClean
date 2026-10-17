@@ -2312,6 +2312,32 @@ Execute o InstallerClean novamente como administrador.</value></data>
        Application log. 0 = the donation page's address, printed as written. The
        amount is in US dollars, written the way the language writes a dollar amount. -->
   <data name="Cli.DonateAsk" xml:space="preserve"><value>O InstallerClean é gratuito. Se ele ajudou, faça uma doação de US$ 3: {0}</value></data>
+  <!-- The command line's update, printed before the scan where a newer version is out.
+       The question follows UpdateNotice.Available and UpdateNotice.Recommended, and is
+       asked only where a person can see it and answer it. 0 = the letter for yes, shown
+       in capitals because Enter answers yes; 1 = the letter for no, in lower case. Both
+       come from Cli.UpdateAnswerYes and Cli.UpdateAnswerNo, so the brackets always show
+       the letters the reader takes. -->
+  <data name="Cli.UpdatePrompt" xml:space="preserve"><value>Atualizar agora? [{0}/{1}]</value></data>
+  <!-- One letter each: the first letter of this language's word for yes, and for no. The
+       answer's first letter is compared with them without regard to case, and English Y
+       and N are taken as well in every language. The two must differ. -->
+  <data name="Cli.UpdateAnswerYes" xml:space="preserve"><value>S</value></data>
+  <data name="Cli.UpdateAnswerNo" xml:space="preserve"><value>N</value></data>
+  <!-- After the newer version is in place, before it runs. 0 = its version. -->
+  <data name="Cli.UpdateInstalled" xml:space="preserve"><value>O InstallerClean {0} está instalado.</value></data>
+  <!-- After Cli.UpdateInstalled, where the person typed /d or /m and answered yes: the newer
+       version scans and lists, as /s does, and moves or deletes nothing. /d and /m are the
+       commands as typed and stay as written. -->
+  <data name="Cli.UpdateListsOnlyAfterDelete" xml:space="preserve"><value>A nova versão vai analisar e listar o que encontrar, sem excluir nada. Para excluir, execute /d novamente depois.</value></data>
+  <data name="Cli.UpdateListsOnlyAfterMove" xml:space="preserve"><value>A nova versão vai analisar e listar o que encontrar, sem mover nada. Para mover, execute /m novamente depois.</value></data>
+  <!-- After UpdateNotice.DownloadFailed or UpdateNotice.InstallFailed, before the run goes on
+       with the version it is. 0 = the command given, /s, /d or /m, as typed and left as
+       written; 1 = the version that runs it. -->
+  <data name="Cli.UpdateRunningInstead" xml:space="preserve"><value>Em vez disso, {0} será executado com o InstallerClean {1}.</value></data>
+  <!-- Where a newer version is out and this copy was built from source, so it cannot update
+       itself. 0 = the release page's address, printed as written. -->
+  <data name="Cli.UpdateDownloadLink" xml:space="preserve"><value>Baixe no GitHub: {0}</value></data>
   <!-- The line a cancelled Move prints instead of the one above, where the window's
        card carries Completion.MoveCancelledRestoreHint. A run that went the distance
        leaves the reader deciding when to delete the backup; a run somebody stopped
@@ -2353,6 +2379,14 @@ Execute o InstallerClean novamente como administrador.</value></data>
        processed (a cancel during the scan, or before the first delete or
        move), so "each /s, /d or /m run writes one summary entry" holds for
        every run, not only the ones that committed work. -->
+  <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed,
+       3 = the arguments the newer version was started with. Event ID 3005, a notice
+       written once the newer version has started; the newer version writes the run's
+       summary. -->
+  <!-- 0 = mode arg, 1 = the version that ran, 2 = the version it could not install, 3 = the
+       arguments the run was given. Event ID 3006, a notice beside the run's own summary: the
+       first where the download failed, the second where putting it in place or starting it
+       failed. -->
   <!-- Stdout when the CLI cannot acquire the single-instance mutex.
        The GUI variant (Strings.Startup_AlreadyRunningBody) is written
        for a user who tried to launch a second window; the CLI variant
@@ -2437,16 +2471,14 @@ Execute o InstallerClean novamente como administrador.</value></data>
   <data name="Cli.Help.MoveDefault" xml:space="preserve"><value>  installerclean-cli /m          Move para a pasta de backup salva</value></data>
   <data name="Cli.Help.MovePath" xml:space="preserve"><value>  installerclean-cli /m CAMINHO  Move para o caminho especificado</value></data>
   <!-- ONE value carrying TWO printed lines, and the &#10; is where the English
-       breaks rather than where every language must. It was three keys
-       hard-wrapped at English word boundaries, which forced each language to
-       break its own sentence at the same three points and left this note and
-       the exit-1 entry the two worst column-budget overflows of the sixteen.
-       A translation may break anywhere, or not at all if it fits.
-       What went with the other two lines: how to redirect and pipe, which this
-       reader has been doing for twenty years, and that the GUI sits alongside
-       in InstallerClean.exe, which is untrue of the command-line download. -->
+       breaks rather than where every language must. A translation may break
+       anywhere, or not at all if it fits. -->
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>O installerclean-cli bloqueia o prompt até terminar, para que um script&#10;ou uma tarefa agendada possa esperar por ele.</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>Pasta salva por usuário; execuções agendadas ou SYSTEM: /m CAMINHO.</value></data>
+  <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the
+       English breaks; a translation may break anywhere within the 74-column cap.
+       /noupdate is the switch as typed and stays as written. -->
+  <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>Antes de analisar, ele verifica se há uma versão mais recente do&#10;InstallerClean. Quando você o executa, ele pergunta antes de atualizar.&#10;Quando roda sozinho, em uma tarefa agendada ou um script, ele atualiza sem&#10;perguntar. Adicione /noupdate para pular a verificação.</value></data>
   <data name="Cli.Help.ExitCodesHeader" xml:space="preserve"><value>Códigos de saída:</value></data>
   <!-- 0 IS NOT A STATEMENT THAT WORK HAPPENED AND NOT A STATEMENT THAT NONE IS
        LEFT. Five runs exit 0: the help and version flags (/? and -v), which print

@@ -41,7 +41,7 @@ AppVersion={#AppVersion}
 ; is named by UninstallDisplayName further down and does not follow this
 ; directive.
 AppVerName=InstallerClean {#AppVersion}
-; Mutex name matches App.xaml.cs and Cli/Program.cs. Setup pauses with
+; Mutex name matches App.xaml.cs and Cli/ConsoleUpdateHost.cs. Setup pauses with
 ; a "close the running app" prompt when the user upgrades while
 ; InstallerClean.exe or installerclean-cli.exe is holding it.
 AppMutex=Global\InstallerClean_SingleInstance
@@ -159,6 +159,13 @@ Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreve
 ; installer\Languages. The DestName trick is the LICENSE one and is needed for
 ; the same reason.
 Source: "..\THIRD-PARTY-NOTICES"; DestDir: "{app}"; DestName: "THIRD-PARTY-NOTICES.txt"; Flags: ignoreversion
+
+[UninstallDelete]
+; The command line updates itself by renaming its running file to this name
+; before this setup writes the newer version, and the newer version deletes it
+; at its next run. Setup's uninstall log does not know the renamed file, so
+; without this an uninstall in between leaves it, and the folder, behind.
+Type: files; Name: "{app}\installerclean-cli.exe.old"
 
 [Icons]
 Name: "{group}\InstallerClean"; Filename: "{app}\InstallerClean.exe"; IconFilename: "{app}\InstallerClean.exe"

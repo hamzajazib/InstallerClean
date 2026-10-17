@@ -53,7 +53,8 @@ internal static class Composition
             RunningCopy.Kind(provider.GetRequiredService<IRegistryReader>()),
             Environment.ProcessPath ?? string.Empty,
             provider.GetRequiredService<UpdateDownloadService>(),
-            UpdateStagingFolder.DefaultRoot));
+            UpdateStagingFolder.DefaultRoot,
+            AppUpdater.WindowSetupArguments));
 
         // View-model graph. MainViewModel constructs the four child
         // VMs internally; the container only needs to know how to
