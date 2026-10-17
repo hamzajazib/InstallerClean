@@ -286,28 +286,102 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal(string.Format(Strings.Cli_UpdateNotStarted, Latest), _host.Output[^1]);
     }
 
-    [Fact]
-    public void The_separate_download_goes_ahead_where_the_mutex_is_held_elsewhere()
+    [Theory]
+    [InlineData(AppCopyKind.CommandLineDownload, true)]
+    [InlineData(AppCopyKind.CommandLineDownload, false)]
+    [InlineData(AppCopyKind.Setup, true)]
+    [InlineData(AppCopyKind.Setup, false)]
+    public void Where_the_mutex_is_held_elsewhere_nothing_is_asked_or_downloaded(AppCopyKind kind, bool canAsk)
     {
         _host.LockAvailable = false;
-        _host.NewerVersionExitCode = 0;
+        var updater = kind == AppCopyKind.Setup ? Setup() : Download();
 
-        var result = Run(Download(), canAsk: false);
+        var result = Run(updater, canAsk);
 
-        Assert.IsType<CommandLineUpdateResult.HandedOver>(result);
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateFailureStage.InUse, Current, Latest), result);
+        Assert.Equal(InUseLines(), _host.Output);
+        Assert.Equal(0, _host.Reads);
+        Assert.False(updater.Prepared);
+        Assert.Equal("old", File.ReadAllText(_exe));
+        Assert.True(_host.HoldsOwnFile);
     }
 
-    [Fact]
-    public void The_setups_copy_fails_before_any_download_where_the_mutex_is_held_elsewhere()
+    [Theory]
+    [InlineData(AppCopyKind.CommandLineDownload)]
+    [InlineData(AppCopyKind.Setup)]
+    public void Where_another_run_of_this_file_is_alive_nothing_is_asked_or_downloaded(AppCopyKind kind)
     {
-        _host.LockAvailable = false;
-        var updater = Setup();
+        _host.AnotherRunAt = _ => true;
+        var updater = kind == AppCopyKind.Setup ? Setup() : Download();
+
+        var result = Run(updater, canAsk: true);
+
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateFailureStage.InUse, Current, Latest), result);
+        Assert.Equal(InUseLines(), _host.Output);
+        Assert.Equal(0, _host.Reads);
+        Assert.False(updater.Prepared);
+        Assert.False(_host.HoldsLock);
+    }
+
+    [Theory]
+    [InlineData(AppCopyKind.CommandLineDownload)]
+    [InlineData(AppCopyKind.Setup)]
+    public void A_run_of_this_file_that_starts_during_the_download_stops_the_update_before_the_rename(AppCopyKind kind)
+    {
+        // The look before the download finds nothing; the one just before the rename finds
+        // a run.
+        _host.AnotherRunAt = look => look >= 2;
+        var updater = kind == AppCopyKind.Setup ? Setup() : Download();
 
         var result = Run(updater, canAsk: false);
 
-        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateFailureStage.Install, Current, Latest), result);
-        Assert.False(updater.Prepared);
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateFailureStage.InUse, Current, Latest), result);
+        Assert.Equal(new[]
+        {
+            string.Format(Strings.UpdateNotice_Available, Latest),
+            string.Format(Strings.UpdateNotice_Downloading, Latest),
+            Strings.Cli_UpdateInUse,
+            string.Format(Strings.Cli_UpdateRunningInstead, "/s", Current),
+        }, _host.Output);
+        Assert.True(updater.Undone);
+        Assert.Equal("old", File.ReadAllText(_exe));
+        Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
         Assert.Null(_host.SetupRun);
+        Assert.Null(_host.NewerVersionRun);
+        Assert.True(_host.HoldsOwnFile);
+    }
+
+    [Theory]
+    [InlineData(true, UpdateFailureStage.InUse)]
+    [InlineData(false, UpdateFailureStage.Install)]
+    public void A_rename_refused_is_in_use_only_where_another_run_of_this_file_is_alive(
+        bool anotherRunAfterwards, UpdateFailureStage stage)
+    {
+        // A handle that does not share delete is what a run holding its own file has open.
+        using var held = File.Open(_exe, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        _host.AnotherRunAt = look => anotherRunAfterwards && look >= 3;
+        var updater = Download();
+
+        var result = Run(updater, canAsk: false);
+
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(stage, Current, Latest), result);
+        Assert.Equal(3, _host.AnotherRunLooks);
+        Assert.True(updater.Undone);
+        Assert.Equal("old", File.ReadAllText(_exe));
+        Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
+        Assert.True(_host.HoldsOwnFile);
+    }
+
+    [Fact]
+    public void The_rename_comes_with_the_mutex_held_and_this_runs_own_file_let_go()
+    {
+        _host.NewerVersionExitCode = 0;
+
+        Run(Download(), canAsk: false);
+
+        Assert.Equal(new[] { true }, _host.LockHeldAtPrepare);
+        Assert.Equal(2, _host.AnotherRunLooks);
+        Assert.False(_host.NewerVersionRun!.Value.OwnFileHeld);
     }
 
     [Fact]
@@ -395,6 +469,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
         Assert.True(updater.Undone);
         Assert.Null(_host.NewerVersionRun);
+        Assert.True(_host.HoldsOwnFile);
     }
 
     [Fact]
@@ -471,6 +546,14 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Contains("/NOCLOSEAPPLICATIONS", arguments);
     }
 
+    /// <summary>What a run prints where InstallerClean is in use before anything is asked.</summary>
+    private static string[] InUseLines() =>
+    [
+        string.Format(Strings.UpdateNotice_Available, Latest),
+        Strings.Cli_UpdateInUse,
+        string.Format(Strings.Cli_UpdateRunningInstead, "/s", Current),
+    ];
+
     private static string Prompt() =>
         string.Format(Strings.Cli_UpdatePrompt,
             Strings.Cli_UpdateAnswerYes.ToUpper(System.Globalization.CultureInfo.CurrentUICulture),
@@ -504,11 +587,21 @@ public sealed class CommandLineUpdateTests : IDisposable
         public bool LockAvailable { get; set; } = true;
         public bool HoldsLock { get; private set; }
         public List<int> LockThreads { get; } = [];
+
+        /// <summary>Answers each look for another run of this file, given its count from 1.</summary>
+        public Func<int, bool> AnotherRunAt { get; set; } = _ => false;
+        public int AnotherRunLooks { get; private set; }
+
+        /// <summary>Held from the start, as the console host holds its own file before the update.</summary>
+        public bool HoldsOwnFile { get; private set; } = true;
+
+        /// <summary>Whether the mutex was held at each call to <see cref="PrepareToMoveAside"/>.</summary>
+        public List<bool> LockHeldAtPrepare { get; } = [];
         public Func<int?> OnSetup { get; set; } = () => 0;
         public Action? OnNewerVersion { get; set; }
         public int? NewerVersionExitCode { get; set; }
         public (string File, string[] Arguments, bool HeldLock, bool ExeWasAside)? SetupRun { get; private set; }
-        public (string File, string[] Arguments, string From, string To, string ExeHeld)? NewerVersionRun { get; private set; }
+        public (string File, string[] Arguments, string From, string To, string ExeHeld, bool OwnFileHeld)? NewerVersionRun { get; private set; }
         public bool NewerVersionHeldLock { get; private set; }
 
         /// <summary>What the exe's path held at each call to <see cref="PrepareToMoveAside"/>.</summary>
@@ -539,6 +632,12 @@ public sealed class CommandLineUpdateTests : IDisposable
             HoldsLock = false;
         }
 
+        public bool AnotherRunMayBeAlive(string exePath) => AnotherRunAt(++AnotherRunLooks);
+
+        public void HoldOwnFile() => HoldsOwnFile = true;
+
+        public void ReleaseOwnFile() => HoldsOwnFile = false;
+
         public Version? FileVersion(string path) =>
             !File.Exists(path) ? null : File.ReadAllText(path) switch
             {
@@ -547,8 +646,11 @@ public sealed class CommandLineUpdateTests : IDisposable
                 _ => null,
             };
 
-        public void PrepareToMoveAside() =>
+        public void PrepareToMoveAside()
+        {
             PreparedWhileExeHeld.Add(File.Exists(exe) ? File.ReadAllText(exe) : "(nothing)");
+            LockHeldAtPrepare.Add(HoldsLock);
+        }
 
         public int? RunSetup(string file, IReadOnlyList<string> arguments)
         {
@@ -562,7 +664,7 @@ public sealed class CommandLineUpdateTests : IDisposable
             NewerVersionHeldLock = HoldsLock;
             OnNewerVersion?.Invoke();
             if (NewerVersionExitCode is null) return null;
-            NewerVersionRun = (file, arguments.ToArray(), fromVersion, toVersion, File.ReadAllText(file));
+            NewerVersionRun = (file, arguments.ToArray(), fromVersion, toVersion, File.ReadAllText(file), HoldsOwnFile);
             return NewerVersionExitCode;
         }
     }

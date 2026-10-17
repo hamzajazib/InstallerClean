@@ -560,6 +560,7 @@ Ayrıntılar şuraya yazıldı:
   'UpdateNotice.CopyFailed': `Kopyalanamadı. Komutu seçip kendiniz kopyalayın.`,
   'Automation.UpdateNotice.CopyCommand': `Komutu kopyala`,
   'Automation.UpdateNotice.ScoopCommand': `Scoop güncelleme komutu`,
+  'Cli.UpdateInUse': `InstallerClean kullanımda olduğu için şu anda kendini güncelleyemiyor.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

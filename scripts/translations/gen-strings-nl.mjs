@@ -618,6 +618,7 @@ const MAP = {
   'UpdateNotice.CopyFailed': `Kopiëren is niet gelukt. Selecteer de opdracht en kopieer hem zelf.`,
   'Automation.UpdateNotice.CopyCommand': `De opdracht kopiëren`,
   'Automation.UpdateNotice.ScoopCommand': `Bijwerkopdracht van Scoop`,
+  'Cli.UpdateInUse': `InstallerClean is in gebruik en kan zichzelf nu dus niet bijwerken.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -554,6 +554,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is installed. | InstallerClean {0} sürümü yüklendi. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi silmeyecek. Silmek için ardından /d komutunu yeniden çalıştırın. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi taşımayacak. Taşımak için ardından /m komutunu yeniden çalıştırın. |
+| InstallerClean is in use, so it can't update itself now. | InstallerClean kullanımda olduğu için şu anda kendini güncelleyemiyor. |
 | Running {0} with InstallerClean {1} instead. | Bunun yerine {0} komutu InstallerClean {1} ile çalıştırılıyor. |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} sürümü yüklendi ancak başlatılamadı. Komutu yeniden çalıştırın. |
 | Download it from GitHub: {0} | GitHub'dan indirin: {0} |

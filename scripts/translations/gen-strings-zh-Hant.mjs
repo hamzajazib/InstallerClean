@@ -552,6 +552,7 @@ const MAP = {
   'UpdateNotice.CopyFailed': `無法複製。請選取該命令並手動複製。`,
   'Automation.UpdateNotice.CopyCommand': `複製命令`,
   'Automation.UpdateNotice.ScoopCommand': `Scoop 更新命令`,
+  'Cli.UpdateInUse': `InstallerClean 正在使用中，因此現在無法自行更新。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

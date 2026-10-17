@@ -564,6 +564,7 @@ const MAP = {
   'UpdateNotice.CopyFailed': `コピーできませんでした。コマンドを選択して手動でコピーしてください。`,
   'Automation.UpdateNotice.CopyCommand': `コマンドをコピー`,
   'Automation.UpdateNotice.ScoopCommand': `Scoop の更新コマンド`,
+  'Cli.UpdateInUse': `InstallerClean は使用中のため、今は自身を更新できません。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,
@@ -669,6 +670,8 @@ const STRIPPED = new Set([
   'Cli.EventLogUpdateInstallFailed',
   // The machine Cli key for an update whose newer version would not start, by the same rule.
   'Cli.EventLogUpdateNotStarted',
+  // The machine Cli key for an update not tried because InstallerClean was in use, by the same rule.
+  'Cli.EventLogUpdateInUse',
 ]);
 let stripped = 0;
 text = text.replace(/[^\S\n]*<data name="(Cli\.[^"]*)"[\s\S]*?<\/data>\n?/g,

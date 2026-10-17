@@ -2353,9 +2353,13 @@ InstallerClean'i yönetici olarak yeniden çalıştırın.</value></data>
        commands as typed and stay as written. -->
   <data name="Cli.UpdateListsOnlyAfterDelete" xml:space="preserve"><value>Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi silmeyecek. Silmek için ardından /d komutunu yeniden çalıştırın.</value></data>
   <data name="Cli.UpdateListsOnlyAfterMove" xml:space="preserve"><value>Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi taşımayacak. Taşımak için ardından /m komutunu yeniden çalıştırın.</value></data>
-  <!-- After UpdateNotice.DownloadFailed or UpdateNotice.InstallFailed, before the run goes on
-       with the version it is. 0 = the command given, /s, /d or /m, as typed and left as
-       written; 1 = the version that runs it. -->
+  <!-- Where a newer version is out and InstallerClean is in use: the window is open, a
+       Move or Delete is running, or another run of the command line is running from the
+       same file. The update is not tried, and Cli.UpdateRunningInstead follows. -->
+  <data name="Cli.UpdateInUse" xml:space="preserve"><value>InstallerClean kullanımda olduğu için şu anda kendini güncelleyemiyor.</value></data>
+  <!-- After UpdateNotice.DownloadFailed, UpdateNotice.InstallFailed or Cli.UpdateInUse,
+       before the run goes on with the version it is. 0 = the command given, /s, /d or /m,
+       as typed and left as written; 1 = the version that runs it. -->
   <data name="Cli.UpdateRunningInstead" xml:space="preserve"><value>Bunun yerine {0} komutu InstallerClean {1} ile çalıştırılıyor.</value></data>
   <!-- Where the newer version is in place at the command line's path but would not start,
        so the run ends with nothing run and the next run of the command starts the newer
@@ -2412,7 +2416,7 @@ InstallerClean'i yönetici olarak yeniden çalıştırın.</value></data>
   <!-- 0 = mode arg, 1 = the version that ran, 2 = the version it could not install, 3 = the
        arguments the run was given. Event ID 3006, a notice beside the run's own summary: the
        first where the download failed, the second where putting it in place or starting it
-       failed. -->
+       failed, the third where InstallerClean was in use, so the update was not tried. -->
   <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
        ID 3006, the run's only entry, where the newer version is in place but would not
        start, so nothing ran. -->

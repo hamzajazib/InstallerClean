@@ -217,6 +217,9 @@ internal static class Program
         // handler.
         using var cts = new CancellationTokenSource();
         var updateHost = new ConsoleUpdateHost(arg);
+        // This run's own file is held against renaming for as long as it runs, so another
+        // run's update of the same file cannot move it aside under this one.
+        updateHost.HoldOwnFile();
         ConsoleCancelEventHandler cancelHandler = (_, cancelArgs) =>
         {
             cancelArgs.Cancel = true; // keep the process running long enough to stop gracefully
@@ -461,8 +464,8 @@ internal static class Program
     /// <summary>
     /// The Event ID 3006 line: this run could not update itself from
     /// <paramref name="fromVersion"/> to <paramref name="toVersion"/>, the part named by
-    /// <paramref name="stage"/> having failed, and ran <paramref name="arguments"/> with
-    /// <paramref name="fromVersion"/>.
+    /// <paramref name="stage"/> having failed or InstallerClean having been in use, and ran
+    /// <paramref name="arguments"/> with <paramref name="fromVersion"/>.
     /// </summary>
     /// <remarks>
     /// Built outside the en-GB scope, like <see cref="AbortedMoveEventLogLine"/>: the
@@ -473,9 +476,12 @@ internal static class Program
         string arg, string fromVersion, string toVersion, UpdateFailureStage stage,
         IReadOnlyList<string> arguments) =>
         string.Format(
-            stage == UpdateFailureStage.Download
-                ? Strings.Cli_EventLogUpdateDownloadFailed
-                : Strings.Cli_EventLogUpdateInstallFailed,
+            stage switch
+            {
+                UpdateFailureStage.Download => Strings.Cli_EventLogUpdateDownloadFailed,
+                UpdateFailureStage.InUse => Strings.Cli_EventLogUpdateInUse,
+                _ => Strings.Cli_EventLogUpdateInstallFailed,
+            },
             arg, fromVersion, toVersion, string.Join(' ', arguments));
 
     /// <summary>

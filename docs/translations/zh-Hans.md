@@ -554,6 +554,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is installed. | InstallerClean {0} 版已安装。 |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 新版本将扫描并列出找到的内容，不会删除任何文件。如需删除，请在之后再次运行 /d。 |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 新版本将扫描并列出找到的内容，不会移动任何文件。如需移动，请在之后再次运行 /m。 |
+| InstallerClean is in use, so it can't update itself now. | InstallerClean 正在使用中，因此现在无法自行更新。 |
 | Running {0} with InstallerClean {1} instead. | 改为使用 InstallerClean {1} 运行 {0}。 |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} 版已安装，但无法启动。请再次运行该命令。 |
 | Download it from GitHub: {0} | 从 GitHub 下载：{0} |

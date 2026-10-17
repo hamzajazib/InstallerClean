@@ -639,6 +639,7 @@ const MAP = {
   'UpdateNotice.CopyFailed': `Não foi possível copiar. Selecione o comando e copie-o manualmente.`,
   'Automation.UpdateNotice.CopyCommand': `Copiar o comando`,
   'Automation.UpdateNotice.ScoopCommand': `Comando de atualização do Scoop`,
+  'Cli.UpdateInUse': `O InstallerClean está em uso, então não pode se atualizar agora.`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

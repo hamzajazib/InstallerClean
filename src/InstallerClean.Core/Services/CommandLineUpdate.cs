@@ -13,8 +13,9 @@ internal abstract record CommandLineUpdateResult
     /// <summary>
     /// The run goes on with the version it is. <paramref name="FailedAt"/> is null where
     /// nothing was tried: no newer version, the check failing, a no at the question, or a
-    /// build from source. Otherwise it names the part that failed, and the two versions
-    /// are the running one and the one it could not install.
+    /// build from source. Otherwise it names the part that failed, or
+    /// <see cref="UpdateFailureStage.InUse"/> where InstallerClean was in use, and the two
+    /// versions are the running one and the one it could not install.
     /// </summary>
     public sealed record CarriedOn(UpdateFailureStage? FailedAt, string? FromVersion, string? ToVersion)
         : CommandLineUpdateResult;
@@ -75,6 +76,21 @@ internal interface ICommandLineUpdateHost
     void ReleaseInstanceLock();
 
     /// <summary>
+    /// Whether a process other than this one may be running from <paramref name="exePath"/>
+    /// (<see cref="SelfReplacement.AnotherProcessMayRunFrom"/>).
+    /// </summary>
+    bool AnotherRunMayBeAlive(string exePath);
+
+    /// <summary>
+    /// Opens the handle this run holds on its own file against renaming
+    /// (<see cref="SelfReplacement.HoldAgainstRenaming"/>). Does nothing where it is open.
+    /// </summary>
+    void HoldOwnFile();
+
+    /// <summary>Closes that handle, immediately before this run renames its own file.</summary>
+    void ReleaseOwnFile();
+
+    /// <summary>
     /// The version the file at <paramref name="path"/> carries, or null where it carries
     /// none or cannot be read. It is read from the file itself
     /// (<see cref="Helpers.FileVersionResource"/>): the path is this exe's own once it has
@@ -113,9 +129,10 @@ internal interface ICommandLineUpdateHost
 /// same console. Where a person can see the console and answer it, it asks first, and
 /// after a yes the newer version scans and lists as <c>/s</c> does and moves or deletes
 /// nothing. Where nobody can answer, it updates without asking and the newer version
-/// runs the command as given. A part that fails leaves the run going on with the
-/// version it is, and says so, wherever that version's file is back at its own path;
-/// otherwise the run ends there.
+/// runs the command as given. Where InstallerClean is in use, it says so and goes on
+/// without updating. A part that fails leaves the run going on with the version it is,
+/// and says so, wherever that version's file is back at its own path; otherwise the run
+/// ends there.
 /// </summary>
 /// <remarks>
 /// Synchronous on purpose. The host calls it on the thread that owns the single-instance
@@ -198,6 +215,10 @@ internal sealed class CommandLineUpdate
 
         if (canAsk)
         {
+            // Asked here as well as before the download, so a person is not asked a question
+            // whose answer cannot be acted on.
+            if (InUse(exePath))
+                return CarryOn(InUseFailure(), command, current, latest);
             _host.WriteLine(Strings.UpdateNotice_Recommended);
             switch (Ask(token))
             {
@@ -216,14 +237,62 @@ internal sealed class CommandLineUpdate
         }
         catch (Exception ex)
         {
-            var stage = ex is UpdateFailedException failed ? failed.Stage : UpdateFailureStage.Install;
-            Helpers.CrashLog.TryWrite(ex);
+            return CarryOn(ex, command, current, latest);
+        }
+    }
+
+    /// <summary>
+    /// Whether InstallerClean is in use, so the update is not tried: the single-instance
+    /// mutex is held elsewhere, or another process may be running from this exe's file.
+    /// The mutex is taken and released again here, on the calling thread.
+    /// </summary>
+    private bool InUse(string exePath)
+    {
+        var holdsLock = _host.TryTakeInstanceLock();
+        try
+        {
+            return InUse(holdsLock, exePath);
+        }
+        finally
+        {
+            if (holdsLock) _host.ReleaseInstanceLock();
+        }
+    }
+
+    /// <summary>
+    /// Whether InstallerClean is in use, given whether this run took the mutex: it is held
+    /// elsewhere, or another process may be running from this exe's file.
+    /// </summary>
+    private bool InUse(bool holdsLock, string exePath) => !holdsLock || _host.AnotherRunMayBeAlive(exePath);
+
+    private static UpdateFailedException InUseFailure(Exception? inner = null) =>
+        new(UpdateFailureStage.InUse, "InstallerClean is in use, so the update was not tried.", inner);
+
+    /// <summary>
+    /// Says why the update did not happen and that the run goes on with this version, and
+    /// answers <see cref="CommandLineUpdateResult.CarriedOn"/>. A failure is written to
+    /// crash.log. InstallerClean being in use is not a failure, so nothing is, except a
+    /// rename it refused, whose cause is written. This exe's file is back at its own path
+    /// here, so the run holds it against renaming again.
+    /// </summary>
+    private CommandLineUpdateResult.CarriedOn CarryOn(Exception failure, string command, string current, string latest)
+    {
+        var stage = failure is UpdateFailedException failed ? failed.Stage : UpdateFailureStage.Install;
+        _host.HoldOwnFile();
+        if (stage == UpdateFailureStage.InUse)
+        {
+            if (failure.InnerException is not null) Helpers.CrashLog.TryWrite(failure);
+            _host.WriteLine(Strings.Cli_UpdateInUse);
+        }
+        else
+        {
+            Helpers.CrashLog.TryWrite(failure);
             _host.WriteLine(stage == UpdateFailureStage.Download
                 ? Strings.UpdateNotice_DownloadFailed
                 : Strings.UpdateNotice_InstallFailed);
-            _host.WriteLine(string.Format(Strings.Cli_UpdateRunningInstead, command, current));
-            return new CommandLineUpdateResult.CarriedOn(stage, current, latest);
         }
+        _host.WriteLine(string.Format(Strings.Cli_UpdateRunningInstead, command, current));
+        return new CommandLineUpdateResult.CarriedOn(stage, current, latest);
     }
 
     /// <summary>
@@ -288,55 +357,62 @@ internal sealed class CommandLineUpdate
     {
         var isSetup = _updater.Kind == AppCopyKind.Setup;
         PreparedUpdate prepared;
+        Func<bool> putBack;
 
-        // The mutex is held through the download and through writing the newer version
-        // beside this exe, so the window's start, which clears out earlier updates'
-        // download folders behind the mutex, cannot take this one's. The setup names the
-        // same mutex and stops for anything holding it, the window or a Move or Delete
-        // among them, so for the setup's copy a held mutex fails the update before
-        // anything is downloaded. The command line's own download replaces only its own
-        // file, so it goes ahead without the mutex where it is held.
+        // The mutex is held from before the download until this exe has been renamed, on
+        // every kind of copy, so nothing else that takes it runs meanwhile: the window,
+        // which clears out earlier updates' download folders as it starts, a Move or
+        // Delete, and another run's update. A /s takes no mutex, so a process running from
+        // this exe's file is looked for as well, before the download and again just before
+        // the rename, and one that has reached its own code holds the file against
+        // renaming besides. The setup names the same mutex and stops for anything holding
+        // it, so the mutex is released before the setup runs.
         var holdsLock = _host.TryTakeInstanceLock();
         try
         {
-            if (isSetup && !holdsLock)
-                throw new UpdateFailedException(UpdateFailureStage.Install,
-                    "InstallerClean is open, or another Move or Delete is running, so the setup cannot run.");
+            if (InUse(holdsLock, exePath)) throw InUseFailure();
             _host.WriteLine(string.Format(Strings.UpdateNotice_Downloading, latest));
             prepared = _updater.PrepareAsync(latest, null, token).GetAwaiter().GetResult();
+
+            if (!isSetup && (prepared.Replacement is not { } replacement || !Carries(replacement, latest)))
+            {
+                prepared.Undo();
+                throw new UpdateFailedException(UpdateFailureStage.Install,
+                    "The downloaded file does not carry the version it was downloaded as.");
+            }
+
+            _host.PrepareToMoveAside();
+            if (_host.AnotherRunMayBeAlive(exePath))
+            {
+                prepared.Undo();
+                throw InUseFailure();
+            }
+            _host.ReleaseOwnFile();
+            try
+            {
+                putBack = isSetup ? SelfReplacement.MoveAside(exePath) : SelfReplacement.SwapIn(exePath);
+            }
+            catch (Exception ex)
+            {
+                prepared.Undo();
+                if (!File.Exists(exePath)) return Stop(ex);
+                // A rename refused while another run of this exe is alive is InstallerClean
+                // being in use; any other refusal is a failure.
+                if (_host.AnotherRunMayBeAlive(exePath)) throw InUseFailure(ex);
+                throw;
+            }
         }
         finally
         {
             if (holdsLock) _host.ReleaseInstanceLock();
         }
 
-        Func<bool>? putBack = null;
         if (isSetup)
         {
-            if (RunSetup(prepared, exePath, latest) is { } ended) return ended;
+            if (RunSetup(prepared, exePath, latest, putBack) is { } ended) return ended;
             // Ctrl+C while the setup ran: the newer version is in place, and this run stops
             // before its scan.
             token.ThrowIfCancellationRequested();
-        }
-        else
-        {
-            if (prepared.Replacement is not { } replacement || !Carries(replacement, latest))
-            {
-                prepared.Undo();
-                throw new UpdateFailedException(UpdateFailureStage.Install,
-                    "The downloaded file does not carry the version it was downloaded as.");
-            }
-            _host.PrepareToMoveAside();
-            try
-            {
-                putBack = SelfReplacement.SwapIn(exePath);
-            }
-            catch (UpdateFailedException ex)
-            {
-                prepared.Undo();
-                if (!File.Exists(exePath)) return Stop(ex);
-                throw;
-            }
         }
 
         _host.WriteLine(string.Format(Strings.Cli_UpdateInstalled, latest));
@@ -349,7 +425,7 @@ internal sealed class CommandLineUpdate
             return new CommandLineUpdateResult.HandedOver(exitCode.Value, current, latest, string.Join(' ', run));
 
         var notStarted = new UpdateFailedException(UpdateFailureStage.Install, "The newer version could not be started.");
-        if (putBack is not null && putBack())
+        if (!isSetup && putBack())
         {
             prepared.Undo();
             throw notStarted;
@@ -365,27 +441,16 @@ internal sealed class CommandLineUpdate
 
     /// <summary>
     /// Runs the newer setup with this command line renamed aside, so the setup writes the
-    /// newer version at its path rather than meeting a file in use. Answers null where
-    /// the newer version is in place. Any exit code but 0, or a file at the path that does
-    /// not carry the newer version, fails: this exe is put back and the failure thrown, or
+    /// newer version at its path rather than meeting a file in use;
+    /// <paramref name="putBack"/> undoes that rename. Answers null where the newer version
+    /// is in place. Any exit code but 0, or a file at the path that does not carry the
+    /// newer version, fails: this exe is put back and the failure thrown, or
     /// <see cref="CommandLineUpdateResult.Stopped"/> answered where it cannot be put back.
     /// The downloaded setup and its folder are removed either way, the setup having
     /// finished with them.
     /// </summary>
-    private CommandLineUpdateResult? RunSetup(PreparedUpdate prepared, string exePath, string latest)
+    private CommandLineUpdateResult? RunSetup(PreparedUpdate prepared, string exePath, string latest, Func<bool> putBack)
     {
-        _host.PrepareToMoveAside();
-        Func<bool> putBack;
-        try
-        {
-            putBack = SelfReplacement.MoveAside(exePath);
-        }
-        catch
-        {
-            prepared.Undo();
-            throw;
-        }
-
         int? exitCode;
         try
         {

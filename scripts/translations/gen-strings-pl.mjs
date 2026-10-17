@@ -676,6 +676,7 @@ const MAP = {
   'UpdateNotice.CopyFailed': `Nie udało się skopiować. Zaznacz polecenie i skopiuj je samodzielnie.`,
   'Automation.UpdateNotice.CopyCommand': `Kopiuj polecenie`,
   'Automation.UpdateNotice.ScoopCommand': `Polecenie aktualizacji Scoop`,
+  'Cli.UpdateInUse': `InstallerClean jest w użyciu, więc nie może się teraz zaktualizować.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

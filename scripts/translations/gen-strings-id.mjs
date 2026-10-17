@@ -659,6 +659,7 @@ const MAP = {
   'UpdateNotice.CopyFailed': `Tidak dapat menyalinnya. Pilih perintahnya lalu salin sendiri.`,
   'Automation.UpdateNotice.CopyCommand': `Salin perintah`,
   'Automation.UpdateNotice.ScoopCommand': `Perintah pembaruan Scoop`,
+  'Cli.UpdateInUse': `InstallerClean sedang digunakan, jadi tidak dapat memperbarui dirinya sekarang.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

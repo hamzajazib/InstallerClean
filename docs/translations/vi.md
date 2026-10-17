@@ -554,6 +554,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is installed. | Đã cài đặt InstallerClean {0}. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Phiên bản mới sẽ quét và liệt kê những gì tìm thấy, không xóa gì cả. Để xóa, hãy chạy lại /d sau đó. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Phiên bản mới sẽ quét và liệt kê những gì tìm thấy, không di chuyển gì cả. Để di chuyển, hãy chạy lại /m sau đó. |
+| InstallerClean is in use, so it can't update itself now. | InstallerClean đang được sử dụng nên không thể tự cập nhật lúc này. |
 | Running {0} with InstallerClean {1} instead. | Thay vào đó, chạy {0} bằng InstallerClean {1}. |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | Đã cài đặt InstallerClean {0} nhưng không thể khởi động. Hãy chạy lại lệnh. |
 | Download it from GitHub: {0} | Tải về từ GitHub: {0} |

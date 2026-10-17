@@ -654,6 +654,7 @@ const MAP = {
   'UpdateNotice.CopyFailed': `Не вдалося скопіювати. Виділіть команду й скопіюйте її вручну.`,
   'Automation.UpdateNotice.CopyCommand': `Копіювати команду`,
   'Automation.UpdateNotice.ScoopCommand': `Команда оновлення Scoop`,
+  'Cli.UpdateInUse': `InstallerClean використовується, тому зараз не може оновитися.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

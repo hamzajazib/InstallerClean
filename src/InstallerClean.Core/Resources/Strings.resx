@@ -2392,9 +2392,13 @@ Run InstallerClean again as administrator.</value></data>
        commands as typed and stay as written. -->
   <data name="Cli.UpdateListsOnlyAfterDelete" xml:space="preserve"><value>The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards.</value></data>
   <data name="Cli.UpdateListsOnlyAfterMove" xml:space="preserve"><value>The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards.</value></data>
-  <!-- After UpdateNotice.DownloadFailed or UpdateNotice.InstallFailed, before the run goes on
-       with the version it is. 0 = the command given, /s, /d or /m, as typed and left as
-       written; 1 = the version that runs it. -->
+  <!-- Where a newer version is out and InstallerClean is in use: the window is open, a
+       Move or Delete is running, or another run of the command line is running from the
+       same file. The update is not tried, and Cli.UpdateRunningInstead follows. -->
+  <data name="Cli.UpdateInUse" xml:space="preserve"><value>InstallerClean is in use, so it can't update itself now.</value></data>
+  <!-- After UpdateNotice.DownloadFailed, UpdateNotice.InstallFailed or Cli.UpdateInUse,
+       before the run goes on with the version it is. 0 = the command given, /s, /d or /m,
+       as typed and left as written; 1 = the version that runs it. -->
   <data name="Cli.UpdateRunningInstead" xml:space="preserve"><value>Running {0} with InstallerClean {1} instead.</value></data>
   <!-- Where the newer version is in place at the command line's path but would not start,
        so the run ends with nothing run and the next run of the command starts the newer
@@ -2456,9 +2460,10 @@ Run InstallerClean again as administrator.</value></data>
   <!-- 0 = mode arg, 1 = the version that ran, 2 = the version it could not install, 3 = the
        arguments the run was given. Event ID 3006, a notice beside the run's own summary: the
        first where the download failed, the second where putting it in place or starting it
-       failed. -->
+       failed, the third where InstallerClean was in use, so the update was not tried. -->
   <data name="Cli.EventLogUpdateDownloadFailed" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (the download failed) and ran {3} with {1}.</value></data>
   <data name="Cli.EventLogUpdateInstallFailed" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (the install failed) and ran {3} with {1}.</value></data>
+  <data name="Cli.EventLogUpdateInUse" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (InstallerClean was in use) and ran {3} with {1}.</value></data>
   <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
        ID 3006, the run's only entry, where the newer version is in place but would not
        start, so nothing ran. -->

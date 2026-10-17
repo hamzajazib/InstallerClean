@@ -1,7 +1,8 @@
 namespace InstallerClean.Services;
 
 /// <summary>
-/// Which part of an update failed, which decides the line the notice shows.
+/// Which part of an update failed, or what kept it from being tried, which decides the
+/// line shown.
 /// </summary>
 public enum UpdateFailureStage
 {
@@ -16,6 +17,13 @@ public enum UpdateFailureStage
     /// it, moving it into place or starting it.
     /// </summary>
     Install,
+
+    /// <summary>
+    /// Nothing was put in place because InstallerClean is in use: the single-instance
+    /// mutex is held, or another process is running from the command line's own file.
+    /// Only the command line's update gives this answer.
+    /// </summary>
+    InUse,
 }
 
 /// <summary>

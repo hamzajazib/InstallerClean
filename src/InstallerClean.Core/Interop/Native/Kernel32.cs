@@ -556,6 +556,37 @@ internal static partial class Kernel32
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool TerminateProcess(IntPtr hProcess, uint uExitCode);
 
+    /// <summary>
+    /// Opens the process <paramref name="dwProcessId"/> names with
+    /// <paramref name="dwDesiredAccess"/>. Answers an invalid handle where it cannot, with
+    /// <see cref="ERROR_INVALID_PARAMETER"/> as the last error where no process has that id.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "OpenProcess", SetLastError = true)]
+    public static partial SafeProcessHandle OpenProcess(
+        uint dwDesiredAccess,
+        [MarshalAs(UnmanagedType.Bool)] bool bInheritHandle,
+        uint dwProcessId);
+
+    /// <summary>
+    /// The full path of the program a process was started from, in the Win32 form with
+    /// <paramref name="dwFlags"/> 0. <paramref name="lpdwSize"/> carries the buffer's size in
+    /// characters in, and the length written, without the terminating null, out. A buffer
+    /// too small fails with ERROR_INSUFFICIENT_BUFFER.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "QueryFullProcessImageNameW", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool QueryFullProcessImageName(
+        SafeProcessHandle hProcess,
+        uint dwFlags,
+        [Out] char[] lpExeName,
+        ref uint lpdwSize);
+
+    /// <summary>
+    /// The least access <see cref="QueryFullProcessImageName"/> needs, asked for in place
+    /// of fuller access a process of another account can refuse.
+    /// </summary>
+    public const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
+
     public const uint GENERIC_READ           = 0x80000000;
     public const uint GENERIC_WRITE          = 0x40000000;
 
@@ -667,4 +698,7 @@ internal static partial class Kernel32
 
     // What CreateDirectory answers where something already has the name.
     public const int ERROR_ALREADY_EXISTS = 183;
+
+    // What OpenProcess answers where no process has the id.
+    public const int ERROR_INVALID_PARAMETER = 87;
 }

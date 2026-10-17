@@ -3,6 +3,7 @@ using System.Threading;
 using InstallerClean.Helpers;
 using InstallerClean.Resources;
 using InstallerClean.Services;
+using Microsoft.Win32.SafeHandles;
 
 namespace InstallerClean.Cli;
 
@@ -17,6 +18,7 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
 
     private Mutex? _mutex;
     private bool _holdsMutex;
+    private SafeFileHandle? _ownFile;
     private volatile bool _newerVersionRunning;
 
     /// <summary>
@@ -70,6 +72,25 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
         _holdsMutex = false;
         _mutex?.Dispose();
         _mutex = null;
+    }
+
+    public bool AnotherRunMayBeAlive(string exePath) => SelfReplacement.AnotherProcessMayRunFrom(exePath);
+
+    /// <summary>
+    /// Holds this exe's own file, at the path it was started from, against renaming. The
+    /// run calls it before anything else touches the update, and it stays held until the
+    /// process ends or the update renames this exe.
+    /// </summary>
+    public void HoldOwnFile()
+    {
+        if (_ownFile is null && Environment.ProcessPath is { Length: > 0 } path)
+            _ownFile = SelfReplacement.HoldAgainstRenaming(path);
+    }
+
+    public void ReleaseOwnFile()
+    {
+        _ownFile?.Dispose();
+        _ownFile = null;
     }
 
     public Version? FileVersion(string path) =>

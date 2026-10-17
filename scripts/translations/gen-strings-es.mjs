@@ -571,6 +571,7 @@ const MAP = {
   'UpdateNotice.CopyFailed': `No se pudo copiar. Selecciona el comando y cópialo a mano.`,
   'Automation.UpdateNotice.CopyCommand': `Copiar el comando`,
   'Automation.UpdateNotice.ScoopCommand': `Comando de actualización de Scoop`,
+  'Cli.UpdateInUse': `InstallerClean está en uso, así que no puede actualizarse ahora.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

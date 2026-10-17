@@ -220,6 +220,7 @@ public static class Strings
     public static string Cli_EventLogUpdated => Get("Cli.EventLogUpdated");
     public static string Cli_EventLogUpdateDownloadFailed => Get("Cli.EventLogUpdateDownloadFailed");
     public static string Cli_EventLogUpdateInstallFailed => Get("Cli.EventLogUpdateInstallFailed");
+    public static string Cli_EventLogUpdateInUse => Get("Cli.EventLogUpdateInUse");
     public static string Cli_EventLogUpdateNotStarted => Get("Cli.EventLogUpdateNotStarted");
     public static string Cli_EventLogValidationFailed => Get("Cli.EventLogValidationFailed");
     public static string Cli_EventLogWindowsError => Get("Cli.EventLogWindowsError");
@@ -301,6 +302,7 @@ public static class Strings
     public static string Cli_UpdateAnswerYes => Get("Cli.UpdateAnswerYes");
     public static string Cli_UpdateDownloadLink => Get("Cli.UpdateDownloadLink");
     public static string Cli_UpdateInstalled => Get("Cli.UpdateInstalled");
+    public static string Cli_UpdateInUse => Get("Cli.UpdateInUse");
     public static string Cli_UpdateListsOnlyAfterDelete => Get("Cli.UpdateListsOnlyAfterDelete");
     public static string Cli_UpdateListsOnlyAfterMove => Get("Cli.UpdateListsOnlyAfterMove");
     public static string Cli_UpdateNotStarted => Get("Cli.UpdateNotStarted");

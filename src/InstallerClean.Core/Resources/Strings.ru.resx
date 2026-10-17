@@ -2281,9 +2281,12 @@ InstallerClean уже был запущен от имени администра
   <!-- After Cli.UpdateInstalled, where the person typed /d or /m and answered yes: the newer
        version scans and lists, as /s does, and moves or deletes nothing. /d and /m are the
        commands as typed and stay as written. -->
-  <!-- After UpdateNotice.DownloadFailed or UpdateNotice.InstallFailed, before the run goes on
-       with the version it is. 0 = the command given, /s, /d or /m, as typed and left as
-       written; 1 = the version that runs it. -->
+  <!-- Where a newer version is out and InstallerClean is in use: the window is open, a
+       Move or Delete is running, or another run of the command line is running from the
+       same file. The update is not tried, and Cli.UpdateRunningInstead follows. -->
+  <!-- After UpdateNotice.DownloadFailed, UpdateNotice.InstallFailed or Cli.UpdateInUse,
+       before the run goes on with the version it is. 0 = the command given, /s, /d or /m,
+       as typed and left as written; 1 = the version that runs it. -->
   <!-- Where the newer version is in place at the command line's path but would not start,
        so the run ends with nothing run and the next run of the command starts the newer
        version. 0 = its version. -->
@@ -2335,7 +2338,7 @@ InstallerClean уже был запущен от имени администра
   <!-- 0 = mode arg, 1 = the version that ran, 2 = the version it could not install, 3 = the
        arguments the run was given. Event ID 3006, a notice beside the run's own summary: the
        first where the download failed, the second where putting it in place or starting it
-       failed. -->
+       failed, the third where InstallerClean was in use, so the update was not tried. -->
   <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
        ID 3006, the run's only entry, where the newer version is in place but would not
        start, so nothing ran. -->
@@ -2561,4 +2564,5 @@ InstallerClean уже был запущен от имени администра
   <data name="Cli.UpdateNotStarted" xml:space="preserve"><value>Версия InstallerClean {0} установлена, но запустить её не удалось. Выполните команду ещё раз.</value></data>
   <data name="Cli.UpdateDownloadLink" xml:space="preserve"><value>Скачать с GitHub: {0}</value></data>
   <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>Перед сканированием проверяет, есть ли более новая версия InstallerClean.&#10;При запуске вручную спрашивает перед обновлением. При запуске без участия&#10;человека, в запланированной задаче или скрипте, обновляется без вопросов.&#10;Добавьте /noupdate, чтобы пропустить проверку.</value></data>
+  <data name="Cli.UpdateInUse" xml:space="preserve"><value>InstallerClean используется, поэтому сейчас не может обновиться.</value></data>
 </root>

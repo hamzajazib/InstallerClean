@@ -554,6 +554,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is installed. | InstallerClean {0} をインストールしました。 |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も削除しません。削除するには、その後もう一度 /d を実行してください。 |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も移動しません。移動するには、その後もう一度 /m を実行してください。 |
+| InstallerClean is in use, so it can't update itself now. | InstallerClean は使用中のため、今は自身を更新できません。 |
 | Running {0} with InstallerClean {1} instead. | 代わりに InstallerClean {1} で {0} を実行します。 |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} をインストールしましたが、起動できませんでした。もう一度コマンドを実行してください。 |
 | Download it from GitHub: {0} | GitHubからダウンロード：{0} |

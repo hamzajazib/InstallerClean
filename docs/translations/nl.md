@@ -554,6 +554,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is installed. | InstallerClean {0} is geïnstalleerd. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | De nieuwe versie scant en toont wat hij vindt, zonder iets te verwijderen. Voer daarna /d opnieuw uit om te verwijderen. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | De nieuwe versie scant en toont wat hij vindt, zonder iets te verplaatsen. Voer daarna /m opnieuw uit om te verplaatsen. |
+| InstallerClean is in use, so it can't update itself now. | InstallerClean is in gebruik en kan zichzelf nu dus niet bijwerken. |
 | Running {0} with InstallerClean {1} instead. | In plaats daarvan wordt {0} uitgevoerd met InstallerClean {1}. |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} is geïnstalleerd, maar kon niet worden gestart. Voer de opdracht opnieuw uit. |
 | Download it from GitHub: {0} | Download het van GitHub: {0} |

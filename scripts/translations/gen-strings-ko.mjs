@@ -635,6 +635,7 @@ const MAP = {
   'UpdateNotice.CopyFailed': `복사하지 못했습니다. 명령을 선택해 직접 복사하세요.`,
   'Automation.UpdateNotice.CopyCommand': `명령 복사`,
   'Automation.UpdateNotice.ScoopCommand': `Scoop 업데이트 명령`,
+  'Cli.UpdateInUse': `InstallerClean이 사용 중이어서 지금은 스스로 업데이트할 수 없습니다.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

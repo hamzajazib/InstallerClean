@@ -554,6 +554,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is installed. | InstallerClean {0} 버전이 설치되었습니다. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 새 버전은 검사하여 찾은 항목을 나열하기만 하고 아무것도 삭제하지 않습니다. 삭제하려면 그 후에 /d를 다시 실행하세요. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 새 버전은 검사하여 찾은 항목을 나열하기만 하고 아무것도 이동하지 않습니다. 이동하려면 그 후에 /m을 다시 실행하세요. |
+| InstallerClean is in use, so it can't update itself now. | InstallerClean이 사용 중이어서 지금은 스스로 업데이트할 수 없습니다. |
 | Running {0} with InstallerClean {1} instead. | 대신 InstallerClean {1} 버전으로 {0} 명령을 실행합니다. |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} 버전이 설치되었지만 시작할 수 없었습니다. 명령을 다시 실행하세요. |
 | Download it from GitHub: {0} | GitHub에서 내려받기: {0} |
