@@ -368,6 +368,58 @@ public class CliContractTests
         Assert.True(invocation.SkipUpdate);
     }
 
+    private const string EventId = "6f1c2a3b000040008000000000000001";
+    private const string OtherEventId = "6f1c2a3b000040008000000000000002";
+
+    [Theory]
+    [InlineData(new[] { "/cancelevent:" + EventId, "/d" }, new[] { "/d" }, EventId)]
+    [InlineData(new[] { "/m", "D:\\Backup", "/CancelEvent:" + EventId }, new[] { "/m", "D:\\Backup" }, EventId)]
+    [InlineData(new[] { "/s", "/noupdate", "/cancelevent:" + EventId, "/cancelevent:" + OtherEventId },
+        new[] { "/s", "/noupdate" }, EventId)]
+    [InlineData(new[] { "/s" }, new[] { "/s" }, null)]
+    [InlineData(new[] { "/s", "/cancelevent:x" }, new[] { "/s", "/cancelevent:x" }, null)]
+    public void TakeCancelEvent_takes_the_switch_out_wherever_it_stands(
+        string[] args, string[] rest, string? cancelEvent)
+    {
+        Assert.Equal(rest, CliContract.TakeCancelEvent(args, out var value));
+        Assert.Equal(cancelEvent, value);
+    }
+
+    [Fact]
+    public void The_cancel_event_switch_reads_back_the_event_it_was_written_with()
+    {
+        var id = Guid.NewGuid();
+
+        CliContract.TakeCancelEvent([CliContract.CancelEventArgument(id), "/s"], out var taken);
+
+        Assert.True(CliContract.TryReadCancelEvent(taken!, out var name));
+        Assert.Equal(CliContract.CancelEventName(id), name);
+        Assert.StartsWith(@"Local\", name);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("x")]
+    [InlineData("1234")]
+    [InlineData("{6f1c2a3b-0000-4000-8000-000000000000}")]
+    public void The_cancel_event_switch_reads_nothing_but_an_id(string value)
+    {
+        Assert.False(CliContract.TryReadCancelEvent(value, out _));
+    }
+
+    [Theory]
+    [InlineData("/d", "/cancelevent:x")]
+    [InlineData("/m", "/cancelevent:x")]
+    [InlineData("/cancelevent:x", "/s")]
+    public void A_cancel_event_switch_carrying_no_id_is_refused_as_an_argument_the_command_does_not_know(
+        string first, string second)
+    {
+        var invocation = CliContract.ParseArguments(CliContract.TakeCancelEvent([first, second], out _));
+
+        Assert.Equal(CliCommand.UnknownArgument, invocation.Command);
+        Assert.Equal("/cancelevent:x", invocation.OffendingArgument);
+    }
+
     [Fact]
     public void ParseArguments_without_the_switch_the_update_is_on()
     {

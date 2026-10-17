@@ -33,6 +33,11 @@ internal static class Program
     {
         CancelKey.Process.Hook();
 
+        // The version that started this one passes an event it sets on Ctrl+C. Its switch
+        // comes out here, before anything reads, prints or records the arguments.
+        args = CliContract.TakeCancelEvent(args, out var cancelEvent);
+        if (cancelEvent is not null) CancelKey.Process.Watch(cancelEvent);
+
         // No critical-error box for the whole run: a read reaching a drive with no disc or card in
         // it answers with an error rather than waiting on a box that a scheduled task has nobody
         // to dismiss.
@@ -233,23 +238,15 @@ internal static class Program
         // deliberately keeps ex.Message out.
         void CancelRun()
         {
-            // The newer version this run updated to is running in this console and gets the
-            // same Ctrl+C. It prints the notice and stops its own work, so this run prints
-            // nothing, and goes on waiting for its exit code and its summary. The token is
-            // cancelled all the same, which is how the run knows the Ctrl+C came if the
-            // newer version is ended by it before it can answer it.
-            if (!updateHost.NewerVersionRunning)
-            {
-                try
-                {
-                    Console.WriteLine();
-                    Console.WriteLine(updateHost.SetupRunning ? Strings.Cli_CancellingAfterUpdate : Strings.Cli_Cancelling);
-                }
-                catch (Exception ex)
-                {
-                    Helpers.CrashLog.TryWrite(ex);
-                }
-            }
+            // Once the newer version this run updated to is being started or running in this
+            // console, it gets the same Ctrl+C, through the console or the event this run
+            // passes it. It prints the notice and stops its own work, so this run holds its
+            // own line back, and goes on waiting for its exit code and its summary; the host
+            // prints the line where the start fails or Ctrl+C ends the newer version before
+            // it can answer it. The token is cancelled all the same, which is how the run
+            // knows the Ctrl+C came in that last case.
+            if (updateHost.TakeCancellingLine())
+                SayCancelling(updateHost.SetupRunning ? Strings.Cli_CancellingAfterUpdate : Strings.Cli_Cancelling);
             // Cancelled whether or not the line went out, so the run stops either way. The
             // run may have returned and disposed the source meanwhile, which throws here.
             try
@@ -405,7 +402,27 @@ internal static class Program
             return null;
         }
 
-        return ConcludeUpdate(result, arg, args, token.IsCancellationRequested);
+        var cancelled = token.IsCancellationRequested;
+        if (cancelled && result is CommandLineUpdateResult.HandedOver { ExitCode: CommandLineUpdate.ControlCExit })
+            host.SayHeldBackCancelling();
+        return ConcludeUpdate(result, arg, args, cancelled);
+    }
+
+    /// <summary>
+    /// Prints a blank line and <paramref name="line"/>, the line saying the run is
+    /// cancelling. Never throws: it runs on the console's control-handler thread too.
+    /// </summary>
+    internal static void SayCancelling(string line)
+    {
+        try
+        {
+            Console.WriteLine();
+            Console.WriteLine(line);
+        }
+        catch (Exception ex)
+        {
+            Helpers.CrashLog.TryWrite(ex);
+        }
     }
 
     /// <summary>

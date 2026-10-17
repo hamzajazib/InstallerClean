@@ -303,16 +303,70 @@ internal static class CliContract
     internal const string NoUpdateSwitch = "/noupdate";
 
     /// <summary>
+    /// The switch through which the version that started this one passes, after the colon,
+    /// the id of an event that version sets on Ctrl+C. Only a run updating itself passes
+    /// it, so it is not in the help. Every later version accepts it, since a version that
+    /// refused it would refuse the command the one before it starts it with.
+    /// </summary>
+    internal const string CancelEventSwitch = "/cancelevent:";
+
+    /// <summary>
+    /// The name of the event <paramref name="id"/> stands for, in the session's own
+    /// namespace, which the newer version shares, being started by this process.
+    /// </summary>
+    internal static string CancelEventName(Guid id) => @"Local\InstallerClean_Cancel_" + id.ToString("N");
+
+    /// <summary>The argument passing <paramref name="id"/> with <see cref="CancelEventSwitch"/>.</summary>
+    internal static string CancelEventArgument(Guid id) => CancelEventSwitch + id.ToString("N");
+
+    /// <summary>
+    /// The name of the event whose id <see cref="CancelEventArgument"/> wrote after the
+    /// colon. Answers false for anything else.
+    /// </summary>
+    internal static bool TryReadCancelEvent(string value, out string name)
+    {
+        var read = Guid.TryParseExact(value, "N", out var id);
+        name = read ? CancelEventName(id) : string.Empty;
+        return read;
+    }
+
+    /// <summary>
+    /// Takes every <see cref="CancelEventSwitch"/> carrying an event's id out of
+    /// <paramref name="args"/>, wherever it stands and in any case, and answers what is
+    /// left. <paramref name="cancelEvent"/> is the first one's id, or null where there is
+    /// none. One carrying anything else is left in, and <see cref="ParseArguments"/>
+    /// refuses it as an argument it does not know, wherever it stands.
+    /// </summary>
+    internal static string[] TakeCancelEvent(string[] args, out string? cancelEvent)
+    {
+        cancelEvent = null;
+        var rest = new List<string>(args.Length);
+        foreach (var arg in args)
+        {
+            if (arg.StartsWith(CancelEventSwitch, StringComparison.OrdinalIgnoreCase)
+                && TryReadCancelEvent(arg[CancelEventSwitch.Length..], out _))
+                cancelEvent ??= arg[CancelEventSwitch.Length..];
+            else
+                rest.Add(arg);
+        }
+        return rest.ToArray();
+    }
+
+    /// <summary>
     /// Resolves the argument vector to a <see cref="CliInvocation"/>.
     /// <see cref="NoUpdateSwitch"/> is taken out first, wherever it stands, and what is
     /// left is parsed: so <c>/m /noupdate</c> is a <c>/m</c> with no path, never a
     /// <c>/m</c> to a folder of that name. The first token left decides the command,
     /// lower-cased so the comparison is case-insensitive (PowerShell users frequently
     /// type <c>/S</c>). The offending-argument and destination tokens are returned in
-    /// their original case.
+    /// their original case. A <see cref="CancelEventSwitch"/> still here, carrying no
+    /// event's id, is refused as an argument the command does not know, wherever it
+    /// stands, so it is never read as a Move's destination.
     /// </summary>
     internal static CliInvocation ParseArguments(string[] args)
     {
+        if (args.FirstOrDefault(a => a.StartsWith(CancelEventSwitch, StringComparison.OrdinalIgnoreCase)) is { } stray)
+            return new CliInvocation(CliCommand.UnknownArgument, stray, null);
         var rest = args.Where(a => !a.Equals(NoUpdateSwitch, StringComparison.OrdinalIgnoreCase)).ToArray();
         return ParseCommand(rest) with { SkipUpdate = rest.Length != args.Length };
     }

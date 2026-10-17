@@ -19,19 +19,31 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
     private Mutex? _mutex;
     private bool _holdsMutex;
     private SafeFileHandle? _ownFile;
-    private volatile bool _newerVersionRunning;
+    private readonly object _ctrlCGate = new();
+    private bool _newerVersionAnswersCtrlC;
+    private bool _cancellingHeldBack;
     private volatile bool _setupRunning;
 
     /// <summary>
-    /// Whether the newer version has started in this console. The run's answer to Ctrl+C
-    /// reads it: the console sends Ctrl+C to both processes, and while this is true the
-    /// newer version answers it, so this run prints nothing and keeps waiting for its exit
-    /// code; the newer version writes the run's summary, unless Ctrl+C ended it before it
-    /// could answer, when this run writes it. Until a start succeeds it is false, and a
-    /// Ctrl+C cancels this run as anywhere else, which stops the newer version being
-    /// started.
+    /// Takes the line saying the run is cancelling, for a Ctrl+C that has just come: answers
+    /// whether this run prints it now. The run's answer to Ctrl+C calls it once. Once the
+    /// newer version is being started with the event that passes it Ctrl+C, or has
+    /// started, the newer version answers Ctrl+C, so this run holds the line back, prints
+    /// nothing and keeps waiting for its exit code; the newer version writes the run's
+    /// summary, unless Ctrl+C ended it before it could answer, when this run writes it.
+    /// This run prints the line it held back where that start fails, or where Ctrl+C ended
+    /// the newer version before it could answer. Otherwise a Ctrl+C cancels this run as
+    /// anywhere else, which stops the newer version being started.
     /// </summary>
-    public bool NewerVersionRunning => _newerVersionRunning;
+    public bool TakeCancellingLine()
+    {
+        lock (_ctrlCGate)
+        {
+            if (!_newerVersionAnswersCtrlC) return true;
+            _cancellingHeldBack = true;
+            return false;
+        }
+    }
 
     /// <summary>
     /// Whether the newer setup is running. This run waits for the setup to end whatever
@@ -158,15 +170,42 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
         CancellationToken token)
     {
         Console.Out.Flush();
-        using var process = Start(file, arguments, workingDirectory: null, token);
-        if (process is null) return null;
+        // The console gives Ctrl+C only to the processes connected to it, so one that comes
+        // as the newer version starts can reach this run alone. This event is set on Ctrl+C
+        // from here until the newer version ends and passed to it by name, and the newer
+        // version takes it as its own Ctrl+C, one set before it opened the event included.
+        // Where there is no event, the newer version answers Ctrl+C only once it has started.
+        var cancelId = Guid.NewGuid();
+        using var cancelEvent = CreateCancelEvent(cancelId);
+        using var setOnCtrlC = cancelEvent is null
+            ? default
+            : token.Register(static e => ((EventWaitHandle)e!).Set(), cancelEvent);
+        if (cancelEvent is not null) NewerVersionAnswersCtrlC(true);
+        Process? started;
+        try
+        {
+            started = Start(file,
+                cancelEvent is null ? arguments : [.. arguments, CliContract.CancelEventArgument(cancelId)],
+                workingDirectory: null, token);
+        }
+        catch
+        {
+            NewerVersionNotStarted();
+            throw;
+        }
+        if (started is null)
+        {
+            NewerVersionNotStarted();
+            return null;
+        }
+        using var process = started;
         // The newer version is running from the file at this exe's path from here, so
         // nothing leaves this method as an exception: the run reads a throw as the newer
         // version not having started and puts this exe back, which would rename that
         // file under it. A throw is written to crash.log. One from the wait itself is
         // answered with the error code, so this run ends with nothing more run, and the
         // newer version writes its own summary.
-        _newerVersionRunning = true;
+        if (cancelEvent is null) NewerVersionAnswersCtrlC(true);
         // Said before the Application-log write, which can take a moment the first time.
         try
         {
@@ -230,6 +269,58 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
                 }
                 token.WaitHandle.WaitOne(StartRetryInterval);
             }
+        }
+    }
+
+    internal void NewerVersionAnswersCtrlC(bool answers)
+    {
+        lock (_ctrlCGate) _newerVersionAnswersCtrlC = answers;
+    }
+
+    /// <summary>
+    /// The newer version did not start, so this run answers Ctrl+C again, and prints the
+    /// line saying it is cancelling where it held one back meanwhile.
+    /// </summary>
+    internal void NewerVersionNotStarted()
+    {
+        NewerVersionAnswersCtrlC(false);
+        SayHeldBackCancelling();
+    }
+
+    /// <summary>
+    /// Prints the line saying the run is cancelling, where it was held back: the run calls
+    /// it where Ctrl+C ended the newer version before it could answer it.
+    /// </summary>
+    internal void SayHeldBackCancelling()
+    {
+        bool heldBack;
+        lock (_ctrlCGate)
+        {
+            heldBack = _cancellingHeldBack;
+            _cancellingHeldBack = false;
+        }
+        if (heldBack) Program.SayCancelling(Strings.Cli_Cancelling);
+    }
+
+    /// <summary>
+    /// Creates the event <paramref name="id"/> names, or answers null where it cannot or
+    /// where an event of that name exists already, which this run did not make. Each is
+    /// written to crash.log.
+    /// </summary>
+    private static EventWaitHandle? CreateCancelEvent(Guid id)
+    {
+        try
+        {
+            var created = new EventWaitHandle(false, EventResetMode.ManualReset, CliContract.CancelEventName(id),
+                out var createdNew);
+            if (createdNew) return created;
+            created.Dispose();
+            throw new InvalidOperationException("An event with the cancel event's name exists already.");
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+            return null;
         }
     }
 

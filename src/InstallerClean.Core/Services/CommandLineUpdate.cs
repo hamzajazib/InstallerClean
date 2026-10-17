@@ -147,7 +147,8 @@ internal interface ICommandLineUpdateHost
     /// before it has started. Nothing is thrown once it has, a throw from
     /// <paramref name="onStarted"/> included: the run reads a throw as the newer version not
     /// having started, and on a swap puts this exe back at the path the newer version runs
-    /// from. While it runs, Ctrl+C is the newer version's to answer.
+    /// from. While it runs, and from the moment it is being started where the host passes it
+    /// Ctrl+C, Ctrl+C is the newer version's to answer.
     /// </summary>
     int? RunNewerVersion(
         string file, IReadOnlyList<string> arguments, string fromVersion, string toVersion, Action onStarted,
