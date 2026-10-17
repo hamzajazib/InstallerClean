@@ -74,7 +74,13 @@ internal interface ICommandLineUpdateHost
     /// <summary>Releases the mutex <see cref="TryTakeInstanceLock"/> took, on the same thread.</summary>
     void ReleaseInstanceLock();
 
-    /// <summary>The version the file at <paramref name="path"/> carries, or null where it carries none or cannot be read.</summary>
+    /// <summary>
+    /// The version the file at <paramref name="path"/> carries, or null where it carries
+    /// none or cannot be read. It is read from the file itself
+    /// (<see cref="Helpers.FileVersionResource"/>): the path is this exe's own once it has
+    /// been renamed aside, and Windows' own version read answers for that path with the
+    /// running program's version.
+    /// </summary>
     Version? FileVersion(string path);
 
     /// <summary>

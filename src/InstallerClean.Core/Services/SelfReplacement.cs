@@ -33,6 +33,13 @@ namespace InstallerClean.Services;
 /// only assemblies that walk loads, or it fails on a published build and passes on a
 /// build from source, whose assemblies are loose files beside the exe.
 /// </para>
+/// <para>
+/// Once the running exe is renamed, Windows can answer a question about its original
+/// path with the running copy rather than the file now there: its own version read
+/// does. So code after a rename asks about the exe's path only through the file system:
+/// renaming and checking for it here, starting it, and reading its version from its
+/// bytes with <see cref="FileVersionResource"/>.
+/// </para>
 /// </remarks>
 public static class SelfReplacement
 {

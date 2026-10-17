@@ -72,32 +72,20 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
         _mutex = null;
     }
 
-    public Version? FileVersion(string path)
-    {
-        try
-        {
-            var info = FileVersionInfo.GetVersionInfo(path);
-            return info.FileMajorPart == 0 && info.FileMinorPart == 0 && info.FileBuildPart == 0
-                ? null
-                : new Version(info.FileMajorPart, info.FileMinorPart, info.FileBuildPart, info.FilePrivatePart);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            return null;
-        }
-    }
+    public Version? FileVersion(string path) =>
+        FileVersionResource.Read(path) is { } version && (version.Major, version.Minor, version.Build) != (0, 0, 0)
+            ? version
+            : null;
 
     /// <summary>
     /// Loads, before this exe is renamed aside, what the run reaches after it: starting
-    /// the setup and the newer version, reading a file's version, the Application-log
-    /// write, which also makes its source check here, and the English machine line, whose
-    /// first lookup in en-GB probes for resources the console's own language never asks
-    /// for.
+    /// the setup and the newer version, the Application-log write, which also makes its
+    /// source check here, and the English machine line, whose first lookup in en-GB
+    /// probes for resources the console's own language never asks for.
     /// </summary>
     public void PrepareToMoveAside()
     {
-        SelfReplacement.PrepareToMoveAside(
-            typeof(FileVersionInfo).Assembly, typeof(EventLog).Assembly, typeof(ConsoleUpdateHost).Assembly);
+        SelfReplacement.PrepareToMoveAside(typeof(EventLog).Assembly, typeof(ConsoleUpdateHost).Assembly);
         EventLogWriter.PrepareForWrites();
         try
         {
