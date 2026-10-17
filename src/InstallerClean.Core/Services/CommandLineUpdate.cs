@@ -82,7 +82,10 @@ internal interface ICommandLineUpdateHost
     /// <summary>Prints text and leaves the cursor after it, for the question.</summary>
     void Write(string text);
 
-    /// <summary>Reads one line of the person's answer, or null at the end of input.</summary>
+    /// <summary>
+    /// Reads one line of the person's answer, or null at the end of input, which is also
+    /// what Ctrl+C at the prompt can end the read with.
+    /// </summary>
     string? ReadLine();
 
     /// <summary>
@@ -174,10 +177,27 @@ internal sealed class CommandLineUpdate
     /// </summary>
     internal static readonly TimeSpan WatchedCheckBound = TimeSpan.FromSeconds(3);
 
+    /// <summary>
+    /// How long the run waits for Ctrl+C's cancellation once something Ctrl+C can end has
+    /// ended without it: the question's read, which Ctrl+C can end as the end of input, or
+    /// the newer version, which Windows ends with <see cref="ControlCExit"/> where it has
+    /// no handler for Ctrl+C yet. The host's handler cancels the token on the console's
+    /// control-handler thread, which can run after either has ended, so the run waits up
+    /// to this long for it and reads that Ctrl+C as its own.
+    /// </summary>
+    internal static readonly TimeSpan ControlCBound = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>
+    /// The exit code of a console process Windows ended for Ctrl+C because it had no
+    /// handler for it yet, STATUS_CONTROL_C_EXIT.
+    /// </summary>
+    internal const int ControlCExit = unchecked((int)0xC000013A);
+
     private readonly Func<CancellationToken, Task<UpdateCheckResult>> _check;
     private readonly IAppUpdater _updater;
     private readonly ICommandLineUpdateHost _host;
     private readonly TimeSpan _watchedCheckBound;
+    private readonly TimeSpan _controlCBound;
     private bool _saidInstalled;
 
     /// <param name="check">Asks GitHub for the newest version.</param>
@@ -188,17 +208,21 @@ internal sealed class CommandLineUpdate
     /// <param name="host">The console host.</param>
     public CommandLineUpdate(
         Func<CancellationToken, Task<UpdateCheckResult>> check, IAppUpdater updater, ICommandLineUpdateHost host)
-        : this(check, updater, host, WatchedCheckBound) { }
+        : this(check, updater, host, WatchedCheckBound, ControlCBound) { }
 
-    /// <summary>Test seam: the bound on a watched check, so a test need not wait it out.</summary>
+    /// <summary>
+    /// Test seam: the bound on a watched check and the wait for Ctrl+C's cancellation, so
+    /// a test need not wait either out.
+    /// </summary>
     internal CommandLineUpdate(
         Func<CancellationToken, Task<UpdateCheckResult>> check, IAppUpdater updater, ICommandLineUpdateHost host,
-        TimeSpan watchedCheckBound)
+        TimeSpan watchedCheckBound, TimeSpan controlCBound)
     {
         _check = check;
         _updater = updater;
         _host = host;
         _watchedCheckBound = watchedCheckBound;
+        _controlCBound = controlCBound;
     }
 
     /// <summary>
@@ -352,8 +376,10 @@ internal sealed class CommandLineUpdate
     /// <summary>
     /// Asks the question until it gets an answer. Enter, or an answer starting with this
     /// language's letter for yes or with Y, is yes; one starting with its letter for no or
-    /// with N is no; the end of input is no; anything else asks again. Ctrl+C is read off
-    /// the token once the read returns, whatever it returned.
+    /// with N is no; anything else asks again. Ctrl+C is read off the token once the read
+    /// returns. The end of input is no, unless the token is cancelled while the question
+    /// waits on it, up to <see cref="ControlCBound"/> in a run, since Ctrl+C at the prompt
+    /// can itself be read as the end of input.
     /// </summary>
     private Answer Ask(CancellationToken token)
     {
@@ -366,6 +392,7 @@ internal sealed class CommandLineUpdate
         {
             _host.Write(prompt + " ");
             var line = _host.ReadLine();
+            if (line is null) token.WaitHandle.WaitOne(_controlCBound);
             if (token.IsCancellationRequested) return Answer.Cancelled;
             if (line is null) return Answer.No;
             var answer = line.Trim();
@@ -516,6 +543,10 @@ internal sealed class CommandLineUpdate
             // installed, and it is, so it stays in place.
             return new CommandLineUpdateResult.UpdatedThenCancelled(current, latest);
         }
+        // A newer version ended for Ctrl+C before it had a handler for it exits with
+        // ControlCExit, and the same Ctrl+C can cancel the token here only after that exit,
+        // so the run waits for it before handing the exit code back.
+        if (exitCode == ControlCExit) token.WaitHandle.WaitOne(_controlCBound);
         if (exitCode is not null)
             return new CommandLineUpdateResult.HandedOver(exitCode.Value, current, latest, string.Join(' ', run));
 

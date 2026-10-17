@@ -424,7 +424,7 @@ internal static class Program
     {
         switch (result)
         {
-            case CommandLineUpdateResult.HandedOver { ExitCode: ControlCExit } when cancelled:
+            case CommandLineUpdateResult.HandedOver { ExitCode: CommandLineUpdate.ControlCExit } when cancelled:
                 // The newer version was ended by the Ctrl+C this run took too, while it was
                 // still starting and before it could answer it, so it wrote no summary. This
                 // run writes the one the newer version writes for a Ctrl+C a moment later.
@@ -469,12 +469,6 @@ internal static class Program
                 return null;
         }
     }
-
-    /// <summary>
-    /// The exit code of a console process Windows ended for Ctrl+C because it had no
-    /// handler for it yet, STATUS_CONTROL_C_EXIT.
-    /// </summary>
-    private const int ControlCExit = unchecked((int)0xC000013A);
 
     /// <summary>
     /// Ends a run cancelled before any work was done, with the same line, entry and code

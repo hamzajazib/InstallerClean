@@ -40,8 +40,10 @@ public sealed class CommandLineUpdateTests : IDisposable
 
     private CommandLineUpdateResult Run(
         FakeUpdater updater, bool canAsk, string command = "/s", string[]? arguments = null,
-        Func<CancellationToken, Task<UpdateCheckResult>>? check = null, CancellationToken token = default) =>
-        new CommandLineUpdate(check ?? NewerOut, updater, _host, TimeSpan.FromMilliseconds(200))
+        Func<CancellationToken, Task<UpdateCheckResult>>? check = null, CancellationToken token = default,
+        TimeSpan? controlCBound = null) =>
+        new CommandLineUpdate(check ?? NewerOut, updater, _host, TimeSpan.FromMilliseconds(200),
+                controlCBound ?? TimeSpan.FromMilliseconds(20))
             .Run(canAsk, command, arguments ?? [command], _exe, token);
 
     /// <summary>The separate download: the updater has written the newer file beside the exe.</summary>
@@ -206,6 +208,59 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         Assert.IsType<CommandLineUpdateResult.Cancelled>(result);
         Assert.False(updater.Prepared);
+    }
+
+    [Fact]
+    public void Ctrl_C_answered_just_after_the_read_returns_the_end_of_input_cancels_with_nothing_downloaded()
+    {
+        // Ctrl+C at the prompt can end the read as the end of input, with the token
+        // cancelled on another thread a moment later.
+        using var cts = new CancellationTokenSource();
+        _host.OnRead = () =>
+        {
+            cts.CancelAfter(TimeSpan.FromMilliseconds(50));
+            return null;
+        };
+        var updater = Download();
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+
+        var result = Run(updater, canAsk: true, token: cts.Token, controlCBound: TimeSpan.FromSeconds(30));
+
+        Assert.IsType<CommandLineUpdateResult.Cancelled>(result);
+        Assert.False(updater.Prepared);
+        Assert.Null(_host.NewerVersionRun);
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(15), $"The question waited {clock.Elapsed} for the cancellation.");
+    }
+
+    [Fact]
+    public void A_newer_version_ended_by_Ctrl_C_is_handed_back_once_the_cancellation_has_come()
+    {
+        // Windows ends a newer version with no handler yet for Ctrl+C, and the token is
+        // cancelled on another thread a moment later.
+        using var cts = new CancellationTokenSource();
+        _host.Answers.Enqueue("y");
+        _host.NewerVersionExitCode = CommandLineUpdate.ControlCExit;
+        _host.OnNewerVersion = () => cts.CancelAfter(TimeSpan.FromSeconds(1));
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+
+        var result = Run(Download(), canAsk: true, token: cts.Token, controlCBound: TimeSpan.FromSeconds(30));
+
+        Assert.Equal(
+            new CommandLineUpdateResult.HandedOver(CommandLineUpdate.ControlCExit, Current, Latest, "/s"), result);
+        Assert.True(cts.IsCancellationRequested);
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(15), $"The run waited {clock.Elapsed} for the cancellation.");
+    }
+
+    [Fact]
+    public void A_newer_version_ending_with_the_Ctrl_C_code_and_no_Ctrl_C_is_handed_back_as_it_is()
+    {
+        _host.Answers.Enqueue("y");
+        _host.NewerVersionExitCode = CommandLineUpdate.ControlCExit;
+
+        var result = Run(Download(), canAsk: true);
+
+        Assert.Equal(
+            new CommandLineUpdateResult.HandedOver(CommandLineUpdate.ControlCExit, Current, Latest, "/s"), result);
     }
 
     [Fact]
