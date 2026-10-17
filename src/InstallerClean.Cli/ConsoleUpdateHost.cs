@@ -171,12 +171,13 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
     {
         Console.Out.Flush();
         // The console gives Ctrl+C only to the processes connected to it, so one that comes
-        // as the newer version starts can reach this run alone. This event is set on Ctrl+C
-        // from here until the newer version ends and passed to it by name, and the newer
-        // version takes it as its own Ctrl+C, one set before it opened the event included.
-        // Where there is no event, the newer version answers Ctrl+C only once it has started.
+        // as the newer version starts can reach this run alone. Where the newer version
+        // takes CliContract.CancelEventSwitch, this event is set on Ctrl+C from here until
+        // the newer version ends and passed to it by name, and the newer version takes it
+        // as its own Ctrl+C, one set before it opened the event included. Where there is
+        // no event, the newer version answers Ctrl+C only once it has started.
         var cancelId = Guid.NewGuid();
-        using var cancelEvent = CreateCancelEvent(cancelId);
+        using var cancelEvent = CliContract.TakesHandOverSwitches(toVersion) ? CreateCancelEvent(cancelId) : null;
         using var setOnCtrlC = cancelEvent is null
             ? default
             : token.Register(static e => ((EventWaitHandle)e!).Set(), cancelEvent);

@@ -305,10 +305,32 @@ internal static class CliContract
     /// <summary>
     /// The switch through which the version that started this one passes, after the colon,
     /// the id of an event that version sets on Ctrl+C. Only a run updating itself passes
-    /// it, so it is not in the help. Every later version accepts it, since a version that
-    /// refused it would refuse the command the one before it starts it with.
+    /// it, so it is not in the help. It goes only to a version
+    /// <see cref="TakesHandOverSwitches"/> answers true for.
     /// </summary>
     internal const string CancelEventSwitch = "/cancelevent:";
+
+    /// <summary>
+    /// The first version that takes the switch a run updating itself adds to the command
+    /// it starts the newer version with, <see cref="CancelEventSwitch"/>. A version before
+    /// it refuses the switch as an argument it does not know and runs nothing, so the
+    /// switch is never passed to one.
+    /// </summary>
+    /// <remarks>
+    /// Every version from this one on passes the switch to whichever version it updates
+    /// to, so every later version has to go on taking it, or an update to that version
+    /// from one of these runs nothing. A switch added to the hand-over later is one an
+    /// earlier version refuses, so it needs a first version of its own.
+    /// </remarks>
+    internal static readonly Version FirstVersionTakingHandOverSwitches = new(3, 5, 0);
+
+    /// <summary>
+    /// Whether <paramref name="version"/> is <see cref="FirstVersionTakingHandOverSwitches"/>
+    /// or later, its first three parts compared. A version that does not parse answers false.
+    /// </summary>
+    internal static bool TakesHandOverSwitches(string version) =>
+        Version.TryParse(version, out var parsed)
+        && Services.UpdateCheckService.NormaliseToBuild(parsed) >= FirstVersionTakingHandOverSwitches;
 
     /// <summary>
     /// The name of the event <paramref name="id"/> stands for, in the session's own

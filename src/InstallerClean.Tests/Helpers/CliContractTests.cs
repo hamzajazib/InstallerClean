@@ -408,6 +408,24 @@ public class CliContractTests
     }
 
     [Theory]
+    [InlineData("3.5.0", true)]
+    [InlineData("3.5", true)]
+    [InlineData("3.5.0.0", true)]
+    [InlineData("3.5.1", true)]
+    [InlineData("3.10.0", true)]
+    [InlineData("4.0", true)]
+    [InlineData("3.4.0", false)]
+    [InlineData("3.4.9", false)]
+    [InlineData("3.4.0.9", false)]
+    [InlineData("", false)]
+    [InlineData("x", false)]
+    [InlineData("3.5.0-beta", false)]
+    public void A_version_takes_the_cancel_event_switch_from_3_5_0_on(string version, bool takes)
+    {
+        Assert.Equal(takes, CliContract.TakesHandOverSwitches(version));
+    }
+
+    [Theory]
     [InlineData("/d", "/cancelevent:x")]
     [InlineData("/m", "/cancelevent:x")]
     [InlineData("/cancelevent:x", "/s")]

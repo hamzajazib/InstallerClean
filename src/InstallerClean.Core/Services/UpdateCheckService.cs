@@ -397,7 +397,7 @@ public sealed class UpdateCheckService : IUpdateCheckService
         return Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0);
     }
 
-    private static Version NormaliseToBuild(Version v) =>
+    internal static Version NormaliseToBuild(Version v) =>
         new(v.Major, v.Minor, Math.Max(v.Build, 0));
 
     private static string FormatVersion(Version v) =>
