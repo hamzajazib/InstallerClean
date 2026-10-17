@@ -5309,6 +5309,14 @@ public class MainViewModelTests
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(result);
 
+    /// <summary>
+    /// The report's write lands. One that fails takes the box off the card once the card
+    /// is up, after <see cref="MainViewModel.ScanCardDecided"/> has completed.
+    /// </summary>
+    private void ReportWriteLands() =>
+        _resultLogService.WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(true));
+
     [Fact]
     public async Task A_newer_version_puts_the_card_up_and_holds_the_scan_s_card_and_its_report()
     {
@@ -5334,6 +5342,7 @@ public class MainViewModelTests
     {
         var vm = CreateViewModel();
         ScanFinds(EmptyScanResult());
+        ReportWriteLands();
         CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
         await StartAsync(vm);
 
@@ -5370,6 +5379,7 @@ public class MainViewModelTests
     {
         var vm = CreateViewModel();
         ScanFinds(EmptyScanResult());
+        ReportWriteLands();
         CheckAnswers(answer);
 
         await StartAsync(vm);
@@ -5448,6 +5458,7 @@ public class MainViewModelTests
         await vm.Chrome.UpdateNowCommand.ExecuteAsync(null);
 
         await _windowService.Received(1).StartUpdateAndCloseAsync(prepared.FileToStart, prepared.Arguments);
+        Assert.False(vm.ResultsMayShow);
         Assert.False(vm.Completion.IsComplete);
         _firstRunMark.DidNotReceive().Set();
         await _resultLogService.DidNotReceiveWithAnyArgs().WriteAsync(default!, default);

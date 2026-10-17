@@ -60,6 +60,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// </summary>
     private TaskCompletionSource _resultsMayShow = Released();
 
+    /// <summary>
+    /// True once what the latest scan found may be shown, and false while it is held:
+    /// whether <see cref="_resultsMayShow"/> has completed.
+    /// </summary>
+    internal bool ResultsMayShow => _resultsMayShow.Task.IsCompleted;
+
     private static TaskCompletionSource Released()
     {
         var released = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
