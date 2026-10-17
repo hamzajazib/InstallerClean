@@ -35,8 +35,9 @@ namespace InstallerClean.Services;
 /// </para>
 /// <para>
 /// Once the running exe is renamed, Windows can answer a question about its original
-/// path with the running copy rather than the file now there: its own version read
-/// does. So code after a rename asks about the exe's path only through the file system:
+/// path from the running copy rather than the file now there, and a version read is
+/// one such question. So code after a rename asks about the exe's path only through the
+/// file system:
 /// renaming and checking for it here, starting it, and reading its version from its
 /// bytes with <see cref="FileVersionResource"/>.
 /// </para>

@@ -6,10 +6,10 @@ using InstallerClean.Helpers;
 namespace InstallerClean.Tests.Helpers.Integration;
 
 /// <summary>
-/// The file version read from a file's own bytes, held against Windows' own read of the
-/// same files and against the version the compiler wrote, and the files it answers
-/// null for. Each real file is read from a copy at a path no process was started from,
-/// where Windows' read reads the file.
+/// The file version read from a file's own bytes, held against the version Windows
+/// reads for the same files and against the version the compiler wrote, and the files
+/// it answers null for. Each real file is read from a copy at a path no process was
+/// started from, where Windows reads the file itself.
 /// </summary>
 public sealed class FileVersionResourceTests : IDisposable
 {
@@ -64,9 +64,12 @@ public sealed class FileVersionResourceTests : IDisposable
     public void A_file_held_open_for_writing_is_still_read()
     {
         var copy = CopyOf(Path.Combine(Environment.SystemDirectory, "kernel32.dll"), "held.dll");
+        // Windows answers no version for a file another handle holds open for writing,
+        // so its read is taken first.
+        var expected = WindowsRead(copy);
         using var held = new FileStream(copy, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite | FileShare.Delete);
 
-        Assert.Equal(WindowsRead(copy), FileVersionResource.Read(copy));
+        Assert.Equal(expected, FileVersionResource.Read(copy));
     }
 
     [Fact]

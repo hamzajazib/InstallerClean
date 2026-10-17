@@ -9,9 +9,9 @@ namespace InstallerClean.Helpers;
 /// </summary>
 /// <remarks>
 /// The file at the path is opened through the file system and read, so the answer is
-/// always about whatever file is there now. Windows' own version read, given the path a
-/// running program was started from, answers with that program's own version, even
-/// once its file has been renamed and another put at the path. The command line's
+/// always about whatever file is there now. The version read Windows itself provides,
+/// given the path a running program was started from, answers with that program's own
+/// version, even once its file has been renamed and another put at the path. The command line's
 /// update reads its own path at exactly that point.
 ///
 /// It reads the PE headers, the resource directory and VS_VERSIONINFO as Microsoft's
