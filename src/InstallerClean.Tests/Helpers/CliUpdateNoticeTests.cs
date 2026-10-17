@@ -6,9 +6,10 @@ namespace InstallerClean.Tests.Helpers;
 
 /// <summary>
 /// The Application-log notices the command line's update writes: 3005 where it installed
-/// the newer version, and 3006 where it could not or the newer version would not start. They are
-/// machine-read and built in English on every machine, so the whole sentence is the
-/// contract, asserted under an Italian thread culture to show the build is English.
+/// the newer version, and 3006 where it could not, the newer version would not start, or
+/// Ctrl+C came after it could not. They are machine-read and built in English on every
+/// machine, so the whole sentence is the contract, asserted under an Italian thread
+/// culture to show the build is English.
 /// </summary>
 public class CliUpdateNoticeTests
 {
@@ -61,6 +62,22 @@ public class CliUpdateNoticeTests
     {
         var line = BuiltUnderItalian(() => MachineContract.English(
             () => Program.UpdateFailedEventLogLine("/m", "3.4.0", "3.5.0", stage, ["/m", @"D:\Backup"])));
+
+        Assert.Equal(expected, line);
+    }
+
+    [Theory]
+    [InlineData(UpdateFailureStage.Download,
+        "/d mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the download failed), then the run was cancelled, so nothing ran.")]
+    [InlineData(UpdateFailureStage.Install,
+        "/d mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the install failed), then the run was cancelled, so nothing ran.")]
+    [InlineData(UpdateFailureStage.InUse,
+        "/d mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (InstallerClean was in use), then the run was cancelled, so nothing ran.")]
+    public void The_update_that_failed_before_a_Ctrl_C_says_which_part_failed_and_that_nothing_ran(
+        UpdateFailureStage stage, string expected)
+    {
+        var line = BuiltUnderItalian(() => MachineContract.English(
+            () => Program.UpdateFailedThenCancelledEventLogLine("/d", "3.4.0", "3.5.0", stage)));
 
         Assert.Equal(expected, line);
     }

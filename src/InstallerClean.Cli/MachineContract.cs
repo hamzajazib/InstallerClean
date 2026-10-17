@@ -76,8 +76,8 @@ internal static class MachineContract
     /// What a consumer may rely on, because two of these entries are newer than
     /// most tooling watching for them. Every <c>/s</c>, <c>/d</c> or <c>/m</c>
     /// run writes exactly ONE summary entry, and its Event ID is in the 1000,
-    /// 2000 or 4000 band (<see cref="CliContract.EventIdFor"/>), except a run that
-    /// updated itself and then ran nothing, whose one entry is the 3005 or 3006 below
+    /// 2000 or 4000 band (<see cref="CliContract.EventIdFor"/>), except a run whose
+    /// update ended it with nothing run, whose one entry is the 3005 or 3006 below
     /// saying so. Beside it a run
     /// may write NOTICES, in the 3000 band, which are conditions the scan found and
     /// never the run's outcome. THE LIST BELOW IS THE WHOLE BAND, which is the part
@@ -102,8 +102,9 @@ internal static class MachineContract
     /// started, the 3005 says so instead, is the run's one entry and is a Warning. 3006: the run could
     /// not install a newer version, naming both versions and whether the download failed,
     /// the install failed or InstallerClean was in use, and went on with the version it
-    /// is. Where the newer version is in place and would not start, the 3006 says so
-    /// instead and is the run's one entry. Those two aside, a notice never replaces the
+    /// is. Where the newer version is in place and would not start, or Ctrl+C came after
+    /// the update failed or was not tried, the 3006 says so instead and is the run's one
+    /// entry. Those two aside, a notice never replaces the
     /// summary and never stands in for one, so counting runs means counting the summary
     /// bands and those two, and each notice repeats for as long as its own condition
     /// holds, so a machine can emit one on every run for weeks.
@@ -116,7 +117,7 @@ internal static class MachineContract
     /// Warning. 3005 is Information because the run fell short of nothing, except the one
     /// saying Ctrl+C came before the newer version started, which is Warning as a cancelled
     /// run's 2000 is, and 3006 Warning because the run went on with an older version than
-    /// it set out to use.
+    /// it set out to use, or ran nothing.
     /// Nothing here contradicts that: this paragraph says only that a notice is not
     /// the run's SUMMARY entry, which is what a consumer counting runs is asking.
     /// Two questions, near-identical wording, and the sense that travels between

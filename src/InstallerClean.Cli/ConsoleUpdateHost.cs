@@ -159,11 +159,32 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
         Console.Out.Flush();
         using var process = Start(file, arguments, workingDirectory: null, token);
         if (process is null) return null;
-        _newerVersionRunning = true;
-        MachineContract.WriteEventLog(CliEventClass.UpdatedNotice,
-            () => Program.UpdatedEventLogLine(arg, fromVersion, toVersion, arguments));
-        process.WaitForExit();
-        return process.ExitCode;
+        // The newer version is running from the file at this exe's path from here, so
+        // nothing leaves this method as an exception: the run reads a throw as the newer
+        // version not having started and puts this exe back, which would rename that
+        // file under it. A throw is written to crash.log. One from the wait itself is
+        // answered with the error code, so this run ends with nothing more run, and the
+        // newer version writes its own summary.
+        try
+        {
+            _newerVersionRunning = true;
+            MachineContract.WriteEventLog(CliEventClass.UpdatedNotice,
+                () => Program.UpdatedEventLogLine(arg, fromVersion, toVersion, arguments));
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+        }
+        try
+        {
+            process.WaitForExit();
+            return process.ExitCode;
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+            return CliExitCode.Error;
+        }
     }
 
     /// <summary>

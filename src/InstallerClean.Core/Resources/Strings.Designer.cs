@@ -220,9 +220,12 @@ public static class Strings
     public static string Cli_EventLogUnavailable => Get("Cli.EventLogUnavailable");
     public static string Cli_EventLogUpdated => Get("Cli.EventLogUpdated");
     public static string Cli_EventLogUpdateDownloadFailed => Get("Cli.EventLogUpdateDownloadFailed");
+    public static string Cli_EventLogUpdateDownloadFailedThenCancelled => Get("Cli.EventLogUpdateDownloadFailedThenCancelled");
     public static string Cli_EventLogUpdatedThenCancelled => Get("Cli.EventLogUpdatedThenCancelled");
     public static string Cli_EventLogUpdateInstallFailed => Get("Cli.EventLogUpdateInstallFailed");
+    public static string Cli_EventLogUpdateInstallFailedThenCancelled => Get("Cli.EventLogUpdateInstallFailedThenCancelled");
     public static string Cli_EventLogUpdateInUse => Get("Cli.EventLogUpdateInUse");
+    public static string Cli_EventLogUpdateInUseThenCancelled => Get("Cli.EventLogUpdateInUseThenCancelled");
     public static string Cli_EventLogUpdateNotStarted => Get("Cli.EventLogUpdateNotStarted");
     public static string Cli_EventLogValidationFailed => Get("Cli.EventLogValidationFailed");
     public static string Cli_EventLogWindowsError => Get("Cli.EventLogWindowsError");

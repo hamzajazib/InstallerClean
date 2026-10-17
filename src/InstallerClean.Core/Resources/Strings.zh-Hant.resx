@@ -2427,6 +2427,11 @@ InstallerClean 本來就是以系統管理員身分執行，所以再用這種�
   <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
        ID 3005, the run's only entry, where the newer version is in place and Ctrl+C came
        before it started, so nothing ran. -->
+  <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version it could not
+       install. Event ID 3006, the run's only entry, where Ctrl+C came after the update
+       failed or was not tried, so nothing ran: the first where the download failed, the
+       second where putting it in place or starting it failed, the third where
+       InstallerClean was in use. -->
   <!-- Stdout when the CLI cannot acquire the single-instance mutex.
        The GUI variant (Strings.Startup_AlreadyRunningBody) is written
        for a user who tried to launch a second window; the CLI variant

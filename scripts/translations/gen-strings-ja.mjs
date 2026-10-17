@@ -674,6 +674,10 @@ const STRIPPED = new Set([
   // The machine Cli key for an update not tried because InstallerClean was in use, by the same rule.
   'Cli.EventLogUpdateInUse',
   'Cli.EventLogUpdatedThenCancelled',
+  // The machine Cli keys for an update that failed or was not tried before a Ctrl+C, by the same rule.
+  'Cli.EventLogUpdateDownloadFailedThenCancelled',
+  'Cli.EventLogUpdateInstallFailedThenCancelled',
+  'Cli.EventLogUpdateInUseThenCancelled',
 ]);
 let stripped = 0;
 text = text.replace(/[^\S\n]*<data name="(Cli\.[^"]*)"[\s\S]*?<\/data>\n?/g,

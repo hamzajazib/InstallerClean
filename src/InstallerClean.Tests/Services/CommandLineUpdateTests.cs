@@ -286,6 +286,120 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal(string.Format(Strings.Cli_UpdateNotStarted, Latest), _host.Output[^1]);
     }
 
+    [Fact]
+    public void A_newer_version_whose_start_throws_is_put_back_and_the_run_carries_on()
+    {
+        _host.OnNewerVersion = () => throw new InvalidOperationException("thrown before the start");
+        var updater = Download();
+
+        var result = Run(updater, canAsk: false);
+
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateFailureStage.Install, Current, Latest), result);
+        Assert.True(updater.Undone);
+        Assert.Equal("old", File.ReadAllText(_exe));
+        Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
+        Assert.True(_host.HoldsOwnFile);
+        Assert.Equal(string.Format(Strings.Cli_UpdateRunningInstead, "/s", Current), _host.Output[^1]);
+    }
+
+    [Fact]
+    public void A_throw_after_the_swap_and_before_the_start_puts_this_exe_back_and_the_run_carries_on()
+    {
+        _host.NewerVersionExitCode = 0;
+        _host.OnWriteLine = line =>
+        {
+            if (line == string.Format(Strings.Cli_UpdateInstalled, Latest)) throw new IOException("the console refused it");
+        };
+        var updater = Download();
+
+        var result = Run(updater, canAsk: false);
+
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateFailureStage.Install, Current, Latest), result);
+        Assert.True(updater.Undone);
+        Assert.Equal("old", File.ReadAllText(_exe));
+        Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
+        Assert.Null(_host.NewerVersionRun);
+    }
+
+    [Fact]
+    public void A_throw_after_the_setup_and_before_the_start_ends_the_run_as_installed()
+    {
+        SetupInstalls();
+        _host.NewerVersionExitCode = 0;
+        _host.OnWriteLine = line =>
+        {
+            if (line == string.Format(Strings.Cli_UpdateInstalled, Latest)) throw new IOException("the console refused it");
+        };
+
+        var result = Run(Setup(), canAsk: false);
+
+        Assert.Equal(new CommandLineUpdateResult.NotStarted(Current, Latest), result);
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.Equal(string.Format(Strings.Cli_UpdateNotStarted, Latest), _host.Output[^1]);
+        Assert.Null(_host.NewerVersionRun);
+    }
+
+    [Fact]
+    public void A_console_that_refuses_every_line_after_the_setup_ends_the_run_as_installed()
+    {
+        SetupInstalls();
+        _host.NewerVersionExitCode = 0;
+        _host.OnWriteLine = line =>
+        {
+            if (line == string.Format(Strings.Cli_UpdateInstalled, Latest)
+                || line == string.Format(Strings.Cli_UpdateNotStarted, Latest))
+                throw new IOException("the console refused it");
+        };
+
+        var result = Run(Setup(), canAsk: false);
+
+        Assert.Equal(new CommandLineUpdateResult.NotStarted(Current, Latest), result);
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.Null(_host.NewerVersionRun);
+    }
+
+    [Fact]
+    public void A_console_that_refuses_every_line_after_a_failed_setup_ends_the_run_with_nothing_run()
+    {
+        _host.OnSetup = () =>
+        {
+            File.WriteAllText(_exe, "partial");
+            Directory.CreateDirectory(_exe + SelfReplacement.NewSuffix);
+            return 1;
+        };
+        _host.OnWriteLine = line =>
+        {
+            if (line == Strings.UpdateNotice_InstallFailed) throw new IOException("the console refused it");
+        };
+
+        var result = Run(Setup(), canAsk: false);
+
+        Assert.Equal(nameof(IOException), Assert.IsType<CommandLineUpdateResult.Stopped>(result).FailureType);
+        Assert.Null(_host.NewerVersionRun);
+    }
+
+    [Fact]
+    public void A_throw_after_the_setup_once_Ctrl_C_has_come_leaves_the_newer_version_installed_and_starts_nothing()
+    {
+        using var cts = new CancellationTokenSource();
+        SetupInstalls();
+        _host.Answers.Enqueue("y");
+        _host.NewerVersionExitCode = 0;
+        _host.OnWriteLine = line =>
+        {
+            if (line != Strings.Cli_UpdateListsOnlyAfterDelete) return;
+            cts.Cancel();
+            throw new IOException("the console refused it");
+        };
+
+        var result = Run(Setup(), canAsk: true, command: "/d", token: cts.Token);
+
+        Assert.Equal(new CommandLineUpdateResult.UpdatedThenCancelled(Current, Latest), result);
+        Assert.Single(_host.Output, string.Format(Strings.Cli_UpdateInstalled, Latest));
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.Null(_host.NewerVersionRun);
+    }
+
     [Theory]
     [InlineData(AppCopyKind.CommandLineDownload, true)]
     [InlineData(AppCopyKind.CommandLineDownload, false)]
@@ -507,6 +621,87 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Null(_host.NewerVersionRun);
     }
 
+    [Fact]
+    public void A_setup_that_fails_after_Ctrl_C_says_so_puts_this_exe_back_and_runs_nothing()
+    {
+        using var cts = new CancellationTokenSource();
+        _host.OnSetup = () =>
+        {
+            cts.Cancel();
+            return 1;
+        };
+        var updater = Setup();
+
+        var result = Run(updater, canAsk: false, token: cts.Token);
+
+        Assert.Equal(new CommandLineUpdateResult.FailedThenCancelled(UpdateFailureStage.Install, Current, Latest), result);
+        Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
+        Assert.DoesNotContain(string.Format(Strings.Cli_UpdateRunningInstead, "/s", Current), _host.Output);
+        Assert.Equal("old", File.ReadAllText(_exe));
+        Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
+        Assert.True(updater.Undone);
+        Assert.True(_host.HoldsOwnFile);
+        Assert.Null(_host.NewerVersionRun);
+    }
+
+    [Fact]
+    public void A_download_that_fails_after_Ctrl_C_says_so_and_runs_nothing()
+    {
+        using var cts = new CancellationTokenSource();
+        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, _exe, onPrepare: () =>
+        {
+            cts.Cancel();
+            throw new UpdateFailedException(UpdateFailureStage.Download, "failed");
+        });
+
+        var result = Run(updater, canAsk: false, token: cts.Token);
+
+        Assert.Equal(new CommandLineUpdateResult.FailedThenCancelled(UpdateFailureStage.Download, Current, Latest), result);
+        Assert.Equal(Strings.UpdateNotice_DownloadFailed, _host.Output[^1]);
+        Assert.False(_host.HoldsLock);
+    }
+
+    [Fact]
+    public void A_run_of_this_file_found_just_before_the_rename_after_Ctrl_C_says_so_and_changes_nothing()
+    {
+        using var cts = new CancellationTokenSource();
+        // The second look is the one just before the rename.
+        _host.AnotherRunAt = look =>
+        {
+            if (look < 2) return false;
+            cts.Cancel();
+            return true;
+        };
+        var updater = Download();
+
+        var result = Run(updater, canAsk: false, token: cts.Token);
+
+        Assert.Equal(new CommandLineUpdateResult.FailedThenCancelled(UpdateFailureStage.InUse, Current, Latest), result);
+        Assert.Equal(Strings.Cli_UpdateInUse, _host.Output[^1]);
+        Assert.True(updater.Undone);
+        Assert.False(_host.OwnFileReleased);
+        Assert.Equal("old", File.ReadAllText(_exe));
+    }
+
+    [Fact]
+    public void InstallerClean_found_in_use_before_the_question_after_Ctrl_C_asks_nothing_and_runs_nothing()
+    {
+        using var cts = new CancellationTokenSource();
+        _host.AnotherRunAt = _ =>
+        {
+            cts.Cancel();
+            return true;
+        };
+        var updater = Download();
+
+        var result = Run(updater, canAsk: true, token: cts.Token);
+
+        Assert.Equal(new CommandLineUpdateResult.FailedThenCancelled(UpdateFailureStage.InUse, Current, Latest), result);
+        Assert.Equal(new[] { string.Format(Strings.UpdateNotice_Available, Latest), Strings.Cli_UpdateInUse }, _host.Output);
+        Assert.Equal(0, _host.Reads);
+        Assert.False(updater.Prepared);
+    }
+
     [Theory]
     [InlineData(AppCopyKind.CommandLineDownload)]
     [InlineData(AppCopyKind.Setup)]
@@ -706,7 +901,14 @@ public sealed class CommandLineUpdateTests : IDisposable
         /// <summary>What the exe's path held at each call to <see cref="PrepareToMoveAside"/>.</summary>
         public List<string> PreparedWhileExeHeld { get; } = [];
 
-        public void WriteLine(string line) => Output.Add(line);
+        /// <summary>Runs before each line is recorded, so a test can make a line's write throw.</summary>
+        public Action<string>? OnWriteLine { get; set; }
+
+        public void WriteLine(string line)
+        {
+            OnWriteLine?.Invoke(line);
+            Output.Add(line);
+        }
 
         // The question and the answer share a line on screen; recorded as an entry of its own.
         public void Write(string text) => Output.Add(text);

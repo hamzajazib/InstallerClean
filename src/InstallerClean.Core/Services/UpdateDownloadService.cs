@@ -147,6 +147,12 @@ public sealed class UpdateDownloadService
         {
             throw;
         }
+        catch (Exception ex) when ((ex is HttpRequestException or IOException or ObjectDisposedException)
+            && cancellationToken.IsCancellationRequested)
+        {
+            // A connection broken off by the cancel itself is the cancel.
+            throw new OperationCanceledException("The download was cancelled.", ex, cancellationToken);
+        }
         catch (OperationCanceledException ex)
         {
             throw new UpdateFailedException(UpdateFailureStage.Download,

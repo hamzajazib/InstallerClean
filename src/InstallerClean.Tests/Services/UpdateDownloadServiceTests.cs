@@ -191,6 +191,22 @@ public sealed class UpdateDownloadServiceTests : IDisposable
         Assert.False(File.Exists(Destination));
     }
 
+    [Fact]
+    public async Task A_connection_broken_off_by_cancelling_throws_cancellation_and_leaves_nothing()
+    {
+        var handler = new RoutedHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StreamContent(new StallingStream("MZ"u8.ToArray(), breaksOffOnCancel: true)),
+        });
+        var service = new UpdateDownloadService(handler, TimeSpan.FromSeconds(30));
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => service.DownloadAsync(ReleaseAddress, Destination, null, cts.Token));
+
+        Assert.False(File.Exists(Destination));
+    }
+
     /// <summary>
     /// Reports synchronously, so the test reads every value once the call returns,
     /// where <see cref="Progress{T}"/> posts each to the thread pool.
@@ -202,9 +218,11 @@ public sealed class UpdateDownloadServiceTests : IDisposable
 
     /// <summary>
     /// Hands over its bytes, then waits on every later read until the read is
-    /// cancelled, as a connection that has stopped sending does.
+    /// cancelled, as a connection that has stopped sending does. Where
+    /// <paramref name="breaksOffOnCancel"/> is set, the cancelled read throws an
+    /// IOException, as a socket read the cancel breaks off can.
     /// </summary>
-    private sealed class StallingStream(byte[] first) : Stream
+    private sealed class StallingStream(byte[] first, bool breaksOffOnCancel = false) : Stream
     {
         private bool _sent;
 
@@ -216,7 +234,14 @@ public sealed class UpdateDownloadServiceTests : IDisposable
                 first.CopyTo(buffer);
                 return first.Length;
             }
-            await Task.Delay(Timeout.Infinite, cancellationToken);
+            try
+            {
+                await Task.Delay(Timeout.Infinite, cancellationToken);
+            }
+            catch (OperationCanceledException ex) when (breaksOffOnCancel)
+            {
+                throw new IOException("The read was broken off.", ex);
+            }
             return 0;
         }
 

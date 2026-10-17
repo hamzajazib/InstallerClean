@@ -2476,6 +2476,14 @@ Run InstallerClean again as administrator.</value></data>
        ID 3005, the run's only entry, where the newer version is in place and Ctrl+C came
        before it started, so nothing ran. -->
   <data name="Cli.EventLogUpdatedThenCancelled" xml:space="preserve"><value>{0} mode: InstallerClean updated itself from {1} to {2}, then the run was cancelled, so nothing ran.</value></data>
+  <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version it could not
+       install. Event ID 3006, the run's only entry, where Ctrl+C came after the update
+       failed or was not tried, so nothing ran: the first where the download failed, the
+       second where putting it in place or starting it failed, the third where
+       InstallerClean was in use. -->
+  <data name="Cli.EventLogUpdateDownloadFailedThenCancelled" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (the download failed), then the run was cancelled, so nothing ran.</value></data>
+  <data name="Cli.EventLogUpdateInstallFailedThenCancelled" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (the install failed), then the run was cancelled, so nothing ran.</value></data>
+  <data name="Cli.EventLogUpdateInUseThenCancelled" xml:space="preserve"><value>{0} mode: InstallerClean could not update itself from {1} to {2} (InstallerClean was in use), then the run was cancelled, so nothing ran.</value></data>
   <!-- Stdout when the CLI cannot acquire the single-instance mutex.
        The GUI variant (Strings.Startup_AlreadyRunningBody) is written
        for a user who tried to launch a second window; the CLI variant
