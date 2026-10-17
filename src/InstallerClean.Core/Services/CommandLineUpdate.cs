@@ -462,7 +462,14 @@ internal sealed class CommandLineUpdate
             _host.ReleaseOwnFile();
             try
             {
-                putBack = isSetup ? SelfReplacement.MoveAside(exePath) : SelfReplacement.SwapIn(exePath);
+                putBack = isSetup ? SelfReplacement.MoveAside(exePath, token) : SelfReplacement.SwapIn(exePath, token);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                // Ctrl+C while the rename waited for another process to let go of this exe,
+                // which is still at its path. Run answers it as Cancelled.
+                prepared.Undo();
+                throw;
             }
             catch (Exception ex)
             {

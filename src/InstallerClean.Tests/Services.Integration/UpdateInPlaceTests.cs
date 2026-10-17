@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.InteropServices;
@@ -227,7 +228,11 @@ public sealed class UpdateInPlaceTests : IDisposable
         using (var held = SelfReplacement.HoldAgainstRenaming(exe))
         {
             Assert.NotNull(held);
-            Assert.Throws<UpdateFailedException>(() => SelfReplacement.MoveAside(exe));
+            var failure = Assert.Throws<UpdateFailedException>(() => SelfReplacement.MoveAside(exe));
+            // The Restart Manager answers, and its list leaves this process out.
+            var holders = Assert.IsType<FileHeldOpenException>(failure.InnerException).Message;
+            Assert.StartsWith("The Restart Manager names ", holders);
+            Assert.DoesNotContain($"(process {Environment.ProcessId}", holders);
             Assert.Equal(Program(1), File.ReadAllBytes(exe));
             Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
         }
@@ -235,6 +240,58 @@ public sealed class UpdateInPlaceTests : IDisposable
         SelfReplacement.MoveAside(exe);
 
         Assert.Equal(Program(1), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
+    }
+
+    [Fact]
+    public void A_file_let_go_while_the_rename_waits_is_moved_aside()
+    {
+        var exe = Path.Combine(_root, AppCopy.CommandLineFileName);
+        File.WriteAllBytes(exe, Program(1));
+        using var held = SelfReplacement.HoldAgainstRenaming(exe);
+        Assert.NotNull(held);
+        using var letGo = new Timer(_ => held.Dispose(), null, TimeSpan.FromMilliseconds(300), Timeout.InfiniteTimeSpan);
+
+        SelfReplacement.MoveAside(exe);
+
+        Assert.Equal(Program(1), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
+        Assert.False(File.Exists(exe));
+    }
+
+    [Fact]
+    public void Ctrl_C_while_the_rename_waits_ends_the_wait_with_nothing_moved()
+    {
+        var exe = Path.Combine(_root, AppCopy.CommandLineFileName);
+        File.WriteAllBytes(exe, Program(1));
+        using var held = SelfReplacement.HoldAgainstRenaming(exe);
+        Assert.NotNull(held);
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
+        var clock = Stopwatch.StartNew();
+
+        Assert.Throws<OperationCanceledException>(() => SelfReplacement.MoveAside(exe, cts.Token));
+
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(1.5), $"The wait took {clock.Elapsed}.");
+        Assert.Equal(Program(1), File.ReadAllBytes(exe));
+        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
+    }
+
+    [Fact]
+    public async Task Ctrl_C_does_not_end_the_wait_for_the_newer_version_once_this_exe_is_aside()
+    {
+        var exe = Path.Combine(_root, "InstallerClean.exe");
+        File.WriteAllBytes(exe, Program(1));
+        var staged = await StagedBesideAsync(exe, 2);
+        using var held = SelfReplacement.HoldAgainstRenaming(staged);
+        Assert.NotNull(held);
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
+        var clock = Stopwatch.StartNew();
+
+        var failure = Assert.Throws<UpdateFailedException>(() => SelfReplacement.SwapIn(exe, cts.Token));
+
+        Assert.True(clock.Elapsed >= TimeSpan.FromSeconds(1.5), $"The wait took {clock.Elapsed}.");
+        Assert.IsType<FileHeldOpenException>(failure.InnerException);
+        Assert.Equal(Program(1), File.ReadAllBytes(exe));
+        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
+        Assert.True(File.Exists(staged));
     }
 
     [Fact]

@@ -590,6 +590,28 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.True(_host.HoldsOwnFile);
     }
 
+    [Theory]
+    [InlineData(AppCopyKind.CommandLineDownload)]
+    [InlineData(AppCopyKind.Setup)]
+    public void Ctrl_C_while_the_rename_waits_for_this_exe_to_be_let_go_cancels_with_nothing_renamed(AppCopyKind kind)
+    {
+        // A handle that does not share delete, as another program holding the file has open.
+        using var held = File.Open(_exe, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var cts = new CancellationTokenSource();
+        _host.OnReleaseOwnFile = () => cts.CancelAfter(300);
+        var updater = kind == AppCopyKind.Setup ? Setup() : Download();
+
+        var result = Run(updater, canAsk: false, token: cts.Token);
+
+        Assert.IsType<CommandLineUpdateResult.Cancelled>(result);
+        Assert.True(updater.Undone);
+        Assert.Equal("old", File.ReadAllText(_exe));
+        Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
+        Assert.True(_host.HoldsOwnFile);
+        Assert.Null(_host.SetupRun);
+        Assert.Null(_host.NewerVersionRun);
+    }
+
     [Fact]
     public void The_rename_comes_with_the_mutex_held_and_this_runs_own_file_let_go()
     {

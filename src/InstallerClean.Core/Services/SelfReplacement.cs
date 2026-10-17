@@ -301,14 +301,18 @@ public static class SelfReplacement
     /// Renames the running exe aside and the file <see cref="StageAsync"/> wrote to the
     /// name it had, and answers with <see cref="PutBack"/> for it. Throws
     /// <see cref="UpdateFailedException"/> where either rename fails, having put back
-    /// what it had done. <see cref="PrepareToMoveAside"/> comes first.
+    /// what it had done. <see cref="PrepareToMoveAside"/> comes first. Ctrl+C on
+    /// <paramref name="token"/> ends the wait for the first rename, as in
+    /// <see cref="MoveAside"/>, and never the second: stopping between the two would leave
+    /// this exe renamed aside with nothing at its path.
     /// </summary>
-    public static Func<bool> SwapIn(string exePath)
+    public static Func<bool> SwapIn(string exePath, CancellationToken token = default)
     {
-        MoveAside(exePath);
+        MoveAside(exePath, token);
         try
         {
-            File.Move(exePath + NewSuffix, exePath);
+            var newPath = exePath + NewSuffix;
+            WaitOutHold(newPath, () => File.Move(newPath, exePath), CancellationToken.None);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -323,17 +327,20 @@ public static class SelfReplacement
     /// Renames the running exe to its own name with <see cref="OldSuffix"/> on the end,
     /// so the newer version can be written at its path, by <see cref="SwapIn"/> or by
     /// the setup, and answers with <see cref="PutBack"/> for it. Throws
-    /// <see cref="UpdateFailedException"/> where the rename fails, having changed
-    /// nothing. <see cref="PrepareToMoveAside"/> comes first.
+    /// <see cref="UpdateFailedException"/> where the rename fails, having deleted at most
+    /// a copy an earlier update left under that name.
+    /// <see cref="PrepareToMoveAside"/> comes first. Ctrl+C on <paramref name="token"/>
+    /// while it waits for a file another process holds open (<see cref="WaitOutHold"/>)
+    /// throws <see cref="OperationCanceledException"/>, with this exe at its path.
     /// </summary>
-    public static Func<bool> MoveAside(string exePath)
+    public static Func<bool> MoveAside(string exePath, CancellationToken token = default)
     {
         var oldPath = exePath + OldSuffix;
         try
         {
             // One left by an earlier update whose newer version could not delete it.
-            if (File.Exists(oldPath)) DeletePlainFile(oldPath);
-            File.Move(exePath, oldPath);
+            if (File.Exists(oldPath)) WaitOutHold(oldPath, () => DeleteIfPlainFile(oldPath), token);
+            WaitOutHold(exePath, () => File.Move(exePath, oldPath), token);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -356,11 +363,54 @@ public static class SelfReplacement
         var newPath = exePath + NewSuffix;
         if (File.Exists(exePath))
         {
-            if (File.Exists(newPath) && !TryDeletePlainFile(newPath)) return false;
+            if (!TryDeletePlainFile(newPath, waitOutHold: true)) return false;
             if (!TryRename(exePath, newPath)) return false;
         }
         return TryRename(oldPath, exePath);
     }
+
+    /// <summary>
+    /// Runs <paramref name="change"/>, a rename or delete of <paramref name="path"/>, and
+    /// runs it again every <see cref="HoldRetryInterval"/> while it fails with a sharing
+    /// violation, for up to <see cref="HoldWait"/>. An antivirus can hold a file it has
+    /// just seen written or started for a moment, and a sharing violation is what a
+    /// rename or delete meets then. Where the wait runs out, throws
+    /// <see cref="FileHeldOpenException"/>, naming what holds the file. Any other failure
+    /// is thrown at once. Ctrl+C on <paramref name="token"/> ends the wait with
+    /// <see cref="OperationCanceledException"/>; a change whose wait must not end early is
+    /// given <see cref="CancellationToken.None"/>.
+    /// </summary>
+    /// <remarks>
+    /// A rename of a file a run of the command line holds as its own meets a sharing
+    /// violation too, so the update that meets one waits the whole of
+    /// <see cref="HoldWait"/> before it says InstallerClean is in use. The window's
+    /// hand-over waits on the window's own thread, so each wait stays well short of the
+    /// five seconds or so after which Windows marks a window that has drawn nothing as not
+    /// responding.
+    /// </remarks>
+    private static void WaitOutHold(string path, Action change, CancellationToken token)
+    {
+        var started = Stopwatch.GetTimestamp();
+        while (true)
+        {
+            try
+            {
+                change();
+                return;
+            }
+            catch (IOException ex) when (WindowsErrors.Of(ex) == Kernel32.ERROR_SHARING_VIOLATION)
+            {
+                if (Stopwatch.GetElapsedTime(started) >= HoldWait) throw new FileHeldOpenException(path, ex);
+                // A token that cannot be cancelled has a handle that is never set.
+                if (token.WaitHandle.WaitOne(HoldRetryInterval)) token.ThrowIfCancellationRequested();
+            }
+        }
+    }
+
+    /// <summary>How long <see cref="WaitOutHold"/> goes on trying a change another process holds up.</summary>
+    private static readonly TimeSpan HoldWait = TimeSpan.FromSeconds(2);
+
+    private static readonly TimeSpan HoldRetryInterval = TimeSpan.FromMilliseconds(100);
 
     /// <summary>
     /// The window's hand-over to the newer version a copy that replaces its own file has
@@ -440,17 +490,33 @@ public static class SelfReplacement
     public static bool TryRemoveOldCopy(string exePath) =>
         TryDeletePlainFile(exePath + OldSuffix) & TryDeletePlainFile(exePath + NewSuffix);
 
-    private static bool TryDeletePlainFile(string path)
+    /// <summary>
+    /// Deletes <paramref name="path"/> where it is a plain file, and answers whether
+    /// nothing is left there. With <paramref name="waitOutHold"/>, waits for another
+    /// process holding the file open, as <see cref="WaitOutHold"/> does.
+    /// </summary>
+    private static bool TryDeletePlainFile(string path, bool waitOutHold = false)
     {
         try
         {
-            if (File.Exists(path)) DeletePlainFile(path);
+            if (!File.Exists(path)) return true;
+            if (waitOutHold) WaitOutHold(path, () => DeleteIfPlainFile(path), CancellationToken.None);
+            else DeletePlainFile(path);
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// <see cref="DeletePlainFile"/> where anything is still at <paramref name="path"/>,
+    /// so a file that goes while <see cref="WaitOutHold"/> waits is not a failure.
+    /// </summary>
+    private static void DeleteIfPlainFile(string path)
+    {
+        if (File.Exists(path)) DeletePlainFile(path);
     }
 
     /// <summary>
@@ -464,11 +530,16 @@ public static class SelfReplacement
         File.Delete(path);
     }
 
+    /// <summary>
+    /// Renames <paramref name="from"/> to <paramref name="to"/>, waiting for another
+    /// process holding it open as <see cref="WaitOutHold"/> does, and answers whether it
+    /// did. A failure is written to crash.log. Never throws.
+    /// </summary>
     private static bool TryRename(string from, string to)
     {
         try
         {
-            File.Move(from, to);
+            WaitOutHold(from, () => File.Move(from, to), CancellationToken.None);
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

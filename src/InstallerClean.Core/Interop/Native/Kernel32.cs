@@ -688,6 +688,10 @@ internal static partial class Kernel32
     // "No media in drive", in Microsoft's list of system error codes.
     public const int ERROR_NO_MEDIA_IN_DRIVE = 1112;
 
+    // What a rename or delete answers where another process has the file open without
+    // sharing delete.
+    public const int ERROR_SHARING_VIOLATION = 32;
+
     // The two the volume enumeration and the mount-point query answer with, and
     // both are ordinary rather than faults: ERROR_NO_MORE_FILES ends a volume
     // walk, and ERROR_MORE_DATA is the first half of the double-call buffer
