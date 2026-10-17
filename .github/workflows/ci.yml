@@ -592,20 +592,60 @@ jobs:
       # window reads to decide this PC has run InstallerClean before, and with it set
       # no report is offered or saved. The hosts entry stops anything reaching the
       # receiver even so.
+      #
+      # The name is resolved before the entry is written and has to come back with a
+      # real address, so the check after it is reading a resolver that answers. With
+      # the entry in place the lookup passes where it returns no address other than
+      # 0.0.0.0 and ::, or none at all, including as the HostNotFound or NoData that
+      # GetHostAddresses throws for a name with no address. Any other address, or any
+      # other error, fails the step.
       - name: Keep the windows from sending a report
         shell: pwsh
         run: |
           New-Item -Path 'HKLM:\SOFTWARE\NoFaff\InstallerClean' -Force | Out-Null
           New-ItemProperty -Path 'HKLM:\SOFTWARE\NoFaff\InstallerClean' -Name FirstRunRecorded -PropertyType DWord -Value 1 -Force | Out-Null
-          $hosts = Join-Path $env:SystemRoot 'System32\drivers\etc\hosts'
-          Add-Content -Path $hosts -Value "`r`n0.0.0.0 nofaff.netlify.app`r`n:: nofaff.netlify.app"
-          ipconfig /flushdns | Out-Null
           $mark = (Get-ItemProperty 'HKLM:\SOFTWARE\NoFaff\InstallerClean').FirstRunRecorded
           if ($mark -ne 1) { throw "The first-run mark was not set." }
-          $resolved = @([System.Net.Dns]::GetHostAddresses('nofaff.netlify.app') | ForEach-Object { $_.ToString() })
-          $elsewhere = @($resolved | Where-Object { $_ -notin '0.0.0.0', '::' })
-          if ($resolved.Count -eq 0 -or $elsewhere.Count) { throw "nofaff.netlify.app resolves to $($resolved -join ', '), not only to nowhere." }
-          "  first-run mark set; nofaff.netlify.app resolves to $($resolved -join ', ')"
+
+          $receiver = 'nofaff.netlify.app'
+          $nowhere = '0.0.0.0', '::'
+          try {
+            $before = @([System.Net.Dns]::GetHostAddresses($receiver) | ForEach-Object { $_.ToString() })
+          }
+          catch {
+            throw "The lookup of $receiver before the hosts entry is written failed: $($_.Exception.Message)"
+          }
+          if (-not @($before | Where-Object { $_ -notin $nowhere }).Count) {
+            throw "$receiver resolves to $(if ($before.Count) { $before -join ', ' } else { 'no address' }) before the hosts entry is written."
+          }
+
+          $hosts = Join-Path $env:SystemRoot 'System32\drivers\etc\hosts'
+          $entries = $nowhere | ForEach-Object { "$_ $receiver" }
+          Add-Content -Path $hosts -Value ("`r`n" + ($entries -join "`r`n"))
+          $written = @(Get-Content $hosts)
+          foreach ($entry in $entries) {
+            if ($written -notcontains $entry) { throw "The hosts file does not hold '$entry'." }
+          }
+          ipconfig /flushdns | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "ipconfig /flushdns failed with $LASTEXITCODE, so the lookup below could read $receiver's address from before the hosts entry." }
+
+          $lookupError = $null
+          try {
+            $after = @([System.Net.Dns]::GetHostAddresses($receiver) | ForEach-Object { $_.ToString() })
+          }
+          catch {
+            $lookupError = $_.Exception
+            while ($lookupError -and $lookupError -isnot [System.Net.Sockets.SocketException]) { $lookupError = $lookupError.InnerException }
+            if (-not $lookupError) { throw "The lookup of $receiver with the hosts entry in place failed: $($_.Exception.Message)" }
+            if ($lookupError.SocketErrorCode -notin 'HostNotFound', 'NoData') {
+              throw "The lookup of $receiver with the hosts entry in place did not finish: $($lookupError.SocketErrorCode)."
+            }
+            $after = @()
+          }
+          $elsewhere = @($after | Where-Object { $_ -notin $nowhere })
+          if ($elsewhere.Count) { throw "$receiver still resolves to $($elsewhere -join ', ') with the hosts entry in place." }
+          $answer = if ($after.Count) { $after -join ', ' } elseif ($lookupError) { "no address ($($lookupError.SocketErrorCode))" } else { 'no address' }
+          "  first-run mark set; $receiver resolved to $($before -join ', ') before the hosts entry and to $answer after it"
 
       - name: Start Process Monitor
         shell: pwsh
