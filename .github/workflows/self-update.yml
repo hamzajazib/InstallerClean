@@ -1,0 +1,297 @@
+# Updates the command line from a build of the pushed commit to the current
+# release, on a Windows runner, the way a copy on somebody's machine updates
+# itself.
+#
+# The command line is published from the commit with release.yml's flags and an
+# older version number than the current release, then run with /s and its input
+# and output redirected, which is how a scheduled task or a script runs it: it
+# updates without asking, and the newer version runs the command as given. One leg
+# runs it as the command line's own download, from a folder of its own; the other
+# installs a setup built the same way and runs the copy the setup put in Program
+# Files. Each leg has a runner to itself, so neither route's files, registry or
+# Application-log entries can answer for the other's.
+#
+# What this covers is the half of an update the pushed code does: finding the
+# newer version, downloading it, putting it at the running copy's path and
+# handing over to it. The newer version is whichever release is current.
+#
+# The builds are single-file Release builds, as shipped, and have to stay so.
+# Once the running exe has been renamed aside, a single-file build can load no
+# assembly it has not loaded already. A build from source loads its assemblies
+# from loose files beside the exe, so a load after the rename would succeed there
+# and this workflow would pass over code the shipped build cannot run.
+#
+# It runs apart from ci.yml because it reaches GitHub for the release. A run that
+# cannot reach GitHub fails here, with the command line's own output saying
+# nothing was tried, and never reads as a pass.
+
+name: Self-update
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Read-only. The one call that needs the token reads the current release.
+permissions:
+  contents: read
+
+env:
+  # Below the current release, so the build finds a newer version to update to.
+  OLD_VERSION: '3.3.0'
+
+jobs:
+  update:
+    name: Update ${{ matrix.route == 'setup' && 'the setup''s copy' || 'the command line''s own download' }}
+    # The same image as ci.yml and release.yml.
+    runs-on: windows-2025
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        route: [download, setup]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      # Read here through GitHub's API, apart from the app, which reads where
+      # github.com's releases/latest page redirects to. The checks below compare
+      # what the app installed against this.
+      - name: Read the current release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = gh release view --repo $env:GITHUB_REPOSITORY --json tagName --jq .tagName
+          if ($LASTEXITCODE -ne 0 -or -not $tag) { throw "Could not read the current release." }
+          $latest = $tag.Trim() -replace '^v', ''
+          if (-not ($latest -as [version])) { throw "The current release's tag '$tag' is not a version." }
+          if ([version]$latest -le [version]$env:OLD_VERSION) {
+            throw "The current release, $latest, is not newer than $env:OLD_VERSION, so there is nothing to update to."
+          }
+          "  The current release is $latest; the build is numbered $env:OLD_VERSION."
+          "LATEST=$latest" | Add-Content $env:GITHUB_ENV
+
+      - name: Publish the command line at the older version
+        run: dotnet publish src/InstallerClean.Cli/InstallerClean.Cli.csproj -c Release -r win-x64 --self-contained true -p:RestoreLockedMode=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:Version=${{ env.OLD_VERSION }} --nologo -o publish/cli
+
+      - name: Publish the portable GUI at the older version
+        if: matrix.route == 'setup'
+        run: dotnet publish src/InstallerClean/InstallerClean.csproj -c Release -r win-x64 --self-contained true -p:RestoreLockedMode=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:Version=${{ env.OLD_VERSION }} --nologo -o publish/self-contained
+
+      - name: Install Inno Setup
+        if: matrix.route == 'setup'
+        run: choco install innosetup --version=6.7.1 --no-progress -y
+
+      - name: Compile the setup at the older version
+        if: matrix.route == 'setup'
+        run: |
+          $iscc = Get-ChildItem "${env:ProgramFiles(x86)}" -Filter ISCC.exe -Recurse -Depth 1 -ErrorAction SilentlyContinue |
+                  Select-Object -First 1 -ExpandProperty FullName
+          if (-not $iscc) { throw "ISCC.exe not found under ${env:ProgramFiles(x86)} after installing Inno Setup." }
+          & $iscc "/DAppVersion=$env:OLD_VERSION" installer\InstallerClean.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed" }
+
+      # The setup's copy is recognised by the folder the setup records in its
+      # uninstall key, so the path is read from there rather than assumed. A window
+      # left running would hold the single-instance mutex, which the newer setup
+      # stops for, so the step fails on one rather than letting the update fail
+      # for a reason that is not the code.
+      - name: Put the older version in place
+        shell: pwsh
+        run: |
+          if ('${{ matrix.route }}' -eq 'setup') {
+            $setup = (Resolve-Path "publish/InstallerClean-$env:OLD_VERSION-setup.exe").Path
+            $log = Join-Path $env:RUNNER_TEMP 'setup-install.log'
+            $p = Start-Process -FilePath $setup -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', "/LOG=`"$log`"" -Wait -PassThru
+            if ($p.ExitCode -ne 0) { throw "The setup exited with code $($p.ExitCode)." }
+            $key = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\InstallerClean_is1' -ErrorAction Stop
+            $folder = $key.InstallLocation.TrimEnd('\')
+            if (Get-Process InstallerClean -ErrorAction SilentlyContinue) { throw "InstallerClean is running after the silent install." }
+          } else {
+            $folder = Join-Path $env:RUNNER_TEMP 'download'
+            New-Item -ItemType Directory -Force -Path $folder | Out-Null
+            Copy-Item publish/cli/installerclean-cli.exe $folder
+          }
+          $exe = Join-Path $folder 'installerclean-cli.exe'
+          $files = @($exe)
+          if ('${{ matrix.route }}' -eq 'setup') { $files += Join-Path $folder 'InstallerClean.exe' }
+          foreach ($f in $files) {
+            $v = (Get-Item $f).VersionInfo.FileVersion
+            "  $f carries $v"
+            if (-not $v.StartsWith("$env:OLD_VERSION.")) { throw "$f carries $v, not $env:OLD_VERSION." }
+          }
+          "EXE=$exe" | Add-Content $env:GITHUB_ENV
+
+      # Every check runs and prints what it read, and the step fails if any of
+      # them did. The lines the command line prints are built from Strings.resx,
+      # so a reworded string moves the check with it. The runner's UI language
+      # has no satellite, so the command line prints the neutral English.
+      #
+      # The crash log is not required to be empty: a scan writes entries of its
+      # own for registrations it cannot read, on any machine. What fails is an
+      # entry for an assembly that could not be loaded or for an update that
+      # failed.
+      #
+      # The permissions are compared with a file the same account makes in the
+      # same folder. On the command line's own download that file is the
+      # update's own work, written into the folder; on the setup's copy the setup
+      # writes it, so there the check reads what the setup leaves.
+      - name: Update and check the result
+        shell: pwsh
+        run: |
+          $failures = [System.Collections.Generic.List[string]]::new()
+          function Fail([string]$message) { $failures.Add($message); Write-Host "::error::$message" }
+          function Same($a, $b) {
+            $a = $a -as [version]; $b = $b -as [version]
+            $null -ne $a -and $null -ne $b -and
+              $a.Major -eq $b.Major -and $a.Minor -eq $b.Minor -and [Math]::Max($a.Build, 0) -eq [Math]::Max($b.Build, 0)
+          }
+
+          # Standard input and output both redirected, which is what makes the
+          # run one nobody can answer. The newer version is started in the same
+          # console and inherits the output, so it is read to the end of both.
+          function Run([string]$exe) {
+            $info = [System.Diagnostics.ProcessStartInfo]::new($exe, '/s')
+            $info.UseShellExecute = $false
+            $info.RedirectStandardInput = $true
+            $info.RedirectStandardOutput = $true
+            $info.RedirectStandardError = $true
+            $p = [System.Diagnostics.Process]::Start($info)
+            $p.StandardInput.Close()
+            $out = $p.StandardOutput.ReadToEndAsync()
+            $err = $p.StandardError.ReadToEndAsync()
+            $p.WaitForExit()
+            [pscustomobject]@{ ExitCode = $p.ExitCode; Output = $out.Result + $err.Result }
+          }
+
+          $resx = [xml](Get-Content -Raw src/InstallerClean.Core/Resources/Strings.resx)
+          function Line([string]$name) {
+            $value = ($resx.root.data | Where-Object name -eq $name).value
+            if (-not $value) { throw "Strings.resx has no $name." }
+            $value
+          }
+
+          $exe = $env:EXE
+          $folder = Split-Path $exe
+          $old = $env:OLD_VERSION
+          $latest = $env:LATEST
+
+          Write-Host "::group::The update run"
+          $run = Run $exe
+          $run.Output
+          "Exit code: $($run.ExitCode)"
+          Write-Host "::endgroup::"
+
+          "The command line's output:"
+          foreach ($expected in @(
+              ((Line 'UpdateNotice.Available') -f $latest),
+              ((Line 'UpdateNotice.Downloading') -f $latest),
+              ((Line 'Cli.UpdateInstalled') -f $latest))) {
+            if ($run.Output.Contains($expected)) { "  printed: $expected" } else { Fail "It did not print: $expected" }
+          }
+          foreach ($unexpected in @(
+              (Line 'UpdateNotice.DownloadFailed'),
+              (Line 'UpdateNotice.InstallFailed'),
+              ((Line 'Cli.UpdateRunningInstead') -f '/s', $old),
+              ((Line 'Cli.UpdateNotStarted') -f $latest))) {
+            if ($run.Output.Contains($unexpected)) { Fail "It printed: $unexpected" } else { "  did not print: $unexpected" }
+          }
+
+          "The files:"
+          $files = @($exe)
+          if ('${{ matrix.route }}' -eq 'setup') { $files += Join-Path $folder 'InstallerClean.exe' }
+          foreach ($f in $files) {
+            $v = (Get-Item $f).VersionInfo.FileVersion
+            if (Same $v $latest) { "  $f carries $v" } else { Fail "$f carries $v, not $latest." }
+          }
+          if ('${{ matrix.route }}' -eq 'setup') {
+            $shown = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\InstallerClean_is1').DisplayVersion
+            if (Same $shown $latest) { "  the uninstall key's DisplayVersion is $shown" } else { Fail "The uninstall key's DisplayVersion is $shown, not $latest." }
+          }
+          if (Test-Path "$exe.new") { Fail "$exe.new is still there." } else { "  no $exe.new" }
+          $staged = @(Get-ChildItem $env:ProgramData -Directory -Filter 'InstallerClean-update-*' -ErrorAction SilentlyContinue)
+          if ($staged) { Fail "Download folders are left under ${env:ProgramData}: $($staged.Name -join ', ')" } else { "  no download folder under $env:ProgramData" }
+
+          "The permissions:"
+          $control = Join-Path $folder 'permissions-control.tmp'
+          Set-Content -Path $control -Value ''
+          $made = (Get-Acl $control).GetSecurityDescriptorSddlForm('Access')
+          Remove-Item $control
+          $updated = (Get-Acl $exe).GetSecurityDescriptorSddlForm('Access')
+          "  a file made in the folder: $made"
+          "  the updated file:          $updated"
+          if ($updated -ne $made) { Fail "$exe does not have the permissions a file made in its folder has." }
+
+          "The Application log, source InstallerClean:"
+          $events = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'InstallerClean' } -ErrorAction SilentlyContinue |
+                      Sort-Object TimeCreated)
+          foreach ($e in $events) { "  $($e.Id)  $($e.Message)" }
+          $notices = @($events | Where-Object Id -eq 3005)
+          $failed = @($events | Where-Object Id -eq 3006)
+          $summaries = @($events | Where-Object { $_.Id -in 1000, 1002, 2000, 4000 })
+          if ($notices.Count -ne 1) {
+            $unavailable = $run.Output.Contains((Line 'Cli.EventLogUnavailable'))
+            Fail "$($notices.Count) entries with Event ID 3005, where one was expected$(if ($unavailable) { '; the run printed that the Application log refused its entries' })."
+          } elseif ($notices[0].Message -notlike "*from $old to $latest *") {
+            Fail "The 3005 entry does not name the update from $old to $latest."
+          }
+          if ($failed) { Fail "$($failed.Count) entries with Event ID 3006." }
+          if ($summaries.Count -ne 1) { Fail "$($summaries.Count) run summaries, where the newer version's was expected alone." }
+          elseif ($summaries[0].Id -eq 4000) { Fail "The newer version's run ended in a hard error (4000)." }
+
+          "The crash log:"
+          $logs = @(
+            (Join-Path $env:LOCALAPPDATA 'InstallerClean\crash.log'),
+            (Join-Path $env:LOCALAPPDATA 'NoFaff\InstallerClean\crash.log'))
+          foreach ($log in $logs) {
+            if (-not (Test-Path $log)) { "  no $log"; continue }
+            "  $log holds:"
+            Get-Content $log | ForEach-Object { "    $_" }
+            foreach ($pattern in 'Could not load file or assembly', 'UpdateFailedException') {
+              $hits = @(Select-String -Path $log -SimpleMatch $pattern)
+              foreach ($h in $hits) { Fail "$log line $($h.LineNumber): $($h.Line.Trim())" }
+            }
+          }
+
+          "The exit code:"
+          Write-Host "::group::A second run of the file now at the path"
+          $again = Run $exe
+          $again.Output
+          "Exit code: $($again.ExitCode)"
+          Write-Host "::endgroup::"
+          "  the update run exited with $($run.ExitCode), the second run with $($again.ExitCode)"
+          if ($run.ExitCode -ne 0) { Fail "The update run exited with $($run.ExitCode)." }
+          if ($run.ExitCode -ne $again.ExitCode) { Fail "The update run's exit code is not the newer version's own." }
+
+          if ($failures.Count -gt 0) {
+            "$($failures.Count) checks failed:"
+            $failures | ForEach-Object { "  $_" }
+            exit 1
+          }
+          'Every check passed.'
+
+      # The step above prints all of this itself, unless it stopped before its
+      # end.
+      - name: Print the crash log and the Application log
+        if: failure()
+        shell: pwsh
+        run: |
+          foreach ($log in (Join-Path $env:LOCALAPPDATA 'InstallerClean\crash.log'), (Join-Path $env:LOCALAPPDATA 'NoFaff\InstallerClean\crash.log')) {
+            if (Test-Path $log) { "$log holds:"; Get-Content $log } else { "No $log." }
+          }
+          Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'InstallerClean' } -ErrorAction SilentlyContinue |
+            Sort-Object TimeCreated | ForEach-Object { "$($_.Id)  $($_.Message)" }
+
+      - name: Print the setup's log
+        if: always() && matrix.route == 'setup'
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP 'setup-install.log'
+          if (Test-Path $log) { Get-Content $log } else { "No $log." }
