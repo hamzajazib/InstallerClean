@@ -488,13 +488,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Found {0} unneeded {1} to clean up ({2}). | 정리할 불필요한 {1} {0}개를 찾았습니다 ({2}). |
 | Found no unneeded files. | 불필요한 파일을 찾지 못했습니다. |
 | InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back the one file ({2}) rather than offering it. | InstallerClean이 캐시에 있는 어떤 파일이 여기 설치된 프로그램에 속하는지 확실히 알 수 없어서, 파일 하나({2})를 제시하지 않고 보류했습니다. |
-| InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back all {0} {1} ({2}) rather than offering them. | InstallerClean이 캐시에 있는 어떤 파일이 여기 설치된 프로그램에 속하는지 확실히 알 수 없어서, {1} {0}개({2}) 전부를 제시하지 않고 보류했습니다. |
-| InstallerClean couldn't establish that the cached file it found is unneeded, so it has held back the one file ({2}) rather than offering it. | InstallerClean이 찾은 캐시 파일이 필요 없다는 것을 확인하지 못해서, 그 파일 하나({2})를 제시하지 않고 보류했습니다. |
-| InstallerClean couldn't establish that any of the cached files it found are unneeded, so it has held back all {0} {1} ({2}) rather than offering them. | InstallerClean이 찾은 캐시 파일 중 어느 것도 필요 없다는 것을 확인하지 못해서, {1} {0}개({2}) 전부를 제시하지 않고 보류했습니다. |
+| InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back {0} {1} ({2}) rather than offering them. | InstallerClean이 캐시에 있는 어떤 파일이 여기 설치된 프로그램에 속하는지 확실히 알 수 없어서, {1} {0}개({2})를 제시하지 않고 보류했습니다. |
+| InstallerClean couldn't establish that one file is unneeded, so it has held it back ({2}) rather than offering it. | InstallerClean이 파일 하나가 필요 없다는 것을 확인하지 못해서, 그 파일({2})을 제시하지 않고 보류했습니다. |
+| InstallerClean couldn't establish that {0} {1} are unneeded, so it has held them back ({2}) rather than offering them. | InstallerClean이 {1} {0}개가 필요 없다는 것을 확인하지 못해서, 그 파일들({2})을 제시하지 않고 보류했습니다. |
 | InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back the one file ({2}) rather than offering it. | InstallerClean이 캐시에 있는 어떤 파일이 여기 설치된 프로그램에 속하는지 확실히 알 수 없어서, 파일 하나({2})를 제시하지 않고 보류했습니다. |
 | InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back {0} {1} ({2}) rather than offering them. | InstallerClean이 캐시에 있는 어떤 파일이 여기 설치된 프로그램에 속하는지 확실히 알 수 없어서, {1} {0}개({2})를 제시하지 않고 보류했습니다. |
-| InstallerClean couldn't be certain about one of the cached files it found, so it has held that one back ({2}) rather than offering it. | InstallerClean이 찾은 캐시 파일 중 하나에 대해 확신할 수 없어서, 그 파일({2})을 제시하지 않고 보류했습니다. |
-| InstallerClean couldn't be certain about some of the cached files it found, so it has held back {0} {1} ({2}) rather than offering them. | InstallerClean이 찾은 캐시 파일 중 일부에 대해 확신할 수 없어서, {1} {0}개({2})를 제시하지 않고 보류했습니다. |
+| InstallerClean couldn't establish that one file is unneeded, so it has held it back ({2}) rather than offering it. | InstallerClean이 파일 하나가 필요 없다는 것을 확인하지 못해서, 그 파일({2})을 제시하지 않고 보류했습니다. |
+| InstallerClean couldn't establish that {0} {1} are unneeded, so it has held them back ({2}) rather than offering them. | InstallerClean이 {1} {0}개가 필요 없다는 것을 확인하지 못해서, 그 파일들({2})을 제시하지 않고 보류했습니다. |
 | Why it couldn't be certain: | 확신할 수 없었던 이유: |
 |   A file path in Windows Installer's own records wouldn't resolve, so nothing could be matched to it. |   Windows Installer 자체 기록에 있는 파일 경로를 확인할 수 없어서, 그 경로에 아무것도 대조할 수 없었습니다. |
 |   A file Windows has a record of couldn't be identified, so it couldn't be matched to what's in the folder. |   Windows에 기록이 있는 파일 하나의 신원을 확인할 수 없어서, 폴더에 있는 것과 대조할 수 없었습니다. |

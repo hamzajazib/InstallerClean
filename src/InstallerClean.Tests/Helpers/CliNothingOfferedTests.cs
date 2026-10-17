@@ -53,13 +53,13 @@ public class CliNothingOfferedTests
             census: ProductNobodyCouldAsk));
 
         Assert.Equal(CliExitCode.Ok, exit);
-        Assert.Contains(Expected(Strings.Cli_NothingOffered_Plural, 2), stdout, StringComparison.Ordinal);
         Assert.DoesNotContain(Strings.Cli_FoundNoOrphans, stdout, StringComparison.Ordinal);
-        // AND NOT THE LISTED LEAD, which is for a machine offered something beside the
-        // withheld half and is gated on the offer having anything in it. This machine
-        // was offered nothing, so printing it here would put two sentences about one
-        // folder on screen, the second describing a run the first says did not happen.
-        Assert.DoesNotContain(Expected(Strings.Cli_NothingListed_Plural, 2), stdout, StringComparison.Ordinal);
+        // ONCE, AND NOT AGAIN AS THE LISTED LEAD, which is for a machine offered something
+        // beside the withheld half and is gated on the offer having anything in it. The
+        // two read alike, so a count is what tells them apart: this machine was offered
+        // nothing, and the lead printed here as well would put the sentence on screen
+        // twice.
+        Assert.Equal(1, Occurrences(stdout, Expected(Strings.Cli_NothingOffered_Plural, 2)));
     }
 
     [Fact]
@@ -121,16 +121,15 @@ public class CliNothingOfferedTests
             split: new WithholdingSplit(DeclaredProductUnestablishedCount: 2)));
 
         Assert.Equal(CliExitCode.Ok, exit);
-        Assert.Contains(Expected(Strings.Cli_NothingOfferedPerFile_Plural, 2), stdout, StringComparison.Ordinal);
         Assert.DoesNotContain(Strings.Cli_FoundNoOrphans, stdout, StringComparison.Ordinal);
         // Named rather than merely different from the clean line: the wholesale
         // sentence is also different from it, and is false of this machine.
         Assert.DoesNotContain(Expected(Strings.Cli_NothingOffered_Plural, 2), stdout, StringComparison.Ordinal);
-        // AND NOT THE LISTED LEAD, on its own branch. The wholesale fixture asserts the
-        // same thing about the other one, and the guard has two branches to widen: one
-        // that lets the lead onto every machine and one that lets it onto per-file
-        // machines alone. Each fixture holds the branch its own machine takes.
-        Assert.DoesNotContain(Expected(Strings.Cli_NothingListedPerFile_Plural, 2), stdout, StringComparison.Ordinal);
+        // ONCE, AND NOT AGAIN AS THE LISTED LEAD, on its own branch. The wholesale fixture
+        // asserts the same thing about the other one, and the guard has two branches to
+        // widen: one that lets the lead onto every machine and one that lets it onto
+        // per-file machines alone. Each fixture holds the branch its own machine takes.
+        Assert.Equal(1, Occurrences(stdout, Expected(Strings.Cli_NothingOfferedPerFile_Plural, 2)));
     }
 
     [Fact]
@@ -454,13 +453,13 @@ public class CliNothingOfferedTests
     public async Task The_one_form_names_the_size_and_never_the_numeral()
     {
         // A count of one is reachable, being a folder holding a single unclaimed file,
-        // and the plural form renders "held back all 1 files" for it.
+        // and the plural form renders "1 file are unneeded" for it.
         var (_, stdout) = await Run(Scan(
             withheld: 1,
             split: new WithholdingSplit(DeclaredProductUnestablishedCount: 1)));
 
         Assert.Contains(Expected(Strings.Cli_NothingOfferedPerFile_Singular, 1), stdout, StringComparison.Ordinal);
-        Assert.DoesNotContain("1 files", stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain(Expected(Strings.Cli_NothingOfferedPerFile_Plural, 1), stdout, StringComparison.Ordinal);
     }
 
     // ---- fixtures ----

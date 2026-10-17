@@ -1722,16 +1722,16 @@ Esegui di nuovo InstallerClean come amministratore.</value></data>
        held-back files reach no list at all, the command line carrying their count
        and not their names.
 
-       A PAIR AND NOT A FLAT KEY. A flat key here reads "held back all 1 file" at a
-       count of one, which is what the two forms exist to avoid. The one-form names
-       the size and not the numeral, so it spends {2} and leaves {0} and {1} unused;
-       all three are passed on either branch so the two forms cannot disagree about
-       which index is which. SO THIS PAIR'S {N} SETS DIFFER, and that is deliberate
-       rather than a dropped placeholder. The arity check compares each key against
-       its own satellite and never against its sibling, so it is legal. A language
-       that does want the numeral in its one-form adds a satellite-only
-       Cli.NothingOffered.One override, whose arity is checked against the .Plural and
-       may therefore carry {0}.
+       A PAIR AND NOT A FLAT KEY. A flat key here reads "held back 1 file (3.6 MB)
+       rather than offering them" at a count of one, which is what the two forms exist
+       to avoid. The one-form says "the one file" and names the size and not the
+       numeral, so it spends {2} and leaves {0} and {1} unused; all three are passed
+       on either branch so the two forms cannot disagree about which index is which.
+       SO THIS PAIR'S {N} SETS DIFFER, and that is deliberate rather than a dropped
+       placeholder. The arity check compares each key against its own satellite and
+       never against its sibling, so it is legal. A language that does want the
+       numeral in its one-form adds a satellite-only Cli.NothingOffered.One override,
+       whose arity is checked against the .Plural and may therefore carry {0}.
 
        THE NOUN IS A SLOT AND NOT A WORD IN THE SENTENCE, because a noun spelled into
        the value cannot follow the numeral standing in front of it. Russian and
@@ -1755,26 +1755,31 @@ Esegui di nuovo InstallerClean come amministratore.</value></data>
        adds no fact: it has the app arguing against a conclusion the reader has not
        reached. -->
   <data name="Cli.NothingOffered.Singular" xml:space="preserve"><value>InstallerClean non è riuscito a stabilire con certezza quali file nella cache appartengono ai programmi installati qui, perciò ha trattenuto l'unico file ({2}) invece di proporlo.</value></data>
-  <data name="Cli.NothingOffered.Plural" xml:space="preserve"><value>InstallerClean non è riuscito a stabilire con certezza quali file nella cache appartengono ai programmi installati qui, perciò ha trattenuto tutti i {0} {1} ({2}) invece di proporli.</value></data>
+  <data name="Cli.NothingOffered.Plural" xml:space="preserve"><value>InstallerClean non è riuscito a stabilire con certezza quali file nella cache appartengono ai programmi installati qui, perciò ha trattenuto {0} {1} ({2}) invece di proporli.</value></data>
   <!-- The per-file form of the outcome above, for the machine whose offer came out
        empty because every candidate was judged and kept back on its own, rather than
        because a finding about the records emptied the whole walk at once. The pair
        above names that finding, which is false of a file kept back on its own, so
-       this pair states only what holds of all of them.
+       this pair states only what holds of all of them: the app could not establish
+       that they are unneeded.
 
        0 = files held back, 1 = pluralised "file"/"files", 2 = their size, exactly as
        above, and both forms are passed all three so the two cannot disagree about
-       which index is which. "All {0} {1}" and "any of the cached files" because
-       nothing was offered on this run; Cli.NothingListedPerFile drops the "all" and
-       says "some" for the machine that was offered something. -->
-  <data name="Cli.NothingOfferedPerFile.Singular" xml:space="preserve"><value>InstallerClean non è riuscito ad accertare che il file nella cache che ha trovato non sia necessario, perciò ha trattenuto quell'unico file ({2}) invece di proporlo.</value></data>
-  <data name="Cli.NothingOfferedPerFile.Plural" xml:space="preserve"><value>InstallerClean non è riuscito ad accertare di nessuno dei file nella cache che ha trovato che non sia necessario, perciò ha trattenuto tutti i {0} {1} ({2}) invece di proporli.</value></data>
+       which index is which. The one-form says "one file" and names the size and not
+       the numeral, as the pair above does.
+
+       THE ENGLISH PLURAL MAKES THE COUNT THE SUBJECT OF "are unneeded". A language
+       whose verb or adjective agrees with the numeral, and so changes between 2, 5
+       and 21, or whose clause there wants a case Plural.File does not supply, makes
+       the count the object of the holding back instead, as its Cli.NothingOffered
+       does. Polish, Russian, Ukrainian and Turkish are worded that way. -->
+  <data name="Cli.NothingOfferedPerFile.Singular" xml:space="preserve"><value>InstallerClean non è riuscito ad accertare che un file non sia necessario, perciò lo ha trattenuto ({2}) invece di proporlo.</value></data>
+  <data name="Cli.NothingOfferedPerFile.Plural" xml:space="preserve"><value>InstallerClean non è riuscito ad accertare che {0} {1} non siano necessari, perciò li ha trattenuti ({2}) invece di proporli.</value></data>
   <!-- For the machine whose walk-derived half was withheld wholesale while a
        superseded patch was still offered: that run takes the found-files branch, so
        Cli.NothingOffered is not printed and this line is where stdout states the
-       withholding. It opens on Cli.NothingOffered's clause and gives the size as that
-       sentence does, and it has no "all" because something was offered beside these
-       files. The one-form names the size and not the numeral, so it spends {2} and
+       withholding. It is the same sentence as Cli.NothingOffered, and the two move
+       together. The one-form names the size and not the numeral, so it spends {2} and
        leaves {0} and {1} unused; both are passed on either branch so the two forms
        cannot disagree about which index is which. -->
   <data name="Cli.NothingListed.Singular" xml:space="preserve"><value>InstallerClean non è riuscito a stabilire con certezza quali file nella cache appartengono ai programmi installati qui, perciò ha trattenuto l'unico file ({2}) invece di proporlo.</value></data>
@@ -1783,14 +1788,12 @@ Esegui di nuovo InstallerClean come amministratore.</value></data>
        while still offering something, so the sentence names no cause that could be
        false of any file it counts.
 
-       "Some" and no "all", because this machine was offered something, where
-       Cli.NothingOfferedPerFile says "all" and "any" for the machine that was offered
-       nothing. There is no third variation and none may be added. The one-form names
-       the size and not the numeral, so it spends {2} and leaves {0} and {1} unused;
-       both are passed on either branch so the two forms cannot disagree about which
-       index is which. -->
-  <data name="Cli.NothingListedPerFile.Singular" xml:space="preserve"><value>InstallerClean non ha avuto la certezza su uno dei file nella cache che ha trovato, perciò ha trattenuto quello ({2}) invece di proporlo.</value></data>
-  <data name="Cli.NothingListedPerFile.Plural" xml:space="preserve"><value>InstallerClean non ha avuto la certezza su alcuni dei file nella cache che ha trovato, perciò ha trattenuto {0} {1} ({2}) invece di proporli.</value></data>
+       It is the same sentence as Cli.NothingOfferedPerFile, and the two move together,
+       in every language. The one-form names the size and not the numeral, so it spends
+       {2} and leaves {0} and {1} unused; both are passed on either branch so the two
+       forms cannot disagree about which index is which. -->
+  <data name="Cli.NothingListedPerFile.Singular" xml:space="preserve"><value>InstallerClean non è riuscito ad accertare che un file non sia necessario, perciò lo ha trattenuto ({2}) invece di proporlo.</value></data>
+  <data name="Cli.NothingListedPerFile.Plural" xml:space="preserve"><value>InstallerClean non è riuscito ad accertare che {0} {1} non siano necessari, perciò li ha trattenuti ({2}) invece di proporli.</value></data>
   <!-- Introduces the conditions this run met. It prints under whichever of the
        Cli.NothingOffered and Cli.NothingListed sentences that run chose, the
        per-file forms included, so it has to read correctly under all four rather

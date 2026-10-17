@@ -635,9 +635,9 @@ internal static class Program
             // held back are printed in a line of their own.
             var withheldCount = scanResult.UnestablishedWithheldCount;
 
-            // The one-form names the size and not the numeral ("the one file"), so it
-            // spends {2} and leaves {0} and {1} unused; all three are passed on every
-            // branch so the forms cannot disagree about which index is which.
+            // The one-form names the size and not the numeral, so it spends {2} and
+            // leaves {0} and {1} unused; all three are passed on every branch so the
+            // forms cannot disagree about which index is which.
             string HeldBackLine(string singular, string plural, string keyPrefix) =>
                 string.Format(
                     DisplayHelpers.Pluralise(withheldCount, singular, plural, keyPrefix),

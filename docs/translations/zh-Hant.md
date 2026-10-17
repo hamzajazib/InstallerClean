@@ -488,13 +488,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Found {0} unneeded {1} to clean up ({2}). | 找到 {0} 個可清理的不需要的{1}（{2}）。 |
 | Found no unneeded files. | 沒有找到不需要的檔案。 |
 | InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back the one file ({2}) rather than offering it. | InstallerClean 無法確定快取中的哪些檔案屬於這裡安裝的程式，因此沒有提供那 1 個檔案（{2}），而是把它保留了下來。 |
-| InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back all {0} {1} ({2}) rather than offering them. | InstallerClean 無法確定快取中的哪些檔案屬於這裡安裝的程式，因此沒有提供全部 {0} 個{1}（{2}），而是把它們保留了下來。 |
-| InstallerClean couldn't establish that the cached file it found is unneeded, so it has held back the one file ({2}) rather than offering it. | InstallerClean 無法證實它找到的那個快取檔案是不需要的，因此沒有提供那 1 個檔案（{2}），而是把它保留了下來。 |
-| InstallerClean couldn't establish that any of the cached files it found are unneeded, so it has held back all {0} {1} ({2}) rather than offering them. | InstallerClean 無法證實它找到的快取檔案中有任何一個是不需要的，因此沒有提供全部 {0} 個{1}（{2}），而是把它們保留了下來。 |
+| InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back {0} {1} ({2}) rather than offering them. | InstallerClean 無法確定快取中的哪些檔案屬於這裡安裝的程式，因此沒有提供 {0} 個{1}（{2}），而是把它們保留了下來。 |
+| InstallerClean couldn't establish that one file is unneeded, so it has held it back ({2}) rather than offering it. | InstallerClean 無法證實 1 個檔案是不需要的，因此沒有提供它（{2}），而是把它保留了下來。 |
+| InstallerClean couldn't establish that {0} {1} are unneeded, so it has held them back ({2}) rather than offering them. | InstallerClean 無法證實 {0} 個{1}是不需要的，因此沒有提供它們（{2}），而是把它們保留了下來。 |
 | InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back the one file ({2}) rather than offering it. | InstallerClean 無法確定快取中的哪些檔案屬於這裡安裝的程式，因此沒有提供那 1 個檔案（{2}），而是把它保留了下來。 |
 | InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back {0} {1} ({2}) rather than offering them. | InstallerClean 無法確定快取中的哪些檔案屬於這裡安裝的程式，因此沒有提供 {0} 個{1}（{2}），而是把它們保留了下來。 |
-| InstallerClean couldn't be certain about one of the cached files it found, so it has held that one back ({2}) rather than offering it. | InstallerClean 對它找到的其中一個快取檔案沒有把握，因此沒有提供那一個（{2}），而是把它保留了下來。 |
-| InstallerClean couldn't be certain about some of the cached files it found, so it has held back {0} {1} ({2}) rather than offering them. | InstallerClean 對它找到的部分快取檔案沒有把握，因此沒有提供 {0} 個{1}（{2}），而是把它們保留了下來。 |
+| InstallerClean couldn't establish that one file is unneeded, so it has held it back ({2}) rather than offering it. | InstallerClean 無法證實 1 個檔案是不需要的，因此沒有提供它（{2}），而是把它保留了下來。 |
+| InstallerClean couldn't establish that {0} {1} are unneeded, so it has held them back ({2}) rather than offering them. | InstallerClean 無法證實 {0} 個{1}是不需要的，因此沒有提供它們（{2}），而是把它們保留了下來。 |
 | Why it couldn't be certain: | 無法確定的原因： |
 |   A file path in Windows Installer's own records wouldn't resolve, so nothing could be matched to it. |   Windows Installer 自己的記錄中有一個檔案路徑無法解析，因此沒有任何內容能與它對應。 |
 |   A file Windows has a record of couldn't be identified, so it couldn't be matched to what's in the folder. |   Windows 有記錄的某個檔案無法辨識，因此無法與資料夾中的內容對應。 |

@@ -488,13 +488,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Found {0} unneeded {1} to clean up ({2}). | クリーンアップ対象の不要な {1} が {0} 個見つかりました ({2})。 |
 | Found no unneeded files. | 不要なファイルは見つかりませんでした。 |
 | InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back the one file ({2}) rather than offering it. | InstallerClean は、キャッシュ内のどのファイルがここにインストールされたプログラムのものかを確実には判断できなかったため、1 個のファイル({2})を提示せずに保留しました。 |
-| InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back all {0} {1} ({2}) rather than offering them. | InstallerClean は、キャッシュ内のどのファイルがここにインストールされたプログラムのものかを確実には判断できなかったため、{0} 個の{1}({2})をすべて提示せずに保留しました。 |
-| InstallerClean couldn't establish that the cached file it found is unneeded, so it has held back the one file ({2}) rather than offering it. | InstallerClean は、見つけたキャッシュ内のファイルが不要であることを確認できなかったため、その 1 個のファイル({2})を提示せずに保留しました。 |
-| InstallerClean couldn't establish that any of the cached files it found are unneeded, so it has held back all {0} {1} ({2}) rather than offering them. | InstallerClean は、見つけたキャッシュ内のファイルのいずれについても不要であることを確認できなかったため、{0} 個の{1}({2})をすべて提示せずに保留しました。 |
+| InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back {0} {1} ({2}) rather than offering them. | InstallerClean は、キャッシュ内のどのファイルがここにインストールされたプログラムのものかを確実には判断できなかったため、{0} 個の{1}({2})を提示せずに保留しました。 |
+| InstallerClean couldn't establish that one file is unneeded, so it has held it back ({2}) rather than offering it. | InstallerClean は、1 個のファイルが不要であることを確認できなかったため、そのファイル({2})を提示せずに保留しました。 |
+| InstallerClean couldn't establish that {0} {1} are unneeded, so it has held them back ({2}) rather than offering them. | InstallerClean は、{0} 個の{1}が不要であることを確認できなかったため、それらのファイル({2})を提示せずに保留しました。 |
 | InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back the one file ({2}) rather than offering it. | InstallerClean は、キャッシュ内のどのファイルがここにインストールされたプログラムのものかを確実には判断できなかったため、1 個のファイル({2})を提示せずに保留しました。 |
 | InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back {0} {1} ({2}) rather than offering them. | InstallerClean は、キャッシュ内のどのファイルがここにインストールされたプログラムのものかを確実には判断できなかったため、{0} 個の{1}({2})を提示せずに保留しました。 |
-| InstallerClean couldn't be certain about one of the cached files it found, so it has held that one back ({2}) rather than offering it. | InstallerClean は、見つけたキャッシュ内のファイルの 1 つについて確信が持てなかったため、そのファイル({2})を提示せずに保留しました。 |
-| InstallerClean couldn't be certain about some of the cached files it found, so it has held back {0} {1} ({2}) rather than offering them. | InstallerClean は、見つけたキャッシュ内のファイルの一部について確信が持てなかったため、{0} 個の{1}({2})を提示せずに保留しました。 |
+| InstallerClean couldn't establish that one file is unneeded, so it has held it back ({2}) rather than offering it. | InstallerClean は、1 個のファイルが不要であることを確認できなかったため、そのファイル({2})を提示せずに保留しました。 |
+| InstallerClean couldn't establish that {0} {1} are unneeded, so it has held them back ({2}) rather than offering them. | InstallerClean は、{0} 個の{1}が不要であることを確認できなかったため、それらのファイル({2})を提示せずに保留しました。 |
 | Why it couldn't be certain: | 確信を持てなかった理由: |
 |   A file path in Windows Installer's own records wouldn't resolve, so nothing could be matched to it. |   Windows Installer 自身の記録にあるファイルパスを解決できなかったため、それに何も照合できませんでした。 |
 |   A file Windows has a record of couldn't be identified, so it couldn't be matched to what's in the folder. |   Windows に記録のあるファイルを識別できなかったため、フォルダー内のものと照合できませんでした。 |

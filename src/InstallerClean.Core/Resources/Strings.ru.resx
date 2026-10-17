@@ -1712,16 +1712,16 @@ InstallerClean уже был запущен от имени администра
        held-back files reach no list at all, the command line carrying their count
        and not their names.
 
-       A PAIR AND NOT A FLAT KEY. A flat key here reads "held back all 1 file" at a
-       count of one, which is what the two forms exist to avoid. The one-form names
-       the size and not the numeral, so it spends {2} and leaves {0} and {1} unused;
-       all three are passed on either branch so the two forms cannot disagree about
-       which index is which. SO THIS PAIR'S {N} SETS DIFFER, and that is deliberate
-       rather than a dropped placeholder. The arity check compares each key against
-       its own satellite and never against its sibling, so it is legal. A language
-       that does want the numeral in its one-form adds a satellite-only
-       Cli.NothingOffered.One override, whose arity is checked against the .Plural and
-       may therefore carry {0}.
+       A PAIR AND NOT A FLAT KEY. A flat key here reads "held back 1 file (3.6 MB)
+       rather than offering them" at a count of one, which is what the two forms exist
+       to avoid. The one-form says "the one file" and names the size and not the
+       numeral, so it spends {2} and leaves {0} and {1} unused; all three are passed
+       on either branch so the two forms cannot disagree about which index is which.
+       SO THIS PAIR'S {N} SETS DIFFER, and that is deliberate rather than a dropped
+       placeholder. The arity check compares each key against its own satellite and
+       never against its sibling, so it is legal. A language that does want the
+       numeral in its one-form adds a satellite-only Cli.NothingOffered.One override,
+       whose arity is checked against the .Plural and may therefore carry {0}.
 
        THE NOUN IS A SLOT AND NOT A WORD IN THE SENTENCE, because a noun spelled into
        the value cannot follow the numeral standing in front of it. Russian and
@@ -1748,31 +1748,34 @@ InstallerClean уже был запущен от имени администра
        empty because every candidate was judged and kept back on its own, rather than
        because a finding about the records emptied the whole walk at once. The pair
        above names that finding, which is false of a file kept back on its own, so
-       this pair states only what holds of all of them.
+       this pair states only what holds of all of them: the app could not establish
+       that they are unneeded.
 
        0 = files held back, 1 = pluralised "file"/"files", 2 = their size, exactly as
        above, and both forms are passed all three so the two cannot disagree about
-       which index is which. "All {0} {1}" and "any of the cached files" because
-       nothing was offered on this run; Cli.NothingListedPerFile drops the "all" and
-       says "some" for the machine that was offered something. -->
+       which index is which. The one-form says "one file" and names the size and not
+       the numeral, as the pair above does.
+
+       THE ENGLISH PLURAL MAKES THE COUNT THE SUBJECT OF "are unneeded". A language
+       whose verb or adjective agrees with the numeral, and so changes between 2, 5
+       and 21, or whose clause there wants a case Plural.File does not supply, makes
+       the count the object of the holding back instead, as its Cli.NothingOffered
+       does. Polish, Russian, Ukrainian and Turkish are worded that way. -->
   <!-- For the machine whose walk-derived half was withheld wholesale while a
        superseded patch was still offered: that run takes the found-files branch, so
        Cli.NothingOffered is not printed and this line is where stdout states the
-       withholding. It opens on Cli.NothingOffered's clause and gives the size as that
-       sentence does, and it has no "all" because something was offered beside these
-       files. The one-form names the size and not the numeral, so it spends {2} and
+       withholding. It is the same sentence as Cli.NothingOffered, and the two move
+       together. The one-form names the size and not the numeral, so it spends {2} and
        leaves {0} and {1} unused; both are passed on either branch so the two forms
        cannot disagree about which index is which. -->
   <!-- The per-file form of the pair above: a run that kept files back one at a time
        while still offering something, so the sentence names no cause that could be
        false of any file it counts.
 
-       "Some" and no "all", because this machine was offered something, where
-       Cli.NothingOfferedPerFile says "all" and "any" for the machine that was offered
-       nothing. There is no third variation and none may be added. The one-form names
-       the size and not the numeral, so it spends {2} and leaves {0} and {1} unused;
-       both are passed on either branch so the two forms cannot disagree about which
-       index is which. -->
+       It is the same sentence as Cli.NothingOfferedPerFile, and the two move together,
+       in every language. The one-form names the size and not the numeral, so it spends
+       {2} and leaves {0} and {1} unused; both are passed on either branch so the two
+       forms cannot disagree about which index is which. -->
   <!-- Introduces the conditions this run met. It prints under whichever of the
        Cli.NothingOffered and Cli.NothingListed sentences that run chose, the
        per-file forms included, so it has to read correctly under all four rather
@@ -2462,9 +2465,9 @@ InstallerClean уже был запущен от имени администра
   <data name="Cli.ScanSignal.ClockSetBack" xml:space="preserve"><value>Во время сканирования часы этого компьютера ушли назад или отстали, поэтому InstallerClean удержал файлы в {InstallerFolder}, которые не названы в записях ни одной установленной программы, вместо того чтобы предложить их. Запустите команду снова.</value></data>
   <data name="Cli.FoundNoOrphans" xml:space="preserve"><value>Ненужных файлов не найдено.</value></data>
   <data name="Cli.NothingOffered.Singular" xml:space="preserve"><value>InstallerClean не смог с уверенностью определить, какие файлы в кэше принадлежат установленным здесь программам, поэтому удержал единственный файл ({2}), вместо того чтобы предложить его.</value></data>
-  <data name="Cli.NothingOffered.Plural" xml:space="preserve"><value>InstallerClean не смог с уверенностью определить, какие файлы в кэше принадлежат установленным здесь программам, поэтому удержал все {0} {1} ({2}), вместо того чтобы предложить их.</value></data>
-  <data name="Cli.NothingOfferedPerFile.Singular" xml:space="preserve"><value>InstallerClean не смог установить, что найденный им файл в кэше не нужен, поэтому удержал этот единственный файл ({2}), вместо того чтобы предложить его.</value></data>
-  <data name="Cli.NothingOfferedPerFile.Plural" xml:space="preserve"><value>InstallerClean ни об одном из найденных им файлов в кэше не смог установить, что он не нужен, поэтому удержал все {0} {1} ({2}), вместо того чтобы предложить их.</value></data>
+  <data name="Cli.NothingOffered.Plural" xml:space="preserve"><value>InstallerClean не смог с уверенностью определить, какие файлы в кэше принадлежат установленным здесь программам, поэтому удержал {0} {1} ({2}), вместо того чтобы предложить их.</value></data>
+  <data name="Cli.NothingOfferedPerFile.Singular" xml:space="preserve"><value>InstallerClean не смог установить, что один файл не нужен, поэтому удержал его ({2}), вместо того чтобы предложить.</value></data>
+  <data name="Cli.NothingOfferedPerFile.Plural" xml:space="preserve"><value>InstallerClean удержал {0} {1} ({2}), вместо того чтобы предложить их, потому что не смог установить, что они не нужны.</value></data>
   <data name="Cli.DestinationChangedMidBatch" xml:space="preserve"><value>InstallerClean больше не смог подтвердить папку резервных копий и остановился. Проверьте {0}, затем запустите команду снова.</value></data>
   <data name="Cli.Help.Summary" xml:space="preserve"><value>Убирает .msi и .msp из кэша, не нужные ни одной установленной программе.</value></data>
   <data name="Cli.Help.Elevation" xml:space="preserve"><value>Нужна командная строка администратора; без неё сканирования не будет.</value></data>
@@ -2474,8 +2477,8 @@ InstallerClean уже был запущен от имени администра
   <data name="Cli.SupersededHeldBack.Plural" xml:space="preserve"><value>InstallerClean не смог с уверенностью определить, что {0} замещённых файлов больше не нужны, поэтому удержал их.</value></data>
   <data name="Cli.NothingListed.Singular" xml:space="preserve"><value>InstallerClean не смог с уверенностью определить, какие файлы в кэше принадлежат установленным здесь программам, поэтому удержал единственный файл ({2}), вместо того чтобы предложить его.</value></data>
   <data name="Cli.NothingListed.Plural" xml:space="preserve"><value>InstallerClean не смог с уверенностью определить, какие файлы в кэше принадлежат установленным здесь программам, поэтому удержал {0} {1} ({2}), вместо того чтобы предложить их.</value></data>
-  <data name="Cli.NothingListedPerFile.Singular" xml:space="preserve"><value>InstallerClean не был уверен насчёт одного из найденных им файлов в кэше, поэтому удержал именно его ({2}), вместо того чтобы предложить.</value></data>
-  <data name="Cli.NothingListedPerFile.Plural" xml:space="preserve"><value>InstallerClean не был уверен насчёт некоторых из найденных им файлов в кэше, поэтому удержал {0} {1} ({2}), вместо того чтобы предложить их.</value></data>
+  <data name="Cli.NothingListedPerFile.Singular" xml:space="preserve"><value>InstallerClean не смог установить, что один файл не нужен, поэтому удержал его ({2}), вместо того чтобы предложить.</value></data>
+  <data name="Cli.NothingListedPerFile.Plural" xml:space="preserve"><value>InstallerClean удержал {0} {1} ({2}), вместо того чтобы предложить их, потому что не смог установить, что они не нужны.</value></data>
   <data name="Cli.WithheldReasons.Header" xml:space="preserve"><value>Почему уверенности не было:</value></data>
   <data name="Cli.WithheldReasons.RecordedPath" xml:space="preserve"><value>  Путь к файлу из собственных записей Windows Installer не удалось разрешить, поэтому с ним ничего не удалось сопоставить.</value></data>
   <data name="Cli.WithheldReasons.FileIdentity" xml:space="preserve"><value>  Файл, о котором у Windows есть запись, не удалось опознать, поэтому его не удалось сопоставить с тем, что лежит в папке.</value></data>
