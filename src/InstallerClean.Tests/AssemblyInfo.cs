@@ -11,6 +11,10 @@ using InstallerClean.Helpers;
 // output would reach another's run.
 [assembly: Xunit.CollectionBehavior(DisableTestParallelization = true)]
 
+// The tests' own imports name System32 as the place to look for the libraries they load.
+[assembly: System.Runtime.InteropServices.DefaultDllImportSearchPaths(
+    System.Runtime.InteropServices.DllImportSearchPath.System32)]
+
 namespace InstallerClean.Tests;
 
 /// <summary>

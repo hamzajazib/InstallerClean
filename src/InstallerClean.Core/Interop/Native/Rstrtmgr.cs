@@ -6,9 +6,7 @@ namespace InstallerClean.Interop.Native;
 /// P/Invoke surface for rstrtmgr.dll, the Restart Manager, which names the processes that
 /// have a file open. Source-generated <see cref="LibraryImportAttribute"/> stubs over
 /// blittable arguments, as in <see cref="Kernel32"/>, so a call made after the running exe
-/// has been renamed aside reaches no assembly that is not loaded already. Each is loaded
-/// from System32 only, so a file of the same name beside the exe is never loaded into the
-/// elevated process.
+/// has been renamed aside reaches no assembly that is not loaded already.
 /// </summary>
 internal static partial class Rstrtmgr
 {
@@ -30,12 +28,10 @@ internal static partial class Rstrtmgr
     /// <see cref="SessionKeyLength"/> characters and a terminator.
     /// </summary>
     [LibraryImport(Library, EntryPoint = "RmStartSession")]
-    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     internal static unsafe partial int RmStartSession(out uint sessionHandle, uint sessionFlags, char* sessionKey);
 
     /// <summary>Registers the files whose holders <see cref="RmGetList"/> is to name.</summary>
     [LibraryImport(Library, EntryPoint = "RmRegisterResources")]
-    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     internal static unsafe partial int RmRegisterResources(
         uint sessionHandle, uint fileCount, char** fileNames,
         uint applicationCount, void* applications, uint serviceCount, char** serviceNames);
@@ -46,12 +42,10 @@ internal static partial class Rstrtmgr
     /// <paramref name="needed"/>, with nothing written.
     /// </summary>
     [LibraryImport(Library, EntryPoint = "RmGetList")]
-    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     internal static unsafe partial int RmGetList(
         uint sessionHandle, out uint needed, ref uint count, RM_PROCESS_INFO* affectedApps, out uint rebootReasons);
 
     [LibraryImport(Library, EntryPoint = "RmEndSession")]
-    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     internal static partial int RmEndSession(uint sessionHandle);
 
     /// <summary>

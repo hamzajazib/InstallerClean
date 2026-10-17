@@ -546,3 +546,190 @@ jobs:
       - name: Restore in locked mode
         run: dotnet restore src/InstallerClean.sln -p:EnableWindowsTargeting=true -p:RestoreLockedMode=true
 
+
+  # Where each shipped build looks for the Windows libraries it loads. The app runs
+  # elevated, and a portable or slim copy is often run from a Downloads folder, so a
+  # library it looked for in its own folder is one a file dropped there would replace.
+  # Each build is published with release.yml's flags and run once from a folder of its
+  # own, with Process Monitor recording every file the build's process opens or
+  # probes. The job fails where a build looked in its own folder for any .dll, and
+  # where it looked in its extraction folder under %TEMP%\.net for a .dll the bundle
+  # did not put there.
+  #
+  # It refuses to pass on a run that saw nothing: Process Monitor has to have started
+  # and recorded each build's process, the command line has to have loaded msi.dll
+  # for its scan, and each window has to have loaded dwmapi.dll and WPF's
+  # wpfgfx_cor3.dll, which it does only once it creates a window, so a window that
+  # could not open on the runner fails the job.
+  #
+  # A window started on a fresh account offers to send a report. Before any build
+  # runs, the PC-wide first-run mark is set, so the offer is never made, and the
+  # report receiver's host is pointed nowhere in the hosts file. The job fails where
+  # either window left a report behind.
+  native-libraries:
+    name: Native libraries (Windows)
+    runs-on: windows-2025
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Publish the three builds as release.yml does
+        run: |
+          dotnet publish src/InstallerClean.Cli/InstallerClean.Cli.csproj -c Release -r win-x64 --self-contained true -p:RestoreLockedMode=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true --nologo -o publish/cli
+          if ($LASTEXITCODE -ne 0) { throw "The command line did not publish." }
+          dotnet publish src/InstallerClean/InstallerClean.csproj -c Release -r win-x64 --self-contained true -p:RestoreLockedMode=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true --nologo -o publish/self-contained
+          if ($LASTEXITCODE -ne 0) { throw "The portable did not publish." }
+          dotnet publish src/InstallerClean/InstallerClean.csproj -c Release -r win-x64 -p:RestoreLockedMode=true -p:PublishSelfContained=false -p:SelfContained=false -p:PublishSingleFile=true --nologo -o publish/framework-dependent
+          if ($LASTEXITCODE -ne 0) { throw "The slim did not publish." }
+
+      # FirstRunRecorded under HKLM\SOFTWARE\NoFaff\InstallerClean is the mark a
+      # window reads to decide this PC has run InstallerClean before, and with it set
+      # no report is offered or saved. The hosts entry stops anything reaching the
+      # receiver even so.
+      - name: Keep the windows from sending a report
+        shell: pwsh
+        run: |
+          New-Item -Path 'HKLM:\SOFTWARE\NoFaff\InstallerClean' -Force | Out-Null
+          New-ItemProperty -Path 'HKLM:\SOFTWARE\NoFaff\InstallerClean' -Name FirstRunRecorded -PropertyType DWord -Value 1 -Force | Out-Null
+          $hosts = Join-Path $env:SystemRoot 'System32\drivers\etc\hosts'
+          Add-Content -Path $hosts -Value "`r`n0.0.0.0 nofaff.netlify.app`r`n:: nofaff.netlify.app"
+          ipconfig /flushdns | Out-Null
+          $mark = (Get-ItemProperty 'HKLM:\SOFTWARE\NoFaff\InstallerClean').FirstRunRecorded
+          if ($mark -ne 1) { throw "The first-run mark was not set." }
+          $resolved = @([System.Net.Dns]::GetHostAddresses('nofaff.netlify.app') | ForEach-Object { $_.ToString() })
+          $elsewhere = @($resolved | Where-Object { $_ -notin '0.0.0.0', '::' })
+          if ($resolved.Count -eq 0 -or $elsewhere.Count) { throw "nofaff.netlify.app resolves to $($resolved -join ', '), not only to nowhere." }
+          "  first-run mark set; nofaff.netlify.app resolves to $($resolved -join ', ')"
+
+      - name: Start Process Monitor
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'procmon'
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          $procmon = Join-Path $dir 'Procmon64.exe'
+          Invoke-WebRequest https://live.sysinternals.com/Procmon64.exe -OutFile $procmon
+          $sig = Get-AuthenticodeSignature $procmon
+          if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
+            throw "Procmon64.exe is not validly signed by Microsoft: $($sig.Status), $($sig.SignerCertificate.Subject)"
+          }
+          Start-Process $procmon -ArgumentList '/AcceptEula', '/Quiet', '/Minimized', '/BackingFile', "`"$dir\loads.pml`""
+          Start-Process $procmon -ArgumentList '/AcceptEula', '/WaitForIdle' -Wait
+          "PROCMON=$procmon" | Add-Content $env:GITHUB_ENV
+
+      # One build at a time, each ended and waited for before the next starts, since
+      # the windows share the single-instance mutex. The command line scans and ends;
+      # a window is given twenty seconds and then ended.
+      - name: Run each build from a folder of its own
+        shell: pwsh
+        run: |
+          "  interactive: $([Environment]::UserInteractive); session $((Get-Process -Id $PID).SessionId)"
+          $runtimes = dotnet --list-runtimes
+          $runtimes
+          if (-not ($runtimes | Where-Object { $_ -match '^Microsoft\.WindowsDesktop\.App 10\.' })) {
+            throw "No .NET 10 Desktop Runtime is installed, so the slim cannot start."
+          }
+          $builds = @(
+            @{ Label = 'command line'; Exe = 'publish/cli/installerclean-cli.exe'; Arguments = @('/s', '/noupdate'); Wait = 60; MustLoad = @('msi.dll') },
+            @{ Label = 'portable'; Exe = 'publish/self-contained/InstallerClean.exe'; Arguments = @(); Wait = 20; MustLoad = @('dwmapi.dll', 'wpfgfx_cor3.dll') },
+            @{ Label = 'slim'; Exe = 'publish/framework-dependent/InstallerClean.exe'; Arguments = @(); Wait = 20; MustLoad = @('dwmapi.dll', 'wpfgfx_cor3.dll') }
+          )
+          $runs = foreach ($b in $builds) {
+            $folder = Join-Path $env:RUNNER_TEMP ('run-' + ($b.Label -replace ' ', '-'))
+            New-Item -ItemType Directory -Force -Path $folder | Out-Null
+            Copy-Item $b.Exe $folder
+            $exe = Join-Path $folder (Split-Path $b.Exe -Leaf)
+            $start = @{ FilePath = $exe; WorkingDirectory = $folder; PassThru = $true }
+            if ($b.Arguments.Count) { $start.ArgumentList = $b.Arguments }
+            $p = Start-Process @start
+            # Read now, so the exit code is kept once the process ends.
+            $null = $p.Handle
+            if (-not $p.WaitForExit($b.Wait * 1000)) { Stop-Process -Id $p.Id -Force; $p.WaitForExit() }
+            Write-Host "  $($b.Label): process $($p.Id), ended with $($p.ExitCode)"
+            [pscustomobject]@{ Label = $b.Label; Folder = $folder; Exe = (Split-Path $exe -Leaf); Id = $p.Id; MustLoad = $b.MustLoad }
+          }
+          $runs | ConvertTo-Json | Set-Content (Join-Path $env:RUNNER_TEMP 'runs.json')
+
+      - name: Check where each build looked for libraries
+        if: always() && env.PROCMON != ''
+        shell: pwsh
+        run: |
+          $failures = [System.Collections.Generic.List[string]]::new()
+          function Fail([string]$message) { $failures.Add($message); Write-Host "::error::$message" }
+
+          $dir = Split-Path $env:PROCMON
+          Start-Process $env:PROCMON -ArgumentList '/Terminate' -Wait
+          $csv = Join-Path $dir 'loads.csv'
+          Start-Process $env:PROCMON -ArgumentList '/AcceptEula', '/Quiet', '/OpenLog', "`"$dir\loads.pml`"", '/SaveAs', "`"$csv`"" -Wait
+          if (-not (Test-Path $csv)) { throw "Process Monitor saved no record." }
+
+          $runsFile = Join-Path $env:RUNNER_TEMP 'runs.json'
+          if (-not (Test-Path $runsFile)) { throw "No build ran." }
+          $runs = @(Get-Content -Raw $runsFile | ConvertFrom-Json)
+          # The whole machine's record is read once, keeping only the builds' rows.
+          $names = @($runs | ForEach-Object { $_.Exe } | Sort-Object -Unique)
+          $rows = @(Import-Csv $csv | Where-Object { $names -contains $_.'Process Name' })
+          "Process Monitor recorded $($rows.Count) operations by $($names -join ' and ')."
+
+          # A single-file build extracts its own libraries to a folder under %TEMP%\.net.
+          # The path is compared from the "\.net\" on, since Process Monitor gives the
+          # long form of the temp folder and the environment can give its short form.
+          function UnderExtraction([string]$path) { if ($path -match '\\\.net\\(.+)$') { $Matches[1].ToLowerInvariant() } }
+          $extractRoot = Join-Path ([IO.Path]::GetTempPath()) '.net'
+          $bundled = @(Get-ChildItem -Path $extractRoot -Recurse -File -Filter *.dll -ErrorAction SilentlyContinue |
+                       ForEach-Object { UnderExtraction $_.FullName })
+          "  $($bundled.Count) libraries in the extraction folders"
+
+          foreach ($run in $runs) {
+            "== $($run.Label), $($run.Exe), process $($run.Id)"
+            $mine = @($rows | Where-Object { $_.'Process Name' -eq $run.Exe -and $_.PID -eq [string]$run.Id })
+            "  $($mine.Count) operations"
+            if ($mine.Count -eq 0) { Fail "$($run.Label): Process Monitor recorded nothing for process $($run.Id)."; continue }
+
+            $loads = @($mine | Where-Object { $_.Operation -eq 'Load Image' } | ForEach-Object { $_.Path } | Sort-Object -Unique)
+            "  libraries loaded:"
+            $loads | ForEach-Object { "    $_" }
+            if (-not $run.MustLoad) { Fail "$($run.Label) names nothing it must load."; continue }
+            foreach ($name in $run.MustLoad) {
+              if (-not ($loads | Where-Object { (Split-Path $_ -Leaf) -eq $name })) {
+                Fail "$($run.Label) never loaded $name, so it did not get far enough for this check to judge it."
+              }
+            }
+
+            $own = $run.Folder.TrimEnd('\') + '\'
+            $beside = @($mine | Where-Object { $_.Path.StartsWith($own, 'OrdinalIgnoreCase') -and $_.Path.EndsWith('.dll', 'OrdinalIgnoreCase') })
+            foreach ($row in ($beside | Sort-Object Path, Operation -Unique)) {
+              Fail "$($run.Label) looked in its own folder for $(Split-Path $row.Path -Leaf): $($row.Operation), $($row.Result)."
+            }
+
+            $extracted = @($mine | Where-Object { $_.Path.EndsWith('.dll', 'OrdinalIgnoreCase') -and (UnderExtraction $_.Path) })
+            if ($run.Label -eq 'portable' -and $extracted.Count -eq 0) {
+              Fail "The portable shows nothing from its extraction folder, so that folder went unchecked."
+            }
+            foreach ($row in ($extracted | Sort-Object Path, Operation -Unique)) {
+              if ($bundled -notcontains (UnderExtraction $row.Path)) {
+                Fail "$($run.Label) looked in its extraction folder for $(Split-Path $row.Path -Leaf), which the bundle did not put there: $($row.Operation), $($row.Result)."
+              }
+            }
+          }
+
+          "== Reports"
+          foreach ($folder in (Join-Path $env:LOCALAPPDATA 'InstallerClean'), (Join-Path $env:LOCALAPPDATA 'NoFaff\InstallerClean')) {
+            $report = Join-Path $folder 'last-run.json'
+            if (Test-Path $report) { Fail "A window left a report waiting: $report." } else { "  no $report" }
+            $settings = Join-Path $folder 'settings.json'
+            if ((Test-Path $settings) -and ((Get-Content -Raw $settings) -match '"reportToSend"\s*:\s*true')) {
+              Fail "A window marked a report to send in $settings."
+            }
+          }
+
+          if ($failures.Count) {
+            "$($failures.Count) checks failed:"
+            $failures | ForEach-Object { "  $_" }
+            exit 1
+          }
