@@ -487,6 +487,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | Fout: onverwacht extra argument '{0}'. /s en /d nemen geen verdere argumenten, en er kan maar één vlag per uitvoering worden gebruikt. |
 | Cancelling... | Annuleren... |
 | Cancelled. | Geannuleerd. |
+| Cancelling once the update has finished... | Annuleren zodra de update klaar is... |
 | Error: unexpected failure ({0}). Details written to {1}. | Fout: onverwachte crash ({0}). Details weggeschreven naar {1}. |
 | Error: unexpected failure ({0}). The crash log could not be written. | Fout: onverwachte crash ({0}). Het crashlog kon niet worden weggeschreven. |
 | Scanning {InstallerFolder}... | {InstallerFolder} scannen... |

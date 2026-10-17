@@ -1698,6 +1698,10 @@ Voer InstallerClean opnieuw uit als administrator.</value></data>
   <data name="Cli.TooManyArgumentsNoPath" xml:space="preserve"><value>Fout: onverwacht extra argument '{0}'. /s en /d nemen geen verdere argumenten, en er kan maar één vlag per uitvoering worden gebruikt.</value></data>
   <data name="Cli.Cancelling" xml:space="preserve"><value>Annuleren...</value></data>
   <data name="Cli.Cancelled" xml:space="preserve"><value>Geannuleerd.</value></data>
+  <!-- Printed in place of Cli.Cancelling where Ctrl+C comes while the newer setup
+       runs: the run waits for the setup to end, then prints Cli.UpdateInstalled where it
+       installed and Cli.Cancelled. -->
+  <data name="Cli.CancellingAfterUpdate" xml:space="preserve"><value>Annuleren zodra de update klaar is...</value></data>
   <!-- 0 = exception type name (full message + stack trace go to the
        crash log; the CLI runs elevated so .Message could include paths
        from another user's profile if logged to a shared file).
@@ -2420,6 +2424,9 @@ Voer InstallerClean opnieuw uit als administrator.</value></data>
   <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
        ID 3006, the run's only entry, where the newer version is in place but would not
        start, so nothing ran. -->
+  <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
+       ID 3005, the run's only entry, where the newer version is in place and Ctrl+C came
+       before it started, so nothing ran. -->
   <!-- Stdout when the CLI cannot acquire the single-instance mutex.
        The GUI variant (Strings.Startup_AlreadyRunningBody) is written
        for a user who tried to launch a second window; the CLI variant

@@ -20,14 +20,22 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
     private bool _holdsMutex;
     private SafeFileHandle? _ownFile;
     private volatile bool _newerVersionRunning;
+    private volatile bool _setupRunning;
 
     /// <summary>
-    /// Whether the newer version is running in this console. The Ctrl+C handler reads it:
-    /// the console sends Ctrl+C to both processes, and while this is true the newer
+    /// Whether the newer version has started in this console. The Ctrl+C handler reads
+    /// it: the console sends Ctrl+C to both processes, and while this is true the newer
     /// version answers it, so this run prints nothing and keeps waiting for its exit code
-    /// and its summary.
+    /// and its summary. Until a start succeeds it is false, and a Ctrl+C cancels this run
+    /// as anywhere else, which stops the newer version being started.
     /// </summary>
     public bool NewerVersionRunning => _newerVersionRunning;
+
+    /// <summary>
+    /// Whether the newer setup is running. This run waits for the setup to end whatever
+    /// Ctrl+C does, so the Ctrl+C handler says the run stops once it has finished.
+    /// </summary>
+    public bool SetupRunning => _setupRunning;
 
     public void WriteLine(string line) => Console.WriteLine(line);
 
@@ -104,6 +112,15 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
     /// source check here, and the English machine line, whose first lookup in en-GB
     /// probes for resources the console's own language never asks for.
     /// </summary>
+    /// <remarks>
+    /// Two sets of strings are open once this returns: the display language's, through
+    /// the lookup <see cref="SelfReplacement.PrepareToMoveAside"/> makes, and the neutral
+    /// one under en-GB, through the machine line. A string read after the rename comes
+    /// from one of the two: a line for the console is in every satellite, and a machine
+    /// line is built inside <see cref="MachineContract.English"/>. A lookup in any other
+    /// culture, such as one a language setting chose on one thread only, would open a set
+    /// from a file that has been renamed.
+    /// </remarks>
     public void PrepareToMoveAside()
     {
         SelfReplacement.PrepareToMoveAside(typeof(EventLog).Assembly, typeof(ConsoleUpdateHost).Assembly);
@@ -118,24 +135,29 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
         }
     }
 
-    public int? RunSetup(string file, IReadOnlyList<string> arguments)
+    public int? RunSetup(string file, IReadOnlyList<string> arguments, CancellationToken token)
     {
-        using var process = Start(file, arguments, Path.GetDirectoryName(file));
+        using var process = Start(file, arguments, Path.GetDirectoryName(file), token);
         if (process is null) return null;
-        process.WaitForExit();
+        _setupRunning = true;
+        try
+        {
+            process.WaitForExit();
+        }
+        finally
+        {
+            _setupRunning = false;
+        }
         return process.ExitCode;
     }
 
-    public int? RunNewerVersion(string file, IReadOnlyList<string> arguments, string fromVersion, string toVersion)
+    public int? RunNewerVersion(
+        string file, IReadOnlyList<string> arguments, string fromVersion, string toVersion, CancellationToken token)
     {
         Console.Out.Flush();
+        using var process = Start(file, arguments, workingDirectory: null, token);
+        if (process is null) return null;
         _newerVersionRunning = true;
-        using var process = Start(file, arguments, workingDirectory: null);
-        if (process is null)
-        {
-            _newerVersionRunning = false;
-            return null;
-        }
         MachineContract.WriteEventLog(CliEventClass.UpdatedNotice,
             () => Program.UpdatedEventLogLine(arg, fromVersion, toVersion, arguments));
         process.WaitForExit();
@@ -148,9 +170,11 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
     /// given to the newer version means what it meant to this run. An antivirus can hold a
     /// program it has just seen written for a moment, so a start that fails is tried again
     /// a few times, half a second apart. Answers null where every try failed, each written
-    /// to crash.log.
+    /// to crash.log. Throws <see cref="OperationCanceledException"/> where
+    /// <paramref name="token"/> is cancelled and no try has started a process.
     /// </summary>
-    private static Process? Start(string file, IReadOnlyList<string> arguments, string? workingDirectory)
+    private static Process? Start(
+        string file, IReadOnlyList<string> arguments, string? workingDirectory, CancellationToken token)
     {
         var info = new ProcessStartInfo(file) { UseShellExecute = false };
         if (workingDirectory is not null) info.WorkingDirectory = workingDirectory;
@@ -158,6 +182,7 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
 
         for (var attempt = 1; ; attempt++)
         {
+            token.ThrowIfCancellationRequested();
             try
             {
                 return Process.Start(info);
@@ -165,8 +190,12 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
             catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or InvalidOperationException)
             {
                 CrashLog.TryWrite(ex);
-                if (attempt == StartAttempts) return null;
-                Thread.Sleep(StartRetryInterval);
+                if (attempt == StartAttempts)
+                {
+                    token.ThrowIfCancellationRequested();
+                    return null;
+                }
+                token.WaitHandle.WaitOne(StartRetryInterval);
             }
         }
     }

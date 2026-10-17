@@ -619,6 +619,7 @@ const MAP = {
   'Automation.UpdateNotice.CopyCommand': `De opdracht kopiëren`,
   'Automation.UpdateNotice.ScoopCommand': `Bijwerkopdracht van Scoop`,
   'Cli.UpdateInUse': `InstallerClean is in gebruik en kan zichzelf nu dus niet bijwerken.`,
+  'Cli.CancellingAfterUpdate': `Annuleren zodra de update klaar is...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

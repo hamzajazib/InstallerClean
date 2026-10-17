@@ -635,6 +635,7 @@ const MAP = {
   'Automation.UpdateNotice.CopyCommand': `Sao chép lệnh`,
   'Automation.UpdateNotice.ScoopCommand': `Lệnh cập nhật của Scoop`,
   'Cli.UpdateInUse': `InstallerClean đang được sử dụng nên không thể tự cập nhật lúc này.`,
+  'Cli.CancellingAfterUpdate': `Sẽ hủy khi cập nhật xong...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

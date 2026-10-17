@@ -27,8 +27,18 @@ internal abstract record CommandLineUpdateResult
     public sealed record HandedOver(int ExitCode, string FromVersion, string ToVersion, string ArgumentsRun)
         : CommandLineUpdateResult;
 
-    /// <summary>Ctrl+C at the question or during the download. Nothing is left changed on disk.</summary>
+    /// <summary>
+    /// Ctrl+C before the newer version is in place: at the question, during the download,
+    /// or after this exe was moved aside and before anything started, in which case it is
+    /// put back. Nothing is left changed on disk.
+    /// </summary>
     public sealed record Cancelled : CommandLineUpdateResult;
+
+    /// <summary>
+    /// <paramref name="ToVersion"/> is installed at the running exe's path and Ctrl+C came
+    /// before it started, so nothing ran. The newer version stays in place.
+    /// </summary>
+    public sealed record UpdatedThenCancelled(string FromVersion, string ToVersion) : CommandLineUpdateResult;
 
     /// <summary>
     /// <paramref name="ToVersion"/> is installed at the running exe's path, its version
@@ -109,18 +119,23 @@ internal interface ICommandLineUpdateHost
     /// <summary>
     /// Starts the setup at <paramref name="file"/> with <paramref name="arguments"/>,
     /// waits for it to end and answers with its exit code, or null where it could not be
-    /// started.
+    /// started. Throws <see cref="OperationCanceledException"/> where
+    /// <paramref name="token"/> is cancelled before the setup has started; once it has,
+    /// the setup runs to its end.
     /// </summary>
-    int? RunSetup(string file, IReadOnlyList<string> arguments);
+    int? RunSetup(string file, IReadOnlyList<string> arguments, CancellationToken token);
 
     /// <summary>
     /// Starts the newer version at <paramref name="file"/> with <paramref name="arguments"/>
     /// in this console, notes in the Application log that this run updated itself from
     /// <paramref name="fromVersion"/> to <paramref name="toVersion"/> once it is running,
     /// waits for it to end and answers with its exit code, or null where it could not be
-    /// started. While it runs, Ctrl+C is the newer version's to answer.
+    /// started. Throws <see cref="OperationCanceledException"/> where
+    /// <paramref name="token"/> is cancelled before it has started. While it runs, Ctrl+C
+    /// is the newer version's to answer.
     /// </summary>
-    int? RunNewerVersion(string file, IReadOnlyList<string> arguments, string fromVersion, string toVersion);
+    int? RunNewerVersion(
+        string file, IReadOnlyList<string> arguments, string fromVersion, string toVersion, CancellationToken token);
 }
 
 /// <summary>
@@ -233,6 +248,7 @@ internal sealed class CommandLineUpdate
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
+            _host.HoldOwnFile();
             return new CommandLineUpdateResult.Cancelled();
         }
         catch (Exception ex)
@@ -349,7 +365,10 @@ internal sealed class CommandLineUpdate
     /// fails with this exe's file at its own path, having taken away what it changed; the
     /// caller says so and carries on. Answers <see cref="CommandLineUpdateResult.NotStarted"/>
     /// or <see cref="CommandLineUpdateResult.Stopped"/> where a part fails with it no
-    /// longer there.
+    /// longer there. Ctrl+C before the newer version is in place answers
+    /// <see cref="CommandLineUpdateResult.Cancelled"/>, with this exe back at its path and
+    /// nothing changed; Ctrl+C once it is installed answers
+    /// <see cref="CommandLineUpdateResult.UpdatedThenCancelled"/>.
     /// </summary>
     private CommandLineUpdateResult Update(
         bool canAsk, string command, IReadOnlyList<string> arguments, string exePath,
@@ -387,6 +406,11 @@ internal sealed class CommandLineUpdate
                 prepared.Undo();
                 throw InUseFailure();
             }
+            if (token.IsCancellationRequested)
+            {
+                prepared.Undo();
+                return new CommandLineUpdateResult.Cancelled();
+            }
             _host.ReleaseOwnFile();
             try
             {
@@ -407,20 +431,34 @@ internal sealed class CommandLineUpdate
             if (holdsLock) _host.ReleaseInstanceLock();
         }
 
-        if (isSetup)
+        if (isSetup && RunSetup(prepared, exePath, latest, putBack, token) is { } ended) return ended;
+
+        if (token.IsCancellationRequested)
         {
-            if (RunSetup(prepared, exePath, latest, putBack) is { } ended) return ended;
             // Ctrl+C while the setup ran: the newer version is in place, and this run stops
-            // before its scan.
-            token.ThrowIfCancellationRequested();
+            // before it starts. On a swap the newer version has only been renamed in and
+            // nothing has said it is installed, so this exe is put back in its place.
+            if (!isSetup) return CancelAfterSwap(prepared, exePath, current, latest, putBack);
+            SayInstalled(latest);
+            return new CommandLineUpdateResult.UpdatedThenCancelled(current, latest);
         }
 
-        _host.WriteLine(string.Format(Strings.Cli_UpdateInstalled, latest));
+        SayInstalled(latest);
         if (canAsk && command == "/d") _host.WriteLine(Strings.Cli_UpdateListsOnlyAfterDelete);
         if (canAsk && command == "/m") _host.WriteLine(Strings.Cli_UpdateListsOnlyAfterMove);
 
         IReadOnlyList<string> run = canAsk ? ["/s"] : arguments;
-        var exitCode = _host.RunNewerVersion(exePath, run, current, latest);
+        int? exitCode;
+        try
+        {
+            exitCode = _host.RunNewerVersion(exePath, run, current, latest, token);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            // Ctrl+C before the newer version started. The line above has said it is
+            // installed, and it is, so it stays in place.
+            return new CommandLineUpdateResult.UpdatedThenCancelled(current, latest);
+        }
         if (exitCode is not null)
             return new CommandLineUpdateResult.HandedOver(exitCode.Value, current, latest, string.Join(' ', run));
 
@@ -440,28 +478,60 @@ internal sealed class CommandLineUpdate
     }
 
     /// <summary>
+    /// Ctrl+C after the newer version was renamed into this exe's place and before the
+    /// line saying it is installed: this exe is put back and what was readied taken away,
+    /// answering <see cref="CommandLineUpdateResult.Cancelled"/>. Where it cannot be put
+    /// back, the run ends as <see cref="CommandLineUpdateResult.UpdatedThenCancelled"/>
+    /// where the file at the path carries the newer version, and otherwise as
+    /// <see cref="CommandLineUpdateResult.Stopped"/>. Internal so a test can reach the two
+    /// answers where the put-back fails, which no file a test makes can refuse.
+    /// </summary>
+    internal CommandLineUpdateResult CancelAfterSwap(
+        PreparedUpdate prepared, string exePath, string current, string latest, Func<bool> putBack)
+    {
+        if (putBack())
+        {
+            prepared.Undo();
+            _host.HoldOwnFile();
+            return new CommandLineUpdateResult.Cancelled();
+        }
+        if (!Carries(exePath, latest)) return Stop(NotPutBackAfterCancel());
+        SayInstalled(latest);
+        return new CommandLineUpdateResult.UpdatedThenCancelled(current, latest);
+    }
+
+    private static UpdateFailedException NotPutBackAfterCancel() =>
+        new(UpdateFailureStage.Install, "The running copy could not be put back after Ctrl+C.");
+
+    private void SayInstalled(string latest) => _host.WriteLine(string.Format(Strings.Cli_UpdateInstalled, latest));
+
+    /// <summary>
     /// Runs the newer setup with this command line renamed aside, so the setup writes the
     /// newer version at its path rather than meeting a file in use;
     /// <paramref name="putBack"/> undoes that rename. Answers null where the newer version
     /// is in place. Any exit code but 0, or a file at the path that does not carry the
     /// newer version, fails: this exe is put back and the failure thrown, or
     /// <see cref="CommandLineUpdateResult.Stopped"/> answered where it cannot be put back.
+    /// Ctrl+C before the setup has started is thrown the same way, with this exe put back.
     /// The downloaded setup and its folder are removed either way, the setup having
     /// finished with them.
     /// </summary>
-    private CommandLineUpdateResult? RunSetup(PreparedUpdate prepared, string exePath, string latest, Func<bool> putBack)
+    private CommandLineUpdateResult? RunSetup(
+        PreparedUpdate prepared, string exePath, string latest, Func<bool> putBack, CancellationToken token)
     {
         int? exitCode;
         try
         {
+            token.ThrowIfCancellationRequested();
             exitCode = _host.RunSetup(
                 prepared.FileToStart,
-                prepared.Arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+                prepared.Arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries),
+                token);
         }
         catch (Exception ex)
         {
             prepared.Undo();
-            if (!putBack()) return Stop(ex);
+            if (!putBack()) return Stop(ex is OperationCanceledException ? NotPutBackAfterCancel() : ex);
             throw;
         }
         prepared.Undo();

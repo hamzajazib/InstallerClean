@@ -263,6 +263,15 @@ internal enum CliEventClass
     UpdatedNotice,
 
     /// <summary>
+    /// Notice: the run found a newer version and installed it, and Ctrl+C came before it
+    /// started, so nothing ran. It is the run's only entry. It shares Event ID 3005 with
+    /// <see cref="UpdatedNotice"/>, so a filter on that number sees every update that went
+    /// in. WARNING, on the rule at <see cref="CliContract.EntryTypeFor"/>: the run was
+    /// cancelled before its job, as the 2000 for a cancelled run is.
+    /// </summary>
+    UpdatedThenCancelledNotice,
+
+    /// <summary>
     /// Notice: the run found a newer version and could not install it, so it ran with the
     /// version it is. WARNING, on the rule at <see cref="CliContract.EntryTypeFor"/>: the
     /// run did its job with a version older than the one it set out to use.
@@ -401,7 +410,7 @@ internal static class CliContract
         CliEventClass.ScanNothingOfferedNotice => 3002,
         CliEventClass.ScanSupersededHeldBackNotice => 3003,
         CliEventClass.SourcesGivenUpNotice => 3004,
-        CliEventClass.UpdatedNotice => 3005,
+        CliEventClass.UpdatedNotice or CliEventClass.UpdatedThenCancelledNotice => 3005,
         CliEventClass.UpdateFailedNotice => 3006,
         _ => 0,
     };
@@ -429,10 +438,12 @@ internal static class CliContract
     /// one nightly for ever, and the operator's answer to that is a suppression
     /// rule on Source = InstallerClean, which takes the 4000 band with it.
     ///
-    /// The two update notices follow the same rule. A run that installed the newer
-    /// version and ran with it fell short of nothing, so its notice is Information; a
-    /// run that could not install it did its job with an older version than it set out
-    /// to use, so its notice is Warning.
+    /// The update notices follow the same rule. A run that installed the newer version
+    /// and ran with it fell short of nothing, so its notice is Information; a run that
+    /// could not install it did its job with an older version than it set out to use,
+    /// and a run that installed it and was cancelled before it started did not do its
+    /// job at all, so both of those are Warning. The type follows the run, so the two
+    /// classes sharing 3005 differ in it.
     /// </summary>
     internal static EventLogEntryType EntryTypeFor(CliEventClass outcome) => outcome switch
     {

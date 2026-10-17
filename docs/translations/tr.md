@@ -487,6 +487,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | Hata: beklenmeyen fazladan argüman '{0}'. /s ve /d başka argüman almaz ve her çalıştırmada yalnızca bir bayrak kullanılabilir. |
 | Cancelling... | İptal ediliyor... |
 | Cancelled. | İptal edildi. |
+| Cancelling once the update has finished... | Güncelleştirme bittiğinde iptal edilecek... |
 | Error: unexpected failure ({0}). Details written to {1}. | Hata: beklenmeyen arıza ({0}). Ayrıntılar {1} konumuna yazıldı. |
 | Error: unexpected failure ({0}). The crash log could not be written. | Hata: beklenmeyen arıza ({0}). Çökme günlüğü yazılamadı. |
 | Scanning {InstallerFolder}... | {InstallerFolder} taranıyor... |

@@ -1698,6 +1698,10 @@ InstallerClean을 관리자 권한으로 다시 실행하세요.</value></data>
   <data name="Cli.TooManyArgumentsNoPath" xml:space="preserve"><value>오류: 예상치 못한 추가 인수 '{0}'. /s와 /d는 다른 인수를 받지 않으며, 한 번 실행에 플래그는 하나만 쓸 수 있습니다.</value></data>
   <data name="Cli.Cancelling" xml:space="preserve"><value>취소 중...</value></data>
   <data name="Cli.Cancelled" xml:space="preserve"><value>취소되었습니다.</value></data>
+  <!-- Printed in place of Cli.Cancelling where Ctrl+C comes while the newer setup
+       runs: the run waits for the setup to end, then prints Cli.UpdateInstalled where it
+       installed and Cli.Cancelled. -->
+  <data name="Cli.CancellingAfterUpdate" xml:space="preserve"><value>업데이트가 끝나면 취소합니다...</value></data>
   <!-- 0 = exception type name (full message + stack trace go to the
        crash log; the CLI runs elevated so .Message could include paths
        from another user's profile if logged to a shared file).
@@ -2420,6 +2424,9 @@ InstallerClean을 관리자 권한으로 다시 실행하세요.</value></data>
   <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
        ID 3006, the run's only entry, where the newer version is in place but would not
        start, so nothing ran. -->
+  <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
+       ID 3005, the run's only entry, where the newer version is in place and Ctrl+C came
+       before it started, so nothing ran. -->
   <!-- Stdout when the CLI cannot acquire the single-instance mutex.
        The GUI variant (Strings.Startup_AlreadyRunningBody) is written
        for a user who tried to launch a second window; the CLI variant

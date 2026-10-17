@@ -487,6 +487,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | Errore: argomento aggiuntivo inatteso '{0}'. /s e /d non accettano altri argomenti, e si può usare una sola opzione per esecuzione. |
 | Cancelling... | Annullamento... |
 | Cancelled. | Operazione annullata. |
+| Cancelling once the update has finished... | Annullamento al termine dell'aggiornamento... |
 | Error: unexpected failure ({0}). Details written to {1}. | Errore: crash inatteso ({0}). Dettagli scritti in {1}. |
 | Error: unexpected failure ({0}). The crash log could not be written. | Errore: crash inatteso ({0}). Non è stato possibile scrivere il registro dei crash. |
 | Scanning {InstallerFolder}... | Scansione di {InstallerFolder}... |

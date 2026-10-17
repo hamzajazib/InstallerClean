@@ -5,8 +5,8 @@ using InstallerClean.Services;
 namespace InstallerClean.Tests.Helpers;
 
 /// <summary>
-/// The two Application-log notices the command line's update writes, 3005 where it
-/// installed the newer version and ran it, and 3006 where it could not. They are
+/// The Application-log notices the command line's update writes: 3005 where it installed
+/// the newer version, and 3006 where it could not or the newer version would not start. They are
 /// machine-read and built in English on every machine, so the whole sentence is the
 /// contract, asserted under an Italian thread culture to show the build is English.
 /// </summary>
@@ -55,11 +55,31 @@ public class CliUpdateNoticeTests
         @"/m mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the download failed) and ran /m D:\Backup with 3.4.0.")]
     [InlineData(UpdateFailureStage.Install,
         @"/m mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (the install failed) and ran /m D:\Backup with 3.4.0.")]
+    [InlineData(UpdateFailureStage.InUse,
+        @"/m mode: InstallerClean could not update itself from 3.4.0 to 3.5.0 (InstallerClean was in use) and ran /m D:\Backup with 3.4.0.")]
     public void The_update_that_failed_says_which_part_failed_and_what_ran(UpdateFailureStage stage, string expected)
     {
         var line = BuiltUnderItalian(() => MachineContract.English(
             () => Program.UpdateFailedEventLogLine("/m", "3.4.0", "3.5.0", stage, ["/m", @"D:\Backup"])));
 
         Assert.Equal(expected, line);
+    }
+
+    [Fact]
+    public void The_update_that_went_in_and_would_not_start_says_nothing_ran()
+    {
+        var line = BuiltUnderItalian(() => MachineContract.English(
+            () => Program.UpdateNotStartedEventLogLine("/s", "3.4.0", "3.5.0")));
+
+        Assert.Equal("/s mode: InstallerClean updated itself from 3.4.0 to 3.5.0 but could not start it, so nothing ran.", line);
+    }
+
+    [Fact]
+    public void The_update_that_went_in_before_a_Ctrl_C_says_nothing_ran()
+    {
+        var line = BuiltUnderItalian(() => MachineContract.English(
+            () => Program.UpdatedThenCancelledEventLogLine("/s", "3.4.0", "3.5.0")));
+
+        Assert.Equal("/s mode: InstallerClean updated itself from 3.4.0 to 3.5.0, then the run was cancelled, so nothing ran.", line);
     }
 }

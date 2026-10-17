@@ -565,6 +565,7 @@ const MAP = {
   'Automation.UpdateNotice.CopyCommand': `コマンドをコピー`,
   'Automation.UpdateNotice.ScoopCommand': `Scoop の更新コマンド`,
   'Cli.UpdateInUse': `InstallerClean は使用中のため、今は自身を更新できません。`,
+  'Cli.CancellingAfterUpdate': `更新の完了後にキャンセルします...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,
@@ -672,6 +673,7 @@ const STRIPPED = new Set([
   'Cli.EventLogUpdateNotStarted',
   // The machine Cli key for an update not tried because InstallerClean was in use, by the same rule.
   'Cli.EventLogUpdateInUse',
+  'Cli.EventLogUpdatedThenCancelled',
 ]);
 let stripped = 0;
 text = text.replace(/[^\S\n]*<data name="(Cli\.[^"]*)"[\s\S]*?<\/data>\n?/g,

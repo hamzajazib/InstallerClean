@@ -553,6 +553,7 @@ const MAP = {
   'Automation.UpdateNotice.CopyCommand': `複製命令`,
   'Automation.UpdateNotice.ScoopCommand': `Scoop 更新命令`,
   'Cli.UpdateInUse': `InstallerClean 正在使用中，因此現在無法自行更新。`,
+  'Cli.CancellingAfterUpdate': `將在更新完成後取消...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

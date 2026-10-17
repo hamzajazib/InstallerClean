@@ -561,6 +561,7 @@ Ayrıntılar şuraya yazıldı:
   'Automation.UpdateNotice.CopyCommand': `Komutu kopyala`,
   'Automation.UpdateNotice.ScoopCommand': `Scoop güncelleme komutu`,
   'Cli.UpdateInUse': `InstallerClean kullanımda olduğu için şu anda kendini güncelleyemiyor.`,
+  'Cli.CancellingAfterUpdate': `Güncelleştirme bittiğinde iptal edilecek...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

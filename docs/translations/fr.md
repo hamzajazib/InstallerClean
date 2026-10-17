@@ -487,6 +487,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | Erreur : argument supplémentaire inattendu '{0}'. /s et /d n'acceptent aucun autre argument, et un seul indicateur peut être utilisé par exécution. |
 | Cancelling... | Annulation... |
 | Cancelled. | Annulé. |
+| Cancelling once the update has finished... | Annulation dès que la mise à jour sera terminée... |
 | Error: unexpected failure ({0}). Details written to {1}. | Erreur : échec inattendu ({0}). Détails écrits dans {1}. |
 | Error: unexpected failure ({0}). The crash log could not be written. | Erreur : échec inattendu ({0}). Le journal de plantage n'a pas pu être écrit. |
 | Scanning {InstallerFolder}... | Analyse de {InstallerFolder}... |

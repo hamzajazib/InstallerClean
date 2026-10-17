@@ -640,6 +640,7 @@ const MAP = {
   'Automation.UpdateNotice.CopyCommand': `Copiar o comando`,
   'Automation.UpdateNotice.ScoopCommand': `Comando de atualização do Scoop`,
   'Cli.UpdateInUse': `O InstallerClean está em uso, então não pode se atualizar agora.`,
+  'Cli.CancellingAfterUpdate': `Cancelando assim que a atualização terminar...`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

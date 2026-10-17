@@ -713,6 +713,7 @@ const CLI = {
   'Cli.UpdateDownloadLink': `Скачать с GitHub: {0}`,
   'Cli.Help.UpdateNote': `Перед сканированием проверяет, есть ли более новая версия InstallerClean.&#10;При запуске вручную спрашивает перед обновлением. При запуске без участия&#10;человека, в запланированной задаче или скрипте, обновляется без вопросов.&#10;Добавьте /noupdate, чтобы пропустить проверку.`,
   'Cli.UpdateInUse': `InstallerClean используется, поэтому сейчас не может обновиться.`,
+  'Cli.CancellingAfterUpdate': `Отмена после завершения обновления...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -660,6 +660,7 @@ const MAP = {
   'Automation.UpdateNotice.CopyCommand': `Salin perintah`,
   'Automation.UpdateNotice.ScoopCommand': `Perintah pembaruan Scoop`,
   'Cli.UpdateInUse': `InstallerClean sedang digunakan, jadi tidak dapat memperbarui dirinya sekarang.`,
+  'Cli.CancellingAfterUpdate': `Membatalkan setelah pembaruan selesai...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

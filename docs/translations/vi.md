@@ -487,6 +487,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | Lỗi: đối số thừa không mong đợi '{0}'. /s và /d không nhận thêm đối số nào, và mỗi lần chạy chỉ dùng được một cờ. |
 | Cancelling... | Đang hủy... |
 | Cancelled. | Đã hủy. |
+| Cancelling once the update has finished... | Sẽ hủy khi cập nhật xong... |
 | Error: unexpected failure ({0}). Details written to {1}. | Lỗi: sự cố không mong đợi ({0}). Chi tiết đã ghi vào {1}. |
 | Error: unexpected failure ({0}). The crash log could not be written. | Lỗi: sự cố không mong đợi ({0}). Không ghi được nhật ký sự cố. |
 | Scanning {InstallerFolder}... | Đang quét {InstallerFolder}... |

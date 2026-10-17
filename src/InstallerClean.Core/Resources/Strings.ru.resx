@@ -1693,6 +1693,9 @@ InstallerClean уже был запущен от имени администра
        take no path at all, so the quoting advice above would answer about a flag
        the user did not type. The way in is combining flags ("/s /d"), which is
        what the second sentence addresses. -->
+  <!-- Printed in place of Cli.Cancelling where Ctrl+C comes while the newer setup
+       runs: the run waits for the setup to end, then prints Cli.UpdateInstalled where it
+       installed and Cli.Cancelled. -->
   <!-- 0 = exception type name (full message + stack trace go to the
        crash log; the CLI runs elevated so .Message could include paths
        from another user's profile if logged to a shared file).
@@ -2342,6 +2345,9 @@ InstallerClean уже был запущен от имени администра
   <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
        ID 3006, the run's only entry, where the newer version is in place but would not
        start, so nothing ran. -->
+  <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
+       ID 3005, the run's only entry, where the newer version is in place and Ctrl+C came
+       before it started, so nothing ran. -->
   <!-- Stdout when the CLI cannot acquire the single-instance mutex.
        The GUI variant (Strings.Startup_AlreadyRunningBody) is written
        for a user who tried to launch a second window; the CLI variant
@@ -2565,4 +2571,5 @@ InstallerClean уже был запущен от имени администра
   <data name="Cli.UpdateDownloadLink" xml:space="preserve"><value>Скачать с GitHub: {0}</value></data>
   <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>Перед сканированием проверяет, есть ли более новая версия InstallerClean.&#10;При запуске вручную спрашивает перед обновлением. При запуске без участия&#10;человека, в запланированной задаче или скрипте, обновляется без вопросов.&#10;Добавьте /noupdate, чтобы пропустить проверку.</value></data>
   <data name="Cli.UpdateInUse" xml:space="preserve"><value>InstallerClean используется, поэтому сейчас не может обновиться.</value></data>
+  <data name="Cli.CancellingAfterUpdate" xml:space="preserve"><value>Отмена после завершения обновления...</value></data>
 </root>

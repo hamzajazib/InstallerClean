@@ -245,7 +245,7 @@ internal static class Program
                 // reports its cancellation once.
                 if (cts.IsCancellationRequested) return;
                 Console.WriteLine();
-                Console.WriteLine(Strings.Cli_Cancelling);
+                Console.WriteLine(updateHost.SetupRunning ? Strings.Cli_CancellingAfterUpdate : Strings.Cli_Cancelling);
                 cts.Cancel();
             }
             catch (Exception ex)
@@ -370,9 +370,10 @@ internal static class Program
     /// <summary>
     /// The update made before a /s, /d or /m (<see cref="CommandLineUpdate"/>). Answers the
     /// exit code where the run ends here: the newer version's, where it ran in this
-    /// console; <see cref="ExitCancelled"/> after Ctrl+C at the question or during the
-    /// download; or <see cref="ExitError"/> where the update failed with this version's
-    /// file no longer at its path, so nothing ran. Answers null where the run goes on
+    /// console; <see cref="ExitCancelled"/> after Ctrl+C at the question, during the
+    /// download, or with the newer version installed and not yet started; or
+    /// <see cref="ExitError"/> where the update failed with this version's file no longer
+    /// at its path, so nothing ran. Answers null where the run goes on
     /// with this version, having written the notice for an update that failed.
     ///
     /// Nothing is checked where <c>/noupdate</c> was given or this account's settings turn
@@ -418,6 +419,14 @@ internal static class Program
                 Console.WriteLine(Strings.Cli_Cancelled);
                 MachineContract.WriteEventLog(CliEventClass.TransientSkip,
                     () => string.Format(Strings.Cli_EventLogCancelledNoWork, arg));
+                NoteEventLogUnavailable();
+                return ExitCancelled;
+            case CommandLineUpdateResult.UpdatedThenCancelled updated:
+                // The newer version is in place and nothing ran, so the notice saying so is
+                // the run's one entry.
+                Console.WriteLine(Strings.Cli_Cancelled);
+                MachineContract.WriteEventLog(CliEventClass.UpdatedThenCancelledNotice,
+                    () => UpdatedThenCancelledEventLogLine(arg, updated.FromVersion, updated.ToVersion));
                 NoteEventLogUnavailable();
                 return ExitCancelled;
             case CommandLineUpdateResult.CarriedOn { FailedAt: { } stage, FromVersion: { } from, ToVersion: { } to }:
@@ -496,6 +505,19 @@ internal static class Program
     /// </remarks>
     internal static string UpdateNotStartedEventLogLine(string arg, string fromVersion, string toVersion) =>
         string.Format(Strings.Cli_EventLogUpdateNotStarted, arg, fromVersion, toVersion);
+
+    /// <summary>
+    /// The Event ID 3005 line where the run ends with nothing run: this run updated itself
+    /// from <paramref name="fromVersion"/> to <paramref name="toVersion"/>, which is in
+    /// place, and Ctrl+C came before it started.
+    /// </summary>
+    /// <remarks>
+    /// Built outside the en-GB scope, like <see cref="AbortedMoveEventLogLine"/>: the
+    /// caller wraps it, so the line renders English in production and in the ambient
+    /// culture anywhere else.
+    /// </remarks>
+    internal static string UpdatedThenCancelledEventLogLine(string arg, string fromVersion, string toVersion) =>
+        string.Format(Strings.Cli_EventLogUpdatedThenCancelled, arg, fromVersion, toVersion);
 
     /// <summary>
     /// Prints what a run held back, in the operator's language: ONE counted

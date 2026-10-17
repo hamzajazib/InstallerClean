@@ -228,6 +228,7 @@ public class CliContractTests
         Assert.Equal(3003, CliContract.EventIdFor(CliEventClass.ScanSupersededHeldBackNotice));
         Assert.Equal(3004, CliContract.EventIdFor(CliEventClass.SourcesGivenUpNotice));
         Assert.Equal(3005, CliContract.EventIdFor(CliEventClass.UpdatedNotice));
+        Assert.Equal(3005, CliContract.EventIdFor(CliEventClass.UpdatedThenCancelledNotice));
         Assert.Equal(3006, CliContract.EventIdFor(CliEventClass.UpdateFailedNotice));
     }
 
@@ -249,6 +250,7 @@ public class CliContractTests
         Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.ScanSupersededHeldBackNotice), outcomes);
         Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.SourcesGivenUpNotice), outcomes);
         Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.UpdatedNotice), outcomes);
+        Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.UpdatedThenCancelledNotice), outcomes);
         Assert.DoesNotContain(CliContract.EventIdFor(CliEventClass.UpdateFailedNotice), outcomes);
     }
 
@@ -263,12 +265,16 @@ public class CliContractTests
         //
         // The denominator is asserted rather than assumed: a walk that found no
         // members would report no duplicates, which reads exactly like a clean map.
+        //
+        // The two update notices share 3005 by design, so one filter sees every update
+        // that went in, and are counted as one class here. Any other pair is a fault.
         var classes = Enum.GetValues<CliEventClass>();
         Assert.True(classes.Length >= 7,
             $"CliEventClass has {classes.Length} members, which is too few for this walk to be "
             + "measuring what it claims.");
 
-        var ids = classes.Select(CliContract.EventIdFor).ToArray();
+        var ids = classes.Where(c => c != CliEventClass.UpdatedThenCancelledNotice)
+            .Select(CliContract.EventIdFor).ToArray();
         var duplicated = ids.GroupBy(id => id).Where(g => g.Count() > 1).Select(g => g.Key).ToArray();
 
         Assert.True(duplicated.Length == 0,
@@ -284,6 +290,16 @@ public class CliContractTests
         // enum.
         Assert.All(Enum.GetValues<CliEventClass>(),
             c => Assert.NotEqual(0, CliContract.EventIdFor(c)));
+    }
+
+    [Fact]
+    public void EntryType_the_update_notices_follow_the_run()
+    {
+        // One Event ID, two entry types: the run that ran the newer version fell short of
+        // nothing, and the run cancelled before it started did not do its job.
+        Assert.Equal(EventLogEntryType.Information, CliContract.EntryTypeFor(CliEventClass.UpdatedNotice));
+        Assert.Equal(EventLogEntryType.Warning, CliContract.EntryTypeFor(CliEventClass.UpdatedThenCancelledNotice));
+        Assert.Equal(EventLogEntryType.Warning, CliContract.EntryTypeFor(CliEventClass.UpdateFailedNotice));
     }
 
     [Fact]

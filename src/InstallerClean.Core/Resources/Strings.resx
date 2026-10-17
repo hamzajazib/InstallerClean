@@ -1698,6 +1698,10 @@ Run InstallerClean again as administrator.</value></data>
   <data name="Cli.TooManyArgumentsNoPath" xml:space="preserve"><value>Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run.</value></data>
   <data name="Cli.Cancelling" xml:space="preserve"><value>Cancelling...</value></data>
   <data name="Cli.Cancelled" xml:space="preserve"><value>Cancelled.</value></data>
+  <!-- Printed in place of Cli.Cancelling where Ctrl+C comes while the newer setup
+       runs: the run waits for the setup to end, then prints Cli.UpdateInstalled where it
+       installed and Cli.Cancelled. -->
+  <data name="Cli.CancellingAfterUpdate" xml:space="preserve"><value>Cancelling once the update has finished...</value></data>
   <!-- 0 = exception type name (full message + stack trace go to the
        crash log; the CLI runs elevated so .Message could include paths
        from another user's profile if logged to a shared file).
@@ -2468,6 +2472,10 @@ Run InstallerClean again as administrator.</value></data>
        ID 3006, the run's only entry, where the newer version is in place but would not
        start, so nothing ran. -->
   <data name="Cli.EventLogUpdateNotStarted" xml:space="preserve"><value>{0} mode: InstallerClean updated itself from {1} to {2} but could not start it, so nothing ran.</value></data>
+  <!-- 0 = mode arg, 1 = the version that ran the update, 2 = the version installed. Event
+       ID 3005, the run's only entry, where the newer version is in place and Ctrl+C came
+       before it started, so nothing ran. -->
+  <data name="Cli.EventLogUpdatedThenCancelled" xml:space="preserve"><value>{0} mode: InstallerClean updated itself from {1} to {2}, then the run was cancelled, so nothing ran.</value></data>
   <!-- Stdout when the CLI cannot acquire the single-instance mutex.
        The GUI variant (Strings.Startup_AlreadyRunningBody) is written
        for a user who tried to launch a second window; the CLI variant

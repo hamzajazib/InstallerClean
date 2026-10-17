@@ -487,6 +487,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | Ошибка: непредвиденный лишний аргумент «{0}». /s и /d не принимают других аргументов, и за один запуск можно использовать только один ключ. |
 | Cancelling... | Отмена... |
 | Cancelled. | Отменено. |
+| Cancelling once the update has finished... | Отмена после завершения обновления... |
 | Error: unexpected failure ({0}). Details written to {1}. | Ошибка: непредвиденный сбой ({0}). Подробности записаны в {1}. |
 | Error: unexpected failure ({0}). The crash log could not be written. | Ошибка: непредвиденный сбой ({0}). Журнал сбоя записать не удалось. |
 | Scanning {InstallerFolder}... | Сканирование {InstallerFolder}... |

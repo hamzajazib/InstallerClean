@@ -487,6 +487,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | Kesalahan: argumen tambahan tak terduga '{0}'. /s dan /d tidak menerima argumen lain, dan hanya satu flag yang bisa dipakai per proses. |
 | Cancelling... | Membatalkan... |
 | Cancelled. | Dibatalkan. |
+| Cancelling once the update has finished... | Membatalkan setelah pembaruan selesai... |
 | Error: unexpected failure ({0}). Details written to {1}. | Kesalahan: kegagalan tak terduga ({0}). Rincian ditulis ke {1}. |
 | Error: unexpected failure ({0}). The crash log could not be written. | Kesalahan: kegagalan tak terduga ({0}). Log kerusakan tidak bisa ditulis. |
 | Scanning {InstallerFolder}... | Memindai {InstallerFolder}... |

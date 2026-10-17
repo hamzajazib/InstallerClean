@@ -76,7 +76,9 @@ internal static class MachineContract
     /// What a consumer may rely on, because two of these entries are newer than
     /// most tooling watching for them. Every <c>/s</c>, <c>/d</c> or <c>/m</c>
     /// run writes exactly ONE summary entry, and its Event ID is in the 1000,
-    /// 2000 or 4000 band (<see cref="CliContract.EventIdFor"/>). Beside it a run
+    /// 2000 or 4000 band (<see cref="CliContract.EventIdFor"/>), except a run that
+    /// updated itself and then ran nothing, whose one entry is the 3005 or 3006 below
+    /// saying so. Beside it a run
     /// may write NOTICES, in the 3000 band, which are conditions the scan found and
     /// never the run's outcome. THE LIST BELOW IS THE WHOLE BAND, which is the part
     /// a consumer building a filter needs of it. 3000: the scan could not check some
@@ -96,20 +98,25 @@ internal static class MachineContract
     /// check's is written as soon as the check returns, so a run refused after it
     /// carries it too. 3005: the run installed a newer version and ran it, naming both
     /// versions and what the newer one was started with; that newer version, a process of
-    /// its own, writes the run's summary. 3006: the run could not install a newer version,
-    /// naming both versions and whether the download or the install failed, and went on
-    /// with the version it is. A notice never replaces the summary and never stands
-    /// in for one, so counting runs means counting the summary bands, and each
-    /// repeats for as long as its own condition holds, so a machine can emit one on
-    /// every run for weeks.
+    /// its own, writes the run's summary. Where Ctrl+C came before the newer version
+    /// started, the 3005 says so instead, is the run's one entry and is a Warning. 3006: the run could
+    /// not install a newer version, naming both versions and whether the download failed,
+    /// the install failed or InstallerClean was in use, and went on with the version it
+    /// is. Where the newer version is in place and would not start, the 3006 says so
+    /// instead and is the run's one entry. Those two aside, a notice never replaces the
+    /// summary and never stands in for one, so counting runs means counting the summary
+    /// bands and those two, and each notice repeats for as long as its own condition
+    /// holds, so a machine can emit one on every run for weeks.
     ///
     /// "NEVER THE RUN'S OUTCOME" IS ABOUT COUNTING RUNS AND IS NOT THE OTHER SENSE
     /// OF THE SAME WORDS. <see cref="CliContract.EntryTypeFor"/> separates a
     /// standing property of the machine from a run that fell short of its job, and
     /// on that question 3001 is the standing property while 3000, 3002, 3003 and 3004
     /// are about the run, which is why 3001 is Information and the other four are
-    /// Warning. 3005 is Information because the run fell short of nothing, and 3006
-    /// Warning because the run went on with an older version than it set out to use.
+    /// Warning. 3005 is Information because the run fell short of nothing, except the one
+    /// saying Ctrl+C came before the newer version started, which is Warning as a cancelled
+    /// run's 2000 is, and 3006 Warning because the run went on with an older version than
+    /// it set out to use.
     /// Nothing here contradicts that: this paragraph says only that a notice is not
     /// the run's SUMMARY entry, which is what a consumer counting runs is asking.
     /// Two questions, near-identical wording, and the sense that travels between

@@ -487,6 +487,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | 오류: 예상치 못한 추가 인수 '{0}'. /s와 /d는 다른 인수를 받지 않으며, 한 번 실행에 플래그는 하나만 쓸 수 있습니다. |
 | Cancelling... | 취소 중... |
 | Cancelled. | 취소되었습니다. |
+| Cancelling once the update has finished... | 업데이트가 끝나면 취소합니다... |
 | Error: unexpected failure ({0}). Details written to {1}. | 오류: 예상치 못한 실패({0}). 자세한 내용을 {1}에 기록했습니다. |
 | Error: unexpected failure ({0}). The crash log could not be written. | 오류: 예상치 못한 실패({0}). 크래시 로그를 기록하지 못했습니다. |
 | Scanning {InstallerFolder}... | {InstallerFolder} 검사 중... |

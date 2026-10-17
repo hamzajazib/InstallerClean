@@ -487,6 +487,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | 錯誤：出現未預期的多餘參數「{0}」。/s 和 /d 不接受其他參數，而且每次執行只能使用一個選項。 |
 | Cancelling... | 正在取消... |
 | Cancelled. | 已取消。 |
+| Cancelling once the update has finished... | 將在更新完成後取消... |
 | Error: unexpected failure ({0}). Details written to {1}. | 錯誤：未預期的失敗（{0}）。詳細資料已寫入 {1}。 |
 | Error: unexpected failure ({0}). The crash log could not be written. | 錯誤：未預期的失敗（{0}）。無法寫入當機記錄檔。 |
 | Scanning {InstallerFolder}... | 正在掃描 {InstallerFolder}... |

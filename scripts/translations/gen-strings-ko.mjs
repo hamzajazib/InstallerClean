@@ -636,6 +636,7 @@ const MAP = {
   'Automation.UpdateNotice.CopyCommand': `명령 복사`,
   'Automation.UpdateNotice.ScoopCommand': `Scoop 업데이트 명령`,
   'Cli.UpdateInUse': `InstallerClean이 사용 중이어서 지금은 스스로 업데이트할 수 없습니다.`,
+  'Cli.CancellingAfterUpdate': `업데이트가 끝나면 취소합니다...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

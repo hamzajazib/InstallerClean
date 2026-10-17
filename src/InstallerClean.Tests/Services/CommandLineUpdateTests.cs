@@ -485,8 +485,10 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Null(_host.NewerVersionRun);
     }
 
-    [Fact]
-    public void Ctrl_C_while_the_setup_runs_stops_the_run_before_the_newer_version_starts()
+    [Theory]
+    [InlineData("/s")]
+    [InlineData("/d")]
+    public void Ctrl_C_while_the_setup_runs_says_the_newer_version_is_installed_and_starts_nothing(string command)
     {
         using var cts = new CancellationTokenSource();
         _host.OnSetup = () =>
@@ -495,10 +497,107 @@ public sealed class CommandLineUpdateTests : IDisposable
             cts.Cancel();
             return 0;
         };
+        _host.Answers.Enqueue("y");
 
-        var result = Run(Setup(), canAsk: false, token: cts.Token);
+        var result = Run(Setup(), canAsk: true, command: command, token: cts.Token);
+
+        Assert.Equal(new CommandLineUpdateResult.UpdatedThenCancelled(Current, Latest), result);
+        Assert.Equal(string.Format(Strings.Cli_UpdateInstalled, Latest), _host.Output[^1]);
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.Null(_host.NewerVersionRun);
+    }
+
+    [Theory]
+    [InlineData(AppCopyKind.CommandLineDownload)]
+    [InlineData(AppCopyKind.Setup)]
+    public void Ctrl_C_after_the_download_and_before_the_rename_takes_it_away_and_changes_nothing(AppCopyKind kind)
+    {
+        using var cts = new CancellationTokenSource();
+        var updater = kind == AppCopyKind.Setup
+            ? new FakeUpdater(kind, Path.Combine(_folder, "InstallerClean-3.5.0-setup.exe"), onPrepare: cts.Cancel)
+            : new FakeUpdater(kind, _exe, onPrepare: () =>
+            {
+                File.WriteAllText(_exe + SelfReplacement.NewSuffix, "new");
+                cts.Cancel();
+            });
+
+        var result = Run(updater, canAsk: false, token: cts.Token);
 
         Assert.IsType<CommandLineUpdateResult.Cancelled>(result);
+        Assert.True(updater.Undone);
+        Assert.False(_host.OwnFileReleased);
+        Assert.Equal("old", File.ReadAllText(_exe));
+        Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
+        Assert.True(_host.HoldsOwnFile);
+        Assert.False(_host.HoldsLock);
+        Assert.Null(_host.SetupRun);
+        Assert.Null(_host.NewerVersionRun);
+    }
+
+    [Theory]
+    [InlineData(AppCopyKind.CommandLineDownload)]
+    [InlineData(AppCopyKind.Setup)]
+    public void Ctrl_C_once_this_exe_is_renamed_and_before_anything_starts_puts_it_back(AppCopyKind kind)
+    {
+        using var cts = new CancellationTokenSource();
+        // The last call before the rename, after the token was last read.
+        _host.OnReleaseOwnFile = cts.Cancel;
+        var updater = kind == AppCopyKind.Setup ? Setup() : Download();
+
+        var result = Run(updater, canAsk: false, token: cts.Token);
+
+        Assert.IsType<CommandLineUpdateResult.Cancelled>(result);
+        Assert.True(updater.Undone);
+        Assert.Equal("old", File.ReadAllText(_exe));
+        Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
+        Assert.True(_host.HoldsOwnFile);
+        Assert.Null(_host.SetupRun);
+        Assert.Null(_host.NewerVersionRun);
+        Assert.DoesNotContain(string.Format(Strings.Cli_UpdateInstalled, Latest), _host.Output);
+    }
+
+    [Fact]
+    public void Ctrl_C_after_the_swap_where_this_exe_cannot_go_back_says_the_newer_version_is_installed()
+    {
+        File.WriteAllText(_exe, "new");
+        var update = new CommandLineUpdate(NewerOut, Download(), _host);
+        var prepared = new PreparedUpdate(_exe, string.Empty, () => { }, _exe + SelfReplacement.NewSuffix);
+
+        var result = update.CancelAfterSwap(prepared, _exe, Current, Latest, putBack: () => false);
+
+        Assert.Equal(new CommandLineUpdateResult.UpdatedThenCancelled(Current, Latest), result);
+        Assert.Equal(string.Format(Strings.Cli_UpdateInstalled, Latest), Assert.Single(_host.Output));
+    }
+
+    [Fact]
+    public void Ctrl_C_after_the_swap_with_neither_version_at_the_path_ends_the_run_with_nothing_run()
+    {
+        File.Delete(_exe);
+        var update = new CommandLineUpdate(NewerOut, Download(), _host);
+        var prepared = new PreparedUpdate(_exe, string.Empty, () => { }, _exe + SelfReplacement.NewSuffix);
+
+        var result = update.CancelAfterSwap(prepared, _exe, Current, Latest, putBack: () => false);
+
+        Assert.Equal(nameof(UpdateFailedException), Assert.IsType<CommandLineUpdateResult.Stopped>(result).FailureType);
+        Assert.Equal(Strings.UpdateNotice_InstallFailed, Assert.Single(_host.Output));
+    }
+
+    [Theory]
+    [InlineData(AppCopyKind.CommandLineDownload)]
+    [InlineData(AppCopyKind.Setup)]
+    public void Ctrl_C_before_the_newer_version_starts_leaves_it_installed_and_starts_nothing(AppCopyKind kind)
+    {
+        using var cts = new CancellationTokenSource();
+        if (kind == AppCopyKind.Setup) SetupInstalls();
+        _host.NewerVersionExitCode = 0;
+        _host.OnNewerVersion = cts.Cancel;
+        var updater = kind == AppCopyKind.Setup ? Setup() : Download();
+
+        var result = Run(updater, canAsk: false, token: cts.Token);
+
+        Assert.Equal(new CommandLineUpdateResult.UpdatedThenCancelled(Current, Latest), result);
+        Assert.Equal(string.Format(Strings.Cli_UpdateInstalled, Latest), _host.Output[^1]);
+        Assert.Equal("new", File.ReadAllText(_exe));
         Assert.Null(_host.NewerVersionRun);
     }
 
@@ -636,7 +735,17 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         public void HoldOwnFile() => HoldsOwnFile = true;
 
-        public void ReleaseOwnFile() => HoldsOwnFile = false;
+        public Action? OnReleaseOwnFile { get; set; }
+
+        /// <summary>Whether the run let go of its own file, which it does only to rename it.</summary>
+        public bool OwnFileReleased { get; private set; }
+
+        public void ReleaseOwnFile()
+        {
+            HoldsOwnFile = false;
+            OwnFileReleased = true;
+            OnReleaseOwnFile?.Invoke();
+        }
 
         public Version? FileVersion(string path) =>
             !File.Exists(path) ? null : File.ReadAllText(path) switch
@@ -652,17 +761,21 @@ public sealed class CommandLineUpdateTests : IDisposable
             LockHeldAtPrepare.Add(HoldsLock);
         }
 
-        public int? RunSetup(string file, IReadOnlyList<string> arguments)
+        // Each start reads the token first, as the console host's does before every try.
+        public int? RunSetup(string file, IReadOnlyList<string> arguments, CancellationToken token)
         {
+            token.ThrowIfCancellationRequested();
             SetupRun = (file, arguments.ToArray(), HoldsLock,
                 !File.Exists(exe) && File.Exists(exe + SelfReplacement.OldSuffix));
             return OnSetup();
         }
 
-        public int? RunNewerVersion(string file, IReadOnlyList<string> arguments, string fromVersion, string toVersion)
+        public int? RunNewerVersion(
+            string file, IReadOnlyList<string> arguments, string fromVersion, string toVersion, CancellationToken token)
         {
             NewerVersionHeldLock = HoldsLock;
             OnNewerVersion?.Invoke();
+            token.ThrowIfCancellationRequested();
             if (NewerVersionExitCode is null) return null;
             NewerVersionRun = (file, arguments.ToArray(), fromVersion, toVersion, File.ReadAllText(file), HoldsOwnFile);
             return NewerVersionExitCode;

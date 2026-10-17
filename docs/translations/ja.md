@@ -487,6 +487,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Error: unexpected extra argument '{0}'. /s and /d take no further arguments, and only one flag can be used per run. | エラー：予期しない余分な引数 '{0}'。/s と /d は他の引数を取らず、1 回の実行で使えるフラグは 1 つだけです。 |
 | Cancelling... | キャンセル中... |
 | Cancelled. | キャンセルされました。 |
+| Cancelling once the update has finished... | 更新の完了後にキャンセルします... |
 | Error: unexpected failure ({0}). Details written to {1}. | エラー：予期しない障害 ({0})。詳細を {1} に書き込みました。 |
 | Error: unexpected failure ({0}). The crash log could not be written. | エラー：予期しない障害 ({0})。クラッシュログを書き込めませんでした。 |
 | Scanning {InstallerFolder}... | {InstallerFolder} をスキャン中... |

@@ -167,6 +167,7 @@ public static class Strings
     public static string Cli_AdminRightsNeeded => Get("Cli.AdminRightsNeeded");
     public static string Cli_Cancelled => Get("Cli.Cancelled");
     public static string Cli_Cancelling => Get("Cli.Cancelling");
+    public static string Cli_CancellingAfterUpdate => Get("Cli.CancellingAfterUpdate");
     public static string Cli_DeletedFiles => Get("Cli.DeletedFiles");
     public static string Cli_DeletingFiles => Get("Cli.DeletingFiles");
     public static string Cli_DestinationChangedMidBatch => Get("Cli.DestinationChangedMidBatch");
@@ -219,6 +220,7 @@ public static class Strings
     public static string Cli_EventLogUnavailable => Get("Cli.EventLogUnavailable");
     public static string Cli_EventLogUpdated => Get("Cli.EventLogUpdated");
     public static string Cli_EventLogUpdateDownloadFailed => Get("Cli.EventLogUpdateDownloadFailed");
+    public static string Cli_EventLogUpdatedThenCancelled => Get("Cli.EventLogUpdatedThenCancelled");
     public static string Cli_EventLogUpdateInstallFailed => Get("Cli.EventLogUpdateInstallFailed");
     public static string Cli_EventLogUpdateInUse => Get("Cli.EventLogUpdateInUse");
     public static string Cli_EventLogUpdateNotStarted => Get("Cli.EventLogUpdateNotStarted");
