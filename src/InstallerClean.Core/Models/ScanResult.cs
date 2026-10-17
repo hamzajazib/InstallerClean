@@ -340,9 +340,8 @@ namespace InstallerClean.Models;
 /// </param>
 /// <param name="WithheldDeclaredProductInstalledBytes">
 /// The size of the files <see cref="WithholdingSplit.DeclaredProductInstalledCount"/>
-/// counts, so that <see cref="UnestablishedWithheldBytes"/> and
-/// <see cref="UnsettledHeldBackBytes"/> can each leave them out. Carried here rather
-/// than on the split, which holds counts and nothing else.
+/// counts, so that <see cref="UnestablishedWithheldBytes"/> can leave them out. Carried
+/// here rather than on the split, which holds counts and nothing else.
 /// </param>
 /// <param name="WithheldNotBeforeTheClockBytes">
 /// The size of the files <see cref="WithholdingSplit.NotBeforeTheClockCount"/> counts, so
@@ -351,13 +350,12 @@ namespace InstallerClean.Models;
 /// </param>
 /// <param name="WithheldDeclaredPatchRegisteredBytes">
 /// The size of the files <see cref="WithholdingSplit.DeclaredPatchRegisteredCount"/>
-/// counts, so that <see cref="UnestablishedWithheldBytes"/> and
-/// <see cref="UnsettledHeldBackBytes"/> can each leave them out, carried the same way.
+/// counts, so that <see cref="UnestablishedWithheldBytes"/> can leave them out, carried
+/// the same way.
 /// </param>
 /// <param name="SupersededWithheldBytes">
 /// The size of the files <see cref="WithheldCount"/> counts, summed over the same rows:
-/// superseded rows held back whose file is on disk. <see cref="UnsettledHeldBackBytes"/>
-/// adds it to the size of the walk-derived files.
+/// superseded rows held back whose file is on disk.
 ///
 /// IT IS NOT <see cref="RegisteredSupersededBytes"/>, which sizes every superseded or
 /// obsoleted row the scan is keeping, held back or not.
@@ -390,8 +388,7 @@ namespace InstallerClean.Models;
 /// file and the other the check failing to answer.
 /// </param>
 /// <param name="SupersededContainmentBytes">
-/// The size of the files the two counts above count. <see cref="SupersededHeldBackBytes"/>
-/// adds it to <see cref="SupersededWithheldBytes"/>.
+/// The size of the files the two counts above count.
 /// </param>
 /// <param name="SourceRootsGivenUp">
 /// Every drive or share, or path of another form, the declared-product screen stopped
@@ -594,9 +591,9 @@ public record ScanResult(
 
     /// <summary>
     /// What this run's withholding amounts to, for the command line deciding what to
-    /// tell somebody about it. The window's finished screen reads
-    /// <see cref="UnsettledHeldBackCount"/> and <see cref="UnsettledHeldBackIsWholesale"/>
-    /// instead.
+    /// tell somebody about it. The window's finished screen reads none of it: it chooses
+    /// between the all-clear and the screen saying nothing was offered through
+    /// <see cref="IsAllClear"/>.
     ///
     /// THE COMMAND LINE MAKES TWO DECISIONS AND NOT ONE: whether to say anything about a
     /// withholding at all, which <see cref="HasWithholdingToReport"/> answers, and
@@ -696,12 +693,12 @@ public record ScanResult(
         == UnestablishedWithheldCount;
 
     /// <summary>
-    /// How many files the window's finished screen says were held back: every file on
-    /// <see cref="WithheldFiles"/> except those
+    /// How many files this scan held back without establishing that anything needs them:
+    /// every file on <see cref="WithheldFiles"/> except those
     /// <see cref="WithholdingSplit.DeclaredProductInstalledCount"/> and
     /// <see cref="WithholdingSplit.DeclaredPatchRegisteredCount"/> count, together with
-    /// the superseded files <see cref="SupersededHeldBackCount"/> counts.
-    /// <see cref="UnsettledHeldBackBytes"/> is their size.
+    /// the superseded files <see cref="SupersededHeldBackCount"/> counts. Above zero, it
+    /// keeps the all-clear off the window's finished screen (<see cref="IsAllClear"/>).
     ///
     /// THE TWO ARMS LEFT OUT KEEP A FILE BECAUSE WINDOWS HOLDS A RECORD OF THE PROGRAM OR
     /// PATCH IT DECLARES, OR OF A PROGRAM THAT OPENS IT AS ITS PACKAGE. Every other file
@@ -727,24 +724,11 @@ public record ScanResult(
         + SupersededHeldBackCount;
 
     /// <summary>
-    /// The size of the files <see cref="UnsettledHeldBackCount"/> counts, on the same
-    /// reading: the withheld list's size less that of the files the
-    /// declared-product-installed and declared-patch-registered arms count, together with
-    /// <see cref="SupersededHeldBackBytes"/>.
-    /// </summary>
-    public long UnsettledHeldBackBytes =>
-        Math.Max(0, WithheldTotalBytes
-            - WithheldDeclaredProductInstalledBytes
-            - WithheldDeclaredPatchRegisteredBytes)
-        + SupersededHeldBackBytes;
-
-    /// <summary>
     /// How many superseded files this scan kept back from the offer: those
     /// <see cref="WithheldCount"/> counts, and those the containment check refused or could
-    /// not answer for. The command line's superseded line prints it, and the window's
-    /// finished screen counts it through <see cref="UnsettledHeldBackCount"/>, so the two
-    /// hosts count the same superseded files. <see cref="SupersededHeldBackBytes"/> is
-    /// their size.
+    /// not answer for. The command line's superseded line prints it, and
+    /// <see cref="UnsettledHeldBackCount"/> takes it in, so a superseded file held back keeps
+    /// the all-clear off the window's finished screen.
     ///
     /// IT IS A COUNT AND NEVER A CAUSE. Its three members are different findings, and what
     /// is true of all of them is that the app could not establish the file is one it can
@@ -752,13 +736,6 @@ public record ScanResult(
     /// </summary>
     public int SupersededHeldBackCount =>
         WithheldCount + SupersededContainmentRefusedCount + SupersededContainmentUnestablishedCount;
-
-    /// <summary>
-    /// The size of the files <see cref="SupersededHeldBackCount"/> counts:
-    /// <see cref="SupersededWithheldBytes"/> together with
-    /// <see cref="SupersededContainmentBytes"/>.
-    /// </summary>
-    public long SupersededHeldBackBytes => SupersededWithheldBytes + SupersededContainmentBytes;
 
     /// <summary>
     /// How many superseded files this scan withheld on a recorded path it could not
@@ -791,9 +768,8 @@ public record ScanResult(
         RegisteredPackages.Count(p => p.WithheldScanWide && p.FileExists);
 
     /// <summary>
-    /// Whether the window's finished screen, on a run that offered nothing, speaks of
-    /// files held back: true wherever <see cref="UnsettledHeldBackCount"/> is above zero.
-    /// It is one of the two things that keep the all-clear off that screen
+    /// Whether this scan held back a file <see cref="UnsettledHeldBackCount"/> counts. It is
+    /// one of the two things that keep the all-clear off the window's finished screen
     /// (<see cref="IsAllClear"/>).
     /// </summary>
     public bool HasUnsettledHeldBack => UnsettledHeldBackCount > 0;
@@ -803,7 +779,7 @@ public record ScanResult(
     /// all-clear: nothing held back that <see cref="UnsettledHeldBackCount"/> counts, and
     /// no drive or share given up with a file kept because of it
     /// (<see cref="HasSourceRootsGivenUpKeepingFiles"/>). Every other such run gets the
-    /// screen saying what the scan held back or carried on without.
+    /// screen saying nothing was offered.
     ///
     /// A FILE KEPT AT A DRIVE OR SHARE GIVEN UP NEED NOT BE IN THAT COUNT. One whose own
     /// program's packages could not all be read is kept as declaring a program Windows
@@ -813,22 +789,6 @@ public record ScanResult(
     public bool IsAllClear => !HasUnsettledHeldBack && !HasSourceRootsGivenUpKeepingFiles;
 
     /// <summary>
-    /// Whether the wholesale arm accounts for every file
-    /// <see cref="UnsettledHeldBackCount"/> counts. Where it does, the window's finished
-    /// screen gives the sentence naming what the scan could not establish about the
-    /// machine's records; on any other run with files to count, it gives the sentence
-    /// true of every one of them, on the reasoning <see cref="Withholding"/> sets out.
-    ///
-    /// A SUPERSEDED FILE ALWAYS TAKES THE OTHER SENTENCE. The wholesale arm counts
-    /// walk-derived files alone, so it cannot account for a superseded one.
-    ///
-    /// FALSE WHERE NOTHING IS COUNTED. A wholesale arm of zero equals a count of zero, and
-    /// that equality is evidence of nothing.
-    /// </summary>
-    public bool UnsettledHeldBackIsWholesale =>
-        UnsettledHeldBackCount > 0 && WithheldBy.WholesaleCount == UnsettledHeldBackCount;
-
-    /// <summary>
     /// Whether this scan has a line to give about recently changed files
     /// (<see cref="Helpers.RecentChangeReport.Line(ScanResult)"/>): it held back at least
     /// one file whose times are not before its clock, with Windows Installer's in-progress
@@ -836,29 +796,12 @@ public record ScanResult(
     /// this is false.
     /// </summary>
     public bool HasRecentChangeLine => WithheldBy.NotBeforeTheClockCount > 0;
-
-    /// <summary>
-    /// Whether the line about recently changed files
-    /// (<see cref="Helpers.RecentChangeReport.Line(ScanResult)"/>) counts every file
-    /// <see cref="UnsettledHeldBackCount"/> counts. Where it does, the window's finished
-    /// screen on a run that offered nothing gives that line in place of the sentence
-    /// counting the files held back.
-    ///
-    /// FALSE WHERE NOTHING IS COUNTED, AND WHERE A SIGNAL WAS SET. Without a line the
-    /// screen keeps the sentence counting the files.
-    ///
-    /// THE COMMAND LINE DOES NOT READ IT. Its sentences counting files held back leave out
-    /// the files the line counts, so its line about them is printed beside those sentences
-    /// and never in place of one.
-    /// </summary>
-    public bool RecentChangeLineCoversUnsettledHeldBack =>
-        HasRecentChangeLine && WithheldBy.NotBeforeTheClockCount == UnsettledHeldBackCount;
 }
 
 /// <summary>
 /// What a scan's withholding amounts to, in the terms the command line has to speak it.
-/// The window's finished screen does not read it; its reading is
-/// <see cref="ScanResult.UnsettledHeldBackCount"/>.
+/// The window's finished screen does not read it; it reads
+/// <see cref="ScanResult.IsAllClear"/>.
 ///
 /// THE COMMAND LINE PRINTS NO HELD-BACK SENTENCE FOR <see cref="Nothing"/> AND
 /// <see cref="KeptWithoutNotice"/> AND FOR NOTHING ELSE, through
@@ -916,8 +859,9 @@ public enum WithholdingAccount
     /// a run that kept nothing back, and the files stay among those left alone; where any is
     /// of the second kind, it prints the line about those files
     /// (<see cref="Helpers.RecentChangeReport"/>), which stands in place of its clean line
-    /// where nothing is offered. The window's finished screen counts a file of the second
-    /// kind among those held back, through <see cref="ScanResult.UnsettledHeldBackCount"/>.
+    /// where nothing is offered. A file of the second kind is among those
+    /// <see cref="ScanResult.UnsettledHeldBackCount"/> counts, so it keeps the all-clear off
+    /// the window's finished screen, which gives the line about those files.
     /// </summary>
     KeptWithoutNotice,
 }
@@ -1079,9 +1023,8 @@ public static class ShortNameCreationLabels
 /// <see cref="ScanResult.UnestablishedWithheldCount"/> and
 /// <see cref="ScanResult.Withholding"/>, and the first and last of those three by
 /// <see cref="ScanResult.UnsettledHeldBackCount"/> as well. The wholesale count is read
-/// by <see cref="ScanResult.Withholding"/>,
-/// <see cref="ScanResult.NamedConditionsCoverEveryHeldBackFile"/> and
-/// <see cref="ScanResult.UnsettledHeldBackIsWholesale"/>. The scan-signal, the
+/// by <see cref="ScanResult.Withholding"/> and
+/// <see cref="ScanResult.NamedConditionsCoverEveryHeldBackFile"/>. The scan-signal, the
 /// clock-set-back, the age-unestablished and the two containment counts are read by <see cref="Total"/>
 /// alone, and the remaining five by <see cref="ArmsFired"/> and
 /// <see cref="ScanResult.NamedConditionsCoverEveryHeldBackFile"/>.

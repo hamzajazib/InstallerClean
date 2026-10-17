@@ -162,10 +162,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Nothing to clean up in {InstallerFolder} | {InstallerFolder} にクリーンアップするものはありません |
 | Scanned {0} {1} in {2} | {0} 個の {1} を {2} でスキャンしました |
 | Nothing offered on this PC | この PC では何も提示されませんでした |
-| InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back the one file ({2}) rather than offering it. | InstallerClean は、キャッシュ内のどのファイルがここにインストールされたプログラムのものかを確実には判断できなかったため、1 個のファイル({2})を提示せずに保留しました。 |
-| InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back all {0} {1} ({2}) rather than offering them. | InstallerClean は、キャッシュ内のどのファイルがここにインストールされたプログラムのものかを確実には判断できなかったため、{0} 個の{1}({2})をすべて提示せずに保留しました。 |
-| InstallerClean couldn't establish that the cached file it found is unneeded, so it has held back the one file ({2}) rather than offering it. | InstallerClean は、見つけたキャッシュ内のファイルが不要であることを確認できなかったため、その 1 個のファイル({2})を提示せずに保留しました。 |
-| InstallerClean couldn't establish that any of the cached files it found are unneeded, so it has held back all {0} {1} ({2}) rather than offering them. | InstallerClean は、見つけたキャッシュ内のファイルのいずれについても不要であることを確認できなかったため、{0} 個の{1}({2})をすべて提示せずに保留しました。 |
 | One file ({2}) was held back because Windows shows it was changed after InstallerClean started scanning. If a program was installing or updating, scan again once it has finished and InstallerClean will check it again. | 1 個のファイル({2})は、InstallerClean がスキャンを開始した後に変更されたと Windows が示しているため、保留しました。プログラムのインストールや更新が行われていた場合は、それが終わってからもう一度スキャンすれば、InstallerClean がこのファイルを再確認します。 |
 | {0} {1} ({2}) were held back because Windows shows they were changed after InstallerClean started scanning. If a program was installing or updating, scan again once it has finished and InstallerClean will check them again. | {0} 個の{1}({2})は、InstallerClean がスキャンを開始した後に変更されたと Windows が示しているため、保留しました。プログラムのインストールや更新が行われていた場合は、それが終わってからもう一度スキャンすれば、InstallerClean がこれらのファイルを再確認します。 |
 | Delete that folder when you're satisfied all is well. | 問題ないと納得できたら、そのフォルダーを削除してください。 |

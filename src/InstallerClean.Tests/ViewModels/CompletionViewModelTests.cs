@@ -467,12 +467,11 @@ public class CompletionViewModelTests
     }
 
     [Fact]
-    public void The_wholesale_screen_says_what_was_held_back_and_shows_the_scan_receipt()
+    public void A_card_holding_files_back_for_no_reason_it_names_carries_its_heading_and_the_receipt_alone()
     {
-        // The body's count and size are those of the files held back, not of the
-        // folder. It says the app held back files it might otherwise have offered,
-        // and a folder total would tell somebody that much space was going spare,
-        // which the scan has not established.
+        // No line counts the files held back as a whole or names a cause for them, so a
+        // scan whose holds carry no line of their own puts nothing between the heading and
+        // the receipt.
         var vm = TestCompletion.Create();
 
         vm.ShowNothingOffered(
@@ -481,20 +480,16 @@ public class CompletionViewModelTests
         Assert.True(vm.IsComplete);
         Assert.False(vm.HeadingIsWarning);
         Assert.Equal(Strings.Completion_NothingOffered, vm.Heading);
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedBody_Plural,
-                3, DisplayHelpers.PluraliseFile(3), DisplayHelpers.FormatSize(3072)),
-            vm.Summary);
+        Assert.Equal(string.Empty, vm.Summary);
+        Assert.Equal(string.Empty, vm.ScanStartLine);
 
-        // THE RECEIPT IS NOT DECORATION. A heading and a body with no evidence that a
-        // scan ran reads as a failure rather than as a result, which is the opposite
-        // of what this screen has to say. It is the same line the all-clear carries.
+        // THE RECEIPT IS NOT DECORATION. A heading with no evidence that a scan ran reads
+        // as a failure rather than as a result, which is the opposite of what this screen
+        // has to say. It is the same line the all-clear carries.
         //
-        // ITS NOUN IS FILES, WHICH IS WHAT THE NUMBER COUNTS. The caller hands over
-        // the cached files the scan accounted for, and the held-back files this
-        // screen has just named are among them: they are in the folder and the scan
-        // opened them.
+        // ITS NOUN IS FILES, WHICH IS WHAT THE NUMBER COUNTS. The caller hands over the
+        // cached files the scan accounted for, and the files held back are among them:
+        // they are in the folder and the scan opened them.
         Assert.Equal(
             string.Format(
                 Strings.Completion_NothingToCleanUpReceipt,
@@ -505,41 +500,13 @@ public class CompletionViewModelTests
     }
 
     [Fact]
-    public void The_wholesale_screen_at_one_file_does_not_say_all_1_files()
-    {
-        // A COUNT OF ONE IS REACHABLE, being a folder holding a single unclaimed file,
-        // and the plural form renders "held back all 1 files" for it. The one-form
-        // drops the numeral and names the size alone. The literal assertion below is
-        // the control: formatting the right key with the wrong argument, or selecting
-        // the plural at a count of one, both still satisfy a key-level assertion.
-        var vm = TestCompletion.Create();
-
-        vm.ShowNothingOffered(
-            HeldBack(1, Wholesale(1)), scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
-
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedBody_Singular,
-                1, DisplayHelpers.PluraliseFile(1), DisplayHelpers.FormatSize(1024)),
-            vm.Summary);
-        Assert.Contains("the one file", vm.Summary);
-        Assert.Contains(DisplayHelpers.FormatSize(1024), vm.Summary);
-        Assert.DoesNotContain("1 files", vm.Summary);
-
-        // The one-form spends {2} alone, so the noun argument must not reach the
-        // screen: "the one file (file)" is what a wrong index looks like here, and it
-        // is the shape that hid the size while the value still carried {1} for it.
-        Assert.DoesNotContain($"({DisplayHelpers.PluraliseFile(1)})", vm.Summary);
-    }
-
-    [Fact]
-    public void The_wholesale_screen_and_the_all_clear_do_not_share_a_sentence()
+    public void The_nothing_offered_screen_and_the_all_clear_do_not_share_a_sentence()
     {
         // THE WHOLE POINT OF THE SECOND SCREEN, pinned so that a later tidy cannot
-        // collapse them back into one. One says the folder holds nothing to remove;
-        // the other says the app could not establish enough to offer anything, on a
-        // machine whose folder may be full. Showing the first where the second is true
-        // is a claim about somebody's disk the scan never made.
+        // collapse them back into one. One says the folder holds nothing to remove; the
+        // other says nothing was offered, on a machine whose folder may be full. Showing
+        // the first where the second is true is a claim about somebody's disk the scan
+        // never made.
         var allClear = TestCompletion.Create();
         var nothingOffered = TestCompletion.Create();
 
@@ -554,15 +521,10 @@ public class CompletionViewModelTests
     }
 
     [Fact]
-    public void The_two_withholding_bodies_do_not_share_a_sentence()
+    public void A_withholding_on_the_records_and_one_file_at_a_time_give_the_same_card()
     {
-        // THE SAME POINT ONE LEVEL DOWN, and the level where it is easiest to lose.
-        // One heading carries two bodies: one says the scan could not tell which
-        // cached files belong to which installed programs, the other only that it
-        // could not establish the files it counts are unneeded. Each is false of the
-        // other's machine, so a tidy that collapsed them would put a cause on a set
-        // that did not earn it, with the heading and the receipt still matching and
-        // nothing else to notice.
+        // The two readings are different facts about a machine, and the card names
+        // neither: what it shows does not turn on which of them held the files back.
         var wholesale = TestCompletion.Create();
         var perFile = TestCompletion.Create();
 
@@ -571,29 +533,10 @@ public class CompletionViewModelTests
         perFile.ShowNothingOffered(
             HeldBack(3, PerFile(3)), scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
 
-        Assert.NotEqual(wholesale.Summary, perFile.Summary);
-        // Everything else about the screen IS shared, which is what makes the body the
-        // only thing carrying the difference and the only thing worth pinning.
+        Assert.Equal(string.Empty, perFile.Summary);
+        Assert.Equal(wholesale.Summary, perFile.Summary);
         Assert.Equal(wholesale.Heading, perFile.Heading);
         Assert.Equal(wholesale.Restore, perFile.Restore);
-    }
-
-    [Fact]
-    public void The_per_file_body_is_the_one_the_per_file_reading_renders()
-    {
-        // The key-level assertion the test above cannot make: NotEqual would be
-        // satisfied by any two different strings, including the right key formatted
-        // with the wrong arguments. This names the value.
-        var vm = TestCompletion.Create();
-
-        vm.ShowNothingOffered(
-            HeldBack(3, PerFile(3)), scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
-
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedPerFileBody_Plural,
-                3, DisplayHelpers.PluraliseFile(3), DisplayHelpers.FormatSize(3072)),
-            vm.Summary);
     }
 
     // The line about files held back because their times are not before the scan's clock.
@@ -603,27 +546,23 @@ public class CompletionViewModelTests
     private static string LineOf(ScanResult scan) => RecentChangeReport.Line(scan);
 
     [Fact]
-    public void Nothing_offered_keeps_its_body_and_adds_the_line_where_other_files_are_held_too()
+    public void Nothing_offered_gives_the_changed_files_line_above_its_receipt_where_other_files_are_held_too()
     {
         var vm = TestCompletion.Create();
         var scan = HeldBack(5, new WithholdingSplit(DeclaredProductUnestablishedCount: 2, NotBeforeTheClockCount: 3));
 
         vm.ShowNothingOffered(scan, scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: string.Empty);
 
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedPerFileBody_Plural,
-                5, DisplayHelpers.PluraliseFile(5), DisplayHelpers.FormatSize(5120)),
-            vm.Summary);
         Assert.NotEqual(string.Empty, LineOf(scan));
-        Assert.Equal(LineOf(scan), vm.ScanStartLine);
+        Assert.Equal(LineOf(scan), vm.Summary);
+        Assert.Equal(string.Empty, vm.ScanStartLine);
     }
 
     [Fact]
-    public void Nothing_offered_shows_the_line_as_its_body_where_those_are_every_file_it_counts()
+    public void Nothing_offered_gives_the_changed_files_line_then_the_drive_line_above_its_receipt()
     {
-        // Shown once, in the body's place, with the line naming a drive or share still
-        // under it, and nothing left in the zone below.
+        // Shown once, above the receipt, with the line naming a drive or share under it,
+        // and nothing in the zone below.
         var vm = TestCompletion.Create();
         var scan = HeldBack(3, new WithholdingSplit(NotBeforeTheClockCount: 3));
 
@@ -635,45 +574,32 @@ public class CompletionViewModelTests
     }
 
     [Fact]
-    public void Nothing_offered_counts_files_held_for_a_signal_in_its_body_and_gives_the_signal_s_line()
+    public void Nothing_offered_gives_the_signal_s_line_before_the_drive_line()
     {
         // A signal was set just after the scan's clock, so every walked file was held for
-        // it. The card counts them and says which signal, before the given-up line.
+        // it. The card says which signal, before the given-up line.
         var vm = TestCompletion.Create();
         var scan = HeldBack(2, new WithholdingSplit(ScanSignalCount: 2),
             PendingRebootResult.Block(PendingRebootReason.MsiExecuteMutexHeld));
 
         vm.ShowNothingOffered(scan, scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: "Drive line.");
 
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedPerFileBody_Plural,
-                2, DisplayHelpers.PluraliseFile(2), DisplayHelpers.FormatSize(2048))
-            + Environment.NewLine + Strings.Summary_ScanSignal_Busy
-            + Environment.NewLine + "Drive line.",
-            vm.Summary);
+        Assert.Equal(Strings.Summary_ScanSignal_Busy + Environment.NewLine + "Drive line.", vm.Summary);
         Assert.Equal(string.Empty, vm.ScanStartLine);
     }
 
     [Fact]
-    public void Nothing_offered_counts_files_held_for_the_clock_in_its_body_and_gives_the_clock_s_line()
+    public void Nothing_offered_gives_the_clock_s_line_before_the_drive_line()
     {
         // The system clock went back while the scan read the files' times, so every walked
-        // file its times passed was held for that. The card counts them and says so, before
-        // the given-up line, and the line about files changed after the scan started is not
-        // the body.
+        // file its times passed was held for that. The card says so, before the given-up
+        // line.
         var vm = TestCompletion.Create();
         var scan = HeldBack(2, new WithholdingSplit(ClockSetBackCount: 2), PendingRebootResult.Clean);
 
         vm.ShowNothingOffered(scan, scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: "Drive line.");
 
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedPerFileBody_Plural,
-                2, DisplayHelpers.PluraliseFile(2), DisplayHelpers.FormatSize(2048))
-            + Environment.NewLine + Strings.Summary_ScanSignal_ClockSetBack
-            + Environment.NewLine + "Drive line.",
-            vm.Summary);
+        Assert.Equal(Strings.Summary_ScanSignal_ClockSetBack + Environment.NewLine + "Drive line.", vm.Summary);
         Assert.Equal(string.Empty, vm.ScanStartLine);
     }
 
@@ -787,7 +713,7 @@ public class CompletionViewModelTests
     }
 
     [Fact]
-    public void Nothing_offered_gives_the_clock_s_line_and_the_changed_files_line_where_the_scan_held_files_for_both()
+    public void Nothing_offered_gives_the_changed_files_line_then_the_clock_s_line_where_the_scan_held_files_for_both()
     {
         var vm = TestCompletion.Create();
         var scan = HeldBack(3, new WithholdingSplit(NotBeforeTheClockCount: 1, ClockSetBackCount: 2),
@@ -795,14 +721,9 @@ public class CompletionViewModelTests
 
         vm.ShowNothingOffered(scan, scannedFileCount: 9, scanDurationMs: 10, sourcesGivenUp: string.Empty);
 
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedPerFileBody_Plural,
-                3, DisplayHelpers.PluraliseFile(3), DisplayHelpers.FormatSize(3072))
-            + Environment.NewLine + Strings.Summary_ScanSignal_ClockSetBack,
-            vm.Summary);
         Assert.NotEqual(string.Empty, LineOf(scan));
-        Assert.Equal(LineOf(scan), vm.ScanStartLine);
+        Assert.Equal(LineOf(scan) + Environment.NewLine + Strings.Summary_ScanSignal_ClockSetBack, vm.Summary);
+        Assert.Equal(string.Empty, vm.ScanStartLine);
     }
 
     [Theory]
@@ -1120,8 +1041,8 @@ public class CompletionViewModelTests
     }
 
     // The line naming the drives and shares carried on without. On the nothing-offered
-    // card it follows the body, or is the body; on every card after a Move or Delete it
-    // follows the held-back count on a line of its own.
+    // card it is the last of the lines above the receipt; on every card after a Move or
+    // Delete it follows the held-back count on a line of its own.
 
     private const string DriveDLine =
         "InstallerClean carried on without drive D: and left alone any file still to be checked against it. "
@@ -1131,11 +1052,11 @@ public class CompletionViewModelTests
         [new SourceRootGivenUp("d:", SourceRootGiveUpRoute.StoppedWaiting, filesKept)];
 
     [Fact]
-    public void The_nothing_offered_screen_with_nothing_held_back_has_the_line_as_its_whole_body()
+    public void The_nothing_offered_screen_with_nothing_held_back_gives_the_drive_line()
     {
-        // The scan held back nothing the count counts, so there is no sentence to put
-        // the line under: a file kept for an installed program at a drive given up is
-        // outside that count, and the line is everything the card has to say about it.
+        // The scan held back nothing the count counts: a file kept for an installed
+        // program at a drive given up is outside that count, and the line is everything
+        // the card has to say about it.
         var vm = TestCompletion.Create();
 
         vm.ShowNothingOffered(
@@ -1150,17 +1071,14 @@ public class CompletionViewModelTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void The_nothing_offered_screen_puts_the_line_under_the_held_back_sentence(bool wholesale)
+    public void The_nothing_offered_screen_gives_the_drive_line_alone_where_files_are_held_back(bool wholesale)
     {
         var vm = TestCompletion.Create();
-        var withoutLine = TestCompletion.Create();
 
         var scan = HeldBack(3, wholesale ? Wholesale(3) : PerFile(3));
         vm.ShowNothingOffered(scan, scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: DriveDLine);
-        withoutLine.ShowNothingOffered(scan, scannedFileCount: 5, scanDurationMs: 10, sourcesGivenUp: string.Empty);
 
-        Assert.Equal(new[] { withoutLine.Summary, DriveDLine }, vm.Summary.Split(Environment.NewLine));
-        Assert.DoesNotContain(Environment.NewLine, withoutLine.Summary, System.StringComparison.Ordinal);
+        Assert.Equal(DriveDLine, vm.Summary);
     }
 
     public enum Card { Move, MoveStopped, Delete, MoveCancelled, DeleteCancelled, AllSkipped }

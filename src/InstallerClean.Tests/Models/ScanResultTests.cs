@@ -357,8 +357,8 @@ public class ScanResultTests
     [Fact]
     public void Packages_kept_beside_a_second_copy_whose_packages_could_not_all_be_seen_are_held_back_per_file()
     {
-        // The arm is not one of the silent arms. It names a line of its own, and the
-        // finished screen counts its files with the per-file reading.
+        // The arm is not one of the silent arms. It names a line of its own, and its files
+        // are counted as unsettled.
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
             WithheldBy: new WithholdingSplit(SecondCopyUnestablishedCount: 2));
@@ -370,8 +370,6 @@ public class ScanResultTests
         Assert.Equal(new[] { WithholdingSplitArm.SecondCopyUnestablished }, result.WithheldBy.ArmsFired);
         Assert.True(result.NamedConditionsCoverEveryHeldBackFile);
         Assert.Equal(2, result.UnsettledHeldBackCount);
-        Assert.Equal(3072, result.UnsettledHeldBackBytes);
-        Assert.False(result.UnsettledHeldBackIsWholesale);
     }
 
     [Fact]
@@ -598,21 +596,17 @@ public class ScanResultTests
         Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
     }
 
-    // ---- What the window's finished screen counts ----
+    // ---- What a scan counts as held back unsettled ----
     //
     // EVERY FILE HELD BACK EXCEPT THOSE THE DECLARED-PRODUCT-INSTALLED AND
-    // DECLARED-PATCH-REGISTERED ARMS KEPT, TOGETHER WITH THE SUPERSEDED FILES. Every file
-    // and every arm's size below carries a different value, so a reading that subtracts
-    // an arm it should not, or drops an addend, lands on a figure no assertion accepts.
-    // The day-old fixtures set both the arm's count and its size, and the superseded
-    // fixtures both the count and the size, because a fixture leaving either at zero
-    // passes a reading that wrongly subtracts it.
+    // DECLARED-PATCH-REGISTERED ARMS KEPT, TOGETHER WITH THE SUPERSEDED FILES. Above zero,
+    // the count keeps the all-clear off the window's finished screen.
     //
     // THE COMMAND LINE'S MEMBERS ARE ASSERTED BESIDE IT where the two readings part, so
     // a change reaching them from here fails.
 
     [Fact]
-    public void A_scan_that_held_nothing_back_gives_the_finished_screen_nothing_to_count()
+    public void A_scan_that_held_nothing_back_counts_nothing_unsettled()
     {
         var noList = new ScanResult([], [], 0);
         var emptyList = new ScanResult([], [], 0, WithheldFiles: []);
@@ -620,14 +614,12 @@ public class ScanResultTests
         foreach (var result in new[] { noList, emptyList })
         {
             Assert.Equal(0, result.UnsettledHeldBackCount);
-            Assert.Equal(0, result.UnsettledHeldBackBytes);
             Assert.False(result.HasUnsettledHeldBack);
-            Assert.False(result.UnsettledHeldBackIsWholesale);
         }
     }
 
     [Fact]
-    public void Files_kept_for_an_installed_program_are_not_counted_on_the_finished_screen()
+    public void Files_kept_for_an_installed_program_are_not_counted_as_unsettled()
     {
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
@@ -635,12 +627,11 @@ public class ScanResultTests
             WithheldDeclaredProductInstalledBytes: 3072);
 
         Assert.Equal(0, result.UnsettledHeldBackCount);
-        Assert.Equal(0, result.UnsettledHeldBackBytes);
         Assert.False(result.HasUnsettledHeldBack);
     }
 
     [Fact]
-    public void Patch_copies_kept_for_their_patch_s_registrations_are_not_counted_on_the_finished_screen()
+    public void Patch_copies_kept_for_their_patch_s_registrations_are_not_counted_as_unsettled()
     {
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msp", 1024), File("b.msp", 2048)],
@@ -648,12 +639,11 @@ public class ScanResultTests
             WithheldDeclaredPatchRegisteredBytes: 3072);
 
         Assert.Equal(0, result.UnsettledHeldBackCount);
-        Assert.Equal(0, result.UnsettledHeldBackBytes);
         Assert.False(result.HasUnsettledHeldBack);
     }
 
     [Fact]
-    public void The_two_arms_together_are_not_counted_on_the_finished_screen()
+    public void The_two_arms_together_are_not_counted_as_unsettled()
     {
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msp", 2048)],
@@ -662,12 +652,11 @@ public class ScanResultTests
             WithheldDeclaredPatchRegisteredBytes: 2048);
 
         Assert.Equal(0, result.UnsettledHeldBackCount);
-        Assert.Equal(0, result.UnsettledHeldBackBytes);
         Assert.False(result.HasUnsettledHeldBack);
     }
 
     [Fact]
-    public void Files_kept_for_their_times_are_counted_on_the_finished_screen_and_not_by_the_command_line()
+    public void Files_kept_for_their_times_are_counted_as_unsettled_and_not_by_the_command_line()
     {
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
@@ -675,9 +664,7 @@ public class ScanResultTests
             WithheldNotBeforeTheClockBytes: 3072);
 
         Assert.Equal(2, result.UnsettledHeldBackCount);
-        Assert.Equal(3072, result.UnsettledHeldBackBytes);
         Assert.True(result.HasUnsettledHeldBack);
-        Assert.False(result.UnsettledHeldBackIsWholesale);
 
         Assert.Equal(WithholdingAccount.KeptWithoutNotice, result.Withholding);
         Assert.False(result.HasWithholdingToReport);
@@ -721,7 +708,7 @@ public class ScanResultTests
     }
 
     [Fact]
-    public void Files_kept_because_a_signal_was_set_are_counted_by_every_held_back_sentence()
+    public void Files_kept_because_a_signal_was_set_are_counted_by_every_held_back_count()
     {
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msp", 2048)],
@@ -736,54 +723,6 @@ public class ScanResultTests
         Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
         Assert.True(result.HasWithholdingToReport);
         Assert.Equal(2, result.UnsettledHeldBackCount);
-        Assert.Equal(3072, result.UnsettledHeldBackBytes);
-        Assert.False(result.RecentChangeLineCoversUnsettledHeldBack);
-    }
-
-    [Theory]
-    [InlineData("kept for their times", true)]
-    [InlineData("kept for their times, beside one kept for an installed program", true)]
-    [InlineData("kept because a signal was set", false)]
-    [InlineData("kept for their times, beside a superseded file held back", false)]
-    [InlineData("kept for their times, beside one the scan could not settle", false)]
-    [InlineData("nothing held back", false)]
-    [InlineData("wholesale", false)]
-    public void The_line_about_recently_changed_files_covers_the_held_back_files_only_where_it_counts_every_one(
-        string run, bool covers)
-    {
-        var result = run switch
-        {
-            "kept for their times" => new ScanResult([], [], 0,
-                WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-                WithheldBy: new WithholdingSplit(NotBeforeTheClockCount: 2),
-                WithheldNotBeforeTheClockBytes: 3072),
-            "kept for their times, beside one kept for an installed program" => new ScanResult([], [], 0,
-                WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-                WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1, NotBeforeTheClockCount: 1),
-                WithheldDeclaredProductInstalledBytes: 1024,
-                WithheldNotBeforeTheClockBytes: 2048),
-            "kept because a signal was set" => new ScanResult([], [], 0,
-                WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-                WithheldBy: new WithholdingSplit(ScanSignalCount: 2),
-                InstallerActivityAtScan: SignalSet),
-            "kept for their times, beside a superseded file held back" => new ScanResult([], [], 0,
-                WithheldCount: 1,
-                WithheldFiles: [File("a.msi", 1024)],
-                WithheldBy: new WithholdingSplit(NotBeforeTheClockCount: 1),
-                WithheldNotBeforeTheClockBytes: 1024,
-                SupersededWithheldBytes: 2048),
-            "kept for their times, beside one the scan could not settle" => new ScanResult([], [], 0,
-                WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-                WithheldBy: new WithholdingSplit(DeclaredProductUnestablishedCount: 1, NotBeforeTheClockCount: 1),
-                WithheldNotBeforeTheClockBytes: 2048),
-            "nothing held back" => new ScanResult([], [], 0),
-            "wholesale" => new ScanResult([], [], 0,
-                WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-                WithheldBy: new WithholdingSplit(WholesaleCount: 2)),
-            _ => throw new ArgumentOutOfRangeException(nameof(run), run, null),
-        };
-
-        Assert.Equal(covers, result.RecentChangeLineCoversUnsettledHeldBack);
     }
 
     [Fact]
@@ -796,8 +735,6 @@ public class ScanResultTests
             WithheldNotBeforeTheClockBytes: 2048);
 
         Assert.Equal(1, result.UnsettledHeldBackCount);
-        Assert.Equal(2048, result.UnsettledHeldBackBytes);
-        Assert.False(result.UnsettledHeldBackIsWholesale);
     }
 
     [Fact]
@@ -810,24 +747,21 @@ public class ScanResultTests
             WithheldDeclaredPatchRegisteredBytes: 1024);
 
         Assert.Equal(1, result.UnsettledHeldBackCount);
-        Assert.Equal(4096, result.UnsettledHeldBackBytes);
     }
 
     [Fact]
-    public void A_file_whose_times_were_not_established_is_counted_on_the_finished_screen()
+    public void A_file_whose_times_were_not_established_is_counted_as_unsettled()
     {
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024)],
             WithheldBy: new WithholdingSplit(AgeUnestablishedCount: 1));
 
         Assert.Equal(1, result.UnsettledHeldBackCount);
-        Assert.Equal(1024, result.UnsettledHeldBackBytes);
         Assert.True(result.HasUnsettledHeldBack);
-        Assert.False(result.UnsettledHeldBackIsWholesale);
     }
 
     [Fact]
-    public void Superseded_files_held_back_are_counted_on_the_finished_screen_and_not_in_the_command_line_s_walk_sentence()
+    public void Superseded_files_held_back_are_counted_as_unsettled_and_not_in_the_command_line_s_walk_sentence()
     {
         var result = new ScanResult([], [], 0,
             WithheldCount: 3,
@@ -835,9 +769,7 @@ public class ScanResultTests
             SupersededWithheldBytes: 16384);
 
         Assert.Equal(3, result.UnsettledHeldBackCount);
-        Assert.Equal(16384, result.UnsettledHeldBackBytes);
         Assert.True(result.HasUnsettledHeldBack);
-        Assert.False(result.UnsettledHeldBackIsWholesale);
 
         Assert.Equal(WithholdingAccount.Nothing, result.Withholding);
         Assert.False(result.HasWithholdingToReport);
@@ -846,19 +778,17 @@ public class ScanResultTests
     }
 
     [Fact]
-    public void A_wholesale_withholding_alone_takes_the_wholesale_reading_on_the_finished_screen()
+    public void A_wholesale_withholding_is_counted_as_unsettled()
     {
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
             WithheldBy: new WithholdingSplit(WholesaleCount: 2));
 
         Assert.Equal(2, result.UnsettledHeldBackCount);
-        Assert.Equal(3072, result.UnsettledHeldBackBytes);
-        Assert.True(result.UnsettledHeldBackIsWholesale);
     }
 
     [Fact]
-    public void A_superseded_file_beside_a_wholesale_withholding_takes_the_per_file_reading_and_is_counted_with_it()
+    public void A_superseded_file_beside_a_wholesale_withholding_is_counted_with_it()
     {
         var result = new ScanResult([], [], 0,
             WithheldCount: 1,
@@ -867,8 +797,6 @@ public class ScanResultTests
             SupersededWithheldBytes: 16384);
 
         Assert.Equal(3, result.UnsettledHeldBackCount);
-        Assert.Equal(1024 + 2048 + 16384, result.UnsettledHeldBackBytes);
-        Assert.False(result.UnsettledHeldBackIsWholesale);
 
         Assert.Equal(WithholdingAccount.WholeWalkOffer, result.Withholding);
         Assert.Equal(2, result.UnestablishedWithheldCount);
@@ -886,12 +814,10 @@ public class ScanResultTests
             SupersededWithheldBytes: 16384);
 
         Assert.Equal(3, result.UnsettledHeldBackCount);
-        Assert.Equal(1024 + 16384, result.UnsettledHeldBackBytes);
-        Assert.False(result.UnsettledHeldBackIsWholesale);
     }
 
     [Fact]
-    public void A_withheld_file_no_arm_counted_is_counted_on_the_finished_screen()
+    public void A_withheld_file_no_arm_counted_is_counted_as_unsettled()
     {
         // THE LIST LESS THE TWO ARMS, NOT A SUM OF THE OTHERS, so a file on the list the
         // split did not count, or one counted by an arm added later, is spoken of.
@@ -901,17 +827,16 @@ public class ScanResultTests
             WithheldDeclaredProductInstalledBytes: 1024);
 
         Assert.Equal(1, result.UnsettledHeldBackCount);
-        Assert.Equal(2048, result.UnsettledHeldBackBytes);
         Assert.True(result.HasUnsettledHeldBack);
     }
 
     [Fact]
-    public void Superseded_files_the_containment_check_kept_back_are_counted_on_the_finished_screen()
+    public void Superseded_files_the_containment_check_kept_back_are_counted_as_unsettled()
     {
         // A run whose only kept files are superseded rows the containment check refused
         // or could not answer for. The rows are registered files, so they are on no
-        // withheld list; the finished screen counts them anyway, and a run holding
-        // nothing else back is not given the all-clear.
+        // withheld list; they are counted as unsettled anyway, so a run holding nothing
+        // else back is not given the all-clear.
         var result = new ScanResult([], [], 0,
             WithheldFiles: [],
             SupersededContainmentRefusedCount: 2,
@@ -919,11 +844,9 @@ public class ScanResultTests
             SupersededContainmentBytes: 7000);
 
         Assert.Equal(3, result.SupersededHeldBackCount);
-        Assert.Equal(7000, result.SupersededHeldBackBytes);
         Assert.Equal(3, result.UnsettledHeldBackCount);
-        Assert.Equal(7000, result.UnsettledHeldBackBytes);
         Assert.True(result.HasUnsettledHeldBack);
-        Assert.False(result.UnsettledHeldBackIsWholesale);
+        Assert.False(result.IsAllClear);
 
         // The command line's walk sentence is not about them, and its superseded line
         // reads SupersededHeldBackCount.
@@ -932,11 +855,10 @@ public class ScanResultTests
     }
 
     [Fact]
-    public void Superseded_files_held_back_either_way_are_one_count_with_one_size()
+    public void Superseded_files_held_back_either_way_are_one_count()
     {
-        // Distinct figures on each side, so a member left out of the sum, or a size
-        // taken from the wrong side, comes out at a number that cannot be mistaken
-        // for the right one.
+        // Distinct figures on each side, so a member left out of the sum comes out at a
+        // number that cannot be mistaken for the right one.
         var result = new ScanResult([], [], 0,
             WithheldCount: 4,
             WithheldFiles: [],
@@ -946,9 +868,7 @@ public class ScanResultTests
             SupersededContainmentBytes: 5000);
 
         Assert.Equal(324, result.SupersededHeldBackCount);
-        Assert.Equal(5100, result.SupersededHeldBackBytes);
         Assert.Equal(324, result.UnsettledHeldBackCount);
-        Assert.Equal(5100, result.UnsettledHeldBackBytes);
     }
 
     [Fact]
@@ -976,17 +896,14 @@ public class ScanResultTests
     public void Files_from_the_walk_the_containment_check_kept_back_are_held_back_per_file()
     {
         // Both containment arms on the withheld list and nothing else. They are counted
-        // by both hosts' held-back sentences, the finished screen gives the per-file
-        // reading, and the command line prints its sentence on its own, neither arm
-        // having a reason line.
+        // as unsettled and by the command line's held-back sentence, which it prints on its
+        // own, neither arm having a reason line.
         var result = new ScanResult([], [], 0,
             WithheldFiles: [File("link.msi", 0), File("unread.msp", 4096)],
             WithheldBy: new WithholdingSplit(ContainmentRefusedCount: 1, ContainmentUnestablishedCount: 1));
 
         Assert.Equal(2, result.WithheldBy.Total);
         Assert.Equal(2, result.UnsettledHeldBackCount);
-        Assert.Equal(4096, result.UnsettledHeldBackBytes);
-        Assert.False(result.UnsettledHeldBackIsWholesale);
 
         Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
         Assert.True(result.HasWithholdingToReport);
@@ -1007,7 +924,6 @@ public class ScanResultTests
             WithheldBy: new WithholdingSplit(WholesaleCount: 2, ContainmentRefusedCount: 1));
 
         Assert.Equal(3, result.UnsettledHeldBackCount);
-        Assert.False(result.UnsettledHeldBackIsWholesale);
         Assert.Equal(WithholdingAccount.PerFile, result.Withholding);
         Assert.False(result.NamedConditionsCoverEveryHeldBackFile);
     }

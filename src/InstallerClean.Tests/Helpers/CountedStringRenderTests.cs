@@ -19,12 +19,11 @@ namespace InstallerClean.Tests.Helpers;
 /// render its noun where the size belongs, with the suite green and the gate
 /// clean.
 ///
-/// WHAT IT PINS, AND IT IS A FAULT THAT SHIPPED. Completion.NothingOfferedBody
-/// spelled its counted noun into the value, so the noun could not follow the
-/// numeral standing in front of it. Russian and Ukrainian take the nominative
-/// singular after 21, 31 and 41, so both read "21 файлов" where the language
-/// wants "21 файл", at every such count. Polish was correct throughout, which is
-/// why it is here: a fix that moved Polish would be wrong.
+/// WHAT IT PINS. Cli.NothingOffered takes its counted noun through a slot, so the
+/// noun follows the numeral standing in front of it. Russian and Ukrainian take the
+/// nominative singular after 21, 31 and 41, where a noun spelled into the value
+/// would read "21 файлов" for "21 файл" at every such count. Polish is here as the
+/// control: a change that moved its rendering would be wrong.
 ///
 /// The assertions are on the OUTPUT STRING rather than on which form was
 /// selected, because selecting the right form and then rendering it with the
@@ -45,7 +44,7 @@ public class CountedStringRenderTests
 
     [Theory]
     [MemberData(nameof(InflectingLanguages))]
-    public void The_body_renders_with_its_size_and_a_noun_that_agrees(string cultureName)
+    public void The_nothing_offered_line_renders_with_its_size_and_a_noun_that_agrees(string cultureName)
     {
         var culture = CultureInfo.GetCultureInfo(cultureName);
         using var scope = new LocalisationScope(culture);
@@ -75,9 +74,9 @@ public class CountedStringRenderTests
                 Localisation.FormatCulture,
                 DisplayHelpers.Pluralise(
                     count,
-                    Strings.Completion_NothingOfferedBody_Singular,
-                    Strings.Completion_NothingOfferedBody_Plural,
-                    "Completion.NothingOfferedBody"),
+                    Strings.Cli_NothingOffered_Singular,
+                    Strings.Cli_NothingOffered_Plural,
+                    "Cli.NothingOffered"),
                 count,
                 noun,
                 size);

@@ -283,13 +283,12 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public async Task The_nothing_offered_receipt_counts_the_held_back_files_it_has_just_named()
+    public async Task The_nothing_offered_receipt_counts_the_held_back_files()
     {
-        // A HELD-BACK FILE IS IN THE RECEIPT AND IS ALSO NAMED BY THE BODY, and the two
-        // are not a double count. The body says how many files this run kept back; the
-        // receipt says how many the run examined, and it examined that one: it is in
-        // the folder, the scan opened it and judged it. A receipt that left it out
-        // would understate what was looked at, which is the one thing it is for.
+        // A HELD-BACK FILE IS IN THE RECEIPT. The receipt says how many files the run
+        // examined, and it examined that one: it is in the folder, the scan opened it and
+        // judged it. A receipt that left it out would understate what was looked at,
+        // which is the one thing it is for.
         var vm = CreateViewModel();
         var registered = new List<RegisteredPackage>
         {
@@ -310,11 +309,10 @@ public class MainViewModelTests
 
         await vm.Scan.ScanWithProgressAsync(null);
 
-        // Four examined, two of them kept back, and the two sentences sit on one
-        // screen: the body names the two and the receipt counts all four.
+        // Four examined, two of them kept back, and the receipt counts all four.
         Assert.Equal(4, vm.Scan.RegisteredFileCount);
+        Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
         Assert.StartsWith("Scanned 4 files in ", vm.Completion.Restore, StringComparison.Ordinal);
-        Assert.Contains("2 files", vm.Completion.Summary, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -331,9 +329,10 @@ public class MainViewModelTests
     }
 
     // AN EMPTY OFFER HAS THREE MEANINGS AND THE THREE TESTS BELOW ARE THE PARTITION.
-    // The folder held nothing to offer; a rule about the machine's records emptied the
-    // walk-derived offer in one go; or the files were judged one at a time and none
-    // could be cleared. Read what each one SETS UP rather than what it asserts: they
+    // The folder held nothing to offer, which gets the all-clear; or a rule about the
+    // machine's records emptied the walk-derived offer in one go, or the files were
+    // judged one at a time and none could be cleared, each of which gets the screen
+    // saying nothing was offered. Read what each one SETS UP rather than what it asserts: they
     // differ in the withheld list and in the split that says what put those files
     // there, which is exactly what the branch reads, and any two of them passing while
     // the third fails names the mistake.
@@ -361,18 +360,13 @@ public class MainViewModelTests
         Assert.True(vm.Completion.IsComplete);
         Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
         Assert.NotEqual(Strings.Completion_AllClean, vm.Completion.Heading);
-        // The figures are the withheld set, never the folder: printing a folder total
-        // would tell somebody that much was going spare.
-        Assert.Contains("2", vm.Completion.Summary);
-        Assert.Contains(DisplayHelpers.FormatSize(3072), vm.Completion.Summary);
     }
 
     [Fact]
     public async Task A_wholesale_withholding_that_held_nothing_back_still_shows_the_all_clear()
     {
-        // A walk that produced no candidates holds nothing back, and the second screen
-        // would then say it had held back all 0 files, which is absurd and untrue.
-        // Nothing in that folder went unclaimed, so the all-clear is right.
+        // A walk that produced no candidates holds nothing back. Nothing in that folder
+        // went unclaimed, so the all-clear is right.
         //
         // THE FIXTURE IS THE RESULT THE SCAN BUILDS WHEN THE GATE FIRES ON SUCH A WALK:
         // a leg fired, the withheld list is empty and the wholesale arm took nothing.
@@ -392,14 +386,11 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public async Task Files_withheld_one_at_a_time_get_the_per_file_screen_and_not_the_all_clear()
+    public async Task Files_withheld_one_at_a_time_get_the_nothing_offered_screen_and_not_the_all_clear()
     {
-        // THE MACHINE THAT IS NEITHER OF THE OTHER TWO, and the reason there are three
-        // screens rather than two. Its folder is not clean: a file is sitting in it
-        // that nobody has vouched for. But the wholesale screen's body would be false
-        // of it, naming something the scan could not establish about the machine's
-        // records when what actually happened is that this one file was judged and not
-        // cleared. So it gets the body that says only that, which is true of it.
+        // Its folder is not clean: a file is sitting in it that nobody has vouched for,
+        // so it gets the screen saying nothing was offered. The screen names no cause for
+        // the file, and the scan held it for nothing that carries a line of its own.
         var vm = CreateViewModel();
         var withheld = new List<OrphanedFile>
         {
@@ -415,14 +406,7 @@ public class MainViewModelTests
 
         Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
         Assert.NotEqual(Strings.Completion_AllClean, vm.Completion.Heading);
-        // The body is named rather than merely differing from the all-clear's: the
-        // wholesale one also differs from it, so a heading-level assertion alone would
-        // pass on the screen this machine must not get.
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedPerFileBody_Singular,
-                1, DisplayHelpers.PluraliseFile(1), DisplayHelpers.FormatSize(1024)),
-            vm.Completion.Summary);
+        Assert.Equal(string.Empty, vm.Completion.Summary);
     }
 
     [Fact]
@@ -460,7 +444,7 @@ public class MainViewModelTests
         // files stopped at a drive the scan gave up, so nobody compared them with the
         // packages their program opens. The held-back count leaves them out, as it
         // leaves out every file kept for an installed program, so the line naming the
-        // drive is the whole body.
+        // drive is everything the card says about them.
         var vm = CreateViewModel();
         var withheld = new List<OrphanedFile>
         {
@@ -502,7 +486,7 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public async Task Files_held_back_beside_a_drive_given_up_get_the_held_back_sentence_then_the_line()
+    public async Task Files_held_back_beside_a_drive_given_up_get_the_line_naming_the_drive_alone()
     {
         var vm = CreateViewModel();
         var withheld = new List<OrphanedFile>
@@ -521,15 +505,7 @@ public class MainViewModelTests
         await vm.Scan.ScanWithProgressAsync(null);
 
         Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
-        Assert.Equal(
-            new[]
-            {
-                string.Format(
-                    Strings.Completion_NothingOfferedPerFileBody_Singular,
-                    1, DisplayHelpers.PluraliseFile(1), DisplayHelpers.FormatSize(2048)),
-                DriveDLine,
-            },
-            vm.Completion.Summary.Split(Environment.NewLine));
+        Assert.Equal(DriveDLine, vm.Completion.Summary);
     }
 
     [Fact]
@@ -588,11 +564,11 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public async Task A_patch_copy_the_scan_could_not_settle_gets_the_per_file_screen_and_not_the_all_clear()
+    public async Task A_patch_copy_the_scan_could_not_settle_gets_the_nothing_offered_screen_and_not_the_all_clear()
     {
         // Two held patch copies: one kept for its patch's registrations, which is
         // silent, and one the scan could not settle, which is not. The screen is the
-        // nothing-offered one and its body speaks of the second alone, with its size.
+        // nothing-offered one.
         var vm = CreateViewModel();
         var withheld = new List<OrphanedFile>
         {
@@ -610,19 +586,14 @@ public class MainViewModelTests
 
         Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
         Assert.NotEqual(Strings.Completion_AllClean, vm.Completion.Heading);
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedPerFileBody_Singular,
-                1, DisplayHelpers.PluraliseFile(1), DisplayHelpers.FormatSize(2048)),
-            vm.Completion.Summary);
+        Assert.Equal(string.Empty, vm.Completion.Summary);
     }
 
     [Fact]
-    public async Task The_per_file_screen_counts_only_the_files_the_scan_could_not_settle()
+    public async Task A_file_the_scan_could_not_settle_beside_one_kept_for_an_installed_program_gets_the_nothing_offered_screen()
     {
         // Two held: one for an installed program and one the scan could not settle. The
-        // screen's body speaks of the second alone, in its one-file form, with that
-        // file's size.
+        // second keeps the all-clear off.
         var vm = CreateViewModel();
         var withheld = new List<OrphanedFile>
         {
@@ -639,24 +610,17 @@ public class MainViewModelTests
         await vm.Scan.ScanWithProgressAsync(null);
 
         Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedPerFileBody_Singular,
-                1, DisplayHelpers.PluraliseFile(1), DisplayHelpers.FormatSize(2048)),
-            vm.Completion.Summary);
+        Assert.Equal(string.Empty, vm.Completion.Summary);
     }
 
-    // THE FILES THE SCREEN COUNTS THAT THE COMMAND LINE'S HELD-BACK SENTENCE DOES NOT. A
-    // file kept for its times and a superseded patch the scan held back are both counted
-    // here, and each fixture gives every figure a different value, so a reading that
-    // dropped an addend or subtracted the wrong arm lands on a number no assertion
-    // accepts.
+    // THE FILES THAT KEEP THE ALL-CLEAR OFF THAT THE COMMAND LINE'S HELD-BACK SENTENCE
+    // DOES NOT COUNT: a file kept for its times and a superseded patch the scan held back.
 
     [Fact]
-    public async Task Files_kept_for_their_times_are_counted_by_the_per_file_screen_beside_their_own_line()
+    public async Task Files_kept_for_their_times_get_their_line_above_the_receipt_beside_another_hold()
     {
-        // Two files kept for their times and one whose times would not read: the body
-        // counts all three, and the line about the first two is shown under it.
+        // Two files kept for their times and one whose times would not read: the line
+        // about the first two is the card's line, above its receipt.
         var vm = CreateViewModel();
         var withheld = new List<OrphanedFile>
         {
@@ -675,17 +639,13 @@ public class MainViewModelTests
         await vm.Scan.ScanWithProgressAsync(null);
 
         Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedPerFileBody_Plural,
-                DisplayHelpers.FormatCount(3), DisplayHelpers.PluraliseFile(3),
-                DisplayHelpers.FormatSize(7168)),
-            vm.Completion.Summary);
-        Assert.Equal(RecentChangeReport.Line(result), vm.Completion.ScanStartLine);
+        Assert.Equal(RecentChangeReport.Line(result), vm.Completion.Summary);
+        Assert.NotEqual(string.Empty, vm.Completion.Summary);
+        Assert.Equal(string.Empty, vm.Completion.ScanStartLine);
     }
 
     [Fact]
-    public async Task A_file_kept_for_its_times_is_counted_and_a_file_kept_for_an_installed_program_is_not()
+    public async Task A_file_kept_for_its_times_beside_one_kept_for_an_installed_program_gets_its_line_and_not_the_all_clear()
     {
         var vm = CreateViewModel();
         var withheld = new List<OrphanedFile>
@@ -706,16 +666,11 @@ public class MainViewModelTests
         await vm.Scan.ScanWithProgressAsync(null);
 
         Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedPerFileBody_Plural,
-                DisplayHelpers.FormatCount(2), DisplayHelpers.PluraliseFile(2),
-                DisplayHelpers.FormatSize(6144)),
-            vm.Completion.Summary);
+        Assert.Equal(RecentChangeReport.Line(vm.Scan.LastScanResult), vm.Completion.Summary);
     }
 
     [Fact]
-    public async Task Superseded_files_held_back_get_the_per_file_screen_and_not_the_all_clear()
+    public async Task Superseded_files_held_back_get_the_nothing_offered_screen_and_not_the_all_clear()
     {
         // The rows are on the kept list with their files on disk, as the scan leaves
         // them, so the receipt counts them among the files the scan examined.
@@ -739,21 +694,16 @@ public class MainViewModelTests
         await vm.Scan.ScanWithProgressAsync(null);
 
         Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedPerFileBody_Plural,
-                DisplayHelpers.FormatCount(3), DisplayHelpers.PluraliseFile(3),
-                DisplayHelpers.FormatSize(9000)),
-            vm.Completion.Summary);
+        Assert.Equal(string.Empty, vm.Completion.Summary);
         Assert.StartsWith("Scanned 3 files in ", vm.Completion.Restore, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task Files_the_containment_check_kept_back_get_the_per_file_screen_and_not_the_all_clear()
+    public async Task Files_the_containment_check_kept_back_get_the_nothing_offered_screen_and_not_the_all_clear()
     {
         // Two files from the folder walk, one the check refused and one it could not
         // answer for, and nothing else held back. They are on the left-alone line, so
-        // the receipt counts them, and the screen speaks of both with their size.
+        // the receipt counts them.
         var vm = CreateViewModel();
         var withheld = new List<OrphanedFile>
         {
@@ -770,17 +720,12 @@ public class MainViewModelTests
 
         Assert.Equal(2, vm.Scan.RegisteredFileCount);
         Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedPerFileBody_Plural,
-                DisplayHelpers.FormatCount(2), DisplayHelpers.PluraliseFile(2),
-                DisplayHelpers.FormatSize(3072)),
-            vm.Completion.Summary);
+        Assert.Equal(string.Empty, vm.Completion.Summary);
         Assert.StartsWith("Scanned 2 files in ", vm.Completion.Restore, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task A_superseded_patch_the_containment_check_refused_gets_the_per_file_screen_and_not_the_all_clear()
+    public async Task A_superseded_patch_the_containment_check_refused_gets_the_nothing_offered_screen_and_not_the_all_clear()
     {
         // The row carried its removable verdict to the offer and the check refused it,
         // so it stays on the kept list with its file on disk, as the scan leaves it.
@@ -802,17 +747,12 @@ public class MainViewModelTests
 
         Assert.Equal(1, vm.Scan.RegisteredFileCount);
         Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedPerFileBody_Singular,
-                DisplayHelpers.FormatCount(1), DisplayHelpers.PluraliseFile(1),
-                DisplayHelpers.FormatSize(7000)),
-            vm.Completion.Summary);
+        Assert.Equal(string.Empty, vm.Completion.Summary);
         Assert.StartsWith("Scanned 1 file in ", vm.Completion.Restore, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task One_superseded_file_held_back_takes_the_one_form()
+    public async Task One_superseded_file_held_back_gets_the_nothing_offered_screen()
     {
         var vm = CreateViewModel();
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
@@ -824,20 +764,12 @@ public class MainViewModelTests
         await vm.Scan.ScanWithProgressAsync(null);
 
         Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedPerFileBody_Singular,
-                DisplayHelpers.FormatCount(1), DisplayHelpers.PluraliseFile(1),
-                DisplayHelpers.FormatSize(4096)),
-            vm.Completion.Summary);
+        Assert.Equal(string.Empty, vm.Completion.Summary);
     }
 
     [Fact]
-    public async Task A_wholesale_withholding_beside_a_superseded_file_gets_the_per_file_body_counting_both()
+    public async Task A_wholesale_withholding_beside_a_superseded_file_gets_the_nothing_offered_screen()
     {
-        // The wholesale body names a finding about the machine's records, and the
-        // wholesale arm holds back the walk's files alone, so a count with a superseded
-        // file in it takes the body true of every file.
         var vm = CreateViewModel();
         var withheld = new List<OrphanedFile>
         {
@@ -855,16 +787,11 @@ public class MainViewModelTests
         await vm.Scan.ScanWithProgressAsync(null);
 
         Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedPerFileBody_Plural,
-                DisplayHelpers.FormatCount(3), DisplayHelpers.PluraliseFile(3),
-                DisplayHelpers.FormatSize(1024 + 2048 + 4096)),
-            vm.Completion.Summary);
+        Assert.Equal(string.Empty, vm.Completion.Summary);
     }
 
     [Fact]
-    public async Task A_wholesale_withholding_alone_gets_the_wholesale_body()
+    public async Task A_wholesale_withholding_gets_the_nothing_offered_screen_with_no_sentence_naming_it()
     {
         var vm = CreateViewModel();
         var withheld = new List<OrphanedFile>
@@ -880,12 +807,8 @@ public class MainViewModelTests
 
         await vm.Scan.ScanWithProgressAsync(null);
 
-        Assert.Equal(
-            string.Format(
-                Strings.Completion_NothingOfferedBody_Plural,
-                DisplayHelpers.FormatCount(2), DisplayHelpers.PluraliseFile(2),
-                DisplayHelpers.FormatSize(3072)),
-            vm.Completion.Summary);
+        Assert.Equal(Strings.Completion_NothingOffered, vm.Completion.Heading);
+        Assert.Equal(string.Empty, vm.Completion.Summary);
     }
 
     [Fact]

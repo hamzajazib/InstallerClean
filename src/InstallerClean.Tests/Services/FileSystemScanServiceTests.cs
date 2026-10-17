@@ -511,7 +511,6 @@ public class FileSystemScanServiceTests
         Assert.Equal(0, result.WithheldCount);
         Assert.Equal(1, result.SupersededHeldBackCount);
         Assert.Equal(1, result.UnsettledHeldBackCount);
-        Assert.Equal(500, result.UnsettledHeldBackBytes);
         Assert.True(result.HasUnsettledHeldBack);
     }
 

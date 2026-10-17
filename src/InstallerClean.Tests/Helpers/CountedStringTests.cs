@@ -64,7 +64,6 @@ public class CountedStringTests
         "Completion.FailedCount", "Completion.FailedCountDelete",
         "Completion.HeldBack",
         "Completion.MoveCancelledSummary", "Completion.MoveSummary",
-        "Completion.NothingOfferedBody", "Completion.NothingOfferedPerFileBody",
         "Completion.PermanentDeleteCancelledSummary", "Completion.PermanentDeleteSummary",
         "Confirm.DeletePermanently", "Confirm.MoveDestination",
         "Error.AccessDenied", "Error.FileInUse", "Error.IOFailure", "Error.UnknownError",
@@ -93,7 +92,6 @@ public class CountedStringTests
         "Cli.NothingListed", "Cli.NothingListedPerFile",
         "Cli.NothingOffered", "Cli.NothingOfferedPerFile",
         "Completion.HeldBack",
-        "Completion.NothingOfferedBody", "Completion.NothingOfferedPerFileBody",
         "Completion.PermanentDeleteSummary",
         "Confirm.DeletePermanently", "Confirm.MoveDestination", "Error.FileInUse",
         "Summary.MissingFromDisk.OtherPrograms", "Summary.MissingFromDisk.Unnamed",
@@ -365,7 +363,7 @@ public class CountedStringTests
         using var scope = new LocalisationScope(CultureInfo.GetCultureInfo(cultureName));
 
         var culture = CultureInfo.GetCultureInfo(cultureName);
-        const string Prefix = "Completion.NothingOfferedBody";
+        const string Prefix = "Cli.NothingListed";
         Assert.Equal(DisplayHelpers.CountQuestion.Cardinality, DisplayHelpers.QuestionFor(Prefix));
 
         // The override really is absent, so a later reader cannot mistake this for a

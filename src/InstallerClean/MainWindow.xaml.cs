@@ -960,7 +960,7 @@ public partial class MainWindow : Window
     /// onto its own line at the exact point it substitutes into the formatted
     /// sentence, whatever word order the target language uses (mirrors
     /// ConfirmMoveWindow's destination-on-its-own-line treatment). A value with
-    /// no destination (the all-clear's line, the nothing-offered card's body, either
+    /// no destination (the all-clear's line, the nothing-offered card's lines, either
     /// delete summary) keeps its words as they are, taking only the breaks
     /// <see cref="AddTextWithLineBreaks"/> gives it. Locating the raw substring
     /// rather than a bracket-delimited marker, which is how the windows that carry a
@@ -970,7 +970,8 @@ public partial class MainWindow : Window
     /// The summary can be more than one line. The overlay shown when the act-time
     /// re-check held the WHOLE batch back puts the held-back sentence here, with the
     /// line naming any drive or share that check carried on without under it; the
-    /// nothing-offered card puts its body here with the scan's line of that kind; and
+    /// nothing-offered card puts each of its lines saying what to do here, one to a line;
+    /// and
     /// the destination line below is forced onto its own. Every Run therefore goes
     /// through <see cref="AddTextWithLineBreaks"/> rather than straight into
     /// Inlines, so the breaks are ones this method made rather than ones a text

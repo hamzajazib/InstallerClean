@@ -162,10 +162,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Nothing to clean up in {InstallerFolder} | {InstallerFolder} 中没有需要清理的内容 |
 | Scanned {0} {1} in {2} | 扫描了 {0} 个{1}，用时：{2} |
 | Nothing offered on this PC | 在这台电脑上没有提供任何内容 |
-| InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back the one file ({2}) rather than offering it. | InstallerClean 无法确定缓存中的哪些文件属于这里安装的程序，因此没有提供那 1 个文件（{2}），而是把它保留了下来。 |
-| InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back all {0} {1} ({2}) rather than offering them. | InstallerClean 无法确定缓存中的哪些文件属于这里安装的程序，因此没有提供全部 {0} 个{1}（{2}），而是把它们保留了下来。 |
-| InstallerClean couldn't establish that the cached file it found is unneeded, so it has held back the one file ({2}) rather than offering it. | InstallerClean 无法证实它找到的那个缓存文件是不需要的，因此没有提供那 1 个文件（{2}），而是把它保留了下来。 |
-| InstallerClean couldn't establish that any of the cached files it found are unneeded, so it has held back all {0} {1} ({2}) rather than offering them. | InstallerClean 无法证实它找到的缓存文件中有任何一个是不需要的，因此没有提供全部 {0} 个{1}（{2}），而是把它们保留了下来。 |
 | One file ({2}) was held back because Windows shows it was changed after InstallerClean started scanning. If a program was installing or updating, scan again once it has finished and InstallerClean will check it again. | 已保留 1 个文件（{2}），因为 Windows 显示它在 InstallerClean 开始扫描后被更改过。如果当时有程序正在安装或更新，请等它完成后重新扫描，InstallerClean 会再次检查它。 |
 | {0} {1} ({2}) were held back because Windows shows they were changed after InstallerClean started scanning. If a program was installing or updating, scan again once it has finished and InstallerClean will check them again. | 已保留 {0} 个{1}（{2}），因为 Windows 显示它们在 InstallerClean 开始扫描后被更改过。如果当时有程序正在安装或更新，请等它完成后重新扫描，InstallerClean 会再次检查它们。 |
 | Delete that folder when you're satisfied all is well. | 等您确信一切正常时，再删除那个文件夹。 |

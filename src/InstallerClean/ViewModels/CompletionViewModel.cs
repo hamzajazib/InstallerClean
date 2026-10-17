@@ -120,9 +120,8 @@ public partial class CompletionViewModel : ObservableObject
     /// card that carries it works it out as it is revealed, and every other card clears it,
     /// because the view-model instance is reused across operations.
     ///
-    /// ON THE NOTHING-OFFERED CARD IT IS ONLY EVER THE FIRST, and empty where that line is
-    /// the body (<see cref="ShowNothingOffered"/>), whose body carries the signal's or the
-    /// clock's line itself.
+    /// IT IS EMPTY ON THE NOTHING-OFFERED CARD, which carries the line about recently
+    /// changed files above its receipt with its other lines (<see cref="ShowNothingOffered"/>).
     ///
     /// AFTER A MOVE OR DELETE IT SPEAKS FOR THE SCAN THAT RAN WHEN THE OPERATION FINISHED,
     /// not the one the operation started from (<see cref="AfterTheOperationLine"/>). That
@@ -308,112 +307,54 @@ public partial class CompletionViewModel : ObservableObject
     ///
     /// TWO FINDINGS BOTH END WITH AN EMPTY OFFER AND THEY ARE OPPOSITE THINGS TO TELL
     /// SOMEBODY. <see cref="ShowAllClear"/> says the folder holds nothing to remove.
-    /// This says the app could not establish enough to offer the files it counts, on a
-    /// machine whose folder may be full of files nobody has vouched for. The caller
-    /// chooses between them through <see cref="ScanResult.IsAllClear"/>. A file kept
-    /// because Windows holds a record of the program or patch it declares does not
-    /// choose this screen, except where its check stopped at a drive or share the scan
-    /// gave up. Every other file held back chooses it, a file whose times are not before
-    /// the scan's clock, a file the scan held because an in-progress signal was set, a file
-    /// the containment check refused or could not answer for and a superseded patch
-    /// included.
+    /// This says nothing was offered, on a machine whose folder may be full of files
+    /// nobody has vouched for. The caller chooses between them through
+    /// <see cref="ScanResult.IsAllClear"/>. A file kept because Windows holds a record of
+    /// the program or patch it declares does not choose this screen, except where its
+    /// check stopped at a drive or share the scan gave up. Every other file held back
+    /// chooses it, a file whose times are not before the scan's clock, a file the scan held
+    /// because an in-progress signal was set, a file the containment check refused or could
+    /// not answer for and a superseded patch included.
     ///
-    /// ONE SCREEN WITH TWO BODIES, CHOSEN ON THE SCAN RESULT AND NOT HERE.
-    /// The two say what the scan could not establish, and they could not establish
-    /// different things: one that it could not tell which cached files belong to which
-    /// installed programs, the other only that it could not establish the files it
-    /// counts are unneeded. Each is false of the other's machine, so the reading is made
-    /// on the scan result and this method spends it.
-    ///
-    /// NEITHER BODY NAMES A CAUSE FOR ANY PARTICULAR FILE AND NEITHER MAY ACQUIRE ONE.
-    /// Several conditions reach each of them, they are different facts about a machine,
-    /// and a sentence naming one of them is false of the files the others contribute.
-    ///
-    /// THE LINE ABOUT RECENTLY CHANGED FILES SAYS WHAT THEIR TIMES SHOW, AND IT IS TRUE OF
-    /// EVERY FILE IT COUNTS, which are the files one decision kept for one reason. Where the
-    /// scan says they are every file the body would count
-    /// (<see cref="ScanResult.RecentChangeLineCoversUnsettledHeldBack"/>), the line stands
-    /// in the body's place. Anywhere else the body counts every file and the line is shown
-    /// under the card's other lines.
+    /// UNDER THE HEADING THE CARD CARRIES EACH LINE SAYING WHAT TO DO THAT APPLIES, then
+    /// the receipt. The line about recently changed files comes first, then the line saying
+    /// which signal Windows Installer had set or that the clock went back
+    /// (<see cref="ScanSignalReport.WindowLine(ScanResult)"/>, read off the scan as the
+    /// window behind the card reads it), then the line naming the drives and shares the
+    /// scan carried on without. Each is true of every file it speaks of. No line counts
+    /// the files held back as a whole or names a cause for them: several conditions reach
+    /// this screen, they are different facts about a machine, and a sentence naming one of
+    /// them is false of the files the others contribute.
     ///
     /// THE RECEIPT LINE STAYS, and it is the same one the all-clear carries. A screen
-    /// with a heading and a body and no evidence that a scan ran reads as a failure
-    /// rather than as a result, which is the opposite of what it has to say.
+    /// with a heading and no evidence that a scan ran reads as a failure rather than as a
+    /// result, which is the opposite of what it has to say.
     /// </summary>
     /// <param name="result">
-    /// The scan the screen is for. Everything the body says is read off it here, so the
-    /// count, the size and the line about recently changed files come from one scan.
-    ///
-    /// <see cref="ScanResult.UnsettledHeldBackIsWholesale"/> says whether the wholesale
-    /// body is true of every file this screen counts. The wholesale sentence names a cause,
-    /// so it is shown only there, and every other run takes the per-file body, that being
-    /// the only sentence true of every file it counts. A run that kept files back both
-    /// wholesale and one at a time, or held back a superseded patch beside a wholesale
-    /// withholding, takes the per-file body.
-    ///
-    /// <see cref="ScanResult.UnsettledHeldBackCount"/> and
-    /// <see cref="ScanResult.UnsettledHeldBackBytes"/> are how many files the body speaks
-    /// of and their size. A FILE THE DECLARED-PRODUCT-INSTALLED OR
-    /// DECLARED-PATCH-REGISTERED ARM KEPT IS NOT AMONG THEM. A file whose times are not
-    /// before the scan's clock, a file held because an in-progress signal was set, a file
-    /// whose times were not established, a file the containment check refused or could not
-    /// answer for and a superseded patch the scan held back are.
-    ///
-    /// THE COMMAND LINE COUNTS THESE FILES IN TWO SENTENCES RATHER THAN ONE, and leaves the
-    /// files the line about recently changed files counts out of both, so its figures for
-    /// one machine need not match this screen's.
-    ///
-    /// A FILE HELD BECAUSE A SIGNAL WAS SET, OR BECAUSE THE CLOCK WENT BACK, IS COUNTED IN
-    /// THE BODY, and the line saying which follows the body (<see cref="ScanSignalReport.WindowLine(ScanResult)"/>),
-    /// read off <paramref name="result"/> as the window behind the card reads it
-    /// (<see cref="ScanViewModel.ScanSignalText"/>).
-    ///
-    /// The line about recently changed files (<see cref="RecentChangeLine"/>) is the body
-    /// where <see cref="ScanResult.RecentChangeLineCoversUnsettledHeldBack"/> is true, and
-    /// <see cref="ScanStartLine"/> otherwise.
+    /// The scan the screen is for. The line about recently changed files and the signal's
+    /// line are read off it here.
     /// </param>
     /// <param name="scannedFileCount">
     /// The receipt's own count, on the terms <see cref="ShowAllClear"/> sets out: how
-    /// many cached files the scan accounted for, in files rather than in programs.
-    ///
-    /// IT CONTAINS THE FILES THE BODY COUNTS AND IS MEANT TO. A held-back file
-    /// is in the folder and this scan judged it, so the receipt for what was examined
-    /// covers it, while the body above says how many of them were kept back. The two
-    /// numbers answer different questions about one machine and neither is a share of
-    /// the other.
+    /// many cached files the scan accounted for, in files rather than in programs. A FILE
+    /// HELD BACK IS AMONG THEM: it is in the folder and this scan judged it, so the
+    /// receipt for what was examined covers it.
     /// </param>
     /// <param name="sourcesGivenUp">
     /// The line naming the drives and shares the scan carried on without, as the main
-    /// window shows it (<see cref="ScanViewModel.SourcesGivenUpText"/>), or empty. It
-    /// follows the body on a line of its own, and where the body counts no file it is
-    /// the whole body.
-    ///
-    /// THE BODY'S COUNT NEED NOT TAKE IN THE FILES THIS LINE SPEAKS OF. A file kept
-    /// because its own program's packages could not all be read is kept as declaring a
-    /// program Windows still has installed, which the count leaves out. The line counts
-    /// nothing and says those files were left alone, which is true of every one of them.
+    /// window shows it (<see cref="ScanViewModel.SourcesGivenUpText"/>), or empty. It is
+    /// the last of the lines above the receipt.
     /// </param>
     public void ShowNothingOffered(
         ScanResult result, int scannedFileCount, long scanDurationMs, string sourcesGivenUp)
     {
-        var heldBackCount = result.UnsettledHeldBackCount;
-        var recentChange = RecentChangeLine(result);
-        var scanSignal = ScanSignalReport.WindowLine(result);
         HeadingIsWarning = false;
         Heading = Strings.Completion_NothingOffered;
         FailedCount = string.Empty;
         SummaryDestination = string.Empty;
-        // WHERE THE LINE ABOUT RECENTLY CHANGED FILES COUNTS EVERY FILE THE BODY WOULD, IT
-        // IS THE BODY. It says why each was held and when to scan again, so the body's
-        // sentence would only repeat the count. Anywhere else the body counts files the line
-        // does not, so both are shown.
-        var recentChangeIsTheBody = result.RecentChangeLineCoversUnsettledHeldBack;
         Summary = JoinLines(
-            recentChangeIsTheBody ? recentChange
-                : heldBackCount == 0 ? string.Empty
-                : NothingOfferedBody(result.UnsettledHeldBackIsWholesale, heldBackCount,
-                    result.UnsettledHeldBackBytes),
-            JoinLines(scanSignal, sourcesGivenUp));
+            RecentChangeLine(result),
+            JoinLines(ScanSignalReport.WindowLine(result), sourcesGivenUp));
         Restore = string.Format(
             Strings.Completion_NothingToCleanUpReceipt,
             DisplayHelpers.FormatCount(scannedFileCount),
@@ -421,43 +362,9 @@ public partial class CompletionViewModel : ObservableObject
             DisplayHelpers.FormatElapsedLong(TimeSpan.FromMilliseconds(scanDurationMs)));
         Errors = string.Empty;
         Skipped = string.Empty;
-        ScanStartLine = recentChangeIsTheBody ? string.Empty : recentChange;
+        ScanStartLine = string.Empty;
         AsksForDonation = false;
         IsComplete = true;
-    }
-
-    /// <summary>
-    /// The nothing-offered screen's sentence counting the files held back, chosen by
-    /// <paramref name="wholesale"/> on the terms <see cref="ShowNothingOffered"/> sets out.
-    /// </summary>
-    private static string NothingOfferedBody(bool wholesale, int heldBackCount, long heldBackBytes)
-    {
-        // The one-form names the size and not the numeral ("the one file"), so it
-        // spends {2} and leaves {0} and {1} unused. All three arguments are passed on
-        // either branch so the two forms cannot disagree about which index is which.
-        //
-        // THE NOUN GOES IN AS AN ARGUMENT RATHER THAN STANDING IN THE VALUE, because a
-        // noun spelled into the value cannot agree with the numeral beside it: Russian
-        // and Ukrainian read "21 файлов" where the language wants "21 файл". Pluralise
-        // picks the sentence and PluraliseFile picks the noun, and they answer two
-        // different questions, so both are needed here. See the key's own note in
-        // Strings.resx for which language puts the slot where.
-        var perFile = !wholesale;
-        return string.Format(
-            DisplayHelpers.Pluralise(
-                heldBackCount,
-                perFile
-                    ? Strings.Completion_NothingOfferedPerFileBody_Singular
-                    : Strings.Completion_NothingOfferedBody_Singular,
-                perFile
-                    ? Strings.Completion_NothingOfferedPerFileBody_Plural
-                    : Strings.Completion_NothingOfferedBody_Plural,
-                perFile
-                    ? "Completion.NothingOfferedPerFileBody"
-                    : "Completion.NothingOfferedBody"),
-            DisplayHelpers.FormatCount(heldBackCount),
-            DisplayHelpers.PluraliseFile(heldBackCount),
-            DisplayHelpers.FormatSize(heldBackBytes));
     }
 
     /// <summary>

@@ -453,7 +453,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // declared-patch-registered arms kept and gave up no drive or share keeping
             // one, which gets the all-clear, OR that it held back any other file, a
             // superseded patch included, or carried on without a drive or share and left
-            // a file alone because of it, which gets the screen saying so. Telling the
+            // a file alone because of it, which gets the screen saying nothing was
+            // offered. Telling the
             // second machine there is nothing to clean up in its Installer folder is a
             // claim about that disk the scan never made.
             //
@@ -466,7 +467,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // the withholding happens, and the host spends the answer rather than
             // deriving it.
             //
-            // THE SCREEN COUNTS ScanResult.UnsettledHeldBackCount: every file held back
+            // THE CHOICE TURNS ON ScanResult.UnsettledHeldBackCount: every file held back
             // except those kept for a program Windows still has installed or for their
             // patch's registrations, together with the superseded patches the scan held
             // back. A file whose times are not before the scan's clock, a file held

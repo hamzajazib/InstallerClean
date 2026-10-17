@@ -379,7 +379,6 @@ internal static class DisplayHelpers
         // their singular, which is why the classification reads the one-form alone.
         "Cli.NothingListed" or "Cli.NothingListedPerFile"
             or "Cli.NothingOffered" or "Cli.NothingOfferedPerFile"
-            or "Completion.NothingOfferedBody" or "Completion.NothingOfferedPerFileBody"
             or "Confirm.DeletePermanently" or "Confirm.MoveDestination"
             or "Error.AccessDenied" or "Error.FileInUse" or "Error.IOFailure"
             or "Error.UnknownError"
@@ -408,8 +407,8 @@ internal static class DisplayHelpers
     /// Ukrainian: its counted noun sits inside the sentence, so the numeral governs it
     /// directly. Where a key's noun arrives through a slot Plural.File fills, the noun
     /// agrees there instead and an override on the outer key would be
-    /// character-identical to its own .Plural, which is why Completion.NothingOfferedBody
-    /// carries none. Collapsing everything that is not One into Other would put the
+    /// character-identical to its own .Plural, which is why Cli.NothingOffered carries
+    /// none. Collapsing everything that is not One into Other would put the
     /// five-and-up form on a count of three wherever the first case applies, and the band
     /// is pinned on the selector besides, by
     /// CountedStringTests.The_cardinality_selector_keeps_its_paucal_band.

@@ -632,18 +632,12 @@ internal static class Program
             // UnestablishedWithheldBytes, which leave out any file kept because it
             // declares an installed program, for its times (ScanResult.WithheldBy.NotBeforeTheClockCount)
             // or as a copy of a patch Windows holds a registration of. Superseded files
-            // held back are printed in a line of their own. The window's finished screen
-            // counts differently: its one sentence also takes in a file kept for its times
-            // and a superseded file, and on a run that offered nothing, where every file it
-            // would count was kept for its times
-            // (ScanResult.RecentChangeLineCoversUnsettledHeldBack), it gives the line about
-            // those files in that sentence's place.
+            // held back are printed in a line of their own.
             var withheldCount = scanResult.UnestablishedWithheldCount;
 
             // The one-form names the size and not the numeral ("the one file"), so it
             // spends {2} and leaves {0} and {1} unused; all three are passed on every
-            // branch so the forms cannot disagree about which index is which. The
-            // window's own body is built the same way.
+            // branch so the forms cannot disagree about which index is which.
             string HeldBackLine(string singular, string plural, string keyPrefix) =>
                 string.Format(
                     DisplayHelpers.Pluralise(withheldCount, singular, plural, keyPrefix),
@@ -1555,9 +1549,9 @@ internal static class Program
         NoteSourcesGivenUp(arg, sourcesGivenUp, duringTheCheck: false);
 
         // SUPERSEDED FILES HELD BACK, printed wherever the count this line carries is
-        // above zero. The count is SupersededHeldBackCount, the same superseded files the
-        // window's finished screen counts: those whose removable verdict was taken away
-        // and those the containment check refused or could not answer for. It names no
+        // above zero. The count is SupersededHeldBackCount: the superseded files whose
+        // removable verdict was taken away and those the containment check refused or
+        // could not answer for. It names no
         // cause, several separate findings reaching this count and no sentence naming one
         // of them being true of the files the others contribute; the string's own remarks
         // carry that and why "superseded" is earned.

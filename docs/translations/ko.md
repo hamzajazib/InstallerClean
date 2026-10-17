@@ -162,10 +162,6 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Nothing to clean up in {InstallerFolder} | {InstallerFolder}에 정리할 것이 없습니다 |
 | Scanned {0} {1} in {2} | {1} {0}개 검사, {2} 소요 |
 | Nothing offered on this PC | 이 PC에서는 아무것도 제시하지 않았습니다 |
-| InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back the one file ({2}) rather than offering it. | InstallerClean이 캐시에 있는 어떤 파일이 여기 설치된 프로그램에 속하는지 확실히 알 수 없어서, 파일 하나({2})를 제시하지 않고 보류했습니다. |
-| InstallerClean couldn't be certain which cached files belong to the programs installed here, so it has held back all {0} {1} ({2}) rather than offering them. | InstallerClean이 캐시에 있는 어떤 파일이 여기 설치된 프로그램에 속하는지 확실히 알 수 없어서, {1} {0}개({2}) 전부를 제시하지 않고 보류했습니다. |
-| InstallerClean couldn't establish that the cached file it found is unneeded, so it has held back the one file ({2}) rather than offering it. | InstallerClean이 찾은 캐시 파일이 필요 없다는 것을 확인하지 못해서, 그 파일 하나({2})를 제시하지 않고 보류했습니다. |
-| InstallerClean couldn't establish that any of the cached files it found are unneeded, so it has held back all {0} {1} ({2}) rather than offering them. | InstallerClean이 찾은 캐시 파일 중 어느 것도 필요 없다는 것을 확인하지 못해서, {1} {0}개({2}) 전부를 제시하지 않고 보류했습니다. |
 | One file ({2}) was held back because Windows shows it was changed after InstallerClean started scanning. If a program was installing or updating, scan again once it has finished and InstallerClean will check it again. | 파일 하나({2})는 InstallerClean이 검사를 시작한 뒤에 변경된 것으로 Windows에 나타나 보류했습니다. 프로그램이 설치나 업데이트 중이었다면, 끝난 뒤에 다시 검사하면 InstallerClean이 이 파일을 다시 확인합니다. |
 | {0} {1} ({2}) were held back because Windows shows they were changed after InstallerClean started scanning. If a program was installing or updating, scan again once it has finished and InstallerClean will check them again. | {1} {0}개({2})는 InstallerClean이 검사를 시작한 뒤에 변경된 것으로 Windows에 나타나 보류했습니다. 프로그램이 설치나 업데이트 중이었다면, 끝난 뒤에 다시 검사하면 InstallerClean이 이 파일들을 다시 확인합니다. |
 | Delete that folder when you're satisfied all is well. | 모든 것이 괜찮다고 확신하게 되면 그 폴더를 삭제하세요. |
