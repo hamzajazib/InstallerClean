@@ -582,6 +582,17 @@ internal static partial class Kernel32
         ref uint lpdwSize);
 
     /// <summary>
+    /// Sets the folders Windows searches, for the whole process, for a library asked for by
+    /// its name alone and for the libraries a loaded library depends on, to those
+    /// <paramref name="directoryFlags"/> names (LOAD_LIBRARY_SEARCH_*). A library loaded by
+    /// its full path with LOAD_WITH_ALTERED_SEARCH_PATH has its own imports looked for first
+    /// in the folder it was loaded from.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "SetDefaultDllDirectories", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetDefaultDllDirectories(uint directoryFlags);
+
+    /// <summary>
     /// The least access <see cref="QueryFullProcessImageName"/> needs, asked for in place
     /// of fuller access a process of another account can refuse.
     /// </summary>

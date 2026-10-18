@@ -562,9 +562,11 @@ jobs:
   # or read a planted file, where no look found a planted file in place, and where one
   # had changed by the time the build ended. In either pass it also fails where a build
   # loaded a library from its own folder, and in the second where it loaded one under
-  # %TEMP%\.net that its bundle did not extract in the first. A hostfxr.dll or
-  # hostpolicy.dll planted beside a build runs on its own, since the apphost reads
-  # those before the runtime starts and taking one can stop the build starting at all.
+  # %TEMP%\.net that its bundle did not extract in the first. The files planted under
+  # %TEMP%\.net are removed as the first act of the step that traces each build's start.
+  # A hostfxr.dll or hostpolicy.dll planted beside a build runs on its own, since the
+  # apphost reads those before the runtime starts and taking one can stop the build
+  # starting at all.
   #
   # Every look is printed with its full path, its place among the process's rows, and
   # whether it came after the first act of the build's own code that Process Monitor
@@ -1046,6 +1048,18 @@ jobs:
         shell: pwsh
         run: |
           . (Join-Path $env:RUNNER_TEMP 'native.ps1')
+          # The second pass leaves its plants in place, and a start of the same bundle extracts
+          # to the same folder under %TEMP%\.net, so the files planted there are removed first.
+          $plantsFile = Join-Path $env:RUNNER_TEMP 'plants.json'
+          if (Test-Path $plantsFile) {
+            foreach ($p in @(Get-Content -Raw $plantsFile | ConvertFrom-Json)) {
+              foreach ($plant in @($p.Plants | Where-Object { $_ -and $_.Place -eq 'extraction' -and (Test-Path -LiteralPath $_.Path) })) {
+                Remove-Item -LiteralPath $plant.Path -Force -ErrorAction SilentlyContinue
+                if (Test-Path -LiteralPath $plant.Path) { Fail "The planted $($plant.Path) could not be removed before the trace." }
+                else { "  removed the planted $($plant.Path)" }
+              }
+            }
+          }
           # The host reads the registered location from the registry's 32-bit view.
           $key = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry32').OpenSubKey('SOFTWARE\dotnet\Setup\InstalledVersions\x64')
           $registered = if ($key) { $key.GetValue('InstallLocation') }
