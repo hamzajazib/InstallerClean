@@ -547,20 +547,36 @@ jobs:
         run: dotnet restore src/InstallerClean.sln -p:EnableWindowsTargeting=true -p:RestoreLockedMode=true
 
 
-  # Where each shipped build looks for the Windows libraries it loads. The app runs
+  # Where each shipped build loads the Windows libraries it uses from. The app runs
   # elevated, and a portable or slim copy is often run from a Downloads folder, so a
-  # library it looked for in its own folder is one a file dropped there would replace.
-  # Each build is published with release.yml's flags and run once from a folder of its
-  # own, with Process Monitor recording every file the build's process opens or
-  # probes. The job fails where a build looked in its own folder for any .dll, and
-  # where it looked in its extraction folder under %TEMP%\.net for a .dll the bundle
-  # did not put there.
+  # library it would load from its own folder is one a file dropped there would
+  # replace. Each build is published with release.yml's flags and run in two passes,
+  # with Process Monitor recording every file the build's process opens or probes.
+  #
+  # The first pass runs each build from an empty folder of its own and notes every
+  # .dll it looked for there, and every one it looked for under %TEMP%\.net, where a
+  # single-file build extracts itself. The second pass runs each build again with a
+  # file of each of those names planted at the path that was looked at: one the build
+  # loaded under that name in the first pass, else System32's, else, where no file on
+  # the runner carries the name, a small System32 library under it. The job fails where a build loaded, mapped
+  # or read a planted file, where no look found a planted file in place, and where one
+  # had changed by the time the build ended. In either pass it also fails where a build
+  # loaded a library from its own folder, and in the second where it loaded one under
+  # %TEMP%\.net that its bundle did not extract in the first. A hostfxr.dll or
+  # hostpolicy.dll planted beside a build runs on its own, since the apphost reads
+  # those before the runtime starts and taking one can stop the build starting at all.
+  #
+  # Every look is printed with its full path, its place among the process's rows, and
+  # whether it came after the first act of the build's own code that Process Monitor
+  # can see: a file under C:\Windows\Installer, one under %LOCALAPPDATA%\InstallerClean,
+  # or the load of msi.dll.
   #
   # It refuses to pass on a run that saw nothing: Process Monitor has to have started
   # and recorded each build's process, the command line has to have loaded msi.dll
   # for its scan, and each window has to have loaded dwmapi.dll and WPF's
   # wpfgfx_cor3.dll, which it does only once it creates a window, so a window that
-  # could not open on the runner fails the job.
+  # could not open on the runner fails the job. A run with an apphost library planted
+  # alone is the exception and is judged without its must-loads.
   #
   # A window started on a fresh account offers to send a report. Before any build
   # runs, the PC-wide first-run mark is set, so the offer is never made, and the
@@ -569,7 +585,7 @@ jobs:
   native-libraries:
     name: Native libraries (Windows)
     runs-on: windows-2025
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -647,7 +663,11 @@ jobs:
           $answer = if ($after.Count) { $after -join ', ' } elseif ($lookupError) { "no address ($($lookupError.SocketErrorCode))" } else { 'no address' }
           "  first-run mark set; $receiver resolved to $($before -join ', ') before the hosts entry and to $answer after it"
 
-      - name: Start Process Monitor
+      # Both passes dot-source these. Every Process Monitor call is bounded, so one
+      # that hangs fails the job with a message, and a record starts only once no
+      # earlier Process Monitor is left, since one started while another is ending
+      # can hand its arguments over to it instead of recording.
+      - name: Get Process Monitor and write the functions both passes use
         shell: pwsh
         run: |
           $dir = Join-Path $env:RUNNER_TEMP 'procmon'
@@ -658,114 +678,328 @@ jobs:
           if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
             throw "Procmon64.exe is not validly signed by Microsoft: $($sig.Status), $($sig.SignerCertificate.Subject)"
           }
-          Start-Process $procmon -ArgumentList '/AcceptEula', '/Quiet', '/Minimized', '/BackingFile', "`"$dir\loads.pml`""
-          Start-Process $procmon -ArgumentList '/AcceptEula', '/WaitForIdle' -Wait
           "PROCMON=$procmon" | Add-Content $env:GITHUB_ENV
 
-      # One build at a time, each ended and waited for before the next starts, since
-      # the windows share the single-instance mutex. The command line scans and ends;
-      # a window is given twenty seconds and then ended.
-      - name: Run each build from a folder of its own
+          Set-Content -Path (Join-Path $env:RUNNER_TEMP 'native.ps1') -Value @'
+          $procmon = $env:PROCMON
+          $failures = [System.Collections.Generic.List[string]]::new()
+          function Fail([string]$message) { $failures.Add($message); Write-Host "::error::$message" }
+
+          $builds = @(
+            [pscustomobject]@{ Label = 'command line'; Exe = 'publish/cli/installerclean-cli.exe'; Arguments = @('/s', '/noupdate'); Wait = 60; MustLoad = @('msi.dll') },
+            [pscustomobject]@{ Label = 'portable'; Exe = 'publish/self-contained/InstallerClean.exe'; Arguments = @(); Wait = 20; MustLoad = @('dwmapi.dll', 'wpfgfx_cor3.dll') },
+            [pscustomobject]@{ Label = 'slim'; Exe = 'publish/framework-dependent/InstallerClean.exe'; Arguments = @(); Wait = 20; MustLoad = @('dwmapi.dll', 'wpfgfx_cor3.dll') }
+          )
+
+          # The apphost reads these before the runtime starts. A planted one it takes can
+          # stop the build starting at all, so they are planted in a run of their own.
+          $plantedAlone = 'hostfxr.dll', 'hostpolicy.dll'
+
+          # A name looked for that no file on the runner carries is planted as this
+          # library under that name, so the look is judged like any other.
+          $standIn = Join-Path $env:SystemRoot 'System32\msimg32.dll'
+
+          function Invoke-Procmon([string[]]$arguments, [int]$seconds, [string]$what) {
+            $p = Start-Process $procmon -ArgumentList $arguments -PassThru
+            if (-not $p.WaitForExit($seconds * 1000)) {
+              Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+              throw "Process Monitor did not finish $what within $seconds s."
+            }
+          }
+
+          function Wait-ProcmonGone([string]$what) {
+            $deadline = [DateTime]::UtcNow.AddSeconds(60)
+            while (Get-Process -Name Procmon64 -ErrorAction SilentlyContinue) {
+              if ([DateTime]::UtcNow -gt $deadline) { throw "Process Monitor was still running 60 s after $what." }
+              Start-Sleep -Milliseconds 500
+            }
+          }
+
+          function Start-Record([string]$name) {
+            if (Get-Process -Name Procmon64 -ErrorAction SilentlyContinue) { Invoke-Procmon @('/Terminate') 60 'ending a record left running' }
+            Wait-ProcmonGone 'the earlier record ended'
+            $pml = Join-Path (Split-Path $procmon) "$name.pml"
+            Start-Process $procmon -ArgumentList '/AcceptEula', '/Quiet', '/Minimized', '/BackingFile', "`"$pml`""
+            Invoke-Procmon @('/AcceptEula', '/WaitForIdle') 120 "starting the $name record"
+          }
+
+          function Stop-Record([string]$name) {
+            $dir = Split-Path $procmon
+            Invoke-Procmon @('/Terminate') 60 "ending the $name record"
+            Wait-ProcmonGone "the $name record was ended"
+            $csv = Join-Path $dir "$name.csv"
+            Invoke-Procmon @('/AcceptEula', '/Quiet', '/OpenLog', "`"$dir\$name.pml`"", '/SaveAs', "`"$csv`"") 300 "saving the $name record"
+            Wait-ProcmonGone "the $name record was saved"
+            if (-not (Test-Path $csv)) { throw "Process Monitor saved no $name record." }
+            $csv
+          }
+
+          # One build at a time, each ended and waited for before the next starts, since
+          # the windows share the single-instance mutex. The command line scans and ends;
+          # a window is given twenty seconds and then ended.
+          function Invoke-Build($build, [string]$label, [string]$folder) {
+            $start = @{ FilePath = (Join-Path $folder (Split-Path $build.Exe -Leaf)); WorkingDirectory = $folder; PassThru = $true }
+            if ($build.Arguments.Count) { $start.ArgumentList = $build.Arguments }
+            $p = Start-Process @start
+            # Read now, so the exit code is kept once the process ends.
+            $null = $p.Handle
+            if (-not $p.WaitForExit($build.Wait * 1000)) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; $p.WaitForExit() }
+            Write-Host "  ${label}: process $($p.Id), ended with $($p.ExitCode)"
+            $p.Id
+          }
+
+          # Each run's rows, by process. Process Monitor writes the record in event order,
+          # so a row's place among its process's rows is its place in that sequence. Rows
+          # are taken by process ID as well as name, since other processes on the runner
+          # can carry the same name.
+          function Read-Record([string]$csv, [object[]]$runs) {
+            $exes = @{}
+            foreach ($run in $runs) {
+              if ($exes.ContainsKey([string]$run.Id)) { Fail "Two runs had process $($run.Id) in one record, so neither is judged." }
+              $exes[[string]$run.Id] = $run.Exe
+            }
+            $shared = @($runs | Group-Object { [string]$_.Id } | Where-Object Count -gt 1 | ForEach-Object Name)
+            $byProcess = @{}
+            Import-Csv $csv | ForEach-Object {
+              $exe = $exes[$_.PID]
+              if ($exe -and $_.'Process Name' -eq $exe -and $_.PID -notin $shared) {
+                if (-not $byProcess.ContainsKey($_.PID)) { $byProcess[$_.PID] = [System.Collections.Generic.List[object]]::new() }
+                $byProcess[$_.PID].Add($_)
+              }
+            }
+            Write-Host "Process Monitor recorded $([int]($byProcess.Values | Measure-Object -Property Count -Sum).Sum) operations by the builds."
+            $byProcess
+          }
+
+          # Every .dll row in a run's own folder or under %TEMP%\.net, where a single-file
+          # build extracts its own libraries, and every library it loaded from anywhere.
+          function Get-Libraries($rows, [string]$folder) {
+            $own = $folder.TrimEnd('\') + '\'
+            for ($i = 0; $i -lt $rows.Count; $i++) {
+              $row = $rows[$i]
+              if (-not $row.Path.EndsWith('.dll', 'OrdinalIgnoreCase')) { continue }
+              $place = if ($row.Path.StartsWith($own, 'OrdinalIgnoreCase')) { 'own' } elseif ($row.Path -match '\\\.net\\') { 'extraction' } else { 'elsewhere' }
+              if ($place -eq 'elsewhere' -and $row.Operation -ne 'Load Image') { continue }
+              [pscustomobject]@{
+                Index = $i + 1; Place = $place; Operation = $row.Operation; Result = $row.Result
+                Relative = $(if ($place -eq 'own') { $row.Path.Substring($own.Length) })
+                Path = $row.Path; Name = (Split-Path $row.Path -Leaf).ToLowerInvariant(); Time = $row.'Time of Day'
+              }
+            }
+          }
+
+          # The first act of the build's own code that Process Monitor can see: a file
+          # under C:\Windows\Installer, one under %LOCALAPPDATA%\InstallerClean, or the
+          # load of msi.dll. A row after it came after the build's own code started.
+          function Get-Marker($rows) {
+            for ($i = 0; $i -lt $rows.Count; $i++) {
+              $row = $rows[$i]
+              if ($row.Path -match '^C:\\Windows\\Installer(\\|$)' -or $row.Path -match '\\AppData\\Local\\InstallerClean(\\|$)' -or
+                  ($row.Operation -eq 'Load Image' -and (Split-Path $row.Path -Leaf) -eq 'msi.dll')) {
+                return [pscustomobject]@{ Index = $i + 1; What = "$($row.Operation) $($row.Path)" }
+              }
+            }
+          }
+
+          function Get-When($library, $marker) {
+            if ($marker -and $library.Index -gt $marker.Index) { 'after its own code began' } else { 'before any act of its own code seen' }
+          }
+
+          function Show-Libraries($libraries, $marker, [string]$firstTime) {
+            Write-Host "  first row at $firstTime"
+            if ($marker) { Write-Host "  first act of its own code seen: row $($marker.Index), $($marker.What)" }
+            else { Write-Host "  no act of its own code seen" }
+            Write-Host "  every look in its own folder and under %TEMP%\.net (row, time, operation, result, times seen, path):"
+            $libraries | Where-Object { $_.Place -ne 'elsewhere' -and $_.Operation -ne 'Load Image' } |
+              Group-Object Path, Operation, Result | Sort-Object { $_.Group[0].Index } | ForEach-Object {
+                $first = $_.Group[0]
+                Write-Host "    row $($first.Index)  $($first.Time)  $($first.Operation)  $($first.Result)  x$($_.Count)  $($first.Path)  ($(Get-When $first $marker))"
+              }
+            Write-Host "  libraries loaded:"
+            $libraries | Where-Object Operation -eq 'Load Image' | ForEach-Object Path | Sort-Object -Unique | ForEach-Object { Write-Host "    $_" }
+          }
+
+          # The genuine file for a name: one the build loaded under that name from
+          # anywhere but its own folder, else System32's, else the stand-in.
+          function Get-Plant([string]$name, $loads) {
+            $loaded = @($loads | Where-Object { $_.Name -eq $name -and $_.Place -ne 'own' })
+            $system = Join-Path $env:SystemRoot "System32\$name"
+            if ($loaded) { [pscustomobject]@{ Source = $loaded[0].Path; Kind = 'the copy it loaded' } }
+            elseif (Test-Path -LiteralPath $system) { [pscustomobject]@{ Source = $system; Kind = "System32's copy" } }
+            else { [pscustomobject]@{ Source = $standIn; Kind = 'a stand-in, since no file on the runner carries this name' } }
+          }
+
+          # Prints a run's rows and returns its libraries, its loads and its marker, or
+          # nothing where Process Monitor recorded nothing for it.
+          function Read-Run($run, $byProcess) {
+            Write-Host "== $($run.Label), $($run.Exe), process $($run.Id)"
+            $rows = $byProcess[[string]$run.Id]
+            if (-not $rows) { Fail "$($run.Label): Process Monitor recorded nothing for process $($run.Id)."; return }
+            Write-Host "  $($rows.Count) operations"
+            $libraries = @(Get-Libraries $rows $run.Folder)
+            $marker = Get-Marker $rows
+            Show-Libraries $libraries $marker $rows[0].'Time of Day'
+            [pscustomobject]@{ Libraries = $libraries; Loads = @($libraries | Where-Object Operation -eq 'Load Image'); Marker = $marker }
+          }
+
+          function Test-MustLoad($run, $loads) {
+            if (-not $run.Build.MustLoad) { Fail "$($run.Label) names nothing it must load."; return }
+            foreach ($name in $run.Build.MustLoad) {
+              if (-not ($loads | Where-Object Name -eq $name)) {
+                Fail "$($run.Label) never loaded $name, so it did not get far enough for this check to judge it."
+              }
+            }
+          }
+          '@
+
+      - name: First pass, with nothing planted
         shell: pwsh
         run: |
+          . (Join-Path $env:RUNNER_TEMP 'native.ps1')
           "  interactive: $([Environment]::UserInteractive); session $((Get-Process -Id $PID).SessionId)"
           $runtimes = dotnet --list-runtimes
           $runtimes
           if (-not ($runtimes | Where-Object { $_ -match '^Microsoft\.WindowsDesktop\.App 10\.' })) {
             throw "No .NET 10 Desktop Runtime is installed, so the slim cannot start."
           }
-          $builds = @(
-            @{ Label = 'command line'; Exe = 'publish/cli/installerclean-cli.exe'; Arguments = @('/s', '/noupdate'); Wait = 60; MustLoad = @('msi.dll') },
-            @{ Label = 'portable'; Exe = 'publish/self-contained/InstallerClean.exe'; Arguments = @(); Wait = 20; MustLoad = @('dwmapi.dll', 'wpfgfx_cor3.dll') },
-            @{ Label = 'slim'; Exe = 'publish/framework-dependent/InstallerClean.exe'; Arguments = @(); Wait = 20; MustLoad = @('dwmapi.dll', 'wpfgfx_cor3.dll') }
-          )
-          $runs = foreach ($b in $builds) {
-            $folder = Join-Path $env:RUNNER_TEMP ('run-' + ($b.Label -replace ' ', '-'))
-            New-Item -ItemType Directory -Force -Path $folder | Out-Null
-            Copy-Item $b.Exe $folder
-            $exe = Join-Path $folder (Split-Path $b.Exe -Leaf)
-            $start = @{ FilePath = $exe; WorkingDirectory = $folder; PassThru = $true }
-            if ($b.Arguments.Count) { $start.ArgumentList = $b.Arguments }
-            $p = Start-Process @start
-            # Read now, so the exit code is kept once the process ends.
-            $null = $p.Handle
-            if (-not $p.WaitForExit($b.Wait * 1000)) { Stop-Process -Id $p.Id -Force; $p.WaitForExit() }
-            Write-Host "  $($b.Label): process $($p.Id), ended with $($p.ExitCode)"
-            [pscustomobject]@{ Label = $b.Label; Folder = $folder; Exe = (Split-Path $exe -Leaf); Id = $p.Id; MustLoad = $b.MustLoad }
-          }
-          $runs | ConvertTo-Json | Set-Content (Join-Path $env:RUNNER_TEMP 'runs.json')
 
-      - name: Check where each build looked for libraries
-        if: always() && env.PROCMON != ''
+          Start-Record 'first'
+          $runs = foreach ($build in $builds) {
+            $folder = Join-Path $env:RUNNER_TEMP ('first-' + ($build.Label -replace '[^A-Za-z0-9]+', '-'))
+            New-Item -ItemType Directory -Force -Path $folder | Out-Null
+            Copy-Item $build.Exe $folder
+            $id = Invoke-Build $build $build.Label $folder
+            [pscustomobject]@{ Label = $build.Label; Build = $build; Folder = $folder; Exe = (Split-Path $build.Exe -Leaf); Id = $id }
+          }
+          $byProcess = Read-Record (Stop-Record 'first') $runs
+
+          $planned = [System.Collections.Generic.List[object]]::new()
+          foreach ($run in $runs) {
+            $read = Read-Run $run $byProcess
+            if (-not $read) { continue }
+            Test-MustLoad $run $read.Loads
+            foreach ($load in ($read.Loads | Where-Object Place -eq 'own')) {
+              Fail "$($run.Label) loaded $($load.Path) from its own folder, row $($load.Index), $(Get-When $load $read.Marker)."
+            }
+
+            # What the bundle extracted is every file in the folders its libraries were
+            # loaded from under %TEMP%\.net. Those folders stay after the run, and the
+            # second pass starts from them again.
+            $extractionFolders = @($read.Loads | Where-Object Place -eq 'extraction' | ForEach-Object { Split-Path $_.Path } | Sort-Object -Unique)
+            if ($run.Label -eq 'portable' -and -not $extractionFolders) {
+              Fail "The portable loaded nothing from its extraction folder, so that folder went unchecked."
+            }
+            $bundleFiles = @(foreach ($folder in $extractionFolders) { Get-ChildItem -LiteralPath $folder -File | ForEach-Object FullName })
+
+            # A plant goes at the path that was looked at. A look under %TEMP%\.net in a
+            # folder that no longer exists once the run ends, the one the bundle writes
+            # into before moving its files into place, is printed with its path.
+            $plants = [System.Collections.Generic.List[object]]::new()
+            $looks = @($read.Libraries | Where-Object { $_.Operation -ne 'Load Image' -and $_.Path -notmatch '[*?]' })
+            foreach ($relative in ($looks | Where-Object Place -eq 'own' | ForEach-Object { $_.Relative.ToLowerInvariant() } | Sort-Object -Unique)) {
+              $plant = Get-Plant (Split-Path $relative -Leaf) $read.Loads
+              $plants.Add([pscustomobject]@{ Place = 'beside'; Path = $relative; Source = $plant.Source; Kind = $plant.Kind })
+            }
+            foreach ($path in ($looks | Where-Object Place -eq 'extraction' | ForEach-Object { $_.Path.ToLowerInvariant() } | Sort-Object -Unique)) {
+              if (Test-Path -LiteralPath $path) { continue }
+              if (-not (Test-Path -LiteralPath (Split-Path $path))) { "  looked under %TEMP%\.net in a folder gone after the run: $path"; continue }
+              $plant = Get-Plant (Split-Path $path -Leaf) $read.Loads
+              $plants.Add([pscustomobject]@{ Place = 'extraction'; Path = $path; Source = $plant.Source; Kind = $plant.Kind })
+            }
+
+            $alone = @($plants | Where-Object { $_.Place -eq 'beside' -and (Split-Path $_.Path -Leaf) -in $plantedAlone })
+            $planned.Add([pscustomobject]@{
+              Label = $run.Label; BuildLabel = $run.Label; JudgeOnLoadAlone = $false; BundleFiles = $bundleFiles
+              Plants = @($plants | Where-Object { $_ -notin $alone })
+            })
+            foreach ($plant in $alone) {
+              $planned.Add([pscustomobject]@{
+                Label = "$($run.Label) with $(Split-Path $plant.Path -Leaf) alone"; BuildLabel = $run.Label; JudgeOnLoadAlone = $true
+                BundleFiles = $bundleFiles; Plants = @($plant)
+              })
+            }
+          }
+
+          "== Planted for the second pass"
+          foreach ($p in $planned) {
+            "  $($p.Label):"
+            foreach ($plant in $p.Plants) { "    $($plant.Place) $($plant.Path): $($plant.Kind), $($plant.Source)" }
+          }
+          ConvertTo-Json -InputObject @($planned) -Depth 5 | Set-Content (Join-Path $env:RUNNER_TEMP 'plants.json')
+
+          if ($failures.Count) {
+            "$($failures.Count) checks failed:"
+            $failures | ForEach-Object { "  $_" }
+            exit 1
+          }
+
+      # A planted file is judged by whether the build loaded it, and a plant counts only
+      # where a look found it in place and it was unchanged when the build ended, so a
+      # plant that was missed, removed or rewritten cannot pass.
+      - name: Second pass, with the genuine files planted
+        if: ${{ !cancelled() && env.PROCMON != '' }}
         shell: pwsh
         run: |
-          $failures = [System.Collections.Generic.List[string]]::new()
-          function Fail([string]$message) { $failures.Add($message); Write-Host "::error::$message" }
+          . (Join-Path $env:RUNNER_TEMP 'native.ps1')
+          $plantsFile = Join-Path $env:RUNNER_TEMP 'plants.json'
+          if (-not (Test-Path $plantsFile)) { throw "The first pass wrote nothing to plant." }
+          $planned = @(Get-Content -Raw $plantsFile | ConvertFrom-Json)
 
-          $dir = Split-Path $env:PROCMON
-          Start-Process $env:PROCMON -ArgumentList '/Terminate' -Wait
-          $csv = Join-Path $dir 'loads.csv'
-          Start-Process $env:PROCMON -ArgumentList '/AcceptEula', '/Quiet', '/OpenLog', "`"$dir\loads.pml`"", '/SaveAs', "`"$csv`"" -Wait
-          if (-not (Test-Path $csv)) { throw "Process Monitor saved no record." }
-
-          $runsFile = Join-Path $env:RUNNER_TEMP 'runs.json'
-          if (-not (Test-Path $runsFile)) { throw "No build ran." }
-          $runs = @(Get-Content -Raw $runsFile | ConvertFrom-Json)
-          # The whole machine's record is read once, keeping only the builds' rows.
-          $names = @($runs | ForEach-Object { $_.Exe } | Sort-Object -Unique)
-          $rows = @(Import-Csv $csv | Where-Object { $names -contains $_.'Process Name' })
-          "Process Monitor recorded $($rows.Count) operations by $($names -join ' and ')."
-
-          # A single-file build extracts its own libraries to a folder under %TEMP%\.net.
-          # The path is compared from the "\.net\" on, since Process Monitor gives the
-          # long form of the temp folder and the environment can give its short form.
-          function UnderExtraction([string]$path) { if ($path -match '\\\.net\\(.+)$') { $Matches[1].ToLowerInvariant() } }
-          $extractRoot = Join-Path ([IO.Path]::GetTempPath()) '.net'
-          $bundled = @(Get-ChildItem -Path $extractRoot -Recurse -File -Filter *.dll -ErrorAction SilentlyContinue |
-                       ForEach-Object { UnderExtraction $_.FullName })
-          "  $($bundled.Count) libraries in the extraction folders"
-
-          foreach ($run in $runs) {
-            "== $($run.Label), $($run.Exe), process $($run.Id)"
-            $mine = @($rows | Where-Object { $_.'Process Name' -eq $run.Exe -and $_.PID -eq [string]$run.Id })
-            "  $($mine.Count) operations"
-            if ($mine.Count -eq 0) { Fail "$($run.Label): Process Monitor recorded nothing for process $($run.Id)."; continue }
-
-            $loads = @($mine | Where-Object { $_.Operation -eq 'Load Image' } | ForEach-Object { $_.Path } | Sort-Object -Unique)
-            "  libraries loaded:"
-            $loads | ForEach-Object { "    $_" }
-            if (-not $run.MustLoad) { Fail "$($run.Label) names nothing it must load."; continue }
-            foreach ($name in $run.MustLoad) {
-              if (-not ($loads | Where-Object { (Split-Path $_ -Leaf) -eq $name })) {
-                Fail "$($run.Label) never loaded $name, so it did not get far enough for this check to judge it."
-              }
+          Start-Record 'second'
+          $runs = foreach ($p in $planned) {
+            $build = $builds | Where-Object Label -eq $p.BuildLabel
+            $folder = Join-Path $env:RUNNER_TEMP ('second-' + ($p.Label -replace '[^A-Za-z0-9]+', '-'))
+            New-Item -ItemType Directory -Force -Path $folder | Out-Null
+            Copy-Item $build.Exe $folder
+            $placed = [System.Collections.Generic.List[object]]::new()
+            foreach ($plant in @($p.Plants | Where-Object { $_ })) {
+              $path = if ($plant.Place -eq 'beside') { Join-Path $folder $plant.Path } else { $plant.Path }
+              New-Item -ItemType Directory -Force -Path (Split-Path $path) | Out-Null
+              Copy-Item -LiteralPath $plant.Source -Destination $path
+              $placed.Add([pscustomobject]@{ Path = $path; Hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash })
             }
-
-            $own = $run.Folder.TrimEnd('\') + '\'
-            $beside = @($mine | Where-Object { $_.Path.StartsWith($own, 'OrdinalIgnoreCase') -and $_.Path.EndsWith('.dll', 'OrdinalIgnoreCase') })
-            foreach ($row in ($beside | Sort-Object Path, Operation -Unique)) {
-              Fail "$($run.Label) looked in its own folder for $(Split-Path $row.Path -Leaf): $($row.Operation), $($row.Result)."
-            }
-
-            $extracted = @($mine | Where-Object { $_.Path.EndsWith('.dll', 'OrdinalIgnoreCase') -and (UnderExtraction $_.Path) })
-            if ($run.Label -eq 'portable' -and $extracted.Count -eq 0) {
-              Fail "The portable shows nothing from its extraction folder, so that folder went unchecked."
-            }
-            foreach ($row in ($extracted | Sort-Object Path, Operation -Unique)) {
-              if ($bundled -notcontains (UnderExtraction $row.Path)) {
-                Fail "$($run.Label) looked in its extraction folder for $(Split-Path $row.Path -Leaf), which the bundle did not put there: $($row.Operation), $($row.Result)."
-              }
+            $id = Invoke-Build $build $p.Label $folder
+            [pscustomobject]@{
+              Label = $p.Label; Build = $build; Folder = $folder; Exe = (Split-Path $build.Exe -Leaf); Id = $id
+              Placed = $placed; BundleFiles = @($p.BundleFiles | Where-Object { $_ }); JudgeOnLoadAlone = $p.JudgeOnLoadAlone
             }
           }
+          $byProcess = Read-Record (Stop-Record 'second') $runs
 
-          "== Reports"
-          foreach ($folder in (Join-Path $env:LOCALAPPDATA 'InstallerClean'), (Join-Path $env:LOCALAPPDATA 'NoFaff\InstallerClean')) {
-            $report = Join-Path $folder 'last-run.json'
-            if (Test-Path $report) { Fail "A window left a report waiting: $report." } else { "  no $report" }
-            $settings = Join-Path $folder 'settings.json'
-            if ((Test-Path $settings) -and ((Get-Content -Raw $settings) -match '"reportToSend"\s*:\s*true')) {
-              Fail "A window marked a report to send in $settings."
+          foreach ($run in $runs) {
+            $read = Read-Run $run $byProcess
+            if (-not $read) { continue }
+            # A native library is mapped and loaded; a managed one can be read instead, so
+            # any of the three by the build counts as the planted file being taken.
+            $placedPaths = @($run.Placed | ForEach-Object Path)
+            $loadedPaths = @($read.Loads | ForEach-Object Path)
+            foreach ($taken in ($read.Libraries | Where-Object { $_.Operation -in 'CreateFileMapping', 'ReadFile' -and $placedPaths -contains $_.Path -and $loadedPaths -notcontains $_.Path } | Group-Object Path)) {
+              $first = $taken.Group[0]
+              Fail "$($run.Label) read the planted $($first.Path), $($first.Operation) at row $($first.Index), $(Get-When $first $read.Marker)."
             }
+            foreach ($load in $read.Loads) {
+              if ($placedPaths -contains $load.Path) {
+                Fail "$($run.Label) loaded the planted $($load.Path), row $($load.Index), $(Get-When $load $read.Marker)."
+              }
+              elseif ($load.Place -eq 'own' -or ($load.Place -eq 'extraction' -and $run.BundleFiles -notcontains $load.Path)) {
+                Fail "$($run.Label) loaded $($load.Path), which neither its bundle nor the first pass put there, row $($load.Index), $(Get-When $load $read.Marker)."
+              }
+            }
+            foreach ($plant in $run.Placed) {
+              $at = @($read.Libraries | Where-Object { $_.Path -eq $plant.Path -and $_.Operation -ne 'Load Image' })
+              $found = @($at | Where-Object { $_.Result -eq 'SUCCESS' -and $_.Operation -in 'QueryOpen', 'CreateFile' })
+              if (-not $at) { Fail "$($run.Label) did not look for the planted $($plant.Path)." }
+              elseif (-not $found) {
+                Fail "The planted $($plant.Path) was not there when $($run.Label) looked: $(($at | ForEach-Object { "$($_.Operation) $($_.Result)" } | Sort-Object -Unique) -join ', ')."
+              }
+              if (-not (Test-Path -LiteralPath $plant.Path)) { Fail "The planted $($plant.Path) was gone once $($run.Label) ended." }
+              elseif ((Get-FileHash -Algorithm SHA256 -LiteralPath $plant.Path).Hash -ne $plant.Hash) { Fail "The planted $($plant.Path) was changed while $($run.Label) ran." }
+            }
+
+            if ($run.JudgeOnLoadAlone) {
+              "  judged without its must-loads: a build that takes a planted apphost library cannot start, so $($run.Label) is not expected to load $($run.Build.MustLoad -join ' or '). DOTNET_ROOT is $env:DOTNET_ROOT."
+            }
+            else { Test-MustLoad $run $read.Loads }
           }
 
           if ($failures.Count) {
@@ -773,3 +1007,19 @@ jobs:
             $failures | ForEach-Object { "  $_" }
             exit 1
           }
+
+      - name: Check no window left a report
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          $left = @()
+          foreach ($folder in (Join-Path $env:LOCALAPPDATA 'InstallerClean'), (Join-Path $env:LOCALAPPDATA 'NoFaff\InstallerClean')) {
+            $report = Join-Path $folder 'last-run.json'
+            if (Test-Path $report) { $left += "A window left a report waiting: $report." } else { "  no $report" }
+            $settings = Join-Path $folder 'settings.json'
+            if ((Test-Path $settings) -and ((Get-Content -Raw $settings) -match '"reportToSend"\s*:\s*true')) {
+              $left += "A window marked a report to send in $settings."
+            }
+          }
+          $left | ForEach-Object { Write-Host "::error::$_" }
+          if ($left.Count) { exit 1 }
