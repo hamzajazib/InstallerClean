@@ -578,6 +578,14 @@ jobs:
   # could not open on the runner fails the job. A run with an apphost library planted
   # alone is the exception and is judged without its must-loads.
   #
+  # The slim's exe finds .NET only where .NET is installed, so the job fails where the
+  # first pass sees the slim look for hostfxr.dll or hostpolicy.dll in its own folder.
+  # After both passes each build is started once more with the .NET host's trace on.
+  # The job fails where that trace shows the slim's exe searching the folder it is run
+  # from for .NET or loading a hostfxr.dll from anywhere but .NET's install, with one
+  # planted beside it, and prints the folders each build's runtime searches for
+  # native libraries.
+  #
   # A window started on a fresh account offers to send a report. Before any build
   # runs, the PC-wide first-run mark is set, so the offer is never made, and the
   # report receiver's host is pointed nowhere in the hosts file. The job fails where
@@ -850,6 +858,19 @@ jobs:
               }
             }
           }
+
+          # The folder a run's copy of its build is started from, named for the pass and the run.
+          function Get-RunFolder([string]$pass, [string]$label) {
+            Join-Path $env:RUNNER_TEMP ("$pass-" + ($label -replace '[^A-Za-z0-9]+', '-'))
+          }
+
+          # Ends the step with every failure listed, where there was one.
+          function Exit-IfFailed {
+            if (-not $failures.Count) { return }
+            Write-Host "$($failures.Count) checks failed:"
+            $failures | ForEach-Object { Write-Host "  $_" }
+            exit 1
+          }
           '@
 
       - name: First pass, with nothing planted
@@ -865,7 +886,7 @@ jobs:
 
           Start-Record 'first'
           $runs = foreach ($build in $builds) {
-            $folder = Join-Path $env:RUNNER_TEMP ('first-' + ($build.Label -replace '[^A-Za-z0-9]+', '-'))
+            $folder = Get-RunFolder 'first' $build.Label
             New-Item -ItemType Directory -Force -Path $folder | Out-Null
             Copy-Item $build.Exe $folder
             $id = Invoke-Build $build $build.Label $folder
@@ -878,6 +899,14 @@ jobs:
             $read = Read-Run $run $byProcess
             if (-not $read) { continue }
             Test-MustLoad $run $read.Loads
+            foreach ($name in $plantedAlone) {
+              $beside = @($read.Libraries | Where-Object { $_.Place -eq 'own' -and $_.Operation -ne 'Load Image' -and $_.Relative -eq $name })
+              "  looked for $name beside itself: $(if ($beside) { "yes, from row $($beside[0].Index)" } else { 'no' })"
+              if ($beside -and $run.Label -eq 'slim') {
+                $who = if ($name -eq 'hostfxr.dll') { "so its exe searches that folder for .NET" } else { "where hostfxr.dll looked for it" }
+                Fail "The slim looked for $name in the folder it was run from, row $($beside[0].Index), $who."
+              }
+            }
             foreach ($load in ($read.Loads | Where-Object Place -eq 'own')) {
               Fail "$($run.Label) loaded $($load.Path) from its own folder, row $($load.Index), $(Get-When $load $read.Marker)."
             }
@@ -927,11 +956,7 @@ jobs:
           }
           ConvertTo-Json -InputObject @($planned) -Depth 5 | Set-Content (Join-Path $env:RUNNER_TEMP 'plants.json')
 
-          if ($failures.Count) {
-            "$($failures.Count) checks failed:"
-            $failures | ForEach-Object { "  $_" }
-            exit 1
-          }
+          Exit-IfFailed
 
       # A planted file is judged by whether the build loaded it, and a plant counts only
       # where a look found it in place and it was unchanged when the build ended, so a
@@ -948,7 +973,7 @@ jobs:
           Start-Record 'second'
           $runs = foreach ($p in $planned) {
             $build = $builds | Where-Object Label -eq $p.BuildLabel
-            $folder = Join-Path $env:RUNNER_TEMP ('second-' + ($p.Label -replace '[^A-Za-z0-9]+', '-'))
+            $folder = Get-RunFolder 'second' $p.Label
             New-Item -ItemType Directory -Force -Path $folder | Out-Null
             Copy-Item $build.Exe $folder
             $placed = [System.Collections.Generic.List[object]]::new()
@@ -1002,11 +1027,71 @@ jobs:
             else { Test-MustLoad $run $read.Loads }
           }
 
-          if ($failures.Count) {
-            "$($failures.Count) checks failed:"
-            $failures | ForEach-Object { "  $_" }
-            exit 1
+          Exit-IfFailed
+
+      # Each build is started once more with the .NET host's trace on, outside both
+      # records so the trace's variables change nothing either pass saw, and with
+      # DOTNET_ROOT cleared so the slim finds .NET through the location .NET's installer
+      # registers, or .NET's default install folder where none is registered. A genuine
+      # hostfxr.dll is planted beside the slim. Its exe carries the places its host
+      # searches for .NET, which the trace prints as a number: 1 is the exe's own folder,
+      # 4 DOTNET_ROOT and 8 the registered and default installs, and 0 is the default
+      # search, which includes the exe's folder. The job fails where the slim's number is
+      # missing, 0 or includes 1, and where its trace does not name the hostfxr.dll it
+      # loaded or names one outside .NET's install. For every build it prints the
+      # folders the runtime searches for native libraries; the command line is started
+      # for its version, so its host and runtime start and it scans nothing.
+      - name: Trace how each build's host starts
+        if: ${{ !cancelled() && env.PROCMON != '' }}
+        shell: pwsh
+        run: |
+          . (Join-Path $env:RUNNER_TEMP 'native.ps1')
+          # The host reads the registered location from the registry's 32-bit view.
+          $key = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry32').OpenSubKey('SOFTWARE\dotnet\Setup\InstalledVersions\x64')
+          $registered = if ($key) { $key.GetValue('InstallLocation') }
+          "  DOTNET_ROOT was '$env:DOTNET_ROOT', DOTNET_ROOT_X64 '$env:DOTNET_ROOT_X64'; the registered x64 install is '$registered'"
+          $installed = if ($registered) { $registered } else { Join-Path $env:ProgramFiles 'dotnet' }
+          # The newest host, by version: host\fxr holds one folder per installed version.
+          $genuineFxr = @(Get-ChildItem -Path (Join-Path $installed 'host\fxr\*\hostfxr.dll') -ErrorAction SilentlyContinue |
+            Sort-Object { $v = $null; if ([version]::TryParse(($_.Directory.Name -replace '-.*$'), [ref]$v)) { $v } else { [version]'0.0' } } |
+            Select-Object -Last 1)
+          if (-not $genuineFxr.Count) { throw "No hostfxr.dll under $installed to plant beside the slim." }
+          Remove-Item Env:DOTNET_ROOT, Env:DOTNET_ROOT_X64 -ErrorAction SilentlyContinue
+          $env:DOTNET_HOST_TRACE = '1'
+          foreach ($build in $builds) {
+            $folder = Get-RunFolder 'trace' $build.Label
+            New-Item -ItemType Directory -Force -Path $folder | Out-Null
+            Copy-Item $build.Exe $folder
+            if ($build.Label -eq 'slim') {
+              Copy-Item -LiteralPath $genuineFxr[0].FullName -Destination $folder
+              "  planted $($genuineFxr[0].FullName) beside the slim"
+            }
+            $trace = "$folder.txt"
+            $env:DOTNET_HOST_TRACEFILE = $trace
+            # The command line's host and runtime start for --version, which then ends the run.
+            $start = $build | Select-Object *
+            if ($build.Label -eq 'command line') { $start.Arguments = @('--version') }
+            $null = Invoke-Build $start $build.Label $folder
+            if (-not (Test-Path $trace)) { Fail "$($build.Label) wrote no host trace."; continue }
+            $lines = @(Get-Content $trace)
+            Write-Host "== $($build.Label): $($lines.Count) trace lines"
+            $lines | Where-Object { $_ -match '\.NET root search location options|registry value in|Found registered install location|as runtime location|Resolved fxr|Property NATIVE_DLL_SEARCH_DIRECTORIES' } |
+              ForEach-Object { Write-Host "  $_" }
+            if ($build.Label -eq 'slim') {
+              $options = @($lines | ForEach-Object { if ($_ -match '\.NET root search location options: (\d+)') { [int]$Matches[1] } })
+              if (-not $options.Count) { Fail "The slim's trace has no .NET root search location options line." }
+              elseif ($options[0] -eq 0 -or ($options[0] -band 1)) { Fail "The slim's host searches the folder it is run from for .NET: search location options $($options[0])." }
+              $fxr = @($lines | ForEach-Object { if ($_ -match 'Resolved fxr \[(.+)\]') { $Matches[1] } })
+              $installedFxr = $installed.TrimEnd('\') + '\host\fxr\'
+              if (-not $fxr.Count) { Fail "The slim's trace does not name the hostfxr.dll it loaded." }
+              foreach ($path in $fxr) {
+                if ($path.StartsWith($installedFxr, 'OrdinalIgnoreCase')) { "  the slim loaded $path, under $installedFxr" }
+                else { Fail "The slim loaded $path, which is not under $installedFxr, with a hostfxr.dll planted in $folder." }
+              }
+            }
           }
+
+          Exit-IfFailed
 
       - name: Check no window left a report
         if: ${{ !cancelled() }}

@@ -1,0 +1,17 @@
+<Project>
+  <!-- An exe published without its own .NET, the slim among them, has written into it
+       that it finds .NET through DOTNET_ROOT, then the location .NET's installer
+       registers, or .NET's default install folder where none is registered. The folder
+       the exe is run from is not searched, so a hostfxr.dll saved beside a downloaded
+       copy is not loaded. A self-contained publish that is not single file keeps its own
+       hostfxr.dll beside its exe and needs that folder searched, so a publish with
+       SelfContained true keeps the default search. This file is read after the publish
+       profile and after the SDK has set SelfContained from PublishSelfContained and the
+       other publish settings; set in a project file, the condition would be read before
+       both and could put the setting on a self-contained publish. The SDK rebuilds the
+       exe a publish writes into obj only when the assembly or the apphost changes, so a
+       change to the value reaches a local publish after the obj folder is cleaned. -->
+  <PropertyGroup Condition="'$(SelfContained)' != 'true'">
+    <AppHostDotNetSearch>EnvironmentVariable;Global</AppHostDotNetSearch>
+  </PropertyGroup>
+</Project>
