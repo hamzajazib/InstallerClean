@@ -501,21 +501,23 @@ public partial class App : Application
         // user ever gets for a failed start flashes and vanishes. Anything the
         // composition build, the view-model resolve or new MainWindow() throws
         // lands here, XAML resource-type mismatches among them, so it is the
-        // arm that has to survive a broken app.
+        // arm that has to survive a broken app. Each arm then shuts down with
+        // exit code 1 before the splash closes, as a close of the last window
+        // would start the shutdown with exit code 0.
         catch (UnauthorizedAccessException)
         {
             MessageDialog.Show(
                 Strings.Error_AdminRequiredBody,
                 Strings.Error_AdminRequiredTitle,
                 MessageKind.Warning);
+            Shutdown(1);
             splash?.Close();
-            Shutdown();
         }
         catch (Exception ex)
         {
             ShowFailedToStart(ex);
+            Shutdown(1);
             splash?.Close();
-            Shutdown();
         }
     }
 

@@ -254,6 +254,7 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
         catch (Exception ex)
         {
             CrashLog.TryWrite(ex);
+            Program.LeaveConsoleToNewerVersion();
             return CliExitCode.Error;
         }
     }

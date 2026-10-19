@@ -439,8 +439,9 @@ public static class SelfReplacement
     /// whose manifest asks for elevation too, without a prompt. An antivirus can hold a
     /// program it has just seen written for a moment, so a start that fails is tried
     /// again a few times, half a second apart. What stopped the hand-over, a wait Windows
-    /// refused included, goes to crash.log once this exe is back in place; a newer version
-    /// that will not end is written as it happens. The event is created before anything is renamed, and
+    /// refused included, goes to crash.log once this exe is back in place; a look at the
+    /// event Windows refuses after the bound, and a newer version that will not end, are
+    /// written as they happen. The event is created before anything is renamed, and
     /// where it cannot be, nothing is: a newer version that cannot be seen to start is
     /// not put in this exe's place.
     /// </remarks>
