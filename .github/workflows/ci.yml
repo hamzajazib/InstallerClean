@@ -916,7 +916,10 @@ jobs:
           # A run that checks for updates reaches github.com, which the update check alone
           # contacts, and finds no newer release while the build's version is at or above the
           # latest. Process Monitor names the far end of a connection by its host name where
-          # it can, and by its address otherwise.
+          # it can, and by its address otherwise. Every /s run writes one summary entry to
+          # the Application log, or a 3005 or 3006 where an update ended the run, so a run
+          # with no entry there, or a log that cannot be read, fails rather than reading as
+          # one that found nothing newer.
           function Test-UpdateCheck($run, $byProcess) {
             $github = @([System.Net.Dns]::GetHostAddresses('github.com') | ForEach-Object IPAddressToString)
             $answers = @($byProcess[[string]$run.Id] | Where-Object {
@@ -925,8 +928,16 @@ jobs:
             })
             if ($answers) { "  $($run.Label): the update check had an answer from $(($answers[0].Path -split ' -> ')[-1]) at $($answers[0].'Time of Day')" }
             else { Fail "$($run.Label): the update check got no answer from GitHub, so the run's network libraries were not judged." }
-            $events = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'InstallerClean'; Id = 3005, 3006; StartTime = $run.Started } -ErrorAction SilentlyContinue)
-            foreach ($event in $events) {
+            try {
+              $events = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'InstallerClean'; StartTime = $run.Started } -ErrorAction Stop)
+            }
+            catch {
+              if ($_.FullyQualifiedErrorId -notlike 'NoMatchingEventsFound,*') { Fail "$($run.Label): the Application log could not be read, so whether it updated itself was not judged: $($_.Exception.Message)"; return }
+              $events = @()
+            }
+            if (-not $events) { Fail "$($run.Label) wrote no entry to the Application log, so whether it updated itself was not judged."; return }
+            foreach ($event in $events) { "  $($run.Label): Event ID $($event.Id) at $($event.TimeCreated)" }
+            foreach ($event in @($events | Where-Object Id -in 3005, 3006)) {
               if ($event.Id -eq 3005) { Fail "$($run.Label) updated itself to a newer release, Event ID 3005 at $($event.TimeCreated), so what ran was not this build." }
               else { Fail "$($run.Label) found a newer release and the update failed or was not tried, Event ID 3006 at $($event.TimeCreated)." }
             }
