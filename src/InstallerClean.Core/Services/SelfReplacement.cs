@@ -134,7 +134,7 @@ public static class SelfReplacement
             return null;
         });
 
-    /// <summary>The answer of <paramref name="step"/>, or null where it throws, which is written to crash.log.</summary>
+    /// <summary>Answers what <paramref name="step"/> returns, or null where it throws; the exception is written to crash.log.</summary>
     private static T? WritingFailureToCrashLog<T>(Func<T?> step) where T : class
     {
         try

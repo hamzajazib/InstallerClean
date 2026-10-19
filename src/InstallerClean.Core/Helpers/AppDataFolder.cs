@@ -26,8 +26,8 @@ internal static class AppDataFolder
     private const string FolderName = "InstallerClean";
     private const string EarlierParentName = "NoFaff";
 
-    // Twice CrashLog's rotation size: the log is moved aside before a write once it has
-    // reached that size. An earlier log past this is not added to the kept one.
+    // Twice CrashLog.MaxBytes, the size at which a write first moves the log aside to its
+    // archive. An earlier log past this is not added to the kept one.
     private const long MaxMergedLogBytes = 2 * CrashLog.MaxBytes;
 
     private static readonly Lazy<Settled> First = new(
