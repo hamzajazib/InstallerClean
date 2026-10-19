@@ -239,8 +239,13 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
         {
             CrashLog.TryWrite(ex);
         }
-        // A newer version this run could neither end nor wait for answers the error code.
-        if (seen == StartSeen.NotWaitedFor) return CliExitCode.Error;
+        // A newer version this run could neither end nor wait for answers the error code, and
+        // may still be running in this console.
+        if (seen == StartSeen.NotWaitedFor)
+        {
+            Program.LeaveConsoleToNewerVersion();
+            return CliExitCode.Error;
+        }
         try
         {
             process.WaitForExit();

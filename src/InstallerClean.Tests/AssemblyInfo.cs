@@ -62,6 +62,15 @@ internal static class TestCrashLog
     }
 
     /// <summary>
+    /// The crash log as it stands, after the copy it was last moved aside to, or empty where
+    /// there is neither. Read whole, so a test comparing it before and after a write sees
+    /// the entry even where the write moved a full log aside.
+    /// </summary>
+    internal static string Text() => ReadIfThere(CrashLog.LogPath + ".old") + ReadIfThere(CrashLog.LogPath);
+
+    private static string ReadIfThere(string path) => File.Exists(path) ? File.ReadAllText(path) : string.Empty;
+
+    /// <summary>
     /// Deletes <paramref name="folder"/> and everything in it, and throws nothing where the
     /// delete is refused: a file an antivirus holds open, or a read-only one on Windows,
     /// leaves the folder in place and the test that made it passing.

@@ -380,8 +380,11 @@ public partial class App : Application
             HandOverContract.TakeStartedEvent(e.Args, out var startedEvent);
             if (!HandOverContract.SignalStarted(startedEvent))
             {
-                splash.Close();
+                // Shut down with exit code 1 before the splash closes: closing the app's
+                // last window starts a shutdown with exit code 0, and a shutdown already
+                // under way ignores a second.
                 Shutdown(1);
+                splash.Close();
                 return;
             }
 

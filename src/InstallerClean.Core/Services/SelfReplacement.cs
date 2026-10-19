@@ -518,20 +518,19 @@ public static class SelfReplacement
     /// does one found set by a look at the event alone, taken once more after the bound,
     /// <paramref name="cancel"/> or a refused wait: Windows refuses a wait on several
     /// handles where any one of them cannot be waited on, so the event can be readable
-    /// where the wait was not. A look Windows refuses after the bound answers
-    /// <see cref="NewerVersionStart.WaitFailed"/> with its error code, and one after
-    /// <paramref name="cancel"/> is written to crash.log and the answer stays
-    /// <see cref="NewerVersionStart.Cancelled"/>. Nothing else is written: the caller
-    /// writes <see cref="NotStartedFailure"/>. The wait dispatches nothing, so on a window's
+    /// where the wait was not. A look Windows refuses after the bound or
+    /// <paramref name="cancel"/> is written to crash.log and the answer stands; after a
+    /// refused wait it is not, the refusal being the answer already. Nothing else is
+    /// written: the caller writes <see cref="NotStartedFailure"/>. The wait dispatches nothing, so on a window's
     /// thread no window code runs during it. Never throws.
     /// </summary>
     internal static NewerVersionStart AwaitStart(
         Process newer, WaitHandle started, TimeSpan bound, WaitHandle? cancel, out int waitError)
     {
-        var handles = new List<SafeHandle>(3);
-        handles.Insert(StartedIndex, started.SafeWaitHandle);
-        handles.Insert(EndedIndex, newer.SafeHandle);
-        if (cancel is not null) handles.Insert(CancelIndex, cancel.SafeWaitHandle);
+        // In the order of StartedIndex, EndedIndex and CancelIndex.
+        List<SafeHandle> handles = cancel is null
+            ? [started.SafeWaitHandle, newer.SafeHandle]
+            : [started.SafeWaitHandle, newer.SafeHandle, cancel.SafeWaitHandle];
         var answer = Wait(handles, bound, out waitError) switch
         {
             StartedIndex => NewerVersionStart.Started,
@@ -550,12 +549,7 @@ public static class SelfReplacement
             case HandleLook.NotSignalled:
                 return answer;
             default:
-                if (answer == NewerVersionStart.TimedOut)
-                {
-                    waitError = lookError;
-                    return NewerVersionStart.WaitFailed;
-                }
-                if (answer == NewerVersionStart.Cancelled) CrashLog.TryWrite(LookFailure(lookError));
+                if (answer != NewerVersionStart.WaitFailed) CrashLog.TryWrite(LookFailure(lookError));
                 return answer;
         }
     }

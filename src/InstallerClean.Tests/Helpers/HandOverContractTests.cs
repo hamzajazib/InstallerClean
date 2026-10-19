@@ -106,10 +106,10 @@ public class HandOverContractTests
     [InlineData(EventId, "does not exist")]
     public void A_start_whose_started_event_cannot_be_set_does_not_go_on_and_says_why(string id, string why)
     {
-        var before = Occurrences(CrashLogText(), why);
+        var before = Occurrences(TestCrashLog.Text(), why);
 
         Assert.False(HandOverContract.SignalStarted(id));
-        Assert.Equal(before + 1, Occurrences(CrashLogText(), why));
+        Assert.Equal(before + 1, Occurrences(TestCrashLog.Text(), why));
     }
 
     [Fact]
@@ -119,15 +119,11 @@ public class HandOverContractTests
         using var first = HandOverContract.CreateStartedEvent(id);
         Assert.NotNull(first);
 
-        Assert.DoesNotContain(HandOverContract.StartedEventName(id), CrashLogText());
+        Assert.DoesNotContain(HandOverContract.StartedEventName(id), TestCrashLog.Text());
 
         Assert.Null(HandOverContract.CreateStartedEvent(id));
-        Assert.Contains(HandOverContract.StartedEventName(id), CrashLogText());
+        Assert.Contains(HandOverContract.StartedEventName(id), TestCrashLog.Text());
     }
-
-    /// <summary>The crash log as it stands, or empty where there is none.</summary>
-    private static string CrashLogText() =>
-        File.Exists(CrashLog.LogPath) ? File.ReadAllText(CrashLog.LogPath) : string.Empty;
 
     private static int Occurrences(string text, string value)
     {

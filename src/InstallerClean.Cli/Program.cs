@@ -38,7 +38,8 @@ internal static class Program
         // before anything reads, prints or records the arguments, and the second is set at
         // once: the copy that started this one ends it and puts itself back where it is not
         // set in time. Where it cannot be set, this run ends here with the error code,
-        // having printed and run nothing, and the crash log says why.
+        // having printed and run nothing, and the crash log says why. The copy that started
+        // it writes the Application-log entry for the run.
         args = CliContract.TakeCancelEvent(args, out var cancelEvent);
         args = HandOverContract.TakeStartedEvent(args, out var startedEvent);
         if (!HandOverContract.SignalStarted(startedEvent)) return ExitError;
@@ -84,9 +85,20 @@ internal static class Program
         }
         finally
         {
-            RestoreOutputEncoding(previousOutputEncoding);
+            if (!_newerVersionHasConsole) RestoreOutputEncoding(previousOutputEncoding);
         }
     }
+
+    /// <summary>
+    /// Whether this run ends while the newer version it started may still be running in this
+    /// console. The newer version then writes in the code page it found, UTF-8, and puts back
+    /// that code page as it ends, so this run leaves the code page alone rather than change it
+    /// under the newer version's output.
+    /// </summary>
+    private static bool _newerVersionHasConsole;
+
+    /// <summary>Called where this run ends with the newer version it started perhaps still running in this console.</summary>
+    internal static void LeaveConsoleToNewerVersion() => _newerVersionHasConsole = true;
 
     /// <summary>
     /// Reports an exception thrown out of <see cref="Run"/> to <see cref="Main"/>'s catch-all,

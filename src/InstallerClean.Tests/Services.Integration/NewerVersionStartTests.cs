@@ -55,9 +55,6 @@ public sealed class NewerVersionStartTests : IDisposable
 
     private string StartedEventNameOf(EventWaitHandle started) => HandOverContract.StartedEventName(_eventIds[started]);
 
-    private static string CrashLogText() =>
-        File.Exists(CrashLog.LogPath) ? File.ReadAllText(CrashLog.LogPath) : string.Empty;
-
     private const uint EventModifyState = 0x0002;
     private const uint EventAllAccess = 0x1F0003;
     private const int ErrorAccessDenied = 5;
@@ -173,7 +170,7 @@ public sealed class NewerVersionStartTests : IDisposable
         Assert.False(setOnly.SafeWaitHandle.IsInvalid);
         var newer = PowerShellRunning("Start-Sleep -Seconds 600");
         var bound = TimeSpan.FromSeconds(30);
-        var logBefore = CrashLogText();
+        var logBefore = TestCrashLog.Text();
         var clock = Stopwatch.StartNew();
 
         var answer = SelfReplacement.AwaitStart(newer, setOnly, bound, cancel: null, out var waitError);
@@ -181,7 +178,7 @@ public sealed class NewerVersionStartTests : IDisposable
         Assert.True(clock.Elapsed < TimeSpan.FromSeconds(10), $"The wait took {clock.Elapsed}.");
         Assert.Equal(NewerVersionStart.WaitFailed, answer);
         Assert.Equal(ErrorAccessDenied, waitError);
-        Assert.Equal(logBefore, CrashLogText());
+        Assert.Equal(logBefore, TestCrashLog.Text());
         Assert.Contains("failed with error 5", SelfReplacement.NotStartedFailure(answer, waitError, newer, bound).Message);
         Assert.True(SelfReplacement.EndNewerVersion(newer));
         Assert.True(newer.HasExited);
@@ -203,7 +200,6 @@ public sealed class NewerVersionStartTests : IDisposable
         var answer = SelfReplacement.AwaitStart(newer, full, TimeSpan.FromSeconds(1), cancel: null, out var waitError);
 
         Assert.Equal(NewerVersionStart.TimedOut, answer);
-        Assert.Equal(0, waitError);
         Assert.Equal(0, waitError);
         Assert.True(SelfReplacement.EndNewerVersion(newer));
     }
