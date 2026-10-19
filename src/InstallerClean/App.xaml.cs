@@ -50,6 +50,10 @@ public partial class App : Application
     // re-scale derives from them, not from a previously scaled value.
     private readonly Dictionary<string, double> _baseTypeSizes = new();
 
+    // Set where the app closes the splash itself, so its Closed handler does not read the
+    // close as a person asking the app to stop.
+    private bool _splashClosedByApp;
+
     /// <remarks>
     /// <c>async void</c> is the WPF override contract; sync and post-
     /// await throws both reach the catch blocks below.
@@ -525,21 +529,18 @@ public partial class App : Application
     /// where it is up.
     /// </summary>
     /// <remarks>
-    /// The splash's close is marked as the app's own, so it is not read as a person closing
-    /// the splash. The shutdown is queued as a dispatcher operation, so it is asked for only
-    /// after any dialog saying why the start failed has closed: a modal opened after it
-    /// pumps the dispatcher, runs the queued shutdown from inside its own frame, and the
-    /// only diagnosis a user gets for a failed start flashes and vanishes.
+    /// Call it only once any dialog saying why the start failed has closed. The shutdown is
+    /// queued as a dispatcher operation, and a modal opened after it pumps the dispatcher,
+    /// runs the queued shutdown from inside its own frame, and the only diagnosis a user
+    /// gets for a failed start flashes and vanishes. The splash's close is marked as the
+    /// app's own before it happens, so the exit code is this one whichever comes first.
     /// </remarks>
     private void EndFailedStart(SplashWindow? splash)
     {
-        Shutdown(1);
         _splashClosedByApp = true;
+        Shutdown(1);
         splash?.Close();
     }
-
-    /// <summary>Whether the splash is being closed by the app itself rather than by a person.</summary>
-    private bool _splashClosedByApp;
 
     /// <summary>
     /// Writes <paramref name="ex"/> to the crash log and shows the dialog saying the

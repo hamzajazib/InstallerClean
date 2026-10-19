@@ -418,10 +418,10 @@ public static class SelfReplacement
     /// own code is running, and ends this process without running any more of its code.
     /// Answers false where the newer version could not be put in place, could not be
     /// started, or did not say so (<see cref="AwaitStart"/>), with this exe back at its
-    /// own path and the newer version back under its waiting name. Where this exe cannot
-    /// be put back, or another process runs from the file now at the path, the newer
-    /// version stays there and this process ends all the same, so the next start opens
-    /// the newer version.
+    /// own path and the newer version back under its waiting name. Where Windows would not
+    /// end a newer version that did not say so, this exe cannot be put back, or another
+    /// process runs from the file now at the path, the newer version stays there and this
+    /// process ends all the same, so the next start opens the newer version.
     /// </summary>
     /// <param name="exePath">This exe's own path.</param>
     /// <param name="toVersion">
@@ -471,7 +471,7 @@ public static class SelfReplacement
         if (startedEvent is not null) info.ArgumentList.Add(HandOverContract.StartedEventArgument(startedId));
         Exception? failure = null;
         var newerRan = false;
-        var newerStays = false;
+        var newerWouldNotEnd = false;
         for (var attempt = 1; attempt <= StartAttempts; attempt++)
         {
             Process? newer;
@@ -494,15 +494,15 @@ public static class SelfReplacement
                     newer, startedEvent!, startBound ?? HandOverContract.StartBound, cancel: null, out var waitError);
                 if (answer == NewerVersionStart.Started) EndThisProcess();
                 failure = NotStartedFailure(answer, waitError, newer, startBound ?? HandOverContract.StartBound);
-                // One Windows would not end is still running from the file at the path.
-                newerStays = !EndNewerVersion(newer);
+                // A newer version not seen to end is not renamed under.
+                newerWouldNotEnd = !EndNewerVersion(newer);
             }
             break;
         }
 
         // A person can start the file at the path while the wait runs, and renaming a file a
         // process runs from takes from it the assemblies it has still to load.
-        newerStays = newerStays || (newerRan && AnotherProcessMayRunFrom(exePath)) || !putBack();
+        var newerStays = newerWouldNotEnd || (newerRan && AnotherProcessMayRunFrom(exePath)) || !putBack();
         if (failure is not null) CrashLog.TryWrite(failure);
         if (newerStays) EndThisProcess();
         return false;
