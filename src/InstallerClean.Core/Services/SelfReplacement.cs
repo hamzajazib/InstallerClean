@@ -100,8 +100,10 @@ public static class SelfReplacement
     /// each loaded one names, until nothing new loads. Also looks up one string, which
     /// opens the display language's satellite, the set every line in that language shown
     /// after the rename is read from, and readies the crash log
-    /// (<see cref="CrashLog.Prepare"/>). Never throws; an assembly that will not load is
-    /// written to crash.log and the walk goes on.
+    /// (<see cref="CrashLog.Prepare"/>). The walk, the lookup and the readying are each
+    /// done on their own, and the failure of any one is written to crash.log and leaves the
+    /// next to run. Never throws; an assembly that will not load is written to crash.log
+    /// and the walk goes on.
     /// </summary>
     /// <remarks>
     /// An assembly's code reaches other assemblies only through its AssemblyRef table,
@@ -114,7 +116,6 @@ public static class SelfReplacement
     /// </remarks>
     public static void PrepareToMoveAside(params Assembly[] moreRoots)
     {
-        // Each step on its own, so one that throws leaves the others done.
         WritingFailureToCrashLog(() =>
         {
             var roots = new List<Assembly> { typeof(SelfReplacement).Assembly, typeof(Process).Assembly };
@@ -178,7 +179,7 @@ public static class SelfReplacement
         {
             return Assembly.Load(name);
         }
-        catch (Exception ex) when (ex is FileNotFoundException or FileLoadException or BadImageFormatException)
+        catch (Exception ex)
         {
             CrashLog.TryWrite(ex);
             return null;

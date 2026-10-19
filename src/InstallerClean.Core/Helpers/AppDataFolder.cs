@@ -27,7 +27,8 @@ internal static class AppDataFolder
     private const string EarlierParentName = "NoFaff";
 
     // Twice CrashLog's rotation size. The log rotates before a write once it has reached
-    // that size, so it passes it by no more than its last entry.
+    // that size, where the move to its archive goes through; until one does, writes go on
+    // appending to it.
     private const long MaxMergedLogBytes = 2 * CrashLog.MaxBytes;
 
     private static readonly Lazy<Settled> First = new(
