@@ -1357,8 +1357,9 @@ jobs:
           # Each entry's assembly is read from the runtime packs its exe's bundle was built
           # from, in NuGet's cache: an 'import' entry's names have to be among the assembly's
           # imports, and a 'NativeLibrary.Load' entry's among the string literals in its code,
-          # spelled the same. An entry that cannot be read is dropped from the list, so the
-          # looks it would cover are planted.
+          # spelled the same. An entry that fails these checks is dropped from the list, so the
+          # looks it would cover are planted; the step stops where an assembly or the runtime
+          # packs cannot be read.
           $cache = Get-NuGetCache
           $packFolders = @{}
           $assemblyPaths = @{}
@@ -1572,6 +1573,98 @@ jobs:
           }
 
           Exit-IfFailed
+
+      # Settles which code in the command line's run that checks for updates makes its
+      # look for ole32.dll beside the exe, which the list of libraries not planted leaves
+      # out until that look's caller is cited. It reads the first pass's whole Process
+      # Monitor record on the runner, since a record holds every process on the runner and
+      # is not kept, and prints only the thread and the stack of that look, the operations
+      # and paths around it in the same process, and the same for the /noupdate run's look
+      # for ntdll.dll, whose caller is known. It never prints a command line, an
+      # environment or the detail of a row that starts or creates a process. The reader is
+      # procmon-parser, installed from PyPI by the hash of each file. The step judges
+      # nothing and never fails the job, and it refuses, naming what was missing, where the
+      # record is not in a format the reader takes or a run's process or look is not in it.
+      - name: Read the threads and stacks of two looks from the first pass's record
+        if: ${{ !cancelled() && env.PROCMON != '' }}
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $pml = Join-Path (Split-Path $env:PROCMON) 'first.pml'
+          if (-not (Test-Path -LiteralPath $pml)) { "The first pass's record $pml is not there."; exit 0 }
+          "  $pml is $([math]::Round((Get-Item -LiteralPath $pml).Length / 1MB)) MB"
+          $venv = Join-Path $env:RUNNER_TEMP 'pml-reader'
+          python -m venv $venv
+          $requirements = Join-Path $env:RUNNER_TEMP 'pml-reader.txt'
+          @(
+            'procmon-parser==0.4.0 --hash=sha256:5b1c522386f9208cd8d40577c5c90ac1c7a7568262ae89615d0ffe9d35613e1f'
+            'construct==2.10.70 --hash=sha256:c80be81ef595a1a821ec69dc16099550ed22197615f4320b57cc9ce2a672cb30'
+          ) | Set-Content $requirements
+          & "$venv\Scripts\python.exe" -m pip install --quiet --require-hashes --only-binary :all: -r $requirements
+          if ($LASTEXITCODE -ne 0) { "procmon-parser did not install, so the record was not read."; exit 0 }
+          $script = Join-Path $env:RUNNER_TEMP 'read-pml.py'
+          Set-Content -LiteralPath $script -Value @'
+          import sys
+          from procmon_parser import ProcmonLogsReader
+
+          KERNEL = 0xFFFF800000000000
+
+          def frame(process, address):
+              if address >= KERNEL:
+                  return f"kernel {address:#x}"
+              for module in process.modules:
+                  if module.base_address <= address < module.base_address + module.size:
+                      return f"{module.path.rsplit(chr(92), 1)[-1]}+{address - module.base_address:#x}"
+              return f"{address:#x}"
+
+          def find(processes, folder):
+              runs = [p for p in processes if p.image_path.lower().endswith(f"\\{folder}\\installerclean-cli.exe")]
+              if len(runs) != 1:
+                  print(f"  refused: {len(runs)} processes in the record ran {folder}\\installerclean-cli.exe, where there should be one")
+                  return None
+              return runs[0]
+
+          def show(run, events, folder, name, before, after):
+              print(f"== the look for {name} in {folder}")
+              target = f"\\{folder}\\{name}".lower()
+              at = [n for n, e in enumerate(events) if str(e.operation) == "QueryOpen" and (e.path or "").lower().endswith(target)]
+              if not at:
+                  print(f"  refused: process {run.pid} made no QueryOpen of {folder}\\{name}")
+                  return
+              n = at[0]
+              look = events[n]
+              print(f"  process {run.pid}, its event {n + 1} of {len(events)}, thread {look.tid}: {look.operation} {look.path}")
+              print(f"  stack, innermost first ({len(look.stacktrace)} frames):")
+              for address in look.stacktrace:
+                  print(f"    {frame(run, address)}")
+              print(f"  its events {max(n - before, 0) + 1} to {min(n + after, len(events) - 1) + 1} (event, thread, operation, path):")
+              for m in range(max(n - before, 0), min(n + after, len(events) - 1) + 1):
+                  e = events[m]
+                  print(f"    {m + 1}  {e.tid}  {e.operation}  {e.path}{'   <- the look' if m == n else ''}")
+              mine = [(m, e) for m, e in enumerate(events) if e.tid == look.tid]
+              print(f"  thread {look.tid}'s first events in the process ({len(mine)} in all):")
+              for m, e in mine[:15]:
+                  print(f"    {m + 1}  {e.operation}  {e.path}")
+
+          with open(sys.argv[1], "rb") as f:
+              try:
+                  reader = ProcmonLogsReader(f, should_get_stacktrace=True, should_get_details=False)
+              except NotImplementedError as error:
+                  print(f"refused: the reader does not take this record: {error}")
+                  sys.exit(0)
+              looks = [("first-command-line-checking-for-updates", "ole32.dll", 80, 20), ("first-command-line", "ntdll.dll", 20, 5)]
+              runs = [find(reader.processes(), folder) for folder, _, _, _ in looks]
+              wanted = {run.pid: [] for run in runs if run}
+              for e in reader:
+                  if e.process.pid in wanted:
+                      wanted[e.process.pid].append(e)
+              for run, (folder, name, before, after) in zip(runs, looks):
+                  if run:
+                      show(run, wanted[run.pid], folder, name, before, after)
+          '@
+          & "$venv\Scripts\python.exe" -I $script $pml
+          if ($LASTEXITCODE -ne 0) { "The record could not be read to the end." }
+          exit 0
 
       # A planted file is judged by whether the build loaded it, and a plant counts only
       # where a look found it in place and it was unchanged when the build ended, so a
