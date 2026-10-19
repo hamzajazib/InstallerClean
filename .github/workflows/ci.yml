@@ -594,9 +594,9 @@ jobs:
   # where the list names one those folders do not carry. The window loads before its
   # Main the Windows Forms assemblies the installed desktop runtime adds, where the host
   # lists them as trusted platform assemblies, so the job fails where the slim's host
-  # trace does not list them, where the portable's lists an assembly its bundle carries,
-  # and where the slim does not load them before the first act seen of its code in Main
-  # or later.
+  # trace does not list them, where the portable's lists one of them or an assembly its
+  # bundle carries, and where the slim does not load them before the first act seen of
+  # its code in Main or later.
   #
   # The slim's exe finds .NET only where .NET is installed, so the job fails where the
   # first pass sees the slim look for hostfxr.dll or hostpolicy.dll in its own folder.
@@ -832,17 +832,17 @@ jobs:
             }
           }
 
-          # The first act of the build's own code that Process Monitor can see, and the first
-          # it can see of the code that runs in Main or later, each with its kind. A row after
-          # the first came after the build's own code started. In the slim, the first is the
-          # module initializer's load of the first assembly on the exe's list from the installed
-          # runtime's folder, the row on which Process Monitor shows the image loaded. A self-contained single-file build reads every assembly
-          # from its own bundle, so nothing names its module initializer's loads, and its first
-          # act seen is in Main. Main and later make the others: the look for the exe's old or new copy
-          # beside it, the app's folder under %LOCALAPPDATA% or the NoFaff one earlier
-          # versions use, a file under C:\Windows\Installer, and the load of msi.dll. Each
-          # build names the kind it shows first, and the first pass fails where it shows
-          # another.
+          # The first act of the build's own code that Process Monitor can see, and the first it
+          # can see of the code that runs in Main or later, each with its kind. A row after the
+          # first came after the build's own code started. In the slim, the first is the module
+          # initializer's load of the first assembly on the exe's list from the installed
+          # runtime's folder, the row on which Process Monitor shows the image loaded. A
+          # self-contained single-file build reads every assembly from its own bundle, so nothing
+          # names its module initializer's loads, and its first act seen is in Main. Main and
+          # later make the others: the look for the exe's old or new copy beside it, the app's
+          # folder under %LOCALAPPDATA% or the NoFaff one earlier versions use, a file under
+          # C:\Windows\Installer, and the load of msi.dll. Each build names the kind it shows
+          # first, and the first pass fails where it shows another.
           function Get-Marker($rows, $run) {
             $first = @(Read-SourceList $run.Build.Source 'ImportingAssemblies')[0]
             $exe = $run.Folder.TrimEnd('\') + '\' + $run.Exe
@@ -1548,8 +1548,8 @@ jobs:
 
             # The window loads the assemblies on its ImportingAssembliesWhereInstalled list only
             # where the host lists them as trusted platform assemblies: the slim's host lists
-            # every assembly of the installed runtime, and the portable's lists none its bundle
-            # carries.
+            # every assembly of the installed runtime, and the portable's lists none of them
+            # and none its bundle carries.
             if ($build.Label -in 'slim', 'portable') {
               if (-not @($lines | Where-Object { $_ -match 'Property TRUSTED_PLATFORM_ASSEMBLIES = ' }).Count) { Fail "The $($build.Label)'s trace has no TRUSTED_PLATFORM_ASSEMBLIES line." }
               $trusted = @($lines | ForEach-Object { if ($_ -match 'Property TRUSTED_PLATFORM_ASSEMBLIES = (.*)$') { $Matches[1] -split ';' } } | Where-Object { $_ })
