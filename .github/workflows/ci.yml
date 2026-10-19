@@ -586,7 +586,7 @@ jobs:
   # with a hostfxr.dll planted beside the slim and a decoy .NET install named by
   # DOTNET_ROOT. The job fails where that trace shows the slim's exe searching for .NET
   # anywhere but the registered or default install, or loading a hostfxr.dll from
-  # anywhere else, and where a slim published to search DOTNET_ROOT as well does not
+  # anywhere else, and where a slim published to search only DOTNET_ROOT does not
   # load the decoy's. It prints the folders each build's runtime searches for native
   # libraries.
   #
@@ -1052,14 +1052,14 @@ jobs:
       # .NET's default install folder where none is registered. 0 is the default search,
       # which includes the exe's folder. The job fails where the slim's number is missing
       # or anything but 8, and where its trace does not name the hostfxr.dll it loaded or
-      # names one outside .NET's install. The slim is also published to search the
-      # DOTNET_ROOT variables as well, from a copy of the commit of its own, and the job
-      # fails where that build does not load the decoy's hostfxr.dll, which is what shows
-      # the decoy is one the host takes. That build cannot find the desktop runtime under
-      # the decoy and does not start, and its trace is all that is read. For every
-      # build it prints the folders the runtime searches for native libraries; the
-      # command line is started for its version, so its host and runtime start and it
-      # scans nothing.
+      # names one outside .NET's install. The slim is also published to search only the
+      # DOTNET_ROOT variables, from a copy of the commit of its own, and the job fails
+      # where that build does not load the decoy's hostfxr.dll, which is what shows the
+      # decoy is one the host takes. That build cannot find the desktop runtime under the
+      # decoy and does not start, and its trace is all that is read; its search location
+      # options and the hostfxr.dll it resolved are printed. For every build it prints the
+      # folders the runtime searches for native libraries; the command line is started for
+      # its version, so its host and runtime start and it scans nothing.
       - name: Trace how each build's host starts
         if: ${{ !cancelled() && env.PROCMON != '' }}
         shell: pwsh
@@ -1095,7 +1095,7 @@ jobs:
           git archive --format=zip -o "$tree.zip" HEAD
           if ($LASTEXITCODE -ne 0) { throw "git archive failed for the slim that searches DOTNET_ROOT." }
           Expand-Archive -Path "$tree.zip" -DestinationPath $tree -Force
-          dotnet publish (Join-Path $tree 'src/InstallerClean/InstallerClean.csproj') -c Release -r win-x64 -p:RestoreLockedMode=true -p:PublishSelfContained=false -p:SelfContained=false -p:PublishSingleFile=true -p:AppHostDotNetSearch=EnvironmentVariable%3BGlobal --nologo -o "$tree-publish"
+          dotnet publish (Join-Path $tree 'src/InstallerClean/InstallerClean.csproj') -c Release -r win-x64 -p:RestoreLockedMode=true -p:PublishSelfContained=false -p:SelfContained=false -p:PublishSingleFile=true -p:AppHostDotNetSearch=EnvironmentVariable --nologo -o "$tree-publish"
           if ($LASTEXITCODE -ne 0) { throw "The slim that searches DOTNET_ROOT did not publish." }
 
           # The host takes the highest version folder under host\fxr, so the decoy's is named
@@ -1154,7 +1154,10 @@ jobs:
           Remove-Item Env:DOTNET_DISABLE_GUI_ERRORS
           if (-not (Test-Path $trace)) { Fail "The $($control.Label) wrote no host trace, so the decoy is not shown to be one the host takes." }
           else {
-            $fxr = @(Get-Content $trace | ForEach-Object { if ($_ -match 'Resolved fxr \[(.+)\]') { $Matches[1] } })
+            $lines = @(Get-Content $trace)
+            Write-Host "== $($control.Label): $($lines.Count) trace lines"
+            $lines | Where-Object { $_ -match '\.NET root search location options|Resolved fxr' } | ForEach-Object { Write-Host "  $_" }
+            $fxr = @($lines | ForEach-Object { if ($_ -match 'Resolved fxr \[(.+)\]') { $Matches[1] } })
             if (@($fxr | Where-Object { $_.StartsWith($decoyFxr, 'OrdinalIgnoreCase') }).Count) { "  the $($control.Label) loaded $($fxr -join ', '), the decoy's" }
             else { Fail "The $($control.Label) loaded $(if ($fxr.Count) { $fxr -join ', ' } else { 'no hostfxr.dll its trace names' }), not the decoy's under $decoyFxr, so the decoy is not shown to be one the host takes." }
           }
