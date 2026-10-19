@@ -1,4 +1,6 @@
+using System.Globalization;
 using InstallerClean.Helpers;
+using InstallerClean.Resources;
 
 namespace InstallerClean.Tests.Helpers.Integration;
 
@@ -90,11 +92,50 @@ public class CrashLogTests
     }
 
     [Fact]
-    public void Write_never_throws_even_when_exception_serialisation_is_unusual()
+    public void A_fresh_log_after_Prepare_is_headed_in_the_language_Prepare_ran_in()
+    {
+        var first = Path.Combine(Path.GetTempPath(), "InstallerClean.Tests", Guid.NewGuid().ToString("N"));
+        var second = Path.Combine(Path.GetTempPath(), "InstallerClean.Tests", Guid.NewGuid().ToString("N"));
+        var suite = CrashLog.FolderForTests;
+        try
+        {
+            Localisation.SetPickedLanguage(CultureInfo.GetCultureInfo("fr"));
+            var french = FirstLine(Strings.CrashLog_PrivacyHeader);
+            CrashLog.FolderForTests = first;
+            CrashLog.Prepare();
+            Localisation.Reset();
+            var english = FirstLine(Strings.CrashLog_PrivacyHeader);
+            Assert.NotEqual(french, english);
+
+            var (path, written) = CrashLog.TryWrite(new InvalidOperationException("after Prepare"));
+            Assert.True(written);
+            Assert.Equal(french, FirstLine(File.ReadAllText(path)));
+
+            // With the kept header dropped, a write builds its own in the language of the moment.
+            CrashLog.ForgetPreparedHeader();
+            CrashLog.FolderForTests = second;
+            (path, written) = CrashLog.TryWrite(new InvalidOperationException("no header kept"));
+            Assert.True(written);
+            Assert.Equal(english, FirstLine(File.ReadAllText(path)));
+        }
+        finally
+        {
+            Localisation.Reset();
+            CrashLog.ForgetPreparedHeader();
+            CrashLog.FolderForTests = suite;
+            TestCrashLog.TryDelete(first);
+            TestCrashLog.TryDelete(second);
+        }
+    }
+
+    private static string FirstLine(string text) => text.Split('\n')[0].TrimEnd('\r');
+
+    [Fact]
+    public void TryWrite_never_throws_even_when_exception_serialisation_is_unusual()
     {
         var nested = new Exception("outer", new Exception("inner", new Exception("innermost")));
 
-        var ex = Record.Exception(() => CrashLog.Write(nested));
+        var ex = Record.Exception(() => CrashLog.TryWrite(nested));
 
         Assert.Null(ex);
     }

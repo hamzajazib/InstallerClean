@@ -97,8 +97,9 @@ public static class SelfReplacement
     /// Loads every assembly the code after a rename can reach, while the running exe's
     /// file is still whole: this assembly, System.Diagnostics.Process,
     /// System.Diagnostics.StackTrace and <paramref name="moreRoots"/>, then every assembly
-    /// each loaded one names, until nothing new loads. Also looks up one string, so the
-    /// satellite for the display language is loaded, and readies the crash log
+    /// each loaded one names, until nothing new loads. Also looks up one string, which
+    /// opens the display language's satellite, the set every line in that language shown
+    /// after the rename is read from, and readies the crash log
     /// (<see cref="CrashLog.Prepare"/>). Never throws; an assembly that will not load is
     /// written to crash.log and the walk goes on.
     /// </summary>
@@ -515,7 +516,7 @@ public static class SelfReplacement
         return false;
     }
 
-    private const int StartAttempts = 4;
+    internal const int StartAttempts = 4;
     private static readonly TimeSpan StartRetryInterval = TimeSpan.FromMilliseconds(500);
 
     /// <summary>

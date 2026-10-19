@@ -317,7 +317,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // the lot: the cache root's own resolution degrading leaves every path
         // measured against an unexpanded root, and a filter driver refusing
         // CreateFile, or an attribute read failing across the folder, leaves
-        // every verdict unproven. One full CrashLog.Write each would rotate
+        // every verdict unproven. One full CrashLog.TryWrite each would rotate
         // crash.log, which holds 512 KB with one archive, many times over in one
         // scan, and nothing that was in the file before the scan would survive.
         // The refusals are also the least informative entries possible, being

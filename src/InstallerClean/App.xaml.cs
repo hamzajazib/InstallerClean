@@ -248,7 +248,7 @@ public partial class App : Application
             // call would stack a second dialog over the first.
             if (_handlingUnhandledException)
             {
-                CrashLog.Write(args.Exception);
+                CrashLog.TryWrite(args.Exception);
                 args.Handled = true;
                 return;
             }
@@ -280,12 +280,12 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
         {
             if (args.ExceptionObject is Exception ex)
-                CrashLog.Write(ex);
+                CrashLog.TryWrite(ex);
         };
 
         TaskScheduler.UnobservedTaskException += (_, args) =>
         {
-            CrashLog.Write(args.Exception);
+            CrashLog.TryWrite(args.Exception);
             args.SetObserved();
         };
 

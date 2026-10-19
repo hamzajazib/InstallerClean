@@ -154,8 +154,8 @@ public class MoveFilesServiceTests : IDisposable
         // record is a real crash-log write, which is half the behaviour under
         // test; the batch itself runs against a mock so nothing on disk is
         // touched.
-        var logPath = InstallerClean.Helpers.CrashLog.Write(
-            new InvalidOperationException("baseline for the move mutex refusal record"));
+        var logPath = InstallerClean.Helpers.CrashLog.TryWrite(
+            new InvalidOperationException("baseline for the move mutex refusal record")).Path;
         var baseline = new FileInfo(logPath).Length;
 
         var fs = new System.IO.Abstractions.TestingHelpers.MockFileSystem();

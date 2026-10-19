@@ -90,7 +90,7 @@ internal static class UnelevatedLauncher
                 catch (Exception ex)
                 {
                     failureReason = ex.GetType().Name;
-                    CrashLog.Write(ex);
+                    CrashLog.TryWrite(ex);
                 }
                 finally
                 {
@@ -113,20 +113,20 @@ internal static class UnelevatedLauncher
             // harmless.
             if (!sta.Join(TimeSpan.FromSeconds(10)))
             {
-                CrashLog.Write(new TimeoutException(
+                CrashLog.TryWrite(new TimeoutException(
                     "UnelevatedLauncher shell dispatch chain did not return within 10 seconds"));
                 return new OpenUrlResult(false, "shell did not respond");
             }
 
             if (launched) return new OpenUrlResult(true, string.Empty);
 
-            CrashLog.Write(new InvalidOperationException(
+            CrashLog.TryWrite(new InvalidOperationException(
                 "UnelevatedLauncher could not open an unelevated browser via Explorer: " + failureReason));
             return new OpenUrlResult(false, failureReason);
         }
         catch (Exception ex)
         {
-            CrashLog.Write(ex);
+            CrashLog.TryWrite(ex);
             return new OpenUrlResult(false, ex.GetType().Name);
         }
     }

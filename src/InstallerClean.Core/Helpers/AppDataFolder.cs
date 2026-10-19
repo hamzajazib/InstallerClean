@@ -25,7 +25,6 @@ internal static class AppDataFolder
 {
     private const string FolderName = "InstallerClean";
     private const string EarlierParentName = "NoFaff";
-    private const string CrashLogName = "crash.log";
 
     // Twice CrashLog's rotation size. The log rotates before a write once it has reached
     // that size, so it passes it by no more than its last entry.
@@ -218,7 +217,7 @@ internal static class AppDataFolder
 
             try
             {
-                if (name.Equals(CrashLogName, StringComparison.OrdinalIgnoreCase))
+                if (name.Equals(CrashLog.FileName, StringComparison.OrdinalIgnoreCase))
                     AppendEarlierLog(entry, target, failures);
                 else
                     File.Delete(entry);

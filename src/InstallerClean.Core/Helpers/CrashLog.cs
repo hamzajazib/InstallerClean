@@ -13,16 +13,28 @@ public static class CrashLog
 {
     private const long MaxBytes = 512 * 1024;
 
+    /// <summary>The log's file name, in the folder <see cref="LogPath"/> names.</summary>
+    internal const string FileName = "crash.log";
+
+    // The header Prepare built, which every write after it uses, so no write after
+    // Prepare looks a string up. A write before Prepare builds its own and keeps none.
+    private static volatile string? _preparedHeader;
+
     // resx stores the header as one multi-line block ending with a
     // single LF. Normalise to the host platform's line endings so
     // the file reads cleanly in Notepad / VS Code / less. The
     // trailing blank line separates the header from the first entry.
-    // Built where it is written, and null where its string will not load.
+    private static string BuildPrivacyHeader() =>
+        Strings.CrashLog_PrivacyHeader.Replace("\n", Environment.NewLine) + Environment.NewLine;
+
+    // The header Prepare built where it has run, built here otherwise, and null where
+    // its string will not load.
     private static string? PrivacyHeaderOrNull()
     {
+        if (_preparedHeader is { } prepared) return prepared;
         try
         {
-            return Strings.CrashLog_PrivacyHeader.Replace("\n", Environment.NewLine) + Environment.NewLine;
+            return BuildPrivacyHeader();
         }
         catch (Exception)
         {
@@ -37,41 +49,55 @@ public static class CrashLog
     /// </summary>
     internal static string? FolderForTests { get; set; }
 
+    /// <summary>
+    /// Drops the header <see cref="Prepare"/> kept, so a test that prepared the log in one
+    /// language leaves the next writing headers of its own again. Nothing in the app calls it.
+    /// </summary>
+    internal static void ForgetPreparedHeader() => _preparedHeader = null;
+
     private static string LogFolder => FolderForTests ?? AppDataFolder.Location;
-    private static string LogFile => Path.Combine(LogFolder, "crash.log");
 
     /// <summary>
     /// Works out the folder the log is written to, which settles the app's folder on its
-    /// first use, and looks up the header's text, so a write after this needs neither.
-    /// Called before the running exe is renamed aside.
+    /// first use, and builds the header and keeps it, so a write after this needs neither.
+    /// The header is built in the calling thread's language, and every fresh log after
+    /// this is headed in it, so this is called where that is the display language: before
+    /// the running exe is renamed aside, and never inside a machine line's en-GB scope.
+    /// Throws where either cannot be done, for the caller to log.
     /// </summary>
     internal static void Prepare()
     {
         _ = LogFolder;
-        _ = Strings.CrashLog_PrivacyHeader;
+        _preparedHeader = BuildPrivacyHeader();
     }
 
     /// <summary>
-    /// Where the log lives, for the one caller that needs to recognise the path
-    /// inside a sentence without writing anything: the drawing layer gives it its
-    /// break opportunities, and a hardcoded spelling would match nothing on a
-    /// machine whose profile sits elsewhere.
+    /// Where the log lives, or an empty string where the folder cannot be worked out,
+    /// for the one caller that needs to recognise the path inside a sentence without
+    /// writing anything: the drawing layer gives it its break opportunities, and a
+    /// hardcoded spelling would match nothing on a machine whose profile sits elsewhere.
+    /// That caller reads it in a static initialiser, so this never throws.
     /// </summary>
-    public static string LogPath => LogFile;
+    public static string LogPath
+    {
+        get
+        {
+            try
+            {
+                return Path.Combine(LogFolder, FileName);
+            }
+            catch (Exception)
+            {
+                return string.Empty;
+            }
+        }
+    }
 
     /// <summary>
-    /// Appends the exception to crash.log and returns the log path, or an
-    /// empty string where the path could not be worked out. Swallows every
-    /// failure (a crash handler must not throw); use <see cref="TryWrite"/>
-    /// to also learn whether the write succeeded.
-    /// </summary>
-    public static string Write(Exception ex) => TryWrite(ex).Path;
-
-    /// <summary>
-    /// Like <see cref="Write"/> but also reports whether the entry was
-    /// persisted, so dialog text doesn't claim "details written to X"
-    /// when the write failed (symlinked log file, read-only profile). The
-    /// path is empty where it could not be worked out.
+    /// Appends the exception to crash.log and reports where the log is and whether the
+    /// entry was persisted, so dialog text doesn't claim "details written to X" when the
+    /// write failed (symlinked log file, read-only profile). The path is empty where it
+    /// could not be worked out. Swallows every failure: a crash handler must not throw.
     /// </summary>
     public static (string Path, bool Written) TryWrite(Exception ex)
     {
@@ -79,9 +105,9 @@ public static class CrashLog
         try
         {
             var folder = LogFolder;
-            path = Path.Combine(folder, "crash.log");
+            path = Path.Combine(folder, FileName);
             Directory.CreateDirectory(folder);
-            RotateIfNeeded(path, Path.Combine(folder, "crash.log.old"));
+            RotateIfNeeded(path, path + ".old");
 
             // Append-only handle, so the write lands at the end of the file as
             // one atomic step. Two writers really do collide here: unhandled
@@ -153,7 +179,7 @@ public static class CrashLog
         }
         catch
         {
-            // Best-effort: next Write retries; worst case the log
+            // Best-effort: the next write retries; worst case the log
             // briefly exceeds MaxBytes.
         }
     }

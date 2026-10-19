@@ -447,8 +447,8 @@ public sealed class UpdateInPlaceTests : IDisposable
         Assert.Equal(Program(1), File.ReadAllBytes(exe));
         Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
         Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
-        // One entry for each of the four tries: three as they fail, the last once the exe is back.
-        Assert.Equal(failedStartsBefore + 4, FailedStartsInCrashLog(exe));
+        // One entry for each try: each but the last as it fails, the last once the exe is back.
+        Assert.Equal(failedStartsBefore + SelfReplacement.StartAttempts, FailedStartsInCrashLog(exe));
     }
 
     /// <summary>How many entries in the crash log are a start of <paramref name="exe"/> that Windows refused.</summary>
@@ -473,6 +473,8 @@ public sealed class UpdateInPlaceTests : IDisposable
     public void Everything_the_named_assemblies_reference_is_loaded_before_a_rename()
     {
         SelfReplacement.PrepareToMoveAside(typeof(System.Diagnostics.EventLog).Assembly);
+        // The walk readies the crash log too, which keeps a header for every later write.
+        InstallerClean.Helpers.CrashLog.ForgetPreparedHeader();
 
         var loaded = AppDomain.CurrentDomain.GetAssemblies()
             .Select(a => a.GetName().Name).ToHashSet(StringComparer.OrdinalIgnoreCase);

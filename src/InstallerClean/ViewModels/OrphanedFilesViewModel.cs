@@ -102,7 +102,7 @@ public partial class OrphanedFilesViewModel : ObservableObject, IDisposable
             // contract instead of swallowing silently, so a regression
             // surfaces in crash.log rather than as a "no metadata"
             // panel with no diagnostic trail.
-            CrashLog.Write(ex);
+            CrashLog.TryWrite(ex);
             if (!ct.IsCancellationRequested && SelectedFile == value)
                 SelectedDetails = null;
         }

@@ -170,8 +170,8 @@ public class DeleteFilesServiceTests : IDisposable
         // Real filesystem because the record is a real crash-log write, which is
         // half the behaviour under test: the user is told the run refused, and the
         // log is the only place the machine's own condition is written down.
-        var logPath = CrashLog.Write(
-            new InvalidOperationException("baseline for the mutex fall-back record"));
+        var logPath = CrashLog.TryWrite(
+            new InvalidOperationException("baseline for the mutex fall-back record")).Path;
         var baseline = new FileInfo(logPath).Length;
 
         var fs = new MockFileSystem();
