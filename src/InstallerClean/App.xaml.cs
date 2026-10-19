@@ -62,6 +62,11 @@ public partial class App : Application
 
         base.OnStartup(e);
 
+        // Until the main window is up, the app ends only where this method says so, with
+        // the exit code it gives: a dialog or the splash closing starts no shutdown of its
+        // own. A person closing the splash is the exception, handled where it is made.
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
         // Apply the saved UI-language preference before anything reads a
         // resx string: the "already running" message below, the splash, and
         // every window. SettingsService has a no-dependency constructor, so
@@ -184,7 +189,7 @@ public partial class App : Application
         catch (Exception ex)
         {
             ShowFailedToStart(ex);
-            Shutdown();
+            EndFailedStart(splash: null);
             return;
         }
         if (!administrator)
@@ -193,7 +198,7 @@ public partial class App : Application
                 Strings.Startup_AdminRightsNeededBody,
                 Strings.Startup_AdminRightsNeededTitle,
                 MessageKind.Warning);
-            Shutdown();
+            EndFailedStart(splash: null);
             return;
         }
 
@@ -361,6 +366,14 @@ public partial class App : Application
                 }));
 
             splash = new SplashWindow();
+            // A person closing the splash, with Alt+F4, asks the app to stop. The app's own
+            // closes of the splash come after a shutdown has been asked for, or once the
+            // main window is up.
+            var splashClosedByApp = false;
+            splash.Closed += (_, _) =>
+            {
+                if (!splashClosedByApp) Shutdown();
+            };
             splash.Show();
 
             splash.UpdateStep(Strings.Status_Scanning, ScanProgressFill.FloorPercent);
@@ -380,11 +393,7 @@ public partial class App : Application
             HandOverContract.TakeStartedEvent(e.Args, out var startedEvent);
             if (!HandOverContract.SignalStarted(startedEvent))
             {
-                // Shut down with exit code 1 before the splash closes: closing the app's
-                // last window starts a shutdown with exit code 0, and a shutdown already
-                // under way ignores a second.
-                Shutdown(1);
-                splash.Close();
+                EndFailedStart(splash);
                 return;
             }
 
@@ -490,35 +499,46 @@ public partial class App : Application
             var window = new MainWindow(viewModel);
             Application.Current.MainWindow = window;
             window.Show();
+            ShutdownMode = ShutdownMode.OnLastWindowClose;
+            splashClosedByApp = true;
             splash.Close();
         }
-        // Both arms show the dialog BEFORE closing the splash, and the order is
-        // load-bearing. ShutdownMode is never set, so it is the default
-        // OnLastWindowClose; at this point the splash is the only window the
-        // app has, and closing it queues Application.Shutdown as a dispatcher
-        // operation. The modal that follows pumps the dispatcher, runs that
-        // queued shutdown from inside its own frame, and the only diagnosis a
-        // user ever gets for a failed start flashes and vanishes. Anything the
-        // composition build, the view-model resolve or new MainWindow() throws
-        // lands here, XAML resource-type mismatches among them, so it is the
-        // arm that has to survive a broken app. Each arm then shuts down with
-        // exit code 1 before the splash closes, as a close of the last window
-        // would start the shutdown with exit code 0.
+        // Both arms show the dialog before EndFailedStart, and the order is
+        // load-bearing: see EndFailedStart. Anything the composition build, the
+        // view-model resolve or new MainWindow() throws lands here, XAML
+        // resource-type mismatches among them, so it is the arm that has to
+        // survive a broken app.
         catch (UnauthorizedAccessException)
         {
             MessageDialog.Show(
                 Strings.Error_AdminRequiredBody,
                 Strings.Error_AdminRequiredTitle,
                 MessageKind.Warning);
-            Shutdown(1);
-            splash?.Close();
+            EndFailedStart(splash);
         }
         catch (Exception ex)
         {
             ShowFailedToStart(ex);
-            Shutdown(1);
-            splash?.Close();
+            EndFailedStart(splash);
         }
+    }
+
+    /// <summary>
+    /// Ends a start that failed, with exit code 1, and closes <paramref name="splash"/>
+    /// where it is up.
+    /// </summary>
+    /// <remarks>
+    /// The shutdown is asked for before the splash closes, so the splash's close is not
+    /// read as a person closing it, and a shutdown already under way ignores a second. It
+    /// queues the shutdown as a dispatcher operation, so it is asked for only after any
+    /// dialog saying why the start failed has closed: a modal opened after it pumps the
+    /// dispatcher, runs the queued shutdown from inside its own frame, and the only
+    /// diagnosis a user gets for a failed start flashes and vanishes.
+    /// </remarks>
+    private void EndFailedStart(SplashWindow? splash)
+    {
+        Shutdown(1);
+        splash?.Close();
     }
 
     /// <summary>

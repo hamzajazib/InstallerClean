@@ -439,11 +439,11 @@ public static class SelfReplacement
     /// whose manifest asks for elevation too, without a prompt. An antivirus can hold a
     /// program it has just seen written for a moment, so a start that fails is tried
     /// again a few times, half a second apart. What stopped the hand-over, a wait Windows
-    /// refused included, goes to crash.log once this exe is back in place; a look at the
-    /// event Windows refuses after the bound, and a newer version that will not end, are
-    /// written as they happen. The event is created before anything is renamed, and
-    /// where it cannot be, nothing is: a newer version that cannot be seen to start is
-    /// not put in this exe's place.
+    /// refused included, goes to crash.log once this exe is back in place, or as this
+    /// process ends where it is not; a look at the event Windows refuses after the bound,
+    /// and a newer version that will not end, are written as they happen. The event is
+    /// created before anything is renamed, and where it cannot be, nothing is: a newer
+    /// version that cannot be seen to start is not put in this exe's place.
     /// </remarks>
     public static bool HandOverAndEnd(string exePath, string toVersion, TimeSpan? startBound = null)
     {
@@ -493,16 +493,20 @@ public static class SelfReplacement
                     newer, startedEvent!, startBound ?? HandOverContract.StartBound, cancel: null, out var waitError);
                 if (answer == NewerVersionStart.Started) EndThisProcess();
                 failure = NotStartedFailure(answer, waitError, newer, startBound ?? HandOverContract.StartBound);
-                if (!EndNewerVersion(newer)) EndThisProcess();
+                if (!EndNewerVersion(newer))
+                {
+                    CrashLog.TryWrite(failure);
+                    EndThisProcess();
+                }
             }
             break;
         }
 
         // A person can start the file at the path while the wait runs, and renaming a file a
         // process runs from takes from it the assemblies it has still to load.
-        if (newerRan && AnotherProcessMayRunFrom(exePath)) EndThisProcess();
-        if (!putBack()) EndThisProcess();
+        var newerStays = (newerRan && AnotherProcessMayRunFrom(exePath)) || !putBack();
         if (failure is not null) CrashLog.TryWrite(failure);
+        if (newerStays) EndThisProcess();
         return false;
     }
 

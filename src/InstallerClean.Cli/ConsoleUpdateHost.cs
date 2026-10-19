@@ -219,7 +219,8 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
         // throw as the newer version not having started and puts this exe back, which
         // would rename that file under it. A throw is written to crash.log. One from the
         // wait itself is answered with the error code, so this run ends with nothing more
-        // run, and the newer version writes its own summary.
+        // run, and the newer version writes its own summary. This run then leaves the
+        // console's code page to the newer version, which may still be writing to it.
         if (cancelEvent is null) NewerVersionAnswersCtrlC(true);
         // Said before the Application-log write, which can take a moment the first time.
         try
@@ -249,12 +250,20 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
         try
         {
             process.WaitForExit();
-            return process.ExitCode;
         }
         catch (Exception ex)
         {
             CrashLog.TryWrite(ex);
             Program.LeaveConsoleToNewerVersion();
+            return CliExitCode.Error;
+        }
+        try
+        {
+            return process.ExitCode;
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
             return CliExitCode.Error;
         }
     }
