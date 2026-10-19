@@ -586,9 +586,9 @@ jobs:
   # with a hostfxr.dll planted beside the slim and a decoy .NET install named by
   # DOTNET_ROOT. The job fails where that trace shows the slim's exe searching for .NET
   # anywhere but the registered or default install, or loading a hostfxr.dll from
-  # anywhere else, and where a slim published to search only DOTNET_ROOT does not
-  # carry that search or does not load the decoy's. It prints the folders each build's
-  # runtime searches for native libraries.
+  # anywhere else, and where a slim published to search only the DOTNET_ROOT variables
+  # does not carry that search or does not load the decoy's. It prints the folders each
+  # build's runtime searches for native libraries.
   #
   # Then each build is started with the switch a copy updating itself passes the
   # newer version, and the job fails where the build does not say within 60 s that its
@@ -1056,8 +1056,9 @@ jobs:
       # DOTNET_ROOT variables, from a copy of the commit of its own, and the job fails
       # where that build does not load the decoy's hostfxr.dll, which is what shows the
       # decoy is one the host takes. That build cannot find the desktop runtime under the
-      # decoy and does not start, and its trace is all that is read: the job also fails
-      # where its search location options are anything but 4. For every build it prints
+      # decoy and does not start, and its trace is all that is read. The job also fails
+      # where that build's search location options are missing or anything but 4, the value
+      # for the DOTNET_ROOT variables alone. For every build whose runtime starts it prints
       # the folders the runtime searches for native libraries; the command line is started
       # for its version, so its host and runtime start and it scans nothing.
       - name: Trace how each build's host starts
