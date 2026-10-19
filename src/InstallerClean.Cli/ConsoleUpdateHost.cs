@@ -369,7 +369,8 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
             token.ThrowIfCancellationRequested();
             try
             {
-                return Process.Start(info);
+                return Process.Start(info)
+                    ?? throw new InvalidOperationException("Windows started no process for the file.");
             }
             catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or InvalidOperationException)
             {

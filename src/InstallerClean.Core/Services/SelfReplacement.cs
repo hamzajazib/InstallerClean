@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using InstallerClean.Helpers;
 using InstallerClean.Interop.Native;
@@ -98,8 +99,9 @@ public static class SelfReplacement
     /// file is still whole: this assembly, System.Diagnostics.Process,
     /// System.Diagnostics.StackTrace and <paramref name="moreRoots"/>, then every assembly
     /// each loaded one names, until nothing new loads. Also looks up one string, so the
-    /// satellite for the display language is loaded. Never throws; an assembly that will
-    /// not load is written to crash.log and the walk goes on.
+    /// satellite for the display language is loaded, and readies the crash log, whose
+    /// first use builds its header from a string. Never throws; an assembly that will not
+    /// load is written to crash.log and the walk goes on.
     /// </summary>
     /// <remarks>
     /// An assembly's code reaches other assemblies only through its AssemblyRef table,
@@ -120,6 +122,9 @@ public static class SelfReplacement
                 roots.Add(stackTrace);
             LoadReachable(roots);
             _ = Strings.UpdateNotice_InstallFailed;
+            // A throw from the crash log's initialiser on a first use after the rename would
+            // reach the caller, outside the write's own catch.
+            RuntimeHelpers.RunClassConstructor(typeof(CrashLog).TypeHandle);
         }
         catch (Exception ex)
         {
@@ -438,10 +443,11 @@ public static class SelfReplacement
     /// pump messages; the app runs elevated, so CreateProcess starts the newer version,
     /// whose manifest asks for elevation too, without a prompt. An antivirus can hold a
     /// program it has just seen written for a moment, so a start that fails is tried
-    /// again a few times, half a second apart. What stopped the hand-over, a wait Windows
-    /// refused included, goes to crash.log once this exe is back in place, or as this
-    /// process ends where it is not; a look at the event Windows refuses after the bound,
-    /// and a newer version that will not end, are written as they happen. The event is
+    /// again a few times, half a second apart, each failed try but the last written to
+    /// crash.log as it fails. What stopped the hand-over, a wait Windows refused included,
+    /// goes to crash.log once this exe is back in place, or as this process ends where it
+    /// is not; a look at the event Windows refuses after the bound, and a newer version
+    /// that will not end, are written as they happen. The event is
     /// created before anything is renamed, and where it cannot be, nothing is: a newer
     /// version that cannot be seen to start is not put in this exe's place.
     /// </remarks>
@@ -474,22 +480,20 @@ public static class SelfReplacement
         var newerWouldNotEnd = false;
         for (var attempt = 1; attempt <= StartAttempts; attempt++)
         {
-            Process? newer;
+            Process newer;
             try
             {
-                newer = Process.Start(info);
+                newer = Process.Start(info) ?? throw new UpdateFailedException(UpdateFailureStage.Install,
+                    "Windows started no process for the newer version.");
             }
             catch (Exception ex)
             {
                 failure = ex;
-                if (attempt < StartAttempts) Kernel32.Sleep((uint)StartRetryInterval.TotalMilliseconds);
-                continue;
-            }
-            if (newer is null)
-            {
-                failure = new UpdateFailedException(UpdateFailureStage.Install,
-                    "Windows started no process for the newer version.");
-                if (attempt < StartAttempts) Kernel32.Sleep((uint)StartRetryInterval.TotalMilliseconds);
+                if (attempt < StartAttempts)
+                {
+                    CrashLog.TryWrite(ex);
+                    Kernel32.Sleep((uint)StartRetryInterval.TotalMilliseconds);
+                }
                 continue;
             }
             newerRan = true;
