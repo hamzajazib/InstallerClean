@@ -920,7 +920,10 @@ jobs:
           # the Application log, or a 3005 or 3006 where an update ended the run, so a run
           # with no entry there, or a log that cannot be read, fails rather than reading as
           # one that found nothing newer. Only the entries written while the run was going are
-          # read, so a later run of the same exe cannot answer for it.
+          # judged, so a run of the same exe before or after it cannot answer for it.
+          # Get-WinEvent takes its StartTime and EndTime to the whole second, so it is asked
+          # from the run's start, which only widens the read, and the entries are then kept by
+          # the time each was written.
           function Test-UpdateCheck($run, $byProcess) {
             $github = @([System.Net.Dns]::GetHostAddresses('github.com') | ForEach-Object IPAddressToString)
             $answers = @($byProcess[[string]$run.Id] | Where-Object {
@@ -929,7 +932,14 @@ jobs:
             })
             if ($answers) { "  $($run.Label): the update check had an answer from $(($answers[0].Path -split ' -> ')[-1]) at $($answers[0].'Time of Day')" }
             else { Fail "$($run.Label): the update check got no answer from GitHub, so the run's network libraries were not judged." }
-            $entries = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'InstallerClean'; StartTime = $run.Started; EndTime = $run.Ended } -ErrorAction SilentlyContinue -ErrorVariable readErrors)
+            try {
+              $logged = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'InstallerClean'; StartTime = $run.Started } -ErrorAction SilentlyContinue -ErrorVariable readErrors)
+            }
+            catch {
+              Fail "$($run.Label): the Application log could not be read, so whether it updated itself was not judged: $($_.Exception.Message)"
+              return
+            }
+            $entries = @($logged | Where-Object { $_.TimeCreated -ge $run.Started -and $_.TimeCreated -le $run.Ended })
             # No entry matching, and a source that was never registered or writes to another
             # log, each come back as an error that means the run wrote nothing here.
             $noEntry = 'NoMatchingEventsFound', 'NoMatchingProvidersFound', 'LogsAndProvidersDontOverlap'
@@ -1273,7 +1283,7 @@ jobs:
               foreach ($name in @(Get-WhereInstalled)) {
                 $load = @($read.Loads | Where-Object Name -eq "$name.dll".ToLowerInvariant()) | Select-Object -First 1
                 if (-not $load) { Fail "The slim never loaded $name.dll, which it loads before its Main where the installed runtime carries it." }
-                elseif (-not $read.MainMarker) { continue }
+                elseif (-not $read.MainMarker) { "  loaded $name.dll at row $($load.Index): $($load.Path)" }
                 elseif ($load.Index -gt $read.MainMarker.Index) { Fail "The slim loaded $name.dll at row $($load.Index), not before the first act seen of its code in Main or later, where it loads it before its Main." }
                 else { "  loaded $name.dll at row $($load.Index), before row $($read.MainMarker.Index), the $($read.MainMarker.Kind): $($load.Path)" }
               }
@@ -1548,7 +1558,7 @@ jobs:
                 $named = [bool]@($trusted | Where-Object { ($_ -split '\\')[-1] -eq "$name.dll" }).Count
                 "  they name $name`: $(if ($named) { 'yes' } else { 'no' })"
                 if ($build.Label -eq 'slim' -and -not $named) { Fail "The slim's trusted platform assemblies do not name $name, so the slim does not load it before its Main." }
-                if ($build.Label -eq 'portable' -and $named) { Fail "The portable's trusted platform assemblies name $name, which is on the window's list of assemblies it loads where installed." }
+                if ($build.Label -eq 'portable' -and $named) { Fail "The portable's trusted platform assemblies name $name, so its module initializer loads $name by name before its Main." }
               }
               if ($build.Label -eq 'portable') {
                 $bundled = Read-BundleAssemblies $build.Exe
