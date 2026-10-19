@@ -17,8 +17,18 @@ public static class CrashLog
     // single LF. Normalise to the host platform's line endings so
     // the file reads cleanly in Notepad / VS Code / less. The
     // trailing blank line separates the header from the first entry.
-    private static readonly string PrivacyHeader =
-        Strings.CrashLog_PrivacyHeader.Replace("\n", Environment.NewLine) + Environment.NewLine;
+    // Built where it is written, and null where its string will not load.
+    private static string? PrivacyHeaderOrNull()
+    {
+        try
+        {
+            return Strings.CrashLog_PrivacyHeader.Replace("\n", Environment.NewLine) + Environment.NewLine;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
 
     /// <summary>
     /// The folder the test suite has the log written to for its whole run, so that no test
@@ -29,7 +39,17 @@ public static class CrashLog
 
     private static string LogFolder => FolderForTests ?? AppDataFolder.Location;
     private static string LogFile => Path.Combine(LogFolder, "crash.log");
-    private static string ArchiveFile => Path.Combine(LogFolder, "crash.log.old");
+
+    /// <summary>
+    /// Works out the folder the log is written to, which settles the app's folder on its
+    /// first use, and looks up the header's text, so a write after this needs neither.
+    /// Called before the running exe is renamed aside.
+    /// </summary>
+    internal static void Prepare()
+    {
+        _ = LogFolder;
+        _ = Strings.CrashLog_PrivacyHeader;
+    }
 
     /// <summary>
     /// Where the log lives, for the one caller that needs to recognise the path
@@ -40,28 +60,28 @@ public static class CrashLog
     public static string LogPath => LogFile;
 
     /// <summary>
-    /// Appends the exception to crash.log and returns the log path.
-    /// Swallows IO errors (a crash handler must never throw); use
-    /// <see cref="TryWrite"/> to also learn whether the write
-    /// succeeded.
+    /// Appends the exception to crash.log and returns the log path, or an
+    /// empty string where the path could not be worked out. Swallows every
+    /// failure (a crash handler must not throw); use <see cref="TryWrite"/>
+    /// to also learn whether the write succeeded.
     /// </summary>
-    public static string Write(Exception ex)
-    {
-        TryWrite(ex);
-        return LogFile;
-    }
+    public static string Write(Exception ex) => TryWrite(ex).Path;
 
     /// <summary>
     /// Like <see cref="Write"/> but also reports whether the entry was
     /// persisted, so dialog text doesn't claim "details written to X"
-    /// when the write failed (symlinked log file, read-only profile).
+    /// when the write failed (symlinked log file, read-only profile). The
+    /// path is empty where it could not be worked out.
     /// </summary>
     public static (string Path, bool Written) TryWrite(Exception ex)
     {
+        var path = string.Empty;
         try
         {
-            Directory.CreateDirectory(LogFolder);
-            RotateIfNeeded();
+            var folder = LogFolder;
+            path = Path.Combine(folder, "crash.log");
+            Directory.CreateDirectory(folder);
+            RotateIfNeeded(path, Path.Combine(folder, "crash.log.old"));
 
             // Append-only handle, so the write lands at the end of the file as
             // one atomic step. Two writers really do collide here: unhandled
@@ -77,8 +97,8 @@ public static class CrashLog
             //
             // Returns null if LogFile is a symlink; drop the entry rather than
             // append into the symlink's target.
-            using var handle = StorageHelpers.OpenAtomicAppend(LogFile);
-            if (handle is null) return (LogFile, false);
+            using var handle = StorageHelpers.OpenAtomicAppend(path);
+            if (handle is null) return (path, false);
 
             // bufferSize 0: no buffering layer, so the single Write below is a
             // single write to the file. A StreamWriter over a buffered stream
@@ -91,8 +111,13 @@ public static class CrashLog
             // contain file paths from the running session including
             // other users' profiles, so anyone attaching this log to a
             // public report needs the disclosure before sharing.
-            // Header lines start with # so log readers can skip them.
+            // Header lines start with # so log readers can skip them. A
+            // fresh log is written only with its header: where the header
+            // cannot be built, nothing is written and the log stays empty
+            // for a later write.
             var writeHeader = fs.Length == 0;
+            var header = writeHeader ? PrivacyHeaderOrNull() : string.Empty;
+            if (header is null) return (path, false);
 
             // Redundant on an append-only handle (Win32 ignores the offset), and
             // kept as the floor: were this handle ever opened plainly writable
@@ -105,26 +130,26 @@ public static class CrashLog
             // again on an append it would sit in the log body as a stray
             // U+FEFF.
             ReadOnlySpan<byte> bom = writeHeader ? Encoding.UTF8.GetPreamble() : default;
-            byte[] payload = [.. bom, .. Encoding.UTF8.GetBytes(writeHeader ? PrivacyHeader + entry : entry)];
+            byte[] payload = [.. bom, .. Encoding.UTF8.GetBytes(header + entry)];
             fs.Write(payload, 0, payload.Length);
-            return (LogFile, true);
+            return (path, true);
         }
         catch
         {
-            // Swallow: a crash handler must never itself throw.
-            return (LogFile, false);
+            // Swallow: a crash handler must not itself throw.
+            return (path, false);
         }
     }
 
-    private static void RotateIfNeeded()
+    private static void RotateIfNeeded(string logFile, string archiveFile)
     {
         try
         {
-            if (!File.Exists(LogFile)) return;
-            if (new FileInfo(LogFile).Length < MaxBytes) return;
+            if (!File.Exists(logFile)) return;
+            if (new FileInfo(logFile).Length < MaxBytes) return;
             // File.Move with overwrite uses MOVEFILE_REPLACE_EXISTING,
             // which replaces a symlink rather than following it.
-            File.Move(LogFile, ArchiveFile, overwrite: true);
+            File.Move(logFile, archiveFile, overwrite: true);
         }
         catch
         {

@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using InstallerClean.Helpers;
 using InstallerClean.Interop.Native;
@@ -99,9 +98,9 @@ public static class SelfReplacement
     /// file is still whole: this assembly, System.Diagnostics.Process,
     /// System.Diagnostics.StackTrace and <paramref name="moreRoots"/>, then every assembly
     /// each loaded one names, until nothing new loads. Also looks up one string, so the
-    /// satellite for the display language is loaded, and readies the crash log, whose
-    /// first use builds its header from a string. Never throws; an assembly that will not
-    /// load is written to crash.log and the walk goes on.
+    /// satellite for the display language is loaded, and readies the crash log
+    /// (<see cref="CrashLog.Prepare"/>). Never throws; an assembly that will not load is
+    /// written to crash.log and the walk goes on.
     /// </summary>
     /// <remarks>
     /// An assembly's code reaches other assemblies only through its AssemblyRef table,
@@ -122,9 +121,7 @@ public static class SelfReplacement
                 roots.Add(stackTrace);
             LoadReachable(roots);
             _ = Strings.UpdateNotice_InstallFailed;
-            // A throw from the crash log's initialiser on a first use after the rename would
-            // reach the caller, outside the write's own catch.
-            RuntimeHelpers.RunClassConstructor(typeof(CrashLog).TypeHandle);
+            CrashLog.Prepare();
         }
         catch (Exception ex)
         {

@@ -440,13 +440,22 @@ public sealed class UpdateInPlaceTests : IDisposable
         var exe = Path.Combine(_root, "InstallerClean.exe");
         File.WriteAllBytes(exe, Program(1));
         await StagedBesideAsync(exe, 2);
+        var failedStartsBefore = FailedStartsInCrashLog(exe);
 
         Assert.False(SelfReplacement.HandOverAndEnd(exe, "9.9.9"));
 
         Assert.Equal(Program(1), File.ReadAllBytes(exe));
         Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
         Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
+        // One entry for each of the four tries: three as they fail, the last once the exe is back.
+        Assert.Equal(failedStartsBefore + 4, FailedStartsInCrashLog(exe));
     }
+
+    /// <summary>How many entries in the crash log are a start of <paramref name="exe"/> that Windows refused.</summary>
+    private static int FailedStartsInCrashLog(string exe) =>
+        TestCrashLog.Text().Split('\n').Count(line =>
+            line.StartsWith("System.ComponentModel.Win32Exception", StringComparison.Ordinal)
+            && line.Contains(exe, StringComparison.OrdinalIgnoreCase));
 
     [Fact]
     public void A_hand_over_with_nothing_written_beside_the_exe_changes_nothing_and_answers_false()
