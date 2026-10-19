@@ -587,8 +587,8 @@ jobs:
   # DOTNET_ROOT. The job fails where that trace shows the slim's exe searching for .NET
   # anywhere but the registered or default install, or loading a hostfxr.dll from
   # anywhere else, and where a slim published to search only DOTNET_ROOT does not
-  # load the decoy's. It prints the folders each build's runtime searches for native
-  # libraries.
+  # carry that search or does not load the decoy's. It prints the folders each build's
+  # runtime searches for native libraries.
   #
   # Then each build is started with the switch a copy updating itself passes the
   # newer version, and the job fails where the build does not say within 60 s that its
@@ -1056,10 +1056,10 @@ jobs:
       # DOTNET_ROOT variables, from a copy of the commit of its own, and the job fails
       # where that build does not load the decoy's hostfxr.dll, which is what shows the
       # decoy is one the host takes. That build cannot find the desktop runtime under the
-      # decoy and does not start, and its trace is all that is read; its search location
-      # options and the hostfxr.dll it resolved are printed. For every build it prints the
-      # folders the runtime searches for native libraries; the command line is started for
-      # its version, so its host and runtime start and it scans nothing.
+      # decoy and does not start, and its trace is all that is read: the job also fails
+      # where its search location options are anything but 4. For every build it prints
+      # the folders the runtime searches for native libraries; the command line is started
+      # for its version, so its host and runtime start and it scans nothing.
       - name: Trace how each build's host starts
         if: ${{ !cancelled() && env.PROCMON != '' }}
         shell: pwsh
@@ -1109,6 +1109,8 @@ jobs:
           $env:DOTNET_ROOT_X64 = $decoy
           "  DOTNET_ROOT and DOTNET_ROOT_X64 name $decoy, which holds a copy of $($genuineFxr[0].FullName)"
           $env:DOTNET_HOST_TRACE = '1'
+          # The trace lines printed for every build the step starts.
+          $shown = '\.NET root search location options|registry value in|Found registered install location|as runtime location|Resolved fxr|Property NATIVE_DLL_SEARCH_DIRECTORIES'
           foreach ($build in $builds) {
             $folder = Get-RunFolder 'trace' $build.Label
             New-Item -ItemType Directory -Force -Path $folder | Out-Null
@@ -1126,8 +1128,7 @@ jobs:
             if (-not (Test-Path $trace)) { Fail "$($build.Label) wrote no host trace."; continue }
             $lines = @(Get-Content $trace)
             Write-Host "== $($build.Label): $($lines.Count) trace lines"
-            $lines | Where-Object { $_ -match '\.NET root search location options|registry value in|Found registered install location|as runtime location|Resolved fxr|Property NATIVE_DLL_SEARCH_DIRECTORIES' } |
-              ForEach-Object { Write-Host "  $_" }
+            $lines | Where-Object { $_ -match $shown } | ForEach-Object { Write-Host "  $_" }
             if ($build.Label -eq 'slim') {
               $options = @($lines | ForEach-Object { if ($_ -match '\.NET root search location options: (\d+)') { [int]$Matches[1] } })
               if (-not $options.Count) { Fail "The slim's trace has no .NET root search location options line." }
@@ -1156,7 +1157,10 @@ jobs:
           else {
             $lines = @(Get-Content $trace)
             Write-Host "== $($control.Label): $($lines.Count) trace lines"
-            $lines | Where-Object { $_ -match '\.NET root search location options|Resolved fxr' } | ForEach-Object { Write-Host "  $_" }
+            $lines | Where-Object { $_ -match $shown } | ForEach-Object { Write-Host "  $_" }
+            $options = @($lines | ForEach-Object { if ($_ -match '\.NET root search location options: (\d+)') { [int]$Matches[1] } })
+            if (-not $options.Count) { Fail "The $($control.Label)'s trace has no .NET root search location options line." }
+            elseif ($options[0] -ne 4) { Fail "The $($control.Label) was not published to search the DOTNET_ROOT variables alone: search location options $($options[0])." }
             $fxr = @($lines | ForEach-Object { if ($_ -match 'Resolved fxr \[(.+)\]') { $Matches[1] } })
             if (@($fxr | Where-Object { $_.StartsWith($decoyFxr, 'OrdinalIgnoreCase') }).Count) { "  the $($control.Label) loaded $($fxr -join ', '), the decoy's" }
             else { Fail "The $($control.Label) loaded $(if ($fxr.Count) { $fxr -join ', ' } else { 'no hostfxr.dll its trace names' }), not the decoy's under $decoyFxr, so the decoy is not shown to be one the host takes." }
