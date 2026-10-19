@@ -557,6 +557,28 @@ internal static partial class Kernel32
     public static partial bool TerminateProcess(IntPtr hProcess, uint uExitCode);
 
     /// <summary>
+    /// Waits until one of <paramref name="lpHandles"/> is signalled or
+    /// <paramref name="dwMilliseconds"/> have passed, and answers <see cref="WAIT_OBJECT_0"/>
+    /// plus the index of the lowest-numbered handle signalled, <see cref="WAIT_TIMEOUT"/>
+    /// or <see cref="WAIT_FAILED"/>. It never dispatches a window message or a COM call,
+    /// so no window code runs on the waiting thread meanwhile.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "WaitForMultipleObjects", SetLastError = true)]
+    public static partial uint WaitForMultipleObjects(
+        uint nCount, IntPtr[] lpHandles, [MarshalAs(UnmanagedType.Bool)] bool bWaitAll, uint dwMilliseconds);
+
+    public const uint WAIT_OBJECT_0 = 0;
+    public const uint WAIT_TIMEOUT = 0x102;
+    public const uint WAIT_FAILED = 0xFFFFFFFF;
+
+    /// <summary>
+    /// Suspends the calling thread for <paramref name="dwMilliseconds"/>. Like
+    /// <see cref="WaitForMultipleObjects"/>, it dispatches nothing meanwhile.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "Sleep")]
+    public static partial void Sleep(uint dwMilliseconds);
+
+    /// <summary>
     /// Opens the process <paramref name="dwProcessId"/> names with
     /// <paramref name="dwDesiredAccess"/>. Answers an invalid handle where it cannot, with
     /// <see cref="ERROR_INVALID_PARAMETER"/> as the last error where no process has that id.

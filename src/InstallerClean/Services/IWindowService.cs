@@ -5,7 +5,8 @@ namespace InstallerClean.Services;
 /// <summary>
 /// Opens the secondary windows (the two Details windows, About and the report
 /// window), opens a link in the browser, puts text on the clipboard, relaunches the
-/// app, hands over to a newer version and closes the main window. The interface keeps MainViewModel
+/// app, hands over to a newer version, asks whether the app has the single-instance
+/// mutex back after an update that did not hand over, and closes the main window. The interface keeps MainViewModel
 /// free of a direct dependency on Application.Current.MainWindow and on
 /// Window constructors, both of which NRE under xUnit.
 /// </summary>
@@ -49,4 +50,11 @@ public interface IWindowService
     /// still running as it was from its own path.
     /// </summary>
     Task<bool> StartUpdateAndCloseAsync(PreparedUpdate prepared);
+
+    /// <summary>
+    /// Whether the app let go of the single-instance mutex for an update that did not
+    /// hand over, and another process, a Move or Delete from the command line among them,
+    /// holds it now. Asking tries to take it back. Called on the window's thread.
+    /// </summary>
+    bool IsInstanceLockLost();
 }

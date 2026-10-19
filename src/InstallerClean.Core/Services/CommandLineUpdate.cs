@@ -142,13 +142,17 @@ internal interface ICommandLineUpdateHost
     /// in this console, calls <paramref name="onStarted"/> and notes in the Application log
     /// that this run updated itself from <paramref name="fromVersion"/> to
     /// <paramref name="toVersion"/> once it is running, waits for it to end and answers with
-    /// its exit code, or null where it could not be started. Throws
+    /// its exit code, or null where it could not be started. Where
+    /// <paramref name="toVersion"/> takes <see cref="Helpers.HandOverContract.StartedEventSwitch"/>,
+    /// running means it has set the event: one that ends first, or has not set it within
+    /// <see cref="Helpers.HandOverContract.StartBound"/>, is ended and waited for, and the
+    /// answer is null, with nothing said and nothing noted. Throws
     /// <see cref="OperationCanceledException"/> where <paramref name="token"/> is cancelled
-    /// before it has started. Nothing is thrown once it has, a throw from
-    /// <paramref name="onStarted"/> included: the run reads a throw as the newer version not
-    /// having started, and on a swap puts this exe back at the path the newer version runs
-    /// from. While it runs, and from the moment it is being started where the host passes it
-    /// Ctrl+C, Ctrl+C is the newer version's to answer.
+    /// before it has started, the newer version having been ended. Nothing is thrown once it
+    /// has, a throw from <paramref name="onStarted"/> included: the run reads a throw as the
+    /// newer version not having started, and on a swap puts this exe back at the path the
+    /// newer version runs from. While it runs, and from the moment it is being started where
+    /// the host passes it Ctrl+C, Ctrl+C is the newer version's to answer.
     /// </summary>
     int? RunNewerVersion(
         string file, IReadOnlyList<string> arguments, string fromVersion, string toVersion, Action onStarted,

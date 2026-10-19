@@ -588,6 +588,10 @@ jobs:
   # planted beside it, and prints the folders each build's runtime searches for
   # native libraries.
   #
+  # Last, each build is started with the switch a copy updating itself passes the
+  # newer version, and the job fails where the build does not say within 60 s that its
+  # own code is running.
+  #
   # A window started on a fresh account offers to send a report. Before any build
   # runs, the PC-wide first-run mark is set, so the offer is never made, and the
   # report receiver's host is pointed nowhere in the hosts file. The job fails where
@@ -1106,6 +1110,50 @@ jobs:
           }
 
           Exit-IfFailed
+
+      # A copy updating itself starts the newer version with /startedevent:<id> and
+      # puts itself back where that version has not set the event within 60 s. Every
+      # build sets it once its own code is running: the command line as it takes its
+      # arguments, a window once its splash is up and its services are built. So a build
+      # that stops setting it is one no copy can update to. Each build is started here
+      # from a folder of its own with the switch, and the step fails where the event is
+      # not set within 60 s. The time each build took to set it is printed. The command
+      # line is started for its version, so it scans nothing.
+      - name: Check each build says it has started
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          $failed = @()
+          $builds = @(
+            @{ Label = 'command line'; Exe = 'publish/cli/installerclean-cli.exe'; Arguments = @('--version') },
+            @{ Label = 'portable'; Exe = 'publish/self-contained/InstallerClean.exe'; Arguments = @() },
+            @{ Label = 'slim'; Exe = 'publish/framework-dependent/InstallerClean.exe'; Arguments = @() }
+          )
+          foreach ($build in $builds) {
+            $folder = Join-Path $env:RUNNER_TEMP ('started-' + ($build.Label -replace ' ', '-'))
+            New-Item -ItemType Directory -Force -Path $folder | Out-Null
+            Copy-Item $build.Exe $folder
+            $exe = Join-Path $folder (Split-Path $build.Exe -Leaf)
+            $id = [guid]::NewGuid().ToString('N')
+            $created = $false
+            $started = [System.Threading.EventWaitHandle]::new($false, 'ManualReset', "Local\InstallerClean_Started_$id", [ref]$created)
+            if (-not $created) { throw "An event named for $id exists already." }
+            $clock = [System.Diagnostics.Stopwatch]::StartNew()
+            $p = Start-Process -FilePath $exe -ArgumentList (@($build.Arguments) + "/startedevent:$id") -WorkingDirectory $folder -PassThru
+            # Read now, so the exit code is kept once the process ends.
+            $null = $p.Handle
+            $set = $started.WaitOne([TimeSpan]::FromSeconds(60))
+            $clock.Stop()
+            if ($set) { "  $($build.Label) set the event $([math]::Round($clock.Elapsed.TotalSeconds, 1)) s after it was started" }
+            else {
+              $ended = if ($p.HasExited) { "; it ended with exit code $($p.ExitCode)" } else { '' }
+              $failed += "$($build.Label) did not set the event within 60 s$ended."
+            }
+            if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; $p.WaitForExit() }
+            $started.Dispose()
+          }
+          $failed | ForEach-Object { Write-Host "::error::$_" }
+          if ($failed.Count) { exit 1 }
 
       - name: Check no window left a report
         if: ${{ !cancelled() }}

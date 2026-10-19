@@ -882,7 +882,7 @@ public sealed class CommandLineUpdateTests : IDisposable
     {
         File.WriteAllText(_exe, "new");
         var update = new CommandLineUpdate(NewerOut, Download(), _host);
-        var prepared = new PreparedUpdate(_exe, string.Empty, () => { }, _exe + SelfReplacement.NewSuffix);
+        var prepared = new PreparedUpdate("9.9.9", _exe, string.Empty, () => { }, _exe + SelfReplacement.NewSuffix);
 
         var result = update.CancelAfterSwap(prepared, _exe, Current, Latest, putBack: () => false);
 
@@ -895,7 +895,7 @@ public sealed class CommandLineUpdateTests : IDisposable
     {
         File.Delete(_exe);
         var update = new CommandLineUpdate(NewerOut, Download(), _host);
-        var prepared = new PreparedUpdate(_exe, string.Empty, () => { }, _exe + SelfReplacement.NewSuffix);
+        var prepared = new PreparedUpdate("9.9.9", _exe, string.Empty, () => { }, _exe + SelfReplacement.NewSuffix);
 
         var result = update.CancelAfterSwap(prepared, _exe, Current, Latest, putBack: () => false);
 
@@ -1010,8 +1010,8 @@ public sealed class CommandLineUpdateTests : IDisposable
             Prepared = true;
             onPrepare?.Invoke();
             return Task.FromResult(kind == AppCopyKind.Setup
-                ? new PreparedUpdate(fileToStart, "/VERYSILENT /SP-", () => Undone = true)
-                : new PreparedUpdate(fileToStart, string.Empty, () => Undone = true, fileToStart + SelfReplacement.NewSuffix));
+                ? new PreparedUpdate(version, fileToStart, "/VERYSILENT /SP-", () => Undone = true)
+                : new PreparedUpdate(version, fileToStart, string.Empty, () => Undone = true, fileToStart + SelfReplacement.NewSuffix));
         }
     }
 

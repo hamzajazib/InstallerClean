@@ -441,7 +441,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         await StagedBesideAsync(exe, 2);
 
-        Assert.False(SelfReplacement.HandOverAndEnd(exe));
+        Assert.False(SelfReplacement.HandOverAndEnd(exe, "9.9.9"));
 
         Assert.Equal(Program(1), File.ReadAllBytes(exe));
         Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
@@ -454,7 +454,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         var exe = Path.Combine(_root, "InstallerClean.exe");
         File.WriteAllBytes(exe, Program(1));
 
-        Assert.False(SelfReplacement.HandOverAndEnd(exe));
+        Assert.False(SelfReplacement.HandOverAndEnd(exe, "9.9.9"));
 
         Assert.Equal(Program(1), File.ReadAllBytes(exe));
         Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));

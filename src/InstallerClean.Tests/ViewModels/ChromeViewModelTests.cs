@@ -310,7 +310,7 @@ public class ChromeViewModelTests
     }
 
     private PreparedUpdate Prepared(Action? undo = null) =>
-        new(@"C:\ProgramData\InstallerClean-update-x\InstallerClean-9.9.9-setup.exe", "/SILENT /UPDATEFROMAPP",
+        new("9.9.9", @"C:\ProgramData\InstallerClean-update-x\InstallerClean-9.9.9-setup.exe", "/SILENT /UPDATEFROMAPP",
             undo ?? (() => _calls.Add("undo")));
 
     [Fact]

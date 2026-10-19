@@ -31,13 +31,17 @@ public sealed class PreparedUpdate
 {
     private Action? _undo;
 
-    public PreparedUpdate(string fileToStart, string arguments, Action undo, string? replacement = null)
+    public PreparedUpdate(string version, string fileToStart, string arguments, Action undo, string? replacement = null)
     {
+        Version = version;
         FileToStart = fileToStart;
         Arguments = arguments;
         Replacement = replacement;
         _undo = undo;
     }
+
+    /// <summary>The version this is, as the update check gave it.</summary>
+    public string Version { get; }
 
     /// <summary>The program to start: the newer setup, or the app's own path, where the newer version is to go.</summary>
     public string FileToStart { get; }
@@ -161,7 +165,7 @@ public sealed class AppUpdater : IAppUpdater
 
         if (Kind == AppCopyKind.Setup)
         {
-            return new PreparedUpdate(staged, _setupArguments, () =>
+            return new PreparedUpdate(version, staged, _setupArguments, () =>
             {
                 Helpers.StorageHelpers.TryDeleteTempFile(staged);
                 folder.TryRemoveIfEmpty();
@@ -178,7 +182,7 @@ public sealed class AppUpdater : IAppUpdater
             Helpers.StorageHelpers.TryDeleteTempFile(staged);
             folder.TryRemoveIfEmpty();
         }
-        return new PreparedUpdate(_exePath, string.Empty,
+        return new PreparedUpdate(version, _exePath, string.Empty,
             () => Helpers.StorageHelpers.TryDeleteTempFile(replacement), replacement);
     }
 

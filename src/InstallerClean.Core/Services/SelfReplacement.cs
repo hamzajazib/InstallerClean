@@ -414,25 +414,42 @@ public static class SelfReplacement
 
     /// <summary>
     /// The window's hand-over to the newer version a copy that replaces its own file has
-    /// written beside itself: renames it into place, starts it, and ends this process
-    /// without running any more of its code. Answers false only where the newer version
-    /// could not be put in place or started and this exe is back at its own path, with
-    /// the newer version back under its waiting name. Where this exe cannot be put back,
-    /// the newer version stays at the path and this process ends all the same, so the
-    /// next start opens the newer version.
+    /// written beside itself: renames it into place, starts it, waits for it to say its
+    /// own code is running, and ends this process without running any more of its code.
+    /// Answers false where the newer version could not be put in place, could not be
+    /// started, or did not say so (<see cref="AwaitStart"/>), with this exe back at its
+    /// own path and the newer version back under its waiting name. Where this exe cannot
+    /// be put back, or another process runs from the file now at the path, the newer
+    /// version stays there and this process ends all the same, so the next start opens
+    /// the newer version.
     /// </summary>
+    /// <param name="exePath">This exe's own path.</param>
+    /// <param name="toVersion">
+    /// The version being handed over to. One <see cref="HandOverContract.TakesHandOverSwitches"/>
+    /// answers false for is started without the event, and this process ends once it has
+    /// started.
+    /// </param>
+    /// <param name="startBound">Test seam: how long to wait for the event, <see cref="HandOverContract.StartBound"/> where null.</param>
     /// <remarks>
     /// Synchronous on purpose, with <see cref="PrepareToMoveAside"/> done before it: on a
     /// window's thread an await would let the dispatcher run the window's own code
-    /// between the renames and the end. The start uses CreateProcess rather than the
-    /// shell, which can wait on a DDE conversation and pump messages; the app runs
-    /// elevated, so CreateProcess starts the newer version, whose manifest asks for
-    /// elevation too, without a prompt. An antivirus can hold a program it has just seen
-    /// written for a moment, so a start that fails is tried again a few times, half a
-    /// second apart. What failed goes to crash.log only once this exe is back in place.
+    /// between the renames and the end, and every wait here dispatches nothing. The start
+    /// uses CreateProcess rather than the shell, which can wait on a DDE conversation and
+    /// pump messages; the app runs elevated, so CreateProcess starts the newer version,
+    /// whose manifest asks for elevation too, without a prompt. An antivirus can hold a
+    /// program it has just seen written for a moment, so a start that fails is tried
+    /// again a few times, half a second apart. What failed goes to crash.log only once
+    /// this exe is back in place. The event is created before anything is renamed, and
+    /// where it cannot be, nothing is: a newer version that cannot be seen to start is
+    /// not put in this exe's place.
     /// </remarks>
-    public static bool HandOverAndEnd(string exePath)
+    public static bool HandOverAndEnd(string exePath, string toVersion, TimeSpan? startBound = null)
     {
+        var startedId = Guid.NewGuid();
+        var takesSwitch = HandOverContract.TakesHandOverSwitches(toVersion);
+        using var startedEvent = takesSwitch ? HandOverContract.CreateStartedEvent(startedId) : null;
+        if (takesSwitch && startedEvent is null) return false;
+
         Func<bool> putBack;
         try
         {
@@ -449,21 +466,38 @@ public static class SelfReplacement
             UseShellExecute = false,
             WorkingDirectory = Path.GetDirectoryName(exePath) ?? string.Empty,
         };
+        if (startedEvent is not null) info.ArgumentList.Add(HandOverContract.StartedEventArgument(startedId));
         Exception? failure = null;
+        var newerRan = false;
         for (var attempt = 1; attempt <= StartAttempts; attempt++)
         {
+            Process? newer;
             try
             {
-                using var started = Process.Start(info);
-                EndThisProcess();
+                newer = Process.Start(info);
             }
             catch (Exception ex)
             {
                 failure = ex;
-                if (attempt < StartAttempts) Thread.Sleep(StartRetryInterval);
+                if (attempt < StartAttempts) Kernel32.Sleep((uint)StartRetryInterval.TotalMilliseconds);
+                continue;
             }
+            if (newer is null) continue;
+            newerRan = true;
+            using (newer)
+            {
+                if (startedEvent is null) EndThisProcess();
+                var answer = AwaitStart(newer, startedEvent!, startBound ?? HandOverContract.StartBound, cancel: null);
+                if (answer == NewerVersionStart.Started) EndThisProcess();
+                failure = NotStartedFailure(answer, newer, startBound ?? HandOverContract.StartBound);
+                if (!EndNewerVersion(newer)) EndThisProcess();
+            }
+            break;
         }
 
+        // A person can start the file at the path while the wait runs, and renaming a file a
+        // process runs from takes from it the assemblies it has still to load.
+        if (newerRan && AnotherProcessMayRunFrom(exePath)) EndThisProcess();
         if (!putBack()) EndThisProcess();
         if (failure is not null) CrashLog.TryWrite(failure);
         return false;
@@ -471,6 +505,128 @@ public static class SelfReplacement
 
     private const int StartAttempts = 4;
     private static readonly TimeSpan StartRetryInterval = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>
+    /// Waits for the newer version <paramref name="newer"/> to set
+    /// <paramref name="started"/>, for up to <paramref name="bound"/>, and answers what
+    /// came first: the event, the newer version ending, the bound, or
+    /// <paramref name="cancel"/> being set. An event set by a newer version that has also
+    /// ended answers <see cref="NewerVersionStart.Started"/>, and so does one set as
+    /// <paramref name="cancel"/> is. The wait dispatches nothing, so on a window's thread
+    /// no window code runs during it. A wait Windows refuses answers
+    /// <see cref="NewerVersionStart.TimedOut"/>, written to crash.log. Never throws.
+    /// </summary>
+    internal static NewerVersionStart AwaitStart(
+        Process newer, WaitHandle started, TimeSpan bound, WaitHandle? cancel)
+    {
+        var handles = new List<SafeHandle> { started.SafeWaitHandle, newer.SafeHandle };
+        if (cancel is not null) handles.Add(cancel.SafeWaitHandle);
+        var answer = Wait(handles, bound);
+        return answer switch
+        {
+            0 => NewerVersionStart.Started,
+            1 => NewerVersionStart.Ended,
+            2 => NewerVersionStart.Cancelled,
+            _ => NewerVersionStart.TimedOut,
+        };
+    }
+
+    /// <summary>
+    /// Ends <paramref name="newer"/>, a newer version that has not said its own code is
+    /// running, and waits up to <see cref="EndBound"/> for it to have ended. Answers
+    /// whether it has. One that will not end is written to crash.log, and the caller
+    /// leaves the file it runs from where it is. Never throws.
+    /// </summary>
+    internal static bool EndNewerVersion(Process newer)
+    {
+        try
+        {
+            var handles = new List<SafeHandle> { newer.SafeHandle };
+            if (Wait(handles, TimeSpan.Zero) == 0) return true;
+            var handle = newer.SafeHandle;
+            var added = false;
+            try
+            {
+                handle.DangerousAddRef(ref added);
+                Kernel32.TerminateProcess(handle.DangerousGetHandle(), NotStartedExitCode);
+            }
+            finally
+            {
+                if (added) handle.DangerousRelease();
+            }
+            if (Wait(handles, EndBound) == 0) return true;
+            CrashLog.TryWrite(new UpdateFailedException(UpdateFailureStage.Install,
+                "The newer version did not end when it was told to."));
+            return false;
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+            return false;
+        }
+    }
+
+    /// <summary>How long <see cref="EndNewerVersion"/> waits for the newer version to have ended.</summary>
+    private static readonly TimeSpan EndBound = TimeSpan.FromSeconds(5);
+
+    /// <summary>The exit code <see cref="EndNewerVersion"/> ends the newer version with.</summary>
+    private const uint NotStartedExitCode = 1;
+
+    /// <summary>
+    /// What a newer version that did not say its own code is running is written to
+    /// crash.log as, for <paramref name="answer"/>: the exit code it ended with, or how
+    /// long it was waited for. Never throws.
+    /// </summary>
+    internal static UpdateFailedException NotStartedFailure(NewerVersionStart answer, Process newer, TimeSpan bound)
+    {
+        string message;
+        try
+        {
+            message = answer switch
+            {
+                NewerVersionStart.Ended =>
+                    $"The newer version ended with exit code {newer.ExitCode} before it said it had started.",
+                NewerVersionStart.Cancelled => "Ctrl+C came before the newer version said it had started.",
+                _ => $"The newer version did not say it had started within {bound.TotalSeconds:0} seconds.",
+            };
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            message = "The newer version ended before it said it had started.";
+        }
+        return new UpdateFailedException(UpdateFailureStage.Install, message);
+    }
+
+    /// <summary>
+    /// Waits on <paramref name="handles"/> for up to <paramref name="bound"/>, dispatching
+    /// nothing, and answers the index of the first signalled, or -1 where the bound ran
+    /// out or the wait failed, a failure being written to crash.log.
+    /// </summary>
+    private static int Wait(List<SafeHandle> handles, TimeSpan bound)
+    {
+        var raw = new IntPtr[handles.Count];
+        var added = new bool[handles.Count];
+        try
+        {
+            for (var i = 0; i < handles.Count; i++)
+            {
+                handles[i].DangerousAddRef(ref added[i]);
+                raw[i] = handles[i].DangerousGetHandle();
+            }
+            var milliseconds = (uint)Math.Clamp(bound.TotalMilliseconds, 0, uint.MaxValue - 1);
+            var result = Kernel32.WaitForMultipleObjects((uint)raw.Length, raw, bWaitAll: false, milliseconds);
+            if (result < Kernel32.WAIT_OBJECT_0 + (uint)raw.Length) return (int)(result - Kernel32.WAIT_OBJECT_0);
+            if (result == Kernel32.WAIT_FAILED)
+                CrashLog.TryWrite(new UpdateFailedException(UpdateFailureStage.Install,
+                    $"Waiting for the newer version failed with error {Marshal.GetLastPInvokeError()}."));
+            return -1;
+        }
+        finally
+        {
+            for (var i = 0; i < handles.Count; i++)
+                if (added[i]) handles[i].DangerousRelease();
+        }
+    }
 
     /// <summary>
     /// Ends this process at once, running none of its code: no exit handler, no
@@ -548,4 +704,20 @@ public static class SelfReplacement
             return false;
         }
     }
+}
+
+/// <summary>What came first while a copy waited for the newer version it started (<see cref="SelfReplacement.AwaitStart"/>).</summary>
+internal enum NewerVersionStart
+{
+    /// <summary>The newer version set the event: its own code is running.</summary>
+    Started,
+
+    /// <summary>The newer version ended without setting it.</summary>
+    Ended,
+
+    /// <summary>The wait's bound ran out, or Windows refused the wait.</summary>
+    TimedOut,
+
+    /// <summary>Ctrl+C came first.</summary>
+    Cancelled,
 }

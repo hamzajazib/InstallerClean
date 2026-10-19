@@ -48,6 +48,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// off the dispatcher and the same check that the answer is still wanted.
     /// </remarks>
     private readonly Func<string, bool?> _resolveIsOnCacheVolume;
+    private readonly Func<bool> _instanceLockLost;
 
     /// <summary>Read and written only through <see cref="OperationSource"/>.</summary>
     private CancellationTokenSource? _operationSource;
@@ -261,7 +262,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         ScanViewModel scan,
         CompletionViewModel completion,
         IRemovableReverifier reverifier,
-        Func<string, bool?>? resolveIsOnCacheVolume = null)
+        Func<string, bool?>? resolveIsOnCacheVolume = null,
+        Func<bool>? instanceLockLost = null)
     {
         _moveService = moveService;
         _deleteService = deleteService;
@@ -273,6 +275,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         _completion = completion;
         _reverifier = reverifier;
         _resolveIsOnCacheVolume = resolveIsOnCacheVolume ?? AskWhetherOnCacheVolume;
+        _instanceLockLost = instanceLockLost ?? (() => false);
 
         _settings = settingsService.Load();
         MoveDestination = _settings.MoveDestination;
@@ -588,15 +591,31 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     // view model holds no result: after a scan that failed, or the scan after a
     // Move or Delete that did not finish, neither command runs, whatever the
     // layout shows.
+    // The single-instance mutex is what keeps the window and a command-line Move or
+    // Delete from working on the folder at once. An update that did not hand over
+    // can find another process holding it, and until the app has it back neither
+    // command runs; asking tries to take it back.
     private bool CanMove() =>
         !_scan.IsScanInFlight && !IsOperationInFlight
         && !_scan.HasPendingReboot
-        && _scan.HasOrphans;
+        && _scan.HasOrphans
+        && !_instanceLockLost();
 
     private bool CanDelete() =>
         !_scan.IsScanInFlight && !IsOperationInFlight
         && !_scan.HasPendingReboot
-        && _scan.HasOrphans;
+        && _scan.HasOrphans
+        && !_instanceLockLost();
+
+    /// <summary>
+    /// Asks Move and Delete again whether they can run, after an update ends without
+    /// handing over: the app may not have the single-instance mutex back.
+    /// </summary>
+    public void NotifyInstanceLockChanged()
+    {
+        MoveAllCommand.NotifyCanExecuteChanged();
+        DeleteAllCommand.NotifyCanExecuteChanged();
+    }
 
     [RelayCommand]
     private void BrowseDestination()

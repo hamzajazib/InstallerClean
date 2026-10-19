@@ -5369,7 +5369,7 @@ public class MainViewModelTests
     {
         var updater = Substitute.For<IAppUpdater>();
         updater.CanUpdateItself.Returns(true);
-        var prepared = new PreparedUpdate(@"C:\ProgramData\InstallerClean-update-x\InstallerClean-9.9.9-setup.exe",
+        var prepared = new PreparedUpdate("9.9.9", @"C:\ProgramData\InstallerClean-update-x\InstallerClean-9.9.9-setup.exe",
             "/SILENT", () => { });
         updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(prepared);
         _windowService.StartUpdateAndCloseAsync(default!).ReturnsForAnyArgs(true);
@@ -5385,6 +5385,49 @@ public class MainViewModelTests
         Assert.False(vm.Completion.IsComplete);
         _firstRunMark.DidNotReceive().Set();
         await _resultLogService.DidNotReceiveWithAnyArgs().WriteAsync(default!, default);
+    }
+
+    [Fact]
+    public async Task Move_and_Delete_stay_off_while_another_process_holds_the_mutex_an_update_let_go_of()
+    {
+        var vm = CreateViewModel();
+        _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
+            .Returns(ScanResultWithOrphans(2));
+        await vm.Scan.ScanWithProgressAsync(null);
+        Assert.True(vm.Cleanup.MoveAllCommand.CanExecute(null));
+
+        _windowService.IsInstanceLockLost().Returns(true);
+        Assert.False(vm.Cleanup.MoveAllCommand.CanExecute(null));
+        Assert.False(vm.Cleanup.DeleteAllCommand.CanExecute(null));
+
+        _windowService.IsInstanceLockLost().Returns(false);
+        Assert.True(vm.Cleanup.MoveAllCommand.CanExecute(null));
+        Assert.True(vm.Cleanup.DeleteAllCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task An_update_that_does_not_hand_over_has_Move_and_Delete_ask_again_whether_they_can_run()
+    {
+        var updater = Substitute.For<IAppUpdater>();
+        updater.CanUpdateItself.Returns(true);
+        updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(
+            new PreparedUpdate("9.9.9", @"C:\Users\x\InstallerClean.exe", string.Empty, () => { },
+                @"C:\Users\x\InstallerClean.exe.new"));
+        _windowService.StartUpdateAndCloseAsync(default!).ReturnsForAnyArgs(false);
+        var vm = CreateViewModel(new AppSettings(), updater);
+        ScanFinds(EmptyScanResult());
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+        await StartAsync(vm);
+        var moveAsked = 0;
+        var deleteAsked = 0;
+        vm.Cleanup.MoveAllCommand.CanExecuteChanged += (_, _) => moveAsked++;
+        vm.Cleanup.DeleteAllCommand.CanExecuteChanged += (_, _) => deleteAsked++;
+
+        await vm.Chrome.UpdateNowCommand.ExecuteAsync(null);
+
+        Assert.False(vm.Chrome.IsUpdating);
+        Assert.True(moveAsked > 0);
+        Assert.True(deleteAsked > 0);
     }
 
     [Fact]

@@ -109,7 +109,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Cleanup = new CleanupViewModel(
             moveService, deleteService, settingsService,
             dialogService, confirmationService, fileSystem,
-            Scan, Completion, reverifier);
+            Scan, Completion, reverifier,
+            instanceLockLost: windowService.IsInstanceLockLost);
         Chrome = new ChromeViewModel(windowService, msiInfoService, settingsService,
             updateCheckService, dialogService, Scan,
             isBusy: () => IsBusy,
@@ -410,6 +411,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // Update now waits for a scan or a Move or Delete to finish.
             Chrome.NotifyBusyChanged();
         }
+
+        // An update that ended without handing over can leave the app without the
+        // single-instance mutex, which Move and Delete need.
+        if (e.PropertyName == nameof(ChromeViewModel.IsUpdating) && !Chrome.IsUpdating)
+            Cleanup.NotifyInstanceLockChanged();
 
         // Continue without updating: the scan the card stood in front of is shown.
         if (e.PropertyName == nameof(ChromeViewModel.IsOfferingUpdate) && !Chrome.IsOfferingUpdate)

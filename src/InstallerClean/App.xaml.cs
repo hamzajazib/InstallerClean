@@ -29,6 +29,8 @@ public partial class App : Application
 {
     private static Mutex? _singleInstanceMutex;
     private static bool _holdsSingleInstanceMutex;
+    // Set where an update that did not hand over could not take the mutex back.
+    private static bool _instanceLockLost;
     private static ServiceProvider? _services;
     // Reentry guard: a modal dialog pumps messages, so a queued
     // exception could fire DispatcherUnhandledException recursively.
@@ -231,10 +233,6 @@ public partial class App : Application
 
         StartActivationListener();
 
-        // What an update left behind, in the background: the copy it renamed aside, and
-        // the folder a newer setup ran from.
-        _ = Task.Run(RemoveUpdateLeftoversAsync);
-
         DispatcherUnhandledException += (_, args) =>
         {
             // Recursive entry: log silently and bail. A nested handler
@@ -373,6 +371,18 @@ public partial class App : Application
             // subscriptions unhook on teardown.
             _services = Composition.BuildServiceProvider();
             var viewModel = _services.GetRequiredService<MainViewModel>();
+
+            // The copy that started this one, where it updated itself, waits for this before
+            // it ends: the splash is up and the view model built, so the libraries, the
+            // resources and the services this build needs have all loaded. Nothing before
+            // this point waits on anything slow.
+            HandOverContract.TakeStartedEvent(e.Args, out var startedEvent);
+            HandOverContract.SignalStarted(startedEvent);
+
+            // What an update left behind, in the background: the copy it renamed aside, and
+            // the folder a newer setup ran from. After the signal, so the copy renamed aside
+            // is ending as the tries to delete it begin.
+            _ = Task.Run(RemoveUpdateLeftoversAsync);
 
             // Started before the startup scan, so it runs beside it and has usually
             // answered by the time the scan ends. What the scan finds is held until it
@@ -769,7 +779,8 @@ public partial class App : Application
     /// <summary>
     /// Hands over to the newer version <paramref name="prepared"/> holds: releases the
     /// single-instance mutex, starts the newer setup or the newer version, and closes the
-    /// app. Answers false where it could not be started, having taken the mutex back, so
+    /// app. Answers false where it could not be started, or where the newer version did
+    /// not say its own code was running, having taken the mutex back where it is free, so
     /// the app carries on as it was.
     ///
     /// The mutex goes first for two reasons. The newer version takes it as it starts,
@@ -786,7 +797,7 @@ public partial class App : Application
     public Task<bool> StartUpdateAndCloseAsync(PreparedUpdate prepared) =>
         prepared.Replacement is null
             ? StartSetupAndCloseAsync(prepared.FileToStart, prepared.Arguments)
-            : ReplaceAndCloseAsync(prepared.FileToStart);
+            : ReplaceAndCloseAsync(prepared.FileToStart, prepared.Version);
 
     /// <summary>
     /// The setup's copy: starts the newer setup, which starts the app again once it has
@@ -817,7 +828,7 @@ public partial class App : Application
             catch (Exception ex)
             {
                 CrashLog.TryWrite(ex);
-                if (released) RetakeSingleInstanceMutex();
+                if (released) RetakeAfterHandOverFailed();
                 return false;
             }
         }
@@ -857,17 +868,59 @@ public partial class App : Application
     /// <summary>
     /// A copy that replaces its own file: loads what the hand-over reaches, on a pool
     /// thread while the running exe's file is still whole, then on this thread renames
-    /// the newer version into place, starts it and ends the process
-    /// (<see cref="SelfReplacement.HandOverAndEnd"/>). That ends it without
-    /// <see cref="OnExit"/>, so the caller has already settled what closing would.
+    /// the newer version into place, starts it, waits for it to say its own code is
+    /// running and ends the process (<see cref="SelfReplacement.HandOverAndEnd"/>). That
+    /// ends it without <see cref="OnExit"/>, so the caller has already settled what
+    /// closing would. Where the newer version does not say so, this exe is back at its
+    /// own path and the app's windows come back as they were.
     /// </summary>
-    private static async Task<bool> ReplaceAndCloseAsync(string exePath)
+    /// <remarks>
+    /// The windows are hidden for the wait, which can run to
+    /// <see cref="HandOverContract.StartBound"/>: Windows shows a window that has stopped
+    /// answering as not responding, and closing it then would end this process with the
+    /// newer version not yet seen to start. Dispatcher processing is off for the whole
+    /// hand-over, so a wait on this thread that the hand-over makes through a
+    /// WaitHandle dispatches no window message either. The app's own assembly is walked
+    /// as well as the ones the hand-over reaches, because the app's other threads go on
+    /// running through the wait, with this exe renamed aside.
+    /// </remarks>
+    private async Task<bool> ReplaceAndCloseAsync(string exePath, string version)
     {
-        await Task.Run(() => SelfReplacement.PrepareToMoveAside());
+        await Task.Run(() => SelfReplacement.PrepareToMoveAside(typeof(App).Assembly));
+        var hidden = Windows.Cast<Window>().Where(w => w.IsVisible).ToList();
+        foreach (var window in hidden) window.Hide();
         var released = ReleaseSingleInstanceMutex();
-        SelfReplacement.HandOverAndEnd(exePath);
-        if (released) RetakeSingleInstanceMutex();
+        using (Dispatcher.DisableProcessing())
+            SelfReplacement.HandOverAndEnd(exePath, version);
+        if (released) RetakeAfterHandOverFailed();
+        foreach (var window in hidden) window.Show();
+        MainWindow?.Activate();
         return false;
+    }
+
+    /// <summary>
+    /// Takes the single-instance mutex back after an update that did not hand over.
+    /// Where another process took it meanwhile, a command-line run among them,
+    /// <see cref="IsInstanceLockLost"/> answers true until the app holds it again.
+    /// </summary>
+    private static void RetakeAfterHandOverFailed()
+    {
+        RetakeSingleInstanceMutex();
+        _instanceLockLost = !_holdsSingleInstanceMutex;
+    }
+
+    /// <summary>
+    /// Whether the app has let go of the single-instance mutex for an update that did not
+    /// hand over, and another process still holds it. Each call where it has tries to take
+    /// it back, on the dispatcher thread, which is the thread that took it first and
+    /// releases it in <see cref="OnExit"/>.
+    /// </summary>
+    public static bool IsInstanceLockLost()
+    {
+        if (!_instanceLockLost) return false;
+        RetakeSingleInstanceMutex();
+        _instanceLockLost = !_holdsSingleInstanceMutex;
+        return _instanceLockLost;
     }
 
     private const int StartAttempts = 4;

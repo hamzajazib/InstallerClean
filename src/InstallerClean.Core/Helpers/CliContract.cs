@@ -306,31 +306,9 @@ internal static class CliContract
     /// The switch through which the version that started this one passes, after the colon,
     /// the id of an event that version sets on Ctrl+C. Only a run updating itself passes
     /// it, so it is not in the help. It goes only to a version
-    /// <see cref="TakesHandOverSwitches"/> answers true for.
+    /// <see cref="HandOverContract.TakesHandOverSwitches"/> answers true for.
     /// </summary>
     internal const string CancelEventSwitch = "/cancelevent:";
-
-    /// <summary>
-    /// The first version that takes the switch a run updating itself adds to the command
-    /// it starts the newer version with, <see cref="CancelEventSwitch"/>. A version before
-    /// it refuses the switch as an argument it does not know and runs nothing, so the
-    /// switch is never passed to one.
-    /// </summary>
-    /// <remarks>
-    /// Every version from this one on passes the switch to whichever version it updates
-    /// to, so every later version has to go on taking it, or an update to that version
-    /// from one of these runs nothing. A switch added to the hand-over later is one an
-    /// earlier version refuses, so it needs a first version of its own.
-    /// </remarks>
-    internal static readonly Version FirstVersionTakingHandOverSwitches = new(3, 5, 0);
-
-    /// <summary>
-    /// Whether <paramref name="version"/> is <see cref="FirstVersionTakingHandOverSwitches"/>
-    /// or later, its first three parts compared. A version that does not parse answers false.
-    /// </summary>
-    internal static bool TakesHandOverSwitches(string version) =>
-        Version.TryParse(version, out var parsed)
-        && Services.UpdateCheckService.NormaliseToBuild(parsed) >= FirstVersionTakingHandOverSwitches;
 
     /// <summary>
     /// The name of the event <paramref name="id"/> stands for, in the session's own
@@ -359,20 +337,8 @@ internal static class CliContract
     /// none. One carrying anything else is left in, and <see cref="ParseArguments"/>
     /// refuses it as an argument it does not know, wherever it stands.
     /// </summary>
-    internal static string[] TakeCancelEvent(string[] args, out string? cancelEvent)
-    {
-        cancelEvent = null;
-        var rest = new List<string>(args.Length);
-        foreach (var arg in args)
-        {
-            if (arg.StartsWith(CancelEventSwitch, StringComparison.OrdinalIgnoreCase)
-                && TryReadCancelEvent(arg[CancelEventSwitch.Length..], out _))
-                cancelEvent ??= arg[CancelEventSwitch.Length..];
-            else
-                rest.Add(arg);
-        }
-        return rest.ToArray();
-    }
+    internal static string[] TakeCancelEvent(string[] args, out string? cancelEvent) =>
+        HandOverContract.TakeEventSwitch(args, CancelEventSwitch, out cancelEvent);
 
     /// <summary>
     /// Resolves the argument vector to a <see cref="CliInvocation"/>.
@@ -381,13 +347,15 @@ internal static class CliContract
     /// <c>/m</c> to a folder of that name. The first token left decides the command,
     /// lower-cased so the comparison is case-insensitive (PowerShell users frequently
     /// type <c>/S</c>). The offending-argument and destination tokens are returned in
-    /// their original case. A <see cref="CancelEventSwitch"/> still here, carrying no
-    /// event's id, is refused as an argument the command does not know, wherever it
-    /// stands, so it is never read as a Move's destination.
+    /// their original case. A <see cref="CancelEventSwitch"/> or
+    /// <see cref="HandOverContract.StartedEventSwitch"/> still here, carrying no event's
+    /// id, is refused as an argument the command does not know, wherever it stands, so it
+    /// is never read as a Move's destination.
     /// </summary>
     internal static CliInvocation ParseArguments(string[] args)
     {
-        if (args.FirstOrDefault(a => a.StartsWith(CancelEventSwitch, StringComparison.OrdinalIgnoreCase)) is { } stray)
+        if (args.FirstOrDefault(a => a.StartsWith(CancelEventSwitch, StringComparison.OrdinalIgnoreCase)
+                || a.StartsWith(HandOverContract.StartedEventSwitch, StringComparison.OrdinalIgnoreCase)) is { } stray)
             return new CliInvocation(CliCommand.UnknownArgument, stray, null);
         var rest = args.Where(a => !a.Equals(NoUpdateSwitch, StringComparison.OrdinalIgnoreCase)).ToArray();
         return ParseCommand(rest) with { SkipUpdate = rest.Length != args.Length };

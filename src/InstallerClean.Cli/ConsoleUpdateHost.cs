@@ -172,22 +172,34 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
         Console.Out.Flush();
         // The console gives Ctrl+C only to the processes connected to it, so one that comes
         // as the newer version starts can reach this run alone. Where the newer version
-        // takes CliContract.CancelEventSwitch, this event is set on Ctrl+C from here until
-        // the newer version ends and passed to it by name, and the newer version takes it
-        // as its own Ctrl+C, one set before it opened the event included. Where there is
-        // no event, the newer version answers Ctrl+C only once it has started.
+        // takes the hand-over switches, this event is set on Ctrl+C from here until the
+        // newer version ends and passed to it by name, and the newer version takes it as
+        // its own Ctrl+C, one set before it opened the event included. Where there is no
+        // event, the newer version answers Ctrl+C only once it has started.
+        var takesSwitches = HandOverContract.TakesHandOverSwitches(toVersion);
         var cancelId = Guid.NewGuid();
-        using var cancelEvent = CliContract.TakesHandOverSwitches(toVersion) ? CreateCancelEvent(cancelId) : null;
+        var startedId = Guid.NewGuid();
+        using var cancelEvent = takesSwitches ? CreateCancelEvent(cancelId) : null;
+        // The event the newer version sets once its own code is running. Where it cannot be
+        // made, the newer version is not started: one that cannot be seen to start is not
+        // left in this exe's place.
+        using var startedEvent = takesSwitches ? HandOverContract.CreateStartedEvent(startedId) : null;
+        if (takesSwitches && startedEvent is null)
+        {
+            NewerVersionNotStarted();
+            return null;
+        }
         using var setOnCtrlC = cancelEvent is null
             ? default
             : token.Register(static e => ((EventWaitHandle)e!).Set(), cancelEvent);
         if (cancelEvent is not null) NewerVersionAnswersCtrlC(true);
+        List<string> passed = [.. arguments];
+        if (cancelEvent is not null) passed.Add(CliContract.CancelEventArgument(cancelId));
+        if (startedEvent is not null) passed.Add(HandOverContract.StartedEventArgument(startedId));
         Process? started;
         try
         {
-            started = Start(file,
-                cancelEvent is null ? arguments : [.. arguments, CliContract.CancelEventArgument(cancelId)],
-                workingDirectory: null, token);
+            started = Start(file, passed, workingDirectory: null, token);
         }
         catch
         {
@@ -200,6 +212,8 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
             return null;
         }
         using var process = started;
+        if (startedEvent is not null && !NewerVersionSaidItStarted(process, startedEvent, token))
+            return null;
         // The newer version is running from the file at this exe's path from here, so
         // nothing leaves this method as an exception: the run reads a throw as the newer
         // version not having started and puts this exe back, which would rename that
@@ -234,6 +248,44 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
         {
             CrashLog.TryWrite(ex);
             return CliExitCode.Error;
+        }
+    }
+
+    /// <summary>
+    /// Waits for the newer version <paramref name="process"/> to set
+    /// <paramref name="startedEvent"/>, for up to <see cref="HandOverContract.StartBound"/>,
+    /// and answers true where it does. Where it ends first, the bound runs out or Ctrl+C
+    /// comes first, the newer version has run none of the command: it is ended and waited
+    /// for, what happened is written to crash.log, and the answer is false, with the line
+    /// saying the run is cancelling printed where one was held back. Ctrl+C, or a newer
+    /// version that Ctrl+C ended before it had a handler for it, throws
+    /// <see cref="OperationCanceledException"/> instead, so the run answers it as Ctrl+C
+    /// before the newer version started. A newer version that will not end is left to run
+    /// and answered true, so the file it runs from is never renamed under it.
+    /// </summary>
+    private bool NewerVersionSaidItStarted(Process process, EventWaitHandle startedEvent, CancellationToken token)
+    {
+        var answer = SelfReplacement.AwaitStart(process, startedEvent, HandOverContract.StartBound, token.WaitHandle);
+        if (answer == NewerVersionStart.Started) return true;
+        var failure = SelfReplacement.NotStartedFailure(answer, process, HandOverContract.StartBound);
+        if (!SelfReplacement.EndNewerVersion(process)) return true;
+        CrashLog.TryWrite(failure);
+        if (answer == NewerVersionStart.Ended && EndedForCtrlC(process))
+            token.WaitHandle.WaitOne(CommandLineUpdate.ControlCBound);
+        NewerVersionNotStarted();
+        token.ThrowIfCancellationRequested();
+        return false;
+    }
+
+    private static bool EndedForCtrlC(Process process)
+    {
+        try
+        {
+            return process.ExitCode == CommandLineUpdate.ControlCExit;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            return false;
         }
     }
 

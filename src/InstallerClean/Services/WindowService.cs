@@ -80,4 +80,6 @@ public sealed class WindowService : IWindowService
         => Application.Current is App app
             ? app.StartUpdateAndCloseAsync(prepared)
             : Task.FromResult(false);
+
+    public bool IsInstanceLockLost() => App.IsInstanceLockLost();
 }
