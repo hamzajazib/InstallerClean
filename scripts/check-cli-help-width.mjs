@@ -2,29 +2,20 @@
 // Fails (exit 1) when any line of any Cli.Help.* value, in the neutral resx or a
 // satellite, is wider than the help screen's column budget.
 //
-// The budget is 74 and it is the English text's own: it was the width of the
-// longest Cli.Help.* line in Strings.resx when this was written, which is what
-// made it a measured budget rather than a number picked here. Reworded English
-// has since come in under it and the ceiling has deliberately not followed,
-// because a budget that tracks the longest line is not a budget: it would move
-// every time the English was edited and no translation could be written against
-// it. Which line is currently longest is not the point and is not recorded here;
-// what 74 has to stay is comfortably inside an 80-column console.
-// Program.cs prints each value with Console.WriteLine and wraps nothing, so a
-// value the console cannot fit is broken across two rows by the terminal, the
-// second row starting hard against the left margin under a two-column layout.
-// The audience for the CLI is the audience most likely to read that as a broken
-// program. Translations are where it goes wrong: nothing in the resx says how
-// wide a line may be, and a faithful translation of a line already near the
-// budget lands well over it. Russian reached 149 before this guard existed.
+// The budget is 74 columns, comfortably inside an 80-column console. It is a
+// fixed number rather than the width of the longest English line, so a
+// translation can be written against it and it does not move when the English
+// is reworded. Program.cs prints each line of a value with Console.WriteLine and
+// wraps nothing, so a line the console cannot fit is broken across two rows by
+// the terminal, the second row starting hard against the left margin under a
+// two-column layout. Nothing in the resx says how wide a line may be, and a
+// faithful translation of a line near the budget can land well over it.
 //
 // WIDTH IS COUNTED IN TERMINAL COLUMNS, NOT CHARACTERS. A CJK glyph occupies two
-// cells in a fixed-pitch console, so the Japanese and Korean help lines were the
-// widest of the sixteen languages while being among the shortest in characters:
-// counting characters would pass, at 101 and 97 columns, the two lines that
-// overflow an 80-column console worst. East Asian Wide and Fullwidth (UAX #11)
-// count 2, everything else 1, which is the same number as a character count for
-// any all-Latin or all-Cyrillic value.
+// cells in a fixed-pitch console, so a Japanese or Korean line can be among the
+// shortest in characters and the widest on screen. East Asian Wide and
+// Fullwidth (UAX #11) count 2, everything else 1, which is the same number as a
+// character count for any all-Latin or all-Cyrillic value.
 //
 // The two-column command lines carry a second rule this guard does NOT enforce,
 // because it is per-language: the description column is set by the longest
@@ -71,9 +62,8 @@ const columns = (s) => {
 // And Strings.Get spends {InstallerFolder} on the way out (InstallerFolderToken
 // over InstallerCacheHelpers.InstallerFolder, which is SpecialFolder.Windows +
 // "Installer"), so Cli.Help.Header is three columns wider on screen than in the
-// file. A machine whose Windows lives somewhere else draws it wider again: the
-// widest header is 56 columns substituted, so that path would
-// have to run 18 characters past C:\Windows\Installer before the budget bit.
+// file. A machine whose Windows lives somewhere else draws it wider again, by
+// however much longer its path is than C:\Windows\Installer.
 const FOLDER = 'C:\\Windows\\Installer';
 const printed = (value) => value
   .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))

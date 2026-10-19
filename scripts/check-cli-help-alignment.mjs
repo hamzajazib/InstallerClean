@@ -3,20 +3,20 @@
 // start their description at the same terminal column, in any language the app
 // ships.
 //
-// check-cli-help-width.mjs holds the other half of that layout and states in its
-// own header that it does NOT hold this one, because the column is per-language:
-// it is set by the longest "installerclean-cli <flag> <METAVAR>" prefix in that
-// language, and a translated metavariable is not the width of PATH. Italian's
-// PERCORSO and Vietnamese's ĐƯỜNG_DẪN are both wider, so those languages'
-// descriptions sit further right and there is no single number any check could
-// compare against. What is comparable is a language against itself.
+// check-cli-help-width.mjs holds how wide a line may be. Where the description
+// starts is per-language: it is set by the longest
+// "installerclean-cli <flag> <METAVAR>" prefix in that language, and a translated
+// metavariable is not the width of PATH. Italian's PERCORSO and Vietnamese's
+// ĐƯỜNG_DẪN are both wider, so those languages' descriptions sit further right
+// and there is no single number any check could compare against. What is
+// comparable is a language against itself.
 //
-// It bites during a translation round rather than at rest, which is why nothing
-// caught it before: a round reflags some of the rows and leaves the others
-// translated, so the flagged ones carry English padded to English's column while
-// their neighbours keep the language's own. Every value is then correct read on
-// its own and the screen is ragged. Program.cs prints each with Console.WriteLine
-// and pads nothing, so what is in the resx is what lands on the terminal.
+// A translation round is where it goes wrong: a round reflags some of the rows
+// and leaves the others translated, so the flagged ones carry English padded to
+// English's column while their neighbours keep the language's own. Every value is
+// then correct read on its own and the screen is ragged. Program.cs prints each
+// with Console.WriteLine and pads nothing, so what is in the resx is what lands
+// on the terminal.
 //
 // A ROW STILL HOLDING THE NEUTRAL'S ENGLISH IS NOT MEASURED, and the reason is
 // not tidiness. check-still-english.mjs finds an untranslated key by testing the
