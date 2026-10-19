@@ -485,7 +485,13 @@ public static class SelfReplacement
                 if (attempt < StartAttempts) Kernel32.Sleep((uint)StartRetryInterval.TotalMilliseconds);
                 continue;
             }
-            if (newer is null) continue;
+            if (newer is null)
+            {
+                failure = new UpdateFailedException(UpdateFailureStage.Install,
+                    "Windows started no process for the newer version.");
+                if (attempt < StartAttempts) Kernel32.Sleep((uint)StartRetryInterval.TotalMilliseconds);
+                continue;
+            }
             newerRan = true;
             using (newer)
             {
