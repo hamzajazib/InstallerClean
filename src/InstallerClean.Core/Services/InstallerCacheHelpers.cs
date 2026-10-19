@@ -76,7 +76,7 @@ internal enum PathResolution
 internal static class InstallerCacheHelpers
 {
     internal static readonly string InstallerFolder =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Installer");
+        Path.Combine(KnownFolders.GetPath(Environment.SpecialFolder.Windows), "Installer");
 
     /// <summary>
     /// True if <paramref name="path"/> resolves to <c>C:\Windows\Installer</c>
@@ -313,10 +313,10 @@ internal static class InstallerCacheHelpers
 
         var systemRoots = new[]
         {
-            Environment.GetFolderPath(Environment.SpecialFolder.Windows),
-            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            KnownFolders.GetPath(Environment.SpecialFolder.Windows),
+            KnownFolders.GetPath(Environment.SpecialFolder.ProgramFiles),
+            KnownFolders.GetPath(Environment.SpecialFolder.ProgramFilesX86),
+            KnownFolders.GetPath(Environment.SpecialFolder.CommonApplicationData),
         };
 
         foreach (var root in systemRoots)

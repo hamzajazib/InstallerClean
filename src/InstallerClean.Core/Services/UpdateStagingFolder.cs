@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using InstallerClean.Helpers;
 using InstallerClean.Interop.Native;
 
 namespace InstallerClean.Services;
@@ -40,7 +41,7 @@ public sealed class UpdateStagingFolder
     /// The folder under the PC's %ProgramData%, the one the app uses.
     /// </summary>
     public static string DefaultRoot =>
-        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+        KnownFolders.GetPath(Environment.SpecialFolder.CommonApplicationData);
 
     /// <summary>
     /// Creates a new staging folder under <paramref name="root"/>, named

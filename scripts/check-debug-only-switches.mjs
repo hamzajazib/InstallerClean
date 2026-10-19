@@ -101,6 +101,11 @@ const ALLOWED = [
     text: 'var raw = key.GetValue(valueName, null, Microsoft.Win32.RegistryValueOptions.None);',
     what: 'TryReadLocalPackage, expanding the LocalPackage path Windows Installer recorded',
   },
+  {
+    file: 'src/InstallerClean.Core/Helpers/KnownFolders.cs',
+    text: 'GetPath(folder, Shell32.SHGetKnownFolderPath, Ole32.CoTaskMemFree, Environment.GetEnvironmentVariable);',
+    what: 'KnownFolders.GetPath, the variable .NET falls back to where Windows does not answer for a known folder',
+  },
 ];
 
 // What holds the word and names no environment variable, by its text with the spaces

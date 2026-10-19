@@ -31,7 +31,7 @@ internal static class AppDataFolder
     private const long MaxMergedLogBytes = 2 * CrashLog.MaxBytes;
 
     private static readonly Lazy<Settled> First = new(
-        () => Settle(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)));
+        () => Settle(KnownFolders.GetPath(Environment.SpecialFolder.LocalApplicationData)));
 
     private static int _failureRecorded;
 
@@ -97,7 +97,7 @@ internal static class AppDataFolder
     {
         var current = Path.Combine(localAppData, FolderName);
 
-        // No profile folder to answer from, which GetFolderPath reports as an empty
+        // No profile folder to answer from, which KnownFolders reports as an empty
         // string. The relative path is returned as the callers would build it, and
         // nothing is moved relative to the working folder.
         if (string.IsNullOrEmpty(localAppData))

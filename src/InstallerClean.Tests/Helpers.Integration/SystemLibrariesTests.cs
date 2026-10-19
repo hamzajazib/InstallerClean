@@ -34,6 +34,8 @@ public class SystemLibrariesTests
     [Theory]
     [InlineData("msi.dll")]
     [InlineData("rstrtmgr.dll")]
+    [InlineData("shell32.dll")]
+    [InlineData("ole32.dll")]
     public void A_library_is_loaded_from_System32(string name)
     {
         var handle = SystemLibraries.Resolve(name, typeof(SystemLibraries).Assembly, null);

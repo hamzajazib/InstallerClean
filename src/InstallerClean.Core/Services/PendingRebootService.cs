@@ -163,7 +163,7 @@ public sealed class PendingRebootService : IPendingRebootService
             return PendingRebootResult.Block(PendingRebootReason.RegistryCheckUnreadable);
 
         var windowsRoot = _windowsRootOverride
-            ?? Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+            ?? KnownFolders.GetPath(Environment.SpecialFolder.Windows);
         var installerRoot = Path.Combine(windowsRoot, "Installer");
 
         // AN ENTRY NAMING THE CACHE WINS OVER ONE THAT COULD NOT BE PLACED, WHATEVER
