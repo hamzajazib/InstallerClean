@@ -565,13 +565,14 @@ jobs:
   # for in their own folders, before System32, on behalf of System.Private.CoreLib's
   # imports or of WPF's own start-up, which no resolver or setting the app makes can send
   # elsewhere. Those looks are listed in the first pass's step by exe, the runs that make
-  # them, the folder, the library and the assembly that asks for it, and nothing is planted
-  # for them. A look the list does not cover, in any run, is planted as any other. The first
-  # pass prints each listed look with the row of its first look in each run, reads the
-  # assembly from the runtime pack the exe's bundle names, and fails where a listed library
-  # is not spelled as that assembly asks for it, where no run of the exe looked for it, and,
-  # for one listed as looked for before the build's own code runs, where its first look in a
-  # run came after the first act of that code the job can see, or no act was seen.
+  # them, the folder, the library and the assembly that asks for it, and nothing is
+  # planted for a listed look that passes the first pass's check. Any other look, in any
+  # run, is planted as any other. The first pass prints each listed look with the row of
+  # its first look in each run, reads the assembly from the runtime pack the exe's bundle
+  # names, and fails where a listed library is not spelled as that assembly asks for it,
+  # where no run of the exe looked for it, and, for one listed as looked for before the
+  # build's own code runs, where its first look in a run came after the first act of that
+  # code the job can see, or no act was seen.
   #
   # In either pass the job also fails where a build loaded a library from its own
   # folder, and in the second where it loaded one under %TEMP%\.net that its bundle did
@@ -1007,12 +1008,20 @@ jobs:
                 $imports = @($md.MethodDefinitions | ForEach-Object {
                   $import = $md.GetMethodDefinition($_).GetImport()
                   if (-not $import.Module.IsNil) { $md.GetString($md.GetModuleReference($import.Module).Name) }
-                } | Sort-Object -Unique)
+                } | Sort-Object -Unique -CaseSensitive)
                 [pscustomobject]@{ Managed = $true; Imports = $imports }
               }
               finally { $pe.Dispose() }
             }
             finally { $stream.Dispose() }
+          }
+
+          # NuGet's global-packages folder, where the runtime packs the builds were made from are.
+          function Get-NuGetCache {
+            $cache = @(dotnet nuget locals global-packages --list | Where-Object { $_ -match '^global-packages:' } |
+              ForEach-Object { ($_ -replace '^global-packages:\s*', '').Trim() })
+            if ($cache.Count -ne 1) { throw "dotnet nuget locals named $($cache.Count) global-packages folders." }
+            $cache[0]
           }
 
           # A single-file bundle's bytes and its manifest's header: the entry count and where
@@ -1043,9 +1052,10 @@ jobs:
 
           # The .NET runtime packs a single-file build was built from, each by name and
           # version, read from the libraries its bundled deps.json names. The bundler stores the
-          # deps.json uncompressed in every bundle. The deps.json also names each pack without
-          # a version, as a dependency, which is not read. The step stops where the bundle
-          # carries no deps.json, where it names no pack, and where it names two versions of one.
+          # deps.json uncompressed in every bundle. The deps.json also names each pack as a
+          # dependency, with its version beside the name; only the libraries key is read. The
+          # step stops where the bundle carries no deps.json, where it names no pack, and where
+          # it names two versions of one.
           function Read-RuntimePacks([string]$path) {
             $bundle = Read-BundleHeader $path
             if ($bundle.DepsSize -le 0 -or $bundle.DepsOffset + $bundle.DepsSize -gt $bundle.Data.Length) { throw "$path's bundle carries no deps.json." }
@@ -1120,9 +1130,7 @@ jobs:
         shell: pwsh
         run: |
           . (Join-Path $env:RUNNER_TEMP 'native.ps1')
-          $cache = @(dotnet nuget locals global-packages --list | Where-Object { $_ -match '^global-packages:' } |
-            ForEach-Object { ($_ -replace '^global-packages:\s*', '').Trim() })
-          if ($cache.Count -ne 1) { throw "dotnet nuget locals named $($cache.Count) global-packages folders." }
+          $cache = Get-NuGetCache
           $presentation = 'http://schemas.microsoft.com/winfx/2006/xaml/presentation'
           $wpfReads = 'System.Drawing.Common', 'System.Private.Xml', 'System.Private.Xml.Linq', 'System.Data.Common', 'System.Linq.Expressions'
           $exes = @(
@@ -1190,7 +1198,7 @@ jobs:
             "== $($exe.Label)"
             if (-not (Test-Path -LiteralPath $exe.Assembly)) { throw "$($exe.Assembly) is not there to read the $($exe.Label)'s references from." }
             $folders = foreach ($pack in @(Read-RuntimePacks $exe.Bundle)) {
-              $folder = Join-Path $cache[0] "$($pack.Name.ToLowerInvariant()).runtime.win-x64/$($pack.Version)/runtimes/win-x64/lib/net10.0"
+              $folder = Join-Path $cache "$($pack.Name.ToLowerInvariant()).runtime.win-x64/$($pack.Version)/runtimes/win-x64/lib/net10.0"
               if (-not (Test-Path -LiteralPath $folder)) { throw "NuGet's cache does not hold $folder, the $($pack.Name) runtime pack the $($exe.Label) was built from." }
               Write-Host "  built from the $($pack.Name) runtime pack $($pack.Version)"
               $folder
@@ -1298,7 +1306,8 @@ jobs:
           # assembly whose call makes the look, the kind of call ('import', one of the
           # assembly's own imports, or 'NativeLibrary.Load'), when the first look comes
           # ('before' any code of the build's own runs, or 'after'), and the names, each
-          # spelled as the assembly spells it. None of these is planted in those runs.
+          # spelled as the assembly spells it. A look one of these covers is not planted in
+          # those runs where it passes the first pass's check.
           $cli = 'publish/cli/installerclean-cli.exe'
           $portable = 'publish/self-contained/InstallerClean.exe'
           $bothCli = @('command line', 'command line, checking for updates')
@@ -1326,28 +1335,19 @@ jobs:
             [pscustomobject]@{ Exe = $portable; Runs = @('portable'); Places = @('extraction'); Assembly = 'PresentationCore'; Call = 'NativeLibrary.Load'; When = 'before'; Names = @('dwrite.dll') }
           )
 
-          # The imports or the string literals of one assembly, each spelled as the assembly
-          # spells it.
-          function Read-AssemblyNames([string]$path, [string]$call) {
+          # The string literals in one assembly's code, each spelled as the assembly spells it.
+          function Read-UserStrings([string]$path) {
             $stream = [System.IO.File]::OpenRead($path)
             try {
               $pe = [System.Reflection.PortableExecutable.PEReader]::new($stream)
               try {
                 $metadata = [System.Reflection.Metadata.PEReaderExtensions]::GetMetadataReader($pe)
-                $names = if ($call -eq 'import') {
-                  foreach ($handle in $metadata.MethodDefinitions) {
-                    $import = $metadata.GetMethodDefinition($handle).GetImport()
-                    if (-not $import.Module.IsNil) { $metadata.GetString($metadata.GetModuleReference($import.Module).Name) }
-                  }
-                }
-                else {
-                  $handle = [System.Reflection.Metadata.Ecma335.MetadataTokens]::UserStringHandle(1)
-                  while (-not $handle.IsNil) {
-                    $metadata.GetUserString($handle)
-                    $handle = [System.Reflection.Metadata.Ecma335.MetadataReaderExtensions]::GetNextHandle($metadata, $handle)
-                  }
-                }
-                @($names | Sort-Object -Unique -CaseSensitive)
+                $handle = [System.Reflection.Metadata.Ecma335.MetadataTokens]::UserStringHandle(1)
+                $strings = @(while (-not $handle.IsNil) {
+                  $metadata.GetUserString($handle)
+                  $handle = [System.Reflection.Metadata.Ecma335.MetadataReaderExtensions]::GetNextHandle($metadata, $handle)
+                })
+                @($strings | Sort-Object -Unique -CaseSensitive)
               }
               finally { $pe.Dispose() }
             }
@@ -1359,10 +1359,9 @@ jobs:
           # imports, and a 'NativeLibrary.Load' entry's among the string literals in its code,
           # spelled the same. An entry that cannot be read is dropped from the list, so the
           # looks it would cover are planted.
-          $cache = @(dotnet nuget locals global-packages --list | Where-Object { $_ -match '^global-packages:' } |
-            ForEach-Object { ($_ -replace '^global-packages:\s*', '').Trim() })
-          if ($cache.Count -ne 1) { throw "dotnet nuget locals named $($cache.Count) global-packages folders." }
+          $cache = Get-NuGetCache
           $packFolders = @{}
+          $assemblyPaths = @{}
           $assemblyNames = @{}
           $notPlanted = @(foreach ($entry in $notPlanted) {
             $runsOfExe = @($builds | Where-Object Exe -eq $entry.Exe | ForEach-Object Label)
@@ -1375,19 +1374,23 @@ jobs:
             if ($entry.When -cnotin 'before', 'after') { Fail "The libraries not planted for $($entry.Exe) say they are looked for '$($entry.When)', which is neither 'before' nor 'after'."; continue }
             if (-not $packFolders.ContainsKey($entry.Exe)) {
               $packFolders[$entry.Exe] = @(foreach ($pack in @(Read-RuntimePacks $entry.Exe)) {
-                $folder = Join-Path $cache[0] "$($pack.Name.ToLowerInvariant()).runtime.win-x64/$($pack.Version)"
+                $folder = Join-Path $cache "$($pack.Name.ToLowerInvariant()).runtime.win-x64/$($pack.Version)"
                 if (-not (Test-Path -LiteralPath $folder)) { throw "NuGet's cache does not hold $folder, the $($pack.Name) runtime pack $($entry.Exe) was built from." }
                 Write-Host "  $($entry.Exe) was built from the $($pack.Name) runtime pack $($pack.Version)"
                 $folder
               })
             }
-            $found = @($packFolders[$entry.Exe] | ForEach-Object { Get-ChildItem -LiteralPath $_ -Recurse -File -Filter "$($entry.Assembly).dll" })
+            $assemblyKey = "$($entry.Exe)|$($entry.Assembly)"
+            if (-not $assemblyPaths.ContainsKey($assemblyKey)) {
+              $assemblyPaths[$assemblyKey] = @($packFolders[$entry.Exe] | ForEach-Object { Get-ChildItem -LiteralPath $_ -Recurse -File -Filter "$($entry.Assembly).dll" } | ForEach-Object FullName)
+            }
+            $found = $assemblyPaths[$assemblyKey]
             if ($found.Count -ne 1) { Fail "The runtime packs $($entry.Exe) was built from hold $($found.Count) copies of $($entry.Assembly).dll, where they should hold one."; continue }
-            $key = "$($found[0].FullName)|$($entry.Call)"
+            $key = "$($found[0])|$($entry.Call)"
             if (-not $assemblyNames.ContainsKey($key)) {
-              $assemblyNames[$key] = @(Read-AssemblyNames $found[0].FullName $entry.Call)
-              if (-not $assemblyNames[$key]) { throw "Nothing was read from $($found[0].FullName) for the call $($entry.Call)." }
-              if ($entry.Call -eq 'import') { Write-Host "  $($found[0].FullName) imports: $($assemblyNames[$key] -join ', ')" }
+              $assemblyNames[$key] = if ($entry.Call -eq 'import') { @((Read-Imports $found[0]).Imports) } else { @(Read-UserStrings $found[0]) }
+              if (-not $assemblyNames[$key]) { throw "Nothing was read from $($found[0]) for the call $($entry.Call)." }
+              if ($entry.Call -eq 'import') { Write-Host "  $($found[0]) imports: $($assemblyNames[$key] -join ', ')" }
             }
             $what = if ($entry.Call -eq 'import') { 'among its imports' } else { 'among the string literals in its code' }
             $missing = @($entry.Names | Where-Object { $assemblyNames[$key] -cnotcontains $_ })
@@ -1396,13 +1399,6 @@ jobs:
             $entry
           })
 
-          # The entry covering a look at $name in $place in $run, or nothing. A file name
-          # matches as Windows matches one, whatever its case; the spelling is judged apart.
-          function Get-NotPlanted($run, [string]$place, [string]$name) {
-            @($notPlanted | Where-Object {
-              $_.Exe -eq $run.Build.Exe -and $run.Label -in $_.Runs -and $place -in $_.Places -and $name -in $_.Names
-            }) | Select-Object -First 1
-          }
           $listedSeen = @{}
 
           Start-Record 'first'
@@ -1500,7 +1496,10 @@ jobs:
             # exe, or in a folder it loaded its bundle's files from. It is judged by its first
             # look: a file put at that path would be taken there, so a later look at it adds
             # nothing. The extractor's working folder, which is gone by the end of the run, is
-            # never matched.
+            # never matched. Only the paths of the looks that pass are left unplanted, so a
+            # listed look this pass fails is planted in the second as any other.
+            $covered = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+            $unplaced = [System.Collections.Generic.List[string]]::new()
             foreach ($entry in @($notPlanted | Where-Object { $_.Exe -eq $run.Build.Exe -and $run.Label -in $_.Runs })) {
               foreach ($place in $entry.Places) {
                 foreach ($name in $entry.Names) {
@@ -1516,19 +1515,18 @@ jobs:
                   $first = $at[0]
                   $spelled = Split-Path $first.Path -Leaf
                   $line = "$name $where, first looked for at row $($first.Index), $(Get-When $first $read.Marker), with $($at.Count) rows at that name in all: $($first.Operation) $($first.Result) $($first.Path)"
-                  if ($spelled -cne $name) { Fail "$($run.Label) looked for $spelled $where at row $($first.Index), which $($entry.Assembly) spells $name." }
-                  elseif ($entry.When -eq 'after') { "  not planted: $line" }
-                  elseif (-not $read.Marker) { Fail "$($run.Label) is listed as looking for $name $where before its own code runs, and this pass saw no act of its own code to place row $($first.Index) before." }
-                  elseif ($first.Index -gt $read.Marker.Index) { Fail "$($run.Label) is listed as looking for $name $where before its own code runs, and this pass saw it first at row $($first.Index), after row $($read.Marker.Index), the first act of its own code." }
-                  else { "  not planted: $line" }
+                  if ($spelled -cne $name) { Fail "$($run.Label) looked for $spelled $where at row $($first.Index), which $($entry.Assembly) spells $name."; continue }
+                  if ($entry.When -eq 'before') {
+                    if (-not $read.Marker) { $unplaced.Add("$name $where"); continue }
+                    if ($first.Index -gt $read.Marker.Index) { Fail "$($run.Label) is listed as looking for $name $where before its own code runs, and this pass saw it first at row $($first.Index), after row $($read.Marker.Index), the first act of its own code."; continue }
+                  }
+                  "  not planted: $line"
+                  foreach ($look in $at) { $null = $covered.Add($(if ($place -eq 'beside') { "beside|$($look.Relative)" } else { "extraction|$($look.Path)" })) }
                 }
               }
             }
-            $plants = @($plants | Where-Object {
-              $leaf = Split-Path $_.Path -Leaf
-              $listed = if ($_.Place -eq 'beside') { $_.Path -eq $leaf } else { (Split-Path $_.Path) -in $extractionFolders }
-              -not ($listed -and (Get-NotPlanted $run $_.Place $leaf))
-            })
+            if ($unplaced.Count) { Fail "$($run.Label) showed no act of its own code, so these, listed as looked for before it runs, were not placed and are planted: $($unplaced -join '; ')." }
+            $plants = @($plants | Where-Object { -not $covered.Contains("$($_.Place)|$($_.Path)") })
 
             $alone = @($plants | Where-Object { $_.Place -eq 'beside' -and (Split-Path $_.Path -Leaf) -in $plantedAlone })
             $planned.Add([pscustomobject]@{
