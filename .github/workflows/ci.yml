@@ -1638,12 +1638,14 @@ jobs:
                   return None
               return runs[0]
 
-          def show(run, events, folder, name, before, after):
+          def show(run, events, unread, folder, name, before, after):
               print(f"== the look for {name} in {folder}")
+              if unread:
+                  print(f"  {unread} of process {run.pid}'s events could not be read and are left out")
               target = f"\\{folder}\\{name}".lower()
               at = [n for n, e in enumerate(events) if e.operation.name in LOOK and (e.path or "").lower().endswith(target)]
               if not at:
-                  print(f"  refused: process {run.pid} made no QueryOpen or CreateFile of {folder}\\{name}")
+                  print(f"  refused: none of the {len(events)} events read of process {run.pid} is a QueryOpen or CreateFile of {folder}\\{name}, and {unread} of its events could not be read")
                   return
               n = at[0]
               look = events[n]
@@ -1662,34 +1664,40 @@ jobs:
           with open(sys.argv[1], "rb") as f:
               try:
                   reader = PMLStreamReader(f, should_get_stacktrace=True, should_get_details=False)
-              except (NotImplementedError, PMLError) as error:
-                  print(f"refused: the reader does not take this record: {error}")
+              except Exception as error:
+                  print(f"refused: the reader does not take this record: {type(error).__name__}: {error}")
                   sys.exit(0)
               looks = [("first-command-line-checking-for-updates", "ole32.dll", 80, 20), ("first-command-line", "ntdll.dll", 20, 5)]
               runs = [find(reader.processes(), folder) for folder, _, _, _ in looks]
               # Each event starts with the index of its process in the record's process table, so
               # only the two runs' events are read in full. The table is the reader's own.
-              indexes = {i for i, p in reader._process_table.items() if any(p is run for run in runs)}
+              indexes = {i: id(p) for i, p in reader._process_table.items() if any(p is run for run in runs)}
               wanted = {id(run): [] for run in runs if run}
-              skipped = 0
+              unread = {id(run): 0 for run in runs if run}
+              unplaced = 0
               for offset in reader.events_offsets:
-                  f.seek(offset)
-                  if struct.unpack("<I", f.read(4))[0] not in indexes:
+                  try:
+                      f.seek(offset)
+                      index = struct.unpack("<I", f.read(4))[0]
+                  except Exception:
+                      unplaced += 1
+                      continue
+                  if index not in indexes:
                       continue
                   try:
                       event = reader.get_event_at_offset(offset)
-                  except (ValueError, KeyError, PMLError):
-                      skipped += 1
+                  except Exception:
+                      unread[indexes[index]] += 1
                       continue
                   if id(event.process) in wanted:
                       wanted[id(event.process)].append(event)
-              if skipped:
-                  print(f"  {skipped} of the two runs' events could not be read and are left out")
+              if unplaced:
+                  print(f"  {unplaced} events of the record could not be read far enough to say whose they are")
               for run, (folder, name, before, after) in zip(runs, looks):
                   if run:
-                      show(run, wanted[id(run)], folder, name, before, after)
+                      show(run, wanted[id(run)], unread[id(run)], folder, name, before, after)
           '@
-          & "$venv\Scripts\python.exe" -I $script $pml
+          & "$venv\Scripts\python.exe" -I -u $script $pml
           if ($LASTEXITCODE -ne 0) { "The record could not be read to the end." }
           exit 0
 
