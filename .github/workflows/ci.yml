@@ -965,6 +965,7 @@ jobs:
             $null = $reader.ReadUInt32()
             $count = $reader.ReadInt32()
             if ($major -ne 6) { throw "$path has a version $major bundle manifest, which this step does not read." }
+            if ($count -le 0) { throw "$path's bundle manifest counts $count entries." }
             $null = $reader.ReadString()
             # The deps.json and runtimeconfig.json offsets and sizes, then the flags.
             foreach ($field in 1..5) { $null = $reader.ReadInt64() }
@@ -1226,13 +1227,13 @@ jobs:
             }
             # Each exe writes to the crash log whatever fails as it starts, such as an
             # assembly on its list that will not load, so a build started with nothing
-            # planted writes nothing there.
+            # planted writes nothing there. The log is in the app's folder, or in the
+            # NoFaff folder earlier versions use where the app cannot move that one.
             $rows = $byProcess[[string]$run.Id]
-            for ($i = 0; $i -lt $rows.Count; $i++) {
-              if ($rows[$i].Operation -eq 'WriteFile' -and $rows[$i].Path -match '\\AppData\\Local\\InstallerClean\\crash\.log$') {
-                Fail "$($run.Label) wrote to $($rows[$i].Path), row $($i + 1), with nothing planted."
-              }
-            }
+            $writes = @(for ($i = 0; $i -lt $rows.Count; $i++) {
+              if ($rows[$i].Operation -eq 'WriteFile' -and $rows[$i].Path -match '\\AppData\\Local\\(NoFaff\\)?InstallerClean\\crash\.log$') { $i + 1 }
+            })
+            if ($writes) { Fail "$($run.Label) wrote to its crash log $($writes.Count) times with nothing planted, first at row $($writes[0]): $($rows[$writes[0] - 1].Path)." }
             foreach ($name in $plantedAlone) {
               $beside = @($read.Libraries | Where-Object { $_.Place -eq 'own' -and $_.Operation -ne 'Load Image' -and $_.Relative -eq $name })
               "  looked for $name beside itself: $(if ($beside) { "yes, from row $($beside[0].Index)" } else { 'no' })"
@@ -1298,13 +1299,15 @@ jobs:
           }
           ConvertTo-Json -InputObject @($planned) -Depth 5 | Set-Content (Join-Path $env:RUNNER_TEMP 'plants.json')
 
-          # Every build writes to this one crash log, so a copy taken now holds the first
-          # pass's entries alone. It goes into the artifact.
-          $crashLog = Join-Path $env:LOCALAPPDATA 'InstallerClean\crash.log'
-          if (Test-Path -LiteralPath $crashLog) {
+          # Every build writes to one crash log, so a copy taken now holds the first pass's
+          # entries alone. It goes into the artifact, from either folder the app can use.
+          foreach ($folder in 'InstallerClean', 'NoFaff\InstallerClean') {
+            $crashLog = Join-Path $env:LOCALAPPDATA "$folder\crash.log"
+            if (-not (Test-Path -LiteralPath $crashLog)) { continue }
             $kept = Join-Path $env:RUNNER_TEMP 'kept'
             New-Item -ItemType Directory -Force -Path $kept | Out-Null
-            Copy-Item -LiteralPath $crashLog -Destination (Join-Path $kept 'crash-after-first-pass.log')
+            $name = if ($folder -eq 'InstallerClean') { 'crash-after-first-pass.log' } else { 'nofaff-crash-after-first-pass.log' }
+            Copy-Item -LiteralPath $crashLog -Destination (Join-Path $kept $name)
             "  kept $crashLog as it stood after the first pass"
           }
 
@@ -1809,9 +1812,12 @@ jobs:
             Copy-Item -LiteralPath $trace.FullName -Destination $kept
             "  kept $($trace.FullName)"
           }
-          $crashLog = Join-Path $env:LOCALAPPDATA 'InstallerClean\crash.log'
-          if (Test-Path -LiteralPath $crashLog) { Copy-Item -LiteralPath $crashLog -Destination $kept; "  kept $crashLog" }
-          else { "  no $crashLog" }
+          foreach ($folder in 'InstallerClean', 'NoFaff\InstallerClean') {
+            $crashLog = Join-Path $env:LOCALAPPDATA "$folder\crash.log"
+            $name = if ($folder -eq 'InstallerClean') { 'crash.log' } else { 'nofaff-crash.log' }
+            if (Test-Path -LiteralPath $crashLog) { Copy-Item -LiteralPath $crashLog -Destination (Join-Path $kept $name); "  kept $crashLog" }
+            else { "  no $crashLog" }
+          }
 
       - name: Upload the Process Monitor rows and the host traces
         if: ${{ always() }}
