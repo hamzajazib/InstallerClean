@@ -183,8 +183,8 @@ public static class CrashLog
         }
         catch
         {
-            // Best-effort: the next write tries again, and the log goes on
-            // past MaxBytes until a move goes through.
+            // Best-effort: a log that cannot be moved aside takes the entry
+            // anyway, and the next write tries the move again.
         }
     }
 }

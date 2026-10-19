@@ -100,10 +100,9 @@ public static class SelfReplacement
     /// each loaded one names, until nothing new loads. Also looks up one string, which
     /// opens the display language's satellite, the set every line in that language shown
     /// after the rename is read from, and readies the crash log
-    /// (<see cref="CrashLog.Prepare"/>). The walk, the lookup and the readying are each
-    /// done on their own, and the failure of any one is written to crash.log and leaves the
-    /// next to run. Never throws; an assembly that will not load is written to crash.log
-    /// and the walk goes on.
+    /// (<see cref="CrashLog.Prepare"/>). Never throws: the walk, the lookup and the
+    /// readying are each done on their own, and so is each assembly the walk loads or
+    /// reads, so a failure in any one is written to crash.log and the rest go on.
     /// </summary>
     /// <remarks>
     /// An assembly's code reaches other assemblies only through its AssemblyRef table,
@@ -128,56 +127,19 @@ public static class SelfReplacement
         WritingFailureToCrashLog(CrashLog.Prepare);
     }
 
-    private static void WritingFailureToCrashLog(Action step)
-    {
-        try
+    private static void WritingFailureToCrashLog(Action step) =>
+        WritingFailureToCrashLog<object>(() =>
         {
             step();
-        }
-        catch (Exception ex)
-        {
-            CrashLog.TryWrite(ex);
-        }
-    }
+            return null;
+        });
 
-    private static void LoadReachable(IEnumerable<Assembly> roots)
-    {
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var pending = new Queue<Assembly>();
-        void Add(Assembly assembly)
-        {
-            if (assembly.GetName().Name is { } name && seen.Add(name)) pending.Enqueue(assembly);
-        }
-
-        foreach (var root in roots) Add(root);
-        while (pending.TryDequeue(out var assembly))
-        {
-            foreach (var reference in assembly.GetReferencedAssemblies())
-            {
-                if (reference.Name is null || seen.Contains(reference.Name)) continue;
-                if (TryLoad(reference) is { } loaded) Add(loaded);
-                else seen.Add(reference.Name);
-            }
-
-            Type?[] forwarded;
-            try
-            {
-                forwarded = assembly.GetForwardedTypes();
-            }
-            catch (ReflectionTypeLoadException ex)
-            {
-                forwarded = ex.Types;
-            }
-            foreach (var type in forwarded)
-                if (type is not null) Add(type.Assembly);
-        }
-    }
-
-    private static Assembly? TryLoad(AssemblyName name)
+    /// <summary>The answer of <paramref name="step"/>, or null where it throws, which is written to crash.log.</summary>
+    private static T? WritingFailureToCrashLog<T>(Func<T?> step) where T : class
     {
         try
         {
-            return Assembly.Load(name);
+            return step();
         }
         catch (Exception ex)
         {
@@ -185,6 +147,44 @@ public static class SelfReplacement
             return null;
         }
     }
+
+    private static void LoadReachable(IEnumerable<Assembly> roots)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var pending = new Queue<Assembly>();
+        void Add(Assembly assembly) => WritingFailureToCrashLog(() =>
+        {
+            if (assembly.GetName().Name is { } name && seen.Add(name)) pending.Enqueue(assembly);
+        });
+
+        foreach (var root in roots) Add(root);
+        while (pending.TryDequeue(out var assembly))
+        {
+            WritingFailureToCrashLog(() =>
+            {
+                foreach (var reference in assembly.GetReferencedAssemblies())
+                {
+                    if (reference.Name is null || seen.Contains(reference.Name)) continue;
+                    if (TryLoad(reference) is { } loaded) Add(loaded);
+                    else seen.Add(reference.Name);
+                }
+
+                Type?[] forwarded;
+                try
+                {
+                    forwarded = assembly.GetForwardedTypes();
+                }
+                catch (ReflectionTypeLoadException ex)
+                {
+                    forwarded = ex.Types;
+                }
+                foreach (var type in forwarded)
+                    if (type is not null) Add(type.Assembly);
+            });
+        }
+    }
+
+    private static Assembly? TryLoad(AssemblyName name) => WritingFailureToCrashLog(() => Assembly.Load(name));
 
     /// <summary>
     /// Opens <paramref name="path"/> for reading, sharing reading and writing but not
