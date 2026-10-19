@@ -110,7 +110,14 @@ internal static unsafe class SystemLibraries
     }
 
     /// <summary>The library <paramref name="libraryName"/> names, loaded from System32.</summary>
-    internal static IntPtr Resolve(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
+    internal static IntPtr Resolve(string libraryName, Assembly assembly, DllImportSearchPath? searchPath) =>
+        LoadLibraryFromSystem32(libraryName);
+
+    /// <summary>
+    /// The library <paramref name="libraryName"/> names, loaded from System32 with
+    /// LOAD_LIBRARY_SEARCH_SYSTEM32, or a <see cref="DllNotFoundException"/> where it cannot be.
+    /// </summary>
+    internal static IntPtr LoadLibraryFromSystem32(string libraryName)
     {
         var loadLibraryEx = s_loadLibraryEx;
         if (loadLibraryEx == null)

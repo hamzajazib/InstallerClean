@@ -548,7 +548,9 @@ jobs:
   # elevated, and a portable or slim copy is often run from a Downloads folder, so a
   # library it would load from its own folder is one a file dropped there would
   # replace. Each build is published with release.yml's flags and run in two passes,
-  # with Process Monitor recording every file the build's process opens or probes.
+  # with Process Monitor recording every file the build's process opens or probes. The
+  # command line runs twice in each pass: once to scan with /noupdate, and once to scan
+  # after checking for updates, which reaches its network code.
   #
   # The first pass runs each build from an empty folder of its own and notes every
   # .dll it looked for there, and every one it looked for under %TEMP%\.net, where a
@@ -575,7 +577,17 @@ jobs:
   # for its scan, and each window has to have loaded dwmapi.dll and WPF's
   # wpfgfx_cor3.dll, which it does only once it creates a window, so a window that
   # could not open on the runner fails the job. A run with an apphost library planted
-  # alone is the exception and is judged without its must-loads.
+  # alone is the exception and is judged without its must-loads. The command line's run
+  # that checks for updates has to have loaded winhttp.dll and had an answer from
+  # github.com, and fails where the Application log shows it updated itself or found a
+  # newer release it did not install.
+  #
+  # Every Windows library a .NET or WPF assembly imports is loaded from System32 by the
+  # resolver in FrameworkLibraries.cs, which hands the libraries on its OwnLibraries
+  # list back to the runtime. The job fails where the portable's bundle extracts a
+  # library that list does not name, where a framework assembly in a folder the slim's
+  # runtime searches imports a native library there that the list does not name, and
+  # where the list names one those folders do not carry.
   #
   # The slim's exe finds .NET only where .NET is installed, so the job fails where the
   # first pass sees the slim look for hostfxr.dll or hostpolicy.dll in its own folder.
@@ -709,6 +721,7 @@ jobs:
 
           $builds = @(
             [pscustomobject]@{ Label = 'command line'; Exe = 'publish/cli/installerclean-cli.exe'; Arguments = @('/s', '/noupdate'); Wait = 60; MustLoad = @('msi.dll') },
+            [pscustomobject]@{ Label = 'command line, checking for updates'; Exe = 'publish/cli/installerclean-cli.exe'; Arguments = @('/s'); Wait = 60; MustLoad = @('msi.dll', 'winhttp.dll'); UpdateCheck = $true },
             [pscustomobject]@{ Label = 'portable'; Exe = 'publish/self-contained/InstallerClean.exe'; Arguments = @(); Wait = 20; MustLoad = @('dwmapi.dll', 'wpfgfx_cor3.dll') },
             [pscustomobject]@{ Label = 'slim'; Exe = 'publish/framework-dependent/InstallerClean.exe'; Arguments = @(); Wait = 20; MustLoad = @('dwmapi.dll', 'wpfgfx_cor3.dll') }
           )
@@ -873,6 +886,57 @@ jobs:
             }
           }
 
+          # A run that checks for updates reaches github.com, which the update check alone
+          # contacts, and finds no newer release while the build's version is at or above the
+          # latest. Process Monitor names the far end of a connection by its host name where
+          # it can, and by its address otherwise.
+          function Test-UpdateCheck($run, $byProcess) {
+            $github = @([System.Net.Dns]::GetHostAddresses('github.com') | ForEach-Object IPAddressToString)
+            $answers = @($byProcess[[string]$run.Id] | Where-Object {
+              $_.Operation -eq 'TCP Receive' -and $_.Path -match '-> (.+):(https|443)$' -and
+              ($Matches[1] -match '(^|\.)github\.com$' -or $Matches[1] -in $github)
+            })
+            if ($answers) { "  $($run.Label): the update check had an answer from $(($answers[0].Path -split ' -> ')[-1]) at $($answers[0].'Time of Day')" }
+            else { Fail "$($run.Label): the update check got no answer from GitHub, so the run's network libraries were not judged." }
+            $events = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'InstallerClean'; Id = 3005, 3006; StartTime = $run.Started } -ErrorAction SilentlyContinue)
+            foreach ($event in $events) {
+              if ($event.Id -eq 3005) { Fail "$($run.Label) updated itself to a newer release, Event ID 3005 at $($event.TimeCreated), so what ran was not this build." }
+              else { Fail "$($run.Label) found a newer release and the update failed or was not tried, Event ID 3006 at $($event.TimeCreated)." }
+            }
+          }
+
+          # The libraries FrameworkLibraries hands back to the runtime, read from its source,
+          # each as the resolver compares it: without ".dll", in lower case.
+          function Get-OwnLibraries {
+            $source = Get-Content -Raw 'src/InstallerClean.Core/Interop/Native/FrameworkLibraries.cs'
+            if ($source -notmatch '(?s)OwnLibraries\s*=\s*\[(.*?)\];') { throw "FrameworkLibraries.cs has no OwnLibraries list to read." }
+            $names = @([regex]::Matches($Matches[1], '"([^"]+)"') | ForEach-Object { Get-BaseName $_.Groups[1].Value })
+            if (-not $names) { throw "FrameworkLibraries.cs's OwnLibraries list read as empty." }
+            $names
+          }
+
+          function Get-BaseName([string]$name) { ($name -replace '\.dll$', '').ToLowerInvariant() }
+
+          # Whether a file carries .NET metadata, and every module its methods import from,
+          # by the name the import spells.
+          function Read-Imports([string]$path) {
+            $stream = [IO.File]::OpenRead($path)
+            try {
+              $pe = [System.Reflection.PortableExecutable.PEReader]::new($stream)
+              try {
+                if (-not $pe.HasMetadata) { return [pscustomobject]@{ Managed = $false; Imports = @() } }
+                $md = [System.Reflection.Metadata.PEReaderExtensions]::GetMetadataReader($pe)
+                $imports = @($md.MethodDefinitions | ForEach-Object {
+                  $import = $md.GetMethodDefinition($_).GetImport()
+                  if (-not $import.Module.IsNil) { $md.GetString($md.GetModuleReference($import.Module).Name) }
+                } | Sort-Object -Unique)
+                [pscustomobject]@{ Managed = $true; Imports = $imports }
+              }
+              finally { $pe.Dispose() }
+            }
+            finally { $stream.Dispose() }
+          }
+
           # The folder a run's copy of its build is started from, named for the pass and the run.
           function Get-RunFolder([string]$pass, [string]$label) {
             Join-Path $env:RUNNER_TEMP ("$pass-" + ($label -replace '[^A-Za-z0-9]+', '-'))
@@ -886,6 +950,156 @@ jobs:
             exit 1
           }
           '@
+
+      # Each exe loads, before its Main, every assembly it can load that imports a Windows
+      # library, so each has its resolver before any thread of the app's can use it. The
+      # list is LibrarySearch.ImportingAssemblies in each exe's project, and this step
+      # recomputes it from the runtime packs the build's bundle was built from: the
+      # assemblies the exe references, directly or through others, that import a library
+      # not on FrameworkLibraries.OwnLibraries, less those left for their own load to
+      # register, plus those the app loads by name. It fails on any difference, naming it.
+      #
+      # Left for their own load to register: System.Drawing.Common, whose being loaded WPF
+      # reads (WindowsBase's MS.Internal.AssemblyHelper) to decide how it handles
+      # System.Drawing types; and the ribbon and Windows Forms hosting assemblies, which
+      # add their types to the XAML namespace the window's markup uses. WPF reads four more
+      # assemblies the same way, and the step fails where one of them comes to import a
+      # Windows library, so whether to load it is decided rather than inherited. It also
+      # fails where an assembly on a list declares types into that XAML namespace, other
+      # than WPF's own three, which every window loads before its markup is read.
+      - name: Check each exe's list of assemblies it loads first
+        shell: pwsh
+        run: |
+          . (Join-Path $env:RUNNER_TEMP 'native.ps1')
+          $cache = @(dotnet nuget locals global-packages --list | Where-Object { $_ -match '^global-packages:' } |
+            ForEach-Object { ($_ -replace '^global-packages:\s*', '').Trim() })
+          if ($cache.Count -ne 1) { throw "dotnet nuget locals named $($cache.Count) global-packages folders." }
+          $presentation = 'http://schemas.microsoft.com/winfx/2006/xaml/presentation'
+          $wpfReads = 'System.Drawing.Common', 'System.Private.Xml', 'System.Private.Xml.Linq', 'System.Data.Common', 'System.Linq.Expressions'
+          $exes = @(
+            [pscustomobject]@{ Label = 'window'; Bundle = 'publish/self-contained/InstallerClean.exe'; Assembly = 'src/InstallerClean/bin/Release/net10.0-windows/win-x64/InstallerClean.dll'
+              Source = 'src/InstallerClean/LibrarySearch.cs'; LeftToTheirLoad = @('System.Drawing.Common'); ByName = @('UIAutomationClient', 'UIAutomationClientSideProviders') }
+            [pscustomobject]@{ Label = 'command line'; Bundle = 'publish/cli/installerclean-cli.exe'; Assembly = 'src/InstallerClean.Cli/bin/Release/net10.0/win-x64/installerclean-cli.dll'
+              Source = 'src/InstallerClean.Cli/LibrarySearch.cs'; LeftToTheirLoad = @()
+              ByName = @('Microsoft.VisualBasic.Core', 'System.Formats.Tar', 'System.IO.Pipes', 'System.Net.HttpListener', 'System.Net.Ping', 'System.Text.Encoding.CodePages', 'System.Transactions.Local') }
+          )
+          $own = @(Get-OwnLibraries)
+
+          # The XAML namespaces an assembly declares its types into.
+          function Read-XmlnsDefinitions([string]$path) {
+            $stream = [IO.File]::OpenRead($path)
+            try {
+              $md = [System.Reflection.Metadata.PEReaderExtensions]::GetMetadataReader([System.Reflection.PortableExecutable.PEReader]::new($stream))
+              foreach ($handle in $md.GetAssemblyDefinition().GetCustomAttributes()) {
+                $attribute = $md.GetCustomAttribute($handle)
+                $type = switch ($attribute.Constructor.Kind) {
+                  'MemberReference' {
+                    $parent = $md.GetMemberReference([System.Reflection.Metadata.MemberReferenceHandle]$attribute.Constructor).Parent
+                    if ($parent.Kind -eq 'TypeReference') { $md.GetString($md.GetTypeReference([System.Reflection.Metadata.TypeReferenceHandle]$parent).Name) }
+                  }
+                  'MethodDefinition' {
+                    $md.GetString($md.GetTypeDefinition($md.GetMethodDefinition([System.Reflection.Metadata.MethodDefinitionHandle]$attribute.Constructor).GetDeclaringType()).Name)
+                  }
+                }
+                if ($type -eq 'XmlnsDefinitionAttribute') {
+                  $blob = $md.GetBlobReader($attribute.Value)
+                  $null = $blob.ReadUInt16()
+                  $blob.ReadSerializedString()
+                }
+              }
+            }
+            finally { $stream.Dispose() }
+          }
+
+          foreach ($exe in $exes) {
+            "== $($exe.Label)"
+            if (-not (Test-Path -LiteralPath $exe.Assembly)) { throw "$($exe.Assembly) is not there to read the $($exe.Label)'s references from." }
+            $bytes = [System.Text.Encoding]::Latin1.GetString([IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $exe.Bundle).Path))
+            $named = @([regex]::Matches($bytes, '"runtimepack\.([A-Za-z.]+)\.Runtime\.win-x64/([0-9][^"]*)"') | ForEach-Object { "$($_.Groups[1].Value)/$($_.Groups[2].Value)" } | Sort-Object -Unique)
+            if (-not $named) { throw "The $($exe.Label)'s bundle names no .NET runtime pack." }
+            $folders = foreach ($group in ($named | Group-Object { $_.Split('/')[0] })) {
+              if ($group.Count -ne 1) { throw "The $($exe.Label)'s bundle names $($group.Group -join ', '), where it should name one version of that runtime pack." }
+              $name, $version = $group.Group[0].Split('/')
+              $folder = Join-Path $cache[0] "$($name.ToLowerInvariant()).runtime.win-x64/$version/runtimes/win-x64/lib/net10.0"
+              if (-not (Test-Path -LiteralPath $folder)) { throw "NuGet's cache does not hold $folder, the $name runtime pack the $($exe.Label) was built from." }
+              Write-Host "  built from the $name runtime pack $version"
+              $folder
+            }
+            $folders = @($folders) + (Split-Path $exe.Assembly)
+            # Where two packs carry an assembly of one name, as the .NET pack carries small
+            # stand-ins for WindowsBase and Microsoft.VisualBasic, the build takes the one of
+            # higher version, and so does this.
+            $index = @{}
+            $versions = @{}
+            foreach ($folder in $folders) {
+              foreach ($file in (Get-ChildItem -LiteralPath $folder -Filter '*.dll' -File)) {
+                $version = try { [Reflection.AssemblyName]::GetAssemblyName($file.FullName).Version } catch [BadImageFormatException] { continue }
+                if (-not $index.ContainsKey($file.BaseName) -or $version -gt $versions[$file.BaseName]) {
+                  $index[$file.BaseName] = $file.FullName
+                  $versions[$file.BaseName] = $version
+                }
+              }
+            }
+
+            # The assemblies the exe references, directly or through others, and those of
+            # them that import a library not on OwnLibraries.
+            $root = [IO.Path]::GetFileNameWithoutExtension($exe.Assembly)
+            $index[$root] = (Resolve-Path -LiteralPath $exe.Assembly).Path
+            $seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+            $pending = [System.Collections.Generic.Queue[string]]::new()
+            $pending.Enqueue($root)
+            $importing = [System.Collections.Generic.SortedSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+            $absent = [System.Collections.Generic.List[string]]::new()
+            while ($pending.Count) {
+              $name = $pending.Dequeue()
+              if (-not $seen.Add($name)) { continue }
+              if (-not $index.ContainsKey($name)) { $absent.Add($name); continue }
+              $stream = [IO.File]::OpenRead($index[$name])
+              try {
+                $md = [System.Reflection.Metadata.PEReaderExtensions]::GetMetadataReader([System.Reflection.PortableExecutable.PEReader]::new($stream))
+                foreach ($handle in $md.AssemblyReferences) { $pending.Enqueue($md.GetString($md.GetAssemblyReference($handle).Name)) }
+              }
+              finally { $stream.Dispose() }
+              if ($name -in $root, 'System.Private.CoreLib', 'InstallerClean.Core') { continue }
+              $windows = @((Read-Imports $index[$name]).Imports | Where-Object { (Get-BaseName $_) -notin $own })
+              if ($windows) { $null = $importing.Add($name) }
+            }
+            if ($importing.Count -eq 0) { throw "No assembly the $($exe.Label) references imports a Windows library, so the walk read nothing." }
+            "  references $($seen.Count) assemblies; the build carries none of: $($absent -join ', ')"
+
+            foreach ($name in $exe.LeftToTheirLoad) {
+              if (-not $importing.Contains($name)) { Fail "The $($exe.Label) leaves $name for its own load to register, and no assembly it references that imports a Windows library is called that." }
+            }
+            foreach ($name in $wpfReads) {
+              if ($importing.Contains($name) -and $name -notin $exe.LeftToTheirLoad) {
+                Fail "$name, whose being loaded WPF reads, now imports a Windows library and is referenced by the $($exe.Label): decide whether it is loaded first or left for its own load to register."
+              }
+            }
+            $byName = [System.Collections.Generic.List[string]]::new()
+            foreach ($name in $exe.ByName) {
+              if ($seen.Contains($name)) { Fail "The $($exe.Label) names $name as loaded by name, and it is among the assemblies it references." }
+              elseif (-not $index.ContainsKey($name)) { Fail "The $($exe.Label) names $name as loaded by name, and its runtime packs do not carry it." }
+              elseif (-not @((Read-Imports $index[$name]).Imports | Where-Object { (Get-BaseName $_) -notin $own })) { Fail "The $($exe.Label) names $name as loaded by name, and it imports no Windows library." }
+              else { $byName.Add($name) }
+            }
+
+            $expected = [System.Collections.Generic.SortedSet[string]]::new([string[]](@($importing | Where-Object { $_ -notin $exe.LeftToTheirLoad }) + @($byName)), [StringComparer]::OrdinalIgnoreCase)
+            $source = Get-Content -Raw $exe.Source
+            if ($source -notmatch '(?s)ImportingAssemblies\s*=\s*\[(.*?)\];') { throw "$($exe.Source) has no ImportingAssemblies list to read." }
+            $listed = [System.Collections.Generic.SortedSet[string]]::new([string[]]@([regex]::Matches($Matches[1], '"([^"]+)"') | ForEach-Object { $_.Groups[1].Value }), [StringComparer]::OrdinalIgnoreCase)
+            if ($listed.Count -eq 0) { throw "$($exe.Source)'s ImportingAssemblies list read as empty." }
+            "  $($listed.Count) listed, $($expected.Count) computed"
+            foreach ($name in $expected) { if (-not $listed.Contains($name)) { Fail "The $($exe.Label) can load $name, which imports a Windows library, and $($exe.Source) does not list it." } }
+            foreach ($name in $listed) { if (-not $expected.Contains($name)) { Fail "$($exe.Source) lists $name, which is not an assembly the $($exe.Label) can load that imports a Windows library." } }
+            foreach ($name in $listed) {
+              if ($name -in 'PresentationCore', 'PresentationFramework', 'WindowsBase' -or -not $index.ContainsKey($name)) { continue }
+              if (@(Read-XmlnsDefinitions $index[$name]) -contains $presentation) {
+                Fail "$($exe.Source) lists $name, which declares types into the XAML namespace the window's markup uses, so loading it first changes how that markup is read."
+              }
+            }
+          }
+
+          Exit-IfFailed
 
       - name: First pass, with nothing planted
         shell: pwsh
@@ -903,8 +1117,9 @@ jobs:
             $folder = Get-RunFolder 'first' $build.Label
             New-Item -ItemType Directory -Force -Path $folder | Out-Null
             Copy-Item $build.Exe $folder
+            $started = Get-Date
             $id = Invoke-Build $build $build.Label $folder
-            [pscustomobject]@{ Label = $build.Label; Build = $build; Folder = $folder; Exe = (Split-Path $build.Exe -Leaf); Id = $id }
+            [pscustomobject]@{ Label = $build.Label; Build = $build; Folder = $folder; Exe = (Split-Path $build.Exe -Leaf); Id = $id; Started = $started }
           }
           $byProcess = Read-Record (Stop-Record 'first') $runs
 
@@ -913,6 +1128,7 @@ jobs:
             $read = Read-Run $run $byProcess
             if (-not $read) { continue }
             Test-MustLoad $run $read.Loads
+            if ($run.Build.UpdateCheck) { Test-UpdateCheck $run $byProcess }
             foreach ($name in $plantedAlone) {
               $beside = @($read.Libraries | Where-Object { $_.Place -eq 'own' -and $_.Operation -ne 'Load Image' -and $_.Relative -eq $name })
               "  looked for $name beside itself: $(if ($beside) { "yes, from row $($beside[0].Index)" } else { 'no' })"
@@ -933,6 +1149,14 @@ jobs:
               Fail "The portable loaded nothing from its extraction folder, so that folder went unchecked."
             }
             $bundleFiles = @(foreach ($folder in $extractionFolders) { Get-ChildItem -LiteralPath $folder -File | ForEach-Object FullName })
+            # A library the bundle extracts is one a framework assembly may import, and the
+            # resolver hands only those in OwnLibraries back to the runtime.
+            $own = @(Get-OwnLibraries)
+            foreach ($file in $bundleFiles) {
+              if ((Get-BaseName (Split-Path $file -Leaf)) -notin $own) {
+                Fail "$($run.Label)'s bundle extracted $file, which FrameworkLibraries.OwnLibraries does not name, so an import of it is sent to System32."
+              }
+            }
 
             # A plant goes at the path that was looked at. A look under %TEMP%\.net in a
             # folder that no longer exists once the run ends, the one the bundle writes
@@ -997,9 +1221,10 @@ jobs:
               Copy-Item -LiteralPath $plant.Source -Destination $path
               $placed.Add([pscustomobject]@{ Path = $path; Hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash })
             }
+            $started = Get-Date
             $id = Invoke-Build $build $p.Label $folder
             [pscustomobject]@{
-              Label = $p.Label; Build = $build; Folder = $folder; Exe = (Split-Path $build.Exe -Leaf); Id = $id
+              Label = $p.Label; Build = $build; Folder = $folder; Exe = (Split-Path $build.Exe -Leaf); Id = $id; Started = $started
               Placed = $placed; BundleFiles = @($p.BundleFiles | Where-Object { $_ }); JudgeOnLoadAlone = $p.JudgeOnLoadAlone
             }
           }
@@ -1038,7 +1263,10 @@ jobs:
             if ($run.JudgeOnLoadAlone) {
               "  judged without its must-loads: a build that takes a planted apphost library cannot start, so $($run.Label) is not expected to load $($run.Build.MustLoad -join ' or '). DOTNET_ROOT is $env:DOTNET_ROOT."
             }
-            else { Test-MustLoad $run $read.Loads }
+            else {
+              Test-MustLoad $run $read.Loads
+              if ($run.Build.UpdateCheck) { Test-UpdateCheck $run $byProcess }
+            }
           }
 
           Exit-IfFailed
@@ -1114,6 +1342,9 @@ jobs:
           # The trace lines printed for every build the step starts.
           $shown = '\.NET root search location options|registry value in|Found registered install location|as runtime location|Resolved fxr|Property NATIVE_DLL_SEARCH_DIRECTORIES'
           foreach ($build in $builds) {
+            # The trace shows how a build's host starts, which a second run of the same exe
+            # repeats.
+            if ($build.UpdateCheck) { continue }
             $folder = Get-RunFolder 'trace' $build.Label
             New-Item -ItemType Directory -Force -Path $folder | Out-Null
             Copy-Item $build.Exe $folder
@@ -1141,6 +1372,36 @@ jobs:
               foreach ($path in $fxr) {
                 if ($path.StartsWith($installedFxr, 'OrdinalIgnoreCase')) { "  the slim loaded $path, under $installedFxr" }
                 else { Fail "The slim loaded $path, which is not under $installedFxr, with a hostfxr.dll planted in $folder and DOTNET_ROOT naming $decoy." }
+              }
+
+              # The native libraries in the folders the slim's runtime searches are the ones
+              # a framework assembly there can import from beside it. Each one imported must
+              # be in FrameworkLibraries.OwnLibraries, or the resolver sends it to System32,
+              # and each one OwnLibraries names must be there.
+              $searched = @($lines | ForEach-Object { if ($_ -match 'Property NATIVE_DLL_SEARCH_DIRECTORIES = (.*)$') { $Matches[1] -split ';' } } |
+                Where-Object { $_ } | Sort-Object -Unique)
+              $natives = @{}
+              $imported = @{}
+              foreach ($file in @(if ($searched) { Get-ChildItem -LiteralPath $searched -Filter '*.dll' -File })) {
+                $read = Read-Imports $file.FullName
+                if (-not $read.Managed) { $natives[(Get-BaseName $file.Name)] = $file.FullName }
+                elseif ($file.BaseName -ne 'System.Private.CoreLib') {
+                  foreach ($name in $read.Imports) { $imported[(Get-BaseName $name)] = $file.Name }
+                }
+              }
+              $own = @(Get-OwnLibraries)
+              if (-not $natives.Count -or -not $imported.Count) {
+                Fail "The slim's runtime folders ($($searched -join ', ')) gave no native library or no import to compare with FrameworkLibraries.OwnLibraries."
+              }
+              else {
+                "  native libraries in the slim's runtime folders: $(($natives.Keys | Sort-Object) -join ', ')"
+                foreach ($name in ($natives.Keys | Where-Object { $imported.ContainsKey($_) } | Sort-Object)) {
+                  if ($name -in $own) { "  $name, imported by $($imported[$name]), is in OwnLibraries" }
+                  else { Fail "$($natives[$name]) is imported by $($imported[$name]) and FrameworkLibraries.OwnLibraries does not name it, so the resolver sends it to System32." }
+                }
+                foreach ($name in $own) {
+                  if (-not $natives.ContainsKey($name)) { Fail "FrameworkLibraries.OwnLibraries names $name, which no folder the slim's runtime searches carries." }
+                }
               }
             }
           }

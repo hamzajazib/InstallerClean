@@ -55,4 +55,24 @@ public class SystemLibrariesTests
         Assert.Throws<DllNotFoundException>(() =>
             SystemLibraries.Resolve("installerclean-no-such-library.dll", typeof(SystemLibraries).Assembly, null));
     }
+
+    // An API set name loads the library that implements it, which is the module checked.
+    [Theory]
+    [InlineData("uxtheme.dll")]
+    [InlineData("api-ms-win-core-winrt-l1-1-0.dll")]
+    public void A_Windows_library_a_framework_assembly_imports_is_loaded_from_System32(string name)
+    {
+        var handle = FrameworkLibraries.Resolve(name, typeof(Uri).Assembly, null);
+
+        Assert.NotEqual(IntPtr.Zero, handle);
+        var system32 = Environment.GetFolderPath(Environment.SpecialFolder.System);
+        var module = Process.GetCurrentProcess().Modules.Cast<ProcessModule>().Single(m => m.BaseAddress == handle);
+        Assert.Equal(system32, Path.GetDirectoryName(module.FileName), StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void A_library_the_app_carries_is_left_to_the_runtime_by_the_real_resolver()
+    {
+        Assert.Equal(IntPtr.Zero, FrameworkLibraries.Resolve("wpfgfx_cor3.dll", typeof(Uri).Assembly, null));
+    }
 }
