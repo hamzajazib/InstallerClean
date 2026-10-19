@@ -114,15 +114,24 @@ public static class SelfReplacement
     /// </remarks>
     public static void PrepareToMoveAside(params Assembly[] moreRoots)
     {
-        try
+        // Each step on its own, so one that throws leaves the others done.
+        WritingFailureToCrashLog(() =>
         {
             var roots = new List<Assembly> { typeof(SelfReplacement).Assembly, typeof(Process).Assembly };
             roots.AddRange(moreRoots);
             if (TryLoad(new AssemblyName("System.Diagnostics.StackTrace")) is { } stackTrace)
                 roots.Add(stackTrace);
             LoadReachable(roots);
-            _ = Strings.UpdateNotice_InstallFailed;
-            CrashLog.Prepare();
+        });
+        WritingFailureToCrashLog(() => _ = Strings.UpdateNotice_InstallFailed);
+        WritingFailureToCrashLog(CrashLog.Prepare);
+    }
+
+    private static void WritingFailureToCrashLog(Action step)
+    {
+        try
+        {
+            step();
         }
         catch (Exception ex)
         {

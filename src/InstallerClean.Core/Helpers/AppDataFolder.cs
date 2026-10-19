@@ -28,7 +28,7 @@ internal static class AppDataFolder
 
     // Twice CrashLog's rotation size. The log rotates before a write once it has reached
     // that size, so it passes it by no more than its last entry.
-    private const long MaxMergedLogBytes = 1024 * 1024;
+    private const long MaxMergedLogBytes = 2 * CrashLog.MaxBytes;
 
     private static readonly Lazy<Settled> First = new(
         () => Settle(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)));

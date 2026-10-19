@@ -11,10 +11,14 @@ namespace InstallerClean.Helpers;
 /// </summary>
 public static class CrashLog
 {
-    private const long MaxBytes = 512 * 1024;
+    /// <summary>The size at which a write first moves the log aside to its archive.</summary>
+    internal const long MaxBytes = 512 * 1024;
 
     /// <summary>The log's file name, in the folder <see cref="LogPath"/> names.</summary>
     internal const string FileName = "crash.log";
+
+    /// <summary>What the log's path takes on as it is moved aside to its archive.</summary>
+    internal const string ArchiveSuffix = ".old";
 
     // The header Prepare built, which every write after it uses, so no write after
     // Prepare looks a string up. A write before Prepare builds its own and keeps none.
@@ -72,7 +76,7 @@ public static class CrashLog
     }
 
     /// <summary>
-    /// Where the log lives, or an empty string where the folder cannot be worked out,
+    /// Where the log lives, or an empty string where working the folder out throws,
     /// for the one caller that needs to recognise the path inside a sentence without
     /// writing anything: the drawing layer gives it its break opportunities, and a
     /// hardcoded spelling would match nothing on a machine whose profile sits elsewhere.
@@ -107,7 +111,7 @@ public static class CrashLog
             var folder = LogFolder;
             path = Path.Combine(folder, FileName);
             Directory.CreateDirectory(folder);
-            RotateIfNeeded(path, path + ".old");
+            RotateIfNeeded(path, path + ArchiveSuffix);
 
             // Append-only handle, so the write lands at the end of the file as
             // one atomic step. Two writers really do collide here: unhandled

@@ -66,7 +66,7 @@ internal static class TestCrashLog
     /// there is neither. Read whole, so a test comparing it before and after a write sees
     /// the entry even where the write moved a full log aside.
     /// </summary>
-    internal static string Text() => ReadIfThere(CrashLog.LogPath + ".old") + ReadIfThere(CrashLog.LogPath);
+    internal static string Text() => ReadIfThere(CrashLog.LogPath + CrashLog.ArchiveSuffix) + ReadIfThere(CrashLog.LogPath);
 
     private static string ReadIfThere(string path) => File.Exists(path) ? File.ReadAllText(path) : string.Empty;
 
