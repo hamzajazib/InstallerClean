@@ -1286,7 +1286,8 @@ jobs:
             git archive --format=zip -o "$tree.zip" HEAD
             if ($LASTEXITCODE -ne 0) { throw "git archive failed for the $name with start-up hooks allowed." }
             Expand-Archive -Path "$tree.zip" -DestinationPath $tree -Force
-            dotnet publish (Join-Path $tree $project) -c Release -r win-x64 -p:RestoreLockedMode=true @options -p:StartupHookSupport=true --nologo -o "$tree-publish"
+            # Printed rather than returned, so the function answers with the folder alone.
+            dotnet publish (Join-Path $tree $project) -c Release -r win-x64 -p:RestoreLockedMode=true @options -p:StartupHookSupport=true --nologo -o "$tree-publish" | Out-Host
             if ($LASTEXITCODE -ne 0) { throw "The $name with start-up hooks allowed did not publish." }
             "$tree-publish"
           }
@@ -1328,9 +1329,9 @@ jobs:
               $p = [System.Diagnostics.Process]::Start($info)
             }
             catch {
-              $code = $_.Exception.InnerException.NativeErrorCode
-              $why = if ($code -eq 740) { ', which asks for administrator rights the step does not have' } else { '' }
-              $failed += "$($build.Label) could not be started: error $code$why."
+              $cause = if ($_.Exception.InnerException) { $_.Exception.InnerException } else { $_.Exception }
+              $why = if ($cause.NativeErrorCode -eq 740) { ', which asks for administrator rights the step does not have' } else { '' }
+              $failed += "$($build.Label) could not be started: $($cause.Message)$why."
               $started.Dispose()
               continue
             }
@@ -1343,6 +1344,8 @@ jobs:
             $started.Dispose()
             $lines = @(if (Test-Path -LiteralPath $marker) { Get-Content -LiteralPath $marker })
             $own = @($lines | Where-Object { $_ -like "$($p.Id) *" })
+            # A shipped build that ran the hook has failed whether or not it went on to set the event.
+            if (-not $build.Allowing -and $lines.Count) { $failed += "$($build.Label) ran the start-up hook DOTNET_STARTUP_HOOKS names: $($lines -join '; ')"; continue }
             if (-not $set) { $failed += "$($build.Label) did not set the event within 60 s, so whether a hook ran in it is not judged."; continue }
             $after = "$([math]::Round($clock.Elapsed.TotalSeconds, 1)) s"
             if ($build.Allowing) {
@@ -1350,7 +1353,6 @@ jobs:
               elseif (-not $ranBySignal) { $failed += "$($build.Label) ran the hook only after it set the event." }
               else { "  $($build.Label) set the event after $after, and the hook ran in it: $($own -join '; ')" }
             }
-            elseif ($lines.Count) { $failed += "$($build.Label) ran the start-up hook DOTNET_STARTUP_HOOKS names: $($lines -join '; ')" }
             else { "  $($build.Label) set the event after $after, and no hook ran in it" }
           }
           $failed | ForEach-Object { Write-Host "::error::$_" }
