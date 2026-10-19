@@ -123,7 +123,7 @@ internal static class FrameworkLibraries
     }
 
     /// <summary>
-    /// <see cref="ResolveFor(Assembly, IReadOnlyList{string})"/> with its parts given, answering whether
+    /// <see cref="ResolveFor(Assembly, IReadOnlyList{string}, IReadOnlyList{string})"/> with its parts given, answering whether
     /// the resolvers were set. Where <paramref name="exe"/> is not <paramref name="entry"/>,
     /// as in a test run, whose process was started for its test host, nothing is done.
     /// Otherwise <paramref name="register"/> is subscribed to every load first, then given
