@@ -569,8 +569,12 @@ jobs:
   #
   # Every look is printed with its full path, its place among the process's rows, and
   # whether it came after the first act of the build's own code that Process Monitor
-  # can see: a file under C:\Windows\Installer, one under %LOCALAPPDATA%\InstallerClean,
-  # or the load of msi.dll.
+  # can see. Each build names that act: in the slim, its module initializer loading the
+  # first assembly on its list from the installed runtime's folder; in the command line,
+  # Main's look for the exe's old copy beside it; in the portable, its look for the
+  # app's folder under %LOCALAPPDATA%. The first pass fails where a build shows another
+  # first, or none, and where a build started with nothing planted writes to its crash
+  # log.
   #
   # It refuses to pass on a run that saw nothing: Process Monitor has to have started
   # and recorded each build's process, the command line has to have loaded msi.dll
@@ -587,7 +591,12 @@ jobs:
   # list back to the runtime. The job fails where the portable's bundle extracts a
   # library that list does not name, where a framework assembly in a folder the slim's
   # runtime searches imports a native library there that the list does not name, and
-  # where the list names one those folders do not carry.
+  # where the list names one those folders do not carry. The window loads before its
+  # Main the Windows Forms assemblies the installed desktop runtime adds, where the host
+  # lists them as trusted platform assemblies, so the job fails where the slim's host
+  # trace does not list them, where the portable's lists an assembly its bundle carries,
+  # and where the slim does not load them before the first act seen of its code in Main
+  # or later.
   #
   # The slim's exe finds .NET only where .NET is installed, so the job fails where the
   # first pass sees the slim look for hostfxr.dll or hostpolicy.dll in its own folder.
@@ -614,8 +623,8 @@ jobs:
   # either window left a report behind.
   #
   # Each pass's Process Monitor rows for every process named as one of the builds'
-  # exes, and each host trace, are kept with the run for seven days, whether or not
-  # the job passed.
+  # exes, each host trace and the app's crash logs are kept with the run for seven
+  # days, whether or not the job passed.
   native-libraries:
     name: Native libraries (Windows)
     runs-on: windows-2025

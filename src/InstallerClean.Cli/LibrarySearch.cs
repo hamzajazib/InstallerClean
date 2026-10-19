@@ -11,10 +11,10 @@ namespace InstallerClean.Cli;
 internal static class LibrarySearch
 {
     /// <summary>
-    /// Every assembly the command line can load that imports a Windows library, loaded before
-    /// its Main so each has its resolver before any thread of the app's can use it. The
-    /// native-libraries job in ci.yml fails where this list differs from what the build's .NET
-    /// runtime pack gives.
+    /// Every assembly the command line's build carries that imports a Windows library, loaded
+    /// before its Main so each has its resolver before any thread of the app's can use it. The
+    /// native-libraries job in ci.yml fails where this list differs from what the build's bundle
+    /// carries.
     /// </summary>
     internal static readonly string[] ImportingAssemblies =
     [

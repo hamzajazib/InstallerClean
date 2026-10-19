@@ -183,13 +183,13 @@ public class FrameworkLibrariesTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    public void With_no_trusted_platform_assemblies_none_of_the_installed_runtimes_is_loaded(string? value)
+    public void With_no_trusted_platform_assemblies_none_of_the_installed_runtimes_is_given(string? value)
     {
         Assert.Empty(FrameworkLibraries.Trusted(value, WhereInstalled));
     }
 
     [Fact]
-    public void Each_installed_runtime_assembly_the_trusted_list_names_is_loaded()
+    public void Each_installed_runtime_assembly_the_trusted_list_names_is_given()
     {
         var value = PlatformAssemblies(
             @"C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App\10.0.13\PresentationCore.dll",
@@ -200,7 +200,7 @@ public class FrameworkLibrariesTests
     }
 
     [Fact]
-    public void Only_the_installed_runtime_assemblies_the_trusted_list_names_are_loaded()
+    public void Only_the_installed_runtime_assemblies_the_trusted_list_names_are_given()
     {
         var value = PlatformAssemblies(
             @"C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App\10.0.13\MICROSOFT.VISUALBASIC.FORMS.DLL",
@@ -210,7 +210,7 @@ public class FrameworkLibrariesTests
     }
 
     [Fact]
-    public void The_listed_assemblies_load_before_the_installed_runtimes()
+    public void The_listed_assemblies_come_before_the_installed_runtimes_in_the_load_order()
     {
         var value = PlatformAssemblies(@"C:\shared\System.Windows.Forms.Primitives.dll");
 
@@ -220,7 +220,7 @@ public class FrameworkLibrariesTests
     }
 
     [Fact]
-    public void An_exe_with_no_installed_runtime_list_loads_its_own_list_alone()
+    public void An_exe_with_no_installed_runtime_list_has_its_own_list_alone_to_load()
     {
         var value = PlatformAssemblies(@"C:\shared\System.Windows.Forms.Primitives.dll");
 
