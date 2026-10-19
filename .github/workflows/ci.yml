@@ -601,8 +601,9 @@ jobs:
   # report receiver's host is pointed nowhere in the hosts file. The job fails where
   # either window left a report behind.
   #
-  # Each pass's Process Monitor rows for the builds' own processes, and each host
-  # trace, are kept with the run for seven days, whether or not the job passed.
+  # Each pass's Process Monitor rows for every process named as one of the builds'
+  # exes, and each host trace, are kept with the run for seven days, whether or not
+  # the job passed.
   native-libraries:
     name: Native libraries (Windows)
     runs-on: windows-2025
@@ -1388,11 +1389,14 @@ jobs:
           $left | ForEach-Object { Write-Host "::error::$_" }
           if ($left.Count) { exit 1 }
 
-      # A Process Monitor record holds every process on the runner, so only the rows
-      # whose process is one of the builds are kept, each column as recorded except
-      # Detail on a row that starts or creates a process, which is emptied. The host
-      # traces are kept whole. A run that ended before a record was saved keeps what
-      # there is, and this step judges nothing.
+      # A Process Monitor record holds every process on the runner, so only the rows of
+      # every process named as one of the builds' exes are kept, in the record's order,
+      # each column as recorded. The log's row N for a process is its Nth row in the
+      # file with that PID. Detail is emptied on a row that starts or creates a process
+      # and must stay so, since the artifact is public. The host traces are kept whole.
+      # A run that ended before a record was saved keeps what there is, and this step
+      # judges nothing. The artifact's name carries the run attempt, so a job run again
+      # uploads under a name of its own.
       - name: Keep the Process Monitor rows and the host traces
         if: ${{ always() }}
         shell: pwsh
@@ -1419,7 +1423,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: process-monitor-records
+          name: process-monitor-records-${{ github.run_attempt }}
           path: ${{ runner.temp }}/kept
           if-no-files-found: warn
           retention-days: 7
