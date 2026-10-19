@@ -33,13 +33,15 @@ internal static class Program
     {
         CancelKey.Process.Hook();
 
-        // The version that started this one passes an event it sets on Ctrl+C, and one it
-        // waits on until this one sets it. Their switches come out here, before anything
-        // reads, prints or records the arguments, and the second is set at once: the copy
-        // that started this one ends it and puts itself back where it is not set in time.
+        // A version that updated itself passes the one it starts an event it sets on Ctrl+C,
+        // and one it waits on until that version sets it. Their switches come out here,
+        // before anything reads, prints or records the arguments, and the second is set at
+        // once: the copy that started this one ends it and puts itself back where it is not
+        // set in time. Where it cannot be set, this run ends here with the error code,
+        // having printed and run nothing, and the crash log says why.
         args = CliContract.TakeCancelEvent(args, out var cancelEvent);
         args = HandOverContract.TakeStartedEvent(args, out var startedEvent);
-        HandOverContract.SignalStarted(startedEvent);
+        if (!HandOverContract.SignalStarted(startedEvent)) return ExitError;
         if (cancelEvent is not null) CancelKey.Process.Watch(cancelEvent);
 
         // No critical-error box for the whole run: a read reaching a drive with no disc or card in

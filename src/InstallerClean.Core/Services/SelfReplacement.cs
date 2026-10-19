@@ -438,9 +438,9 @@ public static class SelfReplacement
     /// pump messages; the app runs elevated, so CreateProcess starts the newer version,
     /// whose manifest asks for elevation too, without a prompt. An antivirus can hold a
     /// program it has just seen written for a moment, so a start that fails is tried
-    /// again a few times, half a second apart. What stopped the hand-over goes to crash.log
-    /// once this exe is back in place; a wait Windows refuses, or a newer version that will
-    /// not end, is written as it happens. The event is created before anything is renamed, and
+    /// again a few times, half a second apart. What stopped the hand-over, a wait Windows
+    /// refused included, goes to crash.log once this exe is back in place; a newer version
+    /// that will not end is written as it happens. The event is created before anything is renamed, and
     /// where it cannot be, nothing is: a newer version that cannot be seen to start is
     /// not put in this exe's place.
     /// </remarks>
@@ -488,9 +488,10 @@ public static class SelfReplacement
             using (newer)
             {
                 if (startedEvent is null) EndThisProcess();
-                var answer = AwaitStart(newer, startedEvent!, startBound ?? HandOverContract.StartBound, cancel: null);
+                var answer = AwaitStart(
+                    newer, startedEvent!, startBound ?? HandOverContract.StartBound, cancel: null, out var waitError);
                 if (answer == NewerVersionStart.Started) EndThisProcess();
-                failure = NotStartedFailure(answer, newer, startBound ?? HandOverContract.StartBound);
+                failure = NotStartedFailure(answer, waitError, newer, startBound ?? HandOverContract.StartBound);
                 if (!EndNewerVersion(newer)) EndThisProcess();
             }
             break;
@@ -510,33 +511,81 @@ public static class SelfReplacement
     /// <summary>
     /// Waits for the newer version <paramref name="newer"/> to set
     /// <paramref name="started"/>, for up to <paramref name="bound"/>, and answers what
-    /// came first: the event, the newer version ending, the bound, or
-    /// <paramref name="cancel"/> being set. An event set by a newer version that has also
-    /// ended answers <see cref="NewerVersionStart.Started"/>, and so does one set as
-    /// <paramref name="cancel"/> is, or as the bound runs out: the event is looked at once
-    /// more before either is answered. The wait dispatches nothing, so on a window's thread
-    /// no window code runs during it. A wait Windows refuses answers
-    /// <see cref="NewerVersionStart.TimedOut"/>, written to crash.log, with no second look.
-    /// Never throws.
+    /// came first: the event, the newer version ending, the bound, <paramref name="cancel"/>
+    /// being set, or Windows refusing the wait, whose error code is
+    /// <paramref name="waitError"/> (0 for every other answer). An event set by a newer
+    /// version that has also ended answers <see cref="NewerVersionStart.Started"/>, and so
+    /// does one found set by a look at the event alone, taken once more after the bound,
+    /// <paramref name="cancel"/> or a refused wait: Windows refuses a wait on several
+    /// handles where any one of them cannot be waited on, so the event can be readable
+    /// where the wait was not. A look Windows refuses after the bound answers
+    /// <see cref="NewerVersionStart.WaitFailed"/> with its error code, and one after
+    /// <paramref name="cancel"/> is written to crash.log and the answer stays
+    /// <see cref="NewerVersionStart.Cancelled"/>. Nothing else is written: the caller
+    /// writes <see cref="NotStartedFailure"/>. The wait dispatches nothing, so on a window's
+    /// thread no window code runs during it. Never throws.
     /// </summary>
     internal static NewerVersionStart AwaitStart(
-        Process newer, WaitHandle started, TimeSpan bound, WaitHandle? cancel)
+        Process newer, WaitHandle started, TimeSpan bound, WaitHandle? cancel, out int waitError)
     {
-        var handles = new List<SafeHandle> { started.SafeWaitHandle, newer.SafeHandle };
-        if (cancel is not null) handles.Add(cancel.SafeWaitHandle);
-        var answer = Wait(handles, bound);
-        if (answer is TimedOutWait or 2 && IsSet(started)) answer = 0;
-        return answer switch
+        var handles = new List<SafeHandle>(3);
+        handles.Insert(StartedIndex, started.SafeWaitHandle);
+        handles.Insert(EndedIndex, newer.SafeHandle);
+        if (cancel is not null) handles.Insert(CancelIndex, cancel.SafeWaitHandle);
+        var answer = Wait(handles, bound, out waitError) switch
         {
-            0 => NewerVersionStart.Started,
-            1 => NewerVersionStart.Ended,
-            2 => NewerVersionStart.Cancelled,
-            _ => NewerVersionStart.TimedOut,
+            StartedIndex => NewerVersionStart.Started,
+            EndedIndex => NewerVersionStart.Ended,
+            CancelIndex => NewerVersionStart.Cancelled,
+            TimedOutWait => NewerVersionStart.TimedOut,
+            _ => NewerVersionStart.WaitFailed,
         };
+        if (answer is NewerVersionStart.Started or NewerVersionStart.Ended) return answer;
+
+        switch (LookAt(started, out var lookError))
+        {
+            case HandleLook.Signalled:
+                waitError = 0;
+                return NewerVersionStart.Started;
+            case HandleLook.NotSignalled:
+                return answer;
+            default:
+                if (answer == NewerVersionStart.TimedOut)
+                {
+                    waitError = lookError;
+                    return NewerVersionStart.WaitFailed;
+                }
+                if (answer == NewerVersionStart.Cancelled) CrashLog.TryWrite(LookFailure(lookError));
+                return answer;
+        }
     }
 
-    /// <summary>Whether <paramref name="started"/> is set, looked at without waiting.</summary>
-    internal static bool IsSet(WaitHandle started) => Wait([started.SafeWaitHandle], TimeSpan.Zero) == 0;
+    /// <summary>Where <see cref="AwaitStart"/> puts the started event in the handles it waits on.</summary>
+    private const int StartedIndex = 0;
+
+    /// <summary>Where <see cref="AwaitStart"/> puts the newer version's process.</summary>
+    private const int EndedIndex = 1;
+
+    /// <summary>Where <see cref="AwaitStart"/> puts the Ctrl+C handle, where there is one.</summary>
+    private const int CancelIndex = 2;
+
+    /// <summary>
+    /// Looks at <paramref name="handle"/> without waiting and answers whether it is
+    /// signalled, or that Windows refused the look, whose error code is
+    /// <paramref name="error"/>. Writes nothing. Never throws.
+    /// </summary>
+    internal static HandleLook LookAt(WaitHandle handle, out int error) => LookAt(handle.SafeWaitHandle, out error);
+
+    private static HandleLook LookAt(SafeHandle handle, out int error) => Wait([handle], TimeSpan.Zero, out error) switch
+    {
+        0 => HandleLook.Signalled,
+        TimedOutWait => HandleLook.NotSignalled,
+        _ => HandleLook.Failed,
+    };
+
+    /// <summary>What is written to crash.log where Windows refuses a look at the started event with <paramref name="error"/>.</summary>
+    internal static UpdateFailedException LookFailure(int error) => new(UpdateFailureStage.Install,
+        $"Looking at whether the newer version had said it started failed with error {error}.");
 
     /// <summary>
     /// Ends <paramref name="newer"/>, a newer version that has not said its own code is
@@ -545,31 +594,40 @@ public static class SelfReplacement
     /// request to end it, which no process can refuse once it is accepted, and which a
     /// process stuck in the middle of a call into Windows can take a while to complete.
     /// Answers false where Windows refused the request and the process is still running,
-    /// and the caller then never renames the file it runs from. Each of the two is written
-    /// to crash.log. Never throws.
+    /// and the caller then never renames the file it runs from. Any answer from
+    /// TerminateProcess but success counts as refused. Where the newer version has not
+    /// been seen to end, one line goes to crash.log: the request refused, with its error
+    /// code; the newer version still running after the bound; or the wait for it refused,
+    /// with its error code. Never throws.
     /// </summary>
     internal static bool EndNewerVersion(Process newer)
     {
         try
         {
-            var handles = new List<SafeHandle> { newer.SafeHandle };
-            if (Wait(handles, TimeSpan.Zero) == 0) return true;
             var handle = newer.SafeHandle;
+            // A look Windows refuses goes on to the request to end it, as for a newer
+            // version still running.
+            if (LookAt(handle, out _) == HandleLook.Signalled) return true;
             var added = false;
             bool accepted;
+            var terminateError = 0;
             try
             {
                 handle.DangerousAddRef(ref added);
                 accepted = Kernel32.TerminateProcess(handle.DangerousGetHandle(), NotStartedExitCode);
+                if (!accepted) terminateError = Marshal.GetLastPInvokeError();
             }
             finally
             {
                 if (added) handle.DangerousRelease();
             }
-            if (Wait(handles, EndBound) == 0) return true;
-            CrashLog.TryWrite(new UpdateFailedException(UpdateFailureStage.Install, accepted
-                ? "The newer version had not ended a few seconds after Windows accepted the request to end it."
-                : "Windows refused the request to end the newer version."));
+            var ended = Wait([handle], EndBound, out var waitError);
+            if (ended == 0) return true;
+            var waitFailed = ended == FailedWait ? $" Waiting for it to end failed with error {waitError}." : string.Empty;
+            CrashLog.TryWrite(new UpdateFailedException(UpdateFailureStage.Install,
+                !accepted ? $"Windows refused the request to end the newer version, with error {terminateError}.{waitFailed}"
+                : ended == FailedWait ? $"Waiting for the newer version to end, after Windows accepted the request to end it, failed with error {waitError}."
+                : "The newer version had not ended a few seconds after Windows accepted the request to end it."));
             return accepted;
         }
         catch (Exception ex)
@@ -587,10 +645,12 @@ public static class SelfReplacement
 
     /// <summary>
     /// What a newer version that did not say its own code is running is written to
-    /// crash.log as, for <paramref name="answer"/>: the exit code it ended with, or how
-    /// long it was waited for. Never throws.
+    /// crash.log as, for <paramref name="answer"/>: the exit code it ended with, how long
+    /// it was waited for, or the error code <paramref name="waitError"/> Windows refused the
+    /// wait with. Never throws.
     /// </summary>
-    internal static UpdateFailedException NotStartedFailure(NewerVersionStart answer, Process newer, TimeSpan bound)
+    internal static UpdateFailedException NotStartedFailure(
+        NewerVersionStart answer, int waitError, Process newer, TimeSpan bound)
     {
         string message;
         try
@@ -600,6 +660,8 @@ public static class SelfReplacement
                 NewerVersionStart.Ended =>
                     $"The newer version ended with exit code {newer.ExitCode} before it said it had started.",
                 NewerVersionStart.Cancelled => "Ctrl+C came before the newer version said it had started.",
+                NewerVersionStart.WaitFailed =>
+                    $"Waiting for the newer version to say it had started failed with error {waitError}.",
                 _ => $"The newer version did not say it had started within {bound.TotalSeconds:0} seconds.",
             };
         }
@@ -619,10 +681,13 @@ public static class SelfReplacement
     /// <summary>
     /// Waits on <paramref name="handles"/> for up to <paramref name="bound"/>, dispatching
     /// nothing, and answers the index of the first signalled, <see cref="TimedOutWait"/>
-    /// or <see cref="FailedWait"/>, a failure being written to crash.log.
+    /// or <see cref="FailedWait"/>, with the error code Windows refused it with in
+    /// <paramref name="error"/> (0 for every other answer). Writes nothing: each caller
+    /// writes a refusal once.
     /// </summary>
-    private static int Wait(List<SafeHandle> handles, TimeSpan bound)
+    private static int Wait(List<SafeHandle> handles, TimeSpan bound, out int error)
     {
+        error = 0;
         var raw = new IntPtr[handles.Count];
         var added = new bool[handles.Count];
         try
@@ -636,8 +701,7 @@ public static class SelfReplacement
             var result = Kernel32.WaitForMultipleObjects((uint)raw.Length, raw, bWaitAll: false, milliseconds);
             if (result < Kernel32.WAIT_OBJECT_0 + (uint)raw.Length) return (int)(result - Kernel32.WAIT_OBJECT_0);
             if (result == Kernel32.WAIT_TIMEOUT) return TimedOutWait;
-            CrashLog.TryWrite(new UpdateFailedException(UpdateFailureStage.Install,
-                $"Waiting for the newer version failed with error {Marshal.GetLastPInvokeError()}."));
+            error = Marshal.GetLastPInvokeError();
             return FailedWait;
         }
         finally
@@ -734,9 +798,25 @@ internal enum NewerVersionStart
     /// <summary>The newer version ended without setting it.</summary>
     Ended,
 
-    /// <summary>The wait's bound ran out, or Windows refused the wait.</summary>
+    /// <summary>The wait's bound ran out.</summary>
     TimedOut,
 
     /// <summary>Ctrl+C came first.</summary>
     Cancelled,
+
+    /// <summary>Windows refused the wait.</summary>
+    WaitFailed,
+}
+
+/// <summary>What a look at a handle without waiting found (<see cref="SelfReplacement.LookAt(WaitHandle, out int)"/>).</summary>
+internal enum HandleLook
+{
+    /// <summary>It is signalled.</summary>
+    Signalled,
+
+    /// <summary>It is not signalled.</summary>
+    NotSignalled,
+
+    /// <summary>Windows refused the look.</summary>
+    Failed,
 }

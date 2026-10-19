@@ -1119,6 +1119,12 @@ jobs:
       # from a folder of its own with the switch, and the step fails where the event is
       # not set within 60 s. The time each build took to set it is printed. The command
       # line is started for its version, so it scans nothing.
+      #
+      # A build given the switch that cannot set the event ends at once with exit code 1,
+      # having run nothing, so the copy that started it puts itself back straight away.
+      # Each build is started again with an id naming no event, the command line with /s so
+      # that a build going on would scan, and the step fails where a build has not ended
+      # within 60 s, ends with any other exit code, or, for the command line, prints anything.
       - name: Check each build says it has started
         if: ${{ !cancelled() }}
         shell: pwsh
@@ -1151,6 +1157,31 @@ jobs:
             }
             if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; $p.WaitForExit() }
             $started.Dispose()
+          }
+          foreach ($build in $builds) {
+            $folder = Join-Path $env:RUNNER_TEMP ('started-' + ($build.Label -replace ' ', '-'))
+            $exe = Join-Path $folder (Split-Path $build.Exe -Leaf)
+            $id = [guid]::NewGuid().ToString('N')
+            $isCli = $build.Label -eq 'command line'
+            $arguments = @(if ($isCli) { '/s' }) + "/startedevent:$id"
+            $output = Join-Path $folder 'no-event-output.txt'
+            $errors = Join-Path $folder 'no-event-errors.txt'
+            $p = if ($isCli) {
+              Start-Process -FilePath $exe -ArgumentList $arguments -WorkingDirectory $folder -NoNewWindow -PassThru `
+                -RedirectStandardOutput $output -RedirectStandardError $errors
+            } else {
+              Start-Process -FilePath $exe -ArgumentList $arguments -WorkingDirectory $folder -PassThru
+            }
+            $null = $p.Handle
+            if (-not $p.WaitForExit(60000)) {
+              Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; $p.WaitForExit()
+              $failed += "$($build.Label), given an event that does not exist, was still running after 60 s."
+              continue
+            }
+            $printed = if ($isCli) { ((Get-Content -Raw $output) + (Get-Content -Raw $errors)) } else { '' }
+            if ($p.ExitCode -ne 1) { $failed += "$($build.Label), given an event that does not exist, ended with exit code $($p.ExitCode), not 1." }
+            elseif ($printed) { $failed += "$($build.Label), given an event that does not exist, printed: $printed" }
+            else { "  $($build.Label), given an event that does not exist, ended with exit code 1 and printed nothing" }
           }
           $failed | ForEach-Object { Write-Host "::error::$_" }
           if ($failed.Count) { exit 1 }

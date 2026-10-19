@@ -12,9 +12,11 @@ namespace InstallerClean.Helpers;
 /// <see cref="StartedEventSwitch"/> to whichever version it updates to and puts itself
 /// back where that version does not set the event in time. So every later version has to
 /// go on taking the switch and setting the event, or every update to that version from
-/// one of these is put back and says it could not be installed. A switch added to the
-/// hand-over later is one an earlier version does not know, so it needs a first version
-/// of its own.
+/// one of these is put back and says it could not be installed. A version given the
+/// switch that cannot set the event ends at once without running anything, so the copy
+/// that started it puts itself back straight away rather than after a version that has
+/// already run. A switch added to the hand-over later is one an earlier version does not
+/// know, so it needs a first version of its own.
 /// </remarks>
 internal static class HandOverContract
 {
@@ -118,14 +120,15 @@ internal static class HandOverContract
 
     /// <summary>
     /// Sets the event <paramref name="id"/> stands for, telling the copy that started this
-    /// one that its own code is running. Does nothing where <paramref name="id"/> is null.
-    /// An event this process cannot open or set is written to crash.log; the copy that
-    /// started it then ends it once <see cref="StartBound"/> has passed and puts itself
-    /// back. Never throws.
+    /// one that its own code is running, and answers whether this version goes on: true
+    /// where the event is set, and where <paramref name="id"/> is null, as on every start
+    /// that is not an update's. An event this process cannot open or set is written to
+    /// crash.log and answers false, and the caller then ends without running anything.
+    /// Never throws.
     /// </summary>
-    internal static void SignalStarted(string? id)
+    internal static bool SignalStarted(string? id)
     {
-        if (id is null) return;
+        if (id is null) return true;
         try
         {
             if (!Guid.TryParseExact(id, "N", out var parsed))
@@ -133,10 +136,12 @@ internal static class HandOverContract
             if (!EventWaitHandle.TryOpenExisting(StartedEventName(parsed), out var started))
                 throw new InvalidOperationException("The event passed with the started-event switch does not exist.");
             using (started) started.Set();
+            return true;
         }
         catch (Exception ex)
         {
             CrashLog.TryWrite(ex);
+            return false;
         }
     }
 }

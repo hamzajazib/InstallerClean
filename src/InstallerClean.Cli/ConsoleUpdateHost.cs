@@ -212,14 +212,14 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
             return null;
         }
         using var process = started;
-        if (startedEvent is not null && !NewerVersionSaidItStarted(process, startedEvent, token))
-            return null;
-        // The newer version is running from the file at this exe's path from here, so
-        // nothing leaves this method as an exception: the run reads a throw as the newer
-        // version not having started and puts this exe back, which would rename that
-        // file under it. A throw is written to crash.log. One from the wait itself is
-        // answered with the error code, so this run ends with nothing more run, and the
-        // newer version writes its own summary.
+        var seen = startedEvent is null ? StartSeen.Started : NewerVersionSaidItStarted(process, startedEvent, token);
+        if (seen == StartSeen.NotStarted) return null;
+        // The newer version is running from the file at this exe's path from here, or
+        // has run from it, so nothing leaves this method as an exception: the run reads a
+        // throw as the newer version not having started and puts this exe back, which
+        // would rename that file under it. A throw is written to crash.log. One from the
+        // wait itself is answered with the error code, so this run ends with nothing more
+        // run, and the newer version writes its own summary.
         if (cancelEvent is null) NewerVersionAnswersCtrlC(true);
         // Said before the Application-log write, which can take a moment the first time.
         try
@@ -239,6 +239,8 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
         {
             CrashLog.TryWrite(ex);
         }
+        // A newer version this run could neither end nor wait for answers the error code.
+        if (seen == StartSeen.NotWaitedFor) return CliExitCode.Error;
         try
         {
             process.WaitForExit();
@@ -254,22 +256,30 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
     /// <summary>
     /// Waits for the newer version <paramref name="process"/> to set
     /// <paramref name="startedEvent"/>, for up to <see cref="HandOverContract.StartBound"/>,
-    /// and answers true where it does. Where it ends first, the bound runs out or Ctrl+C
-    /// comes first, the newer version has run none of the command: it is ended and waited
-    /// for, what happened is written to crash.log, and the answer is false, with the line
-    /// saying the run is cancelling printed where one was held back. Ctrl+C, or a newer
-    /// version that Ctrl+C ended before it had a handler for it, throws
+    /// and answers <see cref="StartSeen.Started"/> where it does. Where it ends first, the
+    /// bound runs out, Windows refuses the wait or Ctrl+C comes first, the newer version has
+    /// run none of the command: it is ended and waited for, what happened is written to
+    /// crash.log, and the answer is <see cref="StartSeen.NotStarted"/>, with the line saying
+    /// the run is cancelling printed where one was held back. Ctrl+C, or a newer version
+    /// that Ctrl+C ended before it had a handler for it, throws
     /// <see cref="OperationCanceledException"/> instead, so the run answers it as Ctrl+C
-    /// before the newer version started. A newer version Windows would not end is still
-    /// running its own code, so it is waited for until it ends, Ctrl+C or not, and answered
-    /// true where it set the event meanwhile or where the wait could not be made: the file
-    /// it runs from is never renamed under it.
+    /// before the newer version started.
     /// </summary>
-    private bool NewerVersionSaidItStarted(Process process, EventWaitHandle startedEvent, CancellationToken token)
+    /// <remarks>
+    /// A newer version Windows would not end is still running its own code, so it is waited
+    /// for until it ends, Ctrl+C or not, and the file it runs from is never renamed under it.
+    /// It answers <see cref="StartSeen.NotStarted"/> only where a look at the event shows it
+    /// unset once it has ended. Where it set the event, or the look fails, it may have run
+    /// the command, so it answers <see cref="StartSeen.Started"/> and the run hands back its
+    /// exit code; where the wait for it to end fails, <see cref="StartSeen.NotWaitedFor"/>.
+    /// Either way the run never puts this exe back and runs the command a second time.
+    /// </remarks>
+    private StartSeen NewerVersionSaidItStarted(Process process, EventWaitHandle startedEvent, CancellationToken token)
     {
-        var answer = SelfReplacement.AwaitStart(process, startedEvent, HandOverContract.StartBound, token.WaitHandle);
-        if (answer == NewerVersionStart.Started) return true;
-        var failure = SelfReplacement.NotStartedFailure(answer, process, HandOverContract.StartBound);
+        var answer = SelfReplacement.AwaitStart(
+            process, startedEvent, HandOverContract.StartBound, token.WaitHandle, out var waitError);
+        if (answer == NewerVersionStart.Started) return StartSeen.Started;
+        var failure = SelfReplacement.NotStartedFailure(answer, waitError, process, HandOverContract.StartBound);
         if (!SelfReplacement.EndNewerVersion(process))
         {
             try
@@ -279,16 +289,36 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
             catch (Exception ex)
             {
                 CrashLog.TryWrite(ex);
-                return true;
+                return StartSeen.NotWaitedFor;
             }
-            if (SelfReplacement.IsSet(startedEvent)) return true;
+            switch (SelfReplacement.LookAt(startedEvent, out var lookError))
+            {
+                case HandleLook.Signalled:
+                    return StartSeen.Started;
+                case HandleLook.Failed:
+                    CrashLog.TryWrite(SelfReplacement.LookFailure(lookError));
+                    return StartSeen.Started;
+            }
         }
         CrashLog.TryWrite(failure);
         if (answer == NewerVersionStart.Ended && EndedForCtrlC(process))
             token.WaitHandle.WaitOne(CommandLineUpdate.ControlCBound);
         NewerVersionNotStarted();
         token.ThrowIfCancellationRequested();
-        return false;
+        return StartSeen.NotStarted;
+    }
+
+    /// <summary>What <see cref="NewerVersionSaidItStarted"/> found.</summary>
+    private enum StartSeen
+    {
+        /// <summary>The newer version set the event, or may have and has ended: it runs or ran the command.</summary>
+        Started,
+
+        /// <summary>The newer version ran none of the command and has been ended.</summary>
+        NotStarted,
+
+        /// <summary>Windows would neither end the newer version nor let this run wait for it to end.</summary>
+        NotWaitedFor,
     }
 
     private static bool EndedForCtrlC(Process process)

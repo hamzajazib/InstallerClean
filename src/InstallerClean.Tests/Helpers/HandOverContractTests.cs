@@ -90,27 +90,50 @@ public class HandOverContractTests
         Assert.False(started.WaitOne(0));
 
         HandOverContract.TakeStartedEvent([HandOverContract.StartedEventArgument(id)], out var taken);
-        HandOverContract.SignalStarted(taken);
 
+        Assert.True(HandOverContract.SignalStarted(taken));
         Assert.True(started.WaitOne(0));
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("x")]
-    [InlineData(EventId)]
-    public void Signalling_an_event_that_does_not_exist_or_no_event_at_all_does_not_throw(string? id)
+    [Fact]
+    public void A_start_given_no_started_event_goes_on_which_is_every_start_that_is_not_an_update()
     {
-        HandOverContract.SignalStarted(id);
+        Assert.True(HandOverContract.SignalStarted(null));
+    }
+
+    [Theory]
+    [InlineData("x", "is not an event's id")]
+    [InlineData(EventId, "does not exist")]
+    public void A_start_whose_started_event_cannot_be_set_does_not_go_on_and_says_why(string id, string why)
+    {
+        var before = Occurrences(CrashLogText(), why);
+
+        Assert.False(HandOverContract.SignalStarted(id));
+        Assert.Equal(before + 1, Occurrences(CrashLogText(), why));
     }
 
     [Fact]
-    public void An_event_of_that_name_made_elsewhere_is_refused()
+    public void An_event_of_that_name_made_elsewhere_is_refused_and_the_crash_log_names_it()
     {
         var id = Guid.NewGuid();
         using var first = HandOverContract.CreateStartedEvent(id);
         Assert.NotNull(first);
 
+        Assert.DoesNotContain(HandOverContract.StartedEventName(id), CrashLogText());
+
         Assert.Null(HandOverContract.CreateStartedEvent(id));
+        Assert.Contains(HandOverContract.StartedEventName(id), CrashLogText());
+    }
+
+    /// <summary>The crash log as it stands, or empty where there is none.</summary>
+    private static string CrashLogText() =>
+        File.Exists(CrashLog.LogPath) ? File.ReadAllText(CrashLog.LogPath) : string.Empty;
+
+    private static int Occurrences(string text, string value)
+    {
+        var count = 0;
+        for (var at = text.IndexOf(value, StringComparison.Ordinal); at >= 0; at = text.IndexOf(value, at + 1, StringComparison.Ordinal))
+            count++;
+        return count;
     }
 }

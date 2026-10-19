@@ -43,11 +43,30 @@ public sealed class NewerVersionStartTests : IDisposable
     private static string Sets(Guid id) =>
         $"[System.Threading.EventWaitHandle]::OpenExisting('{HandOverContract.StartedEventName(id)}').Set() | Out-Null";
 
-    private static (Guid Id, EventWaitHandle Event) NewEvent()
+    private readonly Dictionary<EventWaitHandle, Guid> _eventIds = [];
+
+    private (Guid Id, EventWaitHandle Event) NewEvent()
     {
         var id = Guid.NewGuid();
-        return (id, HandOverContract.CreateStartedEvent(id)!);
+        var started = HandOverContract.CreateStartedEvent(id)!;
+        _eventIds[started] = id;
+        return (id, started);
     }
+
+    private string StartedEventNameOf(EventWaitHandle started) => HandOverContract.StartedEventName(_eventIds[started]);
+
+    private static string CrashLogText() =>
+        File.Exists(CrashLog.LogPath) ? File.ReadAllText(CrashLog.LogPath) : string.Empty;
+
+    private const uint EventModifyState = 0x0002;
+    private const uint EventAllAccess = 0x1F0003;
+    private const int ErrorAccessDenied = 5;
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", EntryPoint = "OpenEventW",
+        CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    private static extern Microsoft.Win32.SafeHandles.SafeWaitHandle OpenEvent(
+        uint dwDesiredAccess, [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)] bool bInheritHandle,
+        string lpName);
 
     [Fact]
     public void A_newer_version_that_sets_the_event_is_answered_as_started_and_left_running()
@@ -56,9 +75,10 @@ public sealed class NewerVersionStartTests : IDisposable
         using var _ = started;
         var newer = PowerShellRunning(Sets(id) + "; Start-Sleep -Seconds 60");
 
-        var answer = SelfReplacement.AwaitStart(newer, started, TimeSpan.FromSeconds(60), cancel: null);
+        var answer = SelfReplacement.AwaitStart(newer, started, TimeSpan.FromSeconds(60), cancel: null, out var waitError);
 
         Assert.Equal(NewerVersionStart.Started, answer);
+        Assert.Equal(0, waitError);
         Assert.False(newer.HasExited);
     }
 
@@ -70,9 +90,10 @@ public sealed class NewerVersionStartTests : IDisposable
         var newer = PowerShellRunning(Sets(id));
         Assert.True(newer.WaitForExit(TimeSpan.FromSeconds(60)));
 
-        var answer = SelfReplacement.AwaitStart(newer, started, TimeSpan.FromSeconds(60), cancel: null);
+        var answer = SelfReplacement.AwaitStart(newer, started, TimeSpan.FromSeconds(60), cancel: null, out var waitError);
 
         Assert.Equal(NewerVersionStart.Started, answer);
+        Assert.Equal(0, waitError);
     }
 
     [Fact]
@@ -84,11 +105,11 @@ public sealed class NewerVersionStartTests : IDisposable
         var bound = TimeSpan.FromSeconds(60);
         var clock = Stopwatch.StartNew();
 
-        var answer = SelfReplacement.AwaitStart(newer, started, bound, cancel: null);
+        var answer = SelfReplacement.AwaitStart(newer, started, bound, cancel: null, out var waitError);
 
         Assert.Equal(NewerVersionStart.Ended, answer);
         Assert.True(clock.Elapsed < bound / 2, $"The wait took {clock.Elapsed}.");
-        Assert.Contains("exit code 7", SelfReplacement.NotStartedFailure(answer, newer, bound).Message);
+        Assert.Contains("exit code 7", SelfReplacement.NotStartedFailure(answer, waitError, newer, bound).Message);
         Assert.True(SelfReplacement.EndNewerVersion(newer));
     }
 
@@ -99,7 +120,7 @@ public sealed class NewerVersionStartTests : IDisposable
         using var __ = started;
         var newer = PowerShellRunning("Start-Sleep -Seconds 600");
 
-        var answer = SelfReplacement.AwaitStart(newer, started, TimeSpan.FromSeconds(2), cancel: null);
+        var answer = SelfReplacement.AwaitStart(newer, started, TimeSpan.FromSeconds(2), cancel: null, out _);
 
         Assert.Equal(NewerVersionStart.TimedOut, answer);
         Assert.False(newer.HasExited);
@@ -114,9 +135,10 @@ public sealed class NewerVersionStartTests : IDisposable
         using var _ = started;
         var newer = PowerShellRunning("Start-Sleep -Seconds 20; " + Sets(id));
 
-        var answer = SelfReplacement.AwaitStart(newer, started, TimeSpan.FromSeconds(1), cancel: null);
+        var answer = SelfReplacement.AwaitStart(newer, started, TimeSpan.FromSeconds(1), cancel: null, out var waitError);
 
         Assert.Equal(NewerVersionStart.TimedOut, answer);
+        Assert.Equal(0, waitError);
         Assert.True(SelfReplacement.EndNewerVersion(newer));
         Assert.True(newer.HasExited);
         Assert.False(started.WaitOne(0));
@@ -131,11 +153,59 @@ public sealed class NewerVersionStartTests : IDisposable
         var newer = PowerShellRunning("Start-Sleep -Seconds 600");
         using var timer = new Timer(_ => cancel.Set(), null, TimeSpan.FromMilliseconds(500), Timeout.InfiniteTimeSpan);
 
-        var answer = SelfReplacement.AwaitStart(newer, started, TimeSpan.FromSeconds(60), cancel);
+        var answer = SelfReplacement.AwaitStart(newer, started, TimeSpan.FromSeconds(60), cancel, out _);
 
         Assert.Equal(NewerVersionStart.Cancelled, answer);
         Assert.True(SelfReplacement.EndNewerVersion(newer));
         Assert.True(newer.HasExited);
+    }
+
+    [Fact]
+    public void A_wait_Windows_refuses_is_answered_at_once_with_its_error_code_and_written_by_the_caller_alone()
+    {
+        var (_, started) = NewEvent();
+        using var __ = started;
+        // The started event opened again with the right to set it and not to wait on it, so
+        // Windows refuses any wait that includes it, and any look at it.
+        using var setOnly = new ManualResetEvent(false);
+        setOnly.SafeWaitHandle.Dispose();
+        setOnly.SafeWaitHandle = OpenEvent(EventModifyState, false, StartedEventNameOf(started));
+        Assert.False(setOnly.SafeWaitHandle.IsInvalid);
+        var newer = PowerShellRunning("Start-Sleep -Seconds 600");
+        var bound = TimeSpan.FromSeconds(30);
+        var logBefore = CrashLogText();
+        var clock = Stopwatch.StartNew();
+
+        var answer = SelfReplacement.AwaitStart(newer, setOnly, bound, cancel: null, out var waitError);
+
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(10), $"The wait took {clock.Elapsed}.");
+        Assert.Equal(NewerVersionStart.WaitFailed, answer);
+        Assert.Equal(ErrorAccessDenied, waitError);
+        Assert.Equal(logBefore, CrashLogText());
+        Assert.Contains("failed with error 5", SelfReplacement.NotStartedFailure(answer, waitError, newer, bound).Message);
+        Assert.True(SelfReplacement.EndNewerVersion(newer));
+        Assert.True(newer.HasExited);
+    }
+
+    [Fact]
+    public void The_same_wait_on_the_event_opened_with_every_right_runs_to_its_bound()
+    {
+        // The control for the refused wait above: the same event, the same kind of newer
+        // version, and only the access the event was opened with differs.
+        var (_, started) = NewEvent();
+        using var __ = started;
+        using var full = new ManualResetEvent(false);
+        full.SafeWaitHandle.Dispose();
+        full.SafeWaitHandle = OpenEvent(EventAllAccess, false, StartedEventNameOf(started));
+        Assert.False(full.SafeWaitHandle.IsInvalid);
+        var newer = PowerShellRunning("Start-Sleep -Seconds 600");
+
+        var answer = SelfReplacement.AwaitStart(newer, full, TimeSpan.FromSeconds(1), cancel: null, out var waitError);
+
+        Assert.Equal(NewerVersionStart.TimedOut, answer);
+        Assert.Equal(0, waitError);
+        Assert.Equal(0, waitError);
+        Assert.True(SelfReplacement.EndNewerVersion(newer));
     }
 
     [Fact]

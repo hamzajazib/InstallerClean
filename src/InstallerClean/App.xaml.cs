@@ -375,9 +375,15 @@ public partial class App : Application
             // The copy that started this one, where it updated itself, waits for this before
             // it ends: the splash is up and the view model built, so the libraries, the
             // resources and the services this build needs have all loaded. Nothing before
-            // this point waits on anything slow.
+            // this point waits on anything slow. Where the event cannot be set, the app
+            // closes before it starts anything, and that copy puts itself back.
             HandOverContract.TakeStartedEvent(e.Args, out var startedEvent);
-            HandOverContract.SignalStarted(startedEvent);
+            if (!HandOverContract.SignalStarted(startedEvent))
+            {
+                splash.Close();
+                Shutdown(1);
+                return;
+            }
 
             // What an update left behind, in the background: the copy it renamed aside, and
             // the folder a newer setup ran from. After the signal, so the copy renamed aside

@@ -23,7 +23,10 @@ internal abstract record CommandLineUpdateResult
     /// <summary>
     /// The newer version ran in this console with <paramref name="ArgumentsRun"/> and has
     /// finished; <paramref name="ExitCode"/> is its exit code, which the host ends this run
-    /// with, or reads as Ctrl+C having ended it before it could answer.
+    /// with, or reads as Ctrl+C having ended it before it could answer. Where the newer
+    /// version could be neither ended nor waited for, it is this run's
+    /// <see cref="Helpers.CliExitCode.Error"/>, and the newer version may still be running
+    /// in the console.
     /// </summary>
     public sealed record HandedOver(int ExitCode, string FromVersion, string ToVersion, string ArgumentsRun)
         : CommandLineUpdateResult;
@@ -146,7 +149,10 @@ internal interface ICommandLineUpdateHost
     /// <paramref name="toVersion"/> takes <see cref="Helpers.HandOverContract.StartedEventSwitch"/>,
     /// running means it has set the event: one that ends first, or has not set it within
     /// <see cref="Helpers.HandOverContract.StartBound"/>, is ended and waited for, and the
-    /// answer is null, with nothing said and nothing noted. Throws
+    /// answer is null, with nothing said and nothing noted. One Windows will not end is
+    /// waited for until it ends, and counts as running unless the event is then seen unset;
+    /// where that wait fails, the answer is <see cref="Helpers.CliExitCode.Error"/> once
+    /// <paramref name="onStarted"/> and the note have run. Throws
     /// <see cref="OperationCanceledException"/> where <paramref name="token"/> is cancelled
     /// before it has started, the newer version having been ended. Nothing is thrown once it
     /// has, a throw from <paramref name="onStarted"/> included: the run reads a throw as the
