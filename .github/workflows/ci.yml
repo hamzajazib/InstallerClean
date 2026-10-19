@@ -917,6 +917,16 @@ jobs:
 
           function Get-BaseName([string]$name) { ($name -replace '\.dll$', '').ToLowerInvariant() }
 
+          # The assemblies the window loads before its Main only where the runtime lists them
+          # as trusted platform assemblies, read from its LibrarySearch.ImportingAssembliesWhereInstalled.
+          function Get-WhereInstalled {
+            $source = Get-Content -Raw 'src/InstallerClean/LibrarySearch.cs'
+            if ($source -notmatch '(?s)\bImportingAssembliesWhereInstalled\s*=\s*\[(.*?)\];') { throw "LibrarySearch.cs has no ImportingAssembliesWhereInstalled list to read." }
+            $names = @([regex]::Matches($Matches[1], '"([^"]+)"') | ForEach-Object { $_.Groups[1].Value })
+            if (-not $names) { throw "LibrarySearch.cs's ImportingAssembliesWhereInstalled list read as empty." }
+            $names
+          }
+
           # Whether a file carries .NET metadata, and every module its methods import from,
           # by the name the import spells.
           function Read-Imports([string]$path) {
@@ -992,8 +1002,12 @@ jobs:
       # the bundle carries and that import a library not on FrameworkLibraries.OwnLibraries,
       # less those left for their own load to register, plus those the app loads by name.
       # It fails on any difference, naming it. The slim runs the window's exe on the
-      # installed desktop runtime, which also carries the Windows Forms assemblies the
-      # portable leaves out; those get their resolver as they are loaded.
+      # installed desktop runtime, which also carries Windows Forms assemblies the portable
+      # leaves out. The window loads those of them that import a Windows library from a
+      # second list, ImportingAssembliesWhereInstalled, which this step recomputes as what
+      # the runtime packs reach beyond what the bundle carries, and fails on any difference
+      # there too. The command line has no second list, so its packs must reach no assembly
+      # beyond its bundle that imports a Windows library.
       #
       # Left for their own load to register: System.Drawing.Common, whose being loaded WPF
       # reads (WindowsBase's MS.Internal.AssemblyHelper) to decide how it handles
@@ -1047,6 +1061,32 @@ jobs:
             finally { $stream.Dispose() }
           }
 
+          # Every assembly reached from $root through the references of those $index holds and,
+          # where $carried is given, the bundle carries, with those of them that import a
+          # library not on OwnLibraries, and the names reached that could not be followed.
+          function Get-Reached($index, [string]$root, $carried) {
+            $seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+            $pending = [System.Collections.Generic.Queue[string]]::new()
+            $pending.Enqueue($root)
+            $importing = [System.Collections.Generic.SortedSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+            $absent = [System.Collections.Generic.List[string]]::new()
+            while ($pending.Count) {
+              $name = $pending.Dequeue()
+              if (-not $seen.Add($name)) { continue }
+              if (-not $index.ContainsKey($name) -or ($null -ne $carried -and -not $carried.Contains($name))) { $absent.Add($name); continue }
+              $stream = [IO.File]::OpenRead($index[$name])
+              try {
+                $md = [System.Reflection.Metadata.PEReaderExtensions]::GetMetadataReader([System.Reflection.PortableExecutable.PEReader]::new($stream))
+                foreach ($handle in $md.AssemblyReferences) { $pending.Enqueue($md.GetString($md.GetAssemblyReference($handle).Name)) }
+              }
+              finally { $stream.Dispose() }
+              if ($name -in $root, 'System.Private.CoreLib', 'InstallerClean.Core') { continue }
+              $windows = @((Read-Imports $index[$name]).Imports | Where-Object { (Get-BaseName $_) -notin $own })
+              if ($windows) { $null = $importing.Add($name) }
+            }
+            [pscustomobject]@{ Seen = $seen; Importing = $importing; Absent = $absent }
+          }
+
           foreach ($exe in $exes) {
             "== $($exe.Label)"
             if (-not (Test-Path -LiteralPath $exe.Assembly)) { throw "$($exe.Assembly) is not there to read the $($exe.Label)'s references from." }
@@ -1079,37 +1119,24 @@ jobs:
               }
             }
 
-            # The assemblies the exe references, directly or through others, and those of
-            # them that import a library not on OwnLibraries.
+            # What the exe references, walked twice: through the assemblies its bundle
+            # carries, for the list loaded in every build, and through everything its runtime
+            # packs carry, which is what the installed runtime offers the slim.
             $root = [IO.Path]::GetFileNameWithoutExtension($exe.Assembly)
             $index[$root] = (Resolve-Path -LiteralPath $exe.Assembly).Path
-            $seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-            $pending = [System.Collections.Generic.Queue[string]]::new()
-            $pending.Enqueue($root)
-            $importing = [System.Collections.Generic.SortedSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-            $absent = [System.Collections.Generic.List[string]]::new()
-            while ($pending.Count) {
-              $name = $pending.Dequeue()
-              if (-not $seen.Add($name)) { continue }
-              if (-not $index.ContainsKey($name) -or -not $carried.Contains($name)) { $absent.Add($name); continue }
-              $stream = [IO.File]::OpenRead($index[$name])
-              try {
-                $md = [System.Reflection.Metadata.PEReaderExtensions]::GetMetadataReader([System.Reflection.PortableExecutable.PEReader]::new($stream))
-                foreach ($handle in $md.AssemblyReferences) { $pending.Enqueue($md.GetString($md.GetAssemblyReference($handle).Name)) }
-              }
-              finally { $stream.Dispose() }
-              if ($name -in $root, 'System.Private.CoreLib', 'InstallerClean.Core') { continue }
-              $windows = @((Read-Imports $index[$name]).Imports | Where-Object { (Get-BaseName $_) -notin $own })
-              if ($windows) { $null = $importing.Add($name) }
-            }
-            if ($importing.Count -eq 0) { throw "No assembly the $($exe.Label) references imports a Windows library, so the walk read nothing." }
-            "  references $($seen.Count) assemblies; the build carries none of: $($absent -join ', ')"
+            $bundled = Get-Reached $index $root $carried
+            $installed = Get-Reached $index $root $null
+            if ($bundled.Importing.Count -eq 0) { throw "No assembly the $($exe.Label) references imports a Windows library, so the walk read nothing." }
+            $seen = $bundled.Seen
+            $importing = $bundled.Importing
+            "  references $($seen.Count) assemblies; the build carries none of: $($bundled.Absent -join ', ')"
+            "  on the installed runtime, references $($installed.Seen.Count) assemblies; the packs carry none of: $($installed.Absent -join ', ')"
 
             foreach ($name in $exe.LeftToTheirLoad) {
               if (-not $importing.Contains($name)) { Fail "The $($exe.Label) leaves $name for its own load to register, and no assembly it references that imports a Windows library is called that." }
             }
             foreach ($name in $wpfReads) {
-              if ($importing.Contains($name) -and $name -notin $exe.LeftToTheirLoad) {
+              if ($installed.Importing.Contains($name) -and $name -notin $exe.LeftToTheirLoad) {
                 Fail "$name, whose being loaded WPF reads, now imports a Windows library and is referenced by the $($exe.Label): decide whether it is loaded first or left for its own load to register."
               }
             }
@@ -1122,15 +1149,34 @@ jobs:
               else { $byName.Add($name) }
             }
 
-            $expected = [System.Collections.Generic.SortedSet[string]]::new([string[]](@($importing | Where-Object { $_ -notin $exe.LeftToTheirLoad }) + @($byName)), [StringComparer]::OrdinalIgnoreCase)
             $source = Get-Content -Raw $exe.Source
-            if ($source -notmatch '(?s)ImportingAssemblies\s*=\s*\[(.*?)\];') { throw "$($exe.Source) has no ImportingAssemblies list to read." }
-            $listed = [System.Collections.Generic.SortedSet[string]]::new([string[]]@([regex]::Matches($Matches[1], '"([^"]+)"') | ForEach-Object { $_.Groups[1].Value }), [StringComparer]::OrdinalIgnoreCase)
-            if ($listed.Count -eq 0) { throw "$($exe.Source)'s ImportingAssemblies list read as empty." }
-            "  $($listed.Count) listed, $($expected.Count) computed"
-            foreach ($name in $expected) { if (-not $listed.Contains($name)) { Fail "The $($exe.Label) can load $name, which imports a Windows library, and $($exe.Source) does not list it." } }
-            foreach ($name in $listed) { if (-not $expected.Contains($name)) { Fail "$($exe.Source) lists $name, which is not an assembly the $($exe.Label) can load that imports a Windows library." } }
-            foreach ($name in $listed) {
+            $lists = @(
+              [pscustomobject]@{
+                Name = 'ImportingAssemblies'; Required = $true
+                Expected = @($importing | Where-Object { $_ -notin $exe.LeftToTheirLoad }) + @($byName)
+                Missing = 'which imports a Windows library'
+              }
+              [pscustomobject]@{
+                Name = 'ImportingAssembliesWhereInstalled'; Required = $false
+                Expected = @($installed.Importing | Where-Object { -not $importing.Contains($_) -and $_ -notin $exe.LeftToTheirLoad })
+                Missing = 'which imports a Windows library and which the installed runtime carries and its bundle does not'
+              }
+            )
+            $allListed = [System.Collections.Generic.List[string]]::new()
+            foreach ($list in $lists) {
+              $expected = [System.Collections.Generic.SortedSet[string]]::new([string[]]$list.Expected, [StringComparer]::OrdinalIgnoreCase)
+              $listed = [System.Collections.Generic.SortedSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+              if ($source -match "(?s)\b$($list.Name)\s*=\s*\[(.*?)\];") {
+                foreach ($match in [regex]::Matches($Matches[1], '"([^"]+)"')) { $null = $listed.Add($match.Groups[1].Value) }
+                if ($listed.Count -eq 0) { throw "$($exe.Source)'s $($list.Name) list read as empty." }
+              }
+              elseif ($list.Required) { throw "$($exe.Source) has no $($list.Name) list to read." }
+              "  $($list.Name): $($listed.Count) listed, $($expected.Count) computed"
+              foreach ($name in $expected) { if (-not $listed.Contains($name)) { Fail "The $($exe.Label) can load $name, $($list.Missing), and $($exe.Source) does not list it in $($list.Name)." } }
+              foreach ($name in $listed) { if (-not $expected.Contains($name)) { Fail "$($exe.Source) lists $name in $($list.Name), and it is not an assembly the $($exe.Label) can load $($list.Missing)." } }
+              $allListed.AddRange([string[]]@($listed))
+            }
+            foreach ($name in $allListed) {
               if ($name -in 'PresentationCore', 'PresentationFramework', 'WindowsBase' -or -not $index.ContainsKey($name)) { continue }
               if (@(Read-XmlnsDefinitions $index[$name]) -contains $presentation) {
                 Fail "$($exe.Source) lists $name, which declares types into the XAML namespace the window's markup uses, so loading it first changes how that markup is read."
@@ -1168,6 +1214,16 @@ jobs:
             if (-not $read) { continue }
             Test-MustLoad $run $read.Loads
             if ($run.Build.UpdateCheck) { Test-UpdateCheck $run $byProcess }
+            # The slim runs on the installed desktop runtime, which lists these as trusted
+            # platform assemblies, so its module initializer loads each before its Main.
+            if ($run.Label -eq 'slim') {
+              foreach ($name in @(Get-WhereInstalled)) {
+                $load = @($read.Loads | Where-Object Name -eq "$name.dll".ToLowerInvariant()) | Select-Object -First 1
+                if (-not $load) { Fail "The slim never loaded $name.dll, which it loads before its Main where the installed runtime carries it." }
+                elseif (-not $read.Marker -or $load.Index -gt $read.Marker.Index) { Fail "The slim loaded $name.dll at row $($load.Index), $(Get-When $load $read.Marker), where it loads it before its Main." }
+                else { "  loaded $name.dll at row $($load.Index), before row $($read.Marker.Index): $($load.Path)" }
+              }
+            }
             # Each exe writes to the crash log whatever fails as it starts, such as an
             # assembly on its list that will not load, so a build started with nothing
             # planted writes nothing there.
@@ -1420,6 +1476,21 @@ jobs:
             $lines = @(Get-Content $trace)
             Write-Host "== $($build.Label): $($lines.Count) trace lines"
             $lines | Where-Object { $_ -match $shown } | ForEach-Object { Write-Host "  $_" }
+
+            # The window loads the assemblies on its ImportingAssembliesWhereInstalled list only
+            # where the host lists them as trusted platform assemblies: the slim's host lists
+            # every assembly of the installed runtime, and the portable's lists none it carries.
+            if ($build.Label -in 'slim', 'portable') {
+              if (-not @($lines | Where-Object { $_ -match 'Property TRUSTED_PLATFORM_ASSEMBLIES = ' }).Count) { Fail "The $($build.Label)'s trace has no TRUSTED_PLATFORM_ASSEMBLIES line." }
+              $trusted = @($lines | ForEach-Object { if ($_ -match 'Property TRUSTED_PLATFORM_ASSEMBLIES = (.*)$') { $Matches[1] -split ';' } } | Where-Object { $_ })
+              "  the $($build.Label)'s trusted platform assemblies: $($trusted.Count)"
+              foreach ($name in @(Get-WhereInstalled)) {
+                $named = [bool]@($trusted | Where-Object { ($_ -split '\\')[-1] -eq "$name.dll" }).Count
+                "  they name $name`: $(if ($named) { 'yes' } else { 'no' })"
+                if ($build.Label -eq 'slim' -and -not $named) { Fail "The slim's trusted platform assemblies do not name $name, so the slim does not load it before its Main." }
+                if ($build.Label -eq 'portable' -and $named) { Fail "The portable's trusted platform assemblies name $name, which its bundle does not carry." }
+              }
+            }
             if ($build.Label -eq 'slim') {
               $options = @($lines | ForEach-Object { if ($_ -match '\.NET root search location options: (\d+)') { [int]$Matches[1] } })
               if (-not $options.Count) { Fail "The slim's trace has no .NET root search location options line." }

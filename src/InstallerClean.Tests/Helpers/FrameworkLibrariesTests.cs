@@ -175,4 +175,55 @@ public class FrameworkLibrariesTests
         Assert.NotNull(resolver);
         Assert.Equal(IntPtr.Zero, resolver("wpfgfx_cor3.dll", Other, null));
     }
+
+    private static readonly string[] WhereInstalled = ["Microsoft.VisualBasic.Forms", "System.Windows.Forms.Primitives"];
+
+    private static string PlatformAssemblies(params string[] paths) => string.Join(Path.PathSeparator, paths);
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void With_no_trusted_platform_assemblies_none_of_the_installed_runtimes_is_loaded(string? value)
+    {
+        Assert.Empty(FrameworkLibraries.Trusted(value, WhereInstalled));
+    }
+
+    [Fact]
+    public void Each_installed_runtime_assembly_the_trusted_list_names_is_loaded()
+    {
+        var value = PlatformAssemblies(
+            @"C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App\10.0.13\PresentationCore.dll",
+            @"C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App\10.0.13\System.Windows.Forms.Primitives.dll",
+            @"C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App\10.0.13\Microsoft.VisualBasic.Forms.dll");
+
+        Assert.Equal(WhereInstalled, FrameworkLibraries.Trusted(value, WhereInstalled));
+    }
+
+    [Fact]
+    public void Only_the_installed_runtime_assemblies_the_trusted_list_names_are_loaded()
+    {
+        var value = PlatformAssemblies(
+            @"C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App\10.0.13\MICROSOFT.VISUALBASIC.FORMS.DLL",
+            @"C:\System.Windows.Forms.Primitives\System.Windows.Forms.dll");
+
+        Assert.Equal(new[] { "Microsoft.VisualBasic.Forms" }, FrameworkLibraries.Trusted(value, WhereInstalled));
+    }
+
+    [Fact]
+    public void The_listed_assemblies_load_before_the_installed_runtimes()
+    {
+        var value = PlatformAssemblies(@"C:\shared\System.Windows.Forms.Primitives.dll");
+
+        Assert.Equal(
+            new[] { "PresentationCore", "WindowsBase", "System.Windows.Forms.Primitives" },
+            FrameworkLibraries.ToLoad(["PresentationCore", "WindowsBase"], value, WhereInstalled));
+    }
+
+    [Fact]
+    public void An_exe_with_no_installed_runtime_list_loads_its_own_list_alone()
+    {
+        var value = PlatformAssemblies(@"C:\shared\System.Windows.Forms.Primitives.dll");
+
+        Assert.Equal(new[] { "System.Console" }, FrameworkLibraries.ToLoad(["System.Console"], value, null));
+    }
 }

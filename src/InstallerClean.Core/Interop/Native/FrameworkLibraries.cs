@@ -81,9 +81,11 @@ internal static class FrameworkLibraries
     /// <summary>
     /// Sets the resolver on every assembly the process has loaded and will load, where
     /// <paramref name="exe"/> is the assembly the process was started for, then loads the
-    /// assemblies named in <paramref name="importing"/>. Each exe calls this from a module
-    /// initializer, which runs before its Main, naming the assemblies it can load that import
-    /// a Windows library.
+    /// assemblies named in <paramref name="importing"/>, and those named in
+    /// <paramref name="importingWhereTrusted"/> that the runtime lists as trusted platform
+    /// assemblies. Each exe calls this from a module initializer, which runs before its Main,
+    /// naming the assemblies its self-contained build carries that import a Windows library,
+    /// and the window also those the installed desktop runtime adds.
     /// </summary>
     /// <remarks>
     /// The resolver is set as each assembly is loaded, before any of its code runs. Loading
@@ -93,11 +95,12 @@ internal static class FrameworkLibraries
     /// not named is given its resolver as it is loaded. Loading an assembly runs none of its
     /// code, but it does make the assembly one the process has loaded, which WPF reads for some
     /// assemblies; the native-libraries job in ci.yml says which are left out for that and
-    /// fails where an exe's list differs from what it can load. Nothing here throws, since a
+    /// fails where an exe's lists differ from what its builds carry. Nothing here throws, since a
     /// module initializer that throws stops the exe before its Main; a refusal is written to
     /// the crash log.
     /// </remarks>
-    internal static void ResolveFor(Assembly exe, IReadOnlyList<string> importing)
+    internal static void ResolveFor(
+        Assembly exe, IReadOnlyList<string> importing, IReadOnlyList<string>? importingWhereTrusted = null)
     {
         try
         {
@@ -108,7 +111,10 @@ internal static class FrameworkLibraries
                 register => domain.AssemblyLoad += (_, e) => register(e.LoadedAssembly),
                 domain.GetAssemblies,
                 assembly => Register(assembly, s_registered, NativeLibrary.SetDllImportResolver),
-                () => Load(importing));
+                () => Load(ToLoad(
+                    importing,
+                    AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") as string,
+                    importingWhereTrusted)));
         }
         catch (Exception ex)
         {
@@ -166,6 +172,38 @@ internal static class FrameworkLibraries
         {
             Record(ex);
         }
+    }
+
+    /// <summary>
+    /// The assemblies to load before Main, in order: every name in <paramref name="importing"/>,
+    /// then each name in <paramref name="importingWhereTrusted"/> that
+    /// <paramref name="platformAssemblies"/> names.
+    /// </summary>
+    internal static IReadOnlyList<string> ToLoad(
+        IReadOnlyList<string> importing, string? platformAssemblies, IReadOnlyList<string>? importingWhereTrusted) =>
+        [.. importing, .. Trusted(platformAssemblies, importingWhereTrusted)];
+
+    /// <summary>
+    /// The names in <paramref name="names"/> whose file, without ".dll" and ignoring case, is one
+    /// of the paths <paramref name="platformAssemblies"/> lists, in the form of the runtime's
+    /// TRUSTED_PLATFORM_ASSEMBLIES property. The host of a framework-dependent build lists every
+    /// assembly of the installed runtime there; that of a single-file build lists none of the
+    /// assemblies its bundle carries. Where the value is missing or names none of them, nothing
+    /// is returned, so nothing is loaded and nothing is written to the crash log, and such an
+    /// assembly is given its resolver as it is loaded.
+    /// </summary>
+    internal static IReadOnlyList<string> Trusted(string? platformAssemblies, IReadOnlyList<string>? names)
+    {
+        if (string.IsNullOrEmpty(platformAssemblies) || names is null || names.Count == 0)
+            return [];
+        var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in platformAssemblies.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var file = path[(path.LastIndexOfAny(['\\', '/']) + 1)..];
+            if (file.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+                files.Add(file[..^4]);
+        }
+        return [.. names.Where(files.Contains)];
     }
 
     /// <summary>Loads each assembly <paramref name="names"/> names.</summary>
