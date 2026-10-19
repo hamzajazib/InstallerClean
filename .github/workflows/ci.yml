@@ -1242,13 +1242,13 @@ jobs:
       # folder of its own with both variables set on its process alone, and so is each
       # build published again with start-up hooks allowed, from a copy of the commit of
       # its own. Every build is started with /startedevent:<id> and waited for until it
-      # sets the event, the command line for its version, so it scans nothing; a build
-      # that does not set it within 60 s fails the step, since whether a hook ran in it is
-      # then not judged. The step fails where a shipped build ran the hook, and where an
-      # allowing build did not by the time it set the event. Each allowing build's hook
-      # line is printed. The builds are started with CreateProcess, which a window build
-      # asking for administrator rights refuses with error 740 where the step is not
-      # elevated.
+      # sets the event, the command line for its version, so it scans nothing. The step
+      # fails where a shipped build's start wrote any hook line, from its own process or
+      # one it started, whether or not the build then set the event; where any build does
+      # not set the event within 60 s; and where an allowing build's own process had not
+      # run the hook by the time it set the event. Each allowing build's hook line is
+      # printed. The builds are started with CreateProcess, which a window build asking
+      # for administrator rights refuses with error 740 where the step is not elevated.
       - name: Check no build runs a start-up hook
         if: ${{ !cancelled() }}
         shell: pwsh
@@ -1331,7 +1331,8 @@ jobs:
             catch {
               $cause = if ($_.Exception.InnerException) { $_.Exception.InnerException } else { $_.Exception }
               $why = if ($cause.NativeErrorCode -eq 740) { ', which asks for administrator rights the step does not have' } else { '' }
-              $failed += "$($build.Label) could not be started: $($cause.Message)$why."
+              $code = if ($cause.NativeErrorCode) { " (error $($cause.NativeErrorCode))" } else { '' }
+              $failed += "$($build.Label) could not be started: $($cause.Message.TrimEnd('.'))$code$why."
               $started.Dispose()
               continue
             }
@@ -1344,9 +1345,14 @@ jobs:
             $started.Dispose()
             $lines = @(if (Test-Path -LiteralPath $marker) { Get-Content -LiteralPath $marker })
             $own = @($lines | Where-Object { $_ -like "$($p.Id) *" })
-            # A shipped build that ran the hook has failed whether or not it went on to set the event.
+            # Every line counts against a shipped build, its own process's or a process it
+            # started; an allowing build is credited with its own process's line only.
             if (-not $build.Allowing -and $lines.Count) { $failed += "$($build.Label) ran the start-up hook DOTNET_STARTUP_HOOKS names: $($lines -join '; ')"; continue }
-            if (-not $set) { $failed += "$($build.Label) did not set the event within 60 s, so whether a hook ran in it is not judged."; continue }
+            if (-not $set) {
+              $failed += if ($build.Allowing) { "$($build.Label) did not set the event within 60 s, so whether the hook ran by then is not judged." }
+                         else { "$($build.Label) did not set the event within 60 s; no hook ran in it before it was ended." }
+              continue
+            }
             $after = "$([math]::Round($clock.Elapsed.TotalSeconds, 1)) s"
             if ($build.Allowing) {
               if (-not $own.Count) { $failed += "$($build.Label) ran no hook, so a shipped build running none shows nothing." }
