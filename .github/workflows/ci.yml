@@ -603,6 +603,9 @@ jobs:
   # runs, the PC-wide first-run mark is set, so the offer is never made, and the
   # report receiver's host is pointed nowhere in the hosts file. The job fails where
   # either window left a report behind.
+  #
+  # Each pass's Process Monitor rows for the builds' own processes, and each host
+  # trace, are kept with the run for seven days, whether or not the job passed.
   native-libraries:
     name: Native libraries (Windows)
     runs-on: windows-2025
@@ -1387,3 +1390,39 @@ jobs:
           }
           $left | ForEach-Object { Write-Host "::error::$_" }
           if ($left.Count) { exit 1 }
+
+      # A Process Monitor record holds every process on the runner, so only the rows
+      # whose process is one of the builds are kept, each column as recorded except
+      # Detail on a row that starts or creates a process, which is emptied. The host
+      # traces are kept whole. A run that ended before a record was saved keeps what
+      # there is, and this step judges nothing.
+      - name: Keep the Process Monitor rows and the host traces
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          $kept = Join-Path $env:RUNNER_TEMP 'kept'
+          New-Item -ItemType Directory -Force -Path $kept | Out-Null
+          $exes = 'installerclean-cli.exe', 'InstallerClean.exe'
+          foreach ($name in 'first', 'second') {
+            $csv = Join-Path $env:RUNNER_TEMP "procmon\$name.csv"
+            if (-not (Test-Path $csv)) { "  no $csv"; continue }
+            $rows = @(Import-Csv $csv | Where-Object { $_.'Process Name' -in $exes } | ForEach-Object {
+              if ($_.Operation -in 'Process Start', 'Process Create') { $_.Detail = '' }
+              $_
+            })
+            $rows | Export-Csv -Path (Join-Path $kept "$name.csv") -NoTypeInformation -UseQuotes Always
+            "  kept $($rows.Count) rows of $csv"
+          }
+          foreach ($trace in @(Get-ChildItem -Path (Join-Path $env:RUNNER_TEMP 'trace-*.txt') -ErrorAction SilentlyContinue)) {
+            Copy-Item -LiteralPath $trace.FullName -Destination $kept
+            "  kept $($trace.FullName)"
+          }
+
+      - name: Upload the Process Monitor rows and the host traces
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: process-monitor-records
+          path: ${{ runner.temp }}/kept
+          if-no-files-found: warn
+          retention-days: 7
