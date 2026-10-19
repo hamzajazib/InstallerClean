@@ -729,10 +729,10 @@ jobs:
           function Fail([string]$message) { $failures.Add($message); Write-Host "::error::$message" }
 
           $builds = @(
-            [pscustomobject]@{ Label = 'command line'; Exe = 'publish/cli/installerclean-cli.exe'; Arguments = @('/s', '/noupdate'); Wait = 60; MustLoad = @('msi.dll'); Marker = 'old copy' },
-            [pscustomobject]@{ Label = 'command line, checking for updates'; Exe = 'publish/cli/installerclean-cli.exe'; Arguments = @('/s'); Wait = 60; MustLoad = @('msi.dll', 'winhttp.dll'); UpdateCheck = $true; Marker = 'old copy' },
-            [pscustomobject]@{ Label = 'portable'; Exe = 'publish/self-contained/InstallerClean.exe'; Arguments = @(); Wait = 20; MustLoad = @('dwmapi.dll', 'wpfgfx_cor3.dll'); Marker = 'app folder' },
-            [pscustomobject]@{ Label = 'slim'; Exe = 'publish/framework-dependent/InstallerClean.exe'; Arguments = @(); Wait = 20; MustLoad = @('dwmapi.dll', 'wpfgfx_cor3.dll'); Marker = 'module initializer' }
+            [pscustomobject]@{ Label = 'command line'; Exe = 'publish/cli/installerclean-cli.exe'; Source = 'src/InstallerClean.Cli/LibrarySearch.cs'; Arguments = @('/s', '/noupdate'); Wait = 60; MustLoad = @('msi.dll'); Marker = 'old copy' },
+            [pscustomobject]@{ Label = 'command line, checking for updates'; Exe = 'publish/cli/installerclean-cli.exe'; Source = 'src/InstallerClean.Cli/LibrarySearch.cs'; Arguments = @('/s'); Wait = 60; MustLoad = @('msi.dll', 'winhttp.dll'); UpdateCheck = $true; Marker = 'old copy' },
+            [pscustomobject]@{ Label = 'portable'; Exe = 'publish/self-contained/InstallerClean.exe'; Source = 'src/InstallerClean/LibrarySearch.cs'; Arguments = @(); Wait = 20; MustLoad = @('dwmapi.dll', 'wpfgfx_cor3.dll'); Marker = 'app folder' },
+            [pscustomobject]@{ Label = 'slim'; Exe = 'publish/framework-dependent/InstallerClean.exe'; Source = 'src/InstallerClean/LibrarySearch.cs'; Arguments = @(); Wait = 20; MustLoad = @('dwmapi.dll', 'wpfgfx_cor3.dll'); Marker = 'module initializer' }
           )
 
           # The apphost reads these before the runtime starts. A planted one it takes can
@@ -835,8 +835,8 @@ jobs:
           # The first act of the build's own code that Process Monitor can see, and the first
           # it can see of the code that runs in Main or later, each with its kind. A row after
           # the first came after the build's own code started. In the slim, the first is the
-          # module initializer's load of the first assembly on the exe's list, read from the
-          # installed runtime's folder. A self-contained single-file build reads every assembly
+          # module initializer's load of the first assembly on the exe's list from the installed
+          # runtime's folder, the row on which Process Monitor shows the image loaded. A self-contained single-file build reads every assembly
           # from its own bundle, so nothing names its module initializer's loads, and its first
           # act seen is in Main. Main and later make the others: the look for the exe's old or new copy
           # beside it, the app's folder under %LOCALAPPDATA% or the NoFaff one earlier
@@ -844,7 +844,7 @@ jobs:
           # build names the kind it shows first, and the first pass fails where it shows
           # another.
           function Get-Marker($rows, $run) {
-            $first = (Read-SourceList (Get-ListSource $run.Exe) 'ImportingAssemblies')[0]
+            $first = @(Read-SourceList $run.Build.Source 'ImportingAssemblies')[0]
             $exe = $run.Folder.TrimEnd('\') + '\' + $run.Exe
             $initializer = $null
             for ($i = 0; $i -lt $rows.Count; $i++) {
@@ -853,7 +853,7 @@ jobs:
                 elseif ($row.Path -match '\\AppData\\Local\\((NoFaff\\)?InstallerClean(\\|$)|NoFaff$)') { 'app folder' }
                 elseif ($row.Path -match '^C:\\Windows\\Installer(\\|$)') { 'Installer folder' }
                 elseif ($row.Operation -eq 'Load Image' -and (Split-Path $row.Path -Leaf) -eq 'msi.dll') { 'msi.dll' }
-                elseif (-not $initializer -and $row.Path -match '\\dotnet\\shared\\' -and (Split-Path $row.Path -Leaf) -eq "$first.dll") { 'module initializer' }
+                elseif (-not $initializer -and $row.Operation -eq 'Load Image' -and $row.Path -match '\\dotnet\\shared\\' -and (Split-Path $row.Path -Leaf) -eq "$first.dll") { 'module initializer' }
               if (-not $kind) { continue }
               $act = [pscustomobject]@{ Index = $i + 1; Kind = $kind; What = "$($row.Operation) $($row.Path)" }
               if ($kind -eq 'module initializer') { $initializer = $act; continue }
@@ -949,11 +949,6 @@ jobs:
             $names = @([regex]::Matches($Matches[1], '"([^"]+)"') | ForEach-Object { $_.Groups[1].Value })
             if (-not $names) { throw "$path's $name list read as empty." }
             $names
-          }
-
-          # The source of an exe's lists of assemblies it loads before its Main.
-          function Get-ListSource([string]$exe) {
-            if ($exe -like 'installerclean-cli*') { 'src/InstallerClean.Cli/LibrarySearch.cs' } else { 'src/InstallerClean/LibrarySearch.cs' }
           }
 
           function Get-BaseName([string]$name) { ($name -replace '\.dll$', '').ToLowerInvariant() }
@@ -1173,8 +1168,12 @@ jobs:
             "  references $($seen.Count) assemblies; the build carries none of: $($bundled.Absent -join ', ')"
             "  on the installed runtime, references $($installed.Seen.Count) assemblies; the packs carry none of: $($installed.Absent -join ', ')"
 
+            # Where the exe has a list of assemblies it loads where installed, a name it leaves
+            # for their own load may be one only the installed runtime carries; otherwise it is
+            # one its bundle carries.
+            $reached = if (@(Read-SourceList $exe.Source 'ImportingAssembliesWhereInstalled' -optional).Count) { $installed.Importing } else { $importing }
             foreach ($name in $exe.LeftToTheirLoad) {
-              if (-not $installed.Importing.Contains($name)) { Fail "The $($exe.Label) leaves $name for its own load to register, and no assembly it references that imports a Windows library is called that." }
+              if (-not $reached.Contains($name)) { Fail "The $($exe.Label) leaves $name for its own load to register, and no assembly it references that imports a Windows library is called that." }
             }
             foreach ($name in $wpfReads) {
               if ($installed.Importing.Contains($name) -and $name -notin $exe.LeftToTheirLoad) {
@@ -1257,11 +1256,12 @@ jobs:
             # The slim runs on the installed desktop runtime, which lists these as trusted
             # platform assemblies, so its module initializer loads each before its Main: before
             # the first act seen of its code in Main or later.
-            if ($run.Label -eq 'slim') {
+            if ($run.Label -eq 'slim' -and -not $read.MainMarker) { Fail "The slim showed no act of its code in Main or later, so its loads before Main were not judged." }
+            elseif ($run.Label -eq 'slim') {
               foreach ($name in @(Get-WhereInstalled)) {
                 $load = @($read.Loads | Where-Object Name -eq "$name.dll".ToLowerInvariant()) | Select-Object -First 1
                 if (-not $load) { Fail "The slim never loaded $name.dll, which it loads before its Main where the installed runtime carries it." }
-                elseif (-not $read.MainMarker -or $load.Index -gt $read.MainMarker.Index) { Fail "The slim loaded $name.dll at row $($load.Index), not before the first act seen of its code in Main or later, where it loads it before its Main." }
+                elseif ($load.Index -gt $read.MainMarker.Index) { Fail "The slim loaded $name.dll at row $($load.Index), not before the first act seen of its code in Main or later, where it loads it before its Main." }
                 else { "  loaded $name.dll at row $($load.Index), before row $($read.MainMarker.Index), the $($read.MainMarker.Kind): $($load.Path)" }
               }
             }
@@ -1534,10 +1534,11 @@ jobs:
                 $named = [bool]@($trusted | Where-Object { ($_ -split '\\')[-1] -eq "$name.dll" }).Count
                 "  they name $name`: $(if ($named) { 'yes' } else { 'no' })"
                 if ($build.Label -eq 'slim' -and -not $named) { Fail "The slim's trusted platform assemblies do not name $name, so the slim does not load it before its Main." }
+                if ($build.Label -eq 'portable' -and $named) { Fail "The portable's trusted platform assemblies name $name, which its bundle does not carry." }
               }
               if ($build.Label -eq 'portable') {
                 $bundled = Read-BundleAssemblies $build.Exe
-                $listedBundled = @($trusted | Where-Object { $_.EndsWith('.dll', 'OrdinalIgnoreCase') -and $bundled.Contains(($_ -split '\\')[-1] -replace '\.dll$', '') })
+                $listedBundled = @($trusted | Where-Object { $_.EndsWith('.dll', 'OrdinalIgnoreCase') -and $bundled.Contains((($_ -split '\\')[-1] -replace '\.dll$', '')) })
                 "  of the $($bundled.Count) assemblies the portable's bundle carries, its trusted platform assemblies name $($listedBundled.Count)"
                 if ($listedBundled) { Fail "The portable's trusted platform assemblies name $($listedBundled[0]), which its bundle carries." }
               }
