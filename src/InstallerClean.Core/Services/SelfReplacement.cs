@@ -471,6 +471,7 @@ public static class SelfReplacement
         if (startedEvent is not null) info.ArgumentList.Add(HandOverContract.StartedEventArgument(startedId));
         Exception? failure = null;
         var newerRan = false;
+        var newerStays = false;
         for (var attempt = 1; attempt <= StartAttempts; attempt++)
         {
             Process? newer;
@@ -493,18 +494,15 @@ public static class SelfReplacement
                     newer, startedEvent!, startBound ?? HandOverContract.StartBound, cancel: null, out var waitError);
                 if (answer == NewerVersionStart.Started) EndThisProcess();
                 failure = NotStartedFailure(answer, waitError, newer, startBound ?? HandOverContract.StartBound);
-                if (!EndNewerVersion(newer))
-                {
-                    CrashLog.TryWrite(failure);
-                    EndThisProcess();
-                }
+                // One Windows would not end is still running from the file at the path.
+                newerStays = !EndNewerVersion(newer);
             }
             break;
         }
 
         // A person can start the file at the path while the wait runs, and renaming a file a
         // process runs from takes from it the assemblies it has still to load.
-        var newerStays = (newerRan && AnotherProcessMayRunFrom(exePath)) || !putBack();
+        newerStays = newerStays || (newerRan && AnotherProcessMayRunFrom(exePath)) || !putBack();
         if (failure is not null) CrashLog.TryWrite(failure);
         if (newerStays) EndThisProcess();
         return false;

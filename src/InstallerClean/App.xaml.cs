@@ -366,13 +366,10 @@ public partial class App : Application
                 }));
 
             splash = new SplashWindow();
-            // A person closing the splash, with Alt+F4, asks the app to stop. The app's own
-            // closes of the splash come after a shutdown has been asked for, or once the
-            // main window is up.
-            var splashClosedByApp = false;
+            // A person closing the splash, with Alt+F4, asks the app to stop.
             splash.Closed += (_, _) =>
             {
-                if (!splashClosedByApp) Shutdown();
+                if (!_splashClosedByApp) Shutdown();
             };
             splash.Show();
 
@@ -500,7 +497,7 @@ public partial class App : Application
             Application.Current.MainWindow = window;
             window.Show();
             ShutdownMode = ShutdownMode.OnLastWindowClose;
-            splashClosedByApp = true;
+            _splashClosedByApp = true;
             splash.Close();
         }
         // Both arms show the dialog before EndFailedStart, and the order is
@@ -528,18 +525,21 @@ public partial class App : Application
     /// where it is up.
     /// </summary>
     /// <remarks>
-    /// The shutdown is asked for before the splash closes, so the splash's close is not
-    /// read as a person closing it, and a shutdown already under way ignores a second. It
-    /// queues the shutdown as a dispatcher operation, so it is asked for only after any
-    /// dialog saying why the start failed has closed: a modal opened after it pumps the
-    /// dispatcher, runs the queued shutdown from inside its own frame, and the only
-    /// diagnosis a user gets for a failed start flashes and vanishes.
+    /// The splash's close is marked as the app's own, so it is not read as a person closing
+    /// the splash. The shutdown is queued as a dispatcher operation, so it is asked for only
+    /// after any dialog saying why the start failed has closed: a modal opened after it
+    /// pumps the dispatcher, runs the queued shutdown from inside its own frame, and the
+    /// only diagnosis a user gets for a failed start flashes and vanishes.
     /// </remarks>
     private void EndFailedStart(SplashWindow? splash)
     {
         Shutdown(1);
+        _splashClosedByApp = true;
         splash?.Close();
     }
+
+    /// <summary>Whether the splash is being closed by the app itself rather than by a person.</summary>
+    private bool _splashClosedByApp;
 
     /// <summary>
     /// Writes <paramref name="ex"/> to the crash log and shows the dialog saying the
