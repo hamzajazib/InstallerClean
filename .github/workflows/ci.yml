@@ -919,7 +919,8 @@ jobs:
           # it can, and by its address otherwise. Every /s run writes one summary entry to
           # the Application log, or a 3005 or 3006 where an update ended the run, so a run
           # with no entry there, or a log that cannot be read, fails rather than reading as
-          # one that found nothing newer.
+          # one that found nothing newer. Only the entries written while the run was going are
+          # read, so a later run of the same exe cannot answer for it.
           function Test-UpdateCheck($run, $byProcess) {
             $github = @([System.Net.Dns]::GetHostAddresses('github.com') | ForEach-Object IPAddressToString)
             $answers = @($byProcess[[string]$run.Id] | Where-Object {
@@ -928,18 +929,17 @@ jobs:
             })
             if ($answers) { "  $($run.Label): the update check had an answer from $(($answers[0].Path -split ' -> ')[-1]) at $($answers[0].'Time of Day')" }
             else { Fail "$($run.Label): the update check got no answer from GitHub, so the run's network libraries were not judged." }
-            try {
-              $events = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'InstallerClean'; StartTime = $run.Started } -ErrorAction Stop)
-            }
-            catch {
-              if ($_.FullyQualifiedErrorId -notlike 'NoMatchingEventsFound,*') { Fail "$($run.Label): the Application log could not be read, so whether it updated itself was not judged: $($_.Exception.Message)"; return }
-              $events = @()
-            }
-            if (-not $events) { Fail "$($run.Label) wrote no entry to the Application log, so whether it updated itself was not judged."; return }
-            foreach ($event in $events) { "  $($run.Label): Event ID $($event.Id) at $($event.TimeCreated)" }
-            foreach ($event in @($events | Where-Object Id -in 3005, 3006)) {
-              if ($event.Id -eq 3005) { Fail "$($run.Label) updated itself to a newer release, Event ID 3005 at $($event.TimeCreated), so what ran was not this build." }
-              else { Fail "$($run.Label) found a newer release and the update failed or was not tried, Event ID 3006 at $($event.TimeCreated)." }
+            $entries = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'InstallerClean'; StartTime = $run.Started; EndTime = $run.Ended } -ErrorAction SilentlyContinue -ErrorVariable readErrors)
+            # No entry matching, and a source that was never registered or writes to another
+            # log, each come back as an error that means the run wrote nothing here.
+            $noEntry = 'NoMatchingEventsFound', 'NoMatchingProvidersFound', 'LogsAndProvidersDontOverlap'
+            $unread = @($readErrors | Where-Object { ($_.FullyQualifiedErrorId -split ',')[0] -notin $noEntry })
+            foreach ($readError in $unread) { Fail "$($run.Label): the Application log could not be read in full, so whether it updated itself may not have been judged: $($readError.Exception.Message)" }
+            if (-not $entries -and -not $unread) { Fail "$($run.Label) wrote no entry to the Application log, so whether it updated itself was not judged." }
+            foreach ($entry in $entries) { "  $($run.Label): Event ID $($entry.Id) at $($entry.TimeCreated)" }
+            foreach ($entry in @($entries | Where-Object Id -in 3005, 3006)) {
+              if ($entry.Id -eq 3005) { Fail "$($run.Label) updated itself to a newer release, Event ID 3005 at $($entry.TimeCreated), so what ran was not this build." }
+              else { Fail "$($run.Label) found a newer release and the update failed or was not tried, Event ID 3006 at $($entry.TimeCreated)." }
             }
           }
 
@@ -1250,7 +1250,8 @@ jobs:
             Copy-Item $build.Exe $folder
             $started = Get-Date
             $id = Invoke-Build $build $build.Label $folder
-            [pscustomobject]@{ Label = $build.Label; Build = $build; Folder = $folder; Exe = (Split-Path $build.Exe -Leaf); Id = $id; Started = $started }
+            $ended = Get-Date
+            [pscustomobject]@{ Label = $build.Label; Build = $build; Folder = $folder; Exe = (Split-Path $build.Exe -Leaf); Id = $id; Started = $started; Ended = $ended }
           }
           $byProcess = Read-Record (Stop-Record 'first') $runs
 
@@ -1267,11 +1268,12 @@ jobs:
             # The slim runs on the installed desktop runtime, which lists these as trusted
             # platform assemblies, so its module initializer loads each before its Main: before
             # the first act seen of its code in Main or later.
-            if ($run.Label -eq 'slim' -and -not $read.MainMarker) { Fail "The slim showed no act of its code in Main or later, so its loads before Main were not judged." }
-            elseif ($run.Label -eq 'slim') {
+            if ($run.Label -eq 'slim') {
+              if (-not $read.MainMarker) { Fail "The slim showed no act of its code in Main or later, so whether it loads these before its Main was not judged." }
               foreach ($name in @(Get-WhereInstalled)) {
                 $load = @($read.Loads | Where-Object Name -eq "$name.dll".ToLowerInvariant()) | Select-Object -First 1
                 if (-not $load) { Fail "The slim never loaded $name.dll, which it loads before its Main where the installed runtime carries it." }
+                elseif (-not $read.MainMarker) { continue }
                 elseif ($load.Index -gt $read.MainMarker.Index) { Fail "The slim loaded $name.dll at row $($load.Index), not before the first act seen of its code in Main or later, where it loads it before its Main." }
                 else { "  loaded $name.dll at row $($load.Index), before row $($read.MainMarker.Index), the $($read.MainMarker.Kind): $($load.Path)" }
               }
@@ -1393,8 +1395,9 @@ jobs:
             }
             $started = Get-Date
             $id = Invoke-Build $build $p.Label $folder
+            $ended = Get-Date
             [pscustomobject]@{
-              Label = $p.Label; Build = $build; Folder = $folder; Exe = (Split-Path $build.Exe -Leaf); Id = $id; Started = $started
+              Label = $p.Label; Build = $build; Folder = $folder; Exe = (Split-Path $build.Exe -Leaf); Id = $id; Started = $started; Ended = $ended
               Placed = $placed; BundleFiles = @($p.BundleFiles | Where-Object { $_ }); JudgeOnLoadAlone = $p.JudgeOnLoadAlone
             }
           }
@@ -1545,7 +1548,7 @@ jobs:
                 $named = [bool]@($trusted | Where-Object { ($_ -split '\\')[-1] -eq "$name.dll" }).Count
                 "  they name $name`: $(if ($named) { 'yes' } else { 'no' })"
                 if ($build.Label -eq 'slim' -and -not $named) { Fail "The slim's trusted platform assemblies do not name $name, so the slim does not load it before its Main." }
-                if ($build.Label -eq 'portable' -and $named) { Fail "The portable's trusted platform assemblies name $name, which its bundle does not carry." }
+                if ($build.Label -eq 'portable' -and $named) { Fail "The portable's trusted platform assemblies name $name, which is on the window's list of assemblies it loads where installed." }
               }
               if ($build.Label -eq 'portable') {
                 $bundled = Read-BundleAssemblies $build.Exe
