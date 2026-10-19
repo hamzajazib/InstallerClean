@@ -63,18 +63,23 @@ internal static class HandOverContract
 
     /// <summary>
     /// Creates the event <paramref name="id"/> names, unset, or answers null where it
-    /// cannot or where an event of that name exists already, which this process did not
-    /// make. Each is written to crash.log.
+    /// cannot, as <see cref="CreateEvent"/> does.
     /// </summary>
-    internal static EventWaitHandle? CreateStartedEvent(Guid id)
+    internal static EventWaitHandle? CreateStartedEvent(Guid id) => CreateEvent(StartedEventName(id));
+
+    /// <summary>
+    /// Creates a manual-reset event named <paramref name="name"/>, unset, for one of the
+    /// hand-over switches, or answers null where it cannot or where an event of that name
+    /// exists already, which this process did not make. Each is written to crash.log.
+    /// </summary>
+    internal static EventWaitHandle? CreateEvent(string name)
     {
         try
         {
-            var created = new EventWaitHandle(false, EventResetMode.ManualReset, StartedEventName(id),
-                out var createdNew);
+            var created = new EventWaitHandle(false, EventResetMode.ManualReset, name, out var createdNew);
             if (createdNew) return created;
             created.Dispose();
-            throw new InvalidOperationException("An event with the started event's name exists already.");
+            throw new InvalidOperationException($"An event named {name} exists already.");
         }
         catch (Exception ex)
         {

@@ -260,15 +260,29 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
     /// saying the run is cancelling printed where one was held back. Ctrl+C, or a newer
     /// version that Ctrl+C ended before it had a handler for it, throws
     /// <see cref="OperationCanceledException"/> instead, so the run answers it as Ctrl+C
-    /// before the newer version started. A newer version that will not end is left to run
-    /// and answered true, so the file it runs from is never renamed under it.
+    /// before the newer version started. A newer version Windows would not end is still
+    /// running its own code, so it is waited for until it ends, Ctrl+C or not, and answered
+    /// true where it set the event meanwhile or where the wait could not be made: the file
+    /// it runs from is never renamed under it.
     /// </summary>
     private bool NewerVersionSaidItStarted(Process process, EventWaitHandle startedEvent, CancellationToken token)
     {
         var answer = SelfReplacement.AwaitStart(process, startedEvent, HandOverContract.StartBound, token.WaitHandle);
         if (answer == NewerVersionStart.Started) return true;
         var failure = SelfReplacement.NotStartedFailure(answer, process, HandOverContract.StartBound);
-        if (!SelfReplacement.EndNewerVersion(process)) return true;
+        if (!SelfReplacement.EndNewerVersion(process))
+        {
+            try
+            {
+                process.WaitForExit();
+            }
+            catch (Exception ex)
+            {
+                CrashLog.TryWrite(ex);
+                return true;
+            }
+            if (SelfReplacement.IsSet(startedEvent)) return true;
+        }
         CrashLog.TryWrite(failure);
         if (answer == NewerVersionStart.Ended && EndedForCtrlC(process))
             token.WaitHandle.WaitOne(CommandLineUpdate.ControlCBound);
@@ -360,22 +374,8 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
     /// where an event of that name exists already, which this run did not make. Each is
     /// written to crash.log.
     /// </summary>
-    private static EventWaitHandle? CreateCancelEvent(Guid id)
-    {
-        try
-        {
-            var created = new EventWaitHandle(false, EventResetMode.ManualReset, CliContract.CancelEventName(id),
-                out var createdNew);
-            if (createdNew) return created;
-            created.Dispose();
-            throw new InvalidOperationException("An event with the cancel event's name exists already.");
-        }
-        catch (Exception ex)
-        {
-            CrashLog.TryWrite(ex);
-            return null;
-        }
-    }
+    private static EventWaitHandle? CreateCancelEvent(Guid id) =>
+        HandOverContract.CreateEvent(CliContract.CancelEventName(id));
 
     private const int StartAttempts = 4;
     private static readonly TimeSpan StartRetryInterval = TimeSpan.FromMilliseconds(500);

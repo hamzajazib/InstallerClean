@@ -905,8 +905,8 @@ public partial class App : Application
     /// </summary>
     private static void RetakeAfterHandOverFailed()
     {
-        RetakeSingleInstanceMutex();
-        _instanceLockLost = !_holdsSingleInstanceMutex;
+        _instanceLockLost = true;
+        TryRetakeLostLock();
     }
 
     /// <summary>
@@ -917,10 +917,19 @@ public partial class App : Application
     /// </summary>
     public static bool IsInstanceLockLost()
     {
-        if (!_instanceLockLost) return false;
+        TryRetakeLostLock();
+        return _instanceLockLost;
+    }
+
+    /// <summary>
+    /// Where the app let go of the single-instance mutex for an update that did not hand
+    /// over and has not had it back, tries to take it back, on the dispatcher thread.
+    /// </summary>
+    private static void TryRetakeLostLock()
+    {
+        if (!_instanceLockLost) return;
         RetakeSingleInstanceMutex();
         _instanceLockLost = !_holdsSingleInstanceMutex;
-        return _instanceLockLost;
     }
 
     private const int StartAttempts = 4;

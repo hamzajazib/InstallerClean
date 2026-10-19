@@ -438,8 +438,9 @@ public static class SelfReplacement
     /// pump messages; the app runs elevated, so CreateProcess starts the newer version,
     /// whose manifest asks for elevation too, without a prompt. An antivirus can hold a
     /// program it has just seen written for a moment, so a start that fails is tried
-    /// again a few times, half a second apart. What failed goes to crash.log only once
-    /// this exe is back in place. The event is created before anything is renamed, and
+    /// again a few times, half a second apart. What stopped the hand-over goes to crash.log
+    /// once this exe is back in place; a wait Windows refuses, or a newer version that will
+    /// not end, is written as it happens. The event is created before anything is renamed, and
     /// where it cannot be, nothing is: a newer version that cannot be seen to start is
     /// not put in this exe's place.
     /// </remarks>
@@ -512,9 +513,11 @@ public static class SelfReplacement
     /// came first: the event, the newer version ending, the bound, or
     /// <paramref name="cancel"/> being set. An event set by a newer version that has also
     /// ended answers <see cref="NewerVersionStart.Started"/>, and so does one set as
-    /// <paramref name="cancel"/> is. The wait dispatches nothing, so on a window's thread
+    /// <paramref name="cancel"/> is, or as the bound runs out: the event is looked at once
+    /// more before either is answered. The wait dispatches nothing, so on a window's thread
     /// no window code runs during it. A wait Windows refuses answers
-    /// <see cref="NewerVersionStart.TimedOut"/>, written to crash.log. Never throws.
+    /// <see cref="NewerVersionStart.TimedOut"/>, written to crash.log, with no second look.
+    /// Never throws.
     /// </summary>
     internal static NewerVersionStart AwaitStart(
         Process newer, WaitHandle started, TimeSpan bound, WaitHandle? cancel)
@@ -522,6 +525,7 @@ public static class SelfReplacement
         var handles = new List<SafeHandle> { started.SafeWaitHandle, newer.SafeHandle };
         if (cancel is not null) handles.Add(cancel.SafeWaitHandle);
         var answer = Wait(handles, bound);
+        if (answer is TimedOutWait or 2 && IsSet(started)) answer = 0;
         return answer switch
         {
             0 => NewerVersionStart.Started,
@@ -531,11 +535,18 @@ public static class SelfReplacement
         };
     }
 
+    /// <summary>Whether <paramref name="started"/> is set, looked at without waiting.</summary>
+    internal static bool IsSet(WaitHandle started) => Wait([started.SafeWaitHandle], TimeSpan.Zero) == 0;
+
     /// <summary>
     /// Ends <paramref name="newer"/>, a newer version that has not said its own code is
     /// running, and waits up to <see cref="EndBound"/> for it to have ended. Answers
-    /// whether it has. One that will not end is written to crash.log, and the caller
-    /// leaves the file it runs from where it is. Never throws.
+    /// whether it runs no more of its code: it has ended, or Windows has accepted the
+    /// request to end it, which no process can refuse once it is accepted, and which a
+    /// process stuck in the middle of a call into Windows can take a while to complete.
+    /// Answers false where Windows refused the request and the process is still running,
+    /// and the caller then never renames the file it runs from. Each of the two is written
+    /// to crash.log. Never throws.
     /// </summary>
     internal static bool EndNewerVersion(Process newer)
     {
@@ -545,19 +556,21 @@ public static class SelfReplacement
             if (Wait(handles, TimeSpan.Zero) == 0) return true;
             var handle = newer.SafeHandle;
             var added = false;
+            bool accepted;
             try
             {
                 handle.DangerousAddRef(ref added);
-                Kernel32.TerminateProcess(handle.DangerousGetHandle(), NotStartedExitCode);
+                accepted = Kernel32.TerminateProcess(handle.DangerousGetHandle(), NotStartedExitCode);
             }
             finally
             {
                 if (added) handle.DangerousRelease();
             }
             if (Wait(handles, EndBound) == 0) return true;
-            CrashLog.TryWrite(new UpdateFailedException(UpdateFailureStage.Install,
-                "The newer version did not end when it was told to."));
-            return false;
+            CrashLog.TryWrite(new UpdateFailedException(UpdateFailureStage.Install, accepted
+                ? "The newer version had not ended a few seconds after Windows accepted the request to end it."
+                : "Windows refused the request to end the newer version."));
+            return accepted;
         }
         catch (Exception ex)
         {
@@ -597,10 +610,16 @@ public static class SelfReplacement
         return new UpdateFailedException(UpdateFailureStage.Install, message);
     }
 
+    /// <summary>What <see cref="Wait"/> answers where the bound ran out.</summary>
+    private const int TimedOutWait = -1;
+
+    /// <summary>What <see cref="Wait"/> answers where Windows refused the wait.</summary>
+    private const int FailedWait = -2;
+
     /// <summary>
     /// Waits on <paramref name="handles"/> for up to <paramref name="bound"/>, dispatching
-    /// nothing, and answers the index of the first signalled, or -1 where the bound ran
-    /// out or the wait failed, a failure being written to crash.log.
+    /// nothing, and answers the index of the first signalled, <see cref="TimedOutWait"/>
+    /// or <see cref="FailedWait"/>, a failure being written to crash.log.
     /// </summary>
     private static int Wait(List<SafeHandle> handles, TimeSpan bound)
     {
@@ -616,10 +635,10 @@ public static class SelfReplacement
             var milliseconds = (uint)Math.Clamp(bound.TotalMilliseconds, 0, uint.MaxValue - 1);
             var result = Kernel32.WaitForMultipleObjects((uint)raw.Length, raw, bWaitAll: false, milliseconds);
             if (result < Kernel32.WAIT_OBJECT_0 + (uint)raw.Length) return (int)(result - Kernel32.WAIT_OBJECT_0);
-            if (result == Kernel32.WAIT_FAILED)
-                CrashLog.TryWrite(new UpdateFailedException(UpdateFailureStage.Install,
-                    $"Waiting for the newer version failed with error {Marshal.GetLastPInvokeError()}."));
-            return -1;
+            if (result == Kernel32.WAIT_TIMEOUT) return TimedOutWait;
+            CrashLog.TryWrite(new UpdateFailedException(UpdateFailureStage.Install,
+                $"Waiting for the newer version failed with error {Marshal.GetLastPInvokeError()}."));
+            return FailedWait;
         }
         finally
         {
