@@ -582,15 +582,22 @@ jobs:
   #
   # The slim's exe finds .NET only where .NET is installed, so the job fails where the
   # first pass sees the slim look for hostfxr.dll or hostpolicy.dll in its own folder.
-  # After both passes each build is started once more with the .NET host's trace on.
-  # The job fails where that trace shows the slim's exe searching the folder it is run
-  # from for .NET or loading a hostfxr.dll from anywhere but .NET's install, with one
-  # planted beside it, and prints the folders each build's runtime searches for
-  # native libraries.
+  # After both passes each build is started once more with the .NET host's trace on,
+  # with a hostfxr.dll planted beside the slim and a decoy .NET install named by
+  # DOTNET_ROOT. The job fails where that trace shows the slim's exe searching for .NET
+  # anywhere but the registered or default install, or loading a hostfxr.dll from
+  # anywhere else, and where a slim published to search DOTNET_ROOT as well does not
+  # load the decoy's. It prints the folders each build's runtime searches for native
+  # libraries.
   #
-  # Last, each build is started with the switch a copy updating itself passes the
+  # Then each build is started with the switch a copy updating itself passes the
   # newer version, and the job fails where the build does not say within 60 s that its
   # own code is running.
+  #
+  # Last, each build is started with a start-up hook named by DOTNET_STARTUP_HOOKS,
+  # and so is each published again with start-up hooks allowed. The job fails where a
+  # shipped build runs the hook, where an allowing build does not, and where any build
+  # does not say within 60 s that its own code is running.
   #
   # A window started on a fresh account offers to send a report. Before any build
   # runs, the PC-wide first-run mark is set, so the offer is never made, and the
@@ -1036,17 +1043,23 @@ jobs:
           Exit-IfFailed
 
       # Each build is started once more with the .NET host's trace on, outside both
-      # records so the trace's variables change nothing either pass saw, and with
-      # DOTNET_ROOT cleared so the slim finds .NET through the location .NET's installer
-      # registers, or .NET's default install folder where none is registered. A genuine
-      # hostfxr.dll is planted beside the slim. Its exe carries the places its host
-      # searches for .NET, which the trace prints as a number: 1 is the exe's own folder,
-      # 4 DOTNET_ROOT and 8 the registered and default installs, and 0 is the default
-      # search, which includes the exe's folder. The job fails where the slim's number is
-      # missing, 0 or includes 1, and where its trace does not name the hostfxr.dll it
-      # loaded or names one outside .NET's install. For every build it prints the
-      # folders the runtime searches for native libraries; the command line is started
-      # for its version, so its host and runtime start and it scans nothing.
+      # records so the trace's variables change nothing either pass saw. A genuine
+      # hostfxr.dll is planted beside the slim, and DOTNET_ROOT and DOTNET_ROOT_X64 name a
+      # decoy .NET install holding a copy of it under host\fxr. The slim's exe carries the
+      # places its host searches for .NET, which the trace prints as a number made of
+      # these: 1 the exe's own folder, 2 a folder relative to it, 4 the folder the
+      # DOTNET_ROOT variables name, and 8 the location .NET's installer registers, or
+      # .NET's default install folder where none is registered. 0 is the default search,
+      # which includes the exe's folder. The job fails where the slim's number is missing
+      # or anything but 8, and where its trace does not name the hostfxr.dll it loaded or
+      # names one outside .NET's install. The slim is also published to search the
+      # DOTNET_ROOT variables as well, from a copy of the commit of its own, and the job
+      # fails where that build does not load the decoy's hostfxr.dll, which is what shows
+      # the decoy is one the host takes. That build cannot find the desktop runtime under
+      # the decoy and does not start, and its trace is all that is read. For every
+      # build it prints the folders the runtime searches for native libraries; the
+      # command line is started for its version, so its host and runtime start and it
+      # scans nothing.
       - name: Trace how each build's host starts
         if: ${{ !cancelled() && env.PROCMON != '' }}
         shell: pwsh
@@ -1074,7 +1087,27 @@ jobs:
             Sort-Object { $v = $null; if ([version]::TryParse(($_.Directory.Name -replace '-.*$'), [ref]$v)) { $v } else { [version]'0.0' } } |
             Select-Object -Last 1)
           if (-not $genuineFxr.Count) { throw "No hostfxr.dll under $installed to plant beside the slim." }
-          Remove-Item Env:DOTNET_ROOT, Env:DOTNET_ROOT_X64 -ErrorAction SilentlyContinue
+
+          # Published before the DOTNET_ROOT variables are set, so the publish runs as every
+          # other does, and from a copy of the commit, so nothing a publish above left under
+          # obj reaches it.
+          $tree = Join-Path $env:RUNNER_TEMP 'dotnet-root-control'
+          git archive --format=zip -o "$tree.zip" HEAD
+          if ($LASTEXITCODE -ne 0) { throw "git archive failed for the slim that searches DOTNET_ROOT." }
+          Expand-Archive -Path "$tree.zip" -DestinationPath $tree -Force
+          dotnet publish (Join-Path $tree 'src/InstallerClean/InstallerClean.csproj') -c Release -r win-x64 -p:RestoreLockedMode=true -p:PublishSelfContained=false -p:SelfContained=false -p:PublishSingleFile=true -p:AppHostDotNetSearch=EnvironmentVariable%3BGlobal --nologo -o "$tree-publish"
+          if ($LASTEXITCODE -ne 0) { throw "The slim that searches DOTNET_ROOT did not publish." }
+
+          # The host takes the highest version folder under host\fxr, so the decoy's is named
+          # as the genuine one is.
+          $decoy = Join-Path $env:RUNNER_TEMP 'decoy-dotnet-root'
+          $decoyFxr = Join-Path $decoy ('host\fxr\' + $genuineFxr[0].Directory.Name)
+          New-Item -ItemType Directory -Force -Path $decoyFxr | Out-Null
+          Copy-Item -LiteralPath $genuineFxr[0].FullName -Destination $decoyFxr
+          $decoyFxr = $decoyFxr.TrimEnd('\') + '\'
+          $env:DOTNET_ROOT = $decoy
+          $env:DOTNET_ROOT_X64 = $decoy
+          "  DOTNET_ROOT and DOTNET_ROOT_X64 name $decoy, which holds a copy of $($genuineFxr[0].FullName)"
           $env:DOTNET_HOST_TRACE = '1'
           foreach ($build in $builds) {
             $folder = Get-RunFolder 'trace' $build.Label
@@ -1098,15 +1131,32 @@ jobs:
             if ($build.Label -eq 'slim') {
               $options = @($lines | ForEach-Object { if ($_ -match '\.NET root search location options: (\d+)') { [int]$Matches[1] } })
               if (-not $options.Count) { Fail "The slim's trace has no .NET root search location options line." }
-              elseif ($options[0] -eq 0 -or ($options[0] -band 1)) { Fail "The slim's host searches the folder it is run from for .NET: search location options $($options[0])." }
+              elseif ($options[0] -ne 8) { Fail "The slim's host searches for .NET beyond the registered or default install: search location options $($options[0])." }
               $fxr = @($lines | ForEach-Object { if ($_ -match 'Resolved fxr \[(.+)\]') { $Matches[1] } })
               $installedFxr = $installed.TrimEnd('\') + '\host\fxr\'
               if (-not $fxr.Count) { Fail "The slim's trace does not name the hostfxr.dll it loaded." }
               foreach ($path in $fxr) {
                 if ($path.StartsWith($installedFxr, 'OrdinalIgnoreCase')) { "  the slim loaded $path, under $installedFxr" }
-                else { Fail "The slim loaded $path, which is not under $installedFxr, with a hostfxr.dll planted in $folder." }
+                else { Fail "The slim loaded $path, which is not under $installedFxr, with a hostfxr.dll planted in $folder and DOTNET_ROOT naming $decoy." }
               }
             }
+          }
+
+          $control = [pscustomobject]@{ Label = 'slim searching DOTNET_ROOT'; Exe = (Join-Path "$tree-publish" 'InstallerClean.exe'); Arguments = @(); Wait = 20 }
+          $folder = Get-RunFolder 'trace' $control.Label
+          New-Item -ItemType Directory -Force -Path $folder | Out-Null
+          Copy-Item $control.Exe $folder
+          $trace = "$folder.txt"
+          $env:DOTNET_HOST_TRACEFILE = $trace
+          # Without this the host shows a dialog saying the desktop runtime is missing.
+          $env:DOTNET_DISABLE_GUI_ERRORS = '1'
+          $null = Invoke-Build $control $control.Label $folder
+          Remove-Item Env:DOTNET_DISABLE_GUI_ERRORS
+          if (-not (Test-Path $trace)) { Fail "The $($control.Label) wrote no host trace, so the decoy is not shown to be one the host takes." }
+          else {
+            $fxr = @(Get-Content $trace | ForEach-Object { if ($_ -match 'Resolved fxr \[(.+)\]') { $Matches[1] } })
+            if (@($fxr | Where-Object { $_.StartsWith($decoyFxr, 'OrdinalIgnoreCase') }).Count) { "  the $($control.Label) loaded $($fxr -join ', '), the decoy's" }
+            else { Fail "The $($control.Label) loaded $(if ($fxr.Count) { $fxr -join ', ' } else { 'no hostfxr.dll its trace names' }), not the decoy's under $decoyFxr, so the decoy is not shown to be one the host takes." }
           }
 
           Exit-IfFailed
@@ -1182,6 +1232,126 @@ jobs:
             if ($p.ExitCode -ne 1) { $failed += "$($build.Label), given an event that does not exist, ended with exit code $($p.ExitCode), not 1." }
             elseif ($printed) { $failed += "$($build.Label), given an event that does not exist, printed: $printed" }
             else { "  $($build.Label), given an event that does not exist, ended with exit code 1 and printed nothing" }
+          }
+          $failed | ForEach-Object { Write-Host "::error::$_" }
+          if ($failed.Count) { exit 1 }
+
+      # A start-up hook is an assembly .NET loads and runs before the app's own code,
+      # named by DOTNET_STARTUP_HOOKS. A small one is built here that writes its process's
+      # ID and path to the file another variable names. Each build is started from a
+      # folder of its own with both variables set on its process alone, and so is each
+      # build published again with start-up hooks allowed, from a copy of the commit of
+      # its own. Every build is started with /startedevent:<id> and waited for until it
+      # sets the event, the command line for its version, so it scans nothing; a build
+      # that does not set it within 60 s fails the step, since whether a hook ran in it is
+      # then not judged. The step fails where a shipped build ran the hook, and where an
+      # allowing build did not by the time it set the event. Each allowing build's hook
+      # line is printed. The builds are started with CreateProcess, which a window build
+      # asking for administrator rights refuses with error 740 where the step is not
+      # elevated.
+      - name: Check no build runs a start-up hook
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          $failed = @()
+
+          $hookDir = Join-Path $env:RUNNER_TEMP 'startup-hook'
+          New-Item -ItemType Directory -Force -Path $hookDir | Out-Null
+          Set-Content -Path (Join-Path $hookDir 'StartupHook.csproj') -Value @'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <TargetFramework>net10.0</TargetFramework>
+            </PropertyGroup>
+          </Project>
+          '@
+          Set-Content -Path (Join-Path $hookDir 'StartupHook.cs') -Value @'
+          internal class StartupHook
+          {
+              public static void Initialize()
+              {
+                  var marker = System.Environment.GetEnvironmentVariable("STARTUP_HOOK_MARKER");
+                  if (!string.IsNullOrEmpty(marker))
+                      System.IO.File.AppendAllText(marker,
+                          $"{System.Environment.ProcessId} {System.Environment.ProcessPath}{System.Environment.NewLine}");
+              }
+          }
+          '@
+          dotnet build (Join-Path $hookDir 'StartupHook.csproj') -c Release --nologo -o (Join-Path $hookDir 'out')
+          if ($LASTEXITCODE -ne 0) { throw "The start-up hook did not build." }
+          $hook = Join-Path $hookDir 'out\StartupHook.dll'
+          if (-not (Test-Path $hook)) { throw "The start-up hook build wrote no $hook." }
+
+          function Publish-Allowing([string]$name, [string]$project, [string[]]$options) {
+            $tree = Join-Path $env:RUNNER_TEMP "hooks-allowed-$name"
+            git archive --format=zip -o "$tree.zip" HEAD
+            if ($LASTEXITCODE -ne 0) { throw "git archive failed for the $name with start-up hooks allowed." }
+            Expand-Archive -Path "$tree.zip" -DestinationPath $tree -Force
+            dotnet publish (Join-Path $tree $project) -c Release -r win-x64 -p:RestoreLockedMode=true @options -p:StartupHookSupport=true --nologo -o "$tree-publish"
+            if ($LASTEXITCODE -ne 0) { throw "The $name with start-up hooks allowed did not publish." }
+            "$tree-publish"
+          }
+          $selfContained = '--self-contained', 'true', '-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true', '-p:EnableCompressionInSingleFile=true'
+          $cli = Publish-Allowing 'command-line' 'src/InstallerClean.Cli/InstallerClean.Cli.csproj' $selfContained
+          $portable = Publish-Allowing 'portable' 'src/InstallerClean/InstallerClean.csproj' $selfContained
+          $slim = Publish-Allowing 'slim' 'src/InstallerClean/InstallerClean.csproj' @('-p:PublishSelfContained=false', '-p:SelfContained=false', '-p:PublishSingleFile=true')
+
+          $builds = @(
+            [pscustomobject]@{ Label = 'command line'; Exe = 'publish/cli/installerclean-cli.exe'; Allowing = $false },
+            [pscustomobject]@{ Label = 'portable'; Exe = 'publish/self-contained/InstallerClean.exe'; Allowing = $false },
+            [pscustomobject]@{ Label = 'slim'; Exe = 'publish/framework-dependent/InstallerClean.exe'; Allowing = $false },
+            [pscustomobject]@{ Label = 'command line with hooks allowed'; Exe = (Join-Path $cli 'installerclean-cli.exe'); Allowing = $true },
+            [pscustomobject]@{ Label = 'portable with hooks allowed'; Exe = (Join-Path $portable 'InstallerClean.exe'); Allowing = $true },
+            [pscustomobject]@{ Label = 'slim with hooks allowed'; Exe = (Join-Path $slim 'InstallerClean.exe'); Allowing = $true }
+          )
+          # One at a time, each ended and waited for before the next starts, since the
+          # windows share the single-instance mutex.
+          foreach ($build in $builds) {
+            $folder = Join-Path $env:RUNNER_TEMP ('hook-' + ($build.Label -replace '[^A-Za-z0-9]+', '-'))
+            New-Item -ItemType Directory -Force -Path $folder | Out-Null
+            Copy-Item $build.Exe $folder
+            $exe = Join-Path $folder (Split-Path $build.Exe -Leaf)
+            $marker = Join-Path $folder 'hook-ran.txt'
+            Remove-Item -LiteralPath $marker -Force -ErrorAction SilentlyContinue
+            $id = [guid]::NewGuid().ToString('N')
+            $created = $false
+            $started = [System.Threading.EventWaitHandle]::new($false, 'ManualReset', "Local\InstallerClean_Started_$id", [ref]$created)
+            if (-not $created) { throw "An event named for $id exists already." }
+            $info = [System.Diagnostics.ProcessStartInfo]::new($exe)
+            $info.UseShellExecute = $false
+            $info.WorkingDirectory = $folder
+            if ($exe.EndsWith('installerclean-cli.exe', 'OrdinalIgnoreCase')) { $info.ArgumentList.Add('--version') }
+            $info.ArgumentList.Add("/startedevent:$id")
+            $info.Environment['DOTNET_STARTUP_HOOKS'] = $hook
+            $info.Environment['STARTUP_HOOK_MARKER'] = $marker
+            Write-Host "== $($build.Label)"
+            try {
+              $p = [System.Diagnostics.Process]::Start($info)
+            }
+            catch {
+              $code = $_.Exception.InnerException.NativeErrorCode
+              $why = if ($code -eq 740) { ', which asks for administrator rights the step does not have' } else { '' }
+              $failed += "$($build.Label) could not be started: error $code$why."
+              $started.Dispose()
+              continue
+            }
+            $clock = [System.Diagnostics.Stopwatch]::StartNew()
+            $set = $started.WaitOne([TimeSpan]::FromSeconds(60))
+            $clock.Stop()
+            $ranBySignal = Test-Path -LiteralPath $marker
+            if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
+            $p.WaitForExit()
+            $started.Dispose()
+            $lines = @(if (Test-Path -LiteralPath $marker) { Get-Content -LiteralPath $marker })
+            $own = @($lines | Where-Object { $_ -like "$($p.Id) *" })
+            if (-not $set) { $failed += "$($build.Label) did not set the event within 60 s, so whether a hook ran in it is not judged."; continue }
+            $after = "$([math]::Round($clock.Elapsed.TotalSeconds, 1)) s"
+            if ($build.Allowing) {
+              if (-not $own.Count) { $failed += "$($build.Label) ran no hook, so a shipped build running none shows nothing." }
+              elseif (-not $ranBySignal) { $failed += "$($build.Label) ran the hook only after it set the event." }
+              else { "  $($build.Label) set the event after $after, and the hook ran in it: $($own -join '; ')" }
+            }
+            elseif ($lines.Count) { $failed += "$($build.Label) ran the start-up hook DOTNET_STARTUP_HOOKS names: $($lines -join '; ')" }
+            else { "  $($build.Label) set the event after $after, and no hook ran in it" }
           }
           $failed | ForEach-Object { Write-Host "::error::$_" }
           if ($failed.Count) { exit 1 }

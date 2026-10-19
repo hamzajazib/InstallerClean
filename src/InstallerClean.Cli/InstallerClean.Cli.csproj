@@ -29,8 +29,8 @@
          assembly name as the File description, which repeats the filename. -->
     <AssemblyTitle>Cleans up unneeded files in C:\Windows\Installer (command line)</AssemblyTitle>
     <!-- Product name on the Details tab. Unset it defaults to the assembly name,
-         so this row read "installerclean-cli": the file name, in the one field
-         that is supposed to say which product the file belongs to. Same value as
+         so this row would read "installerclean-cli": the file name, in the one
+         field that is supposed to say which product the file belongs to. Same value as
          the GUI and as the setup's VersionInfoProductName, deliberately: the
          face differs and the product does not, and File description one row up
          already says which of the two binaries this is. See the GUI csproj. -->
@@ -40,6 +40,13 @@
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <NeutralLanguage>en-GB</NeutralLanguage>
+  </PropertyGroup>
+
+  <!-- A Release build runs no start-up hook: neither an assembly DOTNET_STARTUP_HOOKS
+       names nor one applied over the diagnostics channel is loaded before Main. A Debug
+       build keeps .NET's default. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <StartupHookSupport>false</StartupHookSupport>
   </PropertyGroup>
 
   <ItemGroup>

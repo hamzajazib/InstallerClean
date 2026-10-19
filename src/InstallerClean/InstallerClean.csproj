@@ -22,17 +22,15 @@
     <!-- Version comes from Directory.Build.props -->
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <!-- Description is what Windows shows as Comments, further down the same
-         Details tab as File description below. It said "unused", which reads as
-         "not run recently": a weaker and different claim from the one the app
-         makes, and one it cannot support, since nothing here looks at when a
-         program last ran. The command line carries the same sentence; File
+         Details tab as File description below. It says what the app finds and
+         what it does with them. The command line carries the same sentence; File
          description sits directly above this field and already marks which
          binary is which. -->
     <Description>Finds the MSI and MSP files in C:\Windows\Installer that no installed program still needs, and moves or deletes them.</Description>
     <!-- AssemblyTitle is what Windows shows as File description: Explorer's
          Details tab and Description column, and Task Manager's process list.
-         Left unset it defaults to the assembly name, so the field repeated
-         "InstallerClean" beside a file called InstallerClean.exe and told a
+         Left unset it defaults to the assembly name, which repeats
+         "InstallerClean" beside a file called InstallerClean.exe and tells a
          reader nothing. That reader is the one who opens Properties on an
          unsigned download before running it. Description above is a different
          field, Comments. -->
@@ -40,7 +38,7 @@
     <!-- Product name on the same Details tab, two rows under File description.
          Unset it defaults to the assembly name, which reads correctly here and
          does so by accident: this assembly happens to be called InstallerClean.
-         The command line's is called installerclean-cli, so the same default put
+         The command line's is called installerclean-cli, so the same default puts
          a file name in the row where a product name belongs. Stated in both
          projects rather than hoisted, because the pair either names one product
          or it does not, and the setup already writes the same value as
@@ -54,6 +52,13 @@
     <!-- en-GB is the source-of-truth language; the neutral Strings.resx
          in InstallerClean.Core holds the source content. -->
     <NeutralLanguage>en-GB</NeutralLanguage>
+  </PropertyGroup>
+
+  <!-- A Release build runs no start-up hook: neither an assembly DOTNET_STARTUP_HOOKS
+       names nor one applied over the diagnostics channel is loaded before Main. A Debug
+       build keeps .NET's default. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <StartupHookSupport>false</StartupHookSupport>
   </PropertyGroup>
 
   <!-- WPF-only dependencies. Headless services, models, helpers,
