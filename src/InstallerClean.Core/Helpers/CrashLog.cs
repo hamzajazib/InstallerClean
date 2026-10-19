@@ -95,7 +95,7 @@ public static class CrashLog
             // losing an entry that several code paths exist for no other
             // purpose than to write.
             //
-            // Returns null if LogFile is a symlink; drop the entry rather than
+            // Returns null where the log file is a symlink; drop the entry rather than
             // append into the symlink's target.
             using var handle = StorageHelpers.OpenAtomicAppend(path);
             if (handle is null) return (path, false);
