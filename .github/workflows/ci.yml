@@ -937,6 +937,39 @@ jobs:
             finally { $stream.Dispose() }
           }
 
+          # The assemblies a single-file bundle carries in its own folder, by name, read from
+          # the bundle's manifest. The host finds the manifest by the 32-byte bundle
+          # signature, which the SDK writes after the manifest's offset; each entry of a
+          # version 6 manifest is its offset, size, compressed size, kind (1 for an assembly)
+          # and path.
+          function Read-BundleAssemblies([string]$path) {
+            $data = [IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $path).Path)
+            $signature = [byte[]](0x8b, 0x12, 0x02, 0xb9, 0x6a, 0x61, 0x20, 0x38, 0x72, 0x7b, 0x93, 0x02, 0x14, 0xd7, 0xa0, 0x32,
+              0x13, 0xf5, 0xb9, 0xe6, 0xef, 0xae, 0x33, 0x18, 0xee, 0x3b, 0x2d, 0xce, 0x24, 0xb3, 0x6a, 0xae)
+            $latin1 = [Text.Encoding]::Latin1
+            $at = $latin1.GetString($data).IndexOf($latin1.GetString($signature), [StringComparison]::Ordinal)
+            if ($at -lt 8) { throw "$path carries no bundle signature." }
+            $reader = [IO.BinaryReader]::new([IO.MemoryStream]::new($data))
+            $reader.BaseStream.Position = [BitConverter]::ToInt64($data, $at - 8)
+            $major = $reader.ReadUInt32()
+            $null = $reader.ReadUInt32()
+            $count = $reader.ReadInt32()
+            if ($major -ne 6) { throw "$path has a version $major bundle manifest, which this step does not read." }
+            $null = $reader.ReadString()
+            # The deps.json and runtimeconfig.json offsets and sizes, then the flags.
+            foreach ($field in 1..5) { $null = $reader.ReadInt64() }
+            $assemblies = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+            foreach ($entry in 1..$count) {
+              foreach ($field in 1..3) { $null = $reader.ReadInt64() }
+              $kind = $reader.ReadByte()
+              $file = $reader.ReadString()
+              if ($kind -eq 1 -and $file -notmatch '[\\/]' -and $file.EndsWith('.dll', 'OrdinalIgnoreCase')) { $null = $assemblies.Add($file.Substring(0, $file.Length - 4)) }
+            }
+            if ($assemblies.Count -eq 0) { throw "$path's bundle manifest names no assembly." }
+            # The comma keeps the set whole rather than letting PowerShell unroll it.
+            , $assemblies
+          }
+
           # The folder a run's copy of its build is started from, named for the pass and the run.
           function Get-RunFolder([string]$pass, [string]$label) {
             Join-Path $env:RUNNER_TEMP ("$pass-" + ($label -replace '[^A-Za-z0-9]+', '-'))
@@ -951,13 +984,16 @@ jobs:
           }
           '@
 
-      # Each exe loads, before its Main, every assembly it can load that imports a Windows
-      # library, so each has its resolver before any thread of the app's can use it. The
-      # list is LibrarySearch.ImportingAssemblies in each exe's project, and this step
-      # recomputes it from the runtime packs the build's bundle was built from: the
-      # assemblies the exe references, directly or through others, that import a library
-      # not on FrameworkLibraries.OwnLibraries, less those left for their own load to
-      # register, plus those the app loads by name. It fails on any difference, naming it.
+      # Each exe loads, before its Main, every assembly its self-contained build carries that
+      # imports a Windows library, so each has its resolver before any thread of the app's
+      # can use it. The list is LibrarySearch.ImportingAssemblies in each exe's project, and
+      # this step recomputes it from the exe's self-contained bundle and the runtime packs it
+      # was built from: the assemblies the exe references, directly or through others, that
+      # the bundle carries and that import a library not on FrameworkLibraries.OwnLibraries,
+      # less those left for their own load to register, plus those the app loads by name.
+      # It fails on any difference, naming it. The slim runs the window's exe on the
+      # installed desktop runtime, which also carries the Windows Forms assemblies the
+      # portable leaves out; those get their resolver as they are loaded.
       #
       # Left for their own load to register: System.Drawing.Common, whose being loaded WPF
       # reads (WindowsBase's MS.Internal.AssemblyHelper) to decide how it handles
@@ -1026,6 +1062,8 @@ jobs:
               $folder
             }
             $folders = @($folders) + (Split-Path $exe.Assembly)
+            $carried = Read-BundleAssemblies $exe.Bundle
+            Write-Host "  the bundle carries $($carried.Count) assemblies"
             # Where two packs carry an assembly of one name, as the .NET pack carries small
             # stand-ins for WindowsBase and Microsoft.VisualBasic, the build takes the one of
             # higher version, and so does this.
@@ -1053,7 +1091,7 @@ jobs:
             while ($pending.Count) {
               $name = $pending.Dequeue()
               if (-not $seen.Add($name)) { continue }
-              if (-not $index.ContainsKey($name)) { $absent.Add($name); continue }
+              if (-not $index.ContainsKey($name) -or -not $carried.Contains($name)) { $absent.Add($name); continue }
               $stream = [IO.File]::OpenRead($index[$name])
               try {
                 $md = [System.Reflection.Metadata.PEReaderExtensions]::GetMetadataReader([System.Reflection.PortableExecutable.PEReader]::new($stream))
@@ -1079,6 +1117,7 @@ jobs:
             foreach ($name in $exe.ByName) {
               if ($seen.Contains($name)) { Fail "The $($exe.Label) names $name as loaded by name, and it is among the assemblies it references." }
               elseif (-not $index.ContainsKey($name)) { Fail "The $($exe.Label) names $name as loaded by name, and its runtime packs do not carry it." }
+              elseif (-not $carried.Contains($name)) { Fail "The $($exe.Label) names $name as loaded by name, and its bundle does not carry it." }
               elseif (-not @((Read-Imports $index[$name]).Imports | Where-Object { (Get-BaseName $_) -notin $own })) { Fail "The $($exe.Label) names $name as loaded by name, and it imports no Windows library." }
               else { $byName.Add($name) }
             }
@@ -1129,6 +1168,15 @@ jobs:
             if (-not $read) { continue }
             Test-MustLoad $run $read.Loads
             if ($run.Build.UpdateCheck) { Test-UpdateCheck $run $byProcess }
+            # Each exe writes to the crash log whatever fails as it starts, such as an
+            # assembly on its list that will not load, so a build started with nothing
+            # planted writes nothing there.
+            $rows = $byProcess[[string]$run.Id]
+            for ($i = 0; $i -lt $rows.Count; $i++) {
+              if ($rows[$i].Operation -eq 'WriteFile' -and $rows[$i].Path -match '\\AppData\\Local\\InstallerClean\\crash\.log$') {
+                Fail "$($run.Label) wrote to $($rows[$i].Path), row $($i + 1), with nothing planted."
+              }
+            }
             foreach ($name in $plantedAlone) {
               $beside = @($read.Libraries | Where-Object { $_.Place -eq 'own' -and $_.Operation -ne 'Load Image' -and $_.Relative -eq $name })
               "  looked for $name beside itself: $(if ($beside) { "yes, from row $($beside[0].Index)" } else { 'no' })"
@@ -1193,6 +1241,16 @@ jobs:
             foreach ($plant in $p.Plants) { "    $($plant.Place) $($plant.Path): $($plant.Kind), $($plant.Source)" }
           }
           ConvertTo-Json -InputObject @($planned) -Depth 5 | Set-Content (Join-Path $env:RUNNER_TEMP 'plants.json')
+
+          # Every build writes to this one crash log, so a copy taken now holds the first
+          # pass's entries alone. It goes into the artifact.
+          $crashLog = Join-Path $env:LOCALAPPDATA 'InstallerClean\crash.log'
+          if (Test-Path -LiteralPath $crashLog) {
+            $kept = Join-Path $env:RUNNER_TEMP 'kept'
+            New-Item -ItemType Directory -Force -Path $kept | Out-Null
+            Copy-Item -LiteralPath $crashLog -Destination (Join-Path $kept 'crash-after-first-pass.log')
+            "  kept $crashLog as it stood after the first pass"
+          }
 
           Exit-IfFailed
 
@@ -1654,7 +1712,8 @@ jobs:
       # every process named as one of the builds' exes are kept, in the record's order,
       # each column as recorded. The log's row N for a process is its Nth row in the
       # file with that PID. Detail is emptied on a row that starts or creates a process
-      # and must stay so, since the artifact is public. The host traces are kept whole.
+      # and must stay so, since the artifact is public. The host traces are kept whole, and
+      # so is the crash log as the job leaves it, beside the first pass's copy.
       # A run that ended before a record was saved keeps what there is, and this step
       # judges nothing. The artifact's name carries the run attempt, so a job run again
       # uploads under a name of its own.
@@ -1679,6 +1738,9 @@ jobs:
             Copy-Item -LiteralPath $trace.FullName -Destination $kept
             "  kept $($trace.FullName)"
           }
+          $crashLog = Join-Path $env:LOCALAPPDATA 'InstallerClean\crash.log'
+          if (Test-Path -LiteralPath $crashLog) { Copy-Item -LiteralPath $crashLog -Destination $kept; "  kept $crashLog" }
+          else { "  no $crashLog" }
 
       - name: Upload the Process Monitor rows and the host traces
         if: ${{ always() }}

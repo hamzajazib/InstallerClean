@@ -11,17 +11,19 @@ namespace InstallerClean;
 internal static class LibrarySearch
 {
     /// <summary>
-    /// The assemblies the window can load that import a Windows library, loaded before its
-    /// Main so each has its resolver before any thread of the app's can use it, all but three:
-    /// System.Drawing.Common, whose being loaded WPF reads, and the ribbon and Windows Forms
-    /// hosting assemblies, which add types to the XAML namespace the window's markup uses.
-    /// Those three are given their resolver as they are loaded. The native-libraries job in
-    /// ci.yml fails where this list differs from what the build's .NET and WPF runtime packs
-    /// give.
+    /// The assemblies the window's self-contained build carries that import a Windows library,
+    /// loaded before its Main so each has its resolver before any thread of the app's can use
+    /// it, all but three: System.Drawing.Common, whose being loaded WPF reads, and the ribbon
+    /// and Windows Forms hosting assemblies, which add types to the XAML namespace the window's
+    /// markup uses. Those three are given their resolver as they are loaded, as are the Windows
+    /// Forms assemblies the installed desktop runtime adds for the framework-dependent build.
+    /// A name here that the build does not carry fails to load, and the failure is written to
+    /// the crash log. The native-libraries job in ci.yml fails where this list differs from
+    /// what the self-contained build carries.
     /// </summary>
     internal static readonly string[] ImportingAssemblies =
     [
-        "DirectWriteForwarder", "Microsoft.VisualBasic.Core", "Microsoft.VisualBasic.Forms",
+        "DirectWriteForwarder", "Microsoft.VisualBasic.Core",
         "Microsoft.Win32.Registry", "Microsoft.Win32.SystemEvents", "PresentationCore", "PresentationFramework",
         "PresentationUI", "ReachFramework", "System.Console", "System.Diagnostics.EventLog",
         "System.Diagnostics.FileVersionInfo", "System.Diagnostics.PerformanceCounter", "System.Diagnostics.Process",
@@ -34,7 +36,7 @@ internal static class LibrarySearch
         "System.Security.Cryptography", "System.Security.Cryptography.Pkcs",
         "System.Security.Cryptography.ProtectedData", "System.Security.Principal.Windows",
         "System.Text.Encoding.CodePages", "System.Threading.AccessControl", "System.Transactions.Local",
-        "System.Windows.Extensions", "System.Windows.Forms.Primitives", "System.Windows.Primitives",
+        "System.Windows.Extensions", "System.Windows.Primitives",
         "UIAutomationClient", "UIAutomationClientSideProviders", "UIAutomationProvider", "UIAutomationTypes",
         "WindowsBase",
     ];
