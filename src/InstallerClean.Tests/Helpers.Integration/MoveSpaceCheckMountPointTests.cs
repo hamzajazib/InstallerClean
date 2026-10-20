@@ -19,10 +19,11 @@ namespace InstallerClean.Tests.Helpers.Integration;
 /// test.
 ///
 /// THE MOUNTED VOLUME'S FIGURE IS COMPARED WITHIN <see cref="FreeSpaceTolerance"/>, not
-/// to the byte. Windows can write its own files to a newly mounted volume, so its
-/// free space can move a little between the run's reading and the test's. The tolerance is far
-/// smaller than the gap between the mounted volume's figure and the cache drive's, so
-/// it cannot let one answer for the other.
+/// to the byte. The run reads it through Get-Volume and the app through
+/// GetDiskFreeSpaceEx, minutes apart, and Windows can write its own files to a newly
+/// mounted volume in between. The tolerance is far smaller than the gap between the
+/// mounted volume's figure and the cache drive's, so it cannot let one answer for the
+/// other.
 ///
 /// Every destination asked about under the mount folder is one the run did not
 /// create, except <see cref="ExistingUnderMount"/>, which it did. Nothing here
@@ -134,14 +135,10 @@ public class MoveSpaceCheckMountPointTests(ITestOutputHelper output)
     public void Row08_free_space_for_a_missing_folder_under_the_mount_is_the_mounted_volume()
     {
         // Two levels that do not exist, so the walk climbs to the mount folder, which
-        // answers for the mounted volume rather than for the drive it sits on. Read
-        // straight after the mount folder itself, the two are one measurement.
-        var atMount = StorageHelpers.GetAvailableFreeSpace(MountFolder);
+        // answers for the mounted volume rather than for the drive it sits on.
         var got = MoveSpaceCheck.AvailableFreeSpaceForDestination(DeepUnderMount);
-        Row(8, $"AvailableFreeSpaceForDestination({DeepUnderMount})",
-            $"{AboutMountedFree}, and equal to GetAvailableFreeSpace({MountFolder}), {atMount}", got);
+        Row(8, $"AvailableFreeSpaceForDestination({DeepUnderMount})", AboutMountedFree, got);
         Assert.True(IsMountedFree(got));
-        Assert.Equal(atMount, got);
     }
 
     [MountedVolumeFact]
@@ -177,23 +174,28 @@ public class MoveSpaceCheckMountPointTests(ITestOutputHelper output)
     [MountedVolumeFact]
     public void Row12_the_command_line_allows_a_move_that_fits_the_mounted_volume()
     {
-        // Measured as well as allowed: the refusal also allows where nothing could be
-        // measured, so the measurement is read for itself.
+        // The measurement is read for itself as well, so the allowance is shown to be
+        // one made against the mounted volume's figure.
         var measured = MoveSpaceCheck.AvailableFreeSpaceForDestination(UnderMount);
         var got = MoveSpaceCheck.RefusalFreeSpace(UnderMount, 1);
         Row(12, $"RefusalFreeSpace({UnderMount}, 1), measuring {measured}",
-            "null, with a measurement", got);
-        Assert.NotNull(measured);
+            $"null, measuring {AboutMountedFree}", got);
+        Assert.True(IsMountedFree(measured));
         Assert.Null(got);
     }
 
     [MountedVolumeFact]
     public void Row13_a_move_beside_the_mount_is_allowed_with_no_room_at_all()
     {
-        // A measured figure of nothing, so only the same-volume answer can allow it.
+        // The window's call with a measured free space of zero, so only the
+        // same-volume answer can allow it, and the command line's call, which
+        // measures for itself, asked for more room than any volume has.
         var got = MoveSpaceCheck.RefusalFreeSpace(BesideDestination, long.MaxValue, 0);
-        Row(13, $"RefusalFreeSpace({BesideDestination}, {long.MaxValue}, 0)", null, got);
+        var gotMeasuring = MoveSpaceCheck.RefusalFreeSpace(BesideDestination, long.MaxValue);
+        Row(13, $"RefusalFreeSpace({BesideDestination}, {long.MaxValue}, 0) and RefusalFreeSpace({BesideDestination}, {long.MaxValue})",
+            "null and null", $"{got?.ToString() ?? "null"} and {gotMeasuring?.ToString() ?? "null"}");
         Assert.Null(got);
+        Assert.Null(gotMeasuring);
     }
 
     [MountedVolumeFact]
@@ -249,8 +251,13 @@ public class MoveSpaceCheckMountPointTests(ITestOutputHelper output)
         // The cache side asked about a real mount point, through the cache-root
         // override: a cache root under the mount folder and a destination under it
         // are on one volume.
+        // The cache root's own volume is read as well, so a true here is the mount
+        // folder answering for both sides rather than the drive answering for both.
+        var cacheVolume = StorageHelpers.GetVolumeMountPoint(CacheRootUnderMount);
         var got = MoveSpaceCheck.ResolveIsOnInstallerCacheDrive(UnderMount, CacheRootUnderMount);
-        Row(19, $"ResolveIsOnInstallerCacheDrive({UnderMount}, cache root {CacheRootUnderMount})", true, got);
+        Row(19, $"ResolveIsOnInstallerCacheDrive({UnderMount}, cache root {CacheRootUnderMount}), cache root on {cacheVolume}",
+            $"true, cache root on {MountVolume}", got);
+        Assert.Equal(MountVolume, cacheVolume, ignoreCase: true);
         Assert.True(got);
     }
 
