@@ -1578,7 +1578,7 @@ jobs:
       # proxy configuration, as WinHttp returns it to .NET's system proxy, and any trace
       # session on the runner that enables the System.Diagnostics.Metrics event source, which
       # the meter of the first request's metrics handler creates. The configuration
-      # script's address and the proxy lists are printed only as absent, empty or set, the
+      # script's address and the proxy lists are printed only as null, empty or set, the
       # address with its length. Trace sessions are read as they stand and again with a Process
       # Monitor record running, as one was during the first pass, and a session that cannot be
       # read is printed as such. The DOTNET_ and COMPlus_ variables are printed by name only.
@@ -1593,7 +1593,9 @@ jobs:
           . (Join-Path $env:RUNNER_TEMP 'native.ps1')
           "  interactive: $([Environment]::UserInteractive); session $((Get-Process -Id $PID).SessionId)"
 
-          Add-Type -TypeDefinition @'
+          "== The current user's proxy configuration, as WinHttp returns it"
+          try {
+          Add-Type -ErrorAction Stop -TypeDefinition @'
           using System;
           using System.Runtime.InteropServices;
 
@@ -1627,67 +1629,79 @@ jobs:
           }
           '@
 
-          function Format-Setting([IntPtr]$pointer) {
-            if ($pointer -eq [IntPtr]::Zero) { return 'null' }
-            $length = [System.Runtime.InteropServices.Marshal]::PtrToStringUni($pointer).Length
-            if ($length -eq 0) { 'empty' } else { "set, $length characters" }
-          }
 
-          $config = [IeProxyConfig+Config]::new()
-          $error32 = 0
-          $read = [IeProxyConfig]::Read([ref]$config, [ref]$error32)
-          try {
-            "== The current user's proxy configuration, as WinHttp returns it"
-            "  WinHttpGetIEProxyConfigForCurrentUser returned $read$(if (-not $read) { ", error $error32" })"
-            if ($read) {
-              "  fAutoDetect: $($config.AutoDetect)"
-              "  lpszAutoConfigUrl: $(Format-Setting $config.AutoConfigUrl)"
-              "  lpszProxy: $(Format-Setting $config.Proxy)"
-              "  lpszProxyBypass: $(Format-Setting $config.ProxyBypass)"
+            function Format-Setting([IntPtr]$pointer, [switch]$WithLength) {
+              if ($pointer -eq [IntPtr]::Zero) { return 'null' }
+              $length = [System.Runtime.InteropServices.Marshal]::PtrToStringUni($pointer).Length
+              if ($length -eq 0) { 'empty' } elseif ($WithLength) { "set, $length characters" } else { 'set' }
+            }
+
+            $config = [IeProxyConfig+Config]::new()
+            $error32 = 0
+            $read = [IeProxyConfig]::Read([ref]$config, [ref]$error32)
+            try {
+              "  WinHttpGetIEProxyConfigForCurrentUser returned $read$(if (-not $read) { ", error $error32" })"
+              if ($read) {
+                "  fAutoDetect: $($config.AutoDetect)"
+                "  lpszAutoConfigUrl: $(Format-Setting $config.AutoConfigUrl -WithLength)"
+                "  lpszProxy: $(Format-Setting $config.Proxy)"
+                "  lpszProxyBypass: $(Format-Setting $config.ProxyBypass)"
+              }
+            }
+            finally {
+              foreach ($pointer in $config.AutoConfigUrl, $config.Proxy, $config.ProxyBypass) {
+                if ($pointer -ne [IntPtr]::Zero) { $null = [IeProxyConfig]::GlobalFree($pointer) }
+              }
             }
           }
-          finally {
-            foreach ($pointer in $config.AutoConfigUrl, $config.Proxy, $config.ProxyBypass) {
-              if ($pointer -ne [IntPtr]::Zero) { $null = [IeProxyConfig]::GlobalFree($pointer) }
-            }
-          }
+          catch { "  The proxy configuration was not read: $($_.Exception.Message)" }
 
-          # logman prints a session's providers by name and by GUID, so either matches.
+          # logman lists each session as its name, its type and its status, and prints a
+          # session's providers by name and by GUID, so either matches. A line of the list
+          # that does not read as a session is printed and counted as one not read.
           function Show-TraceSessions([string]$when) {
             "== Trace sessions $when"
-            $list = @(logman query -ets)
-            if ($LASTEXITCODE -ne 0) { "  logman could not list the sessions (exit $LASTEXITCODE)."; return }
-            $rule = [array]::FindIndex([string[]]$list, [Predicate[string]]{ param($line) $line -match '^-{3,}' })
-            if ($rule -lt 0) { "  logman's list had no header rule, so no session was read."; return }
-            $names = @($list[($rule + 1)..($list.Count - 1)] | ForEach-Object {
-              if ($_ -match '^(?<name>\S.*?)\s{2,}\S+\s+\S+\s*$') { $Matches.name }
-            })
-            if (-not $names) { "  logman listed no sessions."; return }
-            $unread = 0
-            $enabling = 0
-            foreach ($name in $names) {
-              $detail = @(logman query $name -ets)
-              if ($LASTEXITCODE -ne 0) { "  ${name}: could not be read (exit $LASTEXITCODE)"; $unread++; continue }
-              if ($detail -match '20752bc4-c151-50f5-f27b-df92d8af5a61|System\.Diagnostics\.Metrics') {
-                "  ${name}: enables System.Diagnostics.Metrics"
-                $enabling++
+            try {
+              $list = @(logman query -ets)
+              if ($LASTEXITCODE -ne 0) { "  logman could not list the sessions (exit $LASTEXITCODE)."; return }
+              $rule = [array]::FindIndex([string[]]$list, [Predicate[string]]{ param($line) $line -match '^-{3,}' })
+              if ($rule -lt 0) { "  logman's list had no header rule, so no session was read."; return }
+              $rows = @($list | Select-Object -Skip ($rule + 1) | Where-Object { $_.Trim() -and $_ -notmatch '^The command completed' })
+              if (-not $rows) { "  logman listed no sessions."; return }
+              $unread = 0
+              $enabling = 0
+              foreach ($row in $rows) {
+                if ($row -notmatch '^(?<name>\S.*?)\s+\S+\s+\S+\s*$') { "  a line that does not read as a session: $row"; $unread++; continue }
+                $name = $Matches.name
+                $detail = @(logman query $name -ets)
+                if ($LASTEXITCODE -ne 0) { "  ${name}: could not be read (exit $LASTEXITCODE)"; $unread++; continue }
+                if ($detail -match '20752bc4-c151-50f5-f27b-df92d8af5a61|System\.Diagnostics\.Metrics') {
+                  "  ${name}: enables System.Diagnostics.Metrics"
+                  $enabling++
+                }
+                else { "  ${name}: does not enable System.Diagnostics.Metrics" }
               }
-              else { "  ${name}: does not enable System.Diagnostics.Metrics" }
+              "  $($rows.Count) sessions: $($rows.Count - $unread) read, $unread could not be read, $enabling enabling System.Diagnostics.Metrics"
             }
-            "  $($names.Count) sessions: $($names.Count - $unread) read, $unread could not be read, $enabling enabling System.Diagnostics.Metrics"
+            catch { "  The sessions were not read: $($_.Exception.Message)" }
           }
 
           Show-TraceSessions 'as they stand'
           try {
             Start-Record 'probe'
-            try { Show-TraceSessions 'with a Process Monitor record running' }
-            finally {
-              Invoke-Procmon @('/Terminate') 60 'ending the probe record'
-              Wait-ProcmonGone 'the probe record was ended'
-            }
+            Show-TraceSessions 'with a Process Monitor record running'
           }
           catch { "  The sessions were not read with a record running: $($_.Exception.Message)" }
-          Remove-Item -LiteralPath (Join-Path (Split-Path $env:PROCMON) 'probe.pml') -ErrorAction SilentlyContinue
+          finally {
+            if (Get-Process -Name Procmon64 -ErrorAction SilentlyContinue) {
+              try {
+                Invoke-Procmon @('/Terminate') 60 'ending the probe record'
+                Wait-ProcmonGone 'the probe record was ended'
+              }
+              catch { "  The probe record was not ended: $($_.Exception.Message)" }
+            }
+            Remove-Item -LiteralPath (Join-Path (Split-Path $env:PROCMON) 'probe.pml') -ErrorAction SilentlyContinue
+          }
 
           "== Runtime variables, by name"
           $variables = @(Get-ChildItem env: | Where-Object Name -match '^(DOTNET_|COMPlus_)' | ForEach-Object Name | Sort-Object)
