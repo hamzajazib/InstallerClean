@@ -1574,131 +1574,124 @@ jobs:
 
           Exit-IfFailed
 
-      # Reads which thread, and which stack, make the command line's look for ole32.dll
-      # beside the exe in its run that checks for updates, a look the list of libraries not
-      # planted does not name. It reads the first pass's whole Process Monitor record on the
-      # runner, since a record holds every process on the runner and is not kept, and prints
-      # only that look's thread and stack, the events around it in the same process and the
-      # first events of its thread, and the same for the /noupdate run's look for ntdll.dll,
-      # whose caller is known. An event's path is printed for a file-system or registry row
-      # and a library loaded, and only its operation for any other row, such as a network
-      # connection or a process started. It never prints a command line, an environment or
-      # the detail of any row. The reader is procmon-parser, installed from PyPI by the hash
-      # of each file. The step judges nothing and never fails the job, and it refuses, naming
-      # what was missing, where the record is not one the reader takes or a run's process or
-      # look is not in it.
-      - name: Read the threads and stacks of two looks from the first pass's record
+      # Prints two things the command line's update check depends on: the current user's
+      # proxy configuration, as WinHttp returns it to .NET's system proxy, and any trace
+      # session on the runner that enables the System.Diagnostics.Metrics event source, which
+      # the meter of the first request's metrics handler creates. The configuration
+      # script's address and the proxy lists are printed only as absent, empty or set, the
+      # address with its length. Trace sessions are read as they stand and again with a Process
+      # Monitor record running, as one was during the first pass, and a session that cannot be
+      # read is printed as such. The DOTNET_ and COMPlus_ variables are printed by name only.
+      # The step runs under the account the builds ran under, judges nothing and never fails
+      # the job.
+      - name: Read the update check's proxy settings and the runner's trace sessions
         if: ${{ !cancelled() && env.PROCMON != '' }}
         continue-on-error: true
         timeout-minutes: 10
         shell: pwsh
         run: |
-          $pml = Join-Path (Split-Path $env:PROCMON) 'first.pml'
-          if (-not (Test-Path -LiteralPath $pml)) { "The first pass's record $pml is not there."; exit 0 }
-          "  $pml is $([math]::Round((Get-Item -LiteralPath $pml).Length / 1MB)) MB"
-          $venv = Join-Path $env:RUNNER_TEMP 'pml-reader'
-          python -m venv $venv
-          $requirements = Join-Path $env:RUNNER_TEMP 'pml-reader.txt'
-          @(
-            'procmon-parser==0.4.0 --hash=sha256:5b1c522386f9208cd8d40577c5c90ac1c7a7568262ae89615d0ffe9d35613e1f'
-            'construct==2.10.70 --hash=sha256:c80be81ef595a1a821ec69dc16099550ed22197615f4320b57cc9ce2a672cb30'
-          ) | Set-Content $requirements
-          & "$venv\Scripts\python.exe" -m pip install --quiet --require-hashes --only-binary :all: -r $requirements
-          if ($LASTEXITCODE -ne 0) { "procmon-parser did not install, so the record was not read."; exit 0 }
-          $script = Join-Path $env:RUNNER_TEMP 'read-pml.py'
-          Set-Content -LiteralPath $script -Value @'
-          import struct
-          import sys
-          from procmon_parser import PMLError, PMLStreamReader
+          . (Join-Path $env:RUNNER_TEMP 'native.ps1')
+          "  interactive: $([Environment]::UserInteractive); session $((Get-Process -Id $PID).SessionId)"
 
-          sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
-          KERNEL = 0xFFFF800000000000
-          LOOK = ("QueryOpen", "CreateFile")
+          Add-Type -TypeDefinition @'
+          using System;
+          using System.Runtime.InteropServices;
 
-          def frame(process, address):
-              if address >= KERNEL:
-                  return f"kernel {address:#x}"
-              for module in process.modules:
-                  if module.base_address <= address < module.base_address + module.size:
-                      return f"{module.path.rsplit(chr(92), 1)[-1]}+{address - module.base_address:#x}"
-              return f"{address:#x}"
+          public static class IeProxyConfig
+          {
+              [StructLayout(LayoutKind.Sequential)]
+              public struct Config
+              {
+                  public int AutoDetect;
+                  public IntPtr AutoConfigUrl;
+                  public IntPtr Proxy;
+                  public IntPtr ProxyBypass;
+              }
 
-          # The path of a file-system or registry row, or of a library loaded; for any other row,
-          # such as a network connection or a process started, the operation alone.
-          def where(event):
-              kind = event.event_class.name
-              if kind in ("File_System", "Registry") or (kind == "Process" and event.operation.name == "Load_Image"):
-                  return f"{event.operation.name}  {event.path}"
-              return event.operation.name
+              [DllImport("winhttp.dll", SetLastError = true)]
+              [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+              [return: MarshalAs(UnmanagedType.Bool)]
+              private static extern bool WinHttpGetIEProxyConfigForCurrentUser(out Config config);
 
-          def find(processes, folder):
-              runs = [p for p in processes if p.image_path.lower().endswith(f"\\{folder}\\installerclean-cli.exe")]
-              if len(runs) != 1:
-                  print(f"  refused: {len(runs)} processes in the record ran {folder}\\installerclean-cli.exe, where there should be one")
-                  return None
-              return runs[0]
+              [DllImport("kernel32.dll")]
+              [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+              public static extern IntPtr GlobalFree(IntPtr memory);
 
-          def show(run, events, unread, folder, name, before, after):
-              print(f"== the look for {name} in {folder}")
-              if unread:
-                  print(f"  {unread} of process {run.pid}'s events could not be read and are left out")
-              target = f"\\{folder}\\{name}".lower()
-              at = [n for n, e in enumerate(events) if e.operation.name in LOOK and (e.path or "").lower().endswith(target)]
-              if not at:
-                  print(f"  refused: none of the {len(events)} events read of process {run.pid} is a QueryOpen or CreateFile of {folder}\\{name}, and {unread} of its events could not be read")
-                  return
-              n = at[0]
-              look = events[n]
-              print(f"  process {run.pid}, its event {n + 1} of {len(events)}, thread {look.tid}: {where(look)}")
-              print(f"  stack, innermost first ({len(look.stacktrace)} frames):")
-              for address in look.stacktrace:
-                  print(f"    {frame(run, address)}")
-              print(f"  its events {max(n - before, 0) + 1} to {min(n + after, len(events) - 1) + 1} (event, thread, operation, path):")
-              for m in range(max(n - before, 0), min(n + after, len(events) - 1) + 1):
-                  print(f"    {m + 1}  {events[m].tid}  {where(events[m])}{'   <- the look' if m == n else ''}")
-              mine = [(m, e) for m, e in enumerate(events) if e.tid == look.tid]
-              print(f"  thread {look.tid}'s first events in the process ({len(mine)} in all):")
-              for m, e in mine[:15]:
-                  print(f"    {m + 1}  {where(e)}")
-
-          with open(sys.argv[1], "rb") as f:
-              try:
-                  reader = PMLStreamReader(f, should_get_stacktrace=True, should_get_details=False)
-              except Exception as error:
-                  print(f"refused: the reader does not take this record: {type(error).__name__}: {error}")
-                  sys.exit(0)
-              looks = [("first-command-line-checking-for-updates", "ole32.dll", 80, 20), ("first-command-line", "ntdll.dll", 20, 5)]
-              runs = [find(reader.processes(), folder) for folder, _, _, _ in looks]
-              # Each event starts with the index of its process in the record's process table, so
-              # only the two runs' events are read in full. The table is the reader's own.
-              indexes = {i: id(p) for i, p in reader._process_table.items() if any(p is run for run in runs)}
-              wanted = {id(run): [] for run in runs if run}
-              unread = {id(run): 0 for run in runs if run}
-              unplaced = 0
-              for offset in reader.events_offsets:
-                  try:
-                      f.seek(offset)
-                      index = struct.unpack("<I", f.read(4))[0]
-                  except Exception:
-                      unplaced += 1
-                      continue
-                  if index not in indexes:
-                      continue
-                  try:
-                      event = reader.get_event_at_offset(offset)
-                  except Exception:
-                      unread[indexes[index]] += 1
-                      continue
-                  if id(event.process) in wanted:
-                      wanted[id(event.process)].append(event)
-              if unplaced:
-                  print(f"  {unplaced} events of the record could not be read far enough to say whose they are")
-              for run, (folder, name, before, after) in zip(runs, looks):
-                  if run:
-                      show(run, wanted[id(run)], unread[id(run)], folder, name, before, after)
+              // The error is read here, before any other call on the thread can replace it.
+              public static bool Read(out Config config, out int error)
+              {
+                  bool read = WinHttpGetIEProxyConfigForCurrentUser(out config);
+                  error = read ? 0 : Marshal.GetLastPInvokeError();
+                  return read;
+              }
+          }
           '@
-          & "$venv\Scripts\python.exe" -I -u $script $pml
-          if ($LASTEXITCODE -ne 0) { "The record could not be read to the end." }
+
+          function Format-Setting([IntPtr]$pointer) {
+            if ($pointer -eq [IntPtr]::Zero) { return 'null' }
+            $length = [System.Runtime.InteropServices.Marshal]::PtrToStringUni($pointer).Length
+            if ($length -eq 0) { 'empty' } else { "set, $length characters" }
+          }
+
+          $config = [IeProxyConfig+Config]::new()
+          $error32 = 0
+          $read = [IeProxyConfig]::Read([ref]$config, [ref]$error32)
+          try {
+            "== The current user's proxy configuration, as WinHttp returns it"
+            "  WinHttpGetIEProxyConfigForCurrentUser returned $read$(if (-not $read) { ", error $error32" })"
+            if ($read) {
+              "  fAutoDetect: $($config.AutoDetect)"
+              "  lpszAutoConfigUrl: $(Format-Setting $config.AutoConfigUrl)"
+              "  lpszProxy: $(Format-Setting $config.Proxy)"
+              "  lpszProxyBypass: $(Format-Setting $config.ProxyBypass)"
+            }
+          }
+          finally {
+            foreach ($pointer in $config.AutoConfigUrl, $config.Proxy, $config.ProxyBypass) {
+              if ($pointer -ne [IntPtr]::Zero) { $null = [IeProxyConfig]::GlobalFree($pointer) }
+            }
+          }
+
+          # logman prints a session's providers by name and by GUID, so either matches.
+          function Show-TraceSessions([string]$when) {
+            "== Trace sessions $when"
+            $list = @(logman query -ets)
+            if ($LASTEXITCODE -ne 0) { "  logman could not list the sessions (exit $LASTEXITCODE)."; return }
+            $rule = [array]::FindIndex([string[]]$list, [Predicate[string]]{ param($line) $line -match '^-{3,}' })
+            if ($rule -lt 0) { "  logman's list had no header rule, so no session was read."; return }
+            $names = @($list[($rule + 1)..($list.Count - 1)] | ForEach-Object {
+              if ($_ -match '^(?<name>\S.*?)\s{2,}\S+\s+\S+\s*$') { $Matches.name }
+            })
+            if (-not $names) { "  logman listed no sessions."; return }
+            $unread = 0
+            $enabling = 0
+            foreach ($name in $names) {
+              $detail = @(logman query $name -ets)
+              if ($LASTEXITCODE -ne 0) { "  ${name}: could not be read (exit $LASTEXITCODE)"; $unread++; continue }
+              if ($detail -match '20752bc4-c151-50f5-f27b-df92d8af5a61|System\.Diagnostics\.Metrics') {
+                "  ${name}: enables System.Diagnostics.Metrics"
+                $enabling++
+              }
+              else { "  ${name}: does not enable System.Diagnostics.Metrics" }
+            }
+            "  $($names.Count) sessions: $($names.Count - $unread) read, $unread could not be read, $enabling enabling System.Diagnostics.Metrics"
+          }
+
+          Show-TraceSessions 'as they stand'
+          try {
+            Start-Record 'probe'
+            try { Show-TraceSessions 'with a Process Monitor record running' }
+            finally {
+              Invoke-Procmon @('/Terminate') 60 'ending the probe record'
+              Wait-ProcmonGone 'the probe record was ended'
+            }
+          }
+          catch { "  The sessions were not read with a record running: $($_.Exception.Message)" }
+          Remove-Item -LiteralPath (Join-Path (Split-Path $env:PROCMON) 'probe.pml') -ErrorAction SilentlyContinue
+
+          "== Runtime variables, by name"
+          $variables = @(Get-ChildItem env: | Where-Object Name -match '^(DOTNET_|COMPlus_)' | ForEach-Object Name | Sort-Object)
+          if ($variables) { $variables | ForEach-Object { "  $_" } } else { "  none" }
           exit 0
 
       # A planted file is judged by whether the build loaded it, and a plant counts only
