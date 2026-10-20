@@ -118,6 +118,7 @@ const NAMES_NO_VARIABLE = new Map([
   ['Environment.ProcessId', 'the process'],
   ['Environment.ProcessPath', 'the executable'],
   ['Environment.SpecialFolder', 'the known folders'],
+  ['Environment.SystemDirectory', 'the system folder'],
   ['Environment.UserInteractive', 'the window station'],
   ['DoNotExpandEnvironmentNames', 'the registry option that leaves a %NAME% as written'],
   ['EnvironmentVariableTarget', 'the store a read or a write looks in, named beside the call'],
