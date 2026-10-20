@@ -169,6 +169,20 @@ function Show-Libraries($libraries, $marker, $mainMarker, [string]$firstTime) {
 
 # The genuine file for a name: one the build loaded under that name from
 # anywhere but its own folder, else System32's, else the stand-in.
+# The same as Show-Libraries for a program that is not one of the builds: its build
+# names no source file, so nothing places a look against the start of its own code.
+function Show-Looks($libraries, [string]$firstTime) {
+  Write-Host "  first row at $firstTime"
+  Write-Host "  every look in its own folder and under %TEMP%\.net (row, time, operation, result, times seen, path):"
+  $libraries | Where-Object { $_.Place -ne 'elsewhere' -and $_.Operation -ne 'Load Image' } |
+    Group-Object Path, Operation, Result | Sort-Object { $_.Group[0].Index } | ForEach-Object {
+      $first = $_.Group[0]
+      Write-Host "    row $($first.Index)  $($first.Time)  $($first.Operation)  $($first.Result)  x$($_.Count)  $($first.Path)"
+    }
+  Write-Host "  libraries loaded:"
+  $libraries | Where-Object Operation -eq 'Load Image' | ForEach-Object Path | Sort-Object -Unique | ForEach-Object { Write-Host "    $_" }
+}
+
 function Get-Plant([string]$name, $loads) {
   $loaded = @($loads | Where-Object { $_.Name -eq $name -and $_.Place -ne 'own' })
   $system = Join-Path $env:SystemRoot "System32\$name"
@@ -185,8 +199,14 @@ function Read-Run($run, $byProcess) {
   if (-not $rows) { Fail "$($run.Label): Process Monitor recorded nothing for process $($run.Id)."; return }
   Write-Host "  $($rows.Count) operations"
   $libraries = @(Get-Libraries $rows $run.Folder)
-  $markers = Get-Marker $rows $run
-  Show-Libraries $libraries $markers.First $markers.Main $rows[0].'Time of Day'
+  if ($run.Build.Source) {
+    $markers = Get-Marker $rows $run
+    Show-Libraries $libraries $markers.First $markers.Main $rows[0].'Time of Day'
+  }
+  else {
+    $markers = $null
+    Show-Looks $libraries $rows[0].'Time of Day'
+  }
   [pscustomobject]@{ Libraries = $libraries; Loads = @($libraries | Where-Object Operation -eq 'Load Image'); Marker = $markers.First; MainMarker = $markers.Main }
 }
 
@@ -592,6 +612,12 @@ function Add-Plants([string]$folder, $plants) {
 }
 
 # Judges a second-pass run against the files planted for it.
+# When a row came, against the start of the build's own code, for a message about a
+# build; nothing for a program whose build names no source file.
+function Get-WhenSuffix($run, $row, $marker) {
+  if ($run.Build.Source) { ", $(Get-When $row $marker)" } else { '' }
+}
+
 function Test-PlantedRun($run, $read) {
   # A native library is mapped and loaded; a managed one can be read instead, so
   # any of the three by the build counts as the planted file being taken.
@@ -599,14 +625,14 @@ function Test-PlantedRun($run, $read) {
   $loadedPaths = @($read.Loads | ForEach-Object Path)
   foreach ($taken in ($read.Libraries | Where-Object { $_.Operation -in 'CreateFileMapping', 'ReadFile' -and $placedPaths -contains $_.Path -and $loadedPaths -notcontains $_.Path } | Group-Object Path)) {
     $first = $taken.Group[0]
-    Fail "$($run.Label) read the planted $($first.Path), $($first.Operation) at row $($first.Index), $(Get-When $first $read.Marker)."
+    Fail "$($run.Label) read the planted $($first.Path), $($first.Operation) at row $($first.Index)$(Get-WhenSuffix $run $first $read.Marker)."
   }
   foreach ($load in $read.Loads) {
     if ($placedPaths -contains $load.Path) {
-      Fail "$($run.Label) loaded the planted $($load.Path), row $($load.Index), $(Get-When $load $read.Marker)."
+      Fail "$($run.Label) loaded the planted $($load.Path), row $($load.Index)$(Get-WhenSuffix $run $load $read.Marker)."
     }
     elseif ($load.Place -eq 'own' -or ($load.Place -eq 'extraction' -and $run.BundleFiles -notcontains $load.Path)) {
-      Fail "$($run.Label) loaded $($load.Path), which neither its bundle nor the first pass put there, row $($load.Index), $(Get-When $load $read.Marker)."
+      Fail "$($run.Label) loaded $($load.Path), which neither its bundle nor the first pass put there, row $($load.Index)$(Get-WhenSuffix $run $load $read.Marker)."
     }
   }
   foreach ($plant in $run.Placed) {
@@ -618,5 +644,116 @@ function Test-PlantedRun($run, $read) {
     }
     if (-not (Test-Path -LiteralPath $plant.Path)) { Fail "The planted $($plant.Path) was gone once $($run.Label) ended." }
     elseif ((Get-FileHash -Algorithm SHA256 -LiteralPath $plant.Path).Hash -ne $plant.Hash) { Fail "The planted $($plant.Path) was changed while $($run.Label) ran." }
+  }
+}
+
+# Fails where the run's process maps an image from its own folder, of any name but its
+# own exe's. With -AllowCreated, an image this same process created at that path
+# earlier in the record, a CreateFile whose result is Created, is printed and passes:
+# a file a process has just written into a folder of its own making is not one left
+# there for it.
+function Test-OwnLoads($run, $rows, [switch]$AllowCreated) {
+  $own = $run.Folder.TrimEnd('\') + '\'
+  $self = $own + $run.Exe
+  for ($i = 0; $i -lt $rows.Count; $i++) {
+    $row = $rows[$i]
+    if ($row.Operation -ne 'Load Image' -or -not $row.Path.StartsWith($own, 'OrdinalIgnoreCase') -or $row.Path -eq $self) { continue }
+    if ($AllowCreated) {
+      $made = @(for ($j = 0; $j -lt $i; $j++) {
+        $r = $rows[$j]
+        if ($r.Operation -eq 'CreateFile' -and $r.Path -eq $row.Path -and $r.Detail -match 'OpenResult: Created') { $j + 1 }
+      })
+      if ($made) { Write-Host "  loaded $($row.Path) at row $($i + 1), which it created at row $($made[0])"; continue }
+    }
+    Fail "$($run.Exe), process $($run.Id), loaded $($row.Path) from its own folder, row $($i + 1)."
+  }
+}
+
+# Each process $parent started, other than one whose image is at $skip, and each
+# process those started, read from the record $csv by the process ID in each Process
+# Create row. Each is printed with its looks and judged by Test-OwnLoads -AllowCreated.
+# Command lines are not printed. Answers each process as a run.
+function Test-StartedProcesses([string]$csv, $parent, $parentRows, [string]$skip) {
+  $all = [System.Collections.Generic.List[object]]::new()
+  $parents = @([pscustomobject]@{ Run = $parent; Rows = $parentRows })
+  foreach ($depth in 1, 2) {
+    $started = @(foreach ($p in $parents) {
+      foreach ($row in @($p.Rows | Where-Object Operation -eq 'Process Create')) {
+        if ($skip -and $row.Path -eq $skip) { continue }
+        if ($row.Detail -notmatch '^PID: (\d+)') { Fail "A Process Create row of process $($p.Run.Id) names no process ID."; continue }
+        [pscustomobject]@{ Label = Split-Path $row.Path -Leaf; Build = [pscustomobject]@{ Exe = $row.Path }; Folder = Split-Path $row.Path
+          Exe = Split-Path $row.Path -Leaf; Id = [int]$Matches[1]; Parent = "$($p.Run.Exe), process $($p.Run.Id)" }
+      }
+    })
+    if (-not $started) { break }
+    $byChild = Read-Record $csv $started
+    $next = foreach ($child in $started) {
+      $all.Add($child)
+      Write-Host "== $($child.Exe), process $($child.Id), started by $($child.Parent), from $($child.Folder)"
+      $rows = $byChild[[string]$child.Id]
+      if (-not $rows) { Fail "Process Monitor recorded nothing for $($child.Exe), process $($child.Id)."; continue }
+      Show-Looks @(Get-Libraries $rows $child.Folder) $rows[0].'Time of Day'
+      Test-OwnLoads $child $rows -AllowCreated
+      [pscustomobject]@{ Run = $child; Rows = $rows }
+    }
+    $parents = @($next)
+  }
+  $all
+}
+
+# Starts a job writing to $out each is-*.tmp folder that appears in %TEMP%, with its
+# owner and its permissions as read the moment it is seen, until $stop exists. A
+# folder there before the job starts is left out. Answers the job once it has
+# started.
+function Start-TempWatch([string]$out, [string]$stop) {
+  $job = Start-Job -ArgumentList $env:TEMP, $out, $stop -ScriptBlock {
+    param($temp, $out, $stop)
+    $seen = @{}
+    foreach ($d in @(Get-ChildItem -LiteralPath $temp -Directory -Filter 'is-*.tmp' -ErrorAction SilentlyContinue)) { $seen[$d.FullName] = $true }
+    Set-Content -Path $out -Value ''
+    while (-not (Test-Path -LiteralPath $stop)) {
+      foreach ($d in @(Get-ChildItem -LiteralPath $temp -Directory -Filter 'is-*.tmp' -ErrorAction SilentlyContinue)) {
+        if ($seen.ContainsKey($d.FullName)) { continue }
+        try {
+          $acl = Get-Acl -LiteralPath $d.FullName
+          "$($d.FullName)`towner $($acl.Owner)`t$($acl.GetSecurityDescriptorSddlForm('Access'))" | Add-Content -Path $out
+          $seen[$d.FullName] = $true
+        }
+        catch { }
+      }
+      Start-Sleep -Milliseconds 50
+    }
+  }
+  $deadline = [DateTime]::UtcNow.AddSeconds(60)
+  while (-not (Test-Path -LiteralPath $out)) {
+    if ([DateTime]::UtcNow -gt $deadline) { throw "The job watching %TEMP% did not start within 60 s." }
+    Start-Sleep -Milliseconds 200
+  }
+  $job
+}
+
+# Ends the job Start-TempWatch started. An error in ending it is printed.
+function Stop-TempWatch($job, [string]$stop) {
+  try {
+    New-Item -ItemType File -Path $stop -Force | Out-Null
+    $null = Wait-Job $job -Timeout 60
+    Receive-Job $job
+    Remove-Job $job -Force
+  }
+  catch { Write-Host "The job watching %TEMP% did not end cleanly: $($_.Exception.Message)" }
+}
+
+# Prints the folders the watch wrote to $out, and fails where none of $started ran
+# from an is-*.tmp folder, or where one did from a folder the watch did not see made,
+# whose permissions are then not known.
+function Show-TempFolders([string]$out, $started) {
+  Write-Host "== The is-*.tmp folders made in %TEMP% (path, owner, permissions):"
+  $made = @(Get-Content $out -ErrorAction SilentlyContinue | Where-Object { $_ })
+  foreach ($line in $made) { Write-Host "  $line" }
+  $fromTemp = @($started | Where-Object { (Split-Path $_.Folder -Leaf) -like 'is-*.tmp' })
+  if (-not $fromTemp) { Fail "No process the setup started ran from an is-*.tmp folder." }
+  foreach ($child in $fromTemp) {
+    if (@($made | Where-Object { ($_ -split "`t")[0] -eq $child.Folder })) { Write-Host "  $($child.Exe), process $($child.Id), ran from $($child.Folder), printed above" }
+    else { Fail "$($child.Exe), process $($child.Id), ran from $($child.Folder), which the watch on %TEMP% did not see made, so its permissions are not known." }
   }
 }

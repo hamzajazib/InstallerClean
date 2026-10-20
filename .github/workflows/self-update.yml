@@ -206,34 +206,12 @@ jobs:
           . $helper
           # On the setup's copy a job writes down each is-*.tmp folder that appears in
           # %TEMP% while the update runs, with its owner and its permissions, read as the
-          # setup made it. A folder there before the run is left out.
+          # setup made it (Start-TempWatch in native-libraries.ps1).
           $watch = $null
           if ('${{ matrix.route }}' -eq 'setup') {
+            . (Join-Path $env:GITHUB_WORKSPACE 'scripts/native-libraries.ps1')
             $stop = Join-Path $env:RUNNER_TEMP 'setup-temp.stop'
-            $watch = Start-Job -ArgumentList $env:TEMP, (Join-Path $env:RUNNER_TEMP 'setup-temp.txt'), $stop -ScriptBlock {
-              param($temp, $out, $stop)
-              $seen = @{}
-              foreach ($d in @(Get-ChildItem -LiteralPath $temp -Directory -Filter 'is-*.tmp' -ErrorAction SilentlyContinue)) { $seen[$d.FullName] = $true }
-              Set-Content -Path $out -Value ''
-              while (-not (Test-Path -LiteralPath $stop)) {
-                foreach ($d in @(Get-ChildItem -LiteralPath $temp -Directory -Filter 'is-*.tmp' -ErrorAction SilentlyContinue)) {
-                  if ($seen.ContainsKey($d.FullName)) { continue }
-                  try {
-                    $acl = Get-Acl -LiteralPath $d.FullName
-                    "$($d.FullName)`towner $($acl.Owner)`t$($acl.GetSecurityDescriptorSddlForm('Access'))" | Add-Content -Path $out
-                    $seen[$d.FullName] = $true
-                  }
-                  catch { }
-                }
-                Start-Sleep -Milliseconds 50
-              }
-            }
-            $ready = Join-Path $env:RUNNER_TEMP 'setup-temp.txt'
-            $deadline = [DateTime]::UtcNow.AddSeconds(60)
-            while (-not (Test-Path -LiteralPath $ready)) {
-              if ([DateTime]::UtcNow -gt $deadline) { throw "The job watching %TEMP% did not start within 60 s." }
-              Start-Sleep -Milliseconds 200
-            }
+            $watch = Start-TempWatch (Join-Path $env:RUNNER_TEMP 'setup-temp.txt') $stop
           }
           "RUN_STARTED=$((Get-Date).ToUniversalTime().ToString('o'))" | Add-Content $env:GITHUB_ENV
           $run = Run $env:EXE
@@ -242,15 +220,7 @@ jobs:
           "UPDATE_PID=$($run.Id)" | Add-Content $env:GITHUB_ENV
           $run.Output
           "Exit code: $($run.ExitCode)"
-          if ($watch) {
-            try {
-              New-Item -ItemType File -Path $stop -Force | Out-Null
-              $null = Wait-Job $watch -Timeout 60
-              Receive-Job $watch
-              Remove-Job $watch -Force
-            }
-            catch { "The job watching %TEMP% did not end cleanly: $($_.Exception.Message)" }
-          }
+          if ($watch) { Stop-TempWatch $watch $stop }
 
       - name: Stop recording
         if: always() && env.PROCMON != ''
@@ -471,10 +441,11 @@ jobs:
       # of either may not start at all.
       #
       # On the setup's copy each process the old copy starts, other than the newer
-      # version, and each process those start, is judged the same way against its own
-      # folder: the setup in the download's folder under %ProgramData%, and the
-      # setup.tmp it starts from %TEMP%. Their looks are printed and a load from their own
-      # folder fails. Their command lines are not printed.
+      # version, and each process those start, is judged against its own folder: the
+      # setup in the download's folder under %ProgramData%, and the setup.tmp it starts
+      # from %TEMP% (Test-StartedProcesses in native-libraries.ps1). Their looks are
+      # printed, and a load from their own folder fails unless the same process created
+      # that file earlier in the record. Their command lines are not printed.
       - name: Judge the DLLs the update looked for
         if: ${{ !cancelled() && env.UPDATE_PID != '' }}
         shell: pwsh
@@ -506,57 +477,13 @@ jobs:
             ConvertTo-Json -Depth 5 -InputObject ([pscustomobject]@{ Plants = $plants; BundleFiles = $bundleFiles }) |
               Set-Content (Join-Path $env:RUNNER_TEMP 'plants.json')
 
-            # The processes the old copy starts, then the ones they start, by the process
-            # ID Process Monitor gives each in its Process Create row.
-            $parents = @($old)
-            $fromTemp = @()
-            foreach ($depth in 1, 2) {
-              $started = @(foreach ($parent in $parents) {
-                foreach ($row in @($byProcess[[string]$parent.Id] | Where-Object Operation -eq 'Process Create')) {
-                  if ($row.Path -eq $env:EXE) { continue }
-                  if ($row.Detail -notmatch '^PID: (\d+)') { Fail "A Process Create row of process $($parent.Id) names no process ID."; continue }
-                  [pscustomobject]@{ Label = Split-Path $row.Path -Leaf; Folder = Split-Path $row.Path; Exe = Split-Path $row.Path -Leaf; Id = [int]$Matches[1]; Parent = $parent.Label }
-                }
-              })
-              if (-not $started) { break }
-              $byChild = Read-Record $env:UPDATE_RECORD $started
-              foreach ($child in $started) {
-                $kept.Add("$($child.Id)`t$($child.Exe)")
-                $childRows = $byChild[[string]$child.Id]
-                "== $($child.Exe), process $($child.Id), started by $($child.Parent), from $($child.Folder)"
-                if (-not $childRows) { Fail "Process Monitor recorded nothing for $($child.Exe), process $($child.Id)."; continue }
-                $libraries = @(Get-Libraries $childRows $child.Folder)
-                "  every look in its own folder and under %TEMP%\.net (row, operation, result, times seen, path):"
-                $libraries | Where-Object { $_.Place -ne 'elsewhere' -and $_.Operation -ne 'Load Image' } |
-                  Group-Object Path, Operation, Result | Sort-Object { $_.Group[0].Index } | ForEach-Object {
-                    $first = $_.Group[0]
-                    "    row $($first.Index)  $($first.Operation)  $($first.Result)  x$($_.Count)  $($first.Path)"
-                  }
-                "  libraries loaded:"
-                $libraries | Where-Object Operation -eq 'Load Image' | ForEach-Object Path | Sort-Object -Unique | ForEach-Object { "    $_" }
-                foreach ($load in ($libraries | Where-Object { $_.Operation -eq 'Load Image' -and $_.Place -eq 'own' })) {
-                  Fail "$($child.Exe) loaded $($load.Path) from its own folder, row $($load.Index)."
-                }
-              }
-              $parents = $started
-              $byProcess = $byChild
-              $fromTemp += @($started | Where-Object { (Split-Path $_.Folder -Leaf) -like 'is-*.tmp' })
-            }
+            $started = @(Test-StartedProcesses $env:UPDATE_RECORD $old $byProcess[[string]$old.Id] $env:EXE)
+            foreach ($child in $started) { $kept.Add("$($child.Id)`t$($child.Exe)") }
             if ('${{ matrix.route }}' -eq 'setup' -and -not @($kept | Select-Object -Skip 1)) { Fail "The old copy started no setup that Process Monitor recorded." }
           }
           Set-Content -Path (Join-Path $env:RUNNER_TEMP 'kept-update.txt') -Value $kept
 
-          if ('${{ matrix.route }}' -eq 'setup') {
-            "== The is-*.tmp folders made in %TEMP% during the update (path, owner, permissions):"
-            $made = @(Get-Content (Join-Path $env:RUNNER_TEMP 'setup-temp.txt') -ErrorAction SilentlyContinue | Where-Object { $_ })
-            foreach ($line in $made) { "  $line" }
-            if (-not $fromTemp) { Fail "No process the setup started ran from an is-*.tmp folder." }
-            foreach ($child in $fromTemp) {
-              $line = @($made | Where-Object { ($_ -split "`t")[0] -eq $child.Folder })
-              if ($line) { "  $($child.Exe), process $($child.Id), ran from $($child.Folder), the folder printed above" }
-              else { Fail "$($child.Exe), process $($child.Id), ran from $($child.Folder), which the watch on %TEMP% did not see made, so its permissions are not known." }
-            }
-          }
+          if ('${{ matrix.route }}' -eq 'setup') { Show-TempFolders (Join-Path $env:RUNNER_TEMP 'setup-temp.txt') $started }
           Exit-IfFailed
 
       # A copy of this build at the older version is put in a folder of its own with the

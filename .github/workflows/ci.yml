@@ -639,7 +639,7 @@ jobs:
   # newer version, and the job fails where the build does not say within 60 s that its
   # own code is running.
   #
-  # Last, each build is started with a start-up hook named by DOTNET_STARTUP_HOOKS,
+  # Then each build is started with a start-up hook named by DOTNET_STARTUP_HOOKS,
   # and so is each published again with start-up hooks allowed. The job fails where a
   # shipped build runs the hook, where an allowing build does not, and where any build
   # does not say within 60 s that its own code is running.
@@ -649,8 +649,13 @@ jobs:
   # report receiver's host is pointed nowhere in the hosts file. The job fails where
   # either window left a report behind.
   #
+  # Last, the setup is compiled from the builds the job published and run from a
+  # folder of its own under both passes, as a download is run. The setup, the
+  # setup.tmp it starts and anything that starts are judged on the images they load
+  # from their own folders, and the setup on the files planted beside it.
+  #
   # Each pass's Process Monitor rows for every process named as one of the builds'
-  # exes, each host trace and the app's crash logs are kept with the run for seven
+  # exes and for the setup's processes, each host trace and the app's crash logs are kept with the run for seven
   # days, whether or not the job passed.
   native-libraries:
     name: Native libraries (Windows)
@@ -1566,8 +1571,109 @@ jobs:
           $left | ForEach-Object { Write-Host "::error::$_" }
           if ($left.Count) { exit 1 }
 
+      # The setup is compiled from the builds this job published, as build-and-test
+      # compiles it, so it carries them.
+      - name: Compile the setup
+        if: ${{ !cancelled() && env.PROCMON != '' }}
+        run: |
+          choco install innosetup --version=6.7.1 --no-progress -y
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup did not install." }
+          $iscc = Get-ChildItem "${env:ProgramFiles(x86)}" -Filter ISCC.exe -Recurse -Depth 1 -ErrorAction SilentlyContinue |
+                  Select-Object -First 1 -ExpandProperty FullName
+          if (-not $iscc) { throw "ISCC.exe not found under ${env:ProgramFiles(x86)} after installing Inno Setup." }
+          $version = ([xml](Get-Content Directory.Build.props)).Project.PropertyGroup.Version |
+                     Where-Object { $_ } | Select-Object -First 1
+          if (-not $version) { throw "Could not read <Version> from Directory.Build.props." }
+          & $iscc "/DAppVersion=$version" installer\InstallerClean.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed." }
+          "SETUP_VERSION=$version" | Add-Content $env:GITHUB_ENV
+
+      # The setup is copied alone into a folder of its own, as a download sits in
+      # Downloads, and run silently under Process Monitor, twice. A silent install starts
+      # no window: the [Run] entry that opens the app needs /UPDATEFROMAPP and the other
+      # is skipifsilent, so nothing here takes the single-instance mutex or writes a
+      # report, and these runs come after every step that reads the app's own files.
+      #
+      # The setup exe is judged by its process ID and name: every look it makes for a DLL
+      # in its own folder is printed, and the job fails where it loads an image from that
+      # folder. Each process it starts, Inno Setup's setup.tmp from an is-*.tmp folder in
+      # %TEMP%, and each process those start, is judged the same way against its own
+      # folder, where an image the same process created earlier in the record passes:
+      # Inno Setup writes its helper files there and loads them. That folder is made new
+      # with a new name on each run, and its owner and permissions are printed as the
+      # setup made them. The job also fails where the setup does not exit with 0, starts
+      # no setup.tmp, or leaves an uninstall entry whose DisplayVersion is not the one
+      # built.
+      #
+      # The second run's folder holds the genuine file at every path the setup exe looked
+      # at in its own folder in the first, and the job fails where the setup reads or
+      # loads one, and where a plant was not looked for, not found, gone or changed.
+      - name: Run the setup from its own folder, under both passes
+        if: ${{ !cancelled() && env.PROCMON != '' && env.SETUP_VERSION != '' }}
+        shell: pwsh
+        run: |
+          . (Join-Path $env:RUNNER_TEMP 'native.ps1')
+          $setup = (Resolve-Path "publish/InstallerClean-$env:SETUP_VERSION-setup.exe").Path
+
+          # Prints with Write-Host, so what it answers is the run and its reading alone.
+          function Invoke-Setup([string]$pass, $plants) {
+            $folder = Get-RunFolder $pass 'setup'
+            New-Item -ItemType Directory -Force -Path $folder | Out-Null
+            Copy-Item -LiteralPath $setup -Destination $folder
+            $placed = @(Add-Plants $folder @($plants))
+            $exe = Join-Path $folder (Split-Path $setup -Leaf)
+            $out = Join-Path $env:RUNNER_TEMP "setup-$pass-temp.txt"
+            $stop = Join-Path $env:RUNNER_TEMP "setup-$pass-temp.stop"
+            $watch = Start-TempWatch $out $stop
+            Start-Record "setup-$pass"
+            try {
+              $p = Start-Process -FilePath $exe -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-' -WorkingDirectory $folder -PassThru
+              $null = $p.Handle
+              if (-not $p.WaitForExit(300000)) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; $p.WaitForExit(); Fail "The setup was still running after 300 s and was ended." }
+            }
+            finally {
+              $csv = Stop-Record "setup-$pass"
+              Stop-TempWatch $watch $stop
+            }
+            Write-Host "  the setup, process $($p.Id), exited with $($p.ExitCode)"
+            if ($p.ExitCode -ne 0) { Fail "The setup, $pass pass, exited with $($p.ExitCode)." }
+
+            $run = [pscustomobject]@{ Label = "setup, $pass pass"; Build = [pscustomobject]@{ Exe = $setup }; Folder = $folder
+              Exe = Split-Path $exe -Leaf; Id = $p.Id; Placed = $placed; BundleFiles = @() }
+            $kept = [System.Collections.Generic.List[string]]::new()
+            $kept.Add("$($run.Id)`t$($run.Exe)")
+            $byProcess = Read-Record $csv @($run)
+            $read = Read-Run $run $byProcess
+            if ($read) {
+              Test-OwnLoads $run $byProcess[[string]$run.Id]
+              if ($pass -eq 'second') { Test-PlantedRun $run $read }
+              $started = @(Test-StartedProcesses $csv $run $byProcess[[string]$run.Id] '')
+              foreach ($child in $started) { $kept.Add("$($child.Id)`t$($child.Exe)") }
+              if (-not @($started | Where-Object Exe -like '*.tmp')) { Fail "The setup, $pass pass, started no setup.tmp that Process Monitor recorded." }
+              Show-TempFolders $out $started
+            }
+            Set-Content -Path (Join-Path $env:RUNNER_TEMP "kept-setup-$pass.txt") -Value $kept
+
+            $shown = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\InstallerClean_is1' -ErrorAction SilentlyContinue).DisplayVersion
+            if ($shown -eq $env:SETUP_VERSION) { Write-Host "  the uninstall entry's DisplayVersion is $shown" }
+            else { Fail "The uninstall entry's DisplayVersion is '$shown' after the $pass pass, not $env:SETUP_VERSION." }
+            [pscustomobject]@{ Run = $run; Read = $read }
+          }
+
+          $first = Invoke-Setup 'first' @()
+          $plants = @()
+          if ($first.Read) {
+            $plants = @(Get-RunPlants $first.Run $first.Read @() @{} @())
+            "== Planted for the setup's second pass"
+            if (-not $plants) { '  none' }
+            foreach ($plant in $plants) { "  $($plant.Place) $($plant.Path): $($plant.Kind), $($plant.Source)" }
+          }
+          $null = Invoke-Setup 'second' $plants
+          Exit-IfFailed
+
       # A Process Monitor record holds every process on the runner, so only the rows of
-      # every process named as one of the builds' exes are kept, in the record's order,
+      # the setup's processes, each by its process ID and name, and of every process
+      # named as one of the builds' exes are kept, in the record's order,
       # each column as recorded. The log's row N for a process is its Nth row in the
       # file with that PID. Detail is emptied on a row that starts or creates a process
       # and must stay so, since the artifact is public. The host traces are kept whole, and
@@ -1592,6 +1698,19 @@ jobs:
             })
             $rows | Export-Csv -Path (Join-Path $kept "$name.csv") -NoTypeInformation -UseQuotes Always
             "  kept $($rows.Count) rows of $csv"
+          }
+          foreach ($name in 'setup-first', 'setup-second') {
+            $csv = Join-Path $env:RUNNER_TEMP "procmon\$name.csv"
+            $ids = Join-Path $env:RUNNER_TEMP "kept-$name.txt"
+            if (-not (Test-Path $csv) -or -not (Test-Path $ids)) { "  no $name record to keep"; continue }
+            $names = @{}
+            foreach ($line in @(Get-Content $ids | Where-Object { $_ })) { $id, $exe = $line -split "`t"; $names[$id] = $exe }
+            $rows = @(Import-Csv $csv | Where-Object { $names.ContainsKey($_.PID) -and $_.'Process Name' -eq $names[$_.PID] } | ForEach-Object {
+              if ($_.Operation -in 'Process Start', 'Process Create') { $_.Detail = '' }
+              $_
+            })
+            $rows | Export-Csv -Path (Join-Path $kept "$name.csv") -NoTypeInformation -UseQuotes Always
+            "  kept $($rows.Count) rows of $csv, for the processes $(@($names.Keys) -join ', ')"
           }
           foreach ($trace in @(Get-ChildItem -Path (Join-Path $env:RUNNER_TEMP 'trace-*.txt') -ErrorAction SilentlyContinue)) {
             Copy-Item -LiteralPath $trace.FullName -Destination $kept
