@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace InstallerClean.Tests.Helpers;
 
 /// <summary>
@@ -7,8 +9,14 @@ namespace InstallerClean.Tests.Helpers;
 /// <see cref="FolderVariable"/> is the folder the volume is mounted at,
 /// <see cref="BesideVariable"/> an ordinary folder on the volume holding the installer
 /// cache, and <see cref="FreeBytesVariable"/> the mounted volume's free space as Windows
-/// reported it before the run, in bytes.
+/// reported it before the run, in bytes, written as plain digits.
 /// </summary>
+/// <remarks>
+/// The tests it gates expect a small fixed volume, such as a VHDX of a few tens of
+/// megabytes, on a cache drive with far more free space than that: they tell the two
+/// volumes apart by which one answers for a path, and by the mounted one's figure
+/// being the smaller.
+/// </remarks>
 public sealed class MountedVolumeFactAttribute : FactAttribute
 {
     internal const string FolderVariable = "IC_TEST_MOUNTED_VOLUME_FOLDER";
@@ -20,7 +28,9 @@ public sealed class MountedVolumeFactAttribute : FactAttribute
         if (!OperatingSystem.IsWindows()
             || string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(FolderVariable))
             || string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(BesideVariable))
-            || string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(FreeBytesVariable)))
+            || !long.TryParse(Environment.GetEnvironmentVariable(FreeBytesVariable),
+                NumberStyles.None, CultureInfo.InvariantCulture, out var free)
+            || free <= 0)
             Skip = $"Needs a volume mounted into a folder, named by {FolderVariable}, {BesideVariable} and {FreeBytesVariable}.";
     }
 }
