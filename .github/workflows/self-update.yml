@@ -446,13 +446,16 @@ jobs:
       # from %TEMP% (Test-StartedProcesses in native-libraries.ps1). Their looks are
       # printed. A load from their own folder fails, and so does a load from any is-*.tmp
       # folder, setup.tmp's own among them, except of a file the same process created
-      # there earlier in the record. Their command lines are not printed.
+      # there earlier in the record. Their command lines are not printed. First these
+      # checks are run over a record made up for the purpose, and the job fails unless
+      # each fails exactly where it must (Test-SetupControls in native-libraries.ps1).
       - name: Judge the DLLs the update looked for
         if: ${{ !cancelled() && env.UPDATE_PID != '' }}
         shell: pwsh
         run: |
           if (-not $env:UPDATE_RECORD -or -not (Test-Path -LiteralPath $env:UPDATE_RECORD)) { throw "Process Monitor saved no record of the update, so its DLL looks were not judged." }
           . (Join-Path $env:RUNNER_TEMP 'native.ps1')
+          if ('${{ matrix.route }}' -eq 'setup') { Test-SetupControls }
           # The run takes the build's label, which is how the list matches its entries to it.
           $build = $builds[0]
           $notPlanted = @(Select-NotPlanted @(Get-NotPlanted) $builds -OnlyWhatThisRuns)
