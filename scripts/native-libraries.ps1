@@ -1,12 +1,17 @@
-# native-libraries.ps1: Process Monitor, and the functions the native-libraries job in
-# ci.yml records each build with and judges its records by.
+# native-libraries.ps1: Process Monitor, and the functions that record a build with it
+# and judge which DLLs the build looked for and loaded: the native-libraries job in
+# ci.yml, and the update self-update.yml performs.
 #
-# The job writes native.ps1, which defines $builds and then dot-sources this file, and
+# A workflow writes native.ps1, which defines $builds and then dot-sources this file, and
 # each step that records or judges a build dot-sources native.ps1. $builds holds each
 # build's label, its exe, the source file holding its lists, its arguments, how long it
-# is given, what it must load and the kind of its first act seen. The functions read
-# $builds, and each run's Build, from the caller's scope. $procmon is read from
-# $env:PROCMON, which the step that runs Get-Procmon sets for the steps after it.
+# is given, what it must load and the kind of its first act seen. The functions are
+# given the builds and runs they judge, and a run carries its build. $procmon is read
+# from $env:PROCMON, which the step that runs Get-Procmon sets for the steps after it.
+# Source files are read from the repository this file is in, whatever the working
+# directory.
+
+$repository = Split-Path $PSScriptRoot
 
 $procmon = $env:PROCMON
 $failures = [System.Collections.Generic.List[string]]::new()
@@ -20,10 +25,10 @@ $plantedAlone = 'hostfxr.dll', 'hostpolicy.dll'
 # library under that name, so the look is judged like any other.
 $standIn = Join-Path $env:SystemRoot 'System32\msimg32.dll'
 
-# Every Process Monitor call is bounded, so one that hangs fails the step with a
-# message, and a record starts only once no earlier Process Monitor is left, since one
-# started while another is ending can hand its arguments over to it instead of
-# recording.
+# Each Process Monitor call that is waited for is bounded, so one that hangs fails the
+# step with a message. A record starts only once no earlier Process Monitor is left,
+# since one started while another is ending can hand its arguments over to it instead
+# of recording.
 function Invoke-Procmon([string[]]$arguments, [int]$seconds, [string]$what) {
   $p = Start-Process $procmon -ArgumentList $arguments -PassThru
   if (-not $p.WaitForExit($seconds * 1000)) {
@@ -243,7 +248,7 @@ function Get-OwnLibraries {
 # The strings in the array a source file initialises under $name. The step stops
 # where the file has no such array, unless $optional, or where it reads as empty.
 function Read-SourceList([string]$path, [string]$name, [switch]$optional) {
-  $source = Get-Content -Raw $path
+  $source = Get-Content -Raw (Join-Path $repository $path)
   if ($source -notmatch "(?s)\b$name\s*=\s*\[(.*?)\];") {
     if ($optional) { return @() }
     throw "$path has no $name list to read."
@@ -397,7 +402,7 @@ function Read-UserStrings([string]$path) {
 function Get-Procmon([string]$folder) {
   New-Item -ItemType Directory -Force -Path $folder | Out-Null
   $path = Join-Path $folder 'Procmon64.exe'
-  Invoke-WebRequest https://live.sysinternals.com/Procmon64.exe -OutFile $path
+  Invoke-WebRequest https://live.sysinternals.com/Procmon64.exe -OutFile $path -TimeoutSec 300
   $sig = Get-AuthenticodeSignature $path
   if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
     throw "Procmon64.exe is not validly signed by Microsoft: $($sig.Status), $($sig.SignerCertificate.Subject)"
@@ -442,7 +447,6 @@ function Get-NotPlanted {
     # and searches the folder the bundle extracts to before System32.
     [pscustomobject]@{ Exe = $portable; Runs = @('portable'); Places = @('extraction'); Assembly = 'PresentationCore'; Call = 'NativeLibrary.Load'; When = 'before'; Names = @('dwrite.dll') }
   )
-
 }
 
 # Each entry's assembly is read from the runtime packs its exe's bundle was built
@@ -451,13 +455,24 @@ function Get-NotPlanted {
 # spelled the same. An entry that fails these checks fails the step and is dropped
 # from the list, so the looks it would cover are planted in the second pass. The step
 # stops where NuGet's cache, a runtime pack or an assembly's metadata cannot be read.
-function Select-NotPlanted($notPlanted) {
+#
+# An entry has to name an exe and runs among $builds. With -OnlyWhatThisRuns, an entry
+# naming no run in $builds is left out and printed, and one naming some runs not there
+# keeps only those that are, for a workflow that runs some of the builds the list is
+# kept for.
+function Select-NotPlanted($notPlanted, $builds, [switch]$OnlyWhatThisRuns) {
   $cache = Get-NuGetCache
   $packFolders = @{}
   $assemblyPaths = @{}
   $assemblyNames = @{}
   @(foreach ($entry in $notPlanted) {
     $runsOfExe = @($builds | Where-Object Exe -eq $entry.Exe | ForEach-Object Label)
+    if ($OnlyWhatThisRuns) {
+      $here = @($entry.Runs | Where-Object { $_ -in $runsOfExe })
+      if (-not $here) { Write-Host "  not judged here: $($entry.Names -join ', ') listed for $($entry.Exe) in the runs '$($entry.Runs -join "', '")'"; continue }
+      $entry = $entry.PSObject.Copy()
+      $entry.Runs = $here
+    }
     if (-not $runsOfExe) { Fail "The libraries not planted name the exe $($entry.Exe), which no build this job runs is."; continue }
     $stray = @($entry.Runs | Where-Object { $_ -notin $runsOfExe })
     if ($stray -or -not $entry.Runs) { Fail "The libraries not planted for $($entry.Exe) name the runs '$($entry.Runs -join "', '")', where its runs are '$($runsOfExe -join "', '")'."; continue }

@@ -21,6 +21,20 @@
 # from loose files beside the exe, so a load after the rename would succeed there
 # and this workflow would pass over code the shipped build cannot run.
 #
+# Process Monitor records the update, and the DLLs the old copy looks for and loads
+# are judged with the functions and the list in scripts/native-libraries.ps1, as the
+# native-libraries job in ci.yml judges the command line's run that checks for
+# updates: the same exe, built from the same code. On the setup's copy the setup the
+# old copy downloads and starts is judged too, with the setup.tmp Inno Setup's loader
+# writes into %TEMP% and starts, and that folder's permissions are printed as the
+# setup made them. Nothing of the newer version is judged, since it is the release.
+# On the command line's own download the update is then made again from a copy of
+# this build in a folder of its own, with the genuine file planted at every path the
+# first update looked at for a DLL and the list does not name, hostfxr.dll and
+# hostpolicy.dll aside, and the job fails where the old copy reads or loads one. A
+# copy in Program Files, the setup's, is not planted for, since only an administrator
+# can write a file there.
+#
 # It runs apart from ci.yml because it reaches GitHub for the release. A run that
 # cannot reach GitHub fails here, with the command line's own output saying
 # nothing was tried, and never reads as a pass.
@@ -45,7 +59,7 @@ jobs:
     name: Update ${{ matrix.route == 'setup' && 'the setup''s copy' || 'the command line''s own download' }}
     # The same image as ci.yml and release.yml.
     runs-on: windows-2025
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     strategy:
       fail-fast: false
@@ -140,6 +154,22 @@ jobs:
           auditpol /set /subcategory:'{0CCE922C-69AE-11D9-BED3-505054503030}' /success:enable
           if ($LASTEXITCODE -ne 0) { throw "auditpol could not turn on Process Termination." }
 
+      # native.ps1 names the build as the native-libraries job's command line that
+      # checks for updates, so the list's entries for that run apply to the old copy.
+      - name: Get Process Monitor and start recording
+        shell: pwsh
+        run: |
+          Set-Content -Path (Join-Path $env:RUNNER_TEMP 'native.ps1') -Value @'
+          $builds = @(
+            [pscustomobject]@{ Label = 'command line, checking for updates'; Exe = 'publish/cli/installerclean-cli.exe'; Source = 'src/InstallerClean.Cli/LibrarySearch.cs'; MustLoad = @('winhttp.dll'); Marker = 'old copy' }
+          )
+          . (Join-Path $env:GITHUB_WORKSPACE 'scripts/native-libraries.ps1')
+          '@
+          . (Join-Path $env:RUNNER_TEMP 'native.ps1')
+          $procmon = Get-Procmon (Join-Path $env:RUNNER_TEMP 'procmon')
+          "PROCMON=$procmon" | Add-Content $env:GITHUB_ENV
+          Start-Record 'update'
+
       # Standard input and output both redirected, which is what makes the run
       # one nobody can answer. The newer version is started in the same console
       # and inherits the output, so it is read to the end of both. The function
@@ -160,16 +190,62 @@ jobs:
             $out = $p.StandardOutput.ReadToEndAsync()
             $err = $p.StandardError.ReadToEndAsync()
             $p.WaitForExit()
-            [pscustomobject]@{ ExitCode = $p.ExitCode; Output = $out.Result + $err.Result }
+            [pscustomobject]@{ ExitCode = $p.ExitCode; Output = $out.Result + $err.Result; Id = $p.Id }
           }
           '@
           . $helper
+          # On the setup's copy a job writes down each is-*.tmp folder that appears in
+          # %TEMP% while the update runs, with its owner and its permissions, read as the
+          # setup made it. A folder there before the run is left out.
+          $watch = $null
+          if ('${{ matrix.route }}' -eq 'setup') {
+            $stop = Join-Path $env:RUNNER_TEMP 'setup-temp.stop'
+            $watch = Start-Job -ArgumentList $env:TEMP, (Join-Path $env:RUNNER_TEMP 'setup-temp.txt'), $stop -ScriptBlock {
+              param($temp, $out, $stop)
+              $seen = @{}
+              foreach ($d in @(Get-ChildItem -LiteralPath $temp -Directory -Filter 'is-*.tmp' -ErrorAction SilentlyContinue)) { $seen[$d.FullName] = $true }
+              Set-Content -Path $out -Value ''
+              while (-not (Test-Path -LiteralPath $stop)) {
+                foreach ($d in @(Get-ChildItem -LiteralPath $temp -Directory -Filter 'is-*.tmp' -ErrorAction SilentlyContinue)) {
+                  if ($seen.ContainsKey($d.FullName)) { continue }
+                  try {
+                    $acl = Get-Acl -LiteralPath $d.FullName
+                    "$($d.FullName)`towner $($acl.Owner)`t$($acl.GetSecurityDescriptorSddlForm('Access'))" | Add-Content -Path $out
+                    $seen[$d.FullName] = $true
+                  }
+                  catch { }
+                }
+                Start-Sleep -Milliseconds 50
+              }
+            }
+            $ready = Join-Path $env:RUNNER_TEMP 'setup-temp.txt'
+            $deadline = [DateTime]::UtcNow.AddSeconds(60)
+            while (-not (Test-Path -LiteralPath $ready)) {
+              if ([DateTime]::UtcNow -gt $deadline) { throw "The job watching %TEMP% did not start within 60 s." }
+              Start-Sleep -Milliseconds 200
+            }
+          }
           "RUN_STARTED=$((Get-Date).ToUniversalTime().ToString('o'))" | Add-Content $env:GITHUB_ENV
           $run = Run $env:EXE
+          if ($watch) {
+            New-Item -ItemType File -Path $stop -Force | Out-Null
+            $null = Wait-Job $watch -Timeout 60
+            Receive-Job $watch
+            Remove-Job $watch -Force
+          }
           Set-Content -Path (Join-Path $env:RUNNER_TEMP 'update-run.txt') -Value $run.Output -NoNewline
           $run.Output
           "Exit code: $($run.ExitCode)"
           "UPDATE_EXIT=$($run.ExitCode)" | Add-Content $env:GITHUB_ENV
+          "UPDATE_PID=$($run.Id)" | Add-Content $env:GITHUB_ENV
+
+      - name: Stop recording
+        if: always() && env.PROCMON != ''
+        shell: pwsh
+        run: |
+          . (Join-Path $env:RUNNER_TEMP 'native.ps1')
+          $csv = Stop-Record 'update'
+          "UPDATE_RECORD=$csv" | Add-Content $env:GITHUB_ENV
 
       # What the update left, read before the checks make their second run,
       # which changes it. This explains a result and decides none, so it runs
@@ -369,6 +445,189 @@ jobs:
             exit 1
           }
           'Every check passed.'
+
+      # The old copy is judged by its process ID, which the newer version, run from the
+      # same path under the same name, does not share. The job fails where the old copy
+      # loads a DLL from its own folder, and where it shows no act of its own code or never loads
+      # winhttp.dll, which would leave too little of the update recorded to judge. Every
+      # look it makes for a DLL in its own folder or under %TEMP%\.net is printed, with
+      # those the list names. The paths of the looks the list does not name are written
+      # down for the step after this one, which plants them on the command line's own
+      # download, less hostfxr.dll and hostpolicy.dll: a build that takes a planted copy
+      # of either may not start at all.
+      #
+      # On the setup's copy each process the old copy starts, other than the newer
+      # version, and each process those start, is judged the same way against its own
+      # folder: the setup in the download's folder under %ProgramData%, and the
+      # setup.tmp it starts from %TEMP%. Their looks are printed and a load from their own
+      # folder fails. Their command lines are not printed.
+      - name: Judge the DLLs the update looked for
+        if: ${{ !cancelled() && env.UPDATE_RECORD != '' && env.UPDATE_PID != '' }}
+        shell: pwsh
+        run: |
+          . (Join-Path $env:RUNNER_TEMP 'native.ps1')
+          # The run takes the build's label, which is how the list matches its entries to it.
+          $build = $builds[0]
+          $notPlanted = @(Select-NotPlanted @(Get-NotPlanted) $builds -OnlyWhatThisRuns)
+          $old = [pscustomobject]@{ Label = $build.Label; Build = $build; Folder = (Split-Path $env:EXE); Exe = (Split-Path $env:EXE -Leaf); Id = [int]$env:UPDATE_PID }
+          $byProcess = Read-Record $env:UPDATE_RECORD @($old)
+          $read = Read-Run $old $byProcess
+          $kept = [System.Collections.Generic.List[int]]::new()
+          $kept.Add($old.Id)
+          if ($read) {
+            Test-MustLoad $old $read.Loads
+            if (-not $read.Marker) { Fail "The old copy showed no act of its own code." }
+            elseif ($read.Marker.Kind -ne $build.Marker) { Fail "The old copy's first act of its own code seen is the $($read.Marker.Kind) at row $($read.Marker.Index), where it should be the $($build.Marker)." }
+            foreach ($load in ($read.Loads | Where-Object Place -eq 'own')) {
+              Fail "The old copy loaded $($load.Path) from its own folder, row $($load.Index), $(Get-When $load $read.Marker)."
+            }
+            $extractionFolders = @($read.Loads | Where-Object Place -eq 'extraction' | ForEach-Object { Split-Path $_.Path } | Sort-Object -Unique)
+            $bundleFiles = @(foreach ($folder in $extractionFolders) { Get-ChildItem -LiteralPath $folder -File | ForEach-Object FullName })
+            $plants = @(Get-RunPlants $old $read $notPlanted @{} $extractionFolders |
+              Where-Object { -not ($_.Place -eq 'beside' -and (Split-Path $_.Path -Leaf) -in $plantedAlone) })
+            "== The looks the list does not name"
+            if (-not $plants) { '  none' }
+            foreach ($plant in $plants) { "  $($plant.Place) $($plant.Path): $($plant.Kind), $($plant.Source)" }
+            ConvertTo-Json -Depth 5 -InputObject ([pscustomobject]@{ Plants = $plants; BundleFiles = $bundleFiles }) |
+              Set-Content (Join-Path $env:RUNNER_TEMP 'plants.json')
+
+            # The processes the old copy starts, then the ones they start, by the process
+            # ID Process Monitor gives each in its Process Create row.
+            $parents = @($old)
+            foreach ($depth in 1, 2) {
+              $started = @(foreach ($parent in $parents) {
+                foreach ($row in @($byProcess[[string]$parent.Id] | Where-Object Operation -eq 'Process Create')) {
+                  if ($row.Path -eq $env:EXE) { continue }
+                  if ($row.Detail -notmatch '^PID: (\d+)') { Fail "A Process Create row of process $($parent.Id) names no process ID."; continue }
+                  [pscustomobject]@{ Label = Split-Path $row.Path -Leaf; Folder = Split-Path $row.Path; Exe = Split-Path $row.Path -Leaf; Id = [int]$Matches[1]; Parent = $parent.Label }
+                }
+              })
+              if (-not $started) { break }
+              $byChild = Read-Record $env:UPDATE_RECORD $started
+              foreach ($child in $started) {
+                $kept.Add($child.Id)
+                $childRows = $byChild[[string]$child.Id]
+                "== $($child.Exe), process $($child.Id), started by $($child.Parent), from $($child.Folder)"
+                if (-not $childRows) { Fail "Process Monitor recorded nothing for $($child.Exe), process $($child.Id)."; continue }
+                $libraries = @(Get-Libraries $childRows $child.Folder)
+                "  every look in its own folder and under %TEMP%\.net (row, operation, result, times seen, path):"
+                $libraries | Where-Object { $_.Place -ne 'elsewhere' -and $_.Operation -ne 'Load Image' } |
+                  Group-Object Path, Operation, Result | Sort-Object { $_.Group[0].Index } | ForEach-Object {
+                    $first = $_.Group[0]
+                    "    row $($first.Index)  $($first.Operation)  $($first.Result)  x$($_.Count)  $($first.Path)"
+                  }
+                "  libraries loaded:"
+                $libraries | Where-Object Operation -eq 'Load Image' | ForEach-Object Path | Sort-Object -Unique | ForEach-Object { "    $_" }
+                foreach ($load in ($libraries | Where-Object { $_.Operation -eq 'Load Image' -and $_.Place -eq 'own' })) {
+                  Fail "$($child.Exe) loaded $($load.Path) from its own folder, row $($load.Index)."
+                }
+              }
+              $parents = $started
+              $byProcess = $byChild
+            }
+            if ('${{ matrix.route }}' -eq 'setup' -and -not @($kept | Select-Object -Skip 1)) { Fail "The old copy started no setup that Process Monitor recorded." }
+          }
+          Set-Content -Path (Join-Path $env:RUNNER_TEMP 'kept-update.txt') -Value $kept
+
+          if ('${{ matrix.route }}' -eq 'setup') {
+            "== The folders Inno Setup's loader made in %TEMP% during the update (path, owner, permissions):"
+            $made = @(Get-Content (Join-Path $env:RUNNER_TEMP 'setup-temp.txt') -ErrorAction SilentlyContinue | Where-Object { $_ })
+            if (-not $made) { Fail "No is-*.tmp folder was seen in %TEMP% while the update ran." }
+            foreach ($line in $made) { "  $line" }
+          }
+          Exit-IfFailed
+
+      # A copy of this build at the older version is put in a folder of its own with the
+      # genuine file at every path the step above wrote down, and makes the update
+      # again. The event source the first update registered is deleted first, so this
+      # run registers it as the first did and its looks while it does are planted for
+      # too. The job fails where the old copy reads or loads a planted file or any DLL its
+      # bundle did not put under %TEMP%\.net, and where a plant was not looked for, not
+      # found, gone or changed. Its exit code and output are the newer version's and are
+      # not judged; the entries the crash log gains are printed.
+      - name: Update again with the genuine files planted
+        if: ${{ !cancelled() && matrix.route == 'download' && env.UPDATE_RECORD != '' }}
+        shell: pwsh
+        run: |
+          . (Join-Path $env:RUNNER_TEMP 'native.ps1')
+          . (Join-Path $env:RUNNER_TEMP 'run.ps1')
+          $plan = Get-Content -Raw (Join-Path $env:RUNNER_TEMP 'plants.json') | ConvertFrom-Json
+          $build = $builds[0]
+
+          if ([System.Diagnostics.EventLog]::SourceExists('InstallerClean')) { [System.Diagnostics.EventLog]::DeleteEventSource('InstallerClean') }
+          if ([System.Diagnostics.EventLog]::SourceExists('InstallerClean')) { throw "The InstallerClean event source is still registered." }
+          '  the InstallerClean event source is not registered'
+
+          $folder = Join-Path $env:RUNNER_TEMP 'second-update'
+          New-Item -ItemType Directory -Force -Path $folder | Out-Null
+          Copy-Item publish/cli/installerclean-cli.exe $folder
+          $exe = Join-Path $folder 'installerclean-cli.exe'
+          foreach ($left in "$exe.old", "$exe.new") { if (Test-Path -LiteralPath $left) { throw "$left is there before the run." } }
+          $placed = @(Add-Plants $folder @($plan.Plants))
+          "  planted $($placed.Count): $(($placed | ForEach-Object Path) -join ', ')"
+
+          $logs = @(foreach ($name in $crashLogFolders) {
+            $log = Join-Path $env:LOCALAPPDATA "$name\crash.log"
+            [pscustomobject]@{ Path = $log; Length = $(if (Test-Path -LiteralPath $log) { (Get-Item -LiteralPath $log).Length } else { 0 }) }
+          })
+
+          Start-Record 'second'
+          $run = Run $exe
+          $csv = Stop-Record 'second'
+          "  the run exited with $($run.ExitCode)"
+
+          $old = [pscustomobject]@{ Label = $build.Label; Build = $build; Folder = $folder; Exe = 'installerclean-cli.exe'; Id = $run.Id
+            Placed = $placed; BundleFiles = @($plan.BundleFiles | Where-Object { $_ }) }
+          Set-Content -Path (Join-Path $env:RUNNER_TEMP 'kept-second.txt') -Value $old.Id
+          $byProcess = Read-Record $csv @($old)
+          $read = Read-Run $old $byProcess
+          if ($read) {
+            Test-PlantedRun $old $read
+            Test-MustLoad $old $read.Loads
+          }
+
+          foreach ($log in $logs) {
+            if (-not (Test-Path -LiteralPath $log.Path)) { continue }
+            $stream = [IO.File]::Open($log.Path, 'Open', 'Read', 'ReadWrite')
+            try {
+              $null = $stream.Seek($log.Length, 'Begin')
+              $added = [IO.StreamReader]::new($stream).ReadToEnd()
+            }
+            finally { $stream.Dispose() }
+            if ($added) { "  $($log.Path) gained:"; $added -split "`r?`n" | Where-Object { $_ } | ForEach-Object { "    $_" } }
+          }
+          Exit-IfFailed
+
+      # Only the rows of the processes judged are kept, with the Detail of each Process
+      # Start and Process Create row emptied, since those carry a process's environment
+      # and its command line. The artifact is public.
+      - name: Keep the Process Monitor rows
+        if: always() && env.PROCMON != ''
+        shell: pwsh
+        run: |
+          $kept = Join-Path $env:RUNNER_TEMP 'kept'
+          New-Item -ItemType Directory -Force -Path $kept | Out-Null
+          foreach ($name in 'update', 'second') {
+            $csv = Join-Path $env:RUNNER_TEMP "procmon\$name.csv"
+            $ids = Join-Path $env:RUNNER_TEMP "kept-$name.txt"
+            if (-not (Test-Path $csv) -or -not (Test-Path $ids)) { "  no $name record to keep"; continue }
+            $pids = @(Get-Content $ids | Where-Object { $_ })
+            $rows = @(Import-Csv $csv | Where-Object { $_.PID -in $pids } | ForEach-Object {
+              if ($_.Operation -in 'Process Start', 'Process Create') { $_.Detail = '' }
+              $_
+            })
+            $rows | Export-Csv -Path (Join-Path $kept "$name.csv") -NoTypeInformation -UseQuotes Always
+            "  kept $($rows.Count) rows of $csv, for the processes $($pids -join ', ')"
+          }
+
+      - name: Upload the Process Monitor rows
+        if: always() && env.PROCMON != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: process-monitor-records-${{ matrix.route }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/kept
+          if-no-files-found: warn
+          retention-days: 7
 
       # The step above prints all of this itself, unless it stopped before its
       # end.

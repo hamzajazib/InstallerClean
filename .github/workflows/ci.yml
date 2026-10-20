@@ -948,7 +948,7 @@ jobs:
             throw "No .NET 10 Desktop Runtime is installed, so the slim cannot start."
           }
 
-          $notPlanted = @(Select-NotPlanted @(Get-NotPlanted))
+          $notPlanted = @(Select-NotPlanted @(Get-NotPlanted) $builds)
 
           $listedSeen = @{}
 
