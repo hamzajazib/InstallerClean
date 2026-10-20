@@ -26,11 +26,14 @@ public sealed class UpdateStagingFolder
     internal const string NamePrefix = "InstallerClean-update-";
 
     /// <summary>
-    /// Full control for SYSTEM and for Administrators, on the folder and inherited by
-    /// every file and folder inside it, and nothing for anybody else. "P" protects the
-    /// list from the parent's inheritable entries.
+    /// Administrators as the owner, full control for SYSTEM and for Administrators on
+    /// the folder and inherited by every file and folder inside it, and nothing for
+    /// anybody else. "P" protects the list from the parent's inheritable entries. The
+    /// owner is fixed to Administrators, rather than left to the creating account's
+    /// default, so that a folder the app made is told from one another account made by
+    /// an owner no account without administrator rights can set.
     /// </summary>
-    internal const string AdministratorsOnly = "D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)";
+    internal const string AdministratorsOnly = "O:BAD:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)";
 
     private UpdateStagingFolder(string path) => FullPath = path;
 
@@ -110,29 +113,55 @@ public sealed class UpdateStagingFolder
     /// </summary>
     /// <remarks>
     /// Any user can create a folder with this name in %ProgramData%, so nothing found
-    /// is trusted. A folder whose name is not <see cref="NamePrefix"/> and 32 hex
-    /// digits is left alone, and so is one that is a reparse point. Inside, a file is
-    /// deleted only where its name has the downloads' shape, "InstallerClean-" to
-    /// ".exe", and it is a plain file; the folder itself goes only once it is empty,
-    /// never with what is inside it.
+    /// is trusted and nothing is reached by its path across a check. The root is opened
+    /// as a handle, and each candidate folder is opened without following a link in its
+    /// name; a folder is cleaned only where its owner and list are the app's own, as
+    /// <see cref="Create"/> sets them, so a folder another account made is left whole.
+    /// Inside a folder that is the app's own, a file is removed through a handle opened
+    /// relative to the folder's, and only where its name has the downloads' shape,
+    /// "InstallerClean-" to ".exe", and it is a plain file; the folder itself goes,
+    /// relative to the root's handle, only once it is empty.
     /// </remarks>
-    public static bool RemoveLeftovers(string root)
+    public static bool RemoveLeftovers(string root) =>
+        RemoveLeftovers(root, DirectoryGuard.FolderExpectation.AppOwned);
+
+    /// <summary>
+    /// Test seam: the same, against the owner and list a test's folder carries. The
+    /// suite runs without administrator rights, so it cannot create a folder owned by
+    /// Administrators or SYSTEM and names its own account in <paramref name="expected"/>.
+    /// </summary>
+    internal static bool RemoveLeftovers(string root, DirectoryGuard.FolderExpectation expected)
     {
-        var allGone = true;
         try
         {
             if (!Directory.Exists(root)) return true;
+
+            using var rootHandle = DirectoryGuard.OpenDirectoryNoFollow(root);
+            if (rootHandle is null) return false;
+
+            var allGone = true;
             foreach (var folder in Directory.EnumerateDirectories(root, NamePrefix + "*"))
             {
+                var leaf = Path.GetFileName(folder);
                 try
                 {
-                    if (!IsOurName(Path.GetFileName(folder)) || IsReparsePoint(folder)) continue;
+                    if (!IsOurName(leaf)) continue;
+
+                    using var folderHandle = DirectoryGuard.OpenDirectoryNoFollow(folder);
+                    if (folderHandle is null || !DirectoryGuard.IsExpectedFolder(folderHandle, expected))
+                    {
+                        allGone = false;
+                        continue;
+                    }
+
                     foreach (var file in Directory.EnumerateFiles(folder, "InstallerClean-*.exe"))
                     {
-                        if (!IsReparsePoint(file))
-                            File.Delete(file);
+                        if (!DirectoryGuard.TryRemoveChildFile(folderHandle, Path.GetFileName(file)))
+                            allGone = false;
                     }
-                    Directory.Delete(folder, recursive: false);
+
+                    if (!DirectoryGuard.TryRemoveEmptyChildFolder(rootHandle, leaf))
+                        allGone = false;
                 }
                 catch
                 {
@@ -140,20 +169,17 @@ public sealed class UpdateStagingFolder
                     allGone = false;
                 }
             }
+            return allGone;
         }
         catch
         {
             // Nothing here is worth a failed start.
-            allGone = false;
+            return false;
         }
-        return allGone;
     }
 
     private static bool IsOurName(string name) =>
         name.Length == NamePrefix.Length + 32
         && name.StartsWith(NamePrefix, StringComparison.OrdinalIgnoreCase)
         && name.AsSpan(NamePrefix.Length).IndexOfAnyExcept("0123456789abcdefABCDEF") < 0;
-
-    private static bool IsReparsePoint(string path) =>
-        (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
 }

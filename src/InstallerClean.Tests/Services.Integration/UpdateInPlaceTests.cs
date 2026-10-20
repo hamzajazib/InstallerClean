@@ -4,7 +4,9 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using InstallerClean.Helpers;
 using InstallerClean.Services;
+using InstallerClean.Tests.Helpers;
 
 namespace InstallerClean.Tests.Services.Integration;
 
@@ -19,12 +21,27 @@ public sealed class UpdateInPlaceTests : IDisposable
 {
     private readonly string _root = Directory.CreateTempSubdirectory("ic-update-").FullName;
 
+    /// <summary>The SID of the account running the suite.</summary>
+    private static readonly string ThisAccountSid = WindowsIdentity.GetCurrent().User!.Value;
+
     /// <summary>
-    /// The shipping descriptor with the account running the suite added, which runs
-    /// without administrator rights and so could not write into the folder otherwise.
+    /// The shipping list with the account running the suite added, owned by that account
+    /// rather than Administrators. The suite runs without administrator rights, so it
+    /// cannot set Administrators as the owner the way the shipping descriptor does, and
+    /// could not write into the folder without its own entry.
     /// </summary>
     private static readonly string AdministratorsAndThisAccount =
-        UpdateStagingFolder.AdministratorsOnly + $"(A;OICI;FA;;;{WindowsIdentity.GetCurrent().User!.Value})";
+        $"O:{ThisAccountSid}D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;FA;;;{ThisAccountSid})";
+
+    /// <summary>
+    /// What <see cref="UpdateStagingFolder.RemoveLeftovers(string, DirectoryGuard.FolderExpectation)"/>
+    /// is told to accept for a folder made with <see cref="AdministratorsAndThisAccount"/>:
+    /// this account alongside SYSTEM and Administrators.
+    /// </summary>
+    private static readonly DirectoryGuard.FolderExpectation ThisAccountExpectation = new(
+        new HashSet<string> { ThisAccountSid, DirectoryGuard.SystemSid, DirectoryGuard.AdministratorsSid },
+        new HashSet<string> { ThisAccountSid, DirectoryGuard.SystemSid, DirectoryGuard.AdministratorsSid },
+        requireProtected: true);
 
     public void Dispose()
     {
@@ -60,11 +77,12 @@ public sealed class UpdateInPlaceTests : IDisposable
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(body) });
     }
 
-    [Fact]
-    public void The_staging_folder_is_new_each_time_and_only_Administrators_and_SYSTEM_hold_any_right()
+    [AdministratorFact]
+    public void The_staging_folder_is_new_each_time_owned_by_Administrators_and_only_they_and_SYSTEM_hold_any_right()
     {
-        // The shipping descriptor itself. The suite cannot write into this folder, and
-        // does not need to: its creator owns it, so it can read the list back.
+        // The shipping descriptor itself, which sets Administrators as the owner. Only a
+        // process with administrator rights can assign that owner, which is why this runs
+        // where the suite holds them.
         var first = UpdateStagingFolder.Create(_root);
         var second = UpdateStagingFolder.Create(_root);
 
@@ -73,6 +91,8 @@ public sealed class UpdateInPlaceTests : IDisposable
 
         var security = new DirectoryInfo(first.FullPath).GetAccessControl();
         Assert.True(security.AreAccessRulesProtected);
+        var administrators = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+        Assert.Equal(administrators, security.GetOwner(typeof(SecurityIdentifier)));
         var holders = security.GetAccessRules(true, true, typeof(SecurityIdentifier))
             .Cast<FileSystemAccessRule>()
             .Select(rule => (SecurityIdentifier)rule.IdentityReference)
@@ -81,7 +101,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         var expected = new HashSet<SecurityIdentifier>
         {
             new(WellKnownSidType.LocalSystemSid, null),
-            new(WellKnownSidType.BuiltinAdministratorsSid, null),
+            administrators,
         };
         Assert.True(holders.SetEquals(expected), string.Join(", ", holders));
     }
@@ -93,26 +113,76 @@ public sealed class UpdateInPlaceTests : IDisposable
     }
 
     [Fact]
-    public void Leftovers_go_and_nothing_else_does()
+    public void Leftovers_in_the_apps_own_folders_go_and_nothing_else_does()
     {
-        var ours = Path.Combine(_root, UpdateStagingFolder.NamePrefix + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(ours);
+        // A folder the app made, holding a download: cleaned, and the folder with it.
+        var ours = UpdateStagingFolder.Create(_root, AdministratorsAndThisAccount).FullPath;
         File.WriteAllBytes(Path.Combine(ours, "InstallerClean-3.5.0-setup.exe"), Program(1));
 
-        var oursWithOtherFile = Path.Combine(_root, UpdateStagingFolder.NamePrefix + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(oursWithOtherFile);
+        // The app's own folder, but a file that is not a download keeps it: the download
+        // goes, the other file and the folder stay.
+        var oursWithOtherFile = UpdateStagingFolder.Create(_root, AdministratorsAndThisAccount).FullPath;
+        File.WriteAllBytes(Path.Combine(oursWithOtherFile, "InstallerClean-3.5.0-setup.exe"), Program(1));
         File.WriteAllText(Path.Combine(oursWithOtherFile, "notes.txt"), "kept");
 
+        // A folder whose name is not the download shape, left alone.
         var notOurName = Path.Combine(_root, UpdateStagingFolder.NamePrefix + "something-else");
         Directory.CreateDirectory(notOurName);
         File.WriteAllBytes(Path.Combine(notOurName, "InstallerClean-3.5.0-setup.exe"), Program(2));
 
-        var allGone = UpdateStagingFolder.RemoveLeftovers(_root);
+        var allGone = UpdateStagingFolder.RemoveLeftovers(_root, ThisAccountExpectation);
 
         Assert.False(allGone);
         Assert.False(Directory.Exists(ours));
+        Assert.False(File.Exists(Path.Combine(oursWithOtherFile, "InstallerClean-3.5.0-setup.exe")));
         Assert.True(File.Exists(Path.Combine(oursWithOtherFile, "notes.txt")));
         Assert.True(File.Exists(Path.Combine(notOurName, "InstallerClean-3.5.0-setup.exe")));
+    }
+
+    [Fact]
+    public void A_folder_another_account_could_have_made_is_left_untouched()
+    {
+        // A folder with the download name and a file of the download shape inside it,
+        // but made as an ordinary folder: its owner and list are not the app's own, so
+        // the real check leaves it and the file whole. This is the account another user
+        // on the machine would act as.
+        var foreign = Path.Combine(_root, UpdateStagingFolder.NamePrefix + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(foreign);
+        var planted = Path.Combine(foreign, "InstallerClean-anything.exe");
+        File.WriteAllBytes(planted, Program(1));
+
+        var allGone = UpdateStagingFolder.RemoveLeftovers(_root);
+
+        Assert.False(allGone);
+        Assert.True(Directory.Exists(foreign));
+        Assert.True(File.Exists(planted));
+    }
+
+    [Fact]
+    public void A_link_in_place_of_a_folder_is_left_and_its_target_is_untouched()
+    {
+        // A download-named candidate that is a link: the clean-up opens it without
+        // following the link, finds a reparse point and leaves it, so a file reached
+        // through the link is untouched. Best-effort because creating a link needs a
+        // privilege not every host grants.
+        var target = Directory.CreateDirectory(Path.Combine(_root, "target")).FullName;
+        var decoy = Path.Combine(target, "keep.txt");
+        File.WriteAllText(decoy, "untouched");
+
+        var link = Path.Combine(_root, UpdateStagingFolder.NamePrefix + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateSymbolicLink(link, target);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return; // this host cannot create links; the refusal path is exercised where it can
+        }
+
+        var allGone = UpdateStagingFolder.RemoveLeftovers(_root, ThisAccountExpectation);
+
+        Assert.False(allGone);
+        Assert.True(File.Exists(decoy));
     }
 
     /// <summary>The exe and, beside it, the newer version written as an update writes it.</summary>

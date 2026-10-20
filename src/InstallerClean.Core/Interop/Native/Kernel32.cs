@@ -542,6 +542,64 @@ internal static partial class Kernel32
     public static partial IntPtr LocalFree(IntPtr hMem);
 
     /// <summary>
+    /// Removes the file or directory an open handle names, through the handle rather
+    /// than a path, so nothing re-resolves the name between the open and the removal.
+    /// Declared for <see cref="FILE_DISPOSITION_INFO_EX"/>, the POSIX form, whose flags
+    /// let the name go at once while other handles stay open.
+    ///
+    /// THE HANDLE NEEDS <see cref="Ntdll.DELETE"/>. A directory goes only where it is
+    /// empty, as a non-recursive removal does. A handle opened with
+    /// FILE_FLAG_OPEN_REPARSE_POINT on a reparse point removes the reparse point
+    /// itself, never what it points at.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "SetFileInformationByHandle", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetFileDispositionInfoEx(
+        SafeFileHandle hFile,
+        uint fileInformationClass,
+        in FILE_DISPOSITION_INFO_EX lpFileInformation,
+        uint dwBufferSize);
+
+    /// <summary>
+    /// The same call for <see cref="FILE_DISPOSITION_INFO"/>, the older form, for a
+    /// Windows build that refuses <see cref="FileDispositionInfoEx"/> with
+    /// ERROR_INVALID_PARAMETER. It marks the name to go when the last handle closes.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "SetFileInformationByHandle", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetFileDispositionInfo(
+        SafeFileHandle hFile,
+        uint fileInformationClass,
+        in FILE_DISPOSITION_INFO lpFileInformation,
+        uint dwBufferSize);
+
+    /// <summary>The POSIX disposition: a flag word read with the flags below.</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct FILE_DISPOSITION_INFO_EX
+    {
+        public uint Flags;
+    }
+
+    /// <summary>The older disposition: a one-byte flag, non-zero to delete.</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct FILE_DISPOSITION_INFO
+    {
+        public byte DeleteFile;
+    }
+
+    /// <summary>FileDispositionInfoEx of FILE_INFO_BY_HANDLE_CLASS.</summary>
+    public const uint FileDispositionInfoEx = 21;
+
+    /// <summary>FileDispositionInfo of FILE_INFO_BY_HANDLE_CLASS.</summary>
+    public const uint FileDispositionInfo = 4;
+
+    /// <summary>Mark the name to go.</summary>
+    public const uint FILE_DISPOSITION_FLAG_DELETE = 0x00000001;
+
+    /// <summary>Let the name go at once, before the last handle closes.</summary>
+    public const uint FILE_DISPOSITION_FLAG_POSIX_SEMANTICS = 0x00000002;
+
+    /// <summary>
     /// The pseudo-handle standing for this process, which needs no closing.
     /// </summary>
     [LibraryImport(Library, EntryPoint = "GetCurrentProcess")]
@@ -644,6 +702,7 @@ internal static partial class Kernel32
     public const uint FILE_FLAG_OPEN_REPARSE_POINT  = 0x00200000;
 
     public const uint FILE_ATTRIBUTE_REPARSE_POINT  = 0x00000400;
+    public const uint FILE_ATTRIBUTE_DIRECTORY      = 0x00000010;
 
     // GetDriveType's return values. Numbered here rather than cast to
     // System.IO.DriveType at the call site: the two happen to share their
