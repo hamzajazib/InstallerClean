@@ -149,18 +149,16 @@ public sealed class UpdateStagingFolder
 
                     using var folderHandle = DirectoryGuard.OpenDirectoryNoFollow(folder);
                     if (folderHandle is null || !DirectoryGuard.IsExpectedFolder(folderHandle, expected))
-                    {
-                        allGone = false;
                         continue;
-                    }
 
+                    var cleared = true;
                     foreach (var file in Directory.EnumerateFiles(folder, "InstallerClean-*.exe"))
                     {
                         if (!DirectoryGuard.TryRemoveChildFile(folderHandle, Path.GetFileName(file)))
-                            allGone = false;
+                            cleared = false;
                     }
 
-                    if (!DirectoryGuard.TryRemoveEmptyChildFolder(rootHandle, leaf))
+                    if (!cleared || !DirectoryGuard.TryRemoveEmptyChildFolder(rootHandle, leaf))
                         allGone = false;
                 }
                 catch

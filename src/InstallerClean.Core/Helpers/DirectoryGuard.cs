@@ -107,8 +107,7 @@ internal static class DirectoryGuard
             if ((control & Advapi32.SE_DACL_PRESENT) == 0) return false;
             if (expected.RequireProtected && (control & Advapi32.SE_DACL_PROTECTED) == 0) return false;
 
-            // A present list with no entries lets everyone in and a null pointer
-            // stands for that same open list, so neither is the app's own.
+            // A null list pointer grants everyone, so it is never the app's own.
             if (dacl == IntPtr.Zero) return false;
             return EveryAceSidIsExpected(dacl, expected.DaclSids);
         }
@@ -123,8 +122,10 @@ internal static class DirectoryGuard
         // The ACL header carries its entry count in its third field; each entry begins
         // with a four-byte header, then a four-byte mask, then the SID. An entry whose
         // type is neither "allow" nor "deny" has a different shape, so a folder carrying
-        // one is not read further and not taken for the app's own.
+        // one is not read further and not taken for the app's own. A list with no entries
+        // grants nobody and is not how the app's own folders are made, so it is refused.
         ushort aceCount = *(ushort*)((byte*)dacl + 4);
+        if (aceCount == 0) return false;
         for (uint i = 0; i < aceCount; i++)
         {
             if (!Advapi32.GetAce(dacl, i, out var ace)) return false;
@@ -226,8 +227,16 @@ internal static class DirectoryGuard
     internal static bool TryRemoveEmptyChildFolder(SafeFileHandle directory, string leaf)
     {
         using var child = OpenChildNoFollow(
-            directory, leaf, Ntdll.DELETE, Ntdll.FILE_OPEN, Ntdll.FILE_OPEN_REPARSE_POINT);
-        return child is not null && DeleteByHandle(child);
+            directory, leaf,
+            Ntdll.DELETE | Kernel32.FILE_READ_ATTRIBUTES, Ntdll.FILE_OPEN,
+            Ntdll.FILE_OPEN_REPARSE_POINT | Ntdll.FILE_DIRECTORY_FILE);
+        if (child is null) return false;
+
+        if (!Kernel32.GetFileInformationByHandle(child, out var info)
+            || (info.dwFileAttributes & Kernel32.FILE_ATTRIBUTE_REPARSE_POINT) != 0)
+            return false;
+
+        return DeleteByHandle(child);
     }
 
     private static unsafe bool DeleteByHandle(SafeFileHandle handle)

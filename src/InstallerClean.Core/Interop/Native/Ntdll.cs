@@ -26,8 +26,8 @@ internal static partial class Ntdll
     /// <summary>
     /// Opens or creates a file or directory. The handle comes back as a raw value the
     /// caller wraps in a <see cref="SafeFileHandle"/>. The return value is an NTSTATUS,
-    /// zero or above for success; <see cref="RtlNtStatusToDosError"/> turns a failure
-    /// into the Win32 code the rest of the code reads.
+    /// zero or above for success and negative for a failure the caller treats as "not
+    /// opened".
     /// </summary>
     [LibraryImport(Library, SetLastError = false)]
     public static partial int NtCreateFile(
@@ -42,10 +42,6 @@ internal static partial class Ntdll
         uint CreateOptions,
         IntPtr EaBuffer,
         uint EaLength);
-
-    /// <summary>The Win32 error a given NTSTATUS maps to.</summary>
-    [LibraryImport(Library, SetLastError = false)]
-    public static partial uint RtlNtStatusToDosError(int Status);
 
     /// <summary>
     /// A counted UTF-16 string, as ntdll takes names. <see cref="Buffer"/> points at
@@ -91,9 +87,6 @@ internal static partial class Ntdll
     /// <summary>Open the object where it exists, and fail where it does not.</summary>
     public const uint FILE_OPEN = 0x00000001;
 
-    /// <summary>Create the object, and fail where one already has the name.</summary>
-    public const uint FILE_CREATE = 0x00000002;
-
     /// <summary>Open the object as itself where it is a reparse point, never its target.</summary>
     public const uint FILE_OPEN_REPARSE_POINT = 0x00200000;
 
@@ -109,10 +102,4 @@ internal static partial class Ntdll
     /// <summary>The right to delete, and the right synchronous use needs.</summary>
     public const uint DELETE = 0x00010000;
     public const uint SYNCHRONIZE = 0x00100000;
-
-    /// <summary>The right to read a handle's owner and list.</summary>
-    public const uint READ_CONTROL = 0x00020000;
-
-    /// <summary>The right to write bytes, which the write probe's create needs.</summary>
-    public const uint FILE_WRITE_DATA = 0x00000002;
 }

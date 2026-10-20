@@ -153,7 +153,9 @@ public sealed class UpdateInPlaceTests : IDisposable
 
         var allGone = UpdateStagingFolder.RemoveLeftovers(_root);
 
-        Assert.False(allGone);
+        // A folder that is not the app's own is not one the app is waiting on, so it does
+        // not keep the clean-up retrying.
+        Assert.True(allGone);
         Assert.True(Directory.Exists(foreign));
         Assert.True(File.Exists(planted));
     }
@@ -181,7 +183,9 @@ public sealed class UpdateInPlaceTests : IDisposable
 
         var allGone = UpdateStagingFolder.RemoveLeftovers(_root, ThisAccountExpectation);
 
-        Assert.False(allGone);
+        // A link is not a folder the app made, so it is left and does not keep the
+        // clean-up retrying.
+        Assert.True(allGone);
         Assert.True(File.Exists(decoy));
     }
 
