@@ -112,7 +112,11 @@ $nativeLibraryCalls = @(
   }
 )
 
-# The packages each framework-dependent bundle carries, with the libraries each imports.
+# The packages each framework-dependent bundle carries, with the libraries each imports, as a
+# Windows build carries them. The slim built on Windows carries no
+# System.Diagnostics.EventLog.Messages, which the desktop runtime supplies. That file carries no
+# version resource, and an SDK on Linux reads its version from the assembly instead, keeps the
+# package's copy and so builds a slim this list refuses.
 $packages = @{
   'command line, framework-dependent' = [ordered]@{
     'Microsoft.Extensions.DependencyInjection' = ''
@@ -128,7 +132,6 @@ $packages = @{
     'CommunityToolkit.Mvvm' = ''
     'Microsoft.Extensions.DependencyInjection' = ''
     'Microsoft.Extensions.DependencyInjection.Abstractions' = ''
-    'System.Diagnostics.EventLog.Messages' = ''
     'System.IO.Abstractions' = ''
     'TestableIO.System.IO.Abstractions' = ''
     'TestableIO.System.IO.Abstractions.Wrappers' = ''
