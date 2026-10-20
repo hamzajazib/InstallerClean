@@ -27,13 +27,14 @@
 // RegistryValueOptions.None, the option that expands the %NAME% in a registry value. A
 // write (SetEnvironmentVariable, _putenv) counts as a read and is printed as a write.
 // NAMES_NO_VARIABLE lists, by exact text, what holds the word and names no environment
-// variable, such as Environment.NewLine, and stops the run where nothing in the shipped
-// projects holds an entry. Anything else holding it is a read, a message
-// in a string that says "environment" among them, until NAMES_NO_VARIABLE or ALLOWED
-// names it. In Environment.GetEnvironmentVariable the read is the member, so the line
-// holds one. One outside the branch fails unless ALLOWED names it by file and line text;
-// each entry admits one read and stops the run where it finds none. The switch's own
-// read, the line under its home holding its constant, has to be found inside the branch.
+// variable, such as Environment.NewLine. Anything else holding the word is a read, a
+// message in a string that says "environment" among them, until NAMES_NO_VARIABLE or
+// ALLOWED names it. An entry in NAMES_NO_VARIABLE that nothing in the shipped projects
+// holds stops the run. In Environment.GetEnvironmentVariable the read is the member, so
+// the line holds one. One outside the branch fails unless ALLOWED names it by file and
+// line text; each entry admits one read and stops the run where it finds none. The
+// switch's own read, the line under its home holding its constant, has to be found
+// inside the branch.
 //
 // WHAT DEFINES DEBUG. The token DEBUG in a project, props, targets or publish profile
 // file git tracks fails unless an element carrying it, or one around it, is conditioned
@@ -50,8 +51,8 @@
 // reach MSBuild as if they were on the command line.
 //
 // Exit 1 where a switch can reach a Release build, 2 where the run refuses: a file it
-// cannot read to its end, a control not found, git missing. Every finding is printed,
-// passing ones included.
+// cannot read to its end, a control not found, an ALLOWED or NAMES_NO_VARIABLE entry
+// that matches nothing, git missing. Every finding is printed, passing ones included.
 //
 // Usage (from the repo root):
 //   node scripts/check-debug-only-switches.mjs
