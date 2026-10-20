@@ -1600,9 +1600,10 @@ jobs:
       # in its own folder is printed, and the job fails where it loads an image from that
       # folder. Each process it starts, Inno Setup's setup.tmp from an is-*.tmp folder in
       # %TEMP%, and each process those start, is judged the same way against its own
-      # folder. In an is-*.tmp folder an image the same process created earlier in the
-      # record passes: that folder is made new with a new name on each run, and its owner
-      # and permissions are printed as the setup made them. The job also fails where the
+      # folder, read from its own load of its image. An image in any is-*.tmp folder
+      # passes only where the same process created it earlier in the record: such a folder
+      # is made new with a new name on each run, and the owner and permissions of each are
+      # printed as the setup made them. The job also fails where the
       # setup does not exit with 0, starts nothing from an is-*.tmp folder, or leaves no
       # uninstall entry whose DisplayVersion is the one built; the entry is removed before
       # each run, so the one read is that run's.
@@ -1610,11 +1611,16 @@ jobs:
       # The second run's folder holds the genuine file at every path the setup exe looked
       # at in its own folder in the first, and the job fails where the setup reads or
       # loads one, and where a plant was not looked for, not found, gone or changed.
+      #
+      # First the checks on the processes the setup starts are run over a record made up
+      # for the purpose, and the job fails unless each fails exactly where it must
+      # (Test-SetupControls in native-libraries.ps1).
       - name: Run the setup from its own folder, under both passes
         if: ${{ !cancelled() && env.PROCMON != '' && env.SETUP_VERSION != '' }}
         shell: pwsh
         run: |
           . (Join-Path $env:RUNNER_TEMP 'native.ps1')
+          Test-SetupControls
           $setup = (Resolve-Path "publish/InstallerClean-$env:SETUP_VERSION-setup.exe").Path
 
           # Prints with Write-Host, so what it answers is the run and its reading alone.
@@ -1646,17 +1652,17 @@ jobs:
             if ($p.ExitCode -ne 0) { Fail "The setup, $pass pass, exited with $($p.ExitCode)." }
 
             $run = [pscustomobject]@{ Label = "setup, $pass pass"; Build = [pscustomobject]@{ Exe = $setup }; Folder = $folder
-              Exe = Split-Path $exe -Leaf; Id = $p.Id; Placed = $placed; BundleFiles = @() }
+              Exe = Split-Path $exe -Leaf; Id = $p.Id; Placed = $placed; BundleFiles = @(); TempFolders = @() }
             $kept = [System.Collections.Generic.List[string]]::new()
             $kept.Add("$($run.Id)`t$($run.Exe)")
             $byProcess = Read-Record $csv @($run)
             $read = Read-Run $run $byProcess
             if ($read) {
-              Test-OwnLoads $run $byProcess[[string]$run.Id]
+              $run.TempFolders = @(Test-OwnLoads $run $byProcess[[string]$run.Id])
               if ($pass -eq 'second') { Test-PlantedRun $run $read }
               $started = @(Test-StartedProcesses $csv $run $byProcess[[string]$run.Id] '')
               foreach ($child in $started) { $kept.Add("$($child.Id)`t$($child.Exe)") }
-              Show-TempFolders $out $started
+              Show-TempFolders $out (@($run) + $started)
             }
             Set-Content -Path (Join-Path $env:RUNNER_TEMP "kept-setup-$pass.txt") -Value $kept
 

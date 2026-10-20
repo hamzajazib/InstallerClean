@@ -444,9 +444,9 @@ jobs:
       # version, and each process those start, is judged against its own folder: the
       # setup in the download's folder under %ProgramData%, and the setup.tmp it starts
       # from %TEMP% (Test-StartedProcesses in native-libraries.ps1). Their looks are
-      # printed, and a load from their own folder fails, unless the folder is an is-*.tmp
-      # one and the same process created that file earlier in the record. Their command
-      # lines are not printed.
+      # printed. A load from their own folder fails, and so does a load from any is-*.tmp
+      # folder, setup.tmp's own among them, except of a file the same process created
+      # there earlier in the record. Their command lines are not printed.
       - name: Judge the DLLs the update looked for
         if: ${{ !cancelled() && env.UPDATE_PID != '' }}
         shell: pwsh

@@ -648,33 +648,55 @@ function Test-PlantedRun($run, $read) {
   }
 }
 
+# The is-*.tmp folder a path lies under, the first along it, or nothing. Inno Setup
+# makes these in %TEMP%, new and newly named for every run.
+function Get-IsTmpFolder([string]$path) {
+  if ($path -match '^(.*?\\is-[^\\]+\.tmp)\\') { $Matches[1] }
+}
+
 # Fails where the run's process maps an image from its own folder, of any name but its
-# own exe's. With -AllowCreated, an image this same process created at that path
-# earlier in the record, a CreateFile whose result is Created, is printed and passes:
-# a file a process has just written into a folder of its own making is not one left
-# there for it.
-function Test-OwnLoads($run, $rows, [switch]$AllowCreated) {
+# own exe's, or from an is-*.tmp folder. An image in an is-*.tmp folder that this same
+# process created at that path earlier in the record, a CreateFile whose result is
+# Created, is printed and passes: a file a process has just written into a folder made
+# new for the run is not one left there for it. Answers each is-*.tmp folder an image
+# was mapped from.
+function Test-OwnLoads($run, $rows) {
   $own = $run.Folder.TrimEnd('\') + '\'
   $self = $own + $run.Exe
+  $tempFolders = [System.Collections.Generic.List[string]]::new()
   for ($i = 0; $i -lt $rows.Count; $i++) {
     $row = $rows[$i]
-    if ($row.Operation -ne 'Load Image' -or -not $row.Path.StartsWith($own, 'OrdinalIgnoreCase') -or $row.Path -eq $self) { continue }
-    if ($AllowCreated) {
+    if ($row.Operation -ne 'Load Image' -or $row.Path -eq $self) { continue }
+    $inOwn = $row.Path.StartsWith($own, 'OrdinalIgnoreCase')
+    $isTmp = Get-IsTmpFolder $row.Path
+    if (-not $inOwn -and -not $isTmp) { continue }
+    if ($isTmp) {
+      if ($tempFolders -notcontains $isTmp) { $tempFolders.Add($isTmp) }
       $made = @(for ($j = 0; $j -lt $i; $j++) {
         $r = $rows[$j]
         if ($r.Operation -eq 'CreateFile' -and $r.Path -eq $row.Path -and $r.Detail -match 'OpenResult: Created') { $j + 1 }
       })
       if ($made) { Write-Host "  loaded $($row.Path) at row $($i + 1), which it created at row $($made[0])"; continue }
     }
-    Fail "$($run.Exe), process $($run.Id), loaded $($row.Path) from its own folder, row $($i + 1)."
+    if ($inOwn) { Fail "$($run.Exe), process $($run.Id), loaded $($row.Path) from its own folder, row $($i + 1)." }
+    else { Fail "$($run.Exe), process $($run.Id), loaded $($row.Path) from the is-*.tmp folder $isTmp, which it did not create there, row $($i + 1)." }
   }
+  $tempFolders
 }
 
 # Each process $parent started, other than one whose image is at $skip, and each
 # process those started, read from the record $csv by the process ID in each Process
-# Create row. Each is printed with its looks and judged by Test-OwnLoads, with
-# -AllowCreated where it runs from an is-*.tmp folder, which Inno Setup's loader makes
-# new for it in %TEMP%. Command lines are not printed. Answers each process as a run.
+# Create row. Each is printed with its looks and judged by Test-OwnLoads. Command lines
+# are not printed. Answers each process as a run, with the is-*.tmp folders it loaded
+# images from.
+#
+# A Process Create row spells the image's path as the parent passed it, which can be
+# in short names, as in C:\Users\RUNNER~1. So a process's folder is taken from its own
+# load of its image, spelled as its other rows are, and a process with no such load
+# fails and is not judged. A process whose image is at $skip is left out by either
+# spelling. Its exe's name is the Create row's, which Read-Record matches to the
+# record's process name, so a short name there leaves the process with no rows and
+# fails.
 function Test-StartedProcesses([string]$csv, $parent, $parentRows, [string]$skip) {
   $all = [System.Collections.Generic.List[object]]::new()
   $parents = @([pscustomobject]@{ Run = $parent; Rows = $parentRows })
@@ -684,18 +706,24 @@ function Test-StartedProcesses([string]$csv, $parent, $parentRows, [string]$skip
         if ($skip -and $row.Path -eq $skip) { continue }
         if ($row.Detail -notmatch '^PID: (\d+)') { Fail "A Process Create row of process $($p.Run.Id) names no process ID."; continue }
         [pscustomobject]@{ Label = Split-Path $row.Path -Leaf; Build = [pscustomobject]@{ Exe = $row.Path }; Folder = Split-Path $row.Path
-          Exe = Split-Path $row.Path -Leaf; Id = [int]$Matches[1]; Parent = "$($p.Run.Exe), process $($p.Run.Id)" }
+          Exe = Split-Path $row.Path -Leaf; Id = [int]$Matches[1]; Parent = "$($p.Run.Exe), process $($p.Run.Id)"; StartedAs = $row.Path; TempFolders = @() }
       }
     })
     if (-not $started) { break }
     $byChild = Read-Record $csv $started
     $next = foreach ($child in $started) {
+      $rows = $byChild[[string]$child.Id]
+      if (-not $rows) { $all.Add($child); Fail "Process Monitor recorded nothing for $($child.Exe), process $($child.Id)."; continue }
+      $image = @($rows | Where-Object { $_.Operation -eq 'Load Image' -and (Split-Path $_.Path -Leaf) -eq $child.Exe })
+      if (-not $image) { $all.Add($child); Fail "$($child.Exe), process $($child.Id), started as $($child.StartedAs): Process Monitor recorded no load of its image, so its folder is not known and its looks were not judged."; continue }
+      if ($skip -and $image[0].Path -eq $skip) { continue }
+      $child.Build.Exe = $image[0].Path
+      $child.Folder = Split-Path $image[0].Path
       $all.Add($child)
       Write-Host "== $($child.Exe), process $($child.Id), started by $($child.Parent), from $($child.Folder)"
-      $rows = $byChild[[string]$child.Id]
-      if (-not $rows) { Fail "Process Monitor recorded nothing for $($child.Exe), process $($child.Id)."; continue }
+      if ($child.StartedAs -ne $image[0].Path) { Write-Host "  started as $($child.StartedAs)" }
       Show-Looks @(Get-Libraries $rows $child.Folder) $rows[0].'Time of Day'
-      Test-OwnLoads $child $rows -AllowCreated:((Split-Path $child.Folder -Leaf) -like 'is-*.tmp')
+      $child.TempFolders = @(Test-OwnLoads $child $rows)
       [pscustomobject]@{ Run = $child; Rows = $rows }
     }
     $parents = @($next)
@@ -745,17 +773,96 @@ function Stop-TempWatch($job, [string]$stop) {
   finally { Remove-Job $job -Force -ErrorAction SilentlyContinue }
 }
 
-# Prints the folders the watch wrote to $out, and fails where none of $started ran
-# from an is-*.tmp folder, or where one did from a folder the watch did not see made,
-# whose permissions are then not known.
-function Show-TempFolders([string]$out, $started) {
+# Prints the folders the watch wrote to $out. Fails where none of $runs ran from an
+# is-*.tmp folder, and where one ran from or loaded an image from such a folder that
+# the watch did not see made, whose permissions are then not known.
+function Show-TempFolders([string]$out, $runs) {
   Write-Host "== The is-*.tmp folders made in %TEMP% (path, owner, permissions):"
   $made = @(Get-Content $out -ErrorAction SilentlyContinue | Where-Object { $_ })
   foreach ($line in $made) { Write-Host "  $line" }
-  $fromTemp = @($started | Where-Object { (Split-Path $_.Folder -Leaf) -like 'is-*.tmp' })
+  $madePaths = @($made | ForEach-Object { ($_ -split "`t")[0] })
+  $fromTemp = @($runs | Where-Object { (Split-Path $_.Folder -Leaf) -like 'is-*.tmp' })
   if (-not $fromTemp) { Fail "No process the setup started ran from an is-*.tmp folder." }
   foreach ($child in $fromTemp) {
-    if (@($made | Where-Object { ($_ -split "`t")[0] -eq $child.Folder })) { Write-Host "  $($child.Exe), process $($child.Id), ran from $($child.Folder), printed above" }
+    if ($madePaths -contains $child.Folder) { Write-Host "  $($child.Exe), process $($child.Id), ran from $($child.Folder), printed above" }
     else { Fail "$($child.Exe), process $($child.Id), ran from $($child.Folder), which the watch on %TEMP% did not see made, so its permissions are not known." }
   }
+  foreach ($run in $runs) {
+    foreach ($folder in @($run.TempFolders | Where-Object { $_ -and $_ -ne $run.Folder })) {
+      if ($madePaths -contains $folder) { Write-Host "  $($run.Exe), process $($run.Id), loaded images from $folder, printed above" }
+      else { Fail "$($run.Exe), process $($run.Id), loaded images from $folder, which the watch on %TEMP% did not see made, so its permissions are not known." }
+    }
+  }
+}
+
+# Runs Test-StartedProcesses and Show-TempFolders over a record made up for the
+# purpose, and fails the step unless each fails exactly where it must. The setup's
+# started process is created under a short-named path, as in C:\Users\RUNNER~1, with
+# its own rows in full names. It loads a file nobody created from its own is-*.tmp
+# folder, one it opened there without creating it, and one from an is-*.tmp folder
+# the watch did not see made, each of which must fail; and one it created in its own
+# folder and one it created in another is-*.tmp folder, each of which must pass. A
+# second process, created under a short name for $skip's path, must be left out, and
+# a third, with no load of its image, must fail.
+function Test-SetupControls {
+  Write-Host "== Control: the checks on the processes a setup starts"
+  $temp = 'C:\Users\runneradmin\AppData\Local\Temp'
+  $own = "$temp\is-AAAA.tmp"
+  $other = "$temp\is-BBBB.tmp"
+  $unseen = "$temp\is-CCCC.tmp"
+  $skip = 'C:\Program Files\Control\skipped.exe'
+  $created = 'Desired Access: Generic Read/Write, Disposition: OverwriteIf, OpenResult: Created'
+  $opened = 'Desired Access: Generic Read, Disposition: Open, OpenResult: Opened'
+  $rows = @(
+    @(201, 'control.tmp', 'Load Image', "$own\control.tmp", ''),
+    @(201, 'control.tmp', 'Load Image', "$own\planted.dll", ''),
+    @(201, 'control.tmp', 'CreateFile', "$own\opened.dll", $opened),
+    @(201, 'control.tmp', 'Load Image', "$own\opened.dll", ''),
+    @(201, 'control.tmp', 'CreateFile', "$own\made.dll", $created),
+    @(201, 'control.tmp', 'Load Image', "$own\made.dll", ''),
+    @(201, 'control.tmp', 'CreateFile', "$other\_isetup\helper.dll", $created),
+    @(201, 'control.tmp', 'Load Image', "$other\_isetup\helper.dll", ''),
+    @(201, 'control.tmp', 'CreateFile', "$unseen\helper.dll", $created),
+    @(201, 'control.tmp', 'Load Image', "$unseen\helper.dll", ''),
+    @(202, 'skipped.exe', 'Load Image', $skip, ''),
+    @(202, 'skipped.exe', 'Load Image', 'C:\Program Files\Control\planted.dll', ''),
+    @(203, 'noimage.exe', 'CreateFile', 'C:\Windows\System32\kernel32.dll', $opened)
+  ) | ForEach-Object {
+    [pscustomobject]@{ 'Time of Day' = '12:00:00.0000000 PM'; 'Process Name' = $_[1]; PID = [string]$_[0]; Operation = $_[2]; Path = $_[3]; Result = 'SUCCESS'; Detail = $_[4] }
+  }
+  $folder = Join-Path ([IO.Path]::GetTempPath()) ('setup-controls-' + [guid]::NewGuid().ToString('N'))
+  New-Item -ItemType Directory -Force -Path $folder | Out-Null
+  $csv = Join-Path $folder 'record.csv'
+  $out = Join-Path $folder 'temp.txt'
+  $rows | Export-Csv -Path $csv -NoTypeInformation
+  Set-Content -Path $out -Value "$own`towner control`tD:P", "$other`towner control`tD:P"
+  $parent = [pscustomobject]@{ Exe = 'control-setup.exe'; Id = 200; Folder = 'C:\Control' }
+  $parentRows = @(
+    [pscustomobject]@{ Operation = 'Process Create'; Path = 'C:\Users\RUNNER~1\AppData\Local\Temp\is-AAAA.tmp\control.tmp'; Detail = 'PID: 201' },
+    [pscustomobject]@{ Operation = 'Process Create'; Path = 'C:\PROGRA~1\Control\skipped.exe'; Detail = 'PID: 202' },
+    [pscustomobject]@{ Operation = 'Process Create'; Path = 'C:\Control\noimage.exe'; Detail = 'PID: 203' })
+  $caught = [System.Collections.Generic.List[string]]::new()
+  $started = & {
+    function Fail([string]$message) { $caught.Add($message) }
+    $runs = @(Test-StartedProcesses $csv $parent $parentRows $skip)
+    Show-TempFolders $out $runs
+    $runs
+  }
+  Remove-Item -LiteralPath $folder -Recurse -Force
+  $must = @(
+    "loaded $own\planted.dll from its own folder",
+    "loaded $own\opened.dll from its own folder",
+    "loaded images from $unseen, which the watch",
+    'noimage.exe, process 203, started as C:\Control\noimage.exe: Process Monitor recorded no load of its image')
+  foreach ($message in $must) {
+    $hits = @($caught | Where-Object { $_.Contains($message) })
+    if ($hits.Count -eq 1) { Write-Host "  failed as it must: $($hits[0])" }
+    else { Fail "The control on a setup's processes failed $($hits.Count) times where one failure names: $message" }
+  }
+  foreach ($message in $caught) {
+    if (-not @($must | Where-Object { $message.Contains($_) })) { Fail "The control on a setup's processes failed where it must pass: $message" }
+  }
+  $child = @($started | Where-Object Id -eq 201)
+  if ($child.Count -ne 1 -or $child[0].Folder -ne $own) { Fail "The control's setup.tmp was not judged from its own folder $own." }
+  if (@($started | Where-Object Id -eq 202)) { Fail "The control's process at $skip was judged, where it is to be left out." }
 }
