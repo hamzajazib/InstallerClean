@@ -1046,8 +1046,11 @@ jobs:
             # The deps.json's offset and size, the runtimeconfig.json's, then the flags.
             $depsOffset = $reader.ReadInt64()
             $depsSize = $reader.ReadInt64()
-            foreach ($field in 1..3) { $null = $reader.ReadInt64() }
-            [pscustomobject]@{ Data = $data; Reader = $reader; Count = $count; DepsOffset = $depsOffset; DepsSize = $depsSize }
+            $configOffset = $reader.ReadInt64()
+            $configSize = $reader.ReadInt64()
+            $null = $reader.ReadInt64()
+            [pscustomobject]@{ Data = $data; Reader = $reader; Count = $count; DepsOffset = $depsOffset; DepsSize = $depsSize
+              ConfigOffset = $configOffset; ConfigSize = $configSize }
           }
 
           # The .NET runtime packs a single-file build was built from, each by name and
@@ -2034,6 +2037,59 @@ jobs:
           }
           $failed | ForEach-Object { Write-Host "::error::$_" }
           if ($failed.Count) { exit 1 }
+
+      # Each single-file bundle carries its runtimeconfig.json, stored uncompressed, at the
+      # offset and size its manifest's header gives. The three shipped builds must have
+      # System.Net.SocketsHttpHandler.Http3Support and System.Net.Http.EnableActivityPropagation
+      # set to false, and System.StartupHookProvider.IsSupported set to false; the three builds
+      # the start-up hook step publishes with hooks allowed must have the last set to true, so
+      # the step reads values the build wrote rather than finding one it assumed. Each bundle's
+      # offset and size are printed with the three values. A bundle with no runtimeconfig, one
+      # that does not parse, or one missing any of the keys fails the step.
+      - name: Check each build's runtimeconfig turns HTTP/3 and HTTP activities off
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          . (Join-Path $env:RUNNER_TEMP 'native.ps1')
+          $http3 = 'System.Net.SocketsHttpHandler.Http3Support'
+          $activity = 'System.Net.Http.EnableActivityPropagation'
+          $hooks = 'System.StartupHookProvider.IsSupported'
+          $allowed = Join-Path $env:RUNNER_TEMP 'hooks-allowed'
+          $bundles = @(
+            [pscustomobject]@{ Label = 'command line'; Exe = 'publish/cli/installerclean-cli.exe'; Expected = [ordered]@{ $http3 = $false; $activity = $false; $hooks = $false } },
+            [pscustomobject]@{ Label = 'portable'; Exe = 'publish/self-contained/InstallerClean.exe'; Expected = [ordered]@{ $http3 = $false; $activity = $false; $hooks = $false } },
+            [pscustomobject]@{ Label = 'slim'; Exe = 'publish/framework-dependent/InstallerClean.exe'; Expected = [ordered]@{ $http3 = $false; $activity = $false; $hooks = $false } },
+            [pscustomobject]@{ Label = 'command line with hooks allowed'; Exe = "$allowed-command-line-publish/installerclean-cli.exe"; Expected = [ordered]@{ $hooks = $true } },
+            [pscustomobject]@{ Label = 'portable with hooks allowed'; Exe = "$allowed-portable-publish/InstallerClean.exe"; Expected = [ordered]@{ $hooks = $true } },
+            [pscustomobject]@{ Label = 'slim with hooks allowed'; Exe = "$allowed-slim-publish/InstallerClean.exe"; Expected = [ordered]@{ $hooks = $true } }
+          )
+          foreach ($bundle in $bundles) {
+            Write-Host "== $($bundle.Label)"
+            try {
+              if (-not (Test-Path -LiteralPath $bundle.Exe)) { throw "$($bundle.Exe) does not exist." }
+              $header = Read-BundleHeader $bundle.Exe
+              $header.Reader.Dispose()
+              if ($header.ConfigSize -le 0 -or $header.ConfigOffset -le 0 -or $header.ConfigOffset + $header.ConfigSize -gt $header.Data.Length) {
+                throw "the bundle carries no runtimeconfig.json (offset $($header.ConfigOffset), size $($header.ConfigSize))."
+              }
+              Write-Host "  runtimeconfig.json at offset $($header.ConfigOffset), $($header.ConfigSize) bytes"
+              $config = [Text.Encoding]::UTF8.GetString($header.Data, $header.ConfigOffset, $header.ConfigSize) | ConvertFrom-Json -AsHashtable
+              $properties = $config.runtimeOptions.configProperties
+              if ($properties -isnot [System.Collections.IDictionary]) { throw "its runtimeconfig.json has no runtimeOptions.configProperties." }
+            }
+            catch {
+              Fail "$($bundle.Label): $($_.Exception.Message)"
+              continue
+            }
+            foreach ($key in $bundle.Expected.Keys) {
+              $want = $bundle.Expected[$key]
+              if (-not $properties.Contains($key)) { Fail "$($bundle.Label): its runtimeconfig.json does not set $key."; continue }
+              $value = $properties[$key]
+              Write-Host "  $key = $(ConvertTo-Json -Compress -InputObject $value)"
+              if ($value -isnot [bool] -or $value -ne $want) { Fail "$($bundle.Label): $key is $(ConvertTo-Json -Compress -InputObject $value), where it should be $($want.ToString().ToLowerInvariant())." }
+            }
+          }
+          Exit-IfFailed
 
       - name: Check no window left a report
         if: ${{ !cancelled() }}

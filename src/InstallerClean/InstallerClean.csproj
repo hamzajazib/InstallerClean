@@ -72,6 +72,15 @@
     <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
   </PropertyGroup>
 
+  <!-- HttpClient never opens an HTTP/3 connection. One would load msquic.dll by its full
+       path, which in a self-contained build is a path in the exe's own folder, and no
+       resolver of the app's is asked about that load. With the switch in the runtimeconfig
+       the connection pool never reaches System.Net.Quic, whatever version a request asks
+       for, and the environment variable that turns HTTP/3 on is not read. -->
+  <PropertyGroup>
+    <Http3Support>false</Http3Support>
+  </PropertyGroup>
+
   <!-- WPF-only dependencies. Headless services, models, helpers,
        interop and the localisation resx live in InstallerClean.Core
        and flow in via the project reference below. -->
