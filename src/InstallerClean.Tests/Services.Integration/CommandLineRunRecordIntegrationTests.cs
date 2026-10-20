@@ -28,7 +28,8 @@ public class CommandLineRunRecordIntegrationTests
                 () => string.Format(Strings.Cli_EventLogMoveSummary,
                     "/m", 1, 1, DisplayHelpers.PluraliseFile(1), folder,
                     DisplayHelpers.FormatSizeForMachine(100), 0, DisplayHelpers.PluraliseError(0)));
-            Assert.False(EventLogWriter.EventLogUnavailable, "The entry was not written to the Application log.");
+            Assert.False(EventLogWriter.EventLogUnavailable,
+                $"The entry was not written to the Application log: {EventLogWriter.LastFailure}");
         }
 
         // Read until the entry shows, for up to five seconds.

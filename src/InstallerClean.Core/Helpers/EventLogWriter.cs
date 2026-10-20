@@ -41,6 +41,14 @@ internal static class EventLogWriter
     internal static bool EventLogUnavailable { get; set; }
 
     /// <summary>
+    /// What the most recent failed <see cref="Write"/> met, set with
+    /// <see cref="EventLogUnavailable"/>: the step that refused, and where it threw, the
+    /// exception's type, HResult and message. Null until a write fails. Neither host reads
+    /// it; the Application-log integration test prints it when its write fails.
+    /// </summary>
+    internal static string? LastFailure { get; set; }
+
+    /// <summary>
     /// Null in both hosts. When set, <see cref="Write"/> hands it the class and the
     /// built entry in place of the source check and the write to the Application
     /// channel, and does everything else as it always does: the entry is built inside
@@ -61,8 +69,8 @@ internal static class EventLogWriter
     /// <see cref="CliContract.EventIdFor"/> / <see cref="CliContract.EntryTypeFor"/>).
     /// Never throws; a failed write (source creation denied, event log
     /// service stopped, non-Windows host, source mapped to a non-Application
-    /// log) is swallowed because the primary output channel is stdout, not
-    /// the event log.
+    /// log) is swallowed, and recorded in <see cref="LastFailure"/>, because the
+    /// primary output channel is stdout, not the event log.
     /// </summary>
     /// <param name="buildEntry">
     /// Builds the entry text, and it is a callback rather than a built string so
@@ -72,28 +80,37 @@ internal static class EventLogWriter
     /// </param>
     internal static void Write(CliEventClass outcome, Func<string> buildEntry)
     {
+        var step = "building the entry";
         try
         {
             var entry = buildEntry();
             if (Sink is { } sink)
             {
+                step = "handing the entry to the sink";
                 sink(outcome, entry);
                 return;
             }
-            if (!EnsureSourceMappedToApplicationLog())
+            if (!EnsureSourceMappedToApplicationLog(ref step, out var mappedLog))
             {
-                EventLogUnavailable = true;
+                Refused($"the source is registered against the {mappedLog} log, not Application");
                 return;
             }
+            step = "writing the entry";
             EventLog.WriteEntry(SourceName, entry,
                 CliContract.EntryTypeFor(outcome), CliContract.EventIdFor(outcome));
         }
-        catch
+        catch (Exception e)
         {
-            EventLogUnavailable = true;
+            Refused($"{step} threw {e.GetType().FullName} (HResult 0x{e.HResult:X8}): {e.Message}");
             // Stdout is the primary channel; silent failure here keeps the
             // CLI working on hosts where the event log isn't writable.
         }
+    }
+
+    private static void Refused(string failure)
+    {
+        EventLogUnavailable = true;
+        LastFailure = failure;
     }
 
     /// <summary>
@@ -108,7 +125,8 @@ internal static class EventLogWriter
         if (Sink is not null) return;
         try
         {
-            EnsureSourceMappedToApplicationLog();
+            var step = string.Empty;
+            EnsureSourceMappedToApplicationLog(ref step, out _);
         }
         catch
         {
@@ -124,9 +142,11 @@ internal static class EventLogWriter
     /// pointed it at System). Refusing to write into a non-Application
     /// log keeps user-typed paths out of any log whose DACL is wider
     /// than Application's; the writer drops the entry rather than
-    /// mis-routing it.
+    /// mis-routing it. <paramref name="step"/> names each call before it is made, so a
+    /// caller catching a throw knows which call refused, and <paramref name="mappedLog"/>
+    /// is the log the source is registered against.
     /// </summary>
-    private static bool EnsureSourceMappedToApplicationLog()
+    private static bool EnsureSourceMappedToApplicationLog(ref string step, out string mappedLog)
     {
         // First-run registration requires administrator rights. Every run that
         // scans has them (AdministratorRights). A run that stops before it scans
@@ -141,12 +161,16 @@ internal static class EventLogWriter
         // the throw; the next run's SourceExists branch catches the
         // cross-log mapping via LogNameFromSourceName below and refuses
         // to write. The race is benign and recovers on the next call.
+        step = "looking up the source";
         if (!EventLog.SourceExists(SourceName))
         {
+            step = "registering the source";
             EventLog.CreateEventSource(SourceName, "Application");
+            mappedLog = "Application";
             return true;
         }
-        var existingLog = EventLog.LogNameFromSourceName(SourceName, ".");
-        return string.Equals(existingLog, "Application", StringComparison.OrdinalIgnoreCase);
+        step = "reading which log the source is registered against";
+        mappedLog = EventLog.LogNameFromSourceName(SourceName, ".");
+        return string.Equals(mappedLog, "Application", StringComparison.OrdinalIgnoreCase);
     }
 }

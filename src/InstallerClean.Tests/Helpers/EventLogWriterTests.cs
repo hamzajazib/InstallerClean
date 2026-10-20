@@ -5,7 +5,8 @@ namespace InstallerClean.Tests.Helpers;
 /// <summary>
 /// Pins the guarantee the CLI's audit paths are built on: an event-log write
 /// swallows every failure it can meet, the summary build included, and records
-/// the miss in <c>EventLogUnavailable</c> instead of throwing.
+/// the miss in <c>EventLogUnavailable</c>, with the step that failed and how in
+/// <c>LastFailure</c>, instead of throwing.
 /// </summary>
 /// <remarks>
 /// What a throw escaping would cost is stated where the constraint lives, at the
@@ -42,6 +43,10 @@ public class EventLogWriterTests
             // rethrow: a Write that never invoked the builder would also not throw.
             Assert.True(built);
             Assert.True(EventLogWriter.EventLogUnavailable);
+            Assert.Equal(
+                "building the entry threw System.FormatException (HResult 0x80131537): "
+                    + "a resx template the summary interpolates",
+                EventLogWriter.LastFailure);
         }
     }
 

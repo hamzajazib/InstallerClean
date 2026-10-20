@@ -32,11 +32,12 @@ internal static class EventLogRecorder
     internal static void Clear() => Recorded.Clear();
 
     /// <summary>
-    /// Clears the log's refused flag and the command line's note latch
-    /// (<see cref="Program.EventLogNotePrinted"/>), and puts both back, with the writer's
-    /// sink, when disposed. All three are process-global, and the flag and the latch go
-    /// together: a flag cleared with the latch still set would leave a later run's note
-    /// unprinted.
+    /// Clears the log's refused flag, the failure the writer recorded with it
+    /// (<see cref="EventLogWriter.LastFailure"/>) and the command line's note latch
+    /// (<see cref="Program.EventLogNotePrinted"/>), and puts all three back, with the
+    /// writer's sink, when disposed. All four are process-global, and the flag and the
+    /// latch go together: a flag cleared with the latch still set would leave a later
+    /// run's note unprinted.
     /// </summary>
     internal static IDisposable FreshLogState() => new LogState();
 
@@ -44,11 +45,13 @@ internal static class EventLogRecorder
     {
         private readonly Action<CliEventClass, string>? _sink = EventLogWriter.Sink;
         private readonly bool _unavailable = EventLogWriter.EventLogUnavailable;
+        private readonly string? _lastFailure = EventLogWriter.LastFailure;
         private readonly bool _notePrinted = Program.EventLogNotePrinted;
 
         internal LogState()
         {
             EventLogWriter.EventLogUnavailable = false;
+            EventLogWriter.LastFailure = null;
             Program.EventLogNotePrinted = false;
         }
 
@@ -56,6 +59,7 @@ internal static class EventLogRecorder
         {
             EventLogWriter.Sink = _sink;
             EventLogWriter.EventLogUnavailable = _unavailable;
+            EventLogWriter.LastFailure = _lastFailure;
             Program.EventLogNotePrinted = _notePrinted;
         }
     }
