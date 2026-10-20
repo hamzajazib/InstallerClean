@@ -3,11 +3,14 @@
 #
 # Core and the command line declare their P/Invokes in InstallerClean.Interop.Native, where
 # the resolver loads each library from System32. CoreLib's own ole32.dll and oleaut32.dll
-# imports are bound by the runtime's search instead, which looks beside the exe first. So:
+# imports are bound by the runtime's own search instead, which looks in the folder CoreLib was
+# loaded from before it looks in System32. So:
 #
 #  - A call from Core or the command line into a framework method that reaches one of those
 #    CoreLib imports fails, unless an entry below names that caller and that callee and says
-#    why the import is not reached at run time. Each hit prints its whole path to the import.
+#    why the import is not reached at run time. Each hit prints one path to the import, and a
+#    listed callee whose reach in the set differs from the one its reason was read against
+#    fails, printing every member it now reaches.
 #    The window's InstallerClean.dll is held to CoreLib and the packages alone: WPF itself
 #    calls CoreLib's ole32 and oleaut32 imports at start-up.
 #  - A P/Invoke outside InstallerClean.Interop.Native fails, and so does any NativeLibrary
@@ -24,8 +27,9 @@
 # native-libraries job, which runs the builds and sees the look.
 #
 # Every run also checks itself: known members in and out of each framework set, and a planted
-# assembly built here holding one of each fault, every one of which must be reported. An entry
-# or a listed call that matches nothing fails, as stale.
+# assembly built here holding one of each fault, judged by the same code as ours against the
+# command line's sets and the window's, every fault of which must be reported. An entry or a
+# listed call that matches nothing fails, as stale.
 #
 # Run from the repo root after the four publishes: pwsh scripts/check-native-imports.ps1
 param([string]$PublishRoot = 'publish')
@@ -48,8 +52,10 @@ $bundles = @(
 )
 $ours = 'InstallerClean.Core', 'installerclean-cli', 'InstallerClean'
 
-# Each entry names the calls it covers, by caller and callee as this script keys them, and the
-# reason the CoreLib import at the end of the path is not reached at run time.
+# Each entry names the calls it covers, by caller and callee as this script keys them, the
+# reason the CoreLib imports the callee reaches are not reached at run time, and what the callee
+# reaches in the set when the reason was read: a count and a hash of the members. The step prints
+# the members whenever that changes, so a new route is read against the reason before it passes.
 $entries = @(
   [pscustomobject]@{
     Calls = @(, @('[InstallerClean.Core]InstallerClean.Helpers.UnelevatedLauncher::Wrap(IntPtr,System.Collections.Generic.List`1<Object>)',
@@ -58,7 +64,10 @@ $entries = @(
       'under CreateObjectFlags.TrackerObject (ComWrappers.cs:567-580), and Wrap passes UniqueInstance (UnelevatedLauncher.cs). ' +
       'The weak-reference callback the static constructor registers (:551-557, ComWeakRefToObject :1576-1593) creates through ' +
       'GetOrCreateObjectFromWrapper (:751-768), which uses TrackerObject only for an instance registered with RegisterForTrackerSupport ' +
-      'or RegisterForMarshalling, and the app registers neither. Read at .NET v10.0.13.'
+      'or RegisterForMarshalling, and the app registers neither. The reference tracker host, whose callback also reaches ' +
+      'CoGetContextToken (ReferenceTrackerHost.cs:66), is registered only from that wrapper''s constructor ' +
+      '(TrackerObjectManager.cs:17-31, ReferenceTrackerHost.cs:17-19). Read at .NET v10.0.13.'
+    Reach = @{ 'System.Runtime.InteropServices.ComWrappers::GetOrCreateObjectForComInstance(IntPtr,System.Runtime.InteropServices.CreateObjectFlags)' = '29 members, a335253cebd44639' }
   }
   [pscustomobject]@{
     Calls = @(
@@ -67,6 +76,7 @@ $entries = @(
     Reason = 'StartWithCreateProcess reaches CoTaskMemAlloc only through SecureStringToGlobalAllocUnicode, called where ' +
       'ProcessStartInfo.UserName is not empty and Password is set (Process.Windows.cs:527, :552-553). UserName defaults to empty ' +
       '(ProcessStartInfo.cs:157-160) and neither caller sets UserName or Password. Read at .NET v10.0.13.'
+    Reach = @{ 'System.Diagnostics.Process::Start(System.Diagnostics.ProcessStartInfo)' = '10 members, e257c9f191611a3d' }
   }
   [pscustomobject]@{
     Calls = @(
@@ -78,12 +88,17 @@ $entries = @(
       'returns null at once for a null or empty collection (CertificateHelper.cs:18-20), before the certificate reads that reach ' +
       'FindOidInfo. The callback that reads the certificate store is installed only for ClientCertificateOption.Automatic (:282). ' +
       'The app sets no client certificate and no ClientCertificateOptions. Read at .NET v10.0.13.'
+    Reach = @{
+      'System.Net.Http.HttpClientHandler::.ctor()' = '36 members, 7a4c4eac6f130118'
+      'System.Net.Http.HttpClient::.ctor()' = '37 members, bfcb3ce90bf62533'
+    }
   }
   [pscustomobject]@{
     Calls = @(, @('InstallerClean.Services.MsiFileInfoService::GetDigitalSignature(String)', 'System.Security.Cryptography.X509Certificates.X509Certificate::CreateFromSignedFile(String)'))
     Reason = 'CreateFromSignedFile (X509Certificate.cs:240-243) takes a signed MSI or MSP through GetSignerInPKCS7Store ' +
       '(CertificatePal.Windows.Import.cs:70-73). Only a file whose content is a PFX takes the PKCS#12 loader (:75-90), the one route ' +
       'to Guid.NewGuid, and a PFX is not what Windows Installer keeps in its cache. Read at .NET v10.0.13.'
+    Reach = @{ 'System.Security.Cryptography.X509Certificates.X509Certificate::CreateFromSignedFile(String)' = '14 members, 832b37ef312d62bd' }
   }
 )
 
@@ -135,16 +150,23 @@ public static partial class Faults
     public static IntPtr Bstr(string value) => Marshal.StringToBSTR(value);
     public static IntPtr Load() => NativeLibrary.Load("planted");
     public static bool Quic() => QuicConnection.IsSupported;
+    public static object Kind(System.Diagnostics.Activity activity) => activity.Kind;
+
+    [DllImport("planted", CharSet = CharSet.Unicode)]
+    internal static extern int Marshalled(string value);
 
     [LibraryImport("planted", StringMarshalling = StringMarshalling.Utf16)]
     internal static partial int ReadName(out string name);
 }
 '@
+# The calls every set must report: two direct, one the LibraryImport generator writes, one
+# through a static constructor and one through the runtime's marshalling stub.
+$plantedCalls = 'System.Guid::NewGuid()', 'System.Runtime.InteropServices.Marshal::StringToBSTR(String)',
+  'System.Runtime.InteropServices.Marshalling.Utf16StringMarshaller::Free(UInt16*)', 'System.Diagnostics.Activity::.cctor()',
+  'System.Runtime.InteropServices.Marshal::AllocCoTaskMem(Int32)'
 $fixtureFindings = [ordered]@{
-  'call: System.Guid::NewGuid()' = $false
-  'call: System.Runtime.InteropServices.Marshal::StringToBSTR(String)' = $false
-  'call: System.Runtime.InteropServices.Marshalling.Utf16StringMarshaller::Free(UInt16*)' = $false
   'P/Invoke: Planted.Faults planted!ReadName' = $false
+  'P/Invoke: Planted.Faults planted!Marshalled' = $false
   'NativeLibrary: System.Runtime.InteropServices.NativeLibrary::Load(String)' = $false
   'reference: System.Net.Quic' = $false
 }
@@ -178,6 +200,9 @@ foreach ($bundle in $bundles) {
   $bundle | Add-Member Others ([ordered]@{})
   foreach ($entry in [NativeImports.Bundle]::Read((Resolve-Path -LiteralPath $path).Path)) {
     if (-not [NativeImports.Assembly]::HasMetadata($entry.Bytes)) {
+      # Kind 1 is what the bundler records for a managed assembly, so one that will not read
+      # would leave every route through it out of the sets.
+      if ($entry.Kind -eq 1) { throw "The $($bundle.Label) bundle's $($entry.Path) is recorded as an assembly and carries no metadata this reader can read." }
       if (-not $bundle.Others.Contains("kind $($entry.Kind)")) { $bundle.Others["kind $($entry.Kind)"] = [System.Collections.Generic.List[string]]::new() }
       $bundle.Others["kind $($entry.Kind)"].Add($entry.Path)
       continue
@@ -209,6 +234,7 @@ $versions = foreach ($bundle in $bundles) {
   }
   else {
     if ($corelib.Count -ne 1) { throw "The $($bundle.Label) bundle carries $($corelib.Count) copies of CoreLib where it should carry one." }
+    if (-not $corelib[0].Assembly.InformationalVersion) { throw "The $($bundle.Label) bundle's CoreLib carries no version." }
     $bundle | Add-Member Version (($corelib[0].Assembly.InformationalVersion -split '[-+]')[0])
     "$($bundle.Label): .NET $($bundle.Version) ($($corelib[0].Assembly.InformationalVersion))"
   }
@@ -253,6 +279,7 @@ $inClosure = 'System.Guid::NewGuid()', 'System.Runtime.InteropServices.Marshal::
 $outOfClosure = 'System.Runtime.InteropServices.Marshal::ReadInt32(IntPtr)',
   'System.Runtime.InteropServices.Marshalling.ArrayMarshaller`2+ManagedToUnmanagedIn::Free()'
 
+$closures = @{}
 function New-Closure([string]$name, $set) {
   $closure = [NativeImports.Closure]::new([NativeImports.Assembly[]]@($set | ForEach-Object Assembly))
   $corelib = @($set | Where-Object { $_.Assembly.Name -eq 'System.Private.CoreLib' })
@@ -269,24 +296,39 @@ function New-Closure([string]$name, $set) {
     elseif (-not $closure.Members.Contains($key)) { Write-Host "    control, out of the set as it should be: $key" }
     else { Fail "$name holds $key, which reaches no import." }
   }
+  $closures[$name] = $closure
   $closure
+}
+
+# What a listed callee reaches in the set, as a count and a hash of the sorted members, so a
+# change in its routes fails the step rather than passing under a reason written for others.
+function Get-Reach($closure, [string]$callee) {
+  $members = $closure.Reach($callee)
+  $hash = [NativeImports.Bundle]::Sha256([Text.Encoding]::UTF8.GetBytes($members -join "`n")).Substring(0, 16)
+  [pscustomobject]@{ Pin = "$($members.Count) members, $hash"; Members = $members }
 }
 
 $matched = @{}
 $reported = @{}
-function Test-Calls([string]$where, $assembly, $closure) {
+function Test-Calls([string]$where, $assembly, $closure, $findings) {
   foreach ($call in $assembly.Calls) {
     if (-not $closure.Members.Contains($call.Callee)) { continue }
+    if ($findings) { $findings["call: $($call.Callee)"] = $true; continue }
     $id = "$($call.Caller) -> $($call.Callee)"
     $entry = $entries | Where-Object { $_.Calls | Where-Object { $_[0] -eq $call.Caller -and $_[1] -eq $call.Callee } } | Select-Object -First 1
     if ($entry) { $matched[$id] = $true }
     $seen = "$where|$id"
     if ($reported.ContainsKey($seen)) { continue }
     $reported[$seen] = $true
-    Write-Host "  $($assembly.Name): $($call.Caller)"
+    Write-Host "  $($assembly.Name): $($call.Caller)$(if ($call.Note) { " ($($call.Note))" })"
     Write-Host ('    -> ' + $closure.Path($call.Callee).Replace("`n", "`n    "))
-    if ($entry) { Write-Host "    listed: $($entry.Reason)" }
-    else { Fail "$where`: $($assembly.Name)'s $($call.Caller) calls $($call.Callee), which reaches a CoreLib import of ole32 or oleaut32." }
+    if (-not $entry) { Fail "$where`: $($assembly.Name)'s $($call.Caller) calls $($call.Callee), which reaches a CoreLib import of ole32 or oleaut32."; continue }
+    $reach = Get-Reach $closure $call.Callee
+    $pinned = if ($entry.Reach -and $entry.Reach.Contains($call.Callee)) { $entry.Reach[$call.Callee] } else { 'nothing' }
+    if ($pinned -ne $reach.Pin) {
+      Fail "$where`: $($call.Callee) reaches $($reach.Pin) in the set, where its entry was read against $pinned. Re-read the reason against these members: $($reach.Members -join '; ')"
+    }
+    else { Write-Host "    listed, reaching $($reach.Pin): $($entry.Reason)" }
   }
 }
 
@@ -323,7 +365,7 @@ function Test-Assembly($assembly, [string]$where, $findings) {
       else { Fail "$($assembly.Name) declares a P/Invoke outside InstallerClean.Interop.Native: $($import.Type) $($import.Library)!$($import.EntryPoint)." }
     }
   }
-  foreach ($call in $assembly.Calls | Where-Object { $_.Callee.StartsWith('System.Runtime.InteropServices.NativeLibrary::') } | Sort-Object Caller, Callee -Unique) {
+  foreach ($call in $assembly.Calls | Where-Object { $_.Note -ne 'static constructor' -and $_.Callee.StartsWith('System.Runtime.InteropServices.NativeLibrary::') } | Sort-Object Caller, Callee -Unique) {
     Write-Host "  NativeLibrary: $($call.Caller) -> $($call.Callee)"
     if ($call.Callee.StartsWith('System.Runtime.InteropServices.NativeLibrary::SetDllImportResolver(')) { continue }
     $listed = $nativeLibraryCalls | Where-Object { $_.Caller -eq $call.Caller -and $_.Callees -contains $call.Callee }
@@ -376,11 +418,21 @@ foreach ($fd in $bundles | Where-Object Sibling) {
   }
 }
 Write-Host ''
-Write-Host '== The planted assembly, judged against the command line''s framework'
-$cliFramework = New-Closure 'command line, framework' @(Get-Framework (Get-Bundle 'command line'))
-foreach ($call in $fixture.Calls | Where-Object { $cliFramework.Members.Contains($_.Callee) } | Sort-Object Callee -Unique) {
-  Write-Host "  $($call.Caller) -> $($call.Callee)"
-  $fixtureFindings["call: $($call.Callee)"] = $true
+Write-Host '== The planted assembly, judged as our code is'
+# Each set the planted calls are judged against, with the calls it must report. The window's
+# set holds CoreLib and the packages, so Activity's static constructor is not in it.
+$plantedSets = @(
+  [pscustomobject]@{ Name = 'command line, framework'; Expected = $plantedCalls }
+  [pscustomobject]@{ Name = 'command line, framework-dependent, framework'; Expected = $plantedCalls }
+  [pscustomobject]@{ Name = 'slim, CoreLib and the packages'; Expected = @($plantedCalls | Where-Object { $_ -ne 'System.Diagnostics.Activity::.cctor()' }) }
+)
+foreach ($set in $plantedSets) {
+  $found = [ordered]@{}
+  Test-Calls $set.Name $fixture $closures[$set.Name] $found
+  foreach ($callee in $set.Expected) {
+    if ($found.Contains("call: $callee")) { Write-Host "  $($set.Name): reported, as it should be: $callee" }
+    else { Fail "$($set.Name): the planted call to $callee was not reported, so the check cannot be shown to find it." }
+  }
 }
 Test-Assembly $fixture 'the planted assembly' $fixtureFindings
 foreach ($finding in $fixtureFindings.Keys) {

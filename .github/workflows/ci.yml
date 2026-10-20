@@ -99,10 +99,11 @@ jobs:
         if: success() || failure()
         run: node scripts/check-elevation-manifest.mjs
 
-      # One guard reads built files, so it cannot be picked up with the
-      # check-*.mjs glob that runs before the build, and is invoked by name in
-      # both workflows instead. This is what holds those two lines in place.
-      - name: Check the artefact guard is still wired into both workflows
+      # Two guards read built files, so neither can be picked up with the
+      # check-*.mjs glob that runs before the build. Each is invoked by name
+      # instead, the artefact guard in both workflows and the native-imports
+      # check in this one. This is what holds those lines in place.
+      - name: Check the guards that read built files are still wired in
         if: success() || failure()
         run: node scripts/check-guard-wiring.mjs
 

@@ -3,7 +3,7 @@
 // set of framework methods whose calls reach one of CoreLib's own ole32.dll or oleaut32.dll
 // imports. A CoreLib import is bound by the runtime's own search, which no resolver of
 // ours is asked about, so a call of ours into that set can make the runtime look for the
-// library beside the exe before it looks in System32.
+// library in the folder CoreLib was loaded from before it looks in System32.
 //
 // A METHOD IS KEYED BY TYPE, NAME AND FULL SIGNATURE, so Marshal.ReadInt32(IntPtr) and
 // Marshal.ReadInt32(Object, Int32) are different members and only the second reaches an
@@ -12,10 +12,15 @@
 // CertificateHelper) and an import in one copy says nothing about the others.
 //
 // The set follows call, callvirt, newobj, jmp, ldftn and ldvirtftn to the member each
-// names. It does not follow a virtual or interface call to the overrides it can reach:
-// with those edges an enumerator reaches nearly everything and the set means nothing. A
-// method whose IL or signature cannot be read stops the run rather than leaving the set
-// short of it.
+// names, and from each of those and every static field read or write to the static
+// constructor of the type it names, which the runtime runs before that first use. A
+// P/Invoke whose signature the runtime marshals itself, in an assembly that does not
+// disable runtime marshalling, is taken to call Marshal.AllocCoTaskMem and FreeCoTaskMem,
+// which are what the runtime's marshalling stubs call for strings, buffers and structures.
+// The set does not follow a virtual or interface call to the overrides it can reach: with
+// those edges an enumerator reaches nearly everything and the set means nothing. A method
+// whose IL or signature cannot be read stops the run rather than leaving the set short of
+// it.
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -133,7 +138,9 @@ namespace NativeImports
     {
         public string Caller;
         public string Callee;
-        public bool AddressTaken;
+        // How the caller reaches the callee where no call instruction names it: "address
+        // taken", "static constructor" or "runtime marshalling stub".
+        public string Note;
     }
 
     // One assembly's metadata, its P/Invokes and every call its methods make.
@@ -163,7 +170,7 @@ namespace NativeImports
         {
             try
             {
-                using var pe = new PEReader(ImmutableArray.Create(bytes));
+                using var pe = new PEReader(new MemoryStream(bytes, false));
                 return pe.HasMetadata && pe.GetMetadataReader().IsAssembly;
             }
             catch (BadImageFormatException) { return false; }
@@ -172,32 +179,18 @@ namespace NativeImports
         public static Assembly Open(byte[] bytes, string bundlePath)
         {
             var a = new Assembly { Bytes = bytes, BundlePath = bundlePath, Sha256 = Bundle.Sha256(bytes) };
-            a._pe = new PEReader(ImmutableArray.Create(bytes));
+            a._pe = new PEReader(new MemoryStream(bytes, false));
             a._md = a._pe.GetMetadataReader();
             a.Name = a._md.GetString(a._md.GetAssemblyDefinition().Name);
             foreach (var h in a._md.TypeDefinitions)
-                if (!IsPublic(a._md, h)) a.NonPublic.Add(a.RawTypeName(h));
+                if (!IsVisibleOutside(a._md, h)) a.NonPublic.Add(a.RawTypeName(h));
             foreach (var h in a._md.AssemblyReferences)
                 a.AssemblyReferences.Add(a._md.GetString(a._md.GetAssemblyReference(h).Name));
             foreach (var h in a._md.CustomAttributes)
             {
                 var attribute = a._md.GetCustomAttribute(h);
                 if (attribute.Parent.Kind != HandleKind.AssemblyDefinition) continue;
-                // CoreLib defines the attribute itself, so its constructor is a definition
-                // there and a reference everywhere else.
-                var type = attribute.Constructor.Kind switch
-                {
-                    HandleKind.MemberReference => a._md.GetMemberReference((MemberReferenceHandle)attribute.Constructor).Parent,
-                    HandleKind.MethodDefinition => (EntityHandle)a._md.GetMethodDefinition((MethodDefinitionHandle)attribute.Constructor).GetDeclaringType(),
-                    _ => default,
-                };
-                var name = type.Kind switch
-                {
-                    HandleKind.TypeReference => a._md.GetString(a._md.GetTypeReference((TypeReferenceHandle)type).Name),
-                    HandleKind.TypeDefinition => a._md.GetString(a._md.GetTypeDefinition((TypeDefinitionHandle)type).Name),
-                    _ => null,
-                };
-                if (name != "AssemblyInformationalVersionAttribute") continue;
+                if (a.AttributeName(attribute) != "AssemblyInformationalVersionAttribute") continue;
                 var value = a._md.GetBlobReader(attribute.Value);
                 value.ReadUInt16();
                 a.InformationalVersion = value.ReadSerializedString();
@@ -205,13 +198,62 @@ namespace NativeImports
             return a;
         }
 
-        static bool IsPublic(MetadataReader md, TypeDefinitionHandle h)
+        // A protected nested type is visible to a derived type in another assembly, which
+        // names it through a reference, so it is keyed as visible.
+        static bool IsVisibleOutside(MetadataReader md, TypeDefinitionHandle h)
         {
             var t = md.GetTypeDefinition(h);
             var visibility = t.Attributes & TypeAttributes.VisibilityMask;
-            if (t.IsNested) return visibility == TypeAttributes.NestedPublic && IsPublic(md, t.GetDeclaringType());
+            if (t.IsNested)
+                return visibility is TypeAttributes.NestedPublic or TypeAttributes.NestedFamily or TypeAttributes.NestedFamORAssem
+                    && IsVisibleOutside(md, t.GetDeclaringType());
             return visibility == TypeAttributes.Public;
         }
+
+        bool DisablesRuntimeMarshalling()
+        {
+            foreach (var h in _md.GetAssemblyDefinition().GetCustomAttributes())
+                if (AttributeName(_md.GetCustomAttribute(h)) == "DisableRuntimeMarshallingAttribute") return true;
+            return false;
+        }
+
+        string AttributeName(CustomAttribute attribute)
+        {
+            var type = attribute.Constructor.Kind switch
+            {
+                HandleKind.MemberReference => _md.GetMemberReference((MemberReferenceHandle)attribute.Constructor).Parent,
+                HandleKind.MethodDefinition => (EntityHandle)_md.GetMethodDefinition((MethodDefinitionHandle)attribute.Constructor).GetDeclaringType(),
+                _ => default,
+            };
+            return type.Kind switch
+            {
+                HandleKind.TypeReference => _md.GetString(_md.GetTypeReference((TypeReferenceHandle)type).Name),
+                HandleKind.TypeDefinition => _md.GetString(_md.GetTypeDefinition((TypeDefinitionHandle)type).Name),
+                _ => null,
+            };
+        }
+
+        // Whether the runtime writes a marshalling stub for this P/Invoke that can allocate or
+        // free native memory: any parameter or return other than a primitive number, a char,
+        // a bool, a pointer or a function pointer, or one carrying a marshalling directive.
+        bool IsRuntimeMarshalled(MethodDefinition m)
+        {
+            var signature = m.DecodeSignature(new Sig(this), null);
+            foreach (var type in signature.ParameterTypes.Prepend(signature.ReturnType))
+                if (!IsPlain(type)) return true;
+            foreach (var h in m.GetParameters())
+                if (!_md.GetParameter(h).GetMarshallingDescriptor().IsNil) return true;
+            return false;
+        }
+
+        static readonly HashSet<string> PlainTypes = new()
+        {
+            "Void", "Boolean", "Char", "SByte", "Byte", "Int16", "UInt16", "Int32", "UInt32", "Int64", "UInt64",
+            "Single", "Double", "IntPtr", "UIntPtr",
+        };
+
+        static bool IsPlain(string type) =>
+            PlainTypes.Contains(type) || type.EndsWith("*", StringComparison.Ordinal) || type.StartsWith("fnptr(", StringComparison.Ordinal);
 
         string RawTypeName(TypeDefinitionHandle h)
         {
@@ -279,6 +321,14 @@ namespace NativeImports
             return spec.DecodeSignature(new Sig(this), null);
         }
 
+        // The type that declares a static field a token names.
+        string FieldOwner(EntityHandle h) => h.Kind switch
+        {
+            HandleKind.FieldDefinition => TypeName(_md.GetFieldDefinition((FieldDefinitionHandle)h).GetDeclaringType()),
+            HandleKind.MemberReference => TypeName(_md.GetMemberReference((MemberReferenceHandle)h).Parent),
+            _ => null,
+        };
+
         static string Parameters(MethodSignature<string> s) => "(" + string.Join(",", s.ParameterTypes) + ")";
 
         public string MethodKey(MethodDefinitionHandle h)
@@ -313,6 +363,7 @@ namespace NativeImports
         public void ReadMethods(Dictionary<string, HashSet<string>> nonPublicByAssembly)
         {
             _nonPublicByAssembly = nonPublicByAssembly;
+            bool runtimeMarshalling = !DisablesRuntimeMarshalling();
             foreach (var h in _md.MethodDefinitions)
             {
                 var m = _md.GetMethodDefinition(h);
@@ -325,6 +376,11 @@ namespace NativeImports
                 {
                     var library = _md.GetString(_md.GetModuleReference(import.Module).Name);
                     Imports.Add(new Import { Key = key, Type = RawTypeName(m.GetDeclaringType()), Library = library, EntryPoint = _md.GetString(import.Name) });
+                    if (runtimeMarshalling && IsRuntimeMarshalled(m))
+                    {
+                        Calls.Add(new Call { Caller = key, Callee = "System.Runtime.InteropServices.Marshal::AllocCoTaskMem(Int32)", Note = "runtime marshalling stub" });
+                        Calls.Add(new Call { Caller = key, Callee = "System.Runtime.InteropServices.Marshal::FreeCoTaskMem(IntPtr)", Note = "runtime marshalling stub" });
+                    }
                     continue;
                 }
                 if (m.RelativeVirtualAddress == 0) continue;
@@ -338,8 +394,16 @@ namespace NativeImports
                             Callis[key] = Callis.TryGetValue(key, out var n) ? n + 1 : 1;
                             continue;
                         }
+                        if (opcode is ILOpCode.Ldsfld or ILOpCode.Ldsflda or ILOpCode.Stsfld)
+                        {
+                            var owner = FieldOwner(MetadataTokens.EntityHandle(token));
+                            if (owner != null) Calls.Add(new Call { Caller = key, Callee = owner + "::.cctor()", Note = "static constructor" });
+                            continue;
+                        }
                         var callee = MethodKey(MetadataTokens.EntityHandle(token));
-                        if (callee != null) Calls.Add(new Call { Caller = key, Callee = callee, AddressTaken = opcode == ILOpCode.Ldftn || opcode == ILOpCode.Ldvirtftn });
+                        if (callee == null) continue;
+                        Calls.Add(new Call { Caller = key, Callee = callee, Note = opcode is ILOpCode.Ldftn or ILOpCode.Ldvirtftn ? "address taken" : null });
+                        Calls.Add(new Call { Caller = key, Callee = callee.Substring(0, callee.IndexOf("::", StringComparison.Ordinal)) + "::.cctor()", Note = "static constructor" });
                     }
                 }
                 catch (Exception e) when (e is not InvalidDataException)
@@ -377,7 +441,8 @@ namespace NativeImports
             return sizes;
         }
 
-        // Every instruction that names a method, or calls through a pointer, with its token.
+        // Every instruction that names a method or a static field, or calls through a pointer,
+        // with its token.
         // An opcode the table does not know throws, rather than walking on misaligned.
         public static IEnumerable<(ILOpCode, int)> Calls(byte[] il)
         {
@@ -394,7 +459,8 @@ namespace NativeImports
                     continue;
                 }
                 var op = (ILOpCode)code;
-                if (op is ILOpCode.Call or ILOpCode.Callvirt or ILOpCode.Newobj or ILOpCode.Jmp or ILOpCode.Ldftn or ILOpCode.Ldvirtftn or ILOpCode.Calli)
+                if (op is ILOpCode.Call or ILOpCode.Callvirt or ILOpCode.Newobj or ILOpCode.Jmp or ILOpCode.Ldftn or ILOpCode.Ldvirtftn or ILOpCode.Calli
+                    or ILOpCode.Ldsfld or ILOpCode.Ldsflda or ILOpCode.Stsfld)
                     yield return (op, BitConverter.ToInt32(il, i));
                 i += size;
             }
@@ -411,7 +477,9 @@ namespace NativeImports
         public List<string> Sinks = new();
         public HashSet<string> Members = new();
         readonly Dictionary<string, string> _next = new();
-        readonly HashSet<string> _addressTaken = new();
+        readonly Dictionary<string, string> _notes = new();
+        readonly Dictionary<string, HashSet<string>> _callers;
+        Dictionary<string, List<string>> _callees;
 
         public static string Library(string name)
         {
@@ -436,9 +504,10 @@ namespace NativeImports
                 {
                     if (!callers.TryGetValue(call.Callee, out var set)) callers[call.Callee] = set = new HashSet<string>();
                     set.Add(call.Caller);
-                    if (call.AddressTaken) _addressTaken.Add(call.Caller + " -> " + call.Callee);
+                    if (call.Note != null) _notes.TryAdd(call.Caller + " -> " + call.Callee, call.Note);
                 }
             }
+            _callers = callers;
             Sinks.Sort(StringComparer.Ordinal);
             var queue = new Queue<string>(sinks);
             foreach (var s in sinks) Members.Add(s);
@@ -451,12 +520,40 @@ namespace NativeImports
             }
         }
 
+        // Every member of the set the key reaches, itself included, following each edge the set
+        // was built from. A change in what a listed call can reach changes this list.
+        public List<string> Reach(string key)
+        {
+            if (_callees == null)
+            {
+                _callees = new Dictionary<string, List<string>>();
+                foreach (var (callee, set) in _callers)
+                    if (Members.Contains(callee))
+                        foreach (var caller in set)
+                            if (Members.Contains(caller))
+                            {
+                                if (!_callees.TryGetValue(caller, out var list)) _callees[caller] = list = new List<string>();
+                                list.Add(callee);
+                            }
+            }
+            var seen = new HashSet<string>();
+            if (!Members.Contains(key)) return new List<string>();
+            var queue = new Queue<string>();
+            queue.Enqueue(key);
+            seen.Add(key);
+            while (queue.Count > 0)
+                if (_callees.TryGetValue(queue.Dequeue(), out var next))
+                    foreach (var n in next)
+                        if (seen.Add(n)) queue.Enqueue(n);
+            return seen.OrderBy(k => k, StringComparer.Ordinal).ToList();
+        }
+
         public string Path(string key)
         {
             var parts = new List<string> { key };
             while (_next.TryGetValue(key, out var next))
             {
-                parts.Add((_addressTaken.Contains(key + " -> " + next) ? "(address taken) " : "") + next);
+                parts.Add((_notes.TryGetValue(key + " -> " + next, out var note) ? "(" + note + ") " : "") + next);
                 key = next;
             }
             return string.Join("\n  -> ", parts);
