@@ -655,8 +655,8 @@ jobs:
   # from their own folders, and the setup on the files planted beside it.
   #
   # Each pass's Process Monitor rows for every process named as one of the builds'
-  # exes and for the setup's processes, each host trace and the app's crash logs are kept with the run for seven
-  # days, whether or not the job passed.
+  # exes and for the setup's processes, each host trace and the app's crash logs are
+  # kept with the run for seven days, whether or not the job passed.
   native-libraries:
     name: Native libraries (Windows)
     runs-on: windows-2025
@@ -1584,8 +1584,10 @@ jobs:
           $version = ([xml](Get-Content Directory.Build.props)).Project.PropertyGroup.Version |
                      Where-Object { $_ } | Select-Object -First 1
           if (-not $version) { throw "Could not read <Version> from Directory.Build.props." }
-          & $iscc "/DAppVersion=$version" installer\InstallerClean.iss
+          & $iscc "/DAppVersion=$version" installer\InstallerClean.iss | Tee-Object -Variable compileOutput
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed." }
+          $warnings = @($compileOutput | Where-Object { $_ -like 'Warning: *' })
+          if ($warnings.Count -gt 0) { $warnings; throw "ISCC printed warnings, which fail the compile in build-and-test too." }
           "SETUP_VERSION=$version" | Add-Content $env:GITHUB_ENV
 
       # The setup is copied alone into a folder of its own, as a download sits in
@@ -1598,12 +1600,12 @@ jobs:
       # in its own folder is printed, and the job fails where it loads an image from that
       # folder. Each process it starts, Inno Setup's setup.tmp from an is-*.tmp folder in
       # %TEMP%, and each process those start, is judged the same way against its own
-      # folder, where an image the same process created earlier in the record passes:
-      # Inno Setup writes its helper files there and loads them. That folder is made new
-      # with a new name on each run, and its owner and permissions are printed as the
-      # setup made them. The job also fails where the setup does not exit with 0, starts
-      # no setup.tmp, or leaves an uninstall entry whose DisplayVersion is not the one
-      # built.
+      # folder. In an is-*.tmp folder an image the same process created earlier in the
+      # record passes: that folder is made new with a new name on each run, and its owner
+      # and permissions are printed as the setup made them. The job also fails where the
+      # setup does not exit with 0, starts nothing from an is-*.tmp folder, or leaves no
+      # uninstall entry whose DisplayVersion is the one built; the entry is removed before
+      # each run, so the one read is that run's.
       #
       # The second run's folder holds the genuine file at every path the setup exe looked
       # at in its own folder in the first, and the job fails where the setup reads or
@@ -1616,7 +1618,12 @@ jobs:
           $setup = (Resolve-Path "publish/InstallerClean-$env:SETUP_VERSION-setup.exe").Path
 
           # Prints with Write-Host, so what it answers is the run and its reading alone.
+          $uninstallKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\InstallerClean_is1'
+
           function Invoke-Setup([string]$pass, $plants) {
+            # The entry is removed first, so the one read after the run is this run's.
+            Remove-Item -Path $uninstallKey -Recurse -Force -ErrorAction SilentlyContinue
+            if (Test-Path $uninstallKey) { throw "The uninstall entry could not be removed before the $pass pass." }
             $folder = Get-RunFolder $pass 'setup'
             New-Item -ItemType Directory -Force -Path $folder | Out-Null
             Copy-Item -LiteralPath $setup -Destination $folder
@@ -1629,11 +1636,11 @@ jobs:
             try {
               $p = Start-Process -FilePath $exe -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-' -WorkingDirectory $folder -PassThru
               $null = $p.Handle
-              if (-not $p.WaitForExit(300000)) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; $p.WaitForExit(); Fail "The setup was still running after 300 s and was ended." }
+              if (-not $p.WaitForExit(300000)) { $p.Kill($true); $p.WaitForExit(); Fail "The setup was still running after 300 s and was ended with every process it started." }
             }
             finally {
-              $csv = Stop-Record "setup-$pass"
               Stop-TempWatch $watch $stop
+              $csv = Stop-Record "setup-$pass"
             }
             Write-Host "  the setup, process $($p.Id), exited with $($p.ExitCode)"
             if ($p.ExitCode -ne 0) { Fail "The setup, $pass pass, exited with $($p.ExitCode)." }
@@ -1649,12 +1656,11 @@ jobs:
               if ($pass -eq 'second') { Test-PlantedRun $run $read }
               $started = @(Test-StartedProcesses $csv $run $byProcess[[string]$run.Id] '')
               foreach ($child in $started) { $kept.Add("$($child.Id)`t$($child.Exe)") }
-              if (-not @($started | Where-Object Exe -like '*.tmp')) { Fail "The setup, $pass pass, started no setup.tmp that Process Monitor recorded." }
               Show-TempFolders $out $started
             }
             Set-Content -Path (Join-Path $env:RUNNER_TEMP "kept-setup-$pass.txt") -Value $kept
 
-            $shown = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\InstallerClean_is1' -ErrorAction SilentlyContinue).DisplayVersion
+            $shown = (Get-ItemProperty $uninstallKey -ErrorAction SilentlyContinue).DisplayVersion
             if ($shown -eq $env:SETUP_VERSION) { Write-Host "  the uninstall entry's DisplayVersion is $shown" }
             else { Fail "The uninstall entry's DisplayVersion is '$shown' after the $pass pass, not $env:SETUP_VERSION." }
             [pscustomobject]@{ Run = $run; Read = $read }

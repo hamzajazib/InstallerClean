@@ -167,8 +167,6 @@ function Show-Libraries($libraries, $marker, $mainMarker, [string]$firstTime) {
   $libraries | Where-Object Operation -eq 'Load Image' | ForEach-Object Path | Sort-Object -Unique | ForEach-Object { Write-Host "    $_" }
 }
 
-# The genuine file for a name: one the build loaded under that name from
-# anywhere but its own folder, else System32's, else the stand-in.
 # The same as Show-Libraries for a program that is not one of the builds: its build
 # names no source file, so nothing places a look against the start of its own code.
 function Show-Looks($libraries, [string]$firstTime) {
@@ -183,6 +181,8 @@ function Show-Looks($libraries, [string]$firstTime) {
   $libraries | Where-Object Operation -eq 'Load Image' | ForEach-Object Path | Sort-Object -Unique | ForEach-Object { Write-Host "    $_" }
 }
 
+# The genuine file for a name: one the build loaded under that name from
+# anywhere but its own folder, else System32's, else the stand-in.
 function Get-Plant([string]$name, $loads) {
   $loaded = @($loads | Where-Object { $_.Name -eq $name -and $_.Place -ne 'own' })
   $system = Join-Path $env:SystemRoot "System32\$name"
@@ -611,13 +611,14 @@ function Add-Plants([string]$folder, $plants) {
   $placed
 }
 
-# Judges a second-pass run against the files planted for it.
 # When a row came, against the start of the build's own code, for a message about a
 # build; nothing for a program whose build names no source file.
 function Get-WhenSuffix($run, $row, $marker) {
   if ($run.Build.Source) { ", $(Get-When $row $marker)" } else { '' }
 }
 
+# Judges a second-pass run against the files planted for it. For a program whose build
+# names no source file, a load from its own folder is left to Test-OwnLoads.
 function Test-PlantedRun($run, $read) {
   # A native library is mapped and loaded; a managed one can be read instead, so
   # any of the three by the build counts as the planted file being taken.
@@ -631,7 +632,7 @@ function Test-PlantedRun($run, $read) {
     if ($placedPaths -contains $load.Path) {
       Fail "$($run.Label) loaded the planted $($load.Path), row $($load.Index)$(Get-WhenSuffix $run $load $read.Marker)."
     }
-    elseif ($load.Place -eq 'own' -or ($load.Place -eq 'extraction' -and $run.BundleFiles -notcontains $load.Path)) {
+    elseif ($run.Build.Source -and ($load.Place -eq 'own' -or ($load.Place -eq 'extraction' -and $run.BundleFiles -notcontains $load.Path))) {
       Fail "$($run.Label) loaded $($load.Path), which neither its bundle nor the first pass put there, row $($load.Index)$(Get-WhenSuffix $run $load $read.Marker)."
     }
   }
@@ -671,8 +672,9 @@ function Test-OwnLoads($run, $rows, [switch]$AllowCreated) {
 
 # Each process $parent started, other than one whose image is at $skip, and each
 # process those started, read from the record $csv by the process ID in each Process
-# Create row. Each is printed with its looks and judged by Test-OwnLoads -AllowCreated.
-# Command lines are not printed. Answers each process as a run.
+# Create row. Each is printed with its looks and judged by Test-OwnLoads, with
+# -AllowCreated where it runs from an is-*.tmp folder, which Inno Setup's loader makes
+# new for it in %TEMP%. Command lines are not printed. Answers each process as a run.
 function Test-StartedProcesses([string]$csv, $parent, $parentRows, [string]$skip) {
   $all = [System.Collections.Generic.List[object]]::new()
   $parents = @([pscustomobject]@{ Run = $parent; Rows = $parentRows })
@@ -693,7 +695,7 @@ function Test-StartedProcesses([string]$csv, $parent, $parentRows, [string]$skip
       $rows = $byChild[[string]$child.Id]
       if (-not $rows) { Fail "Process Monitor recorded nothing for $($child.Exe), process $($child.Id)."; continue }
       Show-Looks @(Get-Libraries $rows $child.Folder) $rows[0].'Time of Day'
-      Test-OwnLoads $child $rows -AllowCreated
+      Test-OwnLoads $child $rows -AllowCreated:((Split-Path $child.Folder -Leaf) -like 'is-*.tmp')
       [pscustomobject]@{ Run = $child; Rows = $rows }
     }
     $parents = @($next)
@@ -737,10 +739,10 @@ function Stop-TempWatch($job, [string]$stop) {
   try {
     New-Item -ItemType File -Path $stop -Force | Out-Null
     $null = Wait-Job $job -Timeout 60
-    Receive-Job $job
-    Remove-Job $job -Force
+    Receive-Job $job | Out-Host
   }
   catch { Write-Host "The job watching %TEMP% did not end cleanly: $($_.Exception.Message)" }
+  finally { Remove-Job $job -Force -ErrorAction SilentlyContinue }
 }
 
 # Prints the folders the watch wrote to $out, and fails where none of $started ran
