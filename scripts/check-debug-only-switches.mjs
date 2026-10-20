@@ -27,7 +27,8 @@
 // RegistryValueOptions.None, the option that expands the %NAME% in a registry value. A
 // write (SetEnvironmentVariable, _putenv) counts as a read and is printed as a write.
 // NAMES_NO_VARIABLE lists, by exact text, what holds the word and names no environment
-// variable, such as Environment.NewLine. Anything else holding it is a read, a message
+// variable, such as Environment.NewLine, and stops the run where nothing in the shipped
+// projects holds an entry. Anything else holding it is a read, a message
 // in a string that says "environment" among them, until NAMES_NO_VARIABLE or ALLOWED
 // names it. In Environment.GetEnvironmentVariable the read is the member, so the line
 // holds one. One outside the branch fails unless ALLOWED names it by file and line text;
@@ -112,7 +113,6 @@ const ALLOWED = [
 // taken out. Environment.X is the class System.Environment and its member.
 const NAMES_NO_VARIABLE = new Map([
   ['Environment.CurrentManagedThreadId', 'the managed thread'],
-  ['Environment.GetFolderPath', 'a known folder'],
   ['Environment.NewLine', 'the line ending'],
   ['Environment.OSVersion', 'the version of Windows'],
   ['Environment.ProcessId', 'the process'],
@@ -121,7 +121,6 @@ const NAMES_NO_VARIABLE = new Map([
   ['Environment.SystemDirectory', 'the system folder'],
   ['Environment.UserInteractive', 'the window station'],
   ['DoNotExpandEnvironmentNames', 'the registry option that leaves a %NAME% as written'],
-  ['EnvironmentVariableTarget', 'the store a read or a write looks in, named beside the call'],
 ]);
 
 const READ = new RegExp([
@@ -210,6 +209,7 @@ for (const { file } of shipped) {
   perProject.set(project, (perProject.get(project) ?? 0) + 1);
 }
 const allowedUsed = new Map(ALLOWED.map((a) => [a, 0]));
+const namesUsed = new Map([...NAMES_NO_VARIABLE.keys()].map((n) => [n, 0]));
 const ownRead = new Map(SWITCHES.map((s) => [s, 0]));
 for (const { file, code, comments, lineAt, inside } of shipped) {
   const codeLines = code.split('\n');
@@ -230,6 +230,7 @@ for (const { file, code, comments, lineAt, inside } of shipped) {
     const line = lineAt(m.index);
     const at = `  ${file}:${line}  ${name}`;
     if (NAMES_NO_VARIABLE.has(name)) {
+      namesUsed.set(name, namesUsed.get(name) + 1);
       console.log(`${at}  names no variable: ${NAMES_NO_VARIABLE.get(name)}`);
       continue;
     }
@@ -261,6 +262,8 @@ for (const p of SHIPPED)
   if (!perProject.get(p)) refusals.push(`no C# file read under src/${p}/`);
 for (const [entry, used] of allowedUsed)
   if (!used) refusals.push(`ALLOWED names ${entry.file} "${entry.text}" and no such read is found`);
+for (const [name, used] of namesUsed)
+  if (!used) refusals.push(`NAMES_NO_VARIABLE names ${name} and nothing in the shipped projects holds it`);
 for (const [s, n] of ownRead)
   if (!n) refusals.push(`the read of ${s.name} (a line under ${s.home} holding ${s.constant}) is not found inside #if DEBUG`);
 
