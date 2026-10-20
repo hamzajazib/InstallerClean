@@ -101,13 +101,25 @@ function Read-Record([string]$csv, [object[]]$runs) {
   $byProcess
 }
 
-# Every .dll row in a run's own folder or under %TEMP%\.net, where a single-file
-# build extracts its own libraries, and every library it loaded from anywhere.
+# The extensions a look is judged under as one for an image: a library's, and those
+# of printer and other drivers, ActiveX controls, Control Panel items, DirectShow
+# filters, audio codecs, input methods, telephony providers and screen savers. An .exe
+# is not among them: Windows starts one as a process of its own rather than mapping it
+# into the process that names it.
+$imageExtensions = '.dll', '.drv', '.ocx', '.cpl', '.ax', '.acm', '.ime', '.tsp', '.scr'
+
+function Test-ImageName([string]$path) {
+  [IO.Path]::GetExtension($path.Replace('\', '/')) -in $imageExtensions
+}
+
+# Every row naming an image file in a run's own folder or under %TEMP%\.net, where a
+# single-file build extracts its own libraries, and every image file it loaded from
+# anywhere.
 function Get-Libraries($rows, [string]$folder) {
   $own = $folder.TrimEnd('\') + '\'
   for ($i = 0; $i -lt $rows.Count; $i++) {
     $row = $rows[$i]
-    if (-not $row.Path.EndsWith('.dll', 'OrdinalIgnoreCase')) { continue }
+    if (-not (Test-ImageName $row.Path)) { continue }
     $place = if ($row.Path.StartsWith($own, 'OrdinalIgnoreCase')) { 'own' } elseif ($row.Path -match '\\\.net\\') { 'extraction' } else { 'elsewhere' }
     if ($place -eq 'elsewhere' -and $row.Operation -ne 'Load Image') { continue }
     [pscustomobject]@{
@@ -878,4 +890,52 @@ function Test-SetupControls {
   $child = @($started | Where-Object Id -eq 201)
   if ($child.Count -ne 1 -or $child[0].Folder -ne $own) { Fail "The control's setup.tmp was not judged from its own folder $own." }
   if (@($started | Where-Object Id -eq 202)) { Fail "The control's process at $skip was judged, where it is to be left out." }
+}
+
+# Runs Get-Libraries, Get-RunPlants and Test-PlantedRun over records made up for the
+# purpose, and fails the step unless a look beside the exe for winspool.drv and for a
+# .dll is planted for and nothing else is, and a load of the planted winspool.drv in the
+# second pass fails while the planted .dll, looked for and not loaded, passes.
+function Test-ImageNameControls {
+  Write-Host "== Control: the looks for an image other than a .dll"
+  $folder = Join-Path ([IO.Path]::GetTempPath()) ('image-controls-' + [guid]::NewGuid().ToString('N'))
+  $first = Join-Path $folder 'first'
+  $second = Join-Path $folder 'second'
+  $source = Join-Path $folder 'genuine.bin'
+  $caught = [System.Collections.Generic.List[string]]::new()
+  function Get-ControlRow([string]$operation, [string]$result, [string]$path) {
+    [pscustomobject]@{ 'Time of Day' = '12:00:00.0000000 PM'; Operation = $operation; Result = $result; Path = $path; Detail = '' }
+  }
+  try {
+    New-Item -ItemType Directory -Force -Path $first, $second | Out-Null
+    Set-Content -Path $source -Value 'control'
+    $looks = @('winspool.drv', 'control.dll', 'control.en', 'control.runtimeconfig.json') |
+      ForEach-Object { Get-ControlRow 'QueryOpen' 'NAME NOT FOUND' (Join-Path $first $_) }
+    $run = [pscustomobject]@{ Label = 'image control'; Build = [pscustomobject]@{ Exe = 'control.exe'; Source = $null }; Folder = $first; Exe = 'control.exe' }
+    $plants = & {
+      function Fail([string]$message) { $caught.Add($message) }
+      @(Get-RunPlants $run ([pscustomobject]@{ Libraries = @(Get-Libraries $looks $first); Loads = @(); Marker = $null }) @() @{} @())
+    }
+    $names = @($plants | ForEach-Object Path | Sort-Object) -join ', '
+    if ($names -ne 'control.dll, winspool.drv') { Fail "The control on images other than a .dll planted '$names', where it should plant control.dll and winspool.drv." }
+    else { Write-Host "  planted for the second pass: $names" }
+
+    foreach ($plant in $plants) { $plant.Source = $source }
+    $placed = @(Add-Plants $second $plants)
+    $rows = @($placed | ForEach-Object { Get-ControlRow 'QueryOpen' 'SUCCESS' $_.Path }) +
+      @(Get-ControlRow 'Load Image' 'SUCCESS' (Join-Path $second 'winspool.drv'))
+    $libraries = @(Get-Libraries $rows $second)
+    $read = [pscustomobject]@{ Libraries = $libraries; Loads = @($libraries | Where-Object Operation -eq 'Load Image'); Marker = $null }
+    $run = [pscustomobject]@{ Label = 'image control'; Build = $run.Build; Folder = $second; Exe = 'control.exe'; Placed = $placed; BundleFiles = @() }
+    & {
+      function Fail([string]$message) { $caught.Add($message) }
+      Test-PlantedRun $run $read
+    }
+  }
+  finally { Remove-Item -LiteralPath $folder -Recurse -Force -ErrorAction SilentlyContinue }
+  $must = "image control loaded the planted $(Join-Path $second 'winspool.drv'), row "
+  $hits = @($caught | Where-Object { $_.StartsWith($must) })
+  if ($hits.Count -eq 1) { Write-Host "  failed as it must: $($hits[0])" }
+  else { Fail "The control on images other than a .dll failed $($hits.Count) times where one failure names: $must" }
+  foreach ($message in @($caught | Where-Object { -not $_.StartsWith($must) })) { Fail "The control on images other than a .dll failed where it must pass: $message" }
 }
