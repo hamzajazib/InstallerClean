@@ -299,6 +299,18 @@ jobs:
         if: success() || failure()
         run: dotnet publish src/InstallerClean.Cli/InstallerClean.Cli.csproj -c Release -r win-x64 --self-contained true -p:RestoreLockedMode=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o publish/cli
 
+      # Reads the four bundles above, framework included, and fails where our code
+      # can reach a Windows library by a search no resolver of ours answers: a call
+      # into framework code that ends at one of CoreLib's ole32 or oleaut32 imports,
+      # a P/Invoke outside InstallerClean.Interop.Native, an unlisted NativeLibrary
+      # call, a package added or importing a new library, or a reference to
+      # System.Net.Quic. The script says what each check reads and builds the planted
+      # assembly every check must catch.
+      - name: Check what the builds' code can reach in Windows libraries
+        if: success() || failure()
+        shell: pwsh
+        run: ./scripts/check-native-imports.ps1
+
       # Here rather than with the other guards because it reads the three
       # published files, which do not exist until the steps above have run. A
       # satellite that never reaches an artefact leaves the source resx present
