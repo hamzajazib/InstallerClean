@@ -402,7 +402,7 @@ function Read-UserStrings([string]$path) {
 function Get-Procmon([string]$folder) {
   New-Item -ItemType Directory -Force -Path $folder | Out-Null
   $path = Join-Path $folder 'Procmon64.exe'
-  Invoke-WebRequest https://live.sysinternals.com/Procmon64.exe -OutFile $path -TimeoutSec 300
+  Invoke-WebRequest https://live.sysinternals.com/Procmon64.exe -OutFile $path -ConnectionTimeoutSeconds 60 -OperationTimeoutSeconds 60
   $sig = Get-AuthenticodeSignature $path
   if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
     throw "Procmon64.exe is not validly signed by Microsoft: $($sig.Status), $($sig.SignerCertificate.Subject)"

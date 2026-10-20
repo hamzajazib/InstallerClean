@@ -156,7 +156,11 @@ jobs:
 
       # native.ps1 names the build as the native-libraries job's command line that
       # checks for updates, so the list's entries for that run apply to the old copy.
+      #
+      # A failure of Process Monitor's own leaves the update and its checks to run, and
+      # the judging step fails on the record that is missing.
       - name: Get Process Monitor and start recording
+        continue-on-error: true
         shell: pwsh
         run: |
           Set-Content -Path (Join-Path $env:RUNNER_TEMP 'native.ps1') -Value @'
@@ -179,7 +183,7 @@ jobs:
         run: |
           $helper = Join-Path $env:RUNNER_TEMP 'run.ps1'
           Set-Content -Path $helper -Value @'
-          function Run([string]$exe) {
+          function Run([string]$exe, [int]$seconds = 0) {
             $info = [System.Diagnostics.ProcessStartInfo]::new($exe, '/s')
             $info.UseShellExecute = $false
             $info.RedirectStandardInput = $true
@@ -189,6 +193,12 @@ jobs:
             $p.StandardInput.Close()
             $out = $p.StandardOutput.ReadToEndAsync()
             $err = $p.StandardError.ReadToEndAsync()
+            if ($seconds -gt 0) {
+              if (-not $p.WaitForExit($seconds * 1000)) {
+                $p.Kill($true)
+                throw "$exe was still running after $seconds s and was ended."
+              }
+            }
             $p.WaitForExit()
             [pscustomobject]@{ ExitCode = $p.ExitCode; Output = $out.Result + $err.Result; Id = $p.Id }
           }
@@ -227,20 +237,24 @@ jobs:
           }
           "RUN_STARTED=$((Get-Date).ToUniversalTime().ToString('o'))" | Add-Content $env:GITHUB_ENV
           $run = Run $env:EXE
-          if ($watch) {
-            New-Item -ItemType File -Path $stop -Force | Out-Null
-            $null = Wait-Job $watch -Timeout 60
-            Receive-Job $watch
-            Remove-Job $watch -Force
-          }
           Set-Content -Path (Join-Path $env:RUNNER_TEMP 'update-run.txt') -Value $run.Output -NoNewline
-          $run.Output
-          "Exit code: $($run.ExitCode)"
           "UPDATE_EXIT=$($run.ExitCode)" | Add-Content $env:GITHUB_ENV
           "UPDATE_PID=$($run.Id)" | Add-Content $env:GITHUB_ENV
+          $run.Output
+          "Exit code: $($run.ExitCode)"
+          if ($watch) {
+            try {
+              New-Item -ItemType File -Path $stop -Force | Out-Null
+              $null = Wait-Job $watch -Timeout 60
+              Receive-Job $watch
+              Remove-Job $watch -Force
+            }
+            catch { "The job watching %TEMP% did not end cleanly: $($_.Exception.Message)" }
+          }
 
       - name: Stop recording
         if: always() && env.PROCMON != ''
+        continue-on-error: true
         shell: pwsh
         run: |
           . (Join-Path $env:RUNNER_TEMP 'native.ps1')
@@ -462,9 +476,10 @@ jobs:
       # setup.tmp it starts from %TEMP%. Their looks are printed and a load from their own
       # folder fails. Their command lines are not printed.
       - name: Judge the DLLs the update looked for
-        if: ${{ !cancelled() && env.UPDATE_RECORD != '' && env.UPDATE_PID != '' }}
+        if: ${{ !cancelled() && env.UPDATE_PID != '' }}
         shell: pwsh
         run: |
+          if (-not $env:UPDATE_RECORD -or -not (Test-Path -LiteralPath $env:UPDATE_RECORD)) { throw "Process Monitor saved no record of the update, so its DLL looks were not judged." }
           . (Join-Path $env:RUNNER_TEMP 'native.ps1')
           # The run takes the build's label, which is how the list matches its entries to it.
           $build = $builds[0]
@@ -472,8 +487,8 @@ jobs:
           $old = [pscustomobject]@{ Label = $build.Label; Build = $build; Folder = (Split-Path $env:EXE); Exe = (Split-Path $env:EXE -Leaf); Id = [int]$env:UPDATE_PID }
           $byProcess = Read-Record $env:UPDATE_RECORD @($old)
           $read = Read-Run $old $byProcess
-          $kept = [System.Collections.Generic.List[int]]::new()
-          $kept.Add($old.Id)
+          $kept = [System.Collections.Generic.List[string]]::new()
+          $kept.Add("$($old.Id)`t$($old.Exe)")
           if ($read) {
             Test-MustLoad $old $read.Loads
             if (-not $read.Marker) { Fail "The old copy showed no act of its own code." }
@@ -494,6 +509,7 @@ jobs:
             # The processes the old copy starts, then the ones they start, by the process
             # ID Process Monitor gives each in its Process Create row.
             $parents = @($old)
+            $fromTemp = @()
             foreach ($depth in 1, 2) {
               $started = @(foreach ($parent in $parents) {
                 foreach ($row in @($byProcess[[string]$parent.Id] | Where-Object Operation -eq 'Process Create')) {
@@ -505,7 +521,7 @@ jobs:
               if (-not $started) { break }
               $byChild = Read-Record $env:UPDATE_RECORD $started
               foreach ($child in $started) {
-                $kept.Add($child.Id)
+                $kept.Add("$($child.Id)`t$($child.Exe)")
                 $childRows = $byChild[[string]$child.Id]
                 "== $($child.Exe), process $($child.Id), started by $($child.Parent), from $($child.Folder)"
                 if (-not $childRows) { Fail "Process Monitor recorded nothing for $($child.Exe), process $($child.Id)."; continue }
@@ -524,16 +540,22 @@ jobs:
               }
               $parents = $started
               $byProcess = $byChild
+              $fromTemp += @($started | Where-Object { (Split-Path $_.Folder -Leaf) -like 'is-*.tmp' })
             }
             if ('${{ matrix.route }}' -eq 'setup' -and -not @($kept | Select-Object -Skip 1)) { Fail "The old copy started no setup that Process Monitor recorded." }
           }
           Set-Content -Path (Join-Path $env:RUNNER_TEMP 'kept-update.txt') -Value $kept
 
           if ('${{ matrix.route }}' -eq 'setup') {
-            "== The folders Inno Setup's loader made in %TEMP% during the update (path, owner, permissions):"
+            "== The is-*.tmp folders made in %TEMP% during the update (path, owner, permissions):"
             $made = @(Get-Content (Join-Path $env:RUNNER_TEMP 'setup-temp.txt') -ErrorAction SilentlyContinue | Where-Object { $_ })
-            if (-not $made) { Fail "No is-*.tmp folder was seen in %TEMP% while the update ran." }
             foreach ($line in $made) { "  $line" }
+            if (-not $fromTemp) { Fail "No process the setup started ran from an is-*.tmp folder." }
+            foreach ($child in $fromTemp) {
+              $line = @($made | Where-Object { ($_ -split "`t")[0] -eq $child.Folder })
+              if ($line) { "  $($child.Exe), process $($child.Id), ran from $($child.Folder), the folder printed above" }
+              else { Fail "$($child.Exe), process $($child.Id), ran from $($child.Folder), which the watch on %TEMP% did not see made, so its permissions are not known." }
+            }
           }
           Exit-IfFailed
 
@@ -546,12 +568,14 @@ jobs:
       # found, gone or changed. Its exit code and output are the newer version's and are
       # not judged; the entries the crash log gains are printed.
       - name: Update again with the genuine files planted
-        if: ${{ !cancelled() && matrix.route == 'download' && env.UPDATE_RECORD != '' }}
+        if: ${{ !cancelled() && matrix.route == 'download' && env.UPDATE_PID != '' }}
         shell: pwsh
         run: |
           . (Join-Path $env:RUNNER_TEMP 'native.ps1')
           . (Join-Path $env:RUNNER_TEMP 'run.ps1')
-          $plan = Get-Content -Raw (Join-Path $env:RUNNER_TEMP 'plants.json') | ConvertFrom-Json
+          $plantsFile = Join-Path $env:RUNNER_TEMP 'plants.json'
+          if (-not (Test-Path $plantsFile)) { throw "The judging step wrote nothing to plant." }
+          $plan = Get-Content -Raw $plantsFile | ConvertFrom-Json
           $build = $builds[0]
 
           if ([System.Diagnostics.EventLog]::SourceExists('InstallerClean')) { [System.Diagnostics.EventLog]::DeleteEventSource('InstallerClean') }
@@ -572,13 +596,13 @@ jobs:
           })
 
           Start-Record 'second'
-          $run = Run $exe
-          $csv = Stop-Record 'second'
+          try { $run = Run $exe 600 }
+          finally { $csv = Stop-Record 'second' }
           "  the run exited with $($run.ExitCode)"
 
           $old = [pscustomobject]@{ Label = $build.Label; Build = $build; Folder = $folder; Exe = 'installerclean-cli.exe'; Id = $run.Id
             Placed = $placed; BundleFiles = @($plan.BundleFiles | Where-Object { $_ }) }
-          Set-Content -Path (Join-Path $env:RUNNER_TEMP 'kept-second.txt') -Value $old.Id
+          Set-Content -Path (Join-Path $env:RUNNER_TEMP 'kept-second.txt') -Value "$($old.Id)`t$($old.Exe)"
           $byProcess = Read-Record $csv @($old)
           $read = Read-Run $old $byProcess
           if ($read) {
@@ -598,9 +622,10 @@ jobs:
           }
           Exit-IfFailed
 
-      # Only the rows of the processes judged are kept, with the Detail of each Process
-      # Start and Process Create row emptied, since those carry a process's environment
-      # and its command line. The artifact is public.
+      # Only the rows of the processes judged are kept, each matched by its process ID and
+      # its name, since Windows can give a later process an ID an earlier one had. The
+      # Detail of each Process Start and Process Create row is emptied, since those carry
+      # a process's environment and its command line. The artifact is public.
       - name: Keep the Process Monitor rows
         if: always() && env.PROCMON != ''
         shell: pwsh
@@ -611,8 +636,10 @@ jobs:
             $csv = Join-Path $env:RUNNER_TEMP "procmon\$name.csv"
             $ids = Join-Path $env:RUNNER_TEMP "kept-$name.txt"
             if (-not (Test-Path $csv) -or -not (Test-Path $ids)) { "  no $name record to keep"; continue }
-            $pids = @(Get-Content $ids | Where-Object { $_ })
-            $rows = @(Import-Csv $csv | Where-Object { $_.PID -in $pids } | ForEach-Object {
+            $pids = @(Get-Content $ids | Where-Object { $_ } | ForEach-Object { ($_ -split "`t")[0] })
+            $names = @{}
+            foreach ($line in @(Get-Content $ids | Where-Object { $_ })) { $id, $name = $line -split "`t"; $names[$id] = $name }
+            $rows = @(Import-Csv $csv | Where-Object { $_.PID -in $pids -and $_.'Process Name' -eq $names[$_.PID] } | ForEach-Object {
               if ($_.Operation -in 'Process Start', 'Process Create') { $_.Detail = '' }
               $_
             })
@@ -629,8 +656,9 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      # The step above prints all of this itself, unless it stopped before its
-      # end.
+      # "Check the result" prints all of this itself, unless it stopped before its
+      # end. On the command line's own download the entries of the update made again
+      # with the files planted come after the first update's.
       - name: Print the crash log and the Application log
         if: failure()
         shell: pwsh
