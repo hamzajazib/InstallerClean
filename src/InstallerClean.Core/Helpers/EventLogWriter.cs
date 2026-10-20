@@ -30,6 +30,8 @@ internal static class EventLogWriter
     /// </summary>
     internal const string SourceName = "InstallerClean";
 
+    private const string ApplicationLog = "Application";
+
     /// <summary>
     /// Sticky flag: set true on the first Write that fails (source
     /// creation denied by Group Policy, event-log service stopped,
@@ -69,8 +71,8 @@ internal static class EventLogWriter
     /// <see cref="CliContract.EventIdFor"/> / <see cref="CliContract.EntryTypeFor"/>).
     /// Never throws; a failed write (source creation denied, event log
     /// service stopped, non-Windows host, source mapped to a non-Application
-    /// log) is swallowed, and recorded in <see cref="LastFailure"/>, because the
-    /// primary output channel is stdout, not the event log.
+    /// log) is swallowed because the primary output channel is stdout, not
+    /// the event log. What refused is recorded in <see cref="LastFailure"/>.
     /// </summary>
     /// <param name="buildEntry">
     /// Builds the entry text, and it is a callback rather than a built string so
@@ -92,7 +94,8 @@ internal static class EventLogWriter
             }
             if (!EnsureSourceMappedToApplicationLog(ref step, out var mappedLog))
             {
-                Refused($"the source is registered against the {mappedLog} log, not Application");
+                EventLogUnavailable = true;
+                LastFailure = $"the source is registered against the log '{mappedLog}', not {ApplicationLog}";
                 return;
             }
             step = "writing the entry";
@@ -101,16 +104,19 @@ internal static class EventLogWriter
         }
         catch (Exception e)
         {
-            Refused($"{step} threw {e.GetType().FullName} (HResult 0x{e.HResult:X8}): {e.Message}");
+            EventLogUnavailable = true;
             // Stdout is the primary channel; silent failure here keeps the
             // CLI working on hosts where the event log isn't writable.
+            try
+            {
+                LastFailure = $"{step} threw {e.GetType().FullName} (HResult 0x{e.HResult:X8}): {e.Message}";
+            }
+            catch
+            {
+                // An exception whose message cannot be read leaves the step alone recorded.
+                LastFailure = step;
+            }
         }
-    }
-
-    private static void Refused(string failure)
-    {
-        EventLogUnavailable = true;
-        LastFailure = failure;
     }
 
     /// <summary>
@@ -165,12 +171,12 @@ internal static class EventLogWriter
         if (!EventLog.SourceExists(SourceName))
         {
             step = "registering the source";
-            EventLog.CreateEventSource(SourceName, "Application");
-            mappedLog = "Application";
+            EventLog.CreateEventSource(SourceName, ApplicationLog);
+            mappedLog = ApplicationLog;
             return true;
         }
         step = "reading which log the source is registered against";
         mappedLog = EventLog.LogNameFromSourceName(SourceName, ".");
-        return string.Equals(mappedLog, "Application", StringComparison.OrdinalIgnoreCase);
+        return string.Equals(mappedLog, ApplicationLog, StringComparison.OrdinalIgnoreCase);
     }
 }

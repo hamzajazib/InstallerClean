@@ -51,6 +51,24 @@ public class EventLogWriterTests
     }
 
     [Fact]
+    public void A_sink_that_throws_is_recorded_as_the_step_that_refused()
+    {
+        using (EventLogRecorder.FreshLogState())
+        {
+            EventLogWriter.Sink = (_, _) => throw new InvalidOperationException("The log refused the entry.");
+
+            var escaped = Record.Exception(() => EventLogWriter.Write(CliEventClass.Ok, () => "an entry"));
+
+            Assert.Null(escaped);
+            Assert.True(EventLogWriter.EventLogUnavailable);
+            Assert.Equal(
+                "handing the entry to the sink threw System.InvalidOperationException (HResult 0x80131509): "
+                    + "The log refused the entry.",
+                EventLogWriter.LastFailure);
+        }
+    }
+
+    [Fact]
     public void The_recorder_is_the_writers_sink_for_the_whole_suite()
     {
         // Set when the assembly loads. If it were not, a test driving the command
