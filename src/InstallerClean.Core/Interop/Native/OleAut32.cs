@@ -1,0 +1,30 @@
+using System.Runtime.InteropServices;
+
+namespace InstallerClean.Interop.Native;
+
+/// <summary>
+/// P/Invoke surface for oleaut32.dll's BSTR allocation, through the same source-generated
+/// <see cref="LibraryImportAttribute"/> stubs as <see cref="Kernel32"/>.
+/// Consumed by <see cref="Helpers.Bstrs"/>.
+/// </summary>
+/// <remarks>
+/// A BSTR is made and freed here rather than with <see cref="Marshal.StringToBSTR"/> and
+/// <see cref="Marshal.FreeBSTR"/>, which call oleaut32 through .NET's own imports, and
+/// those imports search for oleaut32 without going through this assembly's resolver.
+/// </remarks>
+internal static partial class OleAut32
+{
+    private const string Library = "oleaut32.dll";
+
+    /// <summary>
+    /// A new BSTR of <paramref name="len"/> characters, copied from <paramref name="src"/>
+    /// where it is not null and left for the caller to fill where it is, with a null
+    /// character after the last. Returns zero where the memory could not be allocated.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "SysAllocStringLen")]
+    public static partial IntPtr SysAllocStringLen(IntPtr src, uint len);
+
+    /// <summary>Frees a BSTR made by SysAllocStringLen. A null pointer is ignored.</summary>
+    [LibraryImport(Library, EntryPoint = "SysFreeString")]
+    public static partial void SysFreeString(IntPtr bstrString);
+}

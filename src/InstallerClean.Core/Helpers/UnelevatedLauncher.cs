@@ -210,7 +210,7 @@ internal static class UnelevatedLauncher
             //    The four optional VARIANT arguments are VT_EMPTY (default),
             //    selecting no extra args, no working directory, the default
             //    "open" verb and the default show command.
-            bstrUrl = Marshal.StringToBSTR(url);
+            bstrUrl = Bstrs.FromString(url);
             hr = shellDispatch.ShellExecute(bstrUrl, default, default, default, default);
             if (hr < 0)
             {
@@ -221,7 +221,7 @@ internal static class UnelevatedLauncher
         }
         finally
         {
-            if (bstrUrl != IntPtr.Zero) Marshal.FreeBSTR(bstrUrl);
+            Bstrs.Free(bstrUrl);
             // ComObject is not IDisposable; FinalRelease() releases the
             // wrapper's own reference and works because each wrapper was
             // created with UniqueInstance.

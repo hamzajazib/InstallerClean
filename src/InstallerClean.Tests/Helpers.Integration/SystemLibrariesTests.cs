@@ -36,6 +36,7 @@ public class SystemLibrariesTests
     [InlineData("rstrtmgr.dll")]
     [InlineData("shell32.dll")]
     [InlineData("ole32.dll")]
+    [InlineData("oleaut32.dll")]
     public void A_library_is_loaded_from_System32(string name)
     {
         var handle = SystemLibraries.Resolve(name, typeof(SystemLibraries).Assembly, null);
