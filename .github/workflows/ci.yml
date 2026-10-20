@@ -1025,7 +1025,7 @@ jobs:
           }
 
           # A single-file bundle's bytes and its manifest's header: the entry count and where
-          # the deps.json is, with a reader at the first entry. The host finds the manifest by
+          # the deps.json and the runtimeconfig.json are, with a reader at the first entry. The host finds the manifest by
           # the 32-byte bundle signature, which the SDK writes after the manifest's offset.
           function Read-BundleHeader([string]$path) {
             $data = [IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $path).Path)
@@ -2042,11 +2042,10 @@ jobs:
       # offset and size its manifest's header gives. The three shipped builds must have
       # System.Net.SocketsHttpHandler.Http3Support and System.Net.Http.EnableActivityPropagation
       # set to false, and System.StartupHookProvider.IsSupported set to false; the three builds
-      # the start-up hook step publishes with hooks allowed must have the last set to true, so
-      # the step reads values the build wrote rather than finding one it assumed. Each bundle's
-      # offset and size are printed with the three values. A bundle with no runtimeconfig, one
+      # the start-up hook step publishes with hooks allowed must have the last set to true.
+      # Each bundle's offset and size are printed with the values read. A bundle with no runtimeconfig, one
       # that does not parse, or one missing any of the keys fails the step.
-      - name: Check each build's runtimeconfig turns HTTP/3 and HTTP activities off
+      - name: Check each build's runtimeconfig for HTTP/3, HTTP activities and start-up hooks
         if: ${{ !cancelled() }}
         shell: pwsh
         run: |
@@ -2066,7 +2065,10 @@ jobs:
           foreach ($bundle in $bundles) {
             Write-Host "== $($bundle.Label)"
             try {
-              if (-not (Test-Path -LiteralPath $bundle.Exe)) { throw "$($bundle.Exe) does not exist." }
+              if (-not (Test-Path -LiteralPath $bundle.Exe)) {
+                $from = if ($bundle.Exe.StartsWith($allowed)) { ', which the start-up hook step publishes' } else { '' }
+                throw "$($bundle.Exe) does not exist$from."
+              }
               $header = Read-BundleHeader $bundle.Exe
               $header.Reader.Dispose()
               if ($header.ConfigSize -le 0 -or $header.ConfigOffset -le 0 -or $header.ConfigOffset + $header.ConfigSize -gt $header.Data.Length) {
