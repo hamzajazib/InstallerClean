@@ -21,19 +21,19 @@
 # from loose files beside the exe, so a load after the rename would succeed there
 # and this workflow would pass over code the shipped build cannot run.
 #
-# Process Monitor records the update, and the DLLs the old copy looks for and loads
-# are judged with the functions and the list in scripts/native-libraries.ps1, as the
-# native-libraries job in ci.yml judges the command line's run that checks for
-# updates: the same exe, built from the same code. On the setup's copy the setup the
-# old copy downloads and starts is judged too, with the setup.tmp Inno Setup's loader
-# writes into %TEMP% and starts, and that folder's permissions are printed as the
-# setup made them. Nothing of the newer version is judged, since it is the release.
-# On the command line's own download the update is then made again from a copy of
-# this build in a folder of its own, with the genuine file planted at every path the
-# first update looked at for a DLL and the list does not name, hostfxr.dll and
-# hostpolicy.dll aside, and the job fails where the old copy reads or loads one. A
-# copy in Program Files, the setup's, is not planted for, since only an administrator
-# can write a file there.
+# Process Monitor records the update, and the files the old copy looks for to load and
+# the images it loads are judged with the functions and the list in
+# scripts/native-libraries.ps1, as the native-libraries job in ci.yml judges the
+# command line's run that checks for updates: the same exe, built from the same code.
+# On the setup's copy the setup the old copy downloads and starts is judged too, with
+# the setup.tmp Inno Setup's loader writes into %TEMP% and starts, and that folder's
+# permissions are printed as the setup made them. Nothing of the newer version is
+# judged, since it is the release. On the command line's own download the update is
+# then made again from a copy of this build in a folder of its own, with the genuine
+# file planted at every path the first update looked at for a file to load and the
+# list does not name, hostfxr.dll and hostpolicy.dll aside, and the job fails where
+# the old copy reads or loads one. A copy in Program Files, the setup's, is not
+# planted for, since only an administrator can write a file there.
 #
 # It runs apart from ci.yml because it reaches GitHub for the release. A run that
 # cannot reach GitHub fails here, with the command line's own output saying
@@ -432,10 +432,10 @@ jobs:
 
       # The old copy is judged by its process ID, which the newer version, run from the
       # same path under the same name, does not share. The job fails where the old copy
-      # loads a DLL from its own folder, and where it shows no act of its own code or never loads
-      # winhttp.dll, which would leave too little of the update recorded to judge. Every
-      # look it makes for a DLL in its own folder or under %TEMP%\.net is printed, with
-      # those the list names. The paths of the looks the list does not name are written
+      # loads an image from its own folder other than its own exe, and where it shows no
+      # act of its own code or never loads winhttp.dll, which would leave too little of
+      # the update recorded to judge. Every look it makes for a file to load in its own
+      # folder or under %TEMP%\.net is printed, with those the list names. The paths of the looks the list does not name are written
       # down for the step after this one, which plants them on the command line's own
       # download, less hostfxr.dll and hostpolicy.dll: a build that takes a planted copy
       # of either may not start at all.
@@ -449,11 +449,11 @@ jobs:
       # there earlier in the record. Their command lines are not printed. First these
       # checks are run over a record made up for the purpose, and the job fails unless
       # each fails exactly where it must (Test-SetupControls in native-libraries.ps1).
-      - name: Judge the DLLs the update looked for
+      - name: Judge what the update looked for and loaded
         if: ${{ !cancelled() && env.UPDATE_PID != '' }}
         shell: pwsh
         run: |
-          if (-not $env:UPDATE_RECORD -or -not (Test-Path -LiteralPath $env:UPDATE_RECORD)) { throw "Process Monitor saved no record of the update, so its DLL looks were not judged." }
+          if (-not $env:UPDATE_RECORD -or -not (Test-Path -LiteralPath $env:UPDATE_RECORD)) { throw "Process Monitor saved no record of the update, so its looks were not judged." }
           . (Join-Path $env:RUNNER_TEMP 'native.ps1')
           if ('${{ matrix.route }}' -eq 'setup') { Test-SetupControls }
           # The run takes the build's label, which is how the list matches its entries to it.
@@ -494,7 +494,7 @@ jobs:
       # genuine file at every path the step above wrote down, and makes the update
       # again. The event source the first update registered is deleted first, so this
       # run registers it as the first did and its looks while it does are planted for
-      # too. The job fails where the old copy reads or loads a planted file or any DLL its
+      # too. The job fails where the old copy reads or loads a planted file or any image its
       # bundle did not put under %TEMP%\.net, and where a plant was not looked for, not
       # found, gone or changed. Its exit code and output are the newer version's and are
       # not judged; the entries the crash log gains are printed.

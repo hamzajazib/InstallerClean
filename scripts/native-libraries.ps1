@@ -1,6 +1,6 @@
 # native-libraries.ps1: Process Monitor, and the functions that record a build with it
-# and judge which DLLs the build looked for and loaded: the native-libraries job in
-# ci.yml, and the update self-update.yml performs.
+# and judge which files the build looked for to load and which images it loaded: the
+# native-libraries job in ci.yml, and the update self-update.yml performs.
 #
 # A workflow writes native.ps1, which defines $builds and then dot-sources this file, and
 # each step that records or judges a build dot-sources native.ps1. $builds holds each
@@ -78,10 +78,51 @@ function Invoke-Build($build, [string]$label, [string]$folder) {
   $p.Id
 }
 
+# The path Windows gives $path in full, from GetLongPathName, which needs it to exist,
+# or nothing where Windows does not answer. Get-ShortName is the same from
+# GetShortPathName.
+function Get-LongName([string]$path) { Invoke-PathName 'GetLongPathNameW' $path }
+function Get-ShortName([string]$path) { Invoke-PathName 'GetShortPathNameW' $path }
+
+function Invoke-PathName([string]$function, [string]$path) {
+  if (-not ('NativeLibraries.PathNames' -as [type])) {
+    Add-Type -Namespace NativeLibraries -Name PathNames -MemberDefinition @'
+[DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] public static extern uint GetLongPathNameW(string path, System.Text.StringBuilder buffer, uint size);
+[DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] public static extern uint GetShortPathNameW(string path, System.Text.StringBuilder buffer, uint size);
+'@
+  }
+  $buffer = [System.Text.StringBuilder]::new(32768)
+  $length = [NativeLibraries.PathNames]::$function($path, $buffer, [uint32]$buffer.Capacity)
+  if ($length -eq 0 -or $length -ge $buffer.Capacity) { return }
+  $buffer.ToString()
+}
+
+# A record path on a drive written in full where it has a part holding '~'. A failed
+# open is recorded as the process spelled it, short names included, as in
+# C:\Users\RUNNER~1. The path up to and including its last such part is given in full
+# by Get-LongName, so that part has to exist when the record is read. Answers the path
+# unchanged where it has no such part, and nothing where that part is not given in
+# full. Each part looked up is kept in $longParts, and each one used in $usedParts.
+$longParts = @{}
+$usedParts = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+function Get-FullPath([string]$path) {
+  if ($path -notmatch '^[A-Za-z]:\\' -or -not $path.Contains('~')) { return $path }
+  $parts = $path.Split('\')
+  $last = -1
+  for ($i = 0; $i -lt $parts.Count; $i++) { if ($parts[$i].Contains('~')) { $last = $i } }
+  $short = $parts[0..$last] -join '\'
+  if (-not $longParts.ContainsKey($short)) { $longParts[$short] = Get-LongName $short }
+  if ($null -eq $longParts[$short]) { return }
+  $null = $usedParts.Add($short)
+  $longParts[$short] + $path.Substring($short.Length)
+}
+
 # Each run's rows, by process. Process Monitor writes the record in event order,
 # so a row's place among its process's rows is its place in that sequence. Rows
 # are taken by process ID as well as name, since other processes on the runner
-# can carry the same name.
+# can carry the same name. Each path is written in full by Get-FullPath, and the
+# step fails, naming the path, where one cannot be, so a look spelled in short names
+# is judged with the rest.
 function Read-Record([string]$csv, [object[]]$runs) {
   $exes = @{}
   foreach ($run in $runs) {
@@ -90,38 +131,61 @@ function Read-Record([string]$csv, [object[]]$runs) {
   }
   $shared = @($runs | Group-Object { [string]$_.Id } | Where-Object Count -gt 1 | ForEach-Object Name)
   $byProcess = @{}
+  $usedParts.Clear()
+  $unwritten = [ordered]@{}
   Import-Csv $csv | ForEach-Object {
     $exe = $exes[$_.PID]
     if ($exe -and $_.'Process Name' -eq $exe -and $_.PID -notin $shared) {
       if (-not $byProcess.ContainsKey($_.PID)) { $byProcess[$_.PID] = [System.Collections.Generic.List[object]]::new() }
+      $full = if ($_.Path.Contains('~')) { Get-FullPath $_.Path } else { $_.Path }
+      if ($null -eq $full) { if (-not $unwritten.Contains($_.Path)) { $unwritten[$_.Path] = "$exe, process $($_.PID)" } }
+      else { $_.Path = $full }
       $byProcess[$_.PID].Add($_)
     }
   }
   Write-Host "Process Monitor recorded $([int]($byProcess.Values | Measure-Object -Property Count -Sum).Sum) operations by the builds."
+  foreach ($short in $usedParts) { Write-Host "  paths under $short are read in full, under $($longParts[$short])" }
+  foreach ($path in $unwritten.Keys) { Fail "$($unwritten[$path]): Process Monitor recorded $path, which could not be written in full, so the looks there were not judged." }
   $byProcess
 }
 
-# The extensions a look is judged under as one for an image: a library's, and those
-# of printer and other drivers, ActiveX controls, Control Panel items, DirectShow
-# filters, audio codecs, input methods, telephony providers and screen savers. An .exe
-# is not among them: Windows starts one as a process of its own rather than mapping it
-# into the process that names it.
-$imageExtensions = '.dll', '.drv', '.ocx', '.cpl', '.ax', '.acm', '.ime', '.tsp', '.scr'
+# Looks beside a run's exe or under %TEMP%\.net that are for data rather than for a
+# file to load, by exact extension. Any other look there, whatever its extension, is
+# one for a file the run could load, since Windows maps whatever file it is named.
+$dataExtensions = [System.Collections.Generic.HashSet[string]]::new([string[]]@(
+    # The runtime's runtimeconfig.json and deps.json, and the manifests the window
+    # looks for beside itself.
+    '.json',
+    # The symbols a Debug build carries beside itself.
+    '.pdb',
+    # .NET's own configuration, as InstallerClean.dll.config and Config\machine.config.
+    '.config',
+    # The language files Inno Setup's setup and setup.tmp look for beside themselves,
+    # as InstallerClean-<version>-setup.en, .ENU and .en-US.
+    '.en', '.enu', '.en-US'
+  ), [StringComparer]::OrdinalIgnoreCase)
 
-function Test-ImageName([string]$path) {
-  [IO.Path]::GetExtension($path.Replace('\', '/')) -in $imageExtensions
-}
-
-# Every row naming an image file in a run's own folder or under %TEMP%\.net, where a
-# single-file build extracts its own libraries, and every image file it loaded from
-# anywhere.
-function Get-Libraries($rows, [string]$folder) {
+# Every look for a file in a run's own folder or under %TEMP%\.net, where a single-file
+# build extracts its own libraries, and every image it loaded from anywhere but its own
+# exe. A look is left out where it is for data, by $dataExtensions; where it is for the
+# run's own exe or the exe's .old or .new copy beside it; and where it is at a path the
+# run opens as a folder or has rows under, as the folders a bundle extracts into.
+function Get-Libraries($rows, [string]$folder, [string]$exe) {
   $own = $folder.TrimEnd('\') + '\'
+  $self = $own + $exe
+  # A path the run opens as a directory, or one another of its rows lies under.
+  $folders = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+  foreach ($row in $rows) {
+    if ($row.Operation -eq 'CreateFile' -and $row.Detail -match '(Options: |, )Directory(,| File|$)') { $null = $folders.Add($row.Path) }
+    if (-not ($row.Path.StartsWith($own, 'OrdinalIgnoreCase') -or $row.Path -match '\\\.net\\')) { continue }
+    for ($at = $row.Path.LastIndexOf('\'); $at -gt 0 -and $folders.Add($row.Path.Substring(0, $at)); $at = $row.Path.LastIndexOf('\', $at - 1)) { }
+  }
   for ($i = 0; $i -lt $rows.Count; $i++) {
     $row = $rows[$i]
-    if (-not (Test-ImageName $row.Path)) { continue }
     $place = if ($row.Path.StartsWith($own, 'OrdinalIgnoreCase')) { 'own' } elseif ($row.Path -match '\\\.net\\') { 'extraction' } else { 'elsewhere' }
-    if ($place -eq 'elsewhere' -and $row.Operation -ne 'Load Image') { continue }
+    if ($row.Operation -eq 'Load Image') { if ($row.Path -eq $self) { continue } }
+    elseif ($place -eq 'elsewhere' -or $folders.Contains($row.Path) -or $dataExtensions.Contains([IO.Path]::GetExtension($row.Path)) -or
+      ($place -eq 'own' -and $row.Path -in $self, "$self.old", "$self.new")) { continue }
     [pscustomobject]@{
       Index = $i + 1; Place = $place; Operation = $row.Operation; Result = $row.Result
       Relative = $(if ($place -eq 'own') { $row.Path.Substring($own.Length) })
@@ -210,7 +274,7 @@ function Read-Run($run, $byProcess) {
   $rows = $byProcess[[string]$run.Id]
   if (-not $rows) { Fail "$($run.Label): Process Monitor recorded nothing for process $($run.Id)."; return }
   Write-Host "  $($rows.Count) operations"
-  $libraries = @(Get-Libraries $rows $run.Folder)
+  $libraries = @(Get-Libraries $rows $run.Folder $run.Exe)
   if ($run.Build.Source) {
     $markers = Get-Marker $rows $run
     Show-Libraries $libraries $markers.First $markers.Main $rows[0].'Time of Day'
@@ -735,7 +799,7 @@ function Test-StartedProcesses([string]$csv, $parent, $parentRows, [string]$skip
       $all.Add($child)
       Write-Host "== $($child.Exe), process $($child.Id), started by $($child.Parent), from $($child.Folder)"
       if ($child.StartedAs -ne $image[0].Path) { Write-Host "  started as $($child.StartedAs)" }
-      Show-Looks @(Get-Libraries $rows $child.Folder) $rows[0].'Time of Day'
+      Show-Looks @(Get-Libraries $rows $child.Folder $child.Exe) $rows[0].'Time of Day'
       $child.TempFolders = @(Test-OwnLoads $child $rows)
       [pscustomobject]@{ Run = $child; Rows = $rows }
     }
@@ -810,6 +874,30 @@ function Show-TempFolders([string]$out, $runs) {
   if (-not $ranFromTemp) { Fail "No process the setup started ran from an is-*.tmp folder." }
 }
 
+# Runs $block with Fail collecting each message rather than failing the step. Answers
+# what $block answered, as Output, and the messages, as Caught.
+function Invoke-Caught([scriptblock]$block) {
+  $caught = [System.Collections.Generic.List[string]]::new()
+  $output = & {
+    function Fail([string]$message) { $caught.Add($message) }
+    & $block
+  }
+  [pscustomobject]@{ Output = $output; Caught = $caught }
+}
+
+# Fails the step unless each of $must is part of exactly one of $caught, and for each of
+# $caught that none of $must is part of. $what names the control in each message.
+function Assert-Caught($caught, [string[]]$must, [string]$what) {
+  foreach ($message in $must) {
+    $hits = @($caught | Where-Object { $_.Contains($message) })
+    if ($hits.Count -eq 1) { Write-Host "  failed as it must: $($hits[0])" }
+    else { Fail "The control on $what failed $($hits.Count) times where one failure names: $message" }
+  }
+  foreach ($message in $caught) {
+    if (-not @($must | Where-Object { $message.Contains($_) })) { Fail "The control on $what failed where it must pass: $message" }
+  }
+}
+
 # Runs Test-StartedProcesses and Show-TempFolders over a record made up for the
 # purpose, and fails the step unless each fails exactly where it must. The setup's
 # started process is created under a short-named path, as in C:\Users\RUNNER~1, with
@@ -848,12 +936,6 @@ function Test-SetupControls {
   ) | ForEach-Object {
     [pscustomobject]@{ 'Time of Day' = '12:00:00.0000000 PM'; 'Process Name' = $_[1]; PID = [string]$_[0]; Operation = $_[2]; Path = $_[3]; Result = 'SUCCESS'; Detail = $_[4] }
   }
-  $folder = Join-Path ([IO.Path]::GetTempPath()) ('setup-controls-' + [guid]::NewGuid().ToString('N'))
-  New-Item -ItemType Directory -Force -Path $folder | Out-Null
-  $csv = Join-Path $folder 'record.csv'
-  $out = Join-Path $folder 'temp.txt'
-  $rows | Export-Csv -Path $csv -NoTypeInformation
-  Set-Content -Path $out -Value "$own`towner control`tD:P", "$other`towner control`tD:P"
   $parent = [pscustomobject]@{ Exe = 'control-setup.exe'; Id = 200; Folder = 'C:\Control'; TempFolders = @() }
   $parentRows = @(
     [pscustomobject]@{ Operation = 'CreateFile'; Path = "$temp\is-DDDD.tmp\loader.dll"; Detail = $created },
@@ -861,10 +943,14 @@ function Test-SetupControls {
     [pscustomobject]@{ Operation = 'Process Create'; Path = 'C:\Users\RUNNER~1\AppData\Local\Temp\is-AAAA.tmp\control.tmp'; Detail = 'PID: 201' },
     [pscustomobject]@{ Operation = 'Process Create'; Path = 'C:\PROGRA~1\Control\skipped.exe'; Detail = 'PID: 202' },
     [pscustomobject]@{ Operation = 'Process Create'; Path = 'C:\Control\noimage.exe'; Detail = 'PID: 203' })
-  $caught = [System.Collections.Generic.List[string]]::new()
+  $folder = Join-Path ([IO.Path]::GetTempPath()) ('setup-controls-' + [guid]::NewGuid().ToString('N'))
   try {
-    $started = & {
-      function Fail([string]$message) { $caught.Add($message) }
+    New-Item -ItemType Directory -Force -Path $folder | Out-Null
+    $csv = Join-Path $folder 'record.csv'
+    $out = Join-Path $folder 'temp.txt'
+    $rows | Export-Csv -Path $csv -NoTypeInformation
+    Set-Content -Path $out -Value "$own`towner control`tD:P", "$other`towner control`tD:P"
+    $result = Invoke-Caught {
       $parent.TempFolders = @(Test-OwnLoads $parent $parentRows)
       $runs = @(Test-StartedProcesses $csv $parent $parentRows $skip)
       Show-TempFolders $out (@($parent) + $runs)
@@ -872,70 +958,100 @@ function Test-SetupControls {
     }
   }
   finally { Remove-Item -LiteralPath $folder -Recurse -Force -ErrorAction SilentlyContinue }
-  $must = @(
+  Assert-Caught $result.Caught @(
     "loaded $own\planted.dll from its own folder",
     "loaded $own\opened.dll from its own folder",
     "loaded $other\uncreated.dll from the is-*.tmp folder $other, which it did not create there",
     "loaded images from $unseen, which the watch",
     "control-setup.exe, process 200, loaded images from $temp\is-DDDD.tmp, which the watch",
-    'noimage.exe, process 203, started as C:\Control\noimage.exe: Process Monitor recorded no load of its image')
-  foreach ($message in $must) {
-    $hits = @($caught | Where-Object { $_.Contains($message) })
-    if ($hits.Count -eq 1) { Write-Host "  failed as it must: $($hits[0])" }
-    else { Fail "The control on a setup's processes failed $($hits.Count) times where one failure names: $message" }
-  }
-  foreach ($message in $caught) {
-    if (-not @($must | Where-Object { $message.Contains($_) })) { Fail "The control on a setup's processes failed where it must pass: $message" }
-  }
-  $child = @($started | Where-Object Id -eq 201)
+    'noimage.exe, process 203, started as C:\Control\noimage.exe: Process Monitor recorded no load of its image') "a setup's processes"
+  $child = @($result.Output | Where-Object Id -eq 201)
   if ($child.Count -ne 1 -or $child[0].Folder -ne $own) { Fail "The control's setup.tmp was not judged from its own folder $own." }
-  if (@($started | Where-Object Id -eq 202)) { Fail "The control's process at $skip was judged, where it is to be left out." }
+  if (@($result.Output | Where-Object Id -eq 202)) { Fail "The control's process at $skip was judged, where it is to be left out." }
 }
 
 # Runs Get-Libraries, Get-RunPlants and Test-PlantedRun over records made up for the
-# purpose, and fails the step unless a look beside the exe for winspool.drv and for a
-# .dll is planted for and nothing else is, and a load of the planted winspool.drv in the
-# second pass fails while the planted .dll, looked for and not loaded, passes.
+# purpose. The first pass looks beside the exe for a .dll, an upper-case .OCX, a .drv,
+# an .exe and a dotted name with no extension Windows knows, each of which must be
+# planted for, and for each data name $dataExtensions holds, the exe itself and its
+# .old and .new, and a folder it creates, none of which may be. The second pass must
+# fail where it loads the planted .drv and where it loads a file from beside itself
+# that the first pass did not look for, and pass the load of its own exe.
 function Test-ImageNameControls {
-  Write-Host "== Control: the looks for an image other than a .dll"
+  Write-Host "== Control: the looks for a file to load beside a build"
   $folder = Join-Path ([IO.Path]::GetTempPath()) ('image-controls-' + [guid]::NewGuid().ToString('N'))
   $first = Join-Path $folder 'first'
   $second = Join-Path $folder 'second'
   $source = Join-Path $folder 'genuine.bin'
-  $caught = [System.Collections.Generic.List[string]]::new()
-  function Get-ControlRow([string]$operation, [string]$result, [string]$path) {
-    [pscustomobject]@{ 'Time of Day' = '12:00:00.0000000 PM'; Operation = $operation; Result = $result; Path = $path; Detail = '' }
+  function Get-ControlRow([string]$operation, [string]$path, [string]$detail = '') {
+    [pscustomobject]@{ 'Time of Day' = '12:00:00.0000000 PM'; Operation = $operation; Result = 'NAME NOT FOUND'; Path = $path; Detail = $detail }
   }
+  $planted = 'control.dll', 'control.ocx', 'helper.exe', 'system.io.compression.native', 'winspool.drv'
+  $looked = 'control.dll', 'CONTROL.OCX', 'winspool.drv', 'helper.exe', 'System.IO.Compression.Native',
+    'control.runtimeconfig.json', 'control.pdb', 'control.dll.config', 'control.en', 'control.ENU', 'control.en-US',
+    'control.exe', 'control.exe.old', 'control.exe.new', 'work'
   try {
     New-Item -ItemType Directory -Force -Path $first, $second | Out-Null
     Set-Content -Path $source -Value 'control'
-    $looks = @('winspool.drv', 'control.dll', 'control.en', 'control.runtimeconfig.json') |
-      ForEach-Object { Get-ControlRow 'QueryOpen' 'NAME NOT FOUND' (Join-Path $first $_) }
-    $run = [pscustomobject]@{ Label = 'image control'; Build = [pscustomobject]@{ Exe = 'control.exe'; Source = $null }; Folder = $first; Exe = 'control.exe' }
-    $plants = & {
-      function Fail([string]$message) { $caught.Add($message) }
-      @(Get-RunPlants $run ([pscustomobject]@{ Libraries = @(Get-Libraries $looks $first); Loads = @(); Marker = $null }) @() @{} @())
+    $rows = @($looked | ForEach-Object { Get-ControlRow 'QueryOpen' (Join-Path $first $_) }) +
+      @(Get-ControlRow 'CreateFile' (Join-Path $first 'work') 'Desired Access: Read Data/List Directory, Synchronize, Disposition: Create, Options: Directory, Synchronous IO Non-Alert')
+    $run = [pscustomobject]@{ Label = 'image control'; Build = [pscustomobject]@{ Exe = 'control.exe'; Source = 'control.cs' }; Folder = $first; Exe = 'control.exe' }
+    $firstPass = Invoke-Caught {
+      @(Get-RunPlants $run ([pscustomobject]@{ Libraries = @(Get-Libraries $rows $first 'control.exe'); Loads = @(); Marker = $null }) @() @{} @())
     }
+    $plants = @($firstPass.Output)
     $names = @($plants | ForEach-Object Path | Sort-Object) -join ', '
-    if ($names -ne 'control.dll, winspool.drv') { Fail "The control on images other than a .dll planted '$names', where it should plant control.dll and winspool.drv." }
-    else { Write-Host "  planted for the second pass: $names" }
+    if ($firstPass.Caught.Count -or $names -ne ($planted -join ', ')) {
+      foreach ($message in $firstPass.Caught) { Fail "The control on the looks beside a build failed where it must pass: $message" }
+      Fail "The control on the looks beside a build planted '$names', where it should plant $($planted -join ', ')."
+      return
+    }
+    Write-Host "  planted for the second pass: $names"
 
     foreach ($plant in $plants) { $plant.Source = $source }
     $placed = @(Add-Plants $second $plants)
-    $rows = @($placed | ForEach-Object { Get-ControlRow 'QueryOpen' 'SUCCESS' $_.Path }) +
-      @(Get-ControlRow 'Load Image' 'SUCCESS' (Join-Path $second 'winspool.drv'))
-    $libraries = @(Get-Libraries $rows $second)
+    $rows = @($placed | ForEach-Object { [pscustomobject]@{ 'Time of Day' = '12:00:00.0000000 PM'; Operation = 'QueryOpen'; Result = 'SUCCESS'; Path = $_.Path; Detail = '' } }) +
+      @('winspool.drv', 'unlooked.weird', 'control.exe' | ForEach-Object { [pscustomobject]@{ 'Time of Day' = '12:00:00.0000000 PM'; Operation = 'Load Image'; Result = 'SUCCESS'; Path = (Join-Path $second $_); Detail = '' } })
+    $libraries = @(Get-Libraries $rows $second 'control.exe')
     $read = [pscustomobject]@{ Libraries = $libraries; Loads = @($libraries | Where-Object Operation -eq 'Load Image'); Marker = $null }
     $run = [pscustomobject]@{ Label = 'image control'; Build = $run.Build; Folder = $second; Exe = 'control.exe'; Placed = $placed; BundleFiles = @() }
-    & {
-      function Fail([string]$message) { $caught.Add($message) }
-      Test-PlantedRun $run $read
-    }
+    $secondPass = Invoke-Caught { Test-PlantedRun $run $read }
   }
   finally { Remove-Item -LiteralPath $folder -Recurse -Force -ErrorAction SilentlyContinue }
-  $must = "image control loaded the planted $(Join-Path $second 'winspool.drv'), row "
-  $hits = @($caught | Where-Object { $_.StartsWith($must) })
-  if ($hits.Count -eq 1) { Write-Host "  failed as it must: $($hits[0])" }
-  else { Fail "The control on images other than a .dll failed $($hits.Count) times where one failure names: $must" }
-  foreach ($message in @($caught | Where-Object { -not $_.StartsWith($must) })) { Fail "The control on images other than a .dll failed where it must pass: $message" }
+  Assert-Caught $secondPass.Caught @(
+    "image control loaded the planted $(Join-Path $run.Folder 'winspool.drv'), row ",
+    "image control loaded $(Join-Path $run.Folder 'unlooked.weird'), which neither its bundle nor the first pass put there") 'the looks beside a build'
+}
+
+# Runs Read-Record, Get-Libraries and Get-RunPlants over a record made up for the
+# purpose. A look beside the exe spelled under the short name Windows gives the temp
+# folder must be read in full and planted for, and a look under a short part that does
+# not exist must fail, naming the path.
+function Test-ShortNameControls {
+  Write-Host "== Control: looks recorded under short names"
+  $long = Get-LongName ([IO.Path]::GetTempPath().TrimEnd('\'))
+  $short = if ($long) { Get-ShortName $long }
+  if (-not $short -or -not $short.Contains('~')) { Fail "The control on short names could not be made: Windows gives the temp folder $long no short name holding '~'."; return }
+  $folder = "$long\control-short-names"
+  $missing = 'C:\NOSUCH~9\control\helper.dll'
+  $run = [pscustomobject]@{ Label = 'short-name control'; Build = [pscustomobject]@{ Exe = 'control.exe'; Source = $null }; Folder = $folder; Exe = 'control.exe'; Id = 300 }
+  $csv = Join-Path ([IO.Path]::GetTempPath()) ('short-name-control-' + [guid]::NewGuid().ToString('N') + '.csv')
+  try {
+    @(
+      @('Load Image', 'SUCCESS', "$folder\control.exe"),
+      @('QueryOpen', 'NAME NOT FOUND', "$short\control-short-names\winspool.drv"),
+      @('QueryOpen', 'NAME NOT FOUND', $missing)
+    ) | ForEach-Object {
+      [pscustomobject]@{ 'Time of Day' = '12:00:00.0000000 PM'; 'Process Name' = 'control.exe'; PID = '300'; Operation = $_[0]; Path = $_[2]; Result = $_[1]; Detail = '' }
+    } | Export-Csv -Path $csv -NoTypeInformation
+    $result = Invoke-Caught {
+      $rows = (Read-Record $csv @($run))['300']
+      @(Get-RunPlants $run ([pscustomobject]@{ Libraries = @(Get-Libraries $rows $folder 'control.exe'); Loads = @(); Marker = $null }) @() @{} @())
+    }
+  }
+  finally { Remove-Item -LiteralPath $csv -Force -ErrorAction SilentlyContinue }
+  $names = @($result.Output | ForEach-Object Path) -join ', '
+  if ($names -ne 'winspool.drv') { Fail "The control on short names planted '$names', where it should plant winspool.drv, looked for under $short." }
+  else { Write-Host "  planted for the look under ${short}: $names" }
+  Assert-Caught $result.Caught @("Process Monitor recorded $missing, which could not be written in full") 'short names'
 }
