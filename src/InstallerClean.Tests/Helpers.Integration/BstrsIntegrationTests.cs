@@ -16,10 +16,12 @@ public class BstrsIntegrationTests
     [InlineData("a\0b")]
     public void A_BSTR_matches_the_one_Marshal_StringToBSTR_makes(string value)
     {
-        var ours = Bstrs.FromString(value);
-        var theirs = Marshal.StringToBSTR(value);
+        var ours = IntPtr.Zero;
+        var theirs = IntPtr.Zero;
         try
         {
+            ours = Bstrs.FromString(value);
+            theirs = Marshal.StringToBSTR(value);
             Assert.NotEqual(IntPtr.Zero, ours);
             Assert.Equal(Marshal.ReadInt32(theirs, -4), Marshal.ReadInt32(ours, -4));
             Assert.Equal(value.Length * sizeof(char), Marshal.ReadInt32(ours, -4));
