@@ -6,36 +6,21 @@ namespace InstallerClean.Tests.Helpers;
 /// The decision both hosts make before a Move: is there room.
 /// </summary>
 /// <remarks>
-/// WHAT IS LEFT HERE IS NARROWER THAN IT WAS, AND THE LINE MOVED IN 3.0.0.
-/// <c>IsOnInstallerCacheDrive</c> used to compare two path roots and could be
-/// tested as arithmetic; it now asks Windows which volume a folder is on, so
-/// every case that reaches that question has gone to
-/// <c>Helpers.Integration.MoveSpaceCheckIntegrationTests</c> along with the
-/// ancestor walk that was already there.
+/// <c>IsOnInstallerCacheDrive</c> asks Windows which volume a folder is on, so every
+/// case that reaches that question is in
+/// <c>Helpers.Integration.MoveSpaceCheckIntegrationTests</c>, with the ancestor walk.
 ///
-/// What stays is what still touches nothing: the empty guards, the share that
-/// is turned away on its spelling, and the arithmetic of "is this less than
-/// that". EVERY DESTINATION BELOW IS A SHARE OR A BLANK ON PURPOSE, so the
-/// arithmetic is exercised without a volume query deciding the outcome first,
-/// and so a runner whose letters differ cannot change what these tests mean.
+/// What is here is what touches nothing: the empty guards, the share that is
+/// turned away on its spelling, and the arithmetic of "is this less than that".
+/// EVERY DESTINATION BELOW IS A SHARE OR A BLANK ON PURPOSE, so the arithmetic is
+/// exercised without a volume query deciding the outcome first, and so a runner
+/// whose letters differ cannot change what these tests mean.
 ///
-/// THAT LEAVES ONE SIDE OF A SPLIT UNCOVERED IN THIS FILE and it is said here
-/// rather than left for a reader to notice: nothing below sets up a destination
-/// that IS on the cache volume, which is the arm where RefusalFreeSpace returns
-/// null without consulting the measurement at all. That arm is
+/// The arm where RefusalFreeSpace returns null without consulting the measurement,
+/// a destination that IS on the cache volume, is
 /// <c>RefusalFreeSpace_allows_a_same_drive_move_with_no_room_at_all</c> in the
-/// integration file, where it can be built from a real volume.
-///
-/// AND WHAT IT IS BUILT FROM THERE MATTERS TO THIS SENTENCE, WHICH IS WHY IT IS
-/// SAID HERE AND NOT ONLY THERE. That test named the system directory's root
-/// until the method stopped asking about the system directory's volume, so this
-/// file was pointing at a test whose subject was the wrong one. It is now built
-/// under the installer cache folder itself, so its destination is on the cache's
-/// volume on any machine rather than only where nothing is mounted between a
-/// path root and the cache. The arm is therefore covered wherever the suite
-/// runs. What is still not covered is the machine: a volume mounted at
-/// <c>C:\Windows\Installer</c> needs a second volume and administrator rights,
-/// which nothing here or there can build.
+/// integration file, built under the installer cache folder itself so its
+/// destination is on the cache's volume on any machine.
 /// </remarks>
 public class MoveSpaceCheckTests
 {
