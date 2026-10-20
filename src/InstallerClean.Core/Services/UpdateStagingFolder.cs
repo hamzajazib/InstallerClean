@@ -61,7 +61,7 @@ public sealed class UpdateStagingFolder
         if (!Directory.Exists(root))
             throw new IOException("The folder to create the update's folder in does not exist.");
 
-        var path = Path.Combine(root, NamePrefix + Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(root, NamePrefix + Guids.NewGuid().ToString("N"));
 
         if (!Advapi32.ConvertStringSecurityDescriptorToSecurityDescriptor(
                 descriptorSddl, Advapi32.SDDL_REVISION_1, out var descriptor, IntPtr.Zero))

@@ -177,8 +177,8 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
         // its own Ctrl+C, one set before it opened the event included. Where there is no
         // event, the newer version answers Ctrl+C only once it has started.
         var takesSwitches = HandOverContract.TakesHandOverSwitches(toVersion);
-        var cancelId = Guid.NewGuid();
-        var startedId = Guid.NewGuid();
+        var cancelId = Guids.NewGuid();
+        var startedId = Guids.NewGuid();
         using var cancelEvent = takesSwitches ? CreateCancelEvent(cancelId) : null;
         // The event the newer version sets once its own code is running. Where it cannot be
         // made, the newer version is not started: one that cannot be seen to start is not

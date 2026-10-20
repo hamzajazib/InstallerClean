@@ -461,7 +461,7 @@ public static class SelfReplacement
     /// </remarks>
     public static bool HandOverAndEnd(string exePath, string toVersion, TimeSpan? startBound = null)
     {
-        var startedId = Guid.NewGuid();
+        var startedId = Guids.NewGuid();
         var takesSwitch = HandOverContract.TakesHandOverSwitches(toVersion);
         using var startedEvent = takesSwitch ? HandOverContract.CreateStartedEvent(startedId) : null;
         if (takesSwitch && startedEvent is null) return false;
