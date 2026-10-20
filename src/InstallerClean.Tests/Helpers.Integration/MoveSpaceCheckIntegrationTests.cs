@@ -14,10 +14,12 @@ namespace InstallerClean.Tests.Helpers.Integration;
 /// lands here too.
 ///
 /// A VOLUME MOUNTED INTO A FOLDER NEEDS A SECOND VOLUME AND ADMINISTRATOR
-/// RIGHTS, which a test host does not have. What these tests do is put the real
-/// question to a real volume and use the answer, and in particular establish that
-/// a folder which does not exist yet still resolves, which is the property the
-/// command line's first run depends on.
+/// RIGHTS, so the destination-side questions about one are in
+/// <see cref="MoveSpaceCheckMountPointTests"/>, which run where a volume has been
+/// mounted for them. What these tests do is put the real question to the host's
+/// own volumes and use the answer, and in particular establish that a folder
+/// which does not exist yet still resolves, which is the property the command
+/// line's first run depends on.
 ///
 /// THERE ARE TWO SUCH SHAPES: a volume mounted under the folder the user names,
 /// on the DESTINATION side, and a volume mounted at <c>C:\Windows\Installer</c>
