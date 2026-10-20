@@ -1025,8 +1025,9 @@ jobs:
           }
 
           # A single-file bundle's bytes and its manifest's header: the entry count and where
-          # the deps.json and the runtimeconfig.json are, with a reader at the first entry. The host finds the manifest by
-          # the 32-byte bundle signature, which the SDK writes after the manifest's offset.
+          # the deps.json and the runtimeconfig.json are, with a reader at the first entry. The
+          # host finds the manifest by the 32-byte bundle signature, which the SDK writes after
+          # the manifest's offset.
           function Read-BundleHeader([string]$path) {
             $data = [IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $path).Path)
             $signature = [byte[]](0x8b, 0x12, 0x02, 0xb9, 0x6a, 0x61, 0x20, 0x38, 0x72, 0x7b, 0x93, 0x02, 0x14, 0xd7, 0xa0, 0x32,
@@ -2043,8 +2044,8 @@ jobs:
       # System.Net.SocketsHttpHandler.Http3Support and System.Net.Http.EnableActivityPropagation
       # set to false, and System.StartupHookProvider.IsSupported set to false; the three builds
       # the start-up hook step publishes with hooks allowed must have the last set to true.
-      # Each bundle's offset and size are printed with the values read. A bundle with no runtimeconfig, one
-      # that does not parse, or one missing any of the keys fails the step.
+      # Each bundle's offset and size are printed with the values read. A bundle with no
+      # runtimeconfig, one that does not parse, or one missing any of the keys fails the step.
       - name: Check each build's runtimeconfig for HTTP/3, HTTP activities and start-up hooks
         if: ${{ !cancelled() }}
         shell: pwsh
