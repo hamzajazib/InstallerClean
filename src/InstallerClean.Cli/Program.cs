@@ -466,6 +466,10 @@ internal static class Program
                 // The same exit code from a console closed under it is passed on as it is.
                 return ReportCancelledBeforeWork(arg);
             case CommandLineUpdateResult.HandedOver handedOver:
+                // The newer version writes the run's summary. This run's one entry is the
+                // 3005 written as it handed over, so the note is printed here where the log
+                // refused it.
+                NoteEventLogUnavailable();
                 return handedOver.ExitCode;
             case CommandLineUpdateResult.Cancelled:
                 return ReportCancelledBeforeWork(arg);

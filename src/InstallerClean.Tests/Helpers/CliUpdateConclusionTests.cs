@@ -60,6 +60,28 @@ public class CliUpdateConclusionTests
     }
 
     [Fact]
+    public void A_newer_version_that_ran_after_the_log_refused_the_3005_has_the_note_printed_after_it()
+    {
+        var run = Conclude(new CommandLineUpdateResult.HandedOver(0, From, To, "/s"), cancelled: false,
+            logRefuses: true, handOverWritten: true);
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal(new[] { Strings.Cli_EventLogUnavailable }, run.Lines);
+        Assert.Empty(run.Entries);
+    }
+
+    [Fact]
+    public void A_newer_version_that_ran_after_the_log_took_the_3005_has_nothing_printed_after_it()
+    {
+        var run = Conclude(new CommandLineUpdateResult.HandedOver(0, From, To, "/s"), cancelled: false,
+            handOverWritten: true);
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Empty(run.Lines);
+        Assert.Equal(CliEventClass.UpdatedNotice, Assert.Single(run.Entries).Class);
+    }
+
+    [Fact]
     public void Ctrl_C_before_the_newer_version_was_in_place_writes_the_cancelled_runs_entry()
     {
         var run = Conclude(new CommandLineUpdateResult.Cancelled(), cancelled: true, arg: "/d");
@@ -204,8 +226,13 @@ public class CliUpdateConclusionTests
     private sealed record Concluded(
         int? ExitCode, string[] Lines, IReadOnlyList<(CliEventClass Class, string Text)> Entries);
 
+    /// <param name="handOverWritten">
+    /// Whether the 3005 the host writes as it hands over is written first, as it is on a
+    /// real run that ends in <see cref="CommandLineUpdateResult.HandedOver"/>.
+    /// </param>
     private static Concluded Conclude(
-        CommandLineUpdateResult result, bool cancelled, string arg = "/s", bool logRefuses = false)
+        CommandLineUpdateResult result, bool cancelled, string arg = "/s", bool logRefuses = false,
+        bool handOverWritten = false)
     {
         var original = Console.Out;
         using var console = new StringWriter();
@@ -215,6 +242,8 @@ public class CliUpdateConclusionTests
             return CliRunFixtures.WithTheLogRefusing(_ => logRefuses, () =>
             {
                 EventLogRecorder.Clear();
+                if (handOverWritten)
+                    MachineContract.WriteEventLog(CliEventClass.UpdatedNotice, () => "the hand-over's entry");
                 var exitCode = Program.ConcludeUpdate(result, arg, [arg], cancelled);
                 var lines = console.ToString().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
                 return Task.FromResult(new Concluded(exitCode, lines, EventLogRecorder.Entries));

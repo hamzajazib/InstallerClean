@@ -45,8 +45,9 @@ internal static class EventLogWriter
     /// <summary>
     /// What the most recent failed <see cref="Write"/> met, set with
     /// <see cref="EventLogUnavailable"/>: the step that refused, and where it threw, the
-    /// exception's type, HResult and message. Null until a write fails. Neither host reads
-    /// it; the Application-log integration test prints it when its write fails.
+    /// exception's type, HResult and message. Null until a write fails. The first failed
+    /// write in a process writes it to crash.log, and the Application-log integration test
+    /// prints it when its write fails.
     /// </summary>
     internal static string? LastFailure { get; set; }
 
@@ -72,7 +73,8 @@ internal static class EventLogWriter
     /// Never throws; a failed write (source creation denied, event log
     /// service stopped, non-Windows host, source mapped to a non-Application
     /// log) is swallowed because the primary output channel is stdout, not
-    /// the event log. What refused is recorded in <see cref="LastFailure"/>.
+    /// the event log. What refused is recorded in <see cref="LastFailure"/>, and the first
+    /// failed write in a process writes it to crash.log as well.
     /// </summary>
     /// <param name="buildEntry">
     /// Builds the entry text, and it is a callback rather than a built string so
@@ -94,8 +96,9 @@ internal static class EventLogWriter
             }
             if (!EnsureSourceMappedToApplicationLog(ref step, out var mappedLog))
             {
+                var first = !EventLogUnavailable;
                 EventLogUnavailable = true;
-                LastFailure = $"the source is registered against the log '{mappedLog}', not {ApplicationLog}";
+                Record(first, $"the source is registered against the log '{mappedLog}', not {ApplicationLog}", cause: null);
                 return;
             }
             step = "writing the entry";
@@ -104,19 +107,38 @@ internal static class EventLogWriter
         }
         catch (Exception e)
         {
+            var first = !EventLogUnavailable;
             EventLogUnavailable = true;
             // Stdout is the primary channel; silent failure here keeps the
             // CLI working on hosts where the event log isn't writable.
+            string failure;
             try
             {
-                LastFailure = $"{step} threw {e.GetType().FullName} (HResult 0x{e.HResult:X8}): {e.Message}";
+                failure = $"{step} threw {e.GetType().FullName} (HResult 0x{e.HResult:X8}): {e.Message}";
             }
             catch
             {
                 // An exception whose message cannot be read leaves the step alone recorded.
-                LastFailure = step;
+                failure = step;
             }
+            Record(first, failure, e);
         }
+    }
+
+    /// <summary>
+    /// Records <paramref name="failure"/> in <see cref="LastFailure"/>, once the caller has
+    /// marked the log unavailable. Where <paramref name="first"/> says no write in this
+    /// process had failed before, writes the failure to crash.log, with
+    /// <paramref name="cause"/> under it where one was thrown, so a run whose entries never
+    /// arrived leaves the reason on disk once rather than once per entry. Never throws:
+    /// crash.log swallows its own failures.
+    /// </summary>
+    private static void Record(bool first, string failure, Exception? cause)
+    {
+        LastFailure = failure;
+        if (first)
+            CrashLog.TryWrite(new InvalidOperationException(
+                $"An entry was not written to the Application log: {failure}", cause));
     }
 
     /// <summary>

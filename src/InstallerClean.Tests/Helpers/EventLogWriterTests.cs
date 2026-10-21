@@ -69,6 +69,35 @@ public class EventLogWriterTests
     }
 
     [Fact]
+    public void The_first_refused_write_in_a_process_goes_to_the_crash_log_and_a_later_one_does_not()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), "InstallerClean.Tests", Guid.NewGuid().ToString("N"));
+        var suite = CrashLog.FolderForTests;
+        CrashLog.FolderForTests = folder;
+        try
+        {
+            using (EventLogRecorder.FreshLogState())
+            {
+                EventLogWriter.Sink = (_, _) => throw new InvalidOperationException("The log refused the entry.");
+
+                EventLogWriter.Write(CliEventClass.UpdatedNotice, () => "the first entry");
+                EventLogWriter.Write(CliEventClass.Ok, () => "the second entry");
+            }
+
+            var log = File.ReadAllText(Path.Combine(folder, "crash.log"));
+            const string line = "An entry was not written to the Application log: handing the entry to the sink threw "
+                + "System.InvalidOperationException (HResult 0x80131509): The log refused the entry.";
+            Assert.Equal(1, log.Split(line).Length - 1);
+            Assert.Equal(1, log.Split("An entry was not written to the Application log").Length - 1);
+        }
+        finally
+        {
+            CrashLog.FolderForTests = suite;
+            TestCrashLog.TryDelete(folder);
+        }
+    }
+
+    [Fact]
     public void The_recorder_is_the_writers_sink_for_the_whole_suite()
     {
         // Set when the assembly loads. If it were not, a test driving the command
