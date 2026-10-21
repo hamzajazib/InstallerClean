@@ -14,15 +14,19 @@ namespace InstallerClean.Services;
 /// </summary>
 public interface IDestinationGuard
 {
-    /// <summary>Whether the folder accepts a file and gives it back.</summary>
-    bool TryProbeWritable(string folder);
+    /// <summary>
+    /// Whether the folder accepts a file and gives it back, with the Win32 cause of a
+    /// refusal in <paramref name="failureCode"/> for a caller to record.
+    /// </summary>
+    bool TryProbeWritable(string folder, out int failureCode);
 
     /// <summary>
     /// Removes the file at <paramref name="destinationPath"/>, where it is still there,
     /// so a file reported as failed is one the user has exactly one of. Answers true
-    /// where it is gone, false where it is present and would not go.
+    /// where it is gone, false where it is present and would not go, with the Win32
+    /// cause in <paramref name="failureCode"/>.
     /// </summary>
-    bool TryDiscardCopy(string destinationPath);
+    bool TryDiscardCopy(string destinationPath, out int failureCode);
 
     /// <summary>Removes <paramref name="folder"/> where it is empty.</summary>
     bool TryRemoveEmptyFolder(string folder);
@@ -35,14 +39,16 @@ public interface IDestinationGuard
 /// </summary>
 internal sealed class HandleDestinationGuard : IDestinationGuard
 {
-    public bool TryProbeWritable(string folder) => DirectoryGuard.TryProbeWritable(folder);
+    public bool TryProbeWritable(string folder, out int failureCode) =>
+        DirectoryGuard.TryProbeWritable(folder, out failureCode);
 
-    public bool TryDiscardCopy(string destinationPath)
+    public bool TryDiscardCopy(string destinationPath, out int failureCode)
     {
+        failureCode = 0;
         var folder = Path.GetDirectoryName(destinationPath);
         var leaf = Path.GetFileName(destinationPath);
         if (string.IsNullOrEmpty(folder) || string.IsNullOrEmpty(leaf)) return false;
-        return DirectoryGuard.TryDiscardChildCopy(folder, leaf);
+        return DirectoryGuard.TryDiscardChildCopy(folder, leaf, out failureCode);
     }
 
     public bool TryRemoveEmptyFolder(string folder)
@@ -50,7 +56,7 @@ internal sealed class HandleDestinationGuard : IDestinationGuard
         var parent = Path.GetDirectoryName(folder);
         var leaf = Path.GetFileName(folder);
         if (string.IsNullOrEmpty(parent) || string.IsNullOrEmpty(leaf)) return false;
-        using var parentHandle = DirectoryGuard.OpenDirectoryNoFollow(parent);
+        using var parentHandle = DirectoryGuard.OpenDirectoryFollow(parent, out _);
         return parentHandle is not null && DirectoryGuard.TryRemoveEmptyChildFolder(parentHandle, leaf);
     }
 }
@@ -64,8 +70,9 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
 {
     private readonly IFileSystem _fs = fileSystem;
 
-    public bool TryProbeWritable(string folder)
+    public bool TryProbeWritable(string folder, out int failureCode)
     {
+        failureCode = 0;
         var probe = _fs.Path.Combine(folder, _fs.Path.GetRandomFileName());
         try
         {
@@ -73,14 +80,16 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
             _fs.File.Delete(probe);
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            failureCode = ex.HResult;
             return false;
         }
     }
 
-    public bool TryDiscardCopy(string destinationPath)
+    public bool TryDiscardCopy(string destinationPath, out int failureCode)
     {
+        failureCode = 0;
         try
         {
             if (!_fs.File.Exists(destinationPath)) return true;
@@ -90,8 +99,9 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
             _fs.File.Delete(destinationPath);
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            failureCode = ex.HResult;
             return false;
         }
     }

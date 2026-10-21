@@ -86,6 +86,40 @@ internal static class DirectoryGuard
     }
 
     /// <summary>
+    /// Opens <paramref name="path"/> as a directory handle, following a link in its
+    /// final component, so a folder the user chose that is a volume mount point or a
+    /// directory junction resolves to the directory it stands for, as the Move's own
+    /// path resolution and the file move do. The children of the handle are still
+    /// reached without following a link in each child's name, which is what keeps a
+    /// child swapped for a link from redirecting an act. Null where the open fails or
+    /// what opened is not a directory, with the Win32 cause in
+    /// <paramref name="failureCode"/>.
+    /// </summary>
+    internal static SafeFileHandle? OpenDirectoryFollow(string path, out int failureCode)
+    {
+        failureCode = 0;
+        if (string.IsNullOrEmpty(path)) return null;
+
+        var handle = Kernel32.CreateFile(
+            path, Kernel32.GENERIC_READ, Kernel32.FILE_SHARE_ALL, IntPtr.Zero,
+            Kernel32.OPEN_EXISTING, Kernel32.FILE_FLAG_BACKUP_SEMANTICS, IntPtr.Zero);
+        if (handle.IsInvalid)
+        {
+            failureCode = Marshal.GetLastPInvokeError();
+            return null;
+        }
+
+        if (!Kernel32.GetFileInformationByHandle(handle, out var info)
+            || (info.dwFileAttributes & Kernel32.FILE_ATTRIBUTE_DIRECTORY) == 0)
+        {
+            failureCode = Marshal.GetLastPInvokeError();
+            handle.Dispose();
+            return null;
+        }
+        return handle;
+    }
+
+    /// <summary>
     /// Whether the folder <paramref name="handle"/> names has the owner and list
     /// <paramref name="expected"/> describes. False on any read failure or any
     /// mismatch, so a folder that cannot be vouched for is never acted on.
@@ -257,16 +291,21 @@ internal static class DirectoryGuard
     /// fails the create and the probe leaves nothing behind. False where the folder
     /// cannot be opened or the create is refused.
     /// </summary>
-    internal static bool TryProbeWritable(string folder)
+    internal static bool TryProbeWritable(string folder, out int failureCode)
     {
-        using var dir = OpenDirectoryNoFollow(folder);
+        using var dir = OpenDirectoryFollow(folder, out failureCode);
         if (dir is null) return false;
 
         using var probe = OpenChildNoFollow(
             dir, Path.GetRandomFileName(),
             Ntdll.FILE_WRITE_DATA | Ntdll.DELETE, Ntdll.FILE_CREATE,
-            Ntdll.FILE_NON_DIRECTORY_FILE | Ntdll.FILE_DELETE_ON_CLOSE);
-        return probe is not null;
+            Ntdll.FILE_NON_DIRECTORY_FILE | Ntdll.FILE_DELETE_ON_CLOSE, out var status);
+        if (probe is null)
+        {
+            failureCode = (int)Ntdll.RtlNtStatusToDosError(status);
+            return false;
+        }
+        return true;
     }
 
     /// <summary>
@@ -276,9 +315,9 @@ internal static class DirectoryGuard
     /// that was never made is not reported as a copy that would not go. False where the
     /// file is present and could not be removed, or is a reparse point.
     /// </summary>
-    internal static bool TryDiscardChildCopy(string folder, string leaf)
+    internal static bool TryDiscardChildCopy(string folder, string leaf, out int failureCode)
     {
-        using var dir = OpenDirectoryNoFollow(folder);
+        using var dir = OpenDirectoryFollow(folder, out failureCode);
         if (dir is null) return false;
 
         using var child = OpenChildNoFollow(
@@ -286,11 +325,19 @@ internal static class DirectoryGuard
             Ntdll.DELETE | Kernel32.FILE_READ_ATTRIBUTES | Kernel32.FILE_WRITE_ATTRIBUTES, Ntdll.FILE_OPEN,
             Ntdll.FILE_OPEN_REPARSE_POINT | Ntdll.FILE_NON_DIRECTORY_FILE, out var status);
         if (child is null)
-            return status == STATUS_OBJECT_NAME_NOT_FOUND || status == STATUS_OBJECT_PATH_NOT_FOUND;
+        {
+            if (status == STATUS_OBJECT_NAME_NOT_FOUND || status == STATUS_OBJECT_PATH_NOT_FOUND)
+                return true;
+            failureCode = (int)Ntdll.RtlNtStatusToDosError(status);
+            return false;
+        }
 
         if (!Kernel32.GetFileInformationByHandle(child, out var info)
             || (info.dwFileAttributes & Kernel32.FILE_ATTRIBUTE_REPARSE_POINT) != 0)
+        {
+            failureCode = Marshal.GetLastPInvokeError();
             return false;
+        }
 
         ClearReadOnlyByHandle(child, info.dwFileAttributes);
         return DeleteByHandle(child);

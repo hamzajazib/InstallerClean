@@ -686,10 +686,11 @@ public sealed class MoveFilesService : IMoveFilesService
     /// </summary>
     private void DiscardDestinationCopy(string destPath, PerItemFailureLog failureLog)
     {
-        if (!_destinationGuard.TryDiscardCopy(destPath))
+        if (!_destinationGuard.TryDiscardCopy(destPath, out var failureCode))
             failureLog.Record(new InvalidOperationException(
                 $"A copy of {destPath} could not be removed after the move failed to remove its source, "
-                + "so that file now exists in both places."));
+                + "so that file now exists in both places.",
+                new System.ComponentModel.Win32Exception(failureCode)));
     }
 
     /// <summary>
@@ -789,8 +790,10 @@ public sealed class MoveFilesService : IMoveFilesService
         // folder another account can write cannot steer the test to another file. A
         // folder that grants a create but not a delete fails the probe, which refuses
         // the move.
-        if (!_destinationGuard.TryProbeWritable(folder))
-            throw new LocalisedAccessException(string.Format(Strings.Error_CannotWriteFolder, folder));
+        if (!_destinationGuard.TryProbeWritable(folder, out var failureCode))
+            throw new LocalisedAccessException(
+                string.Format(Strings.Error_CannotWriteFolder, folder),
+                new System.ComponentModel.Win32Exception(failureCode));
     }
 
 }

@@ -43,6 +43,11 @@ internal static partial class Ntdll
         IntPtr EaBuffer,
         uint EaLength);
 
+    /// <summary>The Win32 error a failing NTSTATUS maps to, so a handle open that an
+    /// NTSTATUS refused is recorded with a cause the rest of the code reads.</summary>
+    [LibraryImport(Library, SetLastError = false)]
+    public static partial uint RtlNtStatusToDosError(int Status);
+
     /// <summary>
     /// A counted UTF-16 string, as ntdll takes names. <see cref="Buffer"/> points at
     /// memory the caller keeps alive and pinned for the call; the two lengths are byte

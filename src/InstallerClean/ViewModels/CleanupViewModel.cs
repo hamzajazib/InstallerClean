@@ -810,8 +810,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // steer the test to another file, and it leaves nothing behind. A
             // folder that takes a file and will not give it back is not writable
             // for a Move, and the throw here refuses the destination.
-            if (!_destinationGuard.TryProbeWritable(dest))
-                throw new IOException(string.Format(Strings.Error_CannotWriteFolder, dest));
+            if (!_destinationGuard.TryProbeWritable(dest, out var failureCode))
+                throw new IOException(
+                    string.Format(Strings.Error_CannotWriteFolder, dest),
+                    new System.ComponentModel.Win32Exception(failureCode));
             probeToken.ThrowIfCancellationRequested();
 
             // A same-volume move is a rename and consumes no space, so the

@@ -23,14 +23,15 @@ public sealed class DestinationGuardTests : IDisposable
     [Fact]
     public void A_writable_folder_passes_the_probe_and_nothing_is_left_behind()
     {
-        Assert.True(_guard.TryProbeWritable(_root));
+        Assert.True(_guard.TryProbeWritable(_root, out _));
         Assert.Empty(Directory.EnumerateFileSystemEntries(_root));
     }
 
     [Fact]
-    public void A_folder_that_is_not_there_fails_the_probe()
+    public void A_folder_that_is_not_there_fails_the_probe_with_a_cause()
     {
-        Assert.False(_guard.TryProbeWritable(Path.Combine(_root, "missing")));
+        Assert.False(_guard.TryProbeWritable(Path.Combine(_root, "missing"), out var code));
+        Assert.NotEqual(0, code);
     }
 
     [Fact]
@@ -40,14 +41,37 @@ public sealed class DestinationGuardTests : IDisposable
         File.WriteAllText(copy, "content");
         File.SetAttributes(copy, FileAttributes.ReadOnly);
 
-        Assert.True(_guard.TryDiscardCopy(copy));
+        Assert.True(_guard.TryDiscardCopy(copy, out _));
         Assert.False(File.Exists(copy));
     }
 
     [Fact]
     public void Discarding_a_copy_that_was_never_made_answers_that_it_is_gone()
     {
-        Assert.True(_guard.TryDiscardCopy(Path.Combine(_root, "never-written.msi")));
+        Assert.True(_guard.TryDiscardCopy(Path.Combine(_root, "never-written.msi"), out _));
+    }
+
+    [Fact]
+    public void A_destination_that_is_a_directory_link_passes_the_probe()
+    {
+        // A Move destination the user chose can be a volume mount point or a directory
+        // junction, which the move's own path resolution and the file move both follow.
+        // The probe follows the folder's own link to the directory it stands for, so
+        // such a destination is accepted rather than refused. Best-effort: a link needs
+        // a privilege not every host grants.
+        var target = Directory.CreateDirectory(Path.Combine(_root, "real")).FullName;
+        var linkedDestination = Path.Combine(_root, "mounted");
+        try
+        {
+            Directory.CreateSymbolicLink(linkedDestination, target);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return;
+        }
+
+        Assert.True(_guard.TryProbeWritable(linkedDestination, out _));
+        Assert.Empty(Directory.EnumerateFileSystemEntries(target));
     }
 
     [Fact]
@@ -64,28 +88,30 @@ public sealed class DestinationGuardTests : IDisposable
     }
 
     [Fact]
-    public void A_link_in_the_destinations_place_does_not_let_the_discard_reach_its_target()
+    public void A_copy_name_swapped_for_a_link_is_not_followed_to_its_target()
     {
-        // The destination is a link to another folder holding a file named like the
-        // copy. The discard opens the leaf relative to a handle on the link's own
-        // directory without following the link, so the file behind the link is left.
-        // Best-effort: creating a link needs a privilege not every host grants.
-        var target = Directory.CreateDirectory(Path.Combine(_root, "target")).FullName;
-        var behindLink = Path.Combine(target, "payload.msi");
-        File.WriteAllText(behindLink, "untouched");
+        // The real destination holds a child named like the copy, but that child is a
+        // link to a file elsewhere. The discard opens the child relative to a handle on
+        // the destination folder without following the child's link, finds a reparse
+        // point and leaves it, so the file the link points at is untouched. Best-effort:
+        // a link needs a privilege not every host grants.
+        var outside = Directory.CreateDirectory(Path.Combine(_root, "outside")).FullName;
+        var decoy = Path.Combine(outside, "decoy.txt");
+        File.WriteAllText(decoy, "untouched");
 
-        var linkedDestination = Path.Combine(_root, "destination");
+        var destination = Directory.CreateDirectory(Path.Combine(_root, "destination")).FullName;
+        var copyName = Path.Combine(destination, "payload.msi");
         try
         {
-            Directory.CreateSymbolicLink(linkedDestination, target);
+            File.CreateSymbolicLink(copyName, decoy);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return; // this host cannot create links; the guarantee holds by construction
+            return;
         }
 
-        _guard.TryDiscardCopy(Path.Combine(linkedDestination, "payload.msi"));
+        _guard.TryDiscardCopy(copyName, out _);
 
-        Assert.True(File.Exists(behindLink));
+        Assert.True(File.Exists(decoy));
     }
 }
