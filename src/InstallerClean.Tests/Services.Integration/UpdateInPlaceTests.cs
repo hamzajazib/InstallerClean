@@ -658,6 +658,88 @@ public sealed class UpdateInPlaceTests : IDisposable
         Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
     }
 
+#if DEBUG
+    /// <summary>Answers every request with <paramref name="body"/> and counts the requests.</summary>
+    private sealed class CountedAnswer(byte[] body) : HttpMessageHandler
+    {
+        public int Requests { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Requests++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(body) });
+        }
+    }
+
+    [Fact]
+    public async Task In_a_debug_build_the_local_download_switch_stages_that_file_in_place_of_a_download()
+    {
+        var exeFolder = Directory.CreateDirectory(Path.Combine(_root, "tools")).FullName;
+        var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
+        var exe = Path.Combine(exeFolder, AppCopy.CommandLineFileName);
+        File.WriteAllBytes(exe, Program(1));
+        var local = Path.Combine(_root, "local-newer.exe");
+        File.WriteAllBytes(local, Program(4));
+        var network = new CountedAnswer(Program(2));
+        var updater = new AppUpdater(AppCopyKind.CommandLineDownload, exe,
+            new UpdateDownloadService(network, null), stagingRoot,
+            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount);
+        var before = Environment.GetEnvironmentVariable(AppUpdater.LocalDownloadVariable);
+        try
+        {
+            Environment.SetEnvironmentVariable(AppUpdater.LocalDownloadVariable, local);
+            var prepared = await updater.PrepareAsync("3.5.0", null, CancellationToken.None);
+
+            Assert.Equal(0, network.Requests);
+            Assert.Equal(Program(4), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
+            Assert.Equal(Program(4), File.ReadAllBytes(local));
+            Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
+            prepared.Undo();
+
+            // The control: the same update with the switch cleared downloads.
+            Environment.SetEnvironmentVariable(AppUpdater.LocalDownloadVariable, null);
+            prepared = await updater.PrepareAsync("3.5.0", null, CancellationToken.None);
+
+            Assert.Equal(1, network.Requests);
+            Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
+            prepared.Undo();
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(AppUpdater.LocalDownloadVariable, before);
+        }
+    }
+
+    [Fact]
+    public async Task In_a_debug_build_the_local_download_switch_leaves_the_setup_route_to_download()
+    {
+        var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
+        var exe = Path.Combine(_root, "InstallerClean.exe");
+        File.WriteAllBytes(exe, Program(1));
+        var local = Path.Combine(_root, "local-newer.exe");
+        File.WriteAllBytes(local, Program(4));
+        var network = new CountedAnswer(Program(3));
+        var updater = new AppUpdater(AppCopyKind.Setup, exe,
+            new UpdateDownloadService(network, null), stagingRoot,
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount);
+        var before = Environment.GetEnvironmentVariable(AppUpdater.LocalDownloadVariable);
+        try
+        {
+            Environment.SetEnvironmentVariable(AppUpdater.LocalDownloadVariable, local);
+            var prepared = await updater.PrepareAsync("3.5.0", null, CancellationToken.None);
+
+            Assert.Equal(1, network.Requests);
+            Assert.Equal(Program(3), File.ReadAllBytes(prepared.FileToStart));
+            prepared.Undo();
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(AppUpdater.LocalDownloadVariable, before);
+        }
+    }
+#endif
+
     [Theory]
     [InlineData(AppCopyKind.Scoop)]
     [InlineData(AppCopyKind.FromSource)]

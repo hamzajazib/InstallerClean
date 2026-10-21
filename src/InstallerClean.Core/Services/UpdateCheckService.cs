@@ -162,6 +162,9 @@ public sealed class UpdateCheckService : IUpdateCheckService
                 await Task.Delay(RequestTimeout, cancellationToken).ConfigureAwait(false);
                 return new CheckFailed(UpdateCheckFailureReason.Timeout);
             }
+            if (Environment.GetEnvironmentVariable(PretendLatestVariable) is { Length: > 0 } pretendedTag)
+                return Compare(pretendedTag, currentVersion)
+                    ?? new CheckFailed(UpdateCheckFailureReason.ResponseParseError);
 #endif
             using var request = new HttpRequestMessage(HttpMethod.Get, ReleasesPageUrl);
             request.Headers.UserAgent.ParseAdd(UserAgent);
@@ -206,37 +209,11 @@ public sealed class UpdateCheckService : IUpdateCheckService
                 return new CheckFailed(UpdateCheckFailureReason.ResponseParseError);
             }
 
-            // Tags on the project's releases are "vX.Y.Z"; strip
-            // the leading 'v' before parsing as System.Version.
-            var latestVersion = tagName.StartsWith('v')
-                ? tagName.Substring(1)
-                : tagName;
-            if (!Version.TryParse(latestVersion, out var parsedLatest))
-            {
-                LogIfUserIsWaiting(origin, new HttpRequestException(
-                    $"GitHub redirected to a tag that is not a version: {Clamp(tagName)}"));
-                return new CheckFailed(UpdateCheckFailureReason.ResponseParseError);
-            }
-
-            // Normalise both sides to MAJOR.MINOR.BUILD before
-            // comparing: System.Version's fourth Revision component is
-            // 0 in the assembly version (e.g. 1.7.0.0) but absent from
-            // the GitHub tag. Comparing without normalising would
-            // make 1.7.0.0 always "newer than" 1.7.0.
-            var currentNormalised = NormaliseToBuild(currentVersion);
-            var latestNormalised = NormaliseToBuild(parsedLatest);
-
-            if (latestNormalised > currentNormalised)
-            {
-                // Only the two version strings. The destination is
-                // ReleasesPageUrl, a constant, so nothing the answer
-                // carried reaches the browser.
-                return new UpdateAvailable(
-                    CurrentVersion: FormatVersion(currentNormalised),
-                    LatestVersion: FormatVersion(latestNormalised));
-            }
-
-            return new UpToDate(FormatVersion(currentNormalised));
+            if (Compare(tagName, currentVersion) is { } answer)
+                return answer;
+            LogIfUserIsWaiting(origin, new HttpRequestException(
+                $"GitHub redirected to a tag that is not a version: {Clamp(tagName)}"));
+            return new CheckFailed(UpdateCheckFailureReason.ResponseParseError);
         }
         catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -268,6 +245,43 @@ public sealed class UpdateCheckService : IUpdateCheckService
             return new CheckFailed(UpdateCheckFailureReason.Unknown,
                 crash.Written ? crash.Path : null);
         }
+    }
+
+    /// <summary>
+    /// Compares the release <paramref name="tagName"/> names with
+    /// <paramref name="currentVersion"/>, answering <see cref="UpdateAvailable"/> where the
+    /// tag is newer and <see cref="UpToDate"/> where it is not, or null where the tag is
+    /// not a version.
+    /// </summary>
+    private static UpdateCheckResult? Compare(string tagName, Version currentVersion)
+    {
+        // Tags on the project's releases are "vX.Y.Z"; strip
+        // the leading 'v' before parsing as System.Version.
+        var latestVersion = tagName.StartsWith('v')
+            ? tagName.Substring(1)
+            : tagName;
+        if (!Version.TryParse(latestVersion, out var parsedLatest))
+            return null;
+
+        // Normalise both sides to MAJOR.MINOR.BUILD before
+        // comparing: System.Version's fourth Revision component is
+        // 0 in the assembly version (e.g. 1.7.0.0) but absent from
+        // the GitHub tag. Comparing without normalising would
+        // make 1.7.0.0 always "newer than" 1.7.0.
+        var currentNormalised = NormaliseToBuild(currentVersion);
+        var latestNormalised = NormaliseToBuild(parsedLatest);
+
+        if (latestNormalised > currentNormalised)
+        {
+            // Only the two version strings. The destination is
+            // ReleasesPageUrl, a constant, so nothing the answer
+            // carried reaches the browser.
+            return new UpdateAvailable(
+                CurrentVersion: FormatVersion(currentNormalised),
+                LatestVersion: FormatVersion(latestNormalised));
+        }
+
+        return new UpToDate(FormatVersion(currentNormalised));
     }
 
     /// <summary>
@@ -386,6 +400,15 @@ public sealed class UpdateCheckService : IUpdateCheckService
     /// that never answers does. Held inside <c>#if DEBUG</c> the same way.
     /// </summary>
     internal const string SlowCheckVariable = "INSTALLERCLEAN_DEBUG_SLOW_UPDATE_CHECK";
+
+    /// <summary>
+    /// Set to a release tag such as v9.9.9, a Debug build's check sends nothing and
+    /// compares that tag with the current version as it would the tag GitHub answers
+    /// with, so an update to a version no release carries can be tried offline. A value
+    /// that is not a version answers as a tag that is not one does. Held inside
+    /// <c>#if DEBUG</c> the same way.
+    /// </summary>
+    internal const string PretendLatestVariable = "INSTALLERCLEAN_DEBUG_PRETEND_LATEST";
 #endif
 
     private static Version GetCurrentVersion()

@@ -3,12 +3,13 @@
 // build.
 //
 // A switch here is an environment variable a Debug build reads to change what the app
-// does on the developer's own PC. The window's start check has one, which leaves the
-// Application log unread. The update check has two: one compares the newest release
-// with a version it is given, and one makes the check wait out its own bound and answer
-// as timed out. The update from inside the app has two: one has the app
-// take itself for another kind of copy, and one runs a setup already on disk in place
-// of downloading one. Code between #if DEBUG and its #endif is compiled
+// does on the developer's own PC. In the window's start check, one leaves the
+// Application log unread. In the update check, one compares the newest release with a
+// version it is given, one makes the check wait out its own bound and answer as timed
+// out, and one answers with a release tag it is given without asking GitHub. In the
+// update itself, one has the app take itself for another kind of copy, one runs a
+// setup already on disk in place of downloading one, and one copies a newer file
+// already on disk in place of downloading it. Code between #if DEBUG and its #endif is compiled
 // only where DEBUG is defined, so a switch's name and its read sit there, and nothing
 // that builds a Release defines DEBUG. This checks both.
 //
@@ -86,6 +87,16 @@ const SWITCHES = [
   {
     name: 'INSTALLERCLEAN_DEBUG_LOCAL_SETUP',
     constant: 'LocalSetupVariable',
+    home: 'src/InstallerClean.Core/',
+  },
+  {
+    name: 'INSTALLERCLEAN_DEBUG_PRETEND_LATEST',
+    constant: 'PretendLatestVariable',
+    home: 'src/InstallerClean.Core/',
+  },
+  {
+    name: 'INSTALLERCLEAN_DEBUG_LOCAL_DOWNLOAD',
+    constant: 'LocalDownloadVariable',
     home: 'src/InstallerClean.Core/',
   },
 ];

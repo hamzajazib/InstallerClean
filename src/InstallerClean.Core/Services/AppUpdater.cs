@@ -150,8 +150,8 @@ public sealed class AppUpdater : IAppUpdater
         try
         {
 #if DEBUG
-            if (Kind == AppCopyKind.Setup && LocalSetup() is { } local)
-                await CopyLocalSetupAsync(local, staged, progress, cancellationToken).ConfigureAwait(false);
+            if (LocalFile() is { } local)
+                await CopyLocalFileAsync(local, staged, progress, cancellationToken).ConfigureAwait(false);
             else
 #endif
             await _downloader.DownloadAsync(address, staged, progress, cancellationToken)
@@ -196,14 +196,32 @@ public sealed class AppUpdater : IAppUpdater
     /// </summary>
     internal const string LocalSetupVariable = "INSTALLERCLEAN_DEBUG_LOCAL_SETUP";
 
-    private static string? LocalSetup() =>
-        Environment.GetEnvironmentVariable(LocalSetupVariable) is { Length: > 0 } path ? path : null;
+    /// <summary>
+    /// Set to the path of a newer copy of the kind this one replaces itself with (the
+    /// portable, the slim or the command line), a Debug build that replaces itself copies
+    /// that file in place of downloading one, and then stages and swaps it in as it would
+    /// a download, so an update to a build from this tree can be tried offline. Held inside
+    /// <c>#if DEBUG</c> the same way.
+    /// </summary>
+    internal const string LocalDownloadVariable = "INSTALLERCLEAN_DEBUG_LOCAL_DOWNLOAD";
 
     /// <summary>
-    /// Copies the setup named by <see cref="LocalSetupVariable"/> to where a download
-    /// would have gone, through the same write the download uses.
+    /// The file <see cref="LocalSetupVariable"/> names for the setup's copy, or the one
+    /// <see cref="LocalDownloadVariable"/> names for every other kind; null where it is unset.
     /// </summary>
-    private static async Task CopyLocalSetupAsync(
+    private string? LocalFile()
+    {
+        var path = Kind == AppCopyKind.Setup
+            ? Environment.GetEnvironmentVariable(LocalSetupVariable)
+            : Environment.GetEnvironmentVariable(LocalDownloadVariable);
+        return path is { Length: > 0 } ? path : null;
+    }
+
+    /// <summary>
+    /// Copies the file <see cref="LocalFile"/> names to where a download would have gone,
+    /// through the same write the download uses.
+    /// </summary>
+    private static async Task CopyLocalFileAsync(
         string source, string destination, IProgress<double?>? progress, CancellationToken cancellationToken)
     {
         try
@@ -211,7 +229,7 @@ public sealed class AppUpdater : IAppUpdater
             await using var input = File.OpenRead(source);
             using var handle = Helpers.StorageHelpers.OpenAtomic(
                     destination, FileAccess.Write, Helpers.StorageHelpers.AtomicOpenMode.CreateAlways)
-                ?? throw new IOException("The file the setup is copied to could not be created.");
+                ?? throw new IOException("The file the local copy is written to could not be created.");
             await using var output = new FileStream(handle, FileAccess.Write, bufferSize: 0);
             await input.CopyToAsync(output, cancellationToken).ConfigureAwait(false);
             output.Flush(flushToDisk: true);
@@ -220,7 +238,7 @@ public sealed class AppUpdater : IAppUpdater
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             Helpers.StorageHelpers.TryDeleteTempFile(destination);
-            throw new UpdateFailedException(UpdateFailureStage.Install, "The local setup could not be copied.", ex);
+            throw new UpdateFailedException(UpdateFailureStage.Install, "The local file could not be copied.", ex);
         }
     }
 #endif
