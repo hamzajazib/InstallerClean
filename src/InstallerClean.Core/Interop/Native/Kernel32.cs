@@ -431,6 +431,20 @@ internal static partial class Kernel32
         uint dwBufferSize);
 
     /// <summary>
+    /// Writes <see cref="FILE_BASIC_INFO"/> back to the file behind an open handle,
+    /// which is how the read-only attribute is cleared through the handle rather than
+    /// a path. The handle needs <see cref="FILE_WRITE_ATTRIBUTES"/>. A field left zero
+    /// is unchanged, so only <see cref="FILE_BASIC_INFO.FileAttributes"/> is set.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "SetFileInformationByHandle", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetFileBasicInfoByHandle(
+        SafeFileHandle hFile,
+        uint fileInformationClass,
+        in FILE_BASIC_INFO lpFileInformation,
+        uint dwBufferSize);
+
+    /// <summary>
     /// A file's four times and its attributes. Each time is a FILETIME count of
     /// 100-nanosecond intervals since 1601, UTC, carried as a signed 64-bit value
     /// because the API declares LARGE_INTEGER.
@@ -690,6 +704,7 @@ internal static partial class Kernel32
     // is what lets the length still be queried on such a handle.
     public const uint FILE_APPEND_DATA       = 0x00000004;
     public const uint FILE_READ_ATTRIBUTES   = 0x00000080;
+    public const uint FILE_WRITE_ATTRIBUTES  = 0x00000100;
 
     public const uint CREATE_NEW             = 1;
     public const uint CREATE_ALWAYS          = 2;

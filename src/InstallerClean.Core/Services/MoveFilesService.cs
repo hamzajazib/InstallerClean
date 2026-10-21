@@ -8,6 +8,7 @@ public sealed class MoveFilesService : IMoveFilesService
 {
     private readonly IFileSystem _fs;
     private readonly IMutexProbe _mutex;
+    private readonly IDestinationGuard _destinationGuard;
 
     /// <summary>
     /// Re-reads the batch's patch claims once the installer mutex is held. Held
@@ -32,8 +33,9 @@ public sealed class MoveFilesService : IMoveFilesService
     /// production; the mutex is taken for the batch, and a batch refuses where a
     /// live install owns it.
     /// </summary>
-    public MoveFilesService(IFileSystem fileSystem, IMutexProbe mutex, IRemovableReverifier reverifier)
-        : this(fileSystem, mutex, null, reverifier) { }
+    public MoveFilesService(IFileSystem fileSystem, IMutexProbe mutex, IRemovableReverifier reverifier,
+        IDestinationGuard? destinationGuard = null)
+        : this(fileSystem, mutex, null, reverifier, destinationGuard ?? new HandleDestinationGuard()) { }
 
     /// <summary>Test constructor. No mutex hold and no under-lease re-read (both are exercised via the seam constructor below).</summary>
     internal MoveFilesService(IFileSystem fileSystem)
@@ -43,15 +45,23 @@ public sealed class MoveFilesService : IMoveFilesService
     internal MoveFilesService(IFileSystem fileSystem, string? installerFolderOverride)
         : this(fileSystem, NullMutexProbe.Instance, installerFolderOverride, NullRemovableReverifier.Instance) { }
 
-    /// <summary>Seam constructor: an injected <see cref="IMutexProbe"/> (real or fake) plus the sandbox override.</summary>
+    /// <summary>
+    /// Seam constructor: an injected <see cref="IMutexProbe"/> (real or fake) plus the sandbox override.
+    /// The destination guard defaults to the by-path one, which the test seam's substituted filesystem needs;
+    /// the production constructor above passes the handle one instead.
+    /// </summary>
     internal MoveFilesService(IFileSystem fileSystem, IMutexProbe mutex, string? installerFolderOverride,
-        IRemovableReverifier? reverifier = null)
+        IRemovableReverifier? reverifier = null, IDestinationGuard? destinationGuard = null)
     {
         _fs = fileSystem;
         _mutex = mutex;
         _installerFolderOverride = installerFolderOverride;
         _reverifier = reverifier ?? NullRemovableReverifier.Instance;
+        _destinationGuard = destinationGuard ?? new ByPathDestinationGuard(fileSystem);
     }
+
+    /// <summary>The destination guard this service acts through, so a test can confirm the production path holds the handle one.</summary>
+    internal IDestinationGuard DestinationGuard => _destinationGuard;
 
     public Task<MoveResult> MoveFilesAsync(
         IEnumerable<string> filePaths,
@@ -666,34 +676,20 @@ public sealed class MoveFilesService : IMoveFilesService
     ///
     /// A failure here is the one state with nothing to say for itself: the
     /// error the caller files says the file was left in place, which is true,
-    /// and does not mention the copy. It is recorded rather than surfaced
-    /// because it needs a destination that accepts a create and refuses a
-    /// delete, which the write probe has already had to pass.
+    /// and does not mention the copy. It is recorded rather than surfaced.
     ///
-    /// CopyFile carries the source's attributes across, so the copy of a
-    /// read-only source is read-only and the attribute has to come off before
-    /// the delete. Safe on this file above any other: this process wrote it
-    /// seconds ago at a name it chose. Nothing puts it back on a failure here,
-    /// unlike the source's, because the copy is not a file the user has: the
-    /// record already says it exists in both places, and a read-only leftover is
-    /// only harder for them to remove by hand.
-    ///
-    /// No check that what sits at destPath is still that file, deliberately:
-    /// any identity check is itself racy and the window is milliseconds.
+    /// The guard reaches the copy through a handle opened on the destination
+    /// folder and clears a read-only attribute, which a copy carries across
+    /// from a read-only source, before the delete. A destination the copy was
+    /// never written to answers that the file is gone, so a move that failed
+    /// before it copied anything files no spurious leftover.
     /// </summary>
     private void DiscardDestinationCopy(string destPath, PerItemFailureLog failureLog)
     {
-        try
-        {
-            ClearReadOnly(destPath);
-            _fs.File.Delete(destPath);
-        }
-        catch (Exception ex)
-        {
+        if (!_destinationGuard.TryDiscardCopy(destPath))
             failureLog.Record(new InvalidOperationException(
                 $"A copy of {destPath} could not be removed after the move failed to remove its source, "
-                + "so that file now exists in both places.", ex));
-        }
+                + "so that file now exists in both places."));
     }
 
     /// <summary>
@@ -787,30 +783,14 @@ public sealed class MoveFilesService : IMoveFilesService
 
     private void ProbeDestinationWriteable(string folder)
     {
-        // Fail fast with one clean error rather than collecting per-file
-        // errors for every source when the destination is read-only.
-        //
-        // On a destination whose ACL grants create but not delete, the write
-        // lands and the delete is what throws, so the probe file stays behind.
-        // Nothing here can clear it: a second delete is the operation that was
-        // just refused, and any probe that proves a folder accepts a file has
-        // to create one. The move is refused, which is the outcome that
-        // matters, and the residue is one empty random-named file on a
-        // destination Windows will not let this process tidy.
-        var probe = _fs.Path.Combine(folder, _fs.Path.GetRandomFileName());
-        try
-        {
-            _fs.File.WriteAllBytes(probe, Array.Empty<byte>());
-            _fs.File.Delete(probe);
-        }
-        catch (Exception ex)
-        {
-            // ex.Message stays out of the thrown message (path-leak risk
-            // under elevation); the inner exception preserves it for
-            // crash-log consumers via .InnerException.
-            throw new LocalisedAccessException(
-                string.Format(Strings.Error_CannotWriteFolder, folder), ex);
-        }
+        // Fail fast with one clean error rather than collecting per-file errors for
+        // every source when the destination will not take a file. The guard creates
+        // and removes a write-test file through a handle opened on the folder, so a
+        // folder another account can write cannot steer the test to another file. A
+        // folder that grants a create but not a delete fails the probe, which refuses
+        // the move.
+        if (!_destinationGuard.TryProbeWritable(folder))
+            throw new LocalisedAccessException(string.Format(Strings.Error_CannotWriteFolder, folder));
     }
 
 }

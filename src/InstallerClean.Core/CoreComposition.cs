@@ -84,6 +84,7 @@ public static class CoreComposition
 
         // File-mutating services.
         services.AddSingleton<IFileSystemScanService, FileSystemScanService>();
+        services.AddSingleton<IDestinationGuard, HandleDestinationGuard>();
         services.AddSingleton<IMoveFilesService, MoveFilesService>();
         services.AddSingleton<IDeleteFilesService, DeleteFilesService>();
 

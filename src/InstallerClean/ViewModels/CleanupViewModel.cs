@@ -24,6 +24,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     private readonly IDialogService _dialogService;
     private readonly IConfirmationService _confirmationService;
     private readonly IFileSystem _fs;
+    private readonly IDestinationGuard _destinationGuard;
     private readonly ScanViewModel _scan;
     private readonly CompletionViewModel _completion;
     private readonly IRemovableReverifier _reverifier;
@@ -263,7 +264,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         CompletionViewModel completion,
         IRemovableReverifier reverifier,
         Func<string, bool?>? resolveIsOnCacheVolume = null,
-        Func<bool>? instanceLockLost = null)
+        Func<bool>? instanceLockLost = null,
+        IDestinationGuard? destinationGuard = null)
     {
         _moveService = moveService;
         _deleteService = deleteService;
@@ -271,6 +273,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         _dialogService = dialogService;
         _confirmationService = confirmationService;
         _fs = fileSystem;
+        _destinationGuard = destinationGuard ?? new HandleDestinationGuard();
         _scan = scan;
         _completion = completion;
         _reverifier = reverifier;
@@ -802,26 +805,13 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             createdDestination = !_fs.Directory.Exists(dest);
             _fs.Directory.CreateDirectory(dest);
             probeToken.ThrowIfCancellationRequested();
-            var probe = _fs.Path.Combine(dest, _fs.Path.GetRandomFileName());
-            _fs.File.WriteAllBytes(probe, Array.Empty<byte>());
-            try
-            {
-                probeToken.ThrowIfCancellationRequested();
-                // The delete stays inside the try so a failure to remove the
-                // probe still refuses the destination: a folder that takes a
-                // file and will not give it back is not writable for a Move.
-                _fs.File.Delete(probe);
-            }
-            catch (OperationCanceledException)
-            {
-                // Cancelled between the write and the delete. The probe has to
-                // go on this path too, because RemoveCreatedDestinationAsync
-                // removes the folder non-recursively as its emptiness test, so
-                // a probe left here strands the folder along with it. Silent
-                // because the cancel is the outcome being reported.
-                try { _fs.File.Delete(probe); } catch { }
-                throw;
-            }
+            // The guard writes and removes a write-test file through a handle
+            // opened on the folder, so a folder another account can write cannot
+            // steer the test to another file, and it leaves nothing behind. A
+            // folder that takes a file and will not give it back is not writable
+            // for a Move, and the throw here refuses the destination.
+            if (!_destinationGuard.TryProbeWritable(dest))
+                throw new IOException(string.Format(Strings.Error_CannotWriteFolder, dest));
             probeToken.ThrowIfCancellationRequested();
 
             // A same-volume move is a rename and consumes no space, so the
@@ -1897,11 +1887,11 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// The caller checks its createdDestination local first, so a folder that
     /// was already there is never a candidate.
     ///
-    /// The non-recursive Delete IS the emptiness test, rather than an Exists or
-    /// Any check followed by a delete: Win32 refuses to remove a directory that
-    /// holds anything, so a file that arrived between the pre-flight and the
-    /// cancel stops the removal at the syscall, with no window in which a check
-    /// could pass and the delete then take something with it.
+    /// The removal IS the emptiness test, rather than an Exists or Any check
+    /// followed by a delete: Win32 refuses to remove a directory that holds
+    /// anything, so a file that arrived between the pre-flight and the cancel
+    /// stops the removal at the syscall, with no window in which a check could
+    /// pass and the delete then take something with it.
     ///
     /// Off the dispatcher for the same reason every other touch of the
     /// destination is (a stalled network path), and silent on failure because
@@ -1910,17 +1900,11 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// be noise at the end of an operation they cancelled.
     /// </summary>
     private Task RemoveCreatedDestinationAsync(string destination) => Task.Run(() =>
-    {
-        try
-        {
-            _fs.Directory.Delete(destination);
-        }
-        catch (Exception)
-        {
-            // Not empty any more, gone already, or refused: all fine, because
-            // nothing depends on the folder being gone.
-        }
-    });
+        // Through the guard, which opens the folder's parent as a handle and
+        // removes the folder relative to it where it is empty. The answer is
+        // ignored: not empty any more, gone already or refused are all fine,
+        // because nothing depends on the folder being gone.
+        _destinationGuard.TryRemoveEmptyFolder(destination));
 
     /// <summary>
     /// Re-runs the pending-reboot gate after the service refused at

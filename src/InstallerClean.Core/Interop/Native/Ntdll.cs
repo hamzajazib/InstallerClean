@@ -87,6 +87,9 @@ internal static partial class Ntdll
     /// <summary>Open the object where it exists, and fail where it does not.</summary>
     public const uint FILE_OPEN = 0x00000001;
 
+    /// <summary>Create the object, and fail where one already has the name.</summary>
+    public const uint FILE_CREATE = 0x00000002;
+
     /// <summary>Open the object as itself where it is a reparse point, never its target.</summary>
     public const uint FILE_OPEN_REPARSE_POINT = 0x00200000;
 
@@ -99,7 +102,13 @@ internal static partial class Ntdll
     /// <summary>Complete the call before returning, so the handle can be used at once.</summary>
     public const uint FILE_SYNCHRONOUS_IO_NONALERT = 0x00000020;
 
+    /// <summary>Remove the object when the handle that created it closes.</summary>
+    public const uint FILE_DELETE_ON_CLOSE = 0x00001000;
+
     /// <summary>The right to delete, and the right synchronous use needs.</summary>
     public const uint DELETE = 0x00010000;
     public const uint SYNCHRONIZE = 0x00100000;
+
+    /// <summary>The right to write a file's bytes, which the write probe's create takes.</summary>
+    public const uint FILE_WRITE_DATA = 0x00000002;
 }

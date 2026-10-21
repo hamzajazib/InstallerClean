@@ -90,7 +90,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IEarlierRunCheck earlierRunCheck,
         IFirstRunMark firstRunMark,
         IWindowsRegion windowsRegion,
-        IAppUpdater? appUpdater = null)
+        IAppUpdater? appUpdater = null,
+        IDestinationGuard? destinationGuard = null)
     {
         // Closures read Cleanup / Completion at invocation time, after
         // the ctor runs.
@@ -110,7 +111,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             moveService, deleteService, settingsService,
             dialogService, confirmationService, fileSystem,
             Scan, Completion, reverifier,
-            instanceLockLost: windowService.IsInstanceLockLost);
+            instanceLockLost: windowService.IsInstanceLockLost,
+            destinationGuard: destinationGuard);
         Chrome = new ChromeViewModel(windowService, msiInfoService, settingsService,
             updateCheckService, dialogService, Scan,
             isBusy: () => IsBusy,

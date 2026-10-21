@@ -79,7 +79,8 @@ public class CleanupPreFlightTests
             _settingsService, _rebootService, _msiInfoService,
             _dialogService, _confirmationService, _windowService,
             _fileSystem, _resultLogService, _updateCheckService, _reverifier,
-            _earlierRunCheck, _firstRunMark, _windowsRegion);
+            _earlierRunCheck, _firstRunMark, _windowsRegion,
+            destinationGuard: new ByPathDestinationGuard(_fileSystem));
 
     /// <summary>
     /// Spins until <paramref name="condition"/> holds. The view-models have no

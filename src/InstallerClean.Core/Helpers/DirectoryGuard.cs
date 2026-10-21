@@ -156,9 +156,19 @@ internal static class DirectoryGuard
     /// <paramref name="directory"/> names, resolved against that handle and never a
     /// path, without following a link in <paramref name="leaf"/>. Null on any failure.
     /// </summary>
+    internal static SafeFileHandle? OpenChildNoFollow(
+        SafeFileHandle directory, string leaf, uint access, uint disposition, uint options) =>
+        OpenChildNoFollow(directory, leaf, access, disposition, options, out _);
+
+    /// <summary>
+    /// The same, reporting the NTSTATUS the open returned in <paramref name="status"/>,
+    /// so a caller can tell a child that is absent from one it could not act on. Zero
+    /// where a handle came back.
+    /// </summary>
     internal static unsafe SafeFileHandle? OpenChildNoFollow(
-        SafeFileHandle directory, string leaf, uint access, uint disposition, uint options)
+        SafeFileHandle directory, string leaf, uint access, uint disposition, uint options, out int status)
     {
+        status = 0;
         if (string.IsNullOrEmpty(leaf)) return null;
 
         var refTaken = false;
@@ -185,7 +195,7 @@ internal static class DirectoryGuard
                     SecurityQualityOfService = IntPtr.Zero,
                 };
 
-                var status = Ntdll.NtCreateFile(
+                status = Ntdll.NtCreateFile(
                     out var child, access | Ntdll.SYNCHRONIZE, in attributes, out _, IntPtr.Zero,
                     0, Kernel32.FILE_SHARE_ALL, disposition,
                     options | Ntdll.FILE_SYNCHRONOUS_IO_NONALERT, IntPtr.Zero, 0);
@@ -238,6 +248,71 @@ internal static class DirectoryGuard
 
         return DeleteByHandle(child);
     }
+
+    /// <summary>
+    /// Whether <paramref name="folder"/> accepts a file and gives it back, tested
+    /// through a handle opened on the folder. A random-named child is created relative
+    /// to that handle asking for the right to write it and the right to delete it, and
+    /// removed as the handle closes, so a folder that grants a create but not a delete
+    /// fails the create and the probe leaves nothing behind. False where the folder
+    /// cannot be opened or the create is refused.
+    /// </summary>
+    internal static bool TryProbeWritable(string folder)
+    {
+        using var dir = OpenDirectoryNoFollow(folder);
+        if (dir is null) return false;
+
+        using var probe = OpenChildNoFollow(
+            dir, Path.GetRandomFileName(),
+            Ntdll.FILE_WRITE_DATA | Ntdll.DELETE, Ntdll.FILE_CREATE,
+            Ntdll.FILE_NON_DIRECTORY_FILE | Ntdll.FILE_DELETE_ON_CLOSE);
+        return probe is not null;
+    }
+
+    /// <summary>
+    /// Removes the plain file <paramref name="leaf"/> inside <paramref name="folder"/>
+    /// through a handle, clearing a read-only attribute first. Answers true where the
+    /// file is gone, which includes where it was not there to begin with, so a copy
+    /// that was never made is not reported as a copy that would not go. False where the
+    /// file is present and could not be removed, or is a reparse point.
+    /// </summary>
+    internal static bool TryDiscardChildCopy(string folder, string leaf)
+    {
+        using var dir = OpenDirectoryNoFollow(folder);
+        if (dir is null) return false;
+
+        using var child = OpenChildNoFollow(
+            dir, leaf,
+            Ntdll.DELETE | Kernel32.FILE_READ_ATTRIBUTES | Kernel32.FILE_WRITE_ATTRIBUTES, Ntdll.FILE_OPEN,
+            Ntdll.FILE_OPEN_REPARSE_POINT | Ntdll.FILE_NON_DIRECTORY_FILE, out var status);
+        if (child is null)
+            return status == STATUS_OBJECT_NAME_NOT_FOUND || status == STATUS_OBJECT_PATH_NOT_FOUND;
+
+        if (!Kernel32.GetFileInformationByHandle(child, out var info)
+            || (info.dwFileAttributes & Kernel32.FILE_ATTRIBUTE_REPARSE_POINT) != 0)
+            return false;
+
+        ClearReadOnlyByHandle(child, info.dwFileAttributes);
+        return DeleteByHandle(child);
+    }
+
+    private static unsafe void ClearReadOnlyByHandle(SafeFileHandle handle, uint attributes)
+    {
+        if ((attributes & FILE_ATTRIBUTE_READONLY) == 0) return;
+
+        // A FILE_BASIC_INFO FileAttributes of zero leaves the attributes unchanged, so
+        // where read-only was the only one set, the file is marked normal instead.
+        var cleared = attributes & ~FILE_ATTRIBUTE_READONLY;
+        if (cleared == 0) cleared = FILE_ATTRIBUTE_NORMAL;
+        var basic = new Kernel32.FILE_BASIC_INFO { FileAttributes = cleared };
+        Kernel32.SetFileBasicInfoByHandle(
+            handle, Kernel32.FileBasicInfo, in basic, (uint)sizeof(Kernel32.FILE_BASIC_INFO));
+    }
+
+    private const uint FILE_ATTRIBUTE_READONLY = 0x00000001;
+    private const uint FILE_ATTRIBUTE_NORMAL = 0x00000080;
+    private const int STATUS_OBJECT_NAME_NOT_FOUND = unchecked((int)0xC0000034);
+    private const int STATUS_OBJECT_PATH_NOT_FOUND = unchecked((int)0xC000003A);
 
     private static unsafe bool DeleteByHandle(SafeFileHandle handle)
     {

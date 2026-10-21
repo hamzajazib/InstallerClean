@@ -103,7 +103,8 @@ public class MainViewModelTests
             _settingsService, _rebootService, _msiInfoService,
             _dialogService, _confirmationService, _windowService,
             _fileSystem, _resultLogService, _updateCheckService, _reverifier,
-            _earlierRunCheck, _firstRunMark, _windowsRegion, appUpdater);
+            _earlierRunCheck, _firstRunMark, _windowsRegion, appUpdater,
+            new ByPathDestinationGuard(_fileSystem));
     }
 
     /// <summary>

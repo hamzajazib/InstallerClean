@@ -330,6 +330,7 @@ public class CleanupDestinationVolumeTests
             scan,
             TestCompletion.Create(),
             Substitute.For<IRemovableReverifier>(),
-            resolveIsOnCacheVolume);
+            resolveIsOnCacheVolume,
+            destinationGuard: Substitute.For<IDestinationGuard>());
     }
 }

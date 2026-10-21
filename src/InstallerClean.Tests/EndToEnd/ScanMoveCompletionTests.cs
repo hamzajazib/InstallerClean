@@ -54,7 +54,8 @@ public class ScanMoveCompletionTests
             _settingsService, _rebootService, _msiInfoService,
             _dialogService, _confirmationService, _windowService,
             _fileSystem, _resultLogService, _updateCheckService, _reverifier,
-            _earlierRunCheck, _firstRunMark, _windowsRegion);
+            _earlierRunCheck, _firstRunMark, _windowsRegion,
+            destinationGuard: new ByPathDestinationGuard(_fileSystem));
     }
 
     [Fact]
@@ -223,7 +224,8 @@ public class ScanMoveCompletionTests
             settingsService, rebootService, msiInfoService,
             dialogService, confirmationService, windowService,
             fs, resultLogService, updateCheckService, reverifier,
-            Substitute.For<IEarlierRunCheck>(), Substitute.For<IFirstRunMark>(), Substitute.For<IWindowsRegion>());
+            Substitute.For<IEarlierRunCheck>(), Substitute.For<IFirstRunMark>(), Substitute.For<IWindowsRegion>(),
+            destinationGuard: new ByPathDestinationGuard(fs));
 
         // Stage 1: real scan finds the two orphans.
         await vm.Scan.ScanWithProgressAsync(null);
