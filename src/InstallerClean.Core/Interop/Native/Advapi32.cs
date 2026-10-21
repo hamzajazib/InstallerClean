@@ -91,8 +91,7 @@ internal static partial class Advapi32
 
     /// <summary>
     /// SE_DACL_PROTECTED: the list is sealed against the entries a parent would
-    /// otherwise add by inheritance, as <see cref="UpdateStagingFolder.AdministratorsOnly"/>'s
-    /// "P" sets it.
+    /// otherwise add by inheritance, which an SDDL "P" sets.
     /// </summary>
     public const ushort SE_DACL_PROTECTED = 0x1000;
 }

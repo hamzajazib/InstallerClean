@@ -90,7 +90,7 @@ public sealed class UpdateStagingFolder
     /// <summary>
     /// Removes this folder where it is empty, as it is once the download has been
     /// moved out of it. Leaves it where anything is still inside, and never throws:
-    /// <see cref="RemoveLeftovers"/> takes what is left at a later start.
+    /// <see cref="RemoveLeftovers(string)"/> takes what is left at a later start.
     /// </summary>
     public void TryRemoveIfEmpty()
     {
@@ -116,7 +116,7 @@ public sealed class UpdateStagingFolder
     /// is trusted and nothing is reached by its path across a check. The root is opened
     /// as a handle, and each candidate folder is opened without following a link in its
     /// name; a folder is cleaned only where its owner and list are the app's own, as
-    /// <see cref="Create"/> sets them, so a folder another account made is left whole.
+    /// <see cref="Create(string)"/> sets them, so a folder another account made is left whole.
     /// Inside a folder that is the app's own, a file is removed through a handle opened
     /// relative to the folder's, and only where its name has the downloads' shape,
     /// "InstallerClean-" to ".exe", and it is a plain file; the folder itself goes,
