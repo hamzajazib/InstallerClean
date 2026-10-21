@@ -163,8 +163,13 @@ public sealed class UpdateCheckService : IUpdateCheckService
                 return new CheckFailed(UpdateCheckFailureReason.Timeout);
             }
             if (Environment.GetEnvironmentVariable(PretendLatestVariable) is { Length: > 0 } pretendedTag)
-                return Compare(pretendedTag, currentVersion)
-                    ?? new CheckFailed(UpdateCheckFailureReason.ResponseParseError);
+            {
+                if (Compare(pretendedTag, currentVersion) is { } pretended)
+                    return pretended;
+                LogIfUserIsWaiting(origin, new InvalidOperationException(
+                    $"{PretendLatestVariable} is not a version: {Clamp(pretendedTag)}"));
+                return new CheckFailed(UpdateCheckFailureReason.ResponseParseError);
+            }
 #endif
             using var request = new HttpRequestMessage(HttpMethod.Get, ReleasesPageUrl);
             request.Headers.UserAgent.ParseAdd(UserAgent);
@@ -405,8 +410,9 @@ public sealed class UpdateCheckService : IUpdateCheckService
     /// Set to a release tag such as v9.9.9, a Debug build's check sends nothing and
     /// compares that tag with the current version as it would the tag GitHub answers
     /// with, so an update to a version no release carries can be tried offline. A value
-    /// that is not a version answers as a tag that is not one does. Held inside
-    /// <c>#if DEBUG</c> the same way.
+    /// that is not a version fails the check as such a tag does, and is written to
+    /// crash.log where the user is waiting on the check. Held inside <c>#if DEBUG</c> the
+    /// same way.
     /// </summary>
     internal const string PretendLatestVariable = "INSTALLERCLEAN_DEBUG_PRETEND_LATEST";
 #endif

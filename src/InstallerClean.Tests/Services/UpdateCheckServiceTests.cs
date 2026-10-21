@@ -178,6 +178,32 @@ public class UpdateCheckServiceTests
         }
     }
 
+    /// <summary>
+    /// Runs <paramref name="test"/> with the pretended latest tag set to
+    /// <paramref name="tag"/> and the other switches the check reads cleared, and puts all
+    /// three back as they were.
+    /// </summary>
+    private static async Task WithPretendedLatest(string? tag, Func<Task> test)
+    {
+        string[] names =
+        [
+            UpdateCheckService.PretendLatestVariable,
+            UpdateCheckService.PretendVersionVariable,
+            UpdateCheckService.SlowCheckVariable,
+        ];
+        var before = names.Select(Environment.GetEnvironmentVariable).ToArray();
+        try
+        {
+            foreach (var name in names) Environment.SetEnvironmentVariable(name, null);
+            Environment.SetEnvironmentVariable(UpdateCheckService.PretendLatestVariable, tag);
+            await test();
+        }
+        finally
+        {
+            for (var i = 0; i < names.Length; i++) Environment.SetEnvironmentVariable(names[i], before[i]);
+        }
+    }
+
     [Theory]
     [InlineData("v9.9.9")]
     [InlineData("9.9.9")]
@@ -189,30 +215,22 @@ public class UpdateCheckServiceTests
             requests++;
             return RedirectToTag("v0.0.1");
         });
-        var before = Environment.GetEnvironmentVariable(UpdateCheckService.PretendLatestVariable);
-        try
+        await WithPretendedLatest(tag, async () =>
         {
-            Environment.SetEnvironmentVariable(UpdateCheckService.PretendLatestVariable, tag);
             var available = Assert.IsType<UpdateAvailable>(await service.CheckAsync(UpdateCheckOrigin.Manual));
             Assert.Equal("9.9.9", available.LatestVersion);
             Assert.Equal(0, requests);
 
-            // The control: the same check with the variable cleared asks the network.
+            // The control: the same check with the tag cleared asks the network.
             Environment.SetEnvironmentVariable(UpdateCheckService.PretendLatestVariable, null);
             Assert.IsType<UpToDate>(await service.CheckAsync(UpdateCheckOrigin.Manual));
             Assert.Equal(1, requests);
             Assert.Empty(logged);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(UpdateCheckService.PretendLatestVariable, before);
-        }
+        });
     }
 
-    [Theory]
-    [InlineData("v0.0.1")]
-    [InlineData("not a version")]
-    public async Task In_a_debug_build_a_pretended_tag_that_is_not_newer_never_reaches_the_network(string tag)
+    [Fact]
+    public async Task In_a_debug_build_an_older_pretended_tag_is_up_to_date_without_a_request()
     {
         var requests = 0;
         var (service, logged) = Build(() =>
@@ -220,23 +238,39 @@ public class UpdateCheckServiceTests
             requests++;
             return RedirectToTag("v99.0.0");
         });
-        var before = Environment.GetEnvironmentVariable(UpdateCheckService.PretendLatestVariable);
-        try
+        await WithPretendedLatest("v0.0.1", async () =>
         {
-            Environment.SetEnvironmentVariable(UpdateCheckService.PretendLatestVariable, tag);
-            var result = await service.CheckAsync(UpdateCheckOrigin.Manual);
-
-            if (tag == "not a version")
-                Assert.Equal(UpdateCheckFailureReason.ResponseParseError, Assert.IsType<CheckFailed>(result).ReasonCode);
-            else
-                Assert.IsType<UpToDate>(result);
+            Assert.IsType<UpToDate>(await service.CheckAsync(UpdateCheckOrigin.Manual));
             Assert.Equal(0, requests);
+
+            // The control: the same check with the tag cleared asks the network.
+            Environment.SetEnvironmentVariable(UpdateCheckService.PretendLatestVariable, null);
+            Assert.IsType<UpdateAvailable>(await service.CheckAsync(UpdateCheckOrigin.Manual));
+            Assert.Equal(1, requests);
             Assert.Empty(logged);
-        }
-        finally
+        });
+    }
+
+    [Fact]
+    public async Task In_a_debug_build_a_pretended_tag_that_is_not_a_version_fails_the_check_without_a_request()
+    {
+        var requests = 0;
+        var (service, logged) = Build(() =>
         {
-            Environment.SetEnvironmentVariable(UpdateCheckService.PretendLatestVariable, before);
-        }
+            requests++;
+            return RedirectToTag("v99.0.0");
+        });
+        await WithPretendedLatest("9.9.9a", async () =>
+        {
+            var automatic = Assert.IsType<CheckFailed>(await service.CheckAsync(UpdateCheckOrigin.Automatic));
+            Assert.Equal(UpdateCheckFailureReason.ResponseParseError, automatic.ReasonCode);
+            Assert.Empty(logged);
+
+            var manual = Assert.IsType<CheckFailed>(await service.CheckAsync(UpdateCheckOrigin.Manual));
+            Assert.Equal(UpdateCheckFailureReason.ResponseParseError, manual.ReasonCode);
+            Assert.Contains("9.9.9a", Assert.Single(logged).Message);
+            Assert.Equal(0, requests);
+        });
     }
 #endif
 

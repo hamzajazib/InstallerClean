@@ -72,9 +72,15 @@ public sealed class UpdateInPlaceTests : IDisposable
 
     private sealed class OneAnswer(byte[] body) : HttpMessageHandler
     {
+        /// <summary>How many requests it has answered.</summary>
+        public int Requests { get; private set; }
+
         protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request, CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(body) });
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Requests++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(body) });
+        }
     }
 
     [AdministratorFact]
@@ -659,36 +665,51 @@ public sealed class UpdateInPlaceTests : IDisposable
     }
 
 #if DEBUG
-    /// <summary>Answers every request with <paramref name="body"/> and counts the requests.</summary>
-    private sealed class CountedAnswer(byte[] body) : HttpMessageHandler
+    /// <summary>
+    /// Runs <paramref name="test"/> with the local download switch set to
+    /// <paramref name="path"/> and the local setup switch cleared, and puts both back as
+    /// they were.
+    /// </summary>
+    private static async Task WithLocalDownload(string? path, Func<Task> test)
     {
-        public int Requests { get; private set; }
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request, CancellationToken cancellationToken)
+        var download = Environment.GetEnvironmentVariable(AppUpdater.LocalDownloadVariable);
+        var setup = Environment.GetEnvironmentVariable(AppUpdater.LocalSetupVariable);
+        try
         {
-            Requests++;
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(body) });
+            Environment.SetEnvironmentVariable(AppUpdater.LocalSetupVariable, null);
+            Environment.SetEnvironmentVariable(AppUpdater.LocalDownloadVariable, path);
+            await test();
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(AppUpdater.LocalDownloadVariable, download);
+            Environment.SetEnvironmentVariable(AppUpdater.LocalSetupVariable, setup);
         }
     }
 
-    [Fact]
-    public async Task In_a_debug_build_the_local_download_switch_stages_that_file_in_place_of_a_download()
+    /// <summary>An updater for the command line's own download in its own folder, and the exe it updates.</summary>
+    private (AppUpdater Updater, string Exe, string StagingRoot) CommandLineUpdater(OneAnswer network)
     {
         var exeFolder = Directory.CreateDirectory(Path.Combine(_root, "tools")).FullName;
         var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
         var exe = Path.Combine(exeFolder, AppCopy.CommandLineFileName);
         File.WriteAllBytes(exe, Program(1));
-        var local = Path.Combine(_root, "local-newer.exe");
-        File.WriteAllBytes(local, Program(4));
-        var network = new CountedAnswer(Program(2));
         var updater = new AppUpdater(AppCopyKind.CommandLineDownload, exe,
             new UpdateDownloadService(network, null), stagingRoot,
             CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount);
-        var before = Environment.GetEnvironmentVariable(AppUpdater.LocalDownloadVariable);
-        try
+        return (updater, exe, stagingRoot);
+    }
+
+    [Fact]
+    public async Task In_a_debug_build_the_local_download_switch_stages_that_file_in_place_of_a_download()
+    {
+        var network = new OneAnswer(Program(2));
+        var (updater, exe, stagingRoot) = CommandLineUpdater(network);
+        var local = Path.Combine(_root, "local-newer.exe");
+        File.WriteAllBytes(local, Program(4));
+
+        await WithLocalDownload(local, async () =>
         {
-            Environment.SetEnvironmentVariable(AppUpdater.LocalDownloadVariable, local);
             var prepared = await updater.PrepareAsync("3.5.0", null, CancellationToken.None);
 
             Assert.Equal(0, network.Requests);
@@ -704,11 +725,36 @@ public sealed class UpdateInPlaceTests : IDisposable
             Assert.Equal(1, network.Requests);
             Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
             prepared.Undo();
-        }
-        finally
+        });
+    }
+
+    [Theory]
+    [InlineData("not a program")]
+    [InlineData("a relative path")]
+    [InlineData("a missing file")]
+    public async Task In_a_debug_build_a_local_download_the_download_would_refuse_fails_as_a_download(string which)
+    {
+        var network = new OneAnswer(Program(2));
+        var (updater, exe, stagingRoot) = CommandLineUpdater(network);
+        var local = Path.Combine(_root, "local-newer.exe");
+        File.WriteAllBytes(local, which == "not a program" ? "PK not a program"u8.ToArray() : Program(4));
+        var path = which switch
         {
-            Environment.SetEnvironmentVariable(AppUpdater.LocalDownloadVariable, before);
-        }
+            "a relative path" => Path.GetFileName(local),
+            "a missing file" => local + ".missing",
+            _ => local,
+        };
+
+        await WithLocalDownload(path, async () =>
+        {
+            var failure = await Assert.ThrowsAsync<UpdateFailedException>(
+                () => updater.PrepareAsync("3.5.0", null, CancellationToken.None));
+
+            Assert.Equal(UpdateFailureStage.Download, failure.Stage);
+            Assert.Equal(0, network.Requests);
+            Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
+            Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
+        });
     }
 
     [Fact]
@@ -719,24 +765,19 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var local = Path.Combine(_root, "local-newer.exe");
         File.WriteAllBytes(local, Program(4));
-        var network = new CountedAnswer(Program(3));
+        var network = new OneAnswer(Program(3));
         var updater = new AppUpdater(AppCopyKind.Setup, exe,
             new UpdateDownloadService(network, null), stagingRoot,
             AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount);
-        var before = Environment.GetEnvironmentVariable(AppUpdater.LocalDownloadVariable);
-        try
+
+        await WithLocalDownload(local, async () =>
         {
-            Environment.SetEnvironmentVariable(AppUpdater.LocalDownloadVariable, local);
             var prepared = await updater.PrepareAsync("3.5.0", null, CancellationToken.None);
 
             Assert.Equal(1, network.Requests);
             Assert.Equal(Program(3), File.ReadAllBytes(prepared.FileToStart));
             prepared.Undo();
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(AppUpdater.LocalDownloadVariable, before);
-        }
+        });
     }
 #endif
 

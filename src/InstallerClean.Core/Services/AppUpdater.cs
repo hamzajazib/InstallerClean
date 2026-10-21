@@ -151,7 +151,8 @@ public sealed class AppUpdater : IAppUpdater
         {
 #if DEBUG
             if (LocalFile() is { } local)
-                await CopyLocalFileAsync(local, staged, progress, cancellationToken).ConfigureAwait(false);
+                await new UpdateDownloadService(new LocalFileAnswer(local), null)
+                    .DownloadAsync(address, staged, progress, cancellationToken).ConfigureAwait(false);
             else
 #endif
             await _downloader.DownloadAsync(address, staged, progress, cancellationToken)
@@ -197,11 +198,11 @@ public sealed class AppUpdater : IAppUpdater
     internal const string LocalSetupVariable = "INSTALLERCLEAN_DEBUG_LOCAL_SETUP";
 
     /// <summary>
-    /// Set to the path of a newer copy of the kind this one replaces itself with (the
-    /// portable, the slim or the command line), a Debug build that replaces itself copies
-    /// that file in place of downloading one, and then stages and swaps it in as it would
-    /// a download, so an update to a build from this tree can be tried offline. Held inside
-    /// <c>#if DEBUG</c> the same way.
+    /// Set to the full path of a newer copy of the kind this one replaces itself with (the
+    /// portable, the slim or the command line), a Debug build that replaces itself takes
+    /// that file as the body of its download, and then stages and swaps it in as it would
+    /// any download, so an update to a build from this tree can be tried offline. Held
+    /// inside <c>#if DEBUG</c> the same way.
     /// </summary>
     internal const string LocalDownloadVariable = "INSTALLERCLEAN_DEBUG_LOCAL_DOWNLOAD";
 
@@ -218,27 +219,29 @@ public sealed class AppUpdater : IAppUpdater
     }
 
     /// <summary>
-    /// Copies the file <see cref="LocalFile"/> names to where a download would have gone,
-    /// through the same write the download uses.
+    /// Answers every request with the file at <paramref name="path"/>, so the file goes
+    /// through every check, write and clean-up a download does. A path that is not a full
+    /// path, or a file that cannot be opened, fails as a download that could not be made.
     /// </summary>
-    private static async Task CopyLocalFileAsync(
-        string source, string destination, IProgress<double?>? progress, CancellationToken cancellationToken)
+    private sealed class LocalFileAnswer(string path) : HttpMessageHandler
     {
-        try
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            await using var input = File.OpenRead(source);
-            using var handle = Helpers.StorageHelpers.OpenAtomic(
-                    destination, FileAccess.Write, Helpers.StorageHelpers.AtomicOpenMode.CreateAlways)
-                ?? throw new IOException("The file the local copy is written to could not be created.");
-            await using var output = new FileStream(handle, FileAccess.Write, bufferSize: 0);
-            await input.CopyToAsync(output, cancellationToken).ConfigureAwait(false);
-            output.Flush(flushToDisk: true);
-            progress?.Report(1d);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            Helpers.StorageHelpers.TryDeleteTempFile(destination);
-            throw new UpdateFailedException(UpdateFailureStage.Install, "The local file could not be copied.", ex);
+            if (!Path.IsPathFullyQualified(path))
+                throw new HttpRequestException($"The local file {path} is not a full path.");
+            FileStream file;
+            try
+            {
+                file = File.OpenRead(path);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                throw new HttpRequestException($"The local file {path} could not be opened.", ex);
+            }
+            var content = new StreamContent(file);
+            content.Headers.ContentLength = file.Length;
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = content });
         }
     }
 #endif
