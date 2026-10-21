@@ -36,11 +36,17 @@ internal static class EventLogWriter
     /// Sticky flag: set true on the first Write that fails (source
     /// creation denied by Group Policy, event-log service stopped,
     /// source pre-mapped to a non-Application log). The command line
-    /// prints a one-line stdout warning, once in a run, when this is
+    /// prints a one-line stdout warning, once in a process, when this is
     /// set, so an RMM consumer expecting Application-channel entries can tell
     /// "the channel was unwritable" apart from "nothing happened".
     /// </summary>
-    internal static bool EventLogUnavailable { get; set; }
+    internal static bool EventLogUnavailable
+    {
+        get => Volatile.Read(ref _eventLogUnavailable) != 0;
+        set => Volatile.Write(ref _eventLogUnavailable, value ? 1 : 0);
+    }
+
+    private static int _eventLogUnavailable;
 
     /// <summary>
     /// What the most recent failed <see cref="Write"/> met, set with
@@ -96,9 +102,8 @@ internal static class EventLogWriter
             }
             if (!EnsureSourceMappedToApplicationLog(ref step, out var mappedLog))
             {
-                var first = !EventLogUnavailable;
-                EventLogUnavailable = true;
-                Record(first, $"the source is registered against the log '{mappedLog}', not {ApplicationLog}", cause: null);
+                var first = MarkUnavailable();
+                Record(first, $"the source is registered against the log '{mappedLog}', not {ApplicationLog}");
                 return;
             }
             step = "writing the entry";
@@ -107,8 +112,7 @@ internal static class EventLogWriter
         }
         catch (Exception e)
         {
-            var first = !EventLogUnavailable;
-            EventLogUnavailable = true;
+            var first = MarkUnavailable();
             // Stdout is the primary channel; silent failure here keeps the
             // CLI working on hosts where the event log isn't writable.
             string failure;
@@ -121,24 +125,29 @@ internal static class EventLogWriter
                 // An exception whose message cannot be read leaves the step alone recorded.
                 failure = step;
             }
-            Record(first, failure, e);
+            Record(first, failure);
         }
     }
 
     /// <summary>
+    /// Sets <see cref="EventLogUnavailable"/> and answers whether this call set it, so
+    /// two writes failing at once agree on which was the first.
+    /// </summary>
+    private static bool MarkUnavailable() => Interlocked.Exchange(ref _eventLogUnavailable, 1) == 0;
+
+    /// <summary>
     /// Records <paramref name="failure"/> in <see cref="LastFailure"/>, once the caller has
     /// marked the log unavailable. Where <paramref name="first"/> says no write in this
-    /// process had failed before, writes the failure to crash.log, with
-    /// <paramref name="cause"/> under it where one was thrown, so a run whose entries never
-    /// arrived leaves the reason on disk once rather than once per entry. Never throws:
-    /// crash.log swallows its own failures.
+    /// process had failed before, writes the failure to crash.log as one line, so a
+    /// process whose entries never arrived leaves the reason on disk once rather than once
+    /// per entry. Never throws: crash.log swallows its own failures.
     /// </summary>
-    private static void Record(bool first, string failure, Exception? cause)
+    private static void Record(bool first, string failure)
     {
         LastFailure = failure;
         if (first)
             CrashLog.TryWrite(new InvalidOperationException(
-                $"An entry was not written to the Application log: {failure}", cause));
+                $"An entry was not written to the Application log: {failure}"));
     }
 
     /// <summary>

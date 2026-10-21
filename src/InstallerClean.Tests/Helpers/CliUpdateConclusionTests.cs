@@ -59,13 +59,15 @@ public class CliUpdateConclusionTests
         Assert.Empty(run.Entries);
     }
 
-    [Fact]
-    public void A_newer_version_that_ran_after_the_log_refused_the_3005_has_the_note_printed_after_it()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(CliExitCode.Error)]
+    public void A_newer_version_that_ran_after_the_log_refused_the_3005_has_the_note_printed_after_it(int exitCode)
     {
-        var run = Conclude(new CommandLineUpdateResult.HandedOver(0, From, To, "/s"), cancelled: false,
+        var run = Conclude(new CommandLineUpdateResult.HandedOver(exitCode, From, To, "/s"), cancelled: false,
             logRefuses: true, handOverWritten: true);
 
-        Assert.Equal(0, run.ExitCode);
+        Assert.Equal(exitCode, run.ExitCode);
         Assert.Equal(new[] { Strings.Cli_EventLogUnavailable }, run.Lines);
         Assert.Empty(run.Entries);
     }
