@@ -1752,3 +1752,299 @@ jobs:
           path: ${{ runner.temp }}/kept
           if-no-files-found: warn
           retention-days: 7
+
+  # The command line's own download, updating to a newer version, waits up to a minute
+  # for the newer version to say its own code is running before it hands the run over.
+  # This job runs that wait in a single-file build, offline, against three newer files.
+  #
+  # The old copy is the command line published as a single file from this commit with
+  # the Debug configuration, so it reads INSTALLERCLEAN_DEBUG_PRETEND_LATEST, which has
+  # its update check answer that v9.9.9 is the newest release without asking GitHub, and
+  # INSTALLERCLEAN_DEBUG_LOCAL_DOWNLOAD, which has its download fetch the named file in
+  # place of the release's. Everything after the download, the checks on the file, the
+  # rename, the start and the wait, runs as it does in a release.
+  #
+  # The three newer files each carry the file version 9.9.9, which the old copy checks
+  # before it renames anything:
+  # - the command line published as a Release build stamped 9.9.9, which says it has
+  #   started and runs the command. A Release build ignores both switches, which it
+  #   inherits with the old copy's environment, so it does not update again;
+  # - a stand-in that never says it has started and sleeps, which the old copy ends
+  #   after 60 seconds before it puts itself back;
+  # - the same stand-in ending at once with exit code 7.
+  # The stand-in is a console program built here, published as one self-contained file
+  # named installerclean-cli.exe, since the old copy starts the newer file under that
+  # name from its own folder. It ignores its arguments and reads what to do from
+  # START_CHECK_STAND_IN.
+  #
+  # Each newer file is offered to a fresh copy of the old one in a folder of its own,
+  # one after another, each run with /s and its input and output redirected, so nobody
+  # can answer it, and bounded at 240 s. The job fails where:
+  # - the old copy does not print what it should, or prints what it should not: the
+  #   newer version installed, where it said it had started; the install failed and the
+  #   command run with the old version, where it did not;
+  # - the Application log, read for up to 5 s after each run for the entries made since
+  #   it started, does not hold one 3005 naming the update to 9.9.9 where the newer
+  #   version started, or one 3006 naming the failed install where it did not, or holds
+  #   the other. The app registers its own event source, as it does on a PC. Where an
+  #   entry is missing the step prints whether the run printed the note saying the
+  #   Application log refused an entry, and the line crash.log carries saying why;
+  # - the file at the path does not carry the version that should be there, or a .new
+  #   is left beside it, or a .old where the old copy put itself back;
+  # - crash.log does not gain the line saying the newer version did not say it had
+  #   started within 60 seconds, or that it ended with exit code 7 before it did, and
+  #   the line saying the newer version could not be started; or gains a line saying
+  #   Windows would not end the newer version or it had not ended;
+  # - the run that waited out the minute took less than 60 s, or the one whose newer
+  #   file ended at once took 60 s or more;
+  # - the run's exit code is not that of a second run of the file now at the path, with
+  #   /s /noupdate, or a stand-in is still running from the run's folder.
+  #
+  # The window's wait needs a click and is not run here. Ctrl+C and the cancel event
+  # need a console a hosted runner does not give. The 9.9.9 build's own run checks
+  # GitHub for updates as a Release build does, and that is the only request any build
+  # in the job makes of the network.
+  start-check:
+    name: The start check (Windows)
+    runs-on: windows-2025
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Publish the old copy, the 9.9.9 command line and the stand-in
+        shell: pwsh
+        run: |
+          dotnet publish src/InstallerClean.Cli/InstallerClean.Cli.csproj -c Debug -r win-x64 --self-contained true -p:RestoreLockedMode=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true --nologo -o publish/old
+          if ($LASTEXITCODE -ne 0) { throw "The old copy did not publish." }
+          dotnet publish src/InstallerClean.Cli/InstallerClean.Cli.csproj -c Release -r win-x64 --self-contained true -p:RestoreLockedMode=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:Version=9.9.9 --nologo -o publish/newer
+          if ($LASTEXITCODE -ne 0) { throw "The 9.9.9 command line did not publish." }
+
+          $standIn = Join-Path $env:RUNNER_TEMP 'stand-in'
+          New-Item -ItemType Directory -Force -Path $standIn | Out-Null
+          Set-Content -Path (Join-Path $standIn 'StandIn.csproj') -Value @'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <OutputType>Exe</OutputType>
+              <TargetFramework>net10.0</TargetFramework>
+              <AssemblyName>installerclean-cli</AssemblyName>
+              <Version>9.9.9</Version>
+            </PropertyGroup>
+          </Project>
+          '@
+          Set-Content -Path (Join-Path $standIn 'Program.cs') -Value @'
+          var mode = System.Environment.GetEnvironmentVariable("START_CHECK_STAND_IN");
+          if (mode == "sleep") System.Threading.Thread.Sleep(System.TimeSpan.FromSeconds(300));
+          return mode == "exit" ? 7 : 3;
+          '@
+          dotnet publish (Join-Path $standIn 'StandIn.csproj') -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true --nologo -o (Join-Path $standIn 'out')
+          if ($LASTEXITCODE -ne 0) { throw "The stand-in did not publish." }
+          if (-not (Test-Path (Join-Path $standIn 'out\installerclean-cli.exe'))) { throw "The stand-in's publish wrote no installerclean-cli.exe." }
+
+      - name: Update the old copy to each newer file
+        shell: pwsh
+        run: |
+          $failures = [System.Collections.Generic.List[string]]::new()
+          function Fail([string]$message) { $failures.Add($message); Write-Host "::error::$message" }
+
+          $resx = [xml](Get-Content -Raw src/InstallerClean.Core/Resources/Strings.resx)
+          function Line([string]$name) {
+            $value = ($resx.root.data | Where-Object name -eq $name).value
+            if (-not $value) { throw "Strings.resx has no $name." }
+            $value
+          }
+
+          # MAJOR.MINOR.BUILD of a file's version resource, as the old copy reads it.
+          function Version3([string]$file) {
+            $v = (Get-Item -LiteralPath $file).VersionInfo.FileVersion -as [version]
+            if (-not $v) { return '' }
+            "$($v.Major).$($v.Minor).$([Math]::Max($v.Build, 0))"
+          }
+
+          $oldExe = (Resolve-Path 'publish/old/installerclean-cli.exe').Path
+          $old = Version3 $oldExe
+          $latest = '9.9.9'
+          $signals = (Resolve-Path 'publish/newer/installerclean-cli.exe').Path
+          $standIn = (Resolve-Path (Join-Path $env:RUNNER_TEMP 'stand-in\out\installerclean-cli.exe')).Path
+          "  the old copy carries $old"
+          foreach ($file in $signals, $standIn) {
+            $carried = Version3 $file
+            if ($carried -ne $latest) { throw "$file carries '$carried', not $latest." }
+            "  $file carries $carried"
+          }
+          if ($old -eq $latest -or -not $old) { throw "The old copy carries '$old'." }
+
+          $crashLog = Join-Path $env:LOCALAPPDATA 'InstallerClean\crash.log'
+          "  crash.log is read at $crashLog"
+          function CrashLogLength { if (Test-Path -LiteralPath $crashLog) { (Get-Item -LiteralPath $crashLog).Length } else { 0 } }
+          function CrashLogSince([long]$length) {
+            if (-not (Test-Path -LiteralPath $crashLog)) { return '' }
+            $bytes = [System.IO.File]::ReadAllBytes($crashLog)
+            if ($bytes.Length -lt $length) { $length = 0 }
+            [System.Text.Encoding]::UTF8.GetString($bytes, [int]$length, $bytes.Length - [int]$length)
+          }
+
+          # Runs exe with its input closed and its output read to the end, bounded at
+          # $seconds, after which the process and everything it started are ended.
+          function Run([string]$exe, [string[]]$arguments, [hashtable]$environment, [int]$seconds) {
+            $info = [System.Diagnostics.ProcessStartInfo]::new($exe)
+            foreach ($a in $arguments) { $info.ArgumentList.Add($a) }
+            $info.UseShellExecute = $false
+            $info.WorkingDirectory = Split-Path $exe
+            $info.RedirectStandardInput = $true
+            $info.RedirectStandardOutput = $true
+            $info.RedirectStandardError = $true
+            foreach ($name in $environment.Keys) { $info.Environment[$name] = $environment[$name] }
+            $clock = [System.Diagnostics.Stopwatch]::StartNew()
+            $p = [System.Diagnostics.Process]::Start($info)
+            $p.StandardInput.Close()
+            $out = $p.StandardOutput.ReadToEndAsync()
+            $err = $p.StandardError.ReadToEndAsync()
+            $ended = $p.WaitForExit($seconds * 1000)
+            if (-not $ended) { $p.Kill($true) }
+            $p.WaitForExit()
+            $clock.Stop()
+            $null = $out.Wait(10000)
+            $null = $err.Wait(10000)
+            [pscustomobject]@{
+              ExitCode = if ($ended) { $p.ExitCode } else { $null }
+              Output = $(if ($out.IsCompleted) { $out.Result } else { '' }) + $(if ($err.IsCompleted) { $err.Result } else { '' })
+              Seconds = $clock.Elapsed.TotalSeconds
+            }
+          }
+
+          # The entries with $id the InstallerClean source wrote since $since whose text
+          # is like $like, read again every 250 ms for up to 5 s until one is there.
+          function Entries([datetime]$since, [int]$id, [string]$like) {
+            $clock = [System.Diagnostics.Stopwatch]::StartNew()
+            do {
+              $found = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'InstallerClean'; Id = $id; StartTime = $since } -ErrorAction SilentlyContinue |
+                         Where-Object { $_.Message -like $like })
+              if ($found.Count) { return , $found }
+              Start-Sleep -Milliseconds 250
+            } while ($clock.Elapsed.TotalSeconds -lt 5)
+            , @()
+          }
+
+          function Update([string]$label, [string]$newerFile, [string]$standInMode) {
+            Write-Host "== $label"
+            $folder = Join-Path $env:RUNNER_TEMP "start-check-$label"
+            New-Item -ItemType Directory -Force -Path $folder | Out-Null
+            Copy-Item -LiteralPath $oldExe -Destination $folder
+            $exe = Join-Path $folder 'installerclean-cli.exe'
+            foreach ($left in "$exe.old", "$exe.new") { if (Test-Path -LiteralPath $left) { throw "$left is there before the run." } }
+            $logLength = CrashLogLength
+            $since = (Get-Date).AddSeconds(-2)
+            $run = Run $exe @('/s') @{
+              INSTALLERCLEAN_DEBUG_PRETEND_LATEST = "v$latest"
+              INSTALLERCLEAN_DEBUG_LOCAL_DOWNLOAD = $newerFile
+              START_CHECK_STAND_IN = $standInMode
+            } 240
+            # Everything below is printed with Write-Host, since what the function writes
+            # to its output is what it answers with.
+            Write-Host "::group::$label, the run's output"
+            Write-Host $run.Output
+            Write-Host "::endgroup::"
+            Write-Host "  exit code $($run.ExitCode), after $([math]::Round($run.Seconds, 1)) s"
+            if ($null -eq $run.ExitCode) { Fail "$label`: the run was still going after 240 s and was ended." }
+            $logged = CrashLogSince $logLength
+            if ($logged) { Write-Host "  crash.log gained:"; $logged -split "`r?`n" | Where-Object { $_ } | ForEach-Object { Write-Host "    $_" } }
+            else { Write-Host "  crash.log gained nothing" }
+            $left = @(Get-Process -Name 'installerclean-cli' -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($folder, 'OrdinalIgnoreCase') })
+            if ($left) { Fail "$label`: a process is still running from ${folder}: $(($left | ForEach-Object { "$($_.Id) $($_.Path)" }) -join ', ')"; $left | Stop-Process -Force }
+            [pscustomobject]@{ Label = $label; Exe = $exe; Run = $run; Since = $since; Logged = $logged }
+          }
+
+          function Expect-Printed($update, [string[]]$printed, [string[]]$notPrinted) {
+            foreach ($line in $printed) {
+              if ($update.Run.Output.Contains($line)) { "  printed: $line" } else { Fail "$($update.Label): it did not print: $line" }
+            }
+            foreach ($line in $notPrinted) {
+              if ($update.Run.Output.Contains($line)) { Fail "$($update.Label): it printed: $line" } else { "  did not print: $line" }
+            }
+          }
+
+          function Expect-Entries($update, [int]$id, [string]$like, [int]$otherId) {
+            $found = Entries $update.Since $id $like
+            if ($found.Count -eq 1) { "  the Application log holds one $id`: $($found[0].Message)" }
+            else {
+              $note = $update.Run.Output.Contains((Line 'Cli.EventLogUnavailable'))
+              $why = @($update.Logged -split "`r?`n" | Where-Object { $_ -like '*An entry was not written to the Application log*' })
+              Fail ("$($update.Label): $($found.Count) entries with Event ID $id like '$like', where one was expected. " +
+                "The run $(if ($note) { 'printed' } else { 'did not print' }) the note that the Application log refused an entry" +
+                $(if ($why) { "; crash.log: $($why -join ' | ')" } else { '; crash.log names no refused entry' }) + '.')
+            }
+            $other = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'InstallerClean'; Id = $otherId; StartTime = $update.Since } -ErrorAction SilentlyContinue)
+            if ($other) { Fail "$($update.Label): the Application log holds $($other.Count) entries with Event ID $otherId since the run started: $(($other | ForEach-Object Message) -join ' | ')" }
+            else { "  no $otherId since the run started" }
+          }
+
+          function Expect-File($update, [string]$version, [bool]$noOld) {
+            $carried = Version3 $update.Exe
+            if ($carried -eq $version) { "  the file at the path carries $carried" } else { Fail "$($update.Label): the file at the path carries '$carried', not $version." }
+            if (Test-Path -LiteralPath "$($update.Exe).new") { Fail "$($update.Label): $($update.Exe).new is left." } else { "  no .new" }
+            if ($noOld) {
+              if (Test-Path -LiteralPath "$($update.Exe).old") { Fail "$($update.Label): $($update.Exe).old is left." } else { "  no .old" }
+            }
+          }
+
+          function Expect-Logged($update, [string[]]$logged, [string[]]$notLogged) {
+            foreach ($line in $logged) {
+              if ($update.Logged.Contains($line)) { "  crash.log: $line" } else { Fail "$($update.Label): crash.log did not gain: $line" }
+            }
+            foreach ($line in $notLogged) {
+              if ($update.Logged.Contains($line)) { Fail "$($update.Label): crash.log gained: $line" }
+            }
+          }
+
+          function Expect-ExitCode($update) {
+            $again = Run $update.Exe @('/s', '/noupdate') @{} 240
+            "  a second run of the file at the path, with /s /noupdate, exited with $($again.ExitCode)"
+            if ($update.Run.ExitCode -ne $again.ExitCode) { Fail "$($update.Label): the run exited with $($update.Run.ExitCode), the file at the path with $($again.ExitCode)." }
+          }
+
+          $available = (Line 'UpdateNotice.Available') -f $latest
+          $downloading = (Line 'UpdateNotice.Downloading') -f $latest
+          $installed = (Line 'Cli.UpdateInstalled') -f $latest
+          $installFailed = Line 'UpdateNotice.InstallFailed'
+          $runningInstead = (Line 'Cli.UpdateRunningInstead') -f '/s', $old
+          $notStarted = 'The newer version could not be started.'
+          $endRefused = 'Windows refused the request to end the newer version'
+          $notEnded = 'The newer version had not ended a few seconds after'
+          $updatedLike = "*updated itself from $old to $latest and ran /s with it*"
+          $failedLike = "*could not update itself from $old to $latest (the install failed)*"
+
+          $update = Update 'signals' $signals ''
+          Expect-Printed $update @($available, $downloading, $installed) @($installFailed, $runningInstead)
+          Expect-Entries $update 3005 $updatedLike 3006
+          Expect-File $update $latest $false
+          Expect-Logged $update @() @('did not say it had started', 'before it said it had started', $notStarted)
+          Expect-ExitCode $update
+
+          $update = Update 'exits' $standIn 'exit'
+          Expect-Printed $update @($available, $downloading, $installFailed, $runningInstead) @($installed)
+          Expect-Entries $update 3006 $failedLike 3005
+          Expect-File $update $old $true
+          Expect-Logged $update @('The newer version ended with exit code 7 before it said it had started.', $notStarted) @($endRefused, $notEnded)
+          if ($update.Run.Seconds -ge 60) { Fail "exits: the run took $([math]::Round($update.Run.Seconds, 1)) s, though the newer file ended at once." }
+          Expect-ExitCode $update
+
+          $update = Update 'sleeps' $standIn 'sleep'
+          Expect-Printed $update @($available, $downloading, $installFailed, $runningInstead) @($installed)
+          Expect-Entries $update 3006 $failedLike 3005
+          Expect-File $update $old $true
+          Expect-Logged $update @('The newer version did not say it had started within 60 seconds.', $notStarted) @($endRefused, $notEnded)
+          if ($update.Run.Seconds -lt 60) { Fail "sleeps: the run took $([math]::Round($update.Run.Seconds, 1)) s, less than the minute it waits." }
+          Expect-ExitCode $update
+
+          if ($failures.Count) {
+            "$($failures.Count) checks failed:"
+            $failures | ForEach-Object { "  $_" }
+            exit 1
+          }
+          'Every check passed.'
