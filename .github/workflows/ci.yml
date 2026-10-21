@@ -1800,10 +1800,8 @@ jobs:
   # - the run's exit code is not that of a second run of the file now at the path, with
   #   /s /noupdate, or a stand-in is still running from the run's folder.
   #
-  # The window's wait needs a click and is not run here. Ctrl+C and the cancel event
-  # need a console a hosted runner does not give. The 9.9.9 build's own run checks
-  # GitHub for updates as a Release build does, and that is the only request any build
-  # in the job makes of the network.
+  # The 9.9.9 build's own run checks GitHub for updates as a Release build does, and
+  # that is the only request any build in the job makes of the network.
   start-check:
     name: The start check (Windows)
     runs-on: windows-2025
@@ -1909,12 +1907,40 @@ jobs:
             if (-not $ended) { $p.Kill($true) }
             $p.WaitForExit()
             $clock.Stop()
+            # A process the run started and left running from its folder holds the output
+            # open, so it is ended, and named, before the output is read to its end.
+            $left = @(Leftovers (Split-Path $exe))
+            $left | ForEach-Object { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
             $null = $out.Wait(10000)
             $null = $err.Wait(10000)
             [pscustomobject]@{
               ExitCode = if ($ended) { $p.ExitCode } else { $null }
               Output = $(if ($out.IsCompleted) { $out.Result } else { '' }) + $(if ($err.IsCompleted) { $err.Result } else { '' })
               Seconds = $clock.Elapsed.TotalSeconds
+              Left = @($left | ForEach-Object { "$($_.Id) $(if ($_.Path) { $_.Path } else { '(path not readable)' })" })
+            }
+          }
+
+          # Every installerclean-cli process running from $folder, and every one whose path
+          # cannot be read, since such a process could be running from there.
+          function Leftovers([string]$folder) {
+            @(Get-Process -Name 'installerclean-cli' -ErrorAction SilentlyContinue |
+              Where-Object { -not $_.Path -or $_.Path.StartsWith($folder, 'OrdinalIgnoreCase') })
+          }
+
+          # The InstallerClean entries with $id written since $since. Only the answer that no
+          # entry matches reads as none; any other failure to read the log stops the step.
+          # An entry's text is the first of its insertion strings, which does not depend on
+          # the message file the source is registered with.
+          function Read-Entries([datetime]$since, [int]$id) {
+            try {
+              @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'InstallerClean'; Id = $id; StartTime = $since } -ErrorAction Stop |
+                ForEach-Object { [pscustomobject]@{ Text = $(if ($_.Properties.Count) { [string]$_.Properties[0].Value } else { $_.Message }) } })
+            }
+            catch {
+              if ($_.FullyQualifiedErrorId -like 'NoMatchingEventsFound*' -or $_.Exception.Message -like '*No events were found*' -or
+                  $_.Exception.Message -like '*no providers*InstallerClean*' -or $_.FullyQualifiedErrorId -like 'NoMatchingProvidersFound*') { return , @() }
+              throw "The Application log could not be read: $($_.Exception.Message)"
             }
           }
 
@@ -1923,8 +1949,7 @@ jobs:
           function Entries([datetime]$since, [int]$id, [string]$like) {
             $clock = [System.Diagnostics.Stopwatch]::StartNew()
             do {
-              $found = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'InstallerClean'; Id = $id; StartTime = $since } -ErrorAction SilentlyContinue |
-                         Where-Object { $_.Message -like $like })
+              $found = @(Read-Entries $since $id | Where-Object { $_.Text -like $like })
               if ($found.Count) { return , $found }
               Start-Sleep -Milliseconds 250
             } while ($clock.Elapsed.TotalSeconds -lt 5)
@@ -1939,7 +1964,7 @@ jobs:
             $exe = Join-Path $folder 'installerclean-cli.exe'
             foreach ($left in "$exe.old", "$exe.new") { if (Test-Path -LiteralPath $left) { throw "$left is there before the run." } }
             $logLength = CrashLogLength
-            $since = (Get-Date).AddSeconds(-2)
+            $since = Get-Date
             $run = Run $exe @('/s') @{
               INSTALLERCLEAN_DEBUG_PRETEND_LATEST = "v$latest"
               INSTALLERCLEAN_DEBUG_LOCAL_DOWNLOAD = $newerFile
@@ -1955,8 +1980,7 @@ jobs:
             $logged = CrashLogSince $logLength
             if ($logged) { Write-Host "  crash.log gained:"; $logged -split "`r?`n" | Where-Object { $_ } | ForEach-Object { Write-Host "    $_" } }
             else { Write-Host "  crash.log gained nothing" }
-            $left = @(Get-Process -Name 'installerclean-cli' -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($folder, 'OrdinalIgnoreCase') })
-            if ($left) { Fail "$label`: a process is still running from ${folder}: $(($left | ForEach-Object { "$($_.Id) $($_.Path)" }) -join ', ')"; $left | Stop-Process -Force }
+            if ($run.Left) { Fail "$label`: a process was still running from $folder when the run ended, and was ended: $($run.Left -join ', ')" }
             [pscustomobject]@{ Label = $label; Exe = $exe; Run = $run; Since = $since; Logged = $logged }
           }
 
@@ -1971,7 +1995,7 @@ jobs:
 
           function Expect-Entries($update, [int]$id, [string]$like, [int]$otherId) {
             $found = Entries $update.Since $id $like
-            if ($found.Count -eq 1) { "  the Application log holds one $id`: $($found[0].Message)" }
+            if ($found.Count -eq 1) { "  the Application log holds one $id`: $($found[0].Text)" }
             else {
               $note = $update.Run.Output.Contains((Line 'Cli.EventLogUnavailable'))
               $why = @($update.Logged -split "`r?`n" | Where-Object { $_ -like '*An entry was not written to the Application log*' })
@@ -1979,8 +2003,8 @@ jobs:
                 "The run $(if ($note) { 'printed' } else { 'did not print' }) the note that the Application log refused an entry" +
                 $(if ($why) { "; crash.log: $($why -join ' | ')" } else { '; crash.log names no refused entry' }) + '.')
             }
-            $other = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'InstallerClean'; Id = $otherId; StartTime = $update.Since } -ErrorAction SilentlyContinue)
-            if ($other) { Fail "$($update.Label): the Application log holds $($other.Count) entries with Event ID $otherId since the run started: $(($other | ForEach-Object Message) -join ' | ')" }
+            $other = @(Read-Entries $update.Since $otherId)
+            if ($other) { Fail "$($update.Label): the Application log holds $($other.Count) entries with Event ID $otherId since the run started: $(($other | ForEach-Object Text) -join ' | ')" }
             else { "  no $otherId since the run started" }
           }
 
@@ -1998,11 +2022,12 @@ jobs:
               if ($update.Logged.Contains($line)) { "  crash.log: $line" } else { Fail "$($update.Label): crash.log did not gain: $line" }
             }
             foreach ($line in $notLogged) {
-              if ($update.Logged.Contains($line)) { Fail "$($update.Label): crash.log gained: $line" }
+              if ($update.Logged.Contains($line)) { Fail "$($update.Label): crash.log gained: $line" } else { "  crash.log did not gain: $line" }
             }
           }
 
           function Expect-ExitCode($update) {
+            if ($null -eq $update.Run.ExitCode) { "  the exit code is not compared, since the run was ended"; return }
             $again = Run $update.Exe @('/s', '/noupdate') @{} 240
             "  a second run of the file at the path, with /s /noupdate, exited with $($again.ExitCode)"
             if ($update.Run.ExitCode -ne $again.ExitCode) { Fail "$($update.Label): the run exited with $($update.Run.ExitCode), the file at the path with $($again.ExitCode)." }
@@ -2017,6 +2042,15 @@ jobs:
           $endRefused = 'Windows refused the request to end the newer version'
           $notEnded = 'The newer version had not ended a few seconds after'
           $updatedLike = "*updated itself from $old to $latest and ran /s with it*"
+
+          # Each crash.log line the checks look for, present or absent, is text the code
+          # under src/ still writes, so an absence cannot pass on a line nothing writes.
+          $source = (Get-ChildItem -Path src -Recurse -Filter *.cs | Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' -and $_.FullName -notmatch 'InstallerClean\.Tests' } |
+                     ForEach-Object { Get-Content -Raw -LiteralPath $_.FullName }) -join "`n"
+          foreach ($line in 'The newer version ended with exit code ', ' before it said it had started.',
+                            'The newer version did not say it had started within ', $notStarted, $endRefused, $notEnded) {
+            if (-not $source.Contains($line)) { throw "No C# file under src/ holds '$line', so the crash.log check on it would read nothing." }
+          }
           $failedLike = "*could not update itself from $old to $latest (the install failed)*"
 
           $update = Update 'signals' $signals ''
