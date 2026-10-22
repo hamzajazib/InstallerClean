@@ -63,6 +63,14 @@ public class CreatedFoldersTests
     }
 
     [Fact]
+    public void A_destination_spelled_with_a_parent_reference_lists_the_folders_the_create_makes()
+    {
+        var spelled = Path.Combine(Folder("a", "y"), "..", "z");
+
+        Assert.Equal([Folder("a", "z"), Folder("a")], CreatedFolders.MissingOnPath(_fs, spelled));
+    }
+
+    [Fact]
     public void A_drive_root_is_never_listed()
     {
         var nothingThere = Substitute.For<IFileSystem>();
@@ -74,7 +82,6 @@ public class CreatedFoldersTests
         var missing = CreatedFolders.MissingOnPath(nothingThere, destination);
 
         Assert.Equal(destination, missing[0]);
-        Assert.DoesNotContain(Path.GetPathRoot(destination), missing);
         Assert.All(missing, folder => Assert.False(string.IsNullOrEmpty(Path.GetDirectoryName(folder))));
     }
 

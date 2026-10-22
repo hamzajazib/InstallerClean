@@ -12,13 +12,14 @@ internal static class CreatedFolders
 {
     /// <summary>
     /// The folders that creating <paramref name="destination"/> would make, the
-    /// destination first and the top-most last. Empty where the destination is there
-    /// already. A drive root is never listed.
+    /// destination first and the top-most last, each spelled as its full path so a
+    /// <c>..</c> in the destination names the folders the create makes. Empty where the
+    /// destination is there already. A drive root is never listed.
     /// </summary>
     internal static IReadOnlyList<string> MissingOnPath(IFileSystem fileSystem, string destination)
     {
         var missing = new List<string>();
-        var folder = fileSystem.Path.TrimEndingDirectorySeparator(destination);
+        var folder = fileSystem.Path.TrimEndingDirectorySeparator(fileSystem.Path.GetFullPath(destination));
         while (!string.IsNullOrEmpty(folder) && !fileSystem.Directory.Exists(folder))
         {
             var parent = fileSystem.Path.GetDirectoryName(folder);

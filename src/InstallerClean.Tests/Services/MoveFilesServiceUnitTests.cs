@@ -925,6 +925,26 @@ public class MoveFilesServiceUnitTests
     }
 
     [Fact]
+    public async Task A_create_that_fails_removes_the_folders_the_move_listed_innermost_first()
+    {
+        var directory = Substitute.For<IDirectory>();
+        directory.When(d => d.CreateDirectory(Arg.Any<string>())).Do(_ => throw new IOException("create refused"));
+        var fs = Substitute.For<IFileSystem>();
+        fs.Directory.Returns(directory);
+        fs.Path.Returns(new MockFileSystem().Path);
+        var svc = new MoveFilesService(fs);
+
+        await Assert.ThrowsAsync<LocalisedAccessException>(() =>
+            svc.MoveFilesAsync(new[] { $@"{SourceDir}\a.msi" }, DestDir, UnderLeaseClaims.None));
+
+        Received.InOrder(() =>
+        {
+            directory.Delete(DestDir);
+            directory.Delete(@"D:\backup");
+        });
+    }
+
+    [Fact]
     public async Task A_refused_write_probe_leaves_a_folder_above_the_destination_that_was_already_there()
     {
         var fs = new MockFileSystem();

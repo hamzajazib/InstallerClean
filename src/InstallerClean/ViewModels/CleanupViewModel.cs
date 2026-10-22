@@ -1019,7 +1019,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         // in a way none of its readings names. Nothing has been touched at this
         // point, so the throw ends here in the same dialog as the unforeseen-failure
         // arm below. The counts on screen still describe the folder, so there is
-        // no rescan, and the folder the pre-flight made is removed as it is when
+        // no rescan, and the folders the pre-flight made are removed as they are when
         // the gate blocks.
         bool blocked;
         try
@@ -1898,7 +1898,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// straight back out, the service returning before its own
     /// CreateDestinationFolder precisely so that a batch it empties leaves no
     /// folder behind. That care is undone one layer up if this is not called,
-    /// because the folder that survives is the PRE-FLIGHT's rather than the
+    /// because the folders that survive are the PRE-FLIGHT's rather than the
     /// service's.
     ///
     /// The paths that deliberately do NOT call this are the ones where a file
@@ -1910,7 +1910,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// One path does not call this and is not one of those, so the rule above
     /// does not reach it and reading from the rule alone would make it look like
     /// a defect: the destination-gate arm, where nothing was placed and the
-    /// folder is still left alone. The arm itself carries the reason.
+    /// folders are still left alone. The arm itself carries the reason.
     ///
     /// The list holds only the folders the pre-flight's create made, so a folder
     /// that was already there is never a candidate.
@@ -1945,7 +1945,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// a way none of its readings names. The service touched nothing, so the throw
     /// ends here in the failure dialog with no rescan, as it does at the act-time
     /// re-check, and the caller goes on to its own clean-up, which on a Move removes
-    /// the folder the pre-flight made. In the arms that show the lock dialog first,
+    /// the folders the pre-flight made. In the arms that show the lock dialog first,
     /// this is a second dialog, and it is the one that reports the failed read.
     /// </summary>
     private async Task RecheckAfterLockRefusalAsync(bool deleting)
