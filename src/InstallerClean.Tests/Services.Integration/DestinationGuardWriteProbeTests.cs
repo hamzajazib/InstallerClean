@@ -1,6 +1,7 @@
 using System.Security.AccessControl;
 using System.Security.Principal;
 using InstallerClean.Helpers;
+using InstallerClean.Interop.Native;
 using InstallerClean.Services;
 
 namespace InstallerClean.Tests.Services.Integration;
@@ -56,16 +57,20 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         // The account created each folder and so may rewrite its list, which is how it is
         // let back in to delete a file the probe's folder let it create. Full control on
         // the folder includes FILE_DELETE_CHILD, and each file's own list is reset too.
-        try
+        List<string> folders;
+        try { folders = Directory.EnumerateDirectories(_root).ToList(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { folders = []; }
+
+        foreach (var folder in folders)
         {
-            foreach (var folder in Directory.EnumerateDirectories(_root))
+            ResetAccess(folder, isFolder: true);
+            try
             {
-                ResetAccess(folder, isFolder: true);
-                foreach (var file in Directory.EnumerateFiles(folder))
+                foreach (var file in Directory.EnumerateFiles(folder).ToList())
                     ResetAccess(file, isFolder: false);
             }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
 
         try { Directory.Delete(_root, recursive: true); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
@@ -129,11 +134,15 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         Assert.Equal(AccessDenied, failureCode);
         Assert.Empty(Directory.EnumerateFileSystemEntries(folder));
 
-        // And the folder does let this account create a file when the create asks for the
-        // right to write it and nothing more, which is what the probe asks for less the right
-        // to delete. Last, because it leaves one.
-        using (new FileInfo(Path.Combine(folder, "plain")).Create(
-            FileMode.CreateNew, FileSystemRights.WriteData, FileShare.None, 1, FileOptions.None, fileSecurity: null)) { }
+        // And the folder does let this account create a file when the create is the probe's own
+        // call, made through the folder's handle, with the right to delete the file and the
+        // delete-on-close option taken out. Last, because it leaves one.
+        using var directory = DirectoryGuard.OpenDirectoryFollow(folder, out _);
+        Assert.NotNull(directory);
+        using var created = DirectoryGuard.OpenChildNoFollow(
+            directory, "plain", Ntdll.FILE_WRITE_DATA, Ntdll.FILE_CREATE, Ntdll.FILE_NON_DIRECTORY_FILE,
+            out var status);
+        Assert.True(created is not null, $"the folder refused a create that asks only to write (NTSTATUS 0x{status:X8})");
         Assert.Single(Directory.EnumerateFileSystemEntries(folder));
     }
 
