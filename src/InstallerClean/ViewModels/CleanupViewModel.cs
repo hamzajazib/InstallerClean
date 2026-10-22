@@ -776,10 +776,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         // Captured rather than carried back on DestinationPreFlight, because
         // the two catch arms below need it just as much as the returns do and
         // neither of them ever gets a record: a cancel or a write failure part
-        // way through the probe abandons the move with the folder already
+        // way through the probe abandons the move with the folders already
         // created. The write happens before the first await, and the await is
         // the barrier, so the read after it sees it.
-        var createdDestination = false;
+        IReadOnlyList<string> createdFolders = [];
         var probeTask = Task.Run(() =>
         {
             // Never let files move back inside C:\Windows\Installer.
@@ -798,12 +798,13 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 return DestinationPreFlight.Rejected(insideSystemFolder: true);
 
             // Asked before the create, because after it the answer is always
-            // yes. A destination this pass conjured up and a move that then
-            // never happens should leave nothing behind; one that was already
-            // there is the user's folder and is never touched. Set before
-            // CreateDirectory so a throw from the create cannot leave the flag
-            // saying no about a folder that did appear.
-            createdDestination = !_fs.Directory.Exists(dest);
+            // yes. The create makes the destination and every missing folder
+            // above it, and a move that then never happens should leave none of
+            // them behind; a folder that was already there is the user's and is
+            // never touched. Set before CreateDirectory so a throw from the
+            // create cannot leave the list saying none about a folder that did
+            // appear.
+            createdFolders = CreatedFolders.MissingOnPath(_fs, dest);
             _fs.Directory.CreateDirectory(dest);
             probeToken.ThrowIfCancellationRequested();
             // The guard writes a write-test file through a handle opened on the
@@ -872,7 +873,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             IsOperating = false;
             OperationProgress = string.Empty;
             EndOperation();
-            if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+            await RemoveCreatedFoldersAsync(createdFolders);
             return;
         }
         catch (LocalisedAccessException ex)
@@ -884,7 +885,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             IsOperating = false;
             OperationProgress = string.Empty;
             EndOperation();
-            if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+            await RemoveCreatedFoldersAsync(createdFolders);
             _dialogService.ShowWarning(ex.Message, Strings.Error_DestinationWriteFailedTitle);
             return;
         }
@@ -895,7 +896,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // ex.Message stays out of the dialog: path-leak risk under elevation.
             var message = DescribeWriteFailure(dest, ex, () => CrashLog.TryWrite(ex));
             EndOperation();
-            if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+            await RemoveCreatedFoldersAsync(createdFolders);
             _dialogService.ShowWarning(message, Strings.Error_DestinationWriteFailedTitle);
             return;
         }
@@ -976,7 +977,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // The Move goes no further, so the operation ends here.
             EndOperation();
             OperationProgress = string.Empty;
-            if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+            await RemoveCreatedFoldersAsync(createdFolders);
             _dialogService.ShowWarning(
                 string.Format(Strings.Error_NotEnoughSpaceBody,
                     dest,
@@ -1002,7 +1003,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // here.
             EndOperation();
             OperationProgress = string.Empty;
-            if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+            await RemoveCreatedFoldersAsync(createdFolders);
             return;
         }
 
@@ -1029,7 +1030,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         {
             EndOperation();
             OperationProgress = string.Empty;
-            if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+            await RemoveCreatedFoldersAsync(createdFolders);
             ShowActionFailed(ex, deleting: false);
             return;
         }
@@ -1037,7 +1038,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         {
             EndOperation();
             OperationProgress = string.Empty;
-            if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+            await RemoveCreatedFoldersAsync(createdFolders);
             return;
         }
 
@@ -1089,7 +1090,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 var failure = _scan.DescribeScanFailure(ex);
                 OperationProgress = string.Empty;
                 // The re-verify runs before the batch, so nothing was placed.
-                if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+                await RemoveCreatedFoldersAsync(createdFolders);
                 if (failure.IsError)
                     _dialogService.ShowError(failure.Message, failure.Title);
                 else
@@ -1113,7 +1114,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 ReleaseOperationSource();
                 _scan.PendingRebootResult = installerActivity;
                 OperationProgress = string.Empty;
-                if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+                await RemoveCreatedFoldersAsync(createdFolders);
                 return;
             }
 
@@ -1127,7 +1128,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 await RefreshAfterBatchAsync();
                 _completion.ShowReverifyAllSkipped(reverify, deleting: false);
                 OperationProgress = string.Empty;
-                if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+                await RemoveCreatedFoldersAsync(createdFolders);
                 return;
             }
 
@@ -1223,7 +1224,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 await RecheckAfterLockRefusalAsync(deleting: false);
                 // The service refused at the mutex, before its own
                 // CreateDestinationFolder, so nothing was placed.
-                if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+                await RemoveCreatedFoldersAsync(createdFolders);
                 return;
             }
 
@@ -1248,7 +1249,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 _dialogService.ShowWarning(
                     Strings.Error_MoveInstallerLockUnavailable,
                     Strings.Error_MoveInstallerLockUnavailableTitle);
-                if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+                await RemoveCreatedFoldersAsync(createdFolders);
                 return;
             }
 
@@ -1273,7 +1274,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                     Strings.Error_MoveInstallerLockAccessRefused,
                     Strings.Error_MoveInstallerLockUnavailableTitle);
                 await RecheckAfterLockRefusalAsync(deleting: false);
-                if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+                await RemoveCreatedFoldersAsync(createdFolders);
                 return;
             }
 
@@ -1302,7 +1303,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 await RefreshAfterBatchAsync();
                 _completion.ShowReverifyAllSkipped(reverify, deleting: false);
                 OperationProgress = string.Empty;
-                if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+                await RemoveCreatedFoldersAsync(createdFolders);
                 return;
             }
 
@@ -1384,7 +1385,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // refresh the counts and clear.
             await RefreshAfterBatchAsync();
             OperationProgress = string.Empty;
-            if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+            await RemoveCreatedFoldersAsync(createdFolders);
         }
         catch (LocalisedInvalidOperationException ex)
         {
@@ -1396,7 +1397,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // instead, caught at the call site where the batch's own tally is
             // still in scope.
             //
-            // No RemoveCreatedDestinationAsync either: the gates that reach this
+            // No RemoveCreatedFoldersAsync either: the gates that reach this
             // arm fire precisely because the destination has just been shown to
             // resolve into C:\Windows\Installer or a system folder, and deleting
             // a directory at a path just proven to land somewhere unexpected is
@@ -1412,10 +1413,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // LocalisedAccessException comes from CreateDestinationFolder or
             // ProbeDestinationWriteable, both of which run before the per-file
             // loop starts, so no file has moved and the counts on screen are
-            // still correct. That same ordering is why the created folder can
-            // be removed here: nothing was placed in it.
+            // still correct. That same ordering is why the created folders can
+            // be removed here: nothing was placed in them.
             OperationProgress = string.Empty;
-            if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+            await RemoveCreatedFoldersAsync(createdFolders);
             _dialogService.ShowWarning(ex.Message, Strings.Error_DestinationWriteFailedTitle);
         }
         catch (Exception ex)
@@ -1878,9 +1879,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Removes a destination folder the pre-flight created for a Move that then
-    /// did not go ahead. The rule, rather than a list that goes stale as paths
-    /// are added: every abandon path on which NOTHING WAS PLACED in the folder
+    /// Removes the folders the pre-flight created for a Move that then did not go
+    /// ahead: the destination and each folder above it that was not there before,
+    /// the destination first. The rule, rather than a list that goes stale as paths
+    /// are added: every abandon path on which NOTHING WAS PLACED in the destination
     /// calls this, both before the confirmation (probe cancel, probe write
     /// failure, free-space refusal, confirmation decline, act-time
     /// pending-reboot refusal) and after it (re-verify failure, either half of
@@ -1910,8 +1912,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// a defect: the destination-gate arm, where nothing was placed and the
     /// folder is still left alone. The arm itself carries the reason.
     ///
-    /// The caller checks its createdDestination local first, so a folder that
-    /// was already there is never a candidate.
+    /// The list holds only the folders the pre-flight's create made, so a folder
+    /// that was already there is never a candidate.
     ///
     /// The removal IS the emptiness test, rather than an Exists or Any check
     /// followed by a delete: Win32 refuses to remove a directory that holds
@@ -1925,12 +1927,14 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// guarantee, and a dialog about a folder the user chose to abandon would
     /// be noise at the end of an operation they cancelled.
     /// </summary>
-    private Task RemoveCreatedDestinationAsync(string destination) => Task.Run(() =>
-        // Through the guard, which opens the folder's parent as a handle and
-        // removes the folder relative to it where it is empty. The answer is
-        // ignored: not empty any more, gone already or refused are all fine,
-        // because nothing depends on the folder being gone.
-        _destinationGuard.TryRemoveEmptyFolder(destination));
+    private Task RemoveCreatedFoldersAsync(IReadOnlyList<string> createdFolders) =>
+        createdFolders.Count == 0
+            ? Task.CompletedTask
+            // Through the guard, which opens each folder's parent as a handle and
+            // removes the folder relative to it where it is empty. Nothing depends
+            // on a folder being gone, so a folder that is not empty any more, is
+            // gone already or is refused ends the removal without a word.
+            : Task.Run(() => CreatedFolders.RemoveWhileEmpty(_fs, _destinationGuard, createdFolders));
 
     /// <summary>
     /// Re-runs the pending-reboot gate after the service refused at

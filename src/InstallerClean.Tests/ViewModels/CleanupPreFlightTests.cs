@@ -64,6 +64,9 @@ public class CleanupPreFlightTests
         _fileSystem.Path.Returns(new MockFileSystem().Path);
         _fileSystem.Directory.Returns(_directory);
         _fileSystem.File.Returns(_file);
+        // The destination's parent is a folder that is there, so the destination is the
+        // only folder a Move to it makes.
+        _directory.Exists(Path.GetDirectoryName(_destination)!).Returns(true);
 
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(new ScanResult(
@@ -119,6 +122,23 @@ public class CleanupPreFlightTests
         var removal = removals[0];
         Assert.True(removal[0] as string == _destination, $"the Delete was for {removal[0]}, not the destination");
         Assert.True(removal.Length == 1 || removal[1] is false, "the folder was removed recursively");
+    }
+
+    /// <summary>
+    /// The Move called <c>Delete</c> on the substituted directory once for each of
+    /// <paramref name="innermostFirst"/>, in that order, and not recursively.
+    /// </summary>
+    private void AssertFoldersRemoved(params string[] innermostFirst)
+    {
+        var removals = FolderRemovals();
+        Assert.True(removals.Count == innermostFirst.Length,
+            $"expected {innermostFirst.Length} Delete calls on the directory, but there were {removals.Count}{Listed(removals)}");
+        for (var i = 0; i < innermostFirst.Length; i++)
+        {
+            Assert.True(removals[i][0] as string == innermostFirst[i],
+                $"Delete number {i + 1} was for {removals[i][0]}, not {innermostFirst[i]}");
+            Assert.True(removals[i].Length == 1 || removals[i][1] is false, "a folder was removed recursively");
+        }
     }
 
     /// <summary>The Move made no <c>Delete</c> call on the substituted directory.</summary>
@@ -546,7 +566,7 @@ public class CleanupPreFlightTests
         // at all: CreateDirectory succeeded and the write probe then threw, so
         // by that point the folder exists, the move is abandoned and the user
         // gets the write-failure dialog. The removal therefore has to run off
-        // the caller's captured createdDestination rather than off a record.
+        // the caller's captured list of created folders rather than off a record.
         _file.When(f => f.WriteAllBytes(Arg.Any<string>(), Arg.Any<byte[]>()))
             .Do(_ => throw new UnauthorizedAccessException("probe refused"));
 
@@ -716,6 +736,63 @@ public class CleanupPreFlightTests
         Assert.False(vm.Cleanup.IsOperating);
         // A mistake the message explains whole: the crash log is left as it was.
         Assert.Equal(crashLogBefore, TestCrashLog.Text());
+    }
+
+    [Fact]
+    public async Task A_refused_create_removes_the_destination_and_the_missing_folder_above_it_innermost_first()
+    {
+        var outer = Path.Combine(Path.GetTempPath(), "ic-test-new");
+        var inner = Path.Combine(outer, "inner");
+        _directory.When(d => d.CreateDirectory(Arg.Any<string>()))
+            .Do(_ => throw new UnauthorizedAccessException("create refused"));
+
+        var vm = CreateViewModel();
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = inner;
+
+        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        AssertFoldersRemoved(inner, outer);
+    }
+
+    [Fact]
+    public async Task A_refused_create_leaves_a_folder_that_was_already_above_the_destination()
+    {
+        var existing = Path.Combine(Path.GetTempPath(), "ic-test-existing");
+        var inner = Path.Combine(existing, "inner");
+        _directory.Exists(existing).Returns(true);
+        _directory.When(d => d.CreateDirectory(Arg.Any<string>()))
+            .Do(_ => throw new UnauthorizedAccessException("create refused"));
+
+        var vm = CreateViewModel();
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = inner;
+
+        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        AssertFoldersRemoved(inner);
+    }
+
+    [Fact]
+    public async Task A_folder_that_will_not_go_stops_the_removal_of_the_folders_above_it()
+    {
+        var top = Path.Combine(Path.GetTempPath(), "ic-test-new");
+        var middle = Path.Combine(top, "middle");
+        var inner = Path.Combine(middle, "inner");
+        // The middle folder is missing when the pre-flight lists the folders it will make
+        // and is there when the removal reaches it, holding something its removal refuses.
+        _directory.Exists(middle).Returns(false, true);
+        _directory.When(d => d.Delete(middle)).Do(_ => throw new IOException("not empty"));
+        _directory.When(d => d.CreateDirectory(Arg.Any<string>()))
+            .Do(_ => throw new UnauthorizedAccessException("create refused"));
+
+        var vm = CreateViewModel();
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = inner;
+
+        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        AssertFoldersRemoved(inner, middle);
     }
 
     [Fact]

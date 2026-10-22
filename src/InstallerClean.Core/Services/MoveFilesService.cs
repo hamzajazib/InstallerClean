@@ -224,7 +224,22 @@ public sealed class MoveFilesService : IMoveFilesService
                     return new MoveResult(0, Array.Empty<FileOperationError>(), HeldBack: heldBack, HeldBackReasons: recheck.Reasons);
             }
 
-            CreateDestinationFolder(destinationFolder);
+            // The create makes the destination and every missing folder above it.
+            // A refusal to create it, or to write in it, comes before the first
+            // file moves, so the folders this call made are removed again, each
+            // only while it is empty. The gates between the two refuse a
+            // destination that has just been shown to resolve somewhere
+            // unexpected, and they leave the folders alone.
+            var createdFolders = CreatedFolders.MissingOnPath(_fs, destinationFolder);
+            try
+            {
+                CreateDestinationFolder(destinationFolder);
+            }
+            catch (LocalisedAccessException)
+            {
+                CreatedFolders.RemoveWhileEmpty(_fs, _destinationGuard, createdFolders);
+                throw;
+            }
 
             // Re-check after CreateDirectory closes the TOCTOU window
             // where a junction could be swapped into the leaf.
@@ -278,7 +293,15 @@ public sealed class MoveFilesService : IMoveFilesService
                 throw new LocalisedInvalidOperationException(
                     string.Format(Strings.Error_DestinationInSystemFolder, destinationFolder));
 
-            ProbeDestinationWriteable(destinationFolder);
+            try
+            {
+                ProbeDestinationWriteable(destinationFolder);
+            }
+            catch (LocalisedAccessException)
+            {
+                CreatedFolders.RemoveWhileEmpty(_fs, _destinationGuard, createdFolders);
+                throw;
+            }
 
             int moved = 0;
             var errors = new List<FileOperationError>();

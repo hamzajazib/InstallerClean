@@ -890,6 +890,73 @@ public class MoveFilesServiceUnitTests
         Assert.False(fs.File.Exists($@"{DestDir}\a.msi"));
     }
 
+    /// <summary>A guard whose write test is refused and whose folder removal acts on <paramref name="fs"/>.</summary>
+    private static IDestinationGuard GuardRefusingTheWriteTest(IFileSystem fs)
+    {
+        var removal = new ByPathDestinationGuard(fs);
+        var guard = Substitute.For<IDestinationGuard>();
+        guard.TryProbeWritable(Arg.Any<string>(), out Arg.Any<int>(), out Arg.Any<WriteProbeRefusal>())
+            .Returns(call =>
+            {
+                call[1] = 5;
+                call[2] = WriteProbeRefusal.CreateFailed;
+                return false;
+            });
+        guard.TryRemoveEmptyFolder(Arg.Any<string>())
+            .Returns(call => removal.TryRemoveEmptyFolder(call.ArgAt<string>(0)));
+        return guard;
+    }
+
+    [Fact]
+    public async Task A_refused_write_probe_removes_the_destination_and_the_folders_above_it_that_the_move_made()
+    {
+        var fs = new MockFileSystem();
+        var source = $@"{SourceDir}.msi";
+        fs.AddFile(source, new MockFileData("payload"));
+        var svc = new MoveFilesService(
+            fs, NullMutexProbe.Instance, installerFolderOverride: null, destinationGuard: GuardRefusingTheWriteTest(fs));
+
+        await Assert.ThrowsAsync<LocalisedAccessException>(() =>
+            svc.MoveFilesAsync(new[] { source }, DestDir, UnderLeaseClaims.None));
+
+        Assert.False(fs.Directory.Exists(DestDir));
+        Assert.False(fs.Directory.Exists(@"D:\backup"));
+        Assert.True(fs.File.Exists(source));
+    }
+
+    [Fact]
+    public async Task A_refused_write_probe_leaves_a_folder_above_the_destination_that_was_already_there()
+    {
+        var fs = new MockFileSystem();
+        var source = $@"{SourceDir}.msi";
+        fs.AddFile(source, new MockFileData("payload"));
+        fs.AddDirectory(@"D:\backup");
+        var svc = new MoveFilesService(
+            fs, NullMutexProbe.Instance, installerFolderOverride: null, destinationGuard: GuardRefusingTheWriteTest(fs));
+
+        await Assert.ThrowsAsync<LocalisedAccessException>(() =>
+            svc.MoveFilesAsync(new[] { source }, DestDir, UnderLeaseClaims.None));
+
+        Assert.False(fs.Directory.Exists(DestDir));
+        Assert.True(fs.Directory.Exists(@"D:\backup"));
+    }
+
+    [Fact]
+    public async Task A_refused_write_probe_leaves_a_destination_that_was_already_there()
+    {
+        var fs = new MockFileSystem();
+        var source = $@"{SourceDir}.msi";
+        fs.AddFile(source, new MockFileData("payload"));
+        fs.AddDirectory(DestDir);
+        var svc = new MoveFilesService(
+            fs, NullMutexProbe.Instance, installerFolderOverride: null, destinationGuard: GuardRefusingTheWriteTest(fs));
+
+        await Assert.ThrowsAsync<LocalisedAccessException>(() =>
+            svc.MoveFilesAsync(new[] { source }, DestDir, UnderLeaseClaims.None));
+
+        Assert.True(fs.Directory.Exists(DestDir));
+    }
+
     // The destination guard's classification, at every combination of its four
     // inputs. The resolve behind those inputs asks the real kernel whatever
     // IFileSystem is injected, so the theory hands the four values to the
