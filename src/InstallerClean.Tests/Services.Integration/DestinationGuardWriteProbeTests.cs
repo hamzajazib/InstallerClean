@@ -134,15 +134,16 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         Assert.Equal(AccessDenied, failureCode);
         Assert.Empty(Directory.EnumerateFileSystemEntries(folder));
 
-        // And the folder does let this account create a file when the create is the probe's own
-        // call, made through the folder's handle, with the right to delete the file and the
-        // delete-on-close option taken out. Last, because it leaves one.
+        // And the folder does let this account create a file when the create is the probe's
+        // call without DELETE and without FILE_DELETE_ON_CLOSE: the access and the options are
+        // the probe's own, less those two. Last, because it leaves one.
         using var directory = DirectoryGuard.OpenDirectoryFollow(folder, out _);
         Assert.NotNull(directory);
         using var created = DirectoryGuard.OpenChildNoFollow(
-            directory, "plain", Ntdll.FILE_WRITE_DATA, Ntdll.FILE_CREATE, Ntdll.FILE_NON_DIRECTORY_FILE,
-            out var status);
-        Assert.True(created is not null, $"the folder refused a create that asks only to write (NTSTATUS 0x{status:X8})");
+            directory, "plain", DirectoryGuard.ProbeAccess & ~Ntdll.DELETE, Ntdll.FILE_CREATE,
+            DirectoryGuard.ProbeOptions & ~Ntdll.FILE_DELETE_ON_CLOSE, out var status);
+        Assert.True(created is not null,
+            $"the folder refused a create that asks only to write (Win32 error {Ntdll.RtlNtStatusToDosError(status)})");
         Assert.Single(Directory.EnumerateFileSystemEntries(folder));
     }
 

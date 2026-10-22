@@ -283,6 +283,12 @@ internal static class DirectoryGuard
         return DeleteByHandle(child);
     }
 
+    /// <summary>The access the write probe's create asks for: to write the file and to delete it.</summary>
+    internal const uint ProbeAccess = Ntdll.FILE_WRITE_DATA | Ntdll.DELETE;
+
+    /// <summary>The options the write probe's create passes: a file, removed as its handle closes.</summary>
+    internal const uint ProbeOptions = Ntdll.FILE_NON_DIRECTORY_FILE | Ntdll.FILE_DELETE_ON_CLOSE;
+
     /// <summary>
     /// Whether <paramref name="folder"/> accepts a file and gives it back, tested
     /// through a handle opened on the folder. A random-named child is created relative
@@ -297,9 +303,7 @@ internal static class DirectoryGuard
         if (dir is null) return false;
 
         using var probe = OpenChildNoFollow(
-            dir, Path.GetRandomFileName(),
-            Ntdll.FILE_WRITE_DATA | Ntdll.DELETE, Ntdll.FILE_CREATE,
-            Ntdll.FILE_NON_DIRECTORY_FILE | Ntdll.FILE_DELETE_ON_CLOSE, out var status);
+            dir, Path.GetRandomFileName(), ProbeAccess, Ntdll.FILE_CREATE, ProbeOptions, out var status);
         if (probe is null)
         {
             failureCode = (int)Ntdll.RtlNtStatusToDosError(status);
