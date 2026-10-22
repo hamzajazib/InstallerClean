@@ -50,7 +50,7 @@ To know a PC has had its first run, InstallerClean sets a value named `FirstRunR
 
 ## The command-line tool
 
-It sends no report, and checks for updates as set out above. It writes one summary line per run to the Windows Application event log, with further lines for conditions it found on the PC and for each update it makes or can't make. After a Move or Delete that moves or deletes files, or ends where how far it got isn't known, it sets the `FirstRunRecorded` value described above. All of it stays on your PC.
+It sends no report, and checks for updates as set out above. It writes one summary line per run to the Windows Application event log, with further lines for conditions it found on the PC and for each update it makes or can't make. After a Move or Delete that moves or deletes files, or ends where how far it got isn't known, it sets the `FirstRunRecorded` value described above. The summary lines, the notices and the value stay on your PC.
 
 ## Everything else stays on your PC
 
