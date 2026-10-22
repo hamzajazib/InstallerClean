@@ -95,9 +95,9 @@ public class CleanupPreFlightTests
     }
 
     /// <summary>
-    /// Every folder removal the Move has made through the substituted directory, one entry
-    /// of arguments for each, whichever overload of <c>Delete</c> made it. The probe's own
-    /// file delete goes to the substituted file, so it is not in this list.
+    /// Every <c>Delete</c> the Move has made on the substituted directory, one entry of
+    /// arguments for each, whichever overload made it. The probe's own file delete goes to
+    /// the substituted file, so it is not in this list.
     /// </summary>
     private List<object?[]> FolderRemovals() =>
         _directory.ReceivedCalls()
@@ -106,8 +106,9 @@ public class CleanupPreFlightTests
             .ToList();
 
     /// <summary>
-    /// The Move removed the folder it made, once and not recursively, and no other folder.
-    /// The two-argument overload carries the recursive flag as its second argument.
+    /// The Move called <c>Delete</c> on the substituted directory once, for the folder it
+    /// made and not recursively. The two-argument overload carries the recursive flag as its
+    /// second argument.
     /// </summary>
     private void AssertFolderRemoved()
     {
@@ -116,7 +117,7 @@ public class CleanupPreFlightTests
         Assert.True(removal.Length == 1 || removal[1] is false, "the folder was removed recursively");
     }
 
-    /// <summary>The Move removed no folder.</summary>
+    /// <summary>The Move made no <c>Delete</c> call on the substituted directory.</summary>
     private void AssertNoFolderRemoved() => Assert.Empty(FolderRemovals());
 
     [Fact]
@@ -144,16 +145,25 @@ public class CleanupPreFlightTests
     }
 
     [Fact]
-    public void The_removal_assertion_rejects_no_removal_another_folder_and_a_second_removal()
+    public void The_removal_assertion_rejects_no_removal()
     {
         Assert.Throws<Xunit.Sdk.SingleException>(AssertFolderRemoved);
+    }
 
+    [Fact]
+    public void The_removal_assertion_rejects_the_removal_of_another_folder()
+    {
         _directory.Delete(_destination + "-other");
-        Assert.Throws<Xunit.Sdk.EqualException>(AssertFolderRemoved);
 
-        _directory.ClearReceivedCalls();
+        Assert.Throws<Xunit.Sdk.EqualException>(AssertFolderRemoved);
+    }
+
+    [Fact]
+    public void The_removal_assertion_rejects_a_second_removal()
+    {
         _directory.Delete(_destination);
         _directory.Delete(_destination);
+
         Assert.Throws<Xunit.Sdk.SingleException>(AssertFolderRemoved);
     }
 
