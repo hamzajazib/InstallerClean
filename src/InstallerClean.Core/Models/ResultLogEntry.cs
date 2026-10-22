@@ -164,8 +164,8 @@ public sealed record ResultLogEntry(
     /// </summary>
     public const int CurrentSchemaVersion = 9;
 
-    // Each factory takes windowsRegion as IWindowsRegion.Read returned it for the
-    // report box, so the report carries the value the box started from.
+    // Each factory takes windowsRegion as IWindowsRegion.Read returned it when the
+    // report box was put on the card, so the report carries that reading.
     public static ResultLogEntry ForScanOnly(ScanResult scan, long scanDurationMs, string? windowsRegion) =>
         new(
             CurrentSchemaVersion,
@@ -267,8 +267,7 @@ public sealed record ResultLogEntry(
 /// </param>
 /// <param name="WindowsRegion">
 /// The Country or region set in Windows for the account running the app, the value
-/// <see cref="IWindowsRegion.Read"/> gave when the report box was put on the card and
-/// <see cref="ReportBoxRegions.StartsTicked"/> decided the box's starting state from, in
+/// <see cref="IWindowsRegion.Read"/> gave when the report box was put on the card, in
 /// the shape <see cref="WindowsRegionLabel.For"/> gives it: an ISO 3166-1 two-letter code,
 /// a UN M.49 number, or one of two fixed labels.
 /// </param>

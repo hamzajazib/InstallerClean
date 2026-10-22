@@ -3226,7 +3226,7 @@ public class MainViewModelTests
     [Theory]
     [InlineData(OperationKinds.Move)]
     [InlineData(OperationKinds.Delete)]
-    public async Task A_Move_or_Delete_report_carries_the_region_the_box_started_from(string kind)
+    public async Task A_Move_or_Delete_report_carries_the_region_read_for_the_card_and_the_box_is_ticked(string kind)
     {
         var vm = CreateViewModel();
         _windowsRegion.Read().Returns("NO");
@@ -3258,7 +3258,7 @@ public class MainViewModelTests
         }
 
         Assert.True(vm.Completion.OffersReport);
-        Assert.False(vm.Completion.SendsReport);
+        Assert.True(vm.Completion.SendsReport);
         await _resultLogService.Received(1).WriteAsync(
             Arg.Is<ResultLogEntry>(e => e.Operation.Kind == kind && e.App.WindowsRegion == "NO"),
             Arg.Any<CancellationToken>());
@@ -3882,7 +3882,7 @@ public class MainViewModelTests
     }
 
     // The report box. The start check, the mark and the Windows region are faked, so each
-    // test fixes whether the PC has had its first run and which way the box starts.
+    // test fixes whether the PC has had its first run and which Country or region Windows gives.
     // vm.Dispose() is the barrier for the sends and saves, which run off the
     // dispatcher: it settles a card still up and waits for them, as closing the app
     // does.
@@ -3940,26 +3940,27 @@ public class MainViewModelTests
     }
 
     [Theory]
-    [InlineData("DE", false, "DE")]
-    [InlineData("GB", true, "GB")]
-    [InlineData("US", true, "US")]
-    [InlineData("419", false, "419")]
-    [InlineData(null, false, WindowsRegionLabel.Unreadable)]
-    public async Task The_box_starts_the_way_Windows_Country_or_region_says_and_the_report_carries_it(
-        string? region, bool ticked, string reported)
+    [InlineData("DE", "DE")]
+    [InlineData("NO", "NO")]
+    [InlineData("GB", "GB")]
+    [InlineData("US", "US")]
+    [InlineData("419", "419")]
+    [InlineData(null, WindowsRegionLabel.Unreadable)]
+    public async Task The_box_starts_ticked_whatever_Country_or_region_Windows_says_and_the_report_carries_it(
+        string? region, string reported)
     {
         var vm = FirstRunAllClear(region);
 
         await vm.Scan.ScanCommand.ExecuteAsync(null);
 
         Assert.True(vm.Completion.OffersReport);
-        Assert.Equal(ticked, vm.Completion.SendsReport);
+        Assert.True(vm.Completion.SendsReport);
         await _resultLogService.Received(1).WriteAsync(
             Arg.Is<ResultLogEntry>(e => e.App.WindowsRegion == reported), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task The_report_carries_the_region_the_box_started_from_not_a_later_read()
+    public async Task The_report_carries_the_region_read_for_the_card_not_a_later_read()
     {
         var vm = FirstRunAllClear("GB");
         _windowsRegion.Read().Returns("GB", "DE");
@@ -4124,7 +4125,7 @@ public class MainViewModelTests
         _resultLogService.SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(ResultLogSendOutcome.Sent);
         var scan = vm.Scan.ScanCommand.ExecuteAsync(null);
-        await writeStarted.Task;
+        await writeStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
         Assert.True(vm.Completion.IsComplete);
         Assert.True(vm.Completion.OffersReport);
@@ -4213,7 +4214,7 @@ public class MainViewModelTests
                 return write.Task;
             });
         var scan = vm.Scan.ScanCommand.ExecuteAsync(null);
-        await writeStarted.Task;
+        await writeStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
         vm.Completion.ReportPanelOpen = true;
         // The card's write runs behind the scan rather than inside it, so the box going
         // is waited for rather than the scan.

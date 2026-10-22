@@ -1,14 +1,12 @@
 # InstallerClean privacy policy
 
-Last updated 11 October 2026.
+Last updated 23 October 2026.
 
 InstallerClean never collects anything that could identify you, your PC or your files. No ads, no tracking. It can send me one anonymous report of how its first run on your PC went, which you can stop by unticking a box, and it checks GitHub for updates, which you can turn off. That's all it sends.
 
 ## The anonymous report
 
-When InstallerClean's first run on a PC finishes, its result screen has a box, "Send anonymous report". If it's ticked, the report goes when you close that screen. If you untick it, nothing is sent, then or ever. The small "i" beside the box shows what the report holds.
-
-If the Country or region set in Windows is in the European Union, Iceland, Liechtenstein or Norway, or InstallerClean can't read it, the box starts unticked. Everywhere else it starts ticked.
+When InstallerClean's first run on a PC finishes, its result screen has a box, "Send anonymous report", which starts ticked. If it's ticked, the report goes when you close that screen. If you untick it, nothing is sent, then or ever. The small "i" beside the box shows what the report holds.
 
 There is never more than one report per PC, and it is from the first run. No later run writes or sends another, from any Windows account. If the report can't be sent, because there's no network for example, InstallerClean keeps it and tries again each time you open it until it goes.
 
@@ -40,7 +38,11 @@ Nothing in it names you, your PC, a file, a folder, a drive or a program.
 
 ## Update check
 
-When you open InstallerClean, it asks GitHub whether there's a newer version. That's one request to github.com. GitHub sees your IP address, as any website does, and a line naming InstallerClean and its version. If there's a newer version, the main window says so. Nothing is downloaded unless you click Update now, which downloads the newer version from its release on GitHub and installs it. You can turn the check off in the About screen. Check for updates makes the same check, only when you click it.
+When you open InstallerClean, it asks GitHub whether there's a newer version. That's one request to github.com. GitHub sees your IP address, as any website does, and a line naming InstallerClean and its version. If there's a newer version, InstallerClean says so. Nothing is downloaded unless you click Update now, which downloads the newer version from its release on GitHub and installs it. Check for updates makes the same check, only when you click it.
+
+The command-line tool makes the same check before a scan, Move or Delete. Where someone is at the console to answer, it asks before it updates. Where nobody is, such as a scheduled task or a script, it downloads the newer version from GitHub, installs it without asking and runs the command with it.
+
+You can turn the check off in the About screen, which turns it off for InstallerClean and the command-line tool, for the Windows account that runs them. Adding `/noupdate` to a command skips it for that run.
 
 ## The first-run record
 
@@ -48,13 +50,13 @@ To know a PC has had its first run, InstallerClean sets a value named `FirstRunR
 
 ## The command-line tool
 
-It sends nothing and never checks for updates. It writes one summary line per run to the Windows Application event log, which stays on your PC, and sets the first-run record after a Move or Delete that moved or deleted files.
+It sends no report, and checks for updates as set out above. It writes one summary line per run to the Windows Application event log, with further lines for conditions it found on the PC and for each update it makes or can't make. After a Move or Delete that moves or deletes files, or ends where how far it got isn't known, it sets the `FirstRunRecorded` value described above. All of it stays on your PC.
 
 ## Everything else stays on your PC
 
 In `%LOCALAPPDATA%\InstallerClean`, for your Windows account:
 
-- `settings.json`: your backup folder, the language you picked, whether the update check is on, and whether your report has been sent or is waiting to be.
+- `settings.json`: the folder you chose for Move, the language you picked, whether the update check is on, and whether your report has been sent or is waiting to be.
 - `crash.log`: details of any error, with the one before kept as `crash.log.old`.
 
 On a PC where an earlier version kept these files in `%LOCALAPPDATA%\NoFaff\InstallerClean`, InstallerClean moves them here the first time it starts.

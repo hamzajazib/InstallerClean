@@ -1144,6 +1144,30 @@ public class CompletionViewModelTests
         Assert.Equal(Line(1), CheckLinesOn(card, reverify));
     }
 
+    [Theory]
+    [InlineData("DE")]
+    [InlineData("NO")]
+    [InlineData("IS")]
+    [InlineData("GB")]
+    [InlineData("419")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void The_box_a_card_takes_starts_ticked_whatever_Country_or_region_Windows_gives(string? region)
+    {
+        var windowsRegion = Substitute.For<IWindowsRegion>();
+        windowsRegion.Read().Returns(region);
+        var vm = new CompletionViewModel(
+            Substitute.For<IResultLogService>(), Substitute.For<ISettingsService>(),
+            Substitute.For<IEarlierRunCheck>(), Substitute.For<IFirstRunMark>(),
+            windowsRegion, Substitute.For<IWindowService>(), () => null);
+
+        Assert.True(vm.TakeReport());
+
+        Assert.True(vm.OffersReport);
+        Assert.True(vm.SendsReport);
+        Assert.Equal(region, vm.ReportRegion);
+    }
+
     // The report panel's "See exactly what's sent" link. The card carrying the box is
     // revealed before its report is written, so the window waits for the write; and it
     // shows what the read the send also uses returned, so it cannot differ from what goes.

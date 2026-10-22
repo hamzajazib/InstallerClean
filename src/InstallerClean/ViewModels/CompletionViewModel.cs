@@ -154,16 +154,15 @@ public partial class CompletionViewModel : ObservableObject
     [ObservableProperty] private bool _offersReport;
 
     /// <summary>
-    /// Whether the box is ticked. Its starting state comes from the Country or region
-    /// set in Windows (<see cref="ReportBoxRegions.StartsTicked"/>); what it says as the card
-    /// closes is what happens. No Show* method touches it.
+    /// Whether the box is ticked. It starts ticked on every card that carries it; what it
+    /// says as the card closes is what happens. No Show* method touches it.
     /// </summary>
     [ObservableProperty] private bool _sendsReport;
 
     /// <summary>
-    /// The Country or region <see cref="TakeReport"/> read to start the box, which the
-    /// report built for the same card carries. Null until a card takes the report, and
-    /// wherever Windows gave nothing.
+    /// The Country or region <see cref="TakeReport"/> read for the card, which the report
+    /// built for the same card carries. Null until a card takes the report, and wherever
+    /// Windows gave nothing.
     /// </summary>
     public string? ReportRegion { get; private set; }
 
@@ -243,10 +242,11 @@ public partial class CompletionViewModel : ObservableObject
     /// <paramref name="resultLogService"/> writes and sends the report and
     /// <paramref name="settingsService"/> records whether it is waiting to go or has
     /// gone. <paramref name="earlierRunCheck"/> and <paramref name="firstRunMark"/>
-    /// decide which card is the PC's first, and <paramref name="windowsRegion"/> which
-    /// way its box starts. <paramref name="windowService"/> opens the donate page and
-    /// the report window. <paramref name="lastScan"/> answers with the scan the window
-    /// shows at the moment it is asked, which the card after a Move or Delete speaks for.
+    /// decide which card is the PC's first, and <paramref name="windowsRegion"/> gives the
+    /// Country or region the report carries. <paramref name="windowService"/> opens the
+    /// donate page and the report window. <paramref name="lastScan"/> answers with the scan
+    /// the window shows at the moment it is asked, which the card after a Move or Delete
+    /// speaks for.
     /// </summary>
     public CompletionViewModel(
         IResultLogService resultLogService,
@@ -778,12 +778,11 @@ public partial class CompletionViewModel : ObservableObject
 
     /// <summary>
     /// Takes the report for the card about to be revealed: records the PC's first run,
-    /// sets the PC-wide mark, and puts the box on the card, ticked or not by the
-    /// Country or region set in Windows, which it keeps in <see cref="ReportRegion"/> for
-    /// the report. Called before the Show* method, so the box is there when the
-    /// card is read out. False where this sitting has already had its first run, which
-    /// a second card reaching here behind the same answer from
-    /// <see cref="ReportIsFreeAsync"/> finds.
+    /// sets the PC-wide mark, and puts the box on the card, ticked, reading the Country or
+    /// region set in Windows into <see cref="ReportRegion"/> for the report. Called before
+    /// the Show* method, so the box is there when the card is read out. False where this
+    /// sitting has already had its first run, which a second card reaching here behind the
+    /// same answer from <see cref="ReportIsFreeAsync"/> finds.
     /// </summary>
     public bool TakeReport()
     {
@@ -791,10 +790,9 @@ public partial class CompletionViewModel : ObservableObject
         _firstRunTaken = true;
         _firstRunMark.Set();
         ReportRegion = _windowsRegion.Read();
-        var ticked = ReportBoxRegions.StartsTicked(ReportRegion);
-        _reportTicked = ticked;
+        _reportTicked = true;
         _boxOpen = true;
-        SendsReport = ticked;
+        SendsReport = true;
         OffersReport = true;
         return true;
     }
