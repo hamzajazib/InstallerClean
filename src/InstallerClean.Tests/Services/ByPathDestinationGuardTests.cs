@@ -24,24 +24,39 @@ public class ByPathDestinationGuardTests
 
     public ByPathDestinationGuardTests()
     {
-        // MockFileSystem's Path is a working implementation; a bare substitute would
-        // return null from Combine and GetRandomFileName.
+        // MockFileSystem's Path is a working implementation; a bare substitute returns an
+        // empty string from Combine and GetRandomFileName.
         _fileSystem.Path.Returns(new MockFileSystem().Path);
         _fileSystem.Directory.Returns(_directory);
         _fileSystem.File.Returns(_file);
         _guard = new ByPathDestinationGuard(_fileSystem);
     }
 
-    /// <summary>The refusals a filesystem gives for a folder or a file it will not take.</summary>
-    public static IEnumerable<object[]> Refusals() =>
-    [
-        [new IOException("refused")],
-        [new UnauthorizedAccessException("refused")],
-        [new DirectoryNotFoundException("refused")],
-        [new PathTooLongException("refused")],
-        [new NotSupportedException("refused")],
-        [new ArgumentException("refused")],
-    ];
+    /// <summary>
+    /// The refusals a filesystem gives for a folder or a file it will not take, by exception
+    /// name. A theory row carries the name, which the test framework can serialise, so each
+    /// refusal is its own test case.
+    /// </summary>
+    private static readonly Dictionary<string, Func<Exception>> RefusalFactories = new()
+    {
+        [nameof(IOException)] = () => new IOException("refused"),
+        [nameof(UnauthorizedAccessException)] = () => new UnauthorizedAccessException("refused"),
+        [nameof(DirectoryNotFoundException)] = () => new DirectoryNotFoundException("refused"),
+        [nameof(PathTooLongException)] = () => new PathTooLongException("refused"),
+        [nameof(NotSupportedException)] = () => new NotSupportedException("refused"),
+        [nameof(ArgumentException)] = () => new ArgumentException("refused"),
+    };
+
+    public static TheoryData<string> RefusalNames => new(RefusalFactories.Keys);
+
+    private static Exception NewRefusal(string name) => RefusalFactories[name]();
+
+    [Theory]
+    [MemberData(nameof(RefusalNames))]
+    public void Each_refusal_name_builds_the_exception_it_names(string refusalName)
+    {
+        Assert.Equal(refusalName, NewRefusal(refusalName).GetType().Name);
+    }
 
     [Fact]
     public void An_emptied_folder_is_removed_with_the_one_argument_Delete()
@@ -53,9 +68,10 @@ public class ByPathDestinationGuardTests
     }
 
     [Theory]
-    [MemberData(nameof(Refusals))]
-    public void A_folder_the_filesystem_will_not_remove_answers_false(Exception refusal)
+    [MemberData(nameof(RefusalNames))]
+    public void A_folder_the_filesystem_will_not_remove_answers_false(string refusalName)
     {
+        var refusal = NewRefusal(refusalName);
         _directory.When(d => d.Delete("X")).Do(_ => throw refusal);
 
         Assert.False(_guard.TryRemoveEmptyFolder("X"));
@@ -65,21 +81,32 @@ public class ByPathDestinationGuardTests
     public void A_folder_that_takes_a_file_and_gives_it_back_passes_the_probe()
     {
         string? written = null;
+        byte[]? payload = null;
         _file.When(f => f.WriteAllBytes(Arg.Any<string>(), Arg.Any<byte[]>()))
-            .Do(call => written = call.ArgAt<string>(0));
+            .Do(call =>
+            {
+                written = call.ArgAt<string>(0);
+                payload = call.ArgAt<byte[]>(1);
+            });
 
         Assert.True(_guard.TryProbeWritable(_folder, out var failureCode));
 
         Assert.Equal(0, failureCode);
         Assert.NotNull(written);
         Assert.Equal(_folder, Path.GetDirectoryName(written));
-        _file.Received(1).Delete(written!);
+        Assert.Empty(payload!);
+        Received.InOrder(() =>
+        {
+            _file.WriteAllBytes(written!, Arg.Any<byte[]>());
+            _file.Delete(written!);
+        });
     }
 
     [Theory]
-    [MemberData(nameof(Refusals))]
-    public void A_folder_that_refuses_the_probe_file_fails_the_probe_with_the_refusals_HResult(Exception refusal)
+    [MemberData(nameof(RefusalNames))]
+    public void A_folder_that_refuses_the_probe_file_fails_the_probe_with_the_refusals_HResult(string refusalName)
     {
+        var refusal = NewRefusal(refusalName);
         _file.When(f => f.WriteAllBytes(Arg.Any<string>(), Arg.Any<byte[]>())).Do(_ => throw refusal);
 
         Assert.False(_guard.TryProbeWritable(_folder, out var failureCode));
@@ -89,9 +116,10 @@ public class ByPathDestinationGuardTests
     }
 
     [Theory]
-    [MemberData(nameof(Refusals))]
-    public void A_folder_that_will_not_give_the_probe_file_back_fails_the_probe_with_the_refusals_HResult(Exception refusal)
+    [MemberData(nameof(RefusalNames))]
+    public void A_folder_that_will_not_give_the_probe_file_back_fails_the_probe_with_the_refusals_HResult(string refusalName)
     {
+        var refusal = NewRefusal(refusalName);
         _file.When(f => f.Delete(Arg.Any<string>())).Do(_ => throw refusal);
 
         Assert.False(_guard.TryProbeWritable(_folder, out var failureCode));
@@ -107,6 +135,7 @@ public class ByPathDestinationGuardTests
         Assert.True(_guard.TryDiscardCopy(_copy, out var failureCode));
 
         Assert.Equal(0, failureCode);
+        _file.Received(1).Exists(_copy);
         _file.DidNotReceive().Delete(Arg.Any<string>());
         _file.DidNotReceive().SetAttributes(Arg.Any<string>(), Arg.Any<FileAttributes>());
     }
@@ -140,9 +169,50 @@ public class ByPathDestinationGuardTests
     }
 
     [Theory]
-    [MemberData(nameof(Refusals))]
-    public void A_copy_the_filesystem_will_not_delete_fails_the_discard_with_the_refusals_HResult(Exception refusal)
+    [MemberData(nameof(RefusalNames))]
+    public void A_read_only_copy_whose_attribute_will_not_clear_fails_the_discard_and_is_not_deleted(string refusalName)
     {
+        var refusal = NewRefusal(refusalName);
+        _file.Exists(_copy).Returns(true);
+        _file.GetAttributes(_copy).Returns(FileAttributes.ReadOnly);
+        _file.When(f => f.SetAttributes(_copy, Arg.Any<FileAttributes>())).Do(_ => throw refusal);
+
+        Assert.False(_guard.TryDiscardCopy(_copy, out var failureCode));
+
+        Assert.Equal(refusal.HResult, failureCode);
+        _file.DidNotReceive().Delete(Arg.Any<string>());
+    }
+
+    [Fact]
+    public void A_copy_whose_attributes_cannot_be_read_fails_the_discard_and_is_not_deleted()
+    {
+        var refusal = new UnauthorizedAccessException("refused");
+        _file.Exists(_copy).Returns(true);
+        _file.GetAttributes(_copy).Returns(_ => throw refusal);
+
+        Assert.False(_guard.TryDiscardCopy(_copy, out var failureCode));
+
+        Assert.Equal(refusal.HResult, failureCode);
+        _file.DidNotReceive().Delete(Arg.Any<string>());
+    }
+
+    [Fact]
+    public void A_copy_whose_presence_cannot_be_asked_fails_the_discard_and_is_not_deleted()
+    {
+        var refusal = new IOException("refused");
+        _file.Exists(_copy).Returns(_ => throw refusal);
+
+        Assert.False(_guard.TryDiscardCopy(_copy, out var failureCode));
+
+        Assert.Equal(refusal.HResult, failureCode);
+        _file.DidNotReceive().Delete(Arg.Any<string>());
+    }
+
+    [Theory]
+    [MemberData(nameof(RefusalNames))]
+    public void A_copy_the_filesystem_will_not_delete_fails_the_discard_with_the_refusals_HResult(string refusalName)
+    {
+        var refusal = NewRefusal(refusalName);
         _file.Exists(_copy).Returns(true);
         _file.GetAttributes(_copy).Returns(FileAttributes.Archive);
         _file.When(f => f.Delete(_copy)).Do(_ => throw refusal);

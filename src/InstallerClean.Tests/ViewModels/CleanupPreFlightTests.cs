@@ -59,7 +59,7 @@ public class CleanupPreFlightTests
         _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns(ci => new ReverifyResult((IReadOnlyList<string>)ci[0]!, Array.Empty<string>()));
         // MockFileSystem's Path is a working implementation; a bare substitute
-        // would return null from Combine and GetRandomFileName.
+        // returns an empty string from Combine and GetRandomFileName.
         _fileSystem.Path.Returns(new MockFileSystem().Path);
         _fileSystem.Directory.Returns(_directory);
         _fileSystem.File.Returns(_file);
@@ -105,9 +105,16 @@ public class CleanupPreFlightTests
             .Select(call => call.GetArguments())
             .ToList();
 
-    /// <summary>The Move removed the folder it made, once, and no other folder.</summary>
-    private void AssertFolderRemoved() =>
-        Assert.Equal(_destination, (string?)Assert.Single(FolderRemovals())[0]);
+    /// <summary>
+    /// The Move removed the folder it made, once and not recursively, and no other folder.
+    /// The two-argument overload carries the recursive flag as its second argument.
+    /// </summary>
+    private void AssertFolderRemoved()
+    {
+        var removal = Assert.Single(FolderRemovals());
+        Assert.Equal(_destination, (string?)removal[0]);
+        Assert.True(removal.Length == 1 || removal[1] is false, "the folder was removed recursively");
+    }
 
     /// <summary>The Move removed no folder.</summary>
     private void AssertNoFolderRemoved() => Assert.Empty(FolderRemovals());
