@@ -392,15 +392,25 @@ internal static class DirectoryGuard
             return false;
         }
 
-        if (!Kernel32.GetFileInformationByHandle(child, out var info)
-            || (info.dwFileAttributes & Kernel32.FILE_ATTRIBUTE_REPARSE_POINT) != 0)
+        if (!Kernel32.GetFileInformationByHandle(child, out var info))
         {
             failureCode = Marshal.GetLastPInvokeError();
             return false;
         }
 
+        // The read succeeded, so the last error says nothing about this child.
+        if ((info.dwFileAttributes & Kernel32.FILE_ATTRIBUTE_REPARSE_POINT) != 0)
+        {
+            failureCode = Kernel32.ERROR_REPARSE_POINT_ENCOUNTERED;
+            return false;
+        }
+
         ClearReadOnlyByHandle(child, info.dwFileAttributes);
-        return DeleteByHandle(child);
+        if (DeleteByHandle(child)) return true;
+
+        // The cause the disposition call itself left.
+        failureCode = Marshal.GetLastPInvokeError();
+        return false;
     }
 
     private static unsafe void ClearReadOnlyByHandle(SafeFileHandle handle, uint attributes)

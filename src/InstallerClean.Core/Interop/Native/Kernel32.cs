@@ -815,4 +815,7 @@ internal static partial class Kernel32
 
     // "The directory name is invalid": the code for a path that names a file where a folder is wanted.
     public const int ERROR_DIRECTORY = 267;
+
+    // "The object manager encountered a reparse point": the code for a child that is a link where a plain file is wanted.
+    public const int ERROR_REPARSE_POINT_ENCOUNTERED = 4395;
 }

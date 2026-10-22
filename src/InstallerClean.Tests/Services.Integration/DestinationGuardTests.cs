@@ -108,8 +108,9 @@ public sealed class DestinationGuardTests : IDisposable
         // The real destination holds a child named like the copy, but that child is a
         // link to a file elsewhere. The discard opens the child relative to a handle on
         // the destination folder without following the child's link, finds a reparse
-        // point and leaves it, so the file the link points at is untouched. Best-effort:
-        // a link needs a privilege not every host grants.
+        // point and leaves it, so the file the link points at is untouched, and records
+        // the reparse point as the cause. Best-effort: a link needs a privilege not every
+        // host grants.
         var outside = Directory.CreateDirectory(Path.Combine(_root, "outside")).FullName;
         var decoy = Path.Combine(outside, "decoy.txt");
         File.WriteAllText(decoy, "untouched");
@@ -125,8 +126,9 @@ public sealed class DestinationGuardTests : IDisposable
             return;
         }
 
-        _guard.TryDiscardCopy(copyName, out _);
+        Assert.False(_guard.TryDiscardCopy(copyName, out var code));
 
+        Assert.Equal(Kernel32.ERROR_REPARSE_POINT_ENCOUNTERED, code);
         Assert.True(File.Exists(decoy));
     }
 }
