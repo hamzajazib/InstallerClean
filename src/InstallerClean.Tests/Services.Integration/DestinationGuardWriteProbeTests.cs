@@ -56,33 +56,38 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         // The account created each folder and so may rewrite its list, which is how it is
         // let back in to delete a file the probe's folder let it create. Full control on
         // the folder includes FILE_DELETE_CHILD, and each file's own list is reset too.
-        foreach (var folder in Directory.EnumerateDirectories(_root))
+        try
         {
-            try
+            foreach (var folder in Directory.EnumerateDirectories(_root))
+            {
+                ResetAccess(folder, isFolder: true);
+                foreach (var file in Directory.EnumerateFiles(folder))
+                    ResetAccess(file, isFolder: false);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+
+        try { Directory.Delete(_root, recursive: true); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+    }
+
+    private static void ResetAccess(string path, bool isFolder)
+    {
+        try
+        {
+            if (isFolder)
             {
                 var security = new DirectorySecurity();
                 security.SetSecurityDescriptorSddlForm(FullControlOnFolders, AccessControlSections.Access);
-                new DirectoryInfo(folder).SetAccessControl(security);
+                new DirectoryInfo(path).SetAccessControl(security);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
-
-            try
+            else
             {
-                foreach (var file in Directory.EnumerateFiles(folder))
-                {
-                    try
-                    {
-                        var security = new FileSecurity();
-                        security.SetSecurityDescriptorSddlForm(FullControlOnFiles, AccessControlSections.Access);
-                        new FileInfo(file).SetAccessControl(security);
-                    }
-                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
-                }
+                var security = new FileSecurity();
+                security.SetSecurityDescriptorSddlForm(FullControlOnFiles, AccessControlSections.Access);
+                new FileInfo(path).SetAccessControl(security);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         }
-
-        try { Directory.Delete(_root, recursive: true); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
 
     private string MakeFolder(string accessList)
@@ -124,8 +129,11 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         Assert.Equal(AccessDenied, failureCode);
         Assert.Empty(Directory.EnumerateFileSystemEntries(folder));
 
-        // And the folder does let this account create a file. Last, because it leaves one.
-        using (new FileStream(Path.Combine(folder, "plain"), FileMode.CreateNew, FileAccess.Write)) { }
+        // And the folder does let this account create a file when the create asks for the
+        // right to write it and nothing more, which is what the probe asks for less the right
+        // to delete. Last, because it leaves one.
+        using (new FileInfo(Path.Combine(folder, "plain")).Create(
+            FileMode.CreateNew, FileSystemRights.WriteData, FileShare.None, 1, FileOptions.None, fileSecurity: null)) { }
         Assert.Single(Directory.EnumerateFileSystemEntries(folder));
     }
 
