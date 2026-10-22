@@ -155,6 +155,24 @@ public sealed class DestinationGuardTests : IDisposable
     }
 
     [Fact]
+    public void A_read_only_copy_another_program_holds_open_is_released_from_its_name_at_once()
+    {
+        // The POSIX form lets the name go while a handle that shares delete is still open,
+        // so a new file can take the name straight away; the older form would leave the
+        // name until that handle closed.
+        var destination = Directory.CreateDirectory(Path.Combine(_root, "held-open")).FullName;
+        var copy = Path.Combine(destination, "payload.msi");
+        File.WriteAllBytes(copy, new byte[16]);
+        File.SetAttributes(copy, File.GetAttributes(copy) | FileAttributes.ReadOnly);
+        using var holder = new FileStream(copy, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+
+        Assert.True(_guard.TryDiscardCopy(copy, out _));
+
+        File.WriteAllText(copy, "a new file at the same name");
+        Assert.Equal("a new file at the same name", File.ReadAllText(copy));
+    }
+
+    [Fact]
     public void A_read_only_copy_is_deleted_by_the_older_form_with_its_attribute_cleared()
     {
         var destination = Directory.CreateDirectory(Path.Combine(_root, "older-form")).FullName;

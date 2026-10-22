@@ -380,10 +380,10 @@ internal static class DirectoryGuard
     /// read-only attribute, so the copy goes without its attributes being touched and a
     /// delete that fails leaves it as it was; where the system does not take that form,
     /// the attribute is cleared for the older delete and put back if that delete fails.
-    /// Answers true where the file is gone, which includes where it was not there to begin with, so a copy
-    /// that was never made is not reported as a copy that would not go. False where the
-    /// file is present and could not be removed, is a reparse point, or is a folder,
-    /// which is left in place.
+    /// Answers true where the file is gone, which includes where it was not there to
+    /// begin with, so a copy that was never made is not reported as a copy that would
+    /// not go. False where the file is present and could not be removed, is a reparse
+    /// point, or is a folder, which is left in place.
     /// </summary>
     internal static bool TryDiscardChildCopy(string folder, string leaf, out int failureCode)
     {
@@ -426,8 +426,10 @@ internal static class DirectoryGuard
 
     private static unsafe void SetAttributesByHandle(SafeFileHandle handle, uint attributes)
     {
-        // A FILE_BASIC_INFO FileAttributes of zero leaves the attributes unchanged, so
-        // where read-only was the only one set, the file is marked normal instead.
+        // Only the attributes SetFileAttributes can set are written. A FILE_BASIC_INFO
+        // FileAttributes of zero leaves the attributes unchanged, so where nothing is
+        // left to set, the file is marked normal instead.
+        attributes &= FILE_ATTRIBUTE_VALID_SET_FLAGS;
         if (attributes == 0) attributes = FILE_ATTRIBUTE_NORMAL;
         var basic = new Kernel32.FILE_BASIC_INFO { FileAttributes = attributes };
         Kernel32.SetFileBasicInfoByHandle(
@@ -436,6 +438,9 @@ internal static class DirectoryGuard
 
     private const uint FILE_ATTRIBUTE_READONLY = 0x00000001;
     private const uint FILE_ATTRIBUTE_NORMAL = 0x00000080;
+
+    /// <summary>Archive, hidden, normal, not content indexed, offline, read-only, system and temporary.</summary>
+    private const uint FILE_ATTRIBUTE_VALID_SET_FLAGS = 0x000031A7;
     private const int STATUS_OBJECT_NAME_NOT_FOUND = unchecked((int)0xC0000034);
     private const int STATUS_OBJECT_PATH_NOT_FOUND = unchecked((int)0xC000003A);
     private const int STATUS_ACCESS_DENIED = unchecked((int)0xC0000022);
@@ -452,13 +457,14 @@ internal static class DirectoryGuard
     /// <summary>
     /// Deletes the file or empty folder <paramref name="handle"/> names. Where
     /// <paramref name="fileAttributes"/> is given, the file may be read-only and these
-    /// are its attributes: the POSIX form asks the system to ignore the read-only
-    /// attribute, and the older form has it cleared and put back if the delete fails.
+    /// are its attributes: for a read-only file the POSIX form asks the system to ignore
+    /// the attribute, and the older form has it cleared and put back if the delete fails.
     /// </summary>
     private static unsafe bool DeleteByHandle(SafeFileHandle handle, uint? fileAttributes = null)
     {
         var flags = Kernel32.FILE_DISPOSITION_FLAG_DELETE | Kernel32.FILE_DISPOSITION_FLAG_POSIX_SEMANTICS;
-        if (fileAttributes is not null) flags |= Kernel32.FILE_DISPOSITION_FLAG_IGNORE_READONLY_ATTRIBUTE;
+        if (fileAttributes is { } given && (given & FILE_ATTRIBUTE_READONLY) != 0)
+            flags |= Kernel32.FILE_DISPOSITION_FLAG_IGNORE_READONLY_ATTRIBUTE;
         var posix = new Kernel32.FILE_DISPOSITION_INFO_EX { Flags = flags };
         if (Kernel32.SetFileDispositionInfoEx(
                 handle, Kernel32.FileDispositionInfoEx, in posix, (uint)sizeof(Kernel32.FILE_DISPOSITION_INFO_EX)))
@@ -485,8 +491,8 @@ internal static class DirectoryGuard
 
     /// <summary>
     /// The older delete of a file whose attributes are <paramref name="attributes"/>,
-    /// with the read-only attribute cleared for it and put back if the delete fails. The
-    /// last error after a false answer is the delete's own.
+    /// with the read-only attribute cleared for it and put back if the delete call
+    /// fails. The last error after a false answer is the delete's own.
     /// </summary>
     internal static bool DeleteClearingReadOnly(SafeFileHandle handle, uint attributes)
     {
@@ -496,7 +502,10 @@ internal static class DirectoryGuard
         if (DeleteByPlainForm(handle)) return true;
 
         var error = Marshal.GetLastPInvokeError();
-        SetAttributesByHandle(handle, attributes);
+        // The attributes as they are now, with read-only put back.
+        var current = Kernel32.GetFileInformationByHandle(handle, out var info)
+            ? info.dwFileAttributes : attributes & ~FILE_ATTRIBUTE_READONLY;
+        SetAttributesByHandle(handle, (current & ~FILE_ATTRIBUTE_NORMAL) | FILE_ATTRIBUTE_READONLY);
         Marshal.SetLastPInvokeError(error);
         return false;
     }
