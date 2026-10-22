@@ -71,6 +71,17 @@ public class CreatedFoldersTests
     }
 
     [Fact]
+    public void A_destination_that_cannot_be_spelled_as_a_full_path_lists_nothing()
+    {
+        var fileSystem = Substitute.For<IFileSystem>();
+        var path = Substitute.For<IPath>();
+        path.GetFullPath(Arg.Any<string>()).Returns(_ => throw new PathTooLongException());
+        fileSystem.Path.Returns(path);
+
+        Assert.Empty(CreatedFolders.MissingOnPath(fileSystem, Folder("a")));
+    }
+
+    [Fact]
     public void A_drive_root_is_never_listed()
     {
         var nothingThere = Substitute.For<IFileSystem>();
@@ -117,5 +128,16 @@ public class CreatedFoldersTests
         CreatedFolders.RemoveWhileEmpty(_fs, _guard, [Folder("a", "b", "c"), Folder("a", "b"), Folder("a")]);
 
         Assert.False(_fs.Directory.Exists(Folder("a")));
+    }
+
+    [Fact]
+    public void A_removal_that_throws_ends_without_throwing()
+    {
+        var guard = Substitute.For<IDestinationGuard>();
+        guard.TryRemoveEmptyFolder(Arg.Any<string>()).Returns(_ => throw new InvalidOperationException("refused"));
+
+        var thrown = Record.Exception(() => CreatedFolders.RemoveWhileEmpty(_fs, guard, [Folder("a")]));
+
+        Assert.Null(thrown);
     }
 }

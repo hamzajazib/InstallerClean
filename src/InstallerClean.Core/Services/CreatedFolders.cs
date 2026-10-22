@@ -19,7 +19,16 @@ internal static class CreatedFolders
     internal static IReadOnlyList<string> MissingOnPath(IFileSystem fileSystem, string destination)
     {
         var missing = new List<string>();
-        var folder = fileSystem.Path.TrimEndingDirectorySeparator(fileSystem.Path.GetFullPath(destination));
+        string folder;
+        try
+        {
+            folder = fileSystem.Path.TrimEndingDirectorySeparator(fileSystem.Path.GetFullPath(destination));
+        }
+        catch
+        {
+            // A destination that cannot be spelled as a full path cannot be created either.
+            return missing;
+        }
         while (!string.IsNullOrEmpty(folder) && !fileSystem.Directory.Exists(folder))
         {
             var parent = fileSystem.Path.GetDirectoryName(folder);
@@ -34,15 +43,23 @@ internal static class CreatedFolders
     /// Removes <paramref name="folders"/> in the order given, each through
     /// <paramref name="guard"/> and so only where it is empty. A folder that is no longer
     /// there is passed over; the first that is there and will not go ends the removal, so
-    /// a folder holding anything keeps every folder above it.
+    /// a folder holding anything keeps every folder above it. A failure of the removal
+    /// itself ends it too and is not thrown, so it never replaces the error a caller is
+    /// about to report.
     /// </summary>
     internal static void RemoveWhileEmpty(
         IFileSystem fileSystem, IDestinationGuard guard, IReadOnlyList<string> folders)
     {
-        foreach (var folder in folders)
+        try
         {
-            if (guard.TryRemoveEmptyFolder(folder)) continue;
-            if (fileSystem.Directory.Exists(folder)) return;
+            foreach (var folder in folders)
+            {
+                if (guard.TryRemoveEmptyFolder(folder)) continue;
+                if (fileSystem.Directory.Exists(folder)) return;
+            }
+        }
+        catch
+        {
         }
     }
 }

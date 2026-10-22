@@ -225,11 +225,11 @@ public sealed class MoveFilesService : IMoveFilesService
             }
 
             // The create makes the destination and every missing folder above it.
-            // A create that fails, or a refusal to write in the destination, comes
-            // before the first file moves, so the folders this call made are
-            // removed again, each only while it is empty. The gates between the two refuse a
-            // destination that has just been shown to resolve somewhere
-            // unexpected, and they leave the folders alone.
+            // A create that fails, or a write test that fails, comes before the
+            // first file moves, so the folders this call made are removed again,
+            // each only while it is empty. The gates between the two leave them: a
+            // destination that has just been shown to resolve into the installer
+            // cache or a system folder is not a place to remove a folder from.
             var createdFolders = CreatedFolders.MissingOnPath(_fs, destinationFolder);
             try
             {
@@ -297,7 +297,7 @@ public sealed class MoveFilesService : IMoveFilesService
             {
                 ProbeDestinationWriteable(destinationFolder);
             }
-            catch (LocalisedAccessException)
+            catch
             {
                 CreatedFolders.RemoveWhileEmpty(_fs, _destinationGuard, createdFolders);
                 throw;

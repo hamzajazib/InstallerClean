@@ -942,6 +942,7 @@ public class MoveFilesServiceUnitTests
             directory.Delete(DestDir);
             directory.Delete(@"D:\backup");
         });
+        directory.Received(2).Delete(Arg.Any<string>());
     }
 
     [Fact]
