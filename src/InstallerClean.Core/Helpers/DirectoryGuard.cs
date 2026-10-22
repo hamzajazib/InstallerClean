@@ -295,8 +295,7 @@ internal static class DirectoryGuard
     /// are asked for, not its attributes alone, which any account that can list the
     /// folder is granted on every file in it.
     /// </summary>
-    internal const uint ReadBackAccess =
-        Ntdll.FILE_READ_DATA | Ntdll.FILE_READ_EA | Kernel32.FILE_READ_ATTRIBUTES | Ntdll.READ_CONTROL;
+    internal const uint ReadBackAccess = Ntdll.FILE_GENERIC_READ & ~Ntdll.SYNCHRONIZE;
 
     /// <summary>The options the write probe's second open passes: a file, opened as itself where it is a link.</summary>
     internal const uint ReadBackOptions = Ntdll.FILE_NON_DIRECTORY_FILE | Ntdll.FILE_OPEN_REPARSE_POINT;
@@ -306,7 +305,8 @@ internal static class DirectoryGuard
     /// through a handle opened on the folder. A random-named child is created relative
     /// to that handle, asking for the right to write it and the right to delete it, and
     /// is removed as the handle closes, so the probe leaves nothing behind. While that
-    /// handle is open the child is opened a second time asking to read its bytes.
+    /// handle is open the child is opened a second time for reading, asking for
+    /// <see cref="ReadBackAccess"/>.
     /// <para>
     /// The create is granted whatever the new file's inherited list says, because a
     /// create receives the access it asks for once the folder allows the add. The

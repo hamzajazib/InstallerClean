@@ -122,6 +122,11 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         Assert.NotEqual(0u, DirectoryGuard.ProbeAccess & Ntdll.DELETE);
         Assert.NotEqual(0u, DirectoryGuard.ProbeOptions & Ntdll.FILE_DELETE_ON_CLOSE);
         Assert.NotEqual(0u, DirectoryGuard.ReadBackAccess & Ntdll.FILE_READ_DATA);
+
+        // And the rest of what an open for reading needs: FILE_READ_DATA, FILE_READ_EA,
+        // FILE_READ_ATTRIBUTES and READ_CONTROL, without which a folder granting a file's
+        // bytes and withholding its extended attributes would pass.
+        Assert.Equal(0x00020089u, DirectoryGuard.ReadBackAccess);
         Assert.NotEqual(0u, DirectoryGuard.ReadBackOptions & Ntdll.FILE_OPEN_REPARSE_POINT);
     }
 

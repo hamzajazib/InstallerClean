@@ -120,9 +120,9 @@ internal static partial class Ntdll
     /// <summary>The right to read a file's bytes, which the write probe's second open asks for.</summary>
     public const uint FILE_READ_DATA = 0x00000001;
 
-    /// <summary>The right to read a file's extended attributes.</summary>
-    public const uint FILE_READ_EA = 0x00000008;
-
-    /// <summary>The right to read an object's security descriptor, other than its audit list.</summary>
-    public const uint READ_CONTROL = 0x00020000;
+    /// <summary>
+    /// The rights GENERIC_READ maps to on a file: its bytes, its extended attributes,
+    /// its attributes, its security descriptor other than the audit list, and SYNCHRONIZE.
+    /// </summary>
+    public const uint FILE_GENERIC_READ = 0x00120089;
 }

@@ -872,10 +872,11 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         }
         catch (LocalisedAccessException ex)
         {
-            // The probe's refusal of a folder that takes a file and will not let it
-            // be read back. Its message is a resx string naming the folder the user
-            // typed, so it is shown as it stands, and it is a refusal rather than a
-            // fault, so no crash log is written.
+            // The probe's refusal of a folder that takes a file and refuses access
+            // to it when the probe reads it back. Any other failure of that read
+            // arrives at the arm below. Its message is a resx string naming the
+            // folder the user typed, so it is shown as it stands, and it is a
+            // refusal rather than a fault, so no crash log is written.
             IsOperating = false;
             OperationProgress = string.Empty;
             EndOperation();

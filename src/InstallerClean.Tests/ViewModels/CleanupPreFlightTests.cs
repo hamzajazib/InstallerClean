@@ -585,6 +585,35 @@ public class CleanupPreFlightTests
     }
 
     [Fact]
+    public async Task A_read_back_that_fails_for_another_cause_is_refused_as_a_write_failure()
+    {
+        // A failure of the read that is not a refusal of access, such as another
+        // program holding the new file, says nothing about the folder's permissions,
+        // so it takes the write-failure dialog and not the message for a folder that
+        // will not give files back.
+        _file.ReadAllBytes(Arg.Any<string>()).Returns(_ => throw new IOException("sharing violation"));
+
+        var vm = CreateViewModel();
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = _destination;
+
+        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        // The write-failure body names the crash log where one was written, and says
+        // none could be where it was not; everything before the log's path is fixed.
+        var withLogPrefix = string.Format(
+            InstallerClean.Resources.Strings.Error_IOWriteDestination, _destination, "\0").Split('\0')[0];
+        var withoutLog = string.Format(
+            InstallerClean.Resources.Strings.Error_IOWriteDestination_NoLog, _destination);
+        _dialogService.Received(1).ShowWarning(
+            Arg.Is<string>(body => body == withoutLog || body.StartsWith(withLogPrefix, StringComparison.Ordinal)),
+            InstallerClean.Resources.Strings.Error_DestinationWriteFailedTitle);
+        AssertFolderRemoved();
+        _confirmationService.DidNotReceive().ConfirmMove(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+    }
+
+    [Fact]
     public async Task Cancelling_the_confirmation_leaves_a_folder_that_was_already_there()
     {
         _directory.Exists(_destination).Returns(true);
