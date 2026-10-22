@@ -804,7 +804,18 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // CreateDirectory so a throw from the create cannot leave the flag
             // saying no about a folder that did appear.
             createdDestination = !_fs.Directory.Exists(dest);
-            _fs.Directory.CreateDirectory(dest);
+            try
+            {
+                _fs.Directory.CreateDirectory(dest);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                // Windows refused the account the folder: a refusal, not a fault, so it
+                // takes the access-denied message through the arm below, which writes no
+                // crash log, as the write test's refusals of access do.
+                throw new LocalisedAccessException(
+                    string.Format(Strings.Error_AccessDeniedDestination, dest), ex);
+            }
             probeToken.ThrowIfCancellationRequested();
             // The guard writes a write-test file through a handle opened on the
             // folder, opens it again to read it, and removes it, so a folder
@@ -877,11 +888,11 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         }
         catch (LocalisedAccessException ex)
         {
-            // The probe's refusal of a folder where Windows refused access to adding
-            // its file or to reading it back. Any other failure of the probe arrives
-            // at the arm below. Its message is a resx string naming the folder the
-            // user typed, so it is shown as it stands, and it is a refusal rather
-            // than a fault, so no crash log is written.
+            // A refusal of access: to creating the folder, or to the write test
+            // adding its file or reading it back. Any other failure arrives at the
+            // arm below. Its message is a resx string naming the folder the user
+            // typed, so it is shown as it stands, and it is a refusal rather than a
+            // fault, so no crash log is written.
             IsOperating = false;
             OperationProgress = string.Empty;
             EndOperation();
