@@ -113,15 +113,26 @@ public class CleanupPreFlightTests
     private void AssertFolderRemoved()
     {
         var removals = FolderRemovals();
-        Assert.True(removals.Count == 1, $"expected one Delete on the directory, but there were {removals.Count}");
+        Assert.True(removals.Count == 1,
+            $"expected one Delete on the directory, but there were {removals.Count}{Listed(removals)}");
         var removal = removals[0];
         Assert.True(removal[0] as string == _destination, $"the Delete was for {removal[0]}, not the destination");
         Assert.True(removal.Length == 1 || removal[1] is false, "the folder was removed recursively");
     }
 
     /// <summary>The Move made no <c>Delete</c> call on the substituted directory.</summary>
-    private void AssertNoFolderRemoved() =>
-        Assert.True(FolderRemovals().Count == 0, "expected no Delete on the directory");
+    private void AssertNoFolderRemoved()
+    {
+        var removals = FolderRemovals();
+        Assert.True(removals.Count == 0,
+            $"expected no Delete on the directory, but there {(removals.Count == 1 ? "was" : "were")} {removals.Count}{Listed(removals)}");
+    }
+
+    /// <summary>The <c>Delete</c> calls in <paramref name="removals"/>, written out for a failure message.</summary>
+    private static string Listed(List<object?[]> removals) =>
+        removals.Count == 0
+            ? string.Empty
+            : ": " + string.Join("; ", removals.Select(arguments => $"Delete({string.Join(", ", arguments)})"));
 
     [Fact]
     public void The_removal_assertion_accepts_the_one_argument_Delete_of_the_destination()
@@ -163,6 +174,7 @@ public class CleanupPreFlightTests
 
         var failure = Assert.Throws<Xunit.Sdk.TrueException>(AssertFolderRemoved);
         Assert.Contains("there were 2", failure.Message);
+        Assert.Contains($"Delete({_destination}); Delete({_destination})", failure.Message);
     }
 
     [Fact]
@@ -201,11 +213,13 @@ public class CleanupPreFlightTests
         AssertNoFolderRemoved();
 
         _directory.Delete(_destination);
-        Assert.Throws<Xunit.Sdk.TrueException>(AssertNoFolderRemoved);
+        var oneArgument = Assert.Throws<Xunit.Sdk.TrueException>(AssertNoFolderRemoved);
+        Assert.Contains($"there was 1: Delete({_destination})", oneArgument.Message);
 
         _directory.ClearReceivedCalls();
         _directory.Delete(_destination, false);
-        Assert.Throws<Xunit.Sdk.TrueException>(AssertNoFolderRemoved);
+        var twoArguments = Assert.Throws<Xunit.Sdk.TrueException>(AssertNoFolderRemoved);
+        Assert.Contains($"there was 1: Delete({_destination}, False)", twoArguments.Message);
     }
 
     [Fact]
