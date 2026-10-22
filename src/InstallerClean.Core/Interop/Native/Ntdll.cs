@@ -117,7 +117,7 @@ internal static partial class Ntdll
     /// <summary>The right to write a file's bytes, which the write probe's create takes.</summary>
     public const uint FILE_WRITE_DATA = 0x00000002;
 
-    /// <summary>The right to read a file's bytes, which the write probe's second open asks for.</summary>
+    /// <summary>The right to read a file's bytes.</summary>
     public const uint FILE_READ_DATA = 0x00000001;
 
     /// <summary>

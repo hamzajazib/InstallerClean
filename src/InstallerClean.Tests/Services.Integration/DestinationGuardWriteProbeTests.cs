@@ -50,6 +50,10 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
     // FILE_READ_ATTRIBUTES, FILE_WRITE_ATTRIBUTES, READ_CONTROL and SYNCHRONIZE. No DELETE.
     private const string FileRightsReadWrite = "0x12019F";
 
+    // The same less FILE_READ_EA (0x8): a file's bytes can be read, and an open asking for
+    // everything an open for reading needs is refused.
+    private const string FileRightsBytesWithoutExtendedAttributes = "0x120197";
+
     // The same with DELETE (0x10000) added.
     private const string FileRightsReadWriteDelete = "0x13019F";
 
@@ -121,12 +125,10 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         // bytes, which the file's own list decides.
         Assert.NotEqual(0u, DirectoryGuard.ProbeAccess & Ntdll.DELETE);
         Assert.NotEqual(0u, DirectoryGuard.ProbeOptions & Ntdll.FILE_DELETE_ON_CLOSE);
-        Assert.NotEqual(0u, DirectoryGuard.ReadBackAccess & Ntdll.FILE_READ_DATA);
 
-        // And the rest of what an open for reading needs: FILE_READ_DATA, FILE_READ_EA,
-        // FILE_READ_ATTRIBUTES and READ_CONTROL, without which a folder granting a file's
-        // bytes and withholding its extended attributes would pass.
-        Assert.Equal(0x00020089u, DirectoryGuard.ReadBackAccess);
+        // The second open asks for what GENERIC_READ maps to on a file: FILE_READ_DATA,
+        // FILE_READ_EA, FILE_READ_ATTRIBUTES, READ_CONTROL and SYNCHRONIZE.
+        Assert.Equal(0x00120089u, DirectoryGuard.ReadBackAccess);
         Assert.NotEqual(0u, DirectoryGuard.ReadBackOptions & Ntdll.FILE_OPEN_REPARSE_POINT);
     }
 
@@ -213,6 +215,35 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         AssertDeleteRefused(file);
         Assert.False(_guard.TryDiscardCopy(file, out var discardCode));
         Assert.Equal(AccessDenied, discardCode);
+
+        var folder = MakeFolder(accessList);
+        Assert.False(_guard.TryProbeWritable(folder, out var failureCode, out var readBackRefused));
+        Assert.Equal(AccessDenied, failureCode);
+        Assert.True(readBackRefused);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(folder));
+    }
+
+    [Fact]
+    public void A_folder_whose_files_give_their_bytes_and_not_the_rest_of_a_read_fails_the_probe_at_the_read_back()
+    {
+        AssertTheProbeAsksWhatThisTestAssumes();
+        var accessList = ListGranting(FolderRights, FileRightsBytesWithoutExtendedAttributes);
+
+        // What Windows lets the account do there: an open asking for a file's bytes alone
+        // is granted, and a plain read, which asks for everything an open for reading
+        // needs, is refused.
+        var facts = MakeFolder(accessList);
+        AssertTheFolderOpens(facts);
+        var file = CreateFileLikeTheProbeLessDelete(facts, "copy.msi");
+        using (var directory = DirectoryGuard.OpenDirectoryFollow(facts, out _))
+        {
+            Assert.NotNull(directory);
+            using var bytesOnly = DirectoryGuard.OpenChildNoFollow(
+                directory, "copy.msi", Ntdll.FILE_READ_DATA, Ntdll.FILE_OPEN, DirectoryGuard.ReadBackOptions, out var status);
+            Assert.True(bytesOnly is not null,
+                $"an open asking for the file's bytes alone was refused (Win32 error {Ntdll.RtlNtStatusToDosError(status)})");
+        }
+        AssertReadRefused(file);
 
         var folder = MakeFolder(accessList);
         Assert.False(_guard.TryProbeWritable(folder, out var failureCode, out var readBackRefused));

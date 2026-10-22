@@ -291,11 +291,10 @@ internal static class DirectoryGuard
 
     /// <summary>
     /// The access the write probe's second open asks for: the rights GENERIC_READ maps
-    /// to on a file, less SYNCHRONIZE, which the open adds itself. So the file's bytes
-    /// are asked for, not its attributes alone, which any account that can list the
-    /// folder is granted on every file in it.
+    /// to on a file. So the file's bytes are asked for, not its attributes alone, which
+    /// any account that can list the folder is granted on every file in it.
     /// </summary>
-    internal const uint ReadBackAccess = Ntdll.FILE_GENERIC_READ & ~Ntdll.SYNCHRONIZE;
+    internal const uint ReadBackAccess = Ntdll.FILE_GENERIC_READ;
 
     /// <summary>The options the write probe's second open passes: a file, opened as itself where it is a link.</summary>
     internal const uint ReadBackOptions = Ntdll.FILE_NON_DIRECTORY_FILE | Ntdll.FILE_OPEN_REPARSE_POINT;
@@ -340,11 +339,18 @@ internal static class DirectoryGuard
         if (readBack is null)
         {
             failureCode = (int)Ntdll.RtlNtStatusToDosError(status);
-            readBackRefused = status == STATUS_ACCESS_DENIED;
+            readBackRefused = IsReadBackRefusal(status);
             return false;
         }
         return true;
     }
+
+    /// <summary>
+    /// Whether the NTSTATUS a failed read-back returned says the file's access list
+    /// refused it. Only STATUS_ACCESS_DENIED does; a sharing violation or any other
+    /// failure says nothing about the folder's permissions.
+    /// </summary>
+    internal static bool IsReadBackRefusal(int status) => status == STATUS_ACCESS_DENIED;
 
     /// <summary>
     /// Removes the plain file <paramref name="leaf"/> inside <paramref name="folder"/>
