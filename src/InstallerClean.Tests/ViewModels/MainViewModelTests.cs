@@ -81,9 +81,9 @@ public class MainViewModelTests
 
     /// <summary>
     /// Build a MainViewModel against the substituted services with a
-    /// caller-provided initial AppSettings. Single construction site
-    /// so any future ctor parameter change touches one line, not the
-    /// 10-arg <c>new MainViewModel(...)</c> site repeated across tests.
+    /// caller-provided initial AppSettings. The one place in this class
+    /// that constructs a MainViewModel, so a change to the constructor's
+    /// parameters is made here and not at each test.
     /// </summary>
     private MainViewModel CreateViewModel(AppSettings settings, IAppUpdater? appUpdater = null)
     {
@@ -103,8 +103,8 @@ public class MainViewModelTests
             _settingsService, _rebootService, _msiInfoService,
             _dialogService, _confirmationService, _windowService,
             _fileSystem, _resultLogService, _updateCheckService, _reverifier,
-            _earlierRunCheck, _firstRunMark, _windowsRegion, appUpdater,
-            new ByPathDestinationGuard(_fileSystem));
+            _earlierRunCheck, _firstRunMark, _windowsRegion,
+            new ByPathDestinationGuard(_fileSystem), appUpdater);
     }
 
     /// <summary>

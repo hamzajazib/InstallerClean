@@ -90,8 +90,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IEarlierRunCheck earlierRunCheck,
         IFirstRunMark firstRunMark,
         IWindowsRegion windowsRegion,
-        IAppUpdater? appUpdater = null,
-        IDestinationGuard? destinationGuard = null)
+        IDestinationGuard destinationGuard,
+        IAppUpdater? appUpdater = null)
     {
         // Closures read Cleanup / Completion at invocation time, after
         // the ctor runs.

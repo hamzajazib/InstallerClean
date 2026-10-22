@@ -263,9 +263,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         ScanViewModel scan,
         CompletionViewModel completion,
         IRemovableReverifier reverifier,
+        IDestinationGuard destinationGuard,
         Func<string, bool?>? resolveIsOnCacheVolume = null,
-        Func<bool>? instanceLockLost = null,
-        IDestinationGuard? destinationGuard = null)
+        Func<bool>? instanceLockLost = null)
     {
         _moveService = moveService;
         _deleteService = deleteService;
@@ -273,7 +273,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         _dialogService = dialogService;
         _confirmationService = confirmationService;
         _fs = fileSystem;
-        _destinationGuard = destinationGuard ?? new HandleDestinationGuard();
+        _destinationGuard = destinationGuard;
         _scan = scan;
         _completion = completion;
         _reverifier = reverifier;

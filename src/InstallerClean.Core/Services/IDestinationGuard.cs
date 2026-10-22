@@ -9,7 +9,7 @@ namespace InstallerClean.Services;
 /// Move created. The user may pick a folder another account can write, so each act is
 /// reached in a way that a folder swapped in under the same name part way through cannot
 /// redirect. <see cref="HandleDestinationGuard"/> is that way in the app;
-/// <see cref="ByPathDestinationGuard"/> is the test-seam default, where the real
+/// <see cref="ByPathDestinationGuard"/> is the one the test seams use, where the real
 /// filesystem is substituted.
 /// </summary>
 public interface IDestinationGuard
