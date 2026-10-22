@@ -134,9 +134,11 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         Assert.Equal(AccessDenied, failureCode);
         Assert.Empty(Directory.EnumerateFileSystemEntries(folder));
 
-        // And the folder does let this account create a file when the create is the probe's
-        // call without DELETE and without FILE_DELETE_ON_CLOSE: the access and the options are
-        // the probe's own, less those two. Last, because it leaves one.
+        // And the folder does let this account create a file when the create is the probe's own
+        // minus DELETE and FILE_DELETE_ON_CLOSE, which the probe does ask for. Last, because it
+        // leaves one.
+        Assert.NotEqual(0u, DirectoryGuard.ProbeAccess & Ntdll.DELETE);
+        Assert.NotEqual(0u, DirectoryGuard.ProbeOptions & Ntdll.FILE_DELETE_ON_CLOSE);
         using var directory = DirectoryGuard.OpenDirectoryFollow(folder, out _);
         Assert.NotNull(directory);
         using var created = DirectoryGuard.OpenChildNoFollow(
