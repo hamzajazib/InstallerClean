@@ -376,8 +376,11 @@ internal static class DirectoryGuard
 
     /// <summary>
     /// Removes the plain file <paramref name="leaf"/> inside <paramref name="folder"/>
-    /// through a handle, clearing a read-only attribute first. Answers true where the
-    /// file is gone, which includes where it was not there to begin with, so a copy
+    /// through a handle, a read-only one included. The system is asked to ignore the
+    /// read-only attribute, so the copy goes without its attributes being touched and a
+    /// delete that fails leaves it as it was; where the system does not take that form,
+    /// the attribute is cleared for the older delete and put back if that delete fails.
+    /// Answers true where the file is gone, which includes where it was not there to begin with, so a copy
     /// that was never made is not reported as a copy that would not go. False where the
     /// file is present and could not be removed, is a reparse point, or is a folder,
     /// which is left in place.
@@ -414,23 +417,19 @@ internal static class DirectoryGuard
             return false;
         }
 
-        ClearReadOnlyByHandle(child, info.dwFileAttributes);
-        if (DeleteByHandle(child)) return true;
+        if (DeleteByHandle(child, info.dwFileAttributes)) return true;
 
         // The cause the disposition call itself left.
         failureCode = Marshal.GetLastPInvokeError();
         return false;
     }
 
-    private static unsafe void ClearReadOnlyByHandle(SafeFileHandle handle, uint attributes)
+    private static unsafe void SetAttributesByHandle(SafeFileHandle handle, uint attributes)
     {
-        if ((attributes & FILE_ATTRIBUTE_READONLY) == 0) return;
-
         // A FILE_BASIC_INFO FileAttributes of zero leaves the attributes unchanged, so
         // where read-only was the only one set, the file is marked normal instead.
-        var cleared = attributes & ~FILE_ATTRIBUTE_READONLY;
-        if (cleared == 0) cleared = FILE_ATTRIBUTE_NORMAL;
-        var basic = new Kernel32.FILE_BASIC_INFO { FileAttributes = cleared };
+        if (attributes == 0) attributes = FILE_ATTRIBUTE_NORMAL;
+        var basic = new Kernel32.FILE_BASIC_INFO { FileAttributes = attributes };
         Kernel32.SetFileBasicInfoByHandle(
             handle, Kernel32.FileBasicInfo, in basic, (uint)sizeof(Kernel32.FILE_BASIC_INFO));
     }
@@ -450,12 +449,17 @@ internal static class DirectoryGuard
     internal static bool PosixFormIsNotTaken(int error) =>
         error is Kernel32.ERROR_INVALID_PARAMETER or Kernel32.ERROR_NOT_SUPPORTED or Kernel32.ERROR_INVALID_FUNCTION;
 
-    private static unsafe bool DeleteByHandle(SafeFileHandle handle)
+    /// <summary>
+    /// Deletes the file or empty folder <paramref name="handle"/> names. Where
+    /// <paramref name="fileAttributes"/> is given, the file may be read-only and these
+    /// are its attributes: the POSIX form asks the system to ignore the read-only
+    /// attribute, and the older form has it cleared and put back if the delete fails.
+    /// </summary>
+    private static unsafe bool DeleteByHandle(SafeFileHandle handle, uint? fileAttributes = null)
     {
-        var posix = new Kernel32.FILE_DISPOSITION_INFO_EX
-        {
-            Flags = Kernel32.FILE_DISPOSITION_FLAG_DELETE | Kernel32.FILE_DISPOSITION_FLAG_POSIX_SEMANTICS,
-        };
+        var flags = Kernel32.FILE_DISPOSITION_FLAG_DELETE | Kernel32.FILE_DISPOSITION_FLAG_POSIX_SEMANTICS;
+        if (fileAttributes is not null) flags |= Kernel32.FILE_DISPOSITION_FLAG_IGNORE_READONLY_ATTRIBUTE;
+        var posix = new Kernel32.FILE_DISPOSITION_INFO_EX { Flags = flags };
         if (Kernel32.SetFileDispositionInfoEx(
                 handle, Kernel32.FileDispositionInfoEx, in posix, (uint)sizeof(Kernel32.FILE_DISPOSITION_INFO_EX)))
             return true;
@@ -467,8 +471,33 @@ internal static class DirectoryGuard
         // success while the name is still there.
         if (!PosixFormIsNotTaken(Marshal.GetLastPInvokeError())) return false;
 
+        return fileAttributes is { } attributes
+            ? DeleteClearingReadOnly(handle, attributes)
+            : DeleteByPlainForm(handle);
+    }
+
+    private static unsafe bool DeleteByPlainForm(SafeFileHandle handle)
+    {
         var plain = new Kernel32.FILE_DISPOSITION_INFO { DeleteFile = 1 };
         return Kernel32.SetFileDispositionInfo(
             handle, Kernel32.FileDispositionInfo, in plain, (uint)sizeof(Kernel32.FILE_DISPOSITION_INFO));
+    }
+
+    /// <summary>
+    /// The older delete of a file whose attributes are <paramref name="attributes"/>,
+    /// with the read-only attribute cleared for it and put back if the delete fails. The
+    /// last error after a false answer is the delete's own.
+    /// </summary>
+    internal static bool DeleteClearingReadOnly(SafeFileHandle handle, uint attributes)
+    {
+        if ((attributes & FILE_ATTRIBUTE_READONLY) == 0) return DeleteByPlainForm(handle);
+
+        SetAttributesByHandle(handle, attributes & ~FILE_ATTRIBUTE_READONLY);
+        if (DeleteByPlainForm(handle)) return true;
+
+        var error = Marshal.GetLastPInvokeError();
+        SetAttributesByHandle(handle, attributes);
+        Marshal.SetLastPInvokeError(error);
+        return false;
     }
 }

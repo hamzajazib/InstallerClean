@@ -125,21 +125,114 @@ public sealed class DestinationGuardTests : IDisposable
             $"the mapped file was not refused a delete (got {refusal?.GetType().Name ?? "no exception"})");
         Assert.True(File.Exists(copy));
 
-        // The discard's own open of the copy, with its access and options, is granted: so the
-        // refusal the discard records comes from the delete and not from the open.
-        using (var folder = DirectoryGuard.OpenDirectoryFollow(destination, out var folderCode))
-        {
-            Assert.True(folder is not null, $"the folder did not open (Win32 error {folderCode})");
-            using var opened = DirectoryGuard.OpenChildNoFollow(
-                folder, "payload.msi", DirectoryGuard.DiscardAccess, Ntdll.FILE_OPEN,
-                DirectoryGuard.DiscardOptions, out var status);
-            Assert.True(opened is not null,
-                $"the discard's open was refused (Win32 error {Ntdll.RtlNtStatusToDosError(status)})");
-        }
+        AssertTheDiscardsOpenIsGranted(destination, "payload.msi");
 
         Assert.False(_guard.TryDiscardCopy(copy, out var code));
         Assert.Equal(refusal!.HResult & 0xFFFF, code);
         Assert.True(File.Exists(copy));
+    }
+
+    [Fact]
+    public void A_read_only_copy_whose_delete_is_refused_keeps_the_attributes_it_had()
+    {
+        var destination = Directory.CreateDirectory(Path.Combine(_root, "mapped-read-only")).FullName;
+        var copy = Path.Combine(destination, "payload.msi");
+        File.WriteAllBytes(copy, new byte[4096]);
+
+        using var stream = new FileStream(
+            copy, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite | FileShare.Delete);
+        using var map = MemoryMappedFile.CreateFromFile(
+            stream, null, 0, MemoryMappedFileAccess.ReadWrite, HandleInheritability.None, leaveOpen: true);
+        using var view = map.CreateViewAccessor();
+        File.SetAttributes(copy, File.GetAttributes(copy) | FileAttributes.ReadOnly);
+        var before = File.GetAttributes(copy);
+        AssertTheDiscardsOpenIsGranted(destination, "payload.msi");
+
+        Assert.False(_guard.TryDiscardCopy(copy, out _));
+
+        Assert.Equal(before, File.GetAttributes(copy));
+        Assert.True(File.Exists(copy));
+    }
+
+    [Fact]
+    public void A_read_only_copy_is_deleted_by_the_older_form_with_its_attribute_cleared()
+    {
+        var destination = Directory.CreateDirectory(Path.Combine(_root, "older-form")).FullName;
+        var copy = Path.Combine(destination, "payload.msi");
+        File.WriteAllBytes(copy, new byte[16]);
+        File.SetAttributes(copy, File.GetAttributes(copy) | FileAttributes.ReadOnly);
+
+        using (var folder = DirectoryGuard.OpenDirectoryFollow(destination, out _))
+        using (var child = OpenTheCopyAsTheDiscardDoes(folder!, "payload.msi", out var attributes))
+        {
+            Assert.True(DirectoryGuard.DeleteClearingReadOnly(child, attributes));
+        }
+
+        Assert.False(File.Exists(copy));
+    }
+
+    [Fact]
+    public void A_read_only_copy_the_older_form_cannot_delete_has_its_attribute_put_back_and_the_deletes_cause_kept()
+    {
+        var destination = Directory.CreateDirectory(Path.Combine(_root, "older-form-refused")).FullName;
+        var copy = Path.Combine(destination, "payload.msi");
+        File.WriteAllBytes(copy, new byte[4096]);
+
+        using var stream = new FileStream(
+            copy, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite | FileShare.Delete);
+        using var map = MemoryMappedFile.CreateFromFile(
+            stream, null, 0, MemoryMappedFileAccess.ReadWrite, HandleInheritability.None, leaveOpen: true);
+        using var view = map.CreateViewAccessor();
+        File.SetAttributes(copy, File.GetAttributes(copy) | FileAttributes.ReadOnly);
+        var before = File.GetAttributes(copy);
+        // A read-only file is refused its delete whatever else holds it, so the refusal that
+        // counts here is the one a file with a section mapped over it gives once it is not
+        // read-only; the cause kept is that one.
+        File.SetAttributes(copy, before & ~FileAttributes.ReadOnly);
+        var refusal = Record.Exception(() => File.Delete(copy));
+        Assert.True(refusal is UnauthorizedAccessException or IOException,
+            $"the mapped file was not refused a delete (got {refusal?.GetType().Name ?? "no exception"})");
+        File.SetAttributes(copy, before);
+
+        bool deleted;
+        int cause;
+        using (var folder = DirectoryGuard.OpenDirectoryFollow(destination, out _))
+        using (var child = OpenTheCopyAsTheDiscardDoes(folder!, "payload.msi", out var attributes))
+        {
+            deleted = DirectoryGuard.DeleteClearingReadOnly(child, attributes);
+            cause = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
+        }
+
+        Assert.False(deleted);
+        Assert.Equal(refusal!.HResult & 0xFFFF, cause);
+        Assert.Equal(before, File.GetAttributes(copy));
+        Assert.True(File.Exists(copy));
+    }
+
+    private static Microsoft.Win32.SafeHandles.SafeFileHandle OpenTheCopyAsTheDiscardDoes(
+        Microsoft.Win32.SafeHandles.SafeFileHandle folder, string leaf, out uint attributes)
+    {
+        var child = DirectoryGuard.OpenChildNoFollow(
+            folder, leaf, DirectoryGuard.DiscardAccess, Ntdll.FILE_OPEN, DirectoryGuard.DiscardOptions);
+        Assert.NotNull(child);
+        Assert.True(Kernel32.GetFileInformationByHandle(child, out var info));
+        attributes = info.dwFileAttributes;
+        return child;
+    }
+
+    /// <summary>
+    /// The discard's own open of the copy, with its access and options, is granted: so the
+    /// refusal the discard records comes from the delete and not from the open.
+    /// </summary>
+    private static void AssertTheDiscardsOpenIsGranted(string destination, string leaf)
+    {
+        using var folder = DirectoryGuard.OpenDirectoryFollow(destination, out var folderCode);
+        Assert.True(folder is not null, $"the folder did not open (Win32 error {folderCode})");
+        using var opened = DirectoryGuard.OpenChildNoFollow(
+            folder, leaf, DirectoryGuard.DiscardAccess, Ntdll.FILE_OPEN,
+            DirectoryGuard.DiscardOptions, out var status);
+        Assert.True(opened is not null,
+            $"the discard's open was refused (Win32 error {Ntdll.RtlNtStatusToDosError(status)})");
     }
 
     [Fact]

@@ -265,5 +265,40 @@ public class ByPathDestinationGuardTests
         Assert.False(_guard.TryDiscardCopy(_copy, out var failureCode));
 
         Assert.Equal(refusal.HResult, failureCode);
+        _file.DidNotReceive().SetAttributes(Arg.Any<string>(), Arg.Any<FileAttributes>());
+    }
+
+    [Fact]
+    public void A_read_only_copy_the_filesystem_will_not_delete_has_its_attribute_put_back()
+    {
+        var refusal = new IOException("refused");
+        _file.Exists(_copy).Returns(true);
+        _file.GetAttributes(_copy).Returns(FileAttributes.ReadOnly | FileAttributes.Archive);
+        _file.When(f => f.Delete(_copy)).Do(_ => throw refusal);
+
+        Assert.False(_guard.TryDiscardCopy(_copy, out var failureCode));
+
+        Assert.Equal(refusal.HResult, failureCode);
+        Received.InOrder(() =>
+        {
+            _file.SetAttributes(_copy, FileAttributes.Archive);
+            _file.Delete(_copy);
+            _file.SetAttributes(_copy, FileAttributes.ReadOnly | FileAttributes.Archive);
+        });
+    }
+
+    [Fact]
+    public void A_refused_delete_is_the_cause_recorded_when_the_attribute_cannot_be_put_back()
+    {
+        var refusal = new IOException("delete refused");
+        _file.Exists(_copy).Returns(true);
+        _file.GetAttributes(_copy).Returns(FileAttributes.ReadOnly);
+        _file.When(f => f.Delete(_copy)).Do(_ => throw refusal);
+        _file.When(f => f.SetAttributes(_copy, FileAttributes.ReadOnly))
+            .Do(_ => throw new UnauthorizedAccessException("restore refused"));
+
+        Assert.False(_guard.TryDiscardCopy(_copy, out var failureCode));
+
+        Assert.Equal(refusal.HResult, failureCode);
     }
 }

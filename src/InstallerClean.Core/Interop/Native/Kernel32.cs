@@ -613,6 +613,9 @@ internal static partial class Kernel32
     /// <summary>Let the name go at once, before the last handle closes.</summary>
     public const uint FILE_DISPOSITION_FLAG_POSIX_SEMANTICS = 0x00000002;
 
+    /// <summary>Let a read-only file go, leaving its attributes as they are. Windows 10 version 1809 and later.</summary>
+    public const uint FILE_DISPOSITION_FLAG_IGNORE_READONLY_ATTRIBUTE = 0x00000010;
+
     /// <summary>
     /// The pseudo-handle standing for this process, which needs no closing.
     /// </summary>
@@ -810,11 +813,11 @@ internal static partial class Kernel32
     // What CreateDirectory answers where something already has the name.
     public const int ERROR_ALREADY_EXISTS = 183;
 
-    // What OpenProcess answers where no process has the id.
+    // What OpenProcess answers where no process has the id, and one of the answers to a
+    // disposition form that the system or the file system does not take.
     public const int ERROR_INVALID_PARAMETER = 87;
 
-    // With ERROR_INVALID_PARAMETER above, the answers to a disposition form that the
-    // system or the file system does not take.
+    // The other two answers to a disposition form that is not taken.
     public const int ERROR_INVALID_FUNCTION = 1;
     public const int ERROR_NOT_SUPPORTED = 50;
 

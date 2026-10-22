@@ -702,9 +702,10 @@ public sealed class MoveFilesService : IMoveFilesService
     /// and does not mention the copy. It is recorded rather than surfaced.
     ///
     /// The guard reaches the copy through a handle opened on the destination
-    /// folder and clears a read-only attribute, which a copy carries across
-    /// from a read-only source, before the delete. A destination the copy was
-    /// never written to answers that the file is gone, so a move that failed
+    /// folder and removes it though it carries a read-only attribute across
+    /// from a read-only source, leaving the attribute as it was where the
+    /// delete fails. A destination the copy was never written to answers that
+    /// the file is gone, so a move that failed
     /// before it copied anything files no spurious leftover.
     /// </summary>
     private void DiscardDestinationCopy(string destPath, PerItemFailureLog failureLog)

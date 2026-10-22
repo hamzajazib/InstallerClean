@@ -131,9 +131,22 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
                 return false;
             }
             var attributes = _fs.File.GetAttributes(destinationPath);
-            if (attributes.HasFlag(FileAttributes.ReadOnly))
+            var readOnly = attributes.HasFlag(FileAttributes.ReadOnly);
+            if (readOnly)
                 _fs.File.SetAttributes(destinationPath, attributes & ~FileAttributes.ReadOnly);
-            _fs.File.Delete(destinationPath);
+            try
+            {
+                _fs.File.Delete(destinationPath);
+            }
+            catch
+            {
+                // The copy stays as it was, read-only included.
+                if (readOnly)
+                {
+                    try { _fs.File.SetAttributes(destinationPath, attributes); } catch { }
+                }
+                throw;
+            }
             return true;
         }
         catch (Exception ex)
