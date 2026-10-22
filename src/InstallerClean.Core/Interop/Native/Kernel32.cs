@@ -576,8 +576,8 @@ internal static partial class Kernel32
 
     /// <summary>
     /// The same call for <see cref="FILE_DISPOSITION_INFO"/>, the older form, for a
-    /// Windows build that refuses <see cref="FileDispositionInfoEx"/> with
-    /// ERROR_INVALID_PARAMETER. It marks the name to go when the last handle closes.
+    /// Windows build or file system that does not take <see cref="FileDispositionInfoEx"/>.
+    /// It marks the name to go when the last handle closes.
     /// </summary>
     [LibraryImport(Library, EntryPoint = "SetFileInformationByHandle", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -812,6 +812,11 @@ internal static partial class Kernel32
 
     // What OpenProcess answers where no process has the id.
     public const int ERROR_INVALID_PARAMETER = 87;
+
+    // With ERROR_INVALID_PARAMETER above, the answers to a disposition form that the
+    // system or the file system does not take.
+    public const int ERROR_INVALID_FUNCTION = 1;
+    public const int ERROR_NOT_SUPPORTED = 50;
 
     // "The directory name is invalid": the code for a path that names a file where a folder is wanted.
     public const int ERROR_DIRECTORY = 267;

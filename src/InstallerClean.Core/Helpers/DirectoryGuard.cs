@@ -442,6 +442,14 @@ internal static class DirectoryGuard
     private const int STATUS_ACCESS_DENIED = unchecked((int)0xC0000022);
     private const int STATUS_FILE_IS_A_DIRECTORY = unchecked((int)0xC00000BA);
 
+    /// <summary>
+    /// Whether <paramref name="error"/>, the answer to the POSIX disposition, says the
+    /// system or the file system does not take that form, so that the older one is
+    /// tried. Every other answer is a refusal.
+    /// </summary>
+    internal static bool PosixFormIsNotTaken(int error) =>
+        error is Kernel32.ERROR_INVALID_PARAMETER or Kernel32.ERROR_NOT_SUPPORTED or Kernel32.ERROR_INVALID_FUNCTION;
+
     private static unsafe bool DeleteByHandle(SafeFileHandle handle)
     {
         var posix = new Kernel32.FILE_DISPOSITION_INFO_EX
@@ -452,10 +460,12 @@ internal static class DirectoryGuard
                 handle, Kernel32.FileDispositionInfoEx, in posix, (uint)sizeof(Kernel32.FILE_DISPOSITION_INFO_EX)))
             return true;
 
-        // A Windows build that does not take the POSIX form answers
-        // ERROR_INVALID_PARAMETER; the older form marks the name to go as the last
-        // handle closes, which here is at once.
-        if (Marshal.GetLastPInvokeError() != Kernel32.ERROR_INVALID_PARAMETER) return false;
+        // A Windows build or file system that does not take the POSIX form is
+        // answered with one of the codes below, and the older form is tried. Any other
+        // answer is a refusal and stays one: the older form takes effect when the last
+        // handle closes, so with another program holding the file open it would answer
+        // success while the name is still there.
+        if (!PosixFormIsNotTaken(Marshal.GetLastPInvokeError())) return false;
 
         var plain = new Kernel32.FILE_DISPOSITION_INFO { DeleteFile = 1 };
         return Kernel32.SetFileDispositionInfo(
