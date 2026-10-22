@@ -692,6 +692,28 @@ public class CleanupPreFlightTests
     }
 
     [Fact]
+    public async Task A_folder_that_cannot_be_created_because_its_drive_is_missing_shows_its_message_and_no_crash_log()
+    {
+        _directory.When(d => d.CreateDirectory(Arg.Any<string>()))
+            .Do(_ => throw new DirectoryNotFoundException("no such drive"));
+
+        var vm = CreateViewModel();
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = _destination;
+
+        var crashLogBefore = TestCrashLog.Text();
+        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        _dialogService.Received(1).ShowWarning(
+            string.Format(InstallerClean.Resources.Strings.Error_DestinationMissing, _destination),
+            InstallerClean.Resources.Strings.Error_DestinationWriteFailedTitle);
+        _confirmationService.DidNotReceive().ConfirmMove(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+        // A mistake the message explains whole: the crash log is left as it was.
+        Assert.Equal(crashLogBefore, TestCrashLog.Text());
+    }
+
+    [Fact]
     public async Task Cancelling_the_confirmation_leaves_a_folder_that_was_already_there()
     {
         _directory.Exists(_destination).Returns(true);

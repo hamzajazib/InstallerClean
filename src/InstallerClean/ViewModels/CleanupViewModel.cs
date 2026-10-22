@@ -804,18 +804,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // CreateDirectory so a throw from the create cannot leave the flag
             // saying no about a folder that did appear.
             createdDestination = !_fs.Directory.Exists(dest);
-            try
-            {
-                _fs.Directory.CreateDirectory(dest);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                // Windows refused the account the folder: a refusal, not a fault, so it
-                // takes the access-denied message through the arm below, which writes no
-                // crash log, as the write test's refusals of access do.
-                throw new LocalisedAccessException(
-                    string.Format(Strings.Error_AccessDeniedDestination, dest), ex);
-            }
+            _fs.Directory.CreateDirectory(dest);
             probeToken.ThrowIfCancellationRequested();
             // The guard writes a write-test file through a handle opened on the
             // folder, opens it again to read it, and removes it, so a folder
@@ -888,9 +877,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         }
         catch (LocalisedAccessException ex)
         {
-            // A refusal of access: to creating the folder, or to the write test
-            // adding its file or reading it back. Any other failure arrives at the
-            // arm below. Its message is a resx string naming the folder the user
+            // A refusal of access to the write test adding its file or reading it
+            // back. Any other failure arrives at the arm below. Its message is a resx string naming the folder the user
             // typed, so it is shown as it stands, and it is a refusal rather than a
             // fault, so no crash log is written.
             IsOperating = false;
@@ -905,7 +893,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             IsOperating = false;
             OperationProgress = string.Empty;
             // ex.Message stays out of the dialog: path-leak risk under elevation.
-            var crash = CrashLog.TryWrite(ex);
+            // The crash log is written only where the message names it.
+            var crash = WriteFailureNamesCrashLog(ex) ? CrashLog.TryWrite(ex) : (Path: string.Empty, Written: false);
             EndOperation();
             if (createdDestination) await RemoveCreatedDestinationAsync(dest);
             _dialogService.ShowWarning(
@@ -2413,4 +2402,15 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             ? string.Format(Strings.Error_WriteDestination, dest, logPath)
             : string.Format(Strings.Error_WriteDestination_NoLog, dest),
     };
+
+    /// <summary>
+    /// Whether <see cref="DescribeWriteFailure"/>'s message for <paramref name="ex"/>
+    /// names the crash log, which is where a destination-write failure is written to
+    /// it. A refusal of access, a path too long and a folder that is not there are
+    /// refusals and mistakes the message explains whole, so they write nothing; the
+    /// IOException and catch-all messages name the log and are written to it. Keep the
+    /// two in step: a type moved between them here moves in the switch above too.
+    /// </summary>
+    internal static bool WriteFailureNamesCrashLog(Exception ex) =>
+        ex is not (UnauthorizedAccessException or PathTooLongException or DirectoryNotFoundException);
 }

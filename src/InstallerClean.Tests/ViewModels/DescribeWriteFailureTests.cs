@@ -7,6 +7,29 @@ public class DescribeWriteFailureTests
     private const string Dest = @"D:\backup\installer";
     private const string LogPath = @"C:\Users\Test\AppData\Local\InstallerClean\crash.log";
 
+    public static TheoryData<string> FailureNames => new(Failures.Keys);
+
+    private static readonly Dictionary<string, Func<Exception>> Failures = new()
+    {
+        [nameof(UnauthorizedAccessException)] = () => new UnauthorizedAccessException("x"),
+        [nameof(PathTooLongException)] = () => new PathTooLongException("x"),
+        [nameof(DirectoryNotFoundException)] = () => new DirectoryNotFoundException("x"),
+        [nameof(FileNotFoundException)] = () => new FileNotFoundException("x"),
+        [nameof(IOException)] = () => new IOException("x"),
+        [nameof(InvalidOperationException)] = () => new InvalidOperationException("x"),
+    };
+
+    [Theory]
+    [MemberData(nameof(FailureNames))]
+    public void The_crash_log_is_written_exactly_where_the_message_names_it(string failureName)
+    {
+        var ex = Failures[failureName]();
+
+        var named = CleanupViewModel.DescribeWriteFailure(Dest, ex, LogPath, logWritten: true).Contains(LogPath);
+
+        Assert.Equal(named, CleanupViewModel.WriteFailureNamesCrashLog(ex));
+    }
+
     [Fact]
     public void UnauthorizedAccess_mentions_permission_and_dest()
     {
