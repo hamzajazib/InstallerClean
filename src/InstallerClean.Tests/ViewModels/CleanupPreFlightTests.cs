@@ -120,6 +120,69 @@ public class CleanupPreFlightTests
     private void AssertNoFolderRemoved() => Assert.Empty(FolderRemovals());
 
     [Fact]
+    public void The_removal_assertion_accepts_the_one_argument_Delete_of_the_destination()
+    {
+        _directory.Delete(_destination);
+
+        AssertFolderRemoved();
+    }
+
+    [Fact]
+    public void The_removal_assertion_accepts_the_non_recursive_two_argument_Delete_of_the_destination()
+    {
+        _directory.Delete(_destination, false);
+
+        AssertFolderRemoved();
+    }
+
+    [Fact]
+    public void The_removal_assertion_rejects_a_recursive_Delete_of_the_destination()
+    {
+        _directory.Delete(_destination, true);
+
+        Assert.Throws<Xunit.Sdk.TrueException>(AssertFolderRemoved);
+    }
+
+    [Fact]
+    public void The_removal_assertion_rejects_no_removal_another_folder_and_a_second_removal()
+    {
+        Assert.Throws<Xunit.Sdk.SingleException>(AssertFolderRemoved);
+
+        _directory.Delete(_destination + "-other");
+        Assert.Throws<Xunit.Sdk.EqualException>(AssertFolderRemoved);
+
+        _directory.ClearReceivedCalls();
+        _directory.Delete(_destination);
+        _directory.Delete(_destination);
+        Assert.Throws<Xunit.Sdk.SingleException>(AssertFolderRemoved);
+    }
+
+    [Fact]
+    public void The_removal_assertions_count_only_Delete_on_the_directory()
+    {
+        _directory.Exists(_destination);
+        _directory.CreateDirectory(_destination);
+        _file.Delete(Path.Combine(_destination, "probe"));
+        AssertNoFolderRemoved();
+
+        _directory.Delete(_destination);
+        AssertFolderRemoved();
+    }
+
+    [Fact]
+    public void The_no_removal_assertion_accepts_none_and_rejects_either_overload()
+    {
+        AssertNoFolderRemoved();
+
+        _directory.Delete(_destination);
+        Assert.Throws<Xunit.Sdk.EmptyException>(AssertNoFolderRemoved);
+
+        _directory.ClearReceivedCalls();
+        _directory.Delete(_destination, false);
+        Assert.Throws<Xunit.Sdk.EmptyException>(AssertNoFolderRemoved);
+    }
+
+    [Fact]
     public async Task Cancelling_the_pre_flight_leaves_the_next_operation_cancellable()
     {
         var probeEntered = new ManualResetEventSlim();

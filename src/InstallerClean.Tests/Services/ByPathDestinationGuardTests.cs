@@ -94,7 +94,8 @@ public class ByPathDestinationGuardTests
         Assert.Equal(0, failureCode);
         Assert.NotNull(written);
         Assert.Equal(_folder, Path.GetDirectoryName(written));
-        Assert.Empty(payload!);
+        Assert.NotNull(payload);
+        Assert.Empty(payload);
         Received.InOrder(() =>
         {
             _file.WriteAllBytes(written!, Arg.Any<byte[]>());
