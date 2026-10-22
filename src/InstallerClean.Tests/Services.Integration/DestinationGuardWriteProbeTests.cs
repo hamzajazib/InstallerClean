@@ -122,6 +122,11 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         var folder = MakeFolder(ListGranting(FileRightsWithoutDelete));
         AssertTheProbeOpensTheFolder(folder);
 
+        // The probe has to ask for the right to delete and for the file to go as its handle
+        // closes, or a folder withholding DELETE is not what refuses it.
+        Assert.NotEqual(0u, DirectoryGuard.ProbeAccess & Ntdll.DELETE);
+        Assert.NotEqual(0u, DirectoryGuard.ProbeOptions & Ntdll.FILE_DELETE_ON_CLOSE);
+
         // The folder has to refuse a create that asks to delete the file, or this is a
         // test of a folder that does not.
         var refusal = Record.Exception(() => CreateMarkedToDeleteOnClose(folder).Dispose());
@@ -135,17 +140,15 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         Assert.Empty(Directory.EnumerateFileSystemEntries(folder));
 
         // And the folder does let this account create a file when the create is the probe's own
-        // minus DELETE and FILE_DELETE_ON_CLOSE, which the probe does ask for. Last, because it
-        // leaves one.
-        Assert.NotEqual(0u, DirectoryGuard.ProbeAccess & Ntdll.DELETE);
-        Assert.NotEqual(0u, DirectoryGuard.ProbeOptions & Ntdll.FILE_DELETE_ON_CLOSE);
+        // minus DELETE and FILE_DELETE_ON_CLOSE. Last, because it leaves one.
         using var directory = DirectoryGuard.OpenDirectoryFollow(folder, out _);
         Assert.NotNull(directory);
         using var created = DirectoryGuard.OpenChildNoFollow(
             directory, "plain", DirectoryGuard.ProbeAccess & ~Ntdll.DELETE, Ntdll.FILE_CREATE,
             DirectoryGuard.ProbeOptions & ~Ntdll.FILE_DELETE_ON_CLOSE, out var status);
         Assert.True(created is not null,
-            $"the folder refused a create that asks only to write (Win32 error {Ntdll.RtlNtStatusToDosError(status)})");
+            "the folder refused the probe's create without DELETE and FILE_DELETE_ON_CLOSE "
+            + $"(Win32 error {Ntdll.RtlNtStatusToDosError(status)})");
         Assert.Single(Directory.EnumerateFileSystemEntries(folder));
     }
 
