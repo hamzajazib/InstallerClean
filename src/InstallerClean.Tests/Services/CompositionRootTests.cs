@@ -59,10 +59,10 @@ public class CompositionRootTests
     [Fact]
     public void The_move_acts_on_its_destination_through_the_handle_guard()
     {
-        // The by-path guard is the test seam's default; production must take the
-        // handle one. A constructor default or a registration that quietly handed the
-        // by-path guard to the app would reopen the destination to redirection, and
-        // nothing else would catch it, so the wiring is held here.
+        // The test seam's constructors default to the by-path guard; production must
+        // take the handle one. A registration that quietly handed the by-path guard to
+        // the app would reopen the destination to redirection, and nothing else would
+        // catch it, so the wiring is held here.
         using var services = new ServiceCollection()
             .AddInstallerCleanCore()
             .BuildServiceProvider();

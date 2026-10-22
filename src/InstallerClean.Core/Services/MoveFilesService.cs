@@ -29,13 +29,13 @@ public sealed class MoveFilesService : IMoveFilesService
 
     /// <summary>
     /// Constructor. The DI container injects the registered
-    /// <see cref="IFileSystem"/> and <see cref="IMutexProbe"/> singletons in
-    /// production; the mutex is taken for the batch, and a batch refuses where a
-    /// live install owns it.
+    /// <see cref="IFileSystem"/>, <see cref="IMutexProbe"/> and
+    /// <see cref="IDestinationGuard"/> singletons in production; the mutex is taken
+    /// for the batch, and a batch refuses where a live install owns it.
     /// </summary>
     public MoveFilesService(IFileSystem fileSystem, IMutexProbe mutex, IRemovableReverifier reverifier,
-        IDestinationGuard? destinationGuard = null)
-        : this(fileSystem, mutex, null, reverifier, destinationGuard ?? new HandleDestinationGuard()) { }
+        IDestinationGuard destinationGuard)
+        : this(fileSystem, mutex, null, reverifier, destinationGuard) { }
 
     /// <summary>Test constructor. No mutex hold and no under-lease re-read (both are exercised via the seam constructor below).</summary>
     internal MoveFilesService(IFileSystem fileSystem)
@@ -48,7 +48,7 @@ public sealed class MoveFilesService : IMoveFilesService
     /// <summary>
     /// Seam constructor: an injected <see cref="IMutexProbe"/> (real or fake) plus the sandbox override.
     /// The destination guard defaults to the by-path one, which the test seam's substituted filesystem needs;
-    /// the production constructor above passes the handle one instead.
+    /// the production constructor above passes the one it is given.
     /// </summary>
     internal MoveFilesService(IFileSystem fileSystem, IMutexProbe mutex, string? installerFolderOverride,
         IRemovableReverifier? reverifier = null, IDestinationGuard? destinationGuard = null)
