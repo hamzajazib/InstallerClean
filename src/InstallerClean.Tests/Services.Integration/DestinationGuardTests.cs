@@ -1,4 +1,5 @@
 using System.IO.MemoryMappedFiles;
+using InstallerClean.Helpers;
 using InstallerClean.Interop.Native;
 using InstallerClean.Services;
 
@@ -124,8 +125,20 @@ public sealed class DestinationGuardTests : IDisposable
             $"the mapped file was not refused a delete (got {refusal?.GetType().Name ?? "no exception"})");
         Assert.True(File.Exists(copy));
 
+        // The discard's own open of the copy, with its access and options, is granted: so the
+        // refusal the discard records comes from the delete and not from the open.
+        using (var folder = DirectoryGuard.OpenDirectoryFollow(destination, out var folderCode))
+        {
+            Assert.True(folder is not null, $"the folder did not open (Win32 error {folderCode})");
+            using var opened = DirectoryGuard.OpenChildNoFollow(
+                folder, "payload.msi", DirectoryGuard.DiscardAccess, Ntdll.FILE_OPEN,
+                DirectoryGuard.DiscardOptions, out var status);
+            Assert.True(opened is not null,
+                $"the discard's open was refused (Win32 error {Ntdll.RtlNtStatusToDosError(status)})");
+        }
+
         Assert.False(_guard.TryDiscardCopy(copy, out var code));
-        Assert.NotEqual(0, code);
+        Assert.Equal(refusal!.HResult & 0xFFFF, code);
         Assert.True(File.Exists(copy));
     }
 

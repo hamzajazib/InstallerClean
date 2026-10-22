@@ -368,6 +368,12 @@ internal static class DirectoryGuard
     /// </summary>
     internal static bool IsAccessRefusal(int status) => status == STATUS_ACCESS_DENIED;
 
+    /// <summary>The access the discard's open of the copy asks for: to delete it and to read and write its attributes.</summary>
+    internal const uint DiscardAccess = Ntdll.DELETE | Kernel32.FILE_READ_ATTRIBUTES | Kernel32.FILE_WRITE_ATTRIBUTES;
+
+    /// <summary>The options the discard's open passes: a file, opened as itself where it is a link.</summary>
+    internal const uint DiscardOptions = Ntdll.FILE_OPEN_REPARSE_POINT | Ntdll.FILE_NON_DIRECTORY_FILE;
+
     /// <summary>
     /// Removes the plain file <paramref name="leaf"/> inside <paramref name="folder"/>
     /// through a handle, clearing a read-only attribute first. Answers true where the
@@ -382,9 +388,7 @@ internal static class DirectoryGuard
         if (dir is null) return false;
 
         using var child = OpenChildNoFollow(
-            dir, leaf,
-            Ntdll.DELETE | Kernel32.FILE_READ_ATTRIBUTES | Kernel32.FILE_WRITE_ATTRIBUTES, Ntdll.FILE_OPEN,
-            Ntdll.FILE_OPEN_REPARSE_POINT | Ntdll.FILE_NON_DIRECTORY_FILE, out var status);
+            dir, leaf, DiscardAccess, Ntdll.FILE_OPEN, DiscardOptions, out var status);
         if (child is null)
         {
             if (status == STATUS_OBJECT_NAME_NOT_FOUND || status == STATUS_OBJECT_PATH_NOT_FOUND)

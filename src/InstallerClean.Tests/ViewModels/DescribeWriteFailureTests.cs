@@ -1,4 +1,3 @@
-using InstallerClean.Models;
 using InstallerClean.ViewModels;
 
 namespace InstallerClean.Tests.ViewModels;
@@ -15,7 +14,6 @@ public class DescribeWriteFailureTests
     private static readonly Dictionary<string, (Func<Exception> Create, bool NamesLog)> Failures = new()
     {
         [nameof(UnauthorizedAccessException)] = (() => new UnauthorizedAccessException("x"), false),
-        [nameof(LocalisedAccessException)] = (() => new LocalisedAccessException("x", new IOException()), false),
         [nameof(PathTooLongException)] = (() => new PathTooLongException("x"), false),
         [nameof(DirectoryNotFoundException)] = (() => new DirectoryNotFoundException("x"), false),
         [nameof(FileNotFoundException)] = (() => new FileNotFoundException("x"), true),

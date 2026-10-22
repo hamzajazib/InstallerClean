@@ -1,6 +1,7 @@
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using NSubstitute;
+using InstallerClean.Helpers;
 using InstallerClean.Models;
 using InstallerClean.Services;
 using InstallerClean.ViewModels;
@@ -603,12 +604,9 @@ public class CleanupPreFlightTests
         var crashLogBefore = TestCrashLog.Text();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
-        // The write-failure body names the crash log the failure was written to;
-        // everything before the log's path is fixed.
-        var withLogPrefix = string.Format(
-            InstallerClean.Resources.Strings.Error_IOWriteDestination, _destination, "\0").Split('\0')[0];
         _dialogService.Received(1).ShowWarning(
-            Arg.Is<string>(body => body.StartsWith(withLogPrefix, StringComparison.Ordinal)),
+            string.Format(
+                InstallerClean.Resources.Strings.Error_IOWriteDestination, _destination, CrashLog.LogPath),
             InstallerClean.Resources.Strings.Error_DestinationWriteFailedTitle);
         AssertFolderRemoved();
         _confirmationService.DidNotReceive().ConfirmMove(
@@ -653,10 +651,9 @@ public class CleanupPreFlightTests
         var crashLogBefore = TestCrashLog.Text();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
-        var withLogPrefix = string.Format(
-            InstallerClean.Resources.Strings.Error_IOWriteDestination, _destination, "\0").Split('\0')[0];
         _dialogService.Received(1).ShowWarning(
-            Arg.Is<string>(body => body.StartsWith(withLogPrefix, StringComparison.Ordinal)),
+            string.Format(
+                InstallerClean.Resources.Strings.Error_IOWriteDestination, _destination, CrashLog.LogPath),
             InstallerClean.Resources.Strings.Error_DestinationWriteFailedTitle);
         AssertFolderRemoved();
         _confirmationService.DidNotReceive().ConfirmMove(
@@ -681,11 +678,14 @@ public class CleanupPreFlightTests
         _dialogService.Received(1).ShowWarning(
             string.Format(InstallerClean.Resources.Strings.Error_AccessDeniedDestination, _destination),
             InstallerClean.Resources.Strings.Error_DestinationWriteFailedTitle);
-        // The folder was not there before, so the arm asks for its removal; it never
-        // appeared, and the removal finds nothing.
+        // The folder was not there before, so the arm asks for its removal, and the
+        // guard removes a folder only where it is empty.
         AssertFolderRemoved();
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+        await _moveService.DidNotReceive().MoveFilesAsync(
+            Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
+            Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
         Assert.False(vm.Cleanup.IsOperating);
         // A refusal, not a fault: the crash log is left as it was.
         Assert.Equal(crashLogBefore, TestCrashLog.Text());
@@ -710,6 +710,9 @@ public class CleanupPreFlightTests
         AssertFolderRemoved();
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+        await _moveService.DidNotReceive().MoveFilesAsync(
+            Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
+            Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
         Assert.False(vm.Cleanup.IsOperating);
         // A mistake the message explains whole: the crash log is left as it was.
         Assert.Equal(crashLogBefore, TestCrashLog.Text());
