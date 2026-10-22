@@ -122,6 +122,7 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         Assert.NotEqual(0u, DirectoryGuard.ProbeAccess & Ntdll.DELETE);
         Assert.NotEqual(0u, DirectoryGuard.ProbeOptions & Ntdll.FILE_DELETE_ON_CLOSE);
         Assert.NotEqual(0u, DirectoryGuard.ReadBackAccess & Ntdll.FILE_READ_DATA);
+        Assert.NotEqual(0u, DirectoryGuard.ReadBackOptions & Ntdll.FILE_OPEN_REPARSE_POINT);
     }
 
     private static void AssertTheFolderOpens(string folder)

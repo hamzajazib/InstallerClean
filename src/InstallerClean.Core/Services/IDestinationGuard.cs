@@ -18,9 +18,9 @@ public interface IDestinationGuard
     /// Whether the folder accepts a new file and lets it be read back, with the Win32
     /// cause of a refusal in <paramref name="failureCode"/> for a caller to record.
     /// <paramref name="readBackRefused"/> is true where the folder took the file and
-    /// it could not be read back, so a caller can tell that refusal from a folder that
-    /// will not take a file at all. A folder whose files can be read and not deleted
-    /// passes.
+    /// reading it back was refused access, so a caller can tell that refusal from a
+    /// folder that will not take a file at all and from a failure with another cause.
+    /// A folder whose files can be read and not deleted passes.
     /// </summary>
     bool TryProbeWritable(string folder, out int failureCode, out bool readBackRefused);
 
@@ -76,8 +76,10 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
 
     /// <summary>
     /// Writes an empty file, reads it back and deletes it, giving the answers the app's
-    /// guard gives: a refused write or read fails the probe, and a refused delete does
-    /// not, since a folder whose files can be read and not deleted passes there too.
+    /// guard gives: a refused write or read fails the probe, a read refused access is
+    /// the one that sets <paramref name="readBackRefused"/>, and a refused delete does
+    /// not fail the probe, since a folder whose files can be read and not deleted passes
+    /// there too.
     /// </summary>
     public bool TryProbeWritable(string folder, out int failureCode, out bool readBackRefused)
     {
@@ -102,7 +104,7 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
         catch (Exception ex)
         {
             failureCode = ex.HResult;
-            readBackRefused = true;
+            readBackRefused = ex is UnauthorizedAccessException;
             return false;
         }
         finally

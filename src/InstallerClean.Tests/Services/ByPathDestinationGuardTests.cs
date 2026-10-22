@@ -122,15 +122,17 @@ public class ByPathDestinationGuardTests
 
     [Theory]
     [MemberData(nameof(RefusalNames))]
-    public void A_folder_that_will_not_let_the_probe_file_be_read_back_fails_the_probe_and_still_deletes_it(string refusalName)
+    public void A_probe_file_that_cannot_be_read_back_fails_the_probe_and_is_still_deleted(string refusalName)
     {
         var refusal = NewRefusal(refusalName);
         _file.ReadAllBytes(Arg.Any<string>()).Returns(_ => throw refusal);
 
         Assert.False(_guard.TryProbeWritable(_folder, out var failureCode, out var readBackRefused));
 
+        // Only a read refused access is the folder declining to give the file back; any
+        // other failure of the read fails the probe without saying so.
         Assert.Equal(refusal.HResult, failureCode);
-        Assert.True(readBackRefused);
+        Assert.Equal(refusal is UnauthorizedAccessException, readBackRefused);
         _file.Received(1).Delete(Arg.Any<string>());
     }
 

@@ -72,7 +72,8 @@ public sealed class DestinationGuardTests : IDisposable
             return;
         }
 
-        Assert.True(_guard.TryProbeWritable(linkedDestination, out _, out _));
+        Assert.True(_guard.TryProbeWritable(linkedDestination, out _, out var readBackRefused));
+        Assert.False(readBackRefused);
         Assert.Empty(Directory.EnumerateFileSystemEntries(target));
     }
 

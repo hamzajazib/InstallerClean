@@ -788,8 +788,8 @@ public sealed class MoveFilesService : IMoveFilesService
         // every source when the destination will not take a file. The guard creates
         // a write-test file through a handle opened on the folder, opens it again to
         // read it, and removes it, so a folder another account can write cannot steer
-        // the test to another file. A folder that takes the file and will not let it
-        // be read back is refused with its own message.
+        // the test to a file in another folder. A folder that takes the file and will
+        // not let it be read back is refused with its own message.
         if (!_destinationGuard.TryProbeWritable(folder, out var failureCode, out var readBackRefused))
             throw new LocalisedAccessException(
                 string.Format(

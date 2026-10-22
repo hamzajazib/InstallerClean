@@ -290,11 +290,13 @@ internal static class DirectoryGuard
     internal const uint ProbeOptions = Ntdll.FILE_NON_DIRECTORY_FILE | Ntdll.FILE_DELETE_ON_CLOSE;
 
     /// <summary>
-    /// The access the write probe's second open asks for: to read the file's bytes.
-    /// Not attributes alone, which any account that can list the folder is granted on
-    /// every file in it.
+    /// The access the write probe's second open asks for: the rights GENERIC_READ maps
+    /// to on a file, less SYNCHRONIZE, which the open adds itself. So the file's bytes
+    /// are asked for, not its attributes alone, which any account that can list the
+    /// folder is granted on every file in it.
     /// </summary>
-    internal const uint ReadBackAccess = Ntdll.FILE_READ_DATA;
+    internal const uint ReadBackAccess =
+        Ntdll.FILE_READ_DATA | Ntdll.FILE_READ_EA | Kernel32.FILE_READ_ATTRIBUTES | Ntdll.READ_CONTROL;
 
     /// <summary>The options the write probe's second open passes: a file, opened as itself where it is a link.</summary>
     internal const uint ReadBackOptions = Ntdll.FILE_NON_DIRECTORY_FILE | Ntdll.FILE_OPEN_REPARSE_POINT;
@@ -314,8 +316,9 @@ internal static class DirectoryGuard
     /// passes.
     /// </para>
     /// False where the folder cannot be opened, the create is refused, or the second
-    /// open fails for any cause; <paramref name="readBackRefused"/> is true only in the
-    /// last case.
+    /// open fails for any cause; <paramref name="readBackRefused"/> is true where the
+    /// second open is refused access, and false for every other failure, such as a
+    /// sharing violation from another program that opened the new file first.
     /// </summary>
     internal static bool TryProbeWritable(string folder, out int failureCode, out bool readBackRefused)
     {
@@ -337,7 +340,7 @@ internal static class DirectoryGuard
         if (readBack is null)
         {
             failureCode = (int)Ntdll.RtlNtStatusToDosError(status);
-            readBackRefused = true;
+            readBackRefused = status == STATUS_ACCESS_DENIED;
             return false;
         }
         return true;
@@ -395,6 +398,7 @@ internal static class DirectoryGuard
     private const uint FILE_ATTRIBUTE_NORMAL = 0x00000080;
     private const int STATUS_OBJECT_NAME_NOT_FOUND = unchecked((int)0xC0000034);
     private const int STATUS_OBJECT_PATH_NOT_FOUND = unchecked((int)0xC000003A);
+    private const int STATUS_ACCESS_DENIED = unchecked((int)0xC0000022);
 
     private static unsafe bool DeleteByHandle(SafeFileHandle handle)
     {

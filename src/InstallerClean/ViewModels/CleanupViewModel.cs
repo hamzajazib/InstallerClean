@@ -808,11 +808,12 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             probeToken.ThrowIfCancellationRequested();
             // The guard writes a write-test file through a handle opened on the
             // folder, opens it again to read it, and removes it, so a folder
-            // another account can write cannot steer the test to another file,
-            // and it leaves nothing behind. A folder that will not take the file,
-            // or takes it and will not let it be read back, is not writable for a
-            // Move, and the throw here refuses the destination. The second case
-            // carries its own message, shown as it stands by the arm below.
+            // another account can write cannot steer the test to a file in
+            // another folder, and it leaves nothing behind. A folder that will not
+            // take the file, or takes it and will not let it be read back, is not
+            // writable for a Move, and the throw here refuses the destination. Where
+            // reading it back is refused access, the throw carries its own message,
+            // shown as it stands by the arm below.
             if (!_destinationGuard.TryProbeWritable(dest, out var failureCode, out var readBackRefused))
             {
                 var cause = new System.ComponentModel.Win32Exception(failureCode);
