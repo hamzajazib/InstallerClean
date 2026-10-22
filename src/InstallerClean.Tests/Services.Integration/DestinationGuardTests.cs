@@ -130,6 +130,18 @@ public sealed class DestinationGuardTests : IDisposable
     }
 
     [Fact]
+    public void A_folder_at_the_copy_s_name_is_left_and_recorded_as_a_folder()
+    {
+        var destination = Directory.CreateDirectory(Path.Combine(_root, "named-folder")).FullName;
+        var copyName = Directory.CreateDirectory(Path.Combine(destination, "payload.msi")).FullName;
+
+        Assert.False(_guard.TryDiscardCopy(copyName, out var code));
+
+        Assert.Equal(Kernel32.ERROR_DIRECTORY_NOT_SUPPORTED, code);
+        Assert.True(Directory.Exists(copyName));
+    }
+
+    [Fact]
     public void A_copy_name_swapped_for_a_link_is_not_followed_to_its_target()
     {
         // The real destination holds a child named like the copy, but that child is a

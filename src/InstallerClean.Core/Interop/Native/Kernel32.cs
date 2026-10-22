@@ -818,4 +818,7 @@ internal static partial class Kernel32
 
     // "The object manager encountered a reparse point": the code for a child that is a link where a plain file is wanted.
     public const int ERROR_REPARSE_POINT_ENCOUNTERED = 4395;
+
+    // "An operation is not supported on a directory": the code for a folder where a plain file is wanted.
+    public const int ERROR_DIRECTORY_NOT_SUPPORTED = 336;
 }

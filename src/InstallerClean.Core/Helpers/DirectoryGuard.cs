@@ -388,7 +388,11 @@ internal static class DirectoryGuard
         {
             if (status == STATUS_OBJECT_NAME_NOT_FOUND || status == STATUS_OBJECT_PATH_NOT_FOUND)
                 return true;
-            failureCode = (int)Ntdll.RtlNtStatusToDosError(status);
+            // A folder at the copy's name refuses a file open with a status that maps to
+            // ERROR_ACCESS_DENIED, which would read as a refusal of access.
+            failureCode = status == STATUS_FILE_IS_A_DIRECTORY
+                ? Kernel32.ERROR_DIRECTORY_NOT_SUPPORTED
+                : (int)Ntdll.RtlNtStatusToDosError(status);
             return false;
         }
 
@@ -431,6 +435,7 @@ internal static class DirectoryGuard
     private const int STATUS_OBJECT_NAME_NOT_FOUND = unchecked((int)0xC0000034);
     private const int STATUS_OBJECT_PATH_NOT_FOUND = unchecked((int)0xC000003A);
     private const int STATUS_ACCESS_DENIED = unchecked((int)0xC0000022);
+    private const int STATUS_FILE_IS_A_DIRECTORY = unchecked((int)0xC00000BA);
 
     private static unsafe bool DeleteByHandle(SafeFileHandle handle)
     {
