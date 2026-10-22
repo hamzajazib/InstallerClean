@@ -94,6 +94,24 @@ public class CleanupPreFlightTests
         Assert.True(condition(), "state was not reached within 5 seconds");
     }
 
+    /// <summary>
+    /// Every folder removal the Move has made through the substituted directory, one entry
+    /// of arguments for each, whichever overload of <c>Delete</c> made it. The probe's own
+    /// file delete goes to the substituted file, so it is not in this list.
+    /// </summary>
+    private List<object?[]> FolderRemovals() =>
+        _directory.ReceivedCalls()
+            .Where(call => call.GetMethodInfo().Name == nameof(IDirectory.Delete))
+            .Select(call => call.GetArguments())
+            .ToList();
+
+    /// <summary>The Move removed the folder it made, once, and no other folder.</summary>
+    private void AssertFolderRemoved() =>
+        Assert.Equal(_destination, (string?)Assert.Single(FolderRemovals())[0]);
+
+    /// <summary>The Move removed no folder.</summary>
+    private void AssertNoFolderRemoved() => Assert.Empty(FolderRemovals());
+
     [Fact]
     public async Task Cancelling_the_pre_flight_leaves_the_next_operation_cancellable()
     {
@@ -379,7 +397,7 @@ public class CleanupPreFlightTests
 
         // A fully cancelled Move leaves nothing behind. Non-recursive, so a
         // folder that gained a file meanwhile refuses at the syscall.
-        _directory.Received(1).Delete(_destination);
+        AssertFolderRemoved();
     }
 
     [Fact]
@@ -404,7 +422,7 @@ public class CleanupPreFlightTests
 
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
-        _directory.Received(1).Delete(_destination);
+        AssertFolderRemoved();
         await _moveService.DidNotReceive().MoveFilesAsync(
             Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
             Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
@@ -427,7 +445,7 @@ public class CleanupPreFlightTests
 
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
-        _directory.Received(1).Delete(_destination);
+        AssertFolderRemoved();
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
     }
@@ -447,8 +465,7 @@ public class CleanupPreFlightTests
 
         // The user's own folder, whatever is in it. Cancelling a move they
         // never confirmed must not reach into it.
-        _directory.DidNotReceive().Delete(Arg.Any<string>());
-        _directory.DidNotReceive().Delete(Arg.Any<string>(), Arg.Any<bool>());
+        AssertNoFolderRemoved();
     }
 
     [Fact]
@@ -468,8 +485,7 @@ public class CleanupPreFlightTests
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         // The removal is scoped to the cancel; the files went here.
-        _directory.DidNotReceive().Delete(Arg.Any<string>());
-        _directory.DidNotReceive().Delete(Arg.Any<string>(), Arg.Any<bool>());
+        AssertNoFolderRemoved();
     }
 
     [Fact]
@@ -492,7 +508,7 @@ public class CleanupPreFlightTests
 
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
-        _directory.Received(1).Delete(_destination);
+        AssertFolderRemoved();
     }
 
     [Theory]
@@ -530,7 +546,7 @@ public class CleanupPreFlightTests
 
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
-        _directory.Received(1).Delete(_destination);
+        AssertFolderRemoved();
         _dialogService.Received(accessRefused ? 2 : 1).ShowWarning(Arg.Any<string>(), Arg.Any<string>());
         _dialogService.Received(1).ShowWarning(
             Arg.Is<string>(s => s.Contains(nameof(IOException))),
@@ -577,7 +593,7 @@ public class CleanupPreFlightTests
 
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
-        _directory.Received(1).Delete(_destination);
+        AssertFolderRemoved();
     }
 
     [Fact]
@@ -599,7 +615,7 @@ public class CleanupPreFlightTests
 
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
-        _directory.Received(1).Delete(_destination);
+        AssertFolderRemoved();
         await _moveService.DidNotReceive().MoveFilesAsync(
             Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
             Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
@@ -728,7 +744,7 @@ public class CleanupPreFlightTests
 
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
-        _directory.Received(1).Delete(_destination);
+        AssertFolderRemoved();
     }
 
     [Fact]
@@ -747,7 +763,7 @@ public class CleanupPreFlightTests
 
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
-        _directory.Received(1).Delete(_destination);
+        AssertFolderRemoved();
     }
 
     [Fact]
@@ -780,8 +796,7 @@ public class CleanupPreFlightTests
 
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
-        _directory.DidNotReceive().Delete(Arg.Any<string>());
-        _directory.DidNotReceive().Delete(Arg.Any<string>(), Arg.Any<bool>());
+        AssertNoFolderRemoved();
     }
 
     [Fact]
@@ -815,8 +830,7 @@ public class CleanupPreFlightTests
 
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
-        _directory.DidNotReceive().Delete(Arg.Any<string>());
-        _directory.DidNotReceive().Delete(Arg.Any<string>(), Arg.Any<bool>());
+        AssertNoFolderRemoved();
         // The batch's own account of itself still reaches the user, which is what
         // makes the folder worth keeping: it names files that are in it.
         Assert.True(vm.Completion.IsComplete);
