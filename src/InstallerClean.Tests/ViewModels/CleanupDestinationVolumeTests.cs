@@ -331,6 +331,6 @@ public class CleanupDestinationVolumeTests
             TestCompletion.Create(),
             Substitute.For<IRemovableReverifier>(),
             destinationGuard: Substitute.For<IDestinationGuard>(),
-            resolveIsOnCacheVolume);
+            resolveIsOnCacheVolume: resolveIsOnCacheVolume);
     }
 }

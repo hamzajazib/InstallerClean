@@ -104,7 +104,8 @@ public class MainViewModelTests
             _dialogService, _confirmationService, _windowService,
             _fileSystem, _resultLogService, _updateCheckService, _reverifier,
             _earlierRunCheck, _firstRunMark, _windowsRegion,
-            new ByPathDestinationGuard(_fileSystem), appUpdater);
+            destinationGuard: new ByPathDestinationGuard(_fileSystem),
+            appUpdater: appUpdater);
     }
 
     /// <summary>

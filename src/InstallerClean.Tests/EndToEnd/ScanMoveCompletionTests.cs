@@ -214,11 +214,11 @@ public class ScanMoveCompletionTests
         var updateCheckService = Substitute.For<IUpdateCheckService>();
 
         // Pass the same `fs` instance the production services were
-        // wired against. Two distinct MockFileSystems in one test
-        // ride on the fact that MainViewModel only feeds IFileSystem
-        // to CleanupViewModel's destination probe, but that wiring
-        // could change; sharing the instance keeps the test honest
-        // about the production graph.
+        // wired against, here and to the by-path guard. The view model
+        // creates the destination folder through it and the guard
+        // probes that folder through it, so two distinct MockFileSystems
+        // would split the folder from its probe; sharing the instance
+        // keeps the test honest about the production graph.
         var vm = new MainViewModel(
             scanService, moveService, deleteService,
             settingsService, rebootService, msiInfoService,
