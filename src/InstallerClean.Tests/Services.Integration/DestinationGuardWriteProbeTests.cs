@@ -7,11 +7,12 @@ using InstallerClean.Services;
 namespace InstallerClean.Tests.Services.Integration;
 
 /// <summary>
-/// The write probe against four folders whose access lists decide what the account can do
-/// with a file put in them: a folder it cannot list; a folder it can list and add to whose
-/// files it can write and not read; one whose files it can read and write and not delete;
-/// and one whose files it can also delete. The probe passes the last two, whose files can
-/// be read back, and fails the first two.
+/// The write probe against folders whose access lists decide what the account can do with
+/// a file put in them: a folder it cannot list; a folder it can list and add to whose files
+/// it can write and not read; one whose files give their bytes and not everything an open
+/// for reading needs; one whose files it can read and write and not delete; and one whose
+/// files it can also delete. The probe passes the last two, whose files can be read back,
+/// and fails the rest, naming the step that refused.
 ///
 /// Each test first holds what Windows lets the account do in that folder, with plain calls
 /// and a file made by the probe's own create less DELETE and delete-on-close, so a folder
@@ -195,9 +196,9 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         }
 
         var folder = MakeFolder(accessList);
-        Assert.False(_guard.TryProbeWritable(folder, out var failureCode, out var readBackRefused));
+        Assert.False(_guard.TryProbeWritable(folder, out var failureCode, out var refusal));
         Assert.Equal(AccessDenied, failureCode);
-        Assert.False(readBackRefused);
+        Assert.Equal(WriteProbeRefusal.FolderOpen, refusal);
     }
 
     [Fact]
@@ -217,9 +218,9 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         Assert.Equal(AccessDenied, discardCode);
 
         var folder = MakeFolder(accessList);
-        Assert.False(_guard.TryProbeWritable(folder, out var failureCode, out var readBackRefused));
+        Assert.False(_guard.TryProbeWritable(folder, out var failureCode, out var refusal));
         Assert.Equal(AccessDenied, failureCode);
-        Assert.True(readBackRefused);
+        Assert.Equal(WriteProbeRefusal.ReadBackRefusedAccess, refusal);
         Assert.Empty(Directory.EnumerateFileSystemEntries(folder));
     }
 
@@ -246,9 +247,9 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         AssertReadRefused(file);
 
         var folder = MakeFolder(accessList);
-        Assert.False(_guard.TryProbeWritable(folder, out var failureCode, out var readBackRefused));
+        Assert.False(_guard.TryProbeWritable(folder, out var failureCode, out var refusal));
         Assert.Equal(AccessDenied, failureCode);
-        Assert.True(readBackRefused);
+        Assert.Equal(WriteProbeRefusal.ReadBackRefusedAccess, refusal);
         Assert.Empty(Directory.EnumerateFileSystemEntries(folder));
     }
 
@@ -269,9 +270,9 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         Assert.Equal(AccessDenied, discardCode);
 
         var folder = MakeFolder(accessList);
-        Assert.True(_guard.TryProbeWritable(folder, out var failureCode, out var readBackRefused));
+        Assert.True(_guard.TryProbeWritable(folder, out var failureCode, out var refusal));
         Assert.Equal(0, failureCode);
-        Assert.False(readBackRefused);
+        Assert.Equal(WriteProbeRefusal.None, refusal);
         Assert.Empty(Directory.EnumerateFileSystemEntries(folder));
     }
 
@@ -295,9 +296,9 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         Assert.False(File.Exists(copy));
 
         var folder = MakeFolder(accessList);
-        Assert.True(_guard.TryProbeWritable(folder, out var failureCode, out var readBackRefused));
+        Assert.True(_guard.TryProbeWritable(folder, out var failureCode, out var refusal));
         Assert.Equal(0, failureCode);
-        Assert.False(readBackRefused);
+        Assert.Equal(WriteProbeRefusal.None, refusal);
         Assert.Empty(Directory.EnumerateFileSystemEntries(folder));
     }
 }

@@ -16,13 +16,12 @@ public interface IDestinationGuard
 {
     /// <summary>
     /// Whether the folder accepts a new file and lets it be read back, with the Win32
-    /// cause of a refusal in <paramref name="failureCode"/> for a caller to record.
-    /// <paramref name="readBackRefused"/> is true where the folder took the file and
-    /// reading it back was refused access, so a caller can tell that refusal from a
-    /// folder that will not take a file at all and from a failure with another cause.
-    /// A folder whose files can be read and not deleted passes.
+    /// cause of a refusal in <paramref name="failureCode"/> for a caller to record and
+    /// the step that refused in <paramref name="refusal"/>, so a caller names a cause
+    /// only where the probe established it. A folder whose files can be read and not
+    /// deleted passes.
     /// </summary>
-    bool TryProbeWritable(string folder, out int failureCode, out bool readBackRefused);
+    bool TryProbeWritable(string folder, out int failureCode, out WriteProbeRefusal refusal);
 
     /// <summary>
     /// Removes the file at <paramref name="destinationPath"/>, where it is still there,
@@ -43,8 +42,8 @@ public interface IDestinationGuard
 /// </summary>
 internal sealed class HandleDestinationGuard : IDestinationGuard
 {
-    public bool TryProbeWritable(string folder, out int failureCode, out bool readBackRefused) =>
-        DirectoryGuard.TryProbeWritable(folder, out failureCode, out readBackRefused);
+    public bool TryProbeWritable(string folder, out int failureCode, out WriteProbeRefusal refusal) =>
+        DirectoryGuard.TryProbeWritable(folder, out failureCode, out refusal);
 
     public bool TryDiscardCopy(string destinationPath, out int failureCode)
     {
@@ -76,15 +75,17 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
 
     /// <summary>
     /// Writes an empty file, reads it back and deletes it, giving the answers the app's
-    /// guard gives: a refused write or read fails the probe, a read refused access is
-    /// the one that sets <paramref name="readBackRefused"/>, and a refused delete does
-    /// not fail the probe, since a folder whose files can be read and not deleted passes
-    /// there too.
+    /// guard gives: a refused write or read fails the probe, an
+    /// <see cref="UnauthorizedAccessException"/> naming the step as refused access and
+    /// any other exception as a failure of it, and a refused delete does not fail the
+    /// probe, since a folder whose files can be read and not deleted passes there too.
+    /// There is no folder to open, so <see cref="WriteProbeRefusal.FolderOpen"/> is
+    /// never given.
     /// </summary>
-    public bool TryProbeWritable(string folder, out int failureCode, out bool readBackRefused)
+    public bool TryProbeWritable(string folder, out int failureCode, out WriteProbeRefusal refusal)
     {
         failureCode = 0;
-        readBackRefused = false;
+        refusal = WriteProbeRefusal.None;
         var probe = _fs.Path.Combine(folder, _fs.Path.GetRandomFileName());
         try
         {
@@ -93,6 +94,8 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
         catch (Exception ex)
         {
             failureCode = ex.HResult;
+            refusal = ex is UnauthorizedAccessException
+                ? WriteProbeRefusal.CreateRefusedAccess : WriteProbeRefusal.CreateFailed;
             return false;
         }
 
@@ -104,7 +107,8 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
         catch (Exception ex)
         {
             failureCode = ex.HResult;
-            readBackRefused = ex is UnauthorizedAccessException;
+            refusal = ex is UnauthorizedAccessException
+                ? WriteProbeRefusal.ReadBackRefusedAccess : WriteProbeRefusal.ReadBackFailed;
             return false;
         }
         finally

@@ -790,10 +790,12 @@ public sealed class MoveFilesService : IMoveFilesService
         // read it, and removes it, so a folder another account can write cannot steer
         // the test to a file in another folder. A folder that takes the file and will
         // not let it be read back is refused with its own message.
-        if (!_destinationGuard.TryProbeWritable(folder, out var failureCode, out var readBackRefused))
+        if (!_destinationGuard.TryProbeWritable(folder, out var failureCode, out var refusal))
             throw new LocalisedAccessException(
                 string.Format(
-                    readBackRefused ? Strings.Error_FolderWillNotGiveFilesBack : Strings.Error_CannotWriteFolder,
+                    refusal == WriteProbeRefusal.ReadBackRefusedAccess
+                        ? Strings.Error_FolderWillNotGiveFilesBack
+                        : Strings.Error_CannotWriteFolder,
                     folder),
                 new System.ComponentModel.Win32Exception(failureCode));
     }

@@ -89,10 +89,10 @@ public class ByPathDestinationGuardTests
                 payload = call.ArgAt<byte[]>(1);
             });
 
-        Assert.True(_guard.TryProbeWritable(_folder, out var failureCode, out var readBackRefused));
+        Assert.True(_guard.TryProbeWritable(_folder, out var failureCode, out var probeRefusal));
 
         Assert.Equal(0, failureCode);
-        Assert.False(readBackRefused);
+        Assert.Equal(WriteProbeRefusal.None, probeRefusal);
         Assert.NotNull(written);
         Assert.Equal(_folder, Path.GetDirectoryName(written));
         Assert.NotNull(payload);
@@ -112,10 +112,14 @@ public class ByPathDestinationGuardTests
         var refusal = NewRefusal(refusalName);
         _file.When(f => f.WriteAllBytes(Arg.Any<string>(), Arg.Any<byte[]>())).Do(_ => throw refusal);
 
-        Assert.False(_guard.TryProbeWritable(_folder, out var failureCode, out var readBackRefused));
+        Assert.False(_guard.TryProbeWritable(_folder, out var failureCode, out var probeRefusal));
 
+        // Only a write refused access is the folder refusing the account the right to add
+        // the file; any other failure of the write is named as a failure of the create.
         Assert.Equal(refusal.HResult, failureCode);
-        Assert.False(readBackRefused);
+        Assert.Equal(
+            refusal is UnauthorizedAccessException ? WriteProbeRefusal.CreateRefusedAccess : WriteProbeRefusal.CreateFailed,
+            probeRefusal);
         _file.DidNotReceive().ReadAllBytes(Arg.Any<string>());
         _file.DidNotReceive().Delete(Arg.Any<string>());
     }
@@ -127,12 +131,14 @@ public class ByPathDestinationGuardTests
         var refusal = NewRefusal(refusalName);
         _file.ReadAllBytes(Arg.Any<string>()).Returns(_ => throw refusal);
 
-        Assert.False(_guard.TryProbeWritable(_folder, out var failureCode, out var readBackRefused));
+        Assert.False(_guard.TryProbeWritable(_folder, out var failureCode, out var probeRefusal));
 
         // Only a read refused access is the folder declining to give the file back; any
-        // other failure of the read fails the probe without saying so.
+        // other failure of the read is named as a failure of the read-back.
         Assert.Equal(refusal.HResult, failureCode);
-        Assert.Equal(refusal is UnauthorizedAccessException, readBackRefused);
+        Assert.Equal(
+            refusal is UnauthorizedAccessException ? WriteProbeRefusal.ReadBackRefusedAccess : WriteProbeRefusal.ReadBackFailed,
+            probeRefusal);
         _file.Received(1).Delete(Arg.Any<string>());
     }
 
@@ -143,10 +149,10 @@ public class ByPathDestinationGuardTests
         var refusal = NewRefusal(refusalName);
         _file.When(f => f.Delete(Arg.Any<string>())).Do(_ => throw refusal);
 
-        Assert.True(_guard.TryProbeWritable(_folder, out var failureCode, out var readBackRefused));
+        Assert.True(_guard.TryProbeWritable(_folder, out var failureCode, out var probeRefusal));
 
         Assert.Equal(0, failureCode);
-        Assert.False(readBackRefused);
+        Assert.Equal(WriteProbeRefusal.None, probeRefusal);
         _file.Received(1).Delete(Arg.Any<string>());
     }
 

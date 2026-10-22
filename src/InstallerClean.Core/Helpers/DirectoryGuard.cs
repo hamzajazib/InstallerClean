@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 using InstallerClean.Interop.Native;
+using InstallerClean.Services;
 
 namespace InstallerClean.Helpers;
 
@@ -315,15 +316,20 @@ internal static class DirectoryGuard
     /// passes.
     /// </para>
     /// False where the folder cannot be opened, the create is refused, or the second
-    /// open fails for any cause; <paramref name="readBackRefused"/> is true where the
-    /// second open is refused access, and false for every other failure, such as a
-    /// sharing violation from another program that opened the new file first.
+    /// open fails for any cause, with <paramref name="refusal"/> naming the step and
+    /// whether Windows refused access there. Only STATUS_ACCESS_DENIED counts as a
+    /// refusal of access; any other failure, such as a sharing violation from another
+    /// program that opened the new file first, is named as a failure of that step.
     /// </summary>
-    internal static bool TryProbeWritable(string folder, out int failureCode, out bool readBackRefused)
+    internal static bool TryProbeWritable(string folder, out int failureCode, out WriteProbeRefusal refusal)
     {
-        readBackRefused = false;
+        refusal = WriteProbeRefusal.None;
         using var dir = OpenDirectoryFollow(folder, out failureCode);
-        if (dir is null) return false;
+        if (dir is null)
+        {
+            refusal = WriteProbeRefusal.FolderOpen;
+            return false;
+        }
 
         var leaf = Path.GetRandomFileName();
         using var probe = OpenChildNoFollow(
@@ -331,6 +337,8 @@ internal static class DirectoryGuard
         if (probe is null)
         {
             failureCode = (int)Ntdll.RtlNtStatusToDosError(status);
+            refusal = IsAccessRefusal(status)
+                ? WriteProbeRefusal.CreateRefusedAccess : WriteProbeRefusal.CreateFailed;
             return false;
         }
 
@@ -339,18 +347,19 @@ internal static class DirectoryGuard
         if (readBack is null)
         {
             failureCode = (int)Ntdll.RtlNtStatusToDosError(status);
-            readBackRefused = IsReadBackRefusal(status);
+            refusal = IsAccessRefusal(status)
+                ? WriteProbeRefusal.ReadBackRefusedAccess : WriteProbeRefusal.ReadBackFailed;
             return false;
         }
         return true;
     }
 
     /// <summary>
-    /// Whether the NTSTATUS a failed read-back returned says the file's access list
-    /// refused it. Only STATUS_ACCESS_DENIED does; a sharing violation or any other
+    /// Whether the NTSTATUS a failed step of the probe returned says Windows refused the
+    /// account access. Only STATUS_ACCESS_DENIED does; a sharing violation or any other
     /// failure says nothing about the folder's permissions.
     /// </summary>
-    internal static bool IsReadBackRefusal(int status) => status == STATUS_ACCESS_DENIED;
+    internal static bool IsAccessRefusal(int status) => status == STATUS_ACCESS_DENIED;
 
     /// <summary>
     /// Removes the plain file <paramref name="leaf"/> inside <paramref name="folder"/>

@@ -855,20 +855,23 @@ public class MoveFilesServiceUnitTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task A_refused_write_probe_stops_the_move_with_the_message_for_its_refusal(bool readBackRefused)
+    [InlineData(WriteProbeRefusal.FolderOpen)]
+    [InlineData(WriteProbeRefusal.CreateRefusedAccess)]
+    [InlineData(WriteProbeRefusal.CreateFailed)]
+    [InlineData(WriteProbeRefusal.ReadBackRefusedAccess)]
+    [InlineData(WriteProbeRefusal.ReadBackFailed)]
+    public async Task A_refused_write_probe_stops_the_move_with_the_message_for_its_refusal(WriteProbeRefusal refusal)
     {
         var fs = new MockFileSystem();
         var source = $@"{SourceDir}\a.msi";
         fs.AddFile(source, new MockFileData("payload"));
         fs.AddDirectory(DestDir);
         var guard = Substitute.For<IDestinationGuard>();
-        guard.TryProbeWritable(Arg.Any<string>(), out Arg.Any<int>(), out Arg.Any<bool>())
+        guard.TryProbeWritable(Arg.Any<string>(), out Arg.Any<int>(), out Arg.Any<WriteProbeRefusal>())
             .Returns(call =>
             {
                 call[1] = 5;
-                call[2] = readBackRefused;
+                call[2] = refusal;
                 return false;
             });
 
@@ -876,7 +879,9 @@ public class MoveFilesServiceUnitTests
         var ex = await Assert.ThrowsAsync<LocalisedAccessException>(() =>
             svc.MoveFilesAsync(new[] { source }, DestDir, UnderLeaseClaims.None));
 
-        var expected = readBackRefused
+        // The command line names a cause only for a read-back refused access; every other
+        // refusal is a folder the Move cannot write to.
+        var expected = refusal == WriteProbeRefusal.ReadBackRefusedAccess
             ? InstallerClean.Resources.Strings.Error_FolderWillNotGiveFilesBack
             : InstallerClean.Resources.Strings.Error_CannotWriteFolder;
         Assert.Equal(string.Format(expected, DestDir), ex.Message);

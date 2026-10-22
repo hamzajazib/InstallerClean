@@ -614,6 +614,50 @@ public class CleanupPreFlightTests
     }
 
     [Fact]
+    public async Task A_folder_that_refuses_the_account_the_probe_file_shows_the_access_denied_message()
+    {
+        _file.When(f => f.WriteAllBytes(Arg.Any<string>(), Arg.Any<byte[]>()))
+            .Do(_ => throw new UnauthorizedAccessException("create refused"));
+
+        var vm = CreateViewModel();
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = _destination;
+
+        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        _dialogService.Received(1).ShowWarning(
+            string.Format(InstallerClean.Resources.Strings.Error_AccessDeniedDestination, _destination),
+            InstallerClean.Resources.Strings.Error_DestinationWriteFailedTitle);
+        AssertFolderRemoved();
+        _confirmationService.DidNotReceive().ConfirmMove(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+    }
+
+    [Fact]
+    public async Task A_probe_file_that_cannot_be_added_for_another_cause_is_refused_as_a_write_failure()
+    {
+        _file.When(f => f.WriteAllBytes(Arg.Any<string>(), Arg.Any<byte[]>()))
+            .Do(_ => throw new IOException("disk full"));
+
+        var vm = CreateViewModel();
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = _destination;
+
+        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        var withLogPrefix = string.Format(
+            InstallerClean.Resources.Strings.Error_IOWriteDestination, _destination, "\0").Split('\0')[0];
+        var withoutLog = string.Format(
+            InstallerClean.Resources.Strings.Error_IOWriteDestination_NoLog, _destination);
+        _dialogService.Received(1).ShowWarning(
+            Arg.Is<string>(body => body == withoutLog || body.StartsWith(withLogPrefix, StringComparison.Ordinal)),
+            InstallerClean.Resources.Strings.Error_DestinationWriteFailedTitle);
+        AssertFolderRemoved();
+        _confirmationService.DidNotReceive().ConfirmMove(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+    }
+
+    [Fact]
     public async Task Cancelling_the_confirmation_leaves_a_folder_that_was_already_there()
     {
         _directory.Exists(_destination).Returns(true);

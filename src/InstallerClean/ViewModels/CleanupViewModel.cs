@@ -811,16 +811,22 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // another account can write cannot steer the test to a file in
             // another folder, and it leaves nothing behind. A folder that will not
             // take the file, or takes it and will not let it be read back, is not
-            // writable for a Move, and the throw here refuses the destination. Where
-            // reading it back is refused access, the throw carries its own message,
-            // shown as it stands by the arm below.
-            if (!_destinationGuard.TryProbeWritable(dest, out var failureCode, out var readBackRefused))
+            // writable for a Move, and the throw here refuses the destination. Its type
+            // picks the message: where reading the file back is refused access, the
+            // throw carries its own message, shown as it stands by the arm below;
+            // where adding the file is refused access, it is the access-denied
+            // message; any other refusal is a write failure.
+            if (!_destinationGuard.TryProbeWritable(dest, out var failureCode, out var refusal))
             {
                 var cause = new System.ComponentModel.Win32Exception(failureCode);
-                if (readBackRefused)
-                    throw new LocalisedAccessException(
-                        string.Format(Strings.Error_FolderWillNotGiveFilesBack, dest), cause);
-                throw new IOException(string.Format(Strings.Error_CannotWriteFolder, dest), cause);
+                var message = string.Format(Strings.Error_CannotWriteFolder, dest);
+                throw refusal switch
+                {
+                    WriteProbeRefusal.ReadBackRefusedAccess => new LocalisedAccessException(
+                        string.Format(Strings.Error_FolderWillNotGiveFilesBack, dest), cause),
+                    WriteProbeRefusal.CreateRefusedAccess => new UnauthorizedAccessException(message, cause),
+                    _ => new IOException(message, cause),
+                };
             }
             probeToken.ThrowIfCancellationRequested();
 
