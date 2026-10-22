@@ -569,6 +569,7 @@ public class CleanupPreFlightTests
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
+        var crashLogBefore = TestCrashLog.Text();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -582,6 +583,8 @@ public class CleanupPreFlightTests
             Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
         Assert.False(vm.Cleanup.IsOperating);
         Assert.Equal(string.Empty, vm.Cleanup.OperationProgress);
+        // A refusal, not a fault: the crash log is left as it was.
+        Assert.Equal(crashLogBefore, TestCrashLog.Text());
     }
 
     [Fact]
@@ -597,6 +600,7 @@ public class CleanupPreFlightTests
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
+        var crashLogBefore = TestCrashLog.Text();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         // The write-failure body names the crash log where one was written, and says
@@ -611,6 +615,8 @@ public class CleanupPreFlightTests
         AssertFolderRemoved();
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+        // A failure with no established cause is a fault, so the crash log takes an entry.
+        Assert.NotEqual(crashLogBefore, TestCrashLog.Text());
     }
 
     [Fact]
@@ -623,6 +629,7 @@ public class CleanupPreFlightTests
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
+        var crashLogBefore = TestCrashLog.Text();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -631,6 +638,8 @@ public class CleanupPreFlightTests
         AssertFolderRemoved();
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+        // A refusal, not a fault: the crash log is left as it was.
+        Assert.Equal(crashLogBefore, TestCrashLog.Text());
     }
 
     [Fact]
@@ -643,6 +652,7 @@ public class CleanupPreFlightTests
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
+        var crashLogBefore = TestCrashLog.Text();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         var withLogPrefix = string.Format(
@@ -655,6 +665,8 @@ public class CleanupPreFlightTests
         AssertFolderRemoved();
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+        // A failure with no established cause is a fault, so the crash log takes an entry.
+        Assert.NotEqual(crashLogBefore, TestCrashLog.Text());
     }
 
     [Fact]

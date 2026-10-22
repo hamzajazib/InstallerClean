@@ -1,3 +1,4 @@
+using InstallerClean.Interop.Native;
 using InstallerClean.Services;
 
 namespace InstallerClean.Tests.Services.Integration;
@@ -33,6 +34,17 @@ public sealed class DestinationGuardTests : IDisposable
     {
         Assert.False(_guard.TryProbeWritable(Path.Combine(_root, "missing"), out var code, out var refusal));
         Assert.NotEqual(0, code);
+        Assert.Equal(WriteProbeRefusal.FolderOpen, refusal);
+    }
+
+    [Fact]
+    public void A_path_that_names_a_file_fails_the_probe_at_the_folder_with_ERROR_DIRECTORY()
+    {
+        var file = Path.Combine(_root, "not-a-folder");
+        File.WriteAllBytes(file, []);
+
+        Assert.False(_guard.TryProbeWritable(file, out var code, out var refusal));
+        Assert.Equal(Kernel32.ERROR_DIRECTORY, code);
         Assert.Equal(WriteProbeRefusal.FolderOpen, refusal);
     }
 
