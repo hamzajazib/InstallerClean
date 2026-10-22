@@ -811,21 +811,20 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // another account can write cannot steer the test to a file in
             // another folder, and it leaves nothing behind. A folder that will not
             // take the file, or takes it and will not let it be read back, is not
-            // writable for a Move, and the throw here refuses the destination. Its type
-            // picks the message: where reading the file back is refused access, the
-            // throw carries its own message, shown as it stands by the arm below;
-            // where adding the file is refused access, it is the access-denied
-            // message; any other refusal is a write failure.
+            // writable for a Move, and the throw here refuses the destination. Where
+            // Windows refused access to adding the file or to reading it back, the
+            // throw carries the message for that refusal, shown as it stands by the
+            // arm below; any other refusal is a write failure.
             if (!_destinationGuard.TryProbeWritable(dest, out var failureCode, out var refusal))
             {
                 var cause = new System.ComponentModel.Win32Exception(failureCode);
-                var message = string.Format(Strings.Error_CannotWriteFolder, dest);
                 throw refusal switch
                 {
                     WriteProbeRefusal.ReadBackRefusedAccess => new LocalisedAccessException(
                         string.Format(Strings.Error_FolderWillNotGiveFilesBack, dest), cause),
-                    WriteProbeRefusal.CreateRefusedAccess => new UnauthorizedAccessException(message, cause),
-                    _ => new IOException(message, cause),
+                    WriteProbeRefusal.CreateRefusedAccess => new LocalisedAccessException(
+                        string.Format(Strings.Error_AccessDeniedDestination, dest), cause),
+                    _ => new IOException(string.Format(Strings.Error_CannotWriteFolder, dest), cause),
                 };
             }
             probeToken.ThrowIfCancellationRequested();
@@ -878,11 +877,11 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         }
         catch (LocalisedAccessException ex)
         {
-            // The probe's refusal of a folder that takes a file and refuses access
-            // to it when the probe reads it back. Any other failure of that read
-            // arrives at the arm below. Its message is a resx string naming the
-            // folder the user typed, so it is shown as it stands, and it is a
-            // refusal rather than a fault, so no crash log is written.
+            // The probe's refusal of a folder where Windows refused access to adding
+            // its file or to reading it back. Any other failure of the probe arrives
+            // at the arm below. Its message is a resx string naming the folder the
+            // user typed, so it is shown as it stands, and it is a refusal rather
+            // than a fault, so no crash log is written.
             IsOperating = false;
             OperationProgress = string.Empty;
             EndOperation();

@@ -110,10 +110,17 @@ internal static class DirectoryGuard
             return null;
         }
 
-        if (!Kernel32.GetFileInformationByHandle(handle, out var info)
-            || (info.dwFileAttributes & Kernel32.FILE_ATTRIBUTE_DIRECTORY) == 0)
+        if (!Kernel32.GetFileInformationByHandle(handle, out var info))
         {
             failureCode = Marshal.GetLastPInvokeError();
+            handle.Dispose();
+            return null;
+        }
+
+        // The read succeeded, so the last error says nothing about this path.
+        if ((info.dwFileAttributes & Kernel32.FILE_ATTRIBUTE_DIRECTORY) == 0)
+        {
+            failureCode = Kernel32.ERROR_DIRECTORY;
             handle.Dispose();
             return null;
         }

@@ -879,7 +879,7 @@ public class MoveFilesServiceUnitTests
         var ex = await Assert.ThrowsAsync<LocalisedAccessException>(() =>
             svc.MoveFilesAsync(new[] { source }, DestDir, UnderLeaseClaims.None));
 
-        // The command line names a cause only for a read-back refused access; every other
+        // The service names a cause only for a read-back refused access; every other
         // refusal is a folder the Move cannot write to.
         var expected = refusal == WriteProbeRefusal.ReadBackRefusedAccess
             ? InstallerClean.Resources.Strings.Error_FolderWillNotGiveFilesBack

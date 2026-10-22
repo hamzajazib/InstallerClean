@@ -812,4 +812,7 @@ internal static partial class Kernel32
 
     // What OpenProcess answers where no process has the id.
     public const int ERROR_INVALID_PARAMETER = 87;
+
+    // "The directory name is invalid": the code for a path that names a file where a folder is wanted.
+    public const int ERROR_DIRECTORY = 267;
 }

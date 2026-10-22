@@ -8,11 +8,12 @@ namespace InstallerClean.Tests.Services.Integration;
 
 /// <summary>
 /// The write probe against folders whose access lists decide what the account can do with
-/// a file put in them: a folder it cannot list; a folder it can list and add to whose files
-/// it can write and not read; one whose files give their bytes and not everything an open
-/// for reading needs; one whose files it can read and write and not delete; and one whose
-/// files it can also delete. The probe passes the last two, whose files can be read back,
-/// and fails the rest, naming the step that refused.
+/// a file put in them: a folder it cannot list; a folder it can list and not add to; a
+/// folder it can list and add to whose files it can write and not read; one whose files
+/// give their bytes and not everything an open for reading needs; one whose files it can
+/// read and write and not delete; and one whose files it can also delete. The probe passes
+/// the last two, whose files can be read back, and fails the rest, naming the step that
+/// refused.
 ///
 /// Each test first holds what Windows lets the account do in that folder, with plain calls
 /// and a file made by the probe's own create less DELETE and delete-on-close, so a folder
@@ -42,6 +43,10 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
 
     // The same less FILE_LIST_DIRECTORY, so the probe's open of the folder is refused.
     private const string FolderRightsWithoutList = "0x1200AA";
+
+    // The same as FolderRights less FILE_ADD_FILE, so the folder opens and the probe's
+    // create is refused.
+    private const string FolderRightsWithoutAdd = "0x1200A9";
 
     // Inherited by files: FILE_WRITE_DATA, FILE_APPEND_DATA, FILE_WRITE_EA,
     // FILE_WRITE_ATTRIBUTES, READ_CONTROL and SYNCHRONIZE. No FILE_READ_DATA and no DELETE.
@@ -199,6 +204,25 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         Assert.False(_guard.TryProbeWritable(folder, out var failureCode, out var refusal));
         Assert.Equal(AccessDenied, failureCode);
         Assert.Equal(WriteProbeRefusal.FolderOpen, refusal);
+    }
+
+    [Fact]
+    public void A_folder_the_account_cannot_add_a_file_to_fails_the_probe_at_the_create()
+    {
+        AssertTheProbeAsksWhatThisTestAssumes();
+        var accessList = ListGranting(FolderRightsWithoutAdd, FileRightsReadWriteDelete);
+
+        // What Windows lets the account do there: it can open the folder, and writing a
+        // new file into it is refused.
+        var facts = MakeFolder(accessList);
+        AssertTheFolderOpens(facts);
+        AssertRefused(() => File.WriteAllBytes(Path.Combine(facts, "copy.msi"), []), "adding a file to the folder");
+
+        var folder = MakeFolder(accessList);
+        Assert.False(_guard.TryProbeWritable(folder, out var failureCode, out var refusal));
+        Assert.Equal(AccessDenied, failureCode);
+        Assert.Equal(WriteProbeRefusal.CreateRefusedAccess, refusal);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(folder));
     }
 
     [Fact]
