@@ -448,6 +448,7 @@ public class CleanupPreFlightTests
         // The user's own folder, whatever is in it. Cancelling a move they
         // never confirmed must not reach into it.
         _directory.DidNotReceive().Delete(Arg.Any<string>());
+        _directory.DidNotReceive().Delete(Arg.Any<string>(), Arg.Any<bool>());
     }
 
     [Fact]
@@ -468,6 +469,7 @@ public class CleanupPreFlightTests
 
         // The removal is scoped to the cancel; the files went here.
         _directory.DidNotReceive().Delete(Arg.Any<string>());
+        _directory.DidNotReceive().Delete(Arg.Any<string>(), Arg.Any<bool>());
     }
 
     [Fact]
@@ -779,6 +781,7 @@ public class CleanupPreFlightTests
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _directory.DidNotReceive().Delete(Arg.Any<string>());
+        _directory.DidNotReceive().Delete(Arg.Any<string>(), Arg.Any<bool>());
     }
 
     [Fact]
@@ -813,6 +816,7 @@ public class CleanupPreFlightTests
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _directory.DidNotReceive().Delete(Arg.Any<string>());
+        _directory.DidNotReceive().Delete(Arg.Any<string>(), Arg.Any<bool>());
         // The batch's own account of itself still reaches the user, which is what
         // makes the folder worth keeping: it names files that are in it.
         Assert.True(vm.Completion.IsComplete);

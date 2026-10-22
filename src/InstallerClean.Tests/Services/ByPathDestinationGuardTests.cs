@@ -31,10 +31,13 @@ public class ByPathDestinationGuardTests
         _directory.DidNotReceive().Delete(Arg.Any<string>(), Arg.Any<bool>());
     }
 
-    [Fact]
-    public void A_folder_the_filesystem_will_not_remove_answers_false()
+    [Theory]
+    [InlineData(typeof(IOException))]
+    [InlineData(typeof(UnauthorizedAccessException))]
+    [InlineData(typeof(DirectoryNotFoundException))]
+    public void A_folder_the_filesystem_will_not_remove_answers_false(Type refusal)
     {
-        _directory.When(d => d.Delete("X")).Do(_ => throw new IOException("not empty"));
+        _directory.When(d => d.Delete("X")).Do(_ => throw (Exception)Activator.CreateInstance(refusal)!);
 
         Assert.False(_guard.TryRemoveEmptyFolder("X"));
     }
