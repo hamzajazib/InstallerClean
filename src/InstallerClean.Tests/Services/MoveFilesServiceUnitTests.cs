@@ -911,7 +911,7 @@ public class MoveFilesServiceUnitTests
     public async Task A_refused_write_probe_removes_the_destination_and_the_folders_above_it_that_the_move_made()
     {
         var fs = new MockFileSystem();
-        var source = $@"{SourceDir}.msi";
+        var source = $@"{SourceDir}\a.msi";
         fs.AddFile(source, new MockFileData("payload"));
         var svc = new MoveFilesService(
             fs, NullMutexProbe.Instance, installerFolderOverride: null, destinationGuard: GuardRefusingTheWriteTest(fs));
@@ -972,7 +972,7 @@ public class MoveFilesServiceUnitTests
     public async Task A_refused_write_probe_leaves_a_folder_above_the_destination_that_was_already_there()
     {
         var fs = new MockFileSystem();
-        var source = $@"{SourceDir}.msi";
+        var source = $@"{SourceDir}\a.msi";
         fs.AddFile(source, new MockFileData("payload"));
         fs.AddDirectory(@"D:\backup");
         var svc = new MoveFilesService(
@@ -989,7 +989,7 @@ public class MoveFilesServiceUnitTests
     public async Task A_refused_write_probe_leaves_a_destination_that_was_already_there()
     {
         var fs = new MockFileSystem();
-        var source = $@"{SourceDir}.msi";
+        var source = $@"{SourceDir}\a.msi";
         fs.AddFile(source, new MockFileData("payload"));
         fs.AddDirectory(DestDir);
         var svc = new MoveFilesService(

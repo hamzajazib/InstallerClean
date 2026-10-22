@@ -1,4 +1,4 @@
-using System.IO.MemoryMappedFiles;
+using System.Runtime.InteropServices;
 using InstallerClean.Helpers;
 using InstallerClean.Interop.Native;
 using InstallerClean.Services;
@@ -15,6 +15,8 @@ namespace InstallerClean.Tests.Services.Integration;
 /// </summary>
 public sealed class DestinationGuardTests : IDisposable
 {
+    private const int ErrorAccessDenied = 5;
+
     private readonly string _root = Directory.CreateTempSubdirectory("ic-dest-").FullName;
     private readonly IDestinationGuard _guard = new HandleDestinationGuard();
 
@@ -107,27 +109,22 @@ public sealed class DestinationGuardTests : IDisposable
     [Fact]
     public void A_copy_whose_delete_is_refused_is_left_and_the_cause_the_delete_gave_is_recorded()
     {
-        var destination = Directory.CreateDirectory(Path.Combine(_root, "mapped")).FullName;
-        var copy = Path.Combine(destination, "payload.msi");
-        File.WriteAllBytes(copy, new byte[4096]);
+        var destination = Directory.CreateDirectory(Path.Combine(_root, "loaded")).FullName;
+        var copy = Path.Combine(destination, "payload.dll");
 
-        // A section mapped over the file makes Windows refuse its delete. The stream shares
-        // delete, so the discard's open asking for DELETE is granted, and the refusal comes
-        // from the delete itself.
-        using var stream = new FileStream(
-            copy, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite | FileShare.Delete);
-        using var map = MemoryMappedFile.CreateFromFile(
-            stream, null, 0, MemoryMappedFileAccess.ReadWrite, HandleInheritability.None, leaveOpen: true);
-        using var view = map.CreateViewAccessor();
+        // A library loaded from the file makes Windows refuse its delete. The discard's open
+        // asking for DELETE is granted, so the refusal comes from the delete itself.
+        using var image = new LoadedImage(copy);
 
         var refusal = Record.Exception(() => File.Delete(copy));
         Assert.True(refusal is UnauthorizedAccessException or IOException,
-            $"the mapped file was not refused a delete (got {refusal?.GetType().Name ?? "no exception"})");
+            $"the file with a library loaded from it was not refused a delete (got {refusal?.GetType().Name ?? "no exception"})");
         Assert.True(File.Exists(copy));
 
-        AssertTheDiscardsOpenIsGranted(destination, "payload.msi");
+        AssertTheDiscardsOpenIsGranted(destination, "payload.dll");
 
         Assert.False(_guard.TryDiscardCopy(copy, out var code));
+        Assert.Equal(ErrorAccessDenied, code);
         Assert.Equal(refusal!.HResult & 0xFFFF, code);
         Assert.True(File.Exists(copy));
     }
@@ -135,18 +132,12 @@ public sealed class DestinationGuardTests : IDisposable
     [Fact]
     public void A_read_only_copy_whose_delete_is_refused_keeps_the_attributes_it_had()
     {
-        var destination = Directory.CreateDirectory(Path.Combine(_root, "mapped-read-only")).FullName;
-        var copy = Path.Combine(destination, "payload.msi");
-        File.WriteAllBytes(copy, new byte[4096]);
-
-        using var stream = new FileStream(
-            copy, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite | FileShare.Delete);
-        using var map = MemoryMappedFile.CreateFromFile(
-            stream, null, 0, MemoryMappedFileAccess.ReadWrite, HandleInheritability.None, leaveOpen: true);
-        using var view = map.CreateViewAccessor();
+        var destination = Directory.CreateDirectory(Path.Combine(_root, "loaded-read-only")).FullName;
+        var copy = Path.Combine(destination, "payload.dll");
+        using var image = new LoadedImage(copy);
         File.SetAttributes(copy, File.GetAttributes(copy) | FileAttributes.ReadOnly | FileAttributes.Hidden);
         var before = File.GetAttributes(copy);
-        AssertTheDiscardsOpenIsGranted(destination, "payload.msi");
+        AssertTheDiscardsOpenIsGranted(destination, "payload.dll");
 
         Assert.False(_guard.TryDiscardCopy(copy, out _));
 
@@ -193,38 +184,50 @@ public sealed class DestinationGuardTests : IDisposable
     public void A_read_only_copy_the_older_form_cannot_delete_has_its_attribute_put_back_and_the_deletes_cause_kept()
     {
         var destination = Directory.CreateDirectory(Path.Combine(_root, "older-form-refused")).FullName;
-        var copy = Path.Combine(destination, "payload.msi");
-        File.WriteAllBytes(copy, new byte[4096]);
-
-        using var stream = new FileStream(
-            copy, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite | FileShare.Delete);
-        using var map = MemoryMappedFile.CreateFromFile(
-            stream, null, 0, MemoryMappedFileAccess.ReadWrite, HandleInheritability.None, leaveOpen: true);
-        using var view = map.CreateViewAccessor();
+        var copy = Path.Combine(destination, "payload.dll");
+        using var image = new LoadedImage(copy);
         File.SetAttributes(copy, File.GetAttributes(copy) | FileAttributes.ReadOnly | FileAttributes.Hidden);
         var before = File.GetAttributes(copy);
         // A read-only file is refused its delete whatever else holds it, so the refusal that
-        // counts here is the one a file with a section mapped over it gives once it is not
+        // counts here is the one a file with a library loaded from it gives once it is not
         // read-only; the cause kept is that one.
         File.SetAttributes(copy, before & ~FileAttributes.ReadOnly);
         var refusal = Record.Exception(() => File.Delete(copy));
         Assert.True(refusal is UnauthorizedAccessException or IOException,
-            $"the mapped file was not refused a delete (got {refusal?.GetType().Name ?? "no exception"})");
+            $"the file with a library loaded from it was not refused a delete (got {refusal?.GetType().Name ?? "no exception"})");
         File.SetAttributes(copy, before);
 
         bool deleted;
         int cause;
         using (var folder = DirectoryGuard.OpenDirectoryFollow(destination, out _))
-        using (var child = OpenTheCopyAsTheDiscardDoes(folder!, "payload.msi", out var attributes))
+        using (var child = OpenTheCopyAsTheDiscardDoes(folder!, "payload.dll", out var attributes))
         {
             deleted = DirectoryGuard.DeleteClearingReadOnly(child, attributes);
-            cause = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
+            cause = Marshal.GetLastPInvokeError();
         }
 
         Assert.False(deleted);
+        Assert.Equal(ErrorAccessDenied, cause);
         Assert.Equal(refusal!.HResult & 0xFFFF, cause);
         Assert.Equal(before, File.GetAttributes(copy));
         Assert.True(File.Exists(copy));
+    }
+
+    /// <summary>
+    /// A copy of a system library at the path given, loaded into this process until it is
+    /// disposed. Windows refuses to delete a file that a library is loaded from.
+    /// </summary>
+    private sealed class LoadedImage : IDisposable
+    {
+        private readonly nint _module;
+
+        public LoadedImage(string path)
+        {
+            File.Copy(Path.Combine(Environment.SystemDirectory, "version.dll"), path);
+            _module = NativeLibrary.Load(path);
+        }
+
+        public void Dispose() => NativeLibrary.Free(_module);
     }
 
     private static Microsoft.Win32.SafeHandles.SafeFileHandle OpenTheCopyAsTheDiscardDoes(
