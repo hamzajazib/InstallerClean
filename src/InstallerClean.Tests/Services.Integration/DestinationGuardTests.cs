@@ -1,3 +1,4 @@
+using System.IO.MemoryMappedFiles;
 using InstallerClean.Interop.Native;
 using InstallerClean.Services;
 
@@ -100,6 +101,32 @@ public sealed class DestinationGuardTests : IDisposable
         File.WriteAllText(Path.Combine(full, "keep.txt"), "x");
         Assert.False(_guard.TryRemoveEmptyFolder(full));
         Assert.True(Directory.Exists(full));
+    }
+
+    [Fact]
+    public void A_copy_whose_delete_is_refused_is_left_and_the_cause_the_delete_gave_is_recorded()
+    {
+        var destination = Directory.CreateDirectory(Path.Combine(_root, "mapped")).FullName;
+        var copy = Path.Combine(destination, "payload.msi");
+        File.WriteAllBytes(copy, new byte[4096]);
+
+        // A section mapped over the file makes Windows refuse its delete. The stream shares
+        // delete, so the discard's open asking for DELETE is granted, and the refusal comes
+        // from the delete itself.
+        using var stream = new FileStream(
+            copy, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite | FileShare.Delete);
+        using var map = MemoryMappedFile.CreateFromFile(
+            stream, null, 0, MemoryMappedFileAccess.ReadWrite, HandleInheritability.None, leaveOpen: true);
+        using var view = map.CreateViewAccessor();
+
+        var refusal = Record.Exception(() => File.Delete(copy));
+        Assert.True(refusal is UnauthorizedAccessException or IOException,
+            $"the mapped file was not refused a delete (got {refusal?.GetType().Name ?? "no exception"})");
+        Assert.True(File.Exists(copy));
+
+        Assert.False(_guard.TryDiscardCopy(copy, out var code));
+        Assert.NotEqual(0, code);
+        Assert.True(File.Exists(copy));
     }
 
     [Fact]

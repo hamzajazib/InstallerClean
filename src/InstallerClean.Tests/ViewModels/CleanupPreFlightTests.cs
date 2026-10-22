@@ -603,14 +603,12 @@ public class CleanupPreFlightTests
         var crashLogBefore = TestCrashLog.Text();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
-        // The write-failure body names the crash log where one was written, and says
-        // none could be where it was not; everything before the log's path is fixed.
+        // The write-failure body names the crash log the failure was written to;
+        // everything before the log's path is fixed.
         var withLogPrefix = string.Format(
             InstallerClean.Resources.Strings.Error_IOWriteDestination, _destination, "\0").Split('\0')[0];
-        var withoutLog = string.Format(
-            InstallerClean.Resources.Strings.Error_IOWriteDestination_NoLog, _destination);
         _dialogService.Received(1).ShowWarning(
-            Arg.Is<string>(body => body == withoutLog || body.StartsWith(withLogPrefix, StringComparison.Ordinal)),
+            Arg.Is<string>(body => body.StartsWith(withLogPrefix, StringComparison.Ordinal)),
             InstallerClean.Resources.Strings.Error_DestinationWriteFailedTitle);
         AssertFolderRemoved();
         _confirmationService.DidNotReceive().ConfirmMove(
@@ -657,10 +655,8 @@ public class CleanupPreFlightTests
 
         var withLogPrefix = string.Format(
             InstallerClean.Resources.Strings.Error_IOWriteDestination, _destination, "\0").Split('\0')[0];
-        var withoutLog = string.Format(
-            InstallerClean.Resources.Strings.Error_IOWriteDestination_NoLog, _destination);
         _dialogService.Received(1).ShowWarning(
-            Arg.Is<string>(body => body == withoutLog || body.StartsWith(withLogPrefix, StringComparison.Ordinal)),
+            Arg.Is<string>(body => body.StartsWith(withLogPrefix, StringComparison.Ordinal)),
             InstallerClean.Resources.Strings.Error_DestinationWriteFailedTitle);
         AssertFolderRemoved();
         _confirmationService.DidNotReceive().ConfirmMove(
@@ -685,6 +681,9 @@ public class CleanupPreFlightTests
         _dialogService.Received(1).ShowWarning(
             string.Format(InstallerClean.Resources.Strings.Error_AccessDeniedDestination, _destination),
             InstallerClean.Resources.Strings.Error_DestinationWriteFailedTitle);
+        // The folder was not there before, so the arm asks for its removal; it never
+        // appeared, and the removal finds nothing.
+        AssertFolderRemoved();
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
         Assert.False(vm.Cleanup.IsOperating);
