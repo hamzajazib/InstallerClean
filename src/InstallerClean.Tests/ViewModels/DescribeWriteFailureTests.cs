@@ -1,3 +1,4 @@
+using InstallerClean.Models;
 using InstallerClean.ViewModels;
 
 namespace InstallerClean.Tests.ViewModels;
@@ -7,34 +8,43 @@ public class DescribeWriteFailureTests
     private const string Dest = @"D:\backup\installer";
     private const string LogPath = @"C:\Users\Test\AppData\Local\InstallerClean\crash.log";
 
-    public static TheoryData<string> FailureNames => new(Failures.Keys);
+    private static Func<(string Path, bool Written)> WrittenTo(string path) => () => (path, true);
 
-    private static readonly Dictionary<string, Func<Exception>> Failures = new()
+    private static readonly Func<(string Path, bool Written)> NotWritten = () => (string.Empty, false);
+
+    private static readonly Dictionary<string, (Func<Exception> Create, bool NamesLog)> Failures = new()
     {
-        [nameof(UnauthorizedAccessException)] = () => new UnauthorizedAccessException("x"),
-        [nameof(PathTooLongException)] = () => new PathTooLongException("x"),
-        [nameof(DirectoryNotFoundException)] = () => new DirectoryNotFoundException("x"),
-        [nameof(FileNotFoundException)] = () => new FileNotFoundException("x"),
-        [nameof(IOException)] = () => new IOException("x"),
-        [nameof(InvalidOperationException)] = () => new InvalidOperationException("x"),
+        [nameof(UnauthorizedAccessException)] = (() => new UnauthorizedAccessException("x"), false),
+        [nameof(LocalisedAccessException)] = (() => new LocalisedAccessException("x", new IOException()), false),
+        [nameof(PathTooLongException)] = (() => new PathTooLongException("x"), false),
+        [nameof(DirectoryNotFoundException)] = (() => new DirectoryNotFoundException("x"), false),
+        [nameof(FileNotFoundException)] = (() => new FileNotFoundException("x"), true),
+        [nameof(DriveNotFoundException)] = (() => new DriveNotFoundException("x"), true),
+        [nameof(IOException)] = (() => new IOException("x"), true),
+        [nameof(InvalidOperationException)] = (() => new InvalidOperationException("x"), true),
     };
+
+    public static TheoryData<string> FailureNames => new(Failures.Keys);
 
     [Theory]
     [MemberData(nameof(FailureNames))]
     public void The_crash_log_is_written_exactly_where_the_message_names_it(string failureName)
     {
-        var ex = Failures[failureName]();
+        var (create, namesLog) = Failures[failureName];
+        var written = 0;
 
-        var named = CleanupViewModel.DescribeWriteFailure(Dest, ex, LogPath, logWritten: true).Contains(LogPath);
+        var message = CleanupViewModel.DescribeWriteFailure(
+            Dest, create(), () => { written++; return (LogPath, true); });
 
-        Assert.Equal(named, CleanupViewModel.WriteFailureNamesCrashLog(ex));
+        Assert.Equal(namesLog ? 1 : 0, written);
+        Assert.Equal(namesLog, message.Contains(LogPath));
     }
 
     [Fact]
     public void UnauthorizedAccess_mentions_permission_and_dest()
     {
         var msg = CleanupViewModel.DescribeWriteFailure(
-            Dest, new UnauthorizedAccessException("denied"), LogPath, logWritten: true);
+            Dest, new UnauthorizedAccessException("denied"), WrittenTo(LogPath));
 
         Assert.Contains("permission", msg, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(Dest, msg);
@@ -44,7 +54,7 @@ public class DescribeWriteFailureTests
     public void PathTooLong_mentions_shorter_path()
     {
         var msg = CleanupViewModel.DescribeWriteFailure(
-            Dest, new PathTooLongException("too long"), LogPath, logWritten: true);
+            Dest, new PathTooLongException("too long"), WrittenTo(LogPath));
 
         Assert.Contains("long", msg, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(Dest, msg);
@@ -54,7 +64,7 @@ public class DescribeWriteFailureTests
     public void DirectoryNotFound_mentions_drive_or_network()
     {
         var msg = CleanupViewModel.DescribeWriteFailure(
-            Dest, new DirectoryNotFoundException("missing"), LogPath, logWritten: true);
+            Dest, new DirectoryNotFoundException("missing"), WrittenTo(LogPath));
 
         Assert.Contains("does not exist", msg, StringComparison.OrdinalIgnoreCase);
     }
@@ -63,7 +73,7 @@ public class DescribeWriteFailureTests
     public void IOException_does_not_leak_inner_message_but_does_show_log_path()
     {
         var msg = CleanupViewModel.DescribeWriteFailure(
-            Dest, new IOException("the device is not ready"), LogPath, logWritten: true);
+            Dest, new IOException("the device is not ready"), WrittenTo(LogPath));
 
         Assert.DoesNotContain("the device is not ready", msg);
         Assert.Contains(LogPath, msg);
@@ -74,7 +84,7 @@ public class DescribeWriteFailureTests
     public void IOException_with_no_log_substitutes_log_failure_message()
     {
         var msg = CleanupViewModel.DescribeWriteFailure(
-            Dest, new IOException("the device is not ready"), LogPath, logWritten: false);
+            Dest, new IOException("the device is not ready"), NotWritten);
 
         Assert.DoesNotContain("the device is not ready", msg);
         Assert.DoesNotContain(LogPath, msg);
@@ -86,7 +96,7 @@ public class DescribeWriteFailureTests
     public void Unknown_exception_falls_through_to_generic_wording_without_inner_message()
     {
         var msg = CleanupViewModel.DescribeWriteFailure(
-            Dest, new InvalidOperationException("some other thing"), LogPath, logWritten: true);
+            Dest, new InvalidOperationException("some other thing"), WrittenTo(LogPath));
 
         Assert.DoesNotContain("some other thing", msg);
         Assert.Contains(LogPath, msg);
@@ -97,7 +107,7 @@ public class DescribeWriteFailureTests
     public void Unknown_exception_with_no_log_substitutes_log_failure_message()
     {
         var msg = CleanupViewModel.DescribeWriteFailure(
-            Dest, new InvalidOperationException("some other thing"), LogPath, logWritten: false);
+            Dest, new InvalidOperationException("some other thing"), NotWritten);
 
         Assert.DoesNotContain("some other thing", msg);
         Assert.DoesNotContain(LogPath, msg);
@@ -119,7 +129,7 @@ public class DescribeWriteFailureTests
 
         foreach (var ex in cases)
         {
-            var msg = CleanupViewModel.DescribeWriteFailure(Dest, ex, LogPath, logWritten: true);
+            var msg = CleanupViewModel.DescribeWriteFailure(Dest, ex, WrittenTo(LogPath));
             Assert.Contains(Dest, msg);
         }
     }

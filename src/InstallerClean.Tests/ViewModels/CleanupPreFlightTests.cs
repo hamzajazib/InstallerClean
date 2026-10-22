@@ -707,8 +707,10 @@ public class CleanupPreFlightTests
         _dialogService.Received(1).ShowWarning(
             string.Format(InstallerClean.Resources.Strings.Error_DestinationMissing, _destination),
             InstallerClean.Resources.Strings.Error_DestinationWriteFailedTitle);
+        AssertFolderRemoved();
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+        Assert.False(vm.Cleanup.IsOperating);
         // A mistake the message explains whole: the crash log is left as it was.
         Assert.Equal(crashLogBefore, TestCrashLog.Text());
     }

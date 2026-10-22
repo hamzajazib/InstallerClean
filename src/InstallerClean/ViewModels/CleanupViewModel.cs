@@ -878,9 +878,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         catch (LocalisedAccessException ex)
         {
             // A refusal of access to the write test adding its file or reading it
-            // back. Any other failure arrives at the arm below. Its message is a resx string naming the folder the user
-            // typed, so it is shown as it stands, and it is a refusal rather than a
-            // fault, so no crash log is written.
+            // back. Any other failure arrives at the arm below. Its message is a resx
+            // string naming the folder the user typed, so it is shown as it stands,
+            // and it is a refusal rather than a fault, so no crash log is written.
             IsOperating = false;
             OperationProgress = string.Empty;
             EndOperation();
@@ -893,13 +893,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             IsOperating = false;
             OperationProgress = string.Empty;
             // ex.Message stays out of the dialog: path-leak risk under elevation.
-            // The crash log is written only where the message names it.
-            var crash = WriteFailureNamesCrashLog(ex) ? CrashLog.TryWrite(ex) : (Path: string.Empty, Written: false);
+            var message = DescribeWriteFailure(dest, ex, () => CrashLog.TryWrite(ex));
             EndOperation();
             if (createdDestination) await RemoveCreatedDestinationAsync(dest);
-            _dialogService.ShowWarning(
-                DescribeWriteFailure(dest, ex, crash.Path, crash.Written),
-                Strings.Error_DestinationWriteFailedTitle);
+            _dialogService.ShowWarning(message, Strings.Error_DestinationWriteFailedTitle);
             return;
         }
         IsOperating = false;
@@ -2386,8 +2383,18 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// <paramref name="dest"/> is the user's own typed path so echoing
     /// it back is safe; <paramref name="ex"/>.Message is never routed
     /// through this method (path-leak risk under elevation).
+    /// <para>
+    /// A failure is written to the crash log exactly where its message names the log.
+    /// An IOException and any other type call <paramref name="writeCrashLog"/>, and the
+    /// message carries the path it returns, or says the log could not be written. A
+    /// refusal of access, a path too long and a folder that is not there are explained
+    /// whole by their messages, so <paramref name="writeCrashLog"/> is not called for them.
+    /// A path too long and a folder that is not there derive from IOException, so their
+    /// arms stay ahead of it.
+    /// </para>
     /// </summary>
-    internal static string DescribeWriteFailure(string dest, Exception ex, string logPath, bool logWritten) => ex switch
+    internal static string DescribeWriteFailure(
+        string dest, Exception ex, Func<(string Path, bool Written)> writeCrashLog) => ex switch
     {
         UnauthorizedAccessException =>
             string.Format(Strings.Error_AccessDeniedDestination, dest),
@@ -2395,22 +2402,16 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             string.Format(Strings.Error_PathTooLong, dest),
         DirectoryNotFoundException =>
             string.Format(Strings.Error_DestinationMissing, dest),
-        IOException => logWritten
-            ? string.Format(Strings.Error_IOWriteDestination, dest, logPath)
-            : string.Format(Strings.Error_IOWriteDestination_NoLog, dest),
-        _ => logWritten
-            ? string.Format(Strings.Error_WriteDestination, dest, logPath)
-            : string.Format(Strings.Error_WriteDestination_NoLog, dest),
+        IOException => NamingCrashLog(
+            dest, writeCrashLog, Strings.Error_IOWriteDestination, Strings.Error_IOWriteDestination_NoLog),
+        _ => NamingCrashLog(
+            dest, writeCrashLog, Strings.Error_WriteDestination, Strings.Error_WriteDestination_NoLog),
     };
 
-    /// <summary>
-    /// Whether <see cref="DescribeWriteFailure"/>'s message for <paramref name="ex"/>
-    /// names the crash log, which is where a destination-write failure is written to
-    /// it. A refusal of access, a path too long and a folder that is not there are
-    /// refusals and mistakes the message explains whole, so they write nothing; the
-    /// IOException and catch-all messages name the log and are written to it. Keep the
-    /// two in step: a type moved between them here moves in the switch above too.
-    /// </summary>
-    internal static bool WriteFailureNamesCrashLog(Exception ex) =>
-        ex is not (UnauthorizedAccessException or PathTooLongException or DirectoryNotFoundException);
+    private static string NamingCrashLog(
+        string dest, Func<(string Path, bool Written)> writeCrashLog, string withLog, string withoutLog)
+    {
+        var (path, written) = writeCrashLog();
+        return written ? string.Format(withLog, dest, path) : string.Format(withoutLog, dest);
+    }
 }
