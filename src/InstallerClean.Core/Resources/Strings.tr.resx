@@ -1591,6 +1591,9 @@ Ayrıntılar {1} içinde.</value></data>
        here would put an elevated framework message, which can carry a path
        out of another user's profile, in front of the user. -->
   <data name="Error.CannotWriteFolder" xml:space="preserve"><value>{0} konumuna yazılamıyor.</value></data>
+  <!-- 0 = folder, and nothing else, as above. Shown where the folder took the
+       write test's file and would not let it be read back. -->
+  <data name="Error.FolderWillNotGiveFilesBack" xml:space="preserve"><value>{0} konumuna dosya kaydedebilirsiniz ama onları yeniden açamazsınız, bu yüzden InstallerClean oraya dosya taşımaz.</value></data>
   <!-- 0 = file name -->
   <data name="Error.DestinationCollision" xml:space="preserve"><value>'{0}' adlı bir dosya yedek klasöründe zaten var.</value></data>
 

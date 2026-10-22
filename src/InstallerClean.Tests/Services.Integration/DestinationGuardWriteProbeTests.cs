@@ -7,18 +7,22 @@ using InstallerClean.Services;
 namespace InstallerClean.Tests.Services.Integration;
 
 /// <summary>
-/// The write probe against folders whose access list decides whether a file the probe
-/// creates can also be deleted. The probe asks for the right to delete the file as it
-/// creates it and marks it to go when its handle closes, so a folder that lets the
-/// account create a file and does not let it delete one refuses the create, and the
-/// folder is left with nothing in it.
+/// The write probe against four folders whose access lists decide what the account can do
+/// with a file put in them: a folder it cannot list; a folder it can list and add to whose
+/// files it can write and not read; one whose files it can read and write and not delete;
+/// and one whose files it can also delete. The probe passes the last two, whose files can
+/// be read back, and fails the first two.
+///
+/// Each test first holds what Windows lets the account do in that folder, with plain calls
+/// and a file made by the probe's own create less DELETE and delete-on-close, so a folder
+/// that is not the case under test fails there with its own message before the probe is
+/// asked. The probe then runs in a second folder with the same list, which nothing else
+/// has touched.
 ///
 /// Each folder carries a protected list naming this account alone, so no entry inherited
-/// from the temporary folder's parent, and no group the account's token holds, can supply
-/// the right to delete. The list gives the folder what the probe's open of it asks for
-/// and the right to add a file, and gives files the rights to read and write them. The
-/// folder's list never grants FILE_DELETE_CHILD, which would also satisfy a request to
-/// delete a file inside it.
+/// from the temporary folder's parent, and no group the account's token holds, can supply a
+/// right. The folder's list never grants FILE_DELETE_CHILD, which would also satisfy a
+/// request to delete a file inside it.
 /// </summary>
 public sealed class DestinationGuardWriteProbeTests : IDisposable
 {
@@ -35,16 +39,22 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
     // the probe's open of the folder asks for, and the right to add a file.
     private const string FolderRights = "0x1200AB";
 
-    // Inherited by files: FILE_READ_DATA, FILE_WRITE_DATA, FILE_APPEND_DATA, FILE_READ_EA,
-    // FILE_WRITE_EA, FILE_READ_ATTRIBUTES, FILE_WRITE_ATTRIBUTES, READ_CONTROL and
-    // SYNCHRONIZE. No DELETE.
-    private const string FileRightsWithoutDelete = "0x12019F";
+    // The same less FILE_LIST_DIRECTORY, so the probe's open of the folder is refused.
+    private const string FolderRightsWithoutList = "0x1200AA";
+
+    // Inherited by files: FILE_WRITE_DATA, FILE_APPEND_DATA, FILE_WRITE_EA,
+    // FILE_WRITE_ATTRIBUTES, READ_CONTROL and SYNCHRONIZE. No FILE_READ_DATA and no DELETE.
+    private const string FileRightsWriteOnly = "0x120116";
+
+    // FILE_READ_DATA, FILE_WRITE_DATA, FILE_APPEND_DATA, FILE_READ_EA, FILE_WRITE_EA,
+    // FILE_READ_ATTRIBUTES, FILE_WRITE_ATTRIBUTES, READ_CONTROL and SYNCHRONIZE. No DELETE.
+    private const string FileRightsReadWrite = "0x12019F";
 
     // The same with DELETE (0x10000) added.
-    private const string FileRightsWithDelete = "0x13019F";
+    private const string FileRightsReadWriteDelete = "0x13019F";
 
-    private static string ListGranting(string fileRights) =>
-        $"D:P(A;;{FolderRights};;;{ThisAccountSid})(A;OIIO;{fileRights};;;{ThisAccountSid})";
+    private static string ListGranting(string folderRights, string fileRights) =>
+        $"D:P(A;;{folderRights};;;{ThisAccountSid})(A;OIIO;{fileRights};;;{ThisAccountSid})";
 
     private static readonly string FullControlOnFolders =
         $"D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;FA;;;{ThisAccountSid})";
@@ -55,8 +65,8 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
     public void Dispose()
     {
         // The account created each folder and so may rewrite its list, which is how it is
-        // let back in to delete a file the probe's folder let it create. Full control on
-        // the folder includes FILE_DELETE_CHILD, and each file's own list is reset too.
+        // let back in to list a folder and delete the files in it. Each folder is reset
+        // before its files are listed, and each file's own list is reset too.
         List<string> folders;
         try { folders = Directory.EnumerateDirectories(_root).ToList(); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { folders = []; }
@@ -104,67 +114,153 @@ public sealed class DestinationGuardWriteProbeTests : IDisposable
         return path;
     }
 
-    private static void AssertTheProbeOpensTheFolder(string folder)
+    private static void AssertTheProbeAsksWhatThisTestAssumes()
     {
-        // Without this a refusal at the open of the folder would answer false with the same
-        // code as a refusal of the create, and the assertions below could not tell them apart.
-        using var opened = DirectoryGuard.OpenDirectoryFollow(folder, out var failureCode);
-        Assert.True(opened is not null, $"the probe could not open the folder (Win32 error {failureCode})");
-    }
-
-    private static FileStream CreateMarkedToDeleteOnClose(string folder) =>
-        new(Path.Combine(folder, "marked-to-delete"), FileMode.CreateNew, FileAccess.Write,
-            FileShare.None, bufferSize: 1, FileOptions.DeleteOnClose);
-
-    [Fact]
-    public void A_folder_that_grants_a_create_but_not_a_delete_fails_the_probe_and_is_left_empty()
-    {
-        var folder = MakeFolder(ListGranting(FileRightsWithoutDelete));
-        AssertTheProbeOpensTheFolder(folder);
-
-        // The probe has to ask for the right to delete and for the file to go as its handle
-        // closes, or a folder withholding DELETE is not what refuses it.
+        // The create asks for the right to delete and for the file to go as its handle
+        // closes, so the probe leaves nothing; the second open asks to read the file's
+        // bytes, which the file's own list decides.
         Assert.NotEqual(0u, DirectoryGuard.ProbeAccess & Ntdll.DELETE);
         Assert.NotEqual(0u, DirectoryGuard.ProbeOptions & Ntdll.FILE_DELETE_ON_CLOSE);
+        Assert.NotEqual(0u, DirectoryGuard.ReadBackAccess & Ntdll.FILE_READ_DATA);
+    }
 
-        // The folder has to refuse a create that asks to delete the file, or this is a
-        // test of a folder that does not.
-        var refusal = Record.Exception(() => CreateMarkedToDeleteOnClose(folder).Dispose());
-        Assert.True(refusal is UnauthorizedAccessException,
-            "the folder let this account create a file marked to delete on close, so it is not a folder "
-            + $"that grants a create and refuses a delete (got {refusal?.GetType().Name ?? "no exception"})");
-        Assert.Empty(Directory.EnumerateFileSystemEntries(folder));
+    private static void AssertTheFolderOpens(string folder)
+    {
+        // Without this a refusal at the open of the folder would answer false with the same
+        // code as a refusal later in the probe, and the assertions below could not tell them apart.
+        using var opened = DirectoryGuard.OpenDirectoryFollow(folder, out var failureCode);
+        Assert.True(opened is not null, $"the probe's open of the folder was refused (Win32 error {failureCode})");
+    }
 
-        Assert.False(_guard.TryProbeWritable(folder, out var failureCode));
-        Assert.Equal(AccessDenied, failureCode);
-        Assert.Empty(Directory.EnumerateFileSystemEntries(folder));
-
-        // And the folder does let this account create a file when the create is the probe's own
-        // minus DELETE and FILE_DELETE_ON_CLOSE. Last, because it leaves one.
+    private static string CreateFileLikeTheProbeLessDelete(string folder, string leaf)
+    {
+        // The probe's own create through the folder's handle, with DELETE and
+        // FILE_DELETE_ON_CLOSE taken out, so the file stays when the handle closes.
         using var directory = DirectoryGuard.OpenDirectoryFollow(folder, out _);
         Assert.NotNull(directory);
         using var created = DirectoryGuard.OpenChildNoFollow(
-            directory, "plain", DirectoryGuard.ProbeAccess & ~Ntdll.DELETE, Ntdll.FILE_CREATE,
+            directory, leaf, DirectoryGuard.ProbeAccess & ~Ntdll.DELETE, Ntdll.FILE_CREATE,
             DirectoryGuard.ProbeOptions & ~Ntdll.FILE_DELETE_ON_CLOSE, out var status);
         Assert.True(created is not null,
             "the folder refused the probe's create without DELETE and FILE_DELETE_ON_CLOSE "
             + $"(Win32 error {Ntdll.RtlNtStatusToDosError(status)})");
-        Assert.Single(Directory.EnumerateFileSystemEntries(folder));
+        return Path.Combine(folder, leaf);
+    }
+
+    private static void AssertReadRefused(string file) =>
+        AssertRefused(() => File.ReadAllBytes(file), "reading a file in the folder");
+
+    private static void AssertReadAllowed(string file) =>
+        AssertAllowed(() => File.ReadAllBytes(file), "reading a file in the folder");
+
+    private static void AssertDeleteRefused(string file)
+    {
+        AssertRefused(() => File.Delete(file), "deleting a file in the folder");
+        Assert.True(File.Exists(file), "a file whose delete was refused is gone");
+    }
+
+    private static void AssertRefused(Action act, string what)
+    {
+        var thrown = Record.Exception(act);
+        Assert.True(thrown is UnauthorizedAccessException,
+            $"{what} was expected to be refused (got {thrown?.GetType().Name ?? "no exception"})");
+    }
+
+    private static void AssertAllowed(Action act, string what)
+    {
+        var thrown = Record.Exception(act);
+        Assert.True(thrown is null, $"{what} was expected to be allowed (got {thrown?.GetType().Name})");
     }
 
     [Fact]
-    public void A_folder_that_grants_a_create_and_a_delete_passes_the_probe_and_is_left_empty()
+    public void A_folder_the_account_cannot_list_fails_the_probe_at_the_open_of_the_folder()
     {
-        var folder = MakeFolder(ListGranting(FileRightsWithDelete));
-        AssertTheProbeOpensTheFolder(folder);
+        AssertTheProbeAsksWhatThisTestAssumes();
+        var accessList = ListGranting(FolderRightsWithoutList, FileRightsWriteOnly);
 
-        // The control for the test above: the same list with DELETE added on files, so
-        // the create marked to delete on close is allowed and removes its file as it closes.
-        CreateMarkedToDeleteOnClose(folder).Dispose();
+        // What Windows lets the account do there: its open of the folder is refused.
+        var facts = MakeFolder(accessList);
+        using (var opened = DirectoryGuard.OpenDirectoryFollow(facts, out var openCode))
+        {
+            Assert.True(opened is null, "the folder let this account open it for reading, so it is not a folder it cannot list");
+            Assert.Equal(AccessDenied, openCode);
+        }
+
+        var folder = MakeFolder(accessList);
+        Assert.False(_guard.TryProbeWritable(folder, out var failureCode, out var readBackRefused));
+        Assert.Equal(AccessDenied, failureCode);
+        Assert.False(readBackRefused);
+    }
+
+    [Fact]
+    public void A_folder_whose_files_cannot_be_read_fails_the_probe_at_the_read_back_and_is_left_empty()
+    {
+        AssertTheProbeAsksWhatThisTestAssumes();
+        var accessList = ListGranting(FolderRights, FileRightsWriteOnly);
+
+        // What Windows lets the account do there: it can put a file in, and cannot read it or
+        // delete it, so discarding a copy there is refused too.
+        var facts = MakeFolder(accessList);
+        AssertTheFolderOpens(facts);
+        var file = CreateFileLikeTheProbeLessDelete(facts, "copy.msi");
+        AssertReadRefused(file);
+        AssertDeleteRefused(file);
+        Assert.False(_guard.TryDiscardCopy(file, out var discardCode));
+        Assert.Equal(AccessDenied, discardCode);
+
+        var folder = MakeFolder(accessList);
+        Assert.False(_guard.TryProbeWritable(folder, out var failureCode, out var readBackRefused));
+        Assert.Equal(AccessDenied, failureCode);
+        Assert.True(readBackRefused);
         Assert.Empty(Directory.EnumerateFileSystemEntries(folder));
+    }
 
-        Assert.True(_guard.TryProbeWritable(folder, out var failureCode));
+    [Fact]
+    public void A_folder_whose_files_can_be_read_and_not_deleted_passes_the_probe_and_is_left_empty()
+    {
+        AssertTheProbeAsksWhatThisTestAssumes();
+        var accessList = ListGranting(FolderRights, FileRightsReadWrite);
+
+        // What Windows lets the account do there: it can put a file in and read it, and
+        // cannot delete it, so discarding a copy there is refused.
+        var facts = MakeFolder(accessList);
+        AssertTheFolderOpens(facts);
+        var file = CreateFileLikeTheProbeLessDelete(facts, "copy.msi");
+        AssertReadAllowed(file);
+        AssertDeleteRefused(file);
+        Assert.False(_guard.TryDiscardCopy(file, out var discardCode));
+        Assert.Equal(AccessDenied, discardCode);
+
+        var folder = MakeFolder(accessList);
+        Assert.True(_guard.TryProbeWritable(folder, out var failureCode, out var readBackRefused));
         Assert.Equal(0, failureCode);
+        Assert.False(readBackRefused);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(folder));
+    }
+
+    [Fact]
+    public void A_folder_whose_files_can_be_read_and_deleted_passes_the_probe_and_is_left_empty()
+    {
+        AssertTheProbeAsksWhatThisTestAssumes();
+        var accessList = ListGranting(FolderRights, FileRightsReadWriteDelete);
+
+        // What Windows lets the account do there: it can put a file in, read it and delete
+        // it, and discarding a copy there removes it.
+        var facts = MakeFolder(accessList);
+        AssertTheFolderOpens(facts);
+        var file = CreateFileLikeTheProbeLessDelete(facts, "copy.msi");
+        AssertReadAllowed(file);
+        AssertAllowed(() => File.Delete(file), "deleting a file in the folder");
+        Assert.False(File.Exists(file));
+        var copy = CreateFileLikeTheProbeLessDelete(facts, "copy-2.msi");
+        Assert.True(_guard.TryDiscardCopy(copy, out var discardCode));
+        Assert.Equal(0, discardCode);
+        Assert.False(File.Exists(copy));
+
+        var folder = MakeFolder(accessList);
+        Assert.True(_guard.TryProbeWritable(folder, out var failureCode, out var readBackRefused));
+        Assert.Equal(0, failureCode);
+        Assert.False(readBackRefused);
         Assert.Empty(Directory.EnumerateFileSystemEntries(folder));
     }
 }

@@ -308,6 +308,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The backup folder needs to be a full path to a folder, starting with a drive letter or a network share (for example D:\Backup, or \\server\backup). InstallerClean can't use this one: {0} | バックアップフォルダーは、ドライブ文字またはネットワーク共有で始まる、フォルダーへの完全なパスである必要があります(例：D:\Backup、または \\server\backup)。InstallerClean はこれを使えません：{0} |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then Re-scan and try again. | InstallerClean はバックアップフォルダーを確認できなくなったため、停止しました。{0} を確認してから、再スキャンしてもう一度お試しください。 |
 | Cannot write to {0}. | {0} に書き込めません。 |
+| You can save files in {0} but not open them again, so InstallerClean won't move files there. | {0} にはファイルを保存できますが、もう一度開くことはできないため、InstallerClean はそこへファイルを移動しません。 |
 | A file called '{0}' is already in the backup folder. | '{0}' という名前のファイルはすでにバックアップフォルダーにあります。 |
 
 ## Update check

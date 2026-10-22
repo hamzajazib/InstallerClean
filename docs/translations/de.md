@@ -308,6 +308,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The backup folder needs to be a full path to a folder, starting with a drive letter or a network share (for example D:\Backup, or \\server\backup). InstallerClean can't use this one: {0} | Der Sicherungsordner muss ein vollständiger Pfad zu einem Ordner sein, beginnend mit einem Laufwerksbuchstaben oder einer Netzwerkfreigabe (zum Beispiel D:\Backup oder \\server\backup). InstallerClean kann diesen hier nicht verwenden: {0} |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then Re-scan and try again. | InstallerClean konnte den Sicherungsordner nicht mehr bestätigen und hat deshalb angehalten. Prüfe {0}, dann Neu scannen und noch einmal versuchen. |
 | Cannot write to {0}. | Schreiben in {0} nicht möglich. |
+| You can save files in {0} but not open them again, so InstallerClean won't move files there. | Du kannst Dateien in {0} speichern, aber nicht wieder öffnen, deshalb verschiebt InstallerClean keine Dateien dorthin. |
 | A file called '{0}' is already in the backup folder. | Eine Datei namens '{0}' liegt bereits im Sicherungsordner. |
 
 ## Update check

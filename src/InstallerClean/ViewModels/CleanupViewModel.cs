@@ -806,15 +806,21 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             createdDestination = !_fs.Directory.Exists(dest);
             _fs.Directory.CreateDirectory(dest);
             probeToken.ThrowIfCancellationRequested();
-            // The guard writes and removes a write-test file through a handle
-            // opened on the folder, so a folder another account can write cannot
-            // steer the test to another file, and it leaves nothing behind. A
-            // folder that takes a file and will not give it back is not writable
-            // for a Move, and the throw here refuses the destination.
-            if (!_destinationGuard.TryProbeWritable(dest, out var failureCode))
-                throw new IOException(
-                    string.Format(Strings.Error_CannotWriteFolder, dest),
-                    new System.ComponentModel.Win32Exception(failureCode));
+            // The guard writes a write-test file through a handle opened on the
+            // folder, opens it again to read it, and removes it, so a folder
+            // another account can write cannot steer the test to another file,
+            // and it leaves nothing behind. A folder that will not take the file,
+            // or takes it and will not let it be read back, is not writable for a
+            // Move, and the throw here refuses the destination. The second case
+            // carries its own message, shown as it stands by the arm below.
+            if (!_destinationGuard.TryProbeWritable(dest, out var failureCode, out var readBackRefused))
+            {
+                var cause = new System.ComponentModel.Win32Exception(failureCode);
+                if (readBackRefused)
+                    throw new LocalisedAccessException(
+                        string.Format(Strings.Error_FolderWillNotGiveFilesBack, dest), cause);
+                throw new IOException(string.Format(Strings.Error_CannotWriteFolder, dest), cause);
+            }
             probeToken.ThrowIfCancellationRequested();
 
             // A same-volume move is a rename and consumes no space, so the
@@ -861,6 +867,19 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             OperationProgress = string.Empty;
             EndOperation();
             if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+            return;
+        }
+        catch (LocalisedAccessException ex)
+        {
+            // The probe's refusal of a folder that takes a file and will not let it
+            // be read back. Its message is a resx string naming the folder the user
+            // typed, so it is shown as it stands, and it is a refusal rather than a
+            // fault, so no crash log is written.
+            IsOperating = false;
+            OperationProgress = string.Empty;
+            EndOperation();
+            if (createdDestination) await RemoveCreatedDestinationAsync(dest);
+            _dialogService.ShowWarning(ex.Message, Strings.Error_DestinationWriteFailedTitle);
             return;
         }
         catch (Exception ex)

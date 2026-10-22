@@ -554,6 +554,7 @@ const MAP = {
   'Automation.UpdateNotice.ScoopCommand': `Scoop 更新命令`,
   'Cli.UpdateInUse': `InstallerClean 正在使用中，因此現在無法自行更新。`,
   'Cli.CancellingAfterUpdate': `將在更新完成後取消...`,
+  'Error.FolderWillNotGiveFilesBack': `您可以在 {0} 中儲存檔案，但無法再次開啟，因此 InstallerClean 不會將檔案移到那裡。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -308,6 +308,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The backup folder needs to be a full path to a folder, starting with a drive letter or a network share (for example D:\Backup, or \\server\backup). InstallerClean can't use this one: {0} | 백업 폴더는 드라이브 문자나 네트워크 공유로 시작하는 폴더의 전체 경로여야 합니다(예: D:\Backup 또는 \\server\backup). InstallerClean은 이 경로를 사용할 수 없습니다: {0} |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then Re-scan and try again. | InstallerClean이 백업 폴더를 더 이상 확인할 수 없어서, 중단했습니다. {0}을(를) 확인한 다음 다시 검사하고 다시 시도하세요. |
 | Cannot write to {0}. | {0}에 쓸 수 없습니다. |
+| You can save files in {0} but not open them again, so InstallerClean won't move files there. | {0}에 파일을 저장할 수는 있지만 다시 열 수는 없으므로 InstallerClean은 그곳으로 파일을 이동하지 않습니다. |
 | A file called '{0}' is already in the backup folder. | '{0}'(이)라는 이름의 파일이 이미 백업 폴더에 있습니다. |
 
 ## Update check

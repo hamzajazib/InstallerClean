@@ -15,17 +15,10 @@ namespace InstallerClean.Tests.Services;
 /// (case-insensitivity, locked files, junction handling, read-only
 /// destinations); these unit tests prove the per-file error
 /// categorisation, the destination-collision refusal, and the cancellation
-/// path without touching the disk at all.
-///
-/// Deliberately uncovered: the ProbeDestinationWriteable failure
-/// path. MockFileSystem does not enforce a read-only directory
-/// attribute, and the real-filesystem test would require dropping
-/// the test process's write permission on a temp folder, which CI on
-/// shared agents may refuse. The probe is exercised indirectly by
-/// the existing destination-write integration tests; if a regression
-/// reaches the production read-only path the user sees the localised
-/// "cannot write to {dest}" message via DescribeWriteFailure, not a
-/// silent swallow.
+/// path without touching the disk at all. A refused write probe is
+/// driven through a substituted destination guard, which is how the
+/// message for each kind of refusal is held here; what Windows answers
+/// on real folders is DestinationGuardWriteProbeTests' job.
 /// </summary>
 public class MoveFilesServiceUnitTests
 {
@@ -859,6 +852,37 @@ public class MoveFilesServiceUnitTests
             ex.Message);
         Assert.False(fs.Directory.Exists(InsideSystemFolder));
         Assert.True(fs.File.Exists(source));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_refused_write_probe_stops_the_move_with_the_message_for_its_refusal(bool readBackRefused)
+    {
+        var fs = new MockFileSystem();
+        var source = $@"{SourceDir}\a.msi";
+        fs.AddFile(source, new MockFileData("payload"));
+        fs.AddDirectory(DestDir);
+        var guard = Substitute.For<IDestinationGuard>();
+        guard.TryProbeWritable(Arg.Any<string>(), out Arg.Any<int>(), out Arg.Any<bool>())
+            .Returns(call =>
+            {
+                call[1] = 5;
+                call[2] = readBackRefused;
+                return false;
+            });
+
+        var svc = new MoveFilesService(fs, NullMutexProbe.Instance, installerFolderOverride: null, destinationGuard: guard);
+        var ex = await Assert.ThrowsAsync<LocalisedAccessException>(() =>
+            svc.MoveFilesAsync(new[] { source }, DestDir, UnderLeaseClaims.None));
+
+        var expected = readBackRefused
+            ? InstallerClean.Resources.Strings.Error_FolderWillNotGiveFilesBack
+            : InstallerClean.Resources.Strings.Error_CannotWriteFolder;
+        Assert.Equal(string.Format(expected, DestDir), ex.Message);
+        Assert.Equal(5, Assert.IsType<System.ComponentModel.Win32Exception>(ex.InnerException).NativeErrorCode);
+        Assert.True(fs.File.Exists(source));
+        Assert.False(fs.File.Exists($@"{DestDir}\a.msi"));
     }
 
     // The destination guard's classification, at every combination of its four

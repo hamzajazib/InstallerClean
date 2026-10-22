@@ -562,6 +562,7 @@ Ayrıntılar şuraya yazıldı:
   'Automation.UpdateNotice.ScoopCommand': `Scoop güncelleme komutu`,
   'Cli.UpdateInUse': `InstallerClean kullanımda olduğu için şu anda kendini güncelleyemiyor.`,
   'Cli.CancellingAfterUpdate': `Güncelleştirme bittiğinde iptal edilecek...`,
+  'Error.FolderWillNotGiveFilesBack': `{0} konumuna dosya kaydedebilirsiniz ama onları yeniden açamazsınız, bu yüzden InstallerClean oraya dosya taşımaz.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

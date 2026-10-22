@@ -37,6 +37,7 @@ public class DialogHeadingBodyTests
         { Strings.Error_DestinationWriteFailedTitle, Strings.Error_WriteDestination },
         { Strings.Error_DestinationWriteFailedTitle, Strings.Error_WriteDestination_NoLog },
         { Strings.Error_DestinationWriteFailedTitle, Strings.Error_CannotWriteFolder },
+        { Strings.Error_DestinationWriteFailedTitle, Strings.Error_FolderWillNotGiveFilesBack },
         { Strings.Error_MoveInstallerLockUnavailableTitle, Strings.Error_MoveInstallerLockUnavailable },
         { Strings.Error_InstallerLockUnavailableTitle, Strings.Error_InstallerLockUnavailable },
         // The same two headings over the access-refused bodies: one refusal, two

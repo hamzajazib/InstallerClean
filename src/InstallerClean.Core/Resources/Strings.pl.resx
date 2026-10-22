@@ -1591,6 +1591,9 @@ Szczegóły w {1}.</value></data>
        here would put an elevated framework message, which can carry a path
        out of another user's profile, in front of the user. -->
   <data name="Error.CannotWriteFolder" xml:space="preserve"><value>Nie można zapisać w {0}.</value></data>
+  <!-- 0 = folder, and nothing else, as above. Shown where the folder took the
+       write test's file and would not let it be read back. -->
+  <data name="Error.FolderWillNotGiveFilesBack" xml:space="preserve"><value>Możesz zapisywać pliki w {0}, ale nie możesz ich ponownie otworzyć, więc InstallerClean nie przeniesie tam plików.</value></data>
   <!-- 0 = file name -->
   <data name="Error.DestinationCollision" xml:space="preserve"><value>Plik o nazwie „{0}” już jest w folderze kopii zapasowej.</value></data>
 

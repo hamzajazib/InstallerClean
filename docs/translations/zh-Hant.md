@@ -308,6 +308,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The backup folder needs to be a full path to a folder, starting with a drive letter or a network share (for example D:\Backup, or \\server\backup). InstallerClean can't use this one: {0} | 備份資料夾必須是指向某個資料夾的完整路徑，以磁碟機代號或網路共用資料夾開頭（例如 D:\Backup 或 \\server\backup）。InstallerClean 無法使用這個路徑：{0} |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then Re-scan and try again. | InstallerClean 已無法確認備份資料夾，因此沒有再繼續。請檢查 {0}，然後重新掃描並再試一次。 |
 | Cannot write to {0}. | 無法寫入 {0}。 |
+| You can save files in {0} but not open them again, so InstallerClean won't move files there. | 您可以在 {0} 中儲存檔案，但無法再次開啟，因此 InstallerClean 不會將檔案移到那裡。 |
 | A file called '{0}' is already in the backup folder. | 備份資料夾中已經有一個名為「{0}」的檔案。 |
 
 ## Update check

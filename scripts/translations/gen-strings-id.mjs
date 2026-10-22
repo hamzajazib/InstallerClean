@@ -661,6 +661,7 @@ const MAP = {
   'Automation.UpdateNotice.ScoopCommand': `Perintah pembaruan Scoop`,
   'Cli.UpdateInUse': `InstallerClean sedang digunakan, jadi tidak dapat memperbarui dirinya sekarang.`,
   'Cli.CancellingAfterUpdate': `Membatalkan setelah pembaruan selesai...`,
+  'Error.FolderWillNotGiveFilesBack': `Anda bisa menyimpan file di {0}, tetapi tidak bisa membukanya lagi, jadi InstallerClean tidak akan memindahkan file ke sana.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

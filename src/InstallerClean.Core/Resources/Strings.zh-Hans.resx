@@ -1591,6 +1591,9 @@ InstallerClean 本来就以管理员身份运行，所以再那样启动一次�
        here would put an elevated framework message, which can carry a path
        out of another user's profile, in front of the user. -->
   <data name="Error.CannotWriteFolder" xml:space="preserve"><value>无法写入 {0}。</value></data>
+  <!-- 0 = folder, and nothing else, as above. Shown where the folder took the
+       write test's file and would not let it be read back. -->
+  <data name="Error.FolderWillNotGiveFilesBack" xml:space="preserve"><value>您可以在 {0} 中保存文件，但无法再次打开它们，因此 InstallerClean 不会将文件移动到那里。</value></data>
   <!-- 0 = file name -->
   <data name="Error.DestinationCollision" xml:space="preserve"><value>备份文件夹中已经有一个名为“{0}”的文件。</value></data>
 

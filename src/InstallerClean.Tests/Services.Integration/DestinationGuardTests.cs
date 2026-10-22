@@ -23,15 +23,17 @@ public sealed class DestinationGuardTests : IDisposable
     [Fact]
     public void A_writable_folder_passes_the_probe_and_nothing_is_left_behind()
     {
-        Assert.True(_guard.TryProbeWritable(_root, out _));
+        Assert.True(_guard.TryProbeWritable(_root, out _, out var readBackRefused));
+        Assert.False(readBackRefused);
         Assert.Empty(Directory.EnumerateFileSystemEntries(_root));
     }
 
     [Fact]
     public void A_folder_that_is_not_there_fails_the_probe_with_a_cause()
     {
-        Assert.False(_guard.TryProbeWritable(Path.Combine(_root, "missing"), out var code));
+        Assert.False(_guard.TryProbeWritable(Path.Combine(_root, "missing"), out var code, out var readBackRefused));
         Assert.NotEqual(0, code);
+        Assert.False(readBackRefused);
     }
 
     [Fact]
@@ -70,7 +72,7 @@ public sealed class DestinationGuardTests : IDisposable
             return;
         }
 
-        Assert.True(_guard.TryProbeWritable(linkedDestination, out _));
+        Assert.True(_guard.TryProbeWritable(linkedDestination, out _, out _));
         Assert.Empty(Directory.EnumerateFileSystemEntries(target));
     }
 

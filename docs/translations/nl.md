@@ -308,6 +308,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The backup folder needs to be a full path to a folder, starting with a drive letter or a network share (for example D:\Backup, or \\server\backup). InstallerClean can't use this one: {0} | De back-upmap moet een volledig pad naar een map zijn, beginnend met een stationsletter of een netwerkshare (bijvoorbeeld D:\Backup of \\server\backup). InstallerClean kan deze niet gebruiken: {0} |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then Re-scan and try again. | InstallerClean kon de back-upmap niet meer bevestigen en is gestopt. Controleer {0}, klik daarna op Opnieuw scannen en probeer het opnieuw. |
 | Cannot write to {0}. | Kan niet schrijven naar {0}. |
+| You can save files in {0} but not open them again, so InstallerClean won't move files there. | Je kunt bestanden opslaan in {0}, maar ze niet opnieuw openen, dus InstallerClean verplaatst er geen bestanden naartoe. |
 | A file called '{0}' is already in the backup folder. | Er staat al een bestand met de naam '{0}' in de back-upmap. |
 
 ## Update check

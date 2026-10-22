@@ -1591,6 +1591,9 @@ InstallerClean はすでに管理者として実行されていたため、同�
        here would put an elevated framework message, which can carry a path
        out of another user's profile, in front of the user. -->
   <data name="Error.CannotWriteFolder" xml:space="preserve"><value>{0} に書き込めません。</value></data>
+  <!-- 0 = folder, and nothing else, as above. Shown where the folder took the
+       write test's file and would not let it be read back. -->
+  <data name="Error.FolderWillNotGiveFilesBack" xml:space="preserve"><value>{0} にはファイルを保存できますが、もう一度開くことはできないため、InstallerClean はそこへファイルを移動しません。</value></data>
   <!-- 0 = file name -->
   <data name="Error.DestinationCollision" xml:space="preserve"><value>'{0}' という名前のファイルはすでにバックアップフォルダーにあります。</value></data>
 

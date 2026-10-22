@@ -1591,6 +1591,9 @@ InstallerClean уже працював від імені адміністрат�
        here would put an elevated framework message, which can carry a path
        out of another user's profile, in front of the user. -->
   <data name="Error.CannotWriteFolder" xml:space="preserve"><value>Не вдається записати в {0}.</value></data>
+  <!-- 0 = folder, and nothing else, as above. Shown where the folder took the
+       write test's file and would not let it be read back. -->
+  <data name="Error.FolderWillNotGiveFilesBack" xml:space="preserve"><value>Ви можете зберігати файли в {0}, але не можете знову їх відкрити, тому InstallerClean не переміщуватиме туди файли.</value></data>
   <!-- 0 = file name -->
   <data name="Error.DestinationCollision" xml:space="preserve"><value>Файл з іменем «{0}» уже є в папці резервних копій.</value></data>
 

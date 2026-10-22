@@ -561,6 +561,30 @@ public class CleanupPreFlightTests
     }
 
     [Fact]
+    public async Task A_folder_that_will_not_let_the_probe_file_be_read_back_is_refused_with_its_own_message()
+    {
+        _file.ReadAllBytes(Arg.Any<string>()).Returns(_ => throw new UnauthorizedAccessException("read refused"));
+
+        var vm = CreateViewModel();
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = _destination;
+
+        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        _dialogService.Received(1).ShowWarning(
+            string.Format(InstallerClean.Resources.Strings.Error_FolderWillNotGiveFilesBack, _destination),
+            InstallerClean.Resources.Strings.Error_DestinationWriteFailedTitle);
+        AssertFolderRemoved();
+        _confirmationService.DidNotReceive().ConfirmMove(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+        await _moveService.DidNotReceive().MoveFilesAsync(
+            Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
+            Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
+        Assert.False(vm.Cleanup.IsOperating);
+        Assert.Equal(string.Empty, vm.Cleanup.OperationProgress);
+    }
+
+    [Fact]
     public async Task Cancelling_the_confirmation_leaves_a_folder_that_was_already_there()
     {
         _directory.Exists(_destination).Returns(true);

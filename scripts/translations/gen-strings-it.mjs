@@ -569,6 +569,7 @@ const MAP = {
   'Automation.UpdateNotice.ScoopCommand': `Comando di aggiornamento di Scoop`,
   'Cli.UpdateInUse': `InstallerClean è in uso, quindi ora non può aggiornarsi.`,
   'Cli.CancellingAfterUpdate': `Annullamento al termine dell'aggiornamento...`,
+  'Error.FolderWillNotGiveFilesBack': `Puoi salvare file in {0} ma non riaprirli, quindi InstallerClean non sposterà file lì.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

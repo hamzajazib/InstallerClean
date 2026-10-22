@@ -526,6 +526,7 @@ const MAP = {
   'UpdateNotice.CopyFailed': `Не удалось скопировать. Выделите команду и скопируйте её вручную.`,
   'Automation.UpdateNotice.CopyCommand': `Копировать команду`,
   'Automation.UpdateNotice.ScoopCommand': `Команда обновления Scoop`,
+  'Error.FolderWillNotGiveFilesBack': `Вы можете сохранять файлы в {0}, но не можете снова открыть их, поэтому InstallerClean не будет перемещать туда файлы.`,
 };
 
 // Russian CLDR-category overrides beyond the neutral one/other split. They do NOT

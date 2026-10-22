@@ -308,6 +308,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The backup folder needs to be a full path to a folder, starting with a drive letter or a network share (for example D:\Backup, or \\server\backup). InstallerClean can't use this one: {0} | Thư mục sao lưu phải là một đường dẫn đầy đủ tới một thư mục, bắt đầu bằng ký tự ổ đĩa hoặc một chia sẻ mạng (ví dụ D:\Backup, hoặc \\server\backup). InstallerClean không dùng được cái này: {0} |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then Re-scan and try again. | InstallerClean không còn xác nhận được thư mục sao lưu, nên đã dừng lại. Hãy kiểm tra {0}, rồi Quét lại và thử lần nữa. |
 | Cannot write to {0}. | Không thể ghi vào {0}. |
+| You can save files in {0} but not open them again, so InstallerClean won't move files there. | Bạn có thể lưu tệp vào {0} nhưng không thể mở lại chúng, nên InstallerClean sẽ không chuyển tệp vào đó. |
 | A file called '{0}' is already in the backup folder. | Đã có một tệp tên '{0}' trong thư mục sao lưu. |
 
 ## Update check

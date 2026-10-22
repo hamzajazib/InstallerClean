@@ -290,23 +290,54 @@ internal static class DirectoryGuard
     internal const uint ProbeOptions = Ntdll.FILE_NON_DIRECTORY_FILE | Ntdll.FILE_DELETE_ON_CLOSE;
 
     /// <summary>
-    /// Whether <paramref name="folder"/> accepts a file and gives it back, tested
-    /// through a handle opened on the folder. A random-named child is created relative
-    /// to that handle asking for the right to write it and the right to delete it, and
-    /// removed as the handle closes, so a folder that grants a create but not a delete
-    /// fails the create and the probe leaves nothing behind. False where the folder
-    /// cannot be opened or the create is refused.
+    /// The access the write probe's second open asks for: to read the file's bytes.
+    /// Not attributes alone, which any account that can list the folder is granted on
+    /// every file in it.
     /// </summary>
-    internal static bool TryProbeWritable(string folder, out int failureCode)
+    internal const uint ReadBackAccess = Ntdll.FILE_READ_DATA;
+
+    /// <summary>The options the write probe's second open passes: a file, opened as itself where it is a link.</summary>
+    internal const uint ReadBackOptions = Ntdll.FILE_NON_DIRECTORY_FILE | Ntdll.FILE_OPEN_REPARSE_POINT;
+
+    /// <summary>
+    /// Whether <paramref name="folder"/> accepts a file and lets it be read back, tested
+    /// through a handle opened on the folder. A random-named child is created relative
+    /// to that handle, asking for the right to write it and the right to delete it, and
+    /// is removed as the handle closes, so the probe leaves nothing behind. While that
+    /// handle is open the child is opened a second time asking to read its bytes.
+    /// <para>
+    /// The create is granted whatever the new file's inherited list says, because a
+    /// create receives the access it asks for once the folder allows the add. The
+    /// second open is checked against that list, which is the one a file copied into
+    /// the folder from another volume takes. So a folder whose files cannot be read
+    /// fails at the second open, and a folder whose files can be read and not deleted
+    /// passes.
+    /// </para>
+    /// False where the folder cannot be opened, the create is refused, or the second
+    /// open fails for any cause; <paramref name="readBackRefused"/> is true only in the
+    /// last case.
+    /// </summary>
+    internal static bool TryProbeWritable(string folder, out int failureCode, out bool readBackRefused)
     {
+        readBackRefused = false;
         using var dir = OpenDirectoryFollow(folder, out failureCode);
         if (dir is null) return false;
 
+        var leaf = Path.GetRandomFileName();
         using var probe = OpenChildNoFollow(
-            dir, Path.GetRandomFileName(), ProbeAccess, Ntdll.FILE_CREATE, ProbeOptions, out var status);
+            dir, leaf, ProbeAccess, Ntdll.FILE_CREATE, ProbeOptions, out var status);
         if (probe is null)
         {
             failureCode = (int)Ntdll.RtlNtStatusToDosError(status);
+            return false;
+        }
+
+        using var readBack = OpenChildNoFollow(
+            dir, leaf, ReadBackAccess, Ntdll.FILE_OPEN, ReadBackOptions, out status);
+        if (readBack is null)
+        {
+            failureCode = (int)Ntdll.RtlNtStatusToDosError(status);
+            readBackRefused = true;
             return false;
         }
         return true;

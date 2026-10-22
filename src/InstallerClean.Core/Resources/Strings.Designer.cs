@@ -401,6 +401,7 @@ public static class Strings
     public static string Error_DestinationWriteFailedTitle => Get("Error.DestinationWriteFailedTitle");
     public static string Error_FileInUse_Plural => Get("Error.FileInUse.Plural");
     public static string Error_FileInUse_Singular => Get("Error.FileInUse.Singular");
+    public static string Error_FolderWillNotGiveFilesBack => Get("Error.FolderWillNotGiveFilesBack");
     public static string Error_InstallerDbEmpty => Get("Error.InstallerDbEmpty");
     public static string Error_InstallerLockAccessRefused => Get("Error.InstallerLockAccessRefused");
     public static string Error_InstallerLockUnavailable => Get("Error.InstallerLockUnavailable");

@@ -1591,6 +1591,9 @@ Details in {1}.</value></data>
        here would put an elevated framework message, which can carry a path
        out of another user's profile, in front of the user. -->
   <data name="Error.CannotWriteFolder" xml:space="preserve"><value>Kan niet schrijven naar {0}.</value></data>
+  <!-- 0 = folder, and nothing else, as above. Shown where the folder took the
+       write test's file and would not let it be read back. -->
+  <data name="Error.FolderWillNotGiveFilesBack" xml:space="preserve"><value>Je kunt bestanden opslaan in {0}, maar ze niet opnieuw openen, dus InstallerClean verplaatst er geen bestanden naartoe.</value></data>
   <!-- 0 = file name -->
   <data name="Error.DestinationCollision" xml:space="preserve"><value>Er staat al een bestand met de naam '{0}' in de back-upmap.</value></data>
 

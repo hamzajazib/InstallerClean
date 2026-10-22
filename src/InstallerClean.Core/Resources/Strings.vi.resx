@@ -1591,6 +1591,9 @@ Chi tiết trong {1}.</value></data>
        here would put an elevated framework message, which can carry a path
        out of another user's profile, in front of the user. -->
   <data name="Error.CannotWriteFolder" xml:space="preserve"><value>Không thể ghi vào {0}.</value></data>
+  <!-- 0 = folder, and nothing else, as above. Shown where the folder took the
+       write test's file and would not let it be read back. -->
+  <data name="Error.FolderWillNotGiveFilesBack" xml:space="preserve"><value>Bạn có thể lưu tệp vào {0} nhưng không thể mở lại chúng, nên InstallerClean sẽ không chuyển tệp vào đó.</value></data>
   <!-- 0 = file name -->
   <data name="Error.DestinationCollision" xml:space="preserve"><value>Đã có một tệp tên '{0}' trong thư mục sao lưu.</value></data>
 

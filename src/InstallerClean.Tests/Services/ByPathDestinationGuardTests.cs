@@ -78,7 +78,7 @@ public class ByPathDestinationGuardTests
     }
 
     [Fact]
-    public void A_folder_that_takes_a_file_and_gives_it_back_passes_the_probe()
+    public void A_folder_that_takes_a_file_and_lets_it_be_read_back_passes_the_probe()
     {
         string? written = null;
         byte[]? payload = null;
@@ -89,9 +89,10 @@ public class ByPathDestinationGuardTests
                 payload = call.ArgAt<byte[]>(1);
             });
 
-        Assert.True(_guard.TryProbeWritable(_folder, out var failureCode));
+        Assert.True(_guard.TryProbeWritable(_folder, out var failureCode, out var readBackRefused));
 
         Assert.Equal(0, failureCode);
+        Assert.False(readBackRefused);
         Assert.NotNull(written);
         Assert.Equal(_folder, Path.GetDirectoryName(written));
         Assert.NotNull(payload);
@@ -99,6 +100,7 @@ public class ByPathDestinationGuardTests
         Received.InOrder(() =>
         {
             _file.WriteAllBytes(written!, Arg.Any<byte[]>());
+            _file.ReadAllBytes(written!);
             _file.Delete(written!);
         });
     }
@@ -110,22 +112,40 @@ public class ByPathDestinationGuardTests
         var refusal = NewRefusal(refusalName);
         _file.When(f => f.WriteAllBytes(Arg.Any<string>(), Arg.Any<byte[]>())).Do(_ => throw refusal);
 
-        Assert.False(_guard.TryProbeWritable(_folder, out var failureCode));
+        Assert.False(_guard.TryProbeWritable(_folder, out var failureCode, out var readBackRefused));
 
         Assert.Equal(refusal.HResult, failureCode);
+        Assert.False(readBackRefused);
+        _file.DidNotReceive().ReadAllBytes(Arg.Any<string>());
         _file.DidNotReceive().Delete(Arg.Any<string>());
     }
 
     [Theory]
     [MemberData(nameof(RefusalNames))]
-    public void A_folder_that_will_not_give_the_probe_file_back_fails_the_probe_with_the_refusals_HResult(string refusalName)
+    public void A_folder_that_will_not_let_the_probe_file_be_read_back_fails_the_probe_and_still_deletes_it(string refusalName)
+    {
+        var refusal = NewRefusal(refusalName);
+        _file.ReadAllBytes(Arg.Any<string>()).Returns(_ => throw refusal);
+
+        Assert.False(_guard.TryProbeWritable(_folder, out var failureCode, out var readBackRefused));
+
+        Assert.Equal(refusal.HResult, failureCode);
+        Assert.True(readBackRefused);
+        _file.Received(1).Delete(Arg.Any<string>());
+    }
+
+    [Theory]
+    [MemberData(nameof(RefusalNames))]
+    public void A_folder_whose_probe_file_cannot_be_deleted_passes_the_probe(string refusalName)
     {
         var refusal = NewRefusal(refusalName);
         _file.When(f => f.Delete(Arg.Any<string>())).Do(_ => throw refusal);
 
-        Assert.False(_guard.TryProbeWritable(_folder, out var failureCode));
+        Assert.True(_guard.TryProbeWritable(_folder, out var failureCode, out var readBackRefused));
 
-        Assert.Equal(refusal.HResult, failureCode);
+        Assert.Equal(0, failureCode);
+        Assert.False(readBackRefused);
+        _file.Received(1).Delete(Arg.Any<string>());
     }
 
     [Fact]

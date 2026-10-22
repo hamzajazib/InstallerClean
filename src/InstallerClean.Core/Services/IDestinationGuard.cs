@@ -15,10 +15,14 @@ namespace InstallerClean.Services;
 public interface IDestinationGuard
 {
     /// <summary>
-    /// Whether the folder accepts a file and gives it back, with the Win32 cause of a
-    /// refusal in <paramref name="failureCode"/> for a caller to record.
+    /// Whether the folder accepts a new file and lets it be read back, with the Win32
+    /// cause of a refusal in <paramref name="failureCode"/> for a caller to record.
+    /// <paramref name="readBackRefused"/> is true where the folder took the file and
+    /// it could not be read back, so a caller can tell that refusal from a folder that
+    /// will not take a file at all. A folder whose files can be read and not deleted
+    /// passes.
     /// </summary>
-    bool TryProbeWritable(string folder, out int failureCode);
+    bool TryProbeWritable(string folder, out int failureCode, out bool readBackRefused);
 
     /// <summary>
     /// Removes the file at <paramref name="destinationPath"/>, where it is still there,
@@ -39,8 +43,8 @@ public interface IDestinationGuard
 /// </summary>
 internal sealed class HandleDestinationGuard : IDestinationGuard
 {
-    public bool TryProbeWritable(string folder, out int failureCode) =>
-        DirectoryGuard.TryProbeWritable(folder, out failureCode);
+    public bool TryProbeWritable(string folder, out int failureCode, out bool readBackRefused) =>
+        DirectoryGuard.TryProbeWritable(folder, out failureCode, out readBackRefused);
 
     public bool TryDiscardCopy(string destinationPath, out int failureCode)
     {
@@ -70,20 +74,40 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
 {
     private readonly IFileSystem _fs = fileSystem;
 
-    public bool TryProbeWritable(string folder, out int failureCode)
+    /// <summary>
+    /// Writes an empty file, reads it back and deletes it, giving the answers the app's
+    /// guard gives: a refused write or read fails the probe, and a refused delete does
+    /// not, since a folder whose files can be read and not deleted passes there too.
+    /// </summary>
+    public bool TryProbeWritable(string folder, out int failureCode, out bool readBackRefused)
     {
         failureCode = 0;
+        readBackRefused = false;
         var probe = _fs.Path.Combine(folder, _fs.Path.GetRandomFileName());
         try
         {
             _fs.File.WriteAllBytes(probe, Array.Empty<byte>());
-            _fs.File.Delete(probe);
-            return true;
         }
         catch (Exception ex)
         {
             failureCode = ex.HResult;
             return false;
+        }
+
+        try
+        {
+            _fs.File.ReadAllBytes(probe);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            failureCode = ex.HResult;
+            readBackRefused = true;
+            return false;
+        }
+        finally
+        {
+            try { _fs.File.Delete(probe); } catch { }
         }
     }
 

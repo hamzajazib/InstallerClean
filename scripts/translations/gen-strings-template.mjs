@@ -705,6 +705,7 @@ const MAP = {
   'Automation.UpdateNotice.ScoopCommand': `Scoop's update command`,
   'Cli.UpdateInUse': `InstallerClean is in use, so it can't update itself now.`,
   'Cli.CancellingAfterUpdate': `Cancelling once the update has finished...`,
+  'Error.FolderWillNotGiveFilesBack': `You can save files in {0} but not open them again, so InstallerClean won't move files there.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

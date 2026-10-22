@@ -637,6 +637,7 @@ const MAP = {
   'Automation.UpdateNotice.ScoopCommand': `Scoop 업데이트 명령`,
   'Cli.UpdateInUse': `InstallerClean이 사용 중이어서 지금은 스스로 업데이트할 수 없습니다.`,
   'Cli.CancellingAfterUpdate': `업데이트가 끝나면 취소합니다...`,
+  'Error.FolderWillNotGiveFilesBack': `{0}에 파일을 저장할 수는 있지만 다시 열 수는 없으므로 InstallerClean은 그곳으로 파일을 이동하지 않습니다.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

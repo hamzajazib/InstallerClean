@@ -786,13 +786,15 @@ public sealed class MoveFilesService : IMoveFilesService
     {
         // Fail fast with one clean error rather than collecting per-file errors for
         // every source when the destination will not take a file. The guard creates
-        // and removes a write-test file through a handle opened on the folder, so a
-        // folder another account can write cannot steer the test to another file. A
-        // folder that grants a create but not a delete fails the probe, which refuses
-        // the move.
-        if (!_destinationGuard.TryProbeWritable(folder, out var failureCode))
+        // a write-test file through a handle opened on the folder, opens it again to
+        // read it, and removes it, so a folder another account can write cannot steer
+        // the test to another file. A folder that takes the file and will not let it
+        // be read back is refused with its own message.
+        if (!_destinationGuard.TryProbeWritable(folder, out var failureCode, out var readBackRefused))
             throw new LocalisedAccessException(
-                string.Format(Strings.Error_CannotWriteFolder, folder),
+                string.Format(
+                    readBackRefused ? Strings.Error_FolderWillNotGiveFilesBack : Strings.Error_CannotWriteFolder,
+                    folder),
                 new System.ComponentModel.Win32Exception(failureCode));
     }
 

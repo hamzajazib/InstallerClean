@@ -308,6 +308,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The backup folder needs to be a full path to a folder, starting with a drive letter or a network share (for example D:\Backup, or \\server\backup). InstallerClean can't use this one: {0} | Папка резервних копій має бути повним шляхом до папки, що починається з літери диска або мережевого ресурсу (наприклад, D:\Backup або \\server\backup). InstallerClean не може використати цей: {0} |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then Re-scan and try again. | InstallerClean більше не зміг підтвердити папку резервних копій і зупинився. Перевірте {0}, потім «Повторити сканування» і спробуйте ще раз. |
 | Cannot write to {0}. | Не вдається записати в {0}. |
+| You can save files in {0} but not open them again, so InstallerClean won't move files there. | Ви можете зберігати файли в {0}, але не можете знову їх відкрити, тому InstallerClean не переміщуватиме туди файли. |
 | A file called '{0}' is already in the backup folder. | Файл з іменем «{0}» уже є в папці резервних копій. |
 
 ## Update check
