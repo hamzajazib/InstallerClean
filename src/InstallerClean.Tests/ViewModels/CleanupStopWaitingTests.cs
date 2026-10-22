@@ -19,9 +19,9 @@ namespace InstallerClean.Tests.ViewModels;
 /// started on a stand-in for the window's dispatcher, so the card's reporters are made there
 /// and the waits reach the view model there, one at a time and in order, as they do in the
 /// window. The check and the scan run on the thread pool and report the steps a test gives
-/// them, each step returning once the card has applied what it reported. The filesystem is
-/// substituted as in <see cref="CleanupPreFlightTests"/>, so the check before the Move is
-/// reached.
+/// them, each step returning once the card has applied what it reported. The filesystem and
+/// the destination guard are substituted as in <see cref="CleanupPreFlightTests"/>, so the
+/// check before the Move is reached.
 /// </summary>
 public class CleanupStopWaitingTests
 {
@@ -76,7 +76,8 @@ public class CleanupStopWaitingTests
             _settingsService, _rebootService, _msiInfoService,
             _dialogService, _confirmationService, _windowService,
             _fileSystem, _resultLogService, _updateCheckService, _reverifier,
-            _earlierRunCheck, _firstRunMark, _windowsRegion);
+            _earlierRunCheck, _firstRunMark, _windowsRegion,
+            destinationGuard: new ByPathDestinationGuard(_fileSystem));
 
     private static string WaitLine(string root) => DisplayHelpers.WaitingFor(root);
 

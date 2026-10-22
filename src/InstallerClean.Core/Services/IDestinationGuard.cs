@@ -110,7 +110,8 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
     {
         try
         {
-            _fs.Directory.Delete(folder, recursive: false);
+            // The one-argument Delete is the non-recursive removal: a folder holding anything is refused.
+            _fs.Directory.Delete(folder);
             return true;
         }
         catch

@@ -762,10 +762,11 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         // stall for the SMB timeout on a mapped drive or a UNC share that has
         // gone away, and any of them on the dispatcher freezes the window.
         // The operation's source is installed first so the overlay's Cancel
-        // button can interrupt the wait. The probe goes through IFileSystem so
-        // MockFileSystem-backed tests don't hit real disk; the gates and the
-        // free-space query deliberately do not (a mock must not be able to
-        // talk its way past a safety check).
+        // button can interrupt the wait. The folder is created through
+        // IFileSystem and the write probe goes through the injected destination
+        // guard, so a test that substitutes both creates and probes nothing on
+        // the real disk. The gates and the free-space query read the real disk,
+        // so a mock cannot talk its way past a safety check.
         //
         // Nothing here touches view-model state: the verdict comes back as a
         // record and is applied below, on the dispatcher.
