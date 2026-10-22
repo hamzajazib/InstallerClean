@@ -140,4 +140,16 @@ public class CreatedFoldersTests
 
         Assert.Null(thrown);
     }
+
+    [Fact]
+    public void A_removal_that_throws_ends_the_removal_at_that_folder()
+    {
+        var guard = Substitute.For<IDestinationGuard>();
+        guard.TryRemoveEmptyFolder(Arg.Any<string>()).Returns(_ => throw new InvalidOperationException("refused"));
+
+        CreatedFolders.RemoveWhileEmpty(_fs, guard, [Folder("a", "z"), Folder("a")]);
+
+        guard.Received(1).TryRemoveEmptyFolder(Arg.Any<string>());
+        guard.Received(1).TryRemoveEmptyFolder(Folder("a", "z"));
+    }
 }

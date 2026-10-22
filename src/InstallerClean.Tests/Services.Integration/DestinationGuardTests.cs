@@ -144,7 +144,7 @@ public sealed class DestinationGuardTests : IDisposable
         using var map = MemoryMappedFile.CreateFromFile(
             stream, null, 0, MemoryMappedFileAccess.ReadWrite, HandleInheritability.None, leaveOpen: true);
         using var view = map.CreateViewAccessor();
-        File.SetAttributes(copy, File.GetAttributes(copy) | FileAttributes.ReadOnly);
+        File.SetAttributes(copy, File.GetAttributes(copy) | FileAttributes.ReadOnly | FileAttributes.Hidden);
         var before = File.GetAttributes(copy);
         AssertTheDiscardsOpenIsGranted(destination, "payload.msi");
 
@@ -201,7 +201,7 @@ public sealed class DestinationGuardTests : IDisposable
         using var map = MemoryMappedFile.CreateFromFile(
             stream, null, 0, MemoryMappedFileAccess.ReadWrite, HandleInheritability.None, leaveOpen: true);
         using var view = map.CreateViewAccessor();
-        File.SetAttributes(copy, File.GetAttributes(copy) | FileAttributes.ReadOnly);
+        File.SetAttributes(copy, File.GetAttributes(copy) | FileAttributes.ReadOnly | FileAttributes.Hidden);
         var before = File.GetAttributes(copy);
         // A read-only file is refused its delete whatever else holds it, so the refusal that
         // counts here is the one a file with a section mapped over it gives once it is not

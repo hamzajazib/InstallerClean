@@ -946,6 +946,29 @@ public class MoveFilesServiceUnitTests
     }
 
     [Fact]
+    public async Task A_write_test_that_throws_removes_the_folders_the_move_made_and_the_throw_goes_on()
+    {
+        var fs = new MockFileSystem();
+        var source = $@"{SourceDir}\a.msi";
+        fs.AddFile(source, new MockFileData("payload"));
+        var removal = new ByPathDestinationGuard(fs);
+        var guard = Substitute.For<IDestinationGuard>();
+        guard.TryProbeWritable(Arg.Any<string>(), out Arg.Any<int>(), out Arg.Any<WriteProbeRefusal>())
+            .Returns(_ => throw new IOException("the write test failed"));
+        guard.TryRemoveEmptyFolder(Arg.Any<string>())
+            .Returns(call => removal.TryRemoveEmptyFolder(call.ArgAt<string>(0)));
+        var svc = new MoveFilesService(
+            fs, NullMutexProbe.Instance, installerFolderOverride: null, destinationGuard: guard);
+
+        await Assert.ThrowsAsync<IOException>(() =>
+            svc.MoveFilesAsync(new[] { source }, DestDir, UnderLeaseClaims.None));
+
+        Assert.False(fs.Directory.Exists(DestDir));
+        Assert.False(fs.Directory.Exists(@"D:\backup"));
+        Assert.True(fs.File.Exists(source));
+    }
+
+    [Fact]
     public async Task A_refused_write_probe_leaves_a_folder_above_the_destination_that_was_already_there()
     {
         var fs = new MockFileSystem();
