@@ -1,5 +1,6 @@
 using System.IO.Abstractions;
 using InstallerClean.Helpers;
+using InstallerClean.Interop.Native;
 
 namespace InstallerClean.Services;
 
@@ -27,7 +28,8 @@ public interface IDestinationGuard
     /// Removes the file at <paramref name="destinationPath"/>, where it is still there,
     /// so a file reported as failed is one the user has exactly one of. Answers true
     /// where it is gone, false where it is present and would not go, with the Win32
-    /// cause in <paramref name="failureCode"/>.
+    /// cause in <paramref name="failureCode"/>. A folder at the name is left and
+    /// answered false with ERROR_DIRECTORY_NOT_SUPPORTED.
     /// </summary>
     bool TryDiscardCopy(string destinationPath, out int failureCode);
 
@@ -122,7 +124,12 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
         failureCode = 0;
         try
         {
-            if (!_fs.File.Exists(destinationPath)) return true;
+            if (!_fs.File.Exists(destinationPath))
+            {
+                if (!_fs.Directory.Exists(destinationPath)) return true;
+                failureCode = Kernel32.ERROR_DIRECTORY_NOT_SUPPORTED;
+                return false;
+            }
             var attributes = _fs.File.GetAttributes(destinationPath);
             if (attributes.HasFlag(FileAttributes.ReadOnly))
                 _fs.File.SetAttributes(destinationPath, attributes & ~FileAttributes.ReadOnly);

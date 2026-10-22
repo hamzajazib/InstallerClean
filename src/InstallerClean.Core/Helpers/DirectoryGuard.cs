@@ -373,7 +373,8 @@ internal static class DirectoryGuard
     /// through a handle, clearing a read-only attribute first. Answers true where the
     /// file is gone, which includes where it was not there to begin with, so a copy
     /// that was never made is not reported as a copy that would not go. False where the
-    /// file is present and could not be removed, or is a reparse point.
+    /// file is present and could not be removed, is a reparse point, or is a folder,
+    /// which is left in place.
     /// </summary>
     internal static bool TryDiscardChildCopy(string folder, string leaf, out int failureCode)
     {
@@ -388,8 +389,8 @@ internal static class DirectoryGuard
         {
             if (status == STATUS_OBJECT_NAME_NOT_FOUND || status == STATUS_OBJECT_PATH_NOT_FOUND)
                 return true;
-            // A folder at the copy's name refuses a file open with a status that maps to
-            // ERROR_ACCESS_DENIED, which would read as a refusal of access.
+            // A folder at the copy's name is recorded as ERROR_DIRECTORY_NOT_SUPPORTED
+            // rather than the access-denied code the open's status maps to.
             failureCode = status == STATUS_FILE_IS_A_DIRECTORY
                 ? Kernel32.ERROR_DIRECTORY_NOT_SUPPORTED
                 : (int)Ntdll.RtlNtStatusToDosError(status);

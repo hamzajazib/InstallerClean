@@ -1,5 +1,6 @@
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
+using InstallerClean.Interop.Native;
 using InstallerClean.Services;
 using NSubstitute;
 
@@ -160,13 +161,28 @@ public class ByPathDestinationGuardTests
     public void A_copy_that_is_not_there_is_reported_gone_and_nothing_is_deleted()
     {
         _file.Exists(_copy).Returns(false);
+        _directory.Exists(_copy).Returns(false);
 
         Assert.True(_guard.TryDiscardCopy(_copy, out var failureCode));
 
         Assert.Equal(0, failureCode);
         _file.Received(1).Exists(_copy);
+        _directory.Received(1).Exists(_copy);
         _file.DidNotReceive().Delete(Arg.Any<string>());
         _file.DidNotReceive().SetAttributes(Arg.Any<string>(), Arg.Any<FileAttributes>());
+    }
+
+    [Fact]
+    public void A_folder_at_the_copy_s_name_is_left_and_recorded_as_a_folder()
+    {
+        _file.Exists(_copy).Returns(false);
+        _directory.Exists(_copy).Returns(true);
+
+        Assert.False(_guard.TryDiscardCopy(_copy, out var failureCode));
+
+        Assert.Equal(Kernel32.ERROR_DIRECTORY_NOT_SUPPORTED, failureCode);
+        _file.DidNotReceive().Delete(Arg.Any<string>());
+        _directory.DidNotReceive().Delete(Arg.Any<string>());
     }
 
     [Fact]
