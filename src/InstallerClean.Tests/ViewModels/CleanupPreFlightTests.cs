@@ -112,13 +112,16 @@ public class CleanupPreFlightTests
     /// </summary>
     private void AssertFolderRemoved()
     {
-        var removal = Assert.Single(FolderRemovals());
-        Assert.Equal(_destination, (string?)removal[0]);
+        var removals = FolderRemovals();
+        Assert.True(removals.Count == 1, $"expected one Delete on the directory, but there were {removals.Count}");
+        var removal = removals[0];
+        Assert.True(removal[0] as string == _destination, $"the Delete was for {removal[0]}, not the destination");
         Assert.True(removal.Length == 1 || removal[1] is false, "the folder was removed recursively");
     }
 
     /// <summary>The Move made no <c>Delete</c> call on the substituted directory.</summary>
-    private void AssertNoFolderRemoved() => Assert.Empty(FolderRemovals());
+    private void AssertNoFolderRemoved() =>
+        Assert.True(FolderRemovals().Count == 0, "expected no Delete on the directory");
 
     [Fact]
     public void The_removal_assertion_accepts_the_one_argument_Delete_of_the_destination()
@@ -141,21 +144,15 @@ public class CleanupPreFlightTests
     {
         _directory.Delete(_destination, true);
 
-        Assert.Throws<Xunit.Sdk.TrueException>(AssertFolderRemoved);
+        var failure = Assert.Throws<Xunit.Sdk.TrueException>(AssertFolderRemoved);
+        Assert.Contains("removed recursively", failure.Message);
     }
 
     [Fact]
     public void The_removal_assertion_rejects_no_removal()
     {
-        Assert.Throws<Xunit.Sdk.SingleException>(AssertFolderRemoved);
-    }
-
-    [Fact]
-    public void The_removal_assertion_rejects_the_removal_of_another_folder()
-    {
-        _directory.Delete(_destination + "-other");
-
-        Assert.Throws<Xunit.Sdk.EqualException>(AssertFolderRemoved);
+        var failure = Assert.Throws<Xunit.Sdk.TrueException>(AssertFolderRemoved);
+        Assert.Contains("there were 0", failure.Message);
     }
 
     [Fact]
@@ -164,7 +161,26 @@ public class CleanupPreFlightTests
         _directory.Delete(_destination);
         _directory.Delete(_destination);
 
-        Assert.Throws<Xunit.Sdk.SingleException>(AssertFolderRemoved);
+        var failure = Assert.Throws<Xunit.Sdk.TrueException>(AssertFolderRemoved);
+        Assert.Contains("there were 2", failure.Message);
+    }
+
+    [Fact]
+    public void The_removal_assertion_rejects_the_removal_of_a_folder_named_from_the_destination()
+    {
+        _directory.Delete(_destination + "-other");
+
+        var failure = Assert.Throws<Xunit.Sdk.TrueException>(AssertFolderRemoved);
+        Assert.Contains("not the destination", failure.Message);
+    }
+
+    [Fact]
+    public void The_removal_assertion_rejects_the_removal_of_an_unrelated_folder()
+    {
+        _directory.Delete(Path.Combine(Path.GetTempPath(), "ic-test-unrelated"));
+
+        var failure = Assert.Throws<Xunit.Sdk.TrueException>(AssertFolderRemoved);
+        Assert.Contains("not the destination", failure.Message);
     }
 
     [Fact]
@@ -185,11 +201,11 @@ public class CleanupPreFlightTests
         AssertNoFolderRemoved();
 
         _directory.Delete(_destination);
-        Assert.Throws<Xunit.Sdk.EmptyException>(AssertNoFolderRemoved);
+        Assert.Throws<Xunit.Sdk.TrueException>(AssertNoFolderRemoved);
 
         _directory.ClearReceivedCalls();
         _directory.Delete(_destination, false);
-        Assert.Throws<Xunit.Sdk.EmptyException>(AssertNoFolderRemoved);
+        Assert.Throws<Xunit.Sdk.TrueException>(AssertNoFolderRemoved);
     }
 
     [Fact]
