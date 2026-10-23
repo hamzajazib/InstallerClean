@@ -7,6 +7,7 @@ using System.Security.Principal;
 using InstallerClean.Helpers;
 using InstallerClean.Services;
 using InstallerClean.Tests.Helpers;
+using NSubstitute;
 
 namespace InstallerClean.Tests.Services.Integration;
 
@@ -88,14 +89,36 @@ public sealed class UpdateInPlaceTests : IDisposable
     /// </summary>
     private static byte[] Release(byte tag) => [.. File.ReadAllBytes(CoreLibrary), .. Enumerable.Repeat(tag, 16)];
 
-    private sealed class OneAnswer(byte[] body) : HttpMessageHandler
+    /// <summary>A registry that answers nothing, so .NET Framework 4.8 reads as not installed.</summary>
+    private static readonly IRegistryReader NoRegistry = NSubstitute.Substitute.For<IRegistryReader>();
+
+    /// <summary>An update.json that lists every download with nothing required.</summary>
+    private const string AllowsEveryDownload =
+        """{"schema": 1, "downloads": {"setup": {"requires": []}, "portable": {"requires": []}, "slim": {"requires": []}, "cli": {"requires": []}}}""";
+
+    /// <summary>
+    /// Answers every download with <paramref name="body"/>, and a release's update.json
+    /// with <paramref name="manifest"/>, or 404 Not Found where it is null, as for a
+    /// release that has none.
+    /// </summary>
+    private sealed class OneAnswer(byte[] body, string? manifest = AllowsEveryDownload) : HttpMessageHandler
     {
-        /// <summary>How many requests it has answered.</summary>
+        /// <summary>How many download requests it has answered.</summary>
         public int Requests { get; private set; }
+
+        /// <summary>How many update.json requests it has answered.</summary>
+        public int ManifestRequests { get; private set; }
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/" + UpdateManifest.FileName, StringComparison.Ordinal))
+            {
+                ManifestRequests++;
+                return Task.FromResult(manifest is null
+                    ? new HttpResponseMessage(HttpStatusCode.NotFound)
+                    : new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(manifest) });
+            }
             Requests++;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(body) });
         }
@@ -599,7 +622,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.Portable, exe,
             new UpdateDownloadService(new OneAnswer(Release(2)), null), stagingRoot,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount);
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
 
         var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
@@ -624,7 +647,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.Setup, exe,
             new UpdateDownloadService(new OneAnswer(Release(3)), null), stagingRoot,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount);
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
 
         var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
@@ -648,7 +671,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.Setup, exe,
             new UpdateDownloadService(new OneAnswer(Release(3)), null), stagingRoot,
-            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount);
+            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount, NoRegistry);
 
         var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
@@ -667,7 +690,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.CommandLineDownload, exe,
             new UpdateDownloadService(new OneAnswer(Release(2)), null), stagingRoot,
-            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount);
+            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount, NoRegistry);
 
         var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
@@ -714,7 +737,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.CommandLineDownload, exe,
             new UpdateDownloadService(network, null), stagingRoot,
-            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount);
+            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount, NoRegistry);
         return (updater, exe, stagingRoot);
     }
 
@@ -786,7 +809,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         var network = new OneAnswer(Release(3));
         var updater = new AppUpdater(AppCopyKind.Setup, exe,
             new UpdateDownloadService(network, null), stagingRoot,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount);
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
 
         await WithLocalDownload(local, async () =>
         {
@@ -809,7 +832,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(kind, exe,
             new UpdateDownloadService(new OneAnswer(Program(2)), null), stagingRoot,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount);
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => updater.PrepareAsync("3.5.0", null, CancellationToken.None));
@@ -828,7 +851,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.Portable, exe,
             new UpdateDownloadService(new OneAnswer("not a program"u8.ToArray()), null), stagingRoot,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount);
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
 
         var failure = await Assert.ThrowsAsync<UpdateFailedException>(
             () => updater.PrepareAsync("3.5.0", null, CancellationToken.None));
@@ -838,6 +861,72 @@ public sealed class UpdateInPlaceTests : IDisposable
         Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
         Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
         Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
+    }
+
+    [Theory]
+    [InlineData(AppCopyKind.Setup)]
+    [InlineData(AppCopyKind.Portable)]
+    [InlineData(AppCopyKind.CommandLineDownload)]
+    public async Task A_release_that_rules_this_copy_out_is_refused_before_anything_is_downloaded(AppCopyKind kind)
+    {
+        var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
+        var exe = Path.Combine(_root, kind == AppCopyKind.CommandLineDownload ? AppCopy.CommandLineFileName : "InstallerClean.exe");
+        File.WriteAllBytes(exe, Program(1));
+        var key = UpdateManifest.DownloadKey(kind);
+        var network = new OneAnswer(Release(2),
+            "{\"schema\": 1, \"downloads\": {\"" + key + "\": {\"requires\": [\"netfx-4.8\"]}}}");
+        var updater = new AppUpdater(kind, exe, new UpdateDownloadService(network, null), stagingRoot,
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
+
+        Assert.Equal(UpdateRefusal.NeedsNetFramework48, await updater.CheckRequirementsAsync(CoreRelease, CancellationToken.None));
+        var refused = await Assert.ThrowsAsync<UpdateRefusedException>(
+            () => updater.PrepareAsync(CoreRelease, null, CancellationToken.None));
+
+        Assert.Equal(UpdateRefusal.NeedsNetFramework48, refused.Refusal);
+        Assert.Equal(1, network.ManifestRequests);
+        Assert.Equal(0, network.Requests);
+        Assert.Equal(Program(1), File.ReadAllBytes(exe));
+        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
+        Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
+    }
+
+    [Fact]
+    public async Task The_releases_file_is_read_once_and_the_PC_is_asked_again_each_time()
+    {
+        var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
+        var exe = Path.Combine(_root, "InstallerClean.exe");
+        File.WriteAllBytes(exe, Program(1));
+        var network = new OneAnswer(Release(2),
+            "{\"schema\": 1, \"downloads\": {\"portable\": {\"requires\": [\"netfx-4.8\"]}}}");
+        var registry = NSubstitute.Substitute.For<IRegistryReader>();
+        var updater = new AppUpdater(AppCopyKind.Portable, exe, new UpdateDownloadService(network, null), stagingRoot,
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, registry);
+
+        Assert.Equal(UpdateRefusal.NeedsNetFramework48, await updater.CheckRequirementsAsync(CoreRelease, CancellationToken.None));
+        registry.LocalMachineDwordValue(Arg.Any<string>(), Arg.Any<string>())
+            .Returns(new RegistryDwordRead(RegistryDwordState.Read, 528040));
+        var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
+
+        Assert.Equal(1, network.ManifestRequests);
+        Assert.Equal(1, network.Requests);
+        prepared.Undo();
+    }
+
+    [Fact]
+    public async Task A_release_above_the_last_without_a_file_that_has_none_is_refused()
+    {
+        var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
+        var exe = Path.Combine(_root, "InstallerClean.exe");
+        File.WriteAllBytes(exe, Program(1));
+        var network = new OneAnswer(Release(2), manifest: null);
+        var updater = new AppUpdater(AppCopyKind.Portable, exe, new UpdateDownloadService(network, null), stagingRoot,
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
+        var above = $"{UpdateManifest.LastVersionWithoutManifest.Major}.{UpdateManifest.LastVersionWithoutManifest.Minor + 1}.0";
+        var atOrBelow = UpdateManifest.LastVersionWithoutManifest.ToString(3);
+
+        Assert.Equal(UpdateRefusal.CannotInstallFromThisCopy, await updater.CheckRequirementsAsync(above, CancellationToken.None));
+        Assert.Null(await updater.CheckRequirementsAsync(atOrBelow, CancellationToken.None));
+        Assert.Equal(2, network.ManifestRequests);
     }
 
     [Theory]
@@ -859,7 +948,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         var asked = $"{core.Major}.{core.Minor + 1}.0";
         var updater = new AppUpdater(kind, exe,
             new UpdateDownloadService(new OneAnswer(carriesAnotherVersion ? Release(2) : Program(2)), null), stagingRoot,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount);
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
 
         var failure = await Assert.ThrowsAsync<UpdateFailedException>(
             () => updater.PrepareAsync(asked, null, CancellationToken.None));

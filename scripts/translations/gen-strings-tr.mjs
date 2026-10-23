@@ -563,6 +563,9 @@ Ayrıntılar şuraya yazıldı:
   'Cli.UpdateInUse': `InstallerClean kullanımda olduğu için şu anda kendini güncelleyemiyor.`,
   'Cli.CancellingAfterUpdate': `Güncelleştirme bittiğinde iptal edilecek...`,
   'Error.FolderWillNotGiveFilesBack': `{0} konumuna dosya kaydedebilirsiniz ama onları yeniden açamazsınız, bu yüzden InstallerClean oraya dosya taşımaz.`,
+  'UpdateNotice.NeedsNetFramework48': `InstallerClean {0}, bu bilgisayarda bulunmayan .NET Framework 4.8'i gerektiriyor.`,
+  'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0} otomatik olarak yüklenemiyor.`,
+  'UpdateNotice.CopyCannotTell': `InstallerClean kendi kurulum programıyla yüklenip yüklenmediğini anlayamadığı için kendini güncelleyemiyor.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

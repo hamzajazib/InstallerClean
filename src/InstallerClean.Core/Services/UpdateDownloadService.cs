@@ -70,16 +70,13 @@ public sealed class UpdateDownloadService
         }
     }
 
-    private async Task DownloadCoreAsync(
+    private Task DownloadCoreAsync(
         Uri address, string destinationPath, IProgress<double?>? progress,
-        CancellationToken cancellationToken)
-    {
-        using var stall = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        try
+        CancellationToken cancellationToken) =>
+        WithStallAsync<object?>(async stall =>
         {
-            stall.CancelAfter(_stallTimeout);
-            using var response = await SendFollowingRedirectsAsync(address, stall.Token)
-                .ConfigureAwait(false);
+            // Null only for a 404 asked to be an answer, which the download does not ask.
+            using var response = (await SendFollowingRedirectsAsync(address, stall.Token).ConfigureAwait(false))!;
 
             var length = response.Content.Headers.ContentLength;
             if (length > MaxBytes)
@@ -142,6 +139,24 @@ public sealed class UpdateDownloadService
                 throw new UpdateFailedException(UpdateFailureStage.Install,
                     "The download could not be saved.", ex);
             }
+            return null;
+        }, "The download", cancellationToken);
+
+    /// <summary>
+    /// Runs <paramref name="work"/> with a token that is cancelled where
+    /// <paramref name="cancellationToken"/> is, or where no data has arrived for the stall
+    /// timeout, which <paramref name="work"/> starts again with every read that brings
+    /// data. A broken connection or a stall becomes an <see cref="UpdateFailedException"/>
+    /// at the Download stage, named by <paramref name="what"/>; a cancel stays a cancel.
+    /// </summary>
+    private async Task<T> WithStallAsync<T>(
+        Func<CancellationTokenSource, Task<T>> work, string what, CancellationToken cancellationToken)
+    {
+        using var stall = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        try
+        {
+            stall.CancelAfter(_stallTimeout);
+            return await work(stall).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -151,7 +166,7 @@ public sealed class UpdateDownloadService
             && cancellationToken.IsCancellationRequested)
         {
             // A connection broken off by the cancel itself is the cancel.
-            throw new OperationCanceledException("The download was cancelled.", ex, cancellationToken);
+            throw new OperationCanceledException($"{what} was cancelled.", ex, cancellationToken);
         }
         catch (OperationCanceledException ex)
         {
@@ -160,23 +175,57 @@ public sealed class UpdateDownloadService
         }
         catch (HttpRequestException ex)
         {
-            throw new UpdateFailedException(UpdateFailureStage.Download, "The download failed.", ex);
+            throw new UpdateFailedException(UpdateFailureStage.Download, $"{what} failed.", ex);
         }
         catch (IOException ex)
         {
             // A write failure is caught where it happens, so an IOException reaching
             // here came from the connection.
-            throw new UpdateFailedException(UpdateFailureStage.Download, "The download failed.", ex);
+            throw new UpdateFailedException(UpdateFailureStage.Download, $"{what} failed.", ex);
         }
     }
 
     /// <summary>
+    /// Reads <paramref name="address"/> into memory over the same https-only redirects
+    /// as <see cref="DownloadAsync"/>, under the same stall timeout, and answers its
+    /// bytes, or null where the server answers 404 Not Found. Throws
+    /// <see cref="UpdateFailedException"/> at the Download stage for every other failure,
+    /// a body over <paramref name="maxBytes"/> included, and
+    /// <see cref="OperationCanceledException"/> where <paramref name="cancellationToken"/>
+    /// is cancelled.
+    /// </summary>
+    public Task<byte[]?> ReadAsync(Uri address, int maxBytes, CancellationToken cancellationToken) =>
+        WithStallAsync(async stall =>
+        {
+            using var response = await SendFollowingRedirectsAsync(address, stall.Token, notFoundIsAnswer: true)
+                .ConfigureAwait(false);
+            if (response is null) return null;
+            if (response.Content.Headers.ContentLength > maxBytes)
+                throw Download($"The file at {address} is over {maxBytes} bytes.");
+
+            using var body = await response.Content.ReadAsStreamAsync(stall.Token).ConfigureAwait(false);
+            using var held = new MemoryStream();
+            var buffer = new byte[8192];
+            while (true)
+            {
+                stall.CancelAfter(_stallTimeout);
+                var read = await body.ReadAsync(buffer, stall.Token).ConfigureAwait(false);
+                if (read == 0) break;
+                if (held.Length + read > maxBytes)
+                    throw Download($"The file at {address} is over {maxBytes} bytes.");
+                held.Write(buffer, 0, read);
+            }
+            return (byte[]?)held.ToArray();
+        }, $"Reading {address}", cancellationToken);
+
+    /// <summary>
     /// Sends a GET for <paramref name="address"/> and follows each redirect to an https
     /// address, up to <see cref="MaxRedirects"/> of them, and answers with the first
-    /// response that is not a redirect, which has to be a success.
+    /// response that is not a redirect, which has to be a success, or null for a
+    /// 404 Not Found where <paramref name="notFoundIsAnswer"/> is set.
     /// </summary>
-    private async Task<HttpResponseMessage> SendFollowingRedirectsAsync(
-        Uri address, CancellationToken cancellationToken)
+    private async Task<HttpResponseMessage?> SendFollowingRedirectsAsync(
+        Uri address, CancellationToken cancellationToken, bool notFoundIsAnswer = false)
     {
         var current = address;
         for (var hop = 0; ; hop++)
@@ -200,6 +249,12 @@ public sealed class UpdateDownloadService
                     throw Download("The download was redirected too many times.");
                 current = location.IsAbsoluteUri ? location : new Uri(current, location);
                 continue;
+            }
+
+            if (notFoundIsAnswer && response.StatusCode == HttpStatusCode.NotFound)
+            {
+                response.Dispose();
+                return null;
             }
 
             if (!response.IsSuccessStatusCode)

@@ -567,13 +567,16 @@ public static class Strings
     public static string UpdateCheck_Status_UpToDate => Get("UpdateCheck.Status.UpToDate");
     public static string UpdateCheck_Title => Get("UpdateCheck.Title");
     public static string UpdateNotice_Available => Get("UpdateNotice.Available");
+    public static string UpdateNotice_CannotInstallAutomatically => Get("UpdateNotice.CannotInstallAutomatically");
     public static string UpdateNotice_CommandCopied => Get("UpdateNotice.CommandCopied");
     public static string UpdateNotice_ContinueWithoutUpdating => Get("UpdateNotice.ContinueWithoutUpdating");
+    public static string UpdateNotice_CopyCannotTell => Get("UpdateNotice.CopyCannotTell");
     public static string UpdateNotice_CopyFailed => Get("UpdateNotice.CopyFailed");
     public static string UpdateNotice_Download => Get("UpdateNotice.Download");
     public static string UpdateNotice_DownloadFailed => Get("UpdateNotice.DownloadFailed");
     public static string UpdateNotice_Downloading => Get("UpdateNotice.Downloading");
     public static string UpdateNotice_InstallFailed => Get("UpdateNotice.InstallFailed");
+    public static string UpdateNotice_NeedsNetFramework48 => Get("UpdateNotice.NeedsNetFramework48");
     public static string UpdateNotice_Recommended => Get("UpdateNotice.Recommended");
     public static string UpdateNotice_Scoop => Get("UpdateNotice.Scoop");
     public static string UpdateNotice_UpdateNow => Get("UpdateNotice.UpdateNow");

@@ -527,6 +527,9 @@ const MAP = {
   'Automation.UpdateNotice.CopyCommand': `Копировать команду`,
   'Automation.UpdateNotice.ScoopCommand': `Команда обновления Scoop`,
   'Error.FolderWillNotGiveFilesBack': `Вы можете сохранять файлы в {0}, но не можете снова открыть их, поэтому InstallerClean не будет перемещать туда файлы.`,
+  'UpdateNotice.NeedsNetFramework48': `Для InstallerClean {0} нужен .NET Framework 4.8, которого нет на этом компьютере.`,
+  'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0} не может быть установлен автоматически.`,
+  'UpdateNotice.CopyCannotTell': `InstallerClean не может определить, установлен ли он своим установщиком, поэтому не может обновиться.`,
 };
 
 // Russian CLDR-category overrides beyond the neutral one/other split. They do NOT

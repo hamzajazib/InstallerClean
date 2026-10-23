@@ -12,10 +12,11 @@ internal abstract record CommandLineUpdateResult
 
     /// <summary>
     /// The run goes on with the version it is. <paramref name="FailedAt"/> is null where
-    /// nothing was tried: no newer version, the check failing, a no at the question, or a
-    /// copy that cannot update itself. Otherwise it names the part that failed, or
-    /// <see cref="UpdateFailureStage.InUse"/> where InstallerClean was in use, and the two
-    /// versions are the running one and the one it could not install.
+    /// nothing was tried: no newer version, the check failing, a no at the question, a
+    /// copy that cannot update itself, or a release that rules this copy out. Otherwise it
+    /// names the part that failed, or <see cref="UpdateFailureStage.InUse"/> where
+    /// InstallerClean was in use, and the two versions are the running one and the one it
+    /// could not install.
     /// </summary>
     public sealed record CarriedOn(UpdateFailureStage? FailedAt, string? FromVersion, string? ToVersion)
         : CommandLineUpdateResult;
@@ -171,10 +172,11 @@ internal interface ICommandLineUpdateHost
 /// same console. Where a person can see the console and answer it, it asks first, and
 /// after a yes the newer version scans and lists as <c>/s</c> does and moves or deletes
 /// nothing. Where nobody can answer, it updates without asking and the newer version
-/// runs the command as given. Where InstallerClean is in use, it says so and goes on
-/// without updating. A part that fails leaves the run going on with the version it is,
-/// and says so, wherever that version's file is back at its own path and Ctrl+C has not
-/// come; otherwise the run ends there.
+/// runs the command as given. Where InstallerClean is in use, or the newer version's
+/// release rules this copy out, it says so and goes on without updating. A part that
+/// fails leaves the run going on with the version it is, and says so, wherever that
+/// version's file is back at its own path and Ctrl+C has not come; otherwise the run
+/// ends there.
 /// </summary>
 /// <remarks>
 /// Synchronous on purpose. The host calls it on the thread that owns the single-instance
@@ -272,10 +274,15 @@ internal sealed class CommandLineUpdate
 
         if (!_updater.CanUpdateItself)
         {
-            _host.WriteLine(Strings.UpdateNotice_Recommended);
+            _host.WriteLine(_updater.Kind == AppCopyKind.Undetermined
+                ? Strings.UpdateNotice_CopyCannotTell
+                : Strings.UpdateNotice_Recommended);
             _host.WriteLine(string.Format(Strings.Cli_UpdateDownloadLink, UpdateCheckService.ReleasesPageUrl));
             return CommandLineUpdateResult.NothingTried;
         }
+
+        if (Requirements(canAsk, latest, token) is { } refusal) return Refused(refusal, latest);
+        if (token.IsCancellationRequested) return new CommandLineUpdateResult.Cancelled();
 
         if (canAsk)
         {
@@ -300,10 +307,31 @@ internal sealed class CommandLineUpdate
             _host.HoldOwnFile();
             return new CommandLineUpdateResult.Cancelled();
         }
+        catch (UpdateRefusedException refused)
+        {
+            // The download's own read of the release's file ruled this copy out, where the
+            // read before the question could not be made. Nothing was downloaded.
+            _host.HoldOwnFile();
+            return Refused(refused.Refusal, latest);
+        }
         catch (Exception ex)
         {
             return CarryOn(ex, command, current, latest, token);
         }
+    }
+
+    /// <summary>
+    /// Says why the newer version's release rules this copy out and gives the release page,
+    /// and answers that nothing was tried. Nothing is written to crash.log: it is not a
+    /// failure.
+    /// </summary>
+    private CommandLineUpdateResult Refused(UpdateRefusal refusal, string latest)
+    {
+        _host.WriteLine(string.Format(refusal == UpdateRefusal.NeedsNetFramework48
+            ? Strings.UpdateNotice_NeedsNetFramework48
+            : Strings.UpdateNotice_CannotInstallAutomatically, latest));
+        _host.WriteLine(string.Format(Strings.Cli_UpdateDownloadLink, UpdateCheckService.ReleasesPageUrl));
+        return CommandLineUpdateResult.NothingTried;
     }
 
     /// <summary>
@@ -379,6 +407,29 @@ internal sealed class CommandLineUpdate
             return _check(bound.Token).GetAwaiter().GetResult() as UpdateAvailable;
         }
         catch (OperationCanceledException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Why the newer version's release rules this copy out
+    /// (<see cref="IAppUpdater.CheckRequirementsAsync"/>), or null where it does not, read
+    /// before anything is asked and bounded by <see cref="WatchedCheckBound"/> where a person
+    /// is waiting. A read that fails or runs out answers null: the download reads the file
+    /// again, refusing as this does where the file rules this copy out, and failing as a
+    /// download where it still cannot be read. Ctrl+C answers null too, and the caller
+    /// reads it off the token.
+    /// </summary>
+    private UpdateRefusal? Requirements(bool canAsk, string latest, CancellationToken token)
+    {
+        using var bound = CancellationTokenSource.CreateLinkedTokenSource(token);
+        if (canAsk) bound.CancelAfter(_watchedCheckBound);
+        try
+        {
+            return _updater.CheckRequirementsAsync(latest, bound.Token).GetAwaiter().GetResult();
+        }
+        catch (Exception ex) when (ex is UpdateFailedException or OperationCanceledException)
         {
             return null;
         }

@@ -41,3 +41,19 @@ public sealed class UpdateFailedException : Exception
 
     public UpdateFailureStage Stage { get; }
 }
+
+/// <summary>
+/// An update its release rules out for this copy (<see cref="UpdateManifest"/>), thrown
+/// before anything is downloaded. Not a failure: a host says why with the line for
+/// <see cref="Refusal"/> and gives the release page, and writes nothing to crash.log.
+/// </summary>
+public sealed class UpdateRefusedException : Exception
+{
+    public UpdateRefusedException(UpdateRefusal refusal, string version)
+        : base($"The release of {version} rules this copy out: {refusal}.")
+    {
+        Refusal = refusal;
+    }
+
+    public UpdateRefusal Refusal { get; }
+}

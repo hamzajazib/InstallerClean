@@ -99,6 +99,11 @@ const SWITCHES = [
     constant: 'LocalDownloadVariable',
     home: 'src/InstallerClean.Core/',
   },
+  {
+    name: 'INSTALLERCLEAN_DEBUG_LOCAL_MANIFEST',
+    constant: 'LocalManifestVariable',
+    home: 'src/InstallerClean.Core/',
+  },
 ];
 
 // Reads of the environment a Release build may make, each by its file and the text of

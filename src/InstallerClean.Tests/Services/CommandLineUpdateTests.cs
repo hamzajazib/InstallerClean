@@ -351,6 +351,87 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Empty(_host.PreparedWhileExeHeld);
     }
 
+    [Theory]
+    [InlineData(UpdateRefusal.NeedsNetFramework48, "UpdateNotice.NeedsNetFramework48", true)]
+    [InlineData(UpdateRefusal.NeedsNetFramework48, "UpdateNotice.NeedsNetFramework48", false)]
+    [InlineData(UpdateRefusal.CannotInstallFromThisCopy, "UpdateNotice.CannotInstallAutomatically", true)]
+    [InlineData(UpdateRefusal.CannotInstallFromThisCopy, "UpdateNotice.CannotInstallAutomatically", false)]
+    public void A_release_that_rules_this_copy_out_says_why_and_gives_the_release_page_without_asking(
+        UpdateRefusal refusal, string line, bool canAsk)
+    {
+        var updater = Download();
+        updater.Requirements = () => refusal;
+
+        var result = Run(updater, canAsk);
+
+        Assert.Equal(CommandLineUpdateResult.NothingTried, result);
+        Assert.Equal(new[]
+        {
+            string.Format(Strings.UpdateNotice_Available, Latest),
+            string.Format(Strings.Get(line), Latest),
+            string.Format(Strings.Cli_UpdateDownloadLink, UpdateCheckService.ReleasesPageUrl),
+        }, _host.Output);
+        Assert.False(updater.Prepared);
+        Assert.Equal(0, _host.Reads);
+        Assert.Null(_host.NewerVersionRun);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void A_release_whose_file_cannot_be_read_goes_on_to_the_question_and_the_download(bool canAsk)
+    {
+        var updater = Download();
+        updater.Requirements = () => throw new UpdateFailedException(UpdateFailureStage.Download, "failed");
+        _host.Answers.Enqueue("y");
+        _host.NewerVersionExitCode = 0;
+
+        Run(updater, canAsk);
+
+        Assert.Equal(1, updater.RequirementReads);
+        Assert.Equal(canAsk ? 1 : 0, _host.Reads);
+        Assert.True(updater.Prepared);
+    }
+
+    [Fact]
+    public void A_refusal_from_the_download_says_why_gives_the_release_page_and_starts_nothing()
+    {
+        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, _exe,
+            onPrepare: () => throw new UpdateRefusedException(UpdateRefusal.NeedsNetFramework48, Latest));
+        updater.Requirements = () => throw new UpdateFailedException(UpdateFailureStage.Download, "failed");
+
+        var result = Run(updater, canAsk: false);
+
+        Assert.Equal(CommandLineUpdateResult.NothingTried, result);
+        Assert.Equal(new[]
+        {
+            string.Format(Strings.UpdateNotice_Available, Latest),
+            string.Format(Strings.UpdateNotice_Downloading, Latest),
+            string.Format(Strings.UpdateNotice_NeedsNetFramework48, Latest),
+            string.Format(Strings.Cli_UpdateDownloadLink, UpdateCheckService.ReleasesPageUrl),
+        }, _host.Output);
+        Assert.Null(_host.NewerVersionRun);
+        Assert.True(_host.HoldsOwnFile);
+    }
+
+    [Fact]
+    public void An_undetermined_copy_says_it_cannot_tell_and_gives_the_release_page()
+    {
+        var updater = new FakeUpdater(AppCopyKind.Undetermined, _exe);
+
+        var result = Run(updater, canAsk: true);
+
+        Assert.Equal(CommandLineUpdateResult.NothingTried, result);
+        Assert.Equal(new[]
+        {
+            string.Format(Strings.UpdateNotice_Available, Latest),
+            Strings.UpdateNotice_CopyCannotTell,
+            string.Format(Strings.Cli_UpdateDownloadLink, UpdateCheckService.ReleasesPageUrl),
+        }, _host.Output);
+        Assert.Equal(0, updater.RequirementReads);
+        Assert.False(updater.Prepared);
+    }
+
     [Fact]
     public void A_newer_version_that_will_not_start_is_put_back_and_the_run_carries_on()
     {
@@ -988,6 +1069,16 @@ public sealed class CommandLineUpdateTests : IDisposable
     {
         public AppCopyKind Kind => kind;
         public bool CanUpdateItself => AppCopy.CanUpdateItself(kind);
+
+        /// <summary>What the release's update.json answers; a throw stands for a read that failed.</summary>
+        public Func<UpdateRefusal?> Requirements { get; set; } = () => null;
+        public int RequirementReads { get; private set; }
+
+        public Task<UpdateRefusal?> CheckRequirementsAsync(string version, CancellationToken cancellationToken)
+        {
+            RequirementReads++;
+            return Task.FromResult(Requirements());
+        }
         public string FileToStart => fileToStart;
         public bool Prepared { get; private set; }
         public bool Undone { get; private set; }

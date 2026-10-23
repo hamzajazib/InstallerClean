@@ -323,6 +323,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Download it from GitHub | Download het van GitHub |
 | Update now | Nu bijwerken |
 | This copy was installed by Scoop. To update it, close InstallerClean and run: | Deze kopie is met Scoop geïnstalleerd. Bijwerken doe je door InstallerClean te sluiten en dit uit te voeren: |
+| InstallerClean {0} needs .NET Framework 4.8, which this PC doesn't have. | InstallerClean {0} heeft .NET Framework 4.8 nodig, maar dat staat niet op deze pc. |
+| InstallerClean {0} can't be installed automatically. | InstallerClean {0} kan niet automatisch worden geïnstalleerd. |
+| InstallerClean can't tell whether its setup installed it, so it can't update itself. | InstallerClean kan niet vaststellen of het met zijn eigen setup is geïnstalleerd en kan zichzelf dus niet bijwerken. |
 | Copied | Gekopieerd |
 | Couldn't copy it. Select the command and copy it yourself. | Kopiëren is niet gelukt. Selecteer de opdracht en kopieer hem zelf. |
 | _Continue without updating | _Doorgaan zonder bij te werken |

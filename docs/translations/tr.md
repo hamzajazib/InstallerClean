@@ -323,6 +323,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Download it from GitHub | GitHub'dan indirin |
 | Update now | Şimdi güncelle |
 | This copy was installed by Scoop. To update it, close InstallerClean and run: | Bu kopya Scoop ile yüklendi. Güncellemek için InstallerClean'i kapatıp şunu çalıştırın: |
+| InstallerClean {0} needs .NET Framework 4.8, which this PC doesn't have. | InstallerClean {0}, bu bilgisayarda bulunmayan .NET Framework 4.8'i gerektiriyor. |
+| InstallerClean {0} can't be installed automatically. | InstallerClean {0} otomatik olarak yüklenemiyor. |
+| InstallerClean can't tell whether its setup installed it, so it can't update itself. | InstallerClean kendi kurulum programıyla yüklenip yüklenmediğini anlayamadığı için kendini güncelleyemiyor. |
 | Copied | Kopyalandı |
 | Couldn't copy it. Select the command and copy it yourself. | Kopyalanamadı. Komutu seçip kendiniz kopyalayın. |
 | _Continue without updating | Güncellemeden _devam et |

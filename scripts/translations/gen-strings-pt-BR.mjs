@@ -642,6 +642,9 @@ const MAP = {
   'Cli.UpdateInUse': `O InstallerClean está em uso, então não pode se atualizar agora.`,
   'Cli.CancellingAfterUpdate': `Cancelando assim que a atualização terminar...`,
   'Error.FolderWillNotGiveFilesBack': `Você pode salvar arquivos em {0}, mas não pode abri-los de novo, então o InstallerClean não vai mover arquivos para lá.`,
+  'UpdateNotice.NeedsNetFramework48': `O InstallerClean {0} precisa do .NET Framework 4.8, que não está neste PC.`,
+  'UpdateNotice.CannotInstallAutomatically': `O InstallerClean {0} não pode ser instalado automaticamente.`,
+  'UpdateNotice.CopyCannotTell': `O InstallerClean não consegue saber se foi instalado pelo próprio instalador, então não pode se atualizar.`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

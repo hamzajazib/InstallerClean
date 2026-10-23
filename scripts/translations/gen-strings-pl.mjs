@@ -679,6 +679,9 @@ const MAP = {
   'Cli.UpdateInUse': `InstallerClean jest w użyciu, więc nie może się teraz zaktualizować.`,
   'Cli.CancellingAfterUpdate': `Anulowanie po zakończeniu aktualizacji...`,
   'Error.FolderWillNotGiveFilesBack': `Możesz zapisywać pliki w {0}, ale nie możesz ich ponownie otworzyć, więc InstallerClean nie przeniesie tam plików.`,
+  'UpdateNotice.NeedsNetFramework48': `InstallerClean {0} wymaga .NET Framework 4.8, którego nie ma na tym komputerze.`,
+  'UpdateNotice.CannotInstallAutomatically': `Nie można automatycznie zainstalować InstallerClean {0}.`,
+  'UpdateNotice.CopyCannotTell': `InstallerClean nie może ustalić, czy został zainstalowany przez swój instalator, więc nie może się zaktualizować.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

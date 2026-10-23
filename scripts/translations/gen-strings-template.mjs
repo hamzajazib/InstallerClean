@@ -706,6 +706,9 @@ const MAP = {
   'Cli.UpdateInUse': `InstallerClean is in use, so it can't update itself now.`,
   'Cli.CancellingAfterUpdate': `Cancelling once the update has finished...`,
   'Error.FolderWillNotGiveFilesBack': `You can save files in {0} but not open them again, so InstallerClean won't move files there.`,
+  'UpdateNotice.NeedsNetFramework48': `InstallerClean {0} needs .NET Framework 4.8, which this PC doesn't have.`,
+  'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0} can't be installed automatically.`,
+  'UpdateNotice.CopyCannotTell': `InstallerClean can't tell whether its setup installed it, so it can't update itself.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

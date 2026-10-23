@@ -570,6 +570,9 @@ const MAP = {
   'Cli.UpdateInUse': `InstallerClean è in uso, quindi ora non può aggiornarsi.`,
   'Cli.CancellingAfterUpdate': `Annullamento al termine dell'aggiornamento...`,
   'Error.FolderWillNotGiveFilesBack': `Puoi salvare file in {0} ma non riaprirli, quindi InstallerClean non sposterà file lì.`,
+  'UpdateNotice.NeedsNetFramework48': `InstallerClean {0} richiede .NET Framework 4.8, che non è presente su questo PC.`,
+  'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0} non può essere installato automaticamente.`,
+  'UpdateNotice.CopyCannotTell': `InstallerClean non riesce a stabilire se è stato installato dal suo programma di installazione, quindi non può aggiornarsi.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

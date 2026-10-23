@@ -662,6 +662,9 @@ const MAP = {
   'Cli.UpdateInUse': `InstallerClean sedang digunakan, jadi tidak dapat memperbarui dirinya sekarang.`,
   'Cli.CancellingAfterUpdate': `Membatalkan setelah pembaruan selesai...`,
   'Error.FolderWillNotGiveFilesBack': `Anda bisa menyimpan file di {0}, tetapi tidak bisa membukanya lagi, jadi InstallerClean tidak akan memindahkan file ke sana.`,
+  'UpdateNotice.NeedsNetFramework48': `InstallerClean {0} memerlukan .NET Framework 4.8, yang tidak ada di PC ini.`,
+  'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0} tidak dapat dipasang secara otomatis.`,
+  'UpdateNotice.CopyCannotTell': `InstallerClean tidak dapat memastikan apakah dirinya dipasang oleh program penyiapannya, jadi tidak dapat memperbarui dirinya sendiri.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

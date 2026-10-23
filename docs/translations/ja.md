@@ -323,6 +323,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Download it from GitHub | GitHubからダウンロード |
 | Update now | 今すぐ更新 |
 | This copy was installed by Scoop. To update it, close InstallerClean and run: | このコピーは Scoop でインストールされています。更新するには、InstallerClean を閉じてから次を実行してください： |
+| InstallerClean {0} needs .NET Framework 4.8, which this PC doesn't have. | InstallerClean {0} には .NET Framework 4.8 が必要ですが、この PC にはありません。 |
+| InstallerClean {0} can't be installed automatically. | InstallerClean {0} は自動ではインストールできません。 |
+| InstallerClean can't tell whether its setup installed it, so it can't update itself. | InstallerClean は自身のセットアップでインストールされたかどうかを判断できないため、自身を更新できません。 |
 | Copied | コピー済み |
 | Couldn't copy it. Select the command and copy it yourself. | コピーできませんでした。コマンドを選択して手動でコピーしてください。 |
 | _Continue without updating | 更新せずに続行(_C) |

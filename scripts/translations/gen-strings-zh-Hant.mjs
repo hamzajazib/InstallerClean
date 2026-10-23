@@ -555,6 +555,9 @@ const MAP = {
   'Cli.UpdateInUse': `InstallerClean 正在使用中，因此現在無法自行更新。`,
   'Cli.CancellingAfterUpdate': `將在更新完成後取消...`,
   'Error.FolderWillNotGiveFilesBack': `您可以在 {0} 中儲存檔案，但無法再次開啟，因此 InstallerClean 不會將檔案移到那裡。`,
+  'UpdateNotice.NeedsNetFramework48': `InstallerClean {0} 需要 .NET Framework 4.8，而這台電腦上沒有。`,
+  'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0} 無法自動安裝。`,
+  'UpdateNotice.CopyCannotTell': `InstallerClean 無法判斷自己是否由其安裝程式安裝，因此無法自行更新。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

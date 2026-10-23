@@ -638,6 +638,9 @@ const MAP = {
   'Cli.UpdateInUse': `InstallerClean이 사용 중이어서 지금은 스스로 업데이트할 수 없습니다.`,
   'Cli.CancellingAfterUpdate': `업데이트가 끝나면 취소합니다...`,
   'Error.FolderWillNotGiveFilesBack': `{0}에 파일을 저장할 수는 있지만 다시 열 수는 없으므로 InstallerClean은 그곳으로 파일을 이동하지 않습니다.`,
+  'UpdateNotice.NeedsNetFramework48': `InstallerClean {0}에는 .NET Framework 4.8이 필요하지만 이 PC에는 없습니다.`,
+  'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0}은(는) 자동으로 설치할 수 없습니다.`,
+  'UpdateNotice.CopyCannotTell': `InstallerClean이 자체 설치 프로그램으로 설치되었는지 확인할 수 없어 스스로 업데이트할 수 없습니다.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

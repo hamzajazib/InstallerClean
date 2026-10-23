@@ -1515,6 +1515,18 @@ Detalhes em {1}.</value></data>
     <value>Esta cópia foi instalada pelo Scoop. Para atualizá-la, feche o InstallerClean e execute:</value>
     <comment>A third line on the card and in the notice, under UpdateNotice.Recommended, on a copy installed by Scoop, which shows in place of UpdateNotice.UpdateNow. Scoop's update command (scoop update installerclean, never translated) follows it in a box with a Copy button (Action.Copy). Scoop is the name of a program and is not translated.</comment>
   </data>
+  <data name="UpdateNotice.NeedsNetFramework48" xml:space="preserve">
+    <value>O InstallerClean {0} precisa do .NET Framework 4.8, que não está neste PC.</value>
+    <comment>A third line on the card and in the notice, under UpdateNotice.Available, where the newer version's release says its download for this kind of copy needs .NET Framework 4.8 and the PC does not have it. Update now is not shown; the release link (UpdateNotice.Download) is, and the command line prints Cli.UpdateDownloadLink after it. {0} = the newer version number, as 3.6.0. ".NET Framework 4.8" is a product name and is not translated.</comment>
+  </data>
+  <data name="UpdateNotice.CannotInstallAutomatically" xml:space="preserve">
+    <value>O InstallerClean {0} não pode ser instalado automaticamente.</value>
+    <comment>A third line on the card and in the notice, under UpdateNotice.Available, where the newer version's release rules out installing it from this copy for any other reason. Update now is not shown; the release link (UpdateNotice.Download) is, and the command line prints Cli.UpdateDownloadLink after it. {0} = the newer version number, as 3.6.0.</comment>
+  </data>
+  <data name="UpdateNotice.CopyCannotTell" xml:space="preserve">
+    <value>O InstallerClean não consegue saber se foi instalado pelo próprio instalador, então não pode se atualizar.</value>
+    <comment>A line under UpdateNotice.Available on a copy that cannot tell from the setup's record in the registry whether the setup installed it. Update now is not shown; the release link (UpdateNotice.Download) is, and the command line prints Cli.UpdateDownloadLink after it.</comment>
+  </data>
   <data name="UpdateNotice.CommandCopied" xml:space="preserve">
     <value>Copiado</value>
     <comment>What the Copy button beside Scoop's update command reads for two seconds after it has put the command on the clipboard, before it reads Action.Copy again. Also spoken by a screen reader as the button is pressed. Keep it about as short as Action.Copy, since it takes that button's place.</comment>

@@ -73,6 +73,83 @@ public sealed class UpdateDownloadServiceTests : IDisposable
         Assert.Equal(1d, reported[^1]);
     }
 
+    /// <summary>A stream that cannot seek, so content over it carries no length.</summary>
+    private sealed class UnseekableStream(byte[] bytes) : MemoryStream(bytes)
+    {
+        public override bool CanSeek => false;
+    }
+
+    private static readonly Uri ManifestAddress =
+        new("https://github.com/no-faff/InstallerClean/releases/download/v3.5.0/update.json");
+
+    [Fact]
+    public async Task A_read_follows_the_redirect_and_answers_the_bytes_in_memory()
+    {
+        var text = "{}"u8.ToArray();
+        var handler = new RoutedHandler(uri => uri == ManifestAddress ? Redirect(AssetAddress) : Body(text));
+        var service = new UpdateDownloadService(handler, null);
+
+        var read = await service.ReadAsync(ManifestAddress, 1024, CancellationToken.None);
+
+        Assert.Equal(text, read);
+        Assert.Equal([ManifestAddress, AssetAddress], handler.Requested);
+    }
+
+    [Fact]
+    public async Task A_read_answers_null_for_a_404_after_a_redirect()
+    {
+        var handler = new RoutedHandler(uri => uri == ManifestAddress
+            ? Redirect(AssetAddress)
+            : new HttpResponseMessage(HttpStatusCode.NotFound));
+        var service = new UpdateDownloadService(handler, null);
+
+        Assert.Null(await service.ReadAsync(ManifestAddress, 1024, CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    [InlineData(HttpStatusCode.Gone)]
+    public async Task A_read_fails_as_a_download_for_any_status_but_404(HttpStatusCode status)
+    {
+        var handler = new RoutedHandler(_ => new HttpResponseMessage(status));
+        var service = new UpdateDownloadService(handler, null);
+
+        var failure = await Assert.ThrowsAsync<UpdateFailedException>(
+            () => service.ReadAsync(ManifestAddress, 1024, CancellationToken.None));
+
+        Assert.Equal(UpdateFailureStage.Download, failure.Stage);
+    }
+
+    [Fact]
+    public async Task A_read_over_its_cap_fails_as_a_download_with_or_without_a_length()
+    {
+        var big = new byte[2048];
+        var withLength = new UpdateDownloadService(new RoutedHandler(_ => Body(big)), null);
+        var withoutLength = new UpdateDownloadService(new RoutedHandler(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(new UnseekableStream(big)) }), null);
+
+        foreach (var service in new[] { withLength, withoutLength })
+        {
+            var failure = await Assert.ThrowsAsync<UpdateFailedException>(
+                () => service.ReadAsync(ManifestAddress, 1024, CancellationToken.None));
+            Assert.Equal(UpdateFailureStage.Download, failure.Stage);
+        }
+    }
+
+    [Fact]
+    public async Task A_404_is_still_a_failed_download_for_a_download()
+    {
+        var handler = new RoutedHandler(_ => new HttpResponseMessage(HttpStatusCode.NotFound));
+        var service = new UpdateDownloadService(handler, null);
+
+        var failure = await Assert.ThrowsAsync<UpdateFailedException>(
+            () => service.DownloadAsync(ReleaseAddress, Destination, null, CancellationToken.None));
+
+        Assert.Equal(UpdateFailureStage.Download, failure.Stage);
+        Assert.False(File.Exists(Destination));
+    }
+
     [Fact]
     public async Task A_redirect_to_an_address_that_is_not_https_is_refused()
     {

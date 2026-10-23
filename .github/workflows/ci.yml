@@ -1761,7 +1761,15 @@ jobs:
   # the Debug configuration, so it reads INSTALLERCLEAN_DEBUG_PRETEND_LATEST, which has
   # its update check answer that v9.9.9 is the newest release without asking GitHub, and
   # INSTALLERCLEAN_DEBUG_LOCAL_DOWNLOAD, which has its download fetch the named file in
-  # place of the release's. Everything after the download, the checks on the file, the
+  # place of the release's, and INSTALLERCLEAN_DEBUG_LOCAL_MANIFEST, which has it read the
+  # named file as the release's update.json. A release above 3.5.0 has to carry one, so
+  # every run is given a file: one that lists the command line with nothing required, or,
+  # in the three runs that check the refusal, one with a schema it does not read, one
+  # requiring something it does not know, and one that does not list the command line.
+  # Those three print the line saying the newer version can't be installed automatically
+  # and the release page, download nothing, leave the file at the path as it was, write
+  # no 3005 or 3006 and nothing to crash.log, and run the command with the old copy.
+  # Everything after the download, the checks on the file, the
   # rename, the start and the wait, runs as it does in a release.
   #
   # The three newer files each carry the file version 9.9.9, which the old copy checks
@@ -1956,10 +1964,15 @@ jobs:
             , @()
           }
 
-          function Update([string]$label, [string]$newerFile, [string]$standInMode) {
+          # An update.json listing the command line with nothing required.
+          $allowsCli = '{"schema": 1, "downloads": {"cli": {"requires": []}}}'
+
+          function Update([string]$label, [string]$newerFile, [string]$standInMode, [string]$manifest = $allowsCli) {
             Write-Host "== $label"
             $folder = Join-Path $env:RUNNER_TEMP "start-check-$label"
             New-Item -ItemType Directory -Force -Path $folder | Out-Null
+            $manifestFile = Join-Path $env:RUNNER_TEMP "start-check-$label-update.json"
+            Set-Content -LiteralPath $manifestFile -Value $manifest -Encoding utf8NoBOM -NoNewline
             Copy-Item -LiteralPath $oldExe -Destination $folder
             $exe = Join-Path $folder 'installerclean-cli.exe'
             foreach ($left in "$exe.old", "$exe.new") { if (Test-Path -LiteralPath $left) { throw "$left is there before the run." } }
@@ -1968,6 +1981,7 @@ jobs:
             $run = Run $exe @('/s') @{
               INSTALLERCLEAN_DEBUG_PRETEND_LATEST = "v$latest"
               INSTALLERCLEAN_DEBUG_LOCAL_DOWNLOAD = $newerFile
+              INSTALLERCLEAN_DEBUG_LOCAL_MANIFEST = $manifestFile
               START_CHECK_STAND_IN = $standInMode
             } 240
             # Everything below is printed with Write-Host, since what the function writes
@@ -2075,6 +2089,26 @@ jobs:
           Expect-Logged $update @('The newer version did not say it had started within 60 seconds.', $notStarted) @($endRefused, $notEnded)
           if ($update.Run.Seconds -lt 60) { Fail "sleeps: the run took $([math]::Round($update.Run.Seconds, 1)) s, less than the minute it waits." }
           Expect-ExitCode $update
+
+          $cannotInstall = (Line 'UpdateNotice.CannotInstallAutomatically') -f $latest
+          $releasePage = (Line 'Cli.UpdateDownloadLink') -f 'https://github.com/no-faff/InstallerClean/releases/latest'
+          $refusals = [ordered]@{
+            'refused by its schema'      = '{"schema": 2, "downloads": {"cli": {"requires": []}}}'
+            'refused by its requirement' = '{"schema": 1, "downloads": {"cli": {"requires": ["dotnet-desktop-99"]}}}'
+            'refused by its absence'     = '{"schema": 1, "downloads": {"setup": {"requires": []}}}'
+          }
+          foreach ($label in $refusals.Keys) {
+            $update = Update $label $signals '' $refusals[$label]
+            Expect-Printed $update @($available, $cannotInstall, $releasePage) @($downloading, $installed, $installFailed, $runningInstead)
+            foreach ($id in 3005, 3006) {
+              $entries = @(Read-Entries $update.Since $id)
+              if ($entries) { Fail "$label`: the Application log holds $($entries.Count) entries with Event ID $id since the run started." }
+              else { "  no $id since the run started" }
+            }
+            Expect-File $update $old $true
+            if ($update.Logged) { Fail "$label`: crash.log gained text." } else { "  crash.log gained nothing" }
+            Expect-ExitCode $update
+          }
 
           if ($failures.Count) {
             "$($failures.Count) checks failed:"

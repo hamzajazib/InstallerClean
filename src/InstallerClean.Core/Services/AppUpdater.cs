@@ -13,11 +13,22 @@ public interface IAppUpdater
     bool CanUpdateItself { get; }
 
     /// <summary>
-    /// Downloads <paramref name="version"/> as the same kind of copy, checks that the file
-    /// carries that version, and answers with what to start. Reports the fraction
+    /// Reads what the release of <paramref name="version"/> says its downloads need
+    /// (<see cref="UpdateManifest"/>) and answers why this copy does not install it, or
+    /// null where it may. Throws <see cref="UpdateFailedException"/> at the Download stage
+    /// where the release's file could not be read, and
+    /// <see cref="OperationCanceledException"/> where the token is cancelled.
+    /// </summary>
+    Task<UpdateRefusal?> CheckRequirementsAsync(string version, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Downloads <paramref name="version"/> as the same kind of copy, where its release
+    /// allows it (<see cref="CheckRequirementsAsync"/>), checks that the file carries that
+    /// version, and answers with what to start. Reports the fraction
     /// downloaded, or null where the length is not known. Throws
     /// <see cref="UpdateFailedException"/> where any step fails, a download that does not
-    /// carry the version included, and
+    /// carry the version included, <see cref="UpdateRefusedException"/> before anything is
+    /// downloaded where the release rules this copy out, and
     /// <see cref="OperationCanceledException"/> where the token is cancelled; neither
     /// leaves anything changed on disk.
     /// </summary>
@@ -93,6 +104,8 @@ public sealed class AppUpdater : IAppUpdater
     private readonly UpdateDownloadService _downloader;
     private readonly string _stagingRoot;
     private readonly string _stagingDescriptor;
+    private readonly IRegistryReader _registry;
+    private (string Version, byte[]? Manifest)? _manifest;
 
     /// <param name="kind">The kind of copy running.</param>
     /// <param name="exePath">The running exe's path.</param>
@@ -109,15 +122,17 @@ public sealed class AppUpdater : IAppUpdater
     public AppUpdater(
         AppCopyKind kind, string exePath, UpdateDownloadService downloader, string stagingRoot,
         string setupArguments)
-        : this(kind, exePath, downloader, stagingRoot, setupArguments, UpdateStagingFolder.AdministratorsOnly) { }
+        : this(kind, exePath, downloader, stagingRoot, setupArguments, UpdateStagingFolder.AdministratorsOnly,
+            new RegistryReader()) { }
 
     /// <summary>
     /// Test seam: the staging folder's descriptor given as SDDL, so a suite without
-    /// administrator rights can write into it.
+    /// administrator rights can write into it, and the registry the PC's .NET Framework
+    /// is read from.
     /// </summary>
     internal AppUpdater(
         AppCopyKind kind, string exePath, UpdateDownloadService downloader, string stagingRoot,
-        string setupArguments, string stagingDescriptor)
+        string setupArguments, string stagingDescriptor, IRegistryReader registry)
     {
         Kind = kind;
         _exePath = exePath;
@@ -125,11 +140,42 @@ public sealed class AppUpdater : IAppUpdater
         _downloader = downloader;
         _stagingRoot = stagingRoot;
         _stagingDescriptor = stagingDescriptor;
+        _registry = registry;
     }
 
     public AppCopyKind Kind { get; }
 
     public bool CanUpdateItself => AppCopy.CanUpdateItself(Kind);
+
+    /// <summary>
+    /// The release's file is kept for the version it was read for, so the read made as a
+    /// newer version is found is not made again before its download. The PC is asked again
+    /// each time, so a requirement met since the last answer is seen.
+    /// </summary>
+    public async Task<UpdateRefusal?> CheckRequirementsAsync(string version, CancellationToken cancellationToken)
+    {
+        if (UpdateManifest.DownloadKey(Kind) is null)
+            throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
+
+        byte[]? manifest;
+        if (_manifest is { } kept && kept.Version == version)
+        {
+            manifest = kept.Manifest;
+        }
+        else
+        {
+#if DEBUG
+            if (LocalManifest() is { } local)
+                manifest = local.Absent ? null : ReadLocalManifest(local.Path);
+            else
+#endif
+            manifest = await _downloader.ReadAsync(UpdateManifest.Address(version), UpdateManifest.MaxBytes, cancellationToken)
+                .ConfigureAwait(false);
+            _manifest = (version, manifest);
+        }
+
+        return UpdateManifest.Judge(manifest, version, Kind, () => UpdateManifest.HasNetFramework48(_registry));
+    }
 
     public async Task<PreparedUpdate> PrepareAsync(
         string version, IProgress<double?>? progress, CancellationToken cancellationToken)
@@ -138,6 +184,9 @@ public sealed class AppUpdater : IAppUpdater
         var fileName = AppCopy.DownloadFileName(Kind, version);
         if (address is null || fileName is null)
             throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
+
+        if (await CheckRequirementsAsync(version, cancellationToken).ConfigureAwait(false) is { } refusal)
+            throw new UpdateRefusedException(refusal, version);
 
         UpdateStagingFolder folder;
         try
@@ -223,6 +272,41 @@ public sealed class AppUpdater : IAppUpdater
     /// <c>#if DEBUG</c> the same way.
     /// </summary>
     internal const string LocalDownloadVariable = "INSTALLERCLEAN_DEBUG_LOCAL_DOWNLOAD";
+
+    /// <summary>
+    /// Set to the full path of an update.json, a Debug build reads that file as the
+    /// release's, and set to absent, it reads the release as having none, so the answer
+    /// a release's file gives can be tried offline. Held inside <c>#if DEBUG</c> the same way.
+    /// </summary>
+    internal const string LocalManifestVariable = "INSTALLERCLEAN_DEBUG_LOCAL_MANIFEST";
+
+    /// <summary>What <see cref="LocalManifestVariable"/> says, or null where it is unset.</summary>
+    private static (bool Absent, string Path)? LocalManifest()
+    {
+        var value = Environment.GetEnvironmentVariable(LocalManifestVariable);
+        if (value is not { Length: > 0 }) return null;
+        return string.Equals(value, "absent", StringComparison.OrdinalIgnoreCase) ? (true, string.Empty) : (false, value);
+    }
+
+    /// <summary>
+    /// The file a Debug build reads as the release's update.json, held to the read's size
+    /// cap. A file that is not a full path, cannot be read or is over the cap fails as a
+    /// read that could not be made.
+    /// </summary>
+    private static byte[] ReadLocalManifest(string path)
+    {
+        try
+        {
+            if (!Path.IsPathFullyQualified(path)) throw new IOException($"The local file {path} is not a full path.");
+            var bytes = File.ReadAllBytes(path);
+            if (bytes.Length > UpdateManifest.MaxBytes) throw new IOException($"The local file {path} is over the cap.");
+            return bytes;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            throw new UpdateFailedException(UpdateFailureStage.Download, "The local update.json could not be read.", ex);
+        }
+    }
 
     /// <summary>
     /// The file <see cref="LocalSetupVariable"/> names for the setup's copy, or the one

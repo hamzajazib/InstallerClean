@@ -637,6 +637,9 @@ const MAP = {
   'Cli.UpdateInUse': `InstallerClean đang được sử dụng nên không thể tự cập nhật lúc này.`,
   'Cli.CancellingAfterUpdate': `Sẽ hủy khi cập nhật xong...`,
   'Error.FolderWillNotGiveFilesBack': `Bạn có thể lưu tệp vào {0} nhưng không thể mở lại chúng, nên InstallerClean sẽ không chuyển tệp vào đó.`,
+  'UpdateNotice.NeedsNetFramework48': `InstallerClean {0} cần .NET Framework 4.8, nhưng PC này không có.`,
+  'UpdateNotice.CannotInstallAutomatically': `Không thể tự động cài đặt InstallerClean {0}.`,
+  'UpdateNotice.CopyCannotTell': `InstallerClean không thể xác định liệu nó có được cài bằng trình cài đặt của chính nó hay không, nên không thể tự cập nhật.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

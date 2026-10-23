@@ -323,6 +323,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Download it from GitHub | 从 GitHub 下载 |
 | Update now | 立即更新 |
 | This copy was installed by Scoop. To update it, close InstallerClean and run: | 此副本由 Scoop 安装。要更新，请关闭 InstallerClean 并运行： |
+| InstallerClean {0} needs .NET Framework 4.8, which this PC doesn't have. | InstallerClean {0} 需要 .NET Framework 4.8，而这台电脑上没有。 |
+| InstallerClean {0} can't be installed automatically. | InstallerClean {0} 无法自动安装。 |
+| InstallerClean can't tell whether its setup installed it, so it can't update itself. | InstallerClean 无法判断自己是否由其安装程序安装，因此无法自行更新。 |
 | Copied | 已复制 |
 | Couldn't copy it. Select the command and copy it yourself. | 无法复制。请选中该命令并手动复制。 |
 | _Continue without updating | 不更新，直接继续(_C) |

@@ -323,6 +323,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Download it from GitHub | GitHub에서 내려받기 |
 | Update now | 지금 업데이트 |
 | This copy was installed by Scoop. To update it, close InstallerClean and run: | 이 사본은 Scoop으로 설치되었습니다. 업데이트하려면 InstallerClean을 닫고 다음을 실행하세요: |
+| InstallerClean {0} needs .NET Framework 4.8, which this PC doesn't have. | InstallerClean {0}에는 .NET Framework 4.8이 필요하지만 이 PC에는 없습니다. |
+| InstallerClean {0} can't be installed automatically. | InstallerClean {0}은(는) 자동으로 설치할 수 없습니다. |
+| InstallerClean can't tell whether its setup installed it, so it can't update itself. | InstallerClean이 자체 설치 프로그램으로 설치되었는지 확인할 수 없어 스스로 업데이트할 수 없습니다. |
 | Copied | 복사됨 |
 | Couldn't copy it. Select the command and copy it yourself. | 복사하지 못했습니다. 명령을 선택해 직접 복사하세요. |
 | _Continue without updating | 업데이트하지 않고 계속(_C) |

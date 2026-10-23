@@ -323,6 +323,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Download it from GitHub | Unduh dari GitHub |
 | Update now | Perbarui sekarang |
 | This copy was installed by Scoop. To update it, close InstallerClean and run: | Salinan ini dipasang oleh Scoop. Untuk memperbaruinya, tutup InstallerClean lalu jalankan: |
+| InstallerClean {0} needs .NET Framework 4.8, which this PC doesn't have. | InstallerClean {0} memerlukan .NET Framework 4.8, yang tidak ada di PC ini. |
+| InstallerClean {0} can't be installed automatically. | InstallerClean {0} tidak dapat dipasang secara otomatis. |
+| InstallerClean can't tell whether its setup installed it, so it can't update itself. | InstallerClean tidak dapat memastikan apakah dirinya dipasang oleh program penyiapannya, jadi tidak dapat memperbarui dirinya sendiri. |
 | Copied | Tersalin |
 | Couldn't copy it. Select the command and copy it yourself. | Tidak dapat menyalinnya. Pilih perintahnya lalu salin sendiri. |
 | _Continue without updating | _Lanjutkan tanpa memperbarui |

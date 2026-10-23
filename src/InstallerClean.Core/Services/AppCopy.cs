@@ -137,7 +137,7 @@ public static class AppCopy
     /// address the same way, so the tag and the file names in the release workflow
     /// have to keep this shape.
     /// </summary>
-    private const string DownloadRoot = "https://github.com/no-faff/InstallerClean/releases/download/";
+    internal const string DownloadRoot = "https://github.com/no-faff/InstallerClean/releases/download/";
 
     /// <summary>
     /// The kind of copy, in this order: a build that is not a single file is from

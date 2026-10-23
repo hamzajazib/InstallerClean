@@ -657,6 +657,9 @@ const MAP = {
   'Cli.UpdateInUse': `InstallerClean використовується, тому зараз не може оновитися.`,
   'Cli.CancellingAfterUpdate': `Скасування після завершення оновлення...`,
   'Error.FolderWillNotGiveFilesBack': `Ви можете зберігати файли в {0}, але не можете знову їх відкрити, тому InstallerClean не переміщуватиме туди файли.`,
+  'UpdateNotice.NeedsNetFramework48': `Для InstallerClean {0} потрібен .NET Framework 4.8, якого немає на цьому комп'ютері.`,
+  'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0} не можна встановити автоматично.`,
+  'UpdateNotice.CopyCannotTell': `InstallerClean не може визначити, чи встановила його власна програма встановлення, тому не може оновитися.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,
