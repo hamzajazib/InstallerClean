@@ -38,7 +38,7 @@ Nothing in it names you, your PC, a file, a folder, a drive or a program.
 
 ## Update check
 
-When you open InstallerClean, it asks GitHub whether there's a newer version. That's one request to github.com. GitHub sees your IP address, as any website does, and a line naming InstallerClean and its version. If there's a newer version, InstallerClean says so. Nothing is downloaded unless you click Update now, which downloads the newer version from its release on GitHub and installs it. Check for updates makes the same check, only when you click it.
+When you open InstallerClean, it asks GitHub whether there's a newer version. That's one request to github.com. If there is one, InstallerClean says so, and also reads update.json, a small file in that version's release on GitHub that says what each download needs, to tell whether this copy can install it. A copy installed by Scoop doesn't read update.json, because Scoop does its updating. With each request, GitHub sees your IP address, as any website does, and a line naming InstallerClean and its version. Nothing else is downloaded unless you click Update now, which downloads the newer version from its release on GitHub and installs it. Check for updates makes the same check, only when you click it.
 
 The command-line tool makes the same check before a scan, Move or Delete. Where someone is at the console to answer, it asks before it updates. Where nobody is, such as a scheduled task or a script, it downloads the newer version from GitHub, installs it without asking and runs the command with it.
 
