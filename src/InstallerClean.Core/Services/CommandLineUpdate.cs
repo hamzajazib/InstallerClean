@@ -309,8 +309,8 @@ internal sealed class CommandLineUpdate
         }
         catch (UpdateRefusedException refused)
         {
-            // The download's own read of the release's file ruled this copy out, where the
-            // read before the question could not be made. Nothing was downloaded.
+            // The update's own read of the release's file ruled this copy out, where the read
+            // before the question could not be made. Nothing was downloaded.
             _host.HoldOwnFile();
             return Refused(refused.Refusal, latest);
         }
@@ -416,10 +416,10 @@ internal sealed class CommandLineUpdate
     /// Why the newer version's release rules this copy out
     /// (<see cref="IAppUpdater.CheckRequirementsAsync"/>), or null where it does not, read
     /// before anything is asked and bounded by <see cref="WatchedCheckBound"/> where a person
-    /// is waiting. A read that fails or runs out answers null: the download reads the file
-    /// again, refusing as this does where the file rules this copy out, and failing as a
-    /// download where it still cannot be read. Ctrl+C answers null too, and the caller
-    /// reads it off the token.
+    /// is waiting. A read that fails in any way or runs out answers null: the update reads
+    /// the file again before it says it is downloading, refusing as this does where the
+    /// file rules this copy out, and failing as a download where it still cannot be read.
+    /// Ctrl+C answers null too, and the caller reads it off the token.
     /// </summary>
     private UpdateRefusal? Requirements(bool canAsk, string latest, CancellationToken token)
     {
@@ -429,7 +429,7 @@ internal sealed class CommandLineUpdate
         {
             return _updater.CheckRequirementsAsync(latest, bound.Token).GetAwaiter().GetResult();
         }
-        catch (Exception ex) when (ex is UpdateFailedException or OperationCanceledException)
+        catch (Exception)
         {
             return null;
         }
@@ -499,6 +499,8 @@ internal sealed class CommandLineUpdate
         try
         {
             if (InUse(holdsLock, exePath)) throw InUseFailure();
+            if (_updater.CheckRequirementsAsync(latest, token).GetAwaiter().GetResult() is { } refusal)
+                throw new UpdateRefusedException(refusal, latest);
             _host.WriteLine(string.Format(Strings.UpdateNotice_Downloading, latest));
             prepared = _updater.PrepareAsync(latest, null, token).GetAwaiter().GetResult();
 

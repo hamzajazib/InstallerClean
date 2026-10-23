@@ -120,4 +120,12 @@ public class UpdateManifestTests
     public void The_file_sits_beside_the_releases_downloads() =>
         Assert.Equal(new Uri("https://github.com/no-faff/InstallerClean/releases/download/v3.6.0/update.json"),
             UpdateManifest.Address("3.6.0"));
+
+    [Theory]
+    [InlineData("{}", true)]
+    [InlineData("[1, 2]", true)]
+    [InlineData("<html>Sign in</html>", false)]
+    [InlineData("", false)]
+    public void Only_a_body_that_parses_as_JSON_is_JSON(string body, bool json) =>
+        Assert.Equal(json, UpdateManifest.IsJson(Json(body)));
 }

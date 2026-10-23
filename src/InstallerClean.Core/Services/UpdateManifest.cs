@@ -62,6 +62,20 @@ public static class UpdateManifest
     internal const string NetFrameworkReleaseValueName = "Release";
     internal const int NetFramework48Release = 528040;
 
+    /// <summary>Whether <paramref name="body"/> parses as JSON at all, whatever its shape.</summary>
+    public static bool IsJson(byte[] body)
+    {
+        try
+        {
+            using var _ = JsonDocument.Parse(body);
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
     /// <summary>Where the release of <paramref name="version"/> publishes the file.</summary>
     public static Uri Address(string version) => new($"{AppCopy.DownloadRoot}v{version}/{FileName}");
 

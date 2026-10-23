@@ -379,26 +379,44 @@ public sealed class CommandLineUpdateTests : IDisposable
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void A_release_whose_file_cannot_be_read_goes_on_to_the_question_and_the_download(bool canAsk)
+    public void A_release_whose_file_cannot_be_read_goes_on_to_the_question_and_reads_it_again(bool canAsk)
     {
         var updater = Download();
-        updater.Requirements = () => throw new UpdateFailedException(UpdateFailureStage.Download, "failed");
+        var reads = 0;
+        updater.Requirements = () => ++reads == 1
+            ? throw new UpdateFailedException(UpdateFailureStage.Download, "failed")
+            : null;
         _host.Answers.Enqueue("y");
         _host.NewerVersionExitCode = 0;
 
         Run(updater, canAsk);
 
-        Assert.Equal(1, updater.RequirementReads);
+        Assert.Equal(2, updater.RequirementReads);
         Assert.Equal(canAsk ? 1 : 0, _host.Reads);
         Assert.True(updater.Prepared);
     }
 
     [Fact]
-    public void A_refusal_from_the_download_says_why_gives_the_release_page_and_starts_nothing()
+    public void A_release_whose_file_still_cannot_be_read_fails_as_a_download_and_carries_on()
     {
-        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, _exe,
-            onPrepare: () => throw new UpdateRefusedException(UpdateRefusal.NeedsNetFramework48, Latest));
+        var updater = Download();
         updater.Requirements = () => throw new UpdateFailedException(UpdateFailureStage.Download, "failed");
+
+        var result = Run(updater, canAsk: false);
+
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateFailureStage.Download, Current, Latest), result);
+        Assert.False(updater.Prepared);
+        Assert.Equal(Strings.UpdateNotice_DownloadFailed, _host.Output[^2]);
+    }
+
+    [Fact]
+    public void A_refusal_from_the_updates_own_read_says_why_before_any_download_and_starts_nothing()
+    {
+        var updater = Download();
+        var reads = 0;
+        updater.Requirements = () => ++reads == 1
+            ? throw new UpdateFailedException(UpdateFailureStage.Download, "failed")
+            : UpdateRefusal.NeedsNetFramework48;
 
         var result = Run(updater, canAsk: false);
 
@@ -406,12 +424,13 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal(new[]
         {
             string.Format(Strings.UpdateNotice_Available, Latest),
-            string.Format(Strings.UpdateNotice_Downloading, Latest),
             string.Format(Strings.UpdateNotice_NeedsNetFramework48, Latest),
             string.Format(Strings.Cli_UpdateDownloadLink, UpdateCheckService.ReleasesPageUrl),
         }, _host.Output);
         Assert.Null(_host.NewerVersionRun);
+        Assert.False(updater.Prepared);
         Assert.True(_host.HoldsOwnFile);
+        Assert.False(_host.HoldsLock);
     }
 
     [Fact]

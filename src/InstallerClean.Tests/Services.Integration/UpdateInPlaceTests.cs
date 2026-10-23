@@ -929,6 +929,39 @@ public sealed class UpdateInPlaceTests : IDisposable
         Assert.Equal(2, network.ManifestRequests);
     }
 
+    [Fact]
+    public async Task A_release_with_no_file_is_asked_again_each_time()
+    {
+        var exe = Path.Combine(_root, "InstallerClean.exe");
+        File.WriteAllBytes(exe, Program(1));
+        var network = new OneAnswer(Release(2), manifest: null);
+        var updater = new AppUpdater(AppCopyKind.Portable, exe, new UpdateDownloadService(network, null), _root,
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
+
+        await updater.CheckRequirementsAsync("9.9.9", CancellationToken.None);
+        await updater.CheckRequirementsAsync("9.9.9", CancellationToken.None);
+
+        Assert.Equal(2, network.ManifestRequests);
+    }
+
+    [Fact]
+    public async Task A_body_that_is_not_JSON_fails_as_a_read_and_is_not_kept()
+    {
+        var exe = Path.Combine(_root, "InstallerClean.exe");
+        File.WriteAllBytes(exe, Program(1));
+        var network = new OneAnswer(Release(2), "<html>Sign in to the network</html>");
+        var updater = new AppUpdater(AppCopyKind.Portable, exe, new UpdateDownloadService(network, null), _root,
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
+
+        for (var i = 0; i < 2; i++)
+        {
+            var failure = await Assert.ThrowsAsync<UpdateFailedException>(
+                () => updater.CheckRequirementsAsync(CoreRelease, CancellationToken.None));
+            Assert.Equal(UpdateFailureStage.Download, failure.Stage);
+        }
+        Assert.Equal(2, network.ManifestRequests);
+    }
+
     [Theory]
     [InlineData(AppCopyKind.Setup, true)]
     [InlineData(AppCopyKind.Setup, false)]

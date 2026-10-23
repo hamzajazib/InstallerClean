@@ -148,9 +148,12 @@ public sealed class AppUpdater : IAppUpdater
     public bool CanUpdateItself => AppCopy.CanUpdateItself(Kind);
 
     /// <summary>
-    /// The release's file is kept for the version it was read for, so the read made as a
-    /// newer version is found is not made again before its download. The PC is asked again
-    /// each time, so a requirement met since the last answer is seen.
+    /// A file the release has is kept for the version it was read for, so the read made as
+    /// a newer version is found is not made again before its download. A release with no
+    /// file is asked again each time, in case the file has been published since, and so is
+    /// the PC, so a requirement met since the last answer is seen. A body that is not JSON,
+    /// such as a page a network puts in GitHub's place, fails as a read that could not be
+    /// made and is not kept.
     /// </summary>
     public async Task<UpdateRefusal?> CheckRequirementsAsync(string version, CancellationToken cancellationToken)
     {
@@ -171,7 +174,12 @@ public sealed class AppUpdater : IAppUpdater
 #endif
             manifest = await _downloader.ReadAsync(UpdateManifest.Address(version), UpdateManifest.MaxBytes, cancellationToken)
                 .ConfigureAwait(false);
-            _manifest = (version, manifest);
+            if (manifest is not null)
+            {
+                if (!UpdateManifest.IsJson(manifest))
+                    throw new UpdateFailedException(UpdateFailureStage.Download, "The release's update.json is not JSON.");
+                _manifest = (version, manifest);
+            }
         }
 
         return UpdateManifest.Judge(manifest, version, Kind, () => UpdateManifest.HasNetFramework48(_registry));
