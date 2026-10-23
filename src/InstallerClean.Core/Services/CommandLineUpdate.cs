@@ -88,9 +88,11 @@ internal interface ICommandLineUpdateHost
 
     /// <summary>
     /// Reads one line of the person's answer, or null at the end of input, which is also
-    /// what Ctrl+C at the prompt can end the read with.
+    /// what Ctrl+C at the prompt can end the read with, and null where
+    /// <paramref name="token"/> is cancelled first, as a console being closed cancels it
+    /// with the read still waiting.
     /// </summary>
-    string? ReadLine();
+    string? ReadLine(CancellationToken token);
 
     /// <summary>
     /// Takes the single-instance mutex without waiting, on the calling thread. Answers
@@ -459,10 +461,11 @@ internal sealed class CommandLineUpdate
     /// <summary>
     /// Asks the question until it gets an answer. Enter, or an answer starting with this
     /// language's letter for yes or with Y, is yes; one starting with its letter for no or
-    /// with N is no; anything else asks again. Ctrl+C is read off the token once the read
-    /// returns. The end of input is no, unless the token is cancelled while the question
-    /// waits on it, up to <see cref="ControlCBound"/> in a run, since Ctrl+C at the prompt
-    /// can itself be read as the end of input.
+    /// with N is no; anything else asks again. The read is handed the token and ends as it
+    /// is cancelled, by Ctrl+C or by the console being closed, and the question then
+    /// answers cancelled. The end of input is no, unless the token is cancelled while the
+    /// question waits on it, up to <see cref="ControlCBound"/> in a run, since Ctrl+C at the
+    /// prompt can itself be read as the end of input.
     /// </summary>
     private Answer Ask(CancellationToken token)
     {
@@ -474,7 +477,7 @@ internal sealed class CommandLineUpdate
         while (true)
         {
             _host.Write(prompt + " ");
-            var line = _host.ReadLine();
+            var line = _host.ReadLine(token);
             if (line is null) token.WaitHandle.WaitOne(_controlCBound);
             if (token.IsCancellationRequested) return Answer.Cancelled;
             if (line is null) return Answer.No;

@@ -261,6 +261,26 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
+    public void A_close_with_the_question_still_waiting_cancels_through_the_token_the_read_is_handed()
+    {
+        // A console being closed cancels the token and leaves the read waiting; the host's
+        // read answers null as the token it was handed is cancelled.
+        using var cts = new CancellationTokenSource();
+        _host.OnRead = () =>
+        {
+            Assert.Equal(cts.Token, _host.ReadToken);
+            cts.Cancel();
+            return _host.ReadToken.IsCancellationRequested ? null : "y";
+        };
+        var updater = Download();
+
+        var result = Run(updater, canAsk: true, token: cts.Token);
+
+        Assert.IsType<CommandLineUpdateResult.Cancelled>(result);
+        Assert.False(updater.Prepared);
+    }
+
+    [Fact]
     public void Ctrl_C_answered_just_after_the_read_returns_the_end_of_input_cancels_with_nothing_downloaded()
     {
         // Ctrl+C at the prompt can end the read as the end of input, with the token
@@ -1148,6 +1168,9 @@ public sealed class CommandLineUpdateTests : IDisposable
         public List<string> Output { get; } = [];
         public Queue<string?> Answers { get; } = new();
         public Func<string?>? OnRead { get; set; }
+
+        /// <summary>The token the last read was handed.</summary>
+        public CancellationToken ReadToken { get; private set; }
         public int Reads { get; private set; }
         public bool LockAvailable { get; set; } = true;
         public bool HoldsLock { get; private set; }
@@ -1190,9 +1213,10 @@ public sealed class CommandLineUpdateTests : IDisposable
         // The question and the answer share a line on screen; recorded as an entry of its own.
         public void Write(string text) => Output.Add(text);
 
-        public string? ReadLine()
+        public string? ReadLine(CancellationToken token)
         {
             Reads++;
+            ReadToken = token;
             if (OnRead is not null) return OnRead();
             return Answers.Count > 0 ? Answers.Dequeue() : null;
         }

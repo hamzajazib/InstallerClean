@@ -21,6 +21,14 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
     private volatile bool _setupRunning;
 
     /// <summary>
+    /// The read of the console still waiting for a line, which the next read in this process
+    /// waits on rather than start a second read beside it. One for the process, as there is
+    /// one console.
+    /// </summary>
+    private static Task<string?>? s_pendingRead;
+    private static readonly object s_readGate = new();
+
+    /// <summary>
     /// Takes the line saying the run is cancelling, for a Ctrl+C that has just come: answers
     /// whether this run prints it now. The run's answer to Ctrl+C calls it once. Once the
     /// newer version is being started with the event that passes it Ctrl+C, or has
@@ -51,7 +59,38 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
 
     public void Write(string text) => Console.Write(text);
 
-    public string? ReadLine()
+    /// <summary>
+    /// Reads a line on a thread of its own and waits for it or for <paramref name="token"/>.
+    /// A console being closed cancels the token and leaves the read waiting, so the run goes
+    /// on to end as cancelled while the read is left to end with the process. A later read
+    /// in this process waits on that same read.
+    /// </summary>
+    public string? ReadLine(CancellationToken token)
+    {
+        Task<string?> read;
+        lock (s_readGate)
+            read = s_pendingRead ??= Task.Factory.StartNew(ReadConsoleLine, CancellationToken.None,
+                TaskCreationOptions.LongRunning, TaskScheduler.Default);
+        try
+        {
+            read.Wait(token);
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        lock (s_readGate)
+            if (ReferenceEquals(s_pendingRead, read)) s_pendingRead = null;
+        return read.GetAwaiter().GetResult();
+    }
+
+    /// <summary>Test seam: forgets the read left waiting, so a test starts with none.</summary>
+    internal static void ForgetPendingRead()
+    {
+        lock (s_readGate) s_pendingRead = null;
+    }
+
+    private static string? ReadConsoleLine()
     {
         try
         {
