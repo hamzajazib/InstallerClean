@@ -250,9 +250,11 @@ jobs:
           "Culture:    $(if ($culture.Name) { $culture.Name } else { 'invariant' })"
           "UI culture: $(if ($ui.Name) { $ui.Name } else { 'invariant' })"
 
+      # The normal console verbosity prints each test with its outcome, and each
+      # skipped test with the reason it gives, which the default leaves out.
       - name: Test
         if: success() || failure()
-        run: dotnet test src/InstallerClean.Tests/ -p:RestoreLockedMode=true
+        run: dotnet test src/InstallerClean.Tests/ -p:RestoreLockedMode=true --logger "console;verbosity=normal"
 
       # A build reports a broken reference in a documentation comment only when
       # it writes the documentation file, which no project here asks for. This
