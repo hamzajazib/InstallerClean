@@ -372,9 +372,10 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
     }
 
     /// <summary>
-    /// A start Windows refused. A token whose source has been disposed throws
-    /// <see cref="ObjectDisposedException"/>, which is an InvalidOperationException and is
-    /// not one, so it reaches the caller.
+    /// A start Windows refused. The wait between tries reads the token's wait handle, which
+    /// throws <see cref="ObjectDisposedException"/> where the token's source has been
+    /// disposed; that derives from InvalidOperationException but is not a refused start, so
+    /// it reaches the caller.
     /// </summary>
     private static bool IsStartFailure(Exception ex) =>
         ex is System.ComponentModel.Win32Exception or IOException

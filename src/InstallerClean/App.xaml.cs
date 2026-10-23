@@ -208,8 +208,23 @@ public partial class App : Application
         // Single instance: the mutex is taken without waiting and released
         // in OnExit. A process that ends without releasing it hands it to
         // the next instance, which InstanceLock counts as taken.
-        _instanceLock = new InstanceLock();
-        if (!_instanceLock.TryTake())
+        //
+        // Before the handlers below are hooked too, so it carries its own catch, as the
+        // administrator check does: where Windows will not open the mutex, the app shows
+        // the dialog saying it failed to start, with the crash log, and closes.
+        bool tookInstanceLock;
+        try
+        {
+            _instanceLock = new InstanceLock();
+            tookInstanceLock = _instanceLock.TryTake();
+        }
+        catch (Exception ex)
+        {
+            ShowFailedToStart(ex);
+            EndFailedStart(splash: null);
+            return;
+        }
+        if (!tookInstanceLock)
         {
             // Another instance holds the mutex. If it is the GUI, bring its
             // window to the front, which is what clicking the icon of a running

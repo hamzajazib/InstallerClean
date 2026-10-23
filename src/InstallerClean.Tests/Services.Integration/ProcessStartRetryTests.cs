@@ -44,17 +44,45 @@ public class ProcessStartRetryTests
     }
 
     [Fact]
-    public void A_throw_from_the_wait_ends_the_tries()
+    public void A_failure_is_written_before_a_wait_that_throws_and_the_throw_ends_the_tries()
     {
         var info = Missing();
         var tries = 0;
+        var waitedFor = TimeSpan.Zero;
+        var crashLogBefore = FailedStartsInCrashLog(info.FileName);
 
         Assert.Throws<OperationCanceledException>(() => ProcessStartRetry.Start(
             info,
             _ => { tries++; return true; },
-            _ => throw new OperationCanceledException()));
+            interval =>
+            {
+                waitedFor = interval;
+                throw new OperationCanceledException();
+            }));
 
         Assert.Equal(1, tries);
+        Assert.Equal(ProcessStartRetry.Interval, waitedFor);
+        Assert.Equal(crashLogBefore + 1, FailedStartsInCrashLog(info.FileName));
+    }
+
+    [Fact]
+    public void A_failure_the_caller_stops_retrying_is_thrown_at_that_try()
+    {
+        var info = Missing();
+        var asked = 0;
+        var waits = 0;
+        var crashLogBefore = FailedStartsInCrashLog(info.FileName);
+        // A failure short of the last try, which the caller refuses to try again.
+        var refusedAt = ProcessStartRetry.Attempts - 1;
+
+        Assert.Throws<Win32Exception>(() => ProcessStartRetry.Start(
+            info,
+            _ => ++asked < refusedAt,
+            _ => waits++));
+
+        Assert.Equal(refusedAt, asked);
+        Assert.Equal(refusedAt - 1, waits);
+        Assert.Equal(crashLogBefore + refusedAt - 1, FailedStartsInCrashLog(info.FileName));
     }
 
     /// <summary>How many entries in the crash log are a start of <paramref name="file"/> that was refused.</summary>
