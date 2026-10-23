@@ -67,13 +67,24 @@ function Stop-Record([string]$name) {
 # One build at a time, each ended and waited for before the next starts, since
 # the windows share the single-instance mutex. The command line scans and ends;
 # a window is given twenty seconds and then ended.
+# The addresses github.com resolved to around each run that checks for updates, by its
+# process id, which Test-UpdateCheck judges its connections against.
+$script:GitHubAddressesByRun = @{}
+
+# The addresses github.com resolves to now, or none where the lookup fails.
+function Get-GitHubAddresses {
+  try { @([System.Net.Dns]::GetHostAddresses('github.com') | ForEach-Object IPAddressToString) } catch { @() }
+}
+
 function Invoke-Build($build, [string]$label, [string]$folder) {
   $start = @{ FilePath = (Join-Path $folder (Split-Path $build.Exe -Leaf)); WorkingDirectory = $folder; PassThru = $true }
   if ($build.Arguments.Count) { $start.ArgumentList = $build.Arguments }
+  $before = if ($build.UpdateCheck) { Get-GitHubAddresses } else { @() }
   $p = Start-Process @start
   # Read now, so the exit code is kept once the process ends.
   $null = $p.Handle
   if (-not $p.WaitForExit($build.Wait * 1000)) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; $p.WaitForExit() }
+  if ($build.UpdateCheck) { $script:GitHubAddressesByRun[[string]$p.Id] = @(@($before) + @(Get-GitHubAddresses) | Sort-Object -Unique) }
   Write-Host "  ${label}: process $($p.Id), ended with $($p.ExitCode)"
   $p.Id
 }
@@ -298,7 +309,9 @@ function Test-MustLoad($run, $loads) {
 # A run that checks for updates reaches github.com, which the update check alone
 # contacts, and finds no newer release while the build's version is at or above the
 # latest. Process Monitor names the far end of a connection by its host name where
-# it can, and by its address otherwise. Every /s run writes one summary entry to
+# it can, and by its address otherwise, so an address counts where github.com resolved
+# to it just before the run, just after it, or as it is judged: GitHub's addresses
+# change from one lookup to the next. Every /s run writes one summary entry to
 # the Application log, or a 3005 or 3006 where an update ended the run, so a run
 # with no entry there, or a log that cannot be read, fails rather than reading as
 # one that found nothing newer. Only the entries written while the run was going are
@@ -307,13 +320,18 @@ function Test-MustLoad($run, $loads) {
 # from the run's start, which only widens the read, and the entries are then kept by
 # the time each was written.
 function Test-UpdateCheck($run, $byProcess) {
-  $github = @([System.Net.Dns]::GetHostAddresses('github.com') | ForEach-Object IPAddressToString)
+  $github = @(@($script:GitHubAddressesByRun[[string]$run.Id]) + @(Get-GitHubAddresses) | Where-Object { $_ } | Sort-Object -Unique)
   $answers = @($byProcess[[string]$run.Id] | Where-Object {
     $_.Operation -eq 'TCP Receive' -and $_.Path -match '-> (.+):(https|443)$' -and
     ($Matches[1] -match '(^|\.)github\.com$' -or $Matches[1] -in $github)
   })
   if ($answers) { "  $($run.Label): the update check had an answer from $(($answers[0].Path -split ' -> ')[-1]) at $($answers[0].'Time of Day')" }
-  else { Fail "$($run.Label): the update check got no answer from GitHub, so the run's network libraries were not judged." }
+  else {
+    $seen = @($byProcess[[string]$run.Id] | Where-Object { $_.Operation -eq 'TCP Receive' } | ForEach-Object { ($_.Path -split ' -> ')[-1] } | Sort-Object -Unique)
+    Fail ("$($run.Label): the update check got no answer from GitHub, so the run's network libraries were not judged. " +
+      "github.com resolved to $(if ($github) { $github -join ', ' } else { 'nothing' }) around the run; " +
+      "the run received from $(if ($seen) { $seen -join ', ' } else { 'nowhere' }).")
+  }
   try {
     $logged = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'InstallerClean'; StartTime = $run.Started } -ErrorAction SilentlyContinue -ErrorVariable readErrors)
   }
