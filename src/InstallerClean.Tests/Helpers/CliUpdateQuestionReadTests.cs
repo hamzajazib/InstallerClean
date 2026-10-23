@@ -30,7 +30,8 @@ public sealed class CliUpdateQuestionReadTests : IDisposable
     {
         private readonly SemaphoreSlim _line = new(0);
         private string? _next;
-        public int Reads;
+        private int _reads;
+        public int Reads => Volatile.Read(ref _reads);
         public readonly ManualResetEventSlim Entered = new();
 
         public void Release(string? line)
@@ -41,7 +42,7 @@ public sealed class CliUpdateQuestionReadTests : IDisposable
 
         public override string? ReadLine()
         {
-            Interlocked.Increment(ref Reads);
+            Interlocked.Increment(ref _reads);
             Entered.Set();
             _line.Wait(TimeSpan.FromSeconds(30));
             return _next;
@@ -60,7 +61,7 @@ public sealed class CliUpdateQuestionReadTests : IDisposable
         Assert.Null(host.ReadLine(cancel.Token));
 
         Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(10));
-        Assert.Equal(1, Volatile.Read(ref _reader.Reads));
+        Assert.Equal(1, _reader.Reads);
     }
 
     [Fact]
@@ -76,7 +77,7 @@ public sealed class CliUpdateQuestionReadTests : IDisposable
 
         // A later run in the same process, with a host of its own, waits on the same read.
         Assert.Equal("n", new ConsoleUpdateHost("/s").ReadLine(CancellationToken.None));
-        Assert.Equal(1, Volatile.Read(ref _reader.Reads));
+        Assert.Equal(1, _reader.Reads);
     }
 
     [Fact]

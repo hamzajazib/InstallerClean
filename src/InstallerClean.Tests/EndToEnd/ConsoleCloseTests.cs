@@ -1,5 +1,6 @@
 #if DEBUG
 using System.Diagnostics;
+using System.Diagnostics.Eventing.Reader;
 using System.Text.RegularExpressions;
 using InstallerClean.Helpers;
 using InstallerClean.Services;
@@ -48,6 +49,7 @@ public sealed class ConsoleCloseTests : IDisposable
         var manifest = Path.Combine(_root, "update.json");
         File.WriteAllText(manifest, """{"schema":1,"downloads":{"cli":{"requires":[]}}}""");
         var after = NewestEntryIndex();
+        var started = DateTime.UtcNow;
 
         // A program started under conhost.exe takes this process's environment.
         Environment.SetEnvironmentVariable(AppCopy.PretendCopyVariable, "cli");
@@ -86,18 +88,25 @@ public sealed class ConsoleCloseTests : IDisposable
         Assert.True(_run.WaitForExit(15_000), "The run was still running 15 seconds after its window was closed.");
         var took = closedAt.Elapsed;
 
-        // Read until the entry shows, for up to five seconds.
+        // Read until an entry shows, for up to five seconds, then once more a second later, so
+        // an entry written just after the first is counted too.
         List<(int Id, string Message)> entries = [];
         for (var attempt = 0; attempt < 20 && entries.Count == 0; attempt++)
         {
             entries = EntriesAfter(after);
             if (entries.Count == 0) await Task.Delay(250);
         }
+        await Task.Delay(1000);
+        entries = EntriesAfter(after);
 
+        var evidence = $"Its entries: {Describe(entries)}. The source's entries since the run started, read through an event query: " +
+            $"{EntriesByQuerySince(started)}. The command line's crash.log: {ChildCrashLog(started)}";
         Assert.True(_run.ExitCode == CliExitCode.Cancelled,
-            $"The run ended with {_run.ExitCode} (window class {closed}), {took.TotalSeconds:N1} s after the close. Its entries: {Describe(entries)}");
-        Assert.True(took < TimeSpan.FromSeconds(5), $"The run took {took.TotalSeconds:N1} s to end after the close.");
-        var entry = Assert.Single(entries);
+            $"The run ended with {_run.ExitCode} (window class {closed}), {took.TotalSeconds:N1} s after the close. {evidence}");
+        Assert.True(took < TimeSpan.FromSeconds(5), $"The run took {took.TotalSeconds:N1} s to end after the close. {evidence}");
+        if (entries.Count != 1)
+            Assert.Fail($"The run wrote {entries.Count} entries. {evidence}");
+        var entry = entries[0];
         Assert.Equal(CliContract.EventIdFor(CliEventClass.TransientSkip), entry.Id);
         Assert.Contains("cancelled at the console before any work", entry.Message, StringComparison.Ordinal);
     }
@@ -135,6 +144,69 @@ public sealed class ConsoleCloseTests : IDisposable
         }
         found.Reverse();
         return found;
+    }
+
+    /// <summary>
+    /// The source's entries written since <paramref name="since"/>, by any process, read
+    /// through an event query rather than the log's entry list, so a fault in either reading
+    /// shows as the two disagreeing. Each entry's text is its one insertion string, as the
+    /// command line writes it, which needs no message file to read.
+    /// </summary>
+    private static string EntriesByQuerySince(DateTime since)
+    {
+        var found = new List<string>();
+        try
+        {
+            var query = new EventLogQuery("Application", PathType.LogName,
+                $"*[System[Provider[@Name='{EventLogWriter.SourceName}'] and TimeCreated[@SystemTime >= '{since.AddSeconds(-1):yyyy-MM-ddTHH:mm:ss.fffZ}']]]");
+            using var reader = new EventLogReader(query);
+            for (var record = reader.ReadEvent(); record is not null; record = reader.ReadEvent())
+            {
+                using (record)
+                {
+                    string text;
+                    try { text = record.Properties.Count > 0 ? record.Properties[0].Value?.ToString() ?? "" : ""; }
+                    catch (Exception ex) { text = $"(its text could not be read: {ex.GetType().Name})"; }
+                    found.Add($"{record.Id} at {record.TimeCreated:HH:mm:ss.fff}: {text}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            found.Add($"the query threw {ex.GetType().Name}: {ex.Message}");
+        }
+        return found.Count == 0 ? "none" : string.Join(" | ", found);
+    }
+
+    /// <summary>
+    /// The end of the crash.log the command line writes for the account running the tests,
+    /// in the app's folder or the folder earlier versions used, where it was written after
+    /// <paramref name="since"/>: the first entry it could not write to the Application log
+    /// leaves the reason there. Names the path it read.
+    /// </summary>
+    private static string ChildCrashLog(DateTime since)
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var parts = new List<string>();
+        foreach (var folder in new[] { Path.Combine(localAppData, "InstallerClean"), Path.Combine(localAppData, "NoFaff", "InstallerClean") })
+        {
+            var path = Path.Combine(folder, CrashLog.FileName);
+            try
+            {
+                if (!File.Exists(path)) parts.Add($"{path}: none");
+                else if (File.GetLastWriteTimeUtc(path) < since) parts.Add($"{path}: not written during the run");
+                else
+                {
+                    var text = File.ReadAllText(path);
+                    parts.Add($"{path}:\n{(text.Length > 3000 ? text[^3000..] : text)}");
+                }
+            }
+            catch (Exception ex)
+            {
+                parts.Add($"{path}: could not be read ({ex.GetType().Name})");
+            }
+        }
+        return string.Join("; ", parts);
     }
 
     private static string Describe(List<(int Id, string Message)> entries) =>
