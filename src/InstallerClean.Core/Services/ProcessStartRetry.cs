@@ -24,21 +24,14 @@ internal static class ProcessStartRetry
     /// <paramref name="wait"/>, which ends the tries: that is how a caller cancels between
     /// them. Runs on the calling thread throughout.
     /// </summary>
-    /// <remarks>
-    /// Started through the shell, a file can be handed to a process already running, and
-    /// Windows then answers no process, which is a start, so null is answered. Started
-    /// directly, no process is a failure, thrown as <see cref="InvalidOperationException"/>.
-    /// </remarks>
-    public static Process? Start(ProcessStartInfo info, Func<Exception, bool> retries, Action<TimeSpan> wait)
+    public static Process Start(ProcessStartInfo info, Func<Exception, bool> retries, Action<TimeSpan> wait)
     {
         for (var attempt = 1; ; attempt++)
         {
             try
             {
-                var started = Process.Start(info);
-                if (started is null && !info.UseShellExecute)
-                    throw new InvalidOperationException("Windows started no process for the file.");
-                return started;
+                return Process.Start(info)
+                    ?? throw new InvalidOperationException("Windows started no process for the file.");
             }
             catch (Exception ex) when (attempt < Attempts && retries(ex))
             {

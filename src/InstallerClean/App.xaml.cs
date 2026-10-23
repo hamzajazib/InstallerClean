@@ -823,23 +823,27 @@ public partial class App : Application
     /// installed, and closes the app. A start that fails is tried again through
     /// <see cref="ProcessStartRetry"/>, on the dispatcher thread with its processing held,
     /// as the in-place swap's hand-over is, so none of the window's own code runs while the
-    /// mutex is released. While the tries and the waits between them run, the window takes
-    /// no input and shows the update card as the download left it; then it closes, or the
-    /// card says the update could not be installed.
+    /// mutex is released. The setup starts through CreateProcess rather than the shell,
+    /// which can wait on a DDE conversation and pump messages; the app runs elevated, so
+    /// the setup CreateProcess starts runs elevated too, without a prompt. While the tries
+    /// and the waits between them run, the window takes no input and shows the update card
+    /// as the download left it; then it closes, or the card says the update could not be
+    /// installed.
     /// </summary>
     private bool StartSetupAndClose(string fileToStart, string arguments)
     {
         var released = _instanceLock?.Release() == true;
         var info = new ProcessStartInfo(fileToStart, arguments)
         {
-            UseShellExecute = true,
+            UseShellExecute = false,
             WorkingDirectory = Path.GetDirectoryName(fileToStart) ?? string.Empty,
         };
 
         try
         {
             using (Dispatcher.DisableProcessing())
-            using (ProcessStartRetry.Start(info, _ => true, Thread.Sleep)) { }
+                ProcessStartRetry.Start(
+                    info, _ => true, interval => Kernel32.Sleep((uint)interval.TotalMilliseconds)).Dispose();
         }
         catch (Exception ex)
         {
