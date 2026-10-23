@@ -73,8 +73,9 @@ public sealed class PreparedUpdate
 /// The update from inside the app. The setup's copy downloads the newer setup and runs
 /// it; the portable, the slim and the command line's own download download the newer
 /// version of the same file and write it beside their own. Each download is checked for
-/// the version it was downloaded as before anything uses it. A build from source and
-/// Scoop's copy have no download, and <see cref="PrepareAsync"/> refuses them.
+/// the version it was downloaded as before anything uses it. A build from source,
+/// Scoop's copy and an undetermined copy have no download, and
+/// <see cref="PrepareAsync"/> refuses them.
 /// </summary>
 public sealed class AppUpdater : IAppUpdater
 {

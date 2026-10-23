@@ -183,8 +183,9 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     private bool _hasNewerVersion;
 
     /// <summary>
-    /// Whether this copy can put a newer version in its own place: every download can
-    /// but Scoop's, which Scoop updates, and a build from source cannot.
+    /// Whether this copy can put a newer version in its own place
+    /// (<see cref="AppCopy.CanUpdateItself"/>): Scoop's copy is updated by Scoop, and a
+    /// build from source and an undetermined copy cannot.
     /// </summary>
     public bool CanUpdateItself => _updater?.CanUpdateItself == true;
 

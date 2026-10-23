@@ -22,14 +22,40 @@ public class AppCopyTests
 
     private static readonly Func<string, bool> NoFiles = _ => false;
 
-    [Fact]
-    public void A_build_that_is_not_a_single_file_is_from_source_whatever_else_holds()
-    {
-        var kind = AppCopy.Decide(
-            isSingleFile: false, isSelfContained: true, ProgramFilesFolder,
-            setupInstallLocation: ProgramFilesFolder + @"\", NoFiles);
+    /// <summary>
+    /// The setup's record as <see cref="AppCopy.ReadSetupRecord"/> reads a key holding
+    /// <paramref name="installLocation"/>, or an absent key where it is null.
+    /// </summary>
+    private static SetupRecord RecordOf(string? installLocation) =>
+        AppCopy.ReadSetupRecord(Registry(installLocation is null
+            ? new RegistryKeyValues(RegistryKeyPresence.Absent)
+            : new RegistryKeyValues(RegistryKeyPresence.Present,
+                [new RegistryValue("InstallLocation", RegistryValueKind.String, installLocation)])));
 
-        Assert.Equal(AppCopyKind.FromSource, kind);
+    private static IRegistryReader Registry(RegistryKeyValues read)
+    {
+        var registry = Substitute.For<IRegistryReader>();
+        registry.LocalMachineValues(AppCopy.SetupUninstallKeyPath).Returns(read);
+        return registry;
+    }
+
+    [Theory]
+    [InlineData("names this folder")]
+    [InlineData("none")]
+    [InlineData("cannot tell")]
+    public void A_build_that_is_not_a_single_file_is_from_source_whatever_else_holds(string which)
+    {
+        var record = which switch
+        {
+            "names this folder" => RecordOf(ProgramFilesFolder + @"\"),
+            "none" => SetupRecord.None,
+            _ => SetupRecord.CannotTell,
+        };
+
+        Assert.Equal(AppCopyKind.FromSource,
+            AppCopy.Decide(isSingleFile: false, isSelfContained: true, ProgramFilesFolder, record, NoFiles));
+        Assert.Equal(AppCopyKind.FromSource,
+            AppCopy.DecideCommandLine(isSingleFile: false, ProgramFilesFolder, record));
     }
 
     [Theory]
@@ -39,7 +65,7 @@ public class AppCopyTests
     public void A_copy_in_the_folder_the_setup_recorded_is_the_setups(string installLocation)
     {
         var kind = AppCopy.Decide(
-            isSingleFile: true, isSelfContained: true, ProgramFilesFolder, installLocation, NoFiles);
+            isSingleFile: true, isSelfContained: true, ProgramFilesFolder, RecordOf(installLocation), NoFiles);
 
         Assert.Equal(AppCopyKind.Setup, kind);
     }
@@ -51,20 +77,38 @@ public class AppCopyTests
         // folder tells them apart.
         var kind = AppCopy.Decide(
             isSingleFile: true, isSelfContained: true, DownloadsFolder,
-            setupInstallLocation: ProgramFilesFolder + @"\", NoFiles);
+            RecordOf(ProgramFilesFolder + @"\"), NoFiles);
 
         Assert.Equal(AppCopyKind.Portable, kind);
+    }
+
+    [Theory]
+    [InlineData(ProgramFilesFolder)]
+    [InlineData(DownloadsFolder)]
+    public void A_copy_on_a_PC_whose_setup_record_cannot_tell_is_undetermined(string exeFolder)
+    {
+        foreach (var selfContained in new[] { true, false })
+            Assert.Equal(AppCopyKind.Undetermined, AppCopy.Decide(
+                isSingleFile: true, selfContained, exeFolder, SetupRecord.CannotTell, NoFiles));
     }
 
     [Fact]
-    public void A_recorded_location_that_is_not_a_path_names_no_folder()
+    public void A_copy_beside_Scoops_files_is_Scoops_where_the_setup_record_cannot_tell()
     {
         var kind = AppCopy.Decide(
-            isSingleFile: true, isSelfContained: true, ProgramFilesFolder,
-            setupInstallLocation: "\0not a path", NoFiles);
+            isSingleFile: true, isSelfContained: true, ScoopFolder, SetupRecord.CannotTell,
+            FilesPresent(Path.Combine(ScoopFolder, "scoop-manifest.json"), Path.Combine(ScoopFolder, "scoop-install.json")));
 
-        Assert.Equal(AppCopyKind.Portable, kind);
+        Assert.Equal(AppCopyKind.Scoop, kind);
     }
+
+    [Theory]
+    [InlineData(ProgramFilesFolder)]
+    [InlineData(DownloadsFolder)]
+    public void A_command_line_on_a_PC_whose_setup_record_cannot_tell_is_undetermined(string exeFolder) =>
+        Assert.Equal(AppCopyKind.Undetermined,
+            AppCopy.DecideCommandLine(isSingleFile: true, exeFolder, SetupRecord.CannotTell));
+
 
     [Theory]
     [InlineData("scoop-manifest.json", "scoop-install.json")]
@@ -72,7 +116,7 @@ public class AppCopyTests
     public void A_copy_beside_both_of_Scoops_files_is_Scoops(string manifest, string install)
     {
         var kind = AppCopy.Decide(
-            isSingleFile: true, isSelfContained: true, ScoopFolder, setupInstallLocation: null,
+            isSingleFile: true, isSelfContained: true, ScoopFolder, RecordOf(null),
             FilesPresent(Path.Combine(ScoopFolder, manifest), Path.Combine(ScoopFolder, install)));
 
         Assert.Equal(AppCopyKind.Scoop, kind);
@@ -84,7 +128,7 @@ public class AppCopyTests
     public void One_of_Scoops_files_alone_does_not_make_a_Scoop_copy(string only)
     {
         var kind = AppCopy.Decide(
-            isSingleFile: true, isSelfContained: true, ScoopFolder, setupInstallLocation: null,
+            isSingleFile: true, isSelfContained: true, ScoopFolder, RecordOf(null),
             FilesPresent(Path.Combine(ScoopFolder, only)));
 
         Assert.Equal(AppCopyKind.Portable, kind);
@@ -96,7 +140,7 @@ public class AppCopyTests
     public void Otherwise_the_build_tells_the_portable_from_the_slim(bool selfContained, AppCopyKind expected)
     {
         var kind = AppCopy.Decide(
-            isSingleFile: true, selfContained, DownloadsFolder, setupInstallLocation: null, NoFiles);
+            isSingleFile: true, selfContained, DownloadsFolder, RecordOf(null), NoFiles);
 
         Assert.Equal(expected, kind);
     }
@@ -120,20 +164,13 @@ public class AppCopyTests
         Assert.True(AppCopy.CanUpdateItself(AppCopyKind.CommandLineDownload));
     }
 
-    [Fact]
-    public void A_command_line_built_from_source_is_from_source_whatever_else_holds()
-    {
-        Assert.Equal(AppCopyKind.FromSource,
-            AppCopy.DecideCommandLine(isSingleFile: false, ProgramFilesFolder, ProgramFilesFolder + @""));
-    }
-
     [Theory]
     [InlineData(@"C:\Program Files\InstallerClean\")]
     [InlineData(@"c:\program files\installerclean")]
     public void A_command_line_in_the_folder_the_setup_recorded_is_the_setups(string installLocation)
     {
         Assert.Equal(AppCopyKind.Setup,
-            AppCopy.DecideCommandLine(isSingleFile: true, ProgramFilesFolder, installLocation));
+            AppCopy.DecideCommandLine(isSingleFile: true, ProgramFilesFolder, RecordOf(installLocation)));
     }
 
     [Theory]
@@ -144,9 +181,9 @@ public class AppCopyTests
         // Scoop installs only the window, so even a folder holding Scoop's files is not a
         // Scoop copy of the command line.
         Assert.Equal(AppCopyKind.CommandLineDownload,
-            AppCopy.DecideCommandLine(isSingleFile: true, ScoopFolder, installLocation));
+            AppCopy.DecideCommandLine(isSingleFile: true, ScoopFolder, RecordOf(installLocation)));
         Assert.Equal(AppCopyKind.CommandLineDownload,
-            AppCopy.DecideCommandLine(isSingleFile: true, DownloadsFolder, installLocation));
+            AppCopy.DecideCommandLine(isSingleFile: true, DownloadsFolder, RecordOf(installLocation)));
     }
 
     [Fact]
@@ -155,7 +192,7 @@ public class AppCopyTests
         foreach (var selfContained in new[] { true, false })
         foreach (var folder in new[] { ProgramFilesFolder, ScoopFolder, DownloadsFolder })
             Assert.NotEqual(AppCopyKind.CommandLineDownload,
-                AppCopy.Decide(true, selfContained, folder, ProgramFilesFolder + @"", NoFiles));
+                AppCopy.Decide(true, selfContained, folder, RecordOf(ProgramFilesFolder), NoFiles));
     }
 
     [Fact]
@@ -178,41 +215,75 @@ public class AppCopyTests
     }
 
     [Fact]
-    public void The_setups_location_is_read_from_its_uninstall_key()
+    public void The_setups_record_names_the_folder_in_its_uninstall_key()
     {
-        var registry = Substitute.For<IRegistryReader>();
-        registry.LocalMachineValues(AppCopy.SetupUninstallKeyPath).Returns(new RegistryKeyValues(
+        var registry = Registry(new RegistryKeyValues(
             RegistryKeyPresence.Present,
             [
                 new RegistryValue("DisplayVersion", RegistryValueKind.String, "3.4.0"),
-                new RegistryValue("InstallLocation", RegistryValueKind.String, @"C:\Program Files\InstallerClean\"),
+                new RegistryValue("InstallLocation", RegistryValueKind.String, ProgramFilesFolder + @"\"),
             ]));
 
-        Assert.Equal(@"C:\Program Files\InstallerClean\", AppCopy.ReadSetupInstallLocation(registry));
-    }
+        var record = AppCopy.ReadSetupRecord(registry);
 
-    [Theory]
-    [InlineData(RegistryKeyPresence.Absent)]
-    [InlineData(RegistryKeyPresence.Unreadable)]
-    public void No_location_where_the_key_is_absent_or_unreadable(RegistryKeyPresence presence)
-    {
-        var registry = Substitute.For<IRegistryReader>();
-        registry.LocalMachineValues(AppCopy.SetupUninstallKeyPath).Returns(new RegistryKeyValues(presence));
-
-        Assert.Null(AppCopy.ReadSetupInstallLocation(registry));
+        Assert.Equal(SetupRecordState.Folder, record.State);
+        Assert.Equal(Path.TrimEndingDirectorySeparator(Path.GetFullPath(ProgramFilesFolder + @"\")), record.Folder);
     }
 
     [Fact]
-    public void No_location_where_the_value_is_missing_or_empty()
-    {
-        var registry = Substitute.For<IRegistryReader>();
-        registry.LocalMachineValues(AppCopy.SetupUninstallKeyPath).Returns(
-            new RegistryKeyValues(RegistryKeyPresence.Present,
-                [new RegistryValue("DisplayVersion", RegistryValueKind.String, "3.4.0")]),
-            new RegistryKeyValues(RegistryKeyPresence.Present,
-                [new RegistryValue("InstallLocation", RegistryValueKind.String, "  ")]));
+    public void There_is_no_record_where_the_key_is_absent() =>
+        Assert.Equal(SetupRecord.None,
+            AppCopy.ReadSetupRecord(Registry(new RegistryKeyValues(RegistryKeyPresence.Absent))));
 
-        Assert.Null(AppCopy.ReadSetupInstallLocation(registry));
-        Assert.Null(AppCopy.ReadSetupInstallLocation(registry));
+    [Fact]
+    public void The_record_cannot_tell_where_the_key_is_unreadable() =>
+        Assert.Equal(SetupRecord.CannotTell,
+            AppCopy.ReadSetupRecord(Registry(new RegistryKeyValues(RegistryKeyPresence.Unreadable))));
+
+    [Theory]
+    [InlineData("missing")]
+    [InlineData("blank")]
+    [InlineData("not text")]
+    [InlineData("not a path")]
+    [InlineData("relative")]
+    [InlineData("drive-relative")]
+    public void The_record_cannot_tell_where_the_key_has_no_usable_location(string which)
+    {
+        RegistryValue[] values = which switch
+        {
+            "missing" => [new RegistryValue("DisplayVersion", RegistryValueKind.String, "3.4.0")],
+            "blank" => [new RegistryValue("InstallLocation", RegistryValueKind.String, "  ")],
+            "not text" => [new RegistryValue("InstallLocation", RegistryValueKind.DWord, null)],
+            "not a path" => [new RegistryValue("InstallLocation", RegistryValueKind.String, "\0not a path")],
+            "relative" => [new RegistryValue("InstallLocation", RegistryValueKind.String, "InstallerClean")],
+            _ => [new RegistryValue("InstallLocation", RegistryValueKind.String, "C:InstallerClean")],
+        };
+
+        var record = AppCopy.ReadSetupRecord(Registry(new RegistryKeyValues(RegistryKeyPresence.Present, values)));
+
+        Assert.Equal(SetupRecord.CannotTell, record);
+    }
+
+    [Fact]
+    public void An_undetermined_copy_has_no_download_and_cannot_update_itself()
+    {
+        Assert.Null(AppCopy.DownloadAddress(AppCopyKind.Undetermined, "3.5.0"));
+        Assert.Null(AppCopy.DownloadFileName(AppCopyKind.Undetermined, "3.5.0"));
+        Assert.False(AppCopy.CanUpdateItself(AppCopyKind.Undetermined));
+        Assert.False(AppCopy.UpdatedByScoop(AppCopyKind.Undetermined));
+    }
+
+    [Fact]
+    public void Only_the_four_kinds_with_a_download_update_themselves()
+    {
+        var updating = Enum.GetValues<AppCopyKind>().Where(AppCopy.CanUpdateItself).ToHashSet();
+
+        Assert.Equal(new HashSet<AppCopyKind>
+            {
+                AppCopyKind.Setup, AppCopyKind.Portable, AppCopyKind.Slim, AppCopyKind.CommandLineDownload,
+            },
+            updating);
+        foreach (var kind in Enum.GetValues<AppCopyKind>())
+            Assert.Equal(updating.Contains(kind), AppCopy.DownloadFileName(kind, "3.5.0") is not null);
     }
 }

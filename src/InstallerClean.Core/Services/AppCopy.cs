@@ -36,6 +36,69 @@ public enum AppCopyKind
     /// replacing its own file, as the portable does.
     /// </summary>
     CommandLineDownload,
+
+    /// <summary>
+    /// A single-file copy on a PC whose setup record could not be read, or is there and
+    /// names no folder that can be compared, so whether the setup installed this copy is
+    /// not known. It does not update itself, so it offers the release page alone.
+    /// </summary>
+    Undetermined,
+}
+
+/// <summary>What the setup's record says. See <see cref="SetupRecord"/>.</summary>
+public enum SetupRecordState
+{
+    /// <summary>
+    /// The record could not be read, or is there and names no folder that can be
+    /// compared. First member, so the type's zero is the reading that established nothing.
+    /// </summary>
+    CannotTell,
+
+    /// <summary>There is no record: the setup has not installed InstallerClean on this PC.</summary>
+    None,
+
+    /// <summary>The record names the setup's folder, in <see cref="SetupRecord.Folder"/>.</summary>
+    Folder,
+}
+
+/// <summary>
+/// The setup's record of where it installed InstallerClean, as
+/// <see cref="AppCopy.ReadSetupRecord"/> reads it. Made only through <see cref="None"/>,
+/// <see cref="CannotTell"/> and <see cref="At"/>, so a record in the
+/// <see cref="SetupRecordState.Folder"/> state always holds a full path made absolute
+/// and stripped of trailing separators, and the type's default is
+/// <see cref="SetupRecordState.CannotTell"/>.
+/// </summary>
+public readonly record struct SetupRecord
+{
+    private SetupRecord(SetupRecordState state, string? folder)
+    {
+        State = state;
+        Folder = folder;
+    }
+
+    /// <summary>What the record says.</summary>
+    public SetupRecordState State { get; }
+
+    /// <summary>The setup's folder where <see cref="State"/> is <see cref="SetupRecordState.Folder"/>, and null otherwise.</summary>
+    public string? Folder { get; }
+
+    /// <summary>There is no record.</summary>
+    public static SetupRecord None => new(SetupRecordState.None, null);
+
+    /// <summary>The record could not be read or names nothing that can be compared.</summary>
+    public static SetupRecord CannotTell => new(SetupRecordState.CannotTell, null);
+
+    /// <summary>
+    /// The record naming <paramref name="installLocation"/>, or <see cref="CannotTell"/>
+    /// where it is blank, not a full path, or not a path at all.
+    /// </summary>
+    public static SetupRecord At(string? installLocation) =>
+        !string.IsNullOrWhiteSpace(installLocation)
+        && Path.IsPathFullyQualified(installLocation)
+        && AppCopy.Normalise(installLocation) is { } folder
+            ? new SetupRecord(SetupRecordState.Folder, folder)
+            : CannotTell;
 }
 
 /// <summary>
@@ -79,52 +142,49 @@ public static class AppCopy
     /// <summary>
     /// The kind of copy, in this order: a build that is not a single file is from
     /// source; a copy in the folder the setup recorded is the setup's; a copy beside
-    /// the files Scoop writes into each version's folder is Scoop's; otherwise the
-    /// build says whether it carries its own runtime, which tells the portable from
-    /// the slim.
+    /// the files Scoop writes into each version's folder is Scoop's; a copy on a PC
+    /// whose setup record cannot tell is undetermined; otherwise the build says whether
+    /// it carries its own runtime, which tells the portable from the slim.
     ///
     /// The setup installs the very file the portable download is, so only the
     /// setup's record tells those two apart, and it is asked before the build is.
+    /// Scoop's two files are asked before a record that cannot tell, because the setup
+    /// never writes them.
     /// </summary>
     /// <param name="isSingleFile">Whether the running build is a single-file bundle.</param>
     /// <param name="isSelfContained">Whether the build carries its own .NET runtime.</param>
     /// <param name="exeFolder">The folder the running exe is in.</param>
-    /// <param name="setupInstallLocation">
-    /// The setup's InstallLocation, or null where there is no setup install or its
-    /// record cannot be read.
-    /// </param>
+    /// <param name="setup">The setup's record (<see cref="ReadSetupRecord"/>).</param>
     /// <param name="fileExists">Answers whether a file exists at a path.</param>
     public static AppCopyKind Decide(
         bool isSingleFile,
         bool isSelfContained,
         string exeFolder,
-        string? setupInstallLocation,
+        SetupRecord setup,
         Func<string, bool> fileExists)
     {
         if (!isSingleFile) return AppCopyKind.FromSource;
-        if (setupInstallLocation is not null && SameFolder(exeFolder, setupInstallLocation))
-            return AppCopyKind.Setup;
+        if (IsSetupFolder(exeFolder, setup)) return AppCopyKind.Setup;
         if (IsScoopFolder(exeFolder, fileExists)) return AppCopyKind.Scoop;
+        if (setup.State == SetupRecordState.CannotTell) return AppCopyKind.Undetermined;
         return isSelfContained ? AppCopyKind.Portable : AppCopyKind.Slim;
     }
 
     /// <summary>
     /// The kind of command-line copy, in this order: a build that is not a single file
-    /// is from source; a copy in the folder the setup recorded is the setup's; any other
-    /// is the command line's own download. Scoop installs only the window, so no copy of
-    /// the command line is Scoop's.
+    /// is from source; a copy in the folder the setup recorded is the setup's; a copy on
+    /// a PC whose setup record cannot tell is undetermined; any other is the command
+    /// line's own download. Scoop installs only the window, so no copy of the command
+    /// line is Scoop's.
     /// </summary>
     /// <param name="isSingleFile">Whether the running build is a single-file bundle.</param>
     /// <param name="exeFolder">The folder the running exe is in.</param>
-    /// <param name="setupInstallLocation">
-    /// The setup's InstallLocation, or null where there is no setup install or its
-    /// record cannot be read.
-    /// </param>
-    public static AppCopyKind DecideCommandLine(bool isSingleFile, string exeFolder, string? setupInstallLocation)
+    /// <param name="setup">The setup's record (<see cref="ReadSetupRecord"/>).</param>
+    public static AppCopyKind DecideCommandLine(bool isSingleFile, string exeFolder, SetupRecord setup)
     {
         if (!isSingleFile) return AppCopyKind.FromSource;
-        if (setupInstallLocation is not null && SameFolder(exeFolder, setupInstallLocation))
-            return AppCopyKind.Setup;
+        if (IsSetupFolder(exeFolder, setup)) return AppCopyKind.Setup;
+        if (setup.State == SetupRecordState.CannotTell) return AppCopyKind.Undetermined;
         return AppCopyKind.CommandLineDownload;
     }
 
@@ -143,7 +203,7 @@ public static class AppCopy
         return DecideCommandLine(
             IsSingleFileBuild(),
             Path.GetDirectoryName(exePath) ?? string.Empty,
-            ReadSetupInstallLocation(registry));
+            ReadSetupRecord(registry));
     }
 
     /// <summary>
@@ -165,7 +225,7 @@ public static class AppCopy
             IsSingleFileBuild(),
             isSelfContained,
             Path.GetDirectoryName(exePath) ?? string.Empty,
-            ReadSetupInstallLocation(registry),
+            ReadSetupRecord(registry),
             File.Exists);
     }
 
@@ -180,9 +240,10 @@ public static class AppCopy
 
 #if DEBUG
     /// <summary>
-    /// Set to setup, portable, slim or scoop, a Debug build of the window takes itself
-    /// for that kind of copy, and set to setup or cli, a Debug build of the command line
-    /// takes itself for the setup's copy or its own download, so a build from source can
+    /// Set to setup, portable, slim, scoop or undetermined, a Debug build of the window
+    /// takes itself for that kind of copy, and set to setup, cli or undetermined, a Debug
+    /// build of the command line takes itself for the setup's copy, its own download or a
+    /// copy whose setup record cannot tell, so a build from source can
     /// show what each kind of copy offers and take each route an update takes. The name
     /// and its read sit only inside <c>#if DEBUG</c> blocks, and
     /// <c>scripts/check-debug-only-switches.mjs</c> holds them there, so no Release
@@ -197,6 +258,7 @@ public static class AppCopy
             "portable" => AppCopyKind.Portable,
             "slim" => AppCopyKind.Slim,
             "scoop" => AppCopyKind.Scoop,
+            "undetermined" => AppCopyKind.Undetermined,
             _ => null,
         };
 
@@ -205,32 +267,39 @@ public static class AppCopy
         {
             "setup" => AppCopyKind.Setup,
             "cli" => AppCopyKind.CommandLineDownload,
+            "undetermined" => AppCopyKind.Undetermined,
             _ => null,
         };
 #endif
 
     /// <summary>
-    /// The setup's InstallLocation from the 64-bit view of the registry, or null where
-    /// the key or the value is absent, cannot be read or holds no text.
+    /// The setup's record from the 64-bit view of the registry: the folder its
+    /// InstallLocation names; none where the key is absent; or cannot tell where the key
+    /// cannot be read, or is there and its InstallLocation is missing, holds no text or
+    /// is not a full path. The setup writes InstallLocation on every install, so a key without
+    /// a usable one is a record that cannot say whether this copy is the setup's.
     /// </summary>
-    public static string? ReadSetupInstallLocation(IRegistryReader registry)
+    public static SetupRecord ReadSetupRecord(IRegistryReader registry)
     {
         var read = registry.LocalMachineValues(SetupUninstallKeyPath);
-        if (read.Presence != RegistryKeyPresence.Present || read.Values is null) return null;
+        if (read.Presence == RegistryKeyPresence.Absent) return SetupRecord.None;
+        if (read.Presence != RegistryKeyPresence.Present || read.Values is null) return SetupRecord.CannotTell;
         foreach (var value in read.Values)
         {
             if (string.Equals(value.Name, InstallLocationValueName, StringComparison.OrdinalIgnoreCase))
-                return string.IsNullOrWhiteSpace(value.Text) ? null : value.Text;
+                return SetupRecord.At(value.Text);
         }
-        return null;
+        return SetupRecord.CannotTell;
     }
 
     /// <summary>
-    /// Whether this kind of copy can put a newer version in its own place. A build from
-    /// source has no download to do it with, and Scoop's copy is updated by Scoop.
+    /// Whether this kind of copy can put a newer version in its own place: the setup's
+    /// copy, the portable, the slim and the command line's own download. A build from
+    /// source has no download to do it with, Scoop's copy is updated by Scoop, and an
+    /// undetermined copy may be the setup's. A kind not named here does not update itself.
     /// </summary>
     public static bool CanUpdateItself(AppCopyKind kind) =>
-        kind is not (AppCopyKind.FromSource or AppCopyKind.Scoop);
+        kind is AppCopyKind.Setup or AppCopyKind.Portable or AppCopyKind.Slim or AppCopyKind.CommandLineDownload;
 
     /// <summary>
     /// Whether this kind of copy is updated by Scoop, so a newer version is offered as
@@ -240,7 +309,7 @@ public static class AppCopy
 
     /// <summary>
     /// The file name of the download a kind updates from, or null for a kind that does
-    /// not update itself: a build from source and Scoop's copy. The command line's own
+    /// not update itself: a build from source, Scoop's copy and an undetermined copy. The command line's own
     /// download carries no version in its name; the release it sits in says which
     /// version it is.
     /// </summary>
@@ -264,24 +333,29 @@ public static class AppCopy
             : null;
 
     /// <summary>
-    /// Whether two spellings name the same folder: each made absolute and stripped of
-    /// trailing separators, then compared without regard to case, as Windows compares
-    /// names. Inno Setup writes InstallLocation with a trailing backslash.
+    /// Whether the setup's record names <paramref name="exeFolder"/>: both made absolute
+    /// and stripped of trailing separators, then compared without regard to case, as
+    /// Windows compares names. Inno Setup writes InstallLocation with a trailing backslash.
     /// </summary>
-    private static bool SameFolder(string a, string b)
+    private static bool IsSetupFolder(string exeFolder, SetupRecord setup) =>
+        setup is { State: SetupRecordState.Folder, Folder: { } folder }
+        && Normalise(exeFolder) is { } exe
+        && string.Equals(exe, folder, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// <paramref name="path"/> made absolute and stripped of trailing separators, or null
+    /// where it is not a path.
+    /// </summary>
+    internal static string? Normalise(string path)
     {
         try
         {
-            return string.Equals(Normalise(a), Normalise(b), StringComparison.OrdinalIgnoreCase);
+            return Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
         }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
-            // A recorded value that is not a path names no folder this exe can be in.
-            return false;
+            return null;
         }
-
-        static string Normalise(string path) =>
-            Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
     }
 
     /// <summary>

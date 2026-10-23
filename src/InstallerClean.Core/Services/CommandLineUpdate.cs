@@ -13,7 +13,7 @@ internal abstract record CommandLineUpdateResult
     /// <summary>
     /// The run goes on with the version it is. <paramref name="FailedAt"/> is null where
     /// nothing was tried: no newer version, the check failing, a no at the question, or a
-    /// build from source. Otherwise it names the part that failed, or
+    /// copy that cannot update itself. Otherwise it names the part that failed, or
     /// <see cref="UpdateFailureStage.InUse"/> where InstallerClean was in use, and the two
     /// versions are the running one and the one it could not install.
     /// </summary>

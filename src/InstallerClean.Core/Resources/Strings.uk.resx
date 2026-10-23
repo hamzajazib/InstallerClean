@@ -2372,8 +2372,9 @@ InstallerClean уже працював від імені адміністрат�
        so the run ends with nothing run and the next run of the command starts the newer
        version. 0 = its version. -->
   <data name="Cli.UpdateNotStarted" xml:space="preserve"><value>Версію InstallerClean {0} встановлено, але запустити її не вдалося. Виконайте команду ще раз.</value></data>
-  <!-- Where a newer version is out and this copy was built from source, so it cannot update
-       itself. 0 = the release page's address, printed as written. -->
+  <!-- Where a newer version is out and this copy cannot update itself: a build from source,
+       or a copy that cannot tell from the setup's record whether the setup installed it.
+       0 = the release page's address, printed as written. -->
   <data name="Cli.UpdateDownloadLink" xml:space="preserve"><value>Завантажити з GitHub: {0}</value></data>
   <!-- The line a cancelled Move prints instead of the one above, where the window's
        card carries Completion.MoveCancelledRestoreHint. A run that went the distance
