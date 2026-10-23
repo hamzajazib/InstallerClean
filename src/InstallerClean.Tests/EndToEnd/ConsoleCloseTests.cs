@@ -22,7 +22,34 @@ public sealed class ConsoleCloseTests : IDisposable
     private Process? _run;
     private Process? _host;
 
-    private static readonly string Cli = Path.Combine(AppContext.BaseDirectory, "installerclean-cli.exe");
+    /// <summary>
+    /// The command line in its own project's build of this configuration, which the test build
+    /// builds first: src/InstallerClean.Cli/bin/&lt;configuration&gt;/net10.0 under the folder holding
+    /// the solution, the configuration being the one the tests were built in. A copy beside the
+    /// tests would run without the libraries the command line carries itself,
+    /// System.Diagnostics.EventLog among them, the test project taking those from the Windows
+    /// desktop framework the command line does not use. Answers why where there is none.
+    /// </summary>
+    private static string? CommandLineBuild(out string why)
+    {
+        // The tests run from bin/<configuration>/<framework>/ under their own project.
+        var configuration = new DirectoryInfo(AppContext.BaseDirectory).Parent?.Name;
+        for (var folder = new DirectoryInfo(AppContext.BaseDirectory); folder is not null; folder = folder.Parent)
+        {
+            if (!File.Exists(Path.Combine(folder.FullName, "src", "InstallerClean.sln"))) continue;
+            var cli = Path.Combine(folder.FullName, "src", "InstallerClean.Cli", "bin", configuration ?? "", "net10.0", "installerclean-cli.exe");
+            if (!File.Exists(cli)) { why = $"there is no {cli}"; return null; }
+            if (!File.Exists(Path.Combine(Path.GetDirectoryName(cli)!, "System.Diagnostics.EventLog.dll")))
+            {
+                why = $"{cli} has no System.Diagnostics.EventLog.dll beside it";
+                return null;
+            }
+            why = "";
+            return cli;
+        }
+        why = $"no folder above {AppContext.BaseDirectory} holds src/InstallerClean.sln";
+        return null;
+    }
 
     // The question ends in "[<yes>/<no>]" in every language.
     private static readonly Regex AtQuestion = new(@"\[[^\]/]+/[^\]/]+\]\s*$", RegexOptions.Compiled);
@@ -41,7 +68,8 @@ public sealed class ConsoleCloseTests : IDisposable
     [OwnConsoleWindowFact]
     public async Task A_run_whose_console_window_is_closed_at_its_question_ends_cancelled_with_one_entry()
     {
-        Assert.True(File.Exists(Cli), $"The built command line is not beside the tests: {Cli}");
+        var cli = CommandLineBuild(out var noBuild);
+        if (cli is null) Assert.Fail($"The command line's own build is not there to run: {noBuild}.");
         await SourceRegisteredAsync();
 
         // A release newer than the files the update reads is refused without a question
@@ -55,7 +83,7 @@ public sealed class ConsoleCloseTests : IDisposable
         Environment.SetEnvironmentVariable(AppCopy.PretendCopyVariable, "cli");
         Environment.SetEnvironmentVariable(UpdateCheckService.PretendLatestVariable, "v9.9.9");
         Environment.SetEnvironmentVariable(AppUpdater.LocalManifestVariable, manifest);
-        (_run, _host) = OtherConsole.StartInOwnConsole(Cli, "/s", out var notStarted);
+        (_run, _host) = OtherConsole.StartInOwnConsole(cli, "/s", out var notStarted);
         foreach (var name in Switches) Environment.SetEnvironmentVariable(name, null);
         Assert.True(_run is not null, $"The command line did not start: {notStarted}");
         var window = OtherConsole.WindowClass(_run.Id);
