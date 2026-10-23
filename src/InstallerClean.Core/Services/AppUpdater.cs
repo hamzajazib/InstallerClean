@@ -93,9 +93,11 @@ public sealed class AppUpdater : IAppUpdater
     /// <summary>
     /// What the window starts the newer setup with. /SILENT shows Setup's progress and
     /// asks nothing, /SP- leaves out the page asking whether to install, and /NORESTART
-    /// keeps Setup from restarting Windows. /UPDATEFROMAPP is the app's own: the setup
-    /// script starts the app again once it has installed when it sees it, which it
-    /// otherwise never does on a silent install.
+    /// keeps Setup from restarting Windows. /UPDATEFROMAPP is the app's own: seeing it,
+    /// the setup script first waits for the app to close its handle to the single-instance
+    /// mutex, so the setup's check for a running InstallerClean does not stop for it, and
+    /// starts the app again once it has installed, which it otherwise never does on a
+    /// silent install.
     /// </summary>
     public const string WindowSetupArguments = "/SILENT /SP- /NORESTART /UPDATEFROMAPP";
 

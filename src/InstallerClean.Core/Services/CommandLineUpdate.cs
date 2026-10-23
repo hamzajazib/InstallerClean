@@ -512,8 +512,8 @@ internal sealed class CommandLineUpdate
         // Delete, and another run's update. A /s takes no mutex, so a process running from
         // this exe's file is looked for as well, before the download and again just before
         // the rename, and one that has reached its own code holds the file against
-        // renaming besides. The setup names the same mutex and stops for anything holding
-        // it, so the mutex is released before the setup runs.
+        // renaming besides. The setup names the same mutex and stops while it is open, so
+        // the mutex is released and its handle closed before the setup runs.
         var holdsLock = _host.TryTakeInstanceLock();
         try
         {

@@ -28,6 +28,10 @@
 ; The published binaries and the setup output all sit under ..\publish;
 ; defined once here so the [Files] sources and OutputDir cannot drift apart.
 #define PublishDir "..\publish"
+; The single-instance mutex, named by AppMutex and by the wait in [Code]. It matches
+; InstanceLock.Name in src/InstallerClean.Core/Services/InstanceLock.cs, and
+; scripts/check-instance-lock-name.mjs holds the two together.
+#define AppMutexName "Global\InstallerClean_SingleInstance"
 AppId=InstallerClean
 AppName=InstallerClean
 AppVersion={#AppVersion}
@@ -41,11 +45,11 @@ AppVersion={#AppVersion}
 ; is named by UninstallDisplayName further down and does not follow this
 ; directive.
 AppVerName=InstallerClean {#AppVersion}
-; Mutex name matches InstanceLock.Name in src/InstallerClean.Core/Services/InstanceLock.cs, and
-; scripts/check-instance-lock-name.mjs holds the two together. Setup pauses with
-; a "close the running app" prompt when the user upgrades while
-; InstallerClean.exe or installerclean-cli.exe is holding it.
-AppMutex=Global\InstallerClean_SingleInstance
+; Setup pauses with a "close the running app" prompt while the mutex's name can
+; be opened, which it can while InstallerClean.exe or installerclean-cli.exe has it
+; open, held or not. Started by the app's Update now, Setup first waits for the
+; app to close (InitializeSetup below).
+AppMutex={#AppMutexName}
 ; %LOCALAPPDATA%\InstallerClean\ user data (settings.json,
 ; last-run.json, settings.json.bad on a corrupt-and-recovered run,
 ; crash.log, crash.log.old once the log has rotated) survives
@@ -177,8 +181,8 @@ Name: "{group}\{cm:UninstallApp}"; Filename: "{uninstallexe}"
 
 [Run]
 Filename: "{app}\InstallerClean.exe"; Description: "{cm:LaunchApp}"; Flags: nowait postinstall skipifsilent shellexec
-; The app's Update now runs this setup with /SILENT and /UPDATEFROMAPP, having
-; closed itself, and the app opens again once the files are in place. skipifsilent
+; The app's Update now starts this setup with /SILENT and /UPDATEFROMAPP and then
+; closes, and the app opens again once the files are in place. skipifsilent
 ; skips the entry above on every silent install, winget's and Chocolatey's
 ; included, so this one does the opening, and only where UpdatingFromApp finds the
 ; app's own switch on the command line.
@@ -199,4 +203,25 @@ begin
       Result := True;
       Exit;
     end;
+end;
+
+// Started by the app's Update now, Setup waits for the app to close before it
+// checks AppMutex, for up to 30 seconds: the app starts Setup and then closes, and
+// its handle to the mutex stays open until it closes it as it exits. Setup calls
+// InitializeSetup before its own AppMutex check, which then asks for InstallerClean
+// to be closed where the mutex is still open.
+function InitializeSetup: Boolean;
+var
+  Waited: Integer;
+begin
+  Result := True;
+  if not UpdatingFromApp then Exit;
+  Waited := 0;
+  while CheckForMutexes('{#AppMutexName}') and (Waited < 30000) do
+  begin
+    Sleep(250);
+    Waited := Waited + 250;
+  end;
+  if Waited > 0 then
+    Log(Format('Waited %d ms for InstallerClean to close.', [Waited]));
 end;

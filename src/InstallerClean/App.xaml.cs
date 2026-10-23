@@ -817,10 +817,11 @@ public partial class App : Application
     /// not say its own code was running, having taken the mutex back where it is free, so
     /// the app carries on as it was.
     ///
-    /// The mutex goes first for two reasons. The newer version takes it as it starts,
-    /// and finding it held would send it down the "already running" exit. And the
-    /// setup names it as its AppMutex, so a setup started while it is held stops to
-    /// ask for the app to be closed. The container is not
+    /// The mutex goes first because the newer version takes it as it starts, and
+    /// finding it held would send it down the "already running" exit. The setup names
+    /// it as its AppMutex and stops while the name can be opened, and this app's handle
+    /// stays open until it closes, so a setup started from here waits for this app to
+    /// close before that check. The container is not
     /// disposed first, as the language relaunch disposes it, because a start that
     /// fails leaves this app running; the caller has already settled what disposing
     /// would settle.

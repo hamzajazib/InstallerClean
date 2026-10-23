@@ -3,7 +3,8 @@ namespace InstallerClean.Services;
 /// <summary>
 /// The single-instance mutex the window, a command-line Delete or Move and a command-line
 /// update all take, so no two of them run at once. The setup names it too, as AppMutex,
-/// and stops for anything holding it.
+/// and stops while the name can be opened, which it can while any process has it open,
+/// held or not.
 /// </summary>
 /// <remarks>
 /// A mutex is owned by the thread that took it and only that thread can release it, so
@@ -15,7 +16,7 @@ internal sealed class InstanceLock : IDisposable
     /// <summary>
     /// The mutex's name. Older and newer copies and the installed setup all exclude each
     /// other through this one name, so changing it lets an older copy and a newer one run
-    /// at once. installer/InstallerClean.iss spells it in AppMutex.
+    /// at once. installer/InstallerClean.iss spells it in AppMutexName.
     /// </summary>
     public const string Name = @"Global\InstallerClean_SingleInstance";
 
