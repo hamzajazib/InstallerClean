@@ -49,6 +49,60 @@ internal static class EventLogWriter
     private static int _eventLogUnavailable;
 
     /// <summary>
+    /// When this process registered the event source, as a <see cref="Stopwatch"/>
+    /// timestamp, or 0 where it has not.
+    /// </summary>
+    private static long _registeredAt;
+
+    /// <summary>
+    /// How much of <see cref="RegistrationSettleBound"/> is left since this process
+    /// registered the source, or zero where it did not or the bound has passed.
+    /// </summary>
+    private static TimeSpan SettleTimeLeft()
+    {
+        var registeredAt = Interlocked.Read(ref _registeredAt);
+        if (registeredAt == 0) return TimeSpan.Zero;
+        var left = RegistrationSettleBound - Stopwatch.GetElapsedTime(registeredAt);
+        return left > TimeSpan.Zero ? left : TimeSpan.Zero;
+    }
+
+    /// <summary>
+    /// How long a write is tried again after this process registered the source, and how
+    /// often. Windows can refuse a write under a source registered moments before, with
+    /// InvalidOperationException, until its own list of sources has caught up.
+    /// </summary>
+    internal static readonly TimeSpan RegistrationSettleBound = TimeSpan.FromSeconds(5);
+    internal static readonly TimeSpan RegistrationSettleInterval = TimeSpan.FromMilliseconds(250);
+
+    /// <summary>
+    /// Runs <paramref name="write"/>. A write that throws InvalidOperationException is
+    /// tried again every <paramref name="interval"/> while <paramref name="settleTimeLeft"/>
+    /// lasts, the time left of the settle bound since this process registered the source,
+    /// and the last throw goes to the caller. With no time left, a source registered
+    /// before this process among them, and for any other throw, ObjectDisposedException
+    /// included, the throw goes to the caller at once. <paramref name="sleep"/> waits
+    /// between tries; a test passes one that does not.
+    /// </summary>
+    internal static void WriteRetryingAfterRegistration(
+        Action write, TimeSpan settleTimeLeft, TimeSpan interval, Action<TimeSpan> sleep)
+    {
+        var waited = TimeSpan.Zero;
+        while (true)
+        {
+            try
+            {
+                write();
+                return;
+            }
+            catch (InvalidOperationException ex) when (ex is not ObjectDisposedException && waited < settleTimeLeft)
+            {
+                sleep(interval);
+                waited += interval;
+            }
+        }
+    }
+
+    /// <summary>
     /// What the most recent failed <see cref="Write"/> met, set with
     /// <see cref="EventLogUnavailable"/>: the step that refused, and where it threw, the
     /// exception's type, HResult and message. Null until a write fails. The first failed
@@ -107,8 +161,10 @@ internal static class EventLogWriter
                 return;
             }
             step = "writing the entry";
-            EventLog.WriteEntry(SourceName, entry,
-                CliContract.EntryTypeFor(outcome), CliContract.EventIdFor(outcome));
+            WriteRetryingAfterRegistration(
+                () => EventLog.WriteEntry(SourceName, entry,
+                    CliContract.EntryTypeFor(outcome), CliContract.EventIdFor(outcome)),
+                SettleTimeLeft(), RegistrationSettleInterval, Thread.Sleep);
         }
         catch (Exception e)
         {
@@ -164,6 +220,7 @@ internal static class EventLogWriter
         {
             var step = string.Empty;
             EnsureSourceMappedToApplicationLog(ref step, out _);
+            WriteRetryingAfterRegistration(() => { }, SettleTimeLeft(), RegistrationSettleInterval, Thread.Sleep);
         }
         catch
         {
@@ -203,6 +260,7 @@ internal static class EventLogWriter
         {
             step = "registering the source";
             EventLog.CreateEventSource(SourceName, ApplicationLog);
+            Interlocked.Exchange(ref _registeredAt, Math.Max(Stopwatch.GetTimestamp(), 1));
             mappedLog = ApplicationLog;
             return true;
         }
