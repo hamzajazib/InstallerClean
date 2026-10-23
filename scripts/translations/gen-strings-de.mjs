@@ -64,6 +64,11 @@ const ALSO_KEEP = [
   // nothing to get wrong; only Japanese and Chinese differ, taking the
   // ideographic full stop, which carries no space after it.
   'Display.SentenceSeparator',   // ". "
+  // The colon between a link's words and its address on the command line is the
+  // one English uses. A punctuation mark rather than a word, so there is nothing to
+  // translate and nothing to get wrong; French puts a narrow no-break space before
+  // it, and Japanese and Chinese take the full-width colon.
+  'Cli.UpdateDownloadLink',      // "{0}: {1}"
   // The size and elapsed unit suffixes. German abbreviates them exactly as
   // English does, so there is nothing to translate and nothing to get wrong.
   // A per-language keep rather than a universal one because fr, ru and uk do
@@ -645,7 +650,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `Die neue Version scannt und listet auf, was sie findet, ohne etwas zu verschieben. Zum Verschieben führe danach /m erneut aus.`,
   'Cli.UpdateRunningInstead': `Stattdessen wird {0} mit InstallerClean {1} ausgeführt.`,
   'Cli.UpdateNotStarted': `InstallerClean {0} ist installiert, konnte aber nicht gestartet werden. Führe den Befehl erneut aus.`,
-  'Cli.UpdateDownloadLink': `Von GitHub herunterladen: {0}`,
+  'Cli.UpdateDownloadLink': `{0}: {1}`,
   'Cli.Help.UpdateNote': `Vor dem Scannen prüft es, ob es eine neuere Version von InstallerClean&#10;gibt. Wenn du es selbst startest, fragt es vor dem Aktualisieren. Läuft es&#10;von selbst, in einer geplanten Aufgabe oder einem Skript, aktualisiert es&#10;ohne zu fragen. Mit /noupdate wird die Prüfung übersprungen.`,
   'UpdateNotice.Scoop': `Diese Kopie wurde mit Scoop installiert. Um sie zu aktualisieren, schließe InstallerClean und führe Folgendes aus:`,
   'UpdateNotice.CommandCopied': `Kopiert`,
@@ -655,9 +660,12 @@ const MAP = {
   'Cli.UpdateInUse': `InstallerClean wird gerade verwendet und kann sich deshalb jetzt nicht aktualisieren.`,
   'Cli.CancellingAfterUpdate': `Wird abgebrochen, sobald das Update abgeschlossen ist...`,
   'Error.FolderWillNotGiveFilesBack': `Du kannst Dateien in {0} speichern, aber nicht wieder öffnen, deshalb verschiebt InstallerClean keine Dateien dorthin.`,
-  'UpdateNotice.NeedsNetFramework48': `InstallerClean {0} benötigt .NET Framework 4.8, das auf diesem PC nicht vorhanden ist.`,
+  'UpdateNotice.NeedsNetFramework48': `Diese Version benötigt .NET Framework 4.8. Installiere es von Microsoft, starte den PC neu und öffne dann InstallerClean, um zu aktualisieren.`,
   'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0} kann nicht automatisch installiert werden.`,
   'UpdateNotice.CopyCannotTell': `InstallerClean kann nicht feststellen, ob es mit seinem Setup installiert wurde, und kann sich deshalb nicht selbst aktualisieren.`,
+  'UpdateNotice.DownloadNetFramework48': `.NET Framework 4.8 von Microsoft herunterladen`,
+  'Automation.UpdateNotice.DownloadNetFramework48': `.NET Framework 4.8 von Microsoft herunterladen`,
+  'Cli.UpdateNeedsNetFramework48': `Diese Version benötigt .NET Framework 4.8. Installiere es von Microsoft, starte den PC neu und führe InstallerClean dann erneut aus, um zu aktualisieren.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

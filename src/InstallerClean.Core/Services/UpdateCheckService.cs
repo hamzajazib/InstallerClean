@@ -38,9 +38,10 @@ namespace InstallerClean.Services;
 /// otherwise unaffected.
 ///
 /// One GET, and the body is never read. The answer contributes a version
-/// number to compare and nothing else; the browser's destination is
-/// <see cref="ReleasesPageUrl"/>, a constant, so nothing a server returns
-/// decides where the user is sent.
+/// number to compare and nothing else; the browser's destination is that
+/// version's own release page (<see cref="ReleasePageUrl"/>), built from the
+/// version's three numbers alone, so nothing else a server returns decides
+/// where the user is sent.
 ///
 /// The shipping instance holds HttpClient in a static field per the
 /// documented BCL guidance: a fresh instance per call leaks Windows-side
@@ -68,14 +69,22 @@ public sealed class UpdateCheckService : IUpdateCheckService
     public static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(8);
 
     /// <summary>
-    /// Both what the check asks for and the one page any "there is an update"
-    /// control opens: the link on the notice saying a newer version is available
-    /// comes here. Deliberately the /latest redirect rather than the found
-    /// release's own tag page, so the click lands on whatever is newest at the
-    /// moment it happens rather than on the tag this particular check saw.
+    /// What the check asks for: GitHub answers it with a redirect to the newest
+    /// release's own page, whose tag names the version compared.
     /// </summary>
     public const string ReleasesPageUrl =
         "https://github.com/no-faff/InstallerClean/releases/latest";
+
+    /// <summary>
+    /// The release page of <paramref name="version"/>, which every link to a newer
+    /// version opens: the card's and the notice's, and the command line's. The check
+    /// holds a version as its three numbers and the project's tags are "v" and those
+    /// numbers, as the downloads' addresses are (<see cref="AppCopy.DownloadAddress"/>).
+    /// The page names the version the card names, where the /latest redirect would move
+    /// on to whatever is newest by the time it is opened.
+    /// </summary>
+    public static string ReleasePageUrl(string version) =>
+        $"https://github.com/no-faff/InstallerClean/releases/tag/v{version}";
 
     private static readonly Uri ReleasesPage = new(ReleasesPageUrl);
 
@@ -278,9 +287,10 @@ public sealed class UpdateCheckService : IUpdateCheckService
 
         if (latestNormalised > currentNormalised)
         {
-            // Only the two version strings. The destination is
-            // ReleasesPageUrl, a constant, so nothing the answer
-            // carried reaches the browser.
+            // Only the two version strings, each three numbers. The
+            // destination is built from the newer one alone
+            // (ReleasePageUrl), so nothing else the answer carried
+            // reaches the browser.
             return new UpdateAvailable(
                 CurrentVersion: FormatVersion(currentNormalised),
                 LatestVersion: FormatVersion(latestNormalised));

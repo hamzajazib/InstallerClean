@@ -277,7 +277,7 @@ internal sealed class CommandLineUpdate
             _host.WriteLine(_updater.Kind == AppCopyKind.Undetermined
                 ? Strings.UpdateNotice_CopyCannotTell
                 : Strings.UpdateNotice_Recommended);
-            _host.WriteLine(string.Format(Strings.Cli_UpdateDownloadLink, UpdateCheckService.ReleasesPageUrl));
+            WriteReleaseLink(latest);
             return CommandLineUpdateResult.NothingTried;
         }
 
@@ -310,8 +310,11 @@ internal sealed class CommandLineUpdate
         catch (UpdateRefusedException refused)
         {
             // The update's own read of the release's file ruled this copy out, where the read
-            // before the question could not be made. Nothing was downloaded.
+            // before the question could not be made. Nothing was downloaded. Where the question
+            // was asked, the line naming the newer version is said again, since the reason
+            // follows it.
             _host.HoldOwnFile();
+            if (canAsk) _host.WriteLine(string.Format(Strings.UpdateNotice_Available, latest));
             return Refused(refused.Refusal, latest);
         }
         catch (Exception ex)
@@ -321,18 +324,31 @@ internal sealed class CommandLineUpdate
     }
 
     /// <summary>
-    /// Says why the newer version's release rules this copy out and gives the release page,
-    /// and answers that nothing was tried. Nothing is written to crash.log: it is not a
-    /// failure.
+    /// Says why the newer version's release rules this copy out and where to go from here,
+    /// and answers that nothing was tried: where the PC needs .NET Framework 4.8, Microsoft's
+    /// installer, and otherwise the release page. Nothing is written to crash.log: it is not
+    /// a failure.
     /// </summary>
     private CommandLineUpdateResult Refused(UpdateRefusal refusal, string latest)
     {
-        _host.WriteLine(string.Format(refusal == UpdateRefusal.NeedsNetFramework48
-            ? Strings.UpdateNotice_NeedsNetFramework48
-            : Strings.UpdateNotice_CannotInstallAutomatically, latest));
-        _host.WriteLine(string.Format(Strings.Cli_UpdateDownloadLink, UpdateCheckService.ReleasesPageUrl));
+        if (refusal == UpdateRefusal.NeedsNetFramework48)
+        {
+            _host.WriteLine(Strings.Cli_UpdateNeedsNetFramework48);
+            _host.WriteLine(string.Format(Strings.Cli_UpdateDownloadLink,
+                Strings.UpdateNotice_DownloadNetFramework48, UpdateManifest.NetFramework48DownloadUrl));
+        }
+        else
+        {
+            _host.WriteLine(string.Format(Strings.UpdateNotice_CannotInstallAutomatically, latest));
+            WriteReleaseLink(latest);
+        }
         return CommandLineUpdateResult.NothingTried;
     }
+
+    /// <summary>The link to <paramref name="latest"/>'s release page, and the page's address.</summary>
+    private void WriteReleaseLink(string latest) =>
+        _host.WriteLine(string.Format(Strings.Cli_UpdateDownloadLink,
+            Strings.UpdateNotice_Download, UpdateCheckService.ReleasePageUrl(latest)));
 
     /// <summary>
     /// Whether InstallerClean is in use, so the update is not tried: the single-instance

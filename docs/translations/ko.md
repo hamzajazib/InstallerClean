@@ -321,9 +321,10 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is available. | InstallerClean {0} 버전을 사용할 수 있습니다. |
 | It's strongly recommended to use the latest version. | 최신 버전을 사용할 것을 강력히 권장합니다. |
 | Download it from GitHub | GitHub에서 내려받기 |
+| Download .NET Framework 4.8 from Microsoft | Microsoft에서 .NET Framework 4.8 내려받기 |
 | Update now | 지금 업데이트 |
 | This copy was installed by Scoop. To update it, close InstallerClean and run: | 이 사본은 Scoop으로 설치되었습니다. 업데이트하려면 InstallerClean을 닫고 다음을 실행하세요: |
-| InstallerClean {0} needs .NET Framework 4.8, which this PC doesn't have. | InstallerClean {0}에는 .NET Framework 4.8이 필요하지만 이 PC에는 없습니다. |
+| It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then open InstallerClean to update. | 이 버전에는 .NET Framework 4.8이 필요합니다. Microsoft에서 설치하고 PC를 다시 시작한 다음 InstallerClean을 열어 업데이트하세요. |
 | InstallerClean {0} can't be installed automatically. | InstallerClean {0}은(는) 자동으로 설치할 수 없습니다. |
 | InstallerClean can't tell whether its setup installed it, so it can't update itself. | InstallerClean이 자체 설치 프로그램으로 설치되었는지 확인할 수 없어 스스로 업데이트할 수 없습니다. |
 | Copied | 복사됨 |
@@ -406,6 +407,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the issue tracker on github.com in your browser. | 브라우저에서 github.com의 이슈 트래커를 엽니다. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | 선택하면 InstallerClean이 실행할 때 github에서 새 버전이 있는지 확인합니다. |
 | Download it from github | github에서 내려받기 |
+| Download .NET Framework 4.8 from Microsoft | Microsoft에서 .NET Framework 4.8 내려받기 |
 | Copy the command | 명령 복사 |
 | Scoop's update command | Scoop 업데이트 명령 |
 | Opens the licence file on github.com in your browser. | 브라우저에서 github.com의 라이선스 파일을 엽니다. |
@@ -562,7 +564,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean is in use, so it can't update itself now. | InstallerClean이 사용 중이어서 지금은 스스로 업데이트할 수 없습니다. |
 | Running {0} with InstallerClean {1} instead. | 대신 InstallerClean {1} 버전으로 {0} 명령을 실행합니다. |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} 버전이 설치되었지만 시작할 수 없었습니다. 명령을 다시 실행하세요. |
-| Download it from GitHub: {0} | GitHub에서 내려받기: {0} |
+| {0}: {1} | {0}: {1} |
+| It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | 이 버전에는 .NET Framework 4.8이 필요합니다. Microsoft에서 설치하고 PC를 다시 시작한 다음 InstallerClean을 다시 실행하여 업데이트하세요. |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | 되돌리기는 간단합니다. {0}에서 {InstallerFolder}로 다시 옮기면 모든 것이 원래대로 돌아갑니다. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean이 백업 폴더를 더 이상 확인할 수 없어서, 중단했습니다. {0}을(를) 확인한 다음 명령을 다시 실행하세요. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | 다른 InstallerClean 프로세스가 단일 인스턴스 잠금을 보유하고 있습니다(GUI 또는 다른 CLI 실행). 종료 코드 75(일시적); 나중에 다시 시도해도 안전합니다. |

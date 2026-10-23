@@ -557,7 +557,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も移動しません。移動するには、その後もう一度 /m を実行してください。`,
   'Cli.UpdateRunningInstead': `代わりに InstallerClean {1} で {0} を実行します。`,
   'Cli.UpdateNotStarted': `InstallerClean {0} をインストールしましたが、起動できませんでした。もう一度コマンドを実行してください。`,
-  'Cli.UpdateDownloadLink': `GitHubからダウンロード：{0}`,
+  'Cli.UpdateDownloadLink': `{0}：{1}`,
   'Cli.Help.UpdateNote': `スキャンの前に、InstallerClean の新しいバージョンがあるか確認します。自分&#10;で実行した場合は、更新する前に確認を求めます。スケジュールされたタスクやス&#10;クリプトで自動実行される場合は、確認なしで更新します。確認を省くには&#10;/noupdate を付けてください。`,
   'UpdateNotice.Scoop': `このコピーは Scoop でインストールされています。更新するには、InstallerClean を閉じてから次を実行してください：`,
   'UpdateNotice.CommandCopied': `コピー済み`,
@@ -567,9 +567,12 @@ const MAP = {
   'Cli.UpdateInUse': `InstallerClean は使用中のため、今は自身を更新できません。`,
   'Cli.CancellingAfterUpdate': `更新の完了後にキャンセルします...`,
   'Error.FolderWillNotGiveFilesBack': `{0} にはファイルを保存できますが、もう一度開くことはできないため、InstallerClean はそこへファイルを移動しません。`,
-  'UpdateNotice.NeedsNetFramework48': `InstallerClean {0} には .NET Framework 4.8 が必要ですが、この PC にはありません。`,
+  'UpdateNotice.NeedsNetFramework48': `このバージョンには .NET Framework 4.8 が必要です。Microsoft からインストールして PC を再起動し、InstallerClean を開いて更新してください。`,
   'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0} は自動ではインストールできません。`,
   'UpdateNotice.CopyCannotTell': `InstallerClean は自身のセットアップでインストールされたかどうかを判断できないため、自身を更新できません。`,
+  'UpdateNotice.DownloadNetFramework48': `Microsoft から .NET Framework 4.8 をダウンロード`,
+  'Automation.UpdateNotice.DownloadNetFramework48': `Microsoft から .NET Framework 4.8 をダウンロード`,
+  'Cli.UpdateNeedsNetFramework48': `このバージョンには .NET Framework 4.8 が必要です。Microsoft からインストールして PC を再起動し、InstallerClean をもう一度実行して更新してください。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

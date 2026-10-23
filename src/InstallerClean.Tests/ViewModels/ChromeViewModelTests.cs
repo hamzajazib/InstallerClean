@@ -16,9 +16,10 @@ namespace InstallerClean.Tests.ViewModels;
 /// </summary>
 public class ChromeViewModelTests
 {
-    // The one destination every update control opens; the found release's
-    // own tag page is nowhere in the flow.
-    private const string ReleasesPage = UpdateCheckService.ReleasesPageUrl;
+    // Where the link to the release page goes once a check has found 9.9.9: that
+    // version's own release page, written out rather than built, so the address the
+    // app builds is held to what it should be.
+    private const string ReleasesPage = "https://github.com/no-faff/InstallerClean/releases/tag/v9.9.9";
 
     private readonly IWindowService _windowService = Substitute.For<IWindowService>();
     private readonly IMsiFileInfoService _msiInfoService = Substitute.For<IMsiFileInfoService>();
@@ -273,7 +274,7 @@ public class ChromeViewModelTests
     }
 
     [Fact]
-    public async Task OpenReleasePage_opens_the_releases_page_after_the_automatic_check()
+    public async Task OpenReleasePage_opens_the_found_versions_release_page_after_the_automatic_check()
     {
         CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
         var vm = CreateViewModel();
@@ -613,6 +614,275 @@ public class ChromeViewModelTests
         Assert.True(vm.ShowsUpdateNow);
         Assert.True(vm.ShowsReleaseLink);
         Assert.True(vm.ContinueWithoutUpdatingCommand.CanExecute(null));
+    }
+
+    // ---- What the newer version's release rules out ----
+
+    /// <summary>
+    /// A view model on a copy of <paramref name="kind"/>, answering whether it can update
+    /// itself as the real updater answers for that kind, with the read of what the newer
+    /// version's release needs given a bound of <paramref name="requirementsBound"/>, the
+    /// automatic check given <paramref name="automaticCheckWindow"/> to show what it found,
+    /// and a check that has found 9.9.9. The automatic check has not run.
+    /// </summary>
+    private ChromeViewModel CreateRequirementsViewModel(
+        AppCopyKind kind = AppCopyKind.Setup, TimeSpan? requirementsBound = null,
+        TimeSpan? automaticCheckWindow = null)
+    {
+        _updater.Kind.Returns(kind);
+        _updater.CanUpdateItself.Returns(AppCopy.CanUpdateItself(kind));
+        _settingsService.Load().Returns(new AppSettings { AutoUpdateCheck = true });
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
+        var scan = new ScanViewModel(_scanService, _rebootService, _dialogService);
+        return new ChromeViewModel(
+            _windowService, _msiInfoService, _settingsService,
+            _updateCheckService, _dialogService, scan,
+            checkCooldownOverride: TimeSpan.Zero,
+            updater: _updater,
+            requirementsBoundOverride: requirementsBound,
+            automaticCheckWindowOverride: automaticCheckWindow);
+    }
+
+    private void RequirementsAnswer(UpdateRefusal? refusal) =>
+        _updater.CheckRequirementsAsync("9.9.9", Arg.Any<CancellationToken>()).Returns(refusal);
+
+    private static string RefusalLine(UpdateRefusal refusal) =>
+        refusal == UpdateRefusal.NeedsNetFramework48
+            ? Strings.UpdateNotice_NeedsNetFramework48
+            : string.Format(Strings.UpdateNotice_CannotInstallAutomatically, "9.9.9");
+
+    /// <summary>
+    /// The card and the notice as a refusal leaves them: the reason in the second line, no
+    /// Update now, and one link, Microsoft's .NET Framework 4.8 installer where that is the
+    /// reason and the release page otherwise.
+    /// </summary>
+    private static void AssertRefused(ChromeViewModel vm, UpdateRefusal refusal)
+    {
+        var needsNetFramework = refusal == UpdateRefusal.NeedsNetFramework48;
+        Assert.True(vm.HasNewerVersion);
+        Assert.True(vm.IsUpdateRefused);
+        Assert.Equal(string.Format(Strings.UpdateNotice_Available, "9.9.9"), vm.UpdateNoticeText);
+        Assert.Equal(RefusalLine(refusal), vm.UpdateNoticeDetailText);
+        Assert.False(vm.ShowsUpdateNow);
+        Assert.False(vm.UpdateNowCommand.CanExecute(null));
+        Assert.Equal(!needsNetFramework, vm.ShowsReleaseLink);
+        Assert.Equal(!needsNetFramework, vm.OpenReleasePageCommand.CanExecute(null));
+        Assert.Equal(needsNetFramework, vm.ShowsNetFrameworkLink);
+        Assert.Equal(needsNetFramework, vm.OpenNetFrameworkDownloadCommand.CanExecute(null));
+        Assert.False(vm.HasUpdateFailure);
+    }
+
+    [Theory]
+    [InlineData(UpdateRefusal.NeedsNetFramework48)]
+    [InlineData(UpdateRefusal.CannotInstallFromThisCopy)]
+    public async Task The_automatic_check_says_why_the_release_rules_this_copy_out_in_place_of_Update_now(UpdateRefusal refusal)
+    {
+        var vm = CreateRequirementsViewModel();
+        RequirementsAnswer(refusal);
+
+        await vm.RunAutomaticUpdateCheckAsync();
+
+        AssertRefused(vm, refusal);
+        await _updater.Received(1).CheckRequirementsAsync("9.9.9", Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(UpdateRefusal.NeedsNetFramework48)]
+    [InlineData(UpdateRefusal.CannotInstallFromThisCopy)]
+    public async Task The_manual_check_says_why_and_takes_away_the_line_from_an_earlier_failure(UpdateRefusal refusal)
+    {
+        var vm = CreateRequirementsViewModel();
+        await vm.RunAutomaticUpdateCheckAsync();
+        _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(
+            Task.FromException<PreparedUpdate>(new UpdateFailedException(UpdateFailureStage.Download, "no")));
+        await vm.UpdateNowCommand.ExecuteAsync(null);
+        Assert.True(vm.HasUpdateFailure);
+        RequirementsAnswer(refusal);
+
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        AssertRefused(vm, refusal);
+        Assert.Equal(string.Empty, vm.UpdateStatusText);
+    }
+
+    [Fact]
+    public async Task A_read_that_fails_offers_Update_now_and_says_nothing()
+    {
+        var vm = CreateRequirementsViewModel();
+        _updater.CheckRequirementsAsync("9.9.9", Arg.Any<CancellationToken>()).Returns(
+            Task.FromException<UpdateRefusal?>(new UpdateFailedException(UpdateFailureStage.Download, "no")));
+
+        await vm.RunAutomaticUpdateCheckAsync();
+
+        Assert.True(vm.HasNewerVersion);
+        Assert.False(vm.IsUpdateRefused);
+        Assert.True(vm.ShowsUpdateNow);
+        Assert.False(vm.ShowsReleaseLink);
+        Assert.Equal(Strings.UpdateNotice_Recommended, vm.UpdateNoticeDetailText);
+        _dialogService.DidNotReceive().ShowWarning(Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task A_read_that_runs_past_its_bound_is_ended_and_offers_Update_now()
+    {
+        var vm = CreateRequirementsViewModel(requirementsBound: TimeSpan.FromMilliseconds(50));
+        CancellationToken given = default;
+        _updater.CheckRequirementsAsync("9.9.9", Arg.Any<CancellationToken>()).Returns(async call =>
+        {
+            given = call.Arg<CancellationToken>();
+            await Task.Delay(TimeSpan.FromSeconds(10), given);
+            return (UpdateRefusal?)UpdateRefusal.CannotInstallFromThisCopy;
+        });
+
+        await vm.RunAutomaticUpdateCheckAsync();
+
+        Assert.True(given.IsCancellationRequested);
+        Assert.True(vm.HasNewerVersion);
+        Assert.True(vm.ShowsUpdateNow);
+        Assert.False(vm.IsUpdateRefused);
+    }
+
+    [Fact]
+    public async Task An_automatic_check_answering_after_its_window_reads_nothing_and_offers_Update_now()
+    {
+        var vm = CreateRequirementsViewModel(automaticCheckWindow: TimeSpan.FromMilliseconds(50));
+        _updateCheckService.CheckAsync(Arg.Any<UpdateCheckOrigin>(), Arg.Any<CancellationToken>())
+            .Returns(async _ =>
+            {
+                await Task.Delay(200);
+                return (UpdateCheckResult)new UpdateAvailable("2.1.0", "9.9.9");
+            });
+        RequirementsAnswer(UpdateRefusal.CannotInstallFromThisCopy);
+
+        await vm.RunAutomaticUpdateCheckAsync();
+
+        await _updater.DidNotReceiveWithAnyArgs().CheckRequirementsAsync(default!, default);
+        Assert.True(vm.HasNewerVersion);
+        Assert.True(vm.ShowsUpdateNow);
+    }
+
+    [Fact]
+    public async Task A_copy_that_cannot_tell_whether_its_setup_installed_it_says_so_and_reads_nothing()
+    {
+        var vm = CreateRequirementsViewModel(AppCopyKind.Undetermined);
+
+        await vm.RunAutomaticUpdateCheckAsync();
+
+        Assert.True(vm.HasNewerVersion);
+        Assert.Equal(Strings.UpdateNotice_CopyCannotTell, vm.UpdateNoticeDetailText);
+        Assert.False(vm.ShowsUpdateNow);
+        Assert.True(vm.ShowsReleaseLink);
+        await _updater.DidNotReceiveWithAnyArgs().CheckRequirementsAsync(default!, default);
+    }
+
+    [Theory]
+    [InlineData(AppCopyKind.Scoop)]
+    [InlineData(AppCopyKind.FromSource)]
+    public async Task A_copy_with_no_download_reads_nothing_and_keeps_the_recommendation(AppCopyKind kind)
+    {
+        var vm = CreateRequirementsViewModel(kind);
+
+        await vm.RunAutomaticUpdateCheckAsync();
+
+        Assert.True(vm.HasNewerVersion);
+        Assert.Equal(Strings.UpdateNotice_Recommended, vm.UpdateNoticeDetailText);
+        await _updater.DidNotReceiveWithAnyArgs().CheckRequirementsAsync(default!, default);
+    }
+
+    [Fact]
+    public async Task Update_now_ruled_out_by_its_own_read_says_why_on_the_card_and_writes_no_failure()
+    {
+        var vm = CreateRequirementsViewModel();
+        await vm.RunAutomaticUpdateCheckAsync();
+        vm.OfferUpdate();
+        _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(Task.FromException<PreparedUpdate>(
+            new UpdateRefusedException(UpdateRefusal.CannotInstallFromThisCopy, "9.9.9")));
+        var raised = new List<string?>();
+        vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        await vm.UpdateNowCommand.ExecuteAsync(null);
+
+        AssertRefused(vm, UpdateRefusal.CannotInstallFromThisCopy);
+        Assert.False(vm.IsUpdating);
+        Assert.True(vm.IsOfferingUpdate);
+        Assert.Contains(nameof(ChromeViewModel.UpdateNoticeDetailText), raised);
+        Assert.Contains(nameof(ChromeViewModel.ShowsUpdateNow), raised);
+        Assert.Contains(nameof(ChromeViewModel.ShowsReleaseLink), raised);
+        await _windowService.DidNotReceiveWithAnyArgs().StartUpdateAndCloseAsync(default!);
+    }
+
+    [Fact]
+    public async Task The_NET_Framework_link_downloads_Microsofts_installer()
+    {
+        var vm = CreateRequirementsViewModel();
+        RequirementsAnswer(UpdateRefusal.NeedsNetFramework48);
+        await vm.RunAutomaticUpdateCheckAsync();
+
+        vm.OpenNetFrameworkDownloadCommand.Execute(null);
+
+        _windowService.Received(1).OpenUrl("https://go.microsoft.com/fwlink/?linkid=2088631");
+        _windowService.DidNotReceive().OpenUrl(ReleasesPage);
+    }
+
+    [Fact]
+    public async Task The_NET_Framework_link_waits_for_that_reason_and_shows_for_no_other()
+    {
+        var vm = CreateRequirementsViewModel();
+        Assert.False(vm.OpenNetFrameworkDownloadCommand.CanExecute(null));
+        vm.OpenNetFrameworkDownloadCommand.Execute(null);
+        RequirementsAnswer(UpdateRefusal.CannotInstallFromThisCopy);
+        await vm.RunAutomaticUpdateCheckAsync();
+
+        Assert.False(vm.ShowsNetFrameworkLink);
+        Assert.False(vm.OpenNetFrameworkDownloadCommand.CanExecute(null));
+        vm.OpenNetFrameworkDownloadCommand.Execute(null);
+        _windowService.DidNotReceive().OpenUrl(Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task A_later_check_whose_read_fails_keeps_the_refusal_already_read_for_that_version()
+    {
+        var vm = CreateRequirementsViewModel();
+        RequirementsAnswer(UpdateRefusal.NeedsNetFramework48);
+        await vm.RunAutomaticUpdateCheckAsync();
+        _updater.CheckRequirementsAsync("9.9.9", Arg.Any<CancellationToken>()).Returns(
+            Task.FromException<UpdateRefusal?>(new UpdateFailedException(UpdateFailureStage.Download, "no")));
+
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        AssertRefused(vm, UpdateRefusal.NeedsNetFramework48);
+    }
+
+    [Fact]
+    public async Task A_later_check_finding_another_version_whose_read_fails_offers_Update_now()
+    {
+        var vm = CreateRequirementsViewModel();
+        RequirementsAnswer(UpdateRefusal.NeedsNetFramework48);
+        await vm.RunAutomaticUpdateCheckAsync();
+        CheckAnswers(new UpdateAvailable("2.1.0", "9.9.10"));
+        _updater.CheckRequirementsAsync("9.9.10", Arg.Any<CancellationToken>()).Returns(
+            Task.FromException<UpdateRefusal?>(new UpdateFailedException(UpdateFailureStage.Download, "no")));
+
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsUpdateRefused);
+        Assert.True(vm.ShowsUpdateNow);
+    }
+
+    [Fact]
+    public async Task A_manual_check_finding_this_build_current_takes_the_refusal_down()
+    {
+        var vm = CreateRequirementsViewModel();
+        RequirementsAnswer(UpdateRefusal.NeedsNetFramework48);
+        await vm.RunAutomaticUpdateCheckAsync();
+        CheckAnswers(new UpToDate("2.1.0"));
+
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        Assert.False(vm.HasNewerVersion);
+        Assert.False(vm.IsUpdateRefused);
+        Assert.False(vm.ShowsNetFrameworkLink);
+        Assert.Equal(Strings.UpdateNotice_Recommended, vm.UpdateNoticeDetailText);
     }
 
     // ---- Scoop's copy ----

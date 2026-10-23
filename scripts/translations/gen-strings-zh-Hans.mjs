@@ -537,7 +537,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `新版本将扫描并列出找到的内容，不会移动任何文件。如需移动，请在之后再次运行 /m。`,
   'Cli.UpdateRunningInstead': `改为使用 InstallerClean {1} 运行 {0}。`,
   'Cli.UpdateNotStarted': `InstallerClean {0} 版已安装，但无法启动。请再次运行该命令。`,
-  'Cli.UpdateDownloadLink': `从 GitHub 下载：{0}`,
+  'Cli.UpdateDownloadLink': `{0}：{1}`,
   'Cli.Help.UpdateNote': `扫描前，它会检查是否有更新版本的 InstallerClean。由您亲自运行时，它会在更&#10;新前询问。在计划任务或脚本中自动运行时，它会直接更新而不询问。添加&#10;/noupdate 可跳过检查。`,
   'UpdateNotice.Scoop': `此副本由 Scoop 安装。要更新，请关闭 InstallerClean 并运行：`,
   'UpdateNotice.CommandCopied': `已复制`,
@@ -547,9 +547,12 @@ const MAP = {
   'Cli.UpdateInUse': `InstallerClean 正在使用中，因此现在无法自行更新。`,
   'Cli.CancellingAfterUpdate': `将在更新完成后取消…`,
   'Error.FolderWillNotGiveFilesBack': `您可以在 {0} 中保存文件，但无法再次打开它们，因此 InstallerClean 不会将文件移动到那里。`,
-  'UpdateNotice.NeedsNetFramework48': `InstallerClean {0} 需要 .NET Framework 4.8，而这台电脑上没有。`,
+  'UpdateNotice.NeedsNetFramework48': `此版本需要 .NET Framework 4.8。请从 Microsoft 安装它，重启电脑，然后打开 InstallerClean 进行更新。`,
   'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0} 无法自动安装。`,
   'UpdateNotice.CopyCannotTell': `InstallerClean 无法判断自己是否由其安装程序安装，因此无法自行更新。`,
+  'UpdateNotice.DownloadNetFramework48': `从 Microsoft 下载 .NET Framework 4.8`,
+  'Automation.UpdateNotice.DownloadNetFramework48': `从 Microsoft 下载 .NET Framework 4.8`,
+  'Cli.UpdateNeedsNetFramework48': `此版本需要 .NET Framework 4.8。请从 Microsoft 安装它，重启电脑，然后再次运行 InstallerClean 进行更新。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

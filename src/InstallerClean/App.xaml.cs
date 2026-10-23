@@ -804,7 +804,9 @@ public partial class App : Application
 
     /// <summary>
     /// How much longer than the update check's own timeout the startup waits for it
-    /// before showing the scan anyway.
+    /// before showing the scan anyway. The automatic check reads what a newer version's
+    /// release needs inside the check's own timeout (ChromeViewModel's
+    /// AutomaticCheckWindow), so a find is shown within this wait.
     /// </summary>
     private static readonly TimeSpan UpdateCheckGrace = TimeSpan.FromSeconds(1);
 

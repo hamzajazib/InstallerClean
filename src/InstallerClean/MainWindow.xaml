@@ -189,7 +189,7 @@
                                    Foreground="{StaticResource Text.Heading}" FontSize="{DynamicResource Type.Heading.Sm}"
                                    TextWrapping="Wrap"
                                    AutomationProperties.LiveSetting="Polite"/>
-                        <TextBlock x:Name="UpdateNoticeDetail" Text="{loc:Translate UpdateNotice.Recommended}"
+                        <TextBlock x:Name="UpdateNoticeDetail" Text="{Binding Chrome.UpdateNoticeDetailText}"
                                    Foreground="{StaticResource Text.Body}" FontSize="{DynamicResource Type.Body}"
                                    TextWrapping="Wrap" Margin="{StaticResource GapTop.Sm}"
                                    AutomationProperties.LiveSetting="Polite"/>
@@ -239,7 +239,10 @@
                                    Visibility="{Binding Chrome.HasScoopUpdateCopyFailed, Converter={StaticResource BoolToVis}}"
                                    AutomationProperties.LiveSetting="Polite"/>
                         <!-- Update now wherever the app can update itself; the link where it
-                             cannot, and beside Update now after an update that failed. -->
+                             cannot or the newer version's release rules this copy out, and
+                             beside Update now after an update that failed; the link to
+                             Microsoft's .NET Framework 4.8 installer alone where the release
+                             says this copy's download needs it and the PC does not have it. -->
                         <WrapPanel Margin="{StaticResource GapTop.Sm}">
                             <Button x:Name="UpdateNowButton" Style="{StaticResource CompactAccentPill}"
                                     Content="{loc:Translate UpdateNotice.UpdateNow}"
@@ -249,9 +252,18 @@
                             <TextBlock FontSize="{DynamicResource Type.Body}" TextWrapping="Wrap"
                                        Margin="0,4,0,0" VerticalAlignment="Center"
                                        Visibility="{Binding Chrome.ShowsReleaseLink, Converter={StaticResource BoolToVis}}">
-                                <Hyperlink Command="{Binding Chrome.OpenReleasePageCommand}"
+                                <Hyperlink x:Name="UpdateNoticeDownloadLink"
+                                           Command="{Binding Chrome.OpenReleasePageCommand}"
                                            Style="{StaticResource SubtleLink}"
                                            AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.Download}"><Run Text="{loc:Translate UpdateNotice.Download}"/></Hyperlink>
+                            </TextBlock>
+                            <TextBlock FontSize="{DynamicResource Type.Body}" TextWrapping="Wrap"
+                                       Margin="0,4,0,0" VerticalAlignment="Center"
+                                       Visibility="{Binding Chrome.ShowsNetFrameworkLink, Converter={StaticResource BoolToVis}}">
+                                <Hyperlink x:Name="UpdateNoticeNetFrameworkLink"
+                                           Command="{Binding Chrome.OpenNetFrameworkDownloadCommand}"
+                                           Style="{StaticResource SubtleLink}"
+                                           AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.DownloadNetFramework48}"><Run Text="{loc:Translate UpdateNotice.DownloadNetFramework48}"/></Hyperlink>
                             </TextBlock>
                         </WrapPanel>
                     </StackPanel>
@@ -1572,8 +1584,10 @@
         <!-- The card the window opens with where the check made as the app starts finds
              a newer version, in front of a window showing nothing of the scan: the two
              lines of the notice, Update now or the link where the app cannot update
-             itself, and Continue without updating, which takes the card away and shows
-             the scan. On a copy installed by Scoop, Scoop's update command and Copy take
+             itself or the newer version's release rules this copy out, the second line
+             then saying why, or in place of both the link to Microsoft's .NET Framework
+             4.8 installer where that is why, and Continue without updating, which takes
+             the card away and shows the scan. On a copy installed by Scoop, Scoop's update command and Copy take
              Update now's place, with the link under them. After an update that failed it
              carries the line saying what failed and the link under Update now. The same
              dim and card as the scanning overlay; a click on the dim does nothing. The
@@ -1598,9 +1612,10 @@
                     <TextBlock Text="{Binding Chrome.UpdateNoticeText}"
                                Foreground="{StaticResource Text.Heading}" FontSize="{DynamicResource Type.Heading.Sm}"
                                TextWrapping="Wrap" TextAlignment="Center"/>
-                    <TextBlock Text="{loc:Translate UpdateNotice.Recommended}"
+                    <TextBlock x:Name="UpdateOfferDetail" Text="{Binding Chrome.UpdateNoticeDetailText}"
                                Foreground="{StaticResource Text.Body}" FontSize="{DynamicResource Type.Body}"
-                               TextWrapping="Wrap" TextAlignment="Center" Margin="{StaticResource GapTop.Sm}"/>
+                               TextWrapping="Wrap" TextAlignment="Center" Margin="{StaticResource GapTop.Sm}"
+                               AutomationProperties.LiveSetting="Polite"/>
                     <TextBlock x:Name="UpdateOfferFailure" Text="{Binding Chrome.UpdateFailureText}"
                                Foreground="{StaticResource Status.Warning}" FontSize="{DynamicResource Type.Body}"
                                TextWrapping="Wrap" TextAlignment="Center" Margin="{StaticResource GapTop.Sm}"
@@ -1613,8 +1628,10 @@
                     <!-- The steps one under another, each centred on the card: Update now,
                          the accent marking it as the step the card recommends, or on a copy
                          installed by Scoop, Scoop's update command and Copy, which takes the
-                         accent, with the line saying the copy failed under them; the link,
-                         as large as Continue; then Continue without updating. -->
+                         accent, with the line saying the copy failed under them; the link to
+                         the release page, or to Microsoft's .NET Framework 4.8 installer where
+                         that is why the card has no Update now, as large as Continue; then
+                         Continue without updating. -->
                     <StackPanel Margin="0,20,0,0">
                         <Button x:Name="UpdateOfferUpdateNowButton" Style="{StaticResource AccentPill}"
                                 Content="{loc:Translate UpdateNotice.UpdateNow}"
@@ -1654,6 +1671,15 @@
                                        Command="{Binding Chrome.OpenReleasePageCommand}"
                                        Style="{StaticResource SubtleLink}"
                                        AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.Download}"><Run Text="{loc:Translate UpdateNotice.Download}"/></Hyperlink>
+                        </TextBlock>
+                        <TextBlock FontSize="{DynamicResource Type.Heading.Sm}" FontWeight="Medium"
+                                   TextWrapping="Wrap" TextAlignment="Center"
+                                   HorizontalAlignment="Center" Margin="0,8,0,8"
+                                   Visibility="{Binding Chrome.ShowsNetFrameworkLink, Converter={StaticResource BoolToVis}}">
+                            <Hyperlink x:Name="UpdateOfferNetFrameworkLink"
+                                       Command="{Binding Chrome.OpenNetFrameworkDownloadCommand}"
+                                       Style="{StaticResource SubtleLink}"
+                                       AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.DownloadNetFramework48}"><Run Text="{loc:Translate UpdateNotice.DownloadNetFramework48}"/></Hyperlink>
                         </TextBlock>
                         <Button x:Name="UpdateOfferContinueButton" Style="{StaticResource GhostPill}"
                                 Content="{loc:Translate UpdateNotice.ContinueWithoutUpdating}"

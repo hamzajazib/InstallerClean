@@ -52,6 +52,11 @@ const ALSO_KEEP = [
   // nothing to get wrong; only Japanese and Chinese differ, taking the
   // ideographic full stop, which carries no space after it.
   'Display.SentenceSeparator',   // ". "
+  // The colon between a link's words and its address on the command line is the
+  // one English uses. A punctuation mark rather than a word, so there is nothing to
+  // translate and nothing to get wrong; French puts a narrow no-break space before
+  // it, and Japanese and Chinese take the full-width colon.
+  'Cli.UpdateDownloadLink',      // "{0}: {1}"
   // The size and elapsed unit suffixes. Turkish abbreviates them exactly as
   // English does, so there is nothing to translate and nothing to get wrong.
   // A per-language keep rather than a universal one because fr, ru and uk do
@@ -553,7 +558,7 @@ Ayrıntılar şuraya yazıldı:
   'Cli.UpdateListsOnlyAfterMove': `Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi taşımayacak. Taşımak için ardından /m komutunu yeniden çalıştırın.`,
   'Cli.UpdateRunningInstead': `Bunun yerine {0} komutu InstallerClean {1} ile çalıştırılıyor.`,
   'Cli.UpdateNotStarted': `InstallerClean {0} sürümü yüklendi ancak başlatılamadı. Komutu yeniden çalıştırın.`,
-  'Cli.UpdateDownloadLink': `GitHub'dan indirin: {0}`,
+  'Cli.UpdateDownloadLink': `{0}: {1}`,
   'Cli.Help.UpdateNote': `Taramadan önce InstallerClean'in daha yeni bir sürümü olup olmadığını&#10;denetler. Kendiniz çalıştırdığınızda güncellemeden önce sorar. Zamanlanmış&#10;bir görevde veya betikte kendi kendine çalıştığında sormadan güncellenir.&#10;Denetimi atlamak için /noupdate ekleyin.`,
   'UpdateNotice.Scoop': `Bu kopya Scoop ile yüklendi. Güncellemek için InstallerClean'i kapatıp şunu çalıştırın:`,
   'UpdateNotice.CommandCopied': `Kopyalandı`,
@@ -563,9 +568,12 @@ Ayrıntılar şuraya yazıldı:
   'Cli.UpdateInUse': `InstallerClean kullanımda olduğu için şu anda kendini güncelleyemiyor.`,
   'Cli.CancellingAfterUpdate': `Güncelleştirme bittiğinde iptal edilecek...`,
   'Error.FolderWillNotGiveFilesBack': `{0} konumuna dosya kaydedebilirsiniz ama onları yeniden açamazsınız, bu yüzden InstallerClean oraya dosya taşımaz.`,
-  'UpdateNotice.NeedsNetFramework48': `InstallerClean {0}, bu bilgisayarda bulunmayan .NET Framework 4.8'i gerektiriyor.`,
+  'UpdateNotice.NeedsNetFramework48': `Bu sürüm .NET Framework 4.8 gerektiriyor. Microsoft'tan yükleyin, bilgisayarı yeniden başlatın, ardından güncellemek için InstallerClean'i açın.`,
   'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0} otomatik olarak yüklenemiyor.`,
   'UpdateNotice.CopyCannotTell': `InstallerClean kendi kurulum programıyla yüklenip yüklenmediğini anlayamadığı için kendini güncelleyemiyor.`,
+  'UpdateNotice.DownloadNetFramework48': `.NET Framework 4.8'i Microsoft'tan indirin`,
+  'Automation.UpdateNotice.DownloadNetFramework48': `.NET Framework 4.8'i Microsoft'tan indirin`,
+  'Cli.UpdateNeedsNetFramework48': `Bu sürüm .NET Framework 4.8 gerektiriyor. Microsoft'tan yükleyin, bilgisayarı yeniden başlatın, ardından güncellemek için InstallerClean'i yeniden çalıştırın.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -321,9 +321,10 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is available. | È disponibile InstallerClean {0}. |
 | It's strongly recommended to use the latest version. | Si consiglia vivamente di usare la versione più recente. |
 | Download it from GitHub | Scaricalo da GitHub |
+| Download .NET Framework 4.8 from Microsoft | Scarica .NET Framework 4.8 da Microsoft |
 | Update now | Aggiorna ora |
 | This copy was installed by Scoop. To update it, close InstallerClean and run: | Questa copia è stata installata da Scoop. Per aggiornarla, chiudi InstallerClean ed esegui: |
-| InstallerClean {0} needs .NET Framework 4.8, which this PC doesn't have. | InstallerClean {0} richiede .NET Framework 4.8, che non è presente su questo PC. |
+| It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then open InstallerClean to update. | Questa versione richiede .NET Framework 4.8. Installalo dal sito di Microsoft, riavvia il PC, poi apri InstallerClean per aggiornare. |
 | InstallerClean {0} can't be installed automatically. | InstallerClean {0} non può essere installato automaticamente. |
 | InstallerClean can't tell whether its setup installed it, so it can't update itself. | InstallerClean non riesce a stabilire se è stato installato dal suo programma di installazione, quindi non può aggiornarsi. |
 | Copied | Copiato |
@@ -406,6 +407,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the issue tracker on github.com in your browser. | Apre elenco problemi (issue) in github.com nel browser. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | Se selezionata, all'avvio InstallerClean verifica su github se è disponibile una versione più recente. |
 | Download it from github | Scaricalo da github |
+| Download .NET Framework 4.8 from Microsoft | Scarica .NET Framework 4.8 da Microsoft |
 | Copy the command | Copia il comando |
 | Scoop's update command | Comando di aggiornamento di Scoop |
 | Opens the licence file on github.com in your browser. | Apre file licenza in github.com nel browser. |
@@ -562,7 +564,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean is in use, so it can't update itself now. | InstallerClean è in uso, quindi ora non può aggiornarsi. |
 | Running {0} with InstallerClean {1} instead. | Si esegue invece {0} con InstallerClean {1}. |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} è installato, ma non è stato possibile avviarlo. Esegui di nuovo il comando. |
-| Download it from GitHub: {0} | Scaricalo da GitHub: {0} |
+| {0}: {1} | {0}: {1} |
+| It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | Questa versione richiede .NET Framework 4.8. Installalo dal sito di Microsoft, riavvia il PC, poi esegui di nuovo InstallerClean per aggiornare. |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Annullarlo è semplice. Rispostali da {0} in {InstallerFolder} e tornerà tutto com'era. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean non è più riuscito a confermare la cartella di backup, quindi si è fermato. Controlla {0}, poi esegui di nuovo il comando. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Un altro processo InstallerClean mantiene il blocco a istanza singola (la GUI o un'altra esecuzione della CLI). Codice di uscita 75 (transitorio); è sicuro riprovare più tardi. |

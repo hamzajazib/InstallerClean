@@ -321,9 +321,10 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is available. | InstallerClean {0} が利用可能です。 |
 | It's strongly recommended to use the latest version. | 最新バージョンの使用を強くおすすめします。 |
 | Download it from GitHub | GitHubからダウンロード |
+| Download .NET Framework 4.8 from Microsoft | Microsoft から .NET Framework 4.8 をダウンロード |
 | Update now | 今すぐ更新 |
 | This copy was installed by Scoop. To update it, close InstallerClean and run: | このコピーは Scoop でインストールされています。更新するには、InstallerClean を閉じてから次を実行してください： |
-| InstallerClean {0} needs .NET Framework 4.8, which this PC doesn't have. | InstallerClean {0} には .NET Framework 4.8 が必要ですが、この PC にはありません。 |
+| It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then open InstallerClean to update. | このバージョンには .NET Framework 4.8 が必要です。Microsoft からインストールして PC を再起動し、InstallerClean を開いて更新してください。 |
 | InstallerClean {0} can't be installed automatically. | InstallerClean {0} は自動ではインストールできません。 |
 | InstallerClean can't tell whether its setup installed it, so it can't update itself. | InstallerClean は自身のセットアップでインストールされたかどうかを判断できないため、自身を更新できません。 |
 | Copied | コピー済み |
@@ -406,6 +407,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the issue tracker on github.com in your browser. | ブラウザで github.com の Issue トラッカーを開きます。 |
 | If ticked, InstallerClean checks github for a newer version when you run it. | チェックを入れると、InstallerClean は起動時に github で新しいバージョンを確認します。 |
 | Download it from github | github からダウンロード |
+| Download .NET Framework 4.8 from Microsoft | Microsoft から .NET Framework 4.8 をダウンロード |
 | Copy the command | コマンドをコピー |
 | Scoop's update command | Scoop の更新コマンド |
 | Opens the licence file on github.com in your browser. | ブラウザで github.com のライセンスファイルを開きます。 |
@@ -562,7 +564,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean is in use, so it can't update itself now. | InstallerClean は使用中のため、今は自身を更新できません。 |
 | Running {0} with InstallerClean {1} instead. | 代わりに InstallerClean {1} で {0} を実行します。 |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} をインストールしましたが、起動できませんでした。もう一度コマンドを実行してください。 |
-| Download it from GitHub: {0} | GitHubからダウンロード：{0} |
+| {0}: {1} | {0}：{1} |
+| It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | このバージョンには .NET Framework 4.8 が必要です。Microsoft からインストールして PC を再起動し、InstallerClean をもう一度実行して更新してください。 |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | 元に戻すのは簡単です。{0} から {InstallerFolder} に戻せば、すべて元どおりになります。 |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean はバックアップフォルダーを確認できなくなったため、停止しました。{0} を確認してから、コマンドをもう一度実行してください。 |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | 別の InstallerClean プロセスが単一インスタンスロックを保持しています (GUIまたは別のCLI実行)。終了コード75 (一時的)。後で再試行しても安全です。 |

@@ -209,7 +209,7 @@ public partial class MainWindow : Window
     private void ShowUpdateOffer()
     {
         SpeakWindowAs(DisplayHelpers.SpokenSentences(
-            _vm.Chrome.UpdateNoticeText, Strings.UpdateNotice_Recommended,
+            _vm.Chrome.UpdateNoticeText, _vm.Chrome.UpdateNoticeDetailText,
             _vm.Chrome.ShowsScoopCommand ? _vm.Chrome.ScoopUpdateSpoken : string.Empty));
         Dispatcher.BeginInvoke(DispatcherPriority.Input, FocusUpdateOffer);
     }
@@ -222,7 +222,7 @@ public partial class MainWindow : Window
     private void FocusUpdateOffer()
     {
         if (!UpdateOfferUpdateNowButton.Focus() && !UpdateOfferCopyButton.Focus()
-            && !UpdateOfferDownloadLink.Focus())
+            && !UpdateOfferDownloadLink.Focus() && !UpdateOfferNetFrameworkLink.Focus())
             UpdateOfferContinueButton.Focus();
     }
 
@@ -549,10 +549,12 @@ public partial class MainWindow : Window
     /// <summary>
     /// The card shown while an update downloads. As it appears, the focus moves to its
     /// Cancel and its line is read. As it goes, which it does only where the update was
-    /// cancelled or failed, the focus moves to Update now and the line saying what
-    /// failed is read: on the card saying a newer version is available where that card
-    /// is behind it, with nothing else read until that card goes; otherwise on the
-    /// notice, followed by any warning marked while the card was up.
+    /// cancelled, failed or was ruled out by the newer version's release, the focus moves
+    /// to Update now, or to the link where Update now has gone, and the line saying what
+    /// failed or why the release rules this copy out is read: on the card saying a newer
+    /// version is available where that card is behind it, with nothing else read until
+    /// that card goes; otherwise on the notice, followed by any warning marked while the
+    /// card was up.
     /// </summary>
     private void OnUpdatingChanged()
     {
@@ -568,16 +570,21 @@ public partial class MainWindow : Window
             Dispatcher.BeginInvoke(DispatcherPriority.Input, FocusUpdateOffer);
             if (_vm.Chrome.HasUpdateFailure)
                 AnnounceLiveRegion(UpdateOfferFailure, () => _vm.Chrome.HasUpdateFailure);
+            else if (_vm.Chrome.IsUpdateRefused)
+                AnnounceLiveRegion(UpdateOfferDetail, () => _vm.Chrome.IsUpdateRefused);
             return;
         }
 
         Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
         {
-            if (!UpdateNowButton.Focus())
+            if (!UpdateNowButton.Focus() && !UpdateNoticeDownloadLink.Focus()
+                && !UpdateNoticeNetFrameworkLink.Focus())
                 RescanButton.Focus();
         });
         if (_vm.Chrome.HasUpdateFailure)
             AnnounceLiveRegion(UpdateNoticeFailure, () => _vm.Chrome.HasUpdateFailure);
+        else if (_vm.Chrome.IsUpdateRefused)
+            AnnounceLiveRegion(UpdateNoticeDetail, () => _vm.Chrome.IsUpdateRefused);
         if (!_vm.Cleanup.IsOperating && !_vm.Completion.IsComplete)
             AnnounceMarkedWarnings();
     }

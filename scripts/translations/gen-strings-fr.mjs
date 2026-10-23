@@ -651,7 +651,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `La nouvelle version va analyser et lister ce qu'elle trouve, sans rien déplacer. Pour déplacer, relancez /m ensuite.`,
   'Cli.UpdateRunningInstead': `Exécution de {0} avec InstallerClean {1} à la place.`,
   'Cli.UpdateNotStarted': `InstallerClean {0} est installé, mais n'a pas pu être lancé. Relancez la commande.`,
-  'Cli.UpdateDownloadLink': `Le télécharger sur GitHub : {0}`,
+  'Cli.UpdateDownloadLink': `{0} : {1}`,
   'Cli.Help.UpdateNote': `Avant l'analyse, il vérifie s'il existe une version plus récente&#10;d'InstallerClean. Lancé par vous, il demande avant de mettre à jour. Lancé&#10;seul, dans une tâche planifiée ou un script, il se met à jour sans&#10;demander. Ajoutez /noupdate pour ignorer la vérification.`,
   'UpdateNotice.Scoop': `Cette copie a été installée par Scoop. Pour la mettre à jour, fermez InstallerClean et exécutez :`,
   'UpdateNotice.CommandCopied': `Copié`,
@@ -661,9 +661,12 @@ const MAP = {
   'Cli.UpdateInUse': `InstallerClean est en cours d'utilisation, il ne peut donc pas se mettre à jour maintenant.`,
   'Cli.CancellingAfterUpdate': `Annulation dès que la mise à jour sera terminée...`,
   'Error.FolderWillNotGiveFilesBack': `Vous pouvez enregistrer des fichiers dans {0}, mais pas les rouvrir, donc InstallerClean n'y déplacera pas de fichiers.`,
-  'UpdateNotice.NeedsNetFramework48': `InstallerClean {0} nécessite .NET Framework 4.8, qui n'est pas présent sur ce PC.`,
+  'UpdateNotice.NeedsNetFramework48': `Cette version nécessite .NET Framework 4.8. Installez-le depuis le site de Microsoft, redémarrez le PC, puis ouvrez InstallerClean pour effectuer la mise à jour.`,
   'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0} ne peut pas être installé automatiquement.`,
   'UpdateNotice.CopyCannotTell': `InstallerClean ne peut pas savoir s'il a été installé par son programme d'installation, il ne peut donc pas se mettre à jour.`,
+  'UpdateNotice.DownloadNetFramework48': `Télécharger .NET Framework 4.8 sur le site de Microsoft`,
+  'Automation.UpdateNotice.DownloadNetFramework48': `Télécharger .NET Framework 4.8 sur le site de Microsoft`,
+  'Cli.UpdateNeedsNetFramework48': `Cette version nécessite .NET Framework 4.8. Installez-le depuis le site de Microsoft, redémarrez le PC, puis exécutez à nouveau InstallerClean pour effectuer la mise à jour.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

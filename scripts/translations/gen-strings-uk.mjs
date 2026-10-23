@@ -42,6 +42,11 @@ const ALSO_KEEP = [
   // nothing to get wrong; only Japanese and Chinese differ, taking the
   // ideographic full stop, which carries no space after it.
   'Display.SentenceSeparator',   // ". "
+  // The colon between a link's words and its address on the command line is the
+  // one English uses. A punctuation mark rather than a word, so there is nothing to
+  // translate and nothing to get wrong; French puts a narrow no-break space before
+  // it, and Japanese and Chinese take the full-width colon.
+  'Cli.UpdateDownloadLink',      // "{0}: {1}"
 ];
 
 // Satellite-only CLDR plural overrides (uk). base Singular = "one" (1, 21, 31),
@@ -647,7 +652,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `Нова версія просканує й покаже список знайденого, нічого не переміщуючи. Щоб перемістити, потім знову запустіть /m.`,
   'Cli.UpdateRunningInstead': `Натомість команду {0} буде виконано в InstallerClean {1}.`,
   'Cli.UpdateNotStarted': `Версію InstallerClean {0} встановлено, але запустити її не вдалося. Виконайте команду ще раз.`,
-  'Cli.UpdateDownloadLink': `Завантажити з GitHub: {0}`,
+  'Cli.UpdateDownloadLink': `{0}: {1}`,
   'Cli.Help.UpdateNote': `Перед скануванням перевіряє, чи є новіша версія InstallerClean. Під час&#10;запуску вручну запитує перед оновленням. Під час запуску без участі&#10;людини, у запланованій задачі чи скрипті, оновлюється без запитань.&#10;Додайте /noupdate, щоб пропустити перевірку.`,
   'UpdateNotice.Scoop': `Цю копію встановлено через Scoop. Щоб оновити її, закрийте InstallerClean і виконайте:`,
   'UpdateNotice.CommandCopied': `Скопійовано`,
@@ -657,9 +662,12 @@ const MAP = {
   'Cli.UpdateInUse': `InstallerClean використовується, тому зараз не може оновитися.`,
   'Cli.CancellingAfterUpdate': `Скасування після завершення оновлення...`,
   'Error.FolderWillNotGiveFilesBack': `Ви можете зберігати файли в {0}, але не можете знову їх відкрити, тому InstallerClean не переміщуватиме туди файли.`,
-  'UpdateNotice.NeedsNetFramework48': `Для InstallerClean {0} потрібен .NET Framework 4.8, якого немає на цьому комп'ютері.`,
+  'UpdateNotice.NeedsNetFramework48': `Для цієї версії потрібен .NET Framework 4.8. Встановіть його з сайту Microsoft, перезавантажте комп'ютер, а потім відкрийте InstallerClean, щоб виконати оновлення.`,
   'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0} не можна встановити автоматично.`,
   'UpdateNotice.CopyCannotTell': `InstallerClean не може визначити, чи встановила його власна програма встановлення, тому не може оновитися.`,
+  'UpdateNotice.DownloadNetFramework48': `Завантажити .NET Framework 4.8 з сайту Microsoft`,
+  'Automation.UpdateNotice.DownloadNetFramework48': `Завантажити .NET Framework 4.8 з сайту Microsoft`,
+  'Cli.UpdateNeedsNetFramework48': `Для цієї версії потрібен .NET Framework 4.8. Встановіть його з сайту Microsoft, перезавантажте комп'ютер, а потім знову запустіть InstallerClean, щоб виконати оновлення.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

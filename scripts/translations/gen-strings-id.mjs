@@ -65,6 +65,11 @@ const ALSO_KEEP = [
   // nothing to get wrong; only Japanese and Chinese differ, taking the
   // ideographic full stop, which carries no space after it.
   'Display.SentenceSeparator',   // ". "
+  // The colon between a link's words and its address on the command line is the
+  // one English uses. A punctuation mark rather than a word, so there is nothing to
+  // translate and nothing to get wrong; French puts a narrow no-break space before
+  // it, and Japanese and Chinese take the full-width colon.
+  'Cli.UpdateDownloadLink',      // "{0}: {1}"
   // The size and elapsed unit suffixes. Indonesian abbreviates them exactly as
   // English does, so there is nothing to translate and nothing to get wrong.
   // A per-language keep rather than a universal one because fr, ru and uk do
@@ -652,7 +657,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `Versi baru akan memindai dan menampilkan daftar temuannya, tanpa memindahkan apa pun. Untuk memindahkan, jalankan /m lagi setelahnya.`,
   'Cli.UpdateRunningInstead': `Menjalankan {0} dengan InstallerClean {1} sebagai gantinya.`,
   'Cli.UpdateNotStarted': `InstallerClean {0} telah terpasang, tetapi tidak dapat dijalankan. Jalankan perintah itu lagi.`,
-  'Cli.UpdateDownloadLink': `Unduh dari GitHub: {0}`,
+  'Cli.UpdateDownloadLink': `{0}: {1}`,
   'Cli.Help.UpdateNote': `Sebelum memindai, alat ini memeriksa versi InstallerClean yang lebih baru.&#10;Jika Anda menjalankannya sendiri, alat ini bertanya sebelum memperbarui.&#10;Jika berjalan otomatis lewat tugas terjadwal atau skrip, ia memperbarui&#10;tanpa bertanya. Tambahkan /noupdate untuk melewati pemeriksaan.`,
   'UpdateNotice.Scoop': `Salinan ini dipasang oleh Scoop. Untuk memperbaruinya, tutup InstallerClean lalu jalankan:`,
   'UpdateNotice.CommandCopied': `Tersalin`,
@@ -662,9 +667,12 @@ const MAP = {
   'Cli.UpdateInUse': `InstallerClean sedang digunakan, jadi tidak dapat memperbarui dirinya sekarang.`,
   'Cli.CancellingAfterUpdate': `Membatalkan setelah pembaruan selesai...`,
   'Error.FolderWillNotGiveFilesBack': `Anda bisa menyimpan file di {0}, tetapi tidak bisa membukanya lagi, jadi InstallerClean tidak akan memindahkan file ke sana.`,
-  'UpdateNotice.NeedsNetFramework48': `InstallerClean {0} memerlukan .NET Framework 4.8, yang tidak ada di PC ini.`,
+  'UpdateNotice.NeedsNetFramework48': `Versi ini memerlukan .NET Framework 4.8. Pasang dari Microsoft, mulai ulang PC, lalu buka InstallerClean untuk memperbarui.`,
   'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0} tidak dapat dipasang secara otomatis.`,
   'UpdateNotice.CopyCannotTell': `InstallerClean tidak dapat memastikan apakah dirinya dipasang oleh program penyiapannya, jadi tidak dapat memperbarui dirinya sendiri.`,
+  'UpdateNotice.DownloadNetFramework48': `Unduh .NET Framework 4.8 dari Microsoft`,
+  'Automation.UpdateNotice.DownloadNetFramework48': `Unduh .NET Framework 4.8 dari Microsoft`,
+  'Cli.UpdateNeedsNetFramework48': `Versi ini memerlukan .NET Framework 4.8. Pasang dari Microsoft, mulai ulang PC, lalu jalankan InstallerClean lagi untuk memperbarui.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -696,7 +696,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards.`,
   'Cli.UpdateRunningInstead': `Running {0} with InstallerClean {1} instead.`,
   'Cli.UpdateNotStarted': `InstallerClean {0} is installed but couldn't be started. Run the command again.`,
-  'Cli.UpdateDownloadLink': `Download it from GitHub: {0}`,
+  'Cli.UpdateDownloadLink': `{0}: {1}`,
   'Cli.Help.UpdateNote': `Before it scans, it checks for a newer version of InstallerClean.&#10;When you run it yourself, it asks before updating. When it runs on its&#10;own, in a scheduled task or a script, it updates without asking.&#10;Add /noupdate to skip the check.`,
   'UpdateNotice.Scoop': `This copy was installed by Scoop. To update it, close InstallerClean and run:`,
   'UpdateNotice.CommandCopied': `Copied`,
@@ -706,9 +706,12 @@ const MAP = {
   'Cli.UpdateInUse': `InstallerClean is in use, so it can't update itself now.`,
   'Cli.CancellingAfterUpdate': `Cancelling once the update has finished...`,
   'Error.FolderWillNotGiveFilesBack': `You can save files in {0} but not open them again, so InstallerClean won't move files there.`,
-  'UpdateNotice.NeedsNetFramework48': `InstallerClean {0} needs .NET Framework 4.8, which this PC doesn't have.`,
+  'UpdateNotice.NeedsNetFramework48': `It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then open InstallerClean to update.`,
   'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0} can't be installed automatically.`,
   'UpdateNotice.CopyCannotTell': `InstallerClean can't tell whether its setup installed it, so it can't update itself.`,
+  'UpdateNotice.DownloadNetFramework48': `Download .NET Framework 4.8 from Microsoft`,
+  'Automation.UpdateNotice.DownloadNetFramework48': `Download .NET Framework 4.8 from Microsoft`,
+  'Cli.UpdateNeedsNetFramework48': `It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

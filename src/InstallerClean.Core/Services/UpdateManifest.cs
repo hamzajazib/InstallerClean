@@ -62,6 +62,13 @@ public static class UpdateManifest
     internal const string NetFrameworkReleaseValueName = "Release";
     internal const int NetFramework48Release = 528040;
 
+    /// <summary>
+    /// Microsoft's link to its .NET Framework 4.8 offline installer, as its support article
+    /// for that installer gives it. It answers with the installer file itself, so following
+    /// it downloads the file.
+    /// </summary>
+    public const string NetFramework48DownloadUrl = "https://go.microsoft.com/fwlink/?linkid=2088631";
+
     /// <summary>Whether <paramref name="body"/> parses as JSON at all, whatever its shape.</summary>
     public static bool IsJson(byte[] body)
     {

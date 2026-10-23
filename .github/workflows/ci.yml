@@ -2091,7 +2091,7 @@ jobs:
           Expect-ExitCode $update
 
           $cannotInstall = (Line 'UpdateNotice.CannotInstallAutomatically') -f $latest
-          $releasePage = (Line 'Cli.UpdateDownloadLink') -f 'https://github.com/no-faff/InstallerClean/releases/latest'
+          $releasePage = (Line 'Cli.UpdateDownloadLink') -f (Line 'UpdateNotice.Download'), "https://github.com/no-faff/InstallerClean/releases/tag/v$latest"
           $refusals = [ordered]@{
             'refused by its schema'      = '{"schema": 2, "downloads": {"cli": {"requires": []}}}'
             'refused by its requirement' = '{"schema": 1, "downloads": {"cli": {"requires": ["dotnet-desktop-99"]}}}'

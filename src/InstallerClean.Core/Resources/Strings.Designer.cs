@@ -131,6 +131,7 @@ public static class Strings
     public static string Automation_StopWaitingForPath => Get("Automation.StopWaitingForPath");
     public static string Automation_UpdateNotice_CopyCommand => Get("Automation.UpdateNotice.CopyCommand");
     public static string Automation_UpdateNotice_Download => Get("Automation.UpdateNotice.Download");
+    public static string Automation_UpdateNotice_DownloadNetFramework48 => Get("Automation.UpdateNotice.DownloadNetFramework48");
     public static string Automation_UpdateNotice_ScoopCommand => Get("Automation.UpdateNotice.ScoopCommand");
     public static string Automation_ViewOrphanedFiles => Get("Automation.ViewOrphanedFiles");
     public static string Automation_ViewOrphanedFiles_HelpText => Get("Automation.ViewOrphanedFiles.HelpText");
@@ -310,6 +311,7 @@ public static class Strings
     public static string Cli_UpdateInUse => Get("Cli.UpdateInUse");
     public static string Cli_UpdateListsOnlyAfterDelete => Get("Cli.UpdateListsOnlyAfterDelete");
     public static string Cli_UpdateListsOnlyAfterMove => Get("Cli.UpdateListsOnlyAfterMove");
+    public static string Cli_UpdateNeedsNetFramework48 => Get("Cli.UpdateNeedsNetFramework48");
     public static string Cli_UpdateNotStarted => Get("Cli.UpdateNotStarted");
     public static string Cli_UpdatePrompt => Get("Cli.UpdatePrompt");
     public static string Cli_UpdateRunningInstead => Get("Cli.UpdateRunningInstead");
@@ -575,6 +577,7 @@ public static class Strings
     public static string UpdateNotice_Download => Get("UpdateNotice.Download");
     public static string UpdateNotice_DownloadFailed => Get("UpdateNotice.DownloadFailed");
     public static string UpdateNotice_Downloading => Get("UpdateNotice.Downloading");
+    public static string UpdateNotice_DownloadNetFramework48 => Get("UpdateNotice.DownloadNetFramework48");
     public static string UpdateNotice_InstallFailed => Get("UpdateNotice.InstallFailed");
     public static string UpdateNotice_NeedsNetFramework48 => Get("UpdateNotice.NeedsNetFramework48");
     public static string UpdateNotice_Recommended => Get("UpdateNotice.Recommended");

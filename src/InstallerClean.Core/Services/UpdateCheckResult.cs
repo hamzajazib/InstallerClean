@@ -14,9 +14,9 @@ public sealed record UpToDate(string CurrentVersion) : UpdateCheckResult;
 
 /// <summary>
 /// A newer release tag is published on GitHub. The two version strings
-/// and nothing else: where a click goes is
-/// <see cref="UpdateCheckService.ReleasesPageUrl"/>, fixed in the app, so
-/// what GitHub answered has no say in it.
+/// and nothing else: where a click goes is the newer version's release page
+/// (<see cref="UpdateCheckService.ReleasePageUrl"/>), built from its three
+/// numbers, so nothing else GitHub answered has a say in it.
 /// </summary>
 public sealed record UpdateAvailable(string CurrentVersion, string LatestVersion)
     : UpdateCheckResult;

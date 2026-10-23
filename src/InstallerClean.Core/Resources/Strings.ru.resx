@@ -318,9 +318,13 @@
   </data>
   <data name="Automation.UpdateNotice.Download" xml:space="preserve">
     <value>Скачать с github</value>
-    <comment>Screen-reader name of the link on the notice saying a newer version is
+    <comment>Screen-reader name of the link on the card and the notice saying a newer version is
     available, the visible UpdateNotice.Download cased for speech for the reason
     Automation.CheckForUpdates.HelpText carries. The same words as the link.</comment>
+  </data>
+  <data name="Automation.UpdateNotice.DownloadNetFramework48" xml:space="preserve">
+    <value>Скачать .NET Framework 4.8 с сайта Microsoft</value>
+    <comment>Screen-reader name of the link UpdateNotice.DownloadNetFramework48. The same words as the link.</comment>
   </data>
   <data name="Automation.UpdateNotice.CopyCommand" xml:space="preserve">
     <value>Копировать команду</value>
@@ -1501,11 +1505,15 @@ InstallerClean уже был запущен от имени администра
   </data>
   <data name="UpdateNotice.Recommended" xml:space="preserve">
     <value>Настоятельно рекомендуется использовать последнюю версию.</value>
-    <comment>The second line of the card and of the notice, under UpdateNotice.Available.</comment>
+    <comment>The second line of the card and of the notice, under UpdateNotice.Available. UpdateNotice.NeedsNetFramework48, UpdateNotice.CannotInstallAutomatically or UpdateNotice.CopyCannotTell takes its place where it applies.</comment>
   </data>
   <data name="UpdateNotice.Download" xml:space="preserve">
     <value>Скачать с GitHub</value>
-    <comment>The link on the card and on the notice, which opens the newest release's page on GitHub in the browser. Shown where the app cannot update itself, and after an update that failed.</comment>
+    <comment>The link on the card and on the notice, which opens the newer version's release page on GitHub in the browser. Shown where the app cannot update itself or the newer version's release rules this copy out for any reason but .NET Framework 4.8, and after an update that failed. The command line prints it before the page's address (Cli.UpdateDownloadLink).</comment>
+  </data>
+  <data name="UpdateNotice.DownloadNetFramework48" xml:space="preserve">
+    <value>Скачать .NET Framework 4.8 с сайта Microsoft</value>
+    <comment>The link on the card and on the notice under UpdateNotice.NeedsNetFramework48, in place of UpdateNotice.UpdateNow and UpdateNotice.Download. It downloads Microsoft's .NET Framework 4.8 installer in the browser. The command line prints it before the installer's address (Cli.UpdateDownloadLink). ".NET Framework 4.8" and "Microsoft" are names and are not translated.</comment>
   </data>
   <data name="UpdateNotice.UpdateNow" xml:space="preserve">
     <value>Обновить сейчас</value>
@@ -1516,16 +1524,16 @@ InstallerClean уже был запущен от имени администра
     <comment>A third line on the card and in the notice, under UpdateNotice.Recommended, on a copy installed by Scoop, which shows in place of UpdateNotice.UpdateNow. Scoop's update command (scoop update installerclean, never translated) follows it in a box with a Copy button (Action.Copy). Scoop is the name of a program and is not translated.</comment>
   </data>
   <data name="UpdateNotice.NeedsNetFramework48" xml:space="preserve">
-    <value>Для InstallerClean {0} нужен .NET Framework 4.8, которого нет на этом компьютере.</value>
-    <comment>A third line on the card and in the notice, under UpdateNotice.Available, where the newer version's release says its download for this kind of copy needs .NET Framework 4.8 and the PC does not have it. Update now is not shown; the release link (UpdateNotice.Download) is, and the command line prints Cli.UpdateDownloadLink after it. {0} = the newer version number, as 3.6.0. ".NET Framework 4.8" is a product name and is not translated.</comment>
+    <value>Для этой версии нужен .NET Framework 4.8. Установите его с сайта Microsoft, перезагрузите компьютер, а затем откройте InstallerClean, чтобы выполнить обновление.</value>
+    <comment>The second line of the card and of the notice, under UpdateNotice.Available and in place of UpdateNotice.Recommended, where the newer version's release says its download for this kind of copy needs .NET Framework 4.8 and the PC does not have it. "It" is the newer version UpdateNotice.Available names. Neither Update now nor the release link is shown; the link UpdateNotice.DownloadNetFramework48 is. "Open InstallerClean" means start the app again, after the restart. ".NET Framework 4.8" and "Microsoft" are names and are not translated.</comment>
   </data>
   <data name="UpdateNotice.CannotInstallAutomatically" xml:space="preserve">
     <value>InstallerClean {0} не может быть установлен автоматически.</value>
-    <comment>A third line on the card and in the notice, under UpdateNotice.Available, where the newer version's release rules out installing it from this copy for any other reason. Update now is not shown; the release link (UpdateNotice.Download) is, and the command line prints Cli.UpdateDownloadLink after it. {0} = the newer version number, as 3.6.0.</comment>
+    <comment>The second line of the card and of the notice, in place of UpdateNotice.Recommended, where the newer version's release rules out installing it from this copy for any other reason. Update now is not shown; the release link (UpdateNotice.Download) is, and the command line prints Cli.UpdateDownloadLink after it. {0} = the newer version number, as 3.6.0.</comment>
   </data>
   <data name="UpdateNotice.CopyCannotTell" xml:space="preserve">
     <value>InstallerClean не может определить, установлен ли он своим установщиком, поэтому не может обновиться.</value>
-    <comment>A line under UpdateNotice.Available on a copy that cannot tell from the setup's record in the registry whether the setup installed it. Update now is not shown; the release link (UpdateNotice.Download) is, and the command line prints Cli.UpdateDownloadLink after it.</comment>
+    <comment>The second line of the card and of the notice, in place of UpdateNotice.Recommended, on a copy that cannot tell from the setup's record in the registry whether the setup installed it. Update now is not shown; the release link (UpdateNotice.Download) is, and the command line prints Cli.UpdateDownloadLink after it.</comment>
   </data>
   <data name="UpdateNotice.CommandCopied" xml:space="preserve">
     <value>Скопировано</value>
@@ -2308,9 +2316,17 @@ InstallerClean уже был запущен от имени администра
   <!-- Where the newer version is in place at the command line's path but would not start,
        so the run ends with nothing run and the next run of the command starts the newer
        version. 0 = its version. -->
-  <!-- Where a newer version is out and this copy cannot update itself: a build from source,
-       or a copy that cannot tell from the setup's record whether the setup installed it.
-       0 = the release page's address, printed as written. -->
+  <!-- Where a newer version is out and this copy cannot update itself (a build from source,
+       or a copy that cannot tell from the setup's record whether the setup installed it), or
+       the newer version's release rules this copy out. 0 = the link's words,
+       UpdateNotice.Download or UpdateNotice.DownloadNetFramework48; 1 = the address it
+       downloads from, printed as written. The punctuation between them is this language's own. -->
+  <!-- In place of UpdateNotice.NeedsNetFramework48 on the command line, where the newer
+       version's release says the command line's download needs .NET Framework 4.8 and the
+       PC does not have it. "It" is the newer version named by UpdateNotice.Available, the
+       line above; "run InstallerClean again" means run the command again, after the
+       restart. The line after it is Cli.UpdateDownloadLink with Microsoft's installer.
+       ".NET Framework 4.8" and "Microsoft" are names and are not translated. -->
   <!-- The line a cancelled Move prints instead of the one above, where the window's
        card carries Completion.MoveCancelledRestoreHint. A run that went the distance
        leaves the reader deciding when to delete the backup; a run somebody stopped
@@ -2589,8 +2605,9 @@ InstallerClean уже был запущен от имени администра
   <data name="Cli.UpdateListsOnlyAfterMove" xml:space="preserve"><value>Новая версия просканирует и покажет список найденного, ничего не перемещая. Чтобы переместить, затем снова запустите /m.</value></data>
   <data name="Cli.UpdateRunningInstead" xml:space="preserve"><value>Вместо этого команда {0} будет выполнена в InstallerClean {1}.</value></data>
   <data name="Cli.UpdateNotStarted" xml:space="preserve"><value>Версия InstallerClean {0} установлена, но запустить её не удалось. Выполните команду ещё раз.</value></data>
-  <data name="Cli.UpdateDownloadLink" xml:space="preserve"><value>Скачать с GitHub: {0}</value></data>
+  <data name="Cli.UpdateDownloadLink" xml:space="preserve"><value>{0}: {1}</value></data>
   <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>Перед сканированием проверяет, есть ли более новая версия InstallerClean.&#10;При запуске вручную спрашивает перед обновлением. При запуске без участия&#10;человека, в запланированной задаче или скрипте, обновляется без вопросов.&#10;Добавьте /noupdate, чтобы пропустить проверку.</value></data>
   <data name="Cli.UpdateInUse" xml:space="preserve"><value>InstallerClean используется, поэтому сейчас не может обновиться.</value></data>
   <data name="Cli.CancellingAfterUpdate" xml:space="preserve"><value>Отмена после завершения обновления...</value></data>
+  <data name="Cli.UpdateNeedsNetFramework48" xml:space="preserve"><value>Для этой версии нужен .NET Framework 4.8. Установите его с сайта Microsoft, перезагрузите компьютер, а затем снова запустите InstallerClean, чтобы выполнить обновление.</value></data>
 </root>

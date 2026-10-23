@@ -52,6 +52,11 @@ const ALSO_KEEP = [
   // nothing to get wrong; only Japanese and Chinese differ, taking the
   // ideographic full stop, which carries no space after it.
   'Display.SentenceSeparator',   // ". "
+  // The colon between a link's words and its address on the command line is the
+  // one English uses. A punctuation mark rather than a word, so there is nothing to
+  // translate and nothing to get wrong; French puts a narrow no-break space before
+  // it, and Japanese and Chinese take the full-width colon.
+  'Cli.UpdateDownloadLink',      // "{0}: {1}"
   // The size and elapsed unit suffixes. Vietnamese abbreviates them exactly as
   // English does, so there is nothing to translate and nothing to get wrong.
   // A per-language keep rather than a universal one because fr, ru and uk do
@@ -627,7 +632,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `Phiên bản mới sẽ quét và liệt kê những gì tìm thấy, không di chuyển gì cả. Để di chuyển, hãy chạy lại /m sau đó.`,
   'Cli.UpdateRunningInstead': `Thay vào đó, chạy {0} bằng InstallerClean {1}.`,
   'Cli.UpdateNotStarted': `Đã cài đặt InstallerClean {0} nhưng không thể khởi động. Hãy chạy lại lệnh.`,
-  'Cli.UpdateDownloadLink': `Tải về từ GitHub: {0}`,
+  'Cli.UpdateDownloadLink': `{0}: {1}`,
   'Cli.Help.UpdateNote': `Trước khi quét, công cụ kiểm tra xem có phiên bản InstallerClean mới hơn&#10;không. Khi bạn tự chạy, nó hỏi trước khi cập nhật. Khi chạy tự động, trong&#10;một tác vụ theo lịch hoặc một tập lệnh, nó cập nhật mà không hỏi. Thêm&#10;/noupdate để bỏ qua bước kiểm tra.`,
   'UpdateNotice.Scoop': `Bản này được cài bằng Scoop. Để cập nhật, hãy đóng InstallerClean rồi chạy:`,
   'UpdateNotice.CommandCopied': `Đã sao chép`,
@@ -637,9 +642,12 @@ const MAP = {
   'Cli.UpdateInUse': `InstallerClean đang được sử dụng nên không thể tự cập nhật lúc này.`,
   'Cli.CancellingAfterUpdate': `Sẽ hủy khi cập nhật xong...`,
   'Error.FolderWillNotGiveFilesBack': `Bạn có thể lưu tệp vào {0} nhưng không thể mở lại chúng, nên InstallerClean sẽ không chuyển tệp vào đó.`,
-  'UpdateNotice.NeedsNetFramework48': `InstallerClean {0} cần .NET Framework 4.8, nhưng PC này không có.`,
+  'UpdateNotice.NeedsNetFramework48': `Phiên bản này cần .NET Framework 4.8. Hãy cài đặt nó từ Microsoft, khởi động lại PC, rồi mở InstallerClean để cập nhật.`,
   'UpdateNotice.CannotInstallAutomatically': `Không thể tự động cài đặt InstallerClean {0}.`,
   'UpdateNotice.CopyCannotTell': `InstallerClean không thể xác định liệu nó có được cài bằng trình cài đặt của chính nó hay không, nên không thể tự cập nhật.`,
+  'UpdateNotice.DownloadNetFramework48': `Tải .NET Framework 4.8 về từ Microsoft`,
+  'Automation.UpdateNotice.DownloadNetFramework48': `Tải .NET Framework 4.8 về từ Microsoft`,
+  'Cli.UpdateNeedsNetFramework48': `Phiên bản này cần .NET Framework 4.8. Hãy cài đặt nó từ Microsoft, khởi động lại PC, rồi chạy lại InstallerClean để cập nhật.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

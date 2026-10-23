@@ -53,6 +53,11 @@ const ALSO_KEEP = [
   // nothing to get wrong; only Japanese and Chinese differ, taking the
   // ideographic full stop, which carries no space after it.
   'Display.SentenceSeparator',   // ". "
+  // The colon between a link's words and its address on the command line is the
+  // one English uses. A punctuation mark rather than a word, so there is nothing to
+  // translate and nothing to get wrong; French puts a narrow no-break space before
+  // it, and Japanese and Chinese take the full-width colon.
+  'Cli.UpdateDownloadLink',      // "{0}: {1}"
   // The size and elapsed unit suffixes. Korean abbreviates them exactly as
   // English does, so there is nothing to translate and nothing to get wrong.
   // A per-language keep rather than a universal one because fr, ru and uk do
@@ -628,7 +633,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `새 버전은 검사하여 찾은 항목을 나열하기만 하고 아무것도 이동하지 않습니다. 이동하려면 그 후에 /m을 다시 실행하세요.`,
   'Cli.UpdateRunningInstead': `대신 InstallerClean {1} 버전으로 {0} 명령을 실행합니다.`,
   'Cli.UpdateNotStarted': `InstallerClean {0} 버전이 설치되었지만 시작할 수 없었습니다. 명령을 다시 실행하세요.`,
-  'Cli.UpdateDownloadLink': `GitHub에서 내려받기: {0}`,
+  'Cli.UpdateDownloadLink': `{0}: {1}`,
   'Cli.Help.UpdateNote': `검사하기 전에 InstallerClean의 새 버전이 있는지 확인합니다. 직접 실행하면&#10;업데이트하기 전에 묻습니다. 예약 작업이나 스크립트에서 자동으로 실행되면&#10;묻지 않고 업데이트합니다. 확인을 건너뛰려면 /noupdate를 추가하세요.`,
   'UpdateNotice.Scoop': `이 사본은 Scoop으로 설치되었습니다. 업데이트하려면 InstallerClean을 닫고 다음을 실행하세요:`,
   'UpdateNotice.CommandCopied': `복사됨`,
@@ -638,9 +643,12 @@ const MAP = {
   'Cli.UpdateInUse': `InstallerClean이 사용 중이어서 지금은 스스로 업데이트할 수 없습니다.`,
   'Cli.CancellingAfterUpdate': `업데이트가 끝나면 취소합니다...`,
   'Error.FolderWillNotGiveFilesBack': `{0}에 파일을 저장할 수는 있지만 다시 열 수는 없으므로 InstallerClean은 그곳으로 파일을 이동하지 않습니다.`,
-  'UpdateNotice.NeedsNetFramework48': `InstallerClean {0}에는 .NET Framework 4.8이 필요하지만 이 PC에는 없습니다.`,
+  'UpdateNotice.NeedsNetFramework48': `이 버전에는 .NET Framework 4.8이 필요합니다. Microsoft에서 설치하고 PC를 다시 시작한 다음 InstallerClean을 열어 업데이트하세요.`,
   'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0}은(는) 자동으로 설치할 수 없습니다.`,
   'UpdateNotice.CopyCannotTell': `InstallerClean이 자체 설치 프로그램으로 설치되었는지 확인할 수 없어 스스로 업데이트할 수 없습니다.`,
+  'UpdateNotice.DownloadNetFramework48': `Microsoft에서 .NET Framework 4.8 내려받기`,
+  'Automation.UpdateNotice.DownloadNetFramework48': `Microsoft에서 .NET Framework 4.8 내려받기`,
+  'Cli.UpdateNeedsNetFramework48': `이 버전에는 .NET Framework 4.8이 필요합니다. Microsoft에서 설치하고 PC를 다시 시작한 다음 InstallerClean을 다시 실행하여 업데이트하세요.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

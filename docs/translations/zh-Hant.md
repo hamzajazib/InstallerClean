@@ -321,9 +321,10 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is available. | 已推出 InstallerClean {0} 版。 |
 | It's strongly recommended to use the latest version. | 強烈建議使用最新版本。 |
 | Download it from GitHub | 從 GitHub 下載 |
+| Download .NET Framework 4.8 from Microsoft | 從 Microsoft 下載 .NET Framework 4.8 |
 | Update now | 立即更新 |
 | This copy was installed by Scoop. To update it, close InstallerClean and run: | 此副本由 Scoop 安裝。若要更新，請關閉 InstallerClean 並執行： |
-| InstallerClean {0} needs .NET Framework 4.8, which this PC doesn't have. | InstallerClean {0} 需要 .NET Framework 4.8，而這台電腦上沒有。 |
+| It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then open InstallerClean to update. | 此版本需要 .NET Framework 4.8。請從 Microsoft 安裝，重新啟動電腦，然後開啟 InstallerClean 進行更新。 |
 | InstallerClean {0} can't be installed automatically. | InstallerClean {0} 無法自動安裝。 |
 | InstallerClean can't tell whether its setup installed it, so it can't update itself. | InstallerClean 無法判斷自己是否由其安裝程式安裝，因此無法自行更新。 |
 | Copied | 已複製 |
@@ -406,6 +407,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the issue tracker on github.com in your browser. | 在瀏覽器中開啟 github.com 上的問題追蹤頁面（Issues）。 |
 | If ticked, InstallerClean checks github for a newer version when you run it. | 勾選後，InstallerClean 每次執行時都會在 github 上檢查是否有較新的版本。 |
 | Download it from github | 從 github 下載 |
+| Download .NET Framework 4.8 from Microsoft | 從 Microsoft 下載 .NET Framework 4.8 |
 | Copy the command | 複製命令 |
 | Scoop's update command | Scoop 更新命令 |
 | Opens the licence file on github.com in your browser. | 在瀏覽器中開啟 github.com 上的授權條款檔案。 |
@@ -562,7 +564,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean is in use, so it can't update itself now. | InstallerClean 正在使用中，因此現在無法自行更新。 |
 | Running {0} with InstallerClean {1} instead. | 改用 InstallerClean {1} 執行 {0}。 |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} 版已安裝，但無法啟動。請再次執行該命令。 |
-| Download it from GitHub: {0} | 從 GitHub 下載：{0} |
+| {0}: {1} | {0}：{1} |
+| It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | 此版本需要 .NET Framework 4.8。請從 Microsoft 安裝，重新啟動電腦，然後再次執行 InstallerClean 進行更新。 |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | 要復原很簡單。把它們從 {0} 移回 {InstallerFolder}，一切就會恢復原狀。 |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean 已無法確認備份資料夾，因此沒有再繼續。請檢查 {0}，然後再執行一次命令。 |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | 另一個 InstallerClean 處理程序正持有單一執行個體鎖定（圖形介面或另一次 CLI 執行）。結束代碼 75（暫時性）；稍後可安全地重試。 |

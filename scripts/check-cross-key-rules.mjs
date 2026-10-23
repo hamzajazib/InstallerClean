@@ -51,6 +51,7 @@ const MUST_AGREE = [
   { label: 'Action.CheckForUpdates', name: 'Automation.CheckForUpdates' },
   // A link whose Run is the label, so the override restates it, cased for speech.
   { label: 'UpdateNotice.Download', name: 'Automation.UpdateNotice.Download' },
+  { label: 'UpdateNotice.DownloadNetFramework48', name: 'Automation.UpdateNotice.DownloadNetFramework48' },
   // Section headings drawn in SmallCaps: the resx value is pre-uppercased so a
   // screen reader never meets the glyph mapping, and the name is the same words
   // in ordinary case. It exists for the casing alone.

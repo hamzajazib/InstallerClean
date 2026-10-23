@@ -49,6 +49,11 @@ const ALSO_KEEP = [
   // nothing to get wrong; only Japanese and Chinese differ, taking the
   // ideographic full stop, which carries no space after it.
   'Display.SentenceSeparator',   // ". "
+  // The colon between a link's words and its address on the command line is the
+  // one English uses. A punctuation mark rather than a word, so there is nothing to
+  // translate and nothing to get wrong; French puts a narrow no-break space before
+  // it, and Japanese and Chinese take the full-width colon.
+  'Cli.UpdateDownloadLink',      // "{0}: {1}"
 ];
 
 const MAP = {
@@ -527,9 +532,11 @@ const MAP = {
   'Automation.UpdateNotice.CopyCommand': `Копировать команду`,
   'Automation.UpdateNotice.ScoopCommand': `Команда обновления Scoop`,
   'Error.FolderWillNotGiveFilesBack': `Вы можете сохранять файлы в {0}, но не можете снова открыть их, поэтому InstallerClean не будет перемещать туда файлы.`,
-  'UpdateNotice.NeedsNetFramework48': `Для InstallerClean {0} нужен .NET Framework 4.8, которого нет на этом компьютере.`,
+  'UpdateNotice.NeedsNetFramework48': `Для этой версии нужен .NET Framework 4.8. Установите его с сайта Microsoft, перезагрузите компьютер, а затем откройте InstallerClean, чтобы выполнить обновление.`,
   'UpdateNotice.CannotInstallAutomatically': `InstallerClean {0} не может быть установлен автоматически.`,
   'UpdateNotice.CopyCannotTell': `InstallerClean не может определить, установлен ли он своим установщиком, поэтому не может обновиться.`,
+  'UpdateNotice.DownloadNetFramework48': `Скачать .NET Framework 4.8 с сайта Microsoft`,
+  'Automation.UpdateNotice.DownloadNetFramework48': `Скачать .NET Framework 4.8 с сайта Microsoft`,
 };
 
 // Russian CLDR-category overrides beyond the neutral one/other split. They do NOT
@@ -714,10 +721,11 @@ const CLI = {
   'Cli.UpdateListsOnlyAfterMove': `Новая версия просканирует и покажет список найденного, ничего не перемещая. Чтобы переместить, затем снова запустите /m.`,
   'Cli.UpdateRunningInstead': `Вместо этого команда {0} будет выполнена в InstallerClean {1}.`,
   'Cli.UpdateNotStarted': `Версия InstallerClean {0} установлена, но запустить её не удалось. Выполните команду ещё раз.`,
-  'Cli.UpdateDownloadLink': `Скачать с GitHub: {0}`,
+  'Cli.UpdateDownloadLink': `{0}: {1}`,
   'Cli.Help.UpdateNote': `Перед сканированием проверяет, есть ли более новая версия InstallerClean.&#10;При запуске вручную спрашивает перед обновлением. При запуске без участия&#10;человека, в запланированной задаче или скрипте, обновляется без вопросов.&#10;Добавьте /noupdate, чтобы пропустить проверку.`,
   'Cli.UpdateInUse': `InstallerClean используется, поэтому сейчас не может обновиться.`,
   'Cli.CancellingAfterUpdate': `Отмена после завершения обновления...`,
+  'Cli.UpdateNeedsNetFramework48': `Для этой версии нужен .NET Framework 4.8. Установите его с сайта Microsoft, перезагрузите компьютер, а затем снова запустите InstallerClean, чтобы выполнить обновление.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,
@@ -872,7 +880,8 @@ const cliArityMismatch = cliKeys.filter((k) => {
   const a = placeholders(neutral.get(k)), b = placeholders(output.get(k));
   return a.size !== b.size || [...a].some((i) => !b.has(i));
 });
-const cliUntranslated = neutralHumanCli.filter((k) => output.has(k) && output.get(k) === neutral.get(k));
+const cliUntranslated = neutralHumanCli.filter((k) =>
+  output.has(k) && output.get(k) === neutral.get(k) && !alsoKeep.has(k));
 
 console.log('<data> in output:', output.size, '(expect', (neutralNonCli.length + overrideKeys.length + cliKeys.length) + ')');
 console.log('Cli <data> removed:', cliRemoved, `(expect ${cliExpected})`);

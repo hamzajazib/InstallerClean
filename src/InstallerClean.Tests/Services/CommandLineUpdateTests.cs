@@ -351,13 +351,34 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Empty(_host.PreparedWhileExeHeld);
     }
 
+    /// <summary>The line giving the newer version's release page.</summary>
+    private static string ReleaseLink => string.Format(Strings.Cli_UpdateDownloadLink,
+        Strings.UpdateNotice_Download, "https://github.com/no-faff/InstallerClean/releases/tag/v" + Latest);
+
+    /// <summary>
+    /// The lines for a refusal: why, then Microsoft's .NET Framework 4.8 installer where that
+    /// is why, and the release page otherwise.
+    /// </summary>
+    private static string[] RefusalLines(UpdateRefusal refusal) => refusal == UpdateRefusal.NeedsNetFramework48
+        ? [
+            string.Format(Strings.UpdateNotice_Available, Latest),
+            Strings.Cli_UpdateNeedsNetFramework48,
+            string.Format(Strings.Cli_UpdateDownloadLink,
+                Strings.UpdateNotice_DownloadNetFramework48, "https://go.microsoft.com/fwlink/?linkid=2088631"),
+        ]
+        : [
+            string.Format(Strings.UpdateNotice_Available, Latest),
+            string.Format(Strings.UpdateNotice_CannotInstallAutomatically, Latest),
+            ReleaseLink,
+        ];
+
     [Theory]
-    [InlineData(UpdateRefusal.NeedsNetFramework48, "UpdateNotice.NeedsNetFramework48", true)]
-    [InlineData(UpdateRefusal.NeedsNetFramework48, "UpdateNotice.NeedsNetFramework48", false)]
-    [InlineData(UpdateRefusal.CannotInstallFromThisCopy, "UpdateNotice.CannotInstallAutomatically", true)]
-    [InlineData(UpdateRefusal.CannotInstallFromThisCopy, "UpdateNotice.CannotInstallAutomatically", false)]
-    public void A_release_that_rules_this_copy_out_says_why_and_gives_the_release_page_without_asking(
-        UpdateRefusal refusal, string line, bool canAsk)
+    [InlineData(UpdateRefusal.NeedsNetFramework48, true)]
+    [InlineData(UpdateRefusal.NeedsNetFramework48, false)]
+    [InlineData(UpdateRefusal.CannotInstallFromThisCopy, true)]
+    [InlineData(UpdateRefusal.CannotInstallFromThisCopy, false)]
+    public void A_release_that_rules_this_copy_out_says_why_and_where_to_go_without_asking(
+        UpdateRefusal refusal, bool canAsk)
     {
         var updater = Download();
         updater.Requirements = () => refusal;
@@ -365,12 +386,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         var result = Run(updater, canAsk);
 
         Assert.Equal(CommandLineUpdateResult.NothingTried, result);
-        Assert.Equal(new[]
-        {
-            string.Format(Strings.UpdateNotice_Available, Latest),
-            string.Format(Strings.Get(line), Latest),
-            string.Format(Strings.Cli_UpdateDownloadLink, UpdateCheckService.ReleasesPageUrl),
-        }, _host.Output);
+        Assert.Equal(RefusalLines(refusal), _host.Output);
         Assert.False(updater.Prepared);
         Assert.Equal(0, _host.Reads);
         Assert.Null(_host.NewerVersionRun);
@@ -421,16 +437,30 @@ public sealed class CommandLineUpdateTests : IDisposable
         var result = Run(updater, canAsk: false);
 
         Assert.Equal(CommandLineUpdateResult.NothingTried, result);
-        Assert.Equal(new[]
-        {
-            string.Format(Strings.UpdateNotice_Available, Latest),
-            string.Format(Strings.UpdateNotice_NeedsNetFramework48, Latest),
-            string.Format(Strings.Cli_UpdateDownloadLink, UpdateCheckService.ReleasesPageUrl),
-        }, _host.Output);
+        Assert.Equal(RefusalLines(UpdateRefusal.NeedsNetFramework48), _host.Output);
         Assert.Null(_host.NewerVersionRun);
         Assert.False(updater.Prepared);
         Assert.True(_host.HoldsOwnFile);
         Assert.False(_host.HoldsLock);
+    }
+
+    [Fact]
+    public void A_refusal_from_the_updates_own_read_after_the_question_names_the_version_again()
+    {
+        var updater = Download();
+        var reads = 0;
+        updater.Requirements = () => ++reads == 1
+            ? throw new UpdateFailedException(UpdateFailureStage.Download, "failed")
+            : UpdateRefusal.NeedsNetFramework48;
+        _host.Answers.Enqueue("y");
+
+        var result = Run(updater, canAsk: true);
+
+        Assert.Equal(CommandLineUpdateResult.NothingTried, result);
+        Assert.Equal(1, _host.Reads);
+        Assert.Equal(RefusalLines(UpdateRefusal.NeedsNetFramework48), _host.Output[^3..]);
+        Assert.Null(_host.NewerVersionRun);
+        Assert.False(updater.Prepared);
     }
 
     [Fact]
@@ -445,7 +475,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         {
             string.Format(Strings.UpdateNotice_Available, Latest),
             Strings.UpdateNotice_CopyCannotTell,
-            string.Format(Strings.Cli_UpdateDownloadLink, UpdateCheckService.ReleasesPageUrl),
+            ReleaseLink,
         }, _host.Output);
         Assert.Equal(0, updater.RequirementReads);
         Assert.False(updater.Prepared);
@@ -1041,7 +1071,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         {
             string.Format(Strings.UpdateNotice_Available, Latest),
             Strings.UpdateNotice_Recommended,
-            string.Format(Strings.Cli_UpdateDownloadLink, UpdateCheckService.ReleasesPageUrl),
+            ReleaseLink,
         }, _host.Output);
     }
 

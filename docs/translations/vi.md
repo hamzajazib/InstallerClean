@@ -321,9 +321,10 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is available. | Đã có InstallerClean {0}. |
 | It's strongly recommended to use the latest version. | Chúng tôi đặc biệt khuyên bạn dùng phiên bản mới nhất. |
 | Download it from GitHub | Tải về từ GitHub |
+| Download .NET Framework 4.8 from Microsoft | Tải .NET Framework 4.8 về từ Microsoft |
 | Update now | Cập nhật ngay |
 | This copy was installed by Scoop. To update it, close InstallerClean and run: | Bản này được cài bằng Scoop. Để cập nhật, hãy đóng InstallerClean rồi chạy: |
-| InstallerClean {0} needs .NET Framework 4.8, which this PC doesn't have. | InstallerClean {0} cần .NET Framework 4.8, nhưng PC này không có. |
+| It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then open InstallerClean to update. | Phiên bản này cần .NET Framework 4.8. Hãy cài đặt nó từ Microsoft, khởi động lại PC, rồi mở InstallerClean để cập nhật. |
 | InstallerClean {0} can't be installed automatically. | Không thể tự động cài đặt InstallerClean {0}. |
 | InstallerClean can't tell whether its setup installed it, so it can't update itself. | InstallerClean không thể xác định liệu nó có được cài bằng trình cài đặt của chính nó hay không, nên không thể tự cập nhật. |
 | Copied | Đã sao chép |
@@ -406,6 +407,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the issue tracker on github.com in your browser. | Mở trình theo dõi vấn đề (Issues) trên github.com trong trình duyệt của bạn. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | Nếu được đánh dấu, InstallerClean sẽ kiểm tra github xem có phiên bản mới hơn không khi bạn chạy nó. |
 | Download it from github | Tải về từ github |
+| Download .NET Framework 4.8 from Microsoft | Tải .NET Framework 4.8 về từ Microsoft |
 | Copy the command | Sao chép lệnh |
 | Scoop's update command | Lệnh cập nhật của Scoop |
 | Opens the licence file on github.com in your browser. | Mở tệp giấy phép trên github.com trong trình duyệt của bạn. |
@@ -562,7 +564,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean is in use, so it can't update itself now. | InstallerClean đang được sử dụng nên không thể tự cập nhật lúc này. |
 | Running {0} with InstallerClean {1} instead. | Thay vào đó, chạy {0} bằng InstallerClean {1}. |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | Đã cài đặt InstallerClean {0} nhưng không thể khởi động. Hãy chạy lại lệnh. |
-| Download it from GitHub: {0} | Tải về từ GitHub: {0} |
+| {0}: {1} | {0}: {1} |
+| It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | Phiên bản này cần .NET Framework 4.8. Hãy cài đặt nó từ Microsoft, khởi động lại PC, rồi chạy lại InstallerClean để cập nhật. |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Hoàn tác rất đơn giản. Hãy chuyển chúng từ {0} trở lại {InstallerFolder} và mọi thứ sẽ như cũ. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean không còn xác nhận được thư mục sao lưu, nên đã dừng lại. Hãy kiểm tra {0}, rồi chạy lại lệnh. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Một tiến trình InstallerClean khác đang giữ khóa một-thực-thể (GUI hoặc một lần chạy CLI khác). Mã thoát 75 (tạm thời); có thể thử lại sau. |

@@ -16,7 +16,8 @@ namespace InstallerClean.ViewModels;
 /// update check (the manual button and the once-per-session
 /// automatic check behind <c>AppSettings.AutoUpdateCheck</c>), the card the
 /// window opens with where that automatic check finds a newer version, the
-/// update from inside the app that Update now starts, and on a copy installed by
+/// update from inside the app that Update now starts, the reason in Update now's place
+/// where the newer version's release rules this copy out, and on a copy installed by
 /// Scoop, Scoop's update command and its Copy button in Update now's place.
 ///
 /// Reads <see cref="ScanViewModel.LastScanResult"/> for the details
@@ -47,6 +48,23 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// </summary>
     private static readonly TimeSpan ScoopUpdateCopiedFor = TimeSpan.FromSeconds(2);
 
+    /// <summary>
+    /// How long a check that has found a newer version waits for that release's
+    /// update.json before it shows the notice. Past it, the notice offers Update now,
+    /// whose own read decides.
+    /// </summary>
+    private static readonly TimeSpan RequirementsBound = TimeSpan.FromSeconds(3);
+
+    /// <summary>
+    /// How long from its start the automatic check has to show what it found, read
+    /// included. The app holds the window for the automatic check for
+    /// <see cref="UpdateCheckService.RequestTimeout"/> and a second from the check's start
+    /// (App.UpdateCheckGrace), so the read after a slow answer gets only what is left of
+    /// this, and none once it has gone, and the window still opens with the card. Do not
+    /// lengthen it past that wait: a find shown after it puts up the notice alone.
+    /// </summary>
+    private static readonly TimeSpan AutomaticCheckWindow = UpdateCheckService.RequestTimeout;
+
     private readonly IWindowService _windowService;
     private readonly IMsiFileInfoService _msiInfoService;
     private readonly ISettingsService _settings;
@@ -56,6 +74,8 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     private readonly Func<bool> _isBusy;
     private readonly TimeSpan _checkCooldown;
     private readonly TimeSpan _scoopUpdateCopiedFor;
+    private readonly TimeSpan _requirementsBound;
+    private readonly TimeSpan _automaticCheckWindow;
     private readonly PropertyChangedEventHandler _scanHandler;
     private readonly IAppUpdater? _updater;
     private readonly Action _settleBeforeHandOff;
@@ -64,6 +84,8 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     private CancellationTokenSource? _scoopUpdateCopiedCts;
 
     /// <summary>The newer version the latest find named, which Update now downloads.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UpdateNoticeDetailText))]
     private string? _newerVersion;
 
     /// <param name="isBusy">
@@ -88,6 +110,14 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// Replaces <see cref="ScoopUpdateCopiedFor"/>, so a test can see Copy come back
     /// without waiting two real seconds; production callers pass nothing.
     /// </param>
+    /// <param name="requirementsBoundOverride">
+    /// Replaces <see cref="RequirementsBound"/>, so a test can see a read run past it
+    /// without waiting three real seconds; production callers pass nothing.
+    /// </param>
+    /// <param name="automaticCheckWindowOverride">
+    /// Replaces <see cref="AutomaticCheckWindow"/>, so a test can see a late answer cut
+    /// the read short without waiting eight real seconds; production callers pass nothing.
+    /// </param>
     public ChromeViewModel(
         IWindowService windowService,
         IMsiFileInfoService msiInfoService,
@@ -99,7 +129,9 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         TimeSpan? checkCooldownOverride = null,
         IAppUpdater? updater = null,
         Action? settleBeforeHandOff = null,
-        TimeSpan? scoopUpdateCopiedForOverride = null)
+        TimeSpan? scoopUpdateCopiedForOverride = null,
+        TimeSpan? requirementsBoundOverride = null,
+        TimeSpan? automaticCheckWindowOverride = null)
     {
         _windowService = windowService;
         _msiInfoService = msiInfoService;
@@ -112,6 +144,8 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         _updater = updater;
         _settleBeforeHandOff = settleBeforeHandOff ?? (() => { });
         _scoopUpdateCopiedFor = scoopUpdateCopiedForOverride ?? ScoopUpdateCopiedFor;
+        _requirementsBound = requirementsBoundOverride ?? RequirementsBound;
+        _automaticCheckWindow = automaticCheckWindowOverride ?? AutomaticCheckWindow;
 
         // Re-evaluate the Details buttons when a scan finishes or its result
         // is dropped. HasScanned is observable; LastScanResult is a plain
@@ -178,9 +212,46 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(ShowsUpdateNow))]
     [NotifyPropertyChangedFor(nameof(ShowsReleaseLink))]
     [NotifyPropertyChangedFor(nameof(ShowsScoopCommand))]
+    [NotifyPropertyChangedFor(nameof(ShowsNetFrameworkLink))]
     [NotifyCanExecuteChangedFor(nameof(OpenReleasePageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenNetFrameworkDownloadCommand))]
     [NotifyCanExecuteChangedFor(nameof(UpdateNowCommand))]
     private bool _hasNewerVersion;
+
+    /// <summary>
+    /// Why the newer version's release rules this copy out
+    /// (<see cref="IAppUpdater.CheckRequirementsAsync"/>), or null where it does not or
+    /// could not be read. Set with the version it was read for, before
+    /// <see cref="HasNewerVersion"/>.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsUpdateRefused))]
+    [NotifyPropertyChangedFor(nameof(UpdateNoticeDetailText))]
+    [NotifyPropertyChangedFor(nameof(ShowsUpdateNow))]
+    [NotifyPropertyChangedFor(nameof(ShowsReleaseLink))]
+    [NotifyPropertyChangedFor(nameof(ShowsNetFrameworkLink))]
+    [NotifyCanExecuteChangedFor(nameof(OpenReleasePageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenNetFrameworkDownloadCommand))]
+    [NotifyCanExecuteChangedFor(nameof(UpdateNowCommand))]
+    private UpdateRefusal? _newerVersionRefusal;
+
+    /// <summary>Whether the newer version's release rules this copy out.</summary>
+    public bool IsUpdateRefused => NewerVersionRefusal is not null;
+
+    /// <summary>
+    /// The second line of the card and of the notice: on a copy that cannot tell whether
+    /// the setup installed it, that; where the newer version's release rules this copy
+    /// out, why; otherwise that the latest version is strongly recommended.
+    /// </summary>
+    public string UpdateNoticeDetailText =>
+        _updater?.Kind == AppCopyKind.Undetermined ? Strings.UpdateNotice_CopyCannotTell
+        : NewerVersionRefusal switch
+        {
+            UpdateRefusal.NeedsNetFramework48 => Strings.UpdateNotice_NeedsNetFramework48,
+            UpdateRefusal.CannotInstallFromThisCopy =>
+                string.Format(Strings.UpdateNotice_CannotInstallAutomatically, NewerVersion),
+            _ => Strings.UpdateNotice_Recommended,
+        };
 
     /// <summary>
     /// Whether this copy can put a newer version in its own place
@@ -189,14 +260,28 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// </summary>
     public bool CanUpdateItself => _updater?.CanUpdateItself == true;
 
-    /// <summary>Whether the notice carries Update now.</summary>
-    public bool ShowsUpdateNow => HasNewerVersion && CanUpdateItself;
+    /// <summary>
+    /// Whether the notice carries Update now: where this copy can update itself and the
+    /// newer version's release does not rule it out.
+    /// </summary>
+    public bool ShowsUpdateNow => HasNewerVersion && CanUpdateItself && !IsUpdateRefused;
 
     /// <summary>
     /// Whether the notice carries the link to the release page: where this copy cannot
-    /// update itself, and after an update that failed, beside Update now.
+    /// update itself or the newer version's release rules it out for any reason but
+    /// .NET Framework 4.8, and after an update that failed, beside Update now.
     /// </summary>
-    public bool ShowsReleaseLink => HasNewerVersion && (!CanUpdateItself || HasUpdateFailure);
+    public bool ShowsReleaseLink =>
+        HasNewerVersion && !ShowsNetFrameworkLink && (!CanUpdateItself || IsUpdateRefused || HasUpdateFailure);
+
+    /// <summary>
+    /// Whether the notice carries the link that downloads Microsoft's .NET Framework 4.8
+    /// installer, in place of Update now and the release page: where the newer version's
+    /// release says its download for this copy needs .NET Framework 4.8 and this PC does
+    /// not have it.
+    /// </summary>
+    public bool ShowsNetFrameworkLink =>
+        HasNewerVersion && NewerVersionRefusal == UpdateRefusal.NeedsNetFramework48;
 
     /// <summary>
     /// Whether the card and the notice give Scoop's update command, with its Copy
@@ -349,13 +434,20 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     internal async Task RunAutomaticUpdateCheckAsync()
     {
         var token = ResetUpdateCheckToken();
+        var sinceStart = System.Diagnostics.Stopwatch.StartNew();
         try
         {
             if (!_settings.Load().AutoUpdateCheck)
                 return;
             var result = await _updateCheck.CheckAsync(UpdateCheckOrigin.Automatic, token);
             if (result is UpdateAvailable available)
-                ShowUpdateFound(available);
+            {
+                var left = _automaticCheckWindow - sinceStart.Elapsed;
+                var requirements = await RequirementsAsync(
+                    available.LatestVersion, left < _requirementsBound ? left : _requirementsBound, token);
+                token.ThrowIfCancellationRequested();
+                ShowUpdateFound(available, requirements);
+            }
             // UpToDate and CheckFailed both end in silence: an automatic
             // check the user never asked to watch has nothing to report
             // but a newer version. The Automatic origin extends that
@@ -386,9 +478,15 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         UpdateStatusText = Strings.UpdateCheck_Status_Checking;
 
         UpdateCheckResult result;
+        Requirements requirements = default;
         try
         {
             result = await _updateCheck.CheckAsync(UpdateCheckOrigin.Manual, token);
+            if (result is UpdateAvailable found)
+            {
+                requirements = await RequirementsAsync(found.LatestVersion, _requirementsBound, token);
+                token.ThrowIfCancellationRequested();
+            }
         }
         catch (OperationCanceledException)
         {
@@ -400,12 +498,13 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         {
             case UpToDate:
                 HasNewerVersion = false;
+                NewerVersionRefusal = null;
                 UpdateStatusText = Strings.UpdateCheck_Status_UpToDate;
                 break;
 
             case UpdateAvailable available:
                 UpdateStatusText = string.Empty;
-                ShowUpdateFound(available);
+                ShowUpdateFound(available, requirements);
                 break;
 
             case CheckFailed failed:
@@ -428,7 +527,7 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Opens the releases page; bound to the link on the notice at the top of the
+    /// Opens the newer version's release page; bound to the link on the notice at the top of the
     /// main window and on the card saying a newer version is available. The
     /// CanExecute is the link's tab-order gate, not politeness: WPF's keyboard navigation descends into a collapsed TextBlock
     /// regardless of visibility (a TextBlock is an IContentHost) and admits a
@@ -442,20 +541,77 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(ShowsReleaseLink))]
     private void OpenReleasePage()
     {
-        if (ShowsReleaseLink)
-            _windowService.OpenUrl(UpdateCheckService.ReleasesPageUrl);
+        if (ShowsReleaseLink && NewerVersion is { } version)
+            _windowService.OpenUrl(UpdateCheckService.ReleasePageUrl(version));
     }
 
-    private void ShowUpdateFound(UpdateAvailable available)
+    /// <summary>
+    /// What a read of a release's update.json answered: whether it was made, and why the
+    /// release rules this copy out, or null where it does not.
+    /// </summary>
+    private readonly record struct Requirements(bool Read, UpdateRefusal? Refusal);
+
+    /// <summary>
+    /// What the release of <paramref name="version"/> says of this copy: read, with its
+    /// refusal or none; or not read, where this copy has no download to read it for, or
+    /// where the read fails or runs past <paramref name="within"/>, which no time at all
+    /// is. Nothing is shown or written for a read that fails: Update now reads the file
+    /// again before it downloads. Throws <see cref="OperationCanceledException"/> only
+    /// where <paramref name="token"/> is cancelled.
+    /// </summary>
+    private async Task<Requirements> RequirementsAsync(string version, TimeSpan within, CancellationToken token)
     {
-        _newerVersion = available.LatestVersion;
+        if (_updater is null || !CanUpdateItself || within <= TimeSpan.Zero) return default;
+        using var bound = CancellationTokenSource.CreateLinkedTokenSource(token);
+        bound.CancelAfter(within);
+        try
+        {
+            return new Requirements(true, await _updater.CheckRequirementsAsync(version, bound.Token));
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            return default;
+        }
+    }
+
+    /// <summary>
+    /// Downloads Microsoft's .NET Framework 4.8 installer in the browser; bound to the link
+    /// on the card and the notice. Disabled wherever the link is not shown, for the reason
+    /// <see cref="OpenReleasePage"/> gives.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(ShowsNetFrameworkLink))]
+    private void OpenNetFrameworkDownload()
+    {
+        if (ShowsNetFrameworkLink)
+            _windowService.OpenUrl(UpdateManifest.NetFramework48DownloadUrl);
+    }
+
+    /// <summary>
+    /// Shows the notice for <paramref name="available"/>, with what its release says of this
+    /// copy. A read that was not made leaves a refusal already read for the same version in
+    /// place, so a check that cannot reach the file does not bring back Update now for a
+    /// version this copy is known not to install.
+    /// </summary>
+    private void ShowUpdateFound(UpdateAvailable available, Requirements requirements)
+    {
+        var refusal = requirements.Read || available.LatestVersion != NewerVersion
+            ? requirements.Refusal
+            : NewerVersionRefusal;
+        NewerVersion = available.LatestVersion;
+        NewerVersionRefusal = refusal;
+        if (refusal is not null)
+            UpdateFailureText = string.Empty;
         UpdateNoticeText = string.Format(Strings.UpdateNotice_Available, available.LatestVersion);
         HasNewerVersion = true;
         NewerVersionFound?.Invoke(this, EventArgs.Empty);
     }
 
     private bool CanUpdateNow() =>
-        HasNewerVersion && CanUpdateItself && !IsUpdating && !_isBusy();
+        HasNewerVersion && CanUpdateItself && !IsUpdateRefused && !IsUpdating && !_isBusy();
 
     /// <summary>
     /// Update now, on the card saying a newer version is available and on the notice:
@@ -469,12 +625,15 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// and puts the line for what failed on the card and the notice, with the link
     /// beside Update now, having changed nothing on disk. Cancel takes the download card
     /// away and says nothing. What failed goes to crash.log; the screen names only which
-    /// of the two things it was.
+    /// of the two things it was. Where the newer version's release rules this copy out,
+    /// which the download reads before it fetches anything, the download card goes and
+    /// the card and the notice say why in place of Update now, with the link; that is not
+    /// a failure, and nothing is written.
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanUpdateNow))]
     private async Task UpdateNowAsync()
     {
-        if (!CanUpdateNow() || _updater is null || _newerVersion is not { } version) return;
+        if (!CanUpdateNow() || _updater is null || NewerVersion is not { } version) return;
 
         UpdateFailureText = string.Empty;
         UpdateProgressPercent = 0;
@@ -506,6 +665,10 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         catch (OperationCanceledException) when (cts.IsCancellationRequested)
         {
             // Cancel: the card goes and the notice stays as it was.
+        }
+        catch (UpdateRefusedException ex)
+        {
+            NewerVersionRefusal = ex.Refusal;
         }
         catch (UpdateFailedException ex)
         {

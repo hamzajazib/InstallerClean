@@ -341,14 +341,23 @@ public class UpdateCheckServiceTests
     [Fact]
     public void ReleasesPageUrl_is_this_project_over_https()
     {
-        // Every "there is an update" click lands here, from an elevated
-        // process, so the constant itself is the whole of the destination's
-        // trust: no response field feeds it and there is nothing to
-        // validate at runtime. Pinned so a typo or an http:// slip in a
-        // later edit fails CI rather than the browser.
+        // What the check asks, and the redirect it answers is read for the tag.
+        // Pinned so a typo or an http:// slip in a later edit fails CI rather than
+        // the check.
         Assert.Equal(
             "https://github.com/no-faff/InstallerClean/releases/latest",
             UpdateCheckService.ReleasesPageUrl);
+    }
+
+    [Fact]
+    public void ReleasePageUrl_is_the_versions_own_tag_page_on_this_project_over_https()
+    {
+        // Every link to a newer version opens this, from an elevated process, and
+        // only the version's three numbers feed it. Pinned so a typo or an http://
+        // slip in a later edit fails CI rather than the browser.
+        Assert.Equal(
+            "https://github.com/no-faff/InstallerClean/releases/tag/v3.6.0",
+            UpdateCheckService.ReleasePageUrl("3.6.0"));
     }
 
     /// <summary>

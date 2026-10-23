@@ -321,9 +321,10 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is available. | InstallerClean {0} tersedia. |
 | It's strongly recommended to use the latest version. | Sangat disarankan untuk memakai versi terbaru. |
 | Download it from GitHub | Unduh dari GitHub |
+| Download .NET Framework 4.8 from Microsoft | Unduh .NET Framework 4.8 dari Microsoft |
 | Update now | Perbarui sekarang |
 | This copy was installed by Scoop. To update it, close InstallerClean and run: | Salinan ini dipasang oleh Scoop. Untuk memperbaruinya, tutup InstallerClean lalu jalankan: |
-| InstallerClean {0} needs .NET Framework 4.8, which this PC doesn't have. | InstallerClean {0} memerlukan .NET Framework 4.8, yang tidak ada di PC ini. |
+| It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then open InstallerClean to update. | Versi ini memerlukan .NET Framework 4.8. Pasang dari Microsoft, mulai ulang PC, lalu buka InstallerClean untuk memperbarui. |
 | InstallerClean {0} can't be installed automatically. | InstallerClean {0} tidak dapat dipasang secara otomatis. |
 | InstallerClean can't tell whether its setup installed it, so it can't update itself. | InstallerClean tidak dapat memastikan apakah dirinya dipasang oleh program penyiapannya, jadi tidak dapat memperbarui dirinya sendiri. |
 | Copied | Tersalin |
@@ -406,6 +407,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the issue tracker on github.com in your browser. | Membuka pelacak masalah (Issues) di github.com melalui browser Anda. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | Jika dicentang, InstallerClean memeriksa apakah ada versi yang lebih baru di github saat Anda menjalankannya. |
 | Download it from github | Unduh dari github |
+| Download .NET Framework 4.8 from Microsoft | Unduh .NET Framework 4.8 dari Microsoft |
 | Copy the command | Salin perintah |
 | Scoop's update command | Perintah pembaruan Scoop |
 | Opens the licence file on github.com in your browser. | Membuka file lisensi di github.com melalui browser Anda. |
@@ -562,7 +564,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean is in use, so it can't update itself now. | InstallerClean sedang digunakan, jadi tidak dapat memperbarui dirinya sekarang. |
 | Running {0} with InstallerClean {1} instead. | Menjalankan {0} dengan InstallerClean {1} sebagai gantinya. |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} telah terpasang, tetapi tidak dapat dijalankan. Jalankan perintah itu lagi. |
-| Download it from GitHub: {0} | Unduh dari GitHub: {0} |
+| {0}: {1} | {0}: {1} |
+| It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | Versi ini memerlukan .NET Framework 4.8. Pasang dari Microsoft, mulai ulang PC, lalu jalankan InstallerClean lagi untuk memperbarui. |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Mudah untuk dibatalkan. Pindahkan kembali dari {0} ke {InstallerFolder} dan semuanya akan kembali seperti semula. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean tidak bisa lagi memastikan folder cadangan, jadi berhenti. Periksa {0}, lalu jalankan perintahnya lagi. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Proses InstallerClean lain memegang kunci instans-tunggal (GUI atau proses CLI lain). Kode keluar 75 (sementara); aman untuk dicoba lagi nanti. |

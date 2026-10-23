@@ -115,6 +115,11 @@ const KEEP_ENGLISH = new Set([
 // zh-Hans and zh-Hant, which is why those three are absent here and carry a real
 // value.
 //
+// Cli.UpdateDownloadLink is the same shape again: "{0}: {1}", a link's words, a colon
+// and its address on the command line. It is a keep where the colon is English's, and
+// fr, ja, zh-Hans and zh-Hant carry a real value (a narrow no-break space before it in
+// French, the full-width colon in the other three).
+//
 // The command line's answer letters are here where a language's letter is the English
 // one: N for no wherever its word for no starts with N, Y for yes in Indonesian, and both
 // in Japanese, Korean and Chinese, whose consoles take Y and N.
@@ -130,20 +135,20 @@ const ELAPSED_UNITS = ['Display.Elapsed.Ms', 'Display.Elapsed.S'];
 const UNITS = [...SIZE_UNITS, ...ELAPSED_UNITS];
 
 const ALSO_KEEP = {
-  de: ['Section.Registered.Patches', 'Field.Patches', 'Automation.Section.Patches', 'Action.Details', 'Version.Display', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS, 'Cli.UpdateAnswerNo'],
-  es: ['Plural.Error.Singular', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS, 'Cli.UpdateAnswerNo'],
+  de: ['Section.Registered.Patches', 'Field.Patches', 'Automation.Section.Patches', 'Action.Details', 'Version.Display', 'Display.ListSeparator', 'Display.SentenceSeparator', 'Cli.UpdateDownloadLink', ...UNITS, 'Cli.UpdateAnswerNo'],
+  es: ['Plural.Error.Singular', 'Display.ListSeparator', 'Display.SentenceSeparator', 'Cli.UpdateDownloadLink', ...UNITS, 'Cli.UpdateAnswerNo'],
   fr: ['Field.Application', 'Version.Display', 'Display.ListSeparator', 'Display.SentenceSeparator', ...ELAPSED_UNITS, 'Cli.UpdateAnswerNo'],
-  id: ['Plural.File.Singular', 'Plural.Patch.Singular', 'Field.File', 'Display.ListSeparator', 'Display.SentenceSeparator', 'Display.DriveName', ...UNITS, 'Cli.UpdateAnswerYes'],
-  it: ['Field.File', 'Plural.File.Singular', 'Plural.Patch.Singular', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS, 'Cli.UpdateAnswerNo'],
+  id: ['Plural.File.Singular', 'Plural.Patch.Singular', 'Field.File', 'Display.ListSeparator', 'Display.SentenceSeparator', 'Cli.UpdateDownloadLink', 'Display.DriveName', ...UNITS, 'Cli.UpdateAnswerYes'],
+  it: ['Field.File', 'Plural.File.Singular', 'Plural.Patch.Singular', 'Display.ListSeparator', 'Display.SentenceSeparator', 'Cli.UpdateDownloadLink', ...UNITS, 'Cli.UpdateAnswerNo'],
   ja: [...UNITS, 'Cli.UpdateAnswerYes', 'Cli.UpdateAnswerNo'],
-  ko: ['Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS, 'Cli.UpdateAnswerYes', 'Cli.UpdateAnswerNo'],
-  nl: ['Section.Registered.Patches', 'Field.Patches', 'Automation.Section.Patches', 'Action.Details', 'Plural.Product.Singular', 'Plural.Patch.Singular', 'Plural.Patch.Plural', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS, 'Cli.UpdateAnswerNo'],
-  pl: ['Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS, 'Cli.UpdateAnswerNo'],
-  'pt-BR': ['Plural.Patch.Singular', 'Plural.Patch.Plural', 'Field.Patches', 'Section.Registered.Patches', 'Automation.Section.Patches', 'Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS, 'Cli.UpdateAnswerNo'],
-  ru: ['Display.ListSeparator', 'Display.SentenceSeparator'],
-  tr: ['Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
-  uk: ['Display.ListSeparator', 'Display.SentenceSeparator'],
-  vi: ['Display.ListSeparator', 'Display.SentenceSeparator', ...UNITS],
+  ko: ['Display.ListSeparator', 'Display.SentenceSeparator', 'Cli.UpdateDownloadLink', ...UNITS, 'Cli.UpdateAnswerYes', 'Cli.UpdateAnswerNo'],
+  nl: ['Section.Registered.Patches', 'Field.Patches', 'Automation.Section.Patches', 'Action.Details', 'Plural.Product.Singular', 'Plural.Patch.Singular', 'Plural.Patch.Plural', 'Display.ListSeparator', 'Display.SentenceSeparator', 'Cli.UpdateDownloadLink', ...UNITS, 'Cli.UpdateAnswerNo'],
+  pl: ['Display.ListSeparator', 'Display.SentenceSeparator', 'Cli.UpdateDownloadLink', ...UNITS, 'Cli.UpdateAnswerNo'],
+  'pt-BR': ['Plural.Patch.Singular', 'Plural.Patch.Plural', 'Field.Patches', 'Section.Registered.Patches', 'Automation.Section.Patches', 'Display.ListSeparator', 'Display.SentenceSeparator', 'Cli.UpdateDownloadLink', ...UNITS, 'Cli.UpdateAnswerNo'],
+  ru: ['Display.ListSeparator', 'Display.SentenceSeparator', 'Cli.UpdateDownloadLink'],
+  tr: ['Display.ListSeparator', 'Display.SentenceSeparator', 'Cli.UpdateDownloadLink', ...UNITS],
+  uk: ['Display.ListSeparator', 'Display.SentenceSeparator', 'Cli.UpdateDownloadLink'],
+  vi: ['Display.ListSeparator', 'Display.SentenceSeparator', 'Cli.UpdateDownloadLink', ...UNITS],
   'zh-Hans': [...UNITS, 'Cli.UpdateAnswerYes', 'Cli.UpdateAnswerNo'],
   'zh-Hant': [...UNITS, 'Cli.UpdateAnswerYes', 'Cli.UpdateAnswerNo'],
 };

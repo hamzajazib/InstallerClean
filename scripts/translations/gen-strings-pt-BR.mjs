@@ -61,6 +61,11 @@ const ALSO_KEEP = [
   // nothing to get wrong; only Japanese and Chinese differ, taking the
   // ideographic full stop, which carries no space after it.
   'Display.SentenceSeparator',   // ". "
+  // The colon between a link's words and its address on the command line is the
+  // one English uses. A punctuation mark rather than a word, so there is nothing to
+  // translate and nothing to get wrong; French puts a narrow no-break space before
+  // it, and Japanese and Chinese take the full-width colon.
+  'Cli.UpdateDownloadLink',      // "{0}: {1}"
   // The size and elapsed unit suffixes. Brazilian Portuguese abbreviates them exactly as
   // English does, so there is nothing to translate and nothing to get wrong.
   // A per-language keep rather than a universal one because fr, ru and uk do
@@ -632,7 +637,7 @@ const MAP = {
   'Cli.UpdateListsOnlyAfterMove': `A nova versão vai analisar e listar o que encontrar, sem mover nada. Para mover, execute /m novamente depois.`,
   'Cli.UpdateRunningInstead': `Em vez disso, {0} será executado com o InstallerClean {1}.`,
   'Cli.UpdateNotStarted': `O InstallerClean {0} está instalado, mas não foi possível iniciá-lo. Execute o comando novamente.`,
-  'Cli.UpdateDownloadLink': `Baixe no GitHub: {0}`,
+  'Cli.UpdateDownloadLink': `{0}: {1}`,
   'Cli.Help.UpdateNote': `Antes de analisar, ele verifica se há uma versão mais recente do&#10;InstallerClean. Quando você o executa, ele pergunta antes de atualizar.&#10;Quando roda sozinho, em uma tarefa agendada ou um script, ele atualiza sem&#10;perguntar. Adicione /noupdate para pular a verificação.`,
   'UpdateNotice.Scoop': `Esta cópia foi instalada pelo Scoop. Para atualizá-la, feche o InstallerClean e execute:`,
   'UpdateNotice.CommandCopied': `Copiado`,
@@ -642,9 +647,12 @@ const MAP = {
   'Cli.UpdateInUse': `O InstallerClean está em uso, então não pode se atualizar agora.`,
   'Cli.CancellingAfterUpdate': `Cancelando assim que a atualização terminar...`,
   'Error.FolderWillNotGiveFilesBack': `Você pode salvar arquivos em {0}, mas não pode abri-los de novo, então o InstallerClean não vai mover arquivos para lá.`,
-  'UpdateNotice.NeedsNetFramework48': `O InstallerClean {0} precisa do .NET Framework 4.8, que não está neste PC.`,
+  'UpdateNotice.NeedsNetFramework48': `Esta versão precisa do .NET Framework 4.8. Instale-o pelo site da Microsoft, reinicie o PC e depois abra o InstallerClean para atualizar.`,
   'UpdateNotice.CannotInstallAutomatically': `O InstallerClean {0} não pode ser instalado automaticamente.`,
   'UpdateNotice.CopyCannotTell': `O InstallerClean não consegue saber se foi instalado pelo próprio instalador, então não pode se atualizar.`,
+  'UpdateNotice.DownloadNetFramework48': `Baixe o .NET Framework 4.8 no site da Microsoft`,
+  'Automation.UpdateNotice.DownloadNetFramework48': `Baixe o .NET Framework 4.8 no site da Microsoft`,
+  'Cli.UpdateNeedsNetFramework48': `Esta versão precisa do .NET Framework 4.8. Instale-o pelo site da Microsoft, reinicie o PC e depois execute o InstallerClean de novo para atualizar.`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

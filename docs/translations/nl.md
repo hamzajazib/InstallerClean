@@ -321,9 +321,10 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean {0} is available. | InstallerClean {0} is beschikbaar. |
 | It's strongly recommended to use the latest version. | Het wordt sterk aangeraden om de nieuwste versie te gebruiken. |
 | Download it from GitHub | Download het van GitHub |
+| Download .NET Framework 4.8 from Microsoft | Download .NET Framework 4.8 van Microsoft |
 | Update now | Nu bijwerken |
 | This copy was installed by Scoop. To update it, close InstallerClean and run: | Deze kopie is met Scoop geïnstalleerd. Bijwerken doe je door InstallerClean te sluiten en dit uit te voeren: |
-| InstallerClean {0} needs .NET Framework 4.8, which this PC doesn't have. | InstallerClean {0} heeft .NET Framework 4.8 nodig, maar dat staat niet op deze pc. |
+| It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then open InstallerClean to update. | Deze versie heeft .NET Framework 4.8 nodig. Installeer het van Microsoft, herstart de pc en open daarna InstallerClean om bij te werken. |
 | InstallerClean {0} can't be installed automatically. | InstallerClean {0} kan niet automatisch worden geïnstalleerd. |
 | InstallerClean can't tell whether its setup installed it, so it can't update itself. | InstallerClean kan niet vaststellen of het met zijn eigen setup is geïnstalleerd en kan zichzelf dus niet bijwerken. |
 | Copied | Gekopieerd |
@@ -406,6 +407,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Opens the issue tracker on github.com in your browser. | Opent de issue-tracker op github.com in je browser. |
 | If ticked, InstallerClean checks github for a newer version when you run it. | Als dit is aangevinkt, kijkt InstallerClean bij het starten op github of er een nieuwere versie is. |
 | Download it from github | Download het van github |
+| Download .NET Framework 4.8 from Microsoft | Download .NET Framework 4.8 van Microsoft |
 | Copy the command | De opdracht kopiëren |
 | Scoop's update command | Bijwerkopdracht van Scoop |
 | Opens the licence file on github.com in your browser. | Opent het licentiebestand op github.com in je browser. |
@@ -562,7 +564,8 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean is in use, so it can't update itself now. | InstallerClean is in gebruik en kan zichzelf nu dus niet bijwerken. |
 | Running {0} with InstallerClean {1} instead. | In plaats daarvan wordt {0} uitgevoerd met InstallerClean {1}. |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} is geïnstalleerd, maar kon niet worden gestart. Voer de opdracht opnieuw uit. |
-| Download it from GitHub: {0} | Download het van GitHub: {0} |
+| {0}: {1} | {0}: {1} |
+| It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | Deze versie heeft .NET Framework 4.8 nodig. Installeer het van Microsoft, herstart de pc en voer daarna InstallerClean opnieuw uit om bij te werken. |
 | It's simple to undo. Move them back from {0} into {InstallerFolder} and everything will be back to how it was. | Het is eenvoudig ongedaan te maken. Verplaats ze vanuit {0} terug naar {InstallerFolder} en alles is weer zoals het was. |
 | InstallerClean could no longer confirm the backup folder, so it went no further. Check {0}, then run the command again. | InstallerClean kon de back-upmap niet meer bevestigen en is gestopt. Controleer {0} en voer de opdracht opnieuw uit. |
 | Another InstallerClean process holds the single-instance lock (GUI or another CLI run). Exit 75 (transient); safe to retry later. | Een ander InstallerClean-proces houdt de single-instance-vergrendeling vast (de GUI of een andere CLI-uitvoering). Exit 75 (tijdelijk); je kunt het later veilig opnieuw proberen. |
