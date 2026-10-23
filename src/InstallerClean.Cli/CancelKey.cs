@@ -1,4 +1,5 @@
 using InstallerClean.Helpers;
+using InstallerClean.Interop.Native;
 
 namespace InstallerClean.Cli;
 
@@ -12,17 +13,47 @@ namespace InstallerClean.Cli;
 /// through <see cref="Answer"/>, which calls back at once where the Ctrl+C came first. A
 /// run that ends without answering, such as one printing its help, finishes as it would
 /// have.
+/// <para>
+/// A console closed under the run, or a shutdown, ends it the same way: it cancels
+/// <see cref="Pressed"/>, and the thread Windows gives the event is held for
+/// <see cref="CloseHold"/> so the run can end at its next file and write its entry before
+/// Windows ends the process, which it does once the handler returns or its time is up. A
+/// logoff is taken and the run carries on, since the event does not say whose session is
+/// ending.
+/// </para>
 /// </summary>
 internal sealed class CancelKey
 {
     private readonly CancellationTokenSource _pressed = new();
     private readonly Func<string, WaitHandle?> _openEvent;
+    private readonly Action<TimeSpan> _hold;
     private int _hooked;
+    private int _closing;
 
-    public CancelKey() : this(OpenEvent) { }
+    /// <summary>
+    /// How long a close or shutdown event holds the process: a second inside the five
+    /// seconds Windows allows a console close by default.
+    /// </summary>
+    internal static readonly TimeSpan CloseHold = TimeSpan.FromSeconds(4);
+
+    public CancelKey() : this(OpenEvent, Thread.Sleep) { }
 
     /// <summary>Test seam: how <see cref="Watch"/> opens the event a name names.</summary>
-    internal CancelKey(Func<string, WaitHandle?> openEvent) => _openEvent = openEvent;
+    internal CancelKey(Func<string, WaitHandle?> openEvent) : this(openEvent, Thread.Sleep) { }
+
+    /// <summary>Test seam: also how a close or shutdown event holds its thread.</summary>
+    internal CancelKey(Func<string, WaitHandle?> openEvent, Action<TimeSpan> hold)
+    {
+        _openEvent = openEvent;
+        _hold = hold;
+    }
+
+    /// <summary>
+    /// Whether the console is being closed or Windows is shutting down. A run then prints
+    /// no "Cancelling" line and writes its entry before its last lines, since Windows ends
+    /// the process within seconds.
+    /// </summary>
+    public bool Closing => Volatile.Read(ref _closing) == 1;
 
     /// <summary>The handler the command line hooks.</summary>
     public static CancelKey Process { get; } = new();
@@ -44,6 +75,39 @@ internal sealed class CancelKey
         catch (Exception ex)
         {
             Helpers.CrashLog.TryWrite(ex);
+        }
+        // After CancelKeyPress, so this handler is asked first and passes Ctrl+C and
+        // Ctrl+Break on to the one CancelKeyPress registers.
+        ConsoleControl.TryRegister(Control);
+    }
+
+    /// <summary>
+    /// Answers a console control event, on the thread Windows gives it, and answers whether
+    /// it was taken. Ctrl+C and Ctrl+Break are not, and reach <see cref="Take"/>. A close
+    /// or shutdown cancels <see cref="Pressed"/> and holds this thread for
+    /// <see cref="CloseHold"/>; the process ends as the run returns, or as Windows ends it.
+    /// Never throws.
+    /// </summary>
+    internal bool Control(uint ctrlType)
+    {
+        switch (ctrlType)
+        {
+            case Kernel32.CTRL_LOGOFF_EVENT:
+                return true;
+            case Kernel32.CTRL_CLOSE_EVENT or Kernel32.CTRL_SHUTDOWN_EVENT:
+                Volatile.Write(ref _closing, 1);
+                Press();
+                try
+                {
+                    _hold(CloseHold);
+                }
+                catch (Exception ex)
+                {
+                    Helpers.CrashLog.TryWrite(ex);
+                }
+                return true;
+            default:
+                return false;
         }
     }
 

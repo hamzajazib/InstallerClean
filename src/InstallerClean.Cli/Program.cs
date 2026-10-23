@@ -421,6 +421,9 @@ internal static class Program
     /// </summary>
     internal static void SayCancelling(string line)
     {
+        // A console being closed is given no line: nobody can read it, and Windows ends
+        // the process within seconds, before a setup still running would finish.
+        if (CancelKey.Process.Closing) return;
         try
         {
             Console.WriteLine();
@@ -506,14 +509,17 @@ internal static class Program
         ReportCancelled(CliEventClass.TransientSkip, () => string.Format(Strings.Cli_EventLogCancelledNoWork, arg));
 
     /// <summary>
-    /// Ends a cancelled run that did no work: prints "Cancelled.", writes its one entry,
-    /// of <paramref name="eventClass"/> with <paramref name="line"/>, and answers
-    /// <see cref="ExitCancelled"/>.
+    /// Ends a cancelled run that did no work: writes its one entry, of
+    /// <paramref name="eventClass"/> with <paramref name="line"/>, prints "Cancelled.", and
+    /// answers <see cref="ExitCancelled"/>. Where the console is being closed the entry goes
+    /// first, the run having only seconds left and a console that may already be gone.
     /// </summary>
     private static int ReportCancelled(CliEventClass eventClass, Func<string> line)
     {
+        var closing = CancelKey.Process.Closing;
+        if (closing) MachineContract.WriteEventLog(eventClass, line);
         Console.WriteLine(Strings.Cli_Cancelled);
-        MachineContract.WriteEventLog(eventClass, line);
+        if (!closing) MachineContract.WriteEventLog(eventClass, line);
         NoteEventLogUnavailable();
         return ExitCancelled;
     }
@@ -1483,6 +1489,27 @@ internal static class Program
         }
         catch (Exception ex) when (Classify(ex) == WorkFailure.Cancelled)
         {
+            // EventLog the cancellation so a Task Scheduler audit can see how far the run
+            // got, and pick ExitPartial when work committed before the cancellation
+            // arrived. A run cancelled before any file was processed (a cancel during the
+            // scan, or before the first delete/move) still writes one entry so "each /s,
+            // /d or /m run writes one summary" holds for every run: TransientSkip, not
+            // Partial, since nothing committed and a re-run can succeed. Where the console
+            // is being closed the entry goes before the lines, the run having only seconds
+            // left and a console that may already be gone.
+            void WriteEntry()
+            {
+                if (committedCount > 0)
+                    MachineContract.WriteEventLog(CliEventClass.Partial,
+                        () => string.Format(Strings.Cli_EventLogCancelledPartial,
+                            arg, committedCount, totalToProcess,
+                            DisplayHelpers.PluraliseFile(totalToProcess)));
+                else
+                    MachineContract.WriteEventLog(CliEventClass.TransientSkip,
+                        () => string.Format(Strings.Cli_EventLogCancelledNoWork, arg));
+            }
+            var closing = CancelKey.Process.Closing;
+            if (closing) WriteEntry();
             Console.WriteLine(Strings.Cli_Cancelled);
             // The undo, after the cancellation and not before it: the reader is told
             // the run stopped and then how to put back what it moved, which is the
@@ -1492,25 +1519,8 @@ internal static class Program
             if (cancelledMoveDestination.Length > 0)
                 Console.WriteLine(string.Format(
                     Strings.Cli_MoveCancelledRestoreHint, cancelledMoveDestination));
-            // EventLog the cancellation so a Task Scheduler audit can
-            // see how far the run got, and pick ExitPartial when work
-            // committed before the cancellation arrived.
-            if (committedCount > 0)
-            {
-                MachineContract.WriteEventLog(CliEventClass.Partial,
-                    () => string.Format(Strings.Cli_EventLogCancelledPartial,
-                        arg, committedCount, totalToProcess,
-                        DisplayHelpers.PluraliseFile(totalToProcess)));
-                return ExitPartial;
-            }
-            // Cancelled before any file was processed (a cancel during the
-            // scan, or before the first delete/move). Still write one entry
-            // so "each /s, /d or /m run writes one summary" holds for every
-            // run. TransientSkip, not Partial: nothing committed and a re-run
-            // can succeed.
-            MachineContract.WriteEventLog(CliEventClass.TransientSkip,
-                () => string.Format(Strings.Cli_EventLogCancelledNoWork, arg));
-            return ExitCancelled;
+            if (!closing) WriteEntry();
+            return committedCount > 0 ? ExitPartial : ExitCancelled;
         }
         catch (Exception ex) when (Classify(ex) == WorkFailure.Localised)
         {

@@ -327,6 +327,24 @@ internal static partial class Kernel32
     public const uint SEM_FAILCRITICALERRORS = 0x0001;
 
     /// <summary>
+    /// Adds <paramref name="handlerRoutine"/> to the front of the process's list of console
+    /// control handlers. Windows calls it on a thread of its own for each event, and the
+    /// first routine to answer nonzero ends the list.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "SetConsoleCtrlHandler", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static unsafe partial bool SetConsoleCtrlHandler(
+        delegate* unmanaged<uint, int> handlerRoutine,
+        [MarshalAs(UnmanagedType.Bool)] bool add);
+
+    // The console control events a handler routine is given.
+    public const uint CTRL_C_EVENT = 0;
+    public const uint CTRL_BREAK_EVENT = 1;
+    public const uint CTRL_CLOSE_EVENT = 2;
+    public const uint CTRL_LOGOFF_EVENT = 5;
+    public const uint CTRL_SHUTDOWN_EVENT = 6;
+
+    /// <summary>
     /// Asks the volume at the root <paramref name="lpRootPathName"/>, a drive letter, its
     /// colon and a backslash, for its details. Declared for the answer alone: every output
     /// is passed as a null pointer, and a caller reads only whether the call succeeded and,
