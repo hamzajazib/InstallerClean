@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace InstallerClean.Tests.Helpers;
 
@@ -142,9 +143,113 @@ internal static class OtherConsole
     public static string Close(int processId) => Run("close", processId);
 
     /// <summary>
-    /// Starts <paramref name="file"/> as Windows starts a console program from the shell: in a
-    /// console window of its own, with this process's environment.
+    /// Starts <paramref name="file"/> under a conhost.exe of its own, with this process's
+    /// environment, and answers the program and the conhost. conhost.exe started with a command
+    /// line opens a console window of its own for it, where a program started through the shell
+    /// can be given a pseudo-console window instead. Answers no program where conhost.exe started none in 30
+    /// seconds, with what it found in <paramref name="why"/>.
     /// </summary>
-    public static Process StartInOwnConsole(string file, string arguments) =>
-        Process.Start(new ProcessStartInfo(file, arguments) { UseShellExecute = true })!;
+    public static (Process? Program, Process Host) StartInOwnConsole(string file, string arguments, out string why)
+    {
+        var host = Process.Start(new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "conhost.exe"), $"\"{file}\" {arguments}")
+        {
+            UseShellExecute = true,
+        })!;
+        var name = Path.GetFileName(file);
+        var hostStarted = host.StartTime;
+        var seen = "";
+        var snapshotFailure = "";
+        var clock = Stopwatch.StartNew();
+        while (clock.Elapsed < TimeSpan.FromSeconds(30))
+        {
+            var processes = Processes(out var snapshotError);
+            if (processes is null) snapshotFailure = $"; the process snapshot failed with error {snapshotError}";
+            foreach (var (id, parent, exe) in processes ?? [])
+            {
+                if (parent != host.Id || !string.Equals(exe, name, StringComparison.OrdinalIgnoreCase)) continue;
+                try
+                {
+                    var program = Process.GetProcessById(id);
+                    // A process whose parent's id was given to this conhost after it ended is older than it.
+                    if (program.StartTime < hostStarted) { program.Dispose(); continue; }
+                    // Opened now, so the exit code can be read after it ends.
+                    _ = program.Handle;
+                    why = "";
+                    return (program, host);
+                }
+                catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
+                {
+                    seen = $"; a {name} with id {id} was seen under it and had ended before it could be opened";
+                }
+            }
+            if (host.HasExited) break;
+            Thread.Sleep(100);
+        }
+        why = (host.HasExited ? $"conhost.exe ended with {host.ExitCode} with no {name} under it open" : $"conhost.exe had no {name} under it in 30 seconds")
+            + seen + snapshotFailure;
+        return (null, host);
+    }
+
+    /// <summary>Ends <paramref name="process"/> where it is still running. Never throws.</summary>
+    public static void End(Process? process)
+    {
+        try { if (process is { HasExited: false }) process.Kill(); } catch { }
+        process?.Dispose();
+    }
+
+    /// <summary>
+    /// Every running process's id, its parent's id and its exe's name, from a Toolhelp snapshot,
+    /// or null with the Windows error where the snapshot could not be taken or walked to its end.
+    /// </summary>
+    private static List<(int Id, int Parent, string Exe)>? Processes(out int error)
+    {
+        error = 0;
+        var found = new List<(int, int, string)>();
+        var snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if (snapshot == new IntPtr(-1)) { error = Marshal.GetLastWin32Error(); return null; }
+        try
+        {
+            var entry = new ProcessEntry { Size = (uint)Marshal.SizeOf<ProcessEntry>() };
+            for (var more = Process32FirstW(snapshot, ref entry); more; more = Process32NextW(snapshot, ref entry))
+                found.Add(((int)entry.ProcessId, (int)entry.ParentProcessId, entry.ExeFile));
+            error = Marshal.GetLastWin32Error();
+            if (error != ERROR_NO_MORE_FILES) return null;
+            error = 0;
+        }
+        finally
+        {
+            CloseHandle(snapshot);
+        }
+        return found;
+    }
+
+    private const uint TH32CS_SNAPPROCESS = 0x00000002;
+    private const int ERROR_NO_MORE_FILES = 18;
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct ProcessEntry
+    {
+        public uint Size;
+        public uint Usage;
+        public uint ProcessId;
+        public IntPtr DefaultHeapId;
+        public uint ModuleId;
+        public uint Threads;
+        public uint ParentProcessId;
+        public int PriorityClassBase;
+        public uint Flags;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)] public string ExeFile;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr CreateToolhelp32Snapshot(uint flags, uint processId);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool Process32FirstW(IntPtr snapshot, ref ProcessEntry entry);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool Process32NextW(IntPtr snapshot, ref ProcessEntry entry);
+
+    [DllImport("kernel32.dll")]
+    private static extern bool CloseHandle(IntPtr handle);
 }

@@ -19,6 +19,7 @@ public sealed class ConsoleCloseTests : IDisposable
 {
     private readonly string _root = Directory.CreateTempSubdirectory("ic-close-").FullName;
     private Process? _run;
+    private Process? _host;
 
     private static readonly string Cli = Path.Combine(AppContext.BaseDirectory, "installerclean-cli.exe");
 
@@ -31,8 +32,8 @@ public sealed class ConsoleCloseTests : IDisposable
     public void Dispose()
     {
         foreach (var name in Switches) Environment.SetEnvironmentVariable(name, null);
-        try { if (_run is { HasExited: false }) _run.Kill(); } catch { }
-        _run?.Dispose();
+        OtherConsole.End(_run);
+        OtherConsole.End(_host);
         try { Directory.Delete(_root, recursive: true); } catch { }
     }
 
@@ -48,12 +49,16 @@ public sealed class ConsoleCloseTests : IDisposable
         File.WriteAllText(manifest, """{"schema":1,"downloads":{"cli":{"requires":[]}}}""");
         var after = NewestEntryIndex();
 
-        // A program started through the shell takes this process's environment.
+        // A program started under conhost.exe takes this process's environment.
         Environment.SetEnvironmentVariable(AppCopy.PretendCopyVariable, "cli");
         Environment.SetEnvironmentVariable(UpdateCheckService.PretendLatestVariable, "v9.9.9");
         Environment.SetEnvironmentVariable(AppUpdater.LocalManifestVariable, manifest);
-        _run = OtherConsole.StartInOwnConsole(Cli, "/s");
+        (_run, _host) = OtherConsole.StartInOwnConsole(Cli, "/s", out var notStarted);
         foreach (var name in Switches) Environment.SetEnvironmentVariable(name, null);
+        Assert.True(_run is not null, $"The command line did not start: {notStarted}");
+        var window = OtherConsole.WindowClass(_run.Id);
+        if (OtherConsole.Failed(window)) Assert.Fail($"The run's console window could not be asked about: {window}");
+        Assert.Equal("ConsoleWindowClass", window);
 
         // The last reading that came back is kept, so a run that ends first says what it printed.
         var screen = "";

@@ -7,7 +7,8 @@ namespace InstallerClean.Tests.Helpers;
 /// <see cref="CiWindowsRunnerFactAttribute"/> does, and only where a console program
 /// started there gets a console window of its own, which a test can close. Reported skipped
 /// anywhere else, with the reason. Whether the window comes is asked once per run, of a
-/// cmd.exe started the same way the test starts its program.
+/// cmd.exe started the same way the test starts its program
+/// (<see cref="OtherConsole.StartInOwnConsole"/>).
 /// </summary>
 public sealed class OwnConsoleWindowFactAttribute : FactAttribute
 {
@@ -23,15 +24,17 @@ public sealed class OwnConsoleWindowFactAttribute : FactAttribute
 
     /// <summary>
     /// Null where a cmd.exe started in a console of its own has a conhost console window, or
-    /// where the helper failed, so the test runs and reports that failure; otherwise what
-    /// Windows answered: no window, or a window of another class.
+    /// where starting it or asking about it failed, so the test runs and reports that failure
+    /// itself; otherwise what Windows answered: no window, or a window of another class.
     /// </summary>
     private static string? Probe()
     {
         Process? cmd = null;
+        Process? host = null;
         try
         {
-            cmd = OtherConsole.StartInOwnConsole(Path.Combine(Environment.SystemDirectory, "cmd.exe"), "/k");
+            (cmd, host) = OtherConsole.StartInOwnConsole(Path.Combine(Environment.SystemDirectory, "cmd.exe"), "/k", out _);
+            if (cmd is null) return null;
             Thread.Sleep(1000);
             var answer = OtherConsole.WindowClass(cmd.Id);
             if (answer == "!nowindow") return "GetConsoleWindow answered no window";
@@ -44,8 +47,8 @@ public sealed class OwnConsoleWindowFactAttribute : FactAttribute
         }
         finally
         {
-            try { if (cmd is { HasExited: false }) cmd.Kill(); } catch { }
-            cmd?.Dispose();
+            OtherConsole.End(cmd);
+            OtherConsole.End(host);
         }
     }
 }
