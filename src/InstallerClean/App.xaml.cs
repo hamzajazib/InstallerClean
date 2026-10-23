@@ -877,13 +877,20 @@ public partial class App : Application
     /// downloaded into, trying for ten seconds, because what put each there is usually
     /// still closing as this copy starts: the copy that renamed itself, or the setup,
     /// which opens the app before it exits. Whatever will not go by then is tried again
-    /// at the next start. Never throws.
+    /// at the next start. First, in the setup's folder, it puts back the command line an
+    /// update renamed aside where nothing took its place
+    /// (<see cref="SelfReplacement.TryPutBackMissing"/>). Never throws.
     /// </summary>
     private static async Task RemoveUpdateLeftoversAsync()
     {
         try
         {
             var exePath = Environment.ProcessPath;
+            if (_services?.GetService<IRegistryReader>() is { } registry
+                && RunningCopy.Kind(registry) == AppCopyKind.Setup
+                && Path.GetDirectoryName(exePath) is { Length: > 0 } folder)
+                SelfReplacement.TryPutBackMissing(
+                    Path.Combine(folder, AppCopy.CommandLineFileName), SelfReplacement.SetupRunning);
             var foldersGone = false;
             var oldCopyGone = exePath is null;
             for (var attempt = 0; attempt < 20; attempt++)

@@ -738,6 +738,80 @@ public static class SelfReplacement
         TryDeletePlainFile(exePath + OldSuffix) & TryDeletePlainFile(exePath + NewSuffix);
 
     /// <summary>
+    /// The mutex the setup holds for as long as it runs, created first thing in its InitializeSetup.
+    /// scripts/check-instance-lock-name.mjs holds the two spellings together.
+    /// </summary>
+    public const string SetupMutexName = @"Global\InstallerClean_Setup";
+
+    /// <summary>
+    /// Renames the copy an update moved aside back to <paramref name="exePath"/> where
+    /// nothing is at that path, which is what is left where the process that moved it ended
+    /// before the newer version was put there. Does nothing while
+    /// <paramref name="setupRunning"/> answers true, the setup being about to write the
+    /// newer version there; while a program runs from the copy, or anything else holds it
+    /// open, the update that moved it being still under way; or where the copy is a reparse
+    /// point rather than a plain file. The rename never replaces a file, so a newer version
+    /// written at the path first stays, and the copy beside it is left for that version to
+    /// delete. Answers whether the copy was put back. Never throws.
+    /// </summary>
+    public static bool TryPutBackMissing(string exePath, Func<bool> setupRunning)
+    {
+        try
+        {
+            var oldPath = exePath + OldSuffix;
+            if (File.Exists(exePath) || !File.Exists(oldPath)) return false;
+            if ((File.GetAttributes(oldPath) & FileAttributes.ReparsePoint) != 0) return false;
+            if (setupRunning() || IsOpen(oldPath)) return false;
+            File.Move(oldPath, exePath, overwrite: false);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="path"/> is open in another process, or is the image a running
+    /// program was started from: whether an open for writing that shares nothing is refused.
+    /// Writes nothing.
+    /// </summary>
+    private static bool IsOpen(string path)
+    {
+        try
+        {
+            using var _ = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            return false;
+        }
+        catch (IOException)
+        {
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Whether a setup is running: whether its mutex exists, including one this process
+    /// may not open.
+    /// </summary>
+    public static bool SetupRunning() => SetupRunning(SetupMutexName);
+
+    /// <summary>Test seam: <see cref="SetupRunning()"/> for the mutex <paramref name="name"/> names.</summary>
+    internal static bool SetupRunning(string name)
+    {
+        try
+        {
+            if (!Mutex.TryOpenExisting(name, out var mutex)) return false;
+            mutex.Dispose();
+            return true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return true;
+        }
+    }
+
+    /// <summary>
     /// Deletes <paramref name="path"/> where it is a plain file, and answers whether
     /// nothing is left there. With <paramref name="waitOutHold"/>, waits for another
     /// process holding the file open, as <see cref="WaitOutHold"/> does.

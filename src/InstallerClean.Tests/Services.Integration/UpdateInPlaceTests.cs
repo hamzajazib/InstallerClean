@@ -555,6 +555,91 @@ public sealed class UpdateInPlaceTests : IDisposable
     }
 
     [Fact]
+    public void A_command_line_moved_aside_with_nothing_in_its_place_is_put_back()
+    {
+        var exe = Path.Combine(_root, AppCopy.CommandLineFileName);
+        File.WriteAllBytes(exe + SelfReplacement.OldSuffix, Program(1));
+
+        Assert.True(SelfReplacement.TryPutBackMissing(exe, () => false));
+
+        Assert.Equal(Program(1), File.ReadAllBytes(exe));
+        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
+    }
+
+    [Fact]
+    public void A_newer_command_line_at_the_path_stays_and_the_copy_beside_it_is_left()
+    {
+        var exe = Path.Combine(_root, AppCopy.CommandLineFileName);
+        File.WriteAllBytes(exe, Program(2));
+        File.WriteAllBytes(exe + SelfReplacement.OldSuffix, Program(1));
+
+        Assert.False(SelfReplacement.TryPutBackMissing(exe, () => false));
+
+        Assert.Equal(Program(2), File.ReadAllBytes(exe));
+        Assert.Equal(Program(1), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
+    }
+
+    [Fact]
+    public void Nothing_is_put_back_while_a_setup_is_running()
+    {
+        var exe = Path.Combine(_root, AppCopy.CommandLineFileName);
+        File.WriteAllBytes(exe + SelfReplacement.OldSuffix, Program(1));
+
+        Assert.False(SelfReplacement.TryPutBackMissing(exe, () => true));
+
+        Assert.False(File.Exists(exe));
+        Assert.Equal(Program(1), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
+    }
+
+    [Fact]
+    public void A_copy_a_program_holds_open_is_not_put_back()
+    {
+        var exe = Path.Combine(_root, AppCopy.CommandLineFileName);
+        File.WriteAllBytes(exe + SelfReplacement.OldSuffix, Program(1));
+
+        using (new FileStream(exe + SelfReplacement.OldSuffix, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete))
+            Assert.False(SelfReplacement.TryPutBackMissing(exe, () => false));
+
+        Assert.False(File.Exists(exe));
+        Assert.True(SelfReplacement.TryPutBackMissing(exe, () => false));
+    }
+
+    [Fact]
+    public void A_folder_in_place_of_the_copy_is_not_put_back()
+    {
+        var exe = Path.Combine(_root, AppCopy.CommandLineFileName);
+        Directory.CreateDirectory(exe + SelfReplacement.OldSuffix);
+
+        Assert.False(SelfReplacement.TryPutBackMissing(exe, () => false));
+
+        Assert.False(File.Exists(exe));
+        Assert.False(Directory.Exists(exe));
+    }
+
+    [Fact]
+    public void With_neither_copy_there_nothing_is_put_back_and_the_setup_is_not_asked()
+    {
+        var exe = Path.Combine(_root, AppCopy.CommandLineFileName);
+        var asked = false;
+
+        Assert.False(SelfReplacement.TryPutBackMissing(exe, () => asked = true));
+
+        Assert.False(asked);
+        Assert.False(File.Exists(exe));
+    }
+
+    [Fact]
+    public void A_setup_is_seen_as_running_while_its_mutex_exists()
+    {
+        var name = $@"Local\InstallerClean_SetupMutexTest_{Guid.NewGuid():N}";
+
+        Assert.False(SelfReplacement.SetupRunning(name));
+        using (new Mutex(false, name))
+            Assert.True(SelfReplacement.SetupRunning(name));
+        Assert.False(SelfReplacement.SetupRunning(name));
+    }
+
+    [Fact]
     public async Task A_hand_over_whose_newer_version_will_not_start_puts_everything_back_and_answers_false()
     {
         // Program() writes no runnable image, so every start fails and the process is never ended.
