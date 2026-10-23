@@ -451,10 +451,9 @@ public static class SelfReplacement
     /// between the renames and the end, and every wait here dispatches nothing. The start
     /// uses CreateProcess rather than the shell, which can wait on a DDE conversation and
     /// pump messages; the app runs elevated, so CreateProcess starts the newer version,
-    /// whose manifest asks for elevation too, without a prompt. An antivirus can hold a
-    /// program it has just seen written for a moment, so a start that fails is tried
-    /// again a few times, half a second apart, each failed try but the last written to
-    /// crash.log as it fails. What stopped the hand-over, a wait Windows refused included,
+    /// whose manifest asks for elevation too, without a prompt. A start that fails is tried
+    /// again through <see cref="ProcessStartRetry"/>, each failed try but the last written
+    /// to crash.log as it fails. What stopped the hand-over, a wait Windows refused included,
     /// goes to crash.log once this exe is back in place, or as this process ends where it
     /// is not; a look at the event Windows refuses after the bound, and a newer version
     /// that will not end, are written as they happen. The event is
@@ -488,24 +487,20 @@ public static class SelfReplacement
         Exception? failure = null;
         var newerRan = false;
         var newerWouldNotEnd = false;
-        for (var attempt = 1; attempt <= StartAttempts; attempt++)
+        Process? started = null;
+        try
         {
-            Process newer;
-            try
-            {
-                newer = Process.Start(info) ?? throw new UpdateFailedException(UpdateFailureStage.Install,
-                    "Windows started no process for the newer version.");
-            }
-            catch (Exception ex)
-            {
-                failure = ex;
-                if (attempt < StartAttempts)
-                {
-                    CrashLog.TryWrite(ex);
-                    Kernel32.Sleep((uint)StartRetryInterval.TotalMilliseconds);
-                }
-                continue;
-            }
+            started = ProcessStartRetry.Start(
+                info,
+                _ => true,
+                interval => Kernel32.Sleep((uint)interval.TotalMilliseconds));
+        }
+        catch (Exception ex)
+        {
+            failure = ex;
+        }
+        if (started is { } newer)
+        {
             newerRan = true;
             using (newer)
             {
@@ -517,7 +512,6 @@ public static class SelfReplacement
                 // A newer version not seen to end is not renamed under.
                 newerWouldNotEnd = !EndNewerVersion(newer);
             }
-            break;
         }
 
         // A person can start the file at the path while the wait runs, and renaming a file a
@@ -527,9 +521,6 @@ public static class SelfReplacement
         if (newerStays) EndThisProcess();
         return false;
     }
-
-    internal const int StartAttempts = 4;
-    private static readonly TimeSpan StartRetryInterval = TimeSpan.FromMilliseconds(500);
 
     /// <summary>
     /// Waits for the newer version <paramref name="newer"/> to set

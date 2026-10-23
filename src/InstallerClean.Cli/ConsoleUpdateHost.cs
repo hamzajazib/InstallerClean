@@ -338,9 +338,9 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
     /// <summary>
     /// Starts <paramref name="file"/> sharing this console, its standard handles and, where
     /// <paramref name="workingDirectory"/> is null, its working folder, so a relative path
-    /// given to the newer version means what it meant to this run. An antivirus can hold a
-    /// program it has just seen written for a moment, so a start that fails is tried again
-    /// a few times, half a second apart. Answers null where every try failed, each written
+    /// given to the newer version means what it meant to this run. A start that fails is
+    /// tried again through <see cref="ProcessStartRetry"/>, and Ctrl+C ends the wait between
+    /// tries. Answers null where every try failed, each written
     /// to crash.log. Throws <see cref="OperationCanceledException"/> where
     /// <paramref name="token"/> is cancelled and no try has started a process.
     /// </summary>
@@ -351,26 +351,34 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
         if (workingDirectory is not null) info.WorkingDirectory = workingDirectory;
         foreach (var argument in arguments) info.ArgumentList.Add(argument);
 
-        for (var attempt = 1; ; attempt++)
+        token.ThrowIfCancellationRequested();
+        try
         {
-            token.ThrowIfCancellationRequested();
-            try
-            {
-                return Process.Start(info)
-                    ?? throw new InvalidOperationException("Windows started no process for the file.");
-            }
-            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or InvalidOperationException)
-            {
-                CrashLog.TryWrite(ex);
-                if (attempt == StartAttempts)
+            return ProcessStartRetry.Start(
+                info,
+                IsStartFailure,
+                interval =>
                 {
+                    token.WaitHandle.WaitOne(interval);
                     token.ThrowIfCancellationRequested();
-                    return null;
-                }
-                token.WaitHandle.WaitOne(StartRetryInterval);
-            }
+                });
+        }
+        catch (Exception ex) when (IsStartFailure(ex))
+        {
+            CrashLog.TryWrite(ex);
+            token.ThrowIfCancellationRequested();
+            return null;
         }
     }
+
+    /// <summary>
+    /// A start Windows refused. A token whose source has been disposed throws
+    /// <see cref="ObjectDisposedException"/>, which is an InvalidOperationException and is
+    /// not one, so it reaches the caller.
+    /// </summary>
+    private static bool IsStartFailure(Exception ex) =>
+        ex is System.ComponentModel.Win32Exception or IOException
+            or (InvalidOperationException and not ObjectDisposedException);
 
     internal void NewerVersionAnswersCtrlC(bool answers)
     {
@@ -409,7 +417,4 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
     /// </summary>
     private static EventWaitHandle? CreateCancelEvent(Guid id) =>
         HandOverContract.CreateEvent(CliContract.CancelEventName(id));
-
-    private const int StartAttempts = 4;
-    private static readonly TimeSpan StartRetryInterval = TimeSpan.FromMilliseconds(500);
 }

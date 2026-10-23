@@ -815,41 +815,37 @@ public partial class App : Application
     /// </summary>
     public Task<bool> StartUpdateAndCloseAsync(PreparedUpdate prepared) =>
         prepared.Replacement is null
-            ? StartSetupAndCloseAsync(prepared.FileToStart, prepared.Arguments)
+            ? Task.FromResult(StartSetupAndClose(prepared.FileToStart, prepared.Arguments))
             : ReplaceAndCloseAsync(prepared.FileToStart, prepared.Version);
 
     /// <summary>
     /// The setup's copy: starts the newer setup, which starts the app again once it has
-    /// installed, and closes the app. An antivirus can hold a program it has just seen
-    /// written for a moment, so a start that fails is tried again a few times, half a
-    /// second apart, before the answer is no.
+    /// installed, and closes the app. A start that fails is tried again through
+    /// <see cref="ProcessStartRetry"/>, on the dispatcher thread with its processing held,
+    /// as the in-place swap's hand-over is, so none of the window's own code runs while the
+    /// mutex is released. While the tries and the waits between them run, the window takes
+    /// no input and shows the update card as the download left it; then it closes, or the
+    /// card says the update could not be installed.
     /// </summary>
-    private async Task<bool> StartSetupAndCloseAsync(string fileToStart, string arguments)
+    private bool StartSetupAndClose(string fileToStart, string arguments)
     {
         var released = _instanceLock?.Release() == true;
-
-        for (var attempt = 1; ; attempt++)
+        var info = new ProcessStartInfo(fileToStart, arguments)
         {
-            try
-            {
-                using var started = Process.Start(new ProcessStartInfo(fileToStart, arguments)
-                {
-                    UseShellExecute = true,
-                    WorkingDirectory = Path.GetDirectoryName(fileToStart) ?? string.Empty,
-                });
-                break;
-            }
-            catch (Exception ex) when (attempt < StartAttempts)
-            {
-                CrashLog.TryWrite(ex);
-                await Task.Delay(StartRetryInterval);
-            }
-            catch (Exception ex)
-            {
-                CrashLog.TryWrite(ex);
-                if (released) RetakeAfterHandOverFailed();
-                return false;
-            }
+            UseShellExecute = true,
+            WorkingDirectory = Path.GetDirectoryName(fileToStart) ?? string.Empty,
+        };
+
+        try
+        {
+            using (Dispatcher.DisableProcessing())
+            using (ProcessStartRetry.Start(info, _ => true, Thread.Sleep)) { }
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+            if (released) RetakeAfterHandOverFailed();
+            return false;
         }
 
         Shutdown();
@@ -949,7 +945,4 @@ public partial class App : Application
         if (!_instanceLockLost) return;
         _instanceLockLost = _instanceLock?.TryTake() != true;
     }
-
-    private const int StartAttempts = 4;
-    private static readonly TimeSpan StartRetryInterval = TimeSpan.FromMilliseconds(500);
 }

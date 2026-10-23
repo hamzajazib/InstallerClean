@@ -70,12 +70,10 @@ $entries = @(
     Reach = @{ 'System.Runtime.InteropServices.ComWrappers::GetOrCreateObjectForComInstance(IntPtr,System.Runtime.InteropServices.CreateObjectFlags)' = '29 members, a335253cebd44639' }
   }
   [pscustomobject]@{
-    Calls = @(
-      @('InstallerClean.Services.SelfReplacement::HandOverAndEnd(String,String,System.Nullable`1<System.TimeSpan>)', 'System.Diagnostics.Process::Start(System.Diagnostics.ProcessStartInfo)'),
-      @('[installerclean-cli]InstallerClean.Cli.ConsoleUpdateHost::Start(String,System.Collections.Generic.IReadOnlyList`1<String>,String,System.Threading.CancellationToken)', 'System.Diagnostics.Process::Start(System.Diagnostics.ProcessStartInfo)'))
+    Calls = @(, @('[InstallerClean.Core]InstallerClean.Services.ProcessStartRetry::Start(System.Diagnostics.ProcessStartInfo,System.Func`2<System.Exception,Boolean>,System.Action`1<System.TimeSpan>)', 'System.Diagnostics.Process::Start(System.Diagnostics.ProcessStartInfo)'))
     Reason = 'StartWithCreateProcess reaches CoTaskMemAlloc only through SecureStringToGlobalAllocUnicode, called where ' +
       'ProcessStartInfo.UserName is not empty and Password is set (Process.Windows.cs:527, :552-553). UserName defaults to empty ' +
-      '(ProcessStartInfo.cs:157-160) and neither caller sets UserName or Password. Read at .NET v10.0.13.'
+      '(ProcessStartInfo.cs:157-160) and no ProcessStartInfo the app passes to Process.Start, through the shell or directly, sets UserName or Password. Read at .NET v10.0.13.'
     Reach = @{ 'System.Diagnostics.Process::Start(System.Diagnostics.ProcessStartInfo)' = '10 members, e257c9f191611a3d' }
   }
   [pscustomobject]@{
