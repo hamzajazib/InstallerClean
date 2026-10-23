@@ -11,11 +11,13 @@ namespace InstallerClean.Tests.Helpers;
 /// </summary>
 public sealed class CiWindowsRunnerFactAttribute : FactAttribute
 {
-    public CiWindowsRunnerFactAttribute()
-    {
-        if (!OperatingSystem.IsWindows()
-            || Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true"
-            || !AdministratorRights.Held())
-            Skip = "Leaves an entry in this machine's Application log, so it runs only on a GitHub Actions Windows runner.";
-    }
+    public CiWindowsRunnerFactAttribute() => Skip = SkipReason();
+
+    /// <summary>Null on a GitHub Actions Windows runner; otherwise why a test that runs only there is skipped.</summary>
+    internal static string? SkipReason() =>
+        !OperatingSystem.IsWindows()
+        || Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true"
+        || !AdministratorRights.Held()
+            ? "Leaves an entry in this machine's Application log, so it runs only on a GitHub Actions Windows runner."
+            : null;
 }
