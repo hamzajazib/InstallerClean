@@ -296,22 +296,11 @@ internal static class Program
         // mutex the WPF GUI uses, so a CLI invocation cannot race the
         // GUI mid-delete or mid-move (and a second concurrent CLI run
         // is also rejected). /s is read-only and runs unconditionally.
-        System.Threading.Mutex? mutex = null;
-        var holdsMutex = false;
+        InstanceLock? instanceLock = null;
         if (arg is "/d" or "/m")
         {
-            mutex = new System.Threading.Mutex(initiallyOwned: false, ConsoleUpdateHost.InstanceMutexName);
-            try
-            {
-                holdsMutex = mutex.WaitOne(TimeSpan.Zero);
-            }
-            catch (AbandonedMutexException)
-            {
-                // Previous owner crashed without releasing; the runtime
-                // transfers ownership to this thread.
-                holdsMutex = true;
-            }
-            if (!holdsMutex)
+            instanceLock = new InstanceLock();
+            if (!instanceLock.TryTake())
             {
                 // Nothing on this path may reach Main's catch-all, and the two
                 // halves of it fail differently. A throw before the write costs
@@ -339,7 +328,7 @@ internal static class Program
                 NoteEventLogUnavailable();
                 try
                 {
-                    mutex.Dispose();
+                    instanceLock.Dispose();
                 }
                 catch (Exception ex)
                 {
@@ -371,8 +360,8 @@ internal static class Program
             // writes a second, and one summary per run is what an RMM counts runs by.
             try
             {
-                if (holdsMutex) mutex!.ReleaseMutex();
-                mutex?.Dispose();
+                instanceLock?.Release();
+                instanceLock?.Dispose();
             }
             catch (Exception ex)
             {

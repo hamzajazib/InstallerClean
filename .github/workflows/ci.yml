@@ -99,6 +99,12 @@ jobs:
         if: success() || failure()
         run: node scripts/check-elevation-manifest.mjs
 
+      # The window, the command line and the setup keep out of each other's way through
+      # one mutex name, and the setup spells it in AppMutex where C# cannot reach.
+      - name: Check the single-instance mutex has one name
+        if: success() || failure()
+        run: node scripts/check-instance-lock-name.mjs
+
       # Two guards read built files, so neither can be picked up with the
       # check-*.mjs glob that runs before the build. Each is invoked by name
       # instead, the artefact guard in both workflows and the native-imports

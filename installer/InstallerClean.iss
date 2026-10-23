@@ -41,7 +41,8 @@ AppVersion={#AppVersion}
 ; is named by UninstallDisplayName further down and does not follow this
 ; directive.
 AppVerName=InstallerClean {#AppVersion}
-; Mutex name matches App.xaml.cs and Cli/ConsoleUpdateHost.cs. Setup pauses with
+; Mutex name matches InstanceLock.Name in src/InstallerClean.Core/Services/InstanceLock.cs, and
+; scripts/check-instance-lock-name.mjs holds the two together. Setup pauses with
 ; a "close the running app" prompt when the user upgrades while
 ; InstallerClean.exe or installerclean-cli.exe is holding it.
 AppMutex=Global\InstallerClean_SingleInstance

@@ -13,11 +13,7 @@ namespace InstallerClean.Cli;
 /// </summary>
 internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
 {
-    /// <summary>The mutex the window, a Move or Delete, and the setup all name.</summary>
-    internal const string InstanceMutexName = @"Global\InstallerClean_SingleInstance";
-
-    private Mutex? _mutex;
-    private bool _holdsMutex;
+    private InstanceLock? _instanceLock;
     private SafeFileHandle? _ownFile;
     private readonly object _ctrlCGate = new();
     private bool _newerVersionAnswersCtrlC;
@@ -70,30 +66,18 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
 
     public bool TryTakeInstanceLock()
     {
-        _mutex = new Mutex(initiallyOwned: false, InstanceMutexName);
-        try
-        {
-            _holdsMutex = _mutex.WaitOne(TimeSpan.Zero);
-        }
-        catch (AbandonedMutexException)
-        {
-            // Its last owner ended without releasing it; the runtime hands it to this thread.
-            _holdsMutex = true;
-        }
-        if (!_holdsMutex)
-        {
-            _mutex.Dispose();
-            _mutex = null;
-        }
-        return _holdsMutex;
+        _instanceLock = new InstanceLock();
+        if (_instanceLock.TryTake()) return true;
+        _instanceLock.Dispose();
+        _instanceLock = null;
+        return false;
     }
 
     public void ReleaseInstanceLock()
     {
-        if (_holdsMutex) _mutex?.ReleaseMutex();
-        _holdsMutex = false;
-        _mutex?.Dispose();
-        _mutex = null;
+        _instanceLock?.Release();
+        _instanceLock?.Dispose();
+        _instanceLock = null;
     }
 
     public bool AnotherRunMayBeAlive(string exePath) => SelfReplacement.AnotherProcessMayRunFrom(exePath);

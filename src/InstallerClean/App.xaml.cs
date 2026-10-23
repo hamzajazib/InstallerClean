@@ -27,8 +27,7 @@ namespace InstallerClean;
 /// </summary>
 public partial class App : Application
 {
-    private static Mutex? _singleInstanceMutex;
-    private static bool _holdsSingleInstanceMutex;
+    private static InstanceLock? _instanceLock;
     // Set where an update that did not hand over could not take the mutex back.
     private static bool _instanceLockLost;
     private static ServiceProvider? _services;
@@ -206,20 +205,11 @@ public partial class App : Application
             return;
         }
 
-        // Single-instance pattern: open the mutex without taking
-        // ownership, acquire via WaitOne(0), release explicitly in
-        // OnExit. A process that crashes mid-run hands the mutex to
-        // the next instance via AbandonedMutexException.
-        _singleInstanceMutex = new Mutex(initiallyOwned: false, @"Global\InstallerClean_SingleInstance");
-        try
-        {
-            _holdsSingleInstanceMutex = _singleInstanceMutex.WaitOne(TimeSpan.Zero);
-        }
-        catch (AbandonedMutexException)
-        {
-            _holdsSingleInstanceMutex = true;
-        }
-        if (!_holdsSingleInstanceMutex)
+        // Single instance: the mutex is taken without waiting and released
+        // in OnExit. A process that ends without releasing it hands it to
+        // the next instance, which InstanceLock counts as taken.
+        _instanceLock = new InstanceLock();
+        if (!_instanceLock.TryTake())
         {
             // Another instance holds the mutex. If it is the GUI, bring its
             // window to the front, which is what clicking the icon of a running
@@ -738,9 +728,8 @@ public partial class App : Application
         // skip the AbandonedMutexException path. OnExit runs on the
         // dispatcher thread (same thread that took the mutex in
         // OnStartup), so ReleaseMutex can't throw ApplicationException.
-        if (_holdsSingleInstanceMutex)
-            _singleInstanceMutex?.ReleaseMutex();
-        _singleInstanceMutex?.Dispose();
+        _instanceLock?.Release();
+        _instanceLock?.Dispose();
         base.OnExit(e);
     }
 
@@ -762,7 +751,7 @@ public partial class App : Application
     /// that reads a stale file gets it wrong every time.
     ///
     /// Then the mutex: the child takes the
-    /// same Global\InstallerClean_SingleInstance mutex on startup, and a
+    /// same <see cref="InstanceLock"/> on startup, and a
     /// still-held mutex would send it down the "already running" exit, so the
     /// release order is load-bearing. ReleaseMutex must run on the thread that
     /// acquired it (Win32 owner-thread rule); OnStartup acquired it on the
@@ -778,11 +767,7 @@ public partial class App : Application
         _services?.Dispose();
         _services = null;
 
-        if (_holdsSingleInstanceMutex)
-        {
-            _singleInstanceMutex?.ReleaseMutex();
-            _holdsSingleInstanceMutex = false;
-        }
+        _instanceLock?.Release();
 
         var exePath = Environment.ProcessPath;
         if (exePath is not null)
@@ -841,7 +826,7 @@ public partial class App : Application
     /// </summary>
     private async Task<bool> StartSetupAndCloseAsync(string fileToStart, string arguments)
     {
-        var released = ReleaseSingleInstanceMutex();
+        var released = _instanceLock?.Release() == true;
 
         for (var attempt = 1; ; attempt++)
         {
@@ -923,7 +908,7 @@ public partial class App : Application
         await Task.Run(() => SelfReplacement.PrepareToMoveAside(typeof(App).Assembly));
         var hidden = Windows.Cast<Window>().Where(w => w.IsVisible).ToList();
         foreach (var window in hidden) window.Hide();
-        var released = ReleaseSingleInstanceMutex();
+        var released = _instanceLock?.Release() == true;
         using (Dispatcher.DisableProcessing())
             SelfReplacement.HandOverAndEnd(exePath, version);
         if (released) RetakeAfterHandOverFailed();
@@ -962,31 +947,9 @@ public partial class App : Application
     private static void TryRetakeLostLock()
     {
         if (!_instanceLockLost) return;
-        RetakeSingleInstanceMutex();
-        _instanceLockLost = !_holdsSingleInstanceMutex;
+        _instanceLockLost = _instanceLock?.TryTake() != true;
     }
 
     private const int StartAttempts = 4;
     private static readonly TimeSpan StartRetryInterval = TimeSpan.FromMilliseconds(500);
-
-    /// <summary>Releases the single-instance mutex where this app holds it, and answers whether it did.</summary>
-    private static bool ReleaseSingleInstanceMutex()
-    {
-        if (!_holdsSingleInstanceMutex) return false;
-        _singleInstanceMutex?.ReleaseMutex();
-        _holdsSingleInstanceMutex = false;
-        return true;
-    }
-
-    private static void RetakeSingleInstanceMutex()
-    {
-        try
-        {
-            _holdsSingleInstanceMutex = _singleInstanceMutex?.WaitOne(TimeSpan.Zero) == true;
-        }
-        catch (AbandonedMutexException)
-        {
-            _holdsSingleInstanceMutex = true;
-        }
-    }
 }
