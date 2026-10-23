@@ -191,6 +191,14 @@ jobs:
         if: success() || failure()
         run: node scripts/check-debug-only-switches.mjs
 
+      # The update.json a release publishes is written by scripts/write-update-manifest.mjs
+      # for the downloads the release uploads. This holds the writer's downloads and schema
+      # to the ones UpdateManifest reads, the file it writes to the shape the app reads, and
+      # the writer's own check to refusing a file that is not that.
+      - name: Check the writer of a release's update.json agrees with the app
+        if: success() || failure()
+        run: node scripts/check-update-manifest.mjs
+
       # Every step in this job carries the same condition, for the reason set
       # out at the first guard: no step here is a premise for any other, so a
       # red one reports its own verdict and decides nothing about the rest.
@@ -1763,9 +1771,10 @@ jobs:
   # INSTALLERCLEAN_DEBUG_LOCAL_DOWNLOAD, which has its download fetch the named file in
   # place of the release's, and INSTALLERCLEAN_DEBUG_LOCAL_MANIFEST, which has it read the
   # named file as the release's update.json. A release above 3.5.0 has to carry one, so
-  # every run is given a file: one that lists the command line with nothing required, or,
-  # in the three runs that check the refusal, one with a schema it does not read, one
-  # requiring something it does not know, and one that does not list the command line.
+  # every run is given a file: the one scripts/write-update-manifest.mjs writes for all four
+  # downloads, which the old copy reads as it reads a release's, or, in the three runs that
+  # check the refusal, one with a schema it does not read, one requiring something it does
+  # not know, and the writer's file for every download but the command line.
   # Those three print the line saying the newer version can't be installed automatically
   # and the release page, download nothing, leave the file at the path as it was, write
   # no 3005 or 3006 and nothing to crash.log, and run the command with the old copy.
@@ -1964,8 +1973,14 @@ jobs:
             , @()
           }
 
-          # An update.json listing the command line with nothing required.
-          $allowsCli = '{"schema": 1, "downloads": {"cli": {"requires": []}}}'
+          # The update.json scripts/write-update-manifest.mjs writes for the given downloads.
+          function Manifest-For([string[]]$kinds) {
+            $written = Join-Path $env:RUNNER_TEMP "start-check-written-$($kinds -join '-').json"
+            node scripts/write-update-manifest.mjs $written $kinds | Write-Host
+            if ($LASTEXITCODE -ne 0) { throw "The writer did not write $written." }
+            Get-Content -LiteralPath $written -Raw -Encoding utf8
+          }
+          $allowsCli = Manifest-For 'setup', 'portable', 'slim', 'cli'
 
           function Update([string]$label, [string]$newerFile, [string]$standInMode, [string]$manifest = $allowsCli) {
             Write-Host "== $label"
@@ -2095,7 +2110,7 @@ jobs:
           $refusals = [ordered]@{
             'refused by its schema'      = '{"schema": 2, "downloads": {"cli": {"requires": []}}}'
             'refused by its requirement' = '{"schema": 1, "downloads": {"cli": {"requires": ["dotnet-desktop-99"]}}}'
-            'refused by its absence'     = '{"schema": 1, "downloads": {"setup": {"requires": []}}}'
+            'refused by its absence'     = (Manifest-For 'setup', 'portable', 'slim')
           }
           foreach ($label in $refusals.Keys) {
             $update = Update $label $signals '' $refusals[$label]
