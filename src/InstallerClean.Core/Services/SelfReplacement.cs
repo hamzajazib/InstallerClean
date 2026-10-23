@@ -74,11 +74,13 @@ public static class SelfReplacement
         try
         {
             if (File.Exists(newPath)) DeletePlainFile(newPath);
-            await using var input = File.OpenRead(downloaded);
+            var input = File.OpenRead(downloaded);
+            await using var inputDisposal = input.ConfigureAwait(false);
             using var handle = StorageHelpers.OpenAtomic(newPath, FileAccess.Write, StorageHelpers.AtomicOpenMode.CreateNew)
                 ?? throw new IOException("The file beside the running copy could not be created.");
             created = true;
-            await using var output = new FileStream(handle, FileAccess.Write, bufferSize: 0);
+            var output = new FileStream(handle, FileAccess.Write, bufferSize: 0);
+            await using var outputDisposal = output.ConfigureAwait(false);
             await input.CopyToAsync(output, cancellationToken).ConfigureAwait(false);
             output.Flush(flushToDisk: true);
             return newPath;

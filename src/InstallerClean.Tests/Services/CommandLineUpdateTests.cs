@@ -47,8 +47,8 @@ public sealed class CommandLineUpdateTests : IDisposable
             .Run(canAsk, command, arguments ?? [command], _exe, token);
 
     /// <summary>The separate download: the updater has written the newer file beside the exe.</summary>
-    private FakeUpdater Download(string written = "new") => new(AppCopyKind.CommandLineDownload, _exe,
-        onPrepare: () => File.WriteAllText(_exe + SelfReplacement.NewSuffix, written));
+    private FakeUpdater Download() => new(AppCopyKind.CommandLineDownload, _exe,
+        onPrepare: () => File.WriteAllText(_exe + SelfReplacement.NewSuffix, "new"));
 
     private FakeUpdater Setup() => new(AppCopyKind.Setup, Path.Combine(_folder, "InstallerClean-3.5.0-setup.exe"));
 
@@ -346,18 +346,6 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal(string.Format(Strings.Cli_UpdateRunningInstead, "/s", Current), _host.Output[^1]);
         Assert.Null(_host.NewerVersionRun);
         Assert.False(_host.HoldsLock);
-    }
-
-    [Fact]
-    public void A_download_that_does_not_carry_the_version_it_was_downloaded_as_is_taken_away_and_never_run()
-    {
-        var updater = Download(written: "old");
-
-        var result = Run(updater, canAsk: false);
-
-        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateFailureStage.Install, Current, Latest), result);
-        Assert.True(updater.Undone);
-        Assert.Null(_host.NewerVersionRun);
         Assert.Equal("old", File.ReadAllText(_exe));
         Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
         Assert.Empty(_host.PreparedWhileExeHeld);

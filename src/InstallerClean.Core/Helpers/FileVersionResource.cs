@@ -49,6 +49,16 @@ internal static class FileVersionResource
         }
     }
 
+    /// <summary>
+    /// Whether <paramref name="carried"/> is the release <paramref name="release"/> names: the
+    /// first three parts compared, a part left out counting as 0, as the update check compares
+    /// versions. False where <paramref name="release"/> is not a version.
+    /// </summary>
+    public static bool IsRelease(Version carried, string release) =>
+        Version.TryParse(release, out var expected)
+        && carried.Major == expected.Major && carried.Minor == expected.Minor
+        && Math.Max(carried.Build, 0) == Math.Max(expected.Build, 0);
+
     private static Version? Read(FileStream file)
     {
         byte[]? At(long offset, int count)

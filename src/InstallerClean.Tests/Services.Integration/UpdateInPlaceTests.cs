@@ -70,6 +70,24 @@ public sealed class UpdateInPlaceTests : IDisposable
         return bytes;
     }
 
+    /// <summary>The Core library's own file, which carries a version resource.</summary>
+    private static readonly string CoreLibrary = typeof(FileVersionResource).Assembly.Location;
+
+    /// <summary>
+    /// The release the Core library's file version names, which a download built by
+    /// <see cref="Release"/> carries, as the update check gives a version.
+    /// </summary>
+    private static readonly string CoreRelease = FileVersionResource.Read(CoreLibrary) is { } v
+        ? UpdateCheckService.NormaliseToBuild(v).ToString()
+        : throw new InvalidOperationException("The Core library carries no file version.");
+
+    /// <summary>
+    /// A download that carries <see cref="CoreRelease"/>: the Core library's bytes with
+    /// <paramref name="tag"/> appended, so two of them differ while the version resource
+    /// both carry is the same.
+    /// </summary>
+    private static byte[] Release(byte tag) => [.. File.ReadAllBytes(CoreLibrary), .. Enumerable.Repeat(tag, 16)];
+
     private sealed class OneAnswer(byte[] body) : HttpMessageHandler
     {
         /// <summary>How many requests it has answered.</summary>
@@ -580,16 +598,16 @@ public sealed class UpdateInPlaceTests : IDisposable
         var exe = Path.Combine(exeFolder, "InstallerClean.exe");
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.Portable, exe,
-            new UpdateDownloadService(new OneAnswer(Program(2)), null), stagingRoot,
+            new UpdateDownloadService(new OneAnswer(Release(2)), null), stagingRoot,
             AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount);
 
-        var prepared = await updater.PrepareAsync("3.5.0", null, CancellationToken.None);
+        var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
         Assert.Equal(exe, prepared.FileToStart);
         Assert.Equal(string.Empty, prepared.Arguments);
         Assert.Equal(exe + SelfReplacement.NewSuffix, prepared.Replacement);
         Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
+        Assert.Equal(Release(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
         Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
 
         prepared.Undo();
@@ -605,16 +623,16 @@ public sealed class UpdateInPlaceTests : IDisposable
         var exe = Path.Combine(_root, "InstallerClean.exe");
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.Setup, exe,
-            new UpdateDownloadService(new OneAnswer(Program(3)), null), stagingRoot,
+            new UpdateDownloadService(new OneAnswer(Release(3)), null), stagingRoot,
             AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount);
 
-        var prepared = await updater.PrepareAsync("3.5.0", null, CancellationToken.None);
+        var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
-        Assert.Equal("InstallerClean-3.5.0-setup.exe", Path.GetFileName(prepared.FileToStart));
+        Assert.Equal($"InstallerClean-{CoreRelease}-setup.exe", Path.GetFileName(prepared.FileToStart));
         Assert.StartsWith(stagingRoot, prepared.FileToStart);
         Assert.Contains("/UPDATEFROMAPP", prepared.Arguments);
         Assert.Contains("/SILENT", prepared.Arguments);
-        Assert.Equal(Program(3), File.ReadAllBytes(prepared.FileToStart));
+        Assert.Equal(Release(3), File.ReadAllBytes(prepared.FileToStart));
         Assert.Equal(Program(1), File.ReadAllBytes(exe));
 
         prepared.Undo();
@@ -629,10 +647,10 @@ public sealed class UpdateInPlaceTests : IDisposable
         var exe = Path.Combine(_root, "installerclean-cli.exe");
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.Setup, exe,
-            new UpdateDownloadService(new OneAnswer(Program(3)), null), stagingRoot,
+            new UpdateDownloadService(new OneAnswer(Release(3)), null), stagingRoot,
             CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount);
 
-        var prepared = await updater.PrepareAsync("3.5.0", null, CancellationToken.None);
+        var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
         Assert.Equal(CommandLineUpdate.SetupArguments(canAsk: false), prepared.Arguments);
         Assert.DoesNotContain("/UPDATEFROMAPP", prepared.Arguments);
@@ -648,14 +666,14 @@ public sealed class UpdateInPlaceTests : IDisposable
         var exe = Path.Combine(exeFolder, AppCopy.CommandLineFileName);
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.CommandLineDownload, exe,
-            new UpdateDownloadService(new OneAnswer(Program(2)), null), stagingRoot,
+            new UpdateDownloadService(new OneAnswer(Release(2)), null), stagingRoot,
             CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount);
 
-        var prepared = await updater.PrepareAsync("3.5.0", null, CancellationToken.None);
+        var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
         Assert.Equal(exe, prepared.FileToStart);
         Assert.Equal(Program(1), File.ReadAllBytes(exe));
-        Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
+        Assert.Equal(Release(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
         Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
         Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
 
@@ -703,27 +721,27 @@ public sealed class UpdateInPlaceTests : IDisposable
     [Fact]
     public async Task In_a_debug_build_the_local_download_switch_stages_that_file_in_place_of_a_download()
     {
-        var network = new OneAnswer(Program(2));
+        var network = new OneAnswer(Release(2));
         var (updater, exe, stagingRoot) = CommandLineUpdater(network);
         var local = Path.Combine(_root, "local-newer.exe");
-        File.WriteAllBytes(local, Program(4));
+        File.WriteAllBytes(local, Release(4));
 
         await WithLocalDownload(local, async () =>
         {
-            var prepared = await updater.PrepareAsync("3.5.0", null, CancellationToken.None);
+            var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
             Assert.Equal(0, network.Requests);
-            Assert.Equal(Program(4), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
-            Assert.Equal(Program(4), File.ReadAllBytes(local));
+            Assert.Equal(Release(4), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
+            Assert.Equal(Release(4), File.ReadAllBytes(local));
             Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
             prepared.Undo();
 
             // The control: the same update with the switch cleared downloads.
             Environment.SetEnvironmentVariable(AppUpdater.LocalDownloadVariable, null);
-            prepared = await updater.PrepareAsync("3.5.0", null, CancellationToken.None);
+            prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
             Assert.Equal(1, network.Requests);
-            Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
+            Assert.Equal(Release(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
             prepared.Undo();
         });
     }
@@ -764,18 +782,18 @@ public sealed class UpdateInPlaceTests : IDisposable
         var exe = Path.Combine(_root, "InstallerClean.exe");
         File.WriteAllBytes(exe, Program(1));
         var local = Path.Combine(_root, "local-newer.exe");
-        File.WriteAllBytes(local, Program(4));
-        var network = new OneAnswer(Program(3));
+        File.WriteAllBytes(local, Release(4));
+        var network = new OneAnswer(Release(3));
         var updater = new AppUpdater(AppCopyKind.Setup, exe,
             new UpdateDownloadService(network, null), stagingRoot,
             AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount);
 
         await WithLocalDownload(local, async () =>
         {
-            var prepared = await updater.PrepareAsync("3.5.0", null, CancellationToken.None);
+            var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
             Assert.Equal(1, network.Requests);
-            Assert.Equal(Program(3), File.ReadAllBytes(prepared.FileToStart));
+            Assert.Equal(Release(3), File.ReadAllBytes(prepared.FileToStart));
             prepared.Undo();
         });
     }
@@ -819,6 +837,37 @@ public sealed class UpdateInPlaceTests : IDisposable
         Assert.Equal(Program(1), File.ReadAllBytes(exe));
         Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
         Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
+        Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
+    }
+
+    [Theory]
+    [InlineData(AppCopyKind.Setup, true)]
+    [InlineData(AppCopyKind.Setup, false)]
+    [InlineData(AppCopyKind.Portable, true)]
+    [InlineData(AppCopyKind.Portable, false)]
+    [InlineData(AppCopyKind.CommandLineDownload, true)]
+    [InlineData(AppCopyKind.CommandLineDownload, false)]
+    public async Task A_download_that_does_not_carry_the_version_asked_for_is_deleted_and_nothing_is_written_beside_the_exe(
+        AppCopyKind kind, bool carriesAnotherVersion)
+    {
+        var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
+        var exe = Path.Combine(_root, kind == AppCopyKind.CommandLineDownload ? AppCopy.CommandLineFileName : "InstallerClean.exe");
+        File.WriteAllBytes(exe, Program(1));
+        // Either the Core library's bytes asked for as the release after the one they carry,
+        // or bytes that start as a program and carry no version at all.
+        var core = Version.Parse(CoreRelease);
+        var asked = $"{core.Major}.{core.Minor + 1}.0";
+        var updater = new AppUpdater(kind, exe,
+            new UpdateDownloadService(new OneAnswer(carriesAnotherVersion ? Release(2) : Program(2)), null), stagingRoot,
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount);
+
+        var failure = await Assert.ThrowsAsync<UpdateFailedException>(
+            () => updater.PrepareAsync(asked, null, CancellationToken.None));
+
+        Assert.Equal(UpdateFailureStage.Install, failure.Stage);
+        Assert.Equal(Program(1), File.ReadAllBytes(exe));
+        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
+        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
         Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));
     }
 }

@@ -13,9 +13,11 @@ public interface IAppUpdater
     bool CanUpdateItself { get; }
 
     /// <summary>
-    /// Downloads <paramref name="version"/> as the same kind of copy, and answers with
-    /// what to start. Reports the fraction downloaded, or null where the length is not
-    /// known. Throws <see cref="UpdateFailedException"/> where any step fails, and
+    /// Downloads <paramref name="version"/> as the same kind of copy, checks that the file
+    /// carries that version, and answers with what to start. Reports the fraction
+    /// downloaded, or null where the length is not known. Throws
+    /// <see cref="UpdateFailedException"/> where any step fails, a download that does not
+    /// carry the version included, and
     /// <see cref="OperationCanceledException"/> where the token is cancelled; neither
     /// leaves anything changed on disk.
     /// </summary>
@@ -70,7 +72,8 @@ public sealed class PreparedUpdate
 /// <summary>
 /// The update from inside the app. The setup's copy downloads the newer setup and runs
 /// it; the portable, the slim and the command line's own download download the newer
-/// version of the same file and write it beside their own. A build from source and
+/// version of the same file and write it beside their own. Each download is checked for
+/// the version it was downloaded as before anything uses it. A build from source and
 /// Scoop's copy have no download, and <see cref="PrepareAsync"/> refuses them.
 /// </summary>
 public sealed class AppUpdater : IAppUpdater
@@ -164,6 +167,17 @@ public sealed class AppUpdater : IAppUpdater
             throw;
         }
 
+        // Read in the staging folder, which only Administrators and SYSTEM can write to. A file
+        // that is not the version asked for is deleted here, before anything copies or starts it.
+        if (Helpers.FileVersionResource.Read(staged) is not { } carried
+            || !Helpers.FileVersionResource.IsRelease(carried, version))
+        {
+            Helpers.StorageHelpers.TryDeleteTempFile(staged);
+            folder.TryRemoveIfEmpty();
+            throw new UpdateFailedException(UpdateFailureStage.Install,
+                "The downloaded file does not carry the version it was downloaded as.");
+        }
+
         if (Kind == AppCopyKind.Setup)
         {
             return new PreparedUpdate(version, staged, _setupArguments, () =>
@@ -191,9 +205,11 @@ public sealed class AppUpdater : IAppUpdater
     /// <summary>
     /// Set to the path of a setup, a Debug build whose copy is the setup's runs that
     /// setup in place of downloading one, so a setup built from this tree's script can
-    /// be tried before any release carries it. The name and its read sit only inside
-    /// <c>#if DEBUG</c> blocks, and <c>scripts/check-debug-only-switches.mjs</c> holds
-    /// them there.
+    /// be tried before any release carries it. The setup has to carry the version the
+    /// update check names, as any download does, which
+    /// <see cref="UpdateCheckService.PretendLatestVariable"/> can set. The name and its read
+    /// sit only inside <c>#if DEBUG</c> blocks, and <c>scripts/check-debug-only-switches.mjs</c>
+    /// holds them there.
     /// </summary>
     internal const string LocalSetupVariable = "INSTALLERCLEAN_DEBUG_LOCAL_SETUP";
 
@@ -201,8 +217,9 @@ public sealed class AppUpdater : IAppUpdater
     /// Set to the full path of a newer copy of the kind this one replaces itself with (the
     /// portable, the slim or the command line), a Debug build that replaces itself takes
     /// that file as the body of its download, and then stages and swaps it in as it would
-    /// any download, so an update to a build from this tree can be tried offline. Held
-    /// inside <c>#if DEBUG</c> the same way.
+    /// any download, so an update to a build from this tree can be tried offline. It has to
+    /// carry the version the update check names, as the setup does. Held inside
+    /// <c>#if DEBUG</c> the same way.
     /// </summary>
     internal const string LocalDownloadVariable = "INSTALLERCLEAN_DEBUG_LOCAL_DOWNLOAD";
 

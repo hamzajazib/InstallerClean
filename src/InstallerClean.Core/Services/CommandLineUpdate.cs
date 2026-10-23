@@ -451,13 +451,6 @@ internal sealed class CommandLineUpdate
             _host.WriteLine(string.Format(Strings.UpdateNotice_Downloading, latest));
             prepared = _updater.PrepareAsync(latest, null, token).GetAwaiter().GetResult();
 
-            if (!isSetup && (prepared.Replacement is not { } replacement || !Carries(replacement, latest)))
-            {
-                prepared.Undo();
-                throw new UpdateFailedException(UpdateFailureStage.Install,
-                    "The downloaded file does not carry the version it was downloaded as.");
-            }
-
             _host.PrepareToMoveAside();
             if (_host.AnotherRunMayBeAlive(exePath))
             {
@@ -712,14 +705,13 @@ internal sealed class CommandLineUpdate
     }
 
     /// <summary>
-    /// Whether the file at <paramref name="path"/> carries <paramref name="version"/>, its
-    /// first three parts compared. Checked before the newer version starts, so a file that
-    /// is not what was asked for is never run in this run's place, and a newer version
-    /// that is somehow still behind can never start another update in turn.
+    /// Whether the file at <paramref name="path"/> carries <paramref name="version"/>
+    /// (<see cref="Helpers.FileVersionResource.IsRelease"/>). The download itself is checked
+    /// before it is put in place (<see cref="AppUpdater.PrepareAsync"/>). This reads the file
+    /// at this exe's path after the setup has run, so the setup's copy starts nothing unless
+    /// that file is the newer version, and wherever a failed part or Ctrl+C leaves the run
+    /// saying whether the newer version is in place.
     /// </summary>
     private bool Carries(string path, string version) =>
-        _host.FileVersion(path) is { } carried
-        && Version.TryParse(version, out var expected)
-        && carried.Major == expected.Major && carried.Minor == expected.Minor
-        && Math.Max(carried.Build, 0) == Math.Max(expected.Build, 0);
+        _host.FileVersion(path) is { } carried && Helpers.FileVersionResource.IsRelease(carried, version);
 }
