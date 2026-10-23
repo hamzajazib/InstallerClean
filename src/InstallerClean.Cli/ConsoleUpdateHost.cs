@@ -193,9 +193,12 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
             ? default
             : token.Register(static e => ((EventWaitHandle)e!).Set(), cancelEvent);
         if (cancelEvent is not null) NewerVersionAnswersCtrlC(true);
-        List<string> passed = [.. arguments];
-        if (cancelEvent is not null) passed.Add(CliContract.CancelEventArgument(cancelId));
-        if (startedEvent is not null) passed.Add(HandOverContract.StartedEventArgument(startedId));
+        // The newer version is also told /noupdate, where it takes the switches, so it goes
+        // straight to the command.
+        var passed = HandOverContract.CommandLineArguments(
+            arguments, toVersion,
+            cancelEvent is not null ? cancelId : null,
+            startedEvent is not null ? startedId : null);
         Process? started;
         try
         {

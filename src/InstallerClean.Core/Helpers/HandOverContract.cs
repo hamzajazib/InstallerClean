@@ -23,9 +23,10 @@ internal static class HandOverContract
     /// <summary>
     /// The first version that takes the switches a copy updating itself adds to the
     /// command it starts the newer version with: <see cref="StartedEventSwitch"/>, and
-    /// the command line's <see cref="CliContract.CancelEventSwitch"/>. A command line
-    /// before it refuses either as an argument it does not know and runs nothing, and a
-    /// window before it never sets the event, so neither switch is passed to one.
+    /// the command line's <see cref="CliContract.CancelEventSwitch"/> and
+    /// <see cref="CliContract.NoUpdateSwitch"/>. A command line before it refuses any of
+    /// the three as an argument it does not know and runs nothing, and a window before it
+    /// never sets the event, so none of them is passed to one.
     /// </summary>
     internal static readonly Version FirstVersionTakingHandOverSwitches = new(3, 5, 0);
 
@@ -36,6 +37,25 @@ internal static class HandOverContract
     internal static bool TakesHandOverSwitches(string version) =>
         Version.TryParse(version, out var parsed)
         && Services.UpdateCheckService.NormaliseToBuild(parsed) >= FirstVersionTakingHandOverSwitches;
+
+    /// <summary>
+    /// The arguments a command line starts the newer version <paramref name="toVersion"/>
+    /// with: <paramref name="arguments"/> as given, then the cancel event and the started
+    /// event where an id is given for each, then <see cref="CliContract.NoUpdateSwitch"/>,
+    /// so the newer version goes straight to the command without checking for updates
+    /// again. Only a version <see cref="TakesHandOverSwitches"/> answers true for is given
+    /// <see cref="CliContract.NoUpdateSwitch"/>; an earlier command line refuses it as an
+    /// argument it does not know.
+    /// </summary>
+    internal static List<string> CommandLineArguments(
+        IReadOnlyList<string> arguments, string toVersion, Guid? cancelEventId, Guid? startedEventId)
+    {
+        List<string> passed = [.. arguments];
+        if (cancelEventId is { } cancelId) passed.Add(CliContract.CancelEventArgument(cancelId));
+        if (startedEventId is { } startedId) passed.Add(StartedEventArgument(startedId));
+        if (TakesHandOverSwitches(toVersion)) passed.Add(CliContract.NoUpdateSwitch);
+        return passed;
+    }
 
     /// <summary>
     /// The switch through which the copy that started this one passes, after the colon,

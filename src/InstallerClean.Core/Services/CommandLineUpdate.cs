@@ -147,6 +147,9 @@ internal interface ICommandLineUpdateHost
     /// that this run updated itself from <paramref name="fromVersion"/> to
     /// <paramref name="toVersion"/> once it is running, waits for it to end and answers with
     /// its exit code, or null where it could not be started. Where
+    /// <paramref name="toVersion"/> takes the hand-over switches it is started with
+    /// <see cref="Helpers.CliContract.NoUpdateSwitch"/> as well, so it runs the command
+    /// without checking for updates again. Where
     /// <paramref name="toVersion"/> takes <see cref="Helpers.HandOverContract.StartedEventSwitch"/>,
     /// running means it has set the event: one that ends first, or has not set it within
     /// <see cref="Helpers.HandOverContract.StartBound"/>, is ended and waited for, and the

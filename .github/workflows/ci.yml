@@ -1784,15 +1784,16 @@ jobs:
   # The three newer files each carry the file version 9.9.9, which the old copy checks
   # before it renames anything:
   # - the command line published as a Release build stamped 9.9.9, which says it has
-  #   started and runs the command. A Release build ignores both switches, which it
-  #   inherits with the old copy's environment, so it does not update again;
+  #   started and runs the command. The old copy starts it with /noupdate, so it makes no
+  #   update check, and a Release build ignores the Debug switches it inherits with the
+  #   old copy's environment;
   # - a stand-in that never says it has started and sleeps, which the old copy ends
   #   after 60 seconds before it puts itself back;
   # - the same stand-in ending at once with exit code 7.
   # The stand-in is a console program built here, published as one self-contained file
   # named installerclean-cli.exe, since the old copy starts the newer file under that
-  # name from its own folder. It ignores its arguments and reads what to do from
-  # START_CHECK_STAND_IN.
+  # name from its own folder. It writes its arguments to the file named by
+  # START_CHECK_STAND_IN_ARGUMENTS and reads what to do from START_CHECK_STAND_IN.
   #
   # Each newer file is offered to a fresh copy of the old one in a folder of its own,
   # one after another, each run with /s and its input and output redirected, so nobody
@@ -1815,10 +1816,13 @@ jobs:
   # - the run that waited out the minute took less than 60 s, or the one whose newer
   #   file ended at once took 60 s or more;
   # - the run's exit code is not that of a second run of the file now at the path, with
-  #   /s /noupdate, or a stand-in is still running from the run's folder.
+  #   /s /noupdate, or a stand-in is still running from the run's folder;
+  # - a stand-in was not started with /s, /noupdate, one /cancelevent: and one
+  #   /startedevent:, each of those two carrying an event's id. It writes the arguments it was started with to the file the job
+  #   names, so the old copy's start of a newer version is read in the built exe.
   #
-  # The 9.9.9 build's own run checks GitHub for updates as a Release build does, and
-  # that is the only request any build in the job makes of the network.
+  # No exe the job runs makes a request of the network: the old copy's check is answered
+  # by the Debug switch, and the 9.9.9 build is started with /noupdate.
   start-check:
     name: The start check (Windows)
     runs-on: windows-2025
@@ -1854,6 +1858,8 @@ jobs:
           '@
           Set-Content -Path (Join-Path $standIn 'Program.cs') -Value @'
           var mode = System.Environment.GetEnvironmentVariable("START_CHECK_STAND_IN");
+          var record = System.Environment.GetEnvironmentVariable("START_CHECK_STAND_IN_ARGUMENTS");
+          if (!string.IsNullOrEmpty(record)) System.IO.File.WriteAllLines(record, args);
           if (mode == "sleep") System.Threading.Thread.Sleep(System.TimeSpan.FromSeconds(300));
           return mode == "exit" ? 7 : 3;
           '@
@@ -1993,11 +1999,14 @@ jobs:
             foreach ($left in "$exe.old", "$exe.new") { if (Test-Path -LiteralPath $left) { throw "$left is there before the run." } }
             $logLength = CrashLogLength
             $since = Get-Date
+            $argumentsFile = Join-Path $env:RUNNER_TEMP "start-check-$label-arguments.txt"
+            Remove-Item -LiteralPath $argumentsFile -ErrorAction SilentlyContinue
             $run = Run $exe @('/s') @{
               INSTALLERCLEAN_DEBUG_PRETEND_LATEST = "v$latest"
               INSTALLERCLEAN_DEBUG_LOCAL_DOWNLOAD = $newerFile
               INSTALLERCLEAN_DEBUG_LOCAL_MANIFEST = $manifestFile
               START_CHECK_STAND_IN = $standInMode
+              START_CHECK_STAND_IN_ARGUMENTS = $argumentsFile
             } 240
             # Everything below is printed with Write-Host, since what the function writes
             # to its output is what it answers with.
@@ -2010,7 +2019,7 @@ jobs:
             if ($logged) { Write-Host "  crash.log gained:"; $logged -split "`r?`n" | Where-Object { $_ } | ForEach-Object { Write-Host "    $_" } }
             else { Write-Host "  crash.log gained nothing" }
             if ($run.Left) { Fail "$label`: a process was still running from $folder when the run ended, and was ended: $($run.Left -join ', ')" }
-            [pscustomobject]@{ Label = $label; Exe = $exe; Run = $run; Since = $since; Logged = $logged }
+            [pscustomobject]@{ Label = $label; Exe = $exe; Run = $run; Since = $since; Logged = $logged; Arguments = $argumentsFile }
           }
 
           function Expect-Printed($update, [string[]]$printed, [string[]]$notPrinted) {
@@ -2055,6 +2064,22 @@ jobs:
             }
           }
 
+          # What the old copy started the stand-in with: the arguments it was given, the two
+          # events and /noupdate, each once.
+          function Expect-Arguments($update) {
+            if (-not (Test-Path -LiteralPath $update.Arguments)) { Fail "$($update.Label): the stand-in wrote no arguments, so it was not started."; return }
+            $given = @(Get-Content -LiteralPath $update.Arguments)
+            "  the stand-in was started with: $($given -join ' ')"
+            foreach ($want in '/s', '/noupdate') {
+              $count = @($given | Where-Object { $_ -ceq $want }).Count
+              if ($count -eq 1) { "  it was given $want" } else { Fail "$($update.Label): the stand-in was given $want $count times, not once." }
+            }
+            foreach ($prefix in '/cancelevent:', '/startedevent:') {
+              $count = @($given | Where-Object { $_ -cmatch ('^' + [regex]::Escape($prefix) + '[0-9a-f]{32}$') }).Count
+              if ($count -eq 1) { "  it was given one $prefix with an event's id" } else { Fail "$($update.Label): the stand-in was given $count $prefix arguments carrying an event's id, not one." }
+            }
+          }
+
           function Expect-ExitCode($update) {
             if ($null -eq $update.Run.ExitCode) { "  the exit code is not compared, since the run was ended"; return }
             $again = Run $update.Exe @('/s', '/noupdate') @{} 240
@@ -2094,6 +2119,7 @@ jobs:
           Expect-Entries $update 3006 $failedLike 3005
           Expect-File $update $old $true
           Expect-Logged $update @('The newer version ended with exit code 7 before it said it had started.', $notStarted) @($endRefused, $notEnded)
+          Expect-Arguments $update
           if ($update.Run.Seconds -ge 60) { Fail "exits: the run took $([math]::Round($update.Run.Seconds, 1)) s, though the newer file ended at once." }
           Expect-ExitCode $update
 
@@ -2102,6 +2128,7 @@ jobs:
           Expect-Entries $update 3006 $failedLike 3005
           Expect-File $update $old $true
           Expect-Logged $update @('The newer version did not say it had started within 60 seconds.', $notStarted) @($endRefused, $notEnded)
+          Expect-Arguments $update
           if ($update.Run.Seconds -lt 60) { Fail "sleeps: the run took $([math]::Round($update.Run.Seconds, 1)) s, less than the minute it waits." }
           Expect-ExitCode $update
 

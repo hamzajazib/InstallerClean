@@ -298,7 +298,8 @@ internal static class CliContract
 {
     /// <summary>
     /// The switch that turns off the update check and the update for one run. It may
-    /// come anywhere on the command line, in any case.
+    /// come anywhere on the command line, in any case. A command line updating itself
+    /// starts the newer version with it (<see cref="HandOverContract.CommandLineArguments"/>).
     /// </summary>
     internal const string NoUpdateSwitch = "/noupdate";
 
