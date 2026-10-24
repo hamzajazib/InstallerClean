@@ -6,7 +6,8 @@ namespace InstallerClean.Interop.Native;
 /// P/Invoke surface for user32.dll. Consumed by the WPF host's
 /// WindowChromeExtensions (focus-visual suppression gate),
 /// DetailWindowSizing (work-area measurement) and App's single-instance
-/// hand-off (foreground rights).
+/// hand-off (foreground rights), and by <see cref="WindowStation"/> for the
+/// command line.
 /// </summary>
 internal static partial class User32
 {
@@ -86,5 +87,33 @@ internal static partial class User32
         public int Top;
         public int Right;
         public int Bottom;
+    }
+
+    /// <summary>The window station the process is attached to.</summary>
+    [LibraryImport(Library, EntryPoint = "GetProcessWindowStation")]
+    public static partial IntPtr GetProcessWindowStation();
+
+    /// <summary>
+    /// Reads one kind of information about a window station or desktop object. Called
+    /// with <see cref="UOI_FLAGS"/>, <paramref name="pvInfo"/> is a
+    /// <see cref="USEROBJECTFLAGS"/> and <paramref name="nLength"/> its size.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "GetUserObjectInformationW", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetUserObjectInformation(
+        IntPtr hObj, int nIndex, ref USEROBJECTFLAGS pvInfo, uint nLength, out uint lpnLengthNeeded);
+
+    /// <summary>UOI_FLAGS: the object's <see cref="USEROBJECTFLAGS"/>.</summary>
+    public const int UOI_FLAGS = 1;
+
+    /// <summary>WSF_VISIBLE: the window station can show windows to a user.</summary>
+    public const int WSF_VISIBLE = 0x0001;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct USEROBJECTFLAGS
+    {
+        public int fInherit;
+        public int fReserved;
+        public int dwFlags;
     }
 }

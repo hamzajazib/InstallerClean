@@ -136,7 +136,6 @@ const NAMES_NO_VARIABLE = new Map([
   ['Environment.ProcessPath', 'the executable'],
   ['Environment.SpecialFolder', 'the known folders'],
   ['Environment.SystemDirectory', 'the system folder'],
-  ['Environment.UserInteractive', 'the window station'],
   ['DoNotExpandEnvironmentNames', 'the registry option that leaves a %NAME% as written'],
 ]);
 
