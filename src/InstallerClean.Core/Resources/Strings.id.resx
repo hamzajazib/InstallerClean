@@ -399,8 +399,8 @@
 
   <!-- Tooltips -->
   <data name="Tooltip.BuyMeACuppa.About" xml:space="preserve">
-    <value>Donasi sekecil apa pun sangat dihargai.</value>
-    <comment>Tooltip and screen-reader help on the About window's donate pill. The button it hangs on already reads Donate (Action.BuyMeACuppa), so the tooltip says what the ask is rather than naming the action a second time.</comment>
+    <value>Donasi sekecil apa pun sangat dihargai</value>
+    <comment>Tooltip and screen-reader help on the About window's donate pill. The button it hangs on already reads Donate (Action.BuyMeACuppa), so the tooltip says what the ask is rather than naming the action a second time. The tooltip is one sentence and carries no closing full stop.</comment>
   </data>
   <data name="Tooltip.CancellingPending" xml:space="preserve"><value>Pembatalan diminta. InstallerClean sedang menunggu langkah yang berjalan mencapai titik berhenti. Ini bisa memakan waktu beberapa detik saat I/O berat atau panggilan basis data MSI.</value></data>
   <data name="Tooltip.Close" xml:space="preserve"><value>Tutup</value></data>
@@ -409,8 +409,8 @@
     <comment>Tooltip and screen-reader help on Action.Donate's button. The space before each hyphen is a no-break space, so a narrow tooltip never starts a line with the hyphen; a translation punctuates the aside the way its own language does.</comment>
   </data>
   <data name="Tooltip.LeaveStarOnGitHub.About" xml:space="preserve">
-    <value>Bintang membantu orang lain menemukan InstallerClean.</value>
-    <comment>Tooltip and screen-reader help on the About window's star pill. The button it hangs on already names GitHub (Action.LeaveStarOnGitHub, "Leave a star on GitHub"), so naming it again here says the same word twice in one glance; keep the tooltip to what the star does. "It" is InstallerClean, which most languages will want to say outright.</comment>
+    <value>Bintang membantu orang lain menemukan InstallerClean</value>
+    <comment>Tooltip and screen-reader help on the About window's star pill. The button it hangs on already names GitHub (Action.LeaveStarOnGitHub, "Leave a star on GitHub"), so naming it again here says the same word twice in one glance; keep the tooltip to what the star does. "It" is InstallerClean, which most languages will want to say outright. The tooltip is one sentence and carries no closing full stop.</comment>
   </data>
   <data name="Tooltip.Minimise" xml:space="preserve"><value>Kecilkan</value></data>
   <!-- The Move button's three tooltip states, chosen by whether the backup
@@ -435,8 +435,11 @@
        question still in flight, and one Windows will not answer at all. The
        value is true of every one of them, which is what lets a single wording
        serve all three. Where the space goes is explained on the main window
-       above the buttons rather than asserted in a hover. -->
-  <data name="Tooltip.Move" xml:space="preserve"><value>Memindahkan file yang tidak diperlukan ke folder cadangan.</value></data>
+       above the buttons rather than asserted in a hover.
+
+       Tooltip.Move, below, is one sentence and carries no closing full stop;
+       the two entries after it are two sentences each and keep theirs. -->
+  <data name="Tooltip.Move" xml:space="preserve"><value>Memindahkan file yang tidak diperlukan ke folder cadangan</value></data>
   <!-- The Move button's tooltip while the backup folder box is empty. The
        button still works from here: pressing it opens the folder browser
        and then moves, so this says a folder is coming rather than asking
@@ -947,8 +950,8 @@ Untuk mengembalikannya, Anda butuh pemasang versi yang sudah Anda miliki. Dapatk
   <data name="Completion.PermanentDeleteSummary.Singular" xml:space="preserve"><value>{0} {1} dihapus permanen</value></data>
   <data name="Completion.PermanentDeleteSummary.Plural" xml:space="preserve"><value>{0} {1} dihapus permanen</value></data>
   <data name="Completion.DonateAsk" xml:space="preserve">
-    <value>Donasi sekecil apa pun sangat dihargai.</value>
-    <comment>Tooltip and screen-reader help on the small donate button under Done (Action.DonateSmall), which stands on every completion card that carries Done, including a scan that found nothing to clean up. Keep it plain, with no word putting the reader under an obligation.</comment>
+    <value>Donasi sekecil apa pun sangat dihargai</value>
+    <comment>Tooltip and screen-reader help on the small donate button under Done (Action.DonateSmall), which stands on every completion card that carries Done, including a scan that found nothing to clean up. Keep it plain, with no word putting the reader under an obligation. The tooltip is one sentence and carries no closing full stop.</comment>
   </data>
   <data name="Completion.SendReport" xml:space="preserve">
     <value>Kirim laporan _anonim</value>

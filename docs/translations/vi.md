@@ -185,7 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's simple to undo. Move them back into {InstallerFolder} and everything will be back to how it was. | Hoàn tác rất đơn giản. Hãy chuyển chúng trở lại {InstallerFolder} và mọi thứ sẽ như cũ. |
 | {0} {1} permanently deleted | Đã xóa vĩnh viễn {0} {1} |
 | {0} {1} permanently deleted | Đã xóa vĩnh viễn {0} {1} |
-| Any small donation is much appreciated. | Mọi đóng góp dù nhỏ đều rất được trân trọng. |
+| Any small donation is much appreciated | Mọi đóng góp dù nhỏ đều rất được trân trọng |
 | Send _anonymous report | _Gửi báo cáo ẩn danh |
 | The report adds your result to [this chart] on GitHub, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Báo cáo sẽ thêm kết quả của bạn vào [biểu đồ này] trên GitHub, cho thấy mọi người đang giải phóng được bao nhiêu dung lượng với InstallerClean. Báo cáo cũng chứa các chi tiết kỹ thuật sau để giúp tôi phát hiện lỗi: |
 | How much space was freed, and how many files were moved or deleted | Đã giải phóng bao nhiêu dung lượng, và đã chuyển hoặc xóa bao nhiêu tệp |
@@ -368,13 +368,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 
 | English | Tiếng Việt |
 | --- | --- |
-| Any small donation is much appreciated. | Mọi đóng góp dù nhỏ đều rất được trân trọng. |
+| Any small donation is much appreciated | Mọi đóng góp dù nhỏ đều rất được trân trọng |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | Đã yêu cầu hủy. InstallerClean đang chờ bước hiện tại tới điểm dừng. Việc này có thể mất vài giây khi I/O nặng hoặc khi đang gọi cơ sở dữ liệu MSI. |
 | Close | Đóng |
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | Lẽ ra tôi nên thu phí InstallerClean, vì nó đã tốn rất nhiều công sức, nhưng tôi muốn giữ nó miễn phí để giúp được càng nhiều người càng tốt. Sự ủng hộ của bạn khiến mọi công sức trở nên xứng đáng và tôi rất trân trọng điều đó. |
-| A star helps other people find it. | Một ngôi sao giúp người khác tìm thấy InstallerClean. |
+| A star helps other people find it | Một ngôi sao giúp người khác tìm thấy InstallerClean |
 | Minimise | Thu nhỏ |
-| Move the unneeded files to the backup folder. | Chuyển các tệp không cần thiết vào thư mục sao lưu. |
+| Move the unneeded files to the backup folder | Chuyển các tệp không cần thiết vào thư mục sao lưu |
 | Move the unneeded files to a backup folder. You'll choose it next. | Chuyển các tệp không cần thiết vào một thư mục sao lưu. Bạn sẽ chọn thư mục ngay sau đây. |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | Chuyển các tệp không cần thiết vào thư mục sao lưu. Thư mục đó nằm trên cùng ổ đĩa, nên dung lượng chỉ được giải phóng sau khi bạn xóa thư mục đó. |
 | Delete the unneeded files permanently. Use Move instead if you'd like a chance to satisfy yourself all is well. | Xóa vĩnh viễn các tệp không cần thiết. Hãy dùng Chuyển nếu bạn muốn có cơ hội tự mình yên tâm rằng mọi thứ đều ổn. |

@@ -185,7 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's simple to undo. Move them back into {InstallerFolder} and everything will be back to how it was. | Это легко отменить. Переместите их обратно в {InstallerFolder}, и всё вернётся как было. |
 | {0} {1} permanently deleted | Безвозвратно удалён {0} {1} |
 | {0} {1} permanently deleted | Безвозвратно удалено {0} {1} |
-| Any small donation is much appreciated. | Любая, даже небольшая, поддержка очень ценна. |
+| Any small donation is much appreciated | Любая, даже небольшая, поддержка очень ценна |
 | Send _anonymous report | Отправить _анонимный отчёт |
 | The report adds your result to [this chart] on GitHub, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Отчёт добавляет ваш результат в [этот график] на GitHub, который показывает, сколько места люди освобождают с помощью InstallerClean. В нём есть и эти технические сведения, которые помогают мне находить ошибки: |
 | How much space was freed, and how many files were moved or deleted | Сколько места освобождено и сколько файлов перемещено или удалено |
@@ -368,13 +368,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 
 | English | Русский |
 | --- | --- |
-| Any small donation is much appreciated. | Любая, даже небольшая, поддержка очень ценна. |
+| Any small donation is much appreciated | Любая, даже небольшая, поддержка очень ценна |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | Запрошена отмена. InstallerClean ждёт, когда текущий шаг дойдёт до точки остановки. Это может занять несколько секунд при интенсивном вводе-выводе или обращении к базе данных MSI. |
 | Close | Закрыть |
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | Вообще-то за InstallerClean стоило бы брать деньги: на него ушло огромное количество труда. Но я хочу, чтобы он оставался бесплатным и помогал как можно большему числу людей. Ваша поддержка придаёт всему этому смысл, и я очень за неё благодарен. |
-| A star helps other people find it. | Звезда помогает другим найти InstallerClean. |
+| A star helps other people find it | Звезда помогает другим найти InstallerClean |
 | Minimise | Свернуть |
-| Move the unneeded files to the backup folder. | Перемещает ненужные файлы в папку резервных копий. |
+| Move the unneeded files to the backup folder | Перемещает ненужные файлы в папку резервных копий |
 | Move the unneeded files to a backup folder. You'll choose it next. | Перемещает ненужные файлы в папку резервных копий. Вы выберете её следующим шагом. |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | Перемещает ненужные файлы в папку резервных копий. Она на том же диске, поэтому место освободится только после того, как вы удалите эту папку. |
 | Delete the unneeded files permanently. Use Move instead if you'd like a chance to satisfy yourself all is well. | Безвозвратно удаляет ненужные файлы. Воспользуйтесь «Переместить», если хотите сначала убедиться, что всё в порядке. |

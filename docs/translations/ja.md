@@ -185,7 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's simple to undo. Move them back into {InstallerFolder} and everything will be back to how it was. | 元に戻すのは簡単です。{InstallerFolder} に戻せば、すべて元どおりになります。 |
 | {0} {1} permanently deleted | {0} 個の {1} を完全に削除しました |
 | {0} {1} permanently deleted | {0} 個の {1} を完全に削除しました |
-| Any small donation is much appreciated. | どんな少額のご寄付でもありがたく思います。 |
+| Any small donation is much appreciated | どんな少額のご寄付でもありがたく思います |
 | Send _anonymous report | 匿名レポートを送信(_A) |
 | The report adds your result to [this chart] on GitHub, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | レポートは、あなたの結果を GitHub の[このグラフ]に追加します。このグラフには、InstallerClean でどれだけの容量が取り戻されているかが示されています。また、バグを見つけるのに役立つ、次の技術情報も含まれます： |
 | How much space was freed, and how many files were moved or deleted | 解放された容量と、移動または削除されたファイルの数 |
@@ -368,13 +368,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 
 | English | 日本語 |
 | --- | --- |
-| Any small donation is much appreciated. | どんな少額のご寄付でもありがたく思います。 |
+| Any small donation is much appreciated | どんな少額のご寄付でもありがたく思います |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | キャンセルが要求されました。InstallerClean は現在のステップが停止可能なポイントに達するのを待っています。大量の I/O または MSI データベース呼び出し中は数秒かかることがあります。 |
 | Close | 閉じる |
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | 膨大な手間がかかっているので、本当は InstallerClean を有料にすべきなのですが、できるだけ多くの人の役に立つよう無料のままにしたいと思っています。ご寄付をいただけると報われますし、とてもありがたく思います。 |
-| A star helps other people find it. | スターを付けると、InstallerClean を見つけてもらいやすくなります。 |
+| A star helps other people find it | スターを付けると、InstallerClean を見つけてもらいやすくなります |
 | Minimise | 最小化 |
-| Move the unneeded files to the backup folder. | 不要ファイルをバックアップフォルダーへ移します。 |
+| Move the unneeded files to the backup folder | 不要ファイルをバックアップフォルダーへ移します |
 | Move the unneeded files to a backup folder. You'll choose it next. | 不要ファイルをバックアップフォルダーへ移します。フォルダーはこの後で選びます。 |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | 不要ファイルをバックアップフォルダーへ移します。同じドライブ上にあるため、そのフォルダーを削除するまで空き容量は戻りません。 |
 | Delete the unneeded files permanently. Use Move instead if you'd like a chance to satisfy yourself all is well. | 不要ファイルを完全に削除します。問題ないか自分で確かめたい場合は、代わりに「移動」を使ってください。 |

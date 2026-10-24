@@ -185,7 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's simple to undo. Move them back into {InstallerFolder} and everything will be back to how it was. | 要復原很簡單。把它們移回 {InstallerFolder}，一切就會恢復原狀。 |
 | {0} {1} permanently deleted | 已永久刪除 {0} 個{1} |
 | {0} {1} permanently deleted | 已永久刪除 {0} 個{1} |
-| Any small donation is much appreciated. | 任何小額贊助都非常感謝。 |
+| Any small donation is much appreciated | 任何小額贊助都非常感謝 |
 | Send _anonymous report | 傳送匿名報告(_A) |
 | The report adds your result to [this chart] on GitHub, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | 報告會把您的結果加到 GitHub 上的[這張圖表]，圖表顯示人們用 InstallerClean 釋放了多少空間。報告也包含以下技術細節，幫助我發現程式錯誤： |
 | How much space was freed, and how many files were moved or deleted | 釋放了多少空間，以及移動或刪除了多少個檔案 |
@@ -368,13 +368,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 
 | English | 繁體中文 |
 | --- | --- |
-| Any small donation is much appreciated. | 任何小額贊助都非常感謝。 |
+| Any small donation is much appreciated | 任何小額贊助都非常感謝 |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | 已要求取消。InstallerClean 正在等候目前的步驟到達可以停下來的地方。在大量 I/O 或 MSI 資料庫呼叫期間，這可能需要幾秒鐘。 |
 | Close | 關閉 |
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | InstallerClean 花了我大量心血，我其實應該收費，但我希望它保持免費，好幫助越多人越好。您的贊助讓這一切值得，我非常感激。 |
-| A star helps other people find it. | 給個星星，能幫助更多人找到它。 |
+| A star helps other people find it | 給個星星，能幫助更多人找到它 |
 | Minimise | 最小化 |
-| Move the unneeded files to the backup folder. | 將不需要的檔案移到備份資料夾。 |
+| Move the unneeded files to the backup folder | 將不需要的檔案移到備份資料夾 |
 | Move the unneeded files to a backup folder. You'll choose it next. | 將不需要的檔案移到備份資料夾。接下來您會選擇資料夾。 |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | 將不需要的檔案移到備份資料夾。它與這些檔案在同一個磁碟機上，所以要等您刪除那個資料夾後才會釋放空間。 |
 | Delete the unneeded files permanently. Use Move instead if you'd like a chance to satisfy yourself all is well. | 永久刪除不需要的檔案。如果您想先確認一切正常，請改用移動。 |

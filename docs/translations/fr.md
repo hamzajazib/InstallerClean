@@ -185,7 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's simple to undo. Move them back into {InstallerFolder} and everything will be back to how it was. | C'est simple à annuler. Redéplacez-les dans {InstallerFolder} et tout redeviendra comme avant. |
 | {0} {1} permanently deleted | {0} {1} supprimé définitivement |
 | {0} {1} permanently deleted | {0} {1} supprimés définitivement |
-| Any small donation is much appreciated. | Tout don, même modeste, est très apprécié. |
+| Any small donation is much appreciated | Tout don, même modeste, est très apprécié |
 | Send _anonymous report | Envoyer un rapport _anonyme |
 | The report adds your result to [this chart] on GitHub, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Le rapport ajoute votre résultat à [ce graphique] sur GitHub, qui montre combien d'espace les gens libèrent avec InstallerClean. Il contient aussi ces détails techniques, qui m'aident à repérer d'éventuels bugs : |
 | How much space was freed, and how many files were moved or deleted | La quantité d'espace libérée et le nombre de fichiers déplacés ou supprimés |
@@ -368,13 +368,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 
 | English | Français |
 | --- | --- |
-| Any small donation is much appreciated. | Tout don, même modeste, est très apprécié. |
+| Any small donation is much appreciated | Tout don, même modeste, est très apprécié |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | Annulation demandée. InstallerClean attend que l'étape en cours atteigne un point d'arrêt. Cela peut prendre quelques secondes lors d'opérations d'E/S intensives ou d'un appel à la base de données MSI. |
 | Close | Fermer |
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | Je devrais vraiment faire payer InstallerClean, car il m'a demandé énormément de travail, mais je veux qu'il reste gratuit pour aider le plus de monde possible. Votre don fait que cela en vaut la peine, et il est très apprécié. |
-| A star helps other people find it. | Une étoile aide les autres à découvrir InstallerClean. |
+| A star helps other people find it | Une étoile aide les autres à découvrir InstallerClean |
 | Minimise | Réduire |
-| Move the unneeded files to the backup folder. | Déplace les fichiers inutiles vers le dossier de sauvegarde. |
+| Move the unneeded files to the backup folder | Déplace les fichiers inutiles vers le dossier de sauvegarde |
 | Move the unneeded files to a backup folder. You'll choose it next. | Déplace les fichiers inutiles vers un dossier de sauvegarde. Vous le choisirez juste après. |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | Déplace les fichiers inutiles vers le dossier de sauvegarde. Il est sur le même disque, vous ne récupérerez donc l'espace qu'après avoir supprimé ce dossier. |
 | Delete the unneeded files permanently. Use Move instead if you'd like a chance to satisfy yourself all is well. | Supprime définitivement les fichiers inutiles. Utilisez plutôt Déplacer si vous voulez pouvoir vous convaincre que tout va bien. |

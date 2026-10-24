@@ -185,7 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's simple to undo. Move them back into {InstallerFolder} and everything will be back to how it was. | Mudah untuk dibatalkan. Pindahkan kembali ke {InstallerFolder} dan semuanya akan kembali seperti semula. |
 | {0} {1} permanently deleted | {0} {1} dihapus permanen |
 | {0} {1} permanently deleted | {0} {1} dihapus permanen |
-| Any small donation is much appreciated. | Donasi sekecil apa pun sangat dihargai. |
+| Any small donation is much appreciated | Donasi sekecil apa pun sangat dihargai |
 | Send _anonymous report | Kirim laporan _anonim |
 | The report adds your result to [this chart] on GitHub, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Laporan ini menambahkan hasil Anda ke [grafik ini] di GitHub, yang menunjukkan berapa banyak ruang yang dikosongkan orang dengan InstallerClean. Laporan ini juga memuat detail teknis berikut untuk membantu saya menemukan bug: |
 | How much space was freed, and how many files were moved or deleted | Berapa banyak ruang yang dikosongkan, dan berapa banyak file yang dipindahkan atau dihapus |
@@ -368,13 +368,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 
 | English | Bahasa Indonesia |
 | --- | --- |
-| Any small donation is much appreciated. | Donasi sekecil apa pun sangat dihargai. |
+| Any small donation is much appreciated | Donasi sekecil apa pun sangat dihargai |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | Pembatalan diminta. InstallerClean sedang menunggu langkah yang berjalan mencapai titik berhenti. Ini bisa memakan waktu beberapa detik saat I/O berat atau panggilan basis data MSI. |
 | Close | Tutup |
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | Sebenarnya saya seharusnya memungut biaya untuk InstallerClean, karena pembuatannya memakan banyak sekali tenaga, tetapi saya ingin tetap menggratiskannya agar bisa membantu sebanyak mungkin orang. Donasi Anda membuat semua itu sepadan dan sangat saya hargai. |
-| A star helps other people find it. | Bintang membantu orang lain menemukan InstallerClean. |
+| A star helps other people find it | Bintang membantu orang lain menemukan InstallerClean |
 | Minimise | Kecilkan |
-| Move the unneeded files to the backup folder. | Memindahkan file yang tidak diperlukan ke folder cadangan. |
+| Move the unneeded files to the backup folder | Memindahkan file yang tidak diperlukan ke folder cadangan |
 | Move the unneeded files to a backup folder. You'll choose it next. | Memindahkan file yang tidak diperlukan ke sebuah folder cadangan. Anda akan memilihnya sebentar lagi. |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | Memindahkan file yang tidak diperlukan ke folder cadangan. Folder itu ada di drive yang sama, jadi ruang kosongnya baru kembali setelah Anda menghapus folder itu. |
 | Delete the unneeded files permanently. Use Move instead if you'd like a chance to satisfy yourself all is well. | Menghapus permanen file yang tidak diperlukan. Gunakan Pindahkan saja kalau Anda ingin kesempatan meyakinkan diri bahwa semuanya baik-baik saja. |

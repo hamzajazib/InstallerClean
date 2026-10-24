@@ -233,12 +233,12 @@ const MAP = {
   'Automation.RegisteredMissingSeeAlso': `Explains this folder, and how to recover a file, in the README`,
 
   // Tooltips
-  'Tooltip.BuyMeACuppa.About': `Any small donation is much appreciated.`,
+  'Tooltip.BuyMeACuppa.About': `Any small donation is much appreciated`,
   'Tooltip.CancellingPending': `Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call.`,
   'Tooltip.Close': `Close`,
-  'Tooltip.LeaveStarOnGitHub.About': `A star helps other people find it.`,
+  'Tooltip.LeaveStarOnGitHub.About': `A star helps other people find it`,
   'Tooltip.Minimise': `Minimise`,
-  'Tooltip.Move': `Move the unneeded files to the backup folder.`,
+  'Tooltip.Move': `Move the unneeded files to the backup folder`,
   'Tooltip.MoveNeedsDestination': `Move the unneeded files to a backup folder. You'll choose it next.`,
   'Tooltip.Delete': `Delete the unneeded files permanently. Use Move instead if you'd like a chance to satisfy yourself all is well.`,
   'Tooltip.SigningCertificate': `Subject name from the embedded Authenticode certificate. Not chain-verified.`,
@@ -339,7 +339,7 @@ const MAP = {
   // 0 = deleted count, 1 = pluralised noun
   'Completion.PermanentDeleteSummary.Singular': `{0} {1} permanently deleted`,
   'Completion.PermanentDeleteSummary.Plural': `{0} {1} permanently deleted`,
-  'Completion.DonateAsk': `Any small donation is much appreciated.`,
+  'Completion.DonateAsk': `Any small donation is much appreciated`,
 
   // Summaries
   'Summary.RegisteredStillUsed.Singular': `{0} file left alone`,

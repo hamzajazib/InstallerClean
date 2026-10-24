@@ -185,7 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's simple to undo. Move them back into {InstallerFolder} and everything will be back to how it was. | 되돌리기는 간단합니다. {InstallerFolder}로 다시 옮기면 모든 것이 원래대로 돌아갑니다. |
 | {0} {1} permanently deleted | {1} {0}개 영구 삭제됨 |
 | {0} {1} permanently deleted | {1} {0}개 영구 삭제됨 |
-| Any small donation is much appreciated. | 적은 금액의 후원도 정말 감사합니다. |
+| Any small donation is much appreciated | 적은 금액의 후원도 정말 감사합니다 |
 | Send _anonymous report | 익명 보고서 보내기(_A) |
 | The report adds your result to [this chart] on GitHub, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | 보고서는 사용자의 결과를 GitHub의 [이 차트]에 추가하며, 이 차트는 사람들이 InstallerClean으로 얼마나 많은 공간을 확보하고 있는지 보여 줍니다. 또한 버그를 찾는 데 도움이 되는 다음 기술 정보도 포함됩니다: |
 | How much space was freed, and how many files were moved or deleted | 확보된 공간의 양과 이동하거나 삭제한 파일 수 |
@@ -368,13 +368,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 
 | English | 한국어 |
 | --- | --- |
-| Any small donation is much appreciated. | 적은 금액의 후원도 정말 감사합니다. |
+| Any small donation is much appreciated | 적은 금액의 후원도 정말 감사합니다 |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | 취소가 요청되었습니다. InstallerClean이 현재 단계가 멈출 수 있는 지점에 이를 때까지 기다리고 있습니다. I/O가 많거나 MSI 데이터베이스를 호출하는 동안에는 몇 초 걸릴 수 있습니다. |
 | Close | 닫기 |
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | 정말 많은 노력이 들어갔기 때문에 InstallerClean을 유료로 해야 마땅하지만, 최대한 많은 사람에게 도움이 되도록 무료로 유지하고 싶습니다. 후원해 주시면 큰 보람이 되고 정말 감사하겠습니다. |
-| A star helps other people find it. | 별 하나가 다른 사람들이 InstallerClean을 찾는 데 도움이 됩니다. |
+| A star helps other people find it | 별 하나가 다른 사람들이 InstallerClean을 찾는 데 도움이 됩니다 |
 | Minimise | 최소화 |
-| Move the unneeded files to the backup folder. | 불필요한 파일을 백업 폴더로 옮깁니다. |
+| Move the unneeded files to the backup folder | 불필요한 파일을 백업 폴더로 옮깁니다 |
 | Move the unneeded files to a backup folder. You'll choose it next. | 불필요한 파일을 백업 폴더로 옮깁니다. 폴더는 곧이어 선택하게 됩니다. |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | 불필요한 파일을 백업 폴더로 옮깁니다. 같은 드라이브에 있으므로 그 폴더를 삭제하기 전에는 공간이 확보되지 않습니다. |
 | Delete the unneeded files permanently. Use Move instead if you'd like a chance to satisfy yourself all is well. | 불필요한 파일을 영구히 삭제합니다. 모든 것이 괜찮은지 직접 확인해 보고 싶으면 대신 이동을 사용하세요. |

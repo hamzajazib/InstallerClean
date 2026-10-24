@@ -185,7 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's simple to undo. Move them back into {InstallerFolder} and everything will be back to how it was. | Geri almak kolay. Onları {InstallerFolder} klasörüne geri taşıyın, her şey eskisi gibi olur. |
 | {0} {1} permanently deleted | {0} {1} kalıcı olarak silindi |
 | {0} {1} permanently deleted | {0} {1} kalıcı olarak silindi |
-| Any small donation is much appreciated. | Küçük de olsa her bağış çok makbule geçer. |
+| Any small donation is much appreciated | Küçük de olsa her bağış çok makbule geçer |
 | Send _anonymous report | _Anonim rapor gönder |
 | The report adds your result to [this chart] on GitHub, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Rapor, sonucunuzu GitHub'daki [bu grafiğe] ekler; bu grafik, insanların InstallerClean ile ne kadar yer açtığını gösterir. Ayrıca hataları fark etmeme yardımcı olacak şu teknik ayrıntıları da içerir: |
 | How much space was freed, and how many files were moved or deleted | Ne kadar yer açıldığı ve kaç dosyanın taşındığı ya da silindiği |
@@ -368,13 +368,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 
 | English | Türkçe |
 | --- | --- |
-| Any small donation is much appreciated. | Küçük de olsa her bağış çok makbule geçer. |
+| Any small donation is much appreciated | Küçük de olsa her bağış çok makbule geçer |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | İptal istendi. InstallerClean, geçerli adımın durabileceği bir noktaya gelmesini bekliyor. Yoğun G/Ç sırasında ya da bir MSI veritabanı çağrısında bu birkaç saniye sürebilir. |
 | Close | Kapat |
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | Aslında InstallerClean için ücret almam gerekirdi, çünkü çok büyük bir emek harcandı; ama olabildiğince çok kişiye yardımcı olsun diye ücretsiz kalmasını istiyorum. Bağışınız tüm bu emeğe değmesini sağlıyor ve çok makbule geçiyor. |
-| A star helps other people find it. | Bir yıldız, başkalarının InstallerClean'i bulmasına yardımcı olur. |
+| A star helps other people find it | Bir yıldız, başkalarının InstallerClean'i bulmasına yardımcı olur |
 | Minimise | Simge durumuna küçült |
-| Move the unneeded files to the backup folder. | Gereksiz dosyaları yedek klasörüne taşır. |
+| Move the unneeded files to the backup folder | Gereksiz dosyaları yedek klasörüne taşır |
 | Move the unneeded files to a backup folder. You'll choose it next. | Gereksiz dosyaları bir yedek klasörüne taşır. Klasörü hemen ardından seçeceksiniz. |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | Gereksiz dosyaları yedek klasörüne taşır. Klasör aynı sürücüde olduğu için, o klasörü silene kadar yeri geri kazanamazsınız. |
 | Delete the unneeded files permanently. Use Move instead if you'd like a chance to satisfy yourself all is well. | Gereksiz dosyaları kalıcı olarak siler. Her şeyin yolunda olduğuna kendiniz kanaat getirmek isterseniz onun yerine Taşı'yı kullanın. |

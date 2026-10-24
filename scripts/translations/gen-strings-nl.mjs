@@ -214,12 +214,12 @@ const MAP = {
   'Automation.RegisteredMissingSeeAlso': `Legt uit wat deze map is en hoe je een bestand terugzet, in het README-bestand`,
 
   // Tooltips
-  'Tooltip.BuyMeACuppa.About': `Elke kleine donatie wordt zeer gewaardeerd.`,
+  'Tooltip.BuyMeACuppa.About': `Elke kleine donatie wordt zeer gewaardeerd`,
   'Tooltip.CancellingPending': `Annulering aangevraagd. InstallerClean wacht tot de huidige stap een stoppunt bereikt. Dit kan enkele seconden duren bij zware I/O of een aanroep naar de MSI-database.`,
   'Tooltip.Close': `Sluiten`,
-  'Tooltip.LeaveStarOnGitHub.About': `Een ster helpt anderen het te vinden.`,
+  'Tooltip.LeaveStarOnGitHub.About': `Een ster helpt anderen het te vinden`,
   'Tooltip.Minimise': `Minimaliseren`,
-  'Tooltip.Move': `De overbodige bestanden naar de back-upmap verplaatsen.`,
+  'Tooltip.Move': `De overbodige bestanden naar de back-upmap verplaatsen`,
   'Tooltip.MoveNeedsDestination': `De overbodige bestanden naar een back-upmap verplaatsen. Die kies je hierna.`,
   'Tooltip.Delete': `De overbodige bestanden definitief verwijderen. Gebruik Verplaatsen als je jezelf eerst wilt overtuigen dat alles goed is.`,
   'Tooltip.SigningCertificate': `Naam van het onderwerp uit het ingebedde Authenticode-certificaat. Niet via de certificaatketen geverifieerd.`,
@@ -294,7 +294,7 @@ const MAP = {
   'Completion.PermanentDeleteCancelledSummary': `{0} van {1} {2} definitief verwijderd voordat je annuleerde.`,
   'Completion.PermanentDeleteSummary.Singular': `{0} {1} definitief verwijderd`,
   'Completion.PermanentDeleteSummary.Plural': `{0} {1} definitief verwijderd`,
-  'Completion.DonateAsk': `Elke kleine donatie wordt zeer gewaardeerd.`,
+  'Completion.DonateAsk': `Elke kleine donatie wordt zeer gewaardeerd`,
   // Summaries
   'Summary.RegisteredStillUsed.Singular': `{0} bestand ongemoeid gelaten`,
   'Summary.RegisteredStillUsed.Plural': `{0} bestanden ongemoeid gelaten`,

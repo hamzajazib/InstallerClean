@@ -185,7 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's simple to undo. Move them back into {InstallerFolder} and everything will be back to how it was. | 撤销很简单。把它们移回 {InstallerFolder}，一切就会恢复原样。 |
 | {0} {1} permanently deleted | 已永久删除 {0} 个{1} |
 | {0} {1} permanently deleted | 已永久删除 {0} 个{1} |
-| Any small donation is much appreciated. | 任何小额捐赠都非常感谢。 |
+| Any small donation is much appreciated | 任何小额捐赠都非常感谢 |
 | Send _anonymous report | 发送匿名报告(_A) |
 | The report adds your result to [this chart] on GitHub, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | 报告会把您的结果添加到 GitHub 上的[这张图表]中，图表显示人们用 InstallerClean 释放了多少空间。报告还包含以下技术细节，帮助我发现程序错误： |
 | How much space was freed, and how many files were moved or deleted | 释放了多少空间，以及移动或删除了多少个文件 |
@@ -368,13 +368,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 
 | English | 简体中文 |
 | --- | --- |
-| Any small donation is much appreciated. | 任何小额捐赠都非常感谢。 |
+| Any small donation is much appreciated | 任何小额捐赠都非常感谢 |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | 已请求取消。InstallerClean 正在等待当前步骤到达一个可以停下来的位置。在大量 I/O 操作或 MSI 数据库调用期间，这可能需要几秒钟。 |
 | Close | 关闭 |
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | 我本该为 InstallerClean 收费，因为它花费了大量心血，但我希望它保持免费，好帮助尽可能多的人。您的捐赠让这一切变得值得，我非常感激。 |
-| A star helps other people find it. | 点个星有助于更多人发现 InstallerClean。 |
+| A star helps other people find it | 点个星有助于更多人发现 InstallerClean |
 | Minimise | 最小化 |
-| Move the unneeded files to the backup folder. | 把不需要的文件移动到备份文件夹。 |
+| Move the unneeded files to the backup folder | 把不需要的文件移动到备份文件夹 |
 | Move the unneeded files to a backup folder. You'll choose it next. | 把不需要的文件移动到一个备份文件夹。您接下来会选择它。 |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | 把不需要的文件移动到备份文件夹。它在同一个驱动器上，所以要等您删除那个文件夹后才会释放空间。 |
 | Delete the unneeded files permanently. Use Move instead if you'd like a chance to satisfy yourself all is well. | 永久删除不需要的文件。如果您想有机会自己确认一切正常，请改用移动。 |

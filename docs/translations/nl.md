@@ -185,7 +185,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | It's simple to undo. Move them back into {InstallerFolder} and everything will be back to how it was. | Het is eenvoudig ongedaan te maken. Verplaats ze terug naar {InstallerFolder} en alles is weer zoals het was. |
 | {0} {1} permanently deleted | {0} {1} definitief verwijderd |
 | {0} {1} permanently deleted | {0} {1} definitief verwijderd |
-| Any small donation is much appreciated. | Elke kleine donatie wordt zeer gewaardeerd. |
+| Any small donation is much appreciated | Elke kleine donatie wordt zeer gewaardeerd |
 | Send _anonymous report | _Anoniem rapport versturen |
 | The report adds your result to [this chart] on GitHub, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Het rapport voegt je resultaat toe aan [deze grafiek] op GitHub, die laat zien hoeveel ruimte mensen met InstallerClean vrijmaken. Het bevat ook deze technische gegevens, die me helpen eventuele bugs op te sporen: |
 | How much space was freed, and how many files were moved or deleted | Hoeveel ruimte er is vrijgemaakt en hoeveel bestanden er zijn verplaatst of verwijderd |
@@ -368,13 +368,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 
 | English | Nederlands |
 | --- | --- |
-| Any small donation is much appreciated. | Elke kleine donatie wordt zeer gewaardeerd. |
+| Any small donation is much appreciated | Elke kleine donatie wordt zeer gewaardeerd |
 | Cancellation requested. InstallerClean is waiting for the current step to reach a stopping point. This can take a few seconds during heavy I/O or an MSI database call. | Annulering aangevraagd. InstallerClean wacht tot de huidige stap een stoppunt bereikt. Dit kan enkele seconden duren bij zware I/O of een aanroep naar de MSI-database. |
 | Close | Sluiten |
 | I really should charge for InstallerClean - because it's been a huge amount of work - but I want to keep it free so it helps as many people as possible. Your donation makes it worthwhile and is very much appreciated. | Eigenlijk zou ik geld moeten vragen voor InstallerClean, want het is ontzettend veel werk geweest, maar ik wil het gratis houden zodat het zoveel mogelijk mensen helpt. Jouw donatie maakt het de moeite waard en wordt zeer gewaardeerd. |
-| A star helps other people find it. | Een ster helpt anderen het te vinden. |
+| A star helps other people find it | Een ster helpt anderen het te vinden |
 | Minimise | Minimaliseren |
-| Move the unneeded files to the backup folder. | De overbodige bestanden naar de back-upmap verplaatsen. |
+| Move the unneeded files to the backup folder | De overbodige bestanden naar de back-upmap verplaatsen |
 | Move the unneeded files to a backup folder. You'll choose it next. | De overbodige bestanden naar een back-upmap verplaatsen. Die kies je hierna. |
 | Move the unneeded files to the backup folder. It's on the same drive, so you won't reclaim the space until you delete that folder. | De overbodige bestanden naar de back-upmap verplaatsen. Die staat op dezelfde schijf, dus de ruimte komt pas vrij als je die map verwijdert. |
 | Delete the unneeded files permanently. Use Move instead if you'd like a chance to satisfy yourself all is well. | De overbodige bestanden definitief verwijderen. Gebruik Verplaatsen als je jezelf eerst wilt overtuigen dat alles goed is. |

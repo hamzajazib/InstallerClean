@@ -287,6 +287,50 @@ const bracketCounts = (value) => ({
 });
 
 // ---------------------------------------------------------------------------
+// Rule 10. A tooltip that is one sentence carries no closing full stop.
+//
+// A tooltip is a label for a control, and a one-sentence one reads as a caption
+// with a stop after it. A tooltip of two or more sentences is left alone. A value
+// is judged on its own wording in its own language: it is one sentence when
+// nothing before its final stop is a sentence break, a break being . ! or ?
+// followed by a space, or one of the ideographic 。 ！ ？ followed by more text.
+// The stop that is forbidden is the full stop of the language: a single . (an
+// ellipsis is not one) or the ideographic 。, read through any closing bracket or
+// quote after it.
+//
+// Which keys are tooltips is read from the code and not listed here: every
+// Tooltip.* key in the neutral, every key a XAML ToolTip attribute, setter or
+// element draws, and every key a C# file assigns to a ToolTip through Strings.
+// A tooltip text that a view model returns is found by its Tooltip.* name. A
+// satellite is held to the rule as the neutral is, because a translation can
+// join two English sentences into one, or split one into two, and its stops
+// follow its own sentences.
+const STOP_CLOSERS = '\\)\\]}\u300D\u300F\uFF09\u3011\u201D\u2019"\'';
+const TAIL = new RegExp(`[${STOP_CLOSERS}]*$`, 'u');
+const SENTENCE_BREAK = new RegExp(`[.!?](?=\\s)|[\u3002\uFF01\uFF1F][${STOP_CLOSERS}]*[^${STOP_CLOSERS}]`, 'u');
+const judgeTooltip = (value) => {
+  const core = value.trim().replace(TAIL, '');
+  const stopped = /(?<!\.)\.$|\u3002$/u.test(core);
+  const body = stopped ? core.slice(0, -1) : core;
+  return { oneSentence: !SENTENCE_BREAK.test(body), stopped };
+};
+// The judge is run on known values first, and a run that cannot tell them apart
+// stops, so that a rule which can no longer fault anything does not print a pass.
+for (const [value, oneSentence, stopped] of [
+  ['Open it.', true, true], ['Open it', true, false], ['Open it. Then close it.', false, true],
+  ['Open it. Then close it', false, false], ['\u8981\u5F00\u542F\u3002', true, true],
+  ['\u958B\u304F\u3002\u9589\u3058\u308B\u3002', false, true],
+  ['Loading...', true, false], ['\u300C\u958B\u304F\u3002\u300D', true, true],
+  ['\uFF08\u958B\u304F\u3002\uFF09', true, true],
+  ['\u300C\u958B\u304F\u3002\u300D\u9589\u3058\u308B', false, false]]) {
+  const got = judgeTooltip(value);
+  if (got.oneSentence !== oneSentence || got.stopped !== stopped) {
+    console.error(`Rule 10 control failed on "${value}": read ${JSON.stringify(got)}.`);
+    process.exit(2);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Rule 7. A window title resolved in XAML is never written in code.
 //
 // Every dialog here is ShowInTaskbar=False under custom chrome, so Title is
@@ -947,6 +991,48 @@ const tokenKeys = new Set(
 const linkKeys = new Set(
   [...neutral].filter(([, v]) => v.includes('[') || v.includes(']')).map(([k]) => k));
 
+// Rule 10's keys. The XAML is read the way rules 2 and 7 read it, with its comments
+// blanked: a ToolTip="{loc:Translate Key}" attribute, a ToolTip property setter, and
+// a ToolTip element's Content.
+const tooltipPatterns = [
+  ['a ToolTip attribute', /\bToolTip="\{loc:Translate ([A-Za-z0-9._]+)\}"/g],
+  ['a ToolTip setter', /Property="ToolTip"\s+Value="\{loc:Translate ([A-Za-z0-9._]+)\}"/g],
+  ['a ToolTip element', /<ToolTip\b[^>]*?\bContent="\{loc:Translate ([A-Za-z0-9._]+)\}"/g],
+];
+const tooltipKeysFromXaml = new Set();
+const tooltipKeysByPattern = new Map(tooltipPatterns.map(([name]) => [name, new Set()]));
+for (const xaml of xamlText.values())
+  for (const [name, pattern] of tooltipPatterns)
+    for (const m of xaml.matchAll(pattern)) {
+      tooltipKeysFromXaml.add(m[1]);
+      tooltipKeysByPattern.get(name).add(m[1]);
+    }
+// A tooltip a C# file gives a Strings accessor: the accessor is the key with its
+// dots written as underscores.
+const keyOfAccessor = new Map([...neutral.keys()].map((key) => [key.replaceAll('.', '_'), key]));
+const tooltipKeysFromCode = new Set();
+for (const file of csFiles.filter((f) => f.startsWith(`${GUI}/`)))
+  for (const m of csRead.get(file).code.matchAll(/\bToolTip\s*=\s*Strings\.([A-Za-z0-9_]+)/g))
+    if (keyOfAccessor.has(m[1])) tooltipKeysFromCode.add(keyOfAccessor.get(m[1]));
+const tooltipKeys = new Set([
+  ...[...neutral.keys()].filter((key) => key.startsWith('Tooltip.')),
+  ...tooltipKeysFromXaml,
+  ...tooltipKeysFromCode,
+]);
+// Each way of reading a tooltip has to find at least one, or it has stopped matching
+// and rule 10 would be judging the others alone. The element form is also the only
+// one that draws a key not named Tooltip.*.
+for (const [name] of tooltipPatterns)
+  if (tooltipKeysByPattern.get(name).size === 0)
+    stale.push(`Rule 10 found no tooltip through ${name} in the XAML; its reading of the XAML has `
+      + 'stopped matching that form.');
+if (tooltipKeysFromCode.size === 0)
+  stale.push('Rule 10 found no tooltip a C# file assigns through Strings; its reading of the code '
+    + 'has stopped matching.');
+for (const key of tooltipKeysFromXaml)
+  if (!neutral.has(key))
+    stale.push(`${key} is drawn as a tooltip in the XAML and Strings.resx does not hold it.`);
+
 // The labels each sentence must quote, keyed by the sentence, so a plural override
 // can be measured against the same ones as the form it inflects. Two of the
 // sentences name two buttons, which is why the value is a list. Rule 3 and rule 3a
@@ -986,10 +1072,18 @@ if (stale.length) {
   // the per-language pass, so the list above is what this run reached and never a
   // count of what is wrong: any number of per-language failures can be standing
   // behind it, unseen, until the declarations are fixed and it runs again.
-  console.error(`\n  Rules 1 and 3 to 6 did NOT run: ${LANGS.length} languages unchecked. `
+  console.error(`\n  Rules 1, 3 to 6 and 10 did NOT run: ${LANGS.length} languages unchecked. `
     + 'Fix the declarations and run again before believing anything about the translations.');
   process.exit(1);
 }
+
+// Rule 10's members, as the neutral judges them, printed on every run.
+console.log(`Rule 10, tooltips (${tooltipKeys.size}), as the neutral judges them:`);
+for (const key of [...tooltipKeys].sort()) {
+  const { oneSentence, stopped } = judgeTooltip(neutral.get(key) ?? '');
+  console.log(`  ${key.padEnd(34)} ${oneSentence ? 'one sentence' : 'two or more'}, ${stopped ? 'ends in a full stop' : 'no closing full stop'}`);
+}
+console.log('');
 
 for (const lang of LANGS) {
   const path = lang === 'en-GB' ? `${RESX_DIR}/Strings.resx` : `${RESX_DIR}/Strings.${lang}.resx`;
@@ -1131,6 +1225,14 @@ for (const lang of LANGS) {
     }
   }
 
+  for (const key of tooltipKeys) {
+    const value = read(key);
+    if (value === null) continue;
+    const { oneSentence, stopped } = judgeTooltip(value);
+    if (oneSentence && stopped)
+      failures.push(`${key} is a tooltip of one sentence and ends in a full stop`);
+  }
+
   if (failures.length) {
     console.error(`FAIL  ${lang.padEnd(7)} ${failures.join('; ')}`);
     problems.push(...failures.map((f) => `${lang}: ${f}`));
@@ -1184,5 +1286,6 @@ console.log(`\nCross-key rules OK: ${LANGS.length} languages, ${MUST_AGREE.lengt
   + `and ${ELABORATES_A_LABEL.length + ELABORATES_A_LABEL_IN_CODE.length} measured by containment `
   + `(${ELABORATES_A_LABEL_IN_CODE.length} of them built in code), `
   + `${tokenKeys.size} keys carrying ${FOLDER_TOKEN}, ${linkKeys.size} carrying a [link phrase], `
+  + `${tooltipKeys.size} tooltips judged for a closing full stop, `
   + `${namedInXaml.size} automation names classified (${NAME_IS_THE_LABEL.size} by key identity), `
   + `${csFiles.length} C# files read through Strings bar ${rawAllowed.size} allowed direct.`);
