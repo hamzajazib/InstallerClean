@@ -589,7 +589,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /d         Delete unneeded files permanently |   installerclean-cli /d         不要ファイルを完全に削除 |
 |   installerclean-cli /m         Move to the saved backup folder |   installerclean-cli /m         保存済みのバックアップフォルダーへ移動 |
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m PATH    指定されたパスに移動 |
-| installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli は終了までプロンプトを占有するため、スクリプトや<br>スケジュールされたタスクが完了を待てます。 |
+| installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli は終了までプロンプトを占有するため、<br>スクリプトやスケジュールされたタスクが完了を待てます。 |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | フォルダーはユーザーごと。予約実行や SYSTEM には /m PATH が必要。 |
 | Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | スキャンの前に、InstallerClean の新しいバージョンがあるか確認します。<br>自分で実行した場合は、更新する前に確認を求めます。<br>スケジュールされたタスクやスクリプトで自動実行される場合は、<br>確認なしで更新します。確認を省くには /noupdate を付けてください。 |
 | Exit codes: | 終了コード： |

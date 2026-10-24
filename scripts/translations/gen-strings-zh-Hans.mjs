@@ -353,7 +353,7 @@ const MAP = {
   'Cli.Help.Delete': `  installerclean-cli /d         永久删除不需要的文件`,
   'Cli.Help.MoveDefault': `  installerclean-cli /m         移动到已保存的备份文件夹`,
   'Cli.Help.MovePath': `  installerclean-cli /m 路径    移动到指定路径`,
-  'Cli.Help.NoteLine1': `installerclean-cli 会占住命令提示符直到结束，因此脚本或计划任务&#10;可以等待它完成。`,
+  'Cli.Help.NoteLine1': `installerclean-cli 会占住命令提示符直到结束，&#10;因此脚本或计划任务可以等待它完成。`,
   'Cli.Help.ExitCodesHeader': `退出代码：`,
   'Cli.Help.ExitCodeOk': `  0   成功：本次运行做了要求的事`,
   'Cli.Help.ExitCodeError': `  1   没有处理任何内容：本次运行失败或被拒绝`,

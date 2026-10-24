@@ -2579,7 +2579,7 @@ InstallerClean 本来就以管理员身份运行，所以再那样启动一次�
   <!-- ONE value carrying TWO printed lines, and the &#10; is where the English
        breaks rather than where every language must. A translation may break
        anywhere, or not at all if it fits. -->
-  <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli 会占住命令提示符直到结束，因此脚本或计划任务&#10;可以等待它完成。</value></data>
+  <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli 会占住命令提示符直到结束，&#10;因此脚本或计划任务可以等待它完成。</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>该文件夹按用户保存；计划任务或 SYSTEM 运行需要 /m 路径。</value></data>
   <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the
        English breaks; a translation may break anywhere within the 74-column cap.

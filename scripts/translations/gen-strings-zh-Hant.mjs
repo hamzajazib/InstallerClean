@@ -361,7 +361,7 @@ const MAP = {
   'Cli.Help.Delete': `  installerclean-cli /d         永久刪除不需要的檔案`,
   'Cli.Help.MoveDefault': `  installerclean-cli /m         移到已儲存的備份資料夾`,
   'Cli.Help.MovePath': `  installerclean-cli /m 路徑    移到指定的路徑`,
-  'Cli.Help.NoteLine1': `installerclean-cli 會佔住命令提示字元直到結束，因此指令碼或排定的&#10;工作可以等候它完成。`,
+  'Cli.Help.NoteLine1': `installerclean-cli 會佔住命令提示字元直到結束，&#10;因此指令碼或排定的工作可以等候它完成。`,
   'Cli.Help.ExitCodesHeader': `結束代碼：`,
   'Cli.Help.ExitCodeOk': `  0   成功：這次執行完成了要求的事`,
   'Cli.Help.ExitCodeError': `  1   沒有處理任何內容：這次執行失敗或被拒絕`,

@@ -373,7 +373,7 @@ const MAP = {
   'Cli.Help.Delete': `  installerclean-cli /d         不要ファイルを完全に削除`,
   'Cli.Help.MoveDefault': `  installerclean-cli /m         保存済みのバックアップフォルダーへ移動`,
   'Cli.Help.MovePath': `  installerclean-cli /m PATH    指定されたパスに移動`,
-  'Cli.Help.NoteLine1': `installerclean-cli は終了までプロンプトを占有するため、スクリプトや&#10;スケジュールされたタスクが完了を待てます。`,
+  'Cli.Help.NoteLine1': `installerclean-cli は終了までプロンプトを占有するため、&#10;スクリプトやスケジュールされたタスクが完了を待てます。`,
   'Cli.Help.ExitCodesHeader': `終了コード：`,
   'Cli.Help.ExitCodeOk': `  0   成功：求められた処理を行った`,
   'Cli.Help.ExitCodeError': `  1   何も処理されなかった：実行が失敗したか拒否された`,
