@@ -649,6 +649,13 @@ const MAP = {
   'UpdateNotice.DownloadNetFramework48': `Microsoft에서 .NET Framework 4.8 내려받기`,
   'Automation.UpdateNotice.DownloadNetFramework48': `Microsoft에서 .NET Framework 4.8 내려받기`,
   'Cli.UpdateNeedsNetFramework48': `이 버전에는 .NET Framework 4.8이 필요합니다. Microsoft에서 설치하고 PC를 다시 시작한 다음 InstallerClean을 다시 실행하여 업데이트하세요.`,
+  'Cli.ReportPrompt': `이번 실행의 익명 보고서를 보낼까요? {0}에 저장되어 있습니다. ?를 입력하면 담긴 내용을 볼 수 있습니다. [{1}/{2}/?]`,
+  'Cli.ReportChartAt': `{0} 주소의 차트`,
+  'Cli.ReportInFull': `전체 보고서는 아래에 출력됩니다.`,
+  'Cli.ReportSent': `보고서를 보냈습니다. 감사합니다.`,
+  'Cli.ReportNotSent': `보고서를 보내지 않았습니다.`,
+  'Cli.ReportCouldNotBeSent': `보고서를 보내지 못했습니다. {0}에 보관되어 있습니다.`,
+  'Cli.ReportWaiting': `이전 실행의 보고서를 보내는 중입니다. 보내기로 동의하신 보고서입니다.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

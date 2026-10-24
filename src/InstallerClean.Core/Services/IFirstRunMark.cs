@@ -14,10 +14,12 @@ namespace InstallerClean.Services;
 /// (<see cref="IEarlierRunCheck"/>) sets it where it finds an earlier run, and where it
 /// has not answered within the time a card waits for it.
 ///
-/// The command line writes no report. It sets the mark after a Move or a Delete whose
-/// service counts a file moved or deleted, and where the service fails before its count
-/// comes back with an exception none of the command line's other catches takes. Nothing
-/// removes the mark, and the installer's uninstall leaves it in place.
+/// The command line sets the mark after a Move or a Delete whose service counts a file
+/// moved or deleted, and where the service fails before its count comes back with an
+/// exception none of the command line's other catches takes. A run at a console that
+/// finishes on a PC with no earlier run sets it as it carries its report to the question
+/// (<see cref="ConsoleReportOffer"/>), whatever it moved or deleted. Nothing removes the
+/// mark, and the installer's uninstall leaves it in place.
 /// </summary>
 public interface IFirstRunMark
 {

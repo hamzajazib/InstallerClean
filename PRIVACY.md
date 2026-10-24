@@ -2,7 +2,7 @@
 
 Last updated 24 October 2026.
 
-InstallerClean never collects anything that could identify you, your PC or your files. No ads, no tracking. It can send me one anonymous report of how its first run on your PC went, which you can stop by unticking a box, and it checks GitHub for updates, which you can turn off. That's all it sends.
+InstallerClean never collects anything that could identify you, your PC or your files. No ads, no tracking. It can send me one anonymous report of how its first run on your PC went, which you can stop by unticking a box, or by answering no in the command-line tool, and it checks GitHub for updates, which you can turn off. That's all it sends.
 
 ## The anonymous report
 
@@ -34,7 +34,7 @@ Nothing in it names you, your PC, a file, a folder, a drive or a program.
   </picture>
 </p>
 
-**On your PC.** The report is saved as `last-run.json` in `%LOCALAPPDATA%\InstallerClean` when that result screen appears, whether or not you leave the box ticked, and that file is exactly what's sent. The "See exactly what's sent" link in the panel the small "i" opens shows it to you.
+**On your PC.** The report is saved as `last-run.json` in `%LOCALAPPDATA%\InstallerClean` when that result screen appears, or when the command-line tool asks, whether or not you leave the box ticked or answer yes, and that file is exactly what's sent. The "See exactly what's sent" link in the panel the small "i" opens shows it to you.
 
 ## Update check
 
@@ -50,7 +50,7 @@ To know a PC has had its first run, InstallerClean sets a value named `FirstRunR
 
 ## The command-line tool
 
-It sends no report, and checks for updates as set out above. It writes one summary line per run to the Windows Application event log, with further lines for conditions it found on the PC and for each update it makes or can't make. After a Move or Delete that moves or deletes files, or ends where how far it got isn't known, it sets the `FirstRunRecorded` value described above. The summary lines, the notices and the value stay on your PC.
+Where someone is at the console, it asks whether to send the same anonymous report as InstallerClean, once, after the PC's first finished run, and sends it only if the answer is yes. The question names the file the report is saved in, and typing `?` shows what the report holds and the report itself. If the report can't be sent, it is kept, and the next run at a console sends it without asking again. Where nobody is, such as a scheduled task or a script, it sends no report, and checks for updates as set out above. It writes one summary line per run to the Windows Application event log, with further lines for conditions it found on the PC and for each update it makes or can't make. After a Move or Delete that moves or deletes files, or ends where how far it got isn't known, or when it asks to send the report, it sets the `FirstRunRecorded` value described above. The summary lines, the notices and the value stay on your PC.
 
 ## Everything else stays on your PC
 

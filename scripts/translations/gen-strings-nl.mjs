@@ -632,6 +632,13 @@ const MAP = {
   'UpdateNotice.DownloadNetFramework48': `Download .NET Framework 4.8 van Microsoft`,
   'Automation.UpdateNotice.DownloadNetFramework48': `Download .NET Framework 4.8 van Microsoft`,
   'Cli.UpdateNeedsNetFramework48': `Deze versie heeft .NET Framework 4.8 nodig. Installeer het van Microsoft, herstart de pc en voer daarna InstallerClean opnieuw uit om bij te werken.`,
+  'Cli.ReportPrompt': `Een anoniem rapport van deze uitvoering versturen? Het is opgeslagen in {0}. Typ ? om te zien wat erin staat. [{1}/{2}/?]`,
+  'Cli.ReportChartAt': `de grafiek op {0}`,
+  'Cli.ReportInFull': `Het volledige rapport staat hieronder.`,
+  'Cli.ReportSent': `Rapport verstuurd. Bedankt.`,
+  'Cli.ReportNotSent': `Rapport niet verstuurd.`,
+  'Cli.ReportCouldNotBeSent': `Het rapport kon niet worden verstuurd. Het wordt bewaard in {0}.`,
+  'Cli.ReportWaiting': `Het rapport van een eerdere uitvoering wordt verstuurd, waarvoor je toestemming hebt gegeven.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

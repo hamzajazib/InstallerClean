@@ -2373,6 +2373,29 @@ Hãy chạy lại InstallerClean với tư cách quản trị viên.</value></da
        and N are taken as well in every language. The two must differ. -->
   <data name="Cli.UpdateAnswerYes" xml:space="preserve"><value>C</value></data>
   <data name="Cli.UpdateAnswerNo" xml:space="preserve"><value>K</value></data>
+  <!-- The command line's offer to send the anonymous report, asked after the PC's first
+       finished run where somebody is at the console, once the run's work is done. 0 = the
+       full path of last-run.json, which holds the report; 1 and 2 = the letters for yes
+       and no, as in Cli.UpdatePrompt. The question mark is typed as it is. -->
+  <data name="Cli.ReportPrompt" xml:space="preserve"><value>Gửi báo cáo ẩn danh về lần chạy này? Báo cáo được lưu tại {0}. Nhập ? để xem nội dung. [{1}/{2}/?]</value></data>
+  <!-- Printed in place of the words in [ ] in Completion.ReportPanel.Intro when the question
+       mark is typed, since a console cannot show a link. 0 = the web address of the chart
+       in the README. It stands where those words stood, so it takes the same case as them
+       in the sentence they sit in. -->
+  <data name="Cli.ReportChartAt" xml:space="preserve"><value>biểu đồ tại {0}</value></data>
+  <!-- After the panel's words when the question mark is typed, ahead of the report itself,
+       which follows on the next lines. -->
+  <data name="Cli.ReportInFull" xml:space="preserve"><value>Toàn bộ báo cáo được in bên dưới.</value></data>
+  <!-- After the report was sent and the server accepted it. -->
+  <data name="Cli.ReportSent" xml:space="preserve"><value>Đã gửi báo cáo. Cảm ơn bạn.</value></data>
+  <!-- After the answer was no, and after Ctrl+C at the question or while the report was being sent. -->
+  <data name="Cli.ReportNotSent" xml:space="preserve"><value>Chưa gửi báo cáo.</value></data>
+  <!-- After the answer was yes and the report did not go. 0 = the full path of last-run.json,
+       where the report is kept. -->
+  <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>Không thể gửi báo cáo. Báo cáo được lưu giữ tại {0}.</value></data>
+  <!-- A later run at the console, before it sends a report an earlier run was told to send
+       and could not. Nothing is asked: the answer was given then. -->
+  <data name="Cli.ReportWaiting" xml:space="preserve"><value>Đang gửi báo cáo từ lần chạy trước mà bạn đã đồng ý gửi.</value></data>
   <!-- After the newer version is in place, before it runs. 0 = its version. -->
   <data name="Cli.UpdateInstalled" xml:space="preserve"><value>Đã cài đặt InstallerClean {0}.</value></data>
   <!-- After Cli.UpdateInstalled, where the person typed /d or /m and answered yes: the newer

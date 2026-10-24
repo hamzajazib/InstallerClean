@@ -558,6 +558,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Update now? [{0}/{1}] | Perbarui sekarang? [{0}/{1}] |
 | Y | Y |
 | N | T |
+| Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Kirim laporan anonim dari proses ini? Disimpan di {0}. Ketik ? untuk melihat isinya. [{1}/{2}/?] |
+| the chart at {0} | grafik di {0} |
+| The full report is printed below. | Laporan lengkap dicetak di bawah ini. |
+| Report sent. Thank you. | Laporan terkirim. Terima kasih. |
+| Report not sent. | Laporan tidak dikirim. |
+| The report could not be sent. It is kept in {0}. | Laporan tidak dapat dikirim. Laporan disimpan di {0}. |
+| Sending the report from an earlier run, which you agreed to send. | Mengirim laporan dari proses sebelumnya, yang Anda setujui untuk dikirim. |
 | InstallerClean {0} is installed. | InstallerClean {0} telah terpasang. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Versi baru akan memindai dan menampilkan daftar temuannya, tanpa menghapus apa pun. Untuk menghapus, jalankan /d lagi setelahnya. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Versi baru akan memindai dan menampilkan daftar temuannya, tanpa memindahkan apa pun. Untuk memindahkan, jalankan /m lagi setelahnya. |

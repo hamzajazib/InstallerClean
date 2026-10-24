@@ -558,6 +558,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Update now? [{0}/{1}] | 지금 업데이트할까요? [{0}/{1}] |
 | Y | Y |
 | N | N |
+| Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | 이번 실행의 익명 보고서를 보낼까요? {0}에 저장되어 있습니다. ?를 입력하면 담긴 내용을 볼 수 있습니다. [{1}/{2}/?] |
+| the chart at {0} | {0} 주소의 차트 |
+| The full report is printed below. | 전체 보고서는 아래에 출력됩니다. |
+| Report sent. Thank you. | 보고서를 보냈습니다. 감사합니다. |
+| Report not sent. | 보고서를 보내지 않았습니다. |
+| The report could not be sent. It is kept in {0}. | 보고서를 보내지 못했습니다. {0}에 보관되어 있습니다. |
+| Sending the report from an earlier run, which you agreed to send. | 이전 실행의 보고서를 보내는 중입니다. 보내기로 동의하신 보고서입니다. |
 | InstallerClean {0} is installed. | InstallerClean {0} 버전이 설치되었습니다. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 새 버전은 검사하여 찾은 항목을 나열하기만 하고 아무것도 삭제하지 않습니다. 삭제하려면 그 후에 /d를 다시 실행하세요. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 새 버전은 검사하여 찾은 항목을 나열하기만 하고 아무것도 이동하지 않습니다. 이동하려면 그 후에 /m을 다시 실행하세요. |

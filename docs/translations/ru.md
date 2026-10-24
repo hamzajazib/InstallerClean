@@ -558,6 +558,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Update now? [{0}/{1}] | Обновить сейчас? [{0}/{1}] |
 | Y | Д |
 | N | Н |
+| Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Отправить анонимный отчёт об этом запуске? Он сохранён в {0}. Введите ?, чтобы увидеть, что в нём. [{1}/{2}/?] |
+| the chart at {0} | график по адресу {0} |
+| The full report is printed below. | Полный отчёт выведен ниже. |
+| Report sent. Thank you. | Отчёт отправлен. Спасибо. |
+| Report not sent. | Отчёт не отправлен. |
+| The report could not be sent. It is kept in {0}. | Не удалось отправить отчёт. Он хранится в {0}. |
+| Sending the report from an earlier run, which you agreed to send. | Отправляется отчёт о предыдущем запуске, отправку которого вы разрешили. |
 | InstallerClean {0} is installed. | Версия InstallerClean {0} установлена. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Новая версия просканирует и покажет список найденного, ничего не удаляя. Чтобы удалить, затем снова запустите /d. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Новая версия просканирует и покажет список найденного, ничего не перемещая. Чтобы переместить, затем снова запустите /m. |

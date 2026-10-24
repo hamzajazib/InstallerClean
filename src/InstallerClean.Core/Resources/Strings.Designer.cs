@@ -285,6 +285,13 @@ public static class Strings
     public static string Cli_PendingRebootBlocked_PendingRenameInCache => Get("Cli.PendingRebootBlocked.PendingRenameInCache");
     public static string Cli_PendingRebootBlocked_PendingRenameUnresolved => Get("Cli.PendingRebootBlocked.PendingRenameUnresolved");
     public static string Cli_PendingRebootBlocked_RegistryCheckUnreadable => Get("Cli.PendingRebootBlocked.RegistryCheckUnreadable");
+    public static string Cli_ReportChartAt => Get("Cli.ReportChartAt");
+    public static string Cli_ReportCouldNotBeSent => Get("Cli.ReportCouldNotBeSent");
+    public static string Cli_ReportInFull => Get("Cli.ReportInFull");
+    public static string Cli_ReportNotSent => Get("Cli.ReportNotSent");
+    public static string Cli_ReportPrompt => Get("Cli.ReportPrompt");
+    public static string Cli_ReportSent => Get("Cli.ReportSent");
+    public static string Cli_ReportWaiting => Get("Cli.ReportWaiting");
     public static string Cli_ScanningInstaller => Get("Cli.ScanningInstaller");
     public static string Cli_ScanSignal_AccessRefused => Get("Cli.ScanSignal.AccessRefused");
     public static string Cli_ScanSignal_Busy => Get("Cli.ScanSignal.Busy");

@@ -558,6 +558,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Update now? [{0}/{1}] | Cập nhật ngay bây giờ? [{0}/{1}] |
 | Y | C |
 | N | K |
+| Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Gửi báo cáo ẩn danh về lần chạy này? Báo cáo được lưu tại {0}. Nhập ? để xem nội dung. [{1}/{2}/?] |
+| the chart at {0} | biểu đồ tại {0} |
+| The full report is printed below. | Toàn bộ báo cáo được in bên dưới. |
+| Report sent. Thank you. | Đã gửi báo cáo. Cảm ơn bạn. |
+| Report not sent. | Chưa gửi báo cáo. |
+| The report could not be sent. It is kept in {0}. | Không thể gửi báo cáo. Báo cáo được lưu giữ tại {0}. |
+| Sending the report from an earlier run, which you agreed to send. | Đang gửi báo cáo từ lần chạy trước mà bạn đã đồng ý gửi. |
 | InstallerClean {0} is installed. | Đã cài đặt InstallerClean {0}. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Phiên bản mới sẽ quét và liệt kê những gì tìm thấy, không xóa gì cả. Để xóa, hãy chạy lại /d sau đó. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Phiên bản mới sẽ quét và liệt kê những gì tìm thấy, không di chuyển gì cả. Để di chuyển, hãy chạy lại /m sau đó. |

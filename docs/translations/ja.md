@@ -558,6 +558,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Update now? [{0}/{1}] | 今すぐ更新しますか？ [{0}/{1}] |
 | Y | Y |
 | N | N |
+| Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | この実行の匿名レポートを送信しますか？ 保存先は {0} です。? と入力すると内容を確認できます。[{1}/{2}/?] |
+| the chart at {0} | アドレス {0} のグラフ |
+| The full report is printed below. | レポートの全文を以下に表示します。 |
+| Report sent. Thank you. | レポートを送信しました。ありがとうございます。 |
+| Report not sent. | レポートは送信されませんでした。 |
+| The report could not be sent. It is kept in {0}. | レポートを送信できませんでした。{0} に保存されています。 |
+| Sending the report from an earlier run, which you agreed to send. | 以前の実行のレポートを送信しています。送信に同意いただいたものです。 |
 | InstallerClean {0} is installed. | InstallerClean {0} をインストールしました。 |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も削除しません。削除するには、その後もう一度 /d を実行してください。 |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も移動しません。移動するには、その後もう一度 /m を実行してください。 |

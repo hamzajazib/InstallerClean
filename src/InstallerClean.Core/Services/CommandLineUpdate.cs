@@ -74,26 +74,13 @@ internal abstract record CommandLineUpdateResult
 }
 
 /// <summary>
-/// What <see cref="CommandLineUpdate"/> needs from the console host: the console, the
-/// single-instance mutex, the version a file carries, and starting a program in this
-/// console. Each member is the host's because each touches the console or the process.
+/// What <see cref="CommandLineUpdate"/> needs from the console host: the console
+/// (<see cref="IConsolePrompt"/>), the single-instance mutex, the version a file carries,
+/// and starting a program in this console. Each member is the host's because each touches
+/// the console or the process.
 /// </summary>
-internal interface ICommandLineUpdateHost
+internal interface ICommandLineUpdateHost : IConsolePrompt
 {
-    /// <summary>Prints a line.</summary>
-    void WriteLine(string line);
-
-    /// <summary>Prints text and leaves the cursor after it, for the question.</summary>
-    void Write(string text);
-
-    /// <summary>
-    /// Reads one line of the person's answer, or null at the end of input, which is also
-    /// what Ctrl+C at the prompt can end the read with, and null where
-    /// <paramref name="token"/> is cancelled first, as a console being closed cancels it
-    /// with the read still waiting.
-    /// </summary>
-    string? ReadLine(CancellationToken token);
-
     /// <summary>
     /// Takes the single-instance mutex without waiting, on the calling thread. Answers
     /// whether it is now held.
@@ -469,25 +456,16 @@ internal sealed class CommandLineUpdate
     /// </summary>
     private Answer Ask(CancellationToken token)
     {
-        var yes = Strings.Cli_UpdateAnswerYes.Trim();
-        var no = Strings.Cli_UpdateAnswerNo.Trim();
-        var prompt = string.Format(Strings.Cli_UpdatePrompt,
-            yes.ToUpper(System.Globalization.CultureInfo.CurrentUICulture),
-            no.ToLower(System.Globalization.CultureInfo.CurrentUICulture));
         while (true)
         {
-            _host.Write(prompt + " ");
-            var line = _host.ReadLine(token);
-            if (line is null) token.WaitHandle.WaitOne(_controlCBound);
-            if (token.IsCancellationRequested) return Answer.Cancelled;
-            if (line is null) return Answer.No;
-            var answer = line.Trim();
-            if (answer.Length == 0 || StartsWith(answer, yes) || StartsWith(answer, "Y")) return Answer.Yes;
-            if (StartsWith(answer, no) || StartsWith(answer, "N")) return Answer.No;
+            switch (ConsoleQuestion.Ask(
+                _host, (yes, no) => string.Format(Strings.Cli_UpdatePrompt, yes, no), token, _controlCBound, out _))
+            {
+                case ConsoleAnswer.Yes: return Answer.Yes;
+                case ConsoleAnswer.No: return Answer.No;
+                case ConsoleAnswer.Cancelled: return Answer.Cancelled;
+            }
         }
-
-        static bool StartsWith(string answer, string letter) =>
-            letter.Length > 0 && answer.StartsWith(letter, StringComparison.CurrentCultureIgnoreCase);
     }
 
     /// <summary>

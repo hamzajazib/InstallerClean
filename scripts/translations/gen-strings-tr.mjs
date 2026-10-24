@@ -574,6 +574,13 @@ Ayrıntılar şuraya yazıldı:
   'UpdateNotice.DownloadNetFramework48': `.NET Framework 4.8'i Microsoft'tan indirin`,
   'Automation.UpdateNotice.DownloadNetFramework48': `.NET Framework 4.8'i Microsoft'tan indirin`,
   'Cli.UpdateNeedsNetFramework48': `Bu sürüm .NET Framework 4.8 gerektiriyor. Microsoft'tan yükleyin, bilgisayarı yeniden başlatın, ardından güncellemek için InstallerClean'i yeniden çalıştırın.`,
+  'Cli.ReportPrompt': `Bu çalıştırmanın anonim raporu gönderilsin mi? {0} konumuna kaydedildi. İçeriğini görmek için ? yazın. [{1}/{2}/?]`,
+  'Cli.ReportChartAt': `{0} adresindeki grafiğe`,
+  'Cli.ReportInFull': `Raporun tamamı aşağıda yazdırılmıştır.`,
+  'Cli.ReportSent': `Rapor gönderildi. Teşekkürler.`,
+  'Cli.ReportNotSent': `Rapor gönderilmedi.`,
+  'Cli.ReportCouldNotBeSent': `Rapor gönderilemedi. {0} konumunda saklanıyor.`,
+  'Cli.ReportWaiting': `Daha önceki bir çalıştırmanın raporu gönderiliyor; göndermeyi kabul etmiştiniz.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

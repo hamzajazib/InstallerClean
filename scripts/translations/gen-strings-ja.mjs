@@ -573,6 +573,13 @@ const MAP = {
   'UpdateNotice.DownloadNetFramework48': `Microsoft から .NET Framework 4.8 をダウンロード`,
   'Automation.UpdateNotice.DownloadNetFramework48': `Microsoft から .NET Framework 4.8 をダウンロード`,
   'Cli.UpdateNeedsNetFramework48': `このバージョンには .NET Framework 4.8 が必要です。Microsoft からインストールして PC を再起動し、InstallerClean をもう一度実行して更新してください。`,
+  'Cli.ReportPrompt': `この実行の匿名レポートを送信しますか？ 保存先は {0} です。? と入力すると内容を確認できます。[{1}/{2}/?]`,
+  'Cli.ReportChartAt': `アドレス {0} のグラフ`,
+  'Cli.ReportInFull': `レポートの全文を以下に表示します。`,
+  'Cli.ReportSent': `レポートを送信しました。ありがとうございます。`,
+  'Cli.ReportNotSent': `レポートは送信されませんでした。`,
+  'Cli.ReportCouldNotBeSent': `レポートを送信できませんでした。{0} に保存されています。`,
+  'Cli.ReportWaiting': `以前の実行のレポートを送信しています。送信に同意いただいたものです。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -2303,6 +2303,22 @@ InstallerClean уже был запущен от имени администра
   <!-- One letter each: the first letter of this language's word for yes, and for no. The
        answer's first letter is compared with them without regard to case, and English Y
        and N are taken as well in every language. The two must differ. -->
+  <!-- The command line's offer to send the anonymous report, asked after the PC's first
+       finished run where somebody is at the console, once the run's work is done. 0 = the
+       full path of last-run.json, which holds the report; 1 and 2 = the letters for yes
+       and no, as in Cli.UpdatePrompt. The question mark is typed as it is. -->
+  <!-- Printed in place of the words in [ ] in Completion.ReportPanel.Intro when the question
+       mark is typed, since a console cannot show a link. 0 = the web address of the chart
+       in the README. It stands where those words stood, so it takes the same case as them
+       in the sentence they sit in. -->
+  <!-- After the panel's words when the question mark is typed, ahead of the report itself,
+       which follows on the next lines. -->
+  <!-- After the report was sent and the server accepted it. -->
+  <!-- After the answer was no, and after Ctrl+C at the question or while the report was being sent. -->
+  <!-- After the answer was yes and the report did not go. 0 = the full path of last-run.json,
+       where the report is kept. -->
+  <!-- A later run at the console, before it sends a report an earlier run was told to send
+       and could not. Nothing is asked: the answer was given then. -->
   <!-- After the newer version is in place, before it runs. 0 = its version. -->
   <!-- After Cli.UpdateInstalled, where the person typed /d or /m and answered yes: the newer
        version scans and lists, as /s does, and moves or deletes nothing. /d and /m are the
@@ -2610,4 +2626,11 @@ InstallerClean уже был запущен от имени администра
   <data name="Cli.UpdateInUse" xml:space="preserve"><value>InstallerClean используется, поэтому сейчас не может обновиться.</value></data>
   <data name="Cli.CancellingAfterUpdate" xml:space="preserve"><value>Отмена после завершения обновления...</value></data>
   <data name="Cli.UpdateNeedsNetFramework48" xml:space="preserve"><value>Для этой версии нужен .NET Framework 4.8. Установите его с сайта Microsoft, перезагрузите компьютер, а затем снова запустите InstallerClean, чтобы выполнить обновление.</value></data>
+  <data name="Cli.ReportPrompt" xml:space="preserve"><value>Отправить анонимный отчёт об этом запуске? Он сохранён в {0}. Введите ?, чтобы увидеть, что в нём. [{1}/{2}/?]</value></data>
+  <data name="Cli.ReportChartAt" xml:space="preserve"><value>график по адресу {0}</value></data>
+  <data name="Cli.ReportInFull" xml:space="preserve"><value>Полный отчёт выведен ниже.</value></data>
+  <data name="Cli.ReportSent" xml:space="preserve"><value>Отчёт отправлен. Спасибо.</value></data>
+  <data name="Cli.ReportNotSent" xml:space="preserve"><value>Отчёт не отправлен.</value></data>
+  <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>Не удалось отправить отчёт. Он хранится в {0}.</value></data>
+  <data name="Cli.ReportWaiting" xml:space="preserve"><value>Отправляется отчёт о предыдущем запуске, отправку которого вы разрешили.</value></data>
 </root>

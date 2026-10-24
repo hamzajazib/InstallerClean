@@ -561,6 +561,13 @@ const MAP = {
   'UpdateNotice.DownloadNetFramework48': `從 Microsoft 下載 .NET Framework 4.8`,
   'Automation.UpdateNotice.DownloadNetFramework48': `從 Microsoft 下載 .NET Framework 4.8`,
   'Cli.UpdateNeedsNetFramework48': `此版本需要 .NET Framework 4.8。請從 Microsoft 安裝，重新啟動電腦，然後再次執行 InstallerClean 進行更新。`,
+  'Cli.ReportPrompt': `傳送本次執行的匿名報告？報告已儲存在 {0}。輸入 ? 可查看其內容。[{1}/{2}/?]`,
+  'Cli.ReportChartAt': `地址為 {0} 的圖表`,
+  'Cli.ReportInFull': `完整報告列印在下方。`,
+  'Cli.ReportSent': `報告已傳送。謝謝。`,
+  'Cli.ReportNotSent': `報告未傳送。`,
+  'Cli.ReportCouldNotBeSent': `無法傳送報告。報告保存在 {0}。`,
+  'Cli.ReportWaiting': `正在傳送較早一次執行的報告，您已同意傳送。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

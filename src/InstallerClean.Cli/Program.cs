@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using InstallerClean.Helpers;
@@ -338,6 +339,8 @@ internal static class Program
             }
         }
 
+        var report = new RunReport(ConsoleCanAsk());
+        int exitCode;
         try
         {
             // Sync-over-async wrapper so the acquired mutex (held on the
@@ -350,7 +353,8 @@ internal static class Program
             // AbandonedMutexException path. A console Main has no
             // SynchronizationContext, so GetResult here cannot deadlock
             // on captured-context resumption.
-            return RunWorkAsync(arg, invocation, cts.Token, output: output).GetAwaiter().GetResult();
+            exitCode = RunWorkAsync(arg, invocation, cts.Token, output: output, report: report)
+                .GetAwaiter().GetResult();
         }
         finally
         {
@@ -368,6 +372,62 @@ internal static class Program
                 Helpers.CrashLog.TryWrite(ex);
             }
         }
+
+        // The question comes after the mutex is released, so a person reading it holds up
+        // neither the window nor another run, and after the run's summary entry, so the
+        // exit code and the entry are the work's whatever the answer is.
+        OfferReport(report, updateHost, cts.Token);
+        return exitCode;
+    }
+
+    /// <summary>How long the PC's first-run check is waited for before a report is carried, as the window waits.</summary>
+    private static readonly TimeSpan ReportCheckBound = TimeSpan.FromSeconds(3);
+
+    /// <summary>
+    /// The kind of copy this command-line tool is, as the report names it
+    /// (<see cref="AppCopy.DetectRunningCommandLine"/>), or not known where the process has no path.
+    /// </summary>
+    private static AppCopyKind RunningCopy(IServiceProvider services) =>
+        Environment.ProcessPath is { Length: > 0 } exePath
+            ? AppCopy.DetectRunningCommandLine(exePath, services.GetRequiredService<IRegistryReader>())
+            : AppCopyKind.Undetermined;
+
+    /// <summary>
+    /// After the work of a run, at a console somebody can answer in: offers to send the
+    /// report of a run that was the PC's first and finished
+    /// (<see cref="RunReport.Entry"/>), or sends the report an earlier run was told to
+    /// send and could not. Nothing is asked or sent where nobody can answer, or where
+    /// Ctrl+C has come. Never throws.
+    /// </summary>
+    internal static void OfferReport(RunReport report, IConsolePrompt console, CancellationToken token)
+    {
+        if (!report.CanAsk || token.IsCancellationRequested) return;
+        try
+        {
+            OfferReport(report, console, new ResultLogService(), new SettingsService(), token);
+        }
+        catch (Exception ex)
+        {
+            Helpers.CrashLog.TryWrite(ex);
+        }
+    }
+
+    /// <summary>The offer over the services it uses, which a test supplies.</summary>
+    internal static void OfferReport(
+        RunReport report, IConsolePrompt console, IResultLogService resultLog, ISettingsService settings,
+        CancellationToken token)
+    {
+        if (!report.CanAsk || token.IsCancellationRequested) return;
+        var offer = new ConsoleReportOffer(
+            console, resultLog, settings,
+            Path.Combine(AppDataFolder.Location, "last-run.json"),
+            ReadmeLinks.For("reports-stats", Localisation.UiCulture),
+            () => CancelKey.Process.Closing,
+            CommandLineUpdate.ControlCBound);
+        if (report.Entry is { } entry)
+            offer.Offer(entry, token);
+        else
+            offer.SendWaiting(token);
     }
 
     /// <summary>
@@ -801,12 +861,12 @@ internal static class Program
     internal static async Task<int> RunWorkAsync(
         string arg, CliInvocation invocation, CancellationToken token,
         IServiceProvider? servicesOverride = null, Func<bool>? consoleWatched = null,
-        ConsoleGuard? output = null)
+        ConsoleGuard? output = null, RunReport? report = null)
     {
         // The note follows the run's entry wherever the work returns. Where an exception
         // escapes the work, thrown inside one of its catches, nothing here prints it: Main
         // reports the exception and prints the note after its own line and entry.
-        var exitCode = await DoWorkAsync(arg, invocation, token, servicesOverride, consoleWatched, output);
+        var exitCode = await DoWorkAsync(arg, invocation, token, servicesOverride, consoleWatched, output, report);
         NoteEventLogUnavailable();
         return exitCode;
     }
@@ -819,7 +879,8 @@ internal static class Program
     /// </summary>
     private static async Task<int> DoWorkAsync(
         string arg, CliInvocation invocation, CancellationToken token,
-        IServiceProvider? servicesOverride, Func<bool>? consoleWatched, ConsoleGuard? output)
+        IServiceProvider? servicesOverride, Func<bool>? consoleWatched, ConsoleGuard? output,
+        RunReport? report)
     {
         consoleWatched ??= ConsoleIsWatched;
 
@@ -851,6 +912,47 @@ internal static class Program
                 : null;
             IServiceProvider services = servicesOverride ?? ownedServices!;
 
+            // THE REPORT OF THIS RUN, WHERE SOMEBODY CAN ANSWER FOR IT. The start check runs
+            // from here, alongside the scan, so the PC's first run is decided before any
+            // batch sets the mark itself. A run nobody can answer starts no check, builds
+            // nothing and sets no mark beyond the one a batch sets.
+            var reporting = report is { CanAsk: true };
+            bool? pcHadEarlierRun = null;
+            if (reporting)
+                _ = services.GetRequiredService<IEarlierRunCheck>().ShowsAnEarlierRunAsync();
+
+            async Task<bool> PcHadEarlierRunAsync()
+            {
+                pcHadEarlierRun ??= await services.GetRequiredService<IEarlierRunCheck>()
+                    .ShowsAnEarlierRunWithinAsync(ReportCheckBound);
+                return pcHadEarlierRun.Value;
+            }
+
+            // Carries the report of a run that finished, where this is the PC's first run:
+            // builds it, then sets the PC-wide mark, so a Ctrl+C at the question leaves
+            // this the PC's first run all the same. A report that cannot be built is left
+            // out and the run ends as it would have.
+            async Task CarryReportAsync(Func<ResultLogEntry> build)
+            {
+                if (!reporting || await PcHadEarlierRunAsync()) return;
+                try
+                {
+                    report!.Entry = build();
+                    services.GetRequiredService<IFirstRunMark>().Set();
+                }
+                catch (Exception ex)
+                {
+                    Helpers.CrashLog.TryWrite(ex);
+                }
+            }
+
+            string? WindowsRegion() => services.GetRequiredService<IWindowsRegion>().Read();
+
+            // The report of a scan, which is also the report of a Delete or Move that found
+            // nothing to act on.
+            ResultLogEntry ScanOnlyReport(ScanResult scan, long scanMs) => ResultLogEntry.ForScanOnly(
+                scan, scanMs, WindowsRegion(), ReportHost.CommandLine, RunningCopy(services));
+
             // For /m, resolve and validate the destination before the scan so
             // a misconfigured task fails fast instead of paying a full
             // Installer-folder walk every run before erroring on the path.
@@ -865,7 +967,9 @@ internal static class Program
             var scanService = services.GetRequiredService<IFileSystemScanService>();
 
             Console.WriteLine(Strings.Cli_ScanningInstaller);
+            var scanTimer = Stopwatch.StartNew();
             var scanResult = await scanService.ScanAsync(cancellationToken: token);
+            var scanDurationMs = scanTimer.ElapsedMilliseconds;
 
             var count = scanResult.RemovableFiles.Count;
             var totalBytes = scanResult.RemovableFiles.Sum(f => f.SizeBytes);
@@ -993,6 +1097,7 @@ internal static class Program
                 // audit line reads fully English and carries the size in the form tooling
                 // reads.
                 listing.ForEach(Console.WriteLine);
+                await CarryReportAsync(() => ScanOnlyReport(scanResult, scanDurationMs));
                 return EndScanOnly(arg, output,
                     () => string.Format(Strings.Cli_EventLogScanFound,
                         arg, count, DisplayHelpers.PluraliseFile(count),
@@ -1042,6 +1147,10 @@ internal static class Program
                         : sourcesGivenUp.Count > 0
                             ? SourcesGivenUpEventLogLine(arg, sourcesGivenUp)
                             : string.Format(Strings.Cli_EventLogScanNoOrphans, arg);
+
+                // A scan that offered nothing carries the report, and so does a Delete or
+                // Move that found nothing to act on, as the window's card for them does.
+                await CarryReportAsync(() => ScanOnlyReport(scanResult, scanDurationMs));
 
                 // A Delete or Move that found nothing to act on exits as that Delete or Move,
                 // which is what it was asked for, whatever became of its output.
@@ -1174,7 +1283,8 @@ internal static class Program
             });
 
             // Set where a batch moves or deletes a file, or ends where how far it got is
-            // not known (HandOverBatchAsync).
+            // not known (HandOverBatchAsync). A run that carries its report sets it too
+            // (CarryReportAsync).
             var firstRunMark = services.GetRequiredService<IFirstRunMark>();
 
             if (arg == "/d")
@@ -1195,6 +1305,10 @@ internal static class Program
                 // would otherwise create and probe its destination for an empty
                 // batch). The summary path below still fires with 0, exit Ok, so the
                 // one-summary-per-run event-log contract holds.
+                // Decided here, ahead of the batch, because a batch that deletes a file sets
+                // the mark the answer reads.
+                if (reporting) await PcHadEarlierRunAsync();
+                var operationTimer = Stopwatch.StartNew();
                 var result = await HandOverBatchAsync(firstRunMark,
                     () => filePaths.Count == 0
                         ? Task.FromResult(new DeleteResult(0, Array.Empty<FileOperationError>()))
@@ -1202,6 +1316,7 @@ internal static class Program
                             filePaths, UnderLeaseClaims.From(reverify),
                             progress: progress, cancellationToken: token),
                     r => r.DeletedCount);
+                var operationDurationMs = operationTimer.ElapsedMilliseconds;
 
                 // A Windows Installer transaction grabbed Global\_MSIExecute in the
                 // race after the gate check passed, so the service refused and
@@ -1306,6 +1421,12 @@ internal static class Program
                     ? totalBytes
                     : SumBytesExcludingErrors(survivingFiles, result.Errors);
                 var outcome = CliContract.ClassifyFileOperation(result.DeletedCount, result.Errors.Count);
+                // The folded check, so the under-lease re-read's own held-back files are
+                // counted with the pre-act ones, as the window's report counts them.
+                await CarryReportAsync(() => ResultLogEntry.ForDelete(
+                    scanResult, scanDurationMs, result, actualBytes, operationDurationMs,
+                    reverify.WithHeldBack(result.HeldBack, result.HeldBackReasons),
+                    WindowsRegion(), ReportHost.CommandLine, RunningCopy(services)));
                 // Size and nouns are recomputed inside the en-GB scope, not
                 // reused from the stdout copies, so the audit line reads fully
                 // English ("3.2 GB", "files") on a localised machine, and the size
@@ -1353,6 +1474,9 @@ internal static class Program
             // re-verify; synthesize the empty result so the summary path still fires
             // with 0 and exit Ok.
             MoveResult moveResult;
+            // Decided here, ahead of the batch, as in the /d branch.
+            if (reporting) await PcHadEarlierRunAsync();
+            var moveTimer = Stopwatch.StartNew();
             try
             {
                 moveResult = await HandOverBatchAsync(firstRunMark,
@@ -1390,6 +1514,8 @@ internal static class Program
                 }
                 return ReportAbortedMove(arg, ex, moveDest, count, survivingFiles);
             }
+
+            var moveDurationMs = moveTimer.ElapsedMilliseconds;
 
             // Global\_MSIExecute found held at the service boundary: same outcome
             // as a gate block.
@@ -1478,6 +1604,11 @@ internal static class Program
                 ? totalBytes
                 : SumBytesExcludingErrors(survivingFiles, moveResult.Errors);
             var moveOutcome = CliContract.ClassifyFileOperation(moveResult.MovedCount, moveResult.Errors.Count);
+            await CarryReportAsync(() => ResultLogEntry.ForMove(
+                scanResult, scanDurationMs, moveResult, actualMovedBytes, moveDurationMs,
+                MoveDestinationClassifier.Classify(moveDest),
+                reverify.WithHeldBack(moveResult.HeldBack, moveResult.HeldBackReasons),
+                WindowsRegion(), ReportHost.CommandLine, RunningCopy(services)));
             // Size and nouns recomputed inside the en-GB scope; see the /d
             // summary above for why the stdout copies are not reused.
             MachineContract.WriteEventLog(moveOutcome.EventClass,
@@ -1672,7 +1803,8 @@ internal static class Program
     /// Sets the PC's first-run mark where <paramref name="filesActedOn"/>, the service's
     /// own count of files moved or deleted, is above nought: a Delete's or a Move's
     /// result (<see cref="HandOverBatchAsync{TResult}"/>), and a stopped Move's partial result. A
-    /// scan, and a run whose count came back at nought, leave the mark as it was.
+    /// scan, and a run whose count came back at nought, leave the mark as it was here; a run
+    /// at a console that carries its report sets it where it carries it.
     /// </summary>
     private static void RecordFirstRun(IFirstRunMark mark, int filesActedOn)
     {

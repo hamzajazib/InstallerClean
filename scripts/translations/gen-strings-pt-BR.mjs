@@ -653,6 +653,13 @@ const MAP = {
   'UpdateNotice.DownloadNetFramework48': `Baixe o .NET Framework 4.8 no site da Microsoft`,
   'Automation.UpdateNotice.DownloadNetFramework48': `Baixe o .NET Framework 4.8 no site da Microsoft`,
   'Cli.UpdateNeedsNetFramework48': `Esta versão precisa do .NET Framework 4.8. Instale-o pelo site da Microsoft, reinicie o PC e depois execute o InstallerClean de novo para atualizar.`,
+  'Cli.ReportPrompt': `Enviar um relatório anônimo desta execução? Ele está salvo em {0}. Digite ? para ver o que ele contém. [{1}/{2}/?]`,
+  'Cli.ReportChartAt': `este gráfico em {0}`,
+  'Cli.ReportInFull': `O relatório completo é exibido abaixo.`,
+  'Cli.ReportSent': `Relatório enviado. Obrigado.`,
+  'Cli.ReportNotSent': `Relatório não enviado.`,
+  'Cli.ReportCouldNotBeSent': `Não foi possível enviar o relatório. Ele está guardado em {0}.`,
+  'Cli.ReportWaiting': `Enviando o relatório de uma execução anterior, que você concordou em enviar.`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

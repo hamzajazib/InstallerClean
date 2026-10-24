@@ -558,6 +558,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Update now? [{0}/{1}] | 立即更新？[{0}/{1}] |
 | Y | Y |
 | N | N |
+| Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | 傳送本次執行的匿名報告？報告已儲存在 {0}。輸入 ? 可查看其內容。[{1}/{2}/?] |
+| the chart at {0} | 地址為 {0} 的圖表 |
+| The full report is printed below. | 完整報告列印在下方。 |
+| Report sent. Thank you. | 報告已傳送。謝謝。 |
+| Report not sent. | 報告未傳送。 |
+| The report could not be sent. It is kept in {0}. | 無法傳送報告。報告保存在 {0}。 |
+| Sending the report from an earlier run, which you agreed to send. | 正在傳送較早一次執行的報告，您已同意傳送。 |
 | InstallerClean {0} is installed. | InstallerClean {0} 版已安裝。 |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 新版本會掃描並列出找到的內容，不會刪除任何檔案。如需刪除，請在之後再次執行 /d。 |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 新版本會掃描並列出找到的內容，不會移動任何檔案。如需移動，請在之後再次執行 /m。 |

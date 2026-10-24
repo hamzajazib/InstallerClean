@@ -668,6 +668,13 @@ const MAP = {
   'UpdateNotice.DownloadNetFramework48': `Завантажити .NET Framework 4.8 з сайту Microsoft`,
   'Automation.UpdateNotice.DownloadNetFramework48': `Завантажити .NET Framework 4.8 з сайту Microsoft`,
   'Cli.UpdateNeedsNetFramework48': `Для цієї версії потрібен .NET Framework 4.8. Встановіть його з сайту Microsoft, перезавантажте комп'ютер, а потім знову запустіть InstallerClean, щоб виконати оновлення.`,
+  'Cli.ReportPrompt': `Надіслати анонімний звіт про цей запуск? Його збережено в {0}. Введіть ?, щоб побачити, що в ньому. [{1}/{2}/?]`,
+  'Cli.ReportChartAt': `графіка за адресою {0}`,
+  'Cli.ReportInFull': `Повний звіт виведено нижче.`,
+  'Cli.ReportSent': `Звіт надіслано. Дякую.`,
+  'Cli.ReportNotSent': `Звіт не надіслано.`,
+  'Cli.ReportCouldNotBeSent': `Не вдалося надіслати звіт. Його збережено в {0}.`,
+  'Cli.ReportWaiting': `Надсилається звіт про попередній запуск, надсилання якого ви дозволили.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

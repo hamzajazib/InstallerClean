@@ -726,6 +726,13 @@ const CLI = {
   'Cli.UpdateInUse': `InstallerClean используется, поэтому сейчас не может обновиться.`,
   'Cli.CancellingAfterUpdate': `Отмена после завершения обновления...`,
   'Cli.UpdateNeedsNetFramework48': `Для этой версии нужен .NET Framework 4.8. Установите его с сайта Microsoft, перезагрузите компьютер, а затем снова запустите InstallerClean, чтобы выполнить обновление.`,
+  'Cli.ReportPrompt': `Отправить анонимный отчёт об этом запуске? Он сохранён в {0}. Введите ?, чтобы увидеть, что в нём. [{1}/{2}/?]`,
+  'Cli.ReportChartAt': `график по адресу {0}`,
+  'Cli.ReportInFull': `Полный отчёт выведен ниже.`,
+  'Cli.ReportSent': `Отчёт отправлен. Спасибо.`,
+  'Cli.ReportNotSent': `Отчёт не отправлен.`,
+  'Cli.ReportCouldNotBeSent': `Не удалось отправить отчёт. Он хранится в {0}.`,
+  'Cli.ReportWaiting': `Отправляется отчёт о предыдущем запуске, отправку которого вы разрешили.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

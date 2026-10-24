@@ -558,6 +558,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Update now? [{0}/{1}] | Şimdi güncellensin mi? [{0}/{1}] |
 | Y | E |
 | N | H |
+| Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Bu çalıştırmanın anonim raporu gönderilsin mi? {0} konumuna kaydedildi. İçeriğini görmek için ? yazın. [{1}/{2}/?] |
+| the chart at {0} | {0} adresindeki grafiğe |
+| The full report is printed below. | Raporun tamamı aşağıda yazdırılmıştır. |
+| Report sent. Thank you. | Rapor gönderildi. Teşekkürler. |
+| Report not sent. | Rapor gönderilmedi. |
+| The report could not be sent. It is kept in {0}. | Rapor gönderilemedi. {0} konumunda saklanıyor. |
+| Sending the report from an earlier run, which you agreed to send. | Daha önceki bir çalıştırmanın raporu gönderiliyor; göndermeyi kabul etmiştiniz. |
 | InstallerClean {0} is installed. | InstallerClean {0} sürümü yüklendi. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi silmeyecek. Silmek için ardından /d komutunu yeniden çalıştırın. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi taşımayacak. Taşımak için ardından /m komutunu yeniden çalıştırın. |

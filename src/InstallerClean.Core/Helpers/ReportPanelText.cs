@@ -29,6 +29,20 @@ internal static class ReportPanelText
     ];
 
     /// <summary>
+    /// The panel's words as lines for a console: the opening sentence with the words in
+    /// its <c>[ ]</c> pair replaced by <paramref name="chartPhrase"/>, then each line of
+    /// the list behind a hyphen, then the closing line. The window draws those words
+    /// as a link, which a console cannot, so the phrase there names the chart's address.
+    /// </summary>
+    internal static string[] ConsoleLines(string chartPhrase)
+    {
+        var intro = Strings.Completion_ReportPanel_Intro;
+        if (CompositionParsing.SplitAtBracketedPhrase(intro) is { } split)
+            intro = split.Prefix + chartPhrase + split.Suffix;
+        return [intro, .. Lines.Select(line => "- " + line), Strings.Completion_ReportPanel_Closing];
+    }
+
+    /// <summary>
     /// The panel's words as one line for the screen reader: <paramref name="intro"/>, the
     /// opening sentence as the window draws it, then each line of the list, ended the way
     /// the displayed language ends a sentence, then the closing line and the name of the

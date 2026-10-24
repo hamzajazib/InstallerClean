@@ -558,6 +558,13 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Update now? [{0}/{1}] | Aggiornare ora? [{0}/{1}] |
 | Y | S |
 | N | N |
+| Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Inviare un rapporto anonimo di questa esecuzione? È salvato in {0}. Digita ? per vedere cosa contiene. [{1}/{2}/?] |
+| the chart at {0} | questo grafico all'indirizzo {0} |
+| The full report is printed below. | Il rapporto completo è riportato qui sotto. |
+| Report sent. Thank you. | Rapporto inviato. Grazie. |
+| Report not sent. | Rapporto non inviato. |
+| The report could not be sent. It is kept in {0}. | Non è stato possibile inviare il rapporto. È conservato in {0}. |
+| Sending the report from an earlier run, which you agreed to send. | Invio del rapporto di un'esecuzione precedente, che hai accettato di inviare. |
 | InstallerClean {0} is installed. | InstallerClean {0} è installato. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | La nuova versione eseguirà la scansione ed elencherà ciò che trova, senza eliminare nulla. Per eliminare, esegui di nuovo /d al termine. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | La nuova versione eseguirà la scansione ed elencherà ciò che trova, senza spostare nulla. Per spostare, esegui di nuovo /m al termine. |
