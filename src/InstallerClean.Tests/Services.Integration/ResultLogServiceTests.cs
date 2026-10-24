@@ -39,7 +39,9 @@ public class ResultLogServiceTests : IDisposable
         ResultLogEntry.ForScanOnly(
             new ScanResult(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0),
             scanDurationMs: 1234,
-            windowsRegion: "GB");
+            windowsRegion: "GB",
+            host: ReportHost.Window,
+            copy: AppCopyKind.Setup);
 
     private IEnumerable<string> TempFiles() =>
         Directory.Exists(_folder)
@@ -168,7 +170,9 @@ public class ResultLogServiceTests : IDisposable
         await svc.WriteAsync(ResultLogEntry.ForScanOnly(
             new ScanResult(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0),
             scanDurationMs: 9876,
-            windowsRegion: "GB"));
+            windowsRegion: "GB",
+            host: ReportHost.Window,
+            copy: AppCopyKind.Setup));
         var second = await svc.ReadLastLogAsync();
 
         // MoveFileEx(REPLACE_EXISTING), so there is exactly one log and it is

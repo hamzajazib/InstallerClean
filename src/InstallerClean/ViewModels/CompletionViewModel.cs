@@ -167,6 +167,16 @@ public partial class CompletionViewModel : ObservableObject
     public string? ReportRegion { get; private set; }
 
     /// <summary>
+    /// The kind of copy of the app that is running, which the report carries. It is the
+    /// kind the app decided at start (<see cref="IAppUpdater.Kind"/>), so every report the
+    /// window writes in a sitting names the same one.
+    /// </summary>
+    public AppCopyKind ReportCopy { get; }
+
+    /// <summary>The program that sends the reports this window writes: the window.</summary>
+    public ReportHost ReportHost => ReportHost.Window;
+
+    /// <summary>
     /// Whether the panel saying what the report holds is open, the panel the small
     /// "i" beside the box opens and closes. It closes whenever the box leaves the card,
     /// which every close of the card does, so it is never open without the box. No
@@ -244,9 +254,10 @@ public partial class CompletionViewModel : ObservableObject
     /// gone. <paramref name="earlierRunCheck"/> and <paramref name="firstRunMark"/>
     /// decide which card is the PC's first, and <paramref name="windowsRegion"/> gives the
     /// Country or region the report carries. <paramref name="windowService"/> opens the
-    /// donate page and the report window. <paramref name="lastScan"/> answers with the scan
-    /// the window shows at the moment it is asked, which the card after a Move or Delete
-    /// speaks for.
+    /// donate page and the report window. <paramref name="copy"/> is the kind of copy of the
+    /// app that is running, which the report carries. <paramref name="lastScan"/> answers
+    /// with the scan the window shows at the moment it is asked, which the card after a
+    /// Move or Delete speaks for.
     /// </summary>
     public CompletionViewModel(
         IResultLogService resultLogService,
@@ -255,6 +266,7 @@ public partial class CompletionViewModel : ObservableObject
         IFirstRunMark firstRunMark,
         IWindowsRegion windowsRegion,
         IWindowService windowService,
+        AppCopyKind copy,
         Func<ScanResult?> lastScan)
     {
         _resultLogService = resultLogService;
@@ -263,6 +275,7 @@ public partial class CompletionViewModel : ObservableObject
         _firstRunMark = firstRunMark;
         _windowsRegion = windowsRegion;
         _windowService = windowService;
+        ReportCopy = copy;
         _lastScan = lastScan;
     }
 

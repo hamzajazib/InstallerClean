@@ -1159,7 +1159,7 @@ public class CompletionViewModelTests
         var vm = new CompletionViewModel(
             Substitute.For<IResultLogService>(), Substitute.For<ISettingsService>(),
             Substitute.For<IEarlierRunCheck>(), Substitute.For<IFirstRunMark>(),
-            windowsRegion, Substitute.For<IWindowService>(), () => null);
+            windowsRegion, Substitute.For<IWindowService>(), AppCopyKind.FromSource, () => null);
 
         Assert.True(vm.TakeReport());
 
@@ -1195,7 +1195,7 @@ public class CompletionViewModelTests
             ResultLog.SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(ResultLogSendOutcome.Sent);
             Settings.Update(Arg.Any<Action<AppSettings>>()).Returns(true);
             Vm = new CompletionViewModel(ResultLog, Settings, Substitute.For<IEarlierRunCheck>(), FirstRunMark,
-                Substitute.For<IWindowsRegion>(), Windows, () => null);
+                Substitute.For<IWindowsRegion>(), Windows, AppCopyKind.FromSource, () => null);
             Assert.True(Vm.TakeReport());
             Vm.ShowAllClear(scannedFileCount: 5, scanDurationMs: 10);
             Writing = Vm.WriteReportAsync(null!);

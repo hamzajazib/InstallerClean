@@ -154,6 +154,10 @@ public sealed record ResultLogEntry(
     /// with one in the third, and only a media package path while Windows follows a symbolic link
     /// reached through a network path in the fourth.
     ///
+    /// SCHEMA 10 ADDS TWO KEYS UNDER <c>app</c> AND TAKES NONE AWAY: <c>host</c>, the program
+    /// that sent the report (<see cref="AppInfo.Host"/>), and <c>copyKind</c>, the kind of copy
+    /// of it that was running (<see cref="AppInfo.CopyKind"/>).
+    ///
     /// A receiver that does not recognise a version stores the report under a
     /// lenient v&lt;n&gt;-unknown/ prefix rather than rejecting it, so a bump
     /// never loses data even if the allowlist has not caught up. THAT LENIENCE
@@ -162,14 +166,20 @@ public sealed record ResultLogEntry(
     /// <c>machine</c> arriving before the receiving end knows the name is a
     /// rejected report and a user told sending failed. The receiver ships first.
     /// </summary>
-    public const int CurrentSchemaVersion = 9;
+    public const int CurrentSchemaVersion = 10;
 
     // Each factory takes windowsRegion as IWindowsRegion.Read returned it when the
-    // report box was put on the card, so the report carries that reading.
-    public static ResultLogEntry ForScanOnly(ScanResult scan, long scanDurationMs, string? windowsRegion) =>
+    // report box was put on the card, so the report carries that reading. The host is the
+    // program sending the report and the copy is the kind of copy of it that is running.
+    public static ResultLogEntry ForScanOnly(
+        ScanResult scan,
+        long scanDurationMs,
+        string? windowsRegion,
+        ReportHost host,
+        AppCopyKind copy) =>
         new(
             CurrentSchemaVersion,
-            AppInfo.Current(windowsRegion),
+            AppInfo.Current(windowsRegion, host, copy),
             ResolveOs(),
             MachineInfo.From(scan),
             ScanInfo.From(scan, scanDurationMs),
@@ -183,10 +193,12 @@ public sealed record ResultLogEntry(
         long operationDurationMs,
         string moveDestinationKind,
         ReverifyResult check,
-        string? windowsRegion) =>
+        string? windowsRegion,
+        ReportHost host,
+        AppCopyKind copy) =>
         new(
             CurrentSchemaVersion,
-            AppInfo.Current(windowsRegion),
+            AppInfo.Current(windowsRegion, host, copy),
             ResolveOs(),
             MachineInfo.From(scan),
             ScanInfo.From(scan, scanDurationMs),
@@ -199,10 +211,12 @@ public sealed record ResultLogEntry(
         long bytesFreed,
         long operationDurationMs,
         ReverifyResult check,
-        string? windowsRegion) =>
+        string? windowsRegion,
+        ReportHost host,
+        AppCopyKind copy) =>
         new(
             CurrentSchemaVersion,
-            AppInfo.Current(windowsRegion),
+            AppInfo.Current(windowsRegion, host, copy),
             ResolveOs(),
             MachineInfo.From(scan),
             ScanInfo.From(scan, scanDurationMs),
@@ -236,8 +250,9 @@ public sealed record ResultLogEntry(
 }
 
 /// <summary>
-/// Which build produced the report, which language its user was reading, which
-/// language Windows was showing them, and the Country or region set in Windows.
+/// Which build produced the report, which program sent it and which kind of copy that
+/// was, which language its user was reading, which language Windows was showing them,
+/// and the Country or region set in Windows.
 /// </summary>
 /// <param name="Language">
 /// The language the app was showing for this run: one of
@@ -271,20 +286,43 @@ public sealed record ResultLogEntry(
 /// the shape <see cref="WindowsRegionLabel.For"/> gives it: an ISO 3166-1 two-letter code,
 /// a UN M.49 number, or one of two fixed labels.
 /// </param>
-public sealed record AppInfo(string Version, string Language, string WindowsLanguage, string WindowsRegion)
+/// <param name="Host">
+/// The program that sent the report, as <see cref="ReportHostLabel.For"/> labels it: the
+/// window or the command-line tool.
+///
+/// A COMMAND-LINE TOOL IN THE SETUP'S FOLDER AND THE WINDOW IN THE SAME FOLDER BOTH HAVE
+/// THE SETUP'S COPY KIND, so this is what tells their reports apart.
+/// </param>
+/// <param name="CopyKind">
+/// The kind of copy of the program that was running, as <see cref="AppCopyLabel.For"/>
+/// labels <see cref="AppCopyKind"/>: the setup's, the portable download, the slim
+/// download, the command line's own download, Scoop's, a build from source, or a copy on a
+/// PC whose setup record could not say. It names how the program came to be on the PC and
+/// nothing about the PC or its user.
+/// </param>
+public sealed record AppInfo(
+    string Version,
+    string Language,
+    string WindowsLanguage,
+    string WindowsRegion,
+    string Host,
+    string CopyKind)
 {
     /// <summary>
     /// This build and this user's languages, with <paramref name="windowsRegion"/>, a value
-    /// <see cref="IWindowsRegion.Read"/> returned.
+    /// <see cref="IWindowsRegion.Read"/> returned, and the program and the kind of copy
+    /// that are sending it.
     /// </summary>
-    public static AppInfo Current(string? windowsRegion) =>
+    public static AppInfo Current(string? windowsRegion, ReportHost host, AppCopyKind copy) =>
         new(Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0",
             // The UI culture rather than the format culture, resolved to the
             // language whose strings were shown: a UI culture with no satellite of
             // its own, the invariant culture included, shows the neutral English.
             SupportedLanguages.Active(Localisation.UiCulture),
             WindowsDisplayLanguage.Current(),
-            WindowsRegionLabel.For(windowsRegion));
+            WindowsRegionLabel.For(windowsRegion),
+            ReportHostLabel.For(host),
+            AppCopyLabel.For(copy));
 }
 
 /// <summary>

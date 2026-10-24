@@ -3228,7 +3228,9 @@ public class MainViewModelTests
     [InlineData(OperationKinds.Delete)]
     public async Task A_Move_or_Delete_report_carries_the_region_read_for_the_card_and_the_box_is_ticked(string kind)
     {
-        var vm = CreateViewModel();
+        var updater = Substitute.For<IAppUpdater>();
+        updater.Kind.Returns(AppCopyKind.Slim);
+        var vm = CreateViewModel(new AppSettings(), updater);
         _windowsRegion.Read().Returns("NO");
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(ScanResultWithOrphans(2));
@@ -3260,7 +3262,8 @@ public class MainViewModelTests
         Assert.True(vm.Completion.OffersReport);
         Assert.True(vm.Completion.SendsReport);
         await _resultLogService.Received(1).WriteAsync(
-            Arg.Is<ResultLogEntry>(e => e.Operation.Kind == kind && e.App.WindowsRegion == "NO"),
+            Arg.Is<ResultLogEntry>(e => e.Operation.Kind == kind && e.App.WindowsRegion == "NO"
+                && e.App.Host == "window" && e.App.CopyKind == "slim"),
             Arg.Any<CancellationToken>());
     }
 
@@ -3912,9 +3915,9 @@ public class MainViewModelTests
     }
 
     /// <summary>The scan finds nothing, the report is written, and the region is <paramref name="region"/>.</summary>
-    private MainViewModel FirstRunAllClear(string? region = "GB")
+    private MainViewModel FirstRunAllClear(string? region = "GB", IAppUpdater? appUpdater = null)
     {
-        var vm = CreateViewModel();
+        var vm = CreateViewModel(new AppSettings(), appUpdater);
         _windowsRegion.Read().Returns(region);
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(EmptyScanResult());
@@ -3971,6 +3974,61 @@ public class MainViewModelTests
         await _resultLogService.Received(1).WriteAsync(
             Arg.Is<ResultLogEntry>(e => e.App.WindowsRegion == "GB"), Arg.Any<CancellationToken>());
         _windowsRegion.Received(1).Read();
+    }
+
+    [Theory]
+    [InlineData(AppCopyKind.Setup, "setup")]
+    [InlineData(AppCopyKind.Portable, "portable")]
+    [InlineData(AppCopyKind.Slim, "slim")]
+    [InlineData(AppCopyKind.Scoop, "scoop")]
+    [InlineData(AppCopyKind.FromSource, "fromSource")]
+    [InlineData(AppCopyKind.Undetermined, "undetermined")]
+    public async Task The_report_names_the_window_and_the_kind_of_copy_the_app_decided(
+        AppCopyKind kind, string reported)
+    {
+        var updater = Substitute.For<IAppUpdater>();
+        updater.Kind.Returns(kind);
+        var vm = FirstRunAllClear(appUpdater: updater);
+
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+
+        await _resultLogService.Received(1).WriteAsync(
+            Arg.Is<ResultLogEntry>(e => e.App.Host == "window" && e.App.CopyKind == reported),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(AppCopyKind.Setup)]
+    [InlineData(AppCopyKind.Portable)]
+    [InlineData(AppCopyKind.Scoop)]
+    public void The_card_carries_the_kind_of_copy_the_app_decided(AppCopyKind kind)
+    {
+        var updater = Substitute.For<IAppUpdater>();
+        updater.Kind.Returns(kind);
+
+        var vm = CreateViewModel(new AppSettings(), updater);
+
+        Assert.Equal(kind, vm.Completion.ReportCopy);
+    }
+
+    [Fact]
+    public void The_card_without_an_updater_carries_an_undetermined_copy()
+    {
+        var vm = CreateViewModel();
+
+        Assert.Equal(AppCopyKind.Undetermined, vm.Completion.ReportCopy);
+    }
+
+    [Fact]
+    public async Task A_report_written_without_an_updater_names_an_undetermined_copy()
+    {
+        var vm = FirstRunAllClear();
+
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+
+        await _resultLogService.Received(1).WriteAsync(
+            Arg.Is<ResultLogEntry>(e => e.App.Host == "window" && e.App.CopyKind == "undetermined"),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]

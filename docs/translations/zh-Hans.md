@@ -187,7 +187,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | 已永久删除 {0} 个{1} |
 | Any small donation is much appreciated. | 任何小额捐赠都非常感谢。 |
 | Send _anonymous report | 发送匿名报告(_A) |
-| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | 报告会以完全匿名的方式，把您的结果添加到 GitHub 上的[这张图表]中，让大家看到 InstallerClean 在实际使用中释放了多少空间。报告还包含匿名的技术细节，帮助我发现程序错误： |
+| The report adds your result to [this chart] on GitHub, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | 报告会把您的结果添加到 GitHub 上的[这张图表]中，图表显示人们用 InstallerClean 释放了多少空间。报告还包含以下技术细节，帮助我发现程序错误： |
 | How much space was freed, and how many files were moved or deleted | 释放了多少空间，以及移动或删除了多少个文件 |
 | Whether a Move went to the same drive, another drive, a removable drive or a network share | 移动的目标是同一个驱动器、另一个驱动器、可移动驱动器还是网络共享 |
 | How long the scan and the Move or Delete took | 扫描以及移动或删除各用了多长时间 |
@@ -197,9 +197,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | How many programs and patches Windows has a record of | Windows 记录了多少个程序和补丁 |
 | Whether Windows still makes old-style short file names | Windows 是否仍在生成旧式短文件名 |
 | Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Windows 是 10 还是 11，是 x64 还是 Arm，以及设置的是哪种语言和哪个国家或地区 |
-| InstallerClean's version and the language it was showing | InstallerClean 的版本及其显示的语言 |
+| InstallerClean's version, how you got it (setup, portable, slim, Scoop, the command-line tool on its own, or built from source), whether the report was sent from InstallerClean or the command-line tool, and the language it was showing | InstallerClean 的版本、获取方式（setup、portable、slim、Scoop、单独的命令行工具，或从源代码构建）、报告是由 InstallerClean 还是命令行工具发送的，以及其显示的语言 |
 | Counts of anything that went wrong | 所有出错情况的计数 |
-| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | 其中全是这样的计数和标签。没有任何内容会指明您、您的电脑、文件或程序，我也永远看不到您的 IP 地址。 |
+| Each of these is a count or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | 这些内容都是计数或标签。报告中没有任何内容会指明您、您的电脑、文件或程序，我也永远看不到您的 IP 地址。 |
 | See exactly what's sent | 查看发送的确切内容 |
 
 ## Summaries and counts

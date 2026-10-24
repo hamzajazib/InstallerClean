@@ -955,7 +955,7 @@
     <comment>The checkbox on the first completion card the PC shows, whatever kind of card it is. Ticked, the report goes as the card closes. The underscore marks the access key (Alt+A in English), which must not clash with the card's buttons: Action.Done, Action.DonateSmall, Action.Donate and Action.CloseWithoutDonating.</comment>
   </data>
   <data name="Completion.ReportPanel.Intro" xml:space="preserve">
-    <value>Отчёт добавляет ваш результат, полностью анонимно, в [этот график] на GitHub, где видно, сколько места InstallerClean освобождает при реальном использовании. Ещё в нём есть анонимные технические сведения, которые помогают мне находить ошибки:</value>
+    <value>Отчёт добавляет ваш результат в [этот график] на GitHub, который показывает, сколько места люди освобождают с помощью InstallerClean. В нём есть и эти технические сведения, которые помогают мне находить ошибки:</value>
     <comment>The opening of the panel the small &quot;i&quot; beside Completion.SendReport opens, saying what the report holds. The eleven Completion.ReportPanel.* lines follow it as a bulleted list, then Completion.ReportPanel.Closing. The phrase in [ ] is a link to the chart of results in the README: keep exactly one pair of brackets, around the words that name the chart. &quot;Me&quot; is the app's author.</comment>
   </data>
   <data name="Completion.ReportPanel.Freed" xml:space="preserve">
@@ -995,7 +995,7 @@
     <comment>Bullet 9 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.AppVersion" xml:space="preserve">
-    <value>Версия InstallerClean и язык, на котором он отображался</value>
+    <value>Версия InstallerClean, способ её получения (setup, portable, slim, Scoop, отдельная программа командной строки или сборка из исходного кода), откуда отправлен отчёт (из InstallerClean или из программы командной строки) и язык, на котором он отображался</value>
     <comment>Bullet 10 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Errors" xml:space="preserve">
@@ -1003,7 +1003,7 @@
     <comment>Bullet 11 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Closing" xml:space="preserve">
-    <value>Всё это — счётчики и метки вроде этих. Ничто в нём не указывает на вас, ваш ПК, ваши файлы или программы, и я никогда не вижу ваш IP-адрес.</value>
+    <value>Каждый из этих пунктов — счётчик или метка. Ничто в отчёте не указывает на вас, ваш ПК, ваши файлы или программы, и я никогда не вижу ваш IP-адрес.</value>
     <comment>The closing line of the panel opened from the small &quot;i&quot; beside Completion.SendReport, under the eleven bullets. &quot;I&quot; is the app's author.</comment>
   </data>
   <data name="Completion.ReportPanel.SeeReport" xml:space="preserve">

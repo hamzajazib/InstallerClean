@@ -187,7 +187,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | {0} {1} dihapus permanen |
 | Any small donation is much appreciated. | Donasi sekecil apa pun sangat dihargai. |
 | Send _anonymous report | Kirim laporan _anonim |
-| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | Laporan ini menambahkan hasil Anda, sepenuhnya anonim, ke [grafik ini] di GitHub, yang memperlihatkan berapa banyak ruang yang dikosongkan InstallerClean dalam pemakaian nyata. Laporan ini juga berisi detail teknis anonim untuk membantu saya menemukan bug: |
+| The report adds your result to [this chart] on GitHub, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Laporan ini menambahkan hasil Anda ke [grafik ini] di GitHub, yang menunjukkan berapa banyak ruang yang dikosongkan orang dengan InstallerClean. Laporan ini juga memuat detail teknis berikut untuk membantu saya menemukan bug: |
 | How much space was freed, and how many files were moved or deleted | Berapa banyak ruang yang dikosongkan, dan berapa banyak file yang dipindahkan atau dihapus |
 | Whether a Move went to the same drive, another drive, a removable drive or a network share | Apakah Pindahkan menuju drive yang sama, drive lain, drive yang dapat dilepas, atau berbagi jaringan |
 | How long the scan and the Move or Delete took | Berapa lama pemindaian serta Pindahkan atau Hapus berlangsung |
@@ -197,9 +197,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | How many programs and patches Windows has a record of | Berapa banyak program dan patch yang dicatat Windows |
 | Whether Windows still makes old-style short file names | Apakah Windows masih membuat nama file pendek gaya lama |
 | Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Apakah Windows versi 10 atau 11 dan x64 atau Arm, serta bahasa dan negara atau kawasan yang disetel di dalamnya |
-| InstallerClean's version and the language it was showing | Versi InstallerClean dan bahasa yang ditampilkannya |
+| InstallerClean's version, how you got it (setup, portable, slim, Scoop, the command-line tool on its own, or built from source), whether the report was sent from InstallerClean or the command-line tool, and the language it was showing | Versi InstallerClean, cara Anda mendapatkannya (setup, portable, slim, Scoop, alat baris perintah yang berdiri sendiri, atau dibuat dari kode sumber), apakah laporan dikirim dari InstallerClean atau alat baris perintah, dan bahasa yang ditampilkannya |
 | Counts of anything that went wrong | Jumlah dari apa pun yang gagal |
-| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Semuanya berupa jumlah dan label seperti ini. Tidak ada yang menyebut Anda, PC Anda, file Anda, atau program Anda, dan saya tidak pernah melihat alamat IP Anda. |
+| Each of these is a count or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | Masing-masing berupa jumlah atau label. Tidak ada di dalam laporan yang menyebut Anda, PC Anda, file Anda, atau program Anda, dan saya tidak pernah melihat alamat IP Anda. |
 | See exactly what's sent | Lihat persis apa yang dikirim |
 
 ## Summaries and counts

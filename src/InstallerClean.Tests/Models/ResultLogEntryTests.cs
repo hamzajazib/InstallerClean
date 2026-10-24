@@ -199,7 +199,7 @@ public class ResultLogEntryTests
 
     private static ResultLogEntry SampleEntry() => new(
         SchemaVersion: ResultLogEntry.CurrentSchemaVersion,
-        App: new AppInfo("1.8.0", "en-GB", "en", "GB"),
+        App: new AppInfo("1.8.0", "en-GB", "en", "GB", "window", "setup"),
         Os: "Windows 11 (X64)",
         Machine: SampleMachine(),
         Scan: SampleScan(),
@@ -226,15 +226,15 @@ public class ResultLogEntryTests
     }
 
     [Fact]
-    public void Schema_version_is_nine()
+    public void Schema_version_is_ten()
     {
         // The receiving Edge Function field-validates per version and holds each version a
         // release sends to its exact set of keys, every count in it required; a version it
         // does not know goes to its lenient v<n>-unknown/ path. So a key added to or taken
         // from what a version carries moves the version once a release sends it, and this
-        // pin makes that move a deliberate, reviewed act. Schema 9 is schema 8 with seven keys
-        // appended under scan, from declaredInstalledSourcesFormUrlCount.
-        Assert.Equal(9, ResultLogEntry.CurrentSchemaVersion);
+        // pin makes that move a deliberate, reviewed act. Schema 10 is schema 9 with two keys
+        // appended under app, host and copyKind.
+        Assert.Equal(10, ResultLogEntry.CurrentSchemaVersion);
     }
 
     [Fact]
@@ -255,7 +255,7 @@ public class ResultLogEntryTests
             root.EnumerateObject().Select(p => p.Name));
 
         Assert.Equal(
-            ["version", "language", "windowsLanguage", "windowsRegion"],
+            ["version", "language", "windowsLanguage", "windowsRegion", "host", "copyKind"],
             root.GetProperty("app").EnumerateObject().Select(p => p.Name));
 
         Assert.Equal(
@@ -900,7 +900,8 @@ public class ResultLogEntryTests
             SourceRootsGivenUp: [new("E:", SourceRootGiveUpRoute.StoppedWaiting, 5)], SourceWaitCount: 7);
 
         var entry = ResultLogEntry.ForDelete(
-            scan, 100, new DeleteResult(1, Array.Empty<FileOperationError>()), 10, 20, check, "GB");
+            scan, 100, new DeleteResult(1, Array.Empty<FileOperationError>()), 10, 20, check, "GB",
+            ReportHost.Window, AppCopyKind.Setup);
 
         Assert.Equal([0, 0, 1, 0, 0], GivenUpByRoute(entry.Scan));
         Assert.Equal(3, entry.Scan.FilesKeptForSourcesGivenUpCount);
@@ -1040,12 +1041,39 @@ public class ResultLogEntryTests
         Assert.Equal(2, info.MissingNeededCount);
     }
 
+    [Theory]
+    [InlineData(ReportHost.Window, AppCopyKind.Portable, "window", "portable")]
+    [InlineData(ReportHost.CommandLine, AppCopyKind.CommandLineDownload, "commandLine", "commandLine")]
+    [InlineData(ReportHost.CommandLine, AppCopyKind.Setup, "commandLine", "setup")]
+    public void The_report_names_the_program_that_sends_it_and_its_kind_of_copy(
+        ReportHost host, AppCopyKind copy, string expectedHost, string expectedCopy)
+    {
+        var scan = new ScanResult(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0);
+
+        var entries = new[]
+        {
+            ResultLogEntry.ForScanOnly(scan, 10, "GB", host, copy),
+            ResultLogEntry.ForMove(
+                scan, 10, new MoveResult(0, Array.Empty<FileOperationError>()), 0, 20, "sameDrive",
+                new ReverifyResult([], []), "GB", host, copy),
+            ResultLogEntry.ForDelete(
+                scan, 10, new DeleteResult(0, Array.Empty<FileOperationError>()), 0, 20,
+                new ReverifyResult([], []), "GB", host, copy),
+        };
+
+        foreach (var entry in entries)
+        {
+            Assert.Equal(expectedHost, entry.App.Host);
+            Assert.Equal(expectedCopy, entry.App.CopyKind);
+        }
+    }
+
     [Fact]
     public void The_report_carries_the_region_it_is_given_in_the_receivers_shape()
     {
-        Assert.Equal("GB", AppInfo.Current("gb").WindowsRegion);
-        Assert.Equal("419", AppInfo.Current("419").WindowsRegion);
-        Assert.Equal(WindowsRegionLabel.Unreadable, AppInfo.Current(null).WindowsRegion);
+        Assert.Equal("GB", AppInfo.Current("gb", ReportHost.Window, AppCopyKind.Setup).WindowsRegion);
+        Assert.Equal("419", AppInfo.Current("419", ReportHost.Window, AppCopyKind.Setup).WindowsRegion);
+        Assert.Equal(WindowsRegionLabel.Unreadable, AppInfo.Current(null, ReportHost.Window, AppCopyKind.Setup).WindowsRegion);
     }
 
     [Fact]
@@ -1063,14 +1091,14 @@ public class ResultLogEntryTests
             Localisation.Reset();
 
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("cs-CZ");
-            Assert.Equal(SupportedLanguages.Neutral, AppInfo.Current("GB").Language);
+            Assert.Equal(SupportedLanguages.Neutral, AppInfo.Current("GB", ReportHost.Window, AppCopyKind.Setup).Language);
 
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("de-AT");
-            Assert.Equal("de", AppInfo.Current("GB").Language);
+            Assert.Equal("de", AppInfo.Current("GB", ReportHost.Window, AppCopyKind.Setup).Language);
 
             var picked = CultureInfo.GetCultureInfo("ja");
             Localisation.Set(picked, picked);
-            Assert.Equal("ja", AppInfo.Current("GB").Language);
+            Assert.Equal("ja", AppInfo.Current("GB", ReportHost.Window, AppCopyKind.Setup).Language);
         }
         finally
         {

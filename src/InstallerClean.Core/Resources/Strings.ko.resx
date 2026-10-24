@@ -955,7 +955,7 @@
     <comment>The checkbox on the first completion card the PC shows, whatever kind of card it is. Ticked, the report goes as the card closes. The underscore marks the access key (Alt+A in English), which must not clash with the card's buttons: Action.Done, Action.DonateSmall, Action.Donate and Action.CloseWithoutDonating.</comment>
   </data>
   <data name="Completion.ReportPanel.Intro" xml:space="preserve">
-    <value>보고서는 사용자의 결과를 완전히 익명으로 GitHub의 [이 차트]에 추가하며, 이를 통해 InstallerClean이 실제 사용에서 얼마나 많은 공간을 확보하고 있는지 누구나 볼 수 있습니다. 또한 버그를 찾는 데 도움이 되는 익명의 기술 정보도 포함됩니다:</value>
+    <value>보고서는 사용자의 결과를 GitHub의 [이 차트]에 추가하며, 이 차트는 사람들이 InstallerClean으로 얼마나 많은 공간을 확보하고 있는지 보여 줍니다. 또한 버그를 찾는 데 도움이 되는 다음 기술 정보도 포함됩니다:</value>
     <comment>The opening of the panel the small &quot;i&quot; beside Completion.SendReport opens, saying what the report holds. The eleven Completion.ReportPanel.* lines follow it as a bulleted list, then Completion.ReportPanel.Closing. The phrase in [ ] is a link to the chart of results in the README: keep exactly one pair of brackets, around the words that name the chart. &quot;Me&quot; is the app's author.</comment>
   </data>
   <data name="Completion.ReportPanel.Freed" xml:space="preserve">
@@ -995,7 +995,7 @@
     <comment>Bullet 9 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.AppVersion" xml:space="preserve">
-    <value>InstallerClean의 버전과 표시하던 언어</value>
+    <value>InstallerClean의 버전, 받은 방법(setup, portable, slim, Scoop, 단독 명령줄 도구, 또는 소스에서 빌드), 보고서를 InstallerClean과 명령줄 도구 중 어느 쪽에서 보냈는지, 그리고 표시하던 언어</value>
     <comment>Bullet 10 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Errors" xml:space="preserve">
@@ -1003,7 +1003,7 @@
     <comment>Bullet 11 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Closing" xml:space="preserve">
-    <value>모두 이와 같은 횟수와 라벨뿐입니다. 사용자나 사용자의 PC, 파일, 프로그램을 가리키는 정보는 전혀 없으며, 저는 사용자의 IP 주소를 결코 보지 않습니다.</value>
+    <value>이 항목은 모두 횟수 또는 라벨입니다. 보고서에는 사용자나 사용자의 PC, 파일, 프로그램을 가리키는 정보가 전혀 없으며, 저는 사용자의 IP 주소를 결코 보지 않습니다.</value>
     <comment>The closing line of the panel opened from the small &quot;i&quot; beside Completion.SendReport, under the eleven bullets. &quot;I&quot; is the app's author.</comment>
   </data>
   <data name="Completion.ReportPanel.SeeReport" xml:space="preserve">

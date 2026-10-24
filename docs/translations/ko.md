@@ -187,7 +187,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | {1} {0}개 영구 삭제됨 |
 | Any small donation is much appreciated. | 적은 금액의 후원도 정말 감사합니다. |
 | Send _anonymous report | 익명 보고서 보내기(_A) |
-| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | 보고서는 사용자의 결과를 완전히 익명으로 GitHub의 [이 차트]에 추가하며, 이를 통해 InstallerClean이 실제 사용에서 얼마나 많은 공간을 확보하고 있는지 누구나 볼 수 있습니다. 또한 버그를 찾는 데 도움이 되는 익명의 기술 정보도 포함됩니다: |
+| The report adds your result to [this chart] on GitHub, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | 보고서는 사용자의 결과를 GitHub의 [이 차트]에 추가하며, 이 차트는 사람들이 InstallerClean으로 얼마나 많은 공간을 확보하고 있는지 보여 줍니다. 또한 버그를 찾는 데 도움이 되는 다음 기술 정보도 포함됩니다: |
 | How much space was freed, and how many files were moved or deleted | 확보된 공간의 양과 이동하거나 삭제한 파일 수 |
 | Whether a Move went to the same drive, another drive, a removable drive or a network share | 이동 대상이 같은 드라이브, 다른 드라이브, 이동식 드라이브, 네트워크 공유 중 어디였는지 |
 | How long the scan and the Move or Delete took | 검사와 이동 또는 삭제에 걸린 시간 |
@@ -197,9 +197,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | How many programs and patches Windows has a record of | Windows에 기록이 있는 프로그램과 패치의 수 |
 | Whether Windows still makes old-style short file names | Windows가 아직도 예전 방식의 짧은 파일 이름을 만드는지 여부 |
 | Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Windows가 10인지 11인지, x64인지 Arm인지, 그리고 어떤 언어와 국가 또는 지역으로 설정되어 있는지 |
-| InstallerClean's version and the language it was showing | InstallerClean의 버전과 표시하던 언어 |
+| InstallerClean's version, how you got it (setup, portable, slim, Scoop, the command-line tool on its own, or built from source), whether the report was sent from InstallerClean or the command-line tool, and the language it was showing | InstallerClean의 버전, 받은 방법(setup, portable, slim, Scoop, 단독 명령줄 도구, 또는 소스에서 빌드), 보고서를 InstallerClean과 명령줄 도구 중 어느 쪽에서 보냈는지, 그리고 표시하던 언어 |
 | Counts of anything that went wrong | 문제가 생긴 일의 횟수 |
-| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | 모두 이와 같은 횟수와 라벨뿐입니다. 사용자나 사용자의 PC, 파일, 프로그램을 가리키는 정보는 전혀 없으며, 저는 사용자의 IP 주소를 결코 보지 않습니다. |
+| Each of these is a count or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | 이 항목은 모두 횟수 또는 라벨입니다. 보고서에는 사용자나 사용자의 PC, 파일, 프로그램을 가리키는 정보가 전혀 없으며, 저는 사용자의 IP 주소를 결코 보지 않습니다. |
 | See exactly what's sent | 보내는 내용 그대로 보기 |
 
 ## Summaries and counts

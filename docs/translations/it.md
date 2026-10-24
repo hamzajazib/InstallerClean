@@ -187,7 +187,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | {0} {1} eliminati definitivamente |
 | Any small donation is much appreciated. | Ogni piccola donazione è molto apprezzata. |
 | Send _anonymous report | Invia rapporto _anonimo |
-| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | Il rapporto aggiunge il tuo risultato, in modo del tutto anonimo, a [questo grafico] su GitHub, che mostra quanto spazio InstallerClean sta recuperando nell'uso reale. Contiene anche dettagli tecnici anonimi che mi aiutano a individuare eventuali bug: |
+| The report adds your result to [this chart] on GitHub, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Il rapporto aggiunge il tuo risultato a [questo grafico] su GitHub, che mostra quanto spazio le persone stanno recuperando con InstallerClean. Contiene anche questi dettagli tecnici, che mi aiutano a individuare eventuali bug: |
 | How much space was freed, and how many files were moved or deleted | Quanto spazio è stato liberato e quanti file sono stati spostati o eliminati |
 | Whether a Move went to the same drive, another drive, a removable drive or a network share | Se Sposta ha portato i file sulla stessa unità, su un'altra unità, su un'unità rimovibile o su una condivisione di rete |
 | How long the scan and the Move or Delete took | Quanto sono durati la scansione e Sposta o Elimina |
@@ -197,9 +197,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | How many programs and patches Windows has a record of | Di quanti programmi e patch Windows ha un record |
 | Whether Windows still makes old-style short file names | Se Windows crea ancora i nomi di file brevi vecchio stile |
 | Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Se Windows è 10 o 11 e x64 o Arm, e in quale lingua e con quale paese o area geografica è impostato |
-| InstallerClean's version and the language it was showing | La versione di InstallerClean e la lingua in cui era visualizzato |
+| InstallerClean's version, how you got it (setup, portable, slim, Scoop, the command-line tool on its own, or built from source), whether the report was sent from InstallerClean or the command-line tool, and the language it was showing | La versione di InstallerClean, come l'hai ottenuto (setup, portable, slim, Scoop, lo strumento da riga di comando da solo, o compilato dal codice sorgente), se il rapporto è stato inviato da InstallerClean o dallo strumento da riga di comando, e la lingua in cui era visualizzato |
 | Counts of anything that went wrong | Il conteggio di qualsiasi cosa sia andata storta |
-| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | È tutto fatto di conteggi ed etichette come questi. Niente indica te, il tuo PC, i tuoi file o i tuoi programmi, e non vedo mai il tuo indirizzo IP. |
+| Each of these is a count or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | Ognuno di questi è un conteggio o un'etichetta. Niente nel rapporto indica te, il tuo PC, i tuoi file o i tuoi programmi, e non vedo mai il tuo indirizzo IP. |
 | See exactly what's sent | Vedi esattamente cosa viene inviato |
 
 ## Summaries and counts

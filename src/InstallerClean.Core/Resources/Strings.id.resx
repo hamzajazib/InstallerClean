@@ -955,7 +955,7 @@ Untuk mengembalikannya, Anda butuh pemasang versi yang sudah Anda miliki. Dapatk
     <comment>The checkbox on the first completion card the PC shows, whatever kind of card it is. Ticked, the report goes as the card closes. The underscore marks the access key (Alt+A in English), which must not clash with the card's buttons: Action.Done, Action.DonateSmall, Action.Donate and Action.CloseWithoutDonating.</comment>
   </data>
   <data name="Completion.ReportPanel.Intro" xml:space="preserve">
-    <value>Laporan ini menambahkan hasil Anda, sepenuhnya anonim, ke [grafik ini] di GitHub, yang memperlihatkan berapa banyak ruang yang dikosongkan InstallerClean dalam pemakaian nyata. Laporan ini juga berisi detail teknis anonim untuk membantu saya menemukan bug:</value>
+    <value>Laporan ini menambahkan hasil Anda ke [grafik ini] di GitHub, yang menunjukkan berapa banyak ruang yang dikosongkan orang dengan InstallerClean. Laporan ini juga memuat detail teknis berikut untuk membantu saya menemukan bug:</value>
     <comment>The opening of the panel the small &quot;i&quot; beside Completion.SendReport opens, saying what the report holds. The eleven Completion.ReportPanel.* lines follow it as a bulleted list, then Completion.ReportPanel.Closing. The phrase in [ ] is a link to the chart of results in the README: keep exactly one pair of brackets, around the words that name the chart. &quot;Me&quot; is the app's author.</comment>
   </data>
   <data name="Completion.ReportPanel.Freed" xml:space="preserve">
@@ -995,7 +995,7 @@ Untuk mengembalikannya, Anda butuh pemasang versi yang sudah Anda miliki. Dapatk
     <comment>Bullet 9 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.AppVersion" xml:space="preserve">
-    <value>Versi InstallerClean dan bahasa yang ditampilkannya</value>
+    <value>Versi InstallerClean, cara Anda mendapatkannya (setup, portable, slim, Scoop, alat baris perintah yang berdiri sendiri, atau dibuat dari kode sumber), apakah laporan dikirim dari InstallerClean atau alat baris perintah, dan bahasa yang ditampilkannya</value>
     <comment>Bullet 10 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Errors" xml:space="preserve">
@@ -1003,7 +1003,7 @@ Untuk mengembalikannya, Anda butuh pemasang versi yang sudah Anda miliki. Dapatk
     <comment>Bullet 11 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Closing" xml:space="preserve">
-    <value>Semuanya berupa jumlah dan label seperti ini. Tidak ada yang menyebut Anda, PC Anda, file Anda, atau program Anda, dan saya tidak pernah melihat alamat IP Anda.</value>
+    <value>Masing-masing berupa jumlah atau label. Tidak ada di dalam laporan yang menyebut Anda, PC Anda, file Anda, atau program Anda, dan saya tidak pernah melihat alamat IP Anda.</value>
     <comment>The closing line of the panel opened from the small &quot;i&quot; beside Completion.SendReport, under the eleven bullets. &quot;I&quot; is the app's author.</comment>
   </data>
   <data name="Completion.ReportPanel.SeeReport" xml:space="preserve">

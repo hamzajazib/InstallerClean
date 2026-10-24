@@ -955,7 +955,7 @@ Aby go przywrócić, potrzebujesz instalatora tej wersji, którą już masz. Zdo
     <comment>The checkbox on the first completion card the PC shows, whatever kind of card it is. Ticked, the report goes as the card closes. The underscore marks the access key (Alt+A in English), which must not clash with the card's buttons: Action.Done, Action.DonateSmall, Action.Donate and Action.CloseWithoutDonating.</comment>
   </data>
   <data name="Completion.ReportPanel.Intro" xml:space="preserve">
-    <value>Raport dodaje twój wynik, całkowicie anonimowo, do [tego wykresu] na GitHubie, który pokazuje, ile miejsca InstallerClean odzyskuje w rzeczywistym użyciu. Zawiera też anonimowe dane techniczne, które pomagają mi wyłapywać błędy:</value>
+    <value>Raport dodaje twój wynik do [tego wykresu] na GitHubie, który pokazuje, ile miejsca ludzie odzyskują dzięki InstallerClean. Zawiera też te dane techniczne, które pomagają mi wyłapywać błędy:</value>
     <comment>The opening of the panel the small &quot;i&quot; beside Completion.SendReport opens, saying what the report holds. The eleven Completion.ReportPanel.* lines follow it as a bulleted list, then Completion.ReportPanel.Closing. The phrase in [ ] is a link to the chart of results in the README: keep exactly one pair of brackets, around the words that name the chart. &quot;Me&quot; is the app's author.</comment>
   </data>
   <data name="Completion.ReportPanel.Freed" xml:space="preserve">
@@ -995,7 +995,7 @@ Aby go przywrócić, potrzebujesz instalatora tej wersji, którą już masz. Zdo
     <comment>Bullet 9 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.AppVersion" xml:space="preserve">
-    <value>Wersja InstallerClean i język, w którym był wyświetlany</value>
+    <value>Wersja InstallerClean, sposób jego uzyskania (setup, portable, slim, Scoop, samo narzędzie wiersza poleceń lub kompilacja ze źródeł), informacja, czy raport wysłał InstallerClean, czy narzędzie wiersza poleceń, oraz język, w którym był wyświetlany</value>
     <comment>Bullet 10 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Errors" xml:space="preserve">
@@ -1003,7 +1003,7 @@ Aby go przywrócić, potrzebujesz instalatora tej wersji, którą już masz. Zdo
     <comment>Bullet 11 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Closing" xml:space="preserve">
-    <value>Wszystko to są liczby i etykiety takie jak te. Nic w nim nie wskazuje ciebie, twojego komputera, twoich plików ani programów, a twojego adresu IP nigdy nie widzę.</value>
+    <value>Każda z tych rzeczy jest liczbą albo etykietą. Nic w raporcie nie wskazuje ciebie, twojego komputera, twoich plików ani programów, a twojego adresu IP nigdy nie widzę.</value>
     <comment>The closing line of the panel opened from the small &quot;i&quot; beside Completion.SendReport, under the eleven bullets. &quot;I&quot; is the app's author.</comment>
   </data>
   <data name="Completion.ReportPanel.SeeReport" xml:space="preserve">

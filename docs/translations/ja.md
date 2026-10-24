@@ -187,7 +187,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | {0} 個の {1} を完全に削除しました |
 | Any small donation is much appreciated. | どんな少額のご寄付でもありがたく思います。 |
 | Send _anonymous report | 匿名レポートを送信(_A) |
-| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | レポートは、あなたの結果を完全に匿名のまま GitHub の[このグラフ]に追加します。このグラフでは、InstallerClean が実際の使用でどれだけの容量を取り戻しているかを見ることができます。また、バグを見つけるのに役立つ匿名の技術情報も含まれます： |
+| The report adds your result to [this chart] on GitHub, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | レポートは、あなたの結果を GitHub の[このグラフ]に追加します。このグラフには、InstallerClean でどれだけの容量が取り戻されているかが示されています。また、バグを見つけるのに役立つ、次の技術情報も含まれます： |
 | How much space was freed, and how many files were moved or deleted | 解放された容量と、移動または削除されたファイルの数 |
 | Whether a Move went to the same drive, another drive, a removable drive or a network share | 移動先が同じドライブ、別のドライブ、リムーバブル ドライブ、ネットワーク共有のどれだったか |
 | How long the scan and the Move or Delete took | スキャンと、移動または削除にかかった時間 |
@@ -197,9 +197,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | How many programs and patches Windows has a record of | Windows に登録情報がある、プログラムとパッチの数 |
 | Whether Windows still makes old-style short file names | Windows が今も旧式の短いファイル名を作成しているかどうか |
 | Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Windows が 10 か 11 か、x64 か Arm か、そしてどの言語と国または地域に設定されているか |
-| InstallerClean's version and the language it was showing | InstallerClean のバージョンと、表示していた言語 |
+| InstallerClean's version, how you got it (setup, portable, slim, Scoop, the command-line tool on its own, or built from source), whether the report was sent from InstallerClean or the command-line tool, and the language it was showing | InstallerClean のバージョン、入手方法（setup、portable、slim、Scoop、単体のコマンドラインツール、ソースからのビルドのいずれか）、レポートを送ったのが InstallerClean かコマンドラインツールか、そして表示していた言語 |
 | Counts of anything that went wrong | うまくいかなかったことの件数 |
-| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | すべてこのような件数とラベルだけです。あなた自身、あなたの PC、ファイル、プログラムを特定するものは一切含まれず、私があなたの IP アドレスを見ることもありません。 |
+| Each of these is a count or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | これらはいずれも件数かラベルです。レポートには、あなた自身、あなたの PC、ファイル、プログラムを特定するものは一切含まれず、私があなたの IP アドレスを見ることもありません。 |
 | See exactly what's sent | 送信される内容をそのまま見る |
 
 ## Summaries and counts

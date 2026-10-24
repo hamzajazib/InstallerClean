@@ -1360,7 +1360,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                     // owes an account of both. The drives and shares given up and the
                     // waits are the pre-act check's, which the fold carries through.
                     reverify,
-                    _completion.ReportRegion);
+                    _completion.ReportRegion,
+                    _completion.ReportHost, _completion.ReportCopy);
                 await _completion.WriteReportAsync(entry);
             }
             // Completion overlay carries the user-facing summary; the
@@ -1719,7 +1720,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                     operationTimer.ElapsedMilliseconds,
                     // Folded, as on the Move path.
                     reverify,
-                    _completion.ReportRegion);
+                    _completion.ReportRegion,
+                    _completion.ReportHost, _completion.ReportCopy);
                 await _completion.WriteReportAsync(entry);
             }
             OperationProgress = string.Empty;

@@ -106,6 +106,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Completion = new CompletionViewModel(
             resultLogService, settingsService, earlierRunCheck,
             firstRunMark, windowsRegion, windowService,
+            // Without an updater nothing decided which kind of copy this is.
+            copy: appUpdater?.Kind ?? AppCopyKind.Undetermined,
             lastScan: () => Scan.LastScanResult);
         Cleanup = new CleanupViewModel(
             moveService, deleteService, settingsService,
@@ -523,7 +525,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             if (carriesReport)
                 await Completion.WriteReportAsync(
-                    ResultLogEntry.ForScanOnly(result, Scan.LastScanDurationMs, Completion.ReportRegion));
+                    ResultLogEntry.ForScanOnly(
+                        result, Scan.LastScanDurationMs, Completion.ReportRegion,
+                        Completion.ReportHost, Completion.ReportCopy));
         }
         catch (Exception ex)
         {

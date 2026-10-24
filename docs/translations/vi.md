@@ -187,7 +187,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | Đã xóa vĩnh viễn {0} {1} |
 | Any small donation is much appreciated. | Mọi đóng góp dù nhỏ đều rất được trân trọng. |
 | Send _anonymous report | _Gửi báo cáo ẩn danh |
-| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | Báo cáo sẽ thêm kết quả của bạn, hoàn toàn ẩn danh, vào [biểu đồ này] trên GitHub, nơi mọi người có thể thấy InstallerClean đang giải phóng được bao nhiêu dung lượng trong thực tế. Báo cáo cũng chứa các chi tiết kỹ thuật ẩn danh để giúp tôi phát hiện lỗi: |
+| The report adds your result to [this chart] on GitHub, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Báo cáo sẽ thêm kết quả của bạn vào [biểu đồ này] trên GitHub, cho thấy mọi người đang giải phóng được bao nhiêu dung lượng với InstallerClean. Báo cáo cũng chứa các chi tiết kỹ thuật sau để giúp tôi phát hiện lỗi: |
 | How much space was freed, and how many files were moved or deleted | Đã giải phóng bao nhiêu dung lượng, và đã chuyển hoặc xóa bao nhiêu tệp |
 | Whether a Move went to the same drive, another drive, a removable drive or a network share | Thao tác Chuyển đã đưa tệp đến cùng ổ đĩa, ổ đĩa khác, ổ đĩa di động hay chia sẻ mạng |
 | How long the scan and the Move or Delete took | Lần quét và thao tác Chuyển hoặc Xóa mất bao lâu |
@@ -197,9 +197,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | How many programs and patches Windows has a record of | Windows có bản ghi về bao nhiêu chương trình và bản vá |
 | Whether Windows still makes old-style short file names | Windows có còn tạo tên tệp ngắn kiểu cũ hay không |
 | Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Windows là bản 10 hay 11, x64 hay Arm, và đang đặt ngôn ngữ cùng quốc gia hoặc khu vực nào |
-| InstallerClean's version and the language it was showing | Phiên bản InstallerClean và ngôn ngữ nó đang hiển thị |
+| InstallerClean's version, how you got it (setup, portable, slim, Scoop, the command-line tool on its own, or built from source), whether the report was sent from InstallerClean or the command-line tool, and the language it was showing | Phiên bản InstallerClean, cách bạn có được nó (setup, portable, slim, Scoop, công cụ dòng lệnh dùng riêng, hoặc tự biên dịch từ mã nguồn), báo cáo được gửi từ InstallerClean hay từ công cụ dòng lệnh, và ngôn ngữ nó đang hiển thị |
 | Counts of anything that went wrong | Số lần xảy ra bất kỳ sự cố nào |
-| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Tất cả chỉ là các con số và nhãn như thế này. Không có gì trong đó nêu tên bạn, máy tính, tệp hay chương trình của bạn, và tôi không bao giờ thấy địa chỉ IP của bạn. |
+| Each of these is a count or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | Mỗi mục này là một con số hoặc một nhãn. Không có gì trong báo cáo nêu tên bạn, máy tính, tệp hay chương trình của bạn, và tôi không bao giờ thấy địa chỉ IP của bạn. |
 | See exactly what's sent | Xem chính xác những gì được gửi |
 
 ## Summaries and counts

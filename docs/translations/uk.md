@@ -187,7 +187,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | Остаточно видалено {0} {1} |
 | Any small donation is much appreciated. | Будь-яка, навіть невелика, підтримка дуже цінна. |
 | Send _anonymous report | Надіслати _анонімний звіт |
-| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | Звіт додає ваш результат, повністю анонімно, до [цього графіка] на GitHub, де видно, скільки місця InstallerClean звільняє під час реального використання. Також у ньому є анонімні технічні відомості, які допомагають мені знаходити помилки: |
+| The report adds your result to [this chart] on GitHub, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Звіт додає ваш результат до [цього графіка] на GitHub, який показує, скільки місця люди звільняють за допомогою InstallerClean. У ньому також є ці технічні відомості, які допомагають мені знаходити помилки: |
 | How much space was freed, and how many files were moved or deleted | Скільки місця звільнено і скільки файлів переміщено або видалено |
 | Whether a Move went to the same drive, another drive, a removable drive or a network share | Чи було місцем призначення «Перемістити» той самий диск, інший диск, знімний диск чи мережевий ресурс |
 | How long the scan and the Move or Delete took | Скільки тривали сканування і «Перемістити» або «Видалити» |
@@ -197,9 +197,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | How many programs and patches Windows has a record of | Про скільки програм і виправлень Windows має запис |
 | Whether Windows still makes old-style short file names | Чи досі Windows створює короткі імена файлів старого зразка |
 | Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Яка версія Windows, 10 чи 11, x64 чи Arm, і які в ній встановлено мову та країну або регіон |
-| InstallerClean's version and the language it was showing | Версія InstallerClean і мова, якою він відображався |
+| InstallerClean's version, how you got it (setup, portable, slim, Scoop, the command-line tool on its own, or built from source), whether the report was sent from InstallerClean or the command-line tool, and the language it was showing | Версія InstallerClean, спосіб її отримання (setup, portable, slim, Scoop, окрема програма командного рядка або збірка з вихідного коду), звідки надіслано звіт (з InstallerClean чи з програми командного рядка) і мова, якою він відображався |
 | Counts of anything that went wrong | Лічильники всього, що пішло не так |
-| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Усе це — лічильники та мітки на кшталт цих. Ніщо в ньому не вказує на вас, ваш ПК, ваші файли чи програми, і я ніколи не бачу вашу IP-адресу. |
+| Each of these is a count or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | Кожен із цих пунктів — це лічильник або мітка. Ніщо у звіті не вказує на вас, ваш ПК, ваші файли чи програми, і я ніколи не бачу вашу IP-адресу. |
 | See exactly what's sent | Переглянути, що саме надсилається |
 
 ## Summaries and counts

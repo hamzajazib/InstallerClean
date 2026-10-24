@@ -955,7 +955,7 @@ Om het terug te zetten heb je het installatieprogramma nodig van de versie die j
     <comment>The checkbox on the first completion card the PC shows, whatever kind of card it is. Ticked, the report goes as the card closes. The underscore marks the access key (Alt+A in English), which must not clash with the card's buttons: Action.Done, Action.DonateSmall, Action.Donate and Action.CloseWithoutDonating.</comment>
   </data>
   <data name="Completion.ReportPanel.Intro" xml:space="preserve">
-    <value>Het rapport voegt je resultaat volledig anoniem toe aan [deze grafiek] op GitHub, waarop iedereen kan zien hoeveel ruimte InstallerClean in de praktijk vrijmaakt. Het bevat ook anonieme technische gegevens die me helpen eventuele bugs op te sporen:</value>
+    <value>Het rapport voegt je resultaat toe aan [deze grafiek] op GitHub, die laat zien hoeveel ruimte mensen met InstallerClean vrijmaken. Het bevat ook deze technische gegevens, die me helpen eventuele bugs op te sporen:</value>
     <comment>The opening of the panel the small &quot;i&quot; beside Completion.SendReport opens, saying what the report holds. The eleven Completion.ReportPanel.* lines follow it as a bulleted list, then Completion.ReportPanel.Closing. The phrase in [ ] is a link to the chart of results in the README: keep exactly one pair of brackets, around the words that name the chart. &quot;Me&quot; is the app's author.</comment>
   </data>
   <data name="Completion.ReportPanel.Freed" xml:space="preserve">
@@ -995,7 +995,7 @@ Om het terug te zetten heb je het installatieprogramma nodig van de versie die j
     <comment>Bullet 9 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.AppVersion" xml:space="preserve">
-    <value>De versie van InstallerClean en de taal waarin het werd weergegeven</value>
+    <value>De versie van InstallerClean, hoe je het hebt gekregen (setup, portable, slim, Scoop, het opdrachtregelprogramma op zichzelf, of zelf gebouwd uit de broncode), of het rapport door InstallerClean of door het opdrachtregelprogramma is verstuurd, en de taal waarin het werd weergegeven</value>
     <comment>Bullet 10 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Errors" xml:space="preserve">
@@ -1003,7 +1003,7 @@ Om het terug te zetten heb je het installatieprogramma nodig van de versie die j
     <comment>Bullet 11 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Closing" xml:space="preserve">
-    <value>Het zijn allemaal tellingen en labels zoals deze. Niets ervan noemt jou, je pc, je bestanden of je programma's, en ik zie je IP-adres nooit.</value>
+    <value>Elk van deze is een telling of een label. Niets in het rapport noemt jou, je pc, je bestanden of je programma's, en ik zie je IP-adres nooit.</value>
     <comment>The closing line of the panel opened from the small &quot;i&quot; beside Completion.SendReport, under the eleven bullets. &quot;I&quot; is the app's author.</comment>
   </data>
   <data name="Completion.ReportPanel.SeeReport" xml:space="preserve">

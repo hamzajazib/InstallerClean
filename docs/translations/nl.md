@@ -187,7 +187,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | {0} {1} permanently deleted | {0} {1} definitief verwijderd |
 | Any small donation is much appreciated. | Elke kleine donatie wordt zeer gewaardeerd. |
 | Send _anonymous report | _Anoniem rapport versturen |
-| The report adds your result, completely anonymously, to [this chart] on GitHub, which lets people see how much space InstallerClean is reclaiming in real use. It also contains anonymous technical details to help me spot any bugs: | Het rapport voegt je resultaat volledig anoniem toe aan [deze grafiek] op GitHub, waarop iedereen kan zien hoeveel ruimte InstallerClean in de praktijk vrijmaakt. Het bevat ook anonieme technische gegevens die me helpen eventuele bugs op te sporen: |
+| The report adds your result to [this chart] on GitHub, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Het rapport voegt je resultaat toe aan [deze grafiek] op GitHub, die laat zien hoeveel ruimte mensen met InstallerClean vrijmaken. Het bevat ook deze technische gegevens, die me helpen eventuele bugs op te sporen: |
 | How much space was freed, and how many files were moved or deleted | Hoeveel ruimte er is vrijgemaakt en hoeveel bestanden er zijn verplaatst of verwijderd |
 | Whether a Move went to the same drive, another drive, a removable drive or a network share | Of Verplaatsen naar dezelfde schijf, een andere schijf, een verwisselbare schijf of een netwerkshare ging |
 | How long the scan and the Move or Delete took | Hoe lang de scan en Verplaatsen of Verwijderen duurden |
@@ -197,9 +197,9 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | How many programs and patches Windows has a record of | Van hoeveel programma's en patches Windows een registratie heeft |
 | Whether Windows still makes old-style short file names | Of Windows nog ouderwetse korte bestandsnamen aanmaakt |
 | Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Of Windows 10 of 11 is en x64 of Arm, en op welke taal en welk land of welke regio het is ingesteld |
-| InstallerClean's version and the language it was showing | De versie van InstallerClean en de taal waarin het werd weergegeven |
+| InstallerClean's version, how you got it (setup, portable, slim, Scoop, the command-line tool on its own, or built from source), whether the report was sent from InstallerClean or the command-line tool, and the language it was showing | De versie van InstallerClean, hoe je het hebt gekregen (setup, portable, slim, Scoop, het opdrachtregelprogramma op zichzelf, of zelf gebouwd uit de broncode), of het rapport door InstallerClean of door het opdrachtregelprogramma is verstuurd, en de taal waarin het werd weergegeven |
 | Counts of anything that went wrong | Tellingen van alles wat er misging |
-| All of it is counts and labels like these. Nothing in it names you, your PC, your files or your programs, and I never see your IP address. | Het zijn allemaal tellingen en labels zoals deze. Niets ervan noemt jou, je pc, je bestanden of je programma's, en ik zie je IP-adres nooit. |
+| Each of these is a count or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | Elk van deze is een telling of een label. Niets in het rapport noemt jou, je pc, je bestanden of je programma's, en ik zie je IP-adres nooit. |
 | See exactly what's sent | Precies zien wat er wordt verstuurd |
 
 ## Summaries and counts

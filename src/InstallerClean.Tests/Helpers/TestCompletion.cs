@@ -24,5 +24,6 @@ internal static class TestCompletion
             Substitute.For<IFirstRunMark>(),
             Substitute.For<IWindowsRegion>(),
             windowService ?? Substitute.For<IWindowService>(),
+            AppCopyKind.FromSource,
             lastScan ?? (() => null));
 }

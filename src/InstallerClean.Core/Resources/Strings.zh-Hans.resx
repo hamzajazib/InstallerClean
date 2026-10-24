@@ -955,7 +955,7 @@
     <comment>The checkbox on the first completion card the PC shows, whatever kind of card it is. Ticked, the report goes as the card closes. The underscore marks the access key (Alt+A in English), which must not clash with the card's buttons: Action.Done, Action.DonateSmall, Action.Donate and Action.CloseWithoutDonating.</comment>
   </data>
   <data name="Completion.ReportPanel.Intro" xml:space="preserve">
-    <value>报告会以完全匿名的方式，把您的结果添加到 GitHub 上的[这张图表]中，让大家看到 InstallerClean 在实际使用中释放了多少空间。报告还包含匿名的技术细节，帮助我发现程序错误：</value>
+    <value>报告会把您的结果添加到 GitHub 上的[这张图表]中，图表显示人们用 InstallerClean 释放了多少空间。报告还包含以下技术细节，帮助我发现程序错误：</value>
     <comment>The opening of the panel the small &quot;i&quot; beside Completion.SendReport opens, saying what the report holds. The eleven Completion.ReportPanel.* lines follow it as a bulleted list, then Completion.ReportPanel.Closing. The phrase in [ ] is a link to the chart of results in the README: keep exactly one pair of brackets, around the words that name the chart. &quot;Me&quot; is the app's author.</comment>
   </data>
   <data name="Completion.ReportPanel.Freed" xml:space="preserve">
@@ -995,7 +995,7 @@
     <comment>Bullet 9 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.AppVersion" xml:space="preserve">
-    <value>InstallerClean 的版本及其显示的语言</value>
+    <value>InstallerClean 的版本、获取方式（setup、portable、slim、Scoop、单独的命令行工具，或从源代码构建）、报告是由 InstallerClean 还是命令行工具发送的，以及其显示的语言</value>
     <comment>Bullet 10 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Errors" xml:space="preserve">
@@ -1003,7 +1003,7 @@
     <comment>Bullet 11 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Closing" xml:space="preserve">
-    <value>其中全是这样的计数和标签。没有任何内容会指明您、您的电脑、文件或程序，我也永远看不到您的 IP 地址。</value>
+    <value>这些内容都是计数或标签。报告中没有任何内容会指明您、您的电脑、文件或程序，我也永远看不到您的 IP 地址。</value>
     <comment>The closing line of the panel opened from the small &quot;i&quot; beside Completion.SendReport, under the eleven bullets. &quot;I&quot; is the app's author.</comment>
   </data>
   <data name="Completion.ReportPanel.SeeReport" xml:space="preserve">
