@@ -36,8 +36,8 @@
 # overrides it can reach (NativeImports.cs says why), so a route through one is for the
 # native-libraries job, which runs the builds and sees the look.
 #
-# Every run also checks itself: known members in and out of each framework set, at the depth
-# limit and one member beyond it, and a planted assembly built here holding one of each fault,
+# Every run also checks itself: known members in and out of each framework set, among them one
+# at the depth limit and one beyond it, and a planted assembly built here holding one of each fault,
 # judged by the same code as ours against the command line's sets and the window's, every fault
 # of which must be reported. An entry or a
 # listed call that matches nothing fails, as stale.
@@ -370,7 +370,8 @@ function Test-Calls([string]$where, $assembly, $closure, $findings, [switch]$nea
     Write-Host ('    -> ' + $closure.Path($call.Callee).Replace("`n", "`n    "))
     if (-not $entry) {
       $imports = if ($near) { "a CoreLib import of $($nearLibraries -join ', ') through $nearDepth members or fewer" } else { 'a CoreLib import of ole32 or oleaut32' }
-      Fail "$where`: $($assembly.Name)'s $($call.Caller) calls $($call.Callee), which reaches $imports."
+      $remedy = if ($near) { ' Make the call through an import declared under InstallerClean.Interop.Native, which the resolver loads from System32.' } else { '' }
+      Fail "$where`: $($assembly.Name)'s $($call.Caller) calls $($call.Callee), which reaches $imports.$remedy"
       continue
     }
     $reach = Get-Reach $closure $call.Callee
