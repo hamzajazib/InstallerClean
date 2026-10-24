@@ -288,6 +288,7 @@ public static class Strings
     public static string Cli_ReportChartAt => Get("Cli.ReportChartAt");
     public static string Cli_ReportCouldNotBeSent => Get("Cli.ReportCouldNotBeSent");
     public static string Cli_ReportInFull => Get("Cli.ReportInFull");
+    public static string Cli_ReportIntro => Get("Cli.ReportIntro");
     public static string Cli_ReportNotSent => Get("Cli.ReportNotSent");
     public static string Cli_ReportPrompt => Get("Cli.ReportPrompt");
     public static string Cli_ReportSent => Get("Cli.ReportSent");

@@ -560,6 +560,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | N | H |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Bu çalıştırmanın anonim raporu gönderilsin mi? {0} konumuna kaydedildi. İçeriğini görmek için ? yazın. [{1}/{2}/?] |
 | the chart at {0} | {0} adresindeki grafiğe |
+| The report adds your result to {0}, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Rapor, sonucunuzu {0} ekler; bu grafik, insanların InstallerClean ile ne kadar yer açtığını gösterir. Ayrıca hataları fark etmeme yardımcı olacak şu teknik ayrıntıları da içerir: |
 | The full report is printed below. | Raporun tamamı aşağıda yazdırılmıştır. |
 | Report sent. Thank you. | Rapor gönderildi. Teşekkürler. |
 | Report not sent. | Rapor gönderilmedi. |

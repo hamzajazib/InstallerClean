@@ -555,6 +555,7 @@ const MAP = {
   'Cli.UpdateNeedsNetFramework48': `此版本需要 .NET Framework 4.8。请从 Microsoft 安装它，重启电脑，然后再次运行 InstallerClean 进行更新。`,
   'Cli.ReportPrompt': `发送本次运行的匿名报告？报告已保存在 {0}。输入 ? 可查看其内容。[{1}/{2}/?]`,
   'Cli.ReportChartAt': `地址为 {0} 的图表`,
+  'Cli.ReportIntro': `报告会把您的结果添加到{0}中，图表显示人们用 InstallerClean 释放了多少空间。报告还包含以下技术细节，帮助我发现程序错误：`,
   'Cli.ReportInFull': `完整报告打印在下方。`,
   'Cli.ReportSent': `报告已发送。谢谢。`,
   'Cli.ReportNotSent': `报告未发送。`,

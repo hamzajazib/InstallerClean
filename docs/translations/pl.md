@@ -560,6 +560,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | N | N |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Wysłać anonimowy raport z tego uruchomienia? Jest zapisany w {0}. Wpisz ?, aby zobaczyć, co zawiera. [{1}/{2}/?] |
 | the chart at {0} | wykresu pod adresem {0} |
+| The report adds your result to {0}, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Raport dodaje twój wynik do {0}, który pokazuje, ile miejsca ludzie odzyskują dzięki InstallerClean. Zawiera też te dane techniczne, które pomagają mi wyłapywać błędy: |
 | The full report is printed below. | Pełny raport wyświetlono poniżej. |
 | Report sent. Thank you. | Raport wysłany. Dziękuję. |
 | Report not sent. | Raport nie został wysłany. |

@@ -560,6 +560,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | N | N |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | 이번 실행의 익명 보고서를 보낼까요? {0}에 저장되어 있습니다. ?를 입력하면 담긴 내용을 볼 수 있습니다. [{1}/{2}/?] |
 | the chart at {0} | {0} 주소의 차트 |
+| The report adds your result to {0}, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | 보고서는 사용자의 결과를 {0}에 추가하며, 이 차트는 사람들이 InstallerClean으로 얼마나 많은 공간을 확보하고 있는지 보여 줍니다. 또한 버그를 찾는 데 도움이 되는 다음 기술 정보도 포함됩니다: |
 | The full report is printed below. | 전체 보고서는 아래에 출력됩니다. |
 | Report sent. Thank you. | 보고서를 보냈습니다. 감사합니다. |
 | Report not sent. | 보고서를 보내지 않았습니다. |

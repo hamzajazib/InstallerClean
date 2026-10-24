@@ -650,6 +650,7 @@ const MAP = {
   'Cli.UpdateNeedsNetFramework48': `Phiên bản này cần .NET Framework 4.8. Hãy cài đặt nó từ Microsoft, khởi động lại PC, rồi chạy lại InstallerClean để cập nhật.`,
   'Cli.ReportPrompt': `Gửi báo cáo ẩn danh về lần chạy này? Báo cáo được lưu tại {0}. Nhập ? để xem nội dung. [{1}/{2}/?]`,
   'Cli.ReportChartAt': `biểu đồ tại {0}`,
+  'Cli.ReportIntro': `Báo cáo sẽ thêm kết quả của bạn vào {0}, cho thấy mọi người đang giải phóng được bao nhiêu dung lượng với InstallerClean. Báo cáo cũng chứa các chi tiết kỹ thuật sau để giúp tôi phát hiện lỗi:`,
   'Cli.ReportInFull': `Toàn bộ báo cáo được in bên dưới.`,
   'Cli.ReportSent': `Đã gửi báo cáo. Cảm ơn bạn.`,
   'Cli.ReportNotSent': `Chưa gửi báo cáo.`,

@@ -133,6 +133,58 @@ public class ReportPanelTextTests
         Assert.True(faults.Count == 0, $"{cultureName}: {string.Join("; ", faults)}");
     }
 
+    [Theory]
+    [MemberData(nameof(Cultures))]
+    public void The_console_opening_names_the_chart_by_its_address_and_not_by_a_site(string cultureName)
+    {
+        using var scope = new LocalisationScope(CultureInfo.GetCultureInfo(cultureName));
+        const string phrase = "AT-THE-ADDRESS";
+
+        var opening = ReportPanelText.ConsoleLines(phrase)[0];
+
+        Assert.Contains(phrase, opening, StringComparison.Ordinal);
+        Assert.DoesNotContain("GitHub", opening, StringComparison.Ordinal);
+        Assert.DoesNotContain("{", opening, StringComparison.Ordinal);
+        Assert.DoesNotContain("[", opening, StringComparison.Ordinal);
+        Assert.DoesNotContain("]", opening, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The console's opening and the window's say the same after the chart is named: from the
+    /// first comma, semicolon or full stop that follows the chart, the two are the same words.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Cultures))]
+    public void The_console_opening_says_what_the_windows_does_after_the_chart_is_named(string cultureName)
+    {
+        using var scope = new LocalisationScope(CultureInfo.GetCultureInfo(cultureName));
+
+        var windowSuffix = CompositionParsing.SplitAtBracketedPhrase(Strings.Completion_ReportPanel_Intro)!.Suffix;
+        var consoleRaw = Strings.Cli_ReportIntro;
+        var consoleSuffix = consoleRaw[(consoleRaw.IndexOf("{0}", StringComparison.Ordinal) + 3)..];
+
+        Assert.Equal(FromFirstBreak(windowSuffix), FromFirstBreak(consoleSuffix));
+    }
+
+    private static string FromFirstBreak(string text)
+    {
+        var at = text.IndexOfAny([',', '\uFF0C', ';', '\uFF1B', '\u3002']);
+        Assert.True(at >= 0, $"no comma, semicolon or full stop in: {text}");
+        return text[at..];
+    }
+
+    [Theory]
+    [MemberData(nameof(Cultures))]
+    public void The_console_lists_what_the_report_holds_after_its_opening(string cultureName)
+    {
+        using var scope = new LocalisationScope(CultureInfo.GetCultureInfo(cultureName));
+
+        var lines = ReportPanelText.ConsoleLines("x");
+
+        Assert.Equal(ReportPanelText.Lines.Select(l => "- " + l), lines.Skip(1).Take(ReportPanelText.Lines.Length));
+        Assert.Equal(Strings.Completion_ReportPanel_Closing, lines[^1]);
+    }
+
     /// <summary>
     /// The opening sentence as the window draws it and passes in: the sentence with the
     /// brackets round its link phrase taken out.

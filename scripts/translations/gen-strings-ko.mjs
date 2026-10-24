@@ -651,6 +651,7 @@ const MAP = {
   'Cli.UpdateNeedsNetFramework48': `이 버전에는 .NET Framework 4.8이 필요합니다. Microsoft에서 설치하고 PC를 다시 시작한 다음 InstallerClean을 다시 실행하여 업데이트하세요.`,
   'Cli.ReportPrompt': `이번 실행의 익명 보고서를 보낼까요? {0}에 저장되어 있습니다. ?를 입력하면 담긴 내용을 볼 수 있습니다. [{1}/{2}/?]`,
   'Cli.ReportChartAt': `{0} 주소의 차트`,
+  'Cli.ReportIntro': `보고서는 사용자의 결과를 {0}에 추가하며, 이 차트는 사람들이 InstallerClean으로 얼마나 많은 공간을 확보하고 있는지 보여 줍니다. 또한 버그를 찾는 데 도움이 되는 다음 기술 정보도 포함됩니다:`,
   'Cli.ReportInFull': `전체 보고서는 아래에 출력됩니다.`,
   'Cli.ReportSent': `보고서를 보냈습니다. 감사합니다.`,
   'Cli.ReportNotSent': `보고서를 보내지 않았습니다.`,

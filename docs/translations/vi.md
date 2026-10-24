@@ -560,6 +560,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | N | K |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Gửi báo cáo ẩn danh về lần chạy này? Báo cáo được lưu tại {0}. Nhập ? để xem nội dung. [{1}/{2}/?] |
 | the chart at {0} | biểu đồ tại {0} |
+| The report adds your result to {0}, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Báo cáo sẽ thêm kết quả của bạn vào {0}, cho thấy mọi người đang giải phóng được bao nhiêu dung lượng với InstallerClean. Báo cáo cũng chứa các chi tiết kỹ thuật sau để giúp tôi phát hiện lỗi: |
 | The full report is printed below. | Toàn bộ báo cáo được in bên dưới. |
 | Report sent. Thank you. | Đã gửi báo cáo. Cảm ơn bạn. |
 | Report not sent. | Chưa gửi báo cáo. |

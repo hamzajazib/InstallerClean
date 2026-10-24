@@ -575,6 +575,7 @@ const MAP = {
   'Cli.UpdateNeedsNetFramework48': `このバージョンには .NET Framework 4.8 が必要です。Microsoft からインストールして PC を再起動し、InstallerClean をもう一度実行して更新してください。`,
   'Cli.ReportPrompt': `この実行の匿名レポートを送信しますか？ 保存先は {0} です。? と入力すると内容を確認できます。[{1}/{2}/?]`,
   'Cli.ReportChartAt': `アドレス {0} のグラフ`,
+  'Cli.ReportIntro': `レポートは、あなたの結果を{0}に追加します。このグラフには、InstallerClean でどれだけの容量が取り戻されているかが示されています。また、バグを見つけるのに役立つ、次の技術情報も含まれます：`,
   'Cli.ReportInFull': `レポートの全文を以下に表示します。`,
   'Cli.ReportSent': `レポートを送信しました。ありがとうございます。`,
   'Cli.ReportNotSent': `レポートは送信されませんでした。`,

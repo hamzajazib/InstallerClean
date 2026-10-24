@@ -560,6 +560,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | N | N |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | 傳送本次執行的匿名報告？報告已儲存在 {0}。輸入 ? 可查看其內容。[{1}/{2}/?] |
 | the chart at {0} | 地址為 {0} 的圖表 |
+| The report adds your result to {0}, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | 報告會把您的結果加到{0}，圖表顯示人們用 InstallerClean 釋放了多少空間。報告也包含以下技術細節，幫助我發現程式錯誤： |
 | The full report is printed below. | 完整報告列印在下方。 |
 | Report sent. Thank you. | 報告已傳送。謝謝。 |
 | Report not sent. | 報告未傳送。 |

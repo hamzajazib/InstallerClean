@@ -560,6 +560,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | N | N |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | この実行の匿名レポートを送信しますか？ 保存先は {0} です。? と入力すると内容を確認できます。[{1}/{2}/?] |
 | the chart at {0} | アドレス {0} のグラフ |
+| The report adds your result to {0}, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | レポートは、あなたの結果を{0}に追加します。このグラフには、InstallerClean でどれだけの容量が取り戻されているかが示されています。また、バグを見つけるのに役立つ、次の技術情報も含まれます： |
 | The full report is printed below. | レポートの全文を以下に表示します。 |
 | Report sent. Thank you. | レポートを送信しました。ありがとうございます。 |
 | Report not sent. | レポートは送信されませんでした。 |

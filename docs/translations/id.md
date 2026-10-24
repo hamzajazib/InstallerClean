@@ -560,6 +560,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | N | T |
 | Send an anonymous report of this run? It is saved at {0}. Type ? to see what it holds. [{1}/{2}/?] | Kirim laporan anonim dari proses ini? Disimpan di {0}. Ketik ? untuk melihat isinya. [{1}/{2}/?] |
 | the chart at {0} | grafik di {0} |
+| The report adds your result to {0}, which shows how much space people are reclaiming with InstallerClean. It also holds these technical details, to help me spot any bugs: | Laporan ini menambahkan hasil Anda ke {0}, yang menunjukkan berapa banyak ruang yang dikosongkan orang dengan InstallerClean. Laporan ini juga memuat detail teknis berikut untuk membantu saya menemukan bug: |
 | The full report is printed below. | Laporan lengkap dicetak di bawah ini. |
 | Report sent. Thank you. | Laporan terkirim. Terima kasih. |
 | Report not sent. | Laporan tidak dikirim. |

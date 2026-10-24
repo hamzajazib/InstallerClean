@@ -2378,11 +2378,17 @@ Vuelve a ejecutar InstallerClean como administrador.</value></data>
        full path of last-run.json, which holds the report; 1 and 2 = the letters for yes
        and no, as in Cli.UpdatePrompt. The question mark is typed as it is. -->
   <data name="Cli.ReportPrompt" xml:space="preserve"><value>¿Enviar un informe anónimo de esta ejecución? Está guardado en {0}. Escribe ? para ver qué contiene. [{1}/{2}/?]</value></data>
-  <!-- Printed in place of the words in [ ] in Completion.ReportPanel.Intro when the question
-       mark is typed, since a console cannot show a link. 0 = the web address of the chart
-       in the README. It stands where those words stood, so it takes the same case as them
-       in the sentence they sit in. -->
+  <!-- Fills the {0} in Cli.ReportIntro when the question mark is typed: the chart named by
+       its address, since a console cannot show a link. 0 = the web address of the chart in
+       the README. It stands in the sentence Cli.ReportIntro puts it in, so it takes the case
+       that sentence needs. -->
   <data name="Cli.ReportChartAt" xml:space="preserve"><value>este gráfico en {0}</value></data>
+  <!-- The opening of the report's description when the question mark is typed, in place of
+       Completion.ReportPanel.Intro, which names the chart with a link a console cannot show
+       and so says where it is. 0 = Cli.ReportChartAt with the chart's address in it. The
+       sentence then ends in a colon, and the list of what the report holds follows it. "Me"
+       is the app's author. -->
+  <data name="Cli.ReportIntro" xml:space="preserve"><value>El informe añade tu resultado a {0}, que muestra cuánto espacio están recuperando las personas con InstallerClean. También incluye estos datos técnicos, que me ayudan a detectar errores:</value></data>
   <!-- After the panel's words when the question mark is typed, ahead of the report itself,
        which follows on the next lines. -->
   <data name="Cli.ReportInFull" xml:space="preserve"><value>El informe completo se muestra a continuación.</value></data>
