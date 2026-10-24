@@ -320,7 +320,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Up to date. | 最新です。 |
 | InstallerClean {0} is available. | InstallerClean {0} が利用可能です。 |
 | It's strongly recommended to use the latest version. | 最新バージョンの使用を強くおすすめします。 |
-| Download it from GitHub | GitHubからダウンロード |
+| Download it from GitHub | GitHub からダウンロード |
 | Download .NET Framework 4.8 from Microsoft | Microsoft から .NET Framework 4.8 をダウンロード |
 | Update now | 今すぐ更新 |
 | This copy was installed by Scoop. To update it, close InstallerClean and run: | このコピーは Scoop でインストールされています。更新するには、InstallerClean を閉じてから次を実行してください： |
@@ -591,7 +591,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m PATH    指定されたパスに移動 |
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli は終了までプロンプトを占有するため、スクリプトや<br>スケジュールされたタスクが完了を待てます。 |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | フォルダーはユーザーごと。予約実行や SYSTEM には /m PATH が必要。 |
-| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | スキャンの前に、InstallerClean の新しいバージョンがあるか確認します。自分<br>で実行した場合は、更新する前に確認を求めます。スケジュールされたタスクやス<br>クリプトで自動実行される場合は、確認なしで更新します。確認を省くには<br>/noupdate を付けてください。 |
+| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | スキャンの前に、InstallerClean の新しいバージョンがあるか確認します。<br>自分で実行した場合は、更新する前に確認を求めます。<br>スケジュールされたタスクやスクリプトで自動実行される場合は、<br>確認なしで更新します。確認を省くには /noupdate を付けてください。 |
 | Exit codes: | 終了コード： |
 |   0   success: the run did what it was asked |   0   成功：求められた処理を行った |
 |   1   nothing processed: the run failed or was refused |   1   何も処理されなかった：実行が失敗したか拒否された |
