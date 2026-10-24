@@ -104,7 +104,8 @@ public static class SelfReplacement
     /// after the rename is read from, and readies the crash log
     /// (<see cref="CrashLog.Prepare"/>). Never throws: the walk, the lookup and the
     /// readying are each done on their own, and so is each assembly the walk loads or
-    /// reads, so a failure in any one is written to crash.log and the rest go on.
+    /// reads, so a failure in any one is written to crash.log and the rest go on. An
+    /// assembly the build does not carry is not a failure and is passed over without an entry.
     /// </summary>
     /// <remarks>
     /// An assembly's code reaches other assemblies only through its AssemblyRef table,
@@ -191,7 +192,7 @@ public static class SelfReplacement
     /// assembly of that name: code the build lacks cannot be run after the rename either, so
     /// its absence writes nothing. Any other failure is written to crash.log.
     /// </summary>
-    internal static Assembly? TryLoad(AssemblyName name)
+    internal static Assembly? TryLoad(AssemblyName name) => WritingFailureToCrashLog(() =>
     {
         try
         {
@@ -201,12 +202,7 @@ public static class SelfReplacement
         {
             return null;
         }
-        catch (Exception ex)
-        {
-            CrashLog.TryWrite(ex);
-            return null;
-        }
-    }
+    });
 
     /// <summary>
     /// Whether <paramref name="ex"/> says the assembly <paramref name="asked"/> was not found,
