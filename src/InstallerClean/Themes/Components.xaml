@@ -1329,7 +1329,7 @@
         </Setter>
     </Style>
 
-    <!-- Context menu and menu item. Padding/CornerRadius literals
+    <!-- Context menu and menu item. Padding literals
          here are per-control tunings, not spacing-token decisions:
          the Spacing scale is uniform and does not capture the
          asymmetric (12,6) padding menu rows want.
@@ -1357,18 +1357,25 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ContextMenu">
-                    <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{StaticResource Radius.Chip}"
-                            Padding="{TemplateBinding Padding}">
-                        <ScrollViewer Focusable="False"
-                                      CanContentScroll="True"
-                                      VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Disabled">
-                            <StackPanel IsItemsHost="True"/>
-                        </ScrollViewer>
-                    </Border>
+                    <!-- The fill is a Border of its own under the whole outline, as in
+                         the tooltip templates above: a Border paints its fill inside its
+                         edge, and the row where the two meet can be partly uncovered,
+                         which in a popup lets the window beneath show through. -->
+                    <Grid>
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="{StaticResource Radius.Chip}"/>
+                        <Border BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{StaticResource Radius.Chip}"
+                                Padding="{TemplateBinding Padding}">
+                            <ScrollViewer Focusable="False"
+                                          CanContentScroll="True"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel IsItemsHost="True"/>
+                            </ScrollViewer>
+                        </Border>
+                    </Grid>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
