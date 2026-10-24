@@ -2403,7 +2403,7 @@ Vuelve a ejecutar InstallerClean como administrador.</value></data>
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>No se pudo enviar el informe. Se conserva en {0}.</value></data>
   <!-- A later run at the console, before it sends a report an earlier run was told to send
        and could not. Nothing is asked: the answer was given then. -->
-  <data name="Cli.ReportWaiting" xml:space="preserve"><value>Se envía el informe que aceptaste enviar en una ejecución anterior.</value></data>
+  <data name="Cli.ReportWaiting" xml:space="preserve"><value>Se envía un informe de una ejecución anterior que entonces no se pudo enviar.</value></data>
   <!-- After the newer version is in place, before it runs. 0 = its version. -->
   <data name="Cli.UpdateInstalled" xml:space="preserve"><value>InstallerClean {0} está instalado.</value></data>
   <!-- After Cli.UpdateInstalled, where the person typed /d or /m and answered yes: the newer

@@ -565,7 +565,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report sent. Thank you. | Rapor gönderildi. Teşekkürler. |
 | Report not sent. | Rapor gönderilmedi. |
 | The report could not be sent. It is kept in {0}. | Rapor gönderilemedi. {0} konumunda saklanıyor. |
-| Sending the report you agreed to send in an earlier run. | Daha önceki bir çalıştırmada göndermeyi kabul ettiğiniz rapor gönderiliyor. |
+| Sending a report from an earlier run that could not be sent then. | Daha önceki bir çalıştırmada gönderilemeyen bir rapor gönderiliyor. |
 | InstallerClean {0} is installed. | InstallerClean {0} sürümü yüklendi. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi silmeyecek. Silmek için ardından /d komutunu yeniden çalıştırın. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi taşımayacak. Taşımak için ardından /m komutunu yeniden çalıştırın. |

@@ -2403,7 +2403,7 @@ InstallerClean을 관리자 권한으로 다시 실행하세요.</value></data>
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>보고서를 보내지 못했습니다. {0}에 보관되어 있습니다.</value></data>
   <!-- A later run at the console, before it sends a report an earlier run was told to send
        and could not. Nothing is asked: the answer was given then. -->
-  <data name="Cli.ReportWaiting" xml:space="preserve"><value>앞서 보내기로 동의하신 보고서를 보내는 중입니다.</value></data>
+  <data name="Cli.ReportWaiting" xml:space="preserve"><value>앞서 실행했을 때 보내지 못했던 보고서를 보내는 중입니다.</value></data>
   <!-- After the newer version is in place, before it runs. 0 = its version. -->
   <data name="Cli.UpdateInstalled" xml:space="preserve"><value>InstallerClean {0} 버전이 설치되었습니다.</value></data>
   <!-- After Cli.UpdateInstalled, where the person typed /d or /m and answered yes: the newer

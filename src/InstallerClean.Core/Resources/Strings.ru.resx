@@ -2642,5 +2642,5 @@ InstallerClean уже был запущен от имени администра
   <data name="Cli.ReportSent" xml:space="preserve"><value>Отчёт отправлен. Спасибо.</value></data>
   <data name="Cli.ReportNotSent" xml:space="preserve"><value>Отчёт не отправлен.</value></data>
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>Не удалось отправить отчёт. Он хранится в {0}.</value></data>
-  <data name="Cli.ReportWaiting" xml:space="preserve"><value>Отправляется отчёт, отправку которого вы разрешили ранее.</value></data>
+  <data name="Cli.ReportWaiting" xml:space="preserve"><value>Отправляется отчёт, который не удалось отправить ранее.</value></data>
 </root>

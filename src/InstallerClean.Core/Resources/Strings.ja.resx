@@ -2410,7 +2410,7 @@ InstallerClean を管理者としてもう一度実行してください。</val
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>レポートを送信できませんでした。{0} に保存されています。</value></data>
   <!-- A later run at the console, before it sends a report an earlier run was told to send
        and could not. Nothing is asked: the answer was given then. -->
-  <data name="Cli.ReportWaiting" xml:space="preserve"><value>以前の実行で送信に同意いただいたレポートを送信しています。</value></data>
+  <data name="Cli.ReportWaiting" xml:space="preserve"><value>以前の実行で送信できなかったレポートを送信しています。</value></data>
   <!-- After the newer version is in place, before it runs. 0 = its version. -->
   <data name="Cli.UpdateInstalled" xml:space="preserve"><value>InstallerClean {0} をインストールしました。</value></data>
   <!-- After Cli.UpdateInstalled, where the person typed /d or /m and answered yes: the newer

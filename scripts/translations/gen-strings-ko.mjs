@@ -656,7 +656,7 @@ const MAP = {
   'Cli.ReportSent': `보고서를 보냈습니다. 감사합니다.`,
   'Cli.ReportNotSent': `보고서를 보내지 않았습니다.`,
   'Cli.ReportCouldNotBeSent': `보고서를 보내지 못했습니다. {0}에 보관되어 있습니다.`,
-  'Cli.ReportWaiting': `앞서 보내기로 동의하신 보고서를 보내는 중입니다.`,
+  'Cli.ReportWaiting': `앞서 실행했을 때 보내지 못했던 보고서를 보내는 중입니다.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,
