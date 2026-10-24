@@ -13,6 +13,16 @@
 #    fails, printing every member it now reaches.
 #    The window's InstallerClean.dll is held to CoreLib and the packages alone: WPF itself
 #    calls CoreLib's ole32 and oleaut32 imports at start-up.
+#  - CoreLib's imports of user32.dll, shell32.dll, crypt32.dll and normaliz.dll are bound by the
+#    runtime's own search too, which looks in the folder CoreLib was loaded from before System32.
+#    A call from Core or the command line to a framework method with a path of at most four
+#    members to one of them fails, the import counted as a member, and no entry below covers it.
+#    That is a framework method that calls the import or calls a method that does, or one more
+#    beyond that, such as Environment.UserInteractive calling user32's GetProcessWindowStation.
+#    A route of more members, through task, thread pool or stream code, is for the
+#    native-libraries job, which runs the builds and sees the look. So are CoreLib's imports of
+#    the libraries every process has loaded before its first line runs, such as kernel32.dll
+#    and ntdll.dll.
 #  - A P/Invoke outside InstallerClean.Interop.Native fails, and so does any NativeLibrary
 #    call other than SetDllImportResolver unless it is listed below.
 #  - The package assemblies each framework-dependent bundle carries are pinned by name with
@@ -26,9 +36,10 @@
 # overrides it can reach (NativeImports.cs says why), so a route through one is for the
 # native-libraries job, which runs the builds and sees the look.
 #
-# Every run also checks itself: known members in and out of each framework set, and a planted
-# assembly built here holding one of each fault, judged by the same code as ours against the
-# command line's sets and the window's, every fault of which must be reported. An entry or a
+# Every run also checks itself: known members in and out of each framework set, at the depth
+# limit and one member beyond it, and a planted assembly built here holding one of each fault,
+# judged by the same code as ours against the command line's sets and the window's, every fault
+# of which must be reported. An entry or a
 # listed call that matches nothing fails, as stale.
 #
 # Run from the repo root after the four publishes: pwsh scripts/check-native-imports.ps1
@@ -43,6 +54,12 @@ function Fail([string]$message) { $failures.Add($message); Write-Host "::error::
 
 # The .NET version the entries' source lines were read at.
 $citedVersion = '10.0.13'
+
+# The CoreLib imports the runtime binds by its own search that are not reached through ole32 or
+# oleaut32, and the most members a path to one may have, the import counted, for a call to be
+# reported.
+$nearLibraries = [string[]]('user32.dll', 'shell32.dll', 'crypt32.dll', 'normaliz.dll')
+$nearDepth = 4
 
 $bundles = @(
   [pscustomobject]@{ Label = 'command line'; Path = 'cli/installerclean-cli.exe'; Ours = @('InstallerClean.Core', 'installerclean-cli'); Sibling = $null }
@@ -152,6 +169,7 @@ public static partial class Faults
     public static IntPtr Load() => NativeLibrary.Load("planted");
     public static bool Quic() => QuicConnection.IsSupported;
     public static object Kind(System.Diagnostics.Activity activity) => activity.Kind;
+    public static bool Interactive() => Environment.UserInteractive;
 
     [DllImport("planted", CharSet = CharSet.Unicode)]
     internal static extern int Marshalled(string value);
@@ -162,6 +180,7 @@ public static partial class Faults
 '@
 # The calls every set must report: two direct, one the LibraryImport generator writes, one
 # through a static constructor and one through the runtime's marshalling stub.
+$plantedNearCalls = , 'System.Environment::get_UserInteractive()'
 $plantedCalls = 'System.Guid::NewGuid()', 'System.Runtime.InteropServices.Marshal::StringToBSTR(String)',
   'System.Runtime.InteropServices.Marshalling.Utf16StringMarshaller::Free(UInt16*)', 'System.Diagnostics.Activity::.cctor()',
   'System.Runtime.InteropServices.Marshal::AllocCoTaskMem(Int32)'
@@ -301,6 +320,32 @@ function New-Closure([string]$name, $set) {
   $closure
 }
 
+# The framework methods with a path of at most $nearDepth members to a CoreLib import of
+# $nearLibraries. Reports the sinks and checks the set against members known to be in it, one at
+# the depth limit, and out of it, one a member beyond the limit and one that reaches no import.
+$nearInClosure = 'System.Environment::get_UserInteractive()', 'System.Environment::GetFolderPath(System.Environment+SpecialFolder)'
+$nearOutOfClosure = 'System.DateTime::ToFileTimeUtc()', 'System.Runtime.InteropServices.Marshal::ReadInt32(IntPtr)'
+$nearClosures = @{}
+function New-NearClosure([string]$name, $set) {
+  $closure = [NativeImports.Closure]::new([NativeImports.Assembly[]]@($set | ForEach-Object Assembly), $nearLibraries, $nearDepth)
+  $corelib = @($set | Where-Object { $_.Assembly.Name -eq 'System.Private.CoreLib' })
+  if ($corelib.Count -ne 1) { throw "$name holds $($corelib.Count) copies of CoreLib where it should hold one." }
+  Write-Host "  $name`: $($closure.Sinks.Count) CoreLib imports of $($nearLibraries -join ', '), $($closure.Members.Count) members within $nearDepth of them"
+  if ($closure.Sinks.Count -eq 0) { Fail "$name finds no CoreLib import of $($nearLibraries -join ', ')." }
+  foreach ($key in $nearInClosure) {
+    if (-not $corelib[0].Assembly.Methods.Contains($key)) { Fail "$name`: CoreLib defines no $key, so the control cannot be read." }
+    elseif ($closure.Members.Contains($key)) { Write-Host "    control, in the set as it should be: $key" }
+    else { Fail "$name leaves out $key, which has a path of $nearDepth members or fewer to an import." }
+  }
+  foreach ($key in $nearOutOfClosure) {
+    if (-not $corelib[0].Assembly.Methods.Contains($key)) { Fail "$name`: CoreLib defines no $key, so the control cannot be read." }
+    elseif (-not $closure.Members.Contains($key)) { Write-Host "    control, out of the set as it should be: $key" }
+    else { Fail "$name holds $key, which has no path of $nearDepth members or fewer to an import." }
+  }
+  $nearClosures[$name] = $closure
+  $closure
+}
+
 # What a listed callee reaches in the set, as a count and a hash of the sorted members, so a
 # change in its routes fails the step rather than passing under a reason written for others.
 function Get-Reach($closure, [string]$callee) {
@@ -311,19 +356,23 @@ function Get-Reach($closure, [string]$callee) {
 
 $matched = @{}
 $reported = @{}
-function Test-Calls([string]$where, $assembly, $closure, $findings) {
+function Test-Calls([string]$where, $assembly, $closure, $findings, [switch]$near) {
   foreach ($call in $assembly.Calls) {
     if (-not $closure.Members.Contains($call.Callee)) { continue }
     if ($findings) { $findings["call: $($call.Callee)"] = $true; continue }
     $id = "$($call.Caller) -> $($call.Callee)"
-    $entry = $entries | Where-Object { $_.Calls | Where-Object { $_[0] -eq $call.Caller -and $_[1] -eq $call.Callee } } | Select-Object -First 1
+    $entry = if ($near) { $null } else { $entries | Where-Object { $_.Calls | Where-Object { $_[0] -eq $call.Caller -and $_[1] -eq $call.Callee } } | Select-Object -First 1 }
     if ($entry) { $matched[$id] = $true }
     $seen = "$where|$id"
     if ($reported.ContainsKey($seen)) { continue }
     $reported[$seen] = $true
     Write-Host "  $($assembly.Name): $($call.Caller)$(if ($call.Note) { " ($($call.Note))" })"
     Write-Host ('    -> ' + $closure.Path($call.Callee).Replace("`n", "`n    "))
-    if (-not $entry) { Fail "$where`: $($assembly.Name)'s $($call.Caller) calls $($call.Callee), which reaches a CoreLib import of ole32 or oleaut32."; continue }
+    if (-not $entry) {
+      $imports = if ($near) { "a CoreLib import of $($nearLibraries -join ', ') through $nearDepth members or fewer" } else { 'a CoreLib import of ole32 or oleaut32' }
+      Fail "$where`: $($assembly.Name)'s $($call.Caller) calls $($call.Callee), which reaches $imports."
+      continue
+    }
     $reach = Get-Reach $closure $call.Callee
     $pinned = if ($entry.Reach -and $entry.Reach.Contains($call.Callee)) { $entry.Reach[$call.Callee] } else { 'nothing' }
     if ($pinned -ne $reach.Pin) {
@@ -334,17 +383,23 @@ function Test-Calls([string]$where, $assembly, $closure, $findings) {
 }
 
 Write-Host ''
-Write-Host '== Calls into framework code that reaches one of CoreLib''s ole32 or oleaut32 imports'
+Write-Host "== Calls into framework code that reaches one of CoreLib's ole32 or oleaut32 imports, or within $nearDepth members of one of its $($nearLibraries -join ', ') imports"
 foreach ($bundle in $bundles) {
   $note = if ($bundle.Sibling) { ", judged against the $($bundle.Sibling)'s framework" } else { '' }
   Write-Host "$($bundle.Label)$note"
   $framework = New-Closure "$($bundle.Label), framework" @(Get-Framework $bundle)
+  $nearFramework = New-NearClosure "$($bundle.Label), framework" @(Get-Framework $bundle)
   foreach ($name in $bundle.Ours | Where-Object { $_ -ne 'InstallerClean' }) {
-    Test-Calls $bundle.Label ($bundle.Assemblies | Where-Object Path -eq "$name.dll").Assembly $framework
+    $assembly = ($bundle.Assemblies | Where-Object Path -eq "$name.dll").Assembly
+    Test-Calls $bundle.Label $assembly $framework
+    Test-Calls "$($bundle.Label), within $nearDepth members of an import" $assembly $nearFramework -near
   }
   if ($bundle.Ours -contains 'InstallerClean') {
     $window = New-Closure "$($bundle.Label), CoreLib and the packages" @(Get-WindowSet $bundle)
-    Test-Calls $bundle.Label ($bundle.Assemblies | Where-Object Path -eq 'InstallerClean.dll').Assembly $window
+    $nearWindow = New-NearClosure "$($bundle.Label), CoreLib and the packages" @(Get-WindowSet $bundle)
+    $assembly = ($bundle.Assemblies | Where-Object Path -eq 'InstallerClean.dll').Assembly
+    Test-Calls $bundle.Label $assembly $window
+    Test-Calls "$($bundle.Label), within $nearDepth members of an import" $assembly $nearWindow -near
   }
 }
 foreach ($entry in $entries) {
@@ -433,6 +488,14 @@ foreach ($set in $plantedSets) {
   foreach ($callee in $set.Expected) {
     if ($found.Contains("call: $callee")) { Write-Host "  $($set.Name): reported, as it should be: $callee" }
     else { Fail "$($set.Name): the planted call to $callee was not reported, so the check cannot be shown to find it." }
+  }
+}
+foreach ($set in $plantedSets) {
+  $found = [ordered]@{}
+  Test-Calls $set.Name $fixture $nearClosures[$set.Name] $found -near
+  foreach ($callee in $plantedNearCalls) {
+    if ($found.Contains("call: $callee")) { Write-Host "  $($set.Name), within $nearDepth members of an import: reported, as it should be: $callee" }
+    else { Fail "$($set.Name): the planted call to $callee was not reported within $nearDepth members of an import, so the check cannot be shown to find it." }
   }
 }
 Test-Assembly $fixture 'the planted assembly' $fixtureFindings

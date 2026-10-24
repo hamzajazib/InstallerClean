@@ -467,12 +467,15 @@ namespace NativeImports
         }
     }
 
-    // The framework methods that reach one of CoreLib's ole32.dll or oleaut32.dll imports
-    // through calls, each with one path down to the import for printing.
+    // The framework methods that reach one of CoreLib's imports of the given libraries through
+    // calls, each with one path down to the import for printing. A path of at most maxDepth
+    // members, the import counted, is followed, and a method whose shortest path is longer is
+    // not in the set.
     public sealed class Closure
     {
         public const string CoreLib = "System.Private.CoreLib";
-        static readonly string[] Libraries = { "ole32.dll", "oleaut32.dll" };
+        public static readonly string[] BoundByTheRuntime = { "ole32.dll", "oleaut32.dll" };
+        readonly string[] Libraries;
 
         public List<string> Sinks = new();
         public HashSet<string> Members = new();
@@ -487,8 +490,11 @@ namespace NativeImports
             return name.EndsWith(".dll", StringComparison.Ordinal) ? name : name + ".dll";
         }
 
-        public Closure(IEnumerable<Assembly> assemblies)
+        public Closure(IEnumerable<Assembly> assemblies) : this(assemblies, BoundByTheRuntime, int.MaxValue) { }
+
+        public Closure(IEnumerable<Assembly> assemblies, string[] libraries, int maxDepth)
         {
+            Libraries = libraries;
             var callers = new Dictionary<string, HashSet<string>>();
             var sinks = new List<string>();
             foreach (var a in assemblies)
@@ -510,13 +516,15 @@ namespace NativeImports
             _callers = callers;
             Sinks.Sort(StringComparer.Ordinal);
             var queue = new Queue<string>(sinks);
-            foreach (var s in sinks) Members.Add(s);
+            var depth = new Dictionary<string, int>();
+            foreach (var s in sinks) { Members.Add(s); depth[s] = 1; }
             while (queue.Count > 0)
             {
                 var callee = queue.Dequeue();
+                if (depth[callee] >= maxDepth) continue;
                 if (!callers.TryGetValue(callee, out var set)) continue;
                 foreach (var caller in set.OrderBy(c => c, StringComparer.Ordinal))
-                    if (Members.Add(caller)) { _next[caller] = callee; queue.Enqueue(caller); }
+                    if (Members.Add(caller)) { _next[caller] = callee; depth[caller] = depth[callee] + 1; queue.Enqueue(caller); }
             }
         }
 
