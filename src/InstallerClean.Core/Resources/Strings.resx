@@ -2441,8 +2441,8 @@ Run InstallerClean again as administrator.</value></data>
        where the report is kept. -->
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>The report could not be sent. It is kept in {0}.</value></data>
   <!-- A later run at the console, before it sends a report an earlier run left waiting.
-       Nothing is asked. InstallerClean's window also sends one at its next start without
-       asking. The line names no cause: more than one thing leaves a report waiting. -->
+       Nothing is asked. InstallerClean's window also sends one without asking, at every
+       start until a send is accepted. The line names no cause: more than one thing leaves a report waiting. -->
   <data name="Cli.ReportWaiting" xml:space="preserve"><value>Sending a report left waiting by an earlier run.</value></data>
   <!-- After the newer version is in place, before it runs. 0 = its version. -->
   <data name="Cli.UpdateInstalled" xml:space="preserve"><value>InstallerClean {0} is installed.</value></data>
