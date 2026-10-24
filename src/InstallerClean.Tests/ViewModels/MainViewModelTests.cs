@@ -1,4 +1,5 @@
 using System.IO.Abstractions.TestingHelpers;
+using InstallerClean.Tests.Helpers;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using InstallerClean.Helpers;
@@ -32,7 +33,7 @@ public class MainViewModelTests
     private readonly IUpdateCheckService _updateCheckService = Substitute.For<IUpdateCheckService>();
     private readonly IRemovableReverifier _reverifier = Substitute.For<IRemovableReverifier>();
     private readonly IEarlierRunCheck _earlierRunCheck = Substitute.For<IEarlierRunCheck>();
-    private readonly IFirstRunMark _firstRunMark = Substitute.For<IFirstRunMark>();
+    private readonly IFirstRunMark _firstRunMark = FirstRunMarks.Claiming();
     private readonly IWindowsRegion _windowsRegion = Substitute.For<IWindowsRegion>();
     private readonly MockFileSystem _fileSystem = new();
 
@@ -3928,7 +3929,7 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public async Task The_PCs_first_card_carries_the_box_ticked_writes_the_report_and_sets_the_mark()
+    public async Task The_PCs_first_card_carries_the_box_ticked_writes_the_report_and_claims_the_mark()
     {
         var vm = FirstRunAllClear();
 
@@ -3938,7 +3939,7 @@ public class MainViewModelTests
         Assert.True(vm.Completion.OffersReport);
         Assert.True(vm.Completion.SendsReport);
         await _resultLogService.Received(1).WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
-        _firstRunMark.Received(1).Set();
+        _firstRunMark.Received(1).TryClaim();
     }
 
     [Theory]
@@ -4062,7 +4063,7 @@ public class MainViewModelTests
         Assert.False(vm.Completion.OffersReport);
         await _resultLogService.Received(1).WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>());
         await _earlierRunCheck.Received(1).ShowsAnEarlierRunWithinAsync(Arg.Any<TimeSpan>());
-        _firstRunMark.Received(1).Set();
+        _firstRunMark.Received(1).TryClaim();
     }
 
     public static TheoryData<string> WaysToCloseTheCard => new() { "Done", "Esc", "Donate", "Window" };
@@ -4106,7 +4107,7 @@ public class MainViewModelTests
 
         await _resultLogService.DidNotReceive().SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
         // The mark is set all the same: this was the PC's first run.
-        _firstRunMark.Received(1).Set();
+        _firstRunMark.Received(1).TryClaim();
         var settings = AppliedInOrder(saves);
         Assert.False(settings.ReportSendPending);
         Assert.False(settings.HasSentResultLog);
@@ -4182,7 +4183,7 @@ public class MainViewModelTests
         Assert.True(vm.Completion.IsComplete);
         Assert.False(vm.Completion.OffersReport);
         // The write was attempted, so this was the PC's first run.
-        _firstRunMark.Received(1).Set();
+        _firstRunMark.Received(1).TryClaim();
 
         vm.Completion.DismissCommand.Execute(null);
         vm.Dispose();
@@ -5358,7 +5359,7 @@ public class MainViewModelTests
         Assert.True(vm.Completion.IsComplete);
         Assert.Equal(Strings.Completion_AllClean, vm.Completion.Heading);
         Assert.True(vm.Completion.OffersReport);
-        _firstRunMark.Received(1).Set();
+        _firstRunMark.Received(1).TryClaim();
         // The notice at the top stays for the session.
         Assert.True(vm.Chrome.HasNewerVersion);
     }

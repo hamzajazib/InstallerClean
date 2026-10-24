@@ -38,7 +38,8 @@ public class CliReportCarryTests
         Assert.Equal(OperationKinds.Scan, entry.Operation.Kind);
         Assert.Equal("commandLine", entry.App.Host);
         Assert.Equal("GB", entry.App.WindowsRegion);
-        rig.Mark.Received(1).Set();
+        rig.Mark.Received(1).TryClaim();
+        rig.Mark.DidNotReceive().Set();
     }
 
     [Fact]
@@ -50,7 +51,21 @@ public class CliReportCarryTests
 
         Assert.Equal(CliExitCode.Ok, exitCode);
         Assert.Equal(OperationKinds.Scan, rig.Report.Entry!.Operation.Kind);
-        rig.Mark.Received(1).Set();
+        rig.Mark.Received(1).TryClaim();
+        rig.Mark.DidNotReceive().Set();
+    }
+
+    [Fact]
+    public async Task A_scan_whose_claim_is_refused_carries_nothing()
+    {
+        var rig = new Rig { ClaimGranted = false };
+
+        var exitCode = await rig.Run("/s");
+
+        Assert.Equal(CliExitCode.Ok, exitCode);
+        Assert.Null(rig.Report.Entry);
+        rig.Mark.Received(1).TryClaim();
+        rig.Mark.DidNotReceive().Set();
     }
 
     [Theory]
@@ -75,6 +90,7 @@ public class CliReportCarryTests
 
         Assert.Null(rig.Report.Entry);
         rig.Mark.DidNotReceive().Set();
+        rig.Mark.DidNotReceive().TryClaim();
     }
 
     [Theory]
@@ -232,6 +248,7 @@ public class CliReportCarryTests
         Assert.NotEqual(CliExitCode.Ok, exitCode);
         Assert.Null(rig.Report.Entry);
         rig.Mark.DidNotReceive().Set();
+        rig.Mark.DidNotReceive().TryClaim();
     }
 
     [Fact]
@@ -245,6 +262,7 @@ public class CliReportCarryTests
         Assert.Equal(CliExitCode.Ok, exitCode);
         Assert.Null(rig.Report.Entry);
         rig.Mark.DidNotReceive().Set();
+        rig.Mark.DidNotReceive().TryClaim();
     }
 
     // ---- the offer, as Main calls it ----
@@ -333,6 +351,7 @@ public class CliReportCarryTests
         public Rig()
         {
             Mark = Substitute.For<IFirstRunMark>();
+            Mark.TryClaim().Returns(_ => ClaimGranted);
             Earlier = Substitute.For<IEarlierRunCheck>();
             Earlier.ShowsAnEarlierRunAsync().Returns(_ => Task.FromResult(EarlierRun));
             Earlier.ShowsAnEarlierRunWithinAsync(Arg.Any<TimeSpan>()).Returns(_ => Task.FromResult(EarlierRun));
@@ -353,6 +372,7 @@ public class CliReportCarryTests
         public RunReport Report { get; private set; } = new(canAsk: true);
 
         public bool EarlierRun { get; set; }
+        public bool ClaimGranted { get; set; } = true;
         public bool CanAsk { get; set; } = true;
         public bool Offered { get; set; } = true;
         public bool ReverifyKeeps { get; set; } = true;

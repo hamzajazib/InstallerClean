@@ -1,5 +1,6 @@
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
+using InstallerClean.Tests.Helpers;
 using NSubstitute;
 using InstallerClean.Helpers;
 using InstallerClean.Models;
@@ -39,7 +40,7 @@ public class CleanupPreFlightTests
     private readonly IResultLogService _resultLogService = Substitute.For<IResultLogService>();
     private readonly IRemovableReverifier _reverifier = Substitute.For<IRemovableReverifier>();
     private readonly IEarlierRunCheck _earlierRunCheck = Substitute.For<IEarlierRunCheck>();
-    private readonly IFirstRunMark _firstRunMark = Substitute.For<IFirstRunMark>();
+    private readonly IFirstRunMark _firstRunMark = FirstRunMarks.Claiming();
     private readonly IWindowsRegion _windowsRegion = Substitute.For<IWindowsRegion>();
 
     private readonly IFileSystem _fileSystem = Substitute.For<IFileSystem>();

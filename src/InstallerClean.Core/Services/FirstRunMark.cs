@@ -14,8 +14,27 @@ internal sealed class FirstRunMark : IFirstRunMark
     internal const string KeyPath = @"SOFTWARE\NoFaff\InstallerClean";
     internal const string ValueName = "FirstRunRecorded";
 
+    /// <summary>
+    /// The machine-wide lock <see cref="TryClaim"/> holds around its read and write of the
+    /// mark. It is not the single-instance lock (<see cref="InstanceLock"/>), which a window
+    /// holds for its whole life; this one is held for the length of a registry read and
+    /// write, so nothing waits on it for long.
+    /// </summary>
+    internal const string ClaimLockName = @"Global\InstallerClean_FirstReportClaim";
+
+    /// <summary>How long <see cref="TryClaim"/> waits for the lock before it answers false.</summary>
+    internal static readonly TimeSpan ClaimLockWait = TimeSpan.FromSeconds(2);
+
     private readonly RegistryHive _hive;
     private readonly string _keyPath;
+    private readonly string _claimLockName;
+    private readonly TimeSpan _claimLockWait;
+
+    /// <summary>True once this instance has created the mark, which <see cref="TryClaim"/> reads as the mark being this run's own. A write that finds the mark already there leaves it as it was.</summary>
+    private volatile bool _setHere;
+
+    /// <summary>True once <see cref="TryClaim"/> has granted a claim, so a second call on this instance is refused.</summary>
+    private volatile bool _claimTaken;
 
     public FirstRunMark() : this(RegistryHive.LocalMachine, KeyPath) { }
 
@@ -25,9 +44,15 @@ internal sealed class FirstRunMark : IFirstRunMark
     /// and delete it afterwards.
     /// </summary>
     internal FirstRunMark(RegistryHive hive, string keyPath)
+        : this(hive, keyPath, ClaimLockName, ClaimLockWait) { }
+
+    /// <summary>Test seam: also names the claim lock and bounds the wait for it.</summary>
+    internal FirstRunMark(RegistryHive hive, string keyPath, string claimLockName, TimeSpan claimLockWait)
     {
         _hive = hive;
         _keyPath = keyPath;
+        _claimLockName = claimLockName;
+        _claimLockWait = claimLockWait;
     }
 
     public FirstRunMarkState Read()
@@ -64,7 +89,9 @@ internal sealed class FirstRunMark : IFirstRunMark
                     "The key for the first-run mark could not be created or opened."));
                 return;
             }
+            var existed = key.GetValue(ValueName, null, RegistryValueOptions.DoNotExpandEnvironmentNames) is not null;
             key.SetValue(ValueName, 1, RegistryValueKind.DWord);
+            if (!existed) _setHere = true;
         }
         catch (Exception ex)
         {
@@ -76,6 +103,60 @@ internal sealed class FirstRunMark : IFirstRunMark
             // failure's place in the entry. The window's start check sets it inside the
             // task its answer comes back in, which a throw would fault.
             CrashLog.TryWrite(ex);
+        }
+    }
+
+    public bool TryClaim()
+    {
+        if (_claimTaken) return false;
+        Mutex? claimLock = null;
+        var held = false;
+        try
+        {
+            claimLock = new Mutex(initiallyOwned: false, _claimLockName);
+            try
+            {
+                held = claimLock.WaitOne(_claimLockWait);
+            }
+            catch (AbandonedMutexException)
+            {
+                // Its last holder ended without releasing it; the runtime hands it to this thread.
+                held = true;
+            }
+            if (!held) return false;
+
+            // The claim is looked at again now the lock is held, since another thread on
+            // this instance may have been granted it while this one waited.
+            if (_claimTaken) return false;
+
+            // A mark this instance created is this run's own: a command-line Delete or
+            // Move that moved or deleted a file sets it as the batch returns, ahead of the
+            // claim for the report of that same run. A mark anything else created, or that
+            // cannot be read, is refused.
+            var state = Read();
+            if (state == FirstRunMarkState.Unreadable) return false;
+            if (state == FirstRunMarkState.Set && !_setHere) return false;
+            if (state == FirstRunMarkState.NotSet)
+            {
+                Set();
+                if (Read() != FirstRunMarkState.Set) return false;
+            }
+            _claimTaken = true;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+            return false;
+        }
+        finally
+        {
+            if (held)
+            {
+                try { claimLock!.ReleaseMutex(); }
+                catch (Exception ex) { CrashLog.TryWrite(ex); }
+            }
+            claimLock?.Dispose();
         }
     }
 }

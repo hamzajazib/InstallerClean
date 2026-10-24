@@ -5,7 +5,7 @@ namespace InstallerClean.Services;
 /// <c>FirstRunRecorded</c> under <c>HKLM\SOFTWARE\NoFaff\InstallerClean</c>, one
 /// for the whole PC, so every Windows account on it reads the same answer.
 ///
-/// The window sets it as the PC's first card that writes a report takes the report box
+/// The window claims it as the PC's first card that writes a report takes the report box
 /// (<c>CompletionViewModel.TakeReport</c>), whatever that card shows. It also sets it
 /// where a Move or a Delete writes no report: a cancelled or stopped run that moved or
 /// deleted a file, a finished run that did after the window was asked to close, and any
@@ -17,7 +17,7 @@ namespace InstallerClean.Services;
 /// The command line sets the mark after a Move or a Delete whose service counts a file
 /// moved or deleted, and where the service fails before its count comes back with an
 /// exception none of the command line's other catches takes. A run at a console that
-/// finishes on a PC with no earlier run sets it as it carries its report to the question
+/// finishes on a PC with no earlier run claims it as it carries its report to the question
 /// (<see cref="ConsoleReportOffer"/>), whatever it moved or deleted. Nothing removes the
 /// mark, and the installer's uninstall leaves it in place.
 /// </summary>
@@ -36,6 +36,20 @@ public interface IFirstRunMark
     /// thrown, so a caller needs no guard of its own.
     /// </summary>
     void Set();
+
+    /// <summary>
+    /// Takes the PC's one report: true for the one caller that finds the mark clear and
+    /// sets it, false for every other. The mark is read afresh, never from the answer the
+    /// start check gave, under a short-held machine-wide lock, so a window and a command
+    /// line run that both found the PC clear at their starts cannot both take the report.
+    /// A mark this same instance created earlier counts as clear, once: a command-line
+    /// Delete or Move that moved or deleted a file has set it by the time it claims the
+    /// report of that run. False where the mark was created by anything else, where the
+    /// lock cannot be had within a short wait, where the mark cannot be read, where the
+    /// write does not read back as set, and on any call after a claim was granted: no
+    /// report is carried then. Never throws.
+    /// </summary>
+    bool TryClaim();
 }
 
 /// <summary>What <see cref="IFirstRunMark.Read"/> found.</summary>

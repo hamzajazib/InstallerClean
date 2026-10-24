@@ -929,16 +929,18 @@ internal static class Program
             }
 
             // Carries the report of a run that finished, where this is the PC's first run:
-            // builds it, then sets the PC-wide mark, so a Ctrl+C at the question leaves
-            // this the PC's first run all the same. A report that cannot be built is left
-            // out and the run ends as it would have.
+            // builds it, then claims the PC-wide mark, so a Ctrl+C at the question leaves
+            // this the PC's first run all the same. A claim that is refused, the mark being
+            // set already by a window or another run that finished first, carries nothing. A
+            // report that cannot be built is left out and the run ends as it would have.
             async Task CarryReportAsync(Func<ResultLogEntry> build)
             {
                 if (!reporting || await PcHadEarlierRunAsync()) return;
                 try
                 {
-                    report!.Entry = build();
-                    services.GetRequiredService<IFirstRunMark>().Set();
+                    var entry = build();
+                    if (!services.GetRequiredService<IFirstRunMark>().TryClaim()) return;
+                    report!.Entry = entry;
                 }
                 catch (Exception ex)
                 {
@@ -1283,8 +1285,8 @@ internal static class Program
             });
 
             // Set where a batch moves or deletes a file, or ends where how far it got is
-            // not known (HandOverBatchAsync). A run that carries its report sets it too
-            // (CarryReportAsync).
+            // not known (HandOverBatchAsync). A run that carries its report claims it
+            // (CarryReportAsync), and the claim counts a mark this run set as its own.
             var firstRunMark = services.GetRequiredService<IFirstRunMark>();
 
             if (arg == "/d")

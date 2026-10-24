@@ -782,17 +782,20 @@ public partial class CompletionViewModel : ObservableObject
 
     /// <summary>
     /// Takes the report for the card about to be revealed: records the PC's first run,
-    /// sets the PC-wide mark, and puts the box on the card, ticked, reading the Country or
+    /// claims the PC-wide mark, and puts the box on the card, ticked, reading the Country or
     /// region set in Windows into <see cref="ReportRegion"/> for the report. Called before
     /// the Show* method, so the box is there when the card is read out. False where this
     /// sitting has already had its first run, which a second card reaching here behind the
-    /// same answer from <see cref="ReportIsFreeAsync"/> finds.
+    /// same answer from <see cref="ReportIsFreeAsync"/> finds, and where the claim is
+    /// refused because the mark is already set, which another program that ran meanwhile
+    /// leaves, or cannot be written. Either way this sitting's first run has passed, so no
+    /// later card carries a box.
     /// </summary>
     public bool TakeReport()
     {
         if (_firstRunTaken) return false;
         _firstRunTaken = true;
-        _firstRunMark.Set();
+        if (!_firstRunMark.TryClaim()) return false;
         ReportRegion = _windowsRegion.Read();
         _reportTicked = true;
         _boxOpen = true;

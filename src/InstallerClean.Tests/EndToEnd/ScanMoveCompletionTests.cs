@@ -1,4 +1,5 @@
 using System.IO.Abstractions.TestingHelpers;
+using InstallerClean.Tests.Helpers;
 using NSubstitute;
 using InstallerClean.Models;
 using InstallerClean.Services;
@@ -36,7 +37,7 @@ public class ScanMoveCompletionTests
     private readonly IUpdateCheckService _updateCheckService = Substitute.For<IUpdateCheckService>();
     private readonly IRemovableReverifier _reverifier = Substitute.For<IRemovableReverifier>();
     private readonly IEarlierRunCheck _earlierRunCheck = Substitute.For<IEarlierRunCheck>();
-    private readonly IFirstRunMark _firstRunMark = Substitute.For<IFirstRunMark>();
+    private readonly IFirstRunMark _firstRunMark = FirstRunMarks.Claiming();
     private readonly IWindowsRegion _windowsRegion = Substitute.For<IWindowsRegion>();
 
     private readonly MockFileSystem _fileSystem = new();
@@ -224,7 +225,7 @@ public class ScanMoveCompletionTests
             settingsService, rebootService, msiInfoService,
             dialogService, confirmationService, windowService,
             fs, resultLogService, updateCheckService, reverifier,
-            Substitute.For<IEarlierRunCheck>(), Substitute.For<IFirstRunMark>(), Substitute.For<IWindowsRegion>(),
+            Substitute.For<IEarlierRunCheck>(), FirstRunMarks.Claiming(), Substitute.For<IWindowsRegion>(),
             destinationGuard: new ByPathDestinationGuard(fs));
 
         // Stage 1: real scan finds the two orphans.

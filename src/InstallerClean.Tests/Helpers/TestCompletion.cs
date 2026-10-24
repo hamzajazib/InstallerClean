@@ -21,7 +21,7 @@ internal static class TestCompletion
         new(Substitute.For<IResultLogService>(),
             Substitute.For<ISettingsService>(),
             Substitute.For<IEarlierRunCheck>(),
-            Substitute.For<IFirstRunMark>(),
+            FirstRunMarks.Claiming(),
             Substitute.For<IWindowsRegion>(),
             windowService ?? Substitute.For<IWindowService>(),
             AppCopyKind.FromSource,

@@ -6,6 +6,7 @@ using InstallerClean.Models;
 using InstallerClean.Resources;
 using InstallerClean.Services;
 using InstallerClean.ViewModels;
+using InstallerClean.Tests.Helpers;
 using NSubstitute;
 
 namespace InstallerClean.Tests.ViewModels;
@@ -39,7 +40,7 @@ public class CleanupStopWaitingTests
     private readonly IResultLogService _resultLogService = Substitute.For<IResultLogService>();
     private readonly IRemovableReverifier _reverifier = Substitute.For<IRemovableReverifier>();
     private readonly IEarlierRunCheck _earlierRunCheck = Substitute.For<IEarlierRunCheck>();
-    private readonly IFirstRunMark _firstRunMark = Substitute.For<IFirstRunMark>();
+    private readonly IFirstRunMark _firstRunMark = FirstRunMarks.Claiming();
     private readonly IWindowsRegion _windowsRegion = Substitute.For<IWindowsRegion>();
     private readonly IUpdateCheckService _updateCheckService = Substitute.For<IUpdateCheckService>();
 

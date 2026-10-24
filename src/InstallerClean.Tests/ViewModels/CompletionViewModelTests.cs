@@ -1158,7 +1158,7 @@ public class CompletionViewModelTests
         windowsRegion.Read().Returns(region);
         var vm = new CompletionViewModel(
             Substitute.For<IResultLogService>(), Substitute.For<ISettingsService>(),
-            Substitute.For<IEarlierRunCheck>(), Substitute.For<IFirstRunMark>(),
+            Substitute.For<IEarlierRunCheck>(), FirstRunMarks.Claiming(),
             windowsRegion, Substitute.For<IWindowService>(), AppCopyKind.FromSource, () => null);
 
         Assert.True(vm.TakeReport());
@@ -1166,6 +1166,27 @@ public class CompletionViewModelTests
         Assert.True(vm.OffersReport);
         Assert.True(vm.SendsReport);
         Assert.Equal(region, vm.ReportRegion);
+    }
+
+    [Fact]
+    public void A_refused_claim_takes_no_report_and_no_later_card_takes_one()
+    {
+        // Refuses the first claim and would grant any later one, so a second card that
+        // asked would get a box.
+        var claims = 0;
+        var mark = Substitute.For<IFirstRunMark>();
+        mark.TryClaim().Returns(_ => ++claims > 1);
+        var vm = new CompletionViewModel(
+            Substitute.For<IResultLogService>(), Substitute.For<ISettingsService>(),
+            Substitute.For<IEarlierRunCheck>(), mark,
+            Substitute.For<IWindowsRegion>(), Substitute.For<IWindowService>(), AppCopyKind.FromSource, () => null);
+
+        Assert.False(vm.TakeReport());
+        Assert.False(vm.TakeReport());
+
+        Assert.False(vm.OffersReport);
+        Assert.Equal(1, claims);
+        mark.DidNotReceive().Set();
     }
 
     // The report panel's "See exactly what's sent" link. The card carrying the box is
@@ -1178,7 +1199,7 @@ public class CompletionViewModelTests
     {
         public IResultLogService ResultLog { get; } = Substitute.For<IResultLogService>();
         public ISettingsService Settings { get; } = Substitute.For<ISettingsService>();
-        public IFirstRunMark FirstRunMark { get; } = Substitute.For<IFirstRunMark>();
+        public IFirstRunMark FirstRunMark { get; } = FirstRunMarks.Claiming();
         public IWindowService Windows { get; } = Substitute.For<IWindowService>();
         public TaskCompletionSource<bool> Write { get; } = new();
         public CompletionViewModel Vm { get; }
