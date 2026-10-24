@@ -2403,7 +2403,7 @@ InstallerClean уже працював від імені адміністрат�
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>Не вдалося надіслати звіт. Його збережено в {0}.</value></data>
   <!-- A later run at the console, before it sends a report an earlier run was told to send
        and could not. Nothing is asked: the answer was given then. -->
-  <data name="Cli.ReportWaiting" xml:space="preserve"><value>Надсилається звіт, надсилання якого ви дозволили під час одного з попередніх запусків.</value></data>
+  <data name="Cli.ReportWaiting" xml:space="preserve"><value>Надсилається звіт, надсилання якого ви дозволили раніше.</value></data>
   <!-- After the newer version is in place, before it runs. 0 = its version. -->
   <data name="Cli.UpdateInstalled" xml:space="preserve"><value>Версію InstallerClean {0} встановлено.</value></data>
   <!-- After Cli.UpdateInstalled, where the person typed /d or /m and answered yes: the newer
@@ -2580,12 +2580,14 @@ InstallerClean уже працював від імені адміністрат�
   <data name="Cli.Help.MoveDefault" xml:space="preserve"><value>  installerclean-cli /m         Перемістити до збереженої папки</value></data>
   <data name="Cli.Help.MovePath" xml:space="preserve"><value>  installerclean-cli /m ШЛЯХ    Перемістити за вказаним шляхом</value></data>
   <!-- ONE value carrying TWO printed lines, and the &#10; is where the English
-       breaks rather than where every language must. A translation may break
-       anywhere, or not at all if it fits. -->
+       breaks rather than where every language must. A translation breaks where
+       its own grammar allows, at a space or after punctuation and never inside a
+       word or a noun phrase, or not at all if it fits. -->
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli утримує командний рядок до кінця роботи, щоб&#10;скрипт або запланована задача могли на нього зачекати.</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>Папка своя в кожного користувача; запланованим і SYSTEM: /m ШЛЯХ.</value></data>
   <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the
-       English breaks; a translation may break anywhere within the 74-column cap.
+       English breaks; a translation breaks within the 74-column cap where its own
+       grammar allows, at a space or after punctuation and never inside a word.
        /noupdate is the switch as typed and stays as written. -->
   <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>Перед скануванням перевіряє, чи є новіша версія InstallerClean. Під час&#10;запуску вручну запитує перед оновленням. Під час запуску без участі&#10;людини, у запланованій задачі чи скрипті, оновлюється без запитань.&#10;Додайте /noupdate, щоб пропустити перевірку.</value></data>
   <data name="Cli.Help.ExitCodesHeader" xml:space="preserve"><value>Коди виходу:</value></data>

@@ -655,7 +655,7 @@ const MAP = {
   'Cli.ReportSent': `Đã gửi báo cáo. Cảm ơn bạn.`,
   'Cli.ReportNotSent': `Chưa gửi báo cáo.`,
   'Cli.ReportCouldNotBeSent': `Không thể gửi báo cáo. Báo cáo được lưu giữ tại {0}.`,
-  'Cli.ReportWaiting': `Đang gửi báo cáo mà bạn đã đồng ý gửi ở một lần chạy trước đó.`,
+  'Cli.ReportWaiting': `Đang gửi báo cáo mà bạn đã đồng ý gửi trước đó.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

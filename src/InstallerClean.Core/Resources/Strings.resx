@@ -2639,12 +2639,14 @@ Run InstallerClean again as administrator.</value></data>
   <data name="Cli.Help.MoveDefault" xml:space="preserve"><value>  installerclean-cli /m         Move to the saved backup folder</value></data>
   <data name="Cli.Help.MovePath" xml:space="preserve"><value>  installerclean-cli /m PATH    Move to specified path</value></data>
   <!-- ONE value carrying TWO printed lines, and the &#10; is where the English
-       breaks rather than where every language must. A translation may break
-       anywhere, or not at all if it fits. -->
+       breaks rather than where every language must. A translation breaks where
+       its own grammar allows, at a space or after punctuation and never inside a
+       word or a noun phrase, or not at all if it fits. -->
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli blocks the prompt until it finishes, so a script or&#10;scheduled task can wait on it.</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>That folder is saved per-user; scheduled or SYSTEM runs need /m PATH.</value></data>
   <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the
-       English breaks; a translation may break anywhere within the 74-column cap.
+       English breaks; a translation breaks within the 74-column cap where its own
+       grammar allows, at a space or after punctuation and never inside a word.
        /noupdate is the switch as typed and stays as written. -->
   <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>Before it scans, it checks for a newer version of InstallerClean.&#10;When you run it yourself, it asks before updating. When it runs on its&#10;own, in a scheduled task or a script, it updates without asking.&#10;Add /noupdate to skip the check.</value></data>
   <data name="Cli.Help.ExitCodesHeader" xml:space="preserve"><value>Exit codes:</value></data>

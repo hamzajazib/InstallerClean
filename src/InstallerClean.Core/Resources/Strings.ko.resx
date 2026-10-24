@@ -2403,7 +2403,7 @@ InstallerClean을 관리자 권한으로 다시 실행하세요.</value></data>
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>보고서를 보내지 못했습니다. {0}에 보관되어 있습니다.</value></data>
   <!-- A later run at the console, before it sends a report an earlier run was told to send
        and could not. Nothing is asked: the answer was given then. -->
-  <data name="Cli.ReportWaiting" xml:space="preserve"><value>이전 실행에서 보내기로 동의하신 보고서를 보내는 중입니다.</value></data>
+  <data name="Cli.ReportWaiting" xml:space="preserve"><value>앞서 보내기로 동의하신 보고서를 보내는 중입니다.</value></data>
   <!-- After the newer version is in place, before it runs. 0 = its version. -->
   <data name="Cli.UpdateInstalled" xml:space="preserve"><value>InstallerClean {0} 버전이 설치되었습니다.</value></data>
   <!-- After Cli.UpdateInstalled, where the person typed /d or /m and answered yes: the newer
@@ -2579,12 +2579,14 @@ InstallerClean을 관리자 권한으로 다시 실행하세요.</value></data>
   <data name="Cli.Help.MoveDefault" xml:space="preserve"><value>  installerclean-cli /m         저장된 백업 폴더로 이동</value></data>
   <data name="Cli.Help.MovePath" xml:space="preserve"><value>  installerclean-cli /m 경로    지정한 경로로 이동</value></data>
   <!-- ONE value carrying TWO printed lines, and the &#10; is where the English
-       breaks rather than where every language must. A translation may break
-       anywhere, or not at all if it fits. -->
-  <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli는 끝날 때까지 프롬프트를 붙잡고 있으므로 스크립트나&#10;예약 작업이 이를 기다릴 수 있습니다.</value></data>
+       breaks rather than where every language must. A translation breaks where
+       its own grammar allows, at a space or after punctuation and never inside a
+       word or a noun phrase, or not at all if it fits. -->
+  <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli는 끝날 때까지 프롬프트를 붙잡고 있으므로&#10;스크립트나 예약 작업이 이를 기다릴 수 있습니다.</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>폴더는 사용자별 저장. 예약 또는 SYSTEM 실행에는 /m 경로 필요.</value></data>
   <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the
-       English breaks; a translation may break anywhere within the 74-column cap.
+       English breaks; a translation breaks within the 74-column cap where its own
+       grammar allows, at a space or after punctuation and never inside a word.
        /noupdate is the switch as typed and stays as written. -->
   <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>검사하기 전에 InstallerClean의 새 버전이 있는지 확인합니다. 직접 실행하면&#10;업데이트하기 전에 묻습니다. 예약 작업이나 스크립트에서 자동으로 실행되면&#10;묻지 않고 업데이트합니다. 확인을 건너뛰려면 /noupdate를 추가하세요.</value></data>
   <data name="Cli.Help.ExitCodesHeader" xml:space="preserve"><value>종료 코드:</value></data>

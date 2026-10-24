@@ -2581,12 +2581,14 @@ Voer InstallerClean opnieuw uit als administrator.</value></data>
   <data name="Cli.Help.MoveDefault" xml:space="preserve"><value>  installerclean-cli /m         Verplaatsen naar de opgeslagen back-upmap</value></data>
   <data name="Cli.Help.MovePath" xml:space="preserve"><value>  installerclean-cli /m PAD     Verplaatsen naar het opgegeven pad</value></data>
   <!-- ONE value carrying TWO printed lines, and the &#10; is where the English
-       breaks rather than where every language must. A translation may break
-       anywhere, or not at all if it fits. -->
+       breaks rather than where every language must. A translation breaks where
+       its own grammar allows, at a space or after punctuation and never inside a
+       word or a noun phrase, or not at all if it fits. -->
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli blokkeert de prompt tot het klaar is, zodat een script&#10;of geplande taak erop kan wachten.</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>Die map geldt per gebruiker; geplande of SYSTEM-taken vereisen /m PAD.</value></data>
   <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the
-       English breaks; a translation may break anywhere within the 74-column cap.
+       English breaks; a translation breaks within the 74-column cap where its own
+       grammar allows, at a space or after punctuation and never inside a word.
        /noupdate is the switch as typed and stays as written. -->
   <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>Voor het scannen controleert het of er een nieuwere versie van&#10;InstallerClean is. Start je het zelf, dan vraagt het eerst toestemming.&#10;Draait het zelfstandig, in een geplande taak of een script, dan werkt het&#10;bij zonder te vragen. Voeg /noupdate toe om de controle over te slaan.</value></data>
   <data name="Cli.Help.ExitCodesHeader" xml:space="preserve"><value>Afsluitcodes:</value></data>

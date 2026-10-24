@@ -2581,12 +2581,14 @@ Vuelve a ejecutar InstallerClean como administrador.</value></data>
   <data name="Cli.Help.MoveDefault" xml:space="preserve"><value>  installerclean-cli /m         Mueve a la carpeta de copia de seguridad</value></data>
   <data name="Cli.Help.MovePath" xml:space="preserve"><value>  installerclean-cli /m RUTA    Mueve a la ruta especificada</value></data>
   <!-- ONE value carrying TWO printed lines, and the &#10; is where the English
-       breaks rather than where every language must. A translation may break
-       anywhere, or not at all if it fits. -->
+       breaks rather than where every language must. A translation breaks where
+       its own grammar allows, at a space or after punctuation and never inside a
+       word or a noun phrase, or not at all if it fits. -->
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli bloquea el símbolo del sistema hasta terminar, para&#10;que un script o una tarea programada pueda esperarlo.</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>Carpeta por usuario; ejecuciones programadas o SYSTEM: /m RUTA.</value></data>
   <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the
-       English breaks; a translation may break anywhere within the 74-column cap.
+       English breaks; a translation breaks within the 74-column cap where its own
+       grammar allows, at a space or after punctuation and never inside a word.
        /noupdate is the switch as typed and stays as written. -->
   <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>Antes de analizar, comprueba si hay una versión más reciente de&#10;InstallerClean. Cuando lo ejecutas tú, pregunta antes de actualizar.&#10;Cuando se ejecuta solo, en una tarea programada o un script, se actualiza&#10;sin preguntar. Añade /noupdate para omitir la comprobación.</value></data>
   <data name="Cli.Help.ExitCodesHeader" xml:space="preserve"><value>Códigos de salida:</value></data>

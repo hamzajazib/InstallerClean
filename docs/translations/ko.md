@@ -565,7 +565,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report sent. Thank you. | 보고서를 보냈습니다. 감사합니다. |
 | Report not sent. | 보고서를 보내지 않았습니다. |
 | The report could not be sent. It is kept in {0}. | 보고서를 보내지 못했습니다. {0}에 보관되어 있습니다. |
-| Sending the report you agreed to send in an earlier run. | 이전 실행에서 보내기로 동의하신 보고서를 보내는 중입니다. |
+| Sending the report you agreed to send in an earlier run. | 앞서 보내기로 동의하신 보고서를 보내는 중입니다. |
 | InstallerClean {0} is installed. | InstallerClean {0} 버전이 설치되었습니다. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 새 버전은 검사하여 찾은 항목을 나열하기만 하고 아무것도 삭제하지 않습니다. 삭제하려면 그 후에 /d를 다시 실행하세요. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 새 버전은 검사하여 찾은 항목을 나열하기만 하고 아무것도 이동하지 않습니다. 이동하려면 그 후에 /m을 다시 실행하세요. |
@@ -589,7 +589,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /d         Delete unneeded files permanently |   installerclean-cli /d         불필요한 파일 영구 삭제 |
 |   installerclean-cli /m         Move to the saved backup folder |   installerclean-cli /m         저장된 백업 폴더로 이동 |
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m 경로    지정한 경로로 이동 |
-| installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli는 끝날 때까지 프롬프트를 붙잡고 있으므로 스크립트나<br>예약 작업이 이를 기다릴 수 있습니다. |
+| installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli는 끝날 때까지 프롬프트를 붙잡고 있으므로<br>스크립트나 예약 작업이 이를 기다릴 수 있습니다. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | 폴더는 사용자별 저장. 예약 또는 SYSTEM 실행에는 /m 경로 필요. |
 | Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | 검사하기 전에 InstallerClean의 새 버전이 있는지 확인합니다. 직접 실행하면<br>업데이트하기 전에 묻습니다. 예약 작업이나 스크립트에서 자동으로 실행되면<br>묻지 않고 업데이트합니다. 확인을 건너뛰려면 /noupdate를 추가하세요. |
 | Exit codes: | 종료 코드: |

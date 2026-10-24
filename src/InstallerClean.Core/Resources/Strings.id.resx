@@ -2403,7 +2403,7 @@ Jalankan InstallerClean lagi sebagai administrator.</value></data>
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>Laporan tidak dapat dikirim. Laporan disimpan di {0}.</value></data>
   <!-- A later run at the console, before it sends a report an earlier run was told to send
        and could not. Nothing is asked: the answer was given then. -->
-  <data name="Cli.ReportWaiting" xml:space="preserve"><value>Mengirim laporan yang Anda setujui untuk dikirim pada proses sebelumnya.</value></data>
+  <data name="Cli.ReportWaiting" xml:space="preserve"><value>Mengirim laporan yang sebelumnya Anda setujui untuk dikirim.</value></data>
   <!-- After the newer version is in place, before it runs. 0 = its version. -->
   <data name="Cli.UpdateInstalled" xml:space="preserve"><value>InstallerClean {0} telah terpasang.</value></data>
   <!-- After Cli.UpdateInstalled, where the person typed /d or /m and answered yes: the newer
@@ -2579,12 +2579,14 @@ Jalankan InstallerClean lagi sebagai administrator.</value></data>
   <data name="Cli.Help.MoveDefault" xml:space="preserve"><value>  installerclean-cli /m         Pindahkan ke folder cadangan tersimpan</value></data>
   <data name="Cli.Help.MovePath" xml:space="preserve"><value>  installerclean-cli /m JALUR   Pindahkan ke jalur yang ditentukan</value></data>
   <!-- ONE value carrying TWO printed lines, and the &#10; is where the English
-       breaks rather than where every language must. A translation may break
-       anywhere, or not at all if it fits. -->
+       breaks rather than where every language must. A translation breaks where
+       its own grammar allows, at a space or after punctuation and never inside a
+       word or a noun phrase, or not at all if it fits. -->
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli menahan prompt sampai selesai, sehingga skrip atau&#10;tugas terjadwal bisa menunggunya.</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>Folder disimpan per pengguna; tugas terjadwal atau SYSTEM: /m JALUR.</value></data>
   <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the
-       English breaks; a translation may break anywhere within the 74-column cap.
+       English breaks; a translation breaks within the 74-column cap where its own
+       grammar allows, at a space or after punctuation and never inside a word.
        /noupdate is the switch as typed and stays as written. -->
   <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>Sebelum memindai, alat ini memeriksa versi InstallerClean yang lebih baru.&#10;Jika Anda menjalankannya sendiri, alat ini bertanya sebelum memperbarui.&#10;Jika berjalan otomatis lewat tugas terjadwal atau skrip, ia memperbarui&#10;tanpa bertanya. Tambahkan /noupdate untuk melewati pemeriksaan.</value></data>
   <data name="Cli.Help.ExitCodesHeader" xml:space="preserve"><value>Kode keluar:</value></data>

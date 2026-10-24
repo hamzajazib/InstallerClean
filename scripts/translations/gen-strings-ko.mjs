@@ -452,7 +452,7 @@ const MAP = {
   'Cli.Help.Delete': `  installerclean-cli /d         불필요한 파일 영구 삭제`,
   'Cli.Help.MoveDefault': `  installerclean-cli /m         저장된 백업 폴더로 이동`,
   'Cli.Help.MovePath': `  installerclean-cli /m 경로    지정한 경로로 이동`,
-  'Cli.Help.NoteLine1': `installerclean-cli는 끝날 때까지 프롬프트를 붙잡고 있으므로 스크립트나&#10;예약 작업이 이를 기다릴 수 있습니다.`,
+  'Cli.Help.NoteLine1': `installerclean-cli는 끝날 때까지 프롬프트를 붙잡고 있으므로&#10;스크립트나 예약 작업이 이를 기다릴 수 있습니다.`,
   'Cli.Help.ExitCodesHeader': `종료 코드:`,
   'Cli.Help.ExitCodeOk': `  0   성공: 요청한 일을 했음`,
   'Cli.Help.ExitCodeError': `  1   아무것도 처리되지 않음: 실행이 실패했거나 거부됨`,
@@ -656,7 +656,7 @@ const MAP = {
   'Cli.ReportSent': `보고서를 보냈습니다. 감사합니다.`,
   'Cli.ReportNotSent': `보고서를 보내지 않았습니다.`,
   'Cli.ReportCouldNotBeSent': `보고서를 보내지 못했습니다. {0}에 보관되어 있습니다.`,
-  'Cli.ReportWaiting': `이전 실행에서 보내기로 동의하신 보고서를 보내는 중입니다.`,
+  'Cli.ReportWaiting': `앞서 보내기로 동의하신 보고서를 보내는 중입니다.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

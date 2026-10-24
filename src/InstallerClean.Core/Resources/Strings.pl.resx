@@ -2580,12 +2580,14 @@ Uruchom InstallerClean ponownie jako administrator.</value></data>
   <data name="Cli.Help.MoveDefault" xml:space="preserve"><value>  installerclean-cli /m          Przenieś do zapisanego folderu</value></data>
   <data name="Cli.Help.MovePath" xml:space="preserve"><value>  installerclean-cli /m ŚCIEŻKA  Przenieś do wskazanej ścieżki</value></data>
   <!-- ONE value carrying TWO printed lines, and the &#10; is where the English
-       breaks rather than where every language must. A translation may break
-       anywhere, or not at all if it fits. -->
+       breaks rather than where every language must. A translation breaks where
+       its own grammar allows, at a space or after punctuation and never inside a
+       word or a noun phrase, or not at all if it fits. -->
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli blokuje wiersz polecenia aż do końca, więc skrypt&#10;albo zadanie zaplanowane może na niego zaczekać.</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>Folder dla każdego użytkownika; zaplanowane lub SYSTEM: /m ŚCIEŻKA.</value></data>
   <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the
-       English breaks; a translation may break anywhere within the 74-column cap.
+       English breaks; a translation breaks within the 74-column cap where its own
+       grammar allows, at a space or after punctuation and never inside a word.
        /noupdate is the switch as typed and stays as written. -->
   <data name="Cli.Help.UpdateNote" xml:space="preserve"><value>Przed skanowaniem sprawdza, czy jest nowsza wersja InstallerClean.&#10;Uruchomiony ręcznie pyta przed aktualizacją. Uruchomiony samodzielnie, w&#10;zadaniu zaplanowanym lub skrypcie, aktualizuje się bez pytania. Dodaj&#10;/noupdate, aby pominąć sprawdzanie.</value></data>
   <data name="Cli.Help.ExitCodesHeader" xml:space="preserve"><value>Kody zakończenia:</value></data>
