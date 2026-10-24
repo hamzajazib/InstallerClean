@@ -998,6 +998,91 @@ public class ChromeViewModelTests
     }
 
     [Fact]
+    public async Task Continue_without_updating_clears_Copied_and_ends_its_time()
+    {
+        var vm = await CreateScoopViewModelAsync(TimeSpan.FromMinutes(5));
+        _windowService.CopyToClipboard(default!).ReturnsForAnyArgs(true);
+        var pressed = vm.CopyScoopUpdateCommand.ExecuteAsync(null);
+        Assert.True(vm.IsScoopUpdateCopied);
+        vm.OfferUpdate();
+
+        vm.ContinueWithoutUpdatingCommand.Execute(null);
+
+        Assert.False(vm.IsScoopUpdateCopied);
+        Assert.Equal(Strings.Action_Copy, vm.CopyScoopUpdateText);
+        await pressed.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.False(vm.IsScoopUpdateCopied);
+    }
+
+    [Fact]
+    public async Task Continue_without_updating_clears_the_line_saying_the_copy_failed()
+    {
+        var vm = await CreateScoopViewModelAsync(TimeSpan.Zero);
+        _windowService.CopyToClipboard(default!).ReturnsForAnyArgs(false);
+        await vm.CopyScoopUpdateCommand.ExecuteAsync(null);
+        Assert.True(vm.HasScoopUpdateCopyFailed);
+        vm.OfferUpdate();
+
+        vm.ContinueWithoutUpdatingCommand.Execute(null);
+
+        Assert.False(vm.HasScoopUpdateCopyFailed);
+    }
+
+    [Fact]
+    public async Task A_check_that_finds_this_build_current_clears_Copied_and_ends_its_time()
+    {
+        var vm = await CreateScoopViewModelAsync(TimeSpan.FromMinutes(5));
+        _windowService.CopyToClipboard(default!).ReturnsForAnyArgs(true);
+        var pressed = vm.CopyScoopUpdateCommand.ExecuteAsync(null);
+        Assert.True(vm.IsScoopUpdateCopied);
+        CheckAnswers(new UpToDate("2.1.0"));
+
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        Assert.False(vm.HasNewerVersion);
+        Assert.False(vm.IsScoopUpdateCopied);
+        await pressed.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.False(vm.IsScoopUpdateCopied);
+    }
+
+    [Fact]
+    public async Task A_newer_version_found_after_one_was_taken_back_clears_Copied()
+    {
+        var vm = await CreateScoopViewModelAsync(TimeSpan.FromMinutes(5));
+        CheckAnswers(new UpToDate("2.1.0"), new UpdateAvailable("2.1.0", "9.9.9"));
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+        Assert.False(vm.HasNewerVersion);
+        _windowService.CopyToClipboard(default!).ReturnsForAnyArgs(true);
+        var pressed = vm.CopyScoopUpdateCommand.ExecuteAsync(null);
+        Assert.True(vm.IsScoopUpdateCopied);
+
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        Assert.True(vm.HasNewerVersion);
+        Assert.False(vm.IsScoopUpdateCopied);
+        await pressed.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task A_newer_version_found_after_one_was_taken_back_clears_the_line_saying_the_copy_failed()
+    {
+        var vm = await CreateScoopViewModelAsync(TimeSpan.Zero);
+        _windowService.CopyToClipboard(default!).ReturnsForAnyArgs(false);
+        await vm.CopyScoopUpdateCommand.ExecuteAsync(null);
+        Assert.True(vm.HasScoopUpdateCopyFailed);
+        CheckAnswers(new UpToDate("2.1.0"), new UpdateAvailable("2.1.0", "9.9.9"));
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+        Assert.False(vm.HasNewerVersion);
+        await vm.CopyScoopUpdateCommand.ExecuteAsync(null);
+        Assert.True(vm.HasScoopUpdateCopyFailed);
+
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        Assert.True(vm.HasNewerVersion);
+        Assert.False(vm.HasScoopUpdateCopyFailed);
+    }
+
+    [Fact]
     public async Task A_copy_the_clipboard_refuses_keeps_Copy_and_shows_the_line_until_a_copy_succeeds()
     {
         var vm = await CreateScoopViewModelAsync(TimeSpan.Zero);

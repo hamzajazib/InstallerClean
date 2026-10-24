@@ -422,10 +422,34 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// The card's Continue without updating, and Esc while the card is up: the card goes
-    /// and the main window shows the scan. The notice at the top stays.
+    /// and the main window shows the scan. The notice at the top stays, and whatever Copy
+    /// last answered beside Scoop's update command is cleared, so the notice's button
+    /// reads Copy and its line saying the copy failed is gone.
     /// </summary>
     [RelayCommand(CanExecute = nameof(IsOfferingUpdate))]
-    private void ContinueWithoutUpdating() => IsOfferingUpdate = false;
+    private void ContinueWithoutUpdating()
+    {
+        IsOfferingUpdate = false;
+        ClearScoopCopyAnswer();
+    }
+
+    /// <summary>
+    /// Clears what Copy last answered: "Copied" on the button and the line saying the
+    /// clipboard refused, and ends the time the button was to read "Copied" for.
+    /// </summary>
+    private void ClearScoopCopyAnswer()
+    {
+        _scoopUpdateCopiedCts?.Cancel();
+        IsScoopUpdateCopied = false;
+        HasScoopUpdateCopyFailed = false;
+    }
+
+    /// <summary>
+    /// The notice appearing, and going when a check finds this build current, each start
+    /// Copy's answer afresh. A check that finds a newer version while the notice is
+    /// already up leaves it as it is.
+    /// </summary>
+    partial void OnHasNewerVersionChanged(bool value) => ClearScoopCopyAnswer();
 
     /// <summary>
     /// The automatic check's body. Internal rather than private so
