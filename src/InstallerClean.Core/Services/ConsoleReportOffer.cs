@@ -26,8 +26,8 @@ internal enum ReportOfferOutcome
 /// <summary>
 /// The command line's offer to send the anonymous report of a run: the report is saved
 /// as <c>last-run.json</c>, the person is asked, and the report goes only on a yes. Also
-/// sends a report an earlier run recorded as waiting to go and did not send. The settings it keeps
-/// are the ones the window keeps (<see cref="AppSettings.ReportToSend"/> and
+/// sends a report an earlier run left waiting. The settings it keeps are the ones the
+/// window keeps (<see cref="AppSettings.ReportToSend"/> and
 /// <see cref="AppSettings.HasSentResultLog"/>), so either program sends what the other
 /// left waiting.
 /// </summary>

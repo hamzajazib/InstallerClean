@@ -2401,10 +2401,9 @@ InstallerClean уже працював від імені адміністрат�
   <!-- After the answer was yes and the report did not go. 0 = the full path of last-run.json,
        where the report is kept. -->
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>Не вдалося надіслати звіт. Його збережено в {0}.</value></data>
-  <!-- A later run at the console, before it sends a report an earlier run recorded as
-       waiting to go and did not send. Nothing is asked. The line names no cause, because a
-       report waits after a send that failed and after a run that ended before any send
-       began alike. -->
+  <!-- A later run at the console, before it sends a report an earlier run left waiting.
+       Nothing is asked. The line names no cause: more than one thing leaves a report
+       waiting. -->
   <data name="Cli.ReportWaiting" xml:space="preserve"><value>Надсилається звіт, який не було надіслано раніше.</value></data>
   <!-- After the newer version is in place, before it runs. 0 = its version. -->
   <data name="Cli.UpdateInstalled" xml:space="preserve"><value>Версію InstallerClean {0} встановлено.</value></data>

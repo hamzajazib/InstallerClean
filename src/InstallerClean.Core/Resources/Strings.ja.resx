@@ -2408,10 +2408,9 @@ InstallerClean を管理者としてもう一度実行してください。</val
   <!-- After the answer was yes and the report did not go. 0 = the full path of last-run.json,
        where the report is kept. -->
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>レポートを送信できませんでした。{0} に保存されています。</value></data>
-  <!-- A later run at the console, before it sends a report an earlier run recorded as
-       waiting to go and did not send. Nothing is asked. The line names no cause, because a
-       report waits after a send that failed and after a run that ended before any send
-       began alike. -->
+  <!-- A later run at the console, before it sends a report an earlier run left waiting.
+       Nothing is asked. The line names no cause: more than one thing leaves a report
+       waiting. -->
   <data name="Cli.ReportWaiting" xml:space="preserve"><value>以前の実行で送信されなかったレポートを送信しています。</value></data>
   <!-- After the newer version is in place, before it runs. 0 = its version. -->
   <data name="Cli.UpdateInstalled" xml:space="preserve"><value>InstallerClean {0} をインストールしました。</value></data>
