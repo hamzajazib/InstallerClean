@@ -675,7 +675,7 @@ const MAP = {
   'Cli.ReportSent': `Звіт надіслано. Дякую.`,
   'Cli.ReportNotSent': `Звіт не надіслано.`,
   'Cli.ReportCouldNotBeSent': `Не вдалося надіслати звіт. Його збережено в {0}.`,
-  'Cli.ReportWaiting': `Надсилається звіт про попередній запуск, надсилання якого ви дозволили.`,
+  'Cli.ReportWaiting': `Надсилається звіт, надсилання якого ви дозволили під час попереднього запуску.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

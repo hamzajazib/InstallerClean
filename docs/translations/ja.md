@@ -199,7 +199,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Windows が 10 か 11 か、x64 か Arm か、そしてどの言語と国または地域に設定されているか |
 | InstallerClean's version, how you got it (setup, portable, slim, Scoop, the command-line tool on its own, built from source, or not known), whether the report was sent from InstallerClean or the command-line tool, and the language it was showing | InstallerClean のバージョン、入手方法（setup、portable、slim、Scoop、単体のコマンドラインツール、ソースからのビルド、不明のいずれか）、レポートを送ったのが InstallerClean かコマンドラインツールか、そして表示していた言語 |
 | Counts of anything that went wrong | うまくいかなかったことの件数 |
-| Each of these is a count or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | これらはいずれも件数かラベルです。レポートには、あなた自身、あなたの PC、ファイル、プログラムを特定するものは一切含まれず、私があなたの IP アドレスを見ることもありません。 |
+| Each of these is a number or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | これらはいずれも数値かラベルです。レポートには、あなた自身、あなたの PC、ファイル、プログラムを特定するものは一切含まれず、私があなたの IP アドレスを見ることもありません。 |
 | See exactly what's sent | 送信される内容をそのまま見る |
 
 ## Summaries and counts
@@ -565,7 +565,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report sent. Thank you. | レポートを送信しました。ありがとうございます。 |
 | Report not sent. | レポートは送信されませんでした。 |
 | The report could not be sent. It is kept in {0}. | レポートを送信できませんでした。{0} に保存されています。 |
-| Sending the report from an earlier run, which you agreed to send. | 以前の実行のレポートを送信しています。送信に同意いただいたものです。 |
+| Sending the report you agreed to send in an earlier run. | 以前の実行で送信に同意いただいたレポートを送信しています。 |
 | InstallerClean {0} is installed. | InstallerClean {0} をインストールしました。 |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も削除しません。削除するには、その後もう一度 /d を実行してください。 |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も移動しません。移動するには、その後もう一度 /m を実行してください。 |

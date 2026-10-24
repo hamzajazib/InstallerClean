@@ -611,7 +611,7 @@ const MAP = {
   'Completion.ReportPanel.Windows': `Se o Windows é 10 ou 11 e x64 ou Arm, e em que idioma e país ou região está configurado`,
   'Completion.ReportPanel.AppVersion': `A versão do InstallerClean, como você o obteve (setup, portable, slim, Scoop, a ferramenta de linha de comando sozinha, compilado a partir do código-fonte ou desconhecido), se o relatório foi enviado pelo InstallerClean ou pela ferramenta de linha de comando, e o idioma em que ele estava sendo exibido`,
   'Completion.ReportPanel.Errors': `Contagens de qualquer coisa que tenha dado errado`,
-  'Completion.ReportPanel.Closing': `Cada um desses itens é uma contagem ou um rótulo. Nada no relatório identifica você, seu PC, seus arquivos ou seus programas, e eu nunca vejo seu endereço IP.`,
+  'Completion.ReportPanel.Closing': `Cada um desses itens é um número ou um rótulo. Nada no relatório identifica você, seu PC, seus arquivos ou seus programas, e eu nunca vejo seu endereço IP.`,
   'Automation.ReportInfo': `O que o relatório contém`,
   'Automation.Scroll.ReportContents': `O que o relatório contém`,
   'Completion.ReportPanel.SeeReport': `Ver exatamente o que é enviado`,
@@ -660,7 +660,7 @@ const MAP = {
   'Cli.ReportSent': `Relatório enviado. Obrigado.`,
   'Cli.ReportNotSent': `Relatório não enviado.`,
   'Cli.ReportCouldNotBeSent': `Não foi possível enviar o relatório. Ele está guardado em {0}.`,
-  'Cli.ReportWaiting': `Enviando o relatório de uma execução anterior, que você concordou em enviar.`,
+  'Cli.ReportWaiting': `Enviando o relatório que você concordou em enviar em uma execução anterior.`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

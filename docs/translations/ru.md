@@ -199,7 +199,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Какая версия Windows, 10 или 11, x64 или Arm, и какие в ней заданы язык и страна или регион |
 | InstallerClean's version, how you got it (setup, portable, slim, Scoop, the command-line tool on its own, built from source, or not known), whether the report was sent from InstallerClean or the command-line tool, and the language it was showing | Версия InstallerClean, способ её получения (setup, portable, slim, Scoop, отдельная программа командной строки, сборка из исходного кода или неизвестно), откуда отправлен отчёт (из InstallerClean или из программы командной строки) и язык, на котором он отображался |
 | Counts of anything that went wrong | Счётчики всего, что пошло не так |
-| Each of these is a count or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | Каждый из этих пунктов — число или метка. Ничто в отчёте не указывает на вас, ваш ПК, ваши файлы или программы, и я никогда не вижу ваш IP-адрес. |
+| Each of these is a number or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | Каждый из этих пунктов — число или метка. Ничто в отчёте не указывает на вас, ваш ПК, ваши файлы или программы, и я никогда не вижу ваш IP-адрес. |
 | See exactly what's sent | Посмотреть, что именно отправляется |
 
 ## Summaries and counts
@@ -565,7 +565,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report sent. Thank you. | Отчёт отправлен. Спасибо. |
 | Report not sent. | Отчёт не отправлен. |
 | The report could not be sent. It is kept in {0}. | Не удалось отправить отчёт. Он хранится в {0}. |
-| Sending the report from an earlier run, which you agreed to send. | Отправляется отчёт о предыдущем запуске, отправку которого вы разрешили. |
+| Sending the report you agreed to send in an earlier run. | Отправляется отчёт, отправку которого вы разрешили при предыдущем запуске. |
 | InstallerClean {0} is installed. | Версия InstallerClean {0} установлена. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Новая версия просканирует и покажет список найденного, ничего не удаляя. Чтобы удалить, затем снова запустите /d. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Новая версия просканирует и покажет список найденного, ничего не перемещая. Чтобы переместить, затем снова запустите /m. |

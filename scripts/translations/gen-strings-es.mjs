@@ -543,7 +543,7 @@ const MAP = {
   'Completion.ReportPanel.Windows': `Si Windows es 10 u 11 y x64 o Arm, y en qué idioma y país o región está configurado`,
   'Completion.ReportPanel.AppVersion': `La versión de InstallerClean, cómo lo obtuviste (setup, portable, slim, Scoop, la herramienta de línea de comandos por sí sola, compilado desde el código fuente o desconocido), si el informe se envió desde InstallerClean o desde la herramienta de línea de comandos, y el idioma en que se mostraba`,
   'Completion.ReportPanel.Errors': `Recuentos de cualquier cosa que haya fallado`,
-  'Completion.ReportPanel.Closing': `Cada uno de estos datos es un recuento o una etiqueta. Nada del informe te identifica a ti, a tu PC, tus archivos ni tus programas, y nunca veo tu dirección IP.`,
+  'Completion.ReportPanel.Closing': `Cada uno de estos datos es un número o una etiqueta. Nada del informe te identifica a ti, a tu PC, tus archivos ni tus programas, y nunca veo tu dirección IP.`,
   'Automation.ReportInfo': `Qué contiene el informe`,
   'Automation.Scroll.ReportContents': `Qué contiene el informe`,
   'Completion.ReportPanel.SeeReport': `Ver exactamente qué se envía`,
@@ -592,7 +592,7 @@ const MAP = {
   'Cli.ReportSent': `Informe enviado. Gracias.`,
   'Cli.ReportNotSent': `Informe no enviado.`,
   'Cli.ReportCouldNotBeSent': `No se pudo enviar el informe. Se conserva en {0}.`,
-  'Cli.ReportWaiting': `Se envía el informe de una ejecución anterior, que aceptaste enviar.`,
+  'Cli.ReportWaiting': `Se envía el informe que aceptaste enviar en una ejecución anterior.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -199,7 +199,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Of Windows 10 of 11 is en x64 of Arm, en op welke taal en welk land of welke regio het is ingesteld |
 | InstallerClean's version, how you got it (setup, portable, slim, Scoop, the command-line tool on its own, built from source, or not known), whether the report was sent from InstallerClean or the command-line tool, and the language it was showing | De versie van InstallerClean, hoe je het hebt gekregen (setup, portable, slim, Scoop, het opdrachtregelprogramma op zichzelf, zelf gebouwd uit de broncode of onbekend), of het rapport door InstallerClean of door het opdrachtregelprogramma is verstuurd, en de taal waarin het werd weergegeven |
 | Counts of anything that went wrong | Tellingen van alles wat er misging |
-| Each of these is a count or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | Dit zijn allemaal tellingen of labels. Niets in het rapport noemt jou, je pc, je bestanden of je programma's, en ik zie je IP-adres nooit. |
+| Each of these is a number or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | Dit zijn allemaal getallen of labels. Niets in het rapport noemt jou, je pc, je bestanden of je programma's, en ik zie je IP-adres nooit. |
 | See exactly what's sent | Precies zien wat er wordt verstuurd |
 
 ## Summaries and counts
@@ -565,7 +565,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report sent. Thank you. | Rapport verstuurd. Bedankt. |
 | Report not sent. | Rapport niet verstuurd. |
 | The report could not be sent. It is kept in {0}. | Het rapport kon niet worden verstuurd. Het wordt bewaard in {0}. |
-| Sending the report from an earlier run, which you agreed to send. | Het rapport van een eerdere uitvoering wordt verstuurd, waarvoor je toestemming hebt gegeven. |
+| Sending the report you agreed to send in an earlier run. | Het rapport waarvoor je bij een eerdere uitvoering toestemming hebt gegeven, wordt verstuurd. |
 | InstallerClean {0} is installed. | InstallerClean {0} is geïnstalleerd. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | De nieuwe versie scant en toont wat hij vindt, zonder iets te verwijderen. Voer daarna /d opnieuw uit om te verwijderen. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | De nieuwe versie scant en toont wat hij vindt, zonder iets te verplaatsen. Voer daarna /m opnieuw uit om te verplaatsen. |

@@ -670,7 +670,7 @@ const MAP = {
   'Completion.ReportPanel.Windows': `Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to`,
   'Completion.ReportPanel.AppVersion': `InstallerClean's version, how you got it (setup, portable, slim, Scoop, the command-line tool on its own, built from source, or not known), whether the report was sent from InstallerClean or the command-line tool, and the language it was showing`,
   'Completion.ReportPanel.Errors': `Counts of anything that went wrong`,
-  'Completion.ReportPanel.Closing': `Each of these is a count or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address.`,
+  'Completion.ReportPanel.Closing': `Each of these is a number or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address.`,
   'Automation.ReportInfo': `What the report holds`,
   'Automation.Scroll.ReportContents': `What the report holds`,
   'Completion.ReportPanel.SeeReport': `See exactly what's sent`,
@@ -719,7 +719,7 @@ const MAP = {
   'Cli.ReportSent': `Report sent. Thank you.`,
   'Cli.ReportNotSent': `Report not sent.`,
   'Cli.ReportCouldNotBeSent': `The report could not be sent. It is kept in {0}.`,
-  'Cli.ReportWaiting': `Sending the report from an earlier run, which you agreed to send.`,
+  'Cli.ReportWaiting': `Sending the report you agreed to send in an earlier run.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

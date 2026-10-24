@@ -511,7 +511,7 @@ const MAP = {
   'Completion.ReportPanel.Windows': `Windows 是 10 还是 11，是 x64 还是 Arm，以及设置的是哪种语言和哪个国家或地区`,
   'Completion.ReportPanel.AppVersion': `InstallerClean 的版本、获取方式（setup、portable、slim、Scoop、单独的命令行工具、从源代码构建，或未知）、报告是由 InstallerClean 还是命令行工具发送的，以及其显示的语言`,
   'Completion.ReportPanel.Errors': `所有出错情况的计数`,
-  'Completion.ReportPanel.Closing': `这些内容都是计数或标签。报告中没有任何内容会指明您、您的电脑、文件或程序，我也永远看不到您的 IP 地址。`,
+  'Completion.ReportPanel.Closing': `这些内容都是数字或标签。报告中没有任何内容会指明您、您的电脑、文件或程序，我也永远看不到您的 IP 地址。`,
   'Automation.ReportInfo': `报告包含哪些内容`,
   'Automation.Scroll.ReportContents': `报告包含哪些内容`,
   'Completion.ReportPanel.SeeReport': `查看发送的确切内容`,
@@ -560,7 +560,7 @@ const MAP = {
   'Cli.ReportSent': `报告已发送。谢谢。`,
   'Cli.ReportNotSent': `报告未发送。`,
   'Cli.ReportCouldNotBeSent': `无法发送报告。报告保存在 {0}。`,
-  'Cli.ReportWaiting': `正在发送较早一次运行的报告，您已同意发送。`,
+  'Cli.ReportWaiting': `正在发送您在较早一次运行中同意发送的报告。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -590,7 +590,7 @@ const MAP = {
   'Completion.ReportPanel.Windows': `Of Windows 10 of 11 is en x64 of Arm, en op welke taal en welk land of welke regio het is ingesteld`,
   'Completion.ReportPanel.AppVersion': `De versie van InstallerClean, hoe je het hebt gekregen (setup, portable, slim, Scoop, het opdrachtregelprogramma op zichzelf, zelf gebouwd uit de broncode of onbekend), of het rapport door InstallerClean of door het opdrachtregelprogramma is verstuurd, en de taal waarin het werd weergegeven`,
   'Completion.ReportPanel.Errors': `Tellingen van alles wat er misging`,
-  'Completion.ReportPanel.Closing': `Dit zijn allemaal tellingen of labels. Niets in het rapport noemt jou, je pc, je bestanden of je programma's, en ik zie je IP-adres nooit.`,
+  'Completion.ReportPanel.Closing': `Dit zijn allemaal getallen of labels. Niets in het rapport noemt jou, je pc, je bestanden of je programma's, en ik zie je IP-adres nooit.`,
   'Automation.ReportInfo': `Wat het rapport bevat`,
   'Automation.Scroll.ReportContents': `Wat het rapport bevat`,
   'Completion.ReportPanel.SeeReport': `Precies zien wat er wordt verstuurd`,
@@ -639,7 +639,7 @@ const MAP = {
   'Cli.ReportSent': `Rapport verstuurd. Bedankt.`,
   'Cli.ReportNotSent': `Rapport niet verstuurd.`,
   'Cli.ReportCouldNotBeSent': `Het rapport kon niet worden verstuurd. Het wordt bewaard in {0}.`,
-  'Cli.ReportWaiting': `Het rapport van een eerdere uitvoering wordt verstuurd, waarvoor je toestemming hebt gegeven.`,
+  'Cli.ReportWaiting': `Het rapport waarvoor je bij een eerdere uitvoering toestemming hebt gegeven, wordt verstuurd.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

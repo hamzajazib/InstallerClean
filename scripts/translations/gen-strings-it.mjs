@@ -539,7 +539,7 @@ const MAP = {
   'Completion.ReportPanel.Windows': `Se Windows è 10 o 11 e x64 o Arm, e in quale lingua e con quale paese o area geografica è impostato`,
   'Completion.ReportPanel.AppVersion': `La versione di InstallerClean, come l'hai ottenuto (setup, portable, slim, Scoop, lo strumento da riga di comando da solo, compilato dal codice sorgente, o sconosciuto), se il rapporto è stato inviato da InstallerClean o dallo strumento da riga di comando, e la lingua in cui era visualizzato`,
   'Completion.ReportPanel.Errors': `Il conteggio di qualsiasi cosa sia andata storta`,
-  'Completion.ReportPanel.Closing': `Ognuno di questi è un conteggio o un'etichetta. Niente nel rapporto indica te, il tuo PC, i tuoi file o i tuoi programmi, e non vedo mai il tuo indirizzo IP.`,
+  'Completion.ReportPanel.Closing': `Ognuno di questi è un numero o un'etichetta. Niente nel rapporto indica te, il tuo PC, i tuoi file o i tuoi programmi, e non vedo mai il tuo indirizzo IP.`,
   'Automation.ReportInfo': `Cosa contiene il rapporto`,
   'Automation.Scroll.ReportContents': `Cosa contiene il rapporto`,
   'Completion.ReportPanel.SeeReport': `Vedi esattamente cosa viene inviato`,
@@ -588,7 +588,7 @@ const MAP = {
   'Cli.ReportSent': `Rapporto inviato. Grazie.`,
   'Cli.ReportNotSent': `Rapporto non inviato.`,
   'Cli.ReportCouldNotBeSent': `Non è stato possibile inviare il rapporto. È conservato in {0}.`,
-  'Cli.ReportWaiting': `Invio del rapporto di un'esecuzione precedente, che hai accettato di inviare.`,
+  'Cli.ReportWaiting': `Invio del rapporto che hai accettato di inviare in un'esecuzione precedente.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

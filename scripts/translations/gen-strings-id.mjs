@@ -631,7 +631,7 @@ const MAP = {
   'Completion.ReportPanel.Windows': `Apakah Windows versi 10 atau 11 dan x64 atau Arm, serta bahasa dan negara atau kawasan yang disetel di dalamnya`,
   'Completion.ReportPanel.AppVersion': `Versi InstallerClean, cara Anda mendapatkannya (setup, portable, slim, Scoop, alat baris perintah yang berdiri sendiri, dibuat dari kode sumber, atau tidak diketahui), apakah laporan dikirim dari InstallerClean atau alat baris perintah, dan bahasa yang ditampilkannya`,
   'Completion.ReportPanel.Errors': `Jumlah dari apa pun yang gagal`,
-  'Completion.ReportPanel.Closing': `Masing-masing berupa jumlah atau label. Tidak ada di dalam laporan yang menyebut Anda, PC Anda, file Anda, atau program Anda, dan saya tidak pernah melihat alamat IP Anda.`,
+  'Completion.ReportPanel.Closing': `Masing-masing berupa angka atau label. Tidak ada di dalam laporan yang menyebut Anda, PC Anda, file Anda, atau program Anda, dan saya tidak pernah melihat alamat IP Anda.`,
   'Automation.ReportInfo': `Isi laporan`,
   'Automation.Scroll.ReportContents': `Isi laporan`,
   'Completion.ReportPanel.SeeReport': `Lihat persis apa yang dikirim`,
@@ -680,7 +680,7 @@ const MAP = {
   'Cli.ReportSent': `Laporan terkirim. Terima kasih.`,
   'Cli.ReportNotSent': `Laporan tidak dikirim.`,
   'Cli.ReportCouldNotBeSent': `Laporan tidak dapat dikirim. Laporan disimpan di {0}.`,
-  'Cli.ReportWaiting': `Mengirim laporan dari proses sebelumnya, yang Anda setujui untuk dikirim.`,
+  'Cli.ReportWaiting': `Mengirim laporan yang Anda setujui untuk dikirim pada proses sebelumnya.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

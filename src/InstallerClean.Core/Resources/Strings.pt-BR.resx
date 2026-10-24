@@ -1003,7 +1003,7 @@ Para recolocá-lo, você precisa do instalador da versão que já tem. Consiga-o
     <comment>Bullet 11 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Closing" xml:space="preserve">
-    <value>Cada um desses itens é uma contagem ou um rótulo. Nada no relatório identifica você, seu PC, seus arquivos ou seus programas, e eu nunca vejo seu endereço IP.</value>
+    <value>Cada um desses itens é um número ou um rótulo. Nada no relatório identifica você, seu PC, seus arquivos ou seus programas, e eu nunca vejo seu endereço IP.</value>
     <comment>The closing line of the panel opened from the small &quot;i&quot; beside Completion.SendReport, under the eleven bullets. &quot;I&quot; is the app's author.</comment>
   </data>
   <data name="Completion.ReportPanel.SeeReport" xml:space="preserve">
@@ -2403,7 +2403,7 @@ Execute o InstallerClean novamente como administrador.</value></data>
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>Não foi possível enviar o relatório. Ele está guardado em {0}.</value></data>
   <!-- A later run at the console, before it sends a report an earlier run was told to send
        and could not. Nothing is asked: the answer was given then. -->
-  <data name="Cli.ReportWaiting" xml:space="preserve"><value>Enviando o relatório de uma execução anterior, que você concordou em enviar.</value></data>
+  <data name="Cli.ReportWaiting" xml:space="preserve"><value>Enviando o relatório que você concordou em enviar em uma execução anterior.</value></data>
   <!-- After the newer version is in place, before it runs. 0 = its version. -->
   <data name="Cli.UpdateInstalled" xml:space="preserve"><value>O InstallerClean {0} está instalado.</value></data>
   <!-- After Cli.UpdateInstalled, where the person typed /d or /m and answered yes: the newer

@@ -199,7 +199,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Apakah Windows versi 10 atau 11 dan x64 atau Arm, serta bahasa dan negara atau kawasan yang disetel di dalamnya |
 | InstallerClean's version, how you got it (setup, portable, slim, Scoop, the command-line tool on its own, built from source, or not known), whether the report was sent from InstallerClean or the command-line tool, and the language it was showing | Versi InstallerClean, cara Anda mendapatkannya (setup, portable, slim, Scoop, alat baris perintah yang berdiri sendiri, dibuat dari kode sumber, atau tidak diketahui), apakah laporan dikirim dari InstallerClean atau alat baris perintah, dan bahasa yang ditampilkannya |
 | Counts of anything that went wrong | Jumlah dari apa pun yang gagal |
-| Each of these is a count or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | Masing-masing berupa jumlah atau label. Tidak ada di dalam laporan yang menyebut Anda, PC Anda, file Anda, atau program Anda, dan saya tidak pernah melihat alamat IP Anda. |
+| Each of these is a number or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | Masing-masing berupa angka atau label. Tidak ada di dalam laporan yang menyebut Anda, PC Anda, file Anda, atau program Anda, dan saya tidak pernah melihat alamat IP Anda. |
 | See exactly what's sent | Lihat persis apa yang dikirim |
 
 ## Summaries and counts
@@ -565,7 +565,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report sent. Thank you. | Laporan terkirim. Terima kasih. |
 | Report not sent. | Laporan tidak dikirim. |
 | The report could not be sent. It is kept in {0}. | Laporan tidak dapat dikirim. Laporan disimpan di {0}. |
-| Sending the report from an earlier run, which you agreed to send. | Mengirim laporan dari proses sebelumnya, yang Anda setujui untuk dikirim. |
+| Sending the report you agreed to send in an earlier run. | Mengirim laporan yang Anda setujui untuk dikirim pada proses sebelumnya. |
 | InstallerClean {0} is installed. | InstallerClean {0} telah terpasang. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Versi baru akan memindai dan menampilkan daftar temuannya, tanpa menghapus apa pun. Untuk menghapus, jalankan /d lagi setelahnya. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Versi baru akan memindai dan menampilkan daftar temuannya, tanpa memindahkan apa pun. Untuk memindahkan, jalankan /m lagi setelahnya. |

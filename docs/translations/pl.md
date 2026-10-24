@@ -199,7 +199,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Czy Windows to wersja 10 czy 11, x64 czy Arm, i jaki ma ustawiony język oraz kraj lub region |
 | InstallerClean's version, how you got it (setup, portable, slim, Scoop, the command-line tool on its own, built from source, or not known), whether the report was sent from InstallerClean or the command-line tool, and the language it was showing | Wersja InstallerClean, sposób jego uzyskania (setup, portable, slim, Scoop, samo narzędzie wiersza poleceń, kompilacja ze źródeł lub nieznany), informacja, czy raport wysłał InstallerClean, czy narzędzie wiersza poleceń, oraz język, w którym był wyświetlany |
 | Counts of anything that went wrong | Liczniki wszystkiego, co poszło nie tak |
-| Each of these is a count or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | Każda z tych rzeczy jest liczbą albo etykietą. Nic w raporcie nie wskazuje ciebie, twojego komputera, twoich plików ani programów, a twojego adresu IP nigdy nie widzę. |
+| Each of these is a number or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | Każda z tych rzeczy jest liczbą albo etykietą. Nic w raporcie nie wskazuje ciebie, twojego komputera, twoich plików ani programów, a twojego adresu IP nigdy nie widzę. |
 | See exactly what's sent | Zobacz dokładnie, co jest wysyłane |
 
 ## Summaries and counts
@@ -565,7 +565,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report sent. Thank you. | Raport wysłany. Dziękuję. |
 | Report not sent. | Raport nie został wysłany. |
 | The report could not be sent. It is kept in {0}. | Nie udało się wysłać raportu. Jest przechowywany w {0}. |
-| Sending the report from an earlier run, which you agreed to send. | Wysyłanie raportu z wcześniejszego uruchomienia, na którego wysłanie wyrażono zgodę. |
+| Sending the report you agreed to send in an earlier run. | Wysyłanie raportu, na którego wysłanie wyrażono zgodę podczas wcześniejszego uruchomienia. |
 | InstallerClean {0} is installed. | Wersja InstallerClean {0} jest zainstalowana. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Nowa wersja przeskanuje i wyświetli listę tego, co znajdzie, niczego nie usuwając. Aby usunąć, uruchom potem ponownie /d. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Nowa wersja przeskanuje i wyświetli listę tego, co znajdzie, niczego nie przenosząc. Aby przenieść, uruchom potem ponownie /m. |

@@ -199,7 +199,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Windows가 10인지 11인지, x64인지 Arm인지, 그리고 어떤 언어와 국가 또는 지역으로 설정되어 있는지 |
 | InstallerClean's version, how you got it (setup, portable, slim, Scoop, the command-line tool on its own, built from source, or not known), whether the report was sent from InstallerClean or the command-line tool, and the language it was showing | InstallerClean의 버전, 받은 방법(setup, portable, slim, Scoop, 단독 명령줄 도구, 소스에서 빌드, 또는 알 수 없음), 보고서를 InstallerClean과 명령줄 도구 중 어느 쪽에서 보냈는지, 그리고 표시하던 언어 |
 | Counts of anything that went wrong | 문제가 생긴 일의 횟수 |
-| Each of these is a count or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | 이 항목은 모두 수치 또는 라벨입니다. 보고서에는 사용자나 사용자의 PC, 파일, 프로그램을 가리키는 정보가 없으며, 저에게는 사용자의 IP 주소가 전혀 보이지 않습니다. |
+| Each of these is a number or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | 이 항목은 모두 수치 또는 라벨입니다. 보고서에는 사용자나 사용자의 PC, 파일, 프로그램을 가리키는 정보가 없으며, 저에게는 사용자의 IP 주소가 전혀 보이지 않습니다. |
 | See exactly what's sent | 보내는 내용 그대로 보기 |
 
 ## Summaries and counts
@@ -565,7 +565,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report sent. Thank you. | 보고서를 보냈습니다. 감사합니다. |
 | Report not sent. | 보고서를 보내지 않았습니다. |
 | The report could not be sent. It is kept in {0}. | 보고서를 보내지 못했습니다. {0}에 보관되어 있습니다. |
-| Sending the report from an earlier run, which you agreed to send. | 이전 실행의 보고서를 보내는 중입니다. 보내기로 동의하신 보고서입니다. |
+| Sending the report you agreed to send in an earlier run. | 이전 실행에서 보내기로 동의하신 보고서를 보내는 중입니다. |
 | InstallerClean {0} is installed. | InstallerClean {0} 버전이 설치되었습니다. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 새 버전은 검사하여 찾은 항목을 나열하기만 하고 아무것도 삭제하지 않습니다. 삭제하려면 그 후에 /d를 다시 실행하세요. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 새 버전은 검사하여 찾은 항목을 나열하기만 하고 아무것도 이동하지 않습니다. 이동하려면 그 후에 /m을 다시 실행하세요. |

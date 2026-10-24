@@ -199,7 +199,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Яка версія Windows, 10 чи 11, x64 чи Arm, і які в ній встановлено мову та країну або регіон |
 | InstallerClean's version, how you got it (setup, portable, slim, Scoop, the command-line tool on its own, built from source, or not known), whether the report was sent from InstallerClean or the command-line tool, and the language it was showing | Версія InstallerClean, спосіб її отримання (setup, portable, slim, Scoop, окрема програма командного рядка, збірка з вихідного коду або невідомо), звідки надіслано звіт (з InstallerClean чи з програми командного рядка) і мова, якою він відображався |
 | Counts of anything that went wrong | Лічильники всього, що пішло не так |
-| Each of these is a count or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | Кожен із цих пунктів — це число або мітка. Ніщо у звіті не вказує на вас, ваш ПК, ваші файли чи програми, і я ніколи не бачу вашу IP-адресу. |
+| Each of these is a number or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | Кожен із цих пунктів — це число або мітка. Ніщо у звіті не вказує на вас, ваш ПК, ваші файли чи програми, і я ніколи не бачу вашу IP-адресу. |
 | See exactly what's sent | Переглянути, що саме надсилається |
 
 ## Summaries and counts
@@ -565,7 +565,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report sent. Thank you. | Звіт надіслано. Дякую. |
 | Report not sent. | Звіт не надіслано. |
 | The report could not be sent. It is kept in {0}. | Не вдалося надіслати звіт. Його збережено в {0}. |
-| Sending the report from an earlier run, which you agreed to send. | Надсилається звіт про попередній запуск, надсилання якого ви дозволили. |
+| Sending the report you agreed to send in an earlier run. | Надсилається звіт, надсилання якого ви дозволили під час попереднього запуску. |
 | InstallerClean {0} is installed. | Версію InstallerClean {0} встановлено. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Нова версія просканує й покаже список знайденого, нічого не видаляючи. Щоб видалити, потім знову запустіть /d. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Нова версія просканує й покаже список знайденого, нічого не переміщуючи. Щоб перемістити, потім знову запустіть /m. |

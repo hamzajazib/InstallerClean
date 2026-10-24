@@ -531,7 +531,7 @@ const MAP = {
   'Completion.ReportPanel.Windows': `Windows が 10 か 11 か、x64 か Arm か、そしてどの言語と国または地域に設定されているか`,
   'Completion.ReportPanel.AppVersion': `InstallerClean のバージョン、入手方法（setup、portable、slim、Scoop、単体のコマンドラインツール、ソースからのビルド、不明のいずれか）、レポートを送ったのが InstallerClean かコマンドラインツールか、そして表示していた言語`,
   'Completion.ReportPanel.Errors': `うまくいかなかったことの件数`,
-  'Completion.ReportPanel.Closing': `これらはいずれも件数かラベルです。レポートには、あなた自身、あなたの PC、ファイル、プログラムを特定するものは一切含まれず、私があなたの IP アドレスを見ることもありません。`,
+  'Completion.ReportPanel.Closing': `これらはいずれも数値かラベルです。レポートには、あなた自身、あなたの PC、ファイル、プログラムを特定するものは一切含まれず、私があなたの IP アドレスを見ることもありません。`,
   'Automation.ReportInfo': `レポートの内容`,
   'Automation.Scroll.ReportContents': `レポートの内容`,
   'Completion.ReportPanel.SeeReport': `送信される内容をそのまま見る`,
@@ -580,7 +580,7 @@ const MAP = {
   'Cli.ReportSent': `レポートを送信しました。ありがとうございます。`,
   'Cli.ReportNotSent': `レポートは送信されませんでした。`,
   'Cli.ReportCouldNotBeSent': `レポートを送信できませんでした。{0} に保存されています。`,
-  'Cli.ReportWaiting': `以前の実行のレポートを送信しています。送信に同意いただいたものです。`,
+  'Cli.ReportWaiting': `以前の実行で送信に同意いただいたレポートを送信しています。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

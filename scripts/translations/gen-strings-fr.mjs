@@ -625,7 +625,7 @@ const MAP = {
   'Completion.ReportPanel.Windows': `Si Windows est en version 10 ou 11, x64 ou Arm, et la langue et le pays ou la région qui y sont définis`,
   'Completion.ReportPanel.AppVersion': `La version d'InstallerClean, la façon dont vous l'avez obtenu (setup, portable, slim, Scoop, l'outil en ligne de commande seul, compilé depuis les sources, ou inconnu), si le rapport a été envoyé depuis InstallerClean ou depuis l'outil en ligne de commande, et la langue dans laquelle il s'affichait`,
   'Completion.ReportPanel.Errors': `Le décompte de tout ce qui a échoué`,
-  'Completion.ReportPanel.Closing': `Chacun de ces éléments est un décompte ou un libellé. Rien dans le rapport ne désigne ni vous, ni votre PC, ni vos fichiers, ni vos programmes, et je ne vois jamais votre adresse IP.`,
+  'Completion.ReportPanel.Closing': `Chacun de ces éléments est un nombre ou un libellé. Rien dans le rapport ne désigne ni vous, ni votre PC, ni vos fichiers, ni vos programmes, et je ne vois jamais votre adresse IP.`,
   'Automation.ReportInfo': `Ce que contient le rapport`,
   'Automation.Scroll.ReportContents': `Ce que contient le rapport`,
   'Completion.ReportPanel.SeeReport': `Voir exactement ce qui est envoyé`,
@@ -674,7 +674,7 @@ const MAP = {
   'Cli.ReportSent': `Rapport envoyé. Merci.`,
   'Cli.ReportNotSent': `Rapport non envoyé.`,
   'Cli.ReportCouldNotBeSent': `Le rapport n'a pas pu être envoyé. Il est conservé dans {0}.`,
-  'Cli.ReportWaiting': `Envoi du rapport d'une exécution précédente, que vous avez accepté d'envoyer.`,
+  'Cli.ReportWaiting': `Envoi du rapport que vous avez accepté d'envoyer lors d'une exécution précédente.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

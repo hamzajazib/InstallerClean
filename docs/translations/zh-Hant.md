@@ -199,7 +199,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Windows 是 10 還是 11、是 x64 還是 Arm，以及設定的是哪種語言和哪個國家或地區 |
 | InstallerClean's version, how you got it (setup, portable, slim, Scoop, the command-line tool on its own, built from source, or not known), whether the report was sent from InstallerClean or the command-line tool, and the language it was showing | InstallerClean 的版本、取得方式（setup、portable、slim、Scoop、單獨的命令列工具、從原始碼建置，或未知）、報告是由 InstallerClean 還是命令列工具傳送的，以及其顯示的語言 |
 | Counts of anything that went wrong | 所有出錯情況的次數 |
-| Each of these is a count or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | 這些內容都是數字或標籤。報告中沒有任何內容能指出您、您的電腦、您的檔案或程式，我也從來看不到您的 IP 位址。 |
+| Each of these is a number or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | 這些內容都是數字或標籤。報告中沒有任何內容能指出您、您的電腦、您的檔案或程式，我也從來看不到您的 IP 位址。 |
 | See exactly what's sent | 查看傳送的確切內容 |
 
 ## Summaries and counts
@@ -565,7 +565,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report sent. Thank you. | 報告已傳送。謝謝。 |
 | Report not sent. | 報告未傳送。 |
 | The report could not be sent. It is kept in {0}. | 無法傳送報告。報告保存在 {0}。 |
-| Sending the report from an earlier run, which you agreed to send. | 正在傳送較早一次執行的報告，您已同意傳送。 |
+| Sending the report you agreed to send in an earlier run. | 正在傳送您在較早一次執行中同意傳送的報告。 |
 | InstallerClean {0} is installed. | InstallerClean {0} 版已安裝。 |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 新版本會掃描並列出找到的內容，不會刪除任何檔案。如需刪除，請在之後再次執行 /d。 |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 新版本會掃描並列出找到的內容，不會移動任何檔案。如需移動，請在之後再次執行 /m。 |

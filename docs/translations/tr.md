@@ -199,7 +199,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Whether Windows is 10 or 11 and x64 or Arm, and which language and country or region it's set to | Windows'un 10 mu 11 mi, x64 mü Arm mı olduğu ve hangi dile ve ülke veya bölgeye ayarlandığı |
 | InstallerClean's version, how you got it (setup, portable, slim, Scoop, the command-line tool on its own, built from source, or not known), whether the report was sent from InstallerClean or the command-line tool, and the language it was showing | InstallerClean'in sürümü, nasıl edinildiği (setup, taşınabilir, slim, Scoop, tek başına komut satırı aracı, kaynaktan derlenmiş veya bilinmiyor), raporun InstallerClean'den mi yoksa komut satırı aracından mı gönderildiği ve gösterildiği dil |
 | Counts of anything that went wrong | Ters giden her şeyin sayısı |
-| Each of these is a count or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | Bunların her biri bir sayı ya da etikettir. Raporda hiçbir şey sizi, bilgisayarınızı, dosyalarınızı veya programlarınızı tanımlamaz ve IP adresinizi asla görmem. |
+| Each of these is a number or a label. Nothing in the report names you, your PC, your files or your programs, and I never see your IP address. | Bunların her biri bir sayı ya da etikettir. Raporda hiçbir şey sizi, bilgisayarınızı, dosyalarınızı veya programlarınızı tanımlamaz ve IP adresinizi asla görmem. |
 | See exactly what's sent | Tam olarak neyin gönderildiğini gör |
 
 ## Summaries and counts
@@ -565,7 +565,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report sent. Thank you. | Rapor gönderildi. Teşekkürler. |
 | Report not sent. | Rapor gönderilmedi. |
 | The report could not be sent. It is kept in {0}. | Rapor gönderilemedi. {0} konumunda saklanıyor. |
-| Sending the report from an earlier run, which you agreed to send. | Daha önceki bir çalıştırmanın raporu gönderiliyor; göndermeyi kabul etmiştiniz. |
+| Sending the report you agreed to send in an earlier run. | Daha önceki bir çalıştırmada göndermeyi kabul ettiğiniz rapor gönderiliyor. |
 | InstallerClean {0} is installed. | InstallerClean {0} sürümü yüklendi. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi silmeyecek. Silmek için ardından /d komutunu yeniden çalıştırın. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi taşımayacak. Taşımak için ardından /m komutunu yeniden çalıştırın. |
