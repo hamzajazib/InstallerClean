@@ -333,8 +333,9 @@
   </data>
   <data name="Automation.UpdateNotice.ScoopCommand" xml:space="preserve">
     <value>Commande de mise à jour de Scoop</value>
-    <comment>Screen-reader name of the box holding Scoop's update command (scoop update installerclean) on
-    the card and the notice, on a copy installed by Scoop. A screen reader reads this, then the command.</comment>
+    <comment>Screen-reader name of the box holding Scoop's update command (scoop update followed by the app's
+    name, and --global after that on an install for all users) on the card and the notice, on a copy
+    installed by Scoop. A screen reader reads this, then the command.</comment>
   </data>
   <data name="Automation.Licence.HelpText" xml:space="preserve"><value>Ouvre le fichier de licence sur github.com dans votre navigateur.</value></data>
   <!-- Mixed-case AutomationProperties.Name overrides for the all-caps
@@ -1524,7 +1525,11 @@ Détails dans {1}.</value></data>
   </data>
   <data name="UpdateNotice.Scoop" xml:space="preserve">
     <value>Cette copie a été installée par Scoop. Pour la mettre à jour, fermez InstallerClean et exécutez :</value>
-    <comment>A third line on the card and in the notice, under UpdateNotice.Recommended, on a copy installed by Scoop, which shows in place of UpdateNotice.UpdateNow. Scoop's update command (scoop update installerclean, never translated) follows it in a box with a Copy button (Action.Copy). Scoop is the name of a program and is not translated.</comment>
+    <comment>A third line on the card and in the notice, under UpdateNotice.Recommended, on a copy installed by Scoop, which shows in place of UpdateNotice.UpdateNow. Scoop's update command (scoop update followed by the app's name, never translated) follows it in a box with a Copy button (Action.Copy). Scoop is the name of a program and is not translated.</comment>
+  </data>
+  <data name="UpdateNotice.ScoopGlobal" xml:space="preserve">
+    <value>Cette copie a été installée par Scoop pour tous les utilisateurs. Pour la mettre à jour, fermez InstallerClean, ouvrez un terminal en tant qu'administrateur et exécutez :</value>
+    <comment>UpdateNotice.Scoop for a copy Scoop installed for every user of the PC, which shows in its place. The command that follows it ends in --global (scoop update, the app's name and --global, never translated) and Scoop refuses it from a terminal that is not running as administrator. Scoop is the name of a program and is not translated.</comment>
   </data>
   <data name="UpdateNotice.NeedsNetFramework48" xml:space="preserve">
     <value>Cette version nécessite .NET Framework 4.8. Installez-le depuis le site de Microsoft, redémarrez le PC, puis ouvrez InstallerClean pour effectuer la mise à jour.</value>

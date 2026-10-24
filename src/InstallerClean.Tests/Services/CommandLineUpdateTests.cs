@@ -1137,6 +1137,7 @@ public sealed class CommandLineUpdateTests : IDisposable
     private sealed class FakeUpdater(AppCopyKind kind, string fileToStart, Action? onPrepare = null) : IAppUpdater
     {
         public AppCopyKind Kind => kind;
+        public ScoopUpdate? ScoopUpdate => null;
 
         /// <summary>What the release's update.json answers; a throw stands for a read that failed.</summary>
         public Func<UpdateRefusal?> Requirements { get; set; } = () => null;

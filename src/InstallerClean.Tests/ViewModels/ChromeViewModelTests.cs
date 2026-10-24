@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using NSubstitute;
+using InstallerClean.Helpers;
 using InstallerClean.Models;
 using InstallerClean.Resources;
 using InstallerClean.Services;
@@ -920,6 +921,49 @@ public class ChromeViewModelTests
         Assert.True(vm.OpenReleasePageCommand.CanExecute(null));
         Assert.Equal(Strings.Action_Copy, vm.CopyScoopUpdateText);
         Assert.False(vm.HasScoopUpdateCopyFailed);
+    }
+
+    [Fact]
+    public async Task A_copy_installed_by_Scoop_for_all_users_says_so_and_gives_the_global_command()
+    {
+        _updater.ScoopUpdate.Returns(new ScoopUpdate("scoop update installerclean --global", Global: true));
+        _windowService.CopyToClipboard(default!).ReturnsForAnyArgs(true);
+        var vm = await CreateScoopViewModelAsync(TimeSpan.Zero);
+
+        Assert.Equal("scoop update installerclean --global", vm.ScoopUpdateCommand);
+        Assert.Equal(Strings.UpdateNotice_ScoopGlobal, vm.ScoopUpdateLine);
+        Assert.Equal(
+            DisplayHelpers.SpokenSentences(Strings.UpdateNotice_ScoopGlobal, "scoop update installerclean --global"),
+            vm.ScoopUpdateSpoken);
+
+        await vm.CopyScoopUpdateCommand.ExecuteAsync(null);
+
+        _windowService.Received(1).CopyToClipboard("scoop update installerclean --global");
+    }
+
+    [Fact]
+    public async Task A_copy_installed_by_Scoop_for_one_user_keeps_the_plain_line_and_gives_the_command_for_its_folder()
+    {
+        _updater.ScoopUpdate.Returns(new ScoopUpdate("scoop update installerclean-test", Global: false));
+        _windowService.CopyToClipboard(default!).ReturnsForAnyArgs(true);
+        var vm = await CreateScoopViewModelAsync(TimeSpan.Zero);
+
+        Assert.Equal("scoop update installerclean-test", vm.ScoopUpdateCommand);
+        Assert.Equal(Strings.UpdateNotice_Scoop, vm.ScoopUpdateLine);
+
+        await vm.CopyScoopUpdateCommand.ExecuteAsync(null);
+
+        _windowService.Received(1).CopyToClipboard("scoop update installerclean-test");
+    }
+
+    [Fact]
+    public async Task A_Scoop_copy_whose_folder_names_no_app_gives_the_plain_command()
+    {
+        var vm = await CreateScoopViewModelAsync(TimeSpan.Zero);
+
+        Assert.Null(_updater.ScoopUpdate);
+        Assert.Equal(AppCopy.ScoopUpdateCommand, vm.ScoopUpdateCommand);
+        Assert.Equal(Strings.UpdateNotice_Scoop, vm.ScoopUpdateLine);
     }
 
     [Fact]

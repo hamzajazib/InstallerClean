@@ -120,6 +120,11 @@ const ALLOWED = [
     what: 'TryReadLocalPackage, expanding the LocalPackage path Windows Installer recorded',
   },
   {
+    file: 'src/InstallerClean.Core/Services/AppUpdater.cs',
+    text: 'private static string? ScoopVariable(string name) => Environment.GetEnvironmentVariable(name);',
+    what: 'ScoopVariable, answering the variables Scoop itself reads to find its global root',
+  },
+  {
     file: 'src/InstallerClean.Core/Helpers/KnownFolders.cs',
     text: 'GetPath(folder, Shell32.SHGetKnownFolderPath, Ole32.CoTaskMemFree, Environment.GetEnvironmentVariable);',
     what: 'KnownFolders.GetPath, the variable .NET falls back to where Windows does not answer for a known folder',

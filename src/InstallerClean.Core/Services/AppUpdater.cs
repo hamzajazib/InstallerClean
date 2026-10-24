@@ -1,3 +1,5 @@
+using InstallerClean.Helpers;
+
 namespace InstallerClean.Services;
 
 /// <summary>
@@ -11,6 +13,13 @@ public interface IAppUpdater
     /// says whether a kind can put a newer version in its own place.
     /// </summary>
     AppCopyKind Kind { get; }
+
+    /// <summary>
+    /// Scoop's update command for this copy where <see cref="Kind"/> is
+    /// <see cref="AppCopyKind.Scoop"/>, or null where the folder the copy runs from does
+    /// not say which app Scoop installed it as, and null for every other kind.
+    /// </summary>
+    ScoopUpdate? ScoopUpdate { get; }
 
     /// <summary>
     /// Reads what the release of <paramref name="version"/> says its downloads need
@@ -145,9 +154,46 @@ public sealed class AppUpdater : IAppUpdater
         _stagingRoot = stagingRoot;
         _stagingDescriptor = stagingDescriptor;
         _registry = registry;
+        _scoopUpdate = new Lazy<ScoopUpdate?>(ReadScoopUpdate);
     }
 
     public AppCopyKind Kind { get; }
+
+    // Read the first time it is asked for, which is once a newer version has been found.
+    private readonly Lazy<ScoopUpdate?> _scoopUpdate;
+
+    public ScoopUpdate? ScoopUpdate => _scoopUpdate.Value;
+
+    private static string? ScoopVariable(string name) => Environment.GetEnvironmentVariable(name);
+
+    /// <summary>The largest Scoop settings file that is read.</summary>
+    private const long MaxScoopConfigBytes = 1024 * 1024;
+
+    private static string? ReadScoopConfig(string path)
+    {
+        var file = new FileInfo(path);
+        if (!file.Exists) return null;
+        if (file.Length > MaxScoopConfigBytes) throw new IOException("The settings file is larger than is read.");
+        return File.ReadAllText(path);
+    }
+
+    private ScoopUpdate? ReadScoopUpdate()
+    {
+        if (Kind != AppCopyKind.Scoop) return null;
+        try
+        {
+            return AppCopy.ReadScoopUpdate(
+                Path.GetDirectoryName(_exePath) ?? string.Empty,
+                ScoopVariable,
+                ReadScoopConfig,
+                KnownFolders.GetPath(Environment.SpecialFolder.CommonApplicationData));
+        }
+        catch (Exception ex)
+        {
+            Helpers.CrashLog.TryWrite(ex);
+            return null;
+        }
+    }
 
     /// <summary>
     /// A file the release has is kept for the version it was read for, so the read made as

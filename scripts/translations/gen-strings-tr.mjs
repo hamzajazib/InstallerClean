@@ -561,6 +561,7 @@ Ayrıntılar şuraya yazıldı:
   'Cli.UpdateDownloadLink': `{0}: {1}`,
   'Cli.Help.UpdateNote': `Taramadan önce InstallerClean'in daha yeni bir sürümü olup olmadığını&#10;denetler. Kendiniz çalıştırdığınızda güncellemeden önce sorar. Zamanlanmış&#10;bir görevde veya betikte kendi kendine çalıştığında sormadan güncellenir.&#10;Denetimi atlamak için /noupdate ekleyin.`,
   'UpdateNotice.Scoop': `Bu kopya Scoop ile yüklendi. Güncellemek için InstallerClean'i kapatıp şunu çalıştırın:`,
+  'UpdateNotice.ScoopGlobal': `Bu kopya Scoop ile tüm kullanıcılar için yüklendi. Güncellemek için InstallerClean'i kapatın, yönetici olarak bir terminal açın ve şunu çalıştırın:`,
   'UpdateNotice.CommandCopied': `Kopyalandı`,
   'UpdateNotice.CopyFailed': `Kopyalanamadı. Komutu seçip kendiniz kopyalayın.`,
   'Automation.UpdateNotice.CopyCommand': `Komutu kopyala`,

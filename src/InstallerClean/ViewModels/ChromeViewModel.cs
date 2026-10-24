@@ -291,15 +291,29 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     public bool ShowsScoopCommand =>
         HasNewerVersion && _updater is not null && AppCopy.UpdatedByScoop(_updater.Kind);
 
+    /// <summary>
+    /// What this copy's folder says about its Scoop update: the command for the app it was
+    /// installed as, and whether it is a machine-wide install. A folder that does not say
+    /// gets <see cref="AppCopy.DefaultScoopUpdate"/>.
+    /// </summary>
+    private ScoopUpdate ScoopUpdate => _updater?.ScoopUpdate ?? AppCopy.DefaultScoopUpdate;
+
     /// <summary>Scoop's update command, in the box beside Copy.</summary>
-    public string ScoopUpdateCommand => AppCopy.ScoopUpdateCommand;
+    public string ScoopUpdateCommand => ScoopUpdate.Command;
+
+    /// <summary>
+    /// The line above Scoop's update command: for a machine-wide install, that it was
+    /// installed for all users and the command is run from an administrator's terminal.
+    /// </summary>
+    public string ScoopUpdateLine =>
+        ScoopUpdate.Global ? Strings.UpdateNotice_ScoopGlobal : Strings.UpdateNotice_Scoop;
 
     /// <summary>
     /// The line above Scoop's update command and the command, as one line for a screen
     /// reader: the line's spoken name, so reading it out reads the command too.
     /// </summary>
     public string ScoopUpdateSpoken =>
-        DisplayHelpers.SpokenSentences(Strings.UpdateNotice_Scoop, AppCopy.ScoopUpdateCommand);
+        DisplayHelpers.SpokenSentences(ScoopUpdateLine, ScoopUpdateCommand);
 
     /// <summary>
     /// Set for <see cref="ScoopUpdateCopiedFor"/> once Copy has put Scoop's update command
@@ -737,7 +751,7 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         previous?.Dispose();
         var token = _scoopUpdateCopiedCts.Token;
 
-        var copied = _windowService.CopyToClipboard(AppCopy.ScoopUpdateCommand);
+        var copied = _windowService.CopyToClipboard(ScoopUpdateCommand);
         HasScoopUpdateCopyFailed = !copied;
         IsScoopUpdateCopied = copied;
         ScoopUpdateCopyAnswered?.Invoke(this, copied);

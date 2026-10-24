@@ -635,6 +635,7 @@ const MAP = {
   'Cli.UpdateDownloadLink': `{0}: {1}`,
   'Cli.Help.UpdateNote': `Trước khi quét, công cụ kiểm tra xem có phiên bản InstallerClean mới hơn&#10;không. Khi bạn tự chạy, nó hỏi trước khi cập nhật. Khi chạy tự động, trong&#10;một tác vụ theo lịch hoặc một tập lệnh, nó cập nhật mà không hỏi. Thêm&#10;/noupdate để bỏ qua bước kiểm tra.`,
   'UpdateNotice.Scoop': `Bản này được cài bằng Scoop. Để cập nhật, hãy đóng InstallerClean rồi chạy:`,
+  'UpdateNotice.ScoopGlobal': `Bản này được cài bằng Scoop cho tất cả người dùng. Để cập nhật, hãy đóng InstallerClean, mở terminal với quyền quản trị viên rồi chạy:`,
   'UpdateNotice.CommandCopied': `Đã sao chép`,
   'UpdateNotice.CopyFailed': `Không thể sao chép. Hãy chọn lệnh rồi tự sao chép.`,
   'Automation.UpdateNotice.CopyCommand': `Sao chép lệnh`,

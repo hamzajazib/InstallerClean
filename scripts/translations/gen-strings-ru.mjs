@@ -527,6 +527,7 @@ const MAP = {
   'UpdateNotice.InstallFailed': `Не удалось установить обновление.`,
   'UpdateNotice.ContinueWithoutUpdating': `_Продолжить без обновления`,
   'UpdateNotice.Scoop': `Эта копия установлена через Scoop. Чтобы обновить её, закройте InstallerClean и выполните:`,
+  'UpdateNotice.ScoopGlobal': `Эта копия установлена через Scoop для всех пользователей. Чтобы обновить её, закройте InstallerClean, откройте терминал от имени администратора и выполните:`,
   'UpdateNotice.CommandCopied': `Скопировано`,
   'UpdateNotice.CopyFailed': `Не удалось скопировать. Выделите команду и скопируйте её вручную.`,
   'Automation.UpdateNotice.CopyCommand': `Копировать команду`,

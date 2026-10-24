@@ -324,6 +324,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Download .NET Framework 4.8 from Microsoft | .NET Framework 4.8 von Microsoft herunterladen |
 | Update now | Jetzt aktualisieren |
 | This copy was installed by Scoop. To update it, close InstallerClean and run: | Diese Kopie wurde mit Scoop installiert. Um sie zu aktualisieren, schließe InstallerClean und führe Folgendes aus: |
+| This copy was installed by Scoop for all users. To update it, close InstallerClean, open a terminal as administrator and run: | Diese Kopie wurde mit Scoop für alle Benutzer installiert. Um sie zu aktualisieren, schließe InstallerClean, öffne ein Terminal als Administrator und führe Folgendes aus: |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then open InstallerClean to update. | Diese Version benötigt .NET Framework 4.8. Installiere es von Microsoft, starte den PC neu und öffne dann InstallerClean, um zu aktualisieren. |
 | InstallerClean {0} can't be installed automatically. | InstallerClean {0} kann nicht automatisch installiert werden. |
 | InstallerClean can't tell whether its setup installed it, so it can't update itself. | InstallerClean kann nicht feststellen, ob es mit seinem Setup installiert wurde, und kann sich deshalb nicht selbst aktualisieren. |

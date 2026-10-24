@@ -590,6 +590,7 @@ public static class Strings
     public static string UpdateNotice_NeedsNetFramework48 => Get("UpdateNotice.NeedsNetFramework48");
     public static string UpdateNotice_Recommended => Get("UpdateNotice.Recommended");
     public static string UpdateNotice_Scoop => Get("UpdateNotice.Scoop");
+    public static string UpdateNotice_ScoopGlobal => Get("UpdateNotice.ScoopGlobal");
     public static string UpdateNotice_UpdateNow => Get("UpdateNotice.UpdateNow");
     public static string Version_Display => Get("Version.Display");
     public static string Window_About_Title => Get("Window.About.Title");

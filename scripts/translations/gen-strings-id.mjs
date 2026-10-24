@@ -660,6 +660,7 @@ const MAP = {
   'Cli.UpdateDownloadLink': `{0}: {1}`,
   'Cli.Help.UpdateNote': `Sebelum memindai, alat ini memeriksa versi InstallerClean yang lebih baru.&#10;Jika Anda menjalankannya sendiri, alat ini bertanya sebelum memperbarui.&#10;Jika berjalan otomatis lewat tugas terjadwal atau skrip, ia memperbarui&#10;tanpa bertanya. Tambahkan /noupdate untuk melewati pemeriksaan.`,
   'UpdateNotice.Scoop': `Salinan ini dipasang oleh Scoop. Untuk memperbaruinya, tutup InstallerClean lalu jalankan:`,
+  'UpdateNotice.ScoopGlobal': `Salinan ini dipasang oleh Scoop untuk semua pengguna. Untuk memperbaruinya, tutup InstallerClean, buka terminal sebagai administrator, lalu jalankan:`,
   'UpdateNotice.CommandCopied': `Tersalin`,
   'UpdateNotice.CopyFailed': `Tidak dapat menyalinnya. Pilih perintahnya lalu salin sendiri.`,
   'Automation.UpdateNotice.CopyCommand': `Salin perintah`,

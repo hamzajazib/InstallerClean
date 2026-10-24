@@ -540,6 +540,7 @@ const MAP = {
   'Cli.UpdateDownloadLink': `{0}：{1}`,
   'Cli.Help.UpdateNote': `扫描前，它会检查是否有较新版本的 InstallerClean。由您亲自运行时，&#10;它会在更新前询问。在计划任务或脚本中自动运行时，它会直接更新而不询问。&#10;添加 /noupdate 可跳过检查。`,
   'UpdateNotice.Scoop': `此副本由 Scoop 安装。要更新，请关闭 InstallerClean 并运行：`,
+  'UpdateNotice.ScoopGlobal': `此副本由 Scoop 为所有用户安装。要更新，请关闭 InstallerClean，以管理员身份打开终端并运行：`,
   'UpdateNotice.CommandCopied': `已复制`,
   'UpdateNotice.CopyFailed': `无法复制。请选中该命令并手动复制。`,
   'Automation.UpdateNotice.CopyCommand': `复制命令`,

@@ -324,6 +324,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Download .NET Framework 4.8 from Microsoft | Unduh .NET Framework 4.8 dari Microsoft |
 | Update now | Perbarui sekarang |
 | This copy was installed by Scoop. To update it, close InstallerClean and run: | Salinan ini dipasang oleh Scoop. Untuk memperbaruinya, tutup InstallerClean lalu jalankan: |
+| This copy was installed by Scoop for all users. To update it, close InstallerClean, open a terminal as administrator and run: | Salinan ini dipasang oleh Scoop untuk semua pengguna. Untuk memperbaruinya, tutup InstallerClean, buka terminal sebagai administrator, lalu jalankan: |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then open InstallerClean to update. | Versi ini memerlukan .NET Framework 4.8. Pasang dari Microsoft, mulai ulang PC, lalu buka InstallerClean untuk memperbarui. |
 | InstallerClean {0} can't be installed automatically. | InstallerClean {0} tidak dapat dipasang secara otomatis. |
 | InstallerClean can't tell whether its setup installed it, so it can't update itself. | InstallerClean tidak dapat memastikan apakah dirinya dipasang oleh program penyiapannya, jadi tidak dapat memperbarui dirinya sendiri. |

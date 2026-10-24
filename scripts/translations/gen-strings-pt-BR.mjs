@@ -640,6 +640,7 @@ const MAP = {
   'Cli.UpdateDownloadLink': `{0}: {1}`,
   'Cli.Help.UpdateNote': `Antes de analisar, ele verifica se há uma versão mais recente do&#10;InstallerClean. Quando você o executa, ele pergunta antes de atualizar.&#10;Quando roda sozinho, em uma tarefa agendada ou um script, ele atualiza sem&#10;perguntar. Adicione /noupdate para pular a verificação.`,
   'UpdateNotice.Scoop': `Esta cópia foi instalada pelo Scoop. Para atualizá-la, feche o InstallerClean e execute:`,
+  'UpdateNotice.ScoopGlobal': `Esta cópia foi instalada pelo Scoop para todos os usuários. Para atualizá-la, feche o InstallerClean, abra um terminal como administrador e execute:`,
   'UpdateNotice.CommandCopied': `Copiado`,
   'UpdateNotice.CopyFailed': `Não foi possível copiar. Selecione o comando e copie-o manualmente.`,
   'Automation.UpdateNotice.CopyCommand': `Copiar o comando`,

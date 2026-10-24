@@ -324,6 +324,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Download .NET Framework 4.8 from Microsoft | Tải .NET Framework 4.8 về từ Microsoft |
 | Update now | Cập nhật ngay |
 | This copy was installed by Scoop. To update it, close InstallerClean and run: | Bản này được cài bằng Scoop. Để cập nhật, hãy đóng InstallerClean rồi chạy: |
+| This copy was installed by Scoop for all users. To update it, close InstallerClean, open a terminal as administrator and run: | Bản này được cài bằng Scoop cho tất cả người dùng. Để cập nhật, hãy đóng InstallerClean, mở terminal với quyền quản trị viên rồi chạy: |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then open InstallerClean to update. | Phiên bản này cần .NET Framework 4.8. Hãy cài đặt nó từ Microsoft, khởi động lại PC, rồi mở InstallerClean để cập nhật. |
 | InstallerClean {0} can't be installed automatically. | Không thể tự động cài đặt InstallerClean {0}. |
 | InstallerClean can't tell whether its setup installed it, so it can't update itself. | InstallerClean không thể xác định liệu nó có được cài bằng trình cài đặt của chính nó hay không, nên không thể tự cập nhật. |

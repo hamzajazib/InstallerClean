@@ -102,6 +102,15 @@ public readonly record struct SetupRecord
 }
 
 /// <summary>
+/// Scoop's update command for a copy Scoop installed, and whether it is for a machine-wide
+/// install, which is run from an administrator's terminal and has <c>--global</c> after the
+/// app's name.
+/// </summary>
+/// <param name="Command">The command, as it is typed.</param>
+/// <param name="Global">Whether Scoop installed this copy for every user of the PC.</param>
+public sealed record ScoopUpdate(string Command, bool Global);
+
+/// <summary>
 /// Decides which <see cref="AppCopyKind"/> is running from facts the caller gathers,
 /// and builds the download address for a kind and a version.
 /// </summary>
@@ -124,12 +133,22 @@ public static class AppCopy
     public const string CommandLineFileName = "installerclean-cli.exe";
 
     /// <summary>
-    /// The command that updates Scoop's copy. Scoop names an app after its manifest's
-    /// file, and InstallerClean's manifest in the Extras bucket is installerclean.json.
-    /// Scoop refuses to update an app while a copy of it is running, so wherever the
-    /// command is shown, InstallerClean has to be closed before it is run.
+    /// The command that updates Scoop's copy where the folder it runs from does not name
+    /// the app: Scoop names an app after its manifest's file, and InstallerClean's
+    /// manifest in the Extras bucket is installerclean.json.
+    /// <see cref="ReadScoopUpdate"/> answers the command for a folder that does.
+    ///
+    /// Scoop looks for a running copy by comparing each process's path with the app's
+    /// folder, and stops the update where it finds one, unless its
+    /// ignore_running_processes setting is on. A process whose path the shell cannot read,
+    /// such as an elevated InstallerClean seen from a shell that is not elevated, is not
+    /// compared. So wherever the command is shown, the line above it asks for InstallerClean
+    /// to be closed before it is run.
     /// </summary>
     public const string ScoopUpdateCommand = "scoop update installerclean";
+
+    /// <summary>The update of a Scoop copy that is not known to be machine-wide: <see cref="ScoopUpdateCommand"/>.</summary>
+    public static ScoopUpdate DefaultScoopUpdate { get; } = new(ScoopUpdateCommand, Global: false);
 
     /// <summary>
     /// Where every download is published. A release's files sit under its tag,
@@ -303,9 +322,106 @@ public static class AppCopy
 
     /// <summary>
     /// Whether this kind of copy is updated by Scoop, so a newer version is offered as
-    /// <see cref="ScoopUpdateCommand"/>.
+    /// Scoop's update command (<see cref="ReadScoopUpdate"/>).
     /// </summary>
     public static bool UpdatedByScoop(AppCopyKind kind) => kind == AppCopyKind.Scoop;
+
+    /// <summary>
+    /// Scoop's update command for the copy running from <paramref name="exeFolder"/>, or
+    /// null where the folder is not <c>&lt;root&gt;\apps\&lt;name&gt;\&lt;version&gt;</c>
+    /// with a name Scoop gives an app. The command is <c>scoop update &lt;name&gt;</c>, with
+    /// <c>--global</c> after it where the root is Scoop's global root
+    /// (<see cref="ResolveScoopGlobalRoot"/>) and only then: a root that is not that
+    /// one, or a global root that cannot be established, gives the command without it.
+    /// </summary>
+    /// <param name="exeFolder">The folder the running exe is in.</param>
+    /// <param name="variable">Answers the value of a variable Scoop reads, or null where it is not set.</param>
+    /// <param name="readConfig">Answers a file's text, or null where there is no such file.</param>
+    /// <param name="commonApplicationData">The machine-wide application data folder (ProgramData).</param>
+    public static ScoopUpdate? ReadScoopUpdate(
+        string exeFolder, Func<string, string?> variable, Func<string, string?> readConfig,
+        string commonApplicationData)
+    {
+        if (Normalise(exeFolder) is not { } versionFolder) return null;
+        var nameFolder = Path.GetDirectoryName(versionFolder);
+        var appsFolder = nameFolder is null ? null : Path.GetDirectoryName(nameFolder);
+        var root = appsFolder is null ? null : Path.GetDirectoryName(appsFolder);
+        if (nameFolder is null || appsFolder is null || root is null) return null;
+        if (!string.Equals(Path.GetFileName(appsFolder), "apps", StringComparison.OrdinalIgnoreCase)) return null;
+
+        var name = Path.GetFileName(nameFolder);
+        if (!ScoopAppName.IsMatch(name)) return null;
+
+        var isGlobal = ResolveScoopGlobalRoot(variable, readConfig, commonApplicationData) is { } globalRoot
+            && string.Equals(root, globalRoot, StringComparison.OrdinalIgnoreCase);
+        return new ScoopUpdate(isGlobal ? $"scoop update {name} --global" : $"scoop update {name}", isGlobal);
+    }
+
+    /// <summary>
+    /// What Scoop gives an app as a folder name, which is its manifest's file name: letters,
+    /// digits, dots, hyphens and underscores, so a name that is anything else is not typed
+    /// into a command.
+    /// </summary>
+    private static readonly System.Text.RegularExpressions.Regex ScoopAppName =
+        new(@"^[A-Za-z0-9][A-Za-z0-9._-]*$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Scoop's global root, as Scoop resolves it: the SCOOP_GLOBAL variable, then the
+    /// global_path setting in <c>scoop\config.json</c> under XDG_CONFIG_HOME or else
+    /// under <c>.config</c> in the user profile, then <c>scoop</c> in the machine-wide
+    /// application data folder. Only the settings file under the config home is read. Null
+    /// where it is not established: the value found is not a full path, or the settings file
+    /// is there and cannot be read or parsed.
+    /// </summary>
+    internal static string? ResolveScoopGlobalRoot(
+        Func<string, string?> variable, Func<string, string?> readConfig, string commonApplicationData)
+    {
+        string? chosen = variable("SCOOP_GLOBAL");
+        if (string.IsNullOrEmpty(chosen))
+        {
+            var configHome = variable("XDG_CONFIG_HOME");
+            if (string.IsNullOrEmpty(configHome))
+            {
+                var profile = variable("USERPROFILE");
+                if (string.IsNullOrEmpty(profile)) return null;
+                configHome = Path.Combine(profile, ".config");
+            }
+
+            string? text;
+            try
+            {
+                text = readConfig(Path.Combine(configHome, "scoop", "config.json"));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+            {
+                return null;
+            }
+
+            if (text is not null)
+            {
+                try
+                {
+                    using var document = System.Text.Json.JsonDocument.Parse(text);
+                    if (document.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object) return null;
+                    foreach (var property in document.RootElement.EnumerateObject())
+                    {
+                        if (!string.Equals(property.Name, "global_path", StringComparison.OrdinalIgnoreCase)) continue;
+                        if (property.Value.ValueKind == System.Text.Json.JsonValueKind.Null) continue;
+                        if (property.Value.ValueKind != System.Text.Json.JsonValueKind.String) return null;
+                        chosen = property.Value.GetString();
+                    }
+                }
+                catch (System.Text.Json.JsonException)
+                {
+                    return null;
+                }
+            }
+
+            if (string.IsNullOrEmpty(chosen)) chosen = Path.Combine(commonApplicationData, "scoop");
+        }
+
+        return Path.IsPathFullyQualified(chosen) ? Normalise(chosen) : null;
+    }
 
     /// <summary>
     /// The file name of the download a kind updates from, or null for a kind that does

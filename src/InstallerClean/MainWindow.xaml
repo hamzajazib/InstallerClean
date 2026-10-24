@@ -207,7 +207,7 @@
                              carries the command, so reading the line out reads the command
                              too. The box's spoken name says what it holds, and a screen
                              reader reads the command after it. -->
-                        <TextBlock x:Name="UpdateNoticeScoop" Text="{loc:Translate UpdateNotice.Scoop}"
+                        <TextBlock x:Name="UpdateNoticeScoop" Text="{Binding Chrome.ScoopUpdateLine, Mode=OneWay}"
                                    Foreground="{StaticResource Text.Body}" FontSize="{DynamicResource Type.Body}"
                                    TextWrapping="Wrap" Margin="{StaticResource GapTop.Sm}"
                                    Visibility="{Binding Chrome.ShowsScoopCommand, Converter={StaticResource BoolToVis}}"
@@ -1599,7 +1599,7 @@
                                TextWrapping="Wrap" TextAlignment="Center" Margin="{StaticResource GapTop.Sm}"
                                Visibility="{Binding Chrome.HasUpdateFailure, Converter={StaticResource BoolToVis}}"
                                AutomationProperties.LiveSetting="Polite"/>
-                    <TextBlock Text="{loc:Translate UpdateNotice.Scoop}"
+                    <TextBlock Text="{Binding Chrome.ScoopUpdateLine, Mode=OneWay}"
                                Foreground="{StaticResource Text.Body}" FontSize="{DynamicResource Type.Body}"
                                TextWrapping="Wrap" TextAlignment="Center" Margin="{StaticResource GapTop.Sm}"
                                Visibility="{Binding Chrome.ShowsScoopCommand, Converter={StaticResource BoolToVis}}"/>

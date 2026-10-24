@@ -333,8 +333,9 @@
   </data>
   <data name="Automation.UpdateNotice.ScoopCommand" xml:space="preserve">
     <value>Scoop 업데이트 명령</value>
-    <comment>Screen-reader name of the box holding Scoop's update command (scoop update installerclean) on
-    the card and the notice, on a copy installed by Scoop. A screen reader reads this, then the command.</comment>
+    <comment>Screen-reader name of the box holding Scoop's update command (scoop update followed by the app's
+    name, and --global after that on an install for all users) on the card and the notice, on a copy
+    installed by Scoop. A screen reader reads this, then the command.</comment>
   </data>
   <data name="Automation.Licence.HelpText" xml:space="preserve"><value>브라우저에서 github.com의 라이선스 파일을 엽니다.</value></data>
   <!-- Mixed-case AutomationProperties.Name overrides for the all-caps
@@ -1524,7 +1525,11 @@ InstallerClean은 이미 관리자 권한으로 실행 중이었으므로 그런
   </data>
   <data name="UpdateNotice.Scoop" xml:space="preserve">
     <value>이 사본은 Scoop으로 설치되었습니다. 업데이트하려면 InstallerClean을 닫고 다음을 실행하세요:</value>
-    <comment>A third line on the card and in the notice, under UpdateNotice.Recommended, on a copy installed by Scoop, which shows in place of UpdateNotice.UpdateNow. Scoop's update command (scoop update installerclean, never translated) follows it in a box with a Copy button (Action.Copy). Scoop is the name of a program and is not translated.</comment>
+    <comment>A third line on the card and in the notice, under UpdateNotice.Recommended, on a copy installed by Scoop, which shows in place of UpdateNotice.UpdateNow. Scoop's update command (scoop update followed by the app's name, never translated) follows it in a box with a Copy button (Action.Copy). Scoop is the name of a program and is not translated.</comment>
+  </data>
+  <data name="UpdateNotice.ScoopGlobal" xml:space="preserve">
+    <value>이 사본은 Scoop으로 모든 사용자용으로 설치되었습니다. 업데이트하려면 InstallerClean을 닫고, 관리자 권한으로 터미널을 열어 다음을 실행하세요:</value>
+    <comment>UpdateNotice.Scoop for a copy Scoop installed for every user of the PC, which shows in its place. The command that follows it ends in --global (scoop update, the app's name and --global, never translated) and Scoop refuses it from a terminal that is not running as administrator. Scoop is the name of a program and is not translated.</comment>
   </data>
   <data name="UpdateNotice.NeedsNetFramework48" xml:space="preserve">
     <value>이 버전에는 .NET Framework 4.8이 필요합니다. Microsoft에서 설치하고 PC를 다시 시작한 다음 InstallerClean을 열어 업데이트하세요.</value>
