@@ -565,7 +565,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report sent. Thank you. | Отчёт отправлен. Спасибо. |
 | Report not sent. | Отчёт не отправлен. |
 | The report could not be sent. It is kept in {0}. | Не удалось отправить отчёт. Он хранится в {0}. |
-| Sending a report left waiting by an earlier run. | Отправляется отчёт, ожидающий отправки с более раннего запуска. |
+| Sending a report left waiting by an earlier run. | Отправляется отчёт, ожидающий отправки ещё с более раннего запуска. |
 | InstallerClean {0} is installed. | Версия InstallerClean {0} установлена. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Новая версия просканирует и покажет список найденного, ничего не удаляя. Чтобы удалить, затем снова запустите /d. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Новая версия просканирует и покажет список найденного, ничего не перемещая. Чтобы переместить, затем снова запустите /m. |
