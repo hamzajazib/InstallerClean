@@ -288,17 +288,17 @@ public partial class MainWindow : Window
 
     private void OnClosing(object? sender, CancelEventArgs e)
     {
-        // IsOperating, the overlay flag, and not IsOperationInFlight, the
-        // execution gate the two destructive commands use. That is a contract,
-        // not the near-miss it looks like. The hold is released by
-        // OnCleanupPropertyChanged watching this same property go false, so a
-        // hold taken on the other flag would never be released: nothing raises a
-        // change notification the close is waiting on.
-        //
-        // The two differ during the Move pre-flight, which sets IsOperating only
-        // once its probe of the destination has run for 200 ms, so a close before
-        // then is not held. Nothing has left the installer cache at that point.
-        if (!_vm.Cleanup.IsOperating) return;
+        // IsMoveOrDeleteRunning, which is true from the first line of the Move or
+        // Delete command to its last, and not IsOperating, the overlay flag, or
+        // IsOperationInFlight, the execution gate. The Move creates the
+        // destination folder in its pre-flight, before the overlay is up and while
+        // the confirmation is open, and removes it on every exit that stops short
+        // of the batch; a close taken before that removal has finished ends the
+        // process with the folder left at the path the user typed. The hold is
+        // released by OnCleanupPropertyChanged watching this same property go
+        // false, so a hold taken on another flag would never be released: nothing
+        // raises a change notification the close is waiting on.
+        if (!_vm.Cleanup.IsMoveOrDeleteRunning) return;
 
         // A Move or a Delete is running. Letting this close through kills the
         // worker where it stands: OnExit disposes the container, which cancels
@@ -310,13 +310,15 @@ public partial class MainWindow : Window
         // destination folder with the source still in place: a file that looks
         // like a recovery copy and is not one.
         //
-        // So: hold the close, cancel the batch, and take the close when the
-        // operation lets go. Cancelling stops it at the next file boundary, so
-        // the file being moved right now is finished rather than truncated. The
-        // wait is visible: the operating overlay stays up and says so. The view
-        // model records the close and finishes the operation without the rescan
-        // after the batch, cancelling that rescan where it is already running
-        // (CleanupViewModel.RequestClose).
+        // So: hold the close, cancel the operation, and take the close when the
+        // command lets go. Cancelling stops the batch at the next file boundary,
+        // so the file being moved right now is finished rather than truncated,
+        // and stops the Move before its batch at its next check, removing the
+        // folder its pre-flight made. The wait is visible: the operating overlay
+        // stays up and says so, and a confirmation already open stays up until it
+        // is answered. The view model records the close and finishes the
+        // operation without the rescan after the batch, cancelling that rescan
+        // where it is already running (CleanupViewModel.RequestClose).
         e.Cancel = true;
         _vm.Cleanup.RequestClose();
     }
@@ -731,12 +733,12 @@ public partial class MainWindow : Window
         if (e.PropertyName == nameof(CleanupViewModel.CanStopWaiting) && !_vm.Cleanup.CanStopWaiting)
             HandFocusToCancel(OperationWaitingRegion, OperationCancelButton);
 
-        if (e.PropertyName == nameof(CleanupViewModel.IsOperating) && !_vm.Cleanup.IsOperating
-            && _vm.Cleanup.CloseRequested)
+        if (e.PropertyName == nameof(CleanupViewModel.IsMoveOrDeleteRunning)
+            && !_vm.Cleanup.IsMoveOrDeleteRunning && _vm.Cleanup.CloseRequested)
         {
             // The close the user asked for during the operation. Deferred to a
             // later dispatcher pass rather than closed from here: this fires
-            // inside the operation's finally, and tearing the window (and with
+            // inside the command's finally, and tearing the window (and with
             // it the DI container, and with it these view-models) down while
             // that frame is still on the stack is a re-entrancy nobody should
             // have to reason about.
@@ -744,7 +746,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (e.PropertyName == nameof(CleanupViewModel.IsOperating) && !_vm.Cleanup.IsOperating)
+        // Nothing is focused or announced on a window that is closing.
+        if (e.PropertyName == nameof(CleanupViewModel.IsOperating) && !_vm.Cleanup.IsOperating
+            && !_vm.Cleanup.CloseRequested)
         {
             // The overlay's focused Cancel button collapses with the
             // overlay, and when no completion overlay follows (a

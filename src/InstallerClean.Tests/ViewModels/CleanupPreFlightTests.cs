@@ -1334,4 +1334,243 @@ public class CleanupPreFlightTests
             Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
         Assert.False(vm.Cleanup.IsOperationInFlight);
     }
+
+    /// <summary>The Move's service was never handed a batch.</summary>
+    private async Task AssertNoBatchWasHandedOver() =>
+        await _moveService.DidNotReceive().MoveFilesAsync(
+            Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
+            Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_close_during_the_probe_is_held_until_the_created_folder_has_been_removed(bool overlayUp)
+    {
+        var probeEntered = new ManualResetEventSlim();
+        var releaseProbe = new ManualResetEventSlim();
+        var removalEntered = new ManualResetEventSlim();
+        var releaseRemoval = new ManualResetEventSlim();
+        var removalFinished = 0;
+        _directory.When(d => d.CreateDirectory(Arg.Any<string>())).Do(_ =>
+        {
+            probeEntered.Set();
+            releaseProbe.Wait();
+        });
+        _directory.When(d => d.Delete(Arg.Any<string>())).Do(_ =>
+        {
+            removalEntered.Set();
+            releaseRemoval.Wait();
+            Volatile.Write(ref removalFinished, 1);
+        });
+
+        var vm = CreateViewModel();
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = _destination;
+        int? removalFinishedWhenTheHoldFell = null;
+        vm.Cleanup.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(CleanupViewModel.IsMoveOrDeleteRunning)
+                && !vm.Cleanup.IsMoveOrDeleteRunning)
+                removalFinishedWhenTheHoldFell = Volatile.Read(ref removalFinished);
+        };
+
+        var move = vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+        Assert.True(probeEntered.Wait(TimeSpan.FromSeconds(5)));
+        // Closed straight away, before the overlay is up, or once the overlay and its
+        // Cancel button are up.
+        if (overlayUp) await WaitUntil(() => vm.Cleanup.IsOperating);
+        Assert.True(vm.Cleanup.IsMoveOrDeleteRunning);
+        vm.Cleanup.RequestClose();
+        releaseProbe.Set();
+
+        // The probe has stopped and the folder it made is being removed. The overlay is
+        // down, which is the point at which the window used to take the close.
+        await WaitUntil(() => removalEntered.IsSet);
+        Assert.False(vm.Cleanup.IsOperating);
+        Assert.True(vm.Cleanup.IsMoveOrDeleteRunning);
+        Assert.Null(removalFinishedWhenTheHoldFell);
+        // The execution gate has fallen by now, and neither command may start in the
+        // gap: a second command's hold would be released by the first one's end.
+        Assert.False(vm.Cleanup.IsOperationInFlight);
+        Assert.False(vm.Cleanup.MoveAllCommand.CanExecute(null));
+        Assert.False(vm.Cleanup.DeleteAllCommand.CanExecute(null));
+
+        releaseRemoval.Set();
+        await move.WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Equal(1, removalFinishedWhenTheHoldFell);
+        Assert.False(vm.Cleanup.IsMoveOrDeleteRunning);
+        Assert.True(vm.Cleanup.CloseRequested);
+        AssertFolderRemoved();
+        _confirmationService.DidNotReceive().ConfirmMove(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+        await AssertNoBatchWasHandedOver();
+        Assert.False(vm.Cleanup.IsOperationInFlight);
+        Assert.False(vm.Cleanup.IsCancellationRequested);
+    }
+
+    [Fact]
+    public async Task A_close_while_the_confirmation_is_up_ends_the_Move_and_removes_the_created_folder()
+    {
+        var vm = CreateViewModel();
+        var heldWhileConfirming = false;
+        _confirmationService.ConfirmMove(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>())
+            .Returns(_ =>
+            {
+                heldWhileConfirming = vm.Cleanup.IsMoveOrDeleteRunning && !vm.Cleanup.IsOperating;
+                vm.Cleanup.RequestClose();
+                return true;
+            });
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = _destination;
+
+        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        Assert.True(heldWhileConfirming);
+        AssertFolderRemoved();
+        await AssertNoBatchWasHandedOver();
+        await _reverifier.DidNotReceive().ReverifyAsync(
+            Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>());
+        Assert.False(vm.Cleanup.IsMoveOrDeleteRunning);
+        Assert.False(vm.Cleanup.IsOperationInFlight);
+    }
+
+    [Fact]
+    public async Task A_close_during_the_check_after_the_confirmation_ends_the_Move_and_removes_the_created_folder()
+    {
+        var vm = CreateViewModel();
+        var confirmed = false;
+        _confirmationService.ConfirmMove(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>())
+            .Returns(_ => { confirmed = true; return true; });
+        _rebootService.Check().Returns(_ =>
+        {
+            if (confirmed) vm.Cleanup.RequestClose();
+            return PendingRebootResult.Clean;
+        });
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = _destination;
+
+        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        Assert.True(vm.Cleanup.CloseRequested);
+        AssertFolderRemoved();
+        await AssertNoBatchWasHandedOver();
+        await _reverifier.DidNotReceive().ReverifyAsync(
+            Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>());
+        Assert.False(vm.Cleanup.IsOperating);
+        Assert.False(vm.Cleanup.IsMoveOrDeleteRunning);
+        Assert.False(vm.Cleanup.IsOperationInFlight);
+    }
+
+    [Fact]
+    public async Task A_close_while_the_destination_browser_is_up_starts_no_Move()
+    {
+        var vm = CreateViewModel();
+        _confirmationService.AskForMoveDestination().Returns(_ =>
+        {
+            vm.Cleanup.RequestClose();
+            return _destination;
+        });
+        await vm.Scan.ScanWithProgressAsync(null);
+
+        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        _directory.DidNotReceive().CreateDirectory(Arg.Any<string>());
+        AssertNoFolderRemoved();
+        _confirmationService.DidNotReceive().ConfirmMove(
+            Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+        await AssertNoBatchWasHandedOver();
+        Assert.False(vm.Cleanup.IsMoveOrDeleteRunning);
+        Assert.False(vm.Cleanup.IsOperationInFlight);
+    }
+
+    [Fact]
+    public async Task A_close_while_the_Delete_confirmation_is_up_starts_no_Delete()
+    {
+        var vm = CreateViewModel();
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>())
+            .Returns(_ => { vm.Cleanup.RequestClose(); return true; });
+        await vm.Scan.ScanWithProgressAsync(null);
+
+        await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+
+        await _deleteService.DidNotReceive().DeleteFilesAsync(
+            Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+            Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
+        await _reverifier.DidNotReceive().ReverifyAsync(
+            Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>());
+        Assert.False(vm.Cleanup.IsMoveOrDeleteRunning);
+        Assert.False(vm.Cleanup.IsOperationInFlight);
+    }
+
+    [Fact]
+    public async Task A_close_during_the_check_before_a_Delete_ends_the_Delete()
+    {
+        var vm = CreateViewModel();
+        var confirmed = false;
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>())
+            .Returns(_ => { confirmed = true; return true; });
+        _rebootService.Check().Returns(_ =>
+        {
+            if (confirmed) vm.Cleanup.RequestClose();
+            return PendingRebootResult.Clean;
+        });
+        await vm.Scan.ScanWithProgressAsync(null);
+
+        await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+
+        Assert.True(vm.Cleanup.CloseRequested);
+        await _deleteService.DidNotReceive().DeleteFilesAsync(
+            Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+            Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
+        await _reverifier.DidNotReceive().ReverifyAsync(
+            Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>());
+        Assert.False(vm.Cleanup.IsOperating);
+        Assert.False(vm.Cleanup.IsMoveOrDeleteRunning);
+        Assert.False(vm.Cleanup.IsOperationInFlight);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task The_hold_on_the_close_is_taken_for_a_command_the_user_declines_and_released_after_it(bool deleting)
+    {
+        _confirmationService.ConfirmMove(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>())
+            .Returns(false);
+        _confirmationService.ConfirmDelete(Arg.Any<int>(), Arg.Any<string>()).Returns(false);
+        var vm = CreateViewModel();
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = _destination;
+        var changes = new List<bool>();
+        vm.Cleanup.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(CleanupViewModel.IsMoveOrDeleteRunning))
+                changes.Add(vm.Cleanup.IsMoveOrDeleteRunning);
+        };
+
+        if (deleting) await vm.Cleanup.DeleteAllCommand.ExecuteAsync(null);
+        else await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        Assert.Equal([true, false], changes);
+        Assert.True(vm.Cleanup.MoveAllCommand.CanExecute(null));
+        Assert.True(vm.Cleanup.DeleteAllCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task The_hold_on_the_close_is_released_by_a_Move_refused_for_a_relative_destination()
+    {
+        var vm = CreateViewModel();
+        await vm.Scan.ScanWithProgressAsync(null);
+        vm.Cleanup.MoveDestination = "backup";
+        var changes = new List<bool>();
+        vm.Cleanup.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(CleanupViewModel.IsMoveOrDeleteRunning))
+                changes.Add(vm.Cleanup.IsMoveOrDeleteRunning);
+        };
+
+        await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
+
+        Assert.Equal([true, false], changes);
+    }
 }

@@ -104,13 +104,41 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     // it goes false during the confirm-dialog window between the pre-flight
     // and the move call (so the modal owns the foreground state), and it is set
     // only after 200 ms during the Move pre-flight. IsOperationInFlight is the
-    // execution gate.
+    // execution gate, and IsMoveOrDeleteRunning is what holds the window's close.
     [ObservableProperty] private bool _isOperating;
+
+    /// <summary>
+    /// True from the first line of the Move or Delete command until its last, after
+    /// every clean-up it owes and every dialog it shows. This is what holds the
+    /// window's close: a close taken before it falls can end the process while the
+    /// folder the Move's pre-flight made is still being removed, or while a
+    /// confirmation is up.
+    ///
+    /// It is not <see cref="IsOperationInFlight"/>, which falls in
+    /// <see cref="EndOperation"/> ahead of the clean-up on the pre-flight's early
+    /// exits, nor <see cref="IsOperating"/>, which is false for the whole of the
+    /// pre-flight before its overlay and for the confirmation. Move and Delete are
+    /// out of use while it is true, so a second command cannot start inside the
+    /// first one's clean-up and have this fall under it.
+    /// </summary>
+    public bool IsMoveOrDeleteRunning
+    {
+        get => _isMoveOrDeleteRunning;
+        private set
+        {
+            if (!SetProperty(ref _isMoveOrDeleteRunning, value)) return;
+            MoveAllCommand.NotifyCanExecuteChanged();
+            DeleteAllCommand.NotifyCanExecuteChanged();
+        }
+    }
+    private bool _isMoveOrDeleteRunning;
 
     /// <summary>
     /// True from the first line of a Move or a Delete until it has finished,
     /// pre-flight included, whether or not <see cref="IsOperating"/> ever
-    /// raised the overlay. This is what the commands gate on.
+    /// raised the overlay. This is what the commands gate on, together with
+    /// <see cref="IsMoveOrDeleteRunning"/>, which stays true through the Move's
+    /// clean-up after <see cref="EndOperation"/> has cleared this.
     ///
     /// The Move pre-flight is the reason it exists. It hops off the dispatcher
     /// (a Win32 path resolve against a mapped drive can stall for the SMB
@@ -590,13 +618,13 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     // can find another process holding it, and until the app has it back neither
     // command runs; asking tries to take it back.
     private bool CanMove() =>
-        !_scan.IsScanInFlight && !IsOperationInFlight
+        !_scan.IsScanInFlight && !IsOperationInFlight && !IsMoveOrDeleteRunning
         && !_scan.HasPendingReboot
         && _scan.HasOrphans
         && !_instanceLockLost();
 
     private bool CanDelete() =>
-        !_scan.IsScanInFlight && !IsOperationInFlight
+        !_scan.IsScanInFlight && !IsOperationInFlight && !IsMoveOrDeleteRunning
         && !_scan.HasPendingReboot
         && _scan.HasOrphans
         && !_instanceLockLost();
@@ -675,10 +703,13 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// <summary>
     /// True once the window has been asked to close while a Move or Delete runs
     /// (<see cref="RequestClose"/>). The window holds that close and takes it when
-    /// <see cref="IsOperating"/> goes false. From then on the operation finishes
-    /// without what only an open window needs: no rescan after the batch, a running
-    /// one being cancelled where Cancel is live, no wait for the start check, and no
-    /// report box, the card it would sit on going with the window unseen.
+    /// <see cref="IsMoveOrDeleteRunning"/> goes false. From then on the operation
+    /// finishes without what only an open window needs: no rescan after the batch, a
+    /// running one being cancelled, no wait for the start check, and no report box, the
+    /// card it would sit on going with the window unseen. A Move or Delete not yet
+    /// started when it is set does not start: the Move ends at its pre-flight, at its
+    /// confirmation or at its last check, removing the folders the pre-flight made, and
+    /// the Delete ends at its last check.
     /// </summary>
     public bool CloseRequested => _closeRequested.Task.IsCompleted;
 
@@ -690,21 +721,49 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// The window's close, asked for while a Move or Delete runs: records it and
-    /// cancels the operation where Cancel is live. Cancel is out of use where the
-    /// user has already pressed it or where what is running stops for nothing. The
-    /// close then cancels nothing, and that step finishes. Called on the dispatcher,
-    /// as Cancel is. A second call does nothing.
+    /// cancels what the operation has running, as a press of Cancel does. That
+    /// includes the Move's pre-flight before its overlay is up and the Move while its
+    /// confirmation is open, which the button cannot reach, so the pre-flight stops at
+    /// its next check and the confirmation, once answered, ends the Move. Where the
+    /// user has already pressed Cancel, or what is running stops for nothing, the
+    /// close cancels nothing and that step finishes. Called on the dispatcher, as
+    /// Cancel is. A second call does nothing.
     /// </summary>
     public void RequestClose()
     {
         if (!_closeRequested.TrySetResult()) return;
-        // Neither CancelOperation nor its command's Execute asks CanCancelOperation,
-        // so the test is made here.
-        if (CanCancelOperation()) CancelOperation();
+        // Neither CancelOperation nor its command's Execute asks whether it may run, so
+        // the test is made here, on the source and not on CanCancelOperation: the
+        // overlay is down while the Move's pre-flight runs its first 200 ms and while
+        // the confirmation is up, so the button is out of use with the source live. The
+        // operation lets go of its source once nothing is left to stop on it, and the
+        // heading the press writes is the one the pre-flight's reveal shows if it
+        // raises the overlay while the close waits.
+        if (OperationSource is not null && !IsCancellationRequested) CancelOperation();
     }
 
     [RelayCommand(CanExecute = nameof(CanMove))]
-    private async Task MoveAllAsync()
+    private Task MoveAllAsync() => RunHoldingTheClose(MoveAllCoreAsync);
+
+    /// <summary>
+    /// Runs a Move or a Delete with <see cref="IsMoveOrDeleteRunning"/> set from its
+    /// first line to its last, so the window's close waits for every exit the command
+    /// has, whichever one it takes.
+    /// </summary>
+    private async Task RunHoldingTheClose(Func<Task> command)
+    {
+        IsMoveOrDeleteRunning = true;
+        try
+        {
+            await command();
+        }
+        finally
+        {
+            IsMoveOrDeleteRunning = false;
+        }
+    }
+
+    private async Task MoveAllCoreAsync()
     {
         if (_scan.LastScanResult is null) return;
 
@@ -745,6 +804,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 Strings.Error_InvalidDestinationTitle);
             return;
         }
+
+        // A close asked for while the destination browser or the warning above was
+        // up starts nothing: the pre-flight creates a folder.
+        if (CloseRequested) return;
 
         // Every touch of the destination happens here, on a worker thread and
         // under one cancellable task: the two path gates, the CreateDirectory
@@ -845,10 +908,16 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // in the instant before the confirm dialog; a UNC share that
             // stalls on the SMB timeout still gets the overlay and its
             // cancellable Cancel button. Heading before IsOperating keeps the
-            // start announced exactly once if the overlay does appear.
-            if (await Task.WhenAny(probeTask, Task.Delay(200, probeToken)) != probeTask)
+            // start announced exactly once if the overlay does appear. The delay
+            // is not tied to the probe's token, so a close or Cancel that lands
+            // inside the 200 ms does not raise the overlay early: it appears, with
+            // the cancelling heading, only if the probe is still running when the
+            // 200 ms is up.
+            if (await Task.WhenAny(probeTask, Task.Delay(200)) != probeTask)
             {
-                OperationProgress = Strings.Status_PreparingDestination;
+                OperationProgress = IsCancellationRequested
+                    ? Strings.Status_Cancelling
+                    : Strings.Status_PreparingDestination;
                 IsOperating = true;
             }
             preFlight = await probeTask;
@@ -988,10 +1057,10 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         // to the drive the files are already on frees nothing until the copies
         // parked there are deleted.
         if (!_confirmationService.ConfirmMove(count, sizeDisplay, dest,
-                destinationKind == MoveDestinationKinds.SameDrive))
+                destinationKind == MoveDestinationKinds.SameDrive) || CloseRequested)
         {
-            // User cancelled at the confirmation dialog, so the operation ends
-            // here.
+            // User cancelled at the confirmation dialog, or the window was asked to
+            // close while it was up, so the operation ends here.
             EndOperation();
             OperationProgress = string.Empty;
             await RemoveCreatedFoldersAsync(createdFolders);
@@ -1025,7 +1094,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             ShowActionFailed(ex, deleting: false);
             return;
         }
-        if (blocked)
+        // A close asked for during the confirmation or this check ends the Move
+        // here, as a declined confirmation does: nothing has been placed.
+        if (blocked || CloseRequested)
         {
             EndOperation();
             OperationProgress = string.Empty;
@@ -1453,7 +1524,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand(CanExecute = nameof(CanDelete))]
-    private async Task DeleteAllAsync()
+    private Task DeleteAllAsync() => RunHoldingTheClose(DeleteAllCoreAsync);
+
+    private async Task DeleteAllCoreAsync()
     {
         if (_scan.LastScanResult is null) return;
 
@@ -1461,7 +1534,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         var count = removableFiles.Count;
         var sizeDisplay = _scan.OrphanedSizeDisplay;
 
-        if (!_confirmationService.ConfirmDelete(count, sizeDisplay)) return;
+        if (!_confirmationService.ConfirmDelete(count, sizeDisplay) || CloseRequested) return;
 
         // Snapshot the pre-operation scan state once, after the confirm so a
         // cancel costs nothing. RefreshAsync (inside RunDeleteAsync) replaces
@@ -1503,7 +1576,9 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             ShowActionFailed(ex, deleting: true);
             return;
         }
-        if (blocked)
+        // A close asked for during this check ends the Delete here, with nothing
+        // touched.
+        if (blocked || CloseRequested)
         {
             EndOperation();
             OperationProgress = string.Empty;
