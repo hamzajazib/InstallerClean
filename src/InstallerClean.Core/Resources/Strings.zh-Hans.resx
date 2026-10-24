@@ -289,7 +289,7 @@
        that way by Narrator, on this very string. Lower case triggers
        neither, and none of it is on screen, so the spelling costs nothing. -->
   <data name="Automation.CheckForUpdates.HelpText" xml:space="preserve">
-    <value>在 github 的发布页面上检查是否有更新版本。</value>
+    <value>在 github 的发布页面上检查是否有较新版本。</value>
     <comment>Screen-reader help on the main window's "Check for updates" button.
     "github" is lower case on purpose, here and in every other spoken string: a
     screen reader treats the mid-word capital in "GitHub" as an abbreviation and
@@ -311,7 +311,7 @@
     <comment>Screen-reader help on the About window's "Report a problem" link.</comment>
   </data>
   <data name="Automation.AutoUpdateCheck.HelpText" xml:space="preserve">
-    <value>勾选后，InstallerClean 运行时会在 github 上检查是否有更新版本。</value>
+    <value>勾选后，InstallerClean 运行时会在 github 上检查是否有较新版本。</value>
     <comment>Screen-reader help on the About window's auto-update checkbox.
     Names the destination and is cased for speech for the reasons
     Automation.CheckForUpdates.HelpText carries.</comment>

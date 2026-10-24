@@ -402,10 +402,10 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Move puts the unneeded files in the chosen destination folder. Cancel leaves them where they are. | 移动会将不需要的文件放入所选的目标文件夹。取消则让它们留在原处。 |
 | Say thanks | 道声谢 |
 | Check for updates | 检查更新 |
-| Checks github's releases page for a newer version. | 在 github 的发布页面上检查是否有更新版本。 |
+| Checks github's releases page for a newer version. | 在 github 的发布页面上检查是否有较新版本。 |
 | Opens the readme on github in your browser. | 在浏览器中打开 github 上的 readme。 |
 | Opens the issue tracker on github.com in your browser. | 在浏览器中打开 github.com 上的问题追踪页面（Issues）。 |
-| If ticked, InstallerClean checks github for a newer version when you run it. | 勾选后，InstallerClean 运行时会在 github 上检查是否有更新版本。 |
+| If ticked, InstallerClean checks github for a newer version when you run it. | 勾选后，InstallerClean 运行时会在 github 上检查是否有较新版本。 |
 | Download it from github | 从 github 下载 |
 | Download .NET Framework 4.8 from Microsoft | 从 Microsoft 下载 .NET Framework 4.8 |
 | Copy the command | 复制命令 |

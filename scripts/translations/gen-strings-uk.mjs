@@ -626,7 +626,7 @@ const MAP = {
   'Completion.ReportPanel.Windows': `Яка версія Windows, 10 чи 11, x64 чи Arm, і які в ній встановлено мову та країну або регіон`,
   'Completion.ReportPanel.AppVersion': `Версія InstallerClean, спосіб її отримання (setup, portable, slim, Scoop, окрема програма командного рядка, збірка з вихідного коду або невідомо), звідки надіслано звіт (з InstallerClean чи з програми командного рядка) і мова, якою він відображався`,
   'Completion.ReportPanel.Errors': `Лічильники всього, що пішло не так`,
-  'Completion.ReportPanel.Closing': `Кожен із цих пунктів — це кількість або мітка. Ніщо у звіті не вказує на вас, ваш ПК, ваші файли чи програми, і я ніколи не бачу вашу IP-адресу.`,
+  'Completion.ReportPanel.Closing': `Кожен із цих пунктів — це число або мітка. Ніщо у звіті не вказує на вас, ваш ПК, ваші файли чи програми, і я ніколи не бачу вашу IP-адресу.`,
   'Automation.ReportInfo': `Що містить звіт`,
   'Automation.Scroll.ReportContents': `Що містить звіт`,
   'Completion.ReportPanel.SeeReport': `Переглянути, що саме надсилається`,

@@ -1804,7 +1804,7 @@ InstallerClean'i yönetici olarak yeniden çalıştırın.</value></data>
        adds no fact: it has the app arguing against a conclusion the reader has not
        reached. -->
   <data name="Cli.NothingOffered.Singular" xml:space="preserve"><value>InstallerClean, önbellekteki dosyalardan hangisinin buradaki yüklü programlara ait olduğundan emin olamadı, bu yüzden tek dosyayı ({2}) sunmak yerine geri tuttu.</value></data>
-  <data name="Cli.NothingOffered.Plural" xml:space="preserve"><value>InstallerClean, önbellekteki dosyalardan hangisinin buradaki yüklü programlara ait olduğundan emin olamadı, bu yüzden {0} {1} ({2}) sunmak yerine geri tuttu.</value></data>
+  <data name="Cli.NothingOffered.Plural" xml:space="preserve"><value>InstallerClean, önbellekteki dosyalardan hangisinin buradaki yüklü programlara ait olduğundan emin olamadı, bu yüzden {0} {1} ({2}) sunulmak yerine geri tutuldu.</value></data>
   <!-- The per-file form of the outcome above, for the machine whose offer came out
        empty because every candidate was judged and kept back on its own, rather than
        because a finding about the records emptied the whole walk at once. The pair
@@ -1823,7 +1823,7 @@ InstallerClean'i yönetici olarak yeniden çalıştırın.</value></data>
        the count the object of the holding back instead, as its Cli.NothingOffered
        does. Polish, Russian, Ukrainian and Turkish are worded that way. -->
   <data name="Cli.NothingOfferedPerFile.Singular" xml:space="preserve"><value>InstallerClean, bir dosyanın gereksiz olduğunu saptayamadı, bu yüzden o dosyayı ({2}) sunmak yerine geri tuttu.</value></data>
-  <data name="Cli.NothingOfferedPerFile.Plural" xml:space="preserve"><value>InstallerClean, {0} {1} ({2}) gereksiz olarak saptayamadığı için bunları sunmak yerine geri tuttu.</value></data>
+  <data name="Cli.NothingOfferedPerFile.Plural" xml:space="preserve"><value>InstallerClean, dosyaların gereksiz olduğunu saptayamadı, bu yüzden {0} {1} ({2}) sunulmak yerine geri tutuldu.</value></data>
   <!-- For the machine whose walk-derived half was withheld wholesale while a
        superseded patch was still offered: that run takes the found-files branch, so
        Cli.NothingOffered is not printed and this line is where stdout states the
@@ -1832,7 +1832,7 @@ InstallerClean'i yönetici olarak yeniden çalıştırın.</value></data>
        leaves {0} and {1} unused; both are passed on either branch so the two forms
        cannot disagree about which index is which. -->
   <data name="Cli.NothingListed.Singular" xml:space="preserve"><value>InstallerClean, önbellekteki dosyalardan hangisinin buradaki yüklü programlara ait olduğundan emin olamadı, bu yüzden tek dosyayı ({2}) sunmak yerine geri tuttu.</value></data>
-  <data name="Cli.NothingListed.Plural" xml:space="preserve"><value>InstallerClean, önbellekteki dosyalardan hangisinin buradaki yüklü programlara ait olduğundan emin olamadı, bu yüzden {0} {1} ({2}) sunmak yerine geri tuttu.</value></data>
+  <data name="Cli.NothingListed.Plural" xml:space="preserve"><value>InstallerClean, önbellekteki dosyalardan hangisinin buradaki yüklü programlara ait olduğundan emin olamadı, bu yüzden {0} {1} ({2}) sunulmak yerine geri tutuldu.</value></data>
   <!-- The per-file form of the pair above: a run that kept files back one at a time
        while still offering something, so the sentence names no cause that could be
        false of any file it counts.
@@ -1842,7 +1842,7 @@ InstallerClean'i yönetici olarak yeniden çalıştırın.</value></data>
        {2} and leaves {0} and {1} unused; both are passed on either branch so the two
        forms cannot disagree about which index is which. -->
   <data name="Cli.NothingListedPerFile.Singular" xml:space="preserve"><value>InstallerClean, bir dosyanın gereksiz olduğunu saptayamadı, bu yüzden o dosyayı ({2}) sunmak yerine geri tuttu.</value></data>
-  <data name="Cli.NothingListedPerFile.Plural" xml:space="preserve"><value>InstallerClean, {0} {1} ({2}) gereksiz olarak saptayamadığı için bunları sunmak yerine geri tuttu.</value></data>
+  <data name="Cli.NothingListedPerFile.Plural" xml:space="preserve"><value>InstallerClean, dosyaların gereksiz olduğunu saptayamadı, bu yüzden {0} {1} ({2}) sunulmak yerine geri tutuldu.</value></data>
   <!-- Introduces the conditions this run met. It prints under whichever of the
        Cli.NothingOffered and Cli.NothingListed sentences that run chose, the
        per-file forms included, so it has to read correctly under all four rather

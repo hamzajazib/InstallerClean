@@ -1003,7 +1003,7 @@
     <comment>Bullet 11 of eleven in the panel opened from the small &quot;i&quot; beside Completion.SendReport, each naming one kind of thing the report carries. A fragment with no full stop, like the others in the list.</comment>
   </data>
   <data name="Completion.ReportPanel.Closing" xml:space="preserve">
-    <value>Каждый из этих пунктов — количество или метка. Ничто в отчёте не указывает на вас, ваш ПК, ваши файлы или программы, и я никогда не вижу ваш IP-адрес.</value>
+    <value>Каждый из этих пунктов — число или метка. Ничто в отчёте не указывает на вас, ваш ПК, ваши файлы или программы, и я никогда не вижу ваш IP-адрес.</value>
     <comment>The closing line of the panel opened from the small &quot;i&quot; beside Completion.SendReport, under the eleven bullets. &quot;I&quot; is the app's author.</comment>
   </data>
   <data name="Completion.ReportPanel.SeeReport" xml:space="preserve">
