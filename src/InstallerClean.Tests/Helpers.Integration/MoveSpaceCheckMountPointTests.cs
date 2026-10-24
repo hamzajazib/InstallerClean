@@ -232,16 +232,16 @@ public class MoveSpaceCheckMountPointTests(ITestOutputHelper output)
     [MountedVolumeFact]
     public void Row17_a_destination_under_the_mount_is_recorded_as_another_fixed_drive()
     {
-        var got = CleanupViewModel.ClassifyMoveDestination(UnderMount);
-        Row(17, $"ClassifyMoveDestination({UnderMount})", MoveDestinationKinds.DifferentFixedDrive, got);
+        var got = MoveDestinationClassifier.Classify(UnderMount);
+        Row(17, $"MoveDestinationClassifier.Classify({UnderMount})", MoveDestinationKinds.DifferentFixedDrive, got);
         Assert.Equal(MoveDestinationKinds.DifferentFixedDrive, got);
     }
 
     [MountedVolumeFact]
     public void Row18_a_destination_beside_the_mount_is_recorded_as_the_same_drive()
     {
-        var got = CleanupViewModel.ClassifyMoveDestination(BesideDestination);
-        Row(18, $"ClassifyMoveDestination({BesideDestination})", MoveDestinationKinds.SameDrive, got);
+        var got = MoveDestinationClassifier.Classify(BesideDestination);
+        Row(18, $"MoveDestinationClassifier.Classify({BesideDestination})", MoveDestinationKinds.SameDrive, got);
         Assert.Equal(MoveDestinationKinds.SameDrive, got);
     }
 

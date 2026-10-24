@@ -38,7 +38,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     /// <remarks>
     /// ONE FIELD BECAUSE THERE IS ONE QUESTION. The class asks it twice, from
     /// <see cref="ResolveDestinationVolumeAsync"/> for the tooltip and from
-    /// <see cref="ClassifyMoveDestination"/> for the result-log label, and two
+    /// <see cref="MoveDestinationClassifier.Classify"/> for the result-log label, and two
     /// routes to one answer are two things to keep in step.
     ///
     /// It answers about a real volume, so what a folder is on cannot be arranged
@@ -56,15 +56,6 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     private CancellationTokenSource? _moveDestinationSaveCts;
     private CancellationTokenSource? _destinationVolumeCts;
     private AppSettings _settings;
-
-    /// <summary>
-    /// The volume question as the app asks it, and the value both readings fall
-    /// back to. A wrapper rather than the method itself because
-    /// <see cref="MoveSpaceCheck.ResolveIsOnInstallerCacheDrive"/> carries an
-    /// optional second parameter, which no delegate of this shape can bind.
-    /// </summary>
-    private static bool? AskWhetherOnCacheVolume(string destination) =>
-        MoveSpaceCheck.ResolveIsOnInstallerCacheDrive(destination);
 
     /// <summary>
     /// Debounce window for write-back of MoveDestination edits. Each
@@ -277,7 +268,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         _scan = scan;
         _completion = completion;
         _reverifier = reverifier;
-        _resolveIsOnCacheVolume = resolveIsOnCacheVolume ?? AskWhetherOnCacheVolume;
+        _resolveIsOnCacheVolume = resolveIsOnCacheVolume ?? MoveDestinationClassifier.AskWhetherOnCacheVolume;
         _instanceLockLost = instanceLockLost ?? (() => false);
 
         _settings = settingsService.Load();
@@ -840,7 +831,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // which is the case this arm exists for.
             return new DestinationPreFlight(
                 false, false,
-                ClassifyMoveDestination(dest, _resolveIsOnCacheVolume),
+                MoveDestinationClassifier.Classify(dest, _resolveIsOnCacheVolume),
                 StorageHelpers.GetAvailableFreeSpace(dest));
         }, probeToken);
 
@@ -1207,7 +1198,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                     _completion.ShowMoveStoppedSummary(ex.Partial.MovedCount,
                         CompletedBytes(abortSurviving, ex.Partial.MovedCount, ex.Partial.Errors),
                         ex.Destination, ex.Partial.Errors, ClassifySpaceOutcome(destinationKind),
-                        FoldHeldBack(reverify, ex.Partial.HeldBack, ex.Partial.HeldBackReasons));
+                        reverify.WithHeldBack(ex.Partial.HeldBack, ex.Partial.HeldBackReasons));
                 }
                 return;
             }
@@ -1289,7 +1280,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 var reclaimed = new HashSet<string>(result.HeldBack, StringComparer.OrdinalIgnoreCase);
                 survivingFiles = survivingFiles.Where(f => !reclaimed.Contains(f.FullPath)).ToList();
                 survivingBytes = survivingFiles.Sum(f => f.SizeBytes);
-                reverify = FoldHeldBack(reverify, result.HeldBack, result.HeldBackReasons);
+                reverify = reverify.WithHeldBack(result.HeldBack, result.HeldBackReasons);
             }
 
             if (result.HeldBack.Count > 0 && survivingFiles.Count == 0)
@@ -1657,7 +1648,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 var reclaimed = new HashSet<string>(result.HeldBack, StringComparer.OrdinalIgnoreCase);
                 survivingFiles = survivingFiles.Where(f => !reclaimed.Contains(f.FullPath)).ToList();
                 survivingBytes = survivingFiles.Sum(f => f.SizeBytes);
-                reverify = FoldHeldBack(reverify, result.HeldBack, result.HeldBackReasons);
+                reverify = reverify.WithHeldBack(result.HeldBack, result.HeldBackReasons);
             }
 
             if (result.HeldBack.Count > 0 && survivingFiles.Count == 0)
@@ -1809,73 +1800,6 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         }
         if (actedOn > 0) _completion.RecordFirstRun();
         return false;
-    }
-
-    /// <summary>
-    /// Folds the paths an action service held back under the installer mutex into
-    /// the pre-act re-verify's own account of what it kept back, so the user is
-    /// shown one account of one batch.
-    ///
-    /// Which side of the mutex a file was condemned on is a fact about how the
-    /// check is built rather than about what happened to the file, so the two
-    /// producers earn no line of their own. The tallies are ADDED rather than
-    /// merged, because the two hold back DIFFERENT files: the one number the user
-    /// reads is every file the run held back, and anything that merged rather than
-    /// added would under-count it. The count per cause under that number is added
-    /// for the same reason, and the opt-in result log is what reads it.
-    ///
-    /// The SURVIVING claims move with the paths, because those three collections
-    /// describe one set of files and have to agree: a path leaving
-    /// <c>Surviving</c> for <c>Dropped</c> takes every claim naming it, a patch
-    /// held by several products carrying one per product. A claim left behind
-    /// would make <c>SurvivingPatchClaims</c> name a file the same result has just
-    /// declared held back. <see cref="PatchClaim.LocalPackagePath"/> is normalised
-    /// the way the registered rows are, so the one case-insensitive set answers
-    /// for both.
-    ///
-    /// The SIBLING claims do not, and the body says why. They are the other half
-    /// of what the under-lease re-read is asked, they are keyed by product rather
-    /// than by path, and this is the one place in the app that builds a
-    /// <see cref="ReverifyResult"/> out of another one.
-    /// </summary>
-    internal static ReverifyResult FoldHeldBack(
-        ReverifyResult reverify, IReadOnlyList<string> heldBack, HeldBackReasons reasons)
-    {
-        if (heldBack.Count == 0) return reverify;
-
-        var condemned = new HashSet<string>(heldBack, StringComparer.OrdinalIgnoreCase);
-        // A WITH-EXPRESSION RATHER THAN A REBUILD, and that is the whole of why
-        // SiblingPatchClaims is still here. A positional form naming only some of the
-        // record's members leaves the rest at their defaults, the sibling list among
-        // them, which is a batch with no siblings: the exact pairing UnderLeaseClaims
-        // exists to make unconstructible. This form carries whatever the author did
-        // not name, so a member added to ReverifyResult later arrives here without
-        // anybody having to remember it.
-        //
-        // AND THE SIBLING LIST PASSES THROUGH UNFILTERED, WHICH IS NOT AN OVERSIGHT
-        // AND IS THE THING TO GET WRONG HERE. The surviving claims are keyed by
-        // PATH, so they leave with their paths, which is what the filter below
-        // does. The siblings are keyed by PRODUCT: the re-read walks them by
-        // product code and condemns every batch path on a product one of them
-        // answers badly for. Filtering them by condemned path would throw away the
-        // row that answers for a product a surviving path is still registered to,
-        // and so narrow the very check this is restoring.
-        //
-        // What unfiltered costs, weighed and accepted rather than unnoticed: a
-        // folded result carries siblings for products no surviving path is left on,
-        // so a re-read handed one would make keyed reads that can condemn nothing,
-        // with the machine-wide installer lease held. It is bounded by the batch's
-        // own products, the reads are keyed rather than an enumeration, and a
-        // narrower list would have to be built by product and never by path. That
-        // saving is not worth a second way of getting this wrong.
-        return reverify with
-        {
-            Surviving = reverify.Surviving.Where(p => !condemned.Contains(p)).ToList().AsReadOnly(),
-            Dropped = reverify.Dropped.Concat(heldBack).ToList().AsReadOnly(),
-            Reasons = reverify.Reasons + reasons,
-            SurvivingPatchClaims = reverify.SurvivingPatchClaims
-                .Where(c => !condemned.Contains(c.LocalPackagePath)).ToList().AsReadOnly(),
-        };
     }
 
     /// <summary>
@@ -2303,84 +2227,6 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         MoveDestinationKinds.SameDrive => MoveSpaceOutcome.SameDrive,
         _ => MoveSpaceOutcome.Unclassified,
     };
-
-    /// <summary>
-    /// Classifies the move destination for the result log. Returns one of
-    /// <see cref="MoveDestinationKinds"/>: <c>uncShare</c> for a share,
-    /// <c>sameDrive</c> when the destination is on the volume the Installer
-    /// cache is on, <c>removableDrive</c> or <c>differentFixedDrive</c> for
-    /// another volume by what is mounted there, and <c>unknown</c> for anything
-    /// that could not be established.
-    /// </summary>
-    /// <remarks>
-    /// ASKED ABOUT THE VOLUME AND NOT THE LETTER. Do not classify from the drive
-    /// letter: Path.GetPathRoot handed to DriveInfo classifies a destination under
-    /// a volume mounted into a folder on C: by whatever C: is, and a removable disk
-    /// mounted at <c>C:\Data</c> then reads as a fixed drive. No sentence the user
-    /// reads depends on the difference, because ClassifySpaceOutcome maps fixed,
-    /// removable and share alike to "space was freed". The field is read in the
-    /// result log and in the opt-in report, where a wrong value reads as an answer.
-    ///
-    /// DriveInfo cannot be asked the right question. It is built from a
-    /// drive-letter root, and a mounted folder has no letter, so
-    /// StorageHelpers.GetDriveKind takes the mount point instead.
-    ///
-    /// THREE VOLUME QUERIES RATHER THAN TWO, ON PURPOSE. The same-drive answer comes
-    /// from MoveSpaceCheck so that this window and the command line cannot answer
-    /// it differently, which is the reason that decision lives in Core at all.
-    /// Two of the three are its own, one for the cache folder and one for the
-    /// destination; threading the destination's mount point out of it to save
-    /// the duplicate below would buy back one call per Move and put that back at
-    /// risk. This runs once per operation, inside the pre-flight, off the
-    /// dispatcher.
-    /// </remarks>
-    /// <param name="dest">The folder the move would write into.</param>
-    /// <param name="resolveIsOnCacheVolume">
-    /// The same-drive question, taken rather than reached for: the caller in this
-    /// class hands over <see cref="_resolveIsOnCacheVolume"/>, so the label written
-    /// to the result log and the answer behind the tooltip come from one place.
-    /// Omitted, it is <see cref="AskWhetherOnCacheVolume"/>, which is what the app
-    /// itself asks, so a call site that leaves it out gets the app's own answer.
-    /// </param>
-    internal static string ClassifyMoveDestination(
-        string dest, Func<string, bool?>? resolveIsOnCacheVolume = null)
-    {
-        if (string.IsNullOrWhiteSpace(dest)) return MoveDestinationKinds.Unknown;
-
-        // Answered from the spelling, before anything is asked of the network.
-        // The same test MoveSpaceCheck uses, so the two cannot disagree about
-        // what counts as a share.
-        if (StorageHelpers.IsRemotePath(dest)) return MoveDestinationKinds.UncShare;
-
-        // Three-state for the same reason the tooltip is: this value goes into
-        // the result log and the opt-in report, and it is read as an answer. A
-        // volume question Windows would not settle is unknown, not another
-        // drive, and calling it another drive is what would let the completion
-        // card head a move with a freed count it had not established.
-        var onCacheVolume = (resolveIsOnCacheVolume ?? AskWhetherOnCacheVolume)(dest);
-        if (onCacheVolume is null) return MoveDestinationKinds.Unknown;
-        if (onCacheVolume.Value) return MoveDestinationKinds.SameDrive;
-
-        try
-        {
-            var volume = StorageHelpers.GetVolumeMountPoint(Path.GetFullPath(dest));
-            if (volume is null) return MoveDestinationKinds.Unknown;
-
-            return StorageHelpers.GetDriveKind(volume) switch
-            {
-                DriveType.Fixed => MoveDestinationKinds.DifferentFixedDrive,
-                DriveType.Removable => MoveDestinationKinds.RemovableDrive,
-                // A mapped drive letter reaches here rather than the spelling
-                // test above, its path being local in shape and remote in fact.
-                DriveType.Network => MoveDestinationKinds.UncShare,
-                _ => MoveDestinationKinds.Unknown,
-            };
-        }
-        catch
-        {
-            return MoveDestinationKinds.Unknown;
-        }
-    }
 
     /// <summary>
     /// Maps a destination-write failure to a localised explanation.

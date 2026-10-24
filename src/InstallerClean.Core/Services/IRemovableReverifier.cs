@@ -447,4 +447,70 @@ public record ReverifyResult(
     /// </summary>
     public IReadOnlyList<SourceRootGivenUp> SourceRootsGivenUpKeepingFiles =>
         SourceRootGivenUp.KeepingFiles(SourceRootsGivenUp);
+
+    /// <summary>
+    /// Folds the paths an action service held back under the installer mutex into
+    /// the pre-act re-verify's own account of what it kept back, so the user is
+    /// shown one account of one batch.
+    ///
+    /// Which side of the mutex a file was condemned on is a fact about how the
+    /// check is built rather than about what happened to the file, so the two
+    /// producers earn no line of their own. The tallies are ADDED rather than
+    /// merged, because the two hold back DIFFERENT files: the one number the user
+    /// reads is every file the run held back, and anything that merged rather than
+    /// added would under-count it. The count per cause under that number is added
+    /// for the same reason, and the opt-in result log is what reads it.
+    ///
+    /// The SURVIVING claims move with the paths, because those three collections
+    /// describe one set of files and have to agree: a path leaving
+    /// <c>Surviving</c> for <c>Dropped</c> takes every claim naming it, a patch
+    /// held by several products carrying one per product. A claim left behind
+    /// would make <c>SurvivingPatchClaims</c> name a file the same result has just
+    /// declared held back. <see cref="PatchClaim.LocalPackagePath"/> is normalised
+    /// the way the registered rows are, so the one case-insensitive set answers
+    /// for both.
+    ///
+    /// The SIBLING claims do not, and the body says why. They are the other half
+    /// of what the under-lease re-read is asked, they are keyed by product rather
+    /// than by path, and this is the one place in the app that builds a
+    /// <see cref="ReverifyResult"/> out of another one.
+    /// </summary>
+    public ReverifyResult WithHeldBack(IReadOnlyList<string> heldBack, HeldBackReasons reasons)
+    {
+        if (heldBack.Count == 0) return this;
+
+        var condemned = new HashSet<string>(heldBack, StringComparer.OrdinalIgnoreCase);
+        // A WITH-EXPRESSION RATHER THAN A REBUILD, and that is the whole of why
+        // SiblingPatchClaims is still here. A positional form naming only some of the
+        // record's members leaves the rest at their defaults, the sibling list among
+        // them, which is a batch with no siblings: the exact pairing UnderLeaseClaims
+        // exists to make unconstructible. This form carries whatever the author did
+        // not name, so a member added to ReverifyResult later arrives here without
+        // anybody having to remember it.
+        //
+        // AND THE SIBLING LIST PASSES THROUGH UNFILTERED, WHICH IS NOT AN OVERSIGHT
+        // AND IS THE THING TO GET WRONG HERE. The surviving claims are keyed by
+        // PATH, so they leave with their paths, which is what the filter below
+        // does. The siblings are keyed by PRODUCT: the re-read walks them by
+        // product code and condemns every batch path on a product one of them
+        // answers badly for. Filtering them by condemned path would throw away the
+        // row that answers for a product a surviving path is still registered to,
+        // and so narrow the very check this is restoring.
+        //
+        // What unfiltered costs, weighed and accepted rather than unnoticed: a
+        // folded result carries siblings for products no surviving path is left on,
+        // so a re-read handed one would make keyed reads that can condemn nothing,
+        // with the machine-wide installer lease held. It is bounded by the batch's
+        // own products, the reads are keyed rather than an enumeration, and a
+        // narrower list would have to be built by product and never by path. That
+        // saving is not worth a second way of getting this wrong.
+        return this with
+        {
+            Surviving = Surviving.Where(p => !condemned.Contains(p)).ToList().AsReadOnly(),
+            Dropped = Dropped.Concat(heldBack).ToList().AsReadOnly(),
+            Reasons = Reasons + reasons,
+            SurvivingPatchClaims = SurvivingPatchClaims
+                .Where(c => !condemned.Contains(c.LocalPackagePath)).ToList().AsReadOnly(),
+        };
+    }
 }

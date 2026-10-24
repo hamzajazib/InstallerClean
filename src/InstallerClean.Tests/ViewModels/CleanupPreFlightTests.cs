@@ -1199,7 +1199,7 @@ public class CleanupPreFlightTests
     public async Task A_move_to_the_same_drive_tells_the_confirmation_it_frees_no_space()
     {
         // Built from a real volume rather than %TEMP%, because
-        // ClassifyMoveDestination asks Windows which volume the destination is
+        // MoveDestinationClassifier.Classify asks Windows which volume the destination is
         // on and compares that against the installer cache's: a move to the
         // volume the cache is already on is a rename, and frees nothing until
         // the user deletes the copies parked there. The dialog is the last

@@ -1,16 +1,15 @@
 using InstallerClean.Models;
 using InstallerClean.Services;
-using InstallerClean.ViewModels;
 
-namespace InstallerClean.Tests.ViewModels;
+namespace InstallerClean.Tests.Services;
 
 /// <summary>
-/// What the fold does to what it carries besides the two path lists: the two claim
-/// lists, and the drives and shares the check gave up with the waits it made, which
-/// are each a different question from what it does to the path lists.
+/// What <see cref="ReverifyResult.WithHeldBack"/> does to what it carries besides the two
+/// path lists: the two claim lists, and the drives and shares the check gave up with the
+/// waits it made, which are each a different question from what it does to the path lists.
 /// </summary>
 /// <remarks>
-/// THE FOLD IS THE ONE PLACE IN THE APP THAT BUILDS A ReverifyResult OUT OF
+/// WithHeldBack IS THE ONE PLACE IN THE APP THAT BUILDS A ReverifyResult OUT OF
 /// ANOTHER ONE, so it is the one place a field can be dropped in the making. The
 /// two claim lists are not symmetric and the tests here say so in both
 /// directions: the surviving claims are keyed by path and follow their paths out
@@ -26,7 +25,7 @@ namespace InstallerClean.Tests.ViewModels;
 /// of the pair without the other, and a rebuild that drops a half puts that state
 /// back inside the process whether or not anything reads it this month.
 /// </remarks>
-public class CleanupViewModelFoldTests
+public class ReverifyResultWithHeldBackTests
 {
     private const string Held = @"C:\Windows\Installer\held.msp";
     private const string Kept = @"C:\Windows\Installer\kept.msp";
@@ -48,8 +47,7 @@ public class CleanupViewModelFoldTests
             SurvivingPatchClaims: new[] { Claim(Held), Claim(Kept) },
             SiblingPatchClaims: siblings);
 
-        var after = CleanupViewModel.FoldHeldBack(
-            before, new[] { Held }, new HeldBackReasons(Reclaimed: 1));
+        var after = before.WithHeldBack(new[] { Held }, new HeldBackReasons(Reclaimed: 1));
 
         Assert.Equal(siblings, after.SiblingPatchClaims);
     }
@@ -64,8 +62,7 @@ public class CleanupViewModelFoldTests
             SurvivingPatchClaims: new[] { Claim(Held), Claim(Kept) },
             SiblingPatchClaims: new[] { Claim(Held), Claim(Kept) });
 
-        var after = CleanupViewModel.FoldHeldBack(
-            before, new[] { Held }, new HeldBackReasons(Reclaimed: 1));
+        var after = before.WithHeldBack(new[] { Held }, new HeldBackReasons(Reclaimed: 1));
 
         Assert.Equal(new[] { Claim(Kept) }, after.SurvivingPatchClaims);
         Assert.Equal(new[] { Kept }, after.Surviving);
@@ -82,8 +79,7 @@ public class CleanupViewModelFoldTests
         // the whole of the fix rests on what the copy does.
         var before = new ReverifyResult(new[] { Kept }, Array.Empty<string>());
 
-        var after = CleanupViewModel.FoldHeldBack(
-            before, new[] { Kept }, new HeldBackReasons(Reclaimed: 1));
+        var after = before.WithHeldBack(new[] { Kept }, new HeldBackReasons(Reclaimed: 1));
 
         Assert.Empty(after.SurvivingPatchClaims);
         Assert.Empty(after.SiblingPatchClaims);
@@ -103,8 +99,7 @@ public class CleanupViewModelFoldTests
             new[] { Held, Kept }, Array.Empty<string>(),
             SourceRootsGivenUp: givenUp, SourceWaitCount: 3);
 
-        var after = CleanupViewModel.FoldHeldBack(
-            before, new[] { Held }, new HeldBackReasons(Reclaimed: 1));
+        var after = before.WithHeldBack(new[] { Held }, new HeldBackReasons(Reclaimed: 1));
 
         Assert.Equal(givenUp, after.SourceRootsGivenUp);
         Assert.Equal(new[] { givenUp[0] }, after.SourceRootsGivenUpKeepingFiles);
@@ -119,7 +114,6 @@ public class CleanupViewModelFoldTests
             SurvivingPatchClaims: new[] { Claim(Kept) },
             SiblingPatchClaims: new[] { Claim(Kept) });
 
-        Assert.Same(before, CleanupViewModel.FoldHeldBack(
-            before, Array.Empty<string>(), default));
+        Assert.Same(before, before.WithHeldBack(Array.Empty<string>(), default));
     }
 }
