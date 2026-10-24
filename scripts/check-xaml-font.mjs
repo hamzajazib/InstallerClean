@@ -27,6 +27,11 @@
 //   a ContextMenu built in code take. A ToolTip or ContextMenu element naming a
 //   Style names one of those, and C# sets no Style on either.
 //
+//   A UserControl. It is not a root of its own: its text takes the font of the window
+//   it is placed in, through inheritance. One placed in a ToolTip or a ContextMenu,
+//   or in a Style targeting either, would draw in the system font, so such a use
+//   has to carry a FontFamily of its own and fails otherwise.
+//
 // EVERY REFERENCE TO THE TOKEN IS A DynamicResource. App.OnStartup writes the
 // displayed language's family over Type.FontFamily in the application's own
 // resources. A StaticResource inside Components.xaml resolves against the
@@ -55,6 +60,8 @@ const POPUPS = ['ToolTip', 'ContextMenu'];
 // Roots that draw nothing themselves: Application hosts resources, and a
 // ResourceDictionary's styles are checked where they target a popup.
 const NON_DRAWING_ROOTS = new Set(['Application', 'ResourceDictionary']);
+// A UserControl's text is drawn under the element it is placed in.
+const HOSTED_ROOTS = new Set(['UserControl']);
 
 // XAML with its comments blanked.
 const xamlText = (file) => {
@@ -157,6 +164,8 @@ if (xamlFiles.length === 0 || csFiles.length === 0) {
 const windowClasses = new Set(); // x:Class of every Window root carrying the font
 const popupStyles = []; // { file, line, target, key, basedOn, setsFont, fontValue }
 const popupElements = []; // { file, line, name, style }
+const userControls = new Set(); // simple class name of every XAML file whose root is a UserControl
+const elementUses = []; // { file, line, local, inPopup, hasFont } for every element, to find UserControls in popups
 
 for (const file of xamlFiles) {
   const text = xamlText(file);
@@ -185,6 +194,10 @@ for (const file of xamlFiles) {
     } else if (cls) {
       windowClasses.add(cls);
     }
+  } else if (HOSTED_ROOTS.has(root.name)) {
+    const cls = attr(root.raw, 'x:Class');
+    if (cls) userControls.add(cls.split('.').pop());
+    else problems.push(`${file}:${root.line}: the <${root.name}> root has no x:Class, so its uses cannot be found`);
   } else if (!NON_DRAWING_ROOTS.has(root.name)) {
     problems.push(`${file}:${root.line}: root element <${root.name}> is not one this check knows. Teach it where text under that root takes its font.`);
   }
@@ -215,6 +228,13 @@ for (const file of xamlFiles) {
         fontValue: null,
       };
     }
+    elementUses.push({
+      file,
+      line: t.line,
+      local: t.name.split(':').pop(),
+      inPopup: stack.some((e) => POPUPS.includes(e.name) || e.style),
+      hasFont: attr(t.raw, 'FontFamily') === FONT,
+    });
     if (POPUPS.includes(t.name)) {
       popupElements.push({ file, line: t.line, name: t.name, style: attr(t.raw, 'Style') });
     }
@@ -223,6 +243,12 @@ for (const file of xamlFiles) {
     } else {
       stack.push({ name: t.name, style });
     }
+  }
+}
+
+for (const u of elementUses) {
+  if (userControls.has(u.local) && u.inPopup && !u.hasFont) {
+    problems.push(`${u.file}:${u.line}: <${u.local}> is a UserControl placed in a popup, which inherits no font from a window; expected FontFamily="${FONT}" on it`);
   }
 }
 

@@ -213,31 +213,9 @@
                                    Visibility="{Binding Chrome.ShowsScoopCommand, Converter={StaticResource BoolToVis}}"
                                    AutomationProperties.Name="{Binding Chrome.ScoopUpdateSpoken}"
                                    AutomationProperties.LiveSetting="Polite"/>
-                        <WrapPanel Margin="{StaticResource GapTop.Sm}"
-                                   Visibility="{Binding Chrome.ShowsScoopCommand, Converter={StaticResource BoolToVis}}">
-                            <Border Background="{StaticResource Surface.Sidebar}" CornerRadius="{StaticResource Radius.Panel}"
-                                    BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}"
-                                    Padding="10,6" Margin="0,4,12,0" VerticalAlignment="Center">
-                                <TextBox x:Name="UpdateNoticeScoopCommand"
-                                         Style="{StaticResource SelectableText}"
-                                         Text="{Binding Chrome.ScoopUpdateCommand, Mode=OneWay}"
-                                         Foreground="{StaticResource Text.Heading}"
-                                         FontFamily="Consolas, Cascadia Mono, Lucida Console"
-                                         FontSize="{DynamicResource Type.Body}"
-                                         FocusVisualStyle="{StaticResource FlatTextBoxFocusVisual}"
-                                         AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.ScoopCommand}"/>
-                            </Border>
-                            <Button x:Name="UpdateNoticeCopyButton" Style="{StaticResource CompactAccentPill}"
-                                    Content="{Binding Chrome.CopyScoopUpdateText}"
-                                    Command="{Binding Chrome.CopyScoopUpdateCommand}"
-                                    Margin="0,4,0,0" VerticalAlignment="Center"
-                                    AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.CopyCommand}"/>
-                        </WrapPanel>
-                        <TextBlock x:Name="UpdateNoticeCopyFailure" Text="{loc:Translate UpdateNotice.CopyFailed}"
-                                   Foreground="{StaticResource Status.Warning}" FontSize="{DynamicResource Type.Body}"
-                                   TextWrapping="Wrap" Margin="{StaticResource GapTop.Sm}"
-                                   Visibility="{Binding Chrome.HasScoopUpdateCopyFailed, Converter={StaticResource BoolToVis}}"
-                                   AutomationProperties.LiveSetting="Polite"/>
+                        <chrome:ScoopCommandBox x:Name="UpdateNoticeScoopBox" DataContext="{Binding Chrome}"
+                                                AutomationIdPrefix="UpdateNotice"
+                                                CopyButtonStyle="{StaticResource CompactAccentPill}"/>
                         <!-- Update now wherever the app can update itself; the link where it
                              cannot or the newer version's release rules this copy out, and
                              beside Update now after an update that failed; the link to
@@ -1638,31 +1616,9 @@
                                 Command="{Binding Chrome.UpdateNowCommand}"
                                 HorizontalAlignment="Center" Margin="0,0,0,8"
                                 Visibility="{Binding Chrome.ShowsUpdateNow, Converter={StaticResource BoolToVis}}"/>
-                        <WrapPanel HorizontalAlignment="Center" Margin="0,0,0,8"
-                                   Visibility="{Binding Chrome.ShowsScoopCommand, Converter={StaticResource BoolToVis}}">
-                            <Border Background="{StaticResource Surface.Sidebar}" CornerRadius="{StaticResource Radius.Panel}"
-                                    BorderBrush="{StaticResource Action.Standard.Background}" BorderThickness="{StaticResource BorderThickness.Hairline}"
-                                    Padding="10,6" Margin="0,0,12,0" VerticalAlignment="Center">
-                                <TextBox x:Name="UpdateOfferScoopCommand"
-                                         Style="{StaticResource SelectableText}"
-                                         Text="{Binding Chrome.ScoopUpdateCommand, Mode=OneWay}"
-                                         Foreground="{StaticResource Text.Heading}"
-                                         FontFamily="Consolas, Cascadia Mono, Lucida Console"
-                                         FontSize="{DynamicResource Type.Body}"
-                                         FocusVisualStyle="{StaticResource FlatTextBoxFocusVisual}"
-                                         AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.ScoopCommand}"/>
-                            </Border>
-                            <Button x:Name="UpdateOfferCopyButton" Style="{StaticResource AccentPill}"
-                                    Content="{Binding Chrome.CopyScoopUpdateText}"
-                                    Command="{Binding Chrome.CopyScoopUpdateCommand}"
-                                    VerticalAlignment="Center"
-                                    AutomationProperties.Name="{loc:Translate Automation.UpdateNotice.CopyCommand}"/>
-                        </WrapPanel>
-                        <TextBlock x:Name="UpdateOfferCopyFailure" Text="{loc:Translate UpdateNotice.CopyFailed}"
-                                   Foreground="{StaticResource Status.Warning}" FontSize="{DynamicResource Type.Body}"
-                                   TextWrapping="Wrap" TextAlignment="Center" Margin="0,0,0,8"
-                                   Visibility="{Binding Chrome.HasScoopUpdateCopyFailed, Converter={StaticResource BoolToVis}}"
-                                   AutomationProperties.LiveSetting="Polite"/>
+                        <chrome:ScoopCommandBox x:Name="UpdateOfferScoopBox" DataContext="{Binding Chrome}"
+                                                OnCard="True" AutomationIdPrefix="UpdateOffer"
+                                                CopyButtonStyle="{StaticResource AccentPill}"/>
                         <TextBlock FontSize="{DynamicResource Type.Heading.Sm}" FontWeight="Medium"
                                    TextWrapping="Wrap" TextAlignment="Center"
                                    HorizontalAlignment="Center" Margin="0,8,0,8"

@@ -208,6 +208,7 @@ const PROPERTY_TYPES = new Map([
   ['FocusVisualStyle', 'Style'],
   ['HeaderContainerStyle', 'Style'],
   ['Style', 'Style'],
+  ['CopyButtonStyle', 'Style'],
 ]);
 
 // Where a row above claims a resource satisfies something OTHER than its own

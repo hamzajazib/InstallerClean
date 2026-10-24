@@ -221,7 +221,7 @@ public partial class MainWindow : Window
     /// </summary>
     private void FocusUpdateOffer()
     {
-        if (!UpdateOfferUpdateNowButton.Focus() && !UpdateOfferCopyButton.Focus()
+        if (!UpdateOfferUpdateNowButton.Focus() && !UpdateOfferScoopBox.FocusCopy()
             && !UpdateOfferDownloadLink.Focus() && !UpdateOfferNetFrameworkLink.Focus())
             UpdateOfferContinueButton.Focus();
     }
@@ -631,9 +631,9 @@ public partial class MainWindow : Window
         if (copied)
             Announce(Strings.UpdateNotice_CommandCopied);
         else if (_vm.Chrome.IsOfferingUpdate)
-            AnnounceLiveRegion(UpdateOfferCopyFailure, () => _vm.Chrome.HasScoopUpdateCopyFailed);
+            AnnounceLiveRegion(UpdateOfferScoopBox.CopyFailureLine, () => _vm.Chrome.HasScoopUpdateCopyFailed);
         else
-            AnnounceLiveRegion(UpdateNoticeCopyFailure, () => _vm.Chrome.HasScoopUpdateCopyFailed);
+            AnnounceLiveRegion(UpdateNoticeScoopBox.CopyFailureLine, () => _vm.Chrome.HasScoopUpdateCopyFailed);
     }
 
     /// <summary>
