@@ -589,7 +589,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /d         Delete unneeded files permanently |   installerclean-cli /d         Elimina definitivamente los innecesarios |
 |   installerclean-cli /m         Move to the saved backup folder |   installerclean-cli /m         Mueve a la carpeta de copia de seguridad |
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m RUTA    Mueve a la ruta especificada |
-| installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli bloquea el símbolo del sistema hasta terminar, para<br>que un script o una tarea programada pueda esperarlo. |
+| installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli bloquea el símbolo del sistema hasta terminar,<br>para que un script o una tarea programada pueda esperarlo. |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | Carpeta por usuario; ejecuciones programadas o SYSTEM: /m RUTA. |
 | Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | Antes de analizar, comprueba si hay una versión más reciente de<br>InstallerClean. Cuando lo ejecutas tú, pregunta antes de actualizar.<br>Cuando se ejecuta solo, en una tarea programada o un script, se actualiza<br>sin preguntar. Añade /noupdate para omitir la comprobación. |
 | Exit codes: | Códigos de salida: |

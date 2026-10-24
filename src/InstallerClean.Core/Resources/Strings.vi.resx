@@ -2581,7 +2581,7 @@ Hãy chạy lại InstallerClean với tư cách quản trị viên.</value></da
   <!-- ONE value carrying TWO printed lines, and the &#10; is where the English
        breaks rather than where every language must. A translation breaks where
        its own grammar allows, at a space or after punctuation and never inside a
-       word or a noun phrase, or not at all if it fits. -->
+       word, or not at all if it fits. -->
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli giữ dấu nhắc cho tới khi xong, để một tập lệnh hoặc&#10;một tác vụ theo lịch có thể chờ nó.</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>Thư mục theo người dùng; tác vụ theo lịch hoặc SYSTEM: /m ĐƯỜNG_DẪN.</value></data>
   <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the

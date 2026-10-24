@@ -385,7 +385,7 @@ const MAP = {
   'Cli.Help.Delete': `  installerclean-cli /d         Elimina definitivamente los innecesarios`,
   'Cli.Help.MoveDefault': `  installerclean-cli /m         Mueve a la carpeta de copia de seguridad`,
   'Cli.Help.MovePath': `  installerclean-cli /m RUTA    Mueve a la ruta especificada`,
-  'Cli.Help.NoteLine1': `installerclean-cli bloquea el símbolo del sistema hasta terminar, para&#10;que un script o una tarea programada pueda esperarlo.`,
+  'Cli.Help.NoteLine1': `installerclean-cli bloquea el símbolo del sistema hasta terminar,&#10;para que un script o una tarea programada pueda esperarlo.`,
   'Cli.Help.ExitCodesHeader': `Códigos de salida:`,
   'Cli.Help.ExitCodeOk': `  0   correcto: hizo lo que se le pidió`,
   'Cli.Help.ExitCodeError': `  1   nada procesado: la ejecución falló o fue rechazada`,

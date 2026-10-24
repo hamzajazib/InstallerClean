@@ -675,7 +675,7 @@ const MAP = {
   'Cli.UpdateRunningInstead': `Zamiast tego polecenie {0} zostanie uruchomione w wersji InstallerClean {1}.`,
   'Cli.UpdateNotStarted': `Wersja InstallerClean {0} jest zainstalowana, ale nie udało się jej uruchomić. Uruchom polecenie ponownie.`,
   'Cli.UpdateDownloadLink': `{0}: {1}`,
-  'Cli.Help.UpdateNote': `Przed skanowaniem sprawdza, czy jest nowsza wersja InstallerClean.&#10;Uruchomiony ręcznie pyta przed aktualizacją. Uruchomiony samodzielnie, w&#10;zadaniu zaplanowanym lub skrypcie, aktualizuje się bez pytania. Dodaj&#10;/noupdate, aby pominąć sprawdzanie.`,
+  'Cli.Help.UpdateNote': `Przed skanowaniem sprawdza, czy jest nowsza wersja InstallerClean.&#10;Uruchomiony ręcznie pyta przed aktualizacją. Uruchomiony samodzielnie,&#10;w zadaniu zaplanowanym lub skrypcie, aktualizuje się bez pytania. Dodaj&#10;/noupdate, aby pominąć sprawdzanie.`,
   'UpdateNotice.Scoop': `Ta kopia została zainstalowana przez Scoop. Aby ją zaktualizować, zamknij InstallerClean i uruchom:`,
   'UpdateNotice.CommandCopied': `Skopiowano`,
   'UpdateNotice.CopyFailed': `Nie udało się skopiować. Zaznacz polecenie i skopiuj je samodzielnie.`,

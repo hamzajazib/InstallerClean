@@ -2581,7 +2581,7 @@ InstallerClean을 관리자 권한으로 다시 실행하세요.</value></data>
   <!-- ONE value carrying TWO printed lines, and the &#10; is where the English
        breaks rather than where every language must. A translation breaks where
        its own grammar allows, at a space or after punctuation and never inside a
-       word or a noun phrase, or not at all if it fits. -->
+       word, or not at all if it fits. -->
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli는 끝날 때까지 프롬프트를 붙잡고 있으므로&#10;스크립트나 예약 작업이 이를 기다릴 수 있습니다.</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>폴더는 사용자별 저장. 예약 또는 SYSTEM 실행에는 /m 경로 필요.</value></data>
   <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the

@@ -2583,8 +2583,8 @@ Vuelve a ejecutar InstallerClean como administrador.</value></data>
   <!-- ONE value carrying TWO printed lines, and the &#10; is where the English
        breaks rather than where every language must. A translation breaks where
        its own grammar allows, at a space or after punctuation and never inside a
-       word or a noun phrase, or not at all if it fits. -->
-  <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli bloquea el símbolo del sistema hasta terminar, para&#10;que un script o una tarea programada pueda esperarlo.</value></data>
+       word, or not at all if it fits. -->
+  <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli bloquea el símbolo del sistema hasta terminar,&#10;para que un script o una tarea programada pueda esperarlo.</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>Carpeta por usuario; ejecuciones programadas o SYSTEM: /m RUTA.</value></data>
   <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the
        English breaks; a translation breaks within the 74-column cap where its own

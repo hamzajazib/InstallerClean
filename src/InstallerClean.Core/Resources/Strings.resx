@@ -2641,7 +2641,7 @@ Run InstallerClean again as administrator.</value></data>
   <!-- ONE value carrying TWO printed lines, and the &#10; is where the English
        breaks rather than where every language must. A translation breaks where
        its own grammar allows, at a space or after punctuation and never inside a
-       word or a noun phrase, or not at all if it fits. -->
+       word, or not at all if it fits. -->
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli blocks the prompt until it finishes, so a script or&#10;scheduled task can wait on it.</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>That folder is saved per-user; scheduled or SYSTEM runs need /m PATH.</value></data>
   <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the

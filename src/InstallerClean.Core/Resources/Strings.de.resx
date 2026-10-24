@@ -2583,7 +2583,7 @@ Führe InstallerClean erneut als Administrator aus.</value></data>
   <!-- ONE value carrying TWO printed lines, and the &#10; is where the English
        breaks rather than where every language must. A translation breaks where
        its own grammar allows, at a space or after punctuation and never inside a
-       word or a noun phrase, or not at all if it fits. -->
+       word, or not at all if it fits. -->
   <data name="Cli.Help.NoteLine1" xml:space="preserve"><value>installerclean-cli blockiert die Eingabeaufforderung bis zum Ende,&#10;damit ein Skript oder eine geplante Aufgabe darauf warten kann.</value></data>
   <data name="Cli.Help.MoveScheduledNote" xml:space="preserve"><value>Der Ordner gilt pro Benutzer; geplante Läufe und SYSTEM brauchen /m PFAD.</value></data>
   <!-- ONE value carrying FOUR printed lines, under the /m note. The &#10; is where the
