@@ -206,6 +206,13 @@ jobs:
         if: success() || failure()
         run: node scripts/check-update-manifest.mjs
 
+      # The files a copy downloads to update itself are named by AppCopy, and the
+      # files release.yml publishes have to be those names. This holds the four places
+      # release.yml names the downloads to the ones the app asks for.
+      - name: Check the download names the release publishes are the ones the app asks for
+        if: success() || failure()
+        run: node scripts/check-download-names.mjs
+
       # Every step in this job carries the same condition, for the reason set
       # out at the first guard: no step here is a premise for any other, so a
       # red one reports its own verdict and decides nothing about the rest.

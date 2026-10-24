@@ -147,8 +147,9 @@ public class AppCopyTests
 
     [Theory]
     [InlineData(AppCopyKind.Setup, "https://github.com/no-faff/InstallerClean/releases/download/v3.5.0/InstallerClean-3.5.0-setup.exe")]
-    [InlineData(AppCopyKind.Portable, "https://github.com/no-faff/InstallerClean/releases/download/v3.5.0/InstallerClean-3.5.0-portable.exe")]
-    [InlineData(AppCopyKind.Slim, "https://github.com/no-faff/InstallerClean/releases/download/v3.5.0/InstallerClean-3.5.0-slim.exe")]
+    [InlineData(AppCopyKind.Portable, "https://github.com/no-faff/InstallerClean/releases/download/v3.5.0/InstallerClean-portable.exe")]
+    [InlineData(AppCopyKind.Slim, "https://github.com/no-faff/InstallerClean/releases/download/v3.5.0/InstallerClean-slim.exe")]
+    [InlineData(AppCopyKind.CommandLineDownload, "https://github.com/no-faff/InstallerClean/releases/download/v3.5.0/installerclean-cli.exe")]
     public void Each_kind_downloads_its_own_file_from_the_releases_tag(AppCopyKind kind, string expected)
     {
         Assert.Equal(new Uri(expected), AppCopy.DownloadAddress(kind, "3.5.0"));
@@ -162,6 +163,20 @@ public class AppCopyTests
             new Uri("https://github.com/no-faff/InstallerClean/releases/download/v3.5.0/installerclean-cli.exe"),
             AppCopy.DownloadAddress(AppCopyKind.CommandLineDownload, "3.5.0"));
         Assert.True(AppCopy.CanUpdateItself(AppCopyKind.CommandLineDownload));
+    }
+
+    [Fact]
+    public void Only_the_setups_file_name_carries_the_version()
+    {
+        Assert.Equal("InstallerClean-3.5.0-setup.exe", AppCopy.DownloadFileName(AppCopyKind.Setup, "3.5.0"));
+        Assert.Equal("InstallerClean-3.6.0-setup.exe", AppCopy.DownloadFileName(AppCopyKind.Setup, "3.6.0"));
+        foreach (var kind in new[] { AppCopyKind.Portable, AppCopyKind.Slim, AppCopyKind.CommandLineDownload })
+        {
+            var name = AppCopy.DownloadFileName(kind, "3.5.0");
+            Assert.NotNull(name);
+            Assert.DoesNotContain("3.5.0", name);
+            Assert.Equal(name, AppCopy.DownloadFileName(kind, "3.6.0"));
+        }
     }
 
     [Theory]

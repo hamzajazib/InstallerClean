@@ -295,6 +295,8 @@ public sealed class UpdateInPlaceTests : IDisposable
     [Fact]
     public async Task The_swap_puts_the_newer_file_at_the_exe_path_and_putting_back_restores_it()
     {
+        // A portable saved under the versioned name 3.4.0 gave it: the update puts the
+        // newer file at this path and does not rename it.
         var exe = Path.Combine(_root, "InstallerClean-3.4.0-portable.exe");
         File.WriteAllBytes(exe, Program(1));
         await StagedBesideAsync(exe, 2);

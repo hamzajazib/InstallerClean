@@ -11,9 +11,9 @@ the difference matters:
                                          icon, the two Material Icons
                                          and the Inno Setup translation
                                          files
-  InstallerClean-<version>-portable.exe  Poppins, Montserrat, the Phosphor
+  InstallerClean-portable.exe            Poppins, Montserrat, the Phosphor
                                          icon and the two Material Icons
-  InstallerClean-<version>-slim.exe      Poppins, Montserrat, the Phosphor
+  InstallerClean-slim.exe                Poppins, Montserrat, the Phosphor
                                          icon and the two Material Icons
   installerclean-cli.exe                 none of them, and nothing on this
                                          page applies to it: it is built

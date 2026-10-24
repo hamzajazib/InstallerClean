@@ -12,7 +12,7 @@ namespace InstallerClean.Tests.Services;
 public sealed class UpdateDownloadServiceTests : IDisposable
 {
     private static readonly Uri ReleaseAddress =
-        new("https://github.com/no-faff/InstallerClean/releases/download/v3.5.0/InstallerClean-3.5.0-portable.exe");
+        new("https://github.com/no-faff/InstallerClean/releases/download/v3.5.0/InstallerClean-portable.exe");
 
     private static readonly Uri AssetAddress =
         new("https://release-assets.githubusercontent.com/some/asset");

@@ -309,15 +309,16 @@ public static class AppCopy
 
     /// <summary>
     /// The file name of the download a kind updates from, or null for a kind that does
-    /// not update itself: a build from source, Scoop's copy and an undetermined copy. The command line's own
-    /// download carries no version in its name; the release it sits in says which
-    /// version it is.
+    /// not update itself: a build from source, Scoop's copy and an undetermined copy.
+    /// Only the setup's name carries the version. The portable, the slim and the command
+    /// line's own download keep one name across releases, because each replaces itself
+    /// where it stands and the release it sits in says which version it is.
     /// </summary>
     public static string? DownloadFileName(AppCopyKind kind, string version) => kind switch
     {
         AppCopyKind.Setup => $"InstallerClean-{version}-setup.exe",
-        AppCopyKind.Portable => $"InstallerClean-{version}-portable.exe",
-        AppCopyKind.Slim => $"InstallerClean-{version}-slim.exe",
+        AppCopyKind.Portable => "InstallerClean-portable.exe",
+        AppCopyKind.Slim => "InstallerClean-slim.exe",
         AppCopyKind.CommandLineDownload => CommandLineFileName,
         _ => null,
     };
