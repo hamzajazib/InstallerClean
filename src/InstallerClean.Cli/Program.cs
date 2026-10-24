@@ -1717,7 +1717,7 @@ internal static class Program
     /// <summary>
     /// Whether a person can be watching this console: standard output is not
     /// redirected to a file or another program, and the process runs in an
-    /// interactive window station, which <see cref="Interop.Native.WindowStation.IsInteractive"/> answers.
+    /// interactive window station, which <see cref="Interop.Native.WindowStation.IsInteractive()"/> answers.
     /// </summary>
     internal static bool ConsoleIsWatched() =>
         !Console.IsOutputRedirected && Interop.Native.WindowStation.IsInteractive();
