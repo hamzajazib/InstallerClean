@@ -546,9 +546,10 @@ function Get-NotPlanted {
     # setting on the first DateTime read, and BCryptGenRandom, which seeds the random
     # numbers the thread pool uses.
     [pscustomobject]@{ Exe = $cli; Runs = $bothCli; Places = @('beside'); Assembly = 'System.Private.CoreLib'; Call = 'import'; When = 'after'; Names = @('ntdll.dll', 'BCrypt.dll') }
-    # CoreLib's user32 LoadString, which TimeZoneInfo's static constructor calls for the
-    # UTC display name and which an EventSource write reaches through DateTime.ToFileTimeUtc,
-    # and its calloc under NativeMemory, which System.Net's DNS query allocates with.
+    # CoreLib's user32 LoadString, which TimeZoneInfo calls for the local time zone's names
+    # when the first local DateTime is converted: the update check's TLS handshake does so
+    # while X509ChainPal builds the certificate chain (FILETIME.FromDateTime), and its
+    # calloc under NativeMemory, which System.Net's DNS query allocates with.
     [pscustomobject]@{ Exe = $cli; Runs = @('command line, checking for updates'); Places = @('beside'); Assembly = 'System.Private.CoreLib'; Call = 'import'; When = 'after'; Names = @('user32.dll', 'ucrtbase.dll') }
     # The runtime's start-up, as the command line's.
     [pscustomobject]@{ Exe = $portable; Runs = @('portable'); Places = @('beside', 'extraction'); Assembly = 'System.Private.CoreLib'; Call = 'import'; When = 'before'; Names = @('advapi32.dll', 'kernel32.dll') }
