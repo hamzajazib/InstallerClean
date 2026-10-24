@@ -701,6 +701,30 @@ public sealed class UpdateInPlaceTests : IDisposable
     }
 
     [Fact]
+    public void An_assembly_the_build_does_not_carry_is_passed_over_without_a_crash_log_entry()
+    {
+        var before = TestCrashLog.Text();
+
+        var loaded = SelfReplacement.TryLoad(new System.Reflection.AssemblyName("Ic.Not.In.This.Build, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"));
+
+        Assert.Null(loaded);
+        Assert.Equal(before, TestCrashLog.Text());
+    }
+
+    [Fact]
+    public void A_file_not_found_error_counts_as_absence_only_where_it_names_the_assembly_asked_for()
+    {
+        var asked = new System.Reflection.AssemblyName("Ic.Asked, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null");
+
+        Assert.True(SelfReplacement.NamesTheAssemblyAsked(
+            new FileNotFoundException("m", "Ic.Asked, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"), asked));
+        Assert.False(SelfReplacement.NamesTheAssemblyAsked(
+            new FileNotFoundException("m", "Ic.Dependency, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"), asked));
+        Assert.False(SelfReplacement.NamesTheAssemblyAsked(new FileNotFoundException("m"), asked));
+        Assert.False(SelfReplacement.NamesTheAssemblyAsked(new FileNotFoundException("m", "not an assembly name,,,"), asked));
+    }
+
+    [Fact]
     public async Task The_portable_route_downloads_writes_the_newer_version_beside_the_exe_and_leaves_no_staging_folder()
     {
         var exeFolder = Directory.CreateDirectory(Path.Combine(_root, "app")).FullName;

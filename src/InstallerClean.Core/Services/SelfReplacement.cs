@@ -186,7 +186,45 @@ public static class SelfReplacement
         }
     }
 
-    private static Assembly? TryLoad(AssemblyName name) => WritingFailureToCrashLog(() => Assembly.Load(name));
+    /// <summary>
+    /// Loads <paramref name="name"/>, and answers null where the build does not carry an
+    /// assembly of that name: code the build lacks cannot be run after the rename either, so
+    /// its absence writes nothing. Any other failure is written to crash.log.
+    /// </summary>
+    internal static Assembly? TryLoad(AssemblyName name)
+    {
+        try
+        {
+            return Assembly.Load(name);
+        }
+        catch (FileNotFoundException ex) when (NamesTheAssemblyAsked(ex, name))
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="ex"/> says the assembly <paramref name="asked"/> was not found,
+    /// by its own name. A FileNotFoundException naming a different file is a dependency of an
+    /// assembly that was found, and one naming nothing says nothing about which file is missing.
+    /// </summary>
+    internal static bool NamesTheAssemblyAsked(FileNotFoundException ex, AssemblyName asked)
+    {
+        if (string.IsNullOrEmpty(ex.FileName) || string.IsNullOrEmpty(asked.Name)) return false;
+        try
+        {
+            return string.Equals(new AssemblyName(ex.FileName).Name, asked.Name, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex2) when (ex2 is FileLoadException or ArgumentException)
+        {
+            return false;
+        }
+    }
 
     /// <summary>
     /// Opens <paramref name="path"/> for reading, sharing reading and writing but not
