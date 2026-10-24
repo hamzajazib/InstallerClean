@@ -34,21 +34,23 @@ public sealed class AppSettings
     /// True once this account's report has been sent and accepted. The report goes
     /// from the PC's first finished card, as the card closes with its box ticked,
     /// or from a later start retrying one that did not go
-    /// (<see cref="ReportToSend"/>). The window's start check also reads it as an
+    /// (<see cref="ReportSendPending"/>). The window's start check also reads it as an
     /// earlier run in this account. Nothing clears it.
     /// </summary>
     public bool HasSentResultLog { get; set; }
 
     /// <summary>
-    /// True while this account's saved report, <c>last-run.json</c>, is waiting to
-    /// be sent: written once the first finished card's report is on disk with its
-    /// box ticked, written again each time the box is ticked or unticked, and set
-    /// false once the report is accepted. A start that finds it true with
-    /// <see cref="HasSentResultLog"/> false sends that file, and every later start
-    /// tries again until one is accepted. A <c>last-run.json</c> with no true beside
-    /// it is never sent.
+    /// True from the person's yes to this account's report until the report is
+    /// accepted: set as the first finished card closes with its box ticked, which
+    /// closing the window with the card up does too, and as the command line's
+    /// question is answered yes. It is set false once the report is accepted, and
+    /// where the command line's send is cancelled. A start that finds it true with
+    /// <see cref="HasSentResultLog"/> false sends <c>last-run.json</c>, and every
+    /// later start tries again until one is accepted. A <c>last-run.json</c> with no
+    /// true beside it is never sent: a box left unticked, a question answered no, a
+    /// process that crashed or was ended while its card was still up.
     /// </summary>
-    public bool ReportToSend { get; set; }
+    public bool ReportSendPending { get; set; }
 
     /// <summary>
     /// Whether the app asks GitHub for a newer version once per session,

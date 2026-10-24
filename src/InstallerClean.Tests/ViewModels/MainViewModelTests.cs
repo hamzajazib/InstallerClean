@@ -3891,9 +3891,8 @@ public class MainViewModelTests
     // does.
 
     /// <summary>
-    /// Every save the report makes, kept so a test can apply them all afterwards and
-    /// read what settings.json would hold. Each save reads the report's state as it
-    /// runs, which applying them later does too.
+    /// Every settings save the report makes, kept so a test can apply them all afterwards
+    /// and read what settings.json would hold.
     /// </summary>
     private List<Action<AppSettings>> RecordSettingsSaves()
     {
@@ -4091,7 +4090,7 @@ public class MainViewModelTests
         Assert.False(vm.Completion.OffersReport);
         var settings = AppliedInOrder(saves);
         Assert.True(settings.HasSentResultLog);
-        Assert.False(settings.ReportToSend);
+        Assert.False(settings.ReportSendPending);
     }
 
     [Fact]
@@ -4109,27 +4108,49 @@ public class MainViewModelTests
         // The mark is set all the same: this was the PC's first run.
         _firstRunMark.Received(1).Set();
         var settings = AppliedInOrder(saves);
-        Assert.False(settings.ReportToSend);
+        Assert.False(settings.ReportSendPending);
         Assert.False(settings.HasSentResultLog);
     }
 
     [Fact]
-    public async Task Each_tick_and_untick_saves_whether_the_report_is_waiting()
+    public async Task While_the_card_is_up_nothing_is_recorded_as_waiting_whatever_the_box_says()
     {
         var vm = FirstRunAllClear();
         var saves = RecordSettingsSaves();
         await vm.Scan.ScanCommand.ExecuteAsync(null);
         await vm.Completion.ReportWork;
-        Assert.True(AppliedInOrder(saves).ReportToSend);
+        Assert.True(vm.Completion.OffersReport);
+        Assert.False(AppliedInOrder(saves).ReportSendPending);
 
         vm.Completion.SendsReport = false;
-        await vm.Completion.ReportWork;
-        Assert.False(AppliedInOrder(saves).ReportToSend);
-
         vm.Completion.SendsReport = true;
         await vm.Completion.ReportWork;
-        Assert.True(AppliedInOrder(saves).ReportToSend);
+
         Assert.True(vm.Completion.OffersReport);
+        Assert.Empty(saves);
+        await _resultLogService.DidNotReceive().SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(true, 1)]
+    [InlineData(false, 0)]
+    public async Task What_the_box_says_as_the_card_closes_decides_after_it_was_toggled(bool endsTicked, int sends)
+    {
+        var vm = FirstRunAllClear();
+        _resultLogService.SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(ResultLogSendOutcome.Sent);
+        await vm.Scan.ScanCommand.ExecuteAsync(null);
+
+        vm.Completion.SendsReport = !endsTicked;
+        vm.Completion.SendsReport = endsTicked;
+        vm.Completion.SendsReport = !endsTicked;
+        vm.Completion.SendsReport = endsTicked;
+        vm.Completion.SendsReport = !endsTicked;
+        vm.Completion.SendsReport = endsTicked;
+        vm.Completion.DismissCommand.Execute(null);
+        vm.Dispose();
+
+        await _resultLogService.Received(sends).SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -4146,7 +4167,7 @@ public class MainViewModelTests
 
         await _resultLogService.Received(1).SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
         var settings = AppliedInOrder(saves);
-        Assert.True(settings.ReportToSend);
+        Assert.True(settings.ReportSendPending);
         Assert.False(settings.HasSentResultLog);
     }
 
@@ -4299,14 +4320,14 @@ public class MainViewModelTests
     [InlineData(true, true, true, false)]
     [InlineData(false, true, false, false)]
     public void A_start_sends_this_accounts_report_only_where_it_is_still_waiting(
-        bool read, bool reportToSend, bool hasSent, bool sends)
+        bool read, bool reportSendPending, bool hasSent, bool sends)
     {
         // The second row is a last-run.json from an older version, which never has
-        // ReportToSend beside it; the last is a settings file that could not be read.
+        // ReportSendPending beside it; the last is a settings file that could not be read.
         var vm = CreateViewModel();
         _settingsService.TryLoad(out _).ReturnsForAnyArgs(ci =>
         {
-            ci[0] = new AppSettings { ReportToSend = reportToSend, HasSentResultLog = hasSent };
+            ci[0] = new AppSettings { ReportSendPending = reportSendPending, HasSentResultLog = hasSent };
             return read;
         });
         _resultLogService.ReadLastLogAsync(Arg.Any<CancellationToken>())

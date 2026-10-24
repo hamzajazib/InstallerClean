@@ -27,7 +27,7 @@ internal enum ReportOfferOutcome
 /// The command line's offer to send the anonymous report of a run: the report is saved
 /// as <c>last-run.json</c>, the person is asked, and the report goes only on a yes. Also
 /// sends a report an earlier run left waiting. The settings it keeps are the ones the
-/// window keeps (<see cref="AppSettings.ReportToSend"/> and
+/// window keeps (<see cref="AppSettings.ReportSendPending"/> and
 /// <see cref="AppSettings.HasSentResultLog"/>), so either program sends what the other
 /// left waiting.
 /// </summary>
@@ -79,7 +79,7 @@ internal sealed class ConsoleReportOffer(
 
     /// <summary>
     /// Sends the report an earlier run left waiting, where
-    /// <see cref="AppSettings.ReportToSend"/> is set and
+    /// <see cref="AppSettings.ReportSendPending"/> is set and
     /// <see cref="AppSettings.HasSentResultLog"/> is not, after a line saying what is
     /// being sent. Asks nothing. Never throws.
     /// </summary>
@@ -87,12 +87,12 @@ internal sealed class ConsoleReportOffer(
     {
         try
         {
-            if (!settings.TryLoad(out var current) || !current.ReportToSend || current.HasSentResultLog)
+            if (!settings.TryLoad(out var current) || !current.ReportSendPending || current.HasSentResultLog)
                 return ReportOfferOutcome.NotOffered;
             // A report whose file is no longer there has nothing to send or to be kept.
             if (!resultLog.LastLogExists())
             {
-                if (!settings.Update(s => s.ReportToSend = false))
+                if (!settings.Update(s => s.ReportSendPending = false))
                     CrashLog.TryWrite(new InvalidOperationException(
                         "settings.json could not record that no report is waiting to be sent."));
                 return ReportOfferOutcome.NotOffered;
@@ -149,7 +149,7 @@ internal sealed class ConsoleReportOffer(
     /// </summary>
     private ReportOfferOutcome Send(bool waiting, CancellationToken token)
     {
-        if (!waiting && !settings.Update(s => s.ReportToSend = true))
+        if (!waiting && !settings.Update(s => s.ReportSendPending = true))
             CrashLog.TryWrite(new InvalidOperationException(
                 "settings.json could not record that the report is waiting to be sent."));
 
@@ -166,7 +166,7 @@ internal sealed class ConsoleReportOffer(
             // Ctrl+C while a yes is being sent stops it: the report is not sent and no
             // longer waiting, as the line says. A report an earlier run left stays
             // waiting for the next.
-            if (!waiting && !settings.Update(s => s.ReportToSend = false))
+            if (!waiting && !settings.Update(s => s.ReportSendPending = false))
                 CrashLog.TryWrite(new InvalidOperationException(
                     "settings.json could not record that the report is not waiting to be sent."));
             if (!consoleClosing()) console.WriteLine(Strings.Cli_ReportNotSent);
@@ -182,7 +182,7 @@ internal sealed class ConsoleReportOffer(
         if (!settings.Update(s =>
             {
                 s.HasSentResultLog = true;
-                s.ReportToSend = false;
+                s.ReportSendPending = false;
             }))
             CrashLog.TryWrite(new InvalidOperationException(
                 "The report was sent and settings.json could not record it."));

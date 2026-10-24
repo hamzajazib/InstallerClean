@@ -7,7 +7,7 @@ namespace InstallerClean.Services;
 /// the same JSON to No Faff. The window sends it in two places: as that
 /// run's card closes with its report box ticked, and at a later start
 /// where this account's report is still waiting to go
-/// (<see cref="Models.AppSettings.ReportToSend"/>). The command line sends it
+/// (<see cref="Models.AppSettings.ReportSendPending"/>). The command line sends it
 /// where its question is answered yes (<see cref="ConsoleReportOffer"/>), and at a
 /// later run at a console where the report is still waiting. Nothing in this
 /// service starts a call on its own.

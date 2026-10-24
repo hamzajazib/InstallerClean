@@ -273,7 +273,7 @@ public class CliReportCarryTests
         var settings = Substitute.For<ISettingsService>();
         settings.TryLoad(out Arg.Any<AppSettings>()).Returns(call =>
         {
-            call[0] = new AppSettings { ReportToSend = true };
+            call[0] = new AppSettings { ReportSendPending = true };
             return true;
         });
         var log = Substitute.For<IResultLogService>();

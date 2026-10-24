@@ -6,7 +6,7 @@ InstallerClean never collects anything that could identify you, your PC or your 
 
 ## The anonymous report
 
-When InstallerClean's first run on a PC finishes, its result screen has a box, "Send anonymous report", which starts ticked. If it's ticked, the report goes when you close that screen. If you untick it, nothing is sent, then or ever. The small "i" beside the box shows what the report holds.
+When InstallerClean's first run on a PC finishes, its result screen has a box, "Send anonymous report", which starts ticked. If it's ticked, the report goes when you close that screen. If you untick it, nothing is sent, then or ever. If InstallerClean crashes or is ended from outside, in Task Manager for example, before you close it, nothing is sent. The small "i" beside the box shows what the report holds.
 
 There is never more than one report per PC, and it is from the first run. No later run writes or sends another, from any Windows account. If the report can't be sent, because there's no network for example, InstallerClean keeps it and tries again each time you open it until it goes.
 

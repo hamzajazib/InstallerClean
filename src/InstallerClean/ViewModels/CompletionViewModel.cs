@@ -199,7 +199,7 @@ public partial class CompletionViewModel : ObservableObject
     /// <summary>
     /// How long closing the app waits for the report's send and its settings saves
     /// before it lets the process go. A report cut off here is still waiting
-    /// (<see cref="AppSettings.ReportToSend"/>) and goes from a later start.
+    /// (<see cref="AppSettings.ReportSendPending"/>) and goes from a later start.
     /// </summary>
     internal static readonly TimeSpan ExitWaitBound = TimeSpan.FromSeconds(2);
 
@@ -223,17 +223,8 @@ public partial class CompletionViewModel : ObservableObject
     /// <summary>True from <see cref="TakeReport"/> until the card carrying the box closes.</summary>
     private bool _boxOpen;
 
-    /// <summary>
-    /// What the box last said while it was open, read by the saves and the send on
-    /// thread-pool threads.
-    /// </summary>
+    /// <summary>What the box last said while it was open.</summary>
     private volatile bool _reportTicked;
-
-    /// <summary>True once this sitting's report is on disk.</summary>
-    private volatile bool _reportOnDisk;
-
-    /// <summary>True once a send has been accepted.</summary>
-    private volatile bool _reportSent;
 
     /// <summary>
     /// Completes with whether this sitting's report was written. Set before the write
@@ -242,7 +233,7 @@ public partial class CompletionViewModel : ObservableObject
     private Task<bool>? _reportWritten;
 
     /// <summary>
-    /// Every send and every report settings save still running, which closing the app
+    /// Every send and the settings save beside it still running, which closing the app
     /// waits for (<see cref="SettleReportOnExit"/>). None of them faults.
     /// </summary>
     private Task _reportWork = Task.CompletedTask;
@@ -251,10 +242,10 @@ public partial class CompletionViewModel : ObservableObject
     /// <summary>
     /// <paramref name="resultLogService"/> writes and sends the report and
     /// <paramref name="settingsService"/> records whether it is waiting to go or has
-    /// gone. <paramref name="earlierRunCheck"/> and <paramref name="firstRunMark"/>
-    /// decide which card is the PC's first, and <paramref name="windowsRegion"/> gives the
-    /// Country or region the report carries. <paramref name="windowService"/> opens the
-    /// donate page and the report window. <paramref name="copy"/> is the kind of copy of the
+    /// gone, once the person has answered. <paramref name="earlierRunCheck"/> and
+    /// <paramref name="firstRunMark"/> decide which card is the PC's first, and
+    /// <paramref name="windowsRegion"/> gives the Country or region the report carries.
+    /// <paramref name="windowService"/> opens the donate page and the report window. <paramref name="copy"/> is the kind of copy of the
     /// app that is running, which the report carries. <paramref name="lastScan"/> answers
     /// with the scan the window shows at the moment it is asked, which the card after a
     /// Move or Delete speaks for.
@@ -825,10 +816,10 @@ public partial class CompletionViewModel : ObservableObject
 
     /// <summary>
     /// Writes the report of the card that took it, once that card is up. The write runs
-    /// off the dispatcher. Where it lands, this account records that the report is
-    /// waiting to go if the box is ticked; where it fails, a box still on the card is
-    /// taken away, there being nothing to send. Completes once the write has, and never
-    /// throws.
+    /// off the dispatcher. Nothing is recorded as waiting to go here: that is done as the
+    /// card closes, once the box has its answer. Where the write fails, a box still on the
+    /// card is taken away, there being nothing to send. Completes once the write has, and
+    /// never throws.
     /// </summary>
     public async Task WriteReportAsync(ResultLogEntry entry)
     {
@@ -850,18 +841,10 @@ public partial class CompletionViewModel : ObservableObject
 
         // Settled on a thread-pool thread rather than on the dispatcher, so a send
         // waiting on it while the app closes is not held behind a dispatcher that has
-        // stopped. The save comes before the send can go, so a send cut off on exit
-        // leaves the report recorded as waiting.
-        Track(write.ContinueWith(t =>
-        {
-            var landed = t.Status == TaskStatus.RanToCompletion && t.Result;
-            if (landed)
-            {
-                _reportOnDisk = true;
-                SaveReportToSend();
-            }
-            written.SetResult(landed);
-        }, TaskScheduler.Default));
+        // stopped.
+        Track(write.ContinueWith(
+            t => written.SetResult(t.Status == TaskStatus.RanToCompletion && t.Result),
+            TaskScheduler.Default));
 
         if (await written.Task) return;
         if (_boxOpen)
@@ -873,7 +856,7 @@ public partial class CompletionViewModel : ObservableObject
 
     /// <summary>
     /// Sends this account's saved report where it is still waiting from an earlier
-    /// start: <see cref="AppSettings.ReportToSend"/> true and
+    /// start: <see cref="AppSettings.ReportSendPending"/> true and
     /// <see cref="AppSettings.HasSentResultLog"/> false. Runs in the background and
     /// waits for the window's start check first, so its settings read and save never
     /// meet the check's read. Every start tries until one send is accepted.
@@ -884,7 +867,7 @@ public partial class CompletionViewModel : ObservableObject
         {
             await _earlierRunCheck.ShowsAnEarlierRunAsync().ConfigureAwait(false);
             if (!_settingsService.TryLoad(out var settings)
-                || !settings.ReportToSend || settings.HasSentResultLog)
+                || !settings.ReportSendPending || settings.HasSentResultLog)
                 return;
             await SendSavedReportAsync().ConfigureAwait(false);
         }
@@ -909,8 +892,10 @@ public partial class CompletionViewModel : ObservableObject
 
     /// <summary>
     /// Whatever the box says as its card closes is what happens: ticked, the report is
-    /// sent once it is on disk; unticked, nothing is sent, now or later. The box leaves
-    /// the card either way.
+    /// recorded as waiting to go and sent once it is on disk, and a send that does not
+    /// finish leaves it waiting for a later start; unticked, nothing is recorded or sent,
+    /// now or later. The box leaves the card either way. A card that never closes, because
+    /// the process ended before it could, leaves nothing recorded and nothing sent.
     /// </summary>
     private void SettleReport()
     {
@@ -925,6 +910,9 @@ public partial class CompletionViewModel : ObservableObject
             try
             {
                 if (written is null || !await written.ConfigureAwait(false)) return;
+                if (!_settingsService.Update(s => s.ReportSendPending = true))
+                    CrashLog.TryWrite(new InvalidOperationException(
+                        "settings.json could not record that the report is waiting to be sent."));
                 await SendSavedReportAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
@@ -938,8 +926,6 @@ public partial class CompletionViewModel : ObservableObject
     {
         if (!_boxOpen) return;
         _reportTicked = value;
-        if (_reportOnDisk)
-            Track(Task.Run(SaveReportToSend));
     }
 
     /// <summary>
@@ -955,26 +941,13 @@ public partial class CompletionViewModel : ObservableObject
         var outcome = await _resultLogService.SendAsync(body).ConfigureAwait(false);
         if (outcome != ResultLogSendOutcome.Sent) return;
 
-        _reportSent = true;
         if (!_settingsService.Update(s =>
             {
                 s.HasSentResultLog = true;
-                s.ReportToSend = false;
+                s.ReportSendPending = false;
             }))
             CrashLog.TryWrite(new InvalidOperationException(
                 "The report was sent and settings.json could not record it."));
-    }
-
-    /// <summary>
-    /// Saves whether this account's report is waiting to go, reading the state as the
-    /// save runs rather than when it was asked for, so saves landing out of order still
-    /// leave the last word right: on disk, ticked and not yet sent.
-    /// </summary>
-    private void SaveReportToSend()
-    {
-        if (!_settingsService.Update(s => s.ReportToSend = _reportOnDisk && _reportTicked && !_reportSent))
-            CrashLog.TryWrite(new InvalidOperationException(
-                "settings.json could not record whether the report is waiting to be sent."));
     }
 
     /// <summary>The sends and saves still running, for a test to wait on.</summary>

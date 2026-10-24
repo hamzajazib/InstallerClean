@@ -36,7 +36,7 @@ public class ConsoleReportOfferTests
         Assert.Equal(ReportOfferOutcome.Sent, outcome);
         rig.Log.Received(1).SendAsync(Body, Arg.Any<CancellationToken>());
         Assert.True(rig.Settings.State.HasSentResultLog);
-        Assert.False(rig.Settings.State.ReportToSend);
+        Assert.False(rig.Settings.State.ReportSendPending);
         Assert.Equal(Strings.Cli_ReportSent, rig.Console.Lines[^1]);
     }
 
@@ -52,7 +52,7 @@ public class ConsoleReportOfferTests
 
         Assert.Equal(ReportOfferOutcome.Declined, outcome);
         rig.Log.DidNotReceive().SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
-        Assert.False(rig.Settings.State.ReportToSend);
+        Assert.False(rig.Settings.State.ReportSendPending);
         Assert.False(rig.Settings.State.HasSentResultLog);
         Assert.Equal(Strings.Cli_ReportNotSent, rig.Console.Lines[^1]);
     }
@@ -147,7 +147,7 @@ public class ConsoleReportOfferTests
 
         Assert.Equal(ReportOfferOutcome.Cancelled, outcome);
         rig.Log.DidNotReceive().SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
-        Assert.False(rig.Settings.State.ReportToSend);
+        Assert.False(rig.Settings.State.ReportSendPending);
         Assert.Equal(Strings.Cli_ReportNotSent, rig.Console.Lines[^1]);
     }
 
@@ -177,7 +177,7 @@ public class ConsoleReportOfferTests
         var outcome = rig.Offer();
 
         Assert.Equal(ReportOfferOutcome.NotSent, outcome);
-        Assert.True(rig.Settings.State.ReportToSend);
+        Assert.True(rig.Settings.State.ReportSendPending);
         Assert.False(rig.Settings.State.HasSentResultLog);
         Assert.Equal(string.Format(Strings.Cli_ReportCouldNotBeSent, ReportPath), rig.Console.Lines[^1]);
     }
@@ -190,7 +190,7 @@ public class ConsoleReportOfferTests
         var outcome = rig.Offer();
 
         Assert.Equal(ReportOfferOutcome.NotSent, outcome);
-        Assert.True(rig.Settings.State.ReportToSend);
+        Assert.True(rig.Settings.State.ReportSendPending);
         rig.Log.DidNotReceive().SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
@@ -203,7 +203,7 @@ public class ConsoleReportOfferTests
         var outcome = rig.Offer(cts.Token);
 
         Assert.Equal(ReportOfferOutcome.Cancelled, outcome);
-        Assert.False(rig.Settings.State.ReportToSend);
+        Assert.False(rig.Settings.State.ReportSendPending);
         Assert.False(rig.Settings.State.HasSentResultLog);
         Assert.Equal(Strings.Cli_ReportNotSent, rig.Console.Lines[^1]);
     }
@@ -212,12 +212,12 @@ public class ConsoleReportOfferTests
     public void Ctrl_C_while_a_waiting_report_is_being_sent_leaves_it_waiting()
     {
         var rig = new Rig { SendThrowsCancelled = true };
-        rig.Settings.State.ReportToSend = true;
+        rig.Settings.State.ReportSendPending = true;
 
         var outcome = rig.SendWaiting();
 
         Assert.Equal(ReportOfferOutcome.Cancelled, outcome);
-        Assert.True(rig.Settings.State.ReportToSend);
+        Assert.True(rig.Settings.State.ReportSendPending);
         Assert.False(rig.Settings.State.HasSentResultLog);
     }
 
@@ -225,12 +225,12 @@ public class ConsoleReportOfferTests
     public void A_waiting_report_whose_file_is_gone_is_dropped_without_a_word()
     {
         var rig = new Rig { LogExists = false };
-        rig.Settings.State.ReportToSend = true;
+        rig.Settings.State.ReportSendPending = true;
 
         var outcome = rig.SendWaiting();
 
         Assert.Equal(ReportOfferOutcome.NotOffered, outcome);
-        Assert.False(rig.Settings.State.ReportToSend);
+        Assert.False(rig.Settings.State.ReportSendPending);
         Assert.Empty(rig.Console.Lines);
         rig.Log.DidNotReceive().SendAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
@@ -239,7 +239,7 @@ public class ConsoleReportOfferTests
     public void A_report_waiting_from_an_earlier_run_is_announced_and_sent_without_a_question()
     {
         var rig = new Rig();
-        rig.Settings.State.ReportToSend = true;
+        rig.Settings.State.ReportSendPending = true;
 
         var outcome = rig.SendWaiting();
 
@@ -247,19 +247,19 @@ public class ConsoleReportOfferTests
         Assert.Empty(rig.Console.Writes);
         Assert.Equal(new[] { Strings.Cli_ReportWaiting, Strings.Cli_ReportSent }, rig.Console.Lines);
         Assert.True(rig.Settings.State.HasSentResultLog);
-        Assert.False(rig.Settings.State.ReportToSend);
+        Assert.False(rig.Settings.State.ReportSendPending);
     }
 
     [Fact]
     public void A_waiting_report_that_still_cannot_be_sent_stays_waiting()
     {
         var rig = new Rig { SendOutcome = ResultLogSendOutcome.NetworkUnavailable };
-        rig.Settings.State.ReportToSend = true;
+        rig.Settings.State.ReportSendPending = true;
 
         var outcome = rig.SendWaiting();
 
         Assert.Equal(ReportOfferOutcome.NotSent, outcome);
-        Assert.True(rig.Settings.State.ReportToSend);
+        Assert.True(rig.Settings.State.ReportSendPending);
     }
 
     [Theory]
@@ -267,10 +267,10 @@ public class ConsoleReportOfferTests
     [InlineData(true, true)]
     [InlineData(false, true)]
     public void Nothing_is_said_or_sent_unless_a_report_is_waiting_and_has_not_gone(
-        bool reportToSend, bool hasSent)
+        bool reportSendPending, bool hasSent)
     {
         var rig = new Rig();
-        rig.Settings.State.ReportToSend = reportToSend;
+        rig.Settings.State.ReportSendPending = reportSendPending;
         rig.Settings.State.HasSentResultLog = hasSent;
 
         var outcome = rig.SendWaiting();
