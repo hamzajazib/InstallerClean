@@ -2402,8 +2402,8 @@ Hãy chạy lại InstallerClean với tư cách quản trị viên.</value></da
        where the report is kept. -->
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>Không thể gửi báo cáo. Báo cáo được lưu giữ tại {0}.</value></data>
   <!-- A later run at the console, before it sends a report an earlier run left waiting.
-       Nothing is asked: a report left waiting with its box ticked is sent from the next
-       start of either program, InstallerClean's window included, without a question. The
+       Nothing is asked: a report recorded as waiting is sent from the next start of either
+       program, InstallerClean's window included, without a question. The
        line names no cause: more than one thing leaves a report waiting. -->
   <data name="Cli.ReportWaiting" xml:space="preserve"><value>Đang gửi một báo cáo còn chờ từ một lần chạy trước đó.</value></data>
   <!-- After the newer version is in place, before it runs. 0 = its version. -->
