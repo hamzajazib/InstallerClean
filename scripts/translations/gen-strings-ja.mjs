@@ -580,7 +580,7 @@ const MAP = {
   'Cli.ReportSent': `レポートを送信しました。ありがとうございます。`,
   'Cli.ReportNotSent': `レポートは送信されませんでした。`,
   'Cli.ReportCouldNotBeSent': `レポートを送信できませんでした。{0} に保存されています。`,
-  'Cli.ReportWaiting': `以前の実行で送信できなかったレポートを送信しています。`,
+  'Cli.ReportWaiting': `以前の実行で送信されなかったレポートを送信しています。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

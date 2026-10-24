@@ -560,7 +560,7 @@ const MAP = {
   'Cli.ReportSent': `报告已发送。谢谢。`,
   'Cli.ReportNotSent': `报告未发送。`,
   'Cli.ReportCouldNotBeSent': `无法发送报告。报告保存在 {0}。`,
-  'Cli.ReportWaiting': `正在发送较早一次运行中未能发送的报告。`,
+  'Cli.ReportWaiting': `正在发送较早一次运行中未发送的报告。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

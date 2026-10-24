@@ -2401,9 +2401,11 @@ Führe InstallerClean erneut als Administrator aus.</value></data>
   <!-- After the answer was yes and the report did not go. 0 = the full path of last-run.json,
        where the report is kept. -->
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>Der Bericht konnte nicht gesendet werden. Er wird in {0} aufbewahrt.</value></data>
-  <!-- A later run at the console, before it sends a report an earlier run was told to send
-       and could not. Nothing is asked: the answer was given then. -->
-  <data name="Cli.ReportWaiting" xml:space="preserve"><value>Ein Bericht aus einem früheren Durchlauf, der damals nicht gesendet werden konnte, wird gesendet.</value></data>
+  <!-- A later run at the console, before it sends a report an earlier run recorded as
+       waiting to go and did not send. Nothing is asked. The line names no cause, because a
+       report waits after a send that failed and after a run that ended before any send
+       began alike. -->
+  <data name="Cli.ReportWaiting" xml:space="preserve"><value>Ein Bericht, der in einem früheren Durchlauf nicht gesendet wurde, wird gesendet.</value></data>
   <!-- After the newer version is in place, before it runs. 0 = its version. -->
   <data name="Cli.UpdateInstalled" xml:space="preserve"><value>InstallerClean {0} ist installiert.</value></data>
   <!-- After Cli.UpdateInstalled, where the person typed /d or /m and answered yes: the newer

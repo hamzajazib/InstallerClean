@@ -565,7 +565,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report sent. Thank you. | Đã gửi báo cáo. Cảm ơn bạn. |
 | Report not sent. | Chưa gửi báo cáo. |
 | The report could not be sent. It is kept in {0}. | Không thể gửi báo cáo. Báo cáo được lưu giữ tại {0}. |
-| Sending a report from an earlier run that could not be sent then. | Đang gửi một báo cáo từ lần chạy trước đó mà khi ấy không gửi được. |
+| Sending a report from an earlier run that was not sent. | Đang gửi một báo cáo từ lần chạy trước đó chưa được gửi đi. |
 | InstallerClean {0} is installed. | Đã cài đặt InstallerClean {0}. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Phiên bản mới sẽ quét và liệt kê những gì tìm thấy, không xóa gì cả. Để xóa, hãy chạy lại /d sau đó. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Phiên bản mới sẽ quét và liệt kê những gì tìm thấy, không di chuyển gì cả. Để di chuyển, hãy chạy lại /m sau đó. |

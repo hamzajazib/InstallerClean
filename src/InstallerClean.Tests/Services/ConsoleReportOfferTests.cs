@@ -9,7 +9,7 @@ namespace InstallerClean.Tests.Services;
 /// <summary>
 /// The command line's offer to send the report: the question and its answers, what the
 /// question mark prints, what is kept in settings.json for the window to find, and the
-/// send of a report an earlier run could not send. Driven through a scripted console,
+/// send of a report an earlier run left waiting. Driven through a scripted console,
 /// with the strings read from the resources so the tests hold in any language.
 /// </summary>
 public class ConsoleReportOfferTests

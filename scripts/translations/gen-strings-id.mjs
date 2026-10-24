@@ -680,7 +680,7 @@ const MAP = {
   'Cli.ReportSent': `Laporan terkirim. Terima kasih.`,
   'Cli.ReportNotSent': `Laporan tidak dikirim.`,
   'Cli.ReportCouldNotBeSent': `Laporan tidak dapat dikirim. Laporan disimpan di {0}.`,
-  'Cli.ReportWaiting': `Mengirim laporan dari proses sebelumnya yang saat itu tidak dapat dikirim.`,
+  'Cli.ReportWaiting': `Mengirim laporan dari proses sebelumnya yang belum terkirim.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

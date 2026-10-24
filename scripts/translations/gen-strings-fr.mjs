@@ -674,7 +674,7 @@ const MAP = {
   'Cli.ReportSent': `Rapport envoyé. Merci.`,
   'Cli.ReportNotSent': `Rapport non envoyé.`,
   'Cli.ReportCouldNotBeSent': `Le rapport n'a pas pu être envoyé. Il est conservé dans {0}.`,
-  'Cli.ReportWaiting': `Envoi d'un rapport d'une exécution précédente qui n'avait pas pu être envoyé alors.`,
+  'Cli.ReportWaiting': `Envoi d'un rapport d'une exécution précédente qui n'a pas été envoyé.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

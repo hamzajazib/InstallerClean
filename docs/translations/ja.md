@@ -565,7 +565,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report sent. Thank you. | レポートを送信しました。ありがとうございます。 |
 | Report not sent. | レポートは送信されませんでした。 |
 | The report could not be sent. It is kept in {0}. | レポートを送信できませんでした。{0} に保存されています。 |
-| Sending a report from an earlier run that could not be sent then. | 以前の実行で送信できなかったレポートを送信しています。 |
+| Sending a report from an earlier run that was not sent. | 以前の実行で送信されなかったレポートを送信しています。 |
 | InstallerClean {0} is installed. | InstallerClean {0} をインストールしました。 |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も削除しません。削除するには、その後もう一度 /d を実行してください。 |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 新しいバージョンはスキャンして見つかったものを一覧表示するだけで、何も移動しません。移動するには、その後もう一度 /m を実行してください。 |

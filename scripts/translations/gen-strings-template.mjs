@@ -719,7 +719,7 @@ const MAP = {
   'Cli.ReportSent': `Report sent. Thank you.`,
   'Cli.ReportNotSent': `Report not sent.`,
   'Cli.ReportCouldNotBeSent': `The report could not be sent. It is kept in {0}.`,
-  'Cli.ReportWaiting': `Sending a report from an earlier run that could not be sent then.`,
+  'Cli.ReportWaiting': `Sending a report from an earlier run that was not sent.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,
