@@ -922,7 +922,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => updater.PrepareAsync("3.5.0", null, CancellationToken.None));
 
-        Assert.False(updater.CanUpdateItself);
+        Assert.False(AppCopy.CanUpdateItself(updater.Kind));
         Assert.Equal(Program(1), File.ReadAllBytes(exe));
         Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
         Assert.Empty(Directory.EnumerateFileSystemEntries(stagingRoot));

@@ -296,7 +296,7 @@ public class ChromeViewModelTests
     /// </summary>
     private async Task<ChromeViewModel> CreateUpdatingViewModelAsync()
     {
-        _updater.CanUpdateItself.Returns(true);
+        _updater.Kind.Returns(AppCopyKind.Portable);
         _settingsService.Load().Returns(new AppSettings { AutoUpdateCheck = true });
         CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
         var scan = new ScanViewModel(_scanService, _rebootService, _dialogService);
@@ -408,7 +408,7 @@ public class ChromeViewModelTests
     [Fact]
     public async Task A_settle_that_throws_takes_away_what_was_readied_and_starts_nothing()
     {
-        _updater.CanUpdateItself.Returns(true);
+        _updater.Kind.Returns(AppCopyKind.Portable);
         _settingsService.Load().Returns(new AppSettings { AutoUpdateCheck = true });
         CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
         var vm = new ChromeViewModel(
@@ -502,7 +502,7 @@ public class ChromeViewModelTests
     [Fact]
     public async Task Update_now_waits_while_a_scan_or_a_Move_or_Delete_is_in_flight()
     {
-        _updater.CanUpdateItself.Returns(true);
+        _updater.Kind.Returns(AppCopyKind.Portable);
         _settingsService.Load().Returns(new AppSettings { AutoUpdateCheck = true });
         CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
         var busy = true;
@@ -630,7 +630,6 @@ public class ChromeViewModelTests
         TimeSpan? automaticCheckWindow = null)
     {
         _updater.Kind.Returns(kind);
-        _updater.CanUpdateItself.Returns(AppCopy.CanUpdateItself(kind));
         _settingsService.Load().Returns(new AppSettings { AutoUpdateCheck = true });
         CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
         var scan = new ScanViewModel(_scanService, _rebootService, _dialogService);
@@ -895,7 +894,6 @@ public class ChromeViewModelTests
     private async Task<ChromeViewModel> CreateScoopViewModelAsync(TimeSpan copiedFor)
     {
         _updater.Kind.Returns(AppCopyKind.Scoop);
-        _updater.CanUpdateItself.Returns(AppCopy.CanUpdateItself(AppCopyKind.Scoop));
         _settingsService.Load().Returns(new AppSettings { AutoUpdateCheck = true });
         CheckAnswers(new UpdateAvailable("2.1.0", "9.9.9"));
         var scan = new ScanViewModel(_scanService, _rebootService, _dialogService);

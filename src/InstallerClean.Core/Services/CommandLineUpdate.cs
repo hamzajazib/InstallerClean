@@ -264,7 +264,7 @@ internal sealed class CommandLineUpdate
         var latest = available.LatestVersion;
         _host.WriteLine(string.Format(Strings.UpdateNotice_Available, latest));
 
-        if (!_updater.CanUpdateItself)
+        if (!AppCopy.CanUpdateItself(_updater.Kind))
         {
             _host.WriteLine(_updater.Kind == AppCopyKind.Undetermined
                 ? Strings.UpdateNotice_CopyCannotTell

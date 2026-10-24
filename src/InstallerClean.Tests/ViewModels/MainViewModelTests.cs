@@ -5447,7 +5447,7 @@ public class MainViewModelTests
     public async Task Update_now_from_the_card_takes_no_report_and_hands_over()
     {
         var updater = Substitute.For<IAppUpdater>();
-        updater.CanUpdateItself.Returns(true);
+        updater.Kind.Returns(AppCopyKind.Portable);
         var prepared = new PreparedUpdate("9.9.9", @"C:\ProgramData\InstallerClean-update-x\InstallerClean-9.9.9-setup.exe",
             "/SILENT", () => { });
         updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(prepared);
@@ -5488,7 +5488,7 @@ public class MainViewModelTests
     public async Task An_update_that_does_not_hand_over_has_Move_and_Delete_ask_again_whether_they_can_run()
     {
         var updater = Substitute.For<IAppUpdater>();
-        updater.CanUpdateItself.Returns(true);
+        updater.Kind.Returns(AppCopyKind.Portable);
         updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(
             new PreparedUpdate("9.9.9", @"C:\Users\x\InstallerClean.exe", string.Empty, () => { },
                 @"C:\Users\x\InstallerClean.exe.new"));

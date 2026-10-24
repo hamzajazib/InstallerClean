@@ -258,7 +258,7 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// (<see cref="AppCopy.CanUpdateItself"/>): Scoop's copy is updated by Scoop, and a
     /// build from source and an undetermined copy cannot.
     /// </summary>
-    public bool CanUpdateItself => _updater?.CanUpdateItself == true;
+    public bool CanUpdateItself => _updater is not null && AppCopy.CanUpdateItself(_updater.Kind);
 
     /// <summary>
     /// Whether the notice carries Update now: where this copy can update itself and the

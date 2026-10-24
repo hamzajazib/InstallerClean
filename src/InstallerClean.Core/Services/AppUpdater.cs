@@ -6,18 +6,19 @@ namespace InstallerClean.Services;
 /// </summary>
 public interface IAppUpdater
 {
-    /// <summary>The kind of copy running, decided once at start.</summary>
+    /// <summary>
+    /// The kind of copy running, decided once at start. <see cref="AppCopy.CanUpdateItself"/>
+    /// says whether a kind can put a newer version in its own place.
+    /// </summary>
     AppCopyKind Kind { get; }
-
-    /// <summary>Whether this copy can put a newer version in its own place.</summary>
-    bool CanUpdateItself { get; }
 
     /// <summary>
     /// Reads what the release of <paramref name="version"/> says its downloads need
     /// (<see cref="UpdateManifest"/>) and answers why this copy does not install it, or
     /// null where it may. Throws <see cref="UpdateFailedException"/> at the Download stage
-    /// where the release's file could not be read, and
-    /// <see cref="OperationCanceledException"/> where the token is cancelled.
+    /// where the release's file could not be read,
+    /// <see cref="InvalidOperationException"/> where the kind of copy cannot update itself,
+    /// and <see cref="OperationCanceledException"/> where the token is cancelled.
     /// </summary>
     Task<UpdateRefusal?> CheckRequirementsAsync(string version, CancellationToken cancellationToken);
 
@@ -28,9 +29,10 @@ public interface IAppUpdater
     /// downloaded, or null where the length is not known. Throws
     /// <see cref="UpdateFailedException"/> where any step fails, a download that does not
     /// carry the version included, <see cref="UpdateRefusedException"/> before anything is
-    /// downloaded where the release rules this copy out, and
-    /// <see cref="OperationCanceledException"/> where the token is cancelled; neither
-    /// leaves anything changed on disk.
+    /// downloaded where the release rules this copy out,
+    /// <see cref="InvalidOperationException"/> where the kind of copy cannot update itself,
+    /// and <see cref="OperationCanceledException"/> where the token is cancelled; none of
+    /// them leaves anything changed on disk.
     /// </summary>
     Task<PreparedUpdate> PrepareAsync(
         string version, IProgress<double?>? progress, CancellationToken cancellationToken);
@@ -146,8 +148,6 @@ public sealed class AppUpdater : IAppUpdater
     }
 
     public AppCopyKind Kind { get; }
-
-    public bool CanUpdateItself => AppCopy.CanUpdateItself(Kind);
 
     /// <summary>
     /// A file the release has is kept for the version it was read for, so the read made as
