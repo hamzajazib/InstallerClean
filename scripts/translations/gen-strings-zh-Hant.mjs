@@ -546,7 +546,7 @@ const MAP = {
   'Cli.UpdateRunningInstead': `改用 InstallerClean {1} 執行 {0}。`,
   'Cli.UpdateNotStarted': `InstallerClean {0} 版已安裝，但無法啟動。請再次執行該命令。`,
   'Cli.UpdateDownloadLink': `{0}：{1}`,
-  'Cli.Help.UpdateNote': `掃描前，它會檢查是否有較新版本的 InstallerClean。由您親自執行時，它會在更&#10;新前詢問。在排定的工作或指令碼中自動執行時，它會直接更新而不詢問。加上&#10;/noupdate 可略過檢查。`,
+  'Cli.Help.UpdateNote': `掃描前，它會檢查是否有較新版本的 InstallerClean。由您親自執行時，&#10;它會在更新前詢問。在排定的工作或指令碼中自動執行時，它會直接更新而不詢問。&#10;加上 /noupdate 可略過檢查。`,
   'UpdateNotice.Scoop': `此副本由 Scoop 安裝。若要更新，請關閉 InstallerClean 並執行：`,
   'UpdateNotice.CommandCopied': `已複製`,
   'UpdateNotice.CopyFailed': `無法複製。請選取該命令並手動複製。`,

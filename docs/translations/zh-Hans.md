@@ -591,7 +591,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 |   installerclean-cli /m PATH    Move to specified path |   installerclean-cli /m 路径    移动到指定路径 |
 | installerclean-cli blocks the prompt until it finishes, so a script or<br>scheduled task can wait on it. | installerclean-cli 会占住命令提示符直到结束，因此脚本或计划任务<br>可以等待它完成。 |
 | That folder is saved per-user; scheduled or SYSTEM runs need /m PATH. | 该文件夹按用户保存；计划任务或 SYSTEM 运行需要 /m 路径。 |
-| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | 扫描前，它会检查是否有更新版本的 InstallerClean。由您亲自运行时，它会在更<br>新前询问。在计划任务或脚本中自动运行时，它会直接更新而不询问。添加<br>/noupdate 可跳过检查。 |
+| Before it scans, it checks for a newer version of InstallerClean.<br>When you run it yourself, it asks before updating. When it runs on its<br>own, in a scheduled task or a script, it updates without asking.<br>Add /noupdate to skip the check. | 扫描前，它会检查是否有较新版本的 InstallerClean。由您亲自运行时，<br>它会在更新前询问。在计划任务或脚本中自动运行时，它会直接更新而不询问。<br>添加 /noupdate 可跳过检查。 |
 | Exit codes: | 退出代码： |
 |   0   success: the run did what it was asked |   0   成功：本次运行做了要求的事 |
 |   1   nothing processed: the run failed or was refused |   1   没有处理任何内容：本次运行失败或被拒绝 |
