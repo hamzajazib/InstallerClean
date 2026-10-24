@@ -1821,7 +1821,9 @@ Hãy chạy lại InstallerClean với tư cách quản trị viên.</value></da
        whose verb or adjective agrees with the numeral, and so changes between 2, 5
        and 21, or whose clause there wants a case Plural.File does not supply, makes
        the count the object of the holding back instead, as its Cli.NothingOffered
-       does. Polish, Russian, Ukrainian and Turkish are worded that way. -->
+       does. Polish, Russian and Ukrainian are worded that way. Turkish makes the
+       count the head of a relative clause and the subject of a passive holding back,
+       which keeps it in the nominative Plural.File supplies. -->
   <data name="Cli.NothingOfferedPerFile.Singular" xml:space="preserve"><value>InstallerClean không thể xác định rằng một tệp là không cần thiết, nên đã giữ lại tệp đó ({2}) thay vì đề xuất nó.</value></data>
   <data name="Cli.NothingOfferedPerFile.Plural" xml:space="preserve"><value>InstallerClean không thể xác định rằng {0} {1} là không cần thiết, nên đã giữ lại các tệp đó ({2}) thay vì đề xuất chúng.</value></data>
   <!-- For the machine whose walk-derived half was withheld wholesale while a

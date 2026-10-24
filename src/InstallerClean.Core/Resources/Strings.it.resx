@@ -1821,7 +1821,9 @@ Esegui di nuovo InstallerClean come amministratore.</value></data>
        whose verb or adjective agrees with the numeral, and so changes between 2, 5
        and 21, or whose clause there wants a case Plural.File does not supply, makes
        the count the object of the holding back instead, as its Cli.NothingOffered
-       does. Polish, Russian, Ukrainian and Turkish are worded that way. -->
+       does. Polish, Russian and Ukrainian are worded that way. Turkish makes the
+       count the head of a relative clause and the subject of a passive holding back,
+       which keeps it in the nominative Plural.File supplies. -->
   <data name="Cli.NothingOfferedPerFile.Singular" xml:space="preserve"><value>InstallerClean non è riuscito ad accertare che un file non sia necessario, perciò lo ha trattenuto ({2}) invece di proporlo.</value></data>
   <data name="Cli.NothingOfferedPerFile.Plural" xml:space="preserve"><value>InstallerClean non è riuscito ad accertare che {0} {1} non siano necessari, perciò li ha trattenuti ({2}) invece di proporli.</value></data>
   <!-- For the machine whose walk-derived half was withheld wholesale while a
