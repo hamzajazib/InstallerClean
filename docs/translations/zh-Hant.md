@@ -565,7 +565,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report sent. Thank you. | 報告已傳送。謝謝。 |
 | Report not sent. | 報告未傳送。 |
 | The report could not be sent. It is kept in {0}. | 無法傳送報告。報告保存在 {0}。 |
-| Sending a report from an earlier run that was not sent. | 正在傳送較早一次執行中未傳送的報告。 |
+| Sending a report left waiting by an earlier run. | 正在傳送較早一次執行留下的待傳送報告。 |
 | InstallerClean {0} is installed. | InstallerClean {0} 版已安裝。 |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 新版本會掃描並列出找到的內容，不會刪除任何檔案。如需刪除，請在之後再次執行 /d。 |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 新版本會掃描並列出找到的內容，不會移動任何檔案。如需移動，請在之後再次執行 /m。 |

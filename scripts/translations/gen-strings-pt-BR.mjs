@@ -660,7 +660,7 @@ const MAP = {
   'Cli.ReportSent': `Relatório enviado. Obrigado.`,
   'Cli.ReportNotSent': `Relatório não enviado.`,
   'Cli.ReportCouldNotBeSent': `Não foi possível enviar o relatório. Ele está guardado em {0}.`,
-  'Cli.ReportWaiting': `Enviando um relatório de uma execução anterior que não foi enviado.`,
+  'Cli.ReportWaiting': `Enviando um relatório pendente desde uma execução anterior.`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

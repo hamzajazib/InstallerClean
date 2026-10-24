@@ -565,7 +565,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report sent. Thank you. | 报告已发送。谢谢。 |
 | Report not sent. | 报告未发送。 |
 | The report could not be sent. It is kept in {0}. | 无法发送报告。报告保存在 {0}。 |
-| Sending a report from an earlier run that was not sent. | 正在发送较早一次运行中未发送的报告。 |
+| Sending a report left waiting by an earlier run. | 正在发送较早一次运行留下的待发送报告。 |
 | InstallerClean {0} is installed. | InstallerClean {0} 版已安装。 |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | 新版本将扫描并列出找到的内容，不会删除任何文件。如需删除，请在之后再次运行 /d。 |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | 新版本将扫描并列出找到的内容，不会移动任何文件。如需移动，请在之后再次运行 /m。 |

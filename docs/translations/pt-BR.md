@@ -565,7 +565,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report sent. Thank you. | Relatório enviado. Obrigado. |
 | Report not sent. | Relatório não enviado. |
 | The report could not be sent. It is kept in {0}. | Não foi possível enviar o relatório. Ele está guardado em {0}. |
-| Sending a report from an earlier run that was not sent. | Enviando um relatório de uma execução anterior que não foi enviado. |
+| Sending a report left waiting by an earlier run. | Enviando um relatório pendente desde uma execução anterior. |
 | InstallerClean {0} is installed. | O InstallerClean {0} está instalado. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | A nova versão vai analisar e listar o que encontrar, sem excluir nada. Para excluir, execute /d novamente depois. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | A nova versão vai analisar e listar o que encontrar, sem mover nada. Para mover, execute /m novamente depois. |

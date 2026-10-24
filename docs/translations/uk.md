@@ -565,7 +565,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | Report sent. Thank you. | Звіт надіслано. Дякую. |
 | Report not sent. | Звіт не надіслано. |
 | The report could not be sent. It is kept in {0}. | Не вдалося надіслати звіт. Його збережено в {0}. |
-| Sending a report from an earlier run that was not sent. | Надсилається звіт, який не було надіслано раніше. |
+| Sending a report left waiting by an earlier run. | Надсилається звіт, що очікує надсилання з раннішого запуску. |
 | InstallerClean {0} is installed. | Версію InstallerClean {0} встановлено. |
 | The new version will scan and list what it finds, without deleting anything. To delete, run /d again afterwards. | Нова версія просканує й покаже список знайденого, нічого не видаляючи. Щоб видалити, потім знову запустіть /d. |
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Нова версія просканує й покаже список знайденого, нічого не переміщуючи. Щоб перемістити, потім знову запустіть /m. |
