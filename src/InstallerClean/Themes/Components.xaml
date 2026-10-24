@@ -1169,24 +1169,39 @@
 
                          Thickness resource, not the Double one: a
                          {StaticResource} lookup runs no TypeConverter, so a
-                         Double will not satisfy BorderThickness. -->
-                    <Border Background="{StaticResource Action.Accent.Background}"
-                            BorderBrush="{StaticResource Surface.Card}"
-                            BorderThickness="{StaticResource BorderThickness.Hairline}"
-                            CornerRadius="{StaticResource Radius.Chip}"
-                            Padding="10,6">
-                        <TextBlock Text="{TemplateBinding Content}"
-                                   Foreground="{StaticResource Text.Heading}"
-                                   FontSize="{DynamicResource Type.Body}"
-                                   TextWrapping="Wrap"/>
-                    </Border>
+                         Double will not satisfy BorderThickness.
+
+                         A Border paints its fill inside its edge, as a
+                         shape of its own, and the two meet along a line
+                         that need not fall on a whole device pixel. The row
+                         of pixels there is covered partly by the edge and
+                         partly by the fill, and a tooltip is a popup
+                         composited per pixel, so such a row lets the control
+                         beneath show through: for the small Donate's tooltip
+                         that is Done and its label. The fill is therefore a
+                         Border of its own under the whole outline, and the
+                         hairline Border over it has no fill. -->
+                    <Grid>
+                        <Border Background="{StaticResource Action.Accent.Background}"
+                                CornerRadius="{StaticResource Radius.Chip}"/>
+                        <Border BorderBrush="{StaticResource Surface.Card}"
+                                BorderThickness="{StaticResource BorderThickness.Hairline}"
+                                CornerRadius="{StaticResource Radius.Chip}"
+                                Padding="10,6">
+                            <TextBlock Text="{TemplateBinding Content}"
+                                       Foreground="{StaticResource Text.Heading}"
+                                       FontSize="{DynamicResource Type.Body}"
+                                       TextWrapping="Wrap"/>
+                        </Border>
+                    </Grid>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
 
     <!-- Default ToolTip for attribute-syntax ToolTip="..." usages. Dark
-         card surface, hairline border, body text. -->
+         card surface, hairline border, body text. Built as AccentTooltip is,
+         with the fill as its own Border under the whole outline. -->
     <Style TargetType="ToolTip">
         <Setter Property="FontFamily" Value="{DynamicResource Type.FontFamily}"/>
         <Setter Property="Background" Value="Transparent"/>
@@ -1204,16 +1219,19 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToolTip">
-                    <Border Background="{StaticResource Surface.Sidebar}"
-                            BorderBrush="{StaticResource Action.Standard.Background}"
-                            BorderThickness="{StaticResource BorderThickness.Hairline}"
-                            CornerRadius="{StaticResource Radius.Chip}"
-                            Padding="10,6">
-                        <TextBlock Text="{TemplateBinding Content}"
-                                   Foreground="{StaticResource Text.Body}"
-                                   FontSize="{DynamicResource Type.Body}"
-                                   TextWrapping="Wrap"/>
-                    </Border>
+                    <Grid>
+                        <Border Background="{StaticResource Surface.Sidebar}"
+                                CornerRadius="{StaticResource Radius.Chip}"/>
+                        <Border BorderBrush="{StaticResource Action.Standard.Background}"
+                                BorderThickness="{StaticResource BorderThickness.Hairline}"
+                                CornerRadius="{StaticResource Radius.Chip}"
+                                Padding="10,6">
+                            <TextBlock Text="{TemplateBinding Content}"
+                                       Foreground="{StaticResource Text.Body}"
+                                       FontSize="{DynamicResource Type.Body}"
+                                       TextWrapping="Wrap"/>
+                        </Border>
+                    </Grid>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
