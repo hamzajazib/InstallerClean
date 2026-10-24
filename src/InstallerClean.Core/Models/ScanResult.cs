@@ -353,16 +353,6 @@ namespace InstallerClean.Models;
 /// counts, so that <see cref="UnestablishedWithheldBytes"/> can leave them out, carried
 /// the same way.
 /// </param>
-/// <param name="SupersededWithheldBytes">
-/// The size of the files <see cref="WithheldCount"/> counts, summed over the same rows:
-/// superseded rows held back whose file is on disk.
-///
-/// IT IS NOT <see cref="RegisteredSupersededBytes"/>, which sizes every superseded or
-/// obsoleted row the scan is keeping, held back or not.
-///
-/// APPENDED AFTER THE MEMBERS ABOVE IT, so a positional construction of those still
-/// means what it meant.
-/// </param>
 /// <param name="SupersededContainmentRefusedCount">
 /// Superseded rows whose file is on disk, that carried a removable verdict to the offer,
 /// and that the containment check then refused: the recorded path is a reparse point, or
@@ -375,8 +365,8 @@ namespace InstallerClean.Models;
 /// <see cref="SupersededHeldBackCount"/> adds the three together for both hosts' counts of
 /// files held back, and the opt-in report carries each apart.
 ///
-/// APPENDED AFTER <see cref="SupersededWithheldBytes"/>, with the two members after it, so
-/// a positional construction of the members above still means what it meant.
+/// APPENDED AFTER THE MEMBERS ABOVE IT, so a positional construction of those still
+/// means what it meant.
 /// </param>
 /// <param name="SupersededContainmentUnestablishedCount">
 /// The same rows where the containment check could not answer: the path's attributes, or
@@ -386,9 +376,6 @@ namespace InstallerClean.Models;
 /// NOT ADDED TO <see cref="SupersededContainmentRefusedCount"/> ANYWHERE BUT IN
 /// <see cref="SupersededHeldBackCount"/>, which states no cause. One is a finding about the
 /// file and the other the check failing to answer.
-/// </param>
-/// <param name="SupersededContainmentBytes">
-/// The size of the files the two counts above count.
 /// </param>
 /// <param name="SourceRootsGivenUp">
 /// Every drive or share, or path of another form, the declared-product screen stopped
@@ -465,10 +452,8 @@ public record ScanResult(
     long WithheldDeclaredProductInstalledBytes = 0,
     long WithheldNotBeforeTheClockBytes = 0,
     long WithheldDeclaredPatchRegisteredBytes = 0,
-    long SupersededWithheldBytes = 0,
     int SupersededContainmentRefusedCount = 0,
     int SupersededContainmentUnestablishedCount = 0,
-    long SupersededContainmentBytes = 0,
     IReadOnlyList<SourceRootGivenUp>? SourceRootsGivenUp = null,
     int SourceWaitCount = 0,
     CachedPackageCensus? CachedPackageCensus = null,

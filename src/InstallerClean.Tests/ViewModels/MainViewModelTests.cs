@@ -691,8 +691,7 @@ public class MainViewModelTests
             .Returns(new ScanResult(
                 Array.Empty<OrphanedFile>(), kept, 9000,
                 WithheldCount: 3,
-                WithheldFiles: Array.Empty<OrphanedFile>(),
-                SupersededWithheldBytes: 9000));
+                WithheldFiles: Array.Empty<OrphanedFile>()));
 
         await vm.Scan.ScanWithProgressAsync(null);
 
@@ -743,8 +742,7 @@ public class MainViewModelTests
             .Returns(new ScanResult(
                 Array.Empty<OrphanedFile>(), kept, 7000,
                 WithheldFiles: Array.Empty<OrphanedFile>(),
-                SupersededContainmentRefusedCount: 1,
-                SupersededContainmentBytes: 7000));
+                SupersededContainmentRefusedCount: 1));
 
         await vm.Scan.ScanWithProgressAsync(null);
 
@@ -761,8 +759,7 @@ public class MainViewModelTests
         _scanService.ScanAsync(Arg.Any<IProgress<ScanProgressUpdate>?>(), Arg.Any<CancellationToken>())
             .Returns(new ScanResult(
                 Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
-                WithheldCount: 1,
-                SupersededWithheldBytes: 4096));
+                WithheldCount: 1));
 
         await vm.Scan.ScanWithProgressAsync(null);
 
@@ -784,8 +781,7 @@ public class MainViewModelTests
                 Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), 0,
                 WithheldCount: 1,
                 WithheldFiles: withheld,
-                WithheldBy: new WithholdingSplit(WholesaleCount: 2),
-                SupersededWithheldBytes: 4096));
+                WithheldBy: new WithholdingSplit(WholesaleCount: 2)));
 
         await vm.Scan.ScanWithProgressAsync(null);
 

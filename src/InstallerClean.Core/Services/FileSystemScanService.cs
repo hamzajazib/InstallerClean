@@ -336,11 +336,10 @@ public sealed class FileSystemScanService : IFileSystemScanService
         int obsoletedRegistrations = 0;
         int refusedCandidates = 0;
         // Superseded rows that reached the offer and that the containment check then kept
-        // back, counted by its verdict, and their size. The rows stay on the kept list, so
-        // the left-alone line has them already; these say why, for the report, and count
-        // them among the files the finished screen and the command line say were held back.
+        // back, counted by its verdict. The rows stay on the kept list, so the left-alone
+        // line has them already; these say why, for the report, and count them among the
+        // files the finished screen and the command line say were held back.
         var supersededContained = new ContainmentTally();
-        long supersededContainedBytes = 0;
         int missingAffected = 0;
         int missingUnaffected = 0;
         // The correlation gate's inputs, counted here rather than derived from the
@@ -786,17 +785,16 @@ public sealed class FileSystemScanService : IFileSystemScanService
 
                 // A ROW THE CHECK REFUSES OR CANNOT ANSWER FOR STAYS ON THE KEPT LIST,
                 // which already puts it on the left-alone line and in the details window
-                // as a registered file. What it adds is a count by verdict, with its size,
-                // so the finished screen and the command line count it among the files
-                // held back and the report carries why.
+                // as a registered file. What it adds is a count by verdict, so the
+                // finished screen and the command line count it among the files held
+                // back and the report carries why.
                 refusedCandidates++;
                 refusalLog.Record(new InvalidOperationException(
                     safety == CandidateGuard.RemovalSafety.Refused
                         ? $"Registered removal candidate refused (not directly in the Installer cache, or a reparse point): {pkg.LocalPackagePath}"
                         : $"Registered removal candidate not offered (its symlink status or location could not be read): {pkg.LocalPackagePath}"),
                     cause: $"registered/{safety}");
-                if (supersededContained.Record(safety))
-                    supersededContainedBytes += size;
+                supersededContained.Record(safety);
             }
 
             sizedPackages.Add(sized);
@@ -955,13 +953,6 @@ public sealed class FileSystemScanService : IFileSystemScanService
         // established.
         var registeredWithheld = stillUsed.Count(p => p.RemovableWithheld);
         var withheldCost = stillUsed.Count(p => p.RemovableWithheld && p.FileExists);
-        // The size of exactly the files the cost figure counts, over the same test, so
-        // the count and the size describe one population. The enumeration keeps one row
-        // per path, so a patch registered under several products is one row and is sized
-        // once.
-        var withheldCostBytes = stillUsed
-            .Where(p => p.RemovableWithheld && p.FileExists)
-            .Sum(p => p.FileSizeBytes);
         var registeredUnjudged = stillUsed.Count(p => p.VerdictUnreadable);
 
         // SUPERSEDED AND OBSOLETED ROWS THIS SCAN IS KEEPING. A superseded row the scan
@@ -1138,10 +1129,8 @@ public sealed class FileSystemScanService : IFileSystemScanService
             withheldBy.DeclaredProductInstalledBytes,
             withheldBy.NotBeforeTheClockBytes,
             withheldBy.DeclaredPatchRegisteredBytes,
-            withheldCostBytes,
             supersededContained.RefusedCount,
             supersededContained.UnestablishedCount,
-            supersededContainedBytes,
             sourceRootsGivenUp,
             sourceWaitCount,
             cachedPackageCensus,
@@ -1417,8 +1406,7 @@ public sealed class FileSystemScanService : IFileSystemScanService
         private int _unestablished;
 
         /// <summary>
-        /// Counts <paramref name="verdict"/> and says whether it did, so a caller summing
-        /// the files' sizes beside the counts sizes exactly the files they count.
+        /// Counts <paramref name="verdict"/> and says whether it did.
         /// </summary>
         internal bool Record(CandidateGuard.RemovalSafety verdict)
         {

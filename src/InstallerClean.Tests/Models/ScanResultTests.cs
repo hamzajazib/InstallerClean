@@ -765,8 +765,7 @@ public class ScanResultTests
     {
         var result = new ScanResult([], [], 0,
             WithheldCount: 3,
-            WithheldFiles: [],
-            SupersededWithheldBytes: 16384);
+            WithheldFiles: []);
 
         Assert.Equal(3, result.UnsettledHeldBackCount);
         Assert.True(result.HasUnsettledHeldBack);
@@ -793,8 +792,7 @@ public class ScanResultTests
         var result = new ScanResult([], [], 0,
             WithheldCount: 1,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
-            WithheldBy: new WithholdingSplit(WholesaleCount: 2),
-            SupersededWithheldBytes: 16384);
+            WithheldBy: new WithholdingSplit(WholesaleCount: 2));
 
         Assert.Equal(3, result.UnsettledHeldBackCount);
 
@@ -810,8 +808,7 @@ public class ScanResultTests
             WithheldCount: 2,
             WithheldFiles: [File("a.msi", 1024), File("b.msi", 2048)],
             WithheldBy: new WithholdingSplit(DeclaredProductInstalledCount: 1, ScreenUnansweredCount: 1),
-            WithheldDeclaredProductInstalledBytes: 2048,
-            SupersededWithheldBytes: 16384);
+            WithheldDeclaredProductInstalledBytes: 2048);
 
         Assert.Equal(3, result.UnsettledHeldBackCount);
     }
@@ -840,8 +837,7 @@ public class ScanResultTests
         var result = new ScanResult([], [], 0,
             WithheldFiles: [],
             SupersededContainmentRefusedCount: 2,
-            SupersededContainmentUnestablishedCount: 1,
-            SupersededContainmentBytes: 7000);
+            SupersededContainmentUnestablishedCount: 1);
 
         Assert.Equal(3, result.SupersededHeldBackCount);
         Assert.Equal(3, result.UnsettledHeldBackCount);
@@ -862,10 +858,8 @@ public class ScanResultTests
         var result = new ScanResult([], [], 0,
             WithheldCount: 4,
             WithheldFiles: [],
-            SupersededWithheldBytes: 100,
             SupersededContainmentRefusedCount: 20,
-            SupersededContainmentUnestablishedCount: 300,
-            SupersededContainmentBytes: 5000);
+            SupersededContainmentUnestablishedCount: 300);
 
         Assert.Equal(324, result.SupersededHeldBackCount);
         Assert.Equal(324, result.UnsettledHeldBackCount);

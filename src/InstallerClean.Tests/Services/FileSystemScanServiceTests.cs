@@ -507,7 +507,8 @@ public class FileSystemScanServiceTests
         Assert.Empty(result.WithheldFiles!);
         Assert.Equal(1, result.SupersededContainmentRefusedCount);
         Assert.Equal(0, result.SupersededContainmentUnestablishedCount);
-        Assert.Equal(500, result.SupersededContainmentBytes);
+        // The refused row stays on the kept list, so its size is still in the kept bytes.
+        Assert.Equal(500, result.RegisteredSupersededBytes);
         Assert.Equal(0, result.WithheldCount);
         Assert.Equal(1, result.SupersededHeldBackCount);
         Assert.Equal(1, result.UnsettledHeldBackCount);
@@ -695,14 +696,13 @@ public class FileSystemScanServiceTests
     }
 
     [Fact]
-    public async Task The_size_of_the_withheld_superseded_files_sums_the_cost_figure_s_files_alone()
+    public async Task The_size_of_the_superseded_files_kept_counts_withheld_and_unwithheld_rows_and_not_the_claimed_package()
     {
-        // THE SAME POPULATION AS WithheldCount, SIZED. Every file on the disk carries a
-        // different size, so a sum over a wider or narrower population lands on a figure
-        // the assertion rejects: the superseded row the scan did not withhold is in
-        // RegisteredSupersededBytes and not here, and the claimed package is in neither.
-        // The row whose file has gone is sized at zero by the scan, and WithheldCount
-        // leaves it out.
+        // Every file on the disk carries a different size, so a sum over a wider or
+        // narrower population lands on a figure the assertion rejects: the superseded
+        // rows kept, withheld or not, are in RegisteredSupersededBytes, and the claimed
+        // package is not. The row whose file has gone is sized at zero by the scan, and
+        // WithheldCount leaves it out.
         const string heldOne = @"C:\Windows\Installer\held-one.msp";
         const string heldTwo = @"C:\Windows\Installer\held-two.msp";
         const string heldGone = @"C:\Windows\Installer\held-gone.msp";
@@ -725,7 +725,6 @@ public class FileSystemScanServiceTests
         var result = await new FileSystemScanService(query, fs, Array.Empty<string>(), null).ScanAsync();
 
         Assert.Equal(2, result.WithheldCount);
-        Assert.Equal(4000, result.SupersededWithheldBytes);
         Assert.Equal(9000, result.RegisteredSupersededBytes);
     }
 
