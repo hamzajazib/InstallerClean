@@ -377,8 +377,7 @@ internal static class Program
         // neither the window nor another run, and after the run's summary entry, so the
         // exit code and the entry are the work's whatever the answer is. The donate line
         // a Delete or Move held back follows it.
-        var offer = OfferReport(report, updateHost, cts.Token);
-        WriteHeldDonation(report, offer, cts.Token);
+        OfferReport(report, updateHost, cts.Token);
         return exitCode;
     }
 
@@ -398,39 +397,40 @@ internal static class Program
     /// After the work of a run, at a console somebody can answer in: offers to send the
     /// report of a run that was the PC's first and finished
     /// (<see cref="RunReport.Entry"/>), or sends the report an earlier run was told to
-    /// send and could not. Nothing is asked or sent where nobody can answer, or where
-    /// Ctrl+C has come, which answers <see cref="ReportOfferOutcome.NotOffered"/>, as
-    /// does a failure. Never throws.
+    /// send and could not, and then prints the donate line a Delete or Move held back
+    /// (<see cref="WriteHeldDonation"/>). Nothing is asked or sent where nobody can answer,
+    /// or where Ctrl+C has come. Never throws.
     /// </summary>
-    internal static ReportOfferOutcome OfferReport(RunReport report, IConsolePrompt console, CancellationToken token)
+    internal static void OfferReport(RunReport report, IConsolePrompt console, CancellationToken token)
     {
-        if (!report.CanAsk || token.IsCancellationRequested) return ReportOfferOutcome.NotOffered;
+        if (!report.CanAsk || token.IsCancellationRequested) return;
         try
         {
-            return OfferReport(report, console, new ResultLogService(), new SettingsService(), token);
+            OfferReport(report, console, new ResultLogService(), new SettingsService(), token);
         }
         catch (Exception ex)
         {
             Helpers.CrashLog.TryWrite(ex);
-            return ReportOfferOutcome.NotOffered;
+            WriteHeldDonation(report, ReportOfferOutcome.NotOffered, token);
         }
     }
 
-    /// <summary>The offer over the services it uses, which a test supplies.</summary>
-    internal static ReportOfferOutcome OfferReport(
+    /// <summary>The offer and the donate line over the services they use, which a test supplies.</summary>
+    internal static void OfferReport(
         RunReport report, IConsolePrompt console, IResultLogService resultLog, ISettingsService settings,
         CancellationToken token)
     {
-        if (!report.CanAsk || token.IsCancellationRequested) return ReportOfferOutcome.NotOffered;
+        if (!report.CanAsk || token.IsCancellationRequested) return;
         var offer = new ConsoleReportOffer(
             console, resultLog, settings,
             Path.Combine(AppDataFolder.Location, "last-run.json"),
             ReadmeLinks.For("reports-stats", Localisation.UiCulture),
             () => CancelKey.Process.Closing,
             CommandLineUpdate.ControlCBound);
-        return report.Entry is { } entry
+        var outcome = report.Entry is { } entry
             ? offer.Offer(entry, token)
             : offer.SendWaiting(token);
+        WriteHeldDonation(report, outcome, token);
     }
 
     /// <summary>
@@ -1756,18 +1756,19 @@ internal static class Program
     /// <summary>
     /// Whether an earlier run left a report waiting to be sent, which
     /// <see cref="OfferReport(RunReport, IConsolePrompt, CancellationToken)"/> sends with
-    /// a line of its own.
+    /// a line of its own where the saved report is still there.
     /// </summary>
     private static bool ReportIsWaiting(IServiceProvider services) =>
         services.GetRequiredService<ISettingsService>().TryLoad(out var current)
-        && current.ReportSendPending && !current.HasSentResultLog;
+        && ConsoleReportOffer.IsWaiting(current);
 
     /// <summary>
     /// The donate line a Delete or Move held back for the end of the run
     /// (<see cref="RunReport.DonationHeld"/>), printed after the report question and what
     /// followed it, so it is the last thing the run prints. A report offer ended by Ctrl+C,
-    /// or a Ctrl+C that came before the question, leaves the line out: the cancellation
-    /// stays the last line, as it does for a cancelled run.
+    /// or a Ctrl+C that has come by then, leaves the line out: the cancellation stays the
+    /// last line, as it does for a cancelled run. Console writes cannot throw, as
+    /// <see cref="ConsoleGuard"/> carries every one.
     /// </summary>
     internal static void WriteHeldDonation(RunReport report, ReportOfferOutcome offer, CancellationToken token)
     {

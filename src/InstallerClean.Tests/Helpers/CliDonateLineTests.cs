@@ -10,8 +10,10 @@ namespace InstallerClean.Tests.Helpers;
 /// <summary>
 /// The command line's donate line: printed last, after a blank line, by a Delete that
 /// deleted files and a Move that moved files, and only to a console somebody is
-/// watching. Driven through the real work method with substitute services, the
-/// watched answer passed in, since standard output is redirected under a test runner.
+/// watching. Where the run goes on to ask about its report or to send one, the line
+/// follows that instead (CliReportCarryTests). Driven through the real work method with
+/// substitute services, the watched answer passed in, since standard output is
+/// redirected under a test runner.
 ///
 /// A RUN THAT REACHES THE LINE'S GATE IS MADE TWICE, watched and not, and the two exit
 /// codes are compared: the line is output and nothing else, so it must not move the

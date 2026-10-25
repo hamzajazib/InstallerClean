@@ -441,26 +441,37 @@ public class CliReportCarryTests
     }
 
     [Theory]
-    [InlineData("y", ResultLogSendOutcome.Sent, nameof(ReportOfferOutcome.Sent))]
-    [InlineData("n", ResultLogSendOutcome.Sent, nameof(ReportOfferOutcome.Declined))]
-    [InlineData("y", ResultLogSendOutcome.NetworkUnavailable, nameof(ReportOfferOutcome.NotSent))]
+    [InlineData("y", ResultLogSendOutcome.Sent, "sent")]
+    [InlineData("n", ResultLogSendOutcome.Sent, "declined")]
+    [InlineData("y", ResultLogSendOutcome.NetworkUnavailable, "not sent")]
     public void The_held_donate_line_is_the_last_thing_printed_after_the_question(
-        string answer, ResultLogSendOutcome sendOutcome, string expectedOutcome)
+        string answer, ResultLogSendOutcome sendOutcome, string how)
     {
-        var expected = Enum.Parse<ReportOfferOutcome>(expectedOutcome);
         var report = new RunReport(canAsk: true) { Entry = AnEntry(), DonationHeld = true };
 
-        var (offer, stdout) = OfferThenDonate(report, sendOutcome, CancellationToken.None, answer);
+        var stdout = EndOfRun(report, sendOutcome, CancellationToken.None, answer);
 
-        Assert.Equal(expected, offer);
         Assert.EndsWith(Environment.NewLine + Environment.NewLine + DonateLine + Environment.NewLine, stdout);
-        var reportLine = expected switch
+        var reportLine = how switch
         {
-            ReportOfferOutcome.Sent => Strings.Cli_ReportSent,
-            ReportOfferOutcome.Declined => Strings.Cli_ReportNotSent,
+            "sent" => Strings.Cli_ReportSent,
+            "declined" => Strings.Cli_ReportNotSent,
             _ => string.Format(Strings.Cli_ReportCouldNotBeSent, Path.Combine(AppDataFolder.Location, "last-run.json")),
         };
         Assert.True(stdout.IndexOf(reportLine, StringComparison.Ordinal)
+            < stdout.IndexOf(DonateLine, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void The_held_donate_line_follows_the_send_of_a_report_an_earlier_run_left_waiting()
+    {
+        var report = new RunReport(canAsk: true) { DonationHeld = true };
+
+        var stdout = EndOfRun(report, ResultLogSendOutcome.Sent, CancellationToken.None, reportWaiting: true);
+
+        Assert.Contains(Strings.Cli_ReportWaiting, stdout);
+        Assert.EndsWith(Environment.NewLine + Environment.NewLine + DonateLine + Environment.NewLine, stdout);
+        Assert.True(stdout.IndexOf(Strings.Cli_ReportSent, StringComparison.Ordinal)
             < stdout.IndexOf(DonateLine, StringComparison.Ordinal));
     }
 
@@ -470,10 +481,8 @@ public class CliReportCarryTests
         using var cts = new CancellationTokenSource();
         var report = new RunReport(canAsk: true) { Entry = AnEntry(), DonationHeld = true };
 
-        var (offer, stdout) = OfferThenDonate(
-            report, ResultLogSendOutcome.Sent, cts.Token, cancelAtTheQuestion: cts);
+        var stdout = EndOfRun(report, ResultLogSendOutcome.Sent, cts.Token, cancelAtTheQuestion: cts);
 
-        Assert.Equal(ReportOfferOutcome.Cancelled, offer);
         Assert.Contains(Strings.Cli_ReportNotSent, stdout);
         Assert.DoesNotContain(SupportLink.KoFiUrl, stdout);
     }
@@ -504,9 +513,8 @@ public class CliReportCarryTests
         cts.Cancel();
         var report = new RunReport(canAsk: true) { Entry = AnEntry(), DonationHeld = true };
 
-        var (offer, stdout) = OfferThenDonate(report, ResultLogSendOutcome.Sent, cts.Token);
+        var stdout = EndOfRun(report, ResultLogSendOutcome.Sent, cts.Token);
 
-        Assert.Equal(ReportOfferOutcome.NotOffered, offer);
         Assert.Empty(stdout);
     }
 
@@ -515,7 +523,7 @@ public class CliReportCarryTests
     {
         var report = new RunReport(canAsk: true) { Entry = AnEntry() };
 
-        var (_, stdout) = OfferThenDonate(report, ResultLogSendOutcome.Sent, CancellationToken.None, "n");
+        var stdout = EndOfRun(report, ResultLogSendOutcome.Sent, CancellationToken.None, "n");
 
         Assert.DoesNotContain(SupportLink.KoFiUrl, stdout);
     }
@@ -525,31 +533,37 @@ public class CliReportCarryTests
         1, "GB", ReportHost.CommandLine, AppCopyKind.CommandLineDownload);
 
     /// <summary>
-    /// The end of a run as Main does it: the offer, then the held donate line. The console
-    /// prints into the same buffer as the line does, so the order is what is read back.
-    /// <paramref name="cancelAtTheQuestion"/>, where given, is cancelled as the question is
-    /// read, which ends the read with no answer, as Ctrl+C at the prompt does.
+    /// The end of a run as Main does it, through the offer over substitute services, and
+    /// what it printed. The console prints into the same buffer as the donate line does,
+    /// so the order is what is read back. <paramref name="cancelAtTheQuestion"/>, where
+    /// given, is cancelled as the question is read, which ends the read with no answer, as
+    /// Ctrl+C at the prompt does. <paramref name="reportWaiting"/> is an earlier run's
+    /// report left to be sent.
     /// </summary>
-    private static (ReportOfferOutcome Offer, string Stdout) OfferThenDonate(
+    private static string EndOfRun(
         RunReport report, ResultLogSendOutcome sendOutcome, CancellationToken token,
-        string? answer = null, CancellationTokenSource? cancelAtTheQuestion = null)
+        string? answer = null, CancellationTokenSource? cancelAtTheQuestion = null, bool reportWaiting = false)
     {
         var log = Substitute.For<IResultLogService>();
         log.WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>()).Returns(true);
+        log.LastLogExists().Returns(true);
         log.ReadLastLogAsync(Arg.Any<CancellationToken>()).Returns("{}");
         log.SendAsync("{}", Arg.Any<CancellationToken>()).Returns(sendOutcome);
         var settings = Substitute.For<ISettingsService>();
         settings.Update(Arg.Any<Action<AppSettings>>()).Returns(true);
+        settings.TryLoad(out Arg.Any<AppSettings>()).Returns(call =>
+        {
+            call[0] = new AppSettings { ReportSendPending = reportWaiting };
+            return true;
+        });
 
         var original = Console.Out;
         using var buffer = new StringWriter();
         try
         {
             Console.SetOut(buffer);
-            var console = new RecordingConsole(answer, cancelAtTheQuestion);
-            var offer = Program.OfferReport(report, console, log, settings, token);
-            Program.WriteHeldDonation(report, offer, token);
-            return (offer, buffer.ToString());
+            Program.OfferReport(report, new RecordingConsole(answer, cancelAtTheQuestion), log, settings, token);
+            return buffer.ToString();
         }
         finally
         {

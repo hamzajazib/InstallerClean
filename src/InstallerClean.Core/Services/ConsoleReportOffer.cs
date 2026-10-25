@@ -87,7 +87,7 @@ internal sealed class ConsoleReportOffer(
     {
         try
         {
-            if (!settings.TryLoad(out var current) || !current.ReportSendPending || current.HasSentResultLog)
+            if (!settings.TryLoad(out var current) || !IsWaiting(current))
                 return ReportOfferOutcome.NotOffered;
             // A report whose file is no longer there has nothing to send or to be kept.
             if (!resultLog.LastLogExists())
@@ -106,6 +106,14 @@ internal sealed class ConsoleReportOffer(
             return ReportOfferOutcome.NotSent;
         }
     }
+
+    /// <summary>
+    /// Whether <paramref name="current"/> says an earlier run left a report waiting to be
+    /// sent: <see cref="AppSettings.ReportSendPending"/> is set and
+    /// <see cref="AppSettings.HasSentResultLog"/> is not. <see cref="SendWaiting"/> sends
+    /// one only where this answers true and the saved report is still there.
+    /// </summary>
+    internal static bool IsWaiting(AppSettings current) => current.ReportSendPending && !current.HasSentResultLog;
 
     /// <summary>
     /// Prints what the report holds, the panel's words with the chart named by its
