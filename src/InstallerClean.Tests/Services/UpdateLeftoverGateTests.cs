@@ -56,17 +56,60 @@ public sealed class UpdateLeftoverGateTests
     }
 
     [Fact]
-    public async Task Preparing_an_update_marks_it_begun_even_where_the_update_then_fails()
+    public async Task An_update_about_to_write_marks_it_begun_even_where_the_write_then_fails()
     {
         var gate = new UpdateLeftoverGate();
-        var updater = new AppUpdater(AppCopyKind.Undetermined, Path.Combine(Path.GetTempPath(), "InstallerClean.exe"),
-            new UpdateDownloadService(), Path.GetTempPath(), AppUpdater.WindowSetupArguments,
+        // A file where the staging root should be, so the staging folder cannot be made.
+        var root = Path.GetTempFileName();
+        try
+        {
+            var updater = Updater(gate, root, AllowsEveryDownload);
+
+            await Assert.ThrowsAnyAsync<Exception>(() => updater.PrepareAsync("9.9.9", null, CancellationToken.None));
+
+            Assert.True(gate.UpdateStarted);
+            Assert.False(gate.TryRunPass(() => { }));
+        }
+        finally
+        {
+            File.Delete(root);
+        }
+    }
+
+    [Fact]
+    public async Task An_update_refused_before_it_writes_leaves_the_clean_up_running()
+    {
+        var gate = new UpdateLeftoverGate();
+        var updater = Updater(gate, Path.GetTempPath(), manifest: null);
+
+        await Assert.ThrowsAsync<UpdateRefusedException>(() => updater.PrepareAsync("9.9.9", null, CancellationToken.None));
+
+        Assert.False(gate.UpdateStarted);
+        Assert.True(gate.TryRunPass(() => { }));
+    }
+
+    /// <summary>An update.json that lists every download with nothing required.</summary>
+    private const string AllowsEveryDownload =
+        """{"schema": 1, "downloads": {"setup": {"requires": []}, "portable": {"requires": []}, "slim": {"requires": []}, "cli": {"requires": []}}}""";
+
+    /// <summary>
+    /// A portable copy's updater whose requests are answered here: the release's
+    /// update.json with <paramref name="manifest"/>, or not found where it is null, and
+    /// any other request with nothing.
+    /// </summary>
+    private static AppUpdater Updater(UpdateLeftoverGate gate, string stagingRoot, string? manifest) =>
+        new(AppCopyKind.Portable, Path.Combine(Path.GetTempPath(), "InstallerClean.exe"),
+            new UpdateDownloadService(new Answers(manifest), null), stagingRoot, AppUpdater.WindowSetupArguments,
             UpdateStagingFolder.AdministratorsOnly, NSubstitute.Substitute.For<IRegistryReader>(), gate);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => updater.PrepareAsync("9.9.9", null, CancellationToken.None));
-
-        Assert.True(gate.UpdateStarted);
-        Assert.False(gate.TryRunPass(() => { }));
+    private sealed class Answers(string? manifest) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(
+                request.RequestUri!.AbsolutePath.EndsWith("/" + UpdateManifest.FileName, StringComparison.Ordinal)
+                && manifest is not null
+                    ? new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(manifest) }
+                    : new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
     }
 }

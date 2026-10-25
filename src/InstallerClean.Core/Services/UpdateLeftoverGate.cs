@@ -5,8 +5,9 @@ namespace InstallerClean.Services;
 /// process starts. The clean-up deletes the staging folders' downloads and the newer
 /// version beside the exe by their names, and an update writes files under the same
 /// names while it runs, opened with delete sharing, so a pass of the clean-up while it
-/// runs would delete them. Once <see cref="AppUpdater.PrepareAsync"/> has begun, no pass
-/// runs again in this process, and whatever was left behind waits for the next start.
+/// runs would delete them. Once <see cref="AppUpdater.PrepareAsync"/> is about to write
+/// its first file, no pass runs again in this process, and whatever was left behind waits
+/// for the next start.
 /// </summary>
 public sealed class UpdateLeftoverGate
 {
@@ -16,8 +17,8 @@ public sealed class UpdateLeftoverGate
     /// <summary>The gate this process's clean-up and its updates share.</summary>
     public static UpdateLeftoverGate ForThisProcess { get; } = new();
 
-    /// <summary>Whether an update has begun in this process.</summary>
-    public bool UpdateStarted
+    /// <summary>Whether an update has begun writing in this process.</summary>
+    internal bool UpdateStarted
     {
         get { lock (_gate) return _updateStarted; }
     }

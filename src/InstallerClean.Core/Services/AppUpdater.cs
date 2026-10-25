@@ -143,8 +143,8 @@ public sealed class AppUpdater : IAppUpdater
     /// <summary>
     /// Test seam: the staging folder's descriptor given as SDDL, so a suite without
     /// administrator rights can write into it, the registry the PC's .NET Framework
-    /// is read from, and the gate the update marks as it begins, this process's where
-    /// none is given.
+    /// is read from, and the gate the update marks before it writes anything, which is
+    /// <see cref="UpdateLeftoverGate.ForThisProcess"/> where none is given.
     /// </summary>
     internal AppUpdater(
         AppCopyKind kind, string exePath, UpdateDownloadService downloader, string stagingRoot,
@@ -241,9 +241,6 @@ public sealed class AppUpdater : IAppUpdater
     public async Task<PreparedUpdate> PrepareAsync(
         string version, IProgress<double?>? progress, CancellationToken cancellationToken)
     {
-        // First, so no pass of the start-up clean-up deletes what this update writes
-        // (UpdateLeftoverGate).
-        _leftovers.MarkUpdateStarted();
         var address = AppCopy.DownloadAddress(Kind, version);
         var fileName = AppCopy.DownloadFileName(Kind, version);
         if (address is null || fileName is null)
@@ -252,6 +249,10 @@ public sealed class AppUpdater : IAppUpdater
         if (await CheckRequirementsAsync(version, cancellationToken).ConfigureAwait(false) is { } refusal)
             throw new UpdateRefusedException(refusal, version);
 
+        // Before the first file this update writes, so no pass of the start-up clean-up
+        // deletes one (UpdateLeftoverGate). An update refused before this point writes
+        // nothing, and the clean-up carries on.
+        _leftovers.MarkUpdateStarted();
         UpdateStagingFolder folder;
         try
         {
