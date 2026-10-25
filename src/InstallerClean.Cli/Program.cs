@@ -375,8 +375,10 @@ internal static class Program
 
         // The question comes after the mutex is released, so a person reading it holds up
         // neither the window nor another run, and after the run's summary entry, so the
-        // exit code and the entry are the work's whatever the answer is.
-        OfferReport(report, updateHost, cts.Token);
+        // exit code and the entry are the work's whatever the answer is. The donate line
+        // a Delete or Move held back follows it.
+        var offer = OfferReport(report, updateHost, cts.Token);
+        WriteHeldDonation(report, offer, cts.Token);
         return exitCode;
     }
 
@@ -397,37 +399,38 @@ internal static class Program
     /// report of a run that was the PC's first and finished
     /// (<see cref="RunReport.Entry"/>), or sends the report an earlier run was told to
     /// send and could not. Nothing is asked or sent where nobody can answer, or where
-    /// Ctrl+C has come. Never throws.
+    /// Ctrl+C has come, which answers <see cref="ReportOfferOutcome.NotOffered"/>, as
+    /// does a failure. Never throws.
     /// </summary>
-    internal static void OfferReport(RunReport report, IConsolePrompt console, CancellationToken token)
+    internal static ReportOfferOutcome OfferReport(RunReport report, IConsolePrompt console, CancellationToken token)
     {
-        if (!report.CanAsk || token.IsCancellationRequested) return;
+        if (!report.CanAsk || token.IsCancellationRequested) return ReportOfferOutcome.NotOffered;
         try
         {
-            OfferReport(report, console, new ResultLogService(), new SettingsService(), token);
+            return OfferReport(report, console, new ResultLogService(), new SettingsService(), token);
         }
         catch (Exception ex)
         {
             Helpers.CrashLog.TryWrite(ex);
+            return ReportOfferOutcome.NotOffered;
         }
     }
 
     /// <summary>The offer over the services it uses, which a test supplies.</summary>
-    internal static void OfferReport(
+    internal static ReportOfferOutcome OfferReport(
         RunReport report, IConsolePrompt console, IResultLogService resultLog, ISettingsService settings,
         CancellationToken token)
     {
-        if (!report.CanAsk || token.IsCancellationRequested) return;
+        if (!report.CanAsk || token.IsCancellationRequested) return ReportOfferOutcome.NotOffered;
         var offer = new ConsoleReportOffer(
             console, resultLog, settings,
             Path.Combine(AppDataFolder.Location, "last-run.json"),
             ReadmeLinks.For("reports-stats", Localisation.UiCulture),
             () => CancelKey.Process.Closing,
             CommandLineUpdate.ControlCBound);
-        if (report.Entry is { } entry)
-            offer.Offer(entry, token);
-        else
-            offer.SendWaiting(token);
+        return report.Entry is { } entry
+            ? offer.Offer(entry, token)
+            : offer.SendWaiting(token);
     }
 
     /// <summary>
@@ -948,6 +951,20 @@ internal static class Program
                 }
             }
 
+            // The donate line of a Delete or Move that acted on files. Where the run goes on
+            // to print about its report, a question about the one it carried or the send of
+            // one an earlier run left waiting, the line is held in the report and Main
+            // prints it after that, so it is the last thing on the screen. Anywhere else it
+            // prints here.
+            void AskForDonationAfterReport()
+            {
+                if (!consoleWatched()) return;
+                if (reporting && (report!.Entry is not null || ReportIsWaiting(services)))
+                    report!.DonationHeld = true;
+                else
+                    WriteDonation();
+            }
+
             string? WindowsRegion() => services.GetRequiredService<IWindowsRegion>().Read();
 
             // The report of a scan, which is also the report of a Delete or Move that found
@@ -1410,11 +1427,6 @@ internal static class Program
                     token.ThrowIfCancellationRequested();
                 }
 
-                // After the cancel re-entry, so a cancelled run never prints it: there
-                // the undo, or the cancellation itself, stays the last line.
-                if (result.DeletedCount > 0 && !result.Cancelled)
-                    AskForDonation(consoleWatched);
-
                 // Bytes-recovered figure excludes the per-file error
                 // list. Reporting the scan total on a partial failure
                 // would overstate the freed-space figure for every run
@@ -1429,6 +1441,12 @@ internal static class Program
                     scanResult, scanDurationMs, result, actualBytes, operationDurationMs,
                     reverify.WithHeldBack(result.HeldBack, result.HeldBackReasons),
                     WindowsRegion(), ReportHost.CommandLine, RunningCopy(services)));
+
+                // After the cancel re-entry, so a cancelled run never prints it: there
+                // the undo, or the cancellation itself, stays the last line.
+                if (result.DeletedCount > 0 && !result.Cancelled)
+                    AskForDonationAfterReport();
+
                 // Size and nouns are recomputed inside the en-GB scope, not
                 // reused from the stdout copies, so the audit line reads fully
                 // English ("3.2 GB", "files") on a localised machine, and the size
@@ -1596,11 +1614,6 @@ internal static class Program
                 token.ThrowIfCancellationRequested();
             }
 
-            // See the /d branch. The stopped Move returns through ReportAbortedMove
-            // above and never reaches this.
-            if (moveResult.MovedCount > 0 && !moveResult.Cancelled)
-                AskForDonation(consoleWatched);
-
             // Same per-file error exclusion as the /d branch.
             long actualMovedBytes = moveResult.Errors.Count == 0
                 ? totalBytes
@@ -1611,6 +1624,12 @@ internal static class Program
                 MoveDestinationClassifier.Classify(moveDest),
                 reverify.WithHeldBack(moveResult.HeldBack, moveResult.HeldBackReasons),
                 WindowsRegion(), ReportHost.CommandLine, RunningCopy(services)));
+
+            // See the /d branch. The stopped Move returns through ReportAbortedMove
+            // above and never reaches this.
+            if (moveResult.MovedCount > 0 && !moveResult.Cancelled)
+                AskForDonationAfterReport();
+
             // Size and nouns recomputed inside the en-GB scope; see the /d
             // summary above for why the stdout copies are not reused.
             MachineContract.WriteEventLog(moveOutcome.EventClass,
@@ -1725,17 +1744,35 @@ internal static class Program
         !Console.IsOutputRedirected && Interop.Native.WindowStation.IsInteractive();
 
     /// <summary>
-    /// The donate line, after a blank line, on standard output only and only where
-    /// <paramref name="consoleWatched"/> answers true. Never written to the
-    /// Application log, and nothing about the run's outcome or exit code depends on
-    /// it.
+    /// The donate line, after a blank line, on standard output only. Never written to the
+    /// Application log, and nothing about the run's outcome or exit code depends on it.
     /// </summary>
-    private static void AskForDonation(Func<bool> consoleWatched)
+    private static void WriteDonation()
     {
-        if (!consoleWatched())
-            return;
         Console.WriteLine();
         Console.WriteLine(string.Format(Strings.Cli_DonateAsk, SupportLink.KoFiUrl));
+    }
+
+    /// <summary>
+    /// Whether an earlier run left a report waiting to be sent, which
+    /// <see cref="OfferReport(RunReport, IConsolePrompt, CancellationToken)"/> sends with
+    /// a line of its own.
+    /// </summary>
+    private static bool ReportIsWaiting(IServiceProvider services) =>
+        services.GetRequiredService<ISettingsService>().TryLoad(out var current)
+        && current.ReportSendPending && !current.HasSentResultLog;
+
+    /// <summary>
+    /// The donate line a Delete or Move held back for the end of the run
+    /// (<see cref="RunReport.DonationHeld"/>), printed after the report question and what
+    /// followed it, so it is the last thing the run prints. A report offer ended by Ctrl+C,
+    /// or a Ctrl+C that came before the question, leaves the line out: the cancellation
+    /// stays the last line, as it does for a cancelled run.
+    /// </summary>
+    internal static void WriteHeldDonation(RunReport report, ReportOfferOutcome offer, CancellationToken token)
+    {
+        if (report.DonationHeld && offer != ReportOfferOutcome.Cancelled && !token.IsCancellationRequested)
+            WriteDonation();
     }
 
     /// <summary>

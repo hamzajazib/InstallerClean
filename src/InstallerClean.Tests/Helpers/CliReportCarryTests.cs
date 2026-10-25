@@ -1,6 +1,7 @@
 using InstallerClean.Cli;
 using InstallerClean.Helpers;
 using InstallerClean.Models;
+using InstallerClean.Resources;
 using InstallerClean.Services;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -332,7 +333,245 @@ public class CliReportCarryTests
         Assert.Empty(settings.ReceivedCalls());
     }
 
+    // ---- the donate line, held for the end of a run that goes on to the report ----
+
+    private static string DonateLine => string.Format(Strings.Cli_DonateAsk, SupportLink.KoFiUrl);
+
+    private static Rig WatchedRigWhoseDeleteDeletes()
+    {
+        var rig = new Rig { Watched = true };
+        rig.Delete.DeleteFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<UnderLeaseClaims>(),
+                Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>())
+            .Returns(new DeleteResult(2, NoErrors));
+        return rig;
+    }
+
+    [Fact]
+    public async Task A_delete_that_carries_a_report_holds_its_donate_line_for_the_end_of_the_run()
+    {
+        var rig = WatchedRigWhoseDeleteDeletes();
+
+        await rig.Run("/d");
+
+        Assert.NotNull(rig.Report.Entry);
+        Assert.True(rig.Report.DonationHeld);
+        Assert.DoesNotContain(SupportLink.KoFiUrl, rig.Stdout);
+    }
+
+    [Fact]
+    public async Task A_move_that_carries_a_report_holds_its_donate_line_for_the_end_of_the_run()
+    {
+        var rig = new Rig { Watched = true };
+        rig.Move.MoveFilesAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>(),
+                Arg.Any<UnderLeaseClaims>(), Arg.Any<IProgress<OperationProgress>?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new MoveResult(2, NoErrors));
+
+        await rig.Run("/m", Destination);
+
+        Assert.NotNull(rig.Report.Entry);
+        Assert.True(rig.Report.DonationHeld);
+        Assert.DoesNotContain(SupportLink.KoFiUrl, rig.Stdout);
+    }
+
+    [Fact]
+    public async Task A_delete_on_a_PC_where_an_earlier_run_left_a_report_waiting_holds_its_donate_line()
+    {
+        var rig = WatchedRigWhoseDeleteDeletes();
+        rig.EarlierRun = true;
+        rig.ReportWaiting = true;
+
+        await rig.Run("/d");
+
+        Assert.Null(rig.Report.Entry);
+        Assert.True(rig.Report.DonationHeld);
+        Assert.DoesNotContain(SupportLink.KoFiUrl, rig.Stdout);
+    }
+
+    [Fact]
+    public async Task A_delete_with_no_report_to_ask_about_or_send_prints_its_donate_line_as_it_always_did()
+    {
+        var rig = WatchedRigWhoseDeleteDeletes();
+        rig.EarlierRun = true;
+
+        await rig.Run("/d");
+
+        Assert.False(rig.Report.DonationHeld);
+        Assert.EndsWith(Environment.NewLine + Environment.NewLine + DonateLine + Environment.NewLine, rig.Stdout);
+    }
+
+    [Fact]
+    public async Task A_delete_whose_claim_is_refused_prints_its_donate_line_in_place()
+    {
+        var rig = WatchedRigWhoseDeleteDeletes();
+        rig.ClaimGranted = false;
+
+        await rig.Run("/d");
+
+        Assert.False(rig.Report.DonationHeld);
+        Assert.EndsWith(Environment.NewLine + Environment.NewLine + DonateLine + Environment.NewLine, rig.Stdout);
+    }
+
+    [Fact]
+    public async Task A_delete_at_a_console_nobody_can_answer_in_prints_its_donate_line_in_place()
+    {
+        // Output is watched and input is redirected, so nothing is asked.
+        var rig = WatchedRigWhoseDeleteDeletes();
+        rig.CanAsk = false;
+        rig.ReportWaiting = true;
+
+        await rig.Run("/d");
+
+        Assert.False(rig.Report.DonationHeld);
+        Assert.EndsWith(Environment.NewLine + Environment.NewLine + DonateLine + Environment.NewLine, rig.Stdout);
+    }
+
+    [Fact]
+    public async Task A_delete_that_deleted_nothing_and_a_scan_hold_no_donate_line()
+    {
+        var nothing = new Rig { Watched = true, Offered = false };
+        await nothing.Run("/d");
+        var scan = new Rig { Watched = true };
+        await scan.Run("/s");
+
+        Assert.False(nothing.Report.DonationHeld);
+        Assert.False(scan.Report.DonationHeld);
+        Assert.DoesNotContain(SupportLink.KoFiUrl, nothing.Stdout);
+        Assert.DoesNotContain(SupportLink.KoFiUrl, scan.Stdout);
+    }
+
+    [Theory]
+    [InlineData("y", ResultLogSendOutcome.Sent, nameof(ReportOfferOutcome.Sent))]
+    [InlineData("n", ResultLogSendOutcome.Sent, nameof(ReportOfferOutcome.Declined))]
+    [InlineData("y", ResultLogSendOutcome.NetworkUnavailable, nameof(ReportOfferOutcome.NotSent))]
+    public void The_held_donate_line_is_the_last_thing_printed_after_the_question(
+        string answer, ResultLogSendOutcome sendOutcome, string expectedOutcome)
+    {
+        var expected = Enum.Parse<ReportOfferOutcome>(expectedOutcome);
+        var report = new RunReport(canAsk: true) { Entry = AnEntry(), DonationHeld = true };
+
+        var (offer, stdout) = OfferThenDonate(report, sendOutcome, CancellationToken.None, answer);
+
+        Assert.Equal(expected, offer);
+        Assert.EndsWith(Environment.NewLine + Environment.NewLine + DonateLine + Environment.NewLine, stdout);
+        var reportLine = expected switch
+        {
+            ReportOfferOutcome.Sent => Strings.Cli_ReportSent,
+            ReportOfferOutcome.Declined => Strings.Cli_ReportNotSent,
+            _ => string.Format(Strings.Cli_ReportCouldNotBeSent, Path.Combine(AppDataFolder.Location, "last-run.json")),
+        };
+        Assert.True(stdout.IndexOf(reportLine, StringComparison.Ordinal)
+            < stdout.IndexOf(DonateLine, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Ctrl_C_at_the_question_leaves_the_held_donate_line_out()
+    {
+        using var cts = new CancellationTokenSource();
+        var report = new RunReport(canAsk: true) { Entry = AnEntry(), DonationHeld = true };
+
+        var (offer, stdout) = OfferThenDonate(
+            report, ResultLogSendOutcome.Sent, cts.Token, cancelAtTheQuestion: cts);
+
+        Assert.Equal(ReportOfferOutcome.Cancelled, offer);
+        Assert.Contains(Strings.Cli_ReportNotSent, stdout);
+        Assert.DoesNotContain(SupportLink.KoFiUrl, stdout);
+    }
+
+    [Fact]
+    public void An_offer_that_ended_in_a_cancel_leaves_the_held_donate_line_out_whatever_the_token_says()
+    {
+        var report = new RunReport(canAsk: true) { DonationHeld = true };
+        var original = Console.Out;
+        using var buffer = new StringWriter();
+        try
+        {
+            Console.SetOut(buffer);
+            Program.WriteHeldDonation(report, ReportOfferOutcome.Cancelled, CancellationToken.None);
+        }
+        finally
+        {
+            Console.SetOut(original);
+        }
+
+        Assert.Empty(buffer.ToString());
+    }
+
+    [Fact]
+    public void A_Ctrl_C_that_came_before_the_question_leaves_the_held_donate_line_out()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        var report = new RunReport(canAsk: true) { Entry = AnEntry(), DonationHeld = true };
+
+        var (offer, stdout) = OfferThenDonate(report, ResultLogSendOutcome.Sent, cts.Token);
+
+        Assert.Equal(ReportOfferOutcome.NotOffered, offer);
+        Assert.Empty(stdout);
+    }
+
+    [Fact]
+    public void A_donate_line_nothing_held_is_not_printed_after_the_question()
+    {
+        var report = new RunReport(canAsk: true) { Entry = AnEntry() };
+
+        var (_, stdout) = OfferThenDonate(report, ResultLogSendOutcome.Sent, CancellationToken.None, "n");
+
+        Assert.DoesNotContain(SupportLink.KoFiUrl, stdout);
+    }
+
+    private static ResultLogEntry AnEntry() => ResultLogEntry.ForScanOnly(
+        new ScanResult(Array.Empty<OrphanedFile>(), Array.Empty<RegisteredPackage>(), RegisteredTotalBytes: 0),
+        1, "GB", ReportHost.CommandLine, AppCopyKind.CommandLineDownload);
+
+    /// <summary>
+    /// The end of a run as Main does it: the offer, then the held donate line. The console
+    /// prints into the same buffer as the line does, so the order is what is read back.
+    /// <paramref name="cancelAtTheQuestion"/>, where given, is cancelled as the question is
+    /// read, which ends the read with no answer, as Ctrl+C at the prompt does.
+    /// </summary>
+    private static (ReportOfferOutcome Offer, string Stdout) OfferThenDonate(
+        RunReport report, ResultLogSendOutcome sendOutcome, CancellationToken token,
+        string? answer = null, CancellationTokenSource? cancelAtTheQuestion = null)
+    {
+        var log = Substitute.For<IResultLogService>();
+        log.WriteAsync(Arg.Any<ResultLogEntry>(), Arg.Any<CancellationToken>()).Returns(true);
+        log.ReadLastLogAsync(Arg.Any<CancellationToken>()).Returns("{}");
+        log.SendAsync("{}", Arg.Any<CancellationToken>()).Returns(sendOutcome);
+        var settings = Substitute.For<ISettingsService>();
+        settings.Update(Arg.Any<Action<AppSettings>>()).Returns(true);
+
+        var original = Console.Out;
+        using var buffer = new StringWriter();
+        try
+        {
+            Console.SetOut(buffer);
+            var console = new RecordingConsole(answer, cancelAtTheQuestion);
+            var offer = Program.OfferReport(report, console, log, settings, token);
+            Program.WriteHeldDonation(report, offer, token);
+            return (offer, buffer.ToString());
+        }
+        finally
+        {
+            Console.SetOut(original);
+        }
+    }
+
     // ---- fixtures ----
+
+    /// <summary>A console that prints to standard output and answers its one read with <paramref name="answer"/>, cancelling <paramref name="cancelling"/> first where given.</summary>
+    private sealed class RecordingConsole(string? answer, CancellationTokenSource? cancelling) : IConsolePrompt
+    {
+        public void WriteLine(string line) => Console.WriteLine(line);
+
+        public void Write(string text) => Console.Write(text);
+
+        public string? ReadLine(CancellationToken token)
+        {
+            cancelling?.Cancel();
+            return answer;
+        }
+    }
 
     /// <summary>A console that prints nowhere and answers each read with the next answer it was given, then with the end of input.</summary>
     private sealed class SilentConsole(params string?[] answers) : IConsolePrompt
@@ -377,6 +616,15 @@ public class CliReportCarryTests
         public bool Offered { get; set; } = true;
         public bool ReverifyKeeps { get; set; } = true;
 
+        /// <summary>The answer the run is given for whether somebody is watching its console.</summary>
+        public bool Watched { get; set; }
+
+        /// <summary>Whether the settings say an earlier run left a report waiting to be sent.</summary>
+        public bool ReportWaiting { get; set; }
+
+        /// <summary>What the last run printed to standard output.</summary>
+        public string Stdout { get; private set; } = string.Empty;
+
         public async Task<int> Run(
             string arg, string? destination = null, CancellationToken token = default, bool withReport = true)
         {
@@ -394,13 +642,25 @@ public class CliReportCarryTests
             {
                 Console.SetOut(buffer);
                 return await Program.RunWorkAsync(
-                    arg, new CliInvocation(command, null, destination), token, Services(), () => false,
+                    arg, new CliInvocation(command, null, destination), token, Services(), () => Watched,
                     report: withReport ? Report : null);
             }
             finally
             {
                 Console.SetOut(original);
+                Stdout = buffer.ToString();
             }
+        }
+
+        private ISettingsService Settings()
+        {
+            var settings = Substitute.For<ISettingsService>();
+            settings.TryLoad(out Arg.Any<AppSettings>()).Returns(call =>
+            {
+                call[0] = new AppSettings { ReportSendPending = ReportWaiting };
+                return true;
+            });
+            return settings;
         }
 
         private IServiceProvider Services()
@@ -437,7 +697,7 @@ public class CliReportCarryTests
                 .AddSingleton(reverifier)
                 .AddSingleton(Delete)
                 .AddSingleton(Move)
-                .AddSingleton(Substitute.For<ISettingsService>())
+                .AddSingleton(Settings())
                 .AddSingleton(Mark)
                 .AddSingleton(Earlier)
                 .AddSingleton(Region)

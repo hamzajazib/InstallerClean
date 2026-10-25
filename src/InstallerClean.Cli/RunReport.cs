@@ -21,4 +21,11 @@ internal sealed class RunReport(bool canAsk)
     /// null otherwise.
     /// </summary>
     public ResultLogEntry? Entry { get; set; }
+
+    /// <summary>
+    /// Whether a Delete or Move that acted on files held its donate line back for the end
+    /// of the run, because the run goes on to ask about the report it carried or to send
+    /// one an earlier run left waiting. Main prints the line after that.
+    /// </summary>
+    public bool DonationHeld { get; set; }
 }
