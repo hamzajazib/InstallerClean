@@ -15,14 +15,17 @@ internal sealed class FirstRunMark : IFirstRunMark
     internal const string ValueName = "FirstRunRecorded";
 
     /// <summary>
-    /// The machine-wide lock <see cref="TryClaim"/> holds around its read and write of the
-    /// mark. It is not the single-instance lock (<see cref="InstanceLock"/>), which a window
-    /// holds for its whole life; this one is held for the length of a registry read and
-    /// write, so nothing waits on it for long.
+    /// The machine-wide lock <see cref="TryClaim"/> and <see cref="Set"/> each hold around
+    /// their read and write of the mark. It is not the single-instance lock
+    /// (<see cref="InstanceLock"/>), which a window holds for its whole life; this one is
+    /// held for the length of a registry read and write, so nothing waits on it for long.
     /// </summary>
     internal const string ClaimLockName = @"Global\InstallerClean_FirstReportClaim";
 
-    /// <summary>How long <see cref="TryClaim"/> waits for the lock before it answers false.</summary>
+    /// <summary>
+    /// How long <see cref="TryClaim"/> waits for the lock before it answers false, and how
+    /// long <see cref="Set"/> waits before it writes the mark without the lock.
+    /// </summary>
     internal static readonly TimeSpan ClaimLockWait = TimeSpan.FromSeconds(2);
 
     private readonly RegistryHive _hive;
@@ -30,7 +33,7 @@ internal sealed class FirstRunMark : IFirstRunMark
     private readonly string _claimLockName;
     private readonly TimeSpan _claimLockWait;
 
-    /// <summary>True once this instance has created the mark, which <see cref="TryClaim"/> reads as the mark being this run's own. A write that finds the mark already there leaves it as it was.</summary>
+    /// <summary>True once this instance has created the mark while holding the claim lock, which <see cref="TryClaim"/> reads as the mark being this run's own. A write that finds the mark already there, or that went ahead without the lock, leaves it false.</summary>
     private volatile bool _setHere;
 
     /// <summary>True once <see cref="TryClaim"/> has granted a claim, so a second call on this instance is refused.</summary>
@@ -76,6 +79,37 @@ internal sealed class FirstRunMark : IFirstRunMark
 
     public void Set()
     {
+        Mutex? claimLock = null;
+        var held = false;
+        try
+        {
+            try
+            {
+                claimLock = new Mutex(initiallyOwned: false, _claimLockName);
+                held = WaitForClaimLock(claimLock);
+            }
+            catch (Exception ex)
+            {
+                CrashLog.TryWrite(ex);
+            }
+
+            // Without the lock the mark is still written, and the write is not this run's
+            // own: whether another process created it first is not known.
+            WriteMark(createdUnderLock: held);
+        }
+        finally
+        {
+            ReleaseClaimLock(claimLock, held);
+        }
+    }
+
+    /// <summary>
+    /// Writes the mark. <paramref name="createdUnderLock"/> is true where the caller holds
+    /// the claim lock, so that finding the mark absent is a fact no other process can
+    /// have changed between the read and the write.
+    /// </summary>
+    private void WriteMark(bool createdUnderLock)
+    {
         try
         {
             using var hive = RegistryKey.OpenBaseKey(_hive, RegistryView.Registry64);
@@ -91,7 +125,7 @@ internal sealed class FirstRunMark : IFirstRunMark
             }
             var existed = key.GetValue(ValueName, null, RegistryValueOptions.DoNotExpandEnvironmentNames) is not null;
             key.SetValue(ValueName, 1, RegistryValueKind.DWord);
-            if (!existed) _setHere = true;
+            if (!existed && createdUnderLock) _setHere = true;
         }
         catch (Exception ex)
         {
@@ -106,6 +140,30 @@ internal sealed class FirstRunMark : IFirstRunMark
         }
     }
 
+    /// <summary>True where the lock is held, which includes a lock its last holder ended without releasing.</summary>
+    private bool WaitForClaimLock(Mutex claimLock)
+    {
+        try
+        {
+            return claimLock.WaitOne(_claimLockWait);
+        }
+        catch (AbandonedMutexException)
+        {
+            // Its last holder ended without releasing it; the runtime hands it to this thread.
+            return true;
+        }
+    }
+
+    private static void ReleaseClaimLock(Mutex? claimLock, bool held)
+    {
+        if (held)
+        {
+            try { claimLock!.ReleaseMutex(); }
+            catch (Exception ex) { CrashLog.TryWrite(ex); }
+        }
+        claimLock?.Dispose();
+    }
+
     public bool TryClaim()
     {
         if (_claimTaken) return false;
@@ -114,15 +172,7 @@ internal sealed class FirstRunMark : IFirstRunMark
         try
         {
             claimLock = new Mutex(initiallyOwned: false, _claimLockName);
-            try
-            {
-                held = claimLock.WaitOne(_claimLockWait);
-            }
-            catch (AbandonedMutexException)
-            {
-                // Its last holder ended without releasing it; the runtime hands it to this thread.
-                held = true;
-            }
+            held = WaitForClaimLock(claimLock);
             if (!held) return false;
 
             // The claim is looked at again now the lock is held, since another thread on
@@ -138,7 +188,7 @@ internal sealed class FirstRunMark : IFirstRunMark
             if (state == FirstRunMarkState.Set && !_setHere) return false;
             if (state == FirstRunMarkState.NotSet)
             {
-                Set();
+                WriteMark(createdUnderLock: true);
                 if (Read() != FirstRunMarkState.Set) return false;
             }
             _claimTaken = true;
@@ -151,12 +201,7 @@ internal sealed class FirstRunMark : IFirstRunMark
         }
         finally
         {
-            if (held)
-            {
-                try { claimLock!.ReleaseMutex(); }
-                catch (Exception ex) { CrashLog.TryWrite(ex); }
-            }
-            claimLock?.Dispose();
+            ReleaseClaimLock(claimLock, held);
         }
     }
 }

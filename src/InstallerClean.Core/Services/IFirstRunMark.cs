@@ -32,8 +32,13 @@ public interface IFirstRunMark
     FirstRunMarkState Read();
 
     /// <summary>
-    /// Sets the mark. A write that fails is logged to crash.log and nothing is
-    /// thrown, so a caller needs no guard of its own.
+    /// Sets the mark, holding the machine-wide lock <see cref="TryClaim"/> takes for the
+    /// length of the write, so the instance that finds the mark absent is the one that
+    /// creates it and no other process can have created it in between. Where the lock
+    /// cannot be had within a short wait the mark is written all the same, and this
+    /// instance's <see cref="TryClaim"/> then finds the mark was not its own. A write
+    /// that fails is logged to crash.log and nothing is thrown, so a caller needs no
+    /// guard of its own.
     /// </summary>
     void Set();
 

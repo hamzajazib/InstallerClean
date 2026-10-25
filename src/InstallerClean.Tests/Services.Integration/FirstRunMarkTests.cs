@@ -117,6 +117,95 @@ public sealed class FirstRunMarkTests : IDisposable
     }
 
     [Fact]
+    public void A_set_made_while_another_run_holds_the_claim_lock_finds_the_mark_that_run_creates()
+    {
+        var taken = new ManualResetEventSlim();
+        var proceed = new ManualResetEventSlim();
+        var claimant = ClaimingMark();
+        var claimantGranted = false;
+        var holder = new Thread(() =>
+        {
+            using var held = new Mutex(initiallyOwned: false, _claimLock);
+            held.WaitOne();
+            taken.Set();
+            proceed.Wait();
+            claimantGranted = claimant.TryClaim();
+            held.ReleaseMutex();
+        }) { IsBackground = true };
+        holder.Start();
+        taken.Wait();
+
+        var setter = ClaimingMark();
+        var setting = new Thread(setter.Set) { IsBackground = true };
+        setting.Start();
+        try
+        {
+            // The set waits for the lock, so it cannot finish while the claim is in progress.
+            Assert.False(setting.Join(TimeSpan.FromMilliseconds(200)));
+        }
+        finally
+        {
+            proceed.Set();
+        }
+        holder.Join();
+        setting.Join();
+
+        Assert.True(claimantGranted);
+        Assert.False(setter.TryClaim());
+    }
+
+    [Fact]
+    public void A_set_that_cannot_get_the_lock_in_time_writes_the_mark_and_is_not_the_runs_own()
+    {
+        var taken = new ManualResetEventSlim();
+        var release = new ManualResetEventSlim();
+        var holder = new Thread(() =>
+        {
+            using var held = new Mutex(initiallyOwned: false, _claimLock);
+            held.WaitOne();
+            taken.Set();
+            release.Wait();
+            held.ReleaseMutex();
+        }) { IsBackground = true };
+        holder.Start();
+        taken.Wait();
+
+        var mark = ClaimingMark(TimeSpan.FromMilliseconds(50));
+        try
+        {
+            mark.Set();
+            Assert.Equal(FirstRunMarkState.Set, Mark.Read());
+        }
+        finally
+        {
+            release.Set();
+            holder.Join();
+        }
+
+        Assert.False(mark.TryClaim());
+    }
+
+    [Fact]
+    public void Of_instances_that_each_set_the_mark_and_then_claim_exactly_one_is_granted()
+    {
+        const int Runs = 16;
+        using var start = new Barrier(Runs);
+        var granted = 0;
+
+        var threads = Enumerable.Range(0, Runs).Select(_ => new Thread(() =>
+        {
+            var mark = ClaimingMark();
+            start.SignalAndWait();
+            mark.Set();
+            if (mark.TryClaim()) Interlocked.Increment(ref granted);
+        })).ToList();
+        threads.ForEach(t => t.Start());
+        threads.ForEach(t => t.Join());
+
+        Assert.Equal(1, granted);
+    }
+
+    [Fact]
     public void Of_claims_made_together_on_one_instance_exactly_one_is_granted()
     {
         const int Claimants = 16;
