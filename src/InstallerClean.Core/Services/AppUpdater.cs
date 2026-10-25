@@ -212,9 +212,10 @@ public sealed class AppUpdater : IAppUpdater
     {
         if (UpdateManifest.DownloadKey(Kind) is null)
             throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
-        // Read here as well as by the read below, which a kept file skips.
-        cancellationToken.ThrowIfCancellationRequested();
 
+        // A cancel is answered as a cancel wherever the file came from, a kept file and a
+        // Debug build's local file included, and before the body or the answer is judged,
+        // so a cancelled check never reports a refusal or a read that failed.
         byte[]? manifest;
         if (_manifest is { } kept && kept.Version == version)
         {
@@ -229,6 +230,7 @@ public sealed class AppUpdater : IAppUpdater
 #endif
             manifest = await _downloader.ReadAsync(UpdateManifest.Address(version), UpdateManifest.MaxBytes, cancellationToken)
                 .ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
             if (manifest is not null)
             {
                 if (!UpdateManifest.IsJson(manifest))
@@ -236,6 +238,7 @@ public sealed class AppUpdater : IAppUpdater
                 _manifest = (version, manifest);
             }
         }
+        cancellationToken.ThrowIfCancellationRequested();
 
         return UpdateManifest.Judge(manifest, version, Kind, () => UpdateManifest.HasNetFramework48(_registry));
     }
@@ -254,7 +257,9 @@ public sealed class AppUpdater : IAppUpdater
         // Before the first file this update writes, so no pass of the start-up clean-up
         // deletes one (UpdateLeftoverGate). Everything above only reads, so an update that
         // ends before this point, refused, failed or cancelled, leaves the clean-up running.
-        // A write added above this line has to move the mark above it too.
+        // A write added above this line has to move the mark above it too. A cancel that
+        // came after the requirements were checked is answered here, before the mark.
+        cancellationToken.ThrowIfCancellationRequested();
         _leftovers.MarkUpdateWriting();
         UpdateStagingFolder folder;
         try

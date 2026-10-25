@@ -149,6 +149,20 @@ public sealed class UpdateLeftoverGateTests
         Assert.True(gate.TryRunPass(() => { }));
     }
 
+    [Fact]
+    public async Task A_cancelled_check_against_a_kept_refusing_file_answers_the_cancel_not_the_refusal()
+    {
+        var updater = Updater(new UpdateLeftoverGate(), Path.GetTempPath(), RefusesEveryDownload);
+        Assert.Equal(UpdateRefusal.CannotInstallFromThisCopy,
+            await updater.CheckRequirementsAsync("9.9.9", CancellationToken.None));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => updater.CheckRequirementsAsync("9.9.9", new CancellationToken(canceled: true)));
+    }
+
+    /// <summary>An update.json that lists no download, so every copy is refused.</summary>
+    private const string RefusesEveryDownload = """{"schema": 1, "downloads": {}}""";
+
     /// <summary>An update.json that lists every download with nothing required.</summary>
     private const string AllowsEveryDownload =
         """{"schema": 1, "downloads": {"setup": {"requires": []}, "portable": {"requires": []}, "slim": {"requires": []}, "cli": {"requires": []}}}""";
