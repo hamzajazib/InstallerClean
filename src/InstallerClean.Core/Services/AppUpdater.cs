@@ -230,6 +230,12 @@ public sealed class AppUpdater : IAppUpdater
         if (UpdateManifest.DownloadKey(Kind) is null)
             throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
 
+        // Everything after this runs on a pool thread, whatever thread called, so the
+        // registry read below stays off the window's thread. With the file kept nothing
+        // below awaits anything unfinished, so the method leaves the caller's thread here
+        // rather than at a read.
+        await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+
         // A cancel is answered as the cancel wherever it comes, never as a refusal or a read
         // of the release that failed, the download service answering a read refused as the
         // cancel came with the cancel. A file read in full is kept first, so a cancel as the
@@ -302,6 +308,14 @@ public sealed class AppUpdater : IAppUpdater
         var fileName = AppCopy.DownloadFileName(Kind, version);
         if (address is null || fileName is null)
             throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
+
+        // Everything after this runs on a pool thread, whatever thread called, so the wait
+        // for a running pass of the start-up clean-up (UpdateLeftoverGate), the staging
+        // folder's creation and the start of the download stay off the window's thread. The
+        // requirements below can answer before this method looks at them, with the file
+        // kept, and this method then carries on where it was, so it leaves the caller's
+        // thread itself.
+        await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
         if (await CheckRequirementsAsync(version, null, cancellationToken).ConfigureAwait(false) is { } refusal)
             throw new UpdateRefusedException(refusal, version);

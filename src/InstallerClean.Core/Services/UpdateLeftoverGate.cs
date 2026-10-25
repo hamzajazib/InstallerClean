@@ -21,8 +21,8 @@ public sealed class UpdateLeftoverGate
     /// <summary>
     /// Runs <paramref name="pass"/>, one pass of the clean-up, and answers true, where no
     /// update in this process holds the gate; otherwise runs nothing and answers false.
-    /// <see cref="HoldForUpdate"/> waits for a pass already running, on whichever thread
-    /// the update has reached, the window's own among them, so keep the pass short and
+    /// <see cref="HoldForUpdate"/> waits for a pass already running, on a pool thread
+    /// (<see cref="AppUpdater.PrepareAsync"/>), so keep the pass short and
     /// synchronous.
     /// </summary>
     public bool TryRunPass(Action pass)

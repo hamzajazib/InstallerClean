@@ -106,6 +106,44 @@ public sealed class UpdateLeftoverGateTests
     }
 
     [Fact]
+    public async Task An_update_with_its_release_file_kept_waits_for_a_running_pass_off_the_callers_thread()
+    {
+        var gate = new UpdateLeftoverGate();
+        // A file where the staging root should be, so the update ends at its first write.
+        var root = Path.GetTempFileName();
+        using var inPass = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var pass = Task.Run(() => gate.TryRunPass(() =>
+        {
+            inPass.Set();
+            release.Wait(TimeSpan.FromSeconds(30));
+        }));
+        try
+        {
+            Assert.True(inPass.Wait(TimeSpan.FromSeconds(10)), "The pass never ran.");
+            var updater = Updater(gate, root, AllowsEveryDownload);
+            Assert.Null(await updater.CheckRequirementsAsync("9.9.9", null, CancellationToken.None));
+
+            // The release file is kept, so nothing the update does before its hold waits on
+            // the network. The call comes back while the pass still runs.
+            var update = updater.PrepareAsync("9.9.9", null, CancellationToken.None);
+            var passRunning = !pass.IsCompleted;
+            release.Set();
+
+            Assert.True(passRunning);
+            Assert.Equal(UpdateFailureStage.Install,
+                (await Assert.ThrowsAsync<UpdateFailedException>(() => update.WaitAsync(TimeSpan.FromSeconds(10)))).Stage);
+            Assert.True(await pass.WaitAsync(TimeSpan.FromSeconds(10)));
+            Assert.True(gate.TryRunPass(() => { }));
+        }
+        finally
+        {
+            release.Set();
+            File.Delete(root);
+        }
+    }
+
+    [Fact]
     public async Task An_update_whose_first_write_fails_leaves_the_clean_up_running()
     {
         var gate = new UpdateLeftoverGate();
