@@ -141,6 +141,8 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
         _ownFile = null;
     }
 
+    public bool Closing => CancelKey.Process.Closing;
+
     public Version? FileVersion(string path) =>
         FileVersionResource.ReadIfThere(path) is { } version && (version.Major, version.Minor, version.Build) != (0, 0, 0)
             ? version

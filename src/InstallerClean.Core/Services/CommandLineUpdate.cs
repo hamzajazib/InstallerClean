@@ -122,6 +122,12 @@ internal interface ICommandLineUpdateHost : IConsolePrompt
     Version? FileVersion(string path);
 
     /// <summary>
+    /// Whether the console is being closed, or Windows is logging off or shutting down, so
+    /// the process has seconds left before Windows ends it.
+    /// </summary>
+    bool Closing { get; }
+
+    /// <summary>
     /// Loads what the rest of the run reaches, and checks the event source, while the
     /// running exe's file is still whole (<see cref="SelfReplacement.PrepareToMoveAside"/>).
     /// Called once, immediately before the running exe is renamed aside.
@@ -222,13 +228,6 @@ internal sealed class CommandLineUpdate
     /// that has gone quiet says why.
     /// </summary>
     internal static readonly TimeSpan ReadHoldNotice = TimeSpan.FromSeconds(2);
-
-    /// <summary>
-    /// How long that wait goes on at most where Ctrl+C or the console closing came before
-    /// it started. It stays under the four seconds the command line holds a closing
-    /// console's process, so the run still writes its entry.
-    /// </summary>
-    internal static readonly TimeSpan ReadHoldWaitAfterCancel = TimeSpan.FromSeconds(2);
 
     /// <summary>How often a held file is read again while the run waits for it.</summary>
     private static readonly TimeSpan ReadHoldRetryInterval = TimeSpan.FromMilliseconds(100);
@@ -626,7 +625,7 @@ internal sealed class CommandLineUpdate
                 // failures; this arm is for a throw out of anything else EndNotStarted
                 // reaches, which still ends the run by what the file at the path carries.
                 RefillIfEmpty(exePath);
-                if (Carries(exePath, latest, out var unread) is not true)
+                if (Carries(exePath, latest, out var unread, out _) is not true)
                     return RecordStopped(ex, token.IsCancellationRequested,
                         unread is null ? again : new AggregateException(again, unread));
                 Helpers.CrashLog.TryWrite(new AggregateException(ex, again));
@@ -821,14 +820,15 @@ internal sealed class CommandLineUpdate
         if (exitCode != 0)
             failed = new UpdateFailedException(UpdateFailureStage.Install,
                 exitCode is null ? "The setup could not be started." : $"The setup ended with exit code {exitCode}.");
-        else if (Carries(exePath, latest, out var unread) is not { } carries)
+        else if (Carries(exePath, latest, out var unread, out var waitEnded) is not { } carries)
         {
             // What the setup left at the path cannot be read, so nothing is started and
-            // nothing it may have installed is renamed away. Where Ctrl+C ended the wait
-            // for it, Ctrl+C is what ended the run and the read goes in its entry beside it.
+            // nothing it may have installed is renamed away. Where Ctrl+C or the console
+            // closing ended the wait for it, that is what ended the run, and the read goes
+            // in its entry beside it.
             var readFailed = new UpdateFailedException(UpdateFailureStage.Install,
                 "The version of the file at the command line's path could not be read after the setup.", unread);
-            return Stop(token.IsCancellationRequested ? null : readFailed,
+            return Stop(waitEnded ? null : readFailed,
                 exePath, current, latest, token.IsCancellationRequested, unreadAlready: readFailed,
                 setupVersionUnchecked: unread is IOException held && IsHeld(held));
         }
@@ -870,7 +870,7 @@ internal sealed class CommandLineUpdate
     {
         RefillIfEmpty(exePath);
         var unread = unreadAlready;
-        if (unread is null && Carries(exePath, latest, out unread) is true)
+        if (unread is null && Carries(exePath, latest, out unread, out _) is true)
         {
             if (cancelled)
             {
@@ -889,17 +889,21 @@ internal sealed class CommandLineUpdate
     /// <summary>
     /// Writes a line that closes the update once how it ended is settled: what
     /// <see cref="Stop"/> and <see cref="CarryOn"/> say, and the line saying the newer
-    /// version is installed where Ctrl+C ends the run with it in place; and the line saying
-    /// the run is waiting for a held file (<see cref="Carries"/>). A line that fails
+    /// version is installed where Ctrl+C ends the run with it in place. A line that fails
     /// changes nothing about how the run ended, since the update's own crash.log entry,
-    /// where it has one, is written before it. Nothing it meets leaves it. The host's
-    /// writes never throw (<see cref="IConsolePrompt"/>), and an <see cref="IOException"/> from a host that
-    /// does all the same is a console refusing the line and is passed over. Any other
-    /// failure is written to crash.log: a fault in a host, or a line that cannot be built
-    /// from a translation naming a placeholder its English does not, which
-    /// scripts/check-resx-parity.mjs refuses.
+    /// where it has one, is written before it (<see cref="SayGuarded"/>).
     /// </summary>
-    private static void SayClosing(Action say)
+    private static void SayClosing(Action say) => SayGuarded(say);
+
+    /// <summary>
+    /// Writes a line whose failure changes nothing about the run. Nothing it meets leaves
+    /// it. The host's writes never throw (<see cref="IConsolePrompt"/>), and an
+    /// <see cref="IOException"/> from a host that does all the same is a console refusing
+    /// the line and is passed over. Any other failure is written to crash.log: a fault in a
+    /// host, or a line that cannot be built from a translation naming a placeholder its
+    /// English does not, which scripts/check-resx-parity.mjs refuses.
+    /// </summary>
+    private static void SayGuarded(Action say)
     {
         try
         {
@@ -968,32 +972,35 @@ internal sealed class CommandLineUpdate
     /// reading, with a sharing or a lock violation, is read again every
     /// <see cref="ReadHoldRetryInterval"/> for up to <see cref="ReadHoldWait"/>, and once a
     /// wait has gone on for <see cref="ReadHoldNotice"/> the run says that it is waiting for
-    /// the file. Ctrl+C or the console closing ends the wait; where either came before the
-    /// wait started, it goes on for <see cref="ReadHoldWaitAfterCancel"/> at most. Answers null where the read
-    /// fails, the hold outlasts the wait or the wait is ended, with the failure in
-    /// <paramref name="unread"/> for the run's entry, so the run starts nothing and leaves
-    /// the file where it is. Never throws.
+    /// the file. Ctrl+C that comes during the wait ends it, and so does the console
+    /// closing, whenever it came: Windows ends a closing console's process within seconds,
+    /// and the run writes its entry first. A wait that Ctrl+C came before goes on, since
+    /// nothing ends the process then and the newer version may be a moment away. Answers
+    /// null where the read fails, the hold outlasts the wait or the wait is ended, with the
+    /// failure in <paramref name="unread"/> for the run's entry and
+    /// <paramref name="waitEnded"/> set where Ctrl+C or the closing ended the wait, so the
+    /// run starts nothing and leaves the file where it is. Never throws.
     /// </summary>
-    private bool? Carries(string path, string version, out Exception? unread)
+    private bool? Carries(string path, string version, out Exception? unread, out bool waitEnded)
     {
         unread = null;
+        waitEnded = false;
         var started = Stopwatch.GetTimestamp();
         var said = false;
         var cancelledBefore = _token.IsCancellationRequested;
-        var bound = cancelledBefore && ReadHoldWaitAfterCancel < _readHoldWait ? ReadHoldWaitAfterCancel : _readHoldWait;
+        bool Ended() => _host.Closing || (!cancelledBefore && _token.IsCancellationRequested);
         while (true)
         {
             try
             {
                 return _host.FileVersion(path) is { } carried && Helpers.FileVersionResource.IsRelease(carried, version);
             }
-            catch (IOException ex) when (IsHeld(ex)
-                && (cancelledBefore || !_token.IsCancellationRequested) && Stopwatch.GetElapsedTime(started) < bound)
+            catch (IOException ex) when (IsHeld(ex) && !Ended() && Stopwatch.GetElapsedTime(started) < _readHoldWait)
             {
                 if (!said && Stopwatch.GetElapsedTime(started) >= _readHoldNotice)
                 {
                     said = true;
-                    SayClosing(() => _host.WriteLine(string.Format(Strings.Cli_UpdateWaitingForFile, Path.GetFileName(path))));
+                    SayGuarded(() => _host.WriteLine(string.Format(Strings.Cli_UpdateWaitingForFile, Path.GetFileName(path))));
                 }
                 // A token that cannot be cancelled has a handle that is never set.
                 if (cancelledBefore) Thread.Sleep(ReadHoldRetryInterval);
@@ -1002,6 +1009,7 @@ internal sealed class CommandLineUpdate
             catch (Exception ex)
             {
                 unread = ex;
+                waitEnded = ex is IOException held && IsHeld(held) && Ended();
                 return null;
             }
         }

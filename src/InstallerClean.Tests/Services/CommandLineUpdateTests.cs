@@ -1134,6 +1134,80 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
+    public void A_console_closing_as_the_setups_newer_version_is_held_reads_it_once_and_ends_with_nothing_run()
+    {
+        using var cts = new CancellationTokenSource();
+        var refused = 0;
+        _host.OnSetup = () =>
+        {
+            File.WriteAllText(_exe, "new");
+            _host.Closing = true;
+            cts.Cancel();
+            _host.OnFileVersion = () =>
+            {
+                refused++;
+                throw SharingViolation();
+            };
+            return 0;
+        };
+
+        var result = Run(Setup(), canAsk: false, token: cts.Token, readHoldWait: TimeSpan.FromSeconds(30),
+            readHoldNotice: TimeSpan.FromSeconds(30));
+
+        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Equal(1, refused);
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
+        Assert.Contains("Ctrl+C ended the run, and a failure came as it ended.", TestCrashLog.OnlyEntry());
+    }
+
+    [Fact]
+    public void Ctrl_C_during_the_setup_then_a_hold_that_outlasts_the_wait_ends_with_the_newer_version_unchecked()
+    {
+        using var cts = new CancellationTokenSource();
+        var refused = 0;
+        _host.OnSetup = () =>
+        {
+            File.WriteAllText(_exe, "new");
+            cts.Cancel();
+            _host.OnFileVersion = () =>
+            {
+                refused++;
+                throw SharingViolation();
+            };
+            return 0;
+        };
+
+        var result = Run(Setup(), canAsk: false, token: cts.Token, readHoldWait: TimeSpan.FromMilliseconds(500),
+            readHoldNotice: TimeSpan.FromMilliseconds(100));
+
+        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.True(refused > 1);
+        Assert.Contains(string.Format(Strings.Cli_UpdateWaitingForFile, Path.GetFileName(_exe)), _host.Output);
+        Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
+        Assert.Contains("A failure ended the run and Ctrl+C came as well.", TestCrashLog.OnlyEntry());
+    }
+
+    [Fact]
+    public void Ctrl_C_during_the_setup_then_a_read_that_fails_outright_names_the_read_as_what_ended_the_run()
+    {
+        using var cts = new CancellationTokenSource();
+        _host.OnSetup = () =>
+        {
+            File.WriteAllText(_exe, "new");
+            cts.Cancel();
+            _host.OnFileVersion = () => throw new UnauthorizedAccessException("access denied");
+            return 0;
+        };
+
+        var result = Run(Setup(), canAsk: false, token: cts.Token);
+
+        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
+        Assert.Contains("A failure ended the run and Ctrl+C came as well.", TestCrashLog.OnlyEntry());
+    }
+
+    [Fact]
     public void Ctrl_C_during_the_setup_still_waits_out_a_brief_hold_on_its_newer_version()
     {
         using var cts = new CancellationTokenSource();
@@ -1748,6 +1822,8 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         /// <summary>Runs before each read of a file's version, and may throw in its place.</summary>
         public Action? OnFileVersion { get; set; }
+
+        public bool Closing { get; set; }
 
         public Version? FileVersion(string path)
         {
