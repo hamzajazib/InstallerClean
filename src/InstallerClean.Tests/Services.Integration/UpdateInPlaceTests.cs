@@ -397,19 +397,20 @@ public sealed class UpdateInPlaceTests : IDisposable
         Assert.NotNull(putBack);
         Assert.Equal(Program(2), File.ReadAllBytes(exe));
         Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
-        // The rename back of the running exe was tried and refused, which happens only once
-        // the first rename's wait has run out, and the swap went ahead all the same.
-        Assert.Equal(1, MissingFileEntriesInCrashLog(exe + SelfReplacement.OldSuffix));
+        // The first rename's wait ran out and was written to crash.log, and the rename back of
+        // the running exe was tried and refused, before the swap went ahead all the same.
+        Assert.Equal(1, EntriesInCrashLog<FileHeldOpenException>(staged));
+        Assert.Equal(1, EntriesInCrashLog<FileNotFoundException>(exe + SelfReplacement.OldSuffix));
     }
 
     /// <summary>
-    /// How many entries in the crash log are a rename refused because
-    /// <paramref name="path"/> is not a file. The entry's first line names the path.
+    /// How many entries in the crash log are a <typeparamref name="T"/> whose message names
+    /// <paramref name="path"/>, on the entry's first line.
     /// </summary>
-    private static int MissingFileEntriesInCrashLog(string path) =>
+    private static int EntriesInCrashLog<T>(string path) where T : Exception =>
         TestCrashLog.Text().Split('\n').Count(line =>
-            line.StartsWith(typeof(FileNotFoundException).FullName + ":", StringComparison.Ordinal)
-            && line.Contains(path, StringComparison.OrdinalIgnoreCase));
+            line.StartsWith(typeof(T).FullName + ":", StringComparison.Ordinal)
+            && line.Contains($"'{path}'", StringComparison.OrdinalIgnoreCase));
 
     [Fact]
     public async Task A_put_back_whose_running_exe_will_not_go_back_leaves_the_newer_version_at_the_exe_path()
@@ -463,7 +464,7 @@ public sealed class UpdateInPlaceTests : IDisposable
             var failure = Assert.Throws<UpdateFailedException>(() => SelfReplacement.MoveAside(exe));
             // The Restart Manager answers, and its list leaves this process out.
             var holders = Assert.IsType<FileHeldOpenException>(failure.InnerException).Message;
-            Assert.StartsWith("The Restart Manager names ", holders);
+            Assert.StartsWith($"The file '{exe}' stayed held open. The Restart Manager names ", holders);
             Assert.DoesNotContain($"(process {Environment.ProcessId}", holders);
             Assert.Equal(Program(1), File.ReadAllBytes(exe));
             Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));

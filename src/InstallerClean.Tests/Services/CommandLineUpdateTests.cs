@@ -564,19 +564,22 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
-    public void A_setup_whose_newer_version_has_gone_from_the_path_before_it_starts_puts_this_exe_back_and_carries_on()
+    public void A_setup_whose_newer_version_has_gone_from_the_path_before_it_starts_puts_this_exe_back_and_runs_nothing()
     {
+        // The run has said the newer version is installed and that it will only list, so it
+        // ends rather than running the command with this exe.
         SetupInstalls();
         _host.NewerVersionExitCode = null;
         _host.OnNewerVersion = () => File.Delete(_exe);
-        var updater = Setup();
+        _host.Answers.Enqueue("y");
 
-        var result = Run(updater, canAsk: false);
+        var result = Run(Setup(), canAsk: true, command: "/d");
 
-        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateFailureStage.Install, Current, Latest), result);
-        Assert.True(updater.Undone);
+        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
         Assert.Equal("old", File.ReadAllText(_exe));
         Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
+        Assert.DoesNotContain(_host.Output, line => line.StartsWith(
+            string.Format(Strings.Cli_UpdateRunningInstead, "/d", Current), StringComparison.Ordinal));
     }
 
     [Fact]

@@ -12,12 +12,12 @@ internal sealed class FileHeldOpenException : IOException
 {
     /// <summary>
     /// The exception for <paramref name="path"/>, asked for the moment the last try fails,
-    /// while the file is still held. Its message names the processes the Restart Manager
-    /// says hold the file open, this one left out, by name and process id. Where the
-    /// Restart Manager cannot answer, the message says so. Never throws.
+    /// while the file is still held. Its message names the file, then the processes the
+    /// Restart Manager says hold it open, this one left out, by name and process id. Where
+    /// the Restart Manager cannot answer, the message says so. Never throws.
     /// </summary>
     internal FileHeldOpenException(string path, IOException inner)
-        : base(Holders(path), inner)
+        : base($"The file '{path}' stayed held open. {Holders(path)}", inner)
     {
         HResult = inner.HResult;
     }

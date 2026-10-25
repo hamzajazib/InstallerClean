@@ -647,11 +647,10 @@ internal sealed class CommandLineUpdate
 
     /// <summary>
     /// Ends an update whose newer version did not start, for <paramref name="cause"/>, with
-    /// this exe renamed aside. On a swap, or on the setup's copy with nothing at the path,
-    /// this exe is put back and what was readied taken away, and <paramref name="cause"/>
-    /// thrown, so the caller says so and carries on, or stops where Ctrl+C has come. On the
-    /// setup's copy with a file at the path, or where this exe could not be put back, it
-    /// stays aside, since the setup may have put the newer version and the window
+    /// this exe renamed aside. On a swap this exe is put back and what was readied taken
+    /// away, and <paramref name="cause"/> thrown, so the caller says so and carries on, or
+    /// stops where Ctrl+C has come. On the setup's copy, or where this exe could not be put
+    /// back, it stays aside, since the setup may have put the newer version and the window
     /// beside it in place, and the run ends through <see cref="Stop"/>, which checks the
     /// file at the path before anything says the newer version is installed.
     /// </summary>
@@ -659,7 +658,7 @@ internal sealed class CommandLineUpdate
         Exception cause, bool isSetup, PreparedUpdate prepared, string exePath, string current, string latest,
         Func<bool> putBack, CancellationToken token)
     {
-        if ((!isSetup || !File.Exists(exePath)) && putBack())
+        if (!isSetup && putBack())
         {
             prepared.Undo();
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(cause);
@@ -671,8 +670,10 @@ internal sealed class CommandLineUpdate
     /// <summary>
     /// Ctrl+C after the newer version was renamed into this exe's place and before the
     /// line saying it is installed: this exe is put back and what was readied taken away,
-    /// answering <see cref="CommandLineUpdateResult.Cancelled"/>. Where it cannot be put
-    /// back, the run ends through <see cref="Stop"/>, as
+    /// answering <see cref="CommandLineUpdateResult.Cancelled"/>. <paramref name="putBack"/>
+    /// is the run's own put-back, which gives this exe a second try
+    /// (<see cref="RefillThisExe"/>). Where it cannot be put back, the run ends through
+    /// <see cref="Stop"/>, as
     /// <see cref="CommandLineUpdateResult.UpdatedThenCancelled"/> where the file at the
     /// path carries the newer version. Internal so a test can reach the two
     /// answers where the put-back fails, which no file a test makes can refuse.
@@ -748,7 +749,7 @@ internal sealed class CommandLineUpdate
 
     /// <summary>
     /// Ends the run where this exe is renamed aside and cannot be put back. Where nothing is
-    /// at <paramref name="exePath"/>, the newer version beside it is renamed there first
+    /// at <paramref name="exePath"/>, a file is renamed there first
     /// (<see cref="RefillIfEmpty"/>). Where the file at the path then carries
     /// the newer version, the run ends as one whose newer version did not start:
     /// <see cref="CommandLineUpdateResult.UpdatedThenCancelled"/> where
@@ -778,16 +779,19 @@ internal sealed class CommandLineUpdate
     }
 
     /// <summary>
-    /// On a swap, where nothing is at <paramref name="exePath"/>, renames the newer version
-    /// beside it there (<see cref="SelfReplacement.TryPutNewerVersionAtPath"/>), so a later
-    /// run finds a file there. Every route here has given this exe its own try at going
-    /// back first (<see cref="RefillThisExe"/>), whose success carries the run on or
-    /// cancels it. On the setup's copy nothing is renamed here: a file beside it under the
-    /// newer version's name is one the setup wrote and this run refused.
+    /// Where nothing is at <paramref name="exePath"/>, renames a file there so a later run
+    /// finds one. On a swap it is the newer version beside it
+    /// (<see cref="SelfReplacement.TryPutNewerVersionAtPath"/>): this exe has had its own
+    /// try at going back in the run's put-back (<see cref="RefillThisExe"/>), whose success
+    /// carries the run on or cancels it. On the setup's copy it is this exe
+    /// (<see cref="RefillThisExe"/>), and the run still ends, since the setup's copy may
+    /// already have said the newer version is installed; a file beside it under the newer
+    /// version's name is one the setup wrote and this run refused, and is never renamed.
     /// </summary>
     private void RefillIfEmpty(string exePath)
     {
-        if (_updater.Kind != AppCopyKind.Setup) SelfReplacement.TryPutNewerVersionAtPath(exePath);
+        if (_updater.Kind == AppCopyKind.Setup) RefillThisExe(exePath);
+        else SelfReplacement.TryPutNewerVersionAtPath(exePath);
     }
 
     /// <summary>
