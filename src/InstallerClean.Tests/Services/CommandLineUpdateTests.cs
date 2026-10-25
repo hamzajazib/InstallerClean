@@ -580,8 +580,10 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
         Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
         Assert.Equal(nameof(UpdateFailedException), stopped.FailureType);
-        Assert.Contains("The newer version was not at the command line's path, and the running copy was put back there.",
-            TestCrashLog.Text());
+        // The last entry is the one the run ended with, each entry opening with a "---- " line.
+        var last = TestCrashLog.Text().Split("---- ")[^1];
+        Assert.Contains("The run ended, and the running copy was put back at the command line's path.", last);
+        Assert.Contains("The newer version could not be started.", last);
     }
 
     [Fact]
@@ -600,8 +602,8 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
         // The last entry is the one the run ended with, each entry opening with a "---- " line.
         var last = TestCrashLog.Text().Split("---- ")[^1];
-        Assert.Contains("Ctrl+C came with the newer version not at the command line's path, and the running copy was put back there.", last);
-        Assert.DoesNotContain("could not be put back", last);
+        Assert.Contains("Ctrl+C ended the run, and the running copy was put back at the command line's path.", last);
+        Assert.Contains("The newer version could not be started.", last);
     }
 
     [Fact]

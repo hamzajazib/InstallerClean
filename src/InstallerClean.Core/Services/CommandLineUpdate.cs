@@ -476,8 +476,8 @@ internal sealed class CommandLineUpdate
     /// caller says so and carries on, unless Ctrl+C has come. Answers
     /// <see cref="CommandLineUpdateResult.NotStarted"/> or
     /// <see cref="CommandLineUpdateResult.Stopped"/> where a part fails with it no longer
-    /// there, or on the setup's copy once the setup has installed. Ctrl+C before the newer version is in place, or on a swap before it has
-    /// started, answers <see cref="CommandLineUpdateResult.Cancelled"/>, with this exe back
+    /// there, or on the setup's copy once the setup has installed. Ctrl+C before the newer
+    /// version is in place, or on a swap before it has started, answers <see cref="CommandLineUpdateResult.Cancelled"/>, with this exe back
     /// at its path and nothing changed; Ctrl+C once the setup has installed it answers
     /// <see cref="CommandLineUpdateResult.UpdatedThenCancelled"/>.
     /// </summary>
@@ -573,8 +573,9 @@ internal sealed class CommandLineUpdate
             {
                 // Saying so failed as well, so nothing more is said, and the run ends with
                 // nothing run, answered by what the file at the path carries.
-                var crash = Helpers.CrashLog.TryWrite(again);
-                RefillIfEmpty(exePath);
+                var crash = Helpers.CrashLog.TryWrite(RefillIfEmpty(exePath)
+                    ? ThisExePutBack(token.IsCancellationRequested, again)
+                    : again);
                 if (!Carries(exePath, latest))
                     return new CommandLineUpdateResult.Stopped(again.GetType().Name, crash.Written ? crash.Path : null);
                 return token.IsCancellationRequested
@@ -667,7 +668,7 @@ internal sealed class CommandLineUpdate
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(cause);
         }
         var cancelled = token.IsCancellationRequested;
-        return Stop(cancelled ? null : cause, exePath, current, latest, cancelled);
+        return Stop(cause, exePath, current, latest, cancelled);
     }
 
     /// <summary>
@@ -693,18 +694,22 @@ internal sealed class CommandLineUpdate
         return Stop(null, exePath, current, latest, cancelled: true);
     }
 
-    private static UpdateFailedException NotPutBackAfterCancel() =>
-        new(UpdateFailureStage.Install, "The running copy could not be put back after Ctrl+C.");
+    /// <summary>
+    /// What <see cref="Stop"/> writes to crash.log where Ctrl+C ends the run with this exe
+    /// renamed aside, with <paramref name="cause"/> inside it where there is one.
+    /// </summary>
+    private static UpdateFailedException AsideAfterCancel(Exception? cause) =>
+        new(UpdateFailureStage.Install, "Ctrl+C ended the run with the running copy renamed aside.", cause);
 
     /// <summary>
-    /// What <see cref="Stop"/> writes to crash.log where the newer version was not at the
-    /// path and this exe was renamed back there, with <paramref name="cause"/> inside it.
+    /// What is written to crash.log where the run ends after renaming this exe back to a
+    /// path with nothing at it, with <paramref name="cause"/> inside it where there is one.
     /// </summary>
-    private static UpdateFailedException PutBackWithNewerVersionGone(bool cancelled, Exception? cause) =>
+    private static UpdateFailedException ThisExePutBack(bool cancelled, Exception? cause) =>
         new(UpdateFailureStage.Install,
             cancelled
-                ? "Ctrl+C came with the newer version not at the command line's path, and the running copy was put back there."
-                : "The newer version was not at the command line's path, and the running copy was put back there.",
+                ? "Ctrl+C ended the run, and the running copy was put back at the command line's path."
+                : "The run ended, and the running copy was put back at the command line's path.",
             cause);
 
     /// <summary>Says the newer version is installed, once in a run.</summary>
@@ -743,7 +748,7 @@ internal sealed class CommandLineUpdate
         {
             prepared.Undo();
             if (!putBack())
-                return Stop(ex is OperationCanceledException ? null : ex,
+                return Stop(ex,
                     exePath, current, latest, token.IsCancellationRequested);
             throw;
         }
@@ -765,14 +770,14 @@ internal sealed class CommandLineUpdate
     /// Ends the run where a part failed with this exe renamed aside and the run cannot go on
     /// with it: it could not be put back, or the setup's copy has gone past the point of
     /// saying the newer version is installed. <paramref name="cause"/> is what failed, null
-    /// where Ctrl+C is the whole of it. Where nothing is at <paramref name="exePath"/>, a
+    /// where Ctrl+C is the whole of it, which only happens with <paramref name="cancelled"/>. Where nothing is at <paramref name="exePath"/>, a
     /// file is renamed there first (<see cref="RefillIfEmpty"/>). Where the file at the
     /// path then carries the newer version, the run ends as one whose newer version did not
     /// start: <see cref="CommandLineUpdateResult.UpdatedThenCancelled"/> where
     /// <paramref name="cancelled"/>, and otherwise
     /// <see cref="CommandLineUpdateResult.NotStarted"/> with what failed written to
     /// crash.log. Where it does not, says the update could not be installed, writes to
-    /// crash.log what failed, and that this exe was put back where it was, and answers
+    /// crash.log what failed, with Ctrl+C and whether this exe was put back, and answers
     /// <see cref="CommandLineUpdateResult.Stopped"/>.
     /// </summary>
     private CommandLineUpdateResult Stop(
@@ -786,12 +791,12 @@ internal sealed class CommandLineUpdate
                 SayInstalled(latest);
                 return new CommandLineUpdateResult.UpdatedThenCancelled(current, latest);
             }
-            Helpers.CrashLog.TryWrite(cause!);
+            if (cause is not null) Helpers.CrashLog.TryWrite(cause);
             _host.WriteLine(string.Format(Strings.Cli_UpdateNotStarted, latest));
             return new CommandLineUpdateResult.NotStarted(current, latest);
         }
-        var failure = thisExeBack ? PutBackWithNewerVersionGone(cancelled, cause)
-            : cause ?? NotPutBackAfterCancel();
+        var failure = thisExeBack ? ThisExePutBack(cancelled, cause)
+            : cancelled ? AsideAfterCancel(cause) : cause!;
         var crash = Helpers.CrashLog.TryWrite(failure);
         _host.WriteLine(Strings.UpdateNotice_InstallFailed);
         return new CommandLineUpdateResult.Stopped(failure.GetType().Name, crash.Written ? crash.Path : null);
