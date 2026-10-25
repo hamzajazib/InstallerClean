@@ -349,23 +349,37 @@ public static class SelfReplacement
     /// <summary>
     /// Renames the running exe aside and the file <see cref="StageAsync"/> wrote to the
     /// name it had, and answers with <see cref="PutBack"/> for it. Throws
-    /// <see cref="UpdateFailedException"/> where either rename fails, having put back
-    /// what it had done. <see cref="PrepareToMoveAside"/> comes first. Ctrl+C on
-    /// <paramref name="token"/> ends the wait for the first rename, as in
-    /// <see cref="MoveAside"/>, and never the second: stopping between the two would leave
-    /// this exe renamed aside with nothing at its path.
+    /// <see cref="UpdateFailedException"/> where the first rename fails, with nothing
+    /// changed. Where the second fails, the running exe is renamed back and the failure
+    /// thrown; where that fails too, the newer version is tried at the path once more, and
+    /// the swap answers as done where it goes there, with the first failure written to
+    /// crash.log. Where neither goes, the failure is thrown, and the caller looks at the
+    /// path for what is there.
+    /// <see cref="PrepareToMoveAside"/> comes first. Ctrl+C on <paramref name="token"/>
+    /// ends the wait for the first rename, as in <see cref="MoveAside"/>, and never the
+    /// second: stopping between the two would leave this exe renamed aside with nothing at
+    /// its path.
     /// </summary>
-    public static Func<bool> SwapIn(string exePath, CancellationToken token = default)
+    public static Func<bool> SwapIn(string exePath, CancellationToken token = default) =>
+        SwapInRunning(exePath, token, betweenRenames: null);
+
+    /// <summary>Test seam: <see cref="SwapIn"/>, running <paramref name="betweenRenames"/> after the first rename.</summary>
+    internal static Func<bool> SwapInRunning(string exePath, CancellationToken token, Action? betweenRenames)
     {
         MoveAside(exePath, token);
+        betweenRenames?.Invoke();
+        var newPath = exePath + NewSuffix;
         try
         {
-            var newPath = exePath + NewSuffix;
             WaitOutHold(newPath, () => File.Move(newPath, exePath), CancellationToken.None);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            TryRename(exePath + OldSuffix, exePath);
+            if (!TryRename(exePath + OldSuffix, exePath) && TryRename(newPath, exePath))
+            {
+                CrashLog.TryWrite(ex);
+                return () => PutBack(exePath);
+            }
             throw new UpdateFailedException(UpdateFailureStage.Install,
                 "The newer version could not be moved into place.", ex);
         }
@@ -403,20 +417,53 @@ public static class SelfReplacement
     /// Renames the running exe back to its own path, first renaming whatever is at that
     /// path to the name with <see cref="NewSuffix"/> on the end, where it waits for
     /// <see cref="TryRemoveOldCopy"/>. Answers whether the running exe is at its own path
-    /// again, the one state in which its process can go on loading what it needs. Never
-    /// throws.
+    /// again, the one state in which its process can go on loading what it needs. Where
+    /// the running exe will not go back, whatever was at the path is renamed back to it.
+    /// Never throws.
     /// </summary>
     private static bool PutBack(string exePath)
     {
         var oldPath = exePath + OldSuffix;
         var newPath = exePath + NewSuffix;
+        var movedNewer = false;
         if (File.Exists(exePath))
         {
             if (!TryDeletePlainFile(newPath, waitOutHold: true)) return false;
             if (!TryRename(exePath, newPath)) return false;
+            movedNewer = true;
         }
-        return TryRename(oldPath, exePath);
+        if (TryRename(oldPath, exePath)) return true;
+        if (movedNewer) TryRename(newPath, exePath);
+        return false;
     }
+
+    /// <summary>
+    /// Where nothing is at <paramref name="exePath"/>, renames the copy an update moved
+    /// aside back to it, or where that will not go, the newer version waiting beside it.
+    /// Each only where it is a plain file, and neither replaces a file that has appeared at
+    /// the path. A rename of the copy this process runs from is one Windows allows. It does
+    /// not ask whether a setup is running, as <see cref="TryPutBackMissing"/> does, so it is
+    /// for the copies that replace their own file, which no setup writes. Answers whether a
+    /// file is at the path. Never throws.
+    /// </summary>
+    public static bool TryRefillPath(string exePath)
+    {
+        try
+        {
+            return File.Exists(exePath)
+                || TryRenamePlainFile(exePath + OldSuffix, exePath)
+                || TryRenamePlainFile(exePath + NewSuffix, exePath);
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+            return false;
+        }
+    }
+
+    /// <summary><see cref="TryRename"/> where <paramref name="from"/> is a plain file, and false otherwise.</summary>
+    private static bool TryRenamePlainFile(string from, string to) =>
+        File.Exists(from) && (File.GetAttributes(from) & FileAttributes.ReparsePoint) == 0 && TryRename(from, to);
 
     /// <summary>
     /// Runs <paramref name="change"/>, a rename or delete of <paramref name="path"/>, and
@@ -470,7 +517,10 @@ public static class SelfReplacement
     /// own path and the newer version back under its waiting name. Where Windows would not
     /// end a newer version that did not say so, this exe cannot be put back, or another
     /// process runs from the file now at the path, the newer version stays there and this
-    /// process ends all the same, so the next start opens the newer version.
+    /// process ends all the same, so the next start opens the newer version, which
+    /// <see cref="PutBack"/> renames back to the path where it has moved it and this exe
+    /// will not go. Where <see cref="SwapIn"/> puts neither file at the path, it answers
+    /// false, and the caller puts one there (<see cref="TryRefillPath"/>).
     /// </summary>
     /// <param name="exePath">This exe's own path.</param>
     /// <param name="toVersion">

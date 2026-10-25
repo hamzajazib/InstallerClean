@@ -1042,6 +1042,19 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
+    public void A_swap_that_fails_with_nothing_at_the_exe_path_keeps_the_newer_version_beside_it()
+    {
+        _host.OnReleaseOwnFile = () => File.Delete(_exe);
+        var updater = Download();
+
+        var result = Run(updater, canAsk: false);
+
+        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.False(updater.Undone);
+        Assert.Null(_host.NewerVersionRun);
+    }
+
+    [Fact]
     public void Ctrl_C_before_the_swapped_in_version_starts_puts_this_exe_back_and_starts_nothing()
     {
         using var cts = new CancellationTokenSource();

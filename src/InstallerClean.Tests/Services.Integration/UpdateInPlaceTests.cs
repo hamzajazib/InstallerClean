@@ -343,6 +343,94 @@ public sealed class UpdateInPlaceTests : IDisposable
     }
 
     [Fact]
+    public async Task A_swap_that_can_put_neither_file_at_the_exe_path_keeps_both_beside_it_until_one_can_go()
+    {
+        // A folder at the exe's path refuses every rename to it.
+        var exe = Path.Combine(_root, "InstallerClean.exe");
+        File.WriteAllBytes(exe, Program(1));
+        await StagedBesideAsync(exe, 2);
+
+        var failure = Assert.Throws<UpdateFailedException>(() =>
+            SelfReplacement.SwapInRunning(exe, CancellationToken.None, () => Directory.CreateDirectory(exe)));
+
+        Assert.Equal(UpdateFailureStage.Install, failure.Stage);
+        Assert.Equal(Program(1), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
+        Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
+        Assert.False(SelfReplacement.TryRefillPath(exe));
+
+        Directory.Delete(exe);
+        Assert.True(SelfReplacement.TryRefillPath(exe));
+
+        Assert.Equal(Program(1), File.ReadAllBytes(exe));
+        Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
+        Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
+    }
+
+    [Fact]
+    public async Task A_swap_whose_running_exe_will_not_go_back_puts_the_newer_version_at_the_exe_path()
+    {
+        // The newer version is held open past the first rename's wait and let go during the
+        // last, and a folder in place of the renamed exe refuses the rename back.
+        var exe = Path.Combine(_root, "InstallerClean.exe");
+        File.WriteAllBytes(exe, Program(1));
+        var staged = await StagedBesideAsync(exe, 2);
+        var held = new FileStream(staged, FileMode.Open, FileAccess.Read, FileShare.None);
+        var letGo = Task.Delay(TimeSpan.FromSeconds(3)).ContinueWith(_ => held.Dispose());
+        var aside = Path.Combine(_root, "aside.exe");
+
+        var putBack = SelfReplacement.SwapInRunning(exe, CancellationToken.None, () =>
+        {
+            File.Move(exe + SelfReplacement.OldSuffix, aside);
+            Directory.CreateDirectory(exe + SelfReplacement.OldSuffix);
+        });
+        await letGo;
+
+        Assert.NotNull(putBack);
+        Assert.Equal(Program(2), File.ReadAllBytes(exe));
+        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
+    }
+
+    [Fact]
+    public async Task A_put_back_whose_running_exe_will_not_go_back_leaves_the_newer_version_at_the_exe_path()
+    {
+        var exe = Path.Combine(_root, "InstallerClean.exe");
+        File.WriteAllBytes(exe, Program(1));
+        await StagedBesideAsync(exe, 2);
+        var putBack = SelfReplacement.SwapIn(exe);
+        File.Delete(exe + SelfReplacement.OldSuffix);
+        Directory.CreateDirectory(exe + SelfReplacement.OldSuffix);
+
+        Assert.False(putBack());
+
+        Assert.Equal(Program(2), File.ReadAllBytes(exe));
+        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
+    }
+
+    [Fact]
+    public void Refilling_an_exe_path_puts_the_newer_version_there_where_no_copy_was_moved_aside()
+    {
+        var exe = Path.Combine(_root, "InstallerClean.exe");
+        File.WriteAllBytes(exe + SelfReplacement.NewSuffix, Program(2));
+
+        Assert.True(SelfReplacement.TryRefillPath(exe));
+
+        Assert.Equal(Program(2), File.ReadAllBytes(exe));
+    }
+
+    [Fact]
+    public void Refilling_an_exe_path_that_holds_a_file_changes_nothing()
+    {
+        var exe = Path.Combine(_root, "InstallerClean.exe");
+        File.WriteAllBytes(exe, Program(1));
+        File.WriteAllBytes(exe + SelfReplacement.OldSuffix, Program(9));
+
+        Assert.True(SelfReplacement.TryRefillPath(exe));
+
+        Assert.Equal(Program(1), File.ReadAllBytes(exe));
+        Assert.Equal(Program(9), File.ReadAllBytes(exe + SelfReplacement.OldSuffix));
+    }
+
+    [Fact]
     public void A_file_held_against_renaming_cannot_be_moved_aside_until_it_is_let_go()
     {
         var exe = Path.Combine(_root, AppCopy.CommandLineFileName);
@@ -748,6 +836,24 @@ public sealed class UpdateInPlaceTests : IDisposable
 
         Assert.Equal(Program(1), File.ReadAllBytes(exe));
         Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
+    }
+
+    [Fact]
+    public async Task The_portable_routes_undo_keeps_the_newer_version_while_nothing_is_at_the_exe_path()
+    {
+        var exeFolder = Directory.CreateDirectory(Path.Combine(_root, "app")).FullName;
+        var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
+        var exe = Path.Combine(exeFolder, "InstallerClean.exe");
+        File.WriteAllBytes(exe, Program(1));
+        var updater = new AppUpdater(AppCopyKind.Portable, exe,
+            new UpdateDownloadService(new OneAnswer(Release(2)), null), stagingRoot,
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
+        var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
+        File.Move(exe, exe + SelfReplacement.OldSuffix);
+
+        prepared.Undo();
+
+        Assert.Equal(Release(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
     }
 
     [Fact]

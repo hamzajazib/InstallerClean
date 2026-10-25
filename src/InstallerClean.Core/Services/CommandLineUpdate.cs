@@ -529,8 +529,8 @@ internal sealed class CommandLineUpdate
             }
             catch (Exception ex)
             {
-                prepared.Undo();
                 if (!File.Exists(exePath)) return Stop(ex);
+                prepared.Undo();
                 // A rename refused while another run of this exe is alive is InstallerClean
                 // being in use; any other refusal is a failure.
                 if (_host.AnotherRunMayBeAlive(exePath)) throw InUseFailure(ex);

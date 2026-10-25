@@ -82,7 +82,8 @@ public sealed class PreparedUpdate
 
     /// <summary>
     /// Takes away what getting it ready left: the download, or the newer version written
-    /// beside the running exe. Runs once, however often it is called. Never throws.
+    /// beside the running exe, which stays where nothing is at the exe's path. Runs once,
+    /// however often it is called. Never throws.
     /// </summary>
     public void Undo()
     {
@@ -303,8 +304,11 @@ public sealed class AppUpdater : IAppUpdater
             Helpers.StorageHelpers.TryDeleteTempFile(staged);
             folder.TryRemoveIfEmpty();
         }
+        // With nothing at the exe's path, the newer version is one of the two files that can
+        // go there, so it stays.
         return new PreparedUpdate(version, _exePath, string.Empty,
-            () => Helpers.StorageHelpers.TryDeleteTempFile(replacement), replacement);
+            () => { if (File.Exists(_exePath)) Helpers.StorageHelpers.TryDeleteTempFile(replacement); },
+            replacement);
     }
 
 #if DEBUG

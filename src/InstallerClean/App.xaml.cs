@@ -30,6 +30,8 @@ public partial class App : Application
     private static InstanceLock? _instanceLock;
     // Set where an update that did not hand over could not take the mutex back.
     private static bool _instanceLockLost;
+    // Set where an update that did not hand over left nothing at the exe's path.
+    private static string? _pathLeftEmpty;
     private static ServiceProvider? _services;
     // Reentry guard: a modal dialog pumps messages, so a queued
     // exception could fire DispatcherUnhandledException recursively.
@@ -738,6 +740,7 @@ public partial class App : Application
     /// </summary>
     protected override void OnExit(ExitEventArgs e)
     {
+        RefillPathLeftEmpty();
         _services?.Dispose();
         // Release-before-Dispose: a clean release lets the next instance
         // skip the AbandonedMutexException path. OnExit runs on the
@@ -779,6 +782,7 @@ public partial class App : Application
         // Nulled so OnExit's own _services?.Dispose() is a no-op rather than a
         // second teardown; the flush obligation stays in the one place that has
         // always held it, MainViewModel.Dispose.
+        RefillPathLeftEmpty();
         _services?.Dispose();
         _services = null;
 
@@ -914,7 +918,11 @@ public partial class App : Application
     /// running and ends the process (<see cref="SelfReplacement.HandOverAndEnd"/>). That
     /// ends it without <see cref="OnExit"/>, so the caller has already settled what
     /// closing would. Where the newer version does not say so, this exe is back at its
-    /// own path and the app's windows come back as they were.
+    /// own path and the app's windows come back as they were. Where nothing is at that
+    /// path, this exe is renamed back to it, or the newer version where this exe will not
+    /// go (<see cref="SelfReplacement.TryRefillPath"/>), and where neither goes the windows
+    /// come back all the same and the app tries again as it closes
+    /// (<see cref="RefillPathLeftEmpty"/>).
     /// </summary>
     /// <remarks>
     /// The windows are hidden for the wait, which can run to
@@ -933,11 +941,27 @@ public partial class App : Application
         foreach (var window in hidden) window.Hide();
         var released = _instanceLock?.Release() == true;
         using (Dispatcher.DisableProcessing())
+        {
             SelfReplacement.HandOverAndEnd(exePath, version);
+            if (!File.Exists(exePath) && !SelfReplacement.TryRefillPath(exePath)) _pathLeftEmpty = exePath;
+        }
         if (released) RetakeAfterHandOverFailed();
         foreach (var window in hidden) window.Show();
         MainWindow?.Activate();
         return false;
+    }
+
+    /// <summary>
+    /// Where an update that did not hand over left nothing at the exe's path, puts the copy
+    /// it renamed aside back there, or the newer version beside it
+    /// (<see cref="SelfReplacement.TryRefillPath"/>), so the next start from a shortcut
+    /// finds a file. Runs as the app closes or relaunches, first, so the container's
+    /// disposal and what follows run with this exe back at its path where it can be.
+    /// </summary>
+    private static void RefillPathLeftEmpty()
+    {
+        if (Interlocked.Exchange(ref _pathLeftEmpty, null) is { } exePath)
+            SelfReplacement.TryRefillPath(exePath);
     }
 
     /// <summary>
