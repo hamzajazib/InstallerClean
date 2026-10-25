@@ -15,8 +15,7 @@ namespace InstallerClean.Tests.Helpers;
 internal sealed class MadeViewModels : IDisposable
 {
     private readonly List<MainViewModel> _made = new();
-    private string? _previousFolder;
-    private string? _folder;
+    private IDisposable? _folder;
 
     /// <summary>
     /// Takes the test's folder at the first view model, so a test class whose constructor
@@ -24,12 +23,7 @@ internal sealed class MadeViewModels : IDisposable
     /// </summary>
     public MainViewModel Add(MainViewModel vm)
     {
-        if (_folder is null)
-        {
-            _previousFolder = CrashLog.FolderForTests;
-            _folder = TestCrashLog.NewFolder();
-            CrashLog.FolderForTests = _folder;
-        }
+        _folder ??= TestCrashLog.OwnFolder();
         _made.Add(vm);
         return vm;
     }
@@ -43,11 +37,7 @@ internal sealed class MadeViewModels : IDisposable
         }
         finally
         {
-            if (_folder is not null)
-            {
-                CrashLog.FolderForTests = _previousFolder;
-                TestCrashLog.TryDelete(_folder);
-            }
+            _folder?.Dispose();
         }
     }
 }

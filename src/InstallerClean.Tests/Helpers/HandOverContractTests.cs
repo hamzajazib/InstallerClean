@@ -7,10 +7,14 @@ namespace InstallerClean.Tests.Helpers;
 /// names, and the first version that takes it, which every later version of the window
 /// and the command line is bound to.
 /// </summary>
-public class HandOverContractTests
+public sealed class HandOverContractTests : IDisposable
 {
     private const string EventId = "6f1c2a3b000040008000000000000001";
     private const string OtherEventId = "6f1c2a3b000040008000000000000002";
+
+    private readonly IDisposable _crashLog = TestCrashLog.OwnFolder();
+
+    public void Dispose() => _crashLog.Dispose();
 
     [Theory]
     [InlineData("3.5.0", true)]
@@ -169,10 +173,8 @@ public class HandOverContractTests
     [InlineData(EventId, "does not exist")]
     public void A_start_whose_started_event_cannot_be_set_does_not_go_on_and_says_why(string id, string why)
     {
-        var before = Occurrences(TestCrashLog.Text(), why);
-
         Assert.False(HandOverContract.SignalStarted(id));
-        Assert.Equal(before + 1, Occurrences(TestCrashLog.Text(), why));
+        Assert.Equal(1, Occurrences(TestCrashLog.Text(), why));
     }
 
     [Fact]

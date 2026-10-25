@@ -14,15 +14,23 @@ public sealed class NewerVersionStartTests : IDisposable
 {
     private readonly string _root = Directory.CreateTempSubdirectory("ic-start-").FullName;
     private readonly List<Process> _started = [];
+    private readonly IDisposable _crashLog = TestCrashLog.OwnFolder();
 
     public void Dispose()
     {
-        foreach (var process in _started)
+        try
         {
-            try { if (!process.HasExited) process.Kill(); } catch { }
-            process.Dispose();
+            foreach (var process in _started)
+            {
+                try { if (!process.HasExited) process.Kill(); } catch { }
+                process.Dispose();
+            }
+            try { Directory.Delete(_root, recursive: true); } catch { }
         }
-        try { Directory.Delete(_root, recursive: true); } catch { }
+        finally
+        {
+            _crashLog.Dispose();
+        }
     }
 
     private static readonly string PowerShell =
@@ -170,7 +178,6 @@ public sealed class NewerVersionStartTests : IDisposable
         Assert.False(setOnly.SafeWaitHandle.IsInvalid);
         var newer = PowerShellRunning("Start-Sleep -Seconds 600");
         var bound = TimeSpan.FromSeconds(30);
-        var logBefore = TestCrashLog.Text();
         var clock = Stopwatch.StartNew();
 
         var answer = SelfReplacement.AwaitStart(newer, setOnly, bound, cancel: null, out var waitError);
@@ -178,7 +185,7 @@ public sealed class NewerVersionStartTests : IDisposable
         Assert.True(clock.Elapsed < TimeSpan.FromSeconds(10), $"The wait took {clock.Elapsed}.");
         Assert.Equal(NewerVersionStart.WaitFailed, answer);
         Assert.Equal(ErrorAccessDenied, waitError);
-        Assert.Equal(logBefore, TestCrashLog.Text());
+        Assert.Empty(TestCrashLog.Text());
         Assert.Contains("failed with error 5", SelfReplacement.NotStartedFailure(answer, waitError, newer, bound).Message);
         Assert.True(SelfReplacement.EndNewerVersion(newer));
         Assert.True(newer.HasExited);

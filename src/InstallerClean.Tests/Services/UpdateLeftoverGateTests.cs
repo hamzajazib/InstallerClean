@@ -93,7 +93,7 @@ public sealed class UpdateLeftoverGateTests
             // The hold has started, so a wait that ends here is the lock not holding it.
             marking.Wait();
 
-            Assert.False(mark.Wait(TimeSpan.FromMilliseconds(200)));
+            await Assert.ThrowsAsync<TimeoutException>(() => mark.WaitAsync(TimeSpan.FromMilliseconds(200)));
         }
         finally
         {

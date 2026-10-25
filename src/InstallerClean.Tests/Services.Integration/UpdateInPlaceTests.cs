@@ -21,6 +21,7 @@ namespace InstallerClean.Tests.Services.Integration;
 public sealed class UpdateInPlaceTests : IDisposable
 {
     private readonly string _root = Directory.CreateTempSubdirectory("ic-update-").FullName;
+    private readonly IDisposable _crashLog = TestCrashLog.OwnFolder();
 
     /// <summary>The SID of the account running the suite.</summary>
     private static readonly string ThisAccountSid = WindowsIdentity.GetCurrent().User!.Value;
@@ -46,20 +47,27 @@ public sealed class UpdateInPlaceTests : IDisposable
 
     public void Dispose()
     {
-        // A folder made with the shipping descriptor keeps this account out, but its
-        // creator owns it and may rewrite its list, which is how it is let back in to
-        // be deleted.
-        foreach (var folder in Directory.EnumerateDirectories(_root, "*", SearchOption.AllDirectories))
+        try
         {
-            try
+            // A folder made with the shipping descriptor keeps this account out, but its
+            // creator owns it and may rewrite its list, which is how it is let back in to
+            // be deleted.
+            foreach (var folder in Directory.EnumerateDirectories(_root, "*", SearchOption.AllDirectories))
             {
-                var security = new DirectorySecurity();
-                security.SetSecurityDescriptorSddlForm(AdministratorsAndThisAccount);
-                new DirectoryInfo(folder).SetAccessControl(security);
+                try
+                {
+                    var security = new DirectorySecurity();
+                    security.SetSecurityDescriptorSddlForm(AdministratorsAndThisAccount);
+                    new DirectoryInfo(folder).SetAccessControl(security);
+                }
+                catch { }
             }
-            catch { }
+            try { Directory.Delete(_root, recursive: true); } catch { }
         }
-        try { Directory.Delete(_root, recursive: true); } catch { }
+        finally
+        {
+            _crashLog.Dispose();
+        }
     }
 
     private static byte[] Program(byte fill)
@@ -758,7 +766,6 @@ public sealed class UpdateInPlaceTests : IDisposable
         var exe = Path.Combine(_root, "InstallerClean.exe");
         File.WriteAllBytes(exe, Program(1));
         await StagedBesideAsync(exe, 2);
-        var failedStartsBefore = FailedStartsInCrashLog(exe);
 
         Assert.False(SelfReplacement.HandOverAndEnd(exe, "9.9.9"));
 
@@ -766,7 +773,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
         Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
         // One entry for each try: each but the last as it fails, the last once the exe is back.
-        Assert.Equal(failedStartsBefore + ProcessStartRetry.Attempts, FailedStartsInCrashLog(exe));
+        Assert.Equal(ProcessStartRetry.Attempts, FailedStartsInCrashLog(exe));
     }
 
     /// <summary>How many entries in the crash log are a start of <paramref name="exe"/> that Windows refused.</summary>
@@ -813,12 +820,10 @@ public sealed class UpdateInPlaceTests : IDisposable
     [Fact]
     public void An_assembly_the_build_does_not_carry_is_passed_over_without_a_crash_log_entry()
     {
-        var before = TestCrashLog.Text();
-
         var loaded = SelfReplacement.TryLoad(new System.Reflection.AssemblyName("Ic.Not.In.This.Build, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"));
 
         Assert.Null(loaded);
-        Assert.Equal(before, TestCrashLog.Text());
+        Assert.Empty(TestCrashLog.Text());
     }
 
     [Fact]

@@ -42,8 +42,8 @@ internal static class TestCulture
 /// test runs, so a test reaching the log by a path nobody planned for is covered too, and
 /// it is deleted when the test process exits, along with the shared InstallerClean.Tests
 /// folder above it where no other run's folder is left in it. A test that changes the
-/// folder for its run, as the tests that make view models do (<c>MadeViewModels</c>) and as
-/// CrashLogTests does, puts this one back.
+/// folder for its run, as the tests that make view models do (<c>MadeViewModels</c>), the
+/// update tests do (<see cref="OwnFolder"/>) and CrashLogTests does, puts this one back.
 /// </summary>
 internal static class TestCrashLog
 {
@@ -51,6 +51,32 @@ internal static class TestCrashLog
 
     /// <summary>A folder of its own under the shared one, not yet made.</summary>
     internal static string NewFolder() => Path.Combine(Shared, Guid.NewGuid().ToString("N"));
+
+    /// <summary>
+    /// Points the crash log at a new folder until the answer is disposed, which puts back the
+    /// folder it replaced and deletes the new one. A test class takes one where nothing after
+    /// it in the class's construction can throw, since a test class whose constructor throws
+    /// is never disposed, and each of its tests then reads <see cref="Text"/> and sees only
+    /// what its own work wrote.
+    /// </summary>
+    internal static IDisposable OwnFolder() => new Folder();
+
+    private sealed class Folder : IDisposable
+    {
+        private readonly string? _previous = CrashLog.FolderForTests;
+        private readonly string _folder = NewFolder();
+        private bool _disposed;
+
+        public Folder() => CrashLog.FolderForTests = _folder;
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            CrashLog.FolderForTests = _previous;
+            TryDelete(_folder);
+        }
+    }
 
     [ModuleInitializer]
     internal static void Redirect()
