@@ -1128,8 +1128,32 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal("new", File.ReadAllText(_exe));
         Assert.Null(_host.NewerVersionRun);
         var entry = TestCrashLog.OnlyEntry();
-        Assert.Contains("A failure ended the run and Ctrl+C came as well.", entry);
+        Assert.Contains("Ctrl+C ended the run, and a failure came as it ended.", entry);
         Assert.Contains("could not be read after the setup", entry);
+    }
+
+    [Fact]
+    public void Ctrl_C_during_the_setup_still_waits_out_a_brief_hold_on_its_newer_version()
+    {
+        using var cts = new CancellationTokenSource();
+        var refused = 0;
+        _host.OnSetup = () =>
+        {
+            File.WriteAllText(_exe, "new");
+            cts.Cancel();
+            _host.OnFileVersion = () =>
+            {
+                if (refused++ < 3) throw SharingViolation();
+            };
+            return 0;
+        };
+
+        var result = Run(Setup(), canAsk: false, token: cts.Token, readHoldWait: TimeSpan.FromSeconds(10),
+            readHoldNotice: TimeSpan.FromSeconds(10));
+
+        Assert.Equal(new CommandLineUpdateResult.UpdatedThenCancelled(Current, Latest), result);
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.True(refused > 3);
     }
 
     [Fact]
