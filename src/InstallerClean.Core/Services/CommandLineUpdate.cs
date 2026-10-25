@@ -485,7 +485,8 @@ internal sealed class CommandLineUpdate
     {
         var isSetup = _updater.Kind == AppCopyKind.Setup;
         PreparedUpdate prepared;
-        Func<bool> putBack;
+        Func<bool>? putBack = null;
+        Exception? leftEmpty = null;
 
         // The mutex is held from before the download until this exe has been renamed, on
         // every kind of copy, so nothing else that takes it runs meanwhile: the window,
@@ -529,24 +530,33 @@ internal sealed class CommandLineUpdate
             }
             catch (Exception ex)
             {
-                if (!File.Exists(exePath)) return Stop(ex, exePath, current, latest, token.IsCancellationRequested);
-                prepared.Undo();
-                // A rename refused while another run of this exe is alive is InstallerClean
-                // being in use; any other refusal is a failure.
-                if (_host.AnotherRunMayBeAlive(exePath)) throw InUseFailure(ex);
-                throw;
+                // Where nothing is at the path and this exe will not go back there, the run
+                // ends once the mutex is released.
+                if (!File.Exists(exePath) && !RefillThisExe(exePath))
+                {
+                    leftEmpty = ex;
+                }
+                else
+                {
+                    prepared.Undo();
+                    // A rename refused while another run of this exe is alive is InstallerClean
+                    // being in use; any other refusal is a failure.
+                    if (_host.AnotherRunMayBeAlive(exePath)) throw InUseFailure(ex);
+                    throw;
+                }
             }
         }
         finally
         {
             if (holdsLock) _host.ReleaseInstanceLock();
         }
+        if (putBack is null) return Stop(leftEmpty!, exePath, current, latest, token.IsCancellationRequested);
 
         // This exe is renamed aside from here until something puts it back. A throw that
         // nothing below answers ends the update as a newer version that did not start,
         // which is what it is: the host throws nothing once the newer version has started.
         var backAtPath = false;
-        bool PutBack() => backAtPath = putBack();
+        bool PutBack() => backAtPath = putBack() || RefillThisExe(exePath);
         try
         {
             return AfterRename(canAsk, command, arguments, exePath, current, latest, isSetup, prepared, PutBack, token);
@@ -641,12 +651,8 @@ internal sealed class CommandLineUpdate
     /// away, and <paramref name="cause"/> thrown, so the caller says so and carries on, or
     /// stops where Ctrl+C has come. On the setup's copy, or where this exe could not be put
     /// back, it stays aside, since the setup may have put the newer version and the window
-    /// beside it in place, and the file at the path is checked before anything says the
-    /// newer version is installed. Where it carries the newer version the answer is
-    /// <see cref="CommandLineUpdateResult.NotStarted"/>, or
-    /// <see cref="CommandLineUpdateResult.UpdatedThenCancelled"/> where Ctrl+C has come,
-    /// as everywhere else once the newer version is in place; where it does not, the run
-    /// ends through <see cref="Stop"/>.
+    /// beside it in place, and the run ends through <see cref="Stop"/>, which checks the
+    /// file at the path before anything says the newer version is installed.
     /// </summary>
     private CommandLineUpdateResult EndNotStarted(
         Exception cause, bool isSetup, PreparedUpdate prepared, string exePath, string current, string latest,
@@ -657,25 +663,17 @@ internal sealed class CommandLineUpdate
             prepared.Undo();
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(cause);
         }
-        if (token.IsCancellationRequested)
-        {
-            if (!Carries(exePath, latest)) return Stop(NotPutBackAfterCancel(), exePath, current, latest, cancelled: true);
-            SayInstalled(latest);
-            return new CommandLineUpdateResult.UpdatedThenCancelled(current, latest);
-        }
-        if (!Carries(exePath, latest)) return Stop(cause, exePath, current, latest, cancelled: false);
-        Helpers.CrashLog.TryWrite(cause);
-        _host.WriteLine(string.Format(Strings.Cli_UpdateNotStarted, latest));
-        return new CommandLineUpdateResult.NotStarted(current, latest);
+        var cancelled = token.IsCancellationRequested;
+        return Stop(cancelled ? NotPutBackAfterCancel() : cause, exePath, current, latest, cancelled);
     }
 
     /// <summary>
     /// Ctrl+C after the newer version was renamed into this exe's place and before the
     /// line saying it is installed: this exe is put back and what was readied taken away,
     /// answering <see cref="CommandLineUpdateResult.Cancelled"/>. Where it cannot be put
-    /// back, the run ends as <see cref="CommandLineUpdateResult.UpdatedThenCancelled"/>
-    /// where the file at the path carries the newer version, and otherwise through
-    /// <see cref="Stop"/>. Internal so a test can reach the two
+    /// back, the run ends through <see cref="Stop"/>, as
+    /// <see cref="CommandLineUpdateResult.UpdatedThenCancelled"/> where the file at the
+    /// path carries the newer version. Internal so a test can reach the two
     /// answers where the put-back fails, which no file a test makes can refuse.
     /// </summary>
     internal CommandLineUpdateResult CancelAfterSwap(
@@ -687,9 +685,7 @@ internal sealed class CommandLineUpdate
             _host.HoldOwnFile();
             return new CommandLineUpdateResult.Cancelled();
         }
-        if (!Carries(exePath, latest)) return Stop(NotPutBackAfterCancel(), exePath, current, latest, cancelled: true);
-        SayInstalled(latest);
-        return new CommandLineUpdateResult.UpdatedThenCancelled(current, latest);
+        return Stop(NotPutBackAfterCancel(), exePath, current, latest, cancelled: true);
     }
 
     private static UpdateFailedException NotPutBackAfterCancel() =>
@@ -751,8 +747,8 @@ internal sealed class CommandLineUpdate
 
     /// <summary>
     /// Ends the run where this exe is renamed aside and cannot be put back. Where nothing is
-    /// at <paramref name="exePath"/>, this exe or the newer version beside it is renamed
-    /// there first (<see cref="RefillIfEmpty"/>). Where the file at the path then carries
+    /// at <paramref name="exePath"/>, the newer version beside it is renamed there first
+    /// (<see cref="RefillIfEmpty"/>). Where the file at the path then carries
     /// the newer version, the run ends as one whose newer version did not start:
     /// <see cref="CommandLineUpdateResult.UpdatedThenCancelled"/> where
     /// <paramref name="cancelled"/>, and otherwise <see cref="CommandLineUpdateResult.NotStarted"/>
@@ -781,19 +777,27 @@ internal sealed class CommandLineUpdate
     }
 
     /// <summary>
-    /// Where nothing is at <paramref name="exePath"/>, renames this exe back to it, or the
-    /// newer version beside it where this exe will not go
-    /// (<see cref="SelfReplacement.TryRefillPath"/>), so a later run finds a file there.
-    /// The setup's copy writes nothing beside itself, so there only this exe goes back,
-    /// and nothing does while a setup runs, the setup being about to write the newer
-    /// version there.
+    /// On a swap, where nothing is at <paramref name="exePath"/>, renames the newer version
+    /// beside it there (<see cref="SelfReplacement.TryPutNewerVersionAtPath"/>), so a later
+    /// run finds a file there. This exe has had its own try at going back first
+    /// (<see cref="RefillThisExe"/>), whose success carries the run on. On the setup's copy
+    /// nothing is renamed here: a file beside it under the newer version's name is one the
+    /// setup wrote and this run refused.
     /// </summary>
     private void RefillIfEmpty(string exePath)
     {
-        if (File.Exists(exePath)) return;
-        if (_updater.Kind != AppCopyKind.Setup) SelfReplacement.TryRefillPath(exePath);
-        else if (!SelfReplacement.SetupRunning()) SelfReplacement.TryRefillPath(exePath, orNewerVersion: false);
+        if (_updater.Kind != AppCopyKind.Setup) SelfReplacement.TryPutNewerVersionAtPath(exePath);
     }
+
+    /// <summary>
+    /// Where nothing is at <paramref name="exePath"/>, renames this exe back to it, and
+    /// answers whether it did. On the setup's copy, does nothing while a setup runs, the
+    /// setup being about to write the newer version there.
+    /// </summary>
+    private bool RefillThisExe(string exePath) =>
+        !File.Exists(exePath)
+        && (_updater.Kind != AppCopyKind.Setup || !SelfReplacement.SetupRunning())
+        && SelfReplacement.TryRefillPath(exePath, orNewerVersion: false);
 
     /// <summary>
     /// Whether the file at <paramref name="path"/> carries <paramref name="version"/>

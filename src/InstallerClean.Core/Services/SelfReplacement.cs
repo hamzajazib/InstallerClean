@@ -461,6 +461,24 @@ public static class SelfReplacement
         }
     }
 
+    /// <summary>
+    /// Where nothing is at <paramref name="exePath"/>, renames the newer version waiting
+    /// beside it there, where it is a plain file, without replacing a file that has
+    /// appeared at the path. Answers whether a file is at the path. Never throws.
+    /// </summary>
+    public static bool TryPutNewerVersionAtPath(string exePath)
+    {
+        try
+        {
+            return File.Exists(exePath) || TryRenamePlainFile(exePath + NewSuffix, exePath);
+        }
+        catch (Exception ex)
+        {
+            CrashLog.TryWrite(ex);
+            return false;
+        }
+    }
+
     /// <summary><see cref="TryRename"/> where <paramref name="from"/> is a plain file, and false otherwise.</summary>
     private static bool TryRenamePlainFile(string from, string to) =>
         File.Exists(from) && !IsReparsePoint(from) && TryRename(from, to);
@@ -519,8 +537,10 @@ public static class SelfReplacement
     /// process runs from the file now at the path, the newer version stays there and this
     /// process ends all the same, so the next start opens the newer version, which
     /// <see cref="PutBack"/> renames back to the path where it has moved it and this exe
-    /// will not go. Where <see cref="SwapIn"/> puts neither file at the path, it answers
-    /// false, and the caller puts one there (<see cref="TryRefillPath"/>).
+    /// will not go. Where <see cref="SwapIn"/> puts neither file at the path, this exe is
+    /// renamed back to it and the answer is false; where it will not go, the newer version
+    /// is, and this process ends; where neither goes, the answer is false with nothing at
+    /// the path, and the caller puts one there later (<see cref="TryRefillPath"/>).
     /// </summary>
     /// <param name="exePath">This exe's own path.</param>
     /// <param name="toVersion">
@@ -559,6 +579,11 @@ public static class SelfReplacement
         catch (UpdateFailedException ex)
         {
             CrashLog.TryWrite(ex);
+            // With nothing at the path, this exe goes back and the window carries on; where it
+            // will not, the newer version goes there and stays, as where a start fails below.
+            if (!File.Exists(exePath) && !TryRefillPath(exePath, orNewerVersion: false)
+                && TryRenamePlainFile(exePath + NewSuffix, exePath))
+                EndThisProcess();
             return false;
         }
 

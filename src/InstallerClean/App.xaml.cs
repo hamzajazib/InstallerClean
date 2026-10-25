@@ -288,6 +288,7 @@ public partial class App : Application
         {
             if (args.ExceptionObject is Exception ex)
                 CrashLog.TryWrite(ex);
+            RefillPathLeftEmpty();
         };
 
         TaskScheduler.UnobservedTaskException += (_, args) =>
@@ -918,10 +919,10 @@ public partial class App : Application
     /// running and ends the process (<see cref="SelfReplacement.HandOverAndEnd"/>). That
     /// ends it without <see cref="OnExit"/>, so the caller has already settled what
     /// closing would. Where the newer version does not say so, this exe is back at its
-    /// own path and the app's windows come back as they were. Where nothing is at that
-    /// path, this exe is renamed back to it (<see cref="SelfReplacement.TryRefillPath"/>),
-    /// and where it will not go the windows come back all the same and the app puts one of
-    /// the two files there as it closes (<see cref="RefillPathLeftEmpty"/>).
+    /// own path and the app's windows come back as they were. Where the hand-over leaves
+    /// nothing at that path, the windows come back all the same, and the app puts one of
+    /// the two files there as it closes or as an unhandled exception ends it
+    /// (<see cref="RefillPathLeftEmpty"/>).
     /// </summary>
     /// <remarks>
     /// The windows are hidden for the wait, which can run to
@@ -940,12 +941,8 @@ public partial class App : Application
         foreach (var window in hidden) window.Hide();
         var released = _instanceLock?.Release() == true;
         using (Dispatcher.DisableProcessing())
-        {
             SelfReplacement.HandOverAndEnd(exePath, version);
-            // Only this exe goes back here: the newer version at the path while the windows come
-            // back would be a version this process neither started nor runs from.
-            if (!SelfReplacement.TryRefillPath(exePath, orNewerVersion: false)) _pathLeftEmpty = exePath;
-        }
+        if (!File.Exists(exePath)) _pathLeftEmpty = exePath;
         if (released) RetakeAfterHandOverFailed();
         foreach (var window in hidden) window.Show();
         MainWindow?.Activate();
@@ -957,14 +954,14 @@ public partial class App : Application
     /// it renamed aside back there, or the newer version beside it
     /// (<see cref="SelfReplacement.TryRefillPath"/>), so the next start from a shortcut
     /// finds a file. Runs as the app closes or relaunches, first, so the container's
-    /// disposal and what follows run with this exe back at its path where it goes there.
-    /// Where the newer version goes there instead, a relaunch for a language starts it.
+    /// disposal and what follows run with this exe back at its path where it goes there,
+    /// and on the thread of an unhandled exception that ends the process. Where the newer
+    /// version goes there instead, a relaunch for a language starts it.
     /// </summary>
     private static void RefillPathLeftEmpty()
     {
-        if (_pathLeftEmpty is not { } exePath) return;
-        _pathLeftEmpty = null;
-        SelfReplacement.TryRefillPath(exePath);
+        if (Interlocked.Exchange(ref _pathLeftEmpty, null) is { } exePath)
+            SelfReplacement.TryRefillPath(exePath);
     }
 
     /// <summary>

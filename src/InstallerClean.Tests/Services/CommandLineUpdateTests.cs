@@ -1076,6 +1076,21 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
+    public void Ctrl_C_after_the_swap_with_nothing_at_the_path_puts_the_newer_version_there()
+    {
+        File.Move(_exe, _exe + SelfReplacement.OldSuffix);
+        File.WriteAllText(_exe + SelfReplacement.NewSuffix, "new");
+        var update = new CommandLineUpdate(NewerOut, Download(), _host);
+        var prepared = new PreparedUpdate("9.9.9", _exe, string.Empty, () => { }, _exe + SelfReplacement.NewSuffix);
+
+        var result = update.CancelAfterSwap(prepared, _exe, Current, Latest, putBack: () => false);
+
+        Assert.Equal(new CommandLineUpdateResult.UpdatedThenCancelled(Current, Latest), result);
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.Equal("old", File.ReadAllText(_exe + SelfReplacement.OldSuffix));
+    }
+
+    [Fact]
     public void Ctrl_C_before_the_swapped_in_version_starts_puts_this_exe_back_and_starts_nothing()
     {
         using var cts = new CancellationTokenSource();

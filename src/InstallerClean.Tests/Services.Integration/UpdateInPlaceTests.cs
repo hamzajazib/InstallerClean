@@ -374,9 +374,8 @@ public sealed class UpdateInPlaceTests : IDisposable
         var exe = Path.Combine(_root, "InstallerClean.exe");
         File.WriteAllBytes(exe, Program(1));
         var staged = await StagedBesideAsync(exe, 2);
-        var heldBefore = HeldOpenEntriesInCrashLog();
         var held = new FileStream(staged, FileMode.Open, FileAccess.Read, FileShare.None);
-        var letGo = Task.Delay(TimeSpan.FromSeconds(3)).ContinueWith(_ => held.Dispose());
+        var letGo = Task.CompletedTask;
         var aside = Path.Combine(_root, "aside.exe");
 
         Func<bool> putBack;
@@ -386,11 +385,13 @@ public sealed class UpdateInPlaceTests : IDisposable
             {
                 File.Move(exe + SelfReplacement.OldSuffix, aside);
                 Directory.CreateDirectory(exe + SelfReplacement.OldSuffix);
+                letGo = Task.Delay(TimeSpan.FromSeconds(3)).ContinueWith(_ => held.Dispose());
             });
         }
         finally
         {
             await letGo;
+            held.Dispose();
         }
 
         Assert.NotNull(putBack);
@@ -398,13 +399,18 @@ public sealed class UpdateInPlaceTests : IDisposable
         Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
         // The first rename's wait ran out, which only the branch retrying the newer version
         // writes to crash.log once the swap has gone ahead.
-        Assert.Equal(heldBefore + 1, HeldOpenEntriesInCrashLog());
+        Assert.Equal(1, HeldOpenEntriesInCrashLog(_root));
     }
 
-    /// <summary>How many entries in the crash log are a change another process held up past its wait.</summary>
-    private static int HeldOpenEntriesInCrashLog() =>
+    /// <summary>
+    /// How many entries in the crash log are a change to a file in <paramref name="folder"/>
+    /// that another process held up past its wait. The entry's first line names the file
+    /// through the error it wraps.
+    /// </summary>
+    private static int HeldOpenEntriesInCrashLog(string folder) =>
         TestCrashLog.Text().Split('\n').Count(line =>
-            line.Contains(typeof(FileHeldOpenException).FullName + ":", StringComparison.Ordinal));
+            line.Contains(typeof(FileHeldOpenException).FullName + ":", StringComparison.Ordinal)
+            && line.Contains(folder, StringComparison.OrdinalIgnoreCase));
 
     [Fact]
     public async Task A_put_back_whose_running_exe_will_not_go_back_leaves_the_newer_version_at_the_exe_path()
