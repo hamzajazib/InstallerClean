@@ -49,7 +49,9 @@ public class CleanupPreFlightTests : IDisposable
 
     private readonly IUpdateCheckService _updateCheckService = Substitute.For<IUpdateCheckService>();
 
-    private readonly string _destination = Path.Combine(Path.GetTempPath(), "ic-test-preflight");
+    // A name of each test's own, so a crash-log entry naming it can only be that test's.
+    private readonly string _destination =
+        Path.Combine(Path.GetTempPath(), "ic-test-preflight-" + Guid.NewGuid().ToString("N"));
 
     public CleanupPreFlightTests()
     {
@@ -641,10 +643,9 @@ public class CleanupPreFlightTests : IDisposable
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
         // A failure with no established cause is a fault, so the crash log takes an entry: the
         // write failure the pre-flight raises for this destination.
-        Assert.NotEqual(crashLogBefore, ViewModelCrashLog.WithoutDestinationSaves());
         Assert.Contains(
             string.Format(InstallerClean.Resources.Strings.Error_CannotWriteFolder, _destination),
-            ViewModelCrashLog.NewestEntry(), StringComparison.Ordinal);
+            ViewModelCrashLog.AppendedSince(crashLogBefore), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -692,10 +693,9 @@ public class CleanupPreFlightTests : IDisposable
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
         // A failure with no established cause is a fault, so the crash log takes an entry: the
         // write failure the pre-flight raises for this destination.
-        Assert.NotEqual(crashLogBefore, ViewModelCrashLog.WithoutDestinationSaves());
         Assert.Contains(
             string.Format(InstallerClean.Resources.Strings.Error_CannotWriteFolder, _destination),
-            ViewModelCrashLog.NewestEntry(), StringComparison.Ordinal);
+            ViewModelCrashLog.AppendedSince(crashLogBefore), StringComparison.Ordinal);
     }
 
     [Fact]

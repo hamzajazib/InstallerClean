@@ -53,13 +53,13 @@ internal static class ViewModelCrashLog
     }
 
     /// <summary>
-    /// The newest entry in <see cref="WithoutDestinationSaves"/>, or empty where there is none.
-    /// A test that has just made the app write an entry reads it here, which holds whether or
-    /// not that write moved a full log aside.
+    /// What <see cref="WithoutDestinationSaves"/> holds now beyond <paramref name="before"/>,
+    /// read earlier from it: the text added to the end where the log only grew, or the whole
+    /// log where a write moved a full log aside in between.
     /// </summary>
-    public static string NewestEntry()
+    public static string AppendedSince(string before)
     {
-        var parts = EntryStart.Split(WithoutDestinationSaves());
-        return parts.Length > 1 ? parts[^1] : string.Empty;
+        var after = WithoutDestinationSaves();
+        return after.StartsWith(before, StringComparison.Ordinal) ? after[before.Length..] : after;
     }
 }
