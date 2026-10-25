@@ -300,7 +300,8 @@ internal sealed class CommandLineUpdate
         {
             return Update(canAsk, command, arguments, exePath, current, latest, token);
         }
-        // A refusal that comes back with Ctrl+C pressed ends the run as cancelled too.
+        // A refusal that comes back with Ctrl+C pressed ends the run as cancelled too, since
+        // a refusal here is the run's outcome and the run was cancelled.
         catch (Exception ex) when (ex is OperationCanceledException or UpdateRefusedException
             && token.IsCancellationRequested)
         {

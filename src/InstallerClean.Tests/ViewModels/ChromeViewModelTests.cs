@@ -446,6 +446,24 @@ public class ChromeViewModelTests
         Assert.False(vm.HasUpdateFailure);
     }
 
+    [Fact]
+    public async Task A_refusal_read_as_Cancel_is_pressed_is_still_shown()
+    {
+        var vm = await CreateUpdatingViewModelAsync();
+        _updater.PrepareAsync(default!, default, default).ReturnsForAnyArgs(_ =>
+        {
+            vm.CancelUpdateCommand.Execute(null);
+            return Task.FromException<PreparedUpdate>(
+                new UpdateRefusedException(UpdateRefusal.NeedsNetFramework48, "9.9.9"));
+        });
+
+        await vm.UpdateNowCommand.ExecuteAsync(null);
+
+        Assert.True(vm.IsUpdateRefused);
+        Assert.False(vm.IsUpdating);
+        await _windowService.DidNotReceiveWithAnyArgs().StartUpdateAndCloseAsync(default!);
+    }
+
     [Theory]
     [InlineData(UpdateFailureStage.Download)]
     [InlineData(UpdateFailureStage.Install)]

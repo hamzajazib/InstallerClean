@@ -599,7 +599,8 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// </summary>
     private async Task<Requirements> RequirementsAsync(string version, TimeSpan within, CancellationToken token)
     {
-        if (_updater is null || !CanUpdateItself || within <= TimeSpan.Zero) return default;
+        if (_updater is null || !CanUpdateItself || (within <= TimeSpan.Zero && within != Timeout.InfiniteTimeSpan))
+            return default;
         try
         {
             return new Requirements(true, await _updater.CheckRequirementsAsync(version, within, token));
@@ -698,14 +699,14 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
             if (!handedOver)
                 UpdateFailureText = Strings.UpdateNotice_InstallFailed;
         }
-        catch (Exception ex) when (ex is OperationCanceledException or UpdateRefusedException
-            && cts.IsCancellationRequested)
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
         {
-            // Cancel, a refusal that came with it included: the card goes and the notice
-            // stays as it was.
+            // Cancel: the card goes and the notice stays as it was.
         }
         catch (UpdateRefusedException ex)
         {
+            // A refusal read as Cancel was pressed is still shown: it is what the release
+            // says of this copy, and Update now is not offered again for it.
             NewerVersionRefusal = ex.Refusal;
         }
         catch (UpdateFailedException ex)

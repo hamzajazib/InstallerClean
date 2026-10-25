@@ -25,8 +25,9 @@ public interface IAppUpdater
     /// Reads what the release of <paramref name="version"/> says its downloads need
     /// (<see cref="UpdateManifest"/>) and answers why this copy does not install it, or
     /// null where it may. The read of the release's file is given up after
-    /// <paramref name="within"/>, where one is given; the rest of the check runs to its
-    /// answer. Throws <see cref="UpdateFailedException"/> at the Download stage where the
+    /// <paramref name="within"/>; null, <see cref="Timeout.InfiniteTimeSpan"/> or a time
+    /// longer than a timer can be set for reads with no limit, and zero or any other
+    /// negative time gives the read up at once. The rest of the check runs to its answer. Throws <see cref="UpdateFailedException"/> at the Download stage where the
     /// release's file could not be read, its time running out included,
     /// <see cref="InvalidOperationException"/> where the kind of copy cannot update itself,
     /// and <see cref="OperationCanceledException"/> where <paramref name="cancellationToken"/>
@@ -249,14 +250,17 @@ public sealed class AppUpdater : IAppUpdater
     }
 
     /// <summary>
-    /// Reads the release's update.json, giving up after <paramref name="within"/> where one
-    /// is given. Time running out is a read that failed, at the Download stage, and only a
-    /// cancel of <paramref name="cancellationToken"/> is answered as a cancel.
+    /// Reads the release's update.json, giving up after <paramref name="within"/> as
+    /// <see cref="IAppUpdater.CheckRequirementsAsync"/> describes. Time running out is a read
+    /// that failed, at the Download stage, and only a cancel of
+    /// <paramref name="cancellationToken"/> is answered as a cancel.
     /// </summary>
+    /// <summary>The longest time <see cref="CancellationTokenSource.CancelAfter(TimeSpan)"/> takes.</summary>
+    private static readonly TimeSpan MaxTimerLimit = TimeSpan.FromMilliseconds(uint.MaxValue - 1);
+
     private async Task<byte[]?> ReadWithinAsync(string version, TimeSpan? within, CancellationToken cancellationToken)
     {
-        // Infinite, or longer than a timer can be set for, is no limit.
-        if (within is not { } limit || limit == Timeout.InfiniteTimeSpan || limit.TotalMilliseconds > int.MaxValue - 1)
+        if (within is not { } limit || limit == Timeout.InfiniteTimeSpan || limit > MaxTimerLimit)
             return await _downloader.ReadAsync(UpdateManifest.Address(version), UpdateManifest.MaxBytes, cancellationToken)
                 .ConfigureAwait(false);
 

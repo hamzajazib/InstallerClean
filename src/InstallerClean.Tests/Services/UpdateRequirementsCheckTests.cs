@@ -64,13 +64,45 @@ public sealed class UpdateRequirementsCheckTests
         var registry = Substitute.For<IRegistryReader>();
         registry.LocalMachineDwordValue(Arg.Any<string>(), Arg.Any<string>()).Returns(_ =>
         {
-            Thread.Sleep(TimeSpan.FromSeconds(3));
+            Thread.Sleep(TimeSpan.FromMilliseconds(700));
             return new RegistryDwordRead(RegistryDwordState.Absent);
         });
         var updater = Updater(new Answers(HttpStatusCode.OK, NeedsNetFramework48), registry);
 
         Assert.Equal(UpdateRefusal.NeedsNetFramework48,
-            await updater.CheckRequirementsAsync("9.9.9", TimeSpan.FromSeconds(2), CancellationToken.None));
+            await updater.CheckRequirementsAsync("9.9.9", TimeSpan.FromMilliseconds(500), CancellationToken.None));
+    }
+
+    public static TheoryData<TimeSpan> NoLimits =>
+    [
+        Timeout.InfiniteTimeSpan,
+        TimeSpan.FromMilliseconds(uint.MaxValue - 1),
+        TimeSpan.FromMilliseconds(uint.MaxValue),
+        TimeSpan.MaxValue,
+    ];
+
+    [Theory]
+    [MemberData(nameof(NoLimits))]
+    public async Task An_infinite_limit_or_one_a_timer_takes_at_its_longest_or_beyond_reads_the_file(TimeSpan within)
+    {
+        // The answer takes a moment, so a limit taken as zero would give the read up first.
+        var updater = Updater(new Answers(HttpStatusCode.OK, RefusesEveryDownload, delay: TimeSpan.FromMilliseconds(100)));
+
+        Assert.Equal(UpdateRefusal.CannotInstallFromThisCopy,
+            await updater.CheckRequirementsAsync("9.9.9", within, CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-2)]
+    public async Task A_limit_of_zero_or_less_gives_the_read_up_at_once(int milliseconds)
+    {
+        var updater = Updater(new Stalls());
+
+        var failed = await Assert.ThrowsAsync<UpdateFailedException>(() => updater.CheckRequirementsAsync(
+            "9.9.9", TimeSpan.FromMilliseconds(milliseconds), CancellationToken.None));
+
+        Assert.Equal(UpdateFailureStage.Download, failed.Stage);
     }
 
     [Fact]
@@ -128,27 +160,30 @@ public sealed class UpdateRequirementsCheckTests
     /// <summary>
     /// Answers every request with <paramref name="status"/> and <paramref name="body"/>, and
     /// counts the requests. Cancels <paramref name="cancelAsItAnswers"/> as it answers, and
-    /// <paramref name="cancelAtBodysEnd"/> once the body's last byte has been read.
+    /// <paramref name="cancelAtBodysEnd"/> once the body's last byte has been read. Waits
+    /// <paramref name="delay"/> first, ended by the request's own cancel.
     /// </summary>
     private sealed class Answers(
         HttpStatusCode status, string? body,
-        CancellationTokenSource? cancelAsItAnswers = null, CancellationTokenSource? cancelAtBodysEnd = null)
+        CancellationTokenSource? cancelAsItAnswers = null, CancellationTokenSource? cancelAtBodysEnd = null,
+        TimeSpan? delay = null)
         : HttpMessageHandler
     {
         public int Requests { get; private set; }
 
-        protected override Task<HttpResponseMessage> SendAsync(
+        protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Requests++;
+            if (delay is { } wait) await Task.Delay(wait, cancellationToken);
             cancelAsItAnswers?.Cancel();
             var bytes = System.Text.Encoding.UTF8.GetBytes(body ?? string.Empty);
-            return Task.FromResult(new HttpResponseMessage(status)
+            return new HttpResponseMessage(status)
             {
                 Content = cancelAtBodysEnd is null
                     ? new ByteArrayContent(bytes)
                     : new StreamContent(new CancelsAtEnd(bytes, cancelAtBodysEnd)),
-            });
+            };
         }
     }
 
