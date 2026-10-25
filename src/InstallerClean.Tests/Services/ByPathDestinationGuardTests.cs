@@ -50,19 +50,21 @@ public class ByPathDestinationGuardTests
     };
 
     /// <summary>
-    /// The Windows error number each refusal is recorded as: the low word of its HResult where
-    /// that is in the Windows error facility, and the code for an unidentified failure where
-    /// .NET raised it on its own account.
+    /// The Windows error number each refusal is recorded as: the number the exception stands
+    /// for, and the code for an unidentified failure where .NET raised it on its own account.
     /// </summary>
     private static readonly Dictionary<string, int> RecordedCodes = new()
     {
         [nameof(IOException)] = Kernel32.ERROR_SHARING_VIOLATION,
-        [nameof(UnauthorizedAccessException)] = 5,
+        [nameof(UnauthorizedAccessException)] = Kernel32.ERROR_ACCESS_DENIED,
         [nameof(DirectoryNotFoundException)] = Kernel32.ERROR_PATH_NOT_FOUND,
-        [nameof(PathTooLongException)] = 206,
+        [nameof(PathTooLongException)] = ErrorFilenameExcedRange,
         [nameof(NotSupportedException)] = Kernel32.ERROR_UNIDENTIFIED_ERROR,
-        [nameof(ArgumentException)] = Kernel32.ERROR_INVALID_PARAMETER,
+        [nameof(ArgumentException)] = Kernel32.ERROR_UNIDENTIFIED_ERROR,
     };
+
+    /// <summary>"The filename or extension is too long": what a PathTooLongException stands for.</summary>
+    private const int ErrorFilenameExcedRange = 206;
 
     private static int Win32HResult(int code) => unchecked((int)0x80070000) | code;
 
@@ -204,6 +206,17 @@ public class ByPathDestinationGuardTests
     }
 
     [Fact]
+    public void An_exception_standing_for_no_error_is_recorded_as_unidentified_never_as_zero()
+    {
+        _file.When(f => f.WriteAllBytes(Arg.Any<string>(), Arg.Any<byte[]>()))
+            .Do(_ => throw new IOException("refused", Win32HResult(0)));
+
+        Assert.False(_guard.TryProbeWritable(_folder, out var failureCode, out _));
+
+        Assert.Equal(Kernel32.ERROR_UNIDENTIFIED_ERROR, failureCode);
+    }
+
+    [Fact]
     public void A_Win32Exception_from_the_filesystem_is_recorded_as_its_own_error_number()
     {
         _file.When(f => f.WriteAllBytes(Arg.Any<string>(), Arg.Any<byte[]>()))
@@ -294,7 +307,7 @@ public class ByPathDestinationGuardTests
 
         Assert.False(_guard.TryDiscardCopy(_copy, out var failureCode));
 
-        Assert.Equal(5, failureCode);
+        Assert.Equal(Kernel32.ERROR_ACCESS_DENIED, failureCode);
         _file.DidNotReceive().Delete(Arg.Any<string>());
     }
 

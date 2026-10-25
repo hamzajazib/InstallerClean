@@ -848,6 +848,9 @@ internal static partial class Kernel32
     // "An operation is not supported on a directory": the code for a folder where a plain file is wanted.
     public const int ERROR_DIRECTORY_NOT_SUPPORTED = 336;
 
+    // "Access is denied": the error .NET raises an UnauthorizedAccessException for.
+    public const int ERROR_ACCESS_DENIED = 5;
+
     // "Insufficient information exists to identify the cause of failure": the code for a
     // failure that arrived with no Windows error number.
     public const int ERROR_UNIDENTIFIED_ERROR = 1287;

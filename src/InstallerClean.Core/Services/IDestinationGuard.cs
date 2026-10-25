@@ -256,22 +256,18 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
     }
 
     /// <summary>
-    /// The Windows error number an exception from the filesystem stands for, as the app's
-    /// guard gives it. A <see cref="System.ComponentModel.Win32Exception"/> carries its
-    /// number, and any other exception whose HResult is in the Windows error facility
-    /// (0x8007 in the high word) carries it in the low word, which is the form .NET
-    /// raises an <see cref="UnauthorizedAccessException"/>, a
-    /// <see cref="DirectoryNotFoundException"/> and an <see cref="IOException"/> from a
-    /// failed Windows call in. An exception with neither answers
-    /// <see cref="Kernel32.ERROR_UNIDENTIFIED_ERROR"/>, never 0, which Windows reads as success.
+    /// The Windows error number the filesystem's exception stands for, in the form the app's
+    /// guard gives it: <see cref="WindowsErrors.Of"/>, and
+    /// <see cref="Kernel32.ERROR_ACCESS_DENIED"/> for an <see cref="UnauthorizedAccessException"/>,
+    /// which .NET raises for that error. An exception .NET raised on its own account, or one
+    /// that stands for no error, answers <see cref="Kernel32.ERROR_UNIDENTIFIED_ERROR"/>:
+    /// never 0, which Windows reads as success.
     /// </summary>
     private static int Win32CodeOf(Exception exception)
     {
-        if (exception is System.ComponentModel.Win32Exception win32) return win32.NativeErrorCode;
-        const int facilityMask = unchecked((int)0xFFFF0000);
-        const int win32Facility = unchecked((int)0x80070000);
-        return (exception.HResult & facilityMask) == win32Facility
-            ? exception.HResult & 0xFFFF
-            : Kernel32.ERROR_UNIDENTIFIED_ERROR;
+        var code = exception is UnauthorizedAccessException
+            ? Kernel32.ERROR_ACCESS_DENIED
+            : WindowsErrors.Of(exception);
+        return code is > 0 ? code.Value : Kernel32.ERROR_UNIDENTIFIED_ERROR;
     }
 }
