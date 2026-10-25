@@ -249,15 +249,15 @@ public sealed class AppUpdater : IAppUpdater
         return answer;
     }
 
+    /// <summary>The longest time <see cref="CancellationTokenSource.CancelAfter(TimeSpan)"/> takes.</summary>
+    private static readonly TimeSpan MaxTimerLimit = TimeSpan.FromMilliseconds(uint.MaxValue - 1);
+
     /// <summary>
     /// Reads the release's update.json, giving up after <paramref name="within"/> as
     /// <see cref="IAppUpdater.CheckRequirementsAsync"/> describes. Time running out is a read
     /// that failed, at the Download stage, and only a cancel of
     /// <paramref name="cancellationToken"/> is answered as a cancel.
     /// </summary>
-    /// <summary>The longest time <see cref="CancellationTokenSource.CancelAfter(TimeSpan)"/> takes.</summary>
-    private static readonly TimeSpan MaxTimerLimit = TimeSpan.FromMilliseconds(uint.MaxValue - 1);
-
     private async Task<byte[]?> ReadWithinAsync(string version, TimeSpan? within, CancellationToken cancellationToken)
     {
         if (within is not { } limit || limit == Timeout.InfiniteTimeSpan || limit > MaxTimerLimit)
