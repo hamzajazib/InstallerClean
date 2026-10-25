@@ -140,7 +140,13 @@ internal sealed class FirstRunMark : IFirstRunMark
         }
     }
 
-    /// <summary>True where the lock is held, which includes a lock its last holder ended without releasing.</summary>
+    /// <summary>
+    /// True where the lock is held, which includes a lock its last holder ended without
+    /// releasing. The lock is a <see cref="Mutex"/>, which belongs to the thread that
+    /// waited on it and can be released only by that thread, so nothing between the wait
+    /// and <see cref="ReleaseClaimLock"/> may await: a continuation on another thread
+    /// would fail the release and leave the lock held until the process ends.
+    /// </summary>
     private bool WaitForClaimLock(Mutex claimLock)
     {
         try

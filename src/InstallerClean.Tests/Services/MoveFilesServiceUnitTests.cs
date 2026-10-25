@@ -902,8 +902,8 @@ public class MoveFilesServiceUnitTests
                 call[2] = WriteProbeRefusal.CreateFailed;
                 return false;
             });
-        guard.TryRemoveEmptyFolder(Arg.Any<string>())
-            .Returns(call => removal.TryRemoveEmptyFolder(call.ArgAt<string>(0)));
+        guard.TryRemoveEmptyFolder(Arg.Any<string>(), Arg.Any<string>())
+            .Returns(call => removal.TryRemoveEmptyFolder(call.ArgAt<string>(0), call.ArgAt<string>(1)));
         return guard;
     }
 
@@ -955,8 +955,8 @@ public class MoveFilesServiceUnitTests
         var guard = Substitute.For<IDestinationGuard>();
         guard.TryProbeWritable(Arg.Any<string>(), out Arg.Any<int>(), out Arg.Any<WriteProbeRefusal>())
             .Returns(_ => throw new IOException("the write test failed"));
-        guard.TryRemoveEmptyFolder(Arg.Any<string>())
-            .Returns(call => removal.TryRemoveEmptyFolder(call.ArgAt<string>(0)));
+        guard.TryRemoveEmptyFolder(Arg.Any<string>(), Arg.Any<string>())
+            .Returns(call => removal.TryRemoveEmptyFolder(call.ArgAt<string>(0), call.ArgAt<string>(1)));
         var svc = new MoveFilesService(
             fs, NullMutexProbe.Instance, installerFolderOverride: null, destinationGuard: guard);
 

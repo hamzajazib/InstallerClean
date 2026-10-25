@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using InstallerClean.Helpers;
 using InstallerClean.Interop.Native;
@@ -97,13 +98,106 @@ public sealed class DestinationGuardTests : IDisposable
     public void An_empty_created_folder_is_removed_and_a_folder_with_a_file_is_left()
     {
         var empty = Directory.CreateDirectory(Path.Combine(_root, "empty")).FullName;
-        Assert.True(_guard.TryRemoveEmptyFolder(empty));
+        Assert.True(_guard.TryRemoveEmptyFolder(empty, _root));
         Assert.False(Directory.Exists(empty));
 
         var full = Directory.CreateDirectory(Path.Combine(_root, "full")).FullName;
         File.WriteAllText(Path.Combine(full, "keep.txt"), "x");
-        Assert.False(_guard.TryRemoveEmptyFolder(full));
+        Assert.False(_guard.TryRemoveEmptyFolder(full, _root));
         Assert.True(Directory.Exists(full));
+    }
+
+    [Fact]
+    public void A_chain_of_created_folders_is_removed_from_the_leaf_up()
+    {
+        var leaf = Directory.CreateDirectory(Path.Combine(_root, "a", "b", "c")).FullName;
+        var middle = Path.Combine(_root, "a", "b");
+        var top = Path.Combine(_root, "a");
+
+        Assert.True(_guard.TryRemoveEmptyFolder(leaf, _root));
+        Assert.True(_guard.TryRemoveEmptyFolder(middle, _root));
+        Assert.True(_guard.TryRemoveEmptyFolder(top, _root));
+
+        Assert.False(Directory.Exists(top));
+        Assert.True(Directory.Exists(_root));
+    }
+
+    [Fact]
+    public void A_folder_that_is_not_below_the_existing_ancestor_is_left()
+    {
+        var elsewhere = Directory.CreateDirectory(Path.Combine(_root, "elsewhere")).FullName;
+        var other = Directory.CreateDirectory(Path.Combine(_root, "other")).FullName;
+
+        Assert.False(_guard.TryRemoveEmptyFolder(elsewhere, other));
+        Assert.False(_guard.TryRemoveEmptyFolder(elsewhere, elsewhere));
+        Assert.True(Directory.Exists(elsewhere));
+    }
+
+    [Fact]
+    public void A_created_parent_swapped_for_a_junction_is_not_followed_to_its_target()
+    {
+        // The Move made "made\leaf" and another account then replaced "made" with a
+        // junction to a folder that holds an empty folder of the same name as the leaf.
+        // The walk meets the junction at "made" and removes nothing.
+        var outside = Directory.CreateDirectory(Path.Combine(_root, "outside")).FullName;
+        var protectedFolder = Directory.CreateDirectory(Path.Combine(outside, "leaf")).FullName;
+        var made = Path.Combine(_root, "made");
+        MakeJunction(made, outside);
+
+        Assert.False(_guard.TryRemoveEmptyFolder(Path.Combine(made, "leaf"), _root));
+
+        Assert.True(Directory.Exists(protectedFolder));
+    }
+
+    [Fact]
+    public void A_created_folder_higher_up_swapped_for_a_junction_is_not_followed_to_its_target()
+    {
+        // The Move made "top\middle\leaf" and "top" was then replaced by a junction to a
+        // folder holding a plain "middle\leaf". Every folder below the junction is a real
+        // folder in its target, so only the walk through "top" itself can refuse.
+        var outside = Directory.CreateDirectory(Path.Combine(_root, "outside")).FullName;
+        var protectedFolder = Directory.CreateDirectory(Path.Combine(outside, "middle", "leaf")).FullName;
+        var top = Path.Combine(_root, "top");
+        MakeJunction(top, outside);
+
+        Assert.False(_guard.TryRemoveEmptyFolder(Path.Combine(top, "middle", "leaf"), _root));
+
+        Assert.True(Directory.Exists(protectedFolder));
+    }
+
+    [Fact]
+    public void An_existing_ancestor_that_is_a_junction_is_followed_and_the_created_folders_below_it_are_removed()
+    {
+        // The folder the user chose can be a junction or mount point on purpose, and the
+        // folders the Move made inside it are removed in the directory it stands for.
+        var target = Directory.CreateDirectory(Path.Combine(_root, "target")).FullName;
+        var chosen = Path.Combine(_root, "chosen");
+        MakeJunction(chosen, target);
+        var leaf = Directory.CreateDirectory(Path.Combine(chosen, "new", "leaf")).FullName;
+
+        Assert.True(_guard.TryRemoveEmptyFolder(leaf, chosen));
+        Assert.True(_guard.TryRemoveEmptyFolder(Path.Combine(chosen, "new"), chosen));
+
+        Assert.False(Directory.Exists(Path.Combine(target, "new")));
+        Assert.True(Directory.Exists(target));
+    }
+
+    // A directory junction needs no privilege, which a symbolic link does, so these tests
+    // always make one and fail where it cannot be made.
+    private static void MakeJunction(string link, string target)
+    {
+        using var process = Process.Start(new ProcessStartInfo
+        {
+            FileName = "cmd.exe",
+            Arguments = $"/c mklink /J \"{link}\" \"{target}\"",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        })!;
+        var output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        Assert.True(process.ExitCode == 0, $"mklink /J failed: {output}");
     }
 
     [Fact]

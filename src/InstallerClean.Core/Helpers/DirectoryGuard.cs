@@ -291,6 +291,59 @@ internal static class DirectoryGuard
         return DeleteByHandle(child);
     }
 
+    /// <summary>
+    /// Opens the child folder <paramref name="leaf"/> inside <paramref name="directory"/>
+    /// for listing, resolved against that handle and without following a link in
+    /// <paramref name="leaf"/>. Null where it cannot be opened, is not a folder, or is a
+    /// reparse point.
+    /// </summary>
+    private static SafeFileHandle? OpenChildFolderNoFollow(SafeFileHandle directory, string leaf)
+    {
+        var child = OpenChildNoFollow(
+            directory, leaf, Ntdll.FILE_GENERIC_READ, Ntdll.FILE_OPEN,
+            Ntdll.FILE_OPEN_REPARSE_POINT | Ntdll.FILE_DIRECTORY_FILE);
+        if (child is null) return null;
+
+        if (!Kernel32.GetFileInformationByHandle(child, out var info)
+            || (info.dwFileAttributes & Kernel32.FILE_ATTRIBUTE_REPARSE_POINT) != 0)
+        {
+            child.Dispose();
+            return null;
+        }
+        return child;
+    }
+
+    /// <summary>
+    /// Removes the folder at the end of <paramref name="names"/>, found by walking
+    /// <paramref name="names"/> down from <paramref name="directory"/>: each name is
+    /// opened relative to the folder before it, never by a path and never through a link,
+    /// and the last is removed through <see cref="TryRemoveEmptyChildFolder"/>. Answers
+    /// false, and removes nothing, where any folder on the way is absent, is a reparse
+    /// point or is not a folder, or the last has anything in it.
+    /// </summary>
+    internal static bool TryRemoveEmptyDescendantFolder(SafeFileHandle directory, IReadOnlyList<string> names)
+    {
+        if (names.Count == 0) return false;
+
+        var held = new List<SafeFileHandle>();
+        try
+        {
+            var current = directory;
+            for (var i = 0; i < names.Count - 1; i++)
+            {
+                var next = OpenChildFolderNoFollow(current, names[i]);
+                if (next is null) return false;
+                held.Add(next);
+                current = next;
+            }
+            return TryRemoveEmptyChildFolder(current, names[^1]);
+        }
+        finally
+        {
+            foreach (var handle in held) handle.Dispose();
+        }
+    }
+
     /// <summary>The access the write probe's create asks for: to write the file and to delete it.</summary>
     internal const uint ProbeAccess = Ntdll.FILE_WRITE_DATA | Ntdll.DELETE;
 

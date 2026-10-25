@@ -41,20 +41,26 @@ internal static class CreatedFolders
 
     /// <summary>
     /// Removes <paramref name="folders"/> in the order given, each through
-    /// <paramref name="guard"/> and so only where it is empty. A folder that is no longer
-    /// there is passed over; the first that is there and will not go ends the removal, so
-    /// a folder holding anything keeps every folder above it. A failure of the removal
-    /// itself ends it too and is not thrown, so it never replaces the error a caller is
-    /// about to report.
+    /// <paramref name="guard"/> and so only where it is empty. The list is the one
+    /// <see cref="MissingOnPath"/> gives: each folder's parent is the next in it, and the
+    /// parent of the last is a folder that was there before the Move, which the guard is
+    /// told as the existing ancestor. A folder that is no longer there is passed over;
+    /// the first that is there and will not go ends the removal, so a folder holding
+    /// anything keeps every folder above it. A failure of the removal itself ends it too
+    /// and is not thrown, so it never replaces the error a caller is about to report.
     /// </summary>
     internal static void RemoveWhileEmpty(
         IFileSystem fileSystem, IDestinationGuard guard, IReadOnlyList<string> folders)
     {
         try
         {
+            if (folders.Count == 0) return;
+            var existingAncestor = fileSystem.Path.GetDirectoryName(folders[^1]);
+            if (string.IsNullOrEmpty(existingAncestor)) return;
+
             foreach (var folder in folders)
             {
-                if (guard.TryRemoveEmptyFolder(folder)) continue;
+                if (guard.TryRemoveEmptyFolder(folder, existingAncestor)) continue;
                 if (fileSystem.Directory.Exists(folder)) return;
             }
         }

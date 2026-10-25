@@ -9,7 +9,9 @@ namespace InstallerClean.Services;
 /// the discarding of a copy a half-completed move left, and the removal of a folder the
 /// Move created. The user may pick a folder another account can write, so each act is
 /// reached in a way that a folder swapped in under the same name part way through cannot
-/// redirect. <see cref="HandleDestinationGuard"/> is that way in the app;
+/// redirect. The removal reaches the folder through every folder the Move made above it,
+/// each opened without following a link, so a link put in place of any of them refuses
+/// the removal. <see cref="HandleDestinationGuard"/> is that way in the app;
 /// <see cref="ByPathDestinationGuard"/> is the one the test seams use, where the real
 /// filesystem is substituted.
 /// </summary>
@@ -33,8 +35,16 @@ public interface IDestinationGuard
     /// </summary>
     bool TryDiscardCopy(string destinationPath, out int failureCode);
 
-    /// <summary>Removes <paramref name="folder"/> where it is empty.</summary>
-    bool TryRemoveEmptyFolder(string folder);
+    /// <summary>
+    /// Removes <paramref name="folder"/> where it is empty. <paramref name="existingAncestor"/>
+    /// is the nearest folder above it that was there before the Move: the folder the user
+    /// chose, or the one the chosen path leads to, which may be a volume mount point or a
+    /// directory junction and is followed to the directory it stands for. Every folder
+    /// between it and <paramref name="folder"/> is one the Move made, and each is reached
+    /// from the one above without following a link, so a link in the place of any of them
+    /// answers false and removes nothing. Answers false too where the folder is not empty.
+    /// </summary>
+    bool TryRemoveEmptyFolder(string folder, string existingAncestor);
 }
 
 /// <summary>
@@ -56,13 +66,19 @@ internal sealed class HandleDestinationGuard : IDestinationGuard
         return DirectoryGuard.TryDiscardChildCopy(folder, leaf, out failureCode);
     }
 
-    public bool TryRemoveEmptyFolder(string folder)
+    public bool TryRemoveEmptyFolder(string folder, string existingAncestor)
     {
-        var parent = Path.GetDirectoryName(folder);
-        var leaf = Path.GetFileName(folder);
-        if (string.IsNullOrEmpty(parent) || string.IsNullOrEmpty(leaf)) return false;
-        using var parentHandle = DirectoryGuard.OpenDirectoryFollow(parent, out _);
-        return parentHandle is not null && DirectoryGuard.TryRemoveEmptyChildFolder(parentHandle, leaf);
+        if (string.IsNullOrEmpty(folder) || string.IsNullOrEmpty(existingAncestor)) return false;
+
+        var relative = Path.GetRelativePath(existingAncestor, folder);
+        if (Path.IsPathRooted(relative)) return false;
+        var names = relative.Split(
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries);
+        if (names.Length == 0 || names.Any(name => name is "." or "..")) return false;
+
+        using var ancestor = DirectoryGuard.OpenDirectoryFollow(existingAncestor, out _);
+        return ancestor is not null && DirectoryGuard.TryRemoveEmptyDescendantFolder(ancestor, names);
     }
 }
 
@@ -156,7 +172,7 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
         }
     }
 
-    public bool TryRemoveEmptyFolder(string folder)
+    public bool TryRemoveEmptyFolder(string folder, string existingAncestor)
     {
         try
         {

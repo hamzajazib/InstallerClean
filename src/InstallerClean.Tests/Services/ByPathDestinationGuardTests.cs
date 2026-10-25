@@ -62,7 +62,7 @@ public class ByPathDestinationGuardTests
     [Fact]
     public void An_emptied_folder_is_removed_with_the_one_argument_Delete()
     {
-        Assert.True(_guard.TryRemoveEmptyFolder("X"));
+        Assert.True(_guard.TryRemoveEmptyFolder("X", "Y"));
 
         _directory.Received(1).Delete("X");
         _directory.DidNotReceive().Delete(Arg.Any<string>(), Arg.Any<bool>());
@@ -75,7 +75,7 @@ public class ByPathDestinationGuardTests
         var refusal = NewRefusal(refusalName);
         _directory.When(d => d.Delete("X")).Do(_ => throw refusal);
 
-        Assert.False(_guard.TryRemoveEmptyFolder("X"));
+        Assert.False(_guard.TryRemoveEmptyFolder("X", "Y"));
     }
 
     [Fact]

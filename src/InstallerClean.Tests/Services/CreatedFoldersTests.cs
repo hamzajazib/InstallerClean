@@ -134,7 +134,7 @@ public class CreatedFoldersTests
     public void A_removal_that_throws_ends_without_throwing()
     {
         var guard = Substitute.For<IDestinationGuard>();
-        guard.TryRemoveEmptyFolder(Arg.Any<string>()).Returns(_ => throw new InvalidOperationException("refused"));
+        guard.TryRemoveEmptyFolder(Arg.Any<string>(), Arg.Any<string>()).Returns(_ => throw new InvalidOperationException("refused"));
 
         var thrown = Record.Exception(() => CreatedFolders.RemoveWhileEmpty(_fs, guard, [Folder("a")]));
 
@@ -145,11 +145,35 @@ public class CreatedFoldersTests
     public void A_removal_that_throws_ends_the_removal_at_that_folder()
     {
         var guard = Substitute.For<IDestinationGuard>();
-        guard.TryRemoveEmptyFolder(Arg.Any<string>()).Returns(_ => throw new InvalidOperationException("refused"));
+        guard.TryRemoveEmptyFolder(Arg.Any<string>(), Arg.Any<string>()).Returns(_ => throw new InvalidOperationException("refused"));
 
         CreatedFolders.RemoveWhileEmpty(_fs, guard, [Folder("a", "z"), Folder("a")]);
 
-        guard.Received(1).TryRemoveEmptyFolder(Arg.Any<string>());
-        guard.Received(1).TryRemoveEmptyFolder(Folder("a", "z"));
+        guard.Received(1).TryRemoveEmptyFolder(Arg.Any<string>(), Arg.Any<string>());
+        guard.Received(1).TryRemoveEmptyFolder(Folder("a", "z"), _root);
+    }
+
+    [Fact]
+    public void Each_folder_is_removed_with_the_folder_above_the_top_most_as_the_existing_ancestor()
+    {
+        var guard = Substitute.For<IDestinationGuard>();
+        guard.TryRemoveEmptyFolder(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
+
+        CreatedFolders.RemoveWhileEmpty(_fs, guard, [Folder("a", "b", "c"), Folder("a", "b"), Folder("a")]);
+
+        guard.Received(1).TryRemoveEmptyFolder(Folder("a", "b", "c"), _root);
+        guard.Received(1).TryRemoveEmptyFolder(Folder("a", "b"), _root);
+        guard.Received(1).TryRemoveEmptyFolder(Folder("a"), _root);
+        guard.ReceivedWithAnyArgs(3).TryRemoveEmptyFolder(default!, default!);
+    }
+
+    [Fact]
+    public void No_folders_to_remove_asks_nothing_of_the_guard()
+    {
+        var guard = Substitute.For<IDestinationGuard>();
+
+        CreatedFolders.RemoveWhileEmpty(_fs, guard, []);
+
+        guard.DidNotReceiveWithAnyArgs().TryRemoveEmptyFolder(default!, default!);
     }
 }
