@@ -4,9 +4,9 @@ using InstallerClean.ViewModels;
 namespace InstallerClean.Tests.Helpers;
 
 /// <summary>
-/// The view models a test made, and a crash-log folder of that test's own for as long as it
-/// runs. A test reading <see cref="TestCrashLog.Text"/> sees only what its own work wrote.
-/// Disposing flushes the destination save each view model may still be waiting to make,
+/// The view models a test made, and a crash-log folder of that test's own from the first one
+/// it adds until it is disposed. A test reading <see cref="TestCrashLog.Text"/> after making
+/// a view model sees only what its own work wrote. Disposing flushes the destination save each view model may still be waiting to make,
 /// which otherwise lands about 400 ms later, and then puts the previous folder back and
 /// deletes this one. Flushing is safe on a view model a test has already disposed or
 /// flushed. The folder is the one process-wide <see cref="CrashLog.FolderForTests"/>, which
@@ -15,16 +15,21 @@ namespace InstallerClean.Tests.Helpers;
 internal sealed class MadeViewModels : IDisposable
 {
     private readonly List<MainViewModel> _made = new();
-    private readonly string? _previousFolder = CrashLog.FolderForTests;
-    private readonly string _folder = TestCrashLog.NewFolder();
+    private string? _previousFolder;
+    private string? _folder;
 
-    public MadeViewModels()
-    {
-        CrashLog.FolderForTests = _folder;
-    }
-
+    /// <summary>
+    /// Takes the test's folder at the first view model, so a test class whose constructor
+    /// throws, and is therefore never disposed, has changed nothing.
+    /// </summary>
     public MainViewModel Add(MainViewModel vm)
     {
+        if (_folder is null)
+        {
+            _previousFolder = CrashLog.FolderForTests;
+            _folder = TestCrashLog.NewFolder();
+            CrashLog.FolderForTests = _folder;
+        }
         _made.Add(vm);
         return vm;
     }
@@ -38,8 +43,11 @@ internal sealed class MadeViewModels : IDisposable
         }
         finally
         {
-            CrashLog.FolderForTests = _previousFolder;
-            TestCrashLog.TryDelete(_folder);
+            if (_folder is not null)
+            {
+                CrashLog.FolderForTests = _previousFolder;
+                TestCrashLog.TryDelete(_folder);
+            }
         }
     }
 }

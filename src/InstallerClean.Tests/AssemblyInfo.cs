@@ -41,8 +41,9 @@ internal static class TestCulture
 /// temp folder, never to the log of the PC running the suite. The folder is set before any
 /// test runs, so a test reaching the log by a path nobody planned for is covered too, and
 /// it is deleted when the test process exits, along with the shared InstallerClean.Tests
-/// folder above it where no other run's folder is left in it. A CrashLogTests test that
-/// changes the folder for its run puts this one back.
+/// folder above it where no other run's folder is left in it. A test that changes the
+/// folder for its run, as the tests that make view models do (<c>MadeViewModels</c>) and as
+/// CrashLogTests does, puts this one back.
 /// </summary>
 internal static class TestCrashLog
 {

@@ -92,9 +92,16 @@ public class CleanupStopWaitingTests : IDisposable
     public void Dispose()
     {
         var flushed = _dispatcher.RunAsync(_made.Dispose);
-        if (!flushed.Wait(TimeSpan.FromSeconds(10)))
-            throw new TimeoutException("The dispatcher stand-in did not reach the flush.");
-        flushed.GetAwaiter().GetResult();
+        if (flushed.Wait(TimeSpan.FromSeconds(10)))
+        {
+            flushed.GetAwaiter().GetResult();
+            return;
+        }
+
+        // The stand-in is stuck behind a callback that never returns: flush here, which
+        // still puts the crash-log folder back.
+        _made.Dispose();
+        throw new TimeoutException("The dispatcher stand-in did not reach the flush.");
     }
 
     private static string WaitLine(string root) => DisplayHelpers.WaitingFor(root);
