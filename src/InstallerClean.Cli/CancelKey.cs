@@ -30,7 +30,8 @@ internal sealed class CancelKey
     private int _hooked;
     private int _closing;
     // What cancelled Pressed first: 0 nothing yet; 1 Ctrl+C, or the starting version's
-    // cancel event (Watch); 2 a close or shutdown, recorded before Closing is set.
+    // cancel event (Watch), which that version sets for its own Ctrl+C or close; 2 a close
+    // or shutdown of this process's console, recorded before Closing is set.
     private int _firstPress;
 
     /// <summary>

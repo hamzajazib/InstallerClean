@@ -1257,7 +1257,7 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
-    public void A_wait_the_console_closing_ends_before_Ctrl_C_reaches_the_run_names_the_closing_as_what_ended_the_run()
+    public void A_close_that_came_first_ends_a_wait_before_the_runs_token_is_cancelled_and_is_named()
     {
         _host.OnSetup = () =>
         {
@@ -1343,6 +1343,24 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.IsType<CommandLineUpdateResult.Stopped>(result);
         Assert.Contains("A failure ended the run and the console closing or Windows shutting down came as well.",
             TestCrashLog.OnlyEntry());
+    }
+
+    [Fact]
+    public void A_close_while_Ctrl_C_is_still_being_answered_leaves_Ctrl_C_named_as_what_ended_the_run()
+    {
+        _host.OnSetup = () =>
+        {
+            File.WriteAllText(_exe, "new");
+            _host.Closing = true;
+            _host.ClosedFirst = false;
+            _host.OnFileVersion = () => throw SharingViolation();
+            return 0;
+        };
+
+        var result = Run(Setup(), canAsk: false);
+
+        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Contains("Ctrl+C ended the run, and a failure came as it ended.", TestCrashLog.OnlyEntry());
     }
 
     [Fact]
