@@ -142,8 +142,9 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
     private readonly IFileSystem _fs = fileSystem;
 
     /// <summary>
-    /// Reads whether the folder is there and creates it where it is not. A create that
-    /// throws is <see cref="FolderCreation.Failed"/>.
+    /// Reads whether the folder is there and creates it where it is not, so the answer
+    /// rests on a read before the create, which a substituted filesystem cannot do
+    /// otherwise. A create that throws is <see cref="FolderCreation.Failed"/>.
     /// </summary>
     public FolderCreation TryCreateFolder(string folder)
     {

@@ -10,7 +10,7 @@ using InstallerClean.ViewModels;
 namespace InstallerClean.Tests.ViewModels;
 
 /// <summary>
-/// The Move pre-flight: the CreateDirectory-and-write-probe pass that runs
+/// The Move pre-flight: the folder-creation-and-write-probe pass that runs
 /// on a worker thread before the confirmation dialog. It has its own
 /// cancellation scope, its own overlay reveal and four early returns that
 /// never reach the operation's finally, so it is exercised here rather than
@@ -699,9 +699,8 @@ public class CleanupPreFlightTests
         _dialogService.Received(1).ShowWarning(
             string.Format(InstallerClean.Resources.Strings.Error_AccessDeniedDestination, _destination),
             InstallerClean.Resources.Strings.Error_DestinationWriteFailedTitle);
-        // The folder was not there before, so the arm asks for its removal, and the
-        // guard removes a folder only where it is empty.
-        AssertFolderRemoved();
+        // The create made no folder, so there is none to remove.
+        AssertNoFolderRemoved();
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
         await _moveService.DidNotReceive().MoveFilesAsync(
@@ -728,7 +727,7 @@ public class CleanupPreFlightTests
         _dialogService.Received(1).ShowWarning(
             string.Format(InstallerClean.Resources.Strings.Error_DestinationMissing, _destination),
             InstallerClean.Resources.Strings.Error_DestinationWriteFailedTitle);
-        AssertFolderRemoved();
+        AssertNoFolderRemoved();
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
         await _moveService.DidNotReceive().MoveFilesAsync(
@@ -740,11 +739,11 @@ public class CleanupPreFlightTests
     }
 
     [Fact]
-    public async Task A_refused_create_removes_the_destination_and_the_missing_folder_above_it_innermost_first()
+    public async Task A_refused_create_removes_the_folder_above_the_destination_that_the_move_made()
     {
         var outer = Path.Combine(Path.GetTempPath(), "ic-test-new");
         var inner = Path.Combine(outer, "inner");
-        _directory.When(d => d.CreateDirectory(Arg.Any<string>()))
+        _directory.When(d => d.CreateDirectory(inner))
             .Do(_ => throw new UnauthorizedAccessException("create refused"));
 
         var vm = CreateViewModel();
@@ -753,11 +752,11 @@ public class CleanupPreFlightTests
 
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
-        AssertFoldersRemoved(inner, outer);
+        AssertFoldersRemoved(outer);
     }
 
     [Fact]
-    public async Task A_refused_create_leaves_a_folder_that_was_already_above_the_destination()
+    public async Task A_refused_create_of_the_only_missing_folder_removes_nothing()
     {
         var existing = Path.Combine(Path.GetTempPath(), "ic-test-existing");
         var inner = Path.Combine(existing, "inner");
@@ -771,7 +770,7 @@ public class CleanupPreFlightTests
 
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
-        AssertFoldersRemoved(inner);
+        AssertNoFolderRemoved();
     }
 
     [Fact]
@@ -780,11 +779,12 @@ public class CleanupPreFlightTests
         var top = Path.Combine(Path.GetTempPath(), "ic-test-new");
         var middle = Path.Combine(top, "middle");
         var inner = Path.Combine(middle, "inner");
-        // The middle folder is missing when the pre-flight lists the folders it will make
-        // and is there when the removal reaches it, holding something its removal refuses.
-        _directory.Exists(middle).Returns(false, true);
+        // The middle folder is missing when the pre-flight looks for the folders to make
+        // and when it creates it, and is there when the removal reaches it, holding
+        // something its removal refuses.
+        _directory.Exists(middle).Returns(false, false, true);
         _directory.When(d => d.Delete(middle)).Do(_ => throw new IOException("not empty"));
-        _directory.When(d => d.CreateDirectory(Arg.Any<string>()))
+        _directory.When(d => d.CreateDirectory(inner))
             .Do(_ => throw new UnauthorizedAccessException("create refused"));
 
         var vm = CreateViewModel();
@@ -793,7 +793,7 @@ public class CleanupPreFlightTests
 
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
-        AssertFoldersRemoved(inner, middle);
+        AssertFoldersRemoved(middle);
     }
 
     [Fact]

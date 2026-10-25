@@ -810,7 +810,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         if (CloseRequested) return;
 
         // Every touch of the destination happens here, on a worker thread and
-        // under one cancellable task: the two path gates, the CreateDirectory
+        // under one cancellable task: the two path gates, the folder creation
         // and write probe, the drive classification and the free-space query.
         // Each of them resolves or queries a path through Win32, so each can
         // stall for the SMB timeout on a mapped drive or a UNC share that has
@@ -855,9 +855,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             // The create makes the destination and every missing folder
             // above it, and a move that then never happens should leave none of
             // them behind; a folder that was already there is the user's and is
-            // never touched. The create says which folders it made, and fills
-            // the list before its first create, so a throw part way cannot leave
-            // the list saying none about a folder that did appear.
+            // never touched. The create says which folders it made, and the list
+            // holds them when a later create throws.
             CreatedFolders.Create(_fs, _destinationGuard, dest, createdFolders);
             probeToken.ThrowIfCancellationRequested();
             // The guard writes a write-test file through a handle opened on the

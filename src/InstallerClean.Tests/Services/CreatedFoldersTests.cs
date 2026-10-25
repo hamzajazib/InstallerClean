@@ -186,7 +186,7 @@ public class CreatedFoldersTests
     }
 
     [Fact]
-    public void A_failed_create_ends_the_creating_and_leaves_that_folder_and_those_below_it_listed()
+    public void A_failed_create_ends_the_creating_and_lists_only_the_folders_made_above_it()
     {
         var guard = GuardAnswering(
             (Folder("a"), FolderCreation.Made), (Folder("a", "b"), FolderCreation.Failed));
@@ -194,14 +194,26 @@ public class CreatedFoldersTests
 
         CreatedFolders.Create(_fs, guard, Folder("a", "b", "c"), made);
 
-        Assert.Equal([Folder("a", "b", "c"), Folder("a", "b"), Folder("a")], made);
+        Assert.Equal([Folder("a")], made);
         guard.DidNotReceive().TryCreateFolder(Folder("a", "b", "c"));
+    }
+
+    [Fact]
+    public void A_failed_create_of_the_top_most_folder_lists_nothing()
+    {
+        var guard = GuardAnswering((Folder("a"), FolderCreation.Failed));
+        var made = new List<string>();
+
+        CreatedFolders.Create(_fs, guard, Folder("a", "b"), made);
+
+        Assert.Empty(made);
     }
 
     [Fact]
     public void A_failed_create_is_followed_by_the_destination_being_created_through_the_filesystem()
     {
         var guard = Substitute.For<IDestinationGuard>();
+        guard.TryCreateFolder(Arg.Any<string>()).Returns(FolderCreation.Failed);
 
         CreatedFolders.Create(_fs, guard, Folder("a", "b"), new List<string>());
 
@@ -209,9 +221,10 @@ public class CreatedFoldersTests
     }
 
     [Fact]
-    public void A_failed_create_that_the_filesystem_also_refuses_throws_with_the_folders_listed()
+    public void A_failed_create_that_the_filesystem_also_refuses_throws_with_the_folders_made_listed()
     {
-        var guard = Substitute.For<IDestinationGuard>();
+        var guard = GuardAnswering(
+            (Folder("a"), FolderCreation.Made), (Folder("a", "b"), FolderCreation.Failed));
         var directory = Substitute.For<IDirectory>();
         directory.Exists(_root).Returns(true);
         directory.When(d => d.CreateDirectory(Arg.Any<string>())).Do(_ => throw new IOException("refused"));
@@ -222,7 +235,20 @@ public class CreatedFoldersTests
 
         Assert.Throws<IOException>(() => CreatedFolders.Create(fileSystem, guard, Folder("a", "b"), made));
 
-        Assert.Equal([Folder("a", "b"), Folder("a")], made);
+        Assert.Equal([Folder("a")], made);
+    }
+
+    [Fact]
+    public void A_guard_that_throws_leaves_the_folders_made_before_it_listed()
+    {
+        var guard = Substitute.For<IDestinationGuard>();
+        guard.TryCreateFolder(Folder("a")).Returns(FolderCreation.Made);
+        guard.TryCreateFolder(Folder("a", "b")).Returns(_ => throw new InvalidOperationException("refused"));
+        var made = new List<string>();
+
+        Assert.Throws<InvalidOperationException>(() => CreatedFolders.Create(_fs, guard, Folder("a", "b"), made));
+
+        Assert.Equal([Folder("a")], made);
     }
 
     [Fact]

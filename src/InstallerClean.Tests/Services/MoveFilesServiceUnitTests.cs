@@ -902,6 +902,8 @@ public class MoveFilesServiceUnitTests
                 call[2] = WriteProbeRefusal.CreateFailed;
                 return false;
             });
+        guard.TryCreateFolder(Arg.Any<string>())
+            .Returns(call => removal.TryCreateFolder(call.ArgAt<string>(0)));
         guard.TryRemoveEmptyFolder(Arg.Any<string>(), Arg.Any<string>())
             .Returns(call => removal.TryRemoveEmptyFolder(call.ArgAt<string>(0), call.ArgAt<string>(1)));
         return guard;
@@ -925,10 +927,10 @@ public class MoveFilesServiceUnitTests
     }
 
     [Fact]
-    public async Task A_create_that_fails_removes_the_folders_the_move_listed_innermost_first()
+    public async Task A_create_that_fails_part_way_removes_the_folders_it_made()
     {
         var directory = Substitute.For<IDirectory>();
-        directory.When(d => d.CreateDirectory(Arg.Any<string>())).Do(_ => throw new IOException("create refused"));
+        directory.When(d => d.CreateDirectory(DestDir)).Do(_ => throw new IOException("create refused"));
         var fs = Substitute.For<IFileSystem>();
         fs.Directory.Returns(directory);
         fs.Path.Returns(new MockFileSystem().Path);
@@ -937,12 +939,8 @@ public class MoveFilesServiceUnitTests
         await Assert.ThrowsAsync<LocalisedAccessException>(() =>
             svc.MoveFilesAsync(new[] { $@"{SourceDir}\a.msi" }, DestDir, UnderLeaseClaims.None));
 
-        Received.InOrder(() =>
-        {
-            directory.Delete(DestDir);
-            directory.Delete(@"D:\backup");
-        });
-        directory.Received(2).Delete(Arg.Any<string>());
+        directory.Received(1).Delete(@"D:\backup");
+        directory.Received(1).Delete(Arg.Any<string>());
     }
 
     [Fact]
@@ -955,6 +953,8 @@ public class MoveFilesServiceUnitTests
         var guard = Substitute.For<IDestinationGuard>();
         guard.TryProbeWritable(Arg.Any<string>(), out Arg.Any<int>(), out Arg.Any<WriteProbeRefusal>())
             .Returns(_ => throw new IOException("the write test failed"));
+        guard.TryCreateFolder(Arg.Any<string>())
+            .Returns(call => removal.TryCreateFolder(call.ArgAt<string>(0)));
         guard.TryRemoveEmptyFolder(Arg.Any<string>(), Arg.Any<string>())
             .Returns(call => removal.TryRemoveEmptyFolder(call.ArgAt<string>(0), call.ArgAt<string>(1)));
         var svc = new MoveFilesService(

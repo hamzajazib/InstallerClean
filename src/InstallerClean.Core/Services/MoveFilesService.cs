@@ -241,7 +241,7 @@ public sealed class MoveFilesService : IMoveFilesService
                 throw;
             }
 
-            // Re-check after CreateDirectory closes the TOCTOU window
+            // Re-check after the create closes the TOCTOU window
             // where a junction could be swapped into the leaf.
             if (InstallerCacheHelpers.IsInstallerFolderOrChild(destinationFolder))
                 throw new LocalisedInvalidOperationException(

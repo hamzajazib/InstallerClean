@@ -41,40 +41,50 @@ internal static class CreatedFolders
     }
 
     /// <summary>
-    /// Creates <paramref name="destination"/> and every missing folder above it, and
-    /// leaves <paramref name="folders"/> holding the folders the Move made, in the order
-    /// <see cref="RemoveWhileEmpty"/> takes them: the destination first, the top-most last.
-    /// The list is the caller's and is filled before the first create, so a create that
-    /// throws part way leaves it naming every folder that may have appeared.
+    /// Creates <paramref name="destination"/> and every missing folder above it, and adds
+    /// to <paramref name="folders"/> the folders <paramref name="guard"/> said it made, in
+    /// the order <see cref="RemoveWhileEmpty"/> takes them: the destination first, the
+    /// top-most last. Nothing is listed that a create did not say it made.
     /// <para>
-    /// Each missing folder is created on its own, top-most first, through
-    /// <paramref name="guard"/>, which says from the create whether it made the folder.
-    /// One it says was already there was not made by the Move, so it comes off the list
-    /// along with every folder listed above it, which holds it. One it says failed ends
-    /// the creating and leaves it and the folders below it listed. Where nothing was
-    /// listed, or the creating ended on a failure, the destination is then created through
-    /// <paramref name="fileSystem"/>, which makes whatever is left or throws the failure.
+    /// Each missing folder is created on its own, top-most first. One the guard says was
+    /// already there was not made by the Move, so it is not listed, and neither is any
+    /// folder made above it, which holds it. One the guard says failed ends the creating
+    /// and is not listed either, nor is any folder below it; the folders made above it
+    /// stay listed. Where nothing was missing, or the creating ended on a failure, the
+    /// destination is then created through <paramref name="fileSystem"/>, which makes
+    /// whatever is left or throws the failure, with the folders already made listed.
     /// </para>
     /// </summary>
     internal static void Create(
         IFileSystem fileSystem, IDestinationGuard guard, string destination, List<string> folders)
     {
         var candidates = MissingOnPath(fileSystem, destination);
-        var first = folders.Count;
-        folders.AddRange(candidates);
-
+        var made = new List<string>();
         var ended = false;
-        for (var level = candidates.Count - 1; level >= 0; level--)
+        try
         {
-            var created = guard.TryCreateFolder(candidates[level]);
-            if (created == FolderCreation.Made) continue;
-            if (created == FolderCreation.AlreadyThere)
+            for (var level = candidates.Count - 1; level >= 0; level--)
             {
-                folders.RemoveRange(first + level, folders.Count - first - level);
-                continue;
+                var created = guard.TryCreateFolder(candidates[level]);
+                if (created == FolderCreation.Made)
+                {
+                    made.Add(candidates[level]);
+                }
+                else if (created == FolderCreation.AlreadyThere)
+                {
+                    made.Clear();
+                }
+                else
+                {
+                    ended = true;
+                    break;
+                }
             }
-            ended = true;
-            break;
+        }
+        finally
+        {
+            made.Reverse();
+            folders.AddRange(made);
         }
 
         if (candidates.Count == 0 || ended)
