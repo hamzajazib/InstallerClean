@@ -62,7 +62,6 @@ public sealed class UpdateLeftoverGateTests
         finally
         {
             release.Set();
-            pass.Wait();
         }
 
         Assert.True(await pass);
@@ -130,6 +129,19 @@ public sealed class UpdateLeftoverGateTests
     {
         var gate = new UpdateLeftoverGate();
         var updater = Updater(gate, Path.GetTempPath(), AllowsEveryDownload);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => updater.PrepareAsync("9.9.9", null, new CancellationToken(canceled: true)));
+
+        Assert.True(gate.TryRunPass(() => { }));
+    }
+
+    [Fact]
+    public async Task An_update_cancelled_after_its_release_file_was_read_leaves_the_clean_up_running()
+    {
+        var gate = new UpdateLeftoverGate();
+        var updater = Updater(gate, Path.GetTempPath(), AllowsEveryDownload);
+        Assert.Null(await updater.CheckRequirementsAsync("9.9.9", CancellationToken.None));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => updater.PrepareAsync("9.9.9", null, new CancellationToken(canceled: true)));

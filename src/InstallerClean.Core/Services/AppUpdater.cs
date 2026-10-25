@@ -252,7 +252,9 @@ public sealed class AppUpdater : IAppUpdater
         // Before the first file this update writes, so no pass of the start-up clean-up
         // deletes one (UpdateLeftoverGate). Everything above only reads, so an update that
         // ends before this point, refused, failed or cancelled, leaves the clean-up running.
-        // A write added above this line has to move the mark above it too.
+        // A write added above this line has to move the mark above it too. The token is read
+        // here, since a release file already read for this version is answered without it.
+        cancellationToken.ThrowIfCancellationRequested();
         _leftovers.MarkUpdateWriting();
         UpdateStagingFolder folder;
         try

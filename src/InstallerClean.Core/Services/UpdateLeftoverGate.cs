@@ -12,7 +12,7 @@ namespace InstallerClean.Services;
 public sealed class UpdateLeftoverGate
 {
     private readonly object _gate = new();
-    private bool _updateAboutToWrite;
+    private bool _closed;
 
     /// <summary>The gate this process's clean-up and its updates share.</summary>
     public static UpdateLeftoverGate ForThisProcess { get; } = new();
@@ -32,7 +32,7 @@ public sealed class UpdateLeftoverGate
     {
         lock (_gate)
         {
-            if (_updateAboutToWrite) return false;
+            if (_closed) return false;
             pass();
             return true;
         }
@@ -44,6 +44,6 @@ public sealed class UpdateLeftoverGate
     /// </summary>
     internal void MarkUpdateWriting()
     {
-        lock (_gate) _updateAboutToWrite = true;
+        lock (_gate) _closed = true;
     }
 }
