@@ -762,7 +762,52 @@ public class ChromeViewModelTests
     }
 
     [Fact]
-    public async Task An_automatic_check_answering_after_its_window_reads_nothing_and_offers_Update_now()
+    public async Task An_automatic_check_answering_after_its_window_reads_with_no_time_and_offers_Update_now()
+    {
+        var vm = AnsweringAfterItsWindow();
+        // With no time and no file kept, the read is given up at once.
+        _updater.CheckRequirementsAsync("9.9.9", TimeSpan.Zero, Arg.Any<CancellationToken>()).Returns(
+            Task.FromException<UpdateRefusal?>(new UpdateFailedException(UpdateFailureStage.Download, "no time")));
+
+        await vm.RunAutomaticUpdateCheckAsync();
+
+        await _updater.Received(1).CheckRequirementsAsync("9.9.9", TimeSpan.Zero, Arg.Any<CancellationToken>());
+        Assert.True(vm.HasNewerVersion);
+        Assert.True(vm.ShowsUpdateNow);
+    }
+
+    [Fact]
+    public async Task An_automatic_check_answering_after_its_window_shows_a_refusal_already_kept()
+    {
+        var vm = AnsweringAfterItsWindow();
+        _updater.CheckRequirementsAsync("9.9.9", TimeSpan.Zero, Arg.Any<CancellationToken>())
+            .Returns(UpdateRefusal.CannotInstallFromThisCopy);
+
+        await vm.RunAutomaticUpdateCheckAsync();
+
+        AssertRefused(vm, UpdateRefusal.CannotInstallFromThisCopy);
+    }
+
+    [Fact]
+    public async Task An_infinite_bound_reads_within_the_automatic_checks_window()
+    {
+        var vm = CreateRequirementsViewModel(
+            requirementsBound: Timeout.InfiniteTimeSpan, automaticCheckWindow: TimeSpan.FromSeconds(30));
+        TimeSpan? given = null;
+        _updater.CheckRequirementsAsync("9.9.9", Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>()).Returns(call =>
+        {
+            given = call.Arg<TimeSpan?>();
+            return Task.FromResult<UpdateRefusal?>(null);
+        });
+
+        await vm.RunAutomaticUpdateCheckAsync();
+
+        Assert.NotNull(given);
+        Assert.InRange(given!.Value, TimeSpan.Zero, TimeSpan.FromSeconds(30));
+    }
+
+    /// <summary>A view model whose automatic check finds the newer version after its window has passed.</summary>
+    private ChromeViewModel AnsweringAfterItsWindow()
     {
         var vm = CreateRequirementsViewModel(automaticCheckWindow: TimeSpan.FromMilliseconds(50));
         _updateCheckService.CheckAsync(Arg.Any<UpdateCheckOrigin>(), Arg.Any<CancellationToken>())
@@ -771,13 +816,7 @@ public class ChromeViewModelTests
                 await Task.Delay(200);
                 return (UpdateCheckResult)new UpdateAvailable("2.1.0", "9.9.9");
             });
-        RequirementsAnswer(UpdateRefusal.CannotInstallFromThisCopy);
-
-        await vm.RunAutomaticUpdateCheckAsync();
-
-        await _updater.DidNotReceiveWithAnyArgs().CheckRequirementsAsync(default!, default, default);
-        Assert.True(vm.HasNewerVersion);
-        Assert.True(vm.ShowsUpdateNow);
+        return vm;
     }
 
     [Fact]

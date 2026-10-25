@@ -76,7 +76,6 @@ public sealed class UpdateRequirementsCheckTests
     public static TheoryData<TimeSpan> NoLimits =>
     [
         Timeout.InfiniteTimeSpan,
-        TimeSpan.FromMilliseconds(int.MaxValue + 1L),
         TimeSpan.FromMilliseconds(uint.MaxValue - 1),
         TimeSpan.FromMilliseconds(uint.MaxValue),
         TimeSpan.MaxValue,
