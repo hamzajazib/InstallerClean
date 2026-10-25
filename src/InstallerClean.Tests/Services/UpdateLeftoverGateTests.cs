@@ -118,7 +118,7 @@ public sealed class UpdateLeftoverGateTests
         var pass = Task.Run(() => gate.TryRunPass(() =>
         {
             inPass.Set();
-            release.Wait(TimeSpan.FromSeconds(30));
+            release.Wait(TimeSpan.FromSeconds(10));
             Volatile.Write(ref passEnded, true);
         }));
         try
@@ -128,12 +128,14 @@ public sealed class UpdateLeftoverGateTests
             Assert.Null(await updater.CheckRequirementsAsync("9.9.9", null, CancellationToken.None));
 
             // The release file is kept, so nothing the update does before its hold waits on
-            // the network. The call comes back while the pass still runs.
+            // the network. The call comes back while the pass still runs, and the update
+            // then waits for the pass: one that went on to its first write would already
+            // have failed there.
             var update = updater.PrepareAsync("9.9.9", null, CancellationToken.None);
-            var cameBackDuringPass = !Volatile.Read(ref passEnded);
+            Assert.False(Volatile.Read(ref passEnded), "The call came back only once the pass had ended.");
+            await Assert.ThrowsAsync<TimeoutException>(() => update.WaitAsync(TimeSpan.FromMilliseconds(200)));
             release.Set();
 
-            Assert.True(cameBackDuringPass);
             Assert.Equal(UpdateFailureStage.Install,
                 (await Assert.ThrowsAsync<UpdateFailedException>(() => update.WaitAsync(TimeSpan.FromSeconds(10)))).Stage);
             Assert.True(await pass.WaitAsync(TimeSpan.FromSeconds(10)));

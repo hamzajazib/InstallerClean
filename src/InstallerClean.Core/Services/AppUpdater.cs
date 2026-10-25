@@ -231,24 +231,24 @@ public sealed class AppUpdater : IAppUpdater
     public async Task<UpdateRefusal?> CheckRequirementsAsync(
         string version, TimeSpan? within, CancellationToken cancellationToken)
     {
-        if (UpdateManifest.DownloadKey(Kind) is null)
-            throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
-
         // Everything after this runs on a pool thread, whatever thread called, so the
         // registry read stays off the window's thread. With the file kept nothing in the
         // check awaits anything unfinished, so the method leaves the caller's thread here
         // rather than at a read.
         await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
-        return await RequirementsAsync(version, within, cancellationToken).ConfigureAwait(false);
+        return await CheckRequirementsHereAsync(version, within, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// <see cref="CheckRequirementsAsync"/> on the thread it is called on, up to the read of
-    /// the release's file where that file is not kept.
+    /// The check <see cref="CheckRequirementsAsync"/> makes, without moving off the thread
+    /// that calls it. With the release's file kept, it runs to its answer on that thread.
     /// </summary>
-    private async Task<UpdateRefusal?> RequirementsAsync(
+    private async Task<UpdateRefusal?> CheckRequirementsHereAsync(
         string version, TimeSpan? within, CancellationToken cancellationToken)
     {
+        if (UpdateManifest.DownloadKey(Kind) is null)
+            throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
+
         // A cancel is answered as the cancel wherever it comes, never as a refusal or a read
         // of the release that failed, the download service answering a read refused as the
         // cancel came with the cancel. A file read in full is kept first, so a cancel as the
@@ -329,7 +329,7 @@ public sealed class AppUpdater : IAppUpdater
         // download awaits anything unfinished.
         await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
-        if (await RequirementsAsync(version, null, cancellationToken).ConfigureAwait(false) is { } refusal)
+        if (await CheckRequirementsHereAsync(version, null, cancellationToken).ConfigureAwait(false) is { } refusal)
             throw new UpdateRefusedException(refusal, version);
 
         // Before the first file this update writes, so no pass of the start-up clean-up
