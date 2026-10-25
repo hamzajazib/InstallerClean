@@ -119,9 +119,10 @@ public sealed class UpdateLeftoverGateTests
         var pass = Task.Run(() => gate.TryRunPass(() =>
         {
             inPass.Set();
-            release.Wait(TimeSpan.FromSeconds(10));
+            release.Wait(TimeSpan.FromSeconds(30));
             Volatile.Write(ref passEnded, true);
         }));
+        Task? update = null;
         try
         {
             Assert.True(inPass.Wait(TimeSpan.FromSeconds(10)), "The pass never ran.");
@@ -132,7 +133,7 @@ public sealed class UpdateLeftoverGateTests
             // the network. The call comes back while the pass still runs, and the update
             // then waits for the pass: one that went on to its first write would already
             // have failed there.
-            var update = updater.PrepareAsync("9.9.9", null, CancellationToken.None);
+            update = updater.PrepareAsync("9.9.9", null, CancellationToken.None);
             Assert.False(Volatile.Read(ref passEnded), "The call came back only once the pass had ended.");
             await Assert.ThrowsAsync<TimeoutException>(() => update.WaitAsync(TimeSpan.FromMilliseconds(200)));
             release.Set();
@@ -145,22 +146,8 @@ public sealed class UpdateLeftoverGateTests
         finally
         {
             release.Set();
-            await Settle(pass);
+            await Settle(pass, update);
             File.Delete(root);
-        }
-    }
-
-    /// <summary>
-    /// Waits up to ten seconds for each of a test's own tasks to end and reads any failure,
-    /// so a test whose assertion fails first reports that failure alone.
-    /// </summary>
-    private static async Task Settle(params Task?[] tasks)
-    {
-        foreach (var task in tasks)
-        {
-            if (task is null) continue;
-            try { await task.WaitAsync(TimeSpan.FromSeconds(10)); }
-            catch (Exception) { }
         }
     }
 
@@ -268,6 +255,20 @@ public sealed class UpdateLeftoverGateTests
         finally
         {
             Directory.Delete(root, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// Waits up to ten seconds for each of a test's own tasks to end and reads any failure,
+    /// so a test whose assertion fails first reports that failure alone.
+    /// </summary>
+    private static async Task Settle(params Task?[] tasks)
+    {
+        foreach (var task in tasks)
+        {
+            if (task is null) continue;
+            try { await task.WaitAsync(TimeSpan.FromSeconds(10)); }
+            catch (Exception) { }
         }
     }
 

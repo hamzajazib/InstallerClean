@@ -231,6 +231,9 @@ public sealed class AppUpdater : IAppUpdater
     public async Task<UpdateRefusal?> CheckRequirementsAsync(
         string version, TimeSpan? within, CancellationToken cancellationToken)
     {
+        if (UpdateManifest.DownloadKey(Kind) is null)
+            throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
+
         // Everything after this runs on a pool thread, whatever thread called, so the
         // registry read stays off the window's thread. With the file kept nothing in the
         // check awaits anything unfinished, so the method leaves the caller's thread here
@@ -246,9 +249,6 @@ public sealed class AppUpdater : IAppUpdater
     private async Task<UpdateRefusal?> CheckRequirementsHereAsync(
         string version, TimeSpan? within, CancellationToken cancellationToken)
     {
-        if (UpdateManifest.DownloadKey(Kind) is null)
-            throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
-
         // A cancel is answered as the cancel wherever it comes, never as a refusal or a read
         // of the release that failed, the download service answering a read refused as the
         // cancel came with the cancel. A file read in full is kept first, so a cancel as the
