@@ -143,7 +143,7 @@ public sealed class AppUpdater : IAppUpdater
     /// <summary>
     /// Test seam: the staging folder's descriptor given as SDDL, so a suite without
     /// administrator rights can write into it, the registry the PC's .NET Framework
-    /// is read from, and the gate the update marks before it writes anything, which is
+    /// is read from, and the gate the update holds from before it writes anything, which is
     /// <see cref="UpdateLeftoverGate.ForThisProcess"/> where none is given.
     /// </summary>
     internal AppUpdater(
@@ -256,11 +256,34 @@ public sealed class AppUpdater : IAppUpdater
 
         // Before the first file this update writes, so no pass of the start-up clean-up
         // deletes one (UpdateLeftoverGate). Everything above only reads, so an update that
-        // ends before this point, refused, failed or cancelled, leaves the clean-up running.
-        // A write added above this line has to move the mark above it too. A cancel that
-        // came after the requirements were checked is answered here, before the mark.
+        // ends before this point, refused, failed or cancelled, never holds the gate. A
+        // write added above this line has to move the hold above it too. A cancel that
+        // came after the requirements were checked is answered here, before the hold.
         cancellationToken.ThrowIfCancellationRequested();
-        _leftovers.MarkUpdateWriting();
+        var hold = _leftovers.HoldForUpdate();
+        try
+        {
+            return await PrepareHeldAsync(version, address, fileName, hold, progress, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch
+        {
+            // Every throw below has taken away what it wrote, so nothing of this update's
+            // is left for the clean-up to delete.
+            hold.Release();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// <see cref="PrepareAsync"/> from the first write on, with the clean-up held off by
+    /// <paramref name="hold"/>. The prepared update releases it in its undo once nothing
+    /// it wrote is left waiting, and keeps it where the newer version stays beside an
+    /// exe whose path is empty.
+    /// </summary>
+    private async Task<PreparedUpdate> PrepareHeldAsync(string version, Uri address, string fileName,
+        UpdateLeftoverGate.Hold hold, IProgress<double?>? progress, CancellationToken cancellationToken)
+    {
         UpdateStagingFolder folder;
         try
         {
@@ -305,8 +328,15 @@ public sealed class AppUpdater : IAppUpdater
         {
             return new PreparedUpdate(version, staged, _setupArguments, () =>
             {
-                Helpers.StorageHelpers.TryDeleteTempFile(staged);
-                folder.TryRemoveIfEmpty();
+                try
+                {
+                    Helpers.StorageHelpers.TryDeleteTempFile(staged);
+                    folder.TryRemoveIfEmpty();
+                }
+                finally
+                {
+                    hold.Release();
+                }
             });
         }
 
@@ -321,9 +351,13 @@ public sealed class AppUpdater : IAppUpdater
             folder.TryRemoveIfEmpty();
         }
         // With nothing at the exe's path, the newer version is one of the two files that can
-        // go there, so it stays.
-        return new PreparedUpdate(version, _exePath, string.Empty,
-            () => { if (File.Exists(_exePath)) Helpers.StorageHelpers.TryDeleteTempFile(replacement); },
+        // go there, so it stays, and so does the hold, since a pass of the clean-up deletes it.
+        return new PreparedUpdate(version, _exePath, string.Empty, () =>
+            {
+                if (!File.Exists(_exePath)) return;
+                try { Helpers.StorageHelpers.TryDeleteTempFile(replacement); }
+                finally { hold.Release(); }
+            },
             replacement);
     }
 

@@ -4,13 +4,15 @@ namespace InstallerClean.Tests.Services;
 
 /// <summary>
 /// The gate between the start-up clean-up and this process's own update
-/// (<see cref="UpdateLeftoverGate"/>): a pass runs until an update is about to write its
-/// first file, and none after, whatever becomes of that update.
+/// (<see cref="UpdateLeftoverGate"/>): no pass runs while an update holds it, and passes
+/// run again once every hold is released. An update that ends without being prepared
+/// releases its hold; a prepared one releases it in its undo
+/// (<c>UpdateInPlaceTests</c>).
 /// </summary>
 public sealed class UpdateLeftoverGateTests
 {
     [Fact]
-    public void A_pass_runs_while_no_update_is_about_to_write()
+    public void A_pass_runs_while_no_update_holds_the_gate()
     {
         var gate = new UpdateLeftoverGate();
         var passes = 0;
@@ -22,19 +24,34 @@ public sealed class UpdateLeftoverGateTests
     }
 
     [Fact]
-    public void No_pass_runs_once_an_update_is_about_to_write()
+    public void No_pass_runs_while_an_update_holds_the_gate()
     {
         var gate = new UpdateLeftoverGate();
         var passes = 0;
 
-        gate.MarkUpdateWriting();
+        gate.HoldForUpdate();
 
         Assert.False(gate.TryRunPass(() => passes++));
         Assert.Equal(0, passes);
     }
 
     [Fact]
-    public async Task An_update_about_to_write_during_a_pass_waits_for_it_to_end()
+    public void Passes_run_again_once_every_hold_is_released()
+    {
+        var gate = new UpdateLeftoverGate();
+        var first = gate.HoldForUpdate();
+        var second = gate.HoldForUpdate();
+
+        first.Release();
+        first.Release();
+        Assert.False(gate.TryRunPass(() => { }));
+
+        second.Release();
+        Assert.True(gate.TryRunPass(() => { }));
+    }
+
+    [Fact]
+    public async Task An_update_taking_the_gate_during_a_pass_waits_for_it_to_end()
     {
         var gate = new UpdateLeftoverGate();
         using var inPass = new ManualResetEventSlim();
@@ -52,9 +69,9 @@ public sealed class UpdateLeftoverGateTests
             mark = Task.Run(() =>
             {
                 marking.Set();
-                gate.MarkUpdateWriting();
+                gate.HoldForUpdate();
             });
-            // The mark has started, so a wait that ends here is the lock not holding it.
+            // The hold has started, so a wait that ends here is the lock not holding it.
             marking.Wait();
 
             Assert.False(mark.Wait(TimeSpan.FromMilliseconds(200)));
@@ -70,7 +87,7 @@ public sealed class UpdateLeftoverGateTests
     }
 
     [Fact]
-    public async Task An_update_whose_first_write_fails_still_stops_the_clean_up()
+    public async Task An_update_whose_first_write_fails_leaves_the_clean_up_running()
     {
         var gate = new UpdateLeftoverGate();
         // A file where the staging root should be, so the staging folder cannot be made.
@@ -83,7 +100,7 @@ public sealed class UpdateLeftoverGateTests
                 () => updater.PrepareAsync("9.9.9", null, CancellationToken.None));
 
             Assert.Equal(UpdateFailureStage.Install, failed.Stage);
-            Assert.False(gate.TryRunPass(() => { }));
+            Assert.True(gate.TryRunPass(() => { }));
         }
         finally
         {
@@ -150,6 +167,33 @@ public sealed class UpdateLeftoverGateTests
     }
 
     [Fact]
+    public async Task An_update_cancelled_during_its_download_leaves_the_clean_up_running()
+    {
+        var gate = new UpdateLeftoverGate();
+        var root = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            using var cts = new CancellationTokenSource();
+            var heldDuringDownload = false;
+            var updater = Updater(gate, root, AllowsEveryDownload, onDownload: () =>
+            {
+                heldDuringDownload = !gate.TryRunPass(() => { });
+                cts.Cancel();
+            });
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => updater.PrepareAsync("9.9.9", null, cts.Token));
+
+            Assert.True(heldDuringDownload);
+            Assert.True(gate.TryRunPass(() => { }));
+            Assert.Empty(Directory.EnumerateFileSystemEntries(root));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task A_cancelled_check_against_a_kept_refusing_file_answers_the_cancel_not_the_refusal()
     {
         var updater = Updater(new UpdateLeftoverGate(), Path.GetTempPath(), RefusesEveryDownload);
@@ -170,22 +214,28 @@ public sealed class UpdateLeftoverGateTests
     /// <summary>
     /// An updater for a copy of <paramref name="kind"/> whose requests are answered here:
     /// the release's update.json with <paramref name="manifest"/>, or not found where it
-    /// is null, and any other request with nothing.
+    /// is null, and any other request with nothing, after <paramref name="onDownload"/> runs.
     /// </summary>
     private static AppUpdater Updater(
-        UpdateLeftoverGate gate, string stagingRoot, string? manifest, AppCopyKind kind = AppCopyKind.Portable) =>
+        UpdateLeftoverGate gate, string stagingRoot, string? manifest, AppCopyKind kind = AppCopyKind.Portable,
+        Action? onDownload = null) =>
         new(kind, Path.Combine(Path.GetTempPath(), "InstallerClean.exe"),
-            new UpdateDownloadService(new Answers(manifest), null), stagingRoot, AppUpdater.WindowSetupArguments,
-            UpdateStagingFolder.AdministratorsOnly, NSubstitute.Substitute.For<IRegistryReader>(), gate);
+            new UpdateDownloadService(new Answers(manifest, onDownload), null), stagingRoot,
+            AppUpdater.WindowSetupArguments, UpdateStagingFolder.AdministratorsOnly,
+            NSubstitute.Substitute.For<IRegistryReader>(), gate);
 
-    private sealed class Answers(string? manifest) : HttpMessageHandler
+    private sealed class Answers(string? manifest, Action? onDownload) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request, CancellationToken cancellationToken) =>
-            Task.FromResult(
-                request.RequestUri!.AbsolutePath.EndsWith("/" + UpdateManifest.FileName, StringComparison.Ordinal)
-                && manifest is not null
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/" + UpdateManifest.FileName, StringComparison.Ordinal))
+                return Task.FromResult(manifest is not null
                     ? new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(manifest) }
                     : new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
+            onDownload?.Invoke();
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
+        }
     }
 }

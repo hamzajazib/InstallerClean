@@ -879,6 +879,65 @@ public sealed class UpdateInPlaceTests : IDisposable
     }
 
     [Fact]
+    public async Task A_prepared_update_holds_the_clean_up_off_until_its_undo_takes_the_newer_version_away()
+    {
+        var exeFolder = Directory.CreateDirectory(Path.Combine(_root, "app")).FullName;
+        var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
+        var exe = Path.Combine(exeFolder, "InstallerClean.exe");
+        File.WriteAllBytes(exe, Program(1));
+        var gate = new UpdateLeftoverGate();
+        var updater = new AppUpdater(AppCopyKind.Portable, exe,
+            new UpdateDownloadService(new OneAnswer(Release(2)), null), stagingRoot,
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry, gate);
+
+        var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
+        Assert.False(gate.TryRunPass(() => { }));
+
+        prepared.Undo();
+
+        Assert.True(gate.TryRunPass(() => { }));
+    }
+
+    [Fact]
+    public async Task A_prepared_update_whose_undo_keeps_the_newer_version_keeps_the_clean_up_off()
+    {
+        var exeFolder = Directory.CreateDirectory(Path.Combine(_root, "app")).FullName;
+        var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
+        var exe = Path.Combine(exeFolder, "InstallerClean.exe");
+        File.WriteAllBytes(exe, Program(1));
+        var gate = new UpdateLeftoverGate();
+        var updater = new AppUpdater(AppCopyKind.Portable, exe,
+            new UpdateDownloadService(new OneAnswer(Release(2)), null), stagingRoot,
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry, gate);
+        var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
+        File.Move(exe, exe + SelfReplacement.OldSuffix);
+
+        prepared.Undo();
+
+        Assert.False(gate.TryRunPass(() => { }));
+    }
+
+    [Fact]
+    public async Task A_prepared_setup_holds_the_clean_up_off_until_its_undo_deletes_it()
+    {
+        var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;
+        var exe = Path.Combine(_root, "InstallerClean.exe");
+        File.WriteAllBytes(exe, Program(1));
+        var gate = new UpdateLeftoverGate();
+        var updater = new AppUpdater(AppCopyKind.Setup, exe,
+            new UpdateDownloadService(new OneAnswer(Release(3)), null), stagingRoot,
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry, gate);
+
+        var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
+        Assert.False(gate.TryRunPass(() => { }));
+
+        prepared.Undo();
+
+        Assert.False(File.Exists(prepared.FileToStart));
+        Assert.True(gate.TryRunPass(() => { }));
+    }
+
+    [Fact]
     public async Task The_setup_route_starts_the_downloaded_setup_with_the_apps_switch()
     {
         var stagingRoot = Directory.CreateDirectory(Path.Combine(_root, "programdata")).FullName;

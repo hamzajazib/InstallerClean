@@ -882,10 +882,10 @@ public partial class App : Application
     /// this exe, and removes the folders earlier updates downloaded into. It tries for ten
     /// seconds, because what put each there may still be closing as this copy starts: the
     /// copy that renamed itself, or the setup, which opens the app before it exits.
-    /// Whatever will not go by then is tried again
-    /// at the next start, and so is whatever is left once an update of this copy's own is
-    /// about to write its first file, its files carrying the same names
-    /// (<see cref="UpdateLeftoverGate"/>). First, in the setup's folder, it puts back the
+    /// No pass runs while an update of this copy's own holds
+    /// the gate, its files carrying the same names (<see cref="UpdateLeftoverGate"/>), and
+    /// the ten seconds go on counting. Whatever will not go by then is tried again at the
+    /// next start. First, in the setup's folder, it puts back the
     /// command line an update renamed aside where nothing took its place
     /// (<see cref="SelfReplacement.TryPutBackMissing"/>). Never throws.
     /// </summary>
@@ -908,7 +908,7 @@ public partial class App : Application
                     foldersGone = foldersGone || UpdateStagingFolder.RemoveLeftovers(UpdateStagingFolder.DefaultRoot);
                     oldCopyGone = oldCopyGone || SelfReplacement.TryRemoveOldCopy(exePath!);
                 });
-                if (!ran || (foldersGone && oldCopyGone)) return;
+                if (ran && foldersGone && oldCopyGone) return;
                 await Task.Delay(500);
             }
         }
