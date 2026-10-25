@@ -1041,6 +1041,28 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
+    public void A_setup_whose_newer_version_cannot_be_read_afterwards_is_left_in_place_with_nothing_run()
+    {
+        SetupInstalls();
+        _host.OnSetup = () =>
+        {
+            File.WriteAllText(_exe, "new");
+            _host.OnFileVersion = () => throw new IOException("the version could not be read");
+            return 0;
+        };
+
+        var result = Run(Setup(), canAsk: false);
+
+        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.Null(_host.NewerVersionRun);
+        Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
+        var entry = TestCrashLog.OnlyEntry();
+        Assert.Contains("could not be read after the setup", entry);
+        Assert.Contains("the version could not be read", entry);
+    }
+
+    [Fact]
     public void A_setup_that_fails_with_this_exe_unable_to_go_back_ends_the_run_with_nothing_run()
     {
         _host.OnSetup = () =>
@@ -1557,13 +1579,19 @@ public sealed class CommandLineUpdateTests : IDisposable
             OnReleaseOwnFile?.Invoke();
         }
 
-        public Version? FileVersion(string path) =>
-            !File.Exists(path) ? null : File.ReadAllText(path) switch
+        /// <summary>Runs before each read of a file's version, and may throw in its place.</summary>
+        public Action? OnFileVersion { get; set; }
+
+        public Version? FileVersion(string path)
+        {
+            OnFileVersion?.Invoke();
+            return !File.Exists(path) ? null : File.ReadAllText(path) switch
             {
                 "old" => new Version(3, 4, 0, 0),
                 "new" => new Version(3, 5, 0, 0),
                 _ => null,
             };
+        }
 
         public void PrepareToMoveAside()
         {

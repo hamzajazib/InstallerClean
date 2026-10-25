@@ -580,12 +580,14 @@ internal sealed class CommandLineUpdate
             }
             catch (Exception again) when (!backAtPath)
             {
-                // Ending the run failed as well, before how it ended was settled, since no
-                // closing line throws (SayClosing), so nothing more is said, and the run ends
-                // with nothing run, answered by what the file at the path carries. What ended
-                // the run is ex, and its entry names again beside it.
+                // Ending the run failed as well, before how it ended was settled, so nothing
+                // more is said, and the run ends with nothing run, answered by what the file
+                // at the path carries. What ended the run is ex, and its entry names again
+                // beside it. The refill, the look at the file and SayClosing each catch their
+                // own failures, so nothing EndNotStarted calls throws as the code stands, and
+                // this handles a failure no current path makes.
                 RefillIfEmpty(exePath);
-                if (!Carries(exePath, latest)) return RecordStopped(ex, token.IsCancellationRequested, again);
+                if (Carries(exePath, latest, out _) is not true) return RecordStopped(ex, token.IsCancellationRequested, again);
                 Helpers.CrashLog.TryWrite(new AggregateException(ex, again));
                 return token.IsCancellationRequested
                     ? new CommandLineUpdateResult.UpdatedThenCancelled(current, latest)
@@ -711,8 +713,8 @@ internal sealed class CommandLineUpdate
     /// is a cause and Ctrl+C came as well, the entry says both and no order between them,
     /// since the token does not record when it was cancelled. The answer
     /// names <paramref name="cause"/>'s type, or <see cref="UpdateFailedException"/> where
-    /// there is none. <paramref name="thenFailed"/>, a failure that came after
-    /// <paramref name="cause"/> as the run ended, goes in the entry beside it.
+    /// there is none. <paramref name="thenFailed"/>, a failure that came as the run ended,
+    /// goes in the entry beside <paramref name="cause"/>, or in its place where there is none.
     /// </summary>
     private CommandLineUpdateResult.Stopped RecordStopped(
         Exception? cause, bool cancelled, Exception? thenFailed = null)
@@ -723,7 +725,7 @@ internal sealed class CommandLineUpdate
             + (_renamedBack
                 ? " The running copy was put back at the command line's path."
                 : " The running copy was left renamed aside.");
-        var inner = cause is not null && thenFailed is not null ? new AggregateException(cause, thenFailed) : cause;
+        var inner = cause is not null && thenFailed is not null ? new AggregateException(cause, thenFailed) : cause ?? thenFailed;
         var crash = Helpers.CrashLog.TryWrite(new UpdateFailedException(UpdateFailureStage.Install, how, inner));
         return new CommandLineUpdateResult.Stopped(
             cause?.GetType().Name ?? nameof(UpdateFailedException), crash.Written ? crash.Path : null);
@@ -733,8 +735,9 @@ internal sealed class CommandLineUpdate
     private void SayInstalled(string latest)
     {
         if (_saidInstalled) return;
+        var line = string.Format(Strings.Cli_UpdateInstalled, latest);
         _saidInstalled = true;
-        _host.WriteLine(string.Format(Strings.Cli_UpdateInstalled, latest));
+        _host.WriteLine(line);
     }
 
     /// <summary>
@@ -775,7 +778,13 @@ internal sealed class CommandLineUpdate
         if (exitCode != 0)
             failed = new UpdateFailedException(UpdateFailureStage.Install,
                 exitCode is null ? "The setup could not be started." : $"The setup ended with exit code {exitCode}.");
-        else if (!Carries(exePath, latest))
+        else if (Carries(exePath, latest, out var unread) is not { } carries)
+            // What the setup left at the path cannot be read, so nothing is started and
+            // nothing it may have installed is renamed away.
+            return Stop(new UpdateFailedException(UpdateFailureStage.Install,
+                "The version of the file at the command line's path could not be read after the setup.", unread),
+                exePath, current, latest, token.IsCancellationRequested);
+        else if (!carries)
             failed = new UpdateFailedException(UpdateFailureStage.Install,
                 "The setup finished without putting the newer command line in place.");
         if (failed is null) return null;
@@ -794,15 +803,16 @@ internal sealed class CommandLineUpdate
     /// <paramref name="cancelled"/>, and otherwise
     /// <see cref="CommandLineUpdateResult.NotStarted"/> with what failed written to
     /// crash.log. Where it does not, ends through <see cref="RecordStopped"/> and says the
-    /// update could not be installed. What is written to crash.log here is written before
-    /// the closing line, as the run's one entry, and the closing line changes nothing about
-    /// how the run ended (<see cref="SayClosing"/>).
+    /// update could not be installed, with a failure to read the file at the path in the
+    /// entry beside <paramref name="cause"/>. What is written to crash.log here is the entry
+    /// for how the run ended, written before the closing line, and the closing line
+    /// changes nothing about how the run ended (<see cref="SayClosing"/>).
     /// </summary>
     private CommandLineUpdateResult Stop(
         Exception? cause, string exePath, string current, string latest, bool cancelled)
     {
         RefillIfEmpty(exePath);
-        if (Carries(exePath, latest))
+        if (Carries(exePath, latest, out var unread) is true)
         {
             if (cancelled)
             {
@@ -813,7 +823,7 @@ internal sealed class CommandLineUpdate
             SayClosing(() => _host.WriteLine(string.Format(Strings.Cli_UpdateNotStarted, latest)));
             return new CommandLineUpdateResult.NotStarted(current, latest);
         }
-        var stopped = RecordStopped(cause, cancelled);
+        var stopped = RecordStopped(cause, cancelled, unread);
         SayClosing(() => _host.WriteLine(Strings.UpdateNotice_InstallFailed));
         return stopped;
     }
@@ -821,11 +831,10 @@ internal sealed class CommandLineUpdate
     /// <summary>
     /// Writes a line that closes the update once how it ended is settled: what
     /// <see cref="Stop"/> and <see cref="CarryOn"/> say, and the line saying the newer
-    /// version is installed where Ctrl+C ends the run with it in place. A line the console
-    /// refuses changes nothing about how the run ended, since the update's own crash.log
-    /// entry, where it has one, is written before it. Nothing it meets leaves it, so the
-    /// run answers the end it had settled. The host's writes never throw
-    /// (<see cref="IConsolePrompt"/>), and an <see cref="IOException"/> from a host that
+    /// version is installed where Ctrl+C ends the run with it in place. A line that fails
+    /// changes nothing about how the run ended, since the update's own crash.log entry,
+    /// where it has one, is written before it. Nothing it meets leaves it. The host's
+    /// writes never throw (<see cref="IConsolePrompt"/>), and an <see cref="IOException"/> from a host that
     /// does all the same is a console refusing the line and is passed over. Any other
     /// failure is written to crash.log: a fault in a host, or a line that cannot be built
     /// from a translation naming a placeholder its English does not, which
@@ -889,20 +898,21 @@ internal sealed class CommandLineUpdate
     /// before it is put in place (<see cref="AppUpdater.PrepareAsync"/>). This reads the file
     /// at this exe's path after the setup has run, so the setup's copy starts nothing unless
     /// that file is the newer version, and wherever a failed part or Ctrl+C leaves the run
-    /// saying whether the newer version is in place. A read that fails is written to
-    /// crash.log and answers false, so the run starts nothing and says the update could
-    /// not be installed. Never throws.
+    /// saying whether the newer version is in place. Answers null where the read fails,
+    /// with the failure in <paramref name="unread"/> for the run's entry, so the run starts
+    /// nothing and leaves the file where it is. Never throws.
     /// </summary>
-    private bool Carries(string path, string version)
+    private bool? Carries(string path, string version, out Exception? unread)
     {
+        unread = null;
         try
         {
             return _host.FileVersion(path) is { } carried && Helpers.FileVersionResource.IsRelease(carried, version);
         }
         catch (Exception ex)
         {
-            Helpers.CrashLog.TryWrite(ex);
-            return false;
+            unread = ex;
+            return null;
         }
     }
 }
