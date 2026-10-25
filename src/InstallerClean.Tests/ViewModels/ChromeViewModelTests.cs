@@ -723,7 +723,7 @@ public class ChromeViewModelTests
     }
 
     [Fact]
-    public async Task A_read_given_its_bound_that_runs_past_it_offers_Update_now()
+    public async Task A_read_is_given_its_bound_and_one_that_fails_offers_Update_now()
     {
         var vm = CreateRequirementsViewModel(requirementsBound: TimeSpan.FromMilliseconds(50));
         TimeSpan? given = null;

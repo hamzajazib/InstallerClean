@@ -255,8 +255,13 @@ public sealed class AppUpdater : IAppUpdater
     /// </summary>
     private async Task<byte[]?> ReadWithinAsync(string version, TimeSpan? within, CancellationToken cancellationToken)
     {
+        // Infinite, or longer than a timer can be set for, is no limit.
+        if (within is not { } limit || limit == Timeout.InfiniteTimeSpan || limit.TotalMilliseconds > int.MaxValue - 1)
+            return await _downloader.ReadAsync(UpdateManifest.Address(version), UpdateManifest.MaxBytes, cancellationToken)
+                .ConfigureAwait(false);
+
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        if (within is { } limit) deadline.CancelAfter(limit > TimeSpan.Zero ? limit : TimeSpan.Zero);
+        deadline.CancelAfter(limit > TimeSpan.Zero ? limit : TimeSpan.Zero);
         try
         {
             return await _downloader.ReadAsync(UpdateManifest.Address(version), UpdateManifest.MaxBytes, deadline.Token)

@@ -64,13 +64,13 @@ public sealed class UpdateRequirementsCheckTests
         var registry = Substitute.For<IRegistryReader>();
         registry.LocalMachineDwordValue(Arg.Any<string>(), Arg.Any<string>()).Returns(_ =>
         {
-            Thread.Sleep(TimeSpan.FromMilliseconds(300));
+            Thread.Sleep(TimeSpan.FromSeconds(3));
             return new RegistryDwordRead(RegistryDwordState.Absent);
         });
         var updater = Updater(new Answers(HttpStatusCode.OK, NeedsNetFramework48), registry);
 
         Assert.Equal(UpdateRefusal.NeedsNetFramework48,
-            await updater.CheckRequirementsAsync("9.9.9", TimeSpan.FromMilliseconds(50), CancellationToken.None));
+            await updater.CheckRequirementsAsync("9.9.9", TimeSpan.FromSeconds(2), CancellationToken.None));
     }
 
     [Fact]

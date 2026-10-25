@@ -277,7 +277,7 @@ internal sealed class CommandLineUpdate
             return CommandLineUpdateResult.NothingTried;
         }
 
-        // Ctrl+C comes before a refusal that came back with it.
+        // Ctrl+C answers null here, so the token says whether it came.
         var refusal = Requirements(canAsk, latest, token);
         if (token.IsCancellationRequested) return new CommandLineUpdateResult.Cancelled();
         if (refusal is not null) return Refused(refusal.Value, latest);
@@ -300,7 +300,9 @@ internal sealed class CommandLineUpdate
         {
             return Update(canAsk, command, arguments, exePath, current, latest, token);
         }
-        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        // A refusal that comes back with Ctrl+C pressed ends the run as cancelled too.
+        catch (Exception ex) when (ex is OperationCanceledException or UpdateRefusedException
+            && token.IsCancellationRequested)
         {
             _host.HoldOwnFile();
             return new CommandLineUpdateResult.Cancelled();

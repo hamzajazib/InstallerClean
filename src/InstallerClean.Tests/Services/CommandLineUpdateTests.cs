@@ -38,11 +38,14 @@ public sealed class CommandLineUpdateTests : IDisposable
     private static readonly Func<CancellationToken, Task<UpdateCheckResult>> NewerOut =
         Answers(new UpdateAvailable(Current, Latest));
 
+    /// <summary>The watched check's bound every run here is given.</summary>
+    private static readonly TimeSpan WatchedBound = TimeSpan.FromMilliseconds(200);
+
     private CommandLineUpdateResult Run(
         FakeUpdater updater, bool canAsk, string command = "/s", string[]? arguments = null,
         Func<CancellationToken, Task<UpdateCheckResult>>? check = null, CancellationToken token = default,
         TimeSpan? controlCBound = null) =>
-        new CommandLineUpdate(check ?? NewerOut, updater, _host, TimeSpan.FromMilliseconds(200),
+        new CommandLineUpdate(check ?? NewerOut, updater, _host, WatchedBound,
                 controlCBound ?? TimeSpan.FromMilliseconds(20))
             .Run(canAsk, command, arguments ?? [command], _exe, token);
 
@@ -378,8 +381,23 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         Run(updater, canAsk);
 
-        TimeSpan? watched = TimeSpan.FromMilliseconds(200);
-        Assert.Equal(canAsk ? [watched, null] : new TimeSpan?[] { null, null }, updater.RequirementLimits);
+        Assert.Equal(canAsk ? [WatchedBound, null] : new TimeSpan?[] { null, null }, updater.RequirementLimits);
+    }
+
+    [Fact]
+    public void A_refusal_that_comes_back_with_Ctrl_C_pressed_ends_the_run_as_cancelled()
+    {
+        using var cts = new CancellationTokenSource();
+        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, _exe, onPrepare: () =>
+        {
+            cts.Cancel();
+            throw new UpdateRefusedException(UpdateRefusal.NeedsNetFramework48, Latest);
+        });
+
+        var result = Run(updater, canAsk: false, token: cts.Token);
+
+        Assert.IsType<CommandLineUpdateResult.Cancelled>(result);
+        Assert.DoesNotContain(Strings.Cli_UpdateNeedsNetFramework48, _host.Output);
     }
 
     [Fact]

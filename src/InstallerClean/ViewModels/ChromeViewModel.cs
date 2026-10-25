@@ -698,9 +698,11 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
             if (!handedOver)
                 UpdateFailureText = Strings.UpdateNotice_InstallFailed;
         }
-        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        catch (Exception ex) when (ex is OperationCanceledException or UpdateRefusedException
+            && cts.IsCancellationRequested)
         {
-            // Cancel: the card goes and the notice stays as it was.
+            // Cancel, a refusal that came with it included: the card goes and the notice
+            // stays as it was.
         }
         catch (UpdateRefusedException ex)
         {
