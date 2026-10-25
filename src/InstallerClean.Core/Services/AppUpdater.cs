@@ -250,9 +250,10 @@ public sealed class AppUpdater : IAppUpdater
             throw new UpdateRefusedException(refusal, version);
 
         // Before the first file this update writes, so no pass of the start-up clean-up
-        // deletes one (UpdateLeftoverGate). An update refused before this point writes
-        // nothing, and the clean-up carries on.
-        _leftovers.MarkUpdateStarted();
+        // deletes one (UpdateLeftoverGate). Everything above only reads, so an update that
+        // ends before this point, refused, failed or cancelled, leaves the clean-up running.
+        // A write added above this line has to move the mark above it too.
+        _leftovers.MarkUpdateWriting();
         UpdateStagingFolder folder;
         try
         {

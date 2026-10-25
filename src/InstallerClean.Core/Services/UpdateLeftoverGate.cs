@@ -12,39 +12,34 @@ namespace InstallerClean.Services;
 public sealed class UpdateLeftoverGate
 {
     private readonly object _gate = new();
-    private bool _updateStarted;
+    private bool _updateWriting;
 
     /// <summary>The gate this process's clean-up and its updates share.</summary>
     public static UpdateLeftoverGate ForThisProcess { get; } = new();
 
-    /// <summary>Whether an update has begun writing in this process.</summary>
-    internal bool UpdateStarted
-    {
-        get { lock (_gate) return _updateStarted; }
-    }
-
     /// <summary>
     /// Runs <paramref name="pass"/>, one pass of the clean-up, and answers true, where no
-    /// update has begun; otherwise runs nothing and answers false, and the caller stops.
-    /// An update cannot begin while a pass runs, so keep the pass short and synchronous:
-    /// the update waits on the thread it starts from, the window's own among them.
+    /// update in this process is about to write or writing; otherwise runs nothing and
+    /// answers false, and the caller stops. <see cref="MarkUpdateWriting"/> waits for a
+    /// pass already running, on whichever thread the update has reached, so keep the pass
+    /// short and synchronous.
     /// </summary>
     public bool TryRunPass(Action pass)
     {
         lock (_gate)
         {
-            if (_updateStarted) return false;
+            if (_updateWriting) return false;
             pass();
             return true;
         }
     }
 
     /// <summary>
-    /// Marks that an update has begun, once any pass already running has ended. Every
-    /// pass after this one does nothing.
+    /// Marks that an update is about to write its first file, once any pass already
+    /// running has ended. No pass runs after this in this process.
     /// </summary>
-    internal void MarkUpdateStarted()
+    internal void MarkUpdateWriting()
     {
-        lock (_gate) _updateStarted = true;
+        lock (_gate) _updateWriting = true;
     }
 }

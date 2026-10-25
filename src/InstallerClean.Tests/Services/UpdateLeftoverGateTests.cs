@@ -4,8 +4,8 @@ namespace InstallerClean.Tests.Services;
 
 /// <summary>
 /// The gate between the start-up clean-up and an update this process begins
-/// (<see cref="UpdateLeftoverGate"/>): a pass runs until an update has begun, and none
-/// after.
+/// (<see cref="UpdateLeftoverGate"/>): a pass runs until an update is about to write its
+/// first file, and none after.
 /// </summary>
 public sealed class UpdateLeftoverGateTests
 {
@@ -27,7 +27,7 @@ public sealed class UpdateLeftoverGateTests
         var gate = new UpdateLeftoverGate();
         var passes = 0;
 
-        gate.MarkUpdateStarted();
+        gate.MarkUpdateWriting();
 
         Assert.False(gate.TryRunPass(() => passes++));
         Assert.Equal(0, passes);
@@ -46,13 +46,13 @@ public sealed class UpdateLeftoverGateTests
         }));
         inPass.Wait();
 
-        var mark = Task.Run(gate.MarkUpdateStarted);
+        var mark = Task.Run(gate.MarkUpdateWriting);
 
         Assert.False(mark.Wait(TimeSpan.FromMilliseconds(200)));
         release.Set();
         Assert.True(await pass);
         await mark;
-        Assert.True(gate.UpdateStarted);
+        Assert.False(gate.TryRunPass(() => { }));
     }
 
     [Fact]
@@ -65,9 +65,10 @@ public sealed class UpdateLeftoverGateTests
         {
             var updater = Updater(gate, root, AllowsEveryDownload);
 
-            await Assert.ThrowsAnyAsync<Exception>(() => updater.PrepareAsync("9.9.9", null, CancellationToken.None));
+            var failed = await Assert.ThrowsAsync<UpdateFailedException>(
+                () => updater.PrepareAsync("9.9.9", null, CancellationToken.None));
 
-            Assert.True(gate.UpdateStarted);
+            Assert.Equal(UpdateFailureStage.Install, failed.Stage);
             Assert.False(gate.TryRunPass(() => { }));
         }
         finally
@@ -84,7 +85,20 @@ public sealed class UpdateLeftoverGateTests
 
         await Assert.ThrowsAsync<UpdateRefusedException>(() => updater.PrepareAsync("9.9.9", null, CancellationToken.None));
 
-        Assert.False(gate.UpdateStarted);
+        Assert.True(gate.TryRunPass(() => { }));
+    }
+
+    [Fact]
+    public async Task An_update_from_a_copy_with_nothing_to_download_leaves_the_clean_up_running()
+    {
+        var gate = new UpdateLeftoverGate();
+        var updater = new AppUpdater(AppCopyKind.Undetermined, Path.Combine(Path.GetTempPath(), "InstallerClean.exe"),
+            new UpdateDownloadService(new Answers(AllowsEveryDownload), null), Path.GetTempPath(),
+            AppUpdater.WindowSetupArguments, UpdateStagingFolder.AdministratorsOnly,
+            NSubstitute.Substitute.For<IRegistryReader>(), gate);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => updater.PrepareAsync("9.9.9", null, CancellationToken.None));
+
         Assert.True(gate.TryRunPass(() => { }));
     }
 
