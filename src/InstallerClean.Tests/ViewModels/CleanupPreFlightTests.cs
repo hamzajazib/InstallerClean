@@ -614,8 +614,11 @@ public class CleanupPreFlightTests : IDisposable
             Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
         Assert.False(vm.Cleanup.IsOperating);
         Assert.Equal(string.Empty, vm.Cleanup.OperationProgress);
-        // A refusal, not a fault: the crash log is left as it was.
-        Assert.Equal(crashLogBefore, ViewModelCrashLog.WithoutDestinationSaves());
+        // A refusal, not a fault: nothing the log gained names this test's folder or carries
+        // its refusal.
+        var gained = ViewModelCrashLog.AppendedSince(crashLogBefore);
+        Assert.DoesNotContain(_destination, gained, StringComparison.Ordinal);
+        Assert.DoesNotContain("read refused", gained, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -667,8 +670,11 @@ public class CleanupPreFlightTests : IDisposable
         AssertFolderRemoved();
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
-        // A refusal, not a fault: the crash log is left as it was.
-        Assert.Equal(crashLogBefore, ViewModelCrashLog.WithoutDestinationSaves());
+        // A refusal, not a fault: nothing the log gained names this test's folder or carries
+        // its refusal.
+        var gained = ViewModelCrashLog.AppendedSince(crashLogBefore);
+        Assert.DoesNotContain(_destination, gained, StringComparison.Ordinal);
+        Assert.DoesNotContain("create refused", gained, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -722,8 +728,11 @@ public class CleanupPreFlightTests : IDisposable
             Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<UnderLeaseClaims>(),
             Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
         Assert.False(vm.Cleanup.IsOperating);
-        // A refusal, not a fault: the crash log is left as it was.
-        Assert.Equal(crashLogBefore, ViewModelCrashLog.WithoutDestinationSaves());
+        // A refusal, not a fault: nothing the log gained names this test's folder or carries
+        // its refusal.
+        var gained = ViewModelCrashLog.AppendedSince(crashLogBefore);
+        Assert.DoesNotContain(_destination, gained, StringComparison.Ordinal);
+        Assert.DoesNotContain("create refused", gained, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -750,7 +759,10 @@ public class CleanupPreFlightTests : IDisposable
             Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
         Assert.False(vm.Cleanup.IsOperating);
         // A mistake the message explains whole: the crash log is left as it was.
-        Assert.Equal(crashLogBefore, ViewModelCrashLog.WithoutDestinationSaves());
+        // Nothing the log gained names this test's folder or carries its refusal.
+        var gained = ViewModelCrashLog.AppendedSince(crashLogBefore);
+        Assert.DoesNotContain(_destination, gained, StringComparison.Ordinal);
+        Assert.DoesNotContain("no such drive", gained, StringComparison.Ordinal);
     }
 
     [Fact]

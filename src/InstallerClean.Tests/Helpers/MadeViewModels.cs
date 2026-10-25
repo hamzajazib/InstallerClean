@@ -54,8 +54,8 @@ internal static class ViewModelCrashLog
 
     /// <summary>
     /// What <see cref="WithoutDestinationSaves"/> holds now beyond <paramref name="before"/>,
-    /// read earlier from it: the text added to the end where the log only grew, or the whole
-    /// log where a write moved a full log aside in between.
+    /// read earlier from it: the text after it where the log still starts with it, and the
+    /// whole log where it does not, which a second move of a full log aside causes.
     /// </summary>
     public static string AppendedSince(string before)
     {
