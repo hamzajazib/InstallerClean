@@ -213,9 +213,10 @@ public sealed class AppUpdater : IAppUpdater
         if (UpdateManifest.DownloadKey(Kind) is null)
             throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
 
-        // A cancel is answered as a cancel wherever the file came from, a kept file and a
-        // Debug build's local file included, and before the body or the answer is judged,
-        // so a cancelled check never reports a refusal or a read that failed.
+        // A cancelled check answers the cancel, never a refusal or a read that failed,
+        // wherever the file came from, a kept file and a Debug build's local file included.
+        // A file read in full is kept first, so a cancel as the read ends costs no second
+        // read.
         byte[]? manifest;
         if (_manifest is { } kept && kept.Version == version)
         {
@@ -223,24 +224,39 @@ public sealed class AppUpdater : IAppUpdater
         }
         else
         {
+            try
+            {
 #if DEBUG
-            if (LocalManifest() is { } local)
-                manifest = local.Absent ? null : ReadLocalManifest(local.Path);
-            else
+                if (LocalManifest() is { } local)
+                    manifest = local.Absent ? null : ReadLocalManifest(local.Path);
+                else
 #endif
-            manifest = await _downloader.ReadAsync(UpdateManifest.Address(version), UpdateManifest.MaxBytes, cancellationToken)
-                .ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
+                manifest = await _downloader.ReadAsync(UpdateManifest.Address(version), UpdateManifest.MaxBytes, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (UpdateFailedException ex) when (cancellationToken.IsCancellationRequested)
+            {
+                throw new OperationCanceledException("The read of the release's update.json was cancelled.", ex, cancellationToken);
+            }
             if (manifest is not null)
             {
-                if (!UpdateManifest.IsJson(manifest))
+                if (UpdateManifest.IsJson(manifest))
+                {
+                    _manifest = (version, manifest);
+                }
+                else
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
                     throw new UpdateFailedException(UpdateFailureStage.Download, "The release's update.json is not JSON.");
-                _manifest = (version, manifest);
+                }
             }
         }
         cancellationToken.ThrowIfCancellationRequested();
 
-        return UpdateManifest.Judge(manifest, version, Kind, () => UpdateManifest.HasNetFramework48(_registry));
+        var answer = UpdateManifest.Judge(manifest, version, Kind, () => UpdateManifest.HasNetFramework48(_registry));
+        // The registry read inside the judgement takes time a cancel can come in.
+        cancellationToken.ThrowIfCancellationRequested();
+        return answer;
     }
 
     public async Task<PreparedUpdate> PrepareAsync(
