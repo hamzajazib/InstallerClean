@@ -861,6 +861,24 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
+    public void A_console_that_refuses_the_not_started_line_keeps_the_failed_start_as_the_runs_entry()
+    {
+        SetupInstalls();
+        _host.NewerVersionExitCode = null;
+        _host.OnWriteLine = line =>
+        {
+            if (line == string.Format(Strings.Cli_UpdateNotStarted, Latest)) throw new IOException("the console refused it");
+        };
+
+        var result = Run(Setup(), canAsk: false);
+
+        Assert.Equal(new CommandLineUpdateResult.NotStarted(Current, Latest), result);
+        var last = TestCrashLog.Text().Split("---- ")[^1];
+        Assert.Contains("The newer version could not be started.", last);
+        Assert.DoesNotContain("the console refused it", last);
+    }
+
+    [Fact]
     public void A_setup_that_fails_with_this_exe_unable_to_go_back_ends_the_run_with_nothing_run()
     {
         _host.OnSetup = () =>
