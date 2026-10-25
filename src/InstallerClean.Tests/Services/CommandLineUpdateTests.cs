@@ -461,6 +461,24 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.DoesNotContain("the console refused it", TestCrashLog.OnlyEntry());
     }
 
+    [Fact]
+    public void A_closing_line_that_fails_other_than_as_a_console_refusal_is_not_passed_over()
+    {
+        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, _exe,
+            onPrepare: () => throw new UpdateFailedException(UpdateFailureStage.Download, "failed"));
+        _host.OnWriteLine = line =>
+        {
+            if (line == Strings.UpdateNotice_DownloadFailed) throw new InvalidOperationException("the host's own fault");
+        };
+
+        Assert.Throws<InvalidOperationException>(() => Run(updater, canAsk: false));
+
+        // The download's failure was written before the line that failed, and is the one entry.
+        var entry = TestCrashLog.OnlyEntry();
+        Assert.Contains(typeof(UpdateFailedException).FullName!, entry);
+        Assert.DoesNotContain("the host's own fault", entry);
+    }
+
     /// <summary>The line giving the newer version's release page.</summary>
     private static string ReleaseLink => string.Format(Strings.Cli_UpdateDownloadLink,
         Strings.UpdateNotice_Download, "https://github.com/no-faff/InstallerClean/releases/tag/v" + Latest);
