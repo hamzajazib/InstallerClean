@@ -812,10 +812,10 @@ internal sealed class CommandLineUpdate
     /// <see cref="Stop"/> and <see cref="CarryOn"/> say, and the line saying the newer
     /// version is installed where Ctrl+C ends the run with it in place. A console that
     /// refuses the line changes nothing about how the run ended, whose crash.log entry, if
-    /// it has one, is already written, so the refusal goes no further. The line is made
-    /// inside the guard as well as written, and only the console's own refusal, an
-    /// <see cref="IOException"/>, is let go: anything else is a fault in the code and is
-    /// thrown.
+    /// it has one, is already written, so the refusal goes no further. The host's console
+    /// never throws (<see cref="IConsolePrompt"/>); this catch holds the same for any host
+    /// that does, and takes only an <see cref="IOException"/>, so anything else, a resource
+    /// whose placeholders do not match its arguments among them, is thrown.
     /// </summary>
     private static void SayClosing(Action say)
     {
