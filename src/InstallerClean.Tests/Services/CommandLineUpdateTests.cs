@@ -371,6 +371,40 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Empty(_host.PreparedWhileExeHeld);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_failed_download_whose_lines_the_console_refuses_carries_on_with_one_crash_log_entry(bool refusesRunningInstead)
+    {
+        var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, _exe,
+            onPrepare: () => throw new UpdateFailedException(UpdateFailureStage.Download, "failed"));
+        var refused = refusesRunningInstead
+            ? string.Format(Strings.Cli_UpdateRunningInstead, "/s", Current)
+            : Strings.UpdateNotice_DownloadFailed;
+        _host.OnWriteLine = line =>
+        {
+            if (line == refused) throw new IOException("the console refused it");
+        };
+        var folder = Path.Combine(Path.GetTempPath(), "InstallerClean.Tests", Guid.NewGuid().ToString("N"));
+        var suite = InstallerClean.Helpers.CrashLog.FolderForTests;
+        InstallerClean.Helpers.CrashLog.FolderForTests = folder;
+        try
+        {
+            var result = Run(updater, canAsk: false);
+
+            Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateFailureStage.Download, Current, Latest), result);
+            // Each entry opens with a line starting "---- ".
+            var entries = TestCrashLog.Text().Split('\n').Count(l => l.StartsWith("---- ", StringComparison.Ordinal));
+            Assert.Equal(1, entries);
+            Assert.DoesNotContain("the console refused it", TestCrashLog.Text());
+        }
+        finally
+        {
+            InstallerClean.Helpers.CrashLog.FolderForTests = suite;
+            TestCrashLog.TryDelete(folder);
+        }
+    }
+
     /// <summary>The line giving the newer version's release page.</summary>
     private static string ReleaseLink => string.Format(Strings.Cli_UpdateDownloadLink,
         Strings.UpdateNotice_Download, "https://github.com/no-faff/InstallerClean/releases/tag/v" + Latest);
@@ -582,12 +616,12 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal(nameof(UpdateFailedException), stopped.FailureType);
         // The last entry is the one the run ended with, each entry opening with a "---- " line.
         var last = TestCrashLog.Text().Split("---- ")[^1];
-        Assert.Contains("The run ended, and the running copy was put back at the command line's path.", last);
+        Assert.Contains("The run ended. The running copy was put back at the command line's path.", last);
         Assert.Contains("The newer version could not be started.", last);
     }
 
     [Fact]
-    public void Ctrl_C_as_a_setups_newer_version_goes_from_the_path_puts_this_exe_back_and_says_so_in_the_crash_log()
+    public void Ctrl_C_as_a_setups_newer_version_goes_from_the_path_puts_this_exe_back_and_names_both_in_the_crash_log()
     {
         using var cts = new CancellationTokenSource();
         SetupInstalls();
@@ -602,7 +636,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
         // The last entry is the one the run ended with, each entry opening with a "---- " line.
         var last = TestCrashLog.Text().Split("---- ")[^1];
-        Assert.Contains("Ctrl+C ended the run, and the running copy was put back at the command line's path.", last);
+        Assert.Contains("A failure ended the run and Ctrl+C came as well. The running copy was put back at the command line's path.", last);
         Assert.Contains("The newer version could not be started.", last);
     }
 
@@ -1090,6 +1124,23 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         Assert.Equal(new CommandLineUpdateResult.UpdatedThenCancelled(Current, Latest), result);
         Assert.Equal(string.Format(Strings.Cli_UpdateInstalled, Latest), Assert.Single(_host.Output));
+    }
+
+    [Fact]
+    public void Ctrl_C_after_the_swap_where_this_exe_cannot_go_back_ends_as_installed_when_the_console_refuses_the_line()
+    {
+        File.WriteAllText(_exe, "new");
+        _host.OnWriteLine = line =>
+        {
+            if (line == string.Format(Strings.Cli_UpdateInstalled, Latest)) throw new IOException("the console refused it");
+        };
+        var update = new CommandLineUpdate(NewerOut, Download(), _host);
+        var prepared = new PreparedUpdate("9.9.9", _exe, string.Empty, () => { }, _exe + SelfReplacement.NewSuffix);
+
+        var result = update.CancelAfterSwap(prepared, _exe, Current, Latest, putBack: () => false);
+
+        Assert.Equal(new CommandLineUpdateResult.UpdatedThenCancelled(Current, Latest), result);
+        Assert.Equal("new", File.ReadAllText(_exe));
     }
 
     [Fact]

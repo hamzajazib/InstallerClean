@@ -380,7 +380,8 @@ internal sealed class CommandLineUpdate
     /// rename it refused, whose cause is written. This exe's file is back at its own path
     /// here, so the run holds it against renaming again. Where Ctrl+C has come by the time
     /// the reason is said, the run does not go on: nothing more is said, and the answer is
-    /// <see cref="CommandLineUpdateResult.FailedThenCancelled"/>.
+    /// <see cref="CommandLineUpdateResult.FailedThenCancelled"/>. A console that refuses
+    /// these lines changes neither answer (<see cref="SayClosing"/>).
     /// </summary>
     private CommandLineUpdateResult CarryOn(
         Exception failure, string command, string current, string latest, CancellationToken token)
@@ -390,18 +391,18 @@ internal sealed class CommandLineUpdate
         if (stage == UpdateFailureStage.InUse)
         {
             if (failure.InnerException is not null) Helpers.CrashLog.TryWrite(failure);
-            _host.WriteLine(Strings.Cli_UpdateInUse);
+            SayClosing(() => _host.WriteLine(Strings.Cli_UpdateInUse));
         }
         else
         {
             Helpers.CrashLog.TryWrite(failure);
-            _host.WriteLine(stage == UpdateFailureStage.Download
+            SayClosing(() => _host.WriteLine(stage == UpdateFailureStage.Download
                 ? Strings.UpdateNotice_DownloadFailed
-                : Strings.UpdateNotice_InstallFailed);
+                : Strings.UpdateNotice_InstallFailed));
         }
         if (token.IsCancellationRequested)
             return new CommandLineUpdateResult.FailedThenCancelled(stage, current, latest);
-        _host.WriteLine(string.Format(Strings.Cli_UpdateRunningInstead, command, current));
+        SayClosing(() => _host.WriteLine(string.Format(Strings.Cli_UpdateRunningInstead, command, current)));
         return new CommandLineUpdateResult.CarriedOn(stage, current, latest);
     }
 
@@ -604,7 +605,7 @@ internal sealed class CommandLineUpdate
             // the newer version is in place and stays. On a swap it has only been renamed in
             // and nothing has said it is installed, so this exe is put back in its place.
             if (!isSetup) return CancelAfterSwap(prepared, exePath, current, latest, putBack);
-            SayInstalled(latest);
+            SayClosing(() => SayInstalled(latest));
             return new CommandLineUpdateResult.UpdatedThenCancelled(current, latest);
         }
 
@@ -697,18 +698,22 @@ internal sealed class CommandLineUpdate
 
     /// <summary>
     /// Writes to crash.log how a run ended with nothing run and this exe renamed aside, and
-    /// answers <see cref="CommandLineUpdateResult.Stopped"/> for it. The entry says whether
-    /// Ctrl+C ended the run and whether this exe was renamed back to its path, with
-    /// <paramref name="cause"/> inside it, null where Ctrl+C is the whole of it. The answer
+    /// answers <see cref="CommandLineUpdateResult.Stopped"/> for it. The entry says
+    /// what ended the run and whether this exe was renamed back to its path, with
+    /// <paramref name="cause"/> inside it, null where Ctrl+C is the whole of it. Where there
+    /// is a cause and Ctrl+C came as well, the entry says both and no order between them,
+    /// since the token does not record when it was cancelled. The answer
     /// names <paramref name="cause"/>'s type, or <see cref="UpdateFailedException"/> where
     /// there is none.
     /// </summary>
     private CommandLineUpdateResult.Stopped RecordStopped(Exception? cause, bool cancelled)
     {
-        var how = (cancelled ? "Ctrl+C ended the run" : "The run ended")
+        var how = (cancelled
+                ? cause is null ? "Ctrl+C ended the run." : "A failure ended the run and Ctrl+C came as well."
+                : "The run ended.")
             + (_renamedBack
-                ? ", and the running copy was put back at the command line's path."
-                : " with the running copy renamed aside.");
+                ? " The running copy was put back at the command line's path."
+                : " The running copy was left renamed aside.");
         var crash = Helpers.CrashLog.TryWrite(new UpdateFailedException(UpdateFailureStage.Install, how, cause));
         return new CommandLineUpdateResult.Stopped(
             cause?.GetType().Name ?? nameof(UpdateFailedException), crash.Written ? crash.Path : null);
@@ -780,7 +785,7 @@ internal sealed class CommandLineUpdate
     /// <see cref="CommandLineUpdateResult.NotStarted"/> with what failed written to
     /// crash.log. Where it does not, ends through <see cref="RecordStopped"/> and says the
     /// update could not be installed. What is written to crash.log here is written before
-    /// the closing line, which never throws (<see cref="SayClosing"/>).
+    /// the closing line, and no closing line throws (<see cref="SayClosing"/>).
     /// </summary>
     private CommandLineUpdateResult Stop(
         Exception? cause, string exePath, string current, string latest, bool cancelled)
@@ -790,30 +795,35 @@ internal sealed class CommandLineUpdate
         {
             if (cancelled)
             {
-                SayInstalled(latest);
+                SayClosing(() => SayInstalled(latest));
                 return new CommandLineUpdateResult.UpdatedThenCancelled(current, latest);
             }
             if (cause is not null) Helpers.CrashLog.TryWrite(cause);
-            SayClosing(string.Format(Strings.Cli_UpdateNotStarted, latest));
+            SayClosing(() => _host.WriteLine(string.Format(Strings.Cli_UpdateNotStarted, latest)));
             return new CommandLineUpdateResult.NotStarted(current, latest);
         }
         var stopped = RecordStopped(cause, cancelled);
-        SayClosing(Strings.UpdateNotice_InstallFailed);
+        SayClosing(() => _host.WriteLine(Strings.UpdateNotice_InstallFailed));
         return stopped;
     }
 
     /// <summary>
-    /// Writes the line a run ending in <see cref="Stop"/> closes with. A console that
-    /// refuses it changes nothing about how the run ended, whose entry is already in
-    /// crash.log, so the refusal goes no further. Never throws.
+    /// Writes a line that closes the update once how it ended is settled: what
+    /// <see cref="Stop"/> and <see cref="CarryOn"/> say, and the line saying the newer
+    /// version is installed where Ctrl+C ends the run with it in place. A console that
+    /// refuses the line changes nothing about how the run ended, whose crash.log entry, if
+    /// it has one, is already written, so the refusal goes no further. The line is made
+    /// inside the guard as well as written, and only the console's own refusal, an
+    /// <see cref="IOException"/>, is let go: anything else is a fault in the code and is
+    /// thrown.
     /// </summary>
-    private void SayClosing(string line)
+    private static void SayClosing(Action say)
     {
         try
         {
-            _host.WriteLine(line);
+            say();
         }
-        catch (Exception)
+        catch (IOException)
         {
         }
     }
