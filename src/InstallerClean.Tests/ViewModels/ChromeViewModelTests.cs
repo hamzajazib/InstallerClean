@@ -803,8 +803,9 @@ public class ChromeViewModelTests
         await vm.RunAutomaticUpdateCheckAsync();
 
         Assert.NotNull(given);
-        // The window's time left: neither the infinite bound nor none.
-        Assert.True(given!.Value > TimeSpan.Zero && given.Value <= TimeSpan.FromSeconds(30));
+        // The window's time left, most of it with an answer at once: neither the infinite
+        // bound nor a sliver.
+        Assert.InRange(given!.Value, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30));
     }
 
     /// <summary>A view model whose automatic check finds the newer version after its window has passed.</summary>

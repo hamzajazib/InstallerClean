@@ -28,8 +28,8 @@ public interface IAppUpdater
     /// <paramref name="within"/>: null, <see cref="Timeout.InfiniteTimeSpan"/> or a time
     /// longer than a timer can be set for is no limit (<see cref="IsNoLimit"/>), and less
     /// than a millisecond fetches nothing and fails as a read that could not be made. A
-    /// file already kept for the version is answered from without
-    /// a read, whatever the limit, and the rest of the check runs to its answer. Throws
+    /// file already kept for the version is answered from without a read, whatever the
+    /// limit, and the rest of the check runs to its answer. Throws
     /// <see cref="UpdateFailedException"/> at the Download stage where the release's file
     /// could not be read, its time running out included,
     /// <see cref="InvalidOperationException"/> where the kind of copy cannot update itself,

@@ -102,7 +102,7 @@ public sealed class UpdateRequirementsCheckTests
     }
 
     [Fact]
-    public async Task A_file_already_kept_answers_with_no_time_given()
+    public async Task A_file_already_kept_answers_with_a_zero_limit()
     {
         var network = new Answers(HttpStatusCode.OK, RefusesEveryDownload);
         var updater = Updater(network);
@@ -117,6 +117,8 @@ public sealed class UpdateRequirementsCheckTests
     [Theory]
     [InlineData(0.5)]
     [InlineData(0)]
+    [InlineData(-0.5)]
+    [InlineData(-1.5)]
     [InlineData(-2)]
     public async Task A_limit_under_a_millisecond_fetches_nothing_and_fails_the_read(double milliseconds)
     {
@@ -131,12 +133,14 @@ public sealed class UpdateRequirementsCheckTests
     }
 
     [Fact]
-    public async Task A_cancel_with_no_time_given_answers_the_cancel()
+    public async Task A_cancel_with_a_zero_limit_answers_the_cancel_and_sends_nothing()
     {
-        var updater = Updater(new Answers(HttpStatusCode.OK, RefusesEveryDownload));
+        var network = new Answers(HttpStatusCode.OK, RefusesEveryDownload);
+        var updater = Updater(network);
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => updater.CheckRequirementsAsync(
             "9.9.9", TimeSpan.Zero, new CancellationToken(canceled: true)));
+        Assert.Equal(0, network.Requests);
     }
 
     [Fact]
