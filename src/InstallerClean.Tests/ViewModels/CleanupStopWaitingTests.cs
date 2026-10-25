@@ -75,29 +75,17 @@ public class CleanupStopWaitingTests : IDisposable
     }
 
     private MainViewModel CreateViewModel() =>
-        Made(new MainViewModel(_scanService, _moveService, _deleteService,
+        _made.Add(new MainViewModel(_scanService, _moveService, _deleteService,
             _settingsService, _rebootService, _msiInfoService,
             _dialogService, _confirmationService, _windowService,
             _fileSystem, _resultLogService, _updateCheckService, _reverifier,
             _earlierRunCheck, _firstRunMark, _windowsRegion,
             destinationGuard: new ByPathDestinationGuard(_fileSystem)));
 
-    /// <summary>
-    /// Every view model this class made, disposed after its test, so a destination save
-    /// still waiting out its delay cannot land in a later test.
-    /// </summary>
-    private readonly List<MainViewModel> _made = new();
+    /// <summary>The view models this class made, flushed after each test.</summary>
+    private readonly MadeViewModels _made = new();
 
-    private MainViewModel Made(MainViewModel vm)
-    {
-        _made.Add(vm);
-        return vm;
-    }
-
-    public void Dispose()
-    {
-        foreach (var vm in _made) vm.Dispose();
-    }
+    public void Dispose() => _made.Dispose();
 
     private static string WaitLine(string root) => DisplayHelpers.WaitingFor(root);
 

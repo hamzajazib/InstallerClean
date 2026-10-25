@@ -80,27 +80,15 @@ public class MainViewModelTests : IDisposable
 
     private MainViewModel CreateViewModel() => CreateViewModel(new AppSettings());
 
-    /// <summary>
-    /// Every view model this class made, disposed after its test, so a destination save
-    /// still waiting out its delay cannot land in a later test.
-    /// </summary>
-    private readonly List<MainViewModel> _made = new();
+    /// <summary>The view models this class made, flushed after each test.</summary>
+    private readonly MadeViewModels _made = new();
+
+    public void Dispose() => _made.Dispose();
 
     public MainViewModelTests()
     {
         // A working settings service: a destination save that does land records nothing.
         _settingsService.Update(Arg.Any<Action<AppSettings>>()).Returns(true);
-    }
-
-    private MainViewModel Made(MainViewModel vm)
-    {
-        _made.Add(vm);
-        return vm;
-    }
-
-    public void Dispose()
-    {
-        foreach (var vm in _made) vm.Dispose();
     }
 
     /// <summary>
@@ -122,7 +110,7 @@ public class MainViewModelTests : IDisposable
         _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns(ci => new ReverifyResult((IReadOnlyList<string>)ci[0]!, Array.Empty<string>()));
 
-        return Made(new MainViewModel(
+        return _made.Add(new MainViewModel(
             _scanService, _moveService, _deleteService,
             _settingsService, _rebootService, _msiInfoService,
             _dialogService, _confirmationService, _windowService,

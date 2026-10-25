@@ -523,6 +523,12 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
+    /// The crash-log message written where the debounced save of the destination is refused.
+    /// </summary>
+    internal const string MoveDestinationSaveRefused =
+        "Settings.Update returned false during MoveDestination debounced save.";
+
+    /// <summary>
     /// Debounced write-back. Each call cancels the previous pending
     /// save so a typist doesn't fire a save per character; the actual
     /// save fires after <see cref="MoveDestinationSaveDelay"/>.
@@ -577,8 +583,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
                 // path-redirection failure (it never throws). Without a
                 // breadcrumb a user report of "my destination reset between
                 // sessions" has no trail back to the failed write.
-                CrashLog.TryWrite(new InvalidOperationException(
-                    "Settings.Update returned false during MoveDestination debounced save."));
+                CrashLog.TryWrite(new InvalidOperationException(MoveDestinationSaveRefused));
             }
         }).ConfigureAwait(true);
 

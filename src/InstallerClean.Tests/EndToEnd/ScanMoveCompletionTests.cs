@@ -42,27 +42,15 @@ public class ScanMoveCompletionTests : IDisposable
 
     private readonly MockFileSystem _fileSystem = new();
 
-    /// <summary>
-    /// Every view model this class made, disposed after its test, so a destination save
-    /// still waiting out its delay cannot land in a later test.
-    /// </summary>
-    private readonly List<MainViewModel> _made = new();
+    /// <summary>The view models this class made, flushed after each test.</summary>
+    private readonly MadeViewModels _made = new();
+
+    public void Dispose() => _made.Dispose();
 
     public ScanMoveCompletionTests()
     {
         // A working settings service: a destination save that does land records nothing.
         _settingsService.Update(Arg.Any<Action<AppSettings>>()).Returns(true);
-    }
-
-    private MainViewModel Made(MainViewModel vm)
-    {
-        _made.Add(vm);
-        return vm;
-    }
-
-    public void Dispose()
-    {
-        foreach (var vm in _made) vm.Dispose();
     }
 
     private MainViewModel CreateMain()
@@ -73,7 +61,7 @@ public class ScanMoveCompletionTests : IDisposable
         _rebootService.Check().Returns(PendingRebootResult.Clean);
         _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns(ci => new ReverifyResult((IReadOnlyList<string>)ci[0]!, Array.Empty<string>()));
-        return Made(new MainViewModel(
+        return _made.Add(new MainViewModel(
             _scanService, _moveService, _deleteService,
             _settingsService, _rebootService, _msiInfoService,
             _dialogService, _confirmationService, _windowService,
@@ -244,7 +232,7 @@ public class ScanMoveCompletionTests : IDisposable
         // probes that folder through it, so two distinct MockFileSystems
         // would split the folder from its probe; sharing the instance
         // keeps the test honest about the production graph.
-        var vm = Made(new MainViewModel(
+        var vm = _made.Add(new MainViewModel(
             scanService, moveService, deleteService,
             settingsService, rebootService, msiInfoService,
             dialogService, confirmationService, windowService,
