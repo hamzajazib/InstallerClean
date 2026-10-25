@@ -481,10 +481,10 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
             if (result is UpdateAvailable available)
             {
                 // The time left in the window, never less than none, bounded by the read's own
-                // bound unless that is infinite.
-                var left = _automaticCheckWindow - sinceStart.Elapsed;
-                if (left < TimeSpan.Zero) left = TimeSpan.Zero;
-                var within = _requirementsBound == Timeout.InfiniteTimeSpan || left < _requirementsBound
+                // bound unless that is no limit.
+                var remaining = _automaticCheckWindow - sinceStart.Elapsed;
+                var left = remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+                var within = AppUpdater.IsNoLimit(_requirementsBound) || left < _requirementsBound
                     ? left
                     : _requirementsBound;
                 var requirements = await RequirementsAsync(available.LatestVersion, within, token);
@@ -600,8 +600,9 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// where the read fails or runs past <paramref name="within"/>. With no time at all the
     /// file is not fetched, and a file already kept for the version still answers
     /// (<see cref="IAppUpdater.CheckRequirementsAsync"/>). Nothing is shown or written for
-    /// a read that fails: Update now reads the file again before it downloads. Throws <see cref="OperationCanceledException"/> only
-    /// where <paramref name="token"/> is cancelled.
+    /// a read that fails: Update now reads the file again before it downloads. Throws
+    /// <see cref="OperationCanceledException"/> only where <paramref name="token"/> is
+    /// cancelled.
     /// </summary>
     private async Task<Requirements> RequirementsAsync(string version, TimeSpan within, CancellationToken token)
     {

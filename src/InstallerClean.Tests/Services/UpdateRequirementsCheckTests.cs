@@ -92,6 +92,32 @@ public sealed class UpdateRequirementsCheckTests
             await updater.CheckRequirementsAsync("9.9.9", within, CancellationToken.None));
     }
 
+    [Fact]
+    public async Task A_long_limit_short_of_the_timers_longest_reads_the_file()
+    {
+        var updater = Updater(new Answers(HttpStatusCode.OK, RefusesEveryDownload, delay: TimeSpan.FromMilliseconds(100)));
+
+        Assert.Equal(UpdateRefusal.CannotInstallFromThisCopy, await updater.CheckRequirementsAsync(
+            "9.9.9", TimeSpan.FromMilliseconds(int.MaxValue + 1L), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task A_limit_of_zero_fetches_nothing_and_a_file_already_kept_still_answers()
+    {
+        var network = new Answers(HttpStatusCode.OK, RefusesEveryDownload);
+        var updater = Updater(network);
+
+        await Assert.ThrowsAsync<UpdateFailedException>(
+            () => updater.CheckRequirementsAsync("9.9.9", TimeSpan.Zero, CancellationToken.None));
+        Assert.Equal(0, network.Requests);
+
+        Assert.Equal(UpdateRefusal.CannotInstallFromThisCopy,
+            await updater.CheckRequirementsAsync("9.9.9", null, CancellationToken.None));
+        Assert.Equal(UpdateRefusal.CannotInstallFromThisCopy,
+            await updater.CheckRequirementsAsync("9.9.9", TimeSpan.Zero, CancellationToken.None));
+        Assert.Equal(1, network.Requests);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(-2)]
