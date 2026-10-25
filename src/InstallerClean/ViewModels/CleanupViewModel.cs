@@ -1931,10 +1931,12 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
     private Task RemoveCreatedFoldersAsync(IReadOnlyList<string> createdFolders) =>
         createdFolders.Count == 0
             ? Task.CompletedTask
-            // Through the guard, which opens each folder's parent as a handle and
-            // removes the folder relative to it where it is empty. Nothing depends
-            // on a folder being gone, so a folder that is not empty any more, is
-            // gone already or is refused ends the removal without a word.
+            // Through the guard, which walks down from the folder that was there
+            // before the create, opening each folder the create made from the one
+            // above without following a link, and removes the folder where it is
+            // empty. Nothing depends on a folder being gone, so a folder that is
+            // not empty any more, is gone already or is refused ends the removal
+            // without a word.
             : Task.Run(() => CreatedFolders.RemoveWhileEmpty(_fs, _destinationGuard, createdFolders));
 
     /// <summary>
