@@ -51,4 +51,15 @@ internal static class ViewModelCrashLog
             .ToList();
         return kept.Count == 0 && parts.Length > 1 ? string.Empty : parts[0] + string.Concat(kept);
     }
+
+    /// <summary>
+    /// The newest entry in <see cref="WithoutDestinationSaves"/>, or empty where there is none.
+    /// A test that has just made the app write an entry reads it here, which holds whether or
+    /// not that write moved a full log aside.
+    /// </summary>
+    public static string NewestEntry()
+    {
+        var parts = EntryStart.Split(WithoutDestinationSaves());
+        return parts.Length > 1 ? parts[^1] : string.Empty;
+    }
 }
