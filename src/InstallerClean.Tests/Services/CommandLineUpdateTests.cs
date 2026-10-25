@@ -564,6 +564,22 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
+    public void A_setup_whose_newer_version_has_gone_from_the_path_before_it_starts_puts_this_exe_back_and_carries_on()
+    {
+        SetupInstalls();
+        _host.NewerVersionExitCode = null;
+        _host.OnNewerVersion = () => File.Delete(_exe);
+        var updater = Setup();
+
+        var result = Run(updater, canAsk: false);
+
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateFailureStage.Install, Current, Latest), result);
+        Assert.True(updater.Undone);
+        Assert.Equal("old", File.ReadAllText(_exe));
+        Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
+    }
+
+    [Fact]
     public void A_throw_after_the_setup_and_before_the_start_ends_the_run_as_installed()
     {
         SetupInstalls();
@@ -1089,21 +1105,6 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         Assert.Equal(new CommandLineUpdateResult.UpdatedThenCancelled(Current, Latest), result);
         Assert.Equal("new", File.ReadAllText(_exe));
-    }
-
-    [Fact]
-    public void Ctrl_C_after_the_swap_with_nothing_at_the_path_puts_this_exe_back_before_the_newer_version()
-    {
-        File.Move(_exe, _exe + SelfReplacement.OldSuffix);
-        File.WriteAllText(_exe + SelfReplacement.NewSuffix, "new");
-        var update = new CommandLineUpdate(NewerOut, Download(), _host);
-        var prepared = new PreparedUpdate("9.9.9", _exe, string.Empty, () => { }, _exe + SelfReplacement.NewSuffix);
-
-        var result = update.CancelAfterSwap(prepared, _exe, Current, Latest, putBack: () => false);
-
-        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
-        Assert.Equal("old", File.ReadAllText(_exe));
-        Assert.Equal("new", File.ReadAllText(_exe + SelfReplacement.NewSuffix));
     }
 
     [Fact]
