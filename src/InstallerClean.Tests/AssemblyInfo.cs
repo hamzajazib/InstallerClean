@@ -114,15 +114,22 @@ internal static class TestCrashLog
     }
 
     /// <summary>
-    /// The one entry in the crash log, from its opening "---- " line on. A log holding none,
-    /// or more than one, fails the test.
+    /// The entries in the crash log in the order they were written, each from its opening
+    /// "---- " line to the line before the next.
     /// </summary>
-    internal static string OnlyEntry()
+    internal static IReadOnlyList<string> Entries()
     {
-        var lines = Text().Split('\n');
-        Assert.Equal(1, lines.Count(l => l.StartsWith("---- ", StringComparison.Ordinal)));
-        return string.Join('\n', lines.SkipWhile(l => !l.StartsWith("---- ", StringComparison.Ordinal)));
+        var entries = new List<string>();
+        foreach (var line in Text().Split('\n'))
+        {
+            if (line.StartsWith("---- ", StringComparison.Ordinal)) entries.Add(line);
+            else if (entries.Count > 0) entries[^1] += "\n" + line;
+        }
+        return entries;
     }
+
+    /// <summary>The one entry in the crash log. A log holding none, or more than one, fails the test.</summary>
+    internal static string OnlyEntry() => Assert.Single(Entries());
 
     /// <summary>
     /// How many entries in the crash log are a start of <paramref name="file"/> that Windows

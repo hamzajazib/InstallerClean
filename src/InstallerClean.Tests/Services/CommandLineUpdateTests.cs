@@ -462,7 +462,7 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
-    public void A_closing_line_that_fails_other_than_as_a_console_refusal_is_not_passed_over()
+    public void A_closing_line_that_fails_other_than_as_a_console_refusal_is_written_after_the_runs_entry()
     {
         var updater = new FakeUpdater(AppCopyKind.CommandLineDownload, _exe,
             onPrepare: () => throw new UpdateFailedException(UpdateFailureStage.Download, "failed"));
@@ -471,12 +471,24 @@ public sealed class CommandLineUpdateTests : IDisposable
             if (line == Strings.UpdateNotice_DownloadFailed) throw new InvalidOperationException("the host's own fault");
         };
 
-        Assert.Throws<InvalidOperationException>(() => Run(updater, canAsk: false));
+        var result = Run(updater, canAsk: false);
 
-        // The download's failure was written before the line that failed, and is the one entry.
-        var entry = TestCrashLog.OnlyEntry();
-        Assert.Contains(typeof(UpdateFailedException).FullName!, entry);
-        Assert.DoesNotContain("the host's own fault", entry);
+        Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateFailureStage.Download, Current, Latest), result);
+        AssertRunEntryThenHostFault(typeof(UpdateFailedException).FullName!);
+    }
+
+    /// <summary>
+    /// The crash log holds the entry the run wrote for how it ended, naming
+    /// <paramref name="runEntry"/>, and after it the host's own fault, which the run's
+    /// entry does not carry.
+    /// </summary>
+    private static void AssertRunEntryThenHostFault(string runEntry)
+    {
+        var entries = TestCrashLog.Entries();
+        Assert.Equal(2, entries.Count);
+        Assert.Contains(runEntry, entries[0]);
+        Assert.DoesNotContain("the host's own fault", entries[0]);
+        Assert.Contains("the host's own fault", entries[1]);
     }
 
     /// <summary>The line giving the newer version's release page.</summary>
@@ -985,7 +997,7 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
-    public void A_not_started_line_that_fails_leaves_the_run_with_its_one_entry_naming_the_failed_start()
+    public void A_not_started_line_that_fails_keeps_the_run_not_started_and_its_entry_naming_the_failed_start()
     {
         SetupInstalls();
         _host.NewerVersionExitCode = null;
@@ -997,16 +1009,15 @@ public sealed class CommandLineUpdateTests : IDisposable
             throw new InvalidOperationException("the host's own fault");
         };
 
-        Assert.Throws<InvalidOperationException>(() => Run(Setup(), canAsk: false));
+        var result = Run(Setup(), canAsk: false);
 
+        Assert.Equal(new CommandLineUpdateResult.NotStarted(Current, Latest), result);
         Assert.Equal(1, tries);
-        var entry = TestCrashLog.OnlyEntry();
-        Assert.Contains("The newer version could not be started.", entry);
-        Assert.DoesNotContain("the host's own fault", entry);
+        AssertRunEntryThenHostFault("The newer version could not be started.");
     }
 
     [Fact]
-    public void A_stopped_runs_closing_line_that_fails_leaves_the_run_with_its_one_entry_naming_the_failed_start()
+    public void A_stopped_runs_closing_line_that_fails_keeps_the_run_stopped_and_its_entry_naming_the_failed_start()
     {
         SetupInstalls();
         _host.NewerVersionExitCode = null;
@@ -1019,14 +1030,14 @@ public sealed class CommandLineUpdateTests : IDisposable
             throw new InvalidOperationException("the host's own fault");
         };
 
-        Assert.Throws<InvalidOperationException>(() => Run(Setup(), canAsk: false));
+        var result = Run(Setup(), canAsk: false);
 
+        var stopped = Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Equal(nameof(UpdateFailedException), stopped.FailureType);
         Assert.Equal("old", File.ReadAllText(_exe));
         Assert.Equal(1, tries);
-        var entry = TestCrashLog.OnlyEntry();
-        Assert.Contains("The run ended. The running copy was put back at the command line's path.", entry);
-        Assert.Contains("The newer version could not be started.", entry);
-        Assert.DoesNotContain("the host's own fault", entry);
+        AssertRunEntryThenHostFault("The run ended. The running copy was put back at the command line's path.");
+        Assert.Contains("The newer version could not be started.", TestCrashLog.Entries()[0]);
     }
 
     [Fact]

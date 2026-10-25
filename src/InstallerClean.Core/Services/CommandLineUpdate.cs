@@ -210,10 +210,6 @@ internal sealed class CommandLineUpdate
     private bool _saidInstalled;
     // Set where this exe was renamed back to a path with nothing at it (RefillThisExe).
     private bool _renamedBack;
-    // Set by the first closing line (SayClosing), once how the run ended is settled and its
-    // crash.log entry, where it has one, is written. No catch in the run takes a failure
-    // after that, so a failure of a closing line leaves the run as it is.
-    private bool _ended;
 
     /// <param name="check">Asks GitHub for the newest version.</param>
     /// <param name="updater">
@@ -307,7 +303,7 @@ internal sealed class CommandLineUpdate
         // A refusal that comes back with Ctrl+C pressed ends the run as cancelled too, since
         // a refusal here is the run's outcome and the run was cancelled.
         catch (Exception ex) when (ex is OperationCanceledException or UpdateRefusedException
-            && token.IsCancellationRequested && !_ended)
+            && token.IsCancellationRequested)
         {
             _host.HoldOwnFile();
             return new CommandLineUpdateResult.Cancelled();
@@ -322,7 +318,7 @@ internal sealed class CommandLineUpdate
             if (canAsk) _host.WriteLine(string.Format(Strings.UpdateNotice_Available, latest));
             return Refused(refused.Refusal, latest);
         }
-        catch (Exception ex) when (!_ended)
+        catch (Exception ex)
         {
             return CarryOn(ex, command, current, latest, token);
         }
@@ -576,20 +572,18 @@ internal sealed class CommandLineUpdate
         {
             return AfterRename(canAsk, command, arguments, exePath, current, latest, isSetup, prepared, PutBack, token);
         }
-        catch (Exception ex) when (!backAtPath && !_ended)
+        catch (Exception ex) when (!backAtPath)
         {
             try
             {
                 return EndNotStarted(ex, isSetup, prepared, exePath, current, latest, PutBack, token);
             }
-            catch (Exception again) when (!backAtPath && !_ended)
+            catch (Exception again) when (!backAtPath)
             {
-                // Ending the run failed as well, before how it ended was settled, so nothing
-                // more is said, and the run ends with nothing run, answered by what the file
-                // at the path carries. What ended the run is ex, and its entry names again
-                // beside it. The refill, the look at the file and the undo that come before
-                // the run's end each catch their own failures, so no failure of theirs
-                // reaches here as the code stands; one that does is recorded this way.
+                // Ending the run failed as well, before how it ended was settled, since no
+                // closing line throws (SayClosing), so nothing more is said, and the run ends
+                // with nothing run, answered by what the file at the path carries. What ended
+                // the run is ex, and its entry names again beside it.
                 RefillIfEmpty(exePath);
                 if (!Carries(exePath, latest)) return RecordStopped(ex, token.IsCancellationRequested, again);
                 Helpers.CrashLog.TryWrite(new AggregateException(ex, again));
@@ -801,8 +795,8 @@ internal sealed class CommandLineUpdate
     /// <see cref="CommandLineUpdateResult.NotStarted"/> with what failed written to
     /// crash.log. Where it does not, ends through <see cref="RecordStopped"/> and says the
     /// update could not be installed. What is written to crash.log here is written before
-    /// the closing line, as the run's one entry, and nothing in the run takes a failure of
-    /// the closing line (<see cref="SayClosing"/>).
+    /// the closing line, as the run's one entry, and the closing line changes nothing about
+    /// how the run ended (<see cref="SayClosing"/>).
     /// </summary>
     private CommandLineUpdateResult Stop(
         Exception? cause, string exePath, string current, string latest, bool cancelled)
@@ -829,21 +823,26 @@ internal sealed class CommandLineUpdate
     /// <see cref="Stop"/> and <see cref="CarryOn"/> say, and the line saying the newer
     /// version is installed where Ctrl+C ends the run with it in place. A line the console
     /// refuses changes nothing about how the run ended, since the update's own crash.log
-    /// entry, where it has one, is written before it. The host's writes never throw
-    /// (<see cref="IConsolePrompt"/>), and the catch here takes an <see cref="IOException"/>
-    /// from a host that does all the same. A line that cannot be built, from a resource
-    /// whose placeholders do not match its arguments, is thrown, and leaves the run: from
-    /// the first closing line on, no catch in the run takes a failure (<see cref="_ended"/>).
+    /// entry, where it has one, is written before it. Nothing it meets leaves it, so the
+    /// run answers the end it had settled. The host's writes never throw
+    /// (<see cref="IConsolePrompt"/>), and an <see cref="IOException"/> from a host that
+    /// does all the same is a console refusing the line and is passed over. Any other
+    /// failure is written to crash.log: a fault in a host, or a line that cannot be built
+    /// from a translation naming a placeholder its English does not, which
+    /// scripts/check-resx-parity.mjs refuses.
     /// </summary>
-    private void SayClosing(Action say)
+    private static void SayClosing(Action say)
     {
-        _ended = true;
         try
         {
             say();
         }
         catch (IOException)
         {
+        }
+        catch (Exception ex)
+        {
+            Helpers.CrashLog.TryWrite(ex);
         }
     }
 
@@ -866,13 +865,22 @@ internal sealed class CommandLineUpdate
     /// <summary>
     /// Where nothing is at <paramref name="exePath"/>, renames this exe back to it, and
     /// answers whether it did. On the setup's copy, does nothing while a setup runs, the
-    /// setup being about to write the newer version there.
+    /// setup being about to write the newer version there. A failure is written to
+    /// crash.log and answers false. Never throws.
     /// </summary>
     private bool RefillThisExe(string exePath)
     {
-        if (File.Exists(exePath)) return false;
-        if (_updater.Kind == AppCopyKind.Setup && SelfReplacement.SetupRunning()) return false;
-        return _renamedBack = SelfReplacement.TryRefillPath(exePath, orNewerVersion: false);
+        try
+        {
+            if (File.Exists(exePath)) return false;
+            if (_updater.Kind == AppCopyKind.Setup && SelfReplacement.SetupRunning()) return false;
+            return _renamedBack = SelfReplacement.TryRefillPath(exePath, orNewerVersion: false);
+        }
+        catch (Exception ex)
+        {
+            Helpers.CrashLog.TryWrite(ex);
+            return false;
+        }
     }
 
     /// <summary>
@@ -881,8 +889,20 @@ internal sealed class CommandLineUpdate
     /// before it is put in place (<see cref="AppUpdater.PrepareAsync"/>). This reads the file
     /// at this exe's path after the setup has run, so the setup's copy starts nothing unless
     /// that file is the newer version, and wherever a failed part or Ctrl+C leaves the run
-    /// saying whether the newer version is in place.
+    /// saying whether the newer version is in place. A read that fails is written to
+    /// crash.log and answers false, so the run starts nothing and says the update could
+    /// not be installed. Never throws.
     /// </summary>
-    private bool Carries(string path, string version) =>
-        _host.FileVersion(path) is { } carried && Helpers.FileVersionResource.IsRelease(carried, version);
+    private bool Carries(string path, string version)
+    {
+        try
+        {
+            return _host.FileVersion(path) is { } carried && Helpers.FileVersionResource.IsRelease(carried, version);
+        }
+        catch (Exception ex)
+        {
+            Helpers.CrashLog.TryWrite(ex);
+            return false;
+        }
+    }
 }
