@@ -133,7 +133,7 @@ public sealed class FirstRunMarkTests : IDisposable
             held.ReleaseMutex();
         }) { IsBackground = true };
         holder.Start();
-        taken.Wait();
+        Assert.True(taken.Wait(TimeSpan.FromSeconds(30)));
 
         var setter = ClaimingMark();
         var setting = new Thread(setter.Set) { IsBackground = true };
@@ -168,7 +168,7 @@ public sealed class FirstRunMarkTests : IDisposable
             held.ReleaseMutex();
         }) { IsBackground = true };
         holder.Start();
-        taken.Wait();
+        Assert.True(taken.Wait(TimeSpan.FromSeconds(30)));
 
         var mark = ClaimingMark(TimeSpan.FromMilliseconds(50));
         try
