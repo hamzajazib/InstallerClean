@@ -7,8 +7,8 @@ namespace InstallerClean.Tests.Services;
 /// <summary>
 /// An update's read of what the release's update.json requires
 /// (<see cref="AppUpdater.CheckRequirementsAsync"/>) when the token is cancelled while it
-/// runs: a cancel is answered as a cancel and never as a read that failed, a file read in
-/// full is kept, and the answer the judgement gives stands.
+/// runs: a cancel is answered as a cancel, never as a refusal or a read that failed, and a
+/// file read in full is kept.
 /// </summary>
 public sealed class UpdateRequirementsCheckTests
 {
@@ -46,12 +46,14 @@ public sealed class UpdateRequirementsCheckTests
     }
 
     [Fact]
-    public async Task A_check_whose_time_runs_out_while_the_pc_is_read_for_dotnet_framework_keeps_its_refusal()
+    public async Task A_check_cancelled_while_the_pc_is_read_for_dotnet_framework_answers_the_cancel_not_the_refusal()
     {
         using var cts = new CancellationTokenSource();
         var updater = Updater(new Answers(HttpStatusCode.OK, NeedsNetFramework48), CancelsAsItIsRead(cts));
 
-        Assert.Equal(UpdateRefusal.NeedsNetFramework48, await updater.CheckRequirementsAsync("9.9.9", cts.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => updater.CheckRequirementsAsync("9.9.9", cts.Token));
+        Assert.Equal(UpdateRefusal.NeedsNetFramework48,
+            await updater.CheckRequirementsAsync("9.9.9", CancellationToken.None));
     }
 
     [Fact]

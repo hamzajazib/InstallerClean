@@ -27,10 +27,8 @@ public interface IAppUpdater
     /// null where it may. Throws <see cref="UpdateFailedException"/> at the Download stage
     /// where the release's file could not be read,
     /// <see cref="InvalidOperationException"/> where the kind of copy cannot update itself,
-    /// and <see cref="OperationCanceledException"/> where the token is cancelled before the
-    /// answer is worked out. A cancel that comes while the PC is read for what the release
-    /// needs leaves the answer standing, so a caller that wants its own cancel answered
-    /// first reads it off the token.
+    /// and <see cref="OperationCanceledException"/> where the token is cancelled, before an
+    /// answer or after one is worked out.
     /// </summary>
     Task<UpdateRefusal?> CheckRequirementsAsync(string version, CancellationToken cancellationToken);
 
@@ -216,10 +214,10 @@ public sealed class AppUpdater : IAppUpdater
         if (UpdateManifest.DownloadKey(Kind) is null)
             throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
 
-        // A cancelled check answers the cancel, never a read that failed, wherever the file
-        // came from, a kept file and a Debug build's local file included. A file read in
-        // full is kept first, so a cancel as the read ends costs no second read. The
-        // download service answers a read refused as the cancel came with the cancel.
+        // A cancelled check answers the cancel, never a refusal and never a read of the
+        // release that failed, the download service answering a read refused as the cancel
+        // came with the cancel. A file read in full is kept first, so a cancel as the read
+        // ends costs no second read.
         byte[]? manifest;
         if (_manifest is { } kept && kept.Version == version)
         {
@@ -242,9 +240,10 @@ public sealed class AppUpdater : IAppUpdater
         }
         cancellationToken.ThrowIfCancellationRequested();
 
-        // A caller's time limit can run out during the registry read the judgement makes,
-        // and the answer it gives still stands, so no cancel is answered after it.
-        return UpdateManifest.Judge(manifest, version, Kind, () => UpdateManifest.HasNetFramework48(_registry));
+        var answer = UpdateManifest.Judge(manifest, version, Kind, () => UpdateManifest.HasNetFramework48(_registry));
+        // The judgement reads the registry, and a cancel can come while it does.
+        cancellationToken.ThrowIfCancellationRequested();
+        return answer;
     }
 
     public async Task<PreparedUpdate> PrepareAsync(
@@ -256,11 +255,7 @@ public sealed class AppUpdater : IAppUpdater
             throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
 
         if (await CheckRequirementsAsync(version, cancellationToken).ConfigureAwait(false) is { } refusal)
-        {
-            // A cancel during the requirement check's registry read is answered as the cancel.
-            cancellationToken.ThrowIfCancellationRequested();
             throw new UpdateRefusedException(refusal, version);
-        }
 
         // Before the first file this update writes, so no pass of the start-up clean-up
         // deletes one (UpdateLeftoverGate). Everything above only reads, so an update that

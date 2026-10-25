@@ -334,17 +334,23 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void Ctrl_C_as_the_release_rules_this_copy_out_cancels_and_says_nothing_of_the_refusal(bool canAsk)
+    [InlineData(1, true)]
+    [InlineData(1, false)]
+    [InlineData(2, true)]
+    [InlineData(2, false)]
+    public void Ctrl_C_during_either_read_of_the_release_cancels_and_says_nothing_of_a_refusal(int cancelledRead, bool canAsk)
     {
         using var cts = new CancellationTokenSource();
         var updater = Download();
+        var reads = 0;
+        // The first read fails where the second is the one cancelled, so the run reads again.
         updater.Requirements = () =>
         {
+            if (++reads < cancelledRead) throw new UpdateFailedException(UpdateFailureStage.Download, "failed");
             cts.Cancel();
-            return UpdateRefusal.NeedsNetFramework48;
+            throw new OperationCanceledException(cts.Token);
         };
+        _host.Answers.Enqueue("y");
 
         var result = Run(updater, canAsk, token: cts.Token);
 
