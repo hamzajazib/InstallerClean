@@ -663,6 +663,7 @@ const MAP = {
   'Cli.ReportCouldNotBeSent': `Não foi possível enviar o relatório. Ele está guardado em {0}.`,
   'Cli.ReportWaiting': `Enviando um relatório pendente desde uma execução anterior.`,
   'Cli.UpdateWaitingForFile': `Aguardando que outro programa libere {0}...`,
+  'Cli.UpdateNotChecked': `O InstallerClean não conseguiu verificar a versão que o instalador instalou, então seu comando não foi executado. Execute-o novamente.`,
 };
 
 // Satellite-only .One override(s). NOT in the neutral; appended before </root>.

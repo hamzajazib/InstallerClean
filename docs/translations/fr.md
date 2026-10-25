@@ -573,6 +573,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean is in use, so it can't update itself now. | InstallerClean est en cours d'utilisation, il ne peut donc pas se mettre à jour maintenant. |
 | Running {0} with InstallerClean {1} instead. | Exécution de {0} avec InstallerClean {1} à la place. |
 | Waiting for another program to let go of {0}... | En attente qu'un autre programme libère {0}... |
+| InstallerClean couldn't check the version the setup installed, so your command didn't run. Run it again. | InstallerClean n'a pas pu vérifier la version installée par le programme d'installation, votre commande n'a donc pas été exécutée. Relancez-la. |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} est installé, mais n'a pas pu être lancé. Relancez la commande. |
 | {0}: {1} | {0} : {1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | Cette version nécessite .NET Framework 4.8. Installez-le depuis le site de Microsoft, redémarrez le PC, puis exécutez à nouveau InstallerClean pour effectuer la mise à jour. |

@@ -573,6 +573,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean is in use, so it can't update itself now. | InstallerClean sedang digunakan, jadi tidak dapat memperbarui dirinya sekarang. |
 | Running {0} with InstallerClean {1} instead. | Menjalankan {0} dengan InstallerClean {1} sebagai gantinya. |
 | Waiting for another program to let go of {0}... | Menunggu program lain melepaskan {0}... |
+| InstallerClean couldn't check the version the setup installed, so your command didn't run. Run it again. | InstallerClean tidak dapat memeriksa versi yang dipasang oleh program instalasi, jadi perintah Anda tidak dijalankan. Jalankan lagi. |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} telah terpasang, tetapi tidak dapat dijalankan. Jalankan perintah itu lagi. |
 | {0}: {1} | {0}: {1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | Versi ini memerlukan .NET Framework 4.8. Pasang dari Microsoft, mulai ulang PC, lalu jalankan InstallerClean lagi untuk memperbarui. |

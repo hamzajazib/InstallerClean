@@ -573,6 +573,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean is in use, so it can't update itself now. | InstallerClean đang được sử dụng nên không thể tự cập nhật lúc này. |
 | Running {0} with InstallerClean {1} instead. | Thay vào đó, chạy {0} bằng InstallerClean {1}. |
 | Waiting for another program to let go of {0}... | Đang chờ chương trình khác giải phóng {0}... |
+| InstallerClean couldn't check the version the setup installed, so your command didn't run. Run it again. | InstallerClean không thể kiểm tra phiên bản mà trình cài đặt đã cài, nên lệnh của bạn chưa được chạy. Hãy chạy lại. |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | Đã cài đặt InstallerClean {0} nhưng không thể khởi động. Hãy chạy lại lệnh. |
 | {0}: {1} | {0}: {1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | Phiên bản này cần .NET Framework 4.8. Hãy cài đặt nó từ Microsoft, khởi động lại PC, rồi chạy lại InstallerClean để cập nhật. |

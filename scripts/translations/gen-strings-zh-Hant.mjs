@@ -571,6 +571,7 @@ const MAP = {
   'Cli.ReportCouldNotBeSent': `無法傳送報告。報告保存在 {0}。`,
   'Cli.ReportWaiting': `正在傳送較早一次執行留下的待傳送報告。`,
   'Cli.UpdateWaitingForFile': `正在等待另一個程式釋放 {0}...`,
+  'Cli.UpdateNotChecked': `InstallerClean 無法檢查安裝程式安裝的版本，因此你的命令未執行。請再次執行。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

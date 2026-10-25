@@ -2348,6 +2348,9 @@ InstallerClean уже был запущен от имени администра
   <!-- After the newer setup has finished, while another program holds the file the setup
        wrote at the command line's path and the run waits for it before reading its version.
        0 = the file's name, installerclean-cli.exe, as it is on disk and left as written. -->
+  <!-- Where the newer setup finished and another program held the file it wrote at the
+       command line's path for as long as the run waited for it, or Ctrl+C ended that wait.
+       The run ends with nothing run, before /s, /d or /m. -->
   <!-- Where the newer version is in place at the command line's path but would not start,
        so the run ends with nothing run and the next run of the command starts the newer
        version. 0 = its version. -->
@@ -2656,4 +2659,5 @@ InstallerClean уже был запущен от имени администра
   <data name="Cli.ReportCouldNotBeSent" xml:space="preserve"><value>Не удалось отправить отчёт. Он хранится в {0}.</value></data>
   <data name="Cli.ReportWaiting" xml:space="preserve"><value>Отправляется отчёт, ожидающий отправки ещё с более раннего запуска.</value></data>
   <data name="Cli.UpdateWaitingForFile" xml:space="preserve"><value>Ожидание, пока другая программа освободит {0}...</value></data>
+  <data name="Cli.UpdateNotChecked" xml:space="preserve"><value>InstallerClean не удалось проверить версию, установленную программой установки, поэтому команда не была выполнена. Выполните её ещё раз.</value></data>
 </root>

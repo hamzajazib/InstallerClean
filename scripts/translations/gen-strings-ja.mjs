@@ -583,6 +583,7 @@ const MAP = {
   'Cli.ReportCouldNotBeSent': `レポートを送信できませんでした。{0} に保存されています。`,
   'Cli.ReportWaiting': `以前の実行から送信待ちになっているレポートを送信しています。`,
   'Cli.UpdateWaitingForFile': `別のプログラムが {0} を解放するのを待っています...`,
+  'Cli.UpdateNotChecked': `InstallerClean はセットアップがインストールしたバージョンを確認できなかったため、コマンドは実行されませんでした。もう一度実行してください。`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

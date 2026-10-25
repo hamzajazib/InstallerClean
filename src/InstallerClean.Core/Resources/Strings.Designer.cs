@@ -320,6 +320,7 @@ public static class Strings
     public static string Cli_UpdateListsOnlyAfterDelete => Get("Cli.UpdateListsOnlyAfterDelete");
     public static string Cli_UpdateListsOnlyAfterMove => Get("Cli.UpdateListsOnlyAfterMove");
     public static string Cli_UpdateNeedsNetFramework48 => Get("Cli.UpdateNeedsNetFramework48");
+    public static string Cli_UpdateNotChecked => Get("Cli.UpdateNotChecked");
     public static string Cli_UpdateNotStarted => Get("Cli.UpdateNotStarted");
     public static string Cli_UpdatePrompt => Get("Cli.UpdatePrompt");
     public static string Cli_UpdateRunningInstead => Get("Cli.UpdateRunningInstead");

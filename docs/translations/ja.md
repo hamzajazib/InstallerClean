@@ -573,6 +573,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean is in use, so it can't update itself now. | InstallerClean は使用中のため、今は自身を更新できません。 |
 | Running {0} with InstallerClean {1} instead. | 代わりに InstallerClean {1} で {0} を実行します。 |
 | Waiting for another program to let go of {0}... | 別のプログラムが {0} を解放するのを待っています... |
+| InstallerClean couldn't check the version the setup installed, so your command didn't run. Run it again. | InstallerClean はセットアップがインストールしたバージョンを確認できなかったため、コマンドは実行されませんでした。もう一度実行してください。 |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} をインストールしましたが、起動できませんでした。もう一度コマンドを実行してください。 |
 | {0}: {1} | {0}：{1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | このバージョンには .NET Framework 4.8 が必要です。Microsoft からインストールして PC を再起動し、InstallerClean をもう一度実行して更新してください。 |

@@ -829,7 +829,8 @@ internal sealed class CommandLineUpdate
             var readFailed = new UpdateFailedException(UpdateFailureStage.Install,
                 "The version of the file at the command line's path could not be read after the setup.", unread);
             return Stop(token.IsCancellationRequested ? null : readFailed,
-                exePath, current, latest, token.IsCancellationRequested, unreadAlready: readFailed);
+                exePath, current, latest, token.IsCancellationRequested, unreadAlready: readFailed,
+                setupVersionUnchecked: unread is IOException held && IsHeld(held));
         }
         else if (!carries)
             failed = new UpdateFailedException(UpdateFailureStage.Install,
@@ -857,11 +858,15 @@ internal sealed class CommandLineUpdate
     /// <paramref name="unreadAlready"/> is a failure to read the file at the path the run
     /// has already met, which is then not read a second time: the run ends through
     /// <see cref="RecordStopped"/> on that one read, which goes in the entry beside
-    /// <paramref name="cause"/> unless it is the cause.
+    /// <paramref name="cause"/> unless it is the cause. <paramref name="setupVersionUnchecked"/>
+    /// is set where a setup that exited 0 left a file at the path that another process held
+    /// for as long as the run waited for it: the closing line then says the version could
+    /// not be checked and the command did not run, in place of saying the update could not
+    /// be installed.
     /// </summary>
     private CommandLineUpdateResult Stop(
         Exception? cause, string exePath, string current, string latest, bool cancelled,
-        Exception? unreadAlready = null)
+        Exception? unreadAlready = null, bool setupVersionUnchecked = false)
     {
         RefillIfEmpty(exePath);
         var unread = unreadAlready;
@@ -877,7 +882,7 @@ internal sealed class CommandLineUpdate
             return new CommandLineUpdateResult.NotStarted(current, latest);
         }
         var stopped = RecordStopped(cause, cancelled, ReferenceEquals(unread, cause) ? null : unread);
-        SayClosing(() => _host.WriteLine(Strings.UpdateNotice_InstallFailed));
+        SayClosing(() => _host.WriteLine(setupVersionUnchecked ? Strings.Cli_UpdateNotChecked : Strings.UpdateNotice_InstallFailed));
         return stopped;
     }
 
@@ -947,6 +952,13 @@ internal sealed class CommandLineUpdate
     }
 
     /// <summary>
+    /// Whether <paramref name="ex"/> is a read refused because another process holds the
+    /// file: a sharing violation, or a lock violation on the part read.
+    /// </summary>
+    private static bool IsHeld(IOException ex) =>
+        Helpers.WindowsErrors.Of(ex) is Kernel32.ERROR_SHARING_VIOLATION or Kernel32.ERROR_LOCK_VIOLATION;
+
+    /// <summary>
     /// Whether the file at <paramref name="path"/> carries <paramref name="version"/>
     /// (<see cref="Helpers.FileVersionResource.IsRelease"/>). The download itself is checked
     /// before it is put in place (<see cref="AppUpdater.PrepareAsync"/>). This reads the file
@@ -975,7 +987,7 @@ internal sealed class CommandLineUpdate
             {
                 return _host.FileVersion(path) is { } carried && Helpers.FileVersionResource.IsRelease(carried, version);
             }
-            catch (IOException ex) when (Helpers.WindowsErrors.Of(ex) is Kernel32.ERROR_SHARING_VIOLATION or Kernel32.ERROR_LOCK_VIOLATION
+            catch (IOException ex) when (IsHeld(ex)
                 && (cancelledBefore || !_token.IsCancellationRequested) && Stopwatch.GetElapsedTime(started) < bound)
             {
                 if (!said && Stopwatch.GetElapsedTime(started) >= _readHoldNotice)

@@ -2432,6 +2432,10 @@ Hãy chạy lại InstallerClean với tư cách quản trị viên.</value></da
        wrote at the command line's path and the run waits for it before reading its version.
        0 = the file's name, installerclean-cli.exe, as it is on disk and left as written. -->
   <data name="Cli.UpdateWaitingForFile" xml:space="preserve"><value>Đang chờ chương trình khác giải phóng {0}...</value></data>
+  <!-- Where the newer setup finished and another program held the file it wrote at the
+       command line's path for as long as the run waited for it, or Ctrl+C ended that wait.
+       The run ends with nothing run, before /s, /d or /m. -->
+  <data name="Cli.UpdateNotChecked" xml:space="preserve"><value>InstallerClean không thể kiểm tra phiên bản mà trình cài đặt đã cài, nên lệnh của bạn chưa được chạy. Hãy chạy lại.</value></data>
   <!-- Where the newer version is in place at the command line's path but would not start,
        so the run ends with nothing run and the next run of the command starts the newer
        version. 0 = its version. -->

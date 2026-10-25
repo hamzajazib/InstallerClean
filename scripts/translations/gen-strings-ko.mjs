@@ -659,6 +659,7 @@ const MAP = {
   'Cli.ReportCouldNotBeSent': `보고서를 보내지 못했습니다. {0}에 보관되어 있습니다.`,
   'Cli.ReportWaiting': `이전 실행 때부터 대기 중이던 보고서를 보내는 중입니다.`,
   'Cli.UpdateWaitingForFile': `다른 프로그램이 {0} 사용을 마칠 때까지 기다리는 중...`,
+  'Cli.UpdateNotChecked': `InstallerClean이 설치 프로그램이 설치한 버전을 확인하지 못해 명령이 실행되지 않았습니다. 다시 실행하세요.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

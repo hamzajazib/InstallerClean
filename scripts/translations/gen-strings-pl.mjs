@@ -700,6 +700,7 @@ const MAP = {
   'Cli.ReportCouldNotBeSent': `Nie udało się wysłać raportu. Jest przechowywany w {0}.`,
   'Cli.ReportWaiting': `Wysyłanie raportu oczekującego od wcześniejszego uruchomienia.`,
   'Cli.UpdateWaitingForFile': `Oczekiwanie, aż inny program zwolni {0}...`,
+  'Cli.UpdateNotChecked': `InstallerClean nie mógł sprawdzić wersji zainstalowanej przez instalator, więc polecenie nie zostało wykonane. Uruchom je ponownie.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

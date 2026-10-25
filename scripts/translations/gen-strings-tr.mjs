@@ -584,6 +584,7 @@ Ayrıntılar şuraya yazıldı:
   'Cli.ReportCouldNotBeSent': `Rapor gönderilemedi. {0} konumunda saklanıyor.`,
   'Cli.ReportWaiting': `Daha önceki bir çalıştırmadan beri bekleyen bir rapor gönderiliyor.`,
   'Cli.UpdateWaitingForFile': `Başka bir programın {0} dosyasını bırakması bekleniyor...`,
+  'Cli.UpdateNotChecked': `InstallerClean, kurulum programının yüklediği sürümü denetleyemedi, bu nedenle komutunuz çalıştırılmadı. Yeniden çalıştırın.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

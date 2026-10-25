@@ -658,6 +658,7 @@ const MAP = {
   'Cli.ReportCouldNotBeSent': `Không thể gửi báo cáo. Báo cáo được lưu giữ tại {0}.`,
   'Cli.ReportWaiting': `Đang gửi một báo cáo còn chờ từ một lần chạy trước đó.`,
   'Cli.UpdateWaitingForFile': `Đang chờ chương trình khác giải phóng {0}...`,
+  'Cli.UpdateNotChecked': `InstallerClean không thể kiểm tra phiên bản mà trình cài đặt đã cài, nên lệnh của bạn chưa được chạy. Hãy chạy lại.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

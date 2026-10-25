@@ -642,6 +642,7 @@ const MAP = {
   'Cli.ReportCouldNotBeSent': `Het rapport kon niet worden verstuurd. Het wordt bewaard in {0}.`,
   'Cli.ReportWaiting': `Een rapport dat sinds een eerdere uitvoering wacht, wordt nu verstuurd.`,
   'Cli.UpdateWaitingForFile': `Wachten tot een ander programma {0} vrijgeeft...`,
+  'Cli.UpdateNotChecked': `InstallerClean kon de versie die het installatieprogramma heeft geïnstalleerd niet controleren, dus je opdracht is niet uitgevoerd. Voer hem opnieuw uit.`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

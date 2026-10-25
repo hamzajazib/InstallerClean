@@ -1127,6 +1127,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.IsType<CommandLineUpdateResult.Stopped>(result);
         Assert.Equal("new", File.ReadAllText(_exe));
         Assert.Null(_host.NewerVersionRun);
+        Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
         var entry = TestCrashLog.OnlyEntry();
         Assert.Contains("Ctrl+C ended the run, and a failure came as it ended.", entry);
         Assert.Contains("could not be read after the setup", entry);
@@ -1205,7 +1206,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Null(_host.NewerVersionRun);
         Assert.True(refused > 1);
         Assert.Single(_host.Output, string.Format(Strings.Cli_UpdateWaitingForFile, Path.GetFileName(_exe)));
-        Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
+        Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
         var entry = TestCrashLog.OnlyEntry();
         Assert.Contains("could not be read after the setup", entry);
         Assert.Contains("being used by another process", entry);

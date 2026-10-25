@@ -2432,6 +2432,10 @@ Vuelve a ejecutar InstallerClean como administrador.</value></data>
        wrote at the command line's path and the run waits for it before reading its version.
        0 = the file's name, installerclean-cli.exe, as it is on disk and left as written. -->
   <data name="Cli.UpdateWaitingForFile" xml:space="preserve"><value>Esperando a que otro programa libere {0}...</value></data>
+  <!-- Where the newer setup finished and another program held the file it wrote at the
+       command line's path for as long as the run waited for it, or Ctrl+C ended that wait.
+       The run ends with nothing run, before /s, /d or /m. -->
+  <data name="Cli.UpdateNotChecked" xml:space="preserve"><value>InstallerClean no pudo comprobar la versión que instaló el instalador, así que tu comando no se ejecutó. Vuelve a ejecutarlo.</value></data>
   <!-- Where the newer version is in place at the command line's path but would not start,
        so the run ends with nothing run and the next run of the command starts the newer
        version. 0 = its version. -->

@@ -573,6 +573,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | InstallerClean is in use, so it can't update itself now. | InstallerClean이 사용 중이어서 지금은 스스로 업데이트할 수 없습니다. |
 | Running {0} with InstallerClean {1} instead. | 대신 InstallerClean {1} 버전으로 {0} 명령을 실행합니다. |
 | Waiting for another program to let go of {0}... | 다른 프로그램이 {0} 사용을 마칠 때까지 기다리는 중... |
+| InstallerClean couldn't check the version the setup installed, so your command didn't run. Run it again. | InstallerClean이 설치 프로그램이 설치한 버전을 확인하지 못해 명령이 실행되지 않았습니다. 다시 실행하세요. |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} 버전이 설치되었지만 시작할 수 없었습니다. 명령을 다시 실행하세요. |
 | {0}: {1} | {0}: {1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | 이 버전에는 .NET Framework 4.8이 필요합니다. Microsoft에서 설치하고 PC를 다시 시작한 다음 InstallerClean을 다시 실행하여 업데이트하세요. |
