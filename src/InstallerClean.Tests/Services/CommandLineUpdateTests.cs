@@ -1300,21 +1300,46 @@ public sealed class CommandLineUpdateTests : IDisposable
     public void Ctrl_C_during_the_setup_bounds_the_wait_for_a_held_newer_version_by_the_shorter_bound()
     {
         using var cts = new CancellationTokenSource();
+        var refused = 0;
         _host.OnSetup = () =>
         {
             File.WriteAllText(_exe, "new");
             cts.Cancel();
-            _host.OnFileVersion = () => throw SharingViolation();
+            _host.OnFileVersion = () =>
+            {
+                refused++;
+                throw SharingViolation();
+            };
             return 0;
         };
-        var started = System.Diagnostics.Stopwatch.GetTimestamp();
 
         var result = Run(Setup(), canAsk: false, token: cts.Token, readHoldWait: TimeSpan.FromSeconds(30),
             readHoldNotice: TimeSpan.FromSeconds(30), readHoldWaitAfterCancel: TimeSpan.FromMilliseconds(300));
 
-        Assert.True(System.Diagnostics.Stopwatch.GetElapsedTime(started) < TimeSpan.FromSeconds(1.5));
+        // Reads come every 100 ms: about 4 in the 300 ms bound, and about 20 in the built-in one.
+        Assert.InRange(refused, 2, 8);
         Assert.IsType<CommandLineUpdateResult.Stopped>(result);
         Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
+    }
+
+    [Fact]
+    public void The_console_closing_during_the_setup_names_the_closing_in_the_entry_where_the_read_fails_outright()
+    {
+        using var cts = new CancellationTokenSource();
+        _host.OnSetup = () =>
+        {
+            File.WriteAllText(_exe, "new");
+            _host.Closing = true;
+            cts.Cancel();
+            _host.OnFileVersion = () => throw new UnauthorizedAccessException("access denied");
+            return 0;
+        };
+
+        var result = Run(Setup(), canAsk: false, token: cts.Token);
+
+        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Contains("A failure ended the run and the console closing or Windows shutting down came as well.",
+            TestCrashLog.OnlyEntry());
     }
 
     [Fact]
