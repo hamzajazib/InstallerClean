@@ -852,11 +852,13 @@ internal static class Program
     /// in the graph on the ordinary path.
     /// </param>
     /// <param name="consoleWatched">
-    /// Whether somebody is watching the console, which decides whether a Delete or Move
-    /// that acted on files gives the donate line at all, here or held in
-    /// <paramref name="report"/> for after the report question; or null for
-    /// <see cref="ConsoleIsWatched"/>. Null on every production path. A test passes its own answer, standard output being
-    /// redirected under a test runner.
+    /// Asked once a Delete or Move that was not cancelled has acted on files: whether
+    /// somebody is watching the console. Where it answers false the run gives no donate
+    /// line; where true, the line prints there or is held in <paramref name="report"/> for
+    /// after the report question or the send of a waiting report. Null asks
+    /// <see cref="ConsoleIsWatched"/>, as every production path does. A test that reads
+    /// the line passes its own answer, standard output being redirected under a test
+    /// runner.
     /// </param>
     /// <param name="output">
     /// The guard <see cref="Main"/> put the run's output behind, which a scan-only run reads
