@@ -21,9 +21,8 @@ public sealed class UpdateLeftoverGate
     /// <summary>
     /// Runs <paramref name="pass"/>, one pass of the clean-up, and answers true, where no
     /// update in this process holds the gate; otherwise runs nothing and answers false.
-    /// <see cref="HoldForUpdate"/> waits for a pass already running, on a pool thread
-    /// (<see cref="AppUpdater.PrepareAsync"/>), so keep the pass short and
-    /// synchronous.
+    /// <see cref="HoldForUpdate"/> blocks the thread that calls it until a pass already
+    /// running has ended, so keep the pass short and synchronous.
     /// </summary>
     public bool TryRunPass(Action pass)
     {
@@ -51,7 +50,9 @@ public sealed class UpdateLeftoverGate
 
     /// <summary>
     /// Holds the gate for an update about to write its first file, once any pass already
-    /// running has ended. No pass runs until every hold taken has been released.
+    /// running has ended, blocking the calling thread until then. No pass runs until every
+    /// hold taken has been released. <see cref="AppUpdater.PrepareAsync"/> calls it from a
+    /// pool thread, never the window's.
     /// </summary>
     internal Hold HoldForUpdate()
     {

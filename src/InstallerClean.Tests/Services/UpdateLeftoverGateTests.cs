@@ -113,10 +113,13 @@ public sealed class UpdateLeftoverGateTests
         var root = Path.GetTempFileName();
         using var inPass = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
+        // Set as the pass ends, inside the gate's lock, so a hold can only follow it.
+        var passEnded = false;
         var pass = Task.Run(() => gate.TryRunPass(() =>
         {
             inPass.Set();
             release.Wait(TimeSpan.FromSeconds(30));
+            Volatile.Write(ref passEnded, true);
         }));
         try
         {
@@ -127,10 +130,10 @@ public sealed class UpdateLeftoverGateTests
             // The release file is kept, so nothing the update does before its hold waits on
             // the network. The call comes back while the pass still runs.
             var update = updater.PrepareAsync("9.9.9", null, CancellationToken.None);
-            var passRunning = !pass.IsCompleted;
+            var cameBackDuringPass = !Volatile.Read(ref passEnded);
             release.Set();
 
-            Assert.True(passRunning);
+            Assert.True(cameBackDuringPass);
             Assert.Equal(UpdateFailureStage.Install,
                 (await Assert.ThrowsAsync<UpdateFailedException>(() => update.WaitAsync(TimeSpan.FromSeconds(10)))).Stage);
             Assert.True(await pass.WaitAsync(TimeSpan.FromSeconds(10)));

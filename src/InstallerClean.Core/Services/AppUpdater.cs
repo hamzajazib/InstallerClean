@@ -136,7 +136,11 @@ public sealed class AppUpdater : IAppUpdater
     private readonly string _stagingDescriptor;
     private readonly IRegistryReader _registry;
     private readonly UpdateLeftoverGate _leftovers;
-    private (string Version, byte[]? Manifest)? _manifest;
+    // Read and replaced whole, from whichever pool thread a check or an update runs on.
+    private volatile KeptManifest? _manifest;
+
+    /// <summary>A release's update.json read in full, and the version it was read for.</summary>
+    private sealed record KeptManifest(string Version, byte[] Manifest);
 
     /// <param name="kind">The kind of copy running.</param>
     /// <param name="exePath">The running exe's path.</param>
@@ -231,11 +235,20 @@ public sealed class AppUpdater : IAppUpdater
             throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
 
         // Everything after this runs on a pool thread, whatever thread called, so the
-        // registry read below stays off the window's thread. With the file kept nothing
-        // below awaits anything unfinished, so the method leaves the caller's thread here
+        // registry read stays off the window's thread. With the file kept nothing in the
+        // check awaits anything unfinished, so the method leaves the caller's thread here
         // rather than at a read.
         await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+        return await RequirementsAsync(version, within, cancellationToken).ConfigureAwait(false);
+    }
 
+    /// <summary>
+    /// <see cref="CheckRequirementsAsync"/> on the thread it is called on, up to the read of
+    /// the release's file where that file is not kept.
+    /// </summary>
+    private async Task<UpdateRefusal?> RequirementsAsync(
+        string version, TimeSpan? within, CancellationToken cancellationToken)
+    {
         // A cancel is answered as the cancel wherever it comes, never as a refusal or a read
         // of the release that failed, the download service answering a read refused as the
         // cancel came with the cancel. A file read in full is kept first, so a cancel as the
@@ -254,7 +267,7 @@ public sealed class AppUpdater : IAppUpdater
 #endif
             manifest = await ReadWithinAsync(version, within, cancellationToken).ConfigureAwait(false);
             var isJson = manifest is null || UpdateManifest.IsJson(manifest);
-            if (manifest is not null && isJson) _manifest = (version, manifest);
+            if (manifest is not null && isJson) _manifest = new KeptManifest(version, manifest);
             cancellationToken.ThrowIfCancellationRequested();
             if (!isJson)
                 throw new UpdateFailedException(UpdateFailureStage.Download, "The release's update.json is not JSON.");
@@ -309,15 +322,14 @@ public sealed class AppUpdater : IAppUpdater
         if (address is null || fileName is null)
             throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
 
-        // Everything after this runs on a pool thread, whatever thread called, so the wait
-        // for a running pass of the start-up clean-up (UpdateLeftoverGate), the staging
-        // folder's creation and the start of the download stay off the window's thread. The
-        // requirements below can answer before this method looks at them, with the file
-        // kept, and this method then carries on where it was, so it leaves the caller's
-        // thread itself.
+        // Everything after this runs on a pool thread, whatever thread called, so the
+        // requirements' registry read, the wait for a running pass of the start-up clean-up
+        // (UpdateLeftoverGate), the staging folder's creation and the start of the download
+        // stay off the window's thread. With the release's file kept, nothing before the
+        // download awaits anything unfinished.
         await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
-        if (await CheckRequirementsAsync(version, null, cancellationToken).ConfigureAwait(false) is { } refusal)
+        if (await RequirementsAsync(version, null, cancellationToken).ConfigureAwait(false) is { } refusal)
             throw new UpdateRefusedException(refusal, version);
 
         // Before the first file this update writes, so no pass of the start-up clean-up
