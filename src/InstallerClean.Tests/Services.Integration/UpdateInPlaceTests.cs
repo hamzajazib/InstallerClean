@@ -21,6 +21,13 @@ namespace InstallerClean.Tests.Services.Integration;
 public sealed class UpdateInPlaceTests : IDisposable
 {
     private readonly string _root = Directory.CreateTempSubdirectory("ic-update-").FullName;
+
+    /// <summary>
+    /// The clean-up gate of a test's updaters where the test does not look at one, so a
+    /// prepared update a test leaves holds this gate and never the process's own.
+    /// </summary>
+    private readonly UpdateLeftoverGate _leftovers = new();
+
     private readonly IDisposable _crashLog = TestCrashLog.OwnFolder();
 
     /// <summary>The SID of the account running the suite.</summary>
@@ -842,7 +849,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.Portable, exe,
             new UpdateDownloadService(new OneAnswer(Release(2)), null), stagingRoot,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry, _leftovers);
 
         var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
@@ -868,7 +875,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.Portable, exe,
             new UpdateDownloadService(new OneAnswer(Release(2)), null), stagingRoot,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry, _leftovers);
         var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
         File.Move(exe, exe + SelfReplacement.OldSuffix);
 
@@ -945,7 +952,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.Setup, exe,
             new UpdateDownloadService(new OneAnswer(Release(3)), null), stagingRoot,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry, _leftovers);
 
         var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
@@ -969,7 +976,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.Setup, exe,
             new UpdateDownloadService(new OneAnswer(Release(3)), null), stagingRoot,
-            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount, NoRegistry);
+            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount, NoRegistry, _leftovers);
 
         var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
@@ -988,7 +995,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.CommandLineDownload, exe,
             new UpdateDownloadService(new OneAnswer(Release(2)), null), stagingRoot,
-            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount, NoRegistry);
+            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount, NoRegistry, _leftovers);
 
         var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
 
@@ -1035,7 +1042,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.CommandLineDownload, exe,
             new UpdateDownloadService(network, null), stagingRoot,
-            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount, NoRegistry);
+            CommandLineUpdate.SetupArguments(canAsk: false), AdministratorsAndThisAccount, NoRegistry, _leftovers);
         return (updater, exe, stagingRoot);
     }
 
@@ -1107,7 +1114,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         var network = new OneAnswer(Release(3));
         var updater = new AppUpdater(AppCopyKind.Setup, exe,
             new UpdateDownloadService(network, null), stagingRoot,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry, _leftovers);
 
         await WithLocalDownload(local, async () =>
         {
@@ -1130,7 +1137,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(kind, exe,
             new UpdateDownloadService(new OneAnswer(Program(2)), null), stagingRoot,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry, _leftovers);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => updater.PrepareAsync("3.5.0", null, CancellationToken.None));
@@ -1149,7 +1156,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var updater = new AppUpdater(AppCopyKind.Portable, exe,
             new UpdateDownloadService(new OneAnswer("not a program"u8.ToArray()), null), stagingRoot,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry, _leftovers);
 
         var failure = await Assert.ThrowsAsync<UpdateFailedException>(
             () => updater.PrepareAsync("3.5.0", null, CancellationToken.None));
@@ -1174,7 +1181,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         var network = new OneAnswer(Release(2),
             "{\"schema\": 1, \"downloads\": {\"" + key + "\": {\"requires\": [\"netfx-4.8\"]}}}");
         var updater = new AppUpdater(kind, exe, new UpdateDownloadService(network, null), stagingRoot,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry, _leftovers);
 
         Assert.Equal(UpdateRefusal.NeedsNetFramework48, await updater.CheckRequirementsAsync(CoreRelease, null, CancellationToken.None));
         var refused = await Assert.ThrowsAsync<UpdateRefusedException>(
@@ -1198,7 +1205,7 @@ public sealed class UpdateInPlaceTests : IDisposable
             "{\"schema\": 1, \"downloads\": {\"portable\": {\"requires\": [\"netfx-4.8\"]}}}");
         var registry = NSubstitute.Substitute.For<IRegistryReader>();
         var updater = new AppUpdater(AppCopyKind.Portable, exe, new UpdateDownloadService(network, null), stagingRoot,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, registry);
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, registry, _leftovers);
 
         Assert.Equal(UpdateRefusal.NeedsNetFramework48, await updater.CheckRequirementsAsync(CoreRelease, null, CancellationToken.None));
         registry.LocalMachineDwordValue(Arg.Any<string>(), Arg.Any<string>())
@@ -1218,7 +1225,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var network = new OneAnswer(Release(2), manifest: null);
         var updater = new AppUpdater(AppCopyKind.Portable, exe, new UpdateDownloadService(network, null), stagingRoot,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry, _leftovers);
         var above = $"{UpdateManifest.LastVersionWithoutManifest.Major}.{UpdateManifest.LastVersionWithoutManifest.Minor + 1}.0";
         var atOrBelow = UpdateManifest.LastVersionWithoutManifest.ToString(3);
 
@@ -1234,7 +1241,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var network = new OneAnswer(Release(2), manifest: null);
         var updater = new AppUpdater(AppCopyKind.Portable, exe, new UpdateDownloadService(network, null), _root,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry, _leftovers);
 
         await updater.CheckRequirementsAsync("9.9.9", null, CancellationToken.None);
         await updater.CheckRequirementsAsync("9.9.9", null, CancellationToken.None);
@@ -1249,7 +1256,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         File.WriteAllBytes(exe, Program(1));
         var network = new OneAnswer(Release(2), "<html>Sign in to the network</html>");
         var updater = new AppUpdater(AppCopyKind.Portable, exe, new UpdateDownloadService(network, null), _root,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry, _leftovers);
 
         for (var i = 0; i < 2; i++)
         {
@@ -1279,7 +1286,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         var asked = $"{core.Major}.{core.Minor + 1}.0";
         var updater = new AppUpdater(kind, exe,
             new UpdateDownloadService(new OneAnswer(carriesAnotherVersion ? Release(2) : Program(2)), null), stagingRoot,
-            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
+            AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry, _leftovers);
 
         var failure = await Assert.ThrowsAsync<UpdateFailedException>(
             () => updater.PrepareAsync(asked, null, CancellationToken.None));

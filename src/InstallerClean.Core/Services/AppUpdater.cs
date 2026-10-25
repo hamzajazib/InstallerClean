@@ -257,6 +257,7 @@ public sealed class AppUpdater : IAppUpdater
         if (_manifest is { } kept && kept.Version == version)
         {
             manifest = kept.Manifest;
+            cancellationToken.ThrowIfCancellationRequested();
         }
         else
         {
@@ -272,7 +273,6 @@ public sealed class AppUpdater : IAppUpdater
             if (!isJson)
                 throw new UpdateFailedException(UpdateFailureStage.Download, "The release's update.json is not JSON.");
         }
-        cancellationToken.ThrowIfCancellationRequested();
 
         var answer = UpdateManifest.Judge(manifest, version, Kind, () => UpdateManifest.HasNetFramework48(_registry));
         // The judgement reads the registry, and a cancel can come while it does.

@@ -882,11 +882,11 @@ public partial class App : Application
     /// this exe, and removes the folders earlier updates downloaded into. It tries for ten
     /// seconds, because what put each there may still be closing as this copy starts: the
     /// copy that renamed itself, or the setup, which opens the app before it exits.
-    /// Whatever will not go by then is tried again at the
-    /// next start. While an update of this copy's own holds the gate, its files carrying
-    /// the same names (<see cref="UpdateLeftoverGate"/>), no pass runs and the ten seconds
-    /// wait until it lets go. First, in the setup's folder, it puts back the
-    /// command line an update renamed aside where nothing took its place
+    /// Whatever will not go by then is tried again at the next start. While an update of
+    /// this copy's own holds the gate, its files carrying the same names
+    /// (<see cref="UpdateLeftoverGate"/>), no pass runs and the ten seconds wait until it
+    /// lets go. First, in the setup's folder, it puts back the command line an update
+    /// renamed aside where nothing took its place
     /// (<see cref="SelfReplacement.TryPutBackMissing"/>). Never throws.
     /// </summary>
     private static async Task RemoveUpdateLeftoversAsync()

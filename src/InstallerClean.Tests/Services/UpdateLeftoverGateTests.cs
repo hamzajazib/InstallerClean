@@ -98,6 +98,7 @@ public sealed class UpdateLeftoverGateTests
         finally
         {
             release.Set();
+            await Settle(pass, mark);
         }
 
         Assert.True(await pass.WaitAsync(TimeSpan.FromSeconds(10)));
@@ -144,7 +145,22 @@ public sealed class UpdateLeftoverGateTests
         finally
         {
             release.Set();
+            await Settle(pass);
             File.Delete(root);
+        }
+    }
+
+    /// <summary>
+    /// Waits up to ten seconds for each of a test's own tasks to end and reads any failure,
+    /// so a test whose assertion fails first reports that failure alone.
+    /// </summary>
+    private static async Task Settle(params Task?[] tasks)
+    {
+        foreach (var task in tasks)
+        {
+            if (task is null) continue;
+            try { await task.WaitAsync(TimeSpan.FromSeconds(10)); }
+            catch (Exception) { }
         }
     }
 
