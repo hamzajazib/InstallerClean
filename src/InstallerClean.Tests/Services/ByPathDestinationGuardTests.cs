@@ -35,18 +35,36 @@ public class ByPathDestinationGuardTests
 
     /// <summary>
     /// The refusals a filesystem gives for a folder or a file it will not take, by exception
-    /// name. A theory row carries the name, which the test framework can serialise, so each
-    /// refusal is its own test case.
+    /// name, each with the HResult .NET raises it with for a failed Windows call. A theory row
+    /// carries the name, which the test framework can serialise, so each refusal is its own
+    /// test case.
     /// </summary>
     private static readonly Dictionary<string, Func<Exception>> RefusalFactories = new()
     {
-        [nameof(IOException)] = () => new IOException("refused"),
+        [nameof(IOException)] = () => new IOException("refused", Win32HResult(Kernel32.ERROR_SHARING_VIOLATION)),
         [nameof(UnauthorizedAccessException)] = () => new UnauthorizedAccessException("refused"),
         [nameof(DirectoryNotFoundException)] = () => new DirectoryNotFoundException("refused"),
         [nameof(PathTooLongException)] = () => new PathTooLongException("refused"),
         [nameof(NotSupportedException)] = () => new NotSupportedException("refused"),
         [nameof(ArgumentException)] = () => new ArgumentException("refused"),
     };
+
+    /// <summary>
+    /// The Windows error number each refusal is recorded as: the low word of its HResult where
+    /// that is in the Windows error facility, and the code for an unidentified failure where
+    /// .NET raised it on its own account.
+    /// </summary>
+    private static readonly Dictionary<string, int> RecordedCodes = new()
+    {
+        [nameof(IOException)] = Kernel32.ERROR_SHARING_VIOLATION,
+        [nameof(UnauthorizedAccessException)] = 5,
+        [nameof(DirectoryNotFoundException)] = Kernel32.ERROR_PATH_NOT_FOUND,
+        [nameof(PathTooLongException)] = 206,
+        [nameof(NotSupportedException)] = Kernel32.ERROR_UNIDENTIFIED_ERROR,
+        [nameof(ArgumentException)] = Kernel32.ERROR_INVALID_PARAMETER,
+    };
+
+    private static int Win32HResult(int code) => unchecked((int)0x80070000) | code;
 
     public static TheoryData<string> RefusalNames => new(RefusalFactories.Keys);
 
@@ -136,7 +154,7 @@ public class ByPathDestinationGuardTests
 
     [Theory]
     [MemberData(nameof(RefusalNames))]
-    public void A_folder_that_refuses_the_probe_file_fails_the_probe_with_the_refusals_HResult(string refusalName)
+    public void A_folder_that_refuses_the_probe_file_fails_the_probe_with_the_refusals_Win32_code(string refusalName)
     {
         var refusal = NewRefusal(refusalName);
         _file.When(f => f.WriteAllBytes(Arg.Any<string>(), Arg.Any<byte[]>())).Do(_ => throw refusal);
@@ -145,7 +163,7 @@ public class ByPathDestinationGuardTests
 
         // Only a write refused access is the folder refusing the account the right to add
         // the file; any other failure of the write is named as a failure of the create.
-        Assert.Equal(refusal.HResult, failureCode);
+        Assert.Equal(RecordedCodes[refusalName], failureCode);
         Assert.Equal(
             refusal is UnauthorizedAccessException ? WriteProbeRefusal.CreateRefusedAccess : WriteProbeRefusal.CreateFailed,
             probeRefusal);
@@ -164,7 +182,7 @@ public class ByPathDestinationGuardTests
 
         // Only a read refused access is the folder declining to give the file back; any
         // other failure of the read is named as a failure of the read-back.
-        Assert.Equal(refusal.HResult, failureCode);
+        Assert.Equal(RecordedCodes[refusalName], failureCode);
         Assert.Equal(
             refusal is UnauthorizedAccessException ? WriteProbeRefusal.ReadBackRefusedAccess : WriteProbeRefusal.ReadBackFailed,
             probeRefusal);
@@ -183,6 +201,17 @@ public class ByPathDestinationGuardTests
         Assert.Equal(0, failureCode);
         Assert.Equal(WriteProbeRefusal.None, probeRefusal);
         _file.Received(1).Delete(Arg.Any<string>());
+    }
+
+    [Fact]
+    public void A_Win32Exception_from_the_filesystem_is_recorded_as_its_own_error_number()
+    {
+        _file.When(f => f.WriteAllBytes(Arg.Any<string>(), Arg.Any<byte[]>()))
+            .Do(_ => throw new System.ComponentModel.Win32Exception(Kernel32.ERROR_NOT_READY));
+
+        Assert.False(_guard.TryProbeWritable(_folder, out var failureCode, out _));
+
+        Assert.Equal(Kernel32.ERROR_NOT_READY, failureCode);
     }
 
     [Fact]
@@ -252,7 +281,7 @@ public class ByPathDestinationGuardTests
 
         Assert.False(_guard.TryDiscardCopy(_copy, out var failureCode));
 
-        Assert.Equal(refusal.HResult, failureCode);
+        Assert.Equal(RecordedCodes[refusalName], failureCode);
         _file.DidNotReceive().Delete(Arg.Any<string>());
     }
 
@@ -265,25 +294,25 @@ public class ByPathDestinationGuardTests
 
         Assert.False(_guard.TryDiscardCopy(_copy, out var failureCode));
 
-        Assert.Equal(refusal.HResult, failureCode);
+        Assert.Equal(5, failureCode);
         _file.DidNotReceive().Delete(Arg.Any<string>());
     }
 
     [Fact]
     public void A_copy_whose_presence_cannot_be_asked_fails_the_discard_and_is_not_deleted()
     {
-        var refusal = new IOException("refused");
+        var refusal = new IOException("refused", Win32HResult(Kernel32.ERROR_SHARING_VIOLATION));
         _file.Exists(_copy).Returns(_ => throw refusal);
 
         Assert.False(_guard.TryDiscardCopy(_copy, out var failureCode));
 
-        Assert.Equal(refusal.HResult, failureCode);
+        Assert.Equal(Kernel32.ERROR_SHARING_VIOLATION, failureCode);
         _file.DidNotReceive().Delete(Arg.Any<string>());
     }
 
     [Theory]
     [MemberData(nameof(RefusalNames))]
-    public void A_copy_the_filesystem_will_not_delete_fails_the_discard_with_the_refusals_HResult(string refusalName)
+    public void A_copy_the_filesystem_will_not_delete_fails_the_discard_with_the_refusals_Win32_code(string refusalName)
     {
         var refusal = NewRefusal(refusalName);
         _file.Exists(_copy).Returns(true);
@@ -292,21 +321,21 @@ public class ByPathDestinationGuardTests
 
         Assert.False(_guard.TryDiscardCopy(_copy, out var failureCode));
 
-        Assert.Equal(refusal.HResult, failureCode);
+        Assert.Equal(RecordedCodes[refusalName], failureCode);
         _file.DidNotReceive().SetAttributes(Arg.Any<string>(), Arg.Any<FileAttributes>());
     }
 
     [Fact]
     public void A_read_only_copy_the_filesystem_will_not_delete_has_its_attribute_put_back()
     {
-        var refusal = new IOException("refused");
+        var refusal = new IOException("refused", Win32HResult(Kernel32.ERROR_SHARING_VIOLATION));
         _file.Exists(_copy).Returns(true);
         _file.GetAttributes(_copy).Returns(FileAttributes.ReadOnly | FileAttributes.Archive);
         _file.When(f => f.Delete(_copy)).Do(_ => throw refusal);
 
         Assert.False(_guard.TryDiscardCopy(_copy, out var failureCode));
 
-        Assert.Equal(refusal.HResult, failureCode);
+        Assert.Equal(Kernel32.ERROR_SHARING_VIOLATION, failureCode);
         Received.InOrder(() =>
         {
             _file.SetAttributes(_copy, FileAttributes.Archive);
@@ -318,7 +347,7 @@ public class ByPathDestinationGuardTests
     [Fact]
     public void A_refused_delete_is_the_cause_recorded_when_the_attribute_cannot_be_put_back()
     {
-        var refusal = new IOException("delete refused");
+        var refusal = new IOException("delete refused", Win32HResult(Kernel32.ERROR_SHARING_VIOLATION));
         _file.Exists(_copy).Returns(true);
         _file.GetAttributes(_copy).Returns(FileAttributes.ReadOnly);
         _file.When(f => f.Delete(_copy)).Do(_ => throw refusal);
@@ -327,6 +356,6 @@ public class ByPathDestinationGuardTests
 
         Assert.False(_guard.TryDiscardCopy(_copy, out var failureCode));
 
-        Assert.Equal(refusal.HResult, failureCode);
+        Assert.Equal(Kernel32.ERROR_SHARING_VIOLATION, failureCode);
     }
 }

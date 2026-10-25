@@ -180,7 +180,7 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
         }
         catch (Exception ex)
         {
-            failureCode = ex.HResult;
+            failureCode = Win32CodeOf(ex);
             refusal = ex is UnauthorizedAccessException
                 ? WriteProbeRefusal.CreateRefusedAccess : WriteProbeRefusal.CreateFailed;
             return false;
@@ -193,7 +193,7 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
         }
         catch (Exception ex)
         {
-            failureCode = ex.HResult;
+            failureCode = Win32CodeOf(ex);
             refusal = ex is UnauthorizedAccessException
                 ? WriteProbeRefusal.ReadBackRefusedAccess : WriteProbeRefusal.ReadBackFailed;
             return false;
@@ -236,7 +236,7 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
         }
         catch (Exception ex)
         {
-            failureCode = ex.HResult;
+            failureCode = Win32CodeOf(ex);
             return false;
         }
     }
@@ -253,5 +253,25 @@ internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinat
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// The Windows error number an exception from the filesystem stands for, as the app's
+    /// guard gives it. A <see cref="System.ComponentModel.Win32Exception"/> carries its
+    /// number, and any other exception whose HResult is in the Windows error facility
+    /// (0x8007 in the high word) carries it in the low word, which is the form .NET
+    /// raises an <see cref="UnauthorizedAccessException"/>, a
+    /// <see cref="DirectoryNotFoundException"/> and an <see cref="IOException"/> from a
+    /// failed Windows call in. An exception with neither answers
+    /// <see cref="Kernel32.ERROR_UNIDENTIFIED_ERROR"/>, never 0, which Windows reads as success.
+    /// </summary>
+    private static int Win32CodeOf(Exception exception)
+    {
+        if (exception is System.ComponentModel.Win32Exception win32) return win32.NativeErrorCode;
+        const int facilityMask = unchecked((int)0xFFFF0000);
+        const int win32Facility = unchecked((int)0x80070000);
+        return (exception.HResult & facilityMask) == win32Facility
+            ? exception.HResult & 0xFFFF
+            : Kernel32.ERROR_UNIDENTIFIED_ERROR;
     }
 }

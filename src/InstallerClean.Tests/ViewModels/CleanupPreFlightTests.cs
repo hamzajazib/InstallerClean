@@ -625,7 +625,8 @@ public class CleanupPreFlightTests : IDisposable
         // program holding the new file, says nothing about the folder's permissions,
         // so it takes the write-failure dialog and not the message for a folder that
         // will not give files back.
-        _file.ReadAllBytes(Arg.Any<string>()).Returns(_ => throw new IOException("sharing violation"));
+        _file.ReadAllBytes(Arg.Any<string>())
+            .Returns(_ => throw new IOException("sharing violation", unchecked((int)0x80070020)));
 
         var vm = CreateViewModel();
         await vm.Scan.ScanWithProgressAsync(null);
@@ -645,6 +646,8 @@ public class CleanupPreFlightTests : IDisposable
         Assert.Contains(
             string.Format(InstallerClean.Resources.Strings.Error_CannotWriteFolder, _destination),
             TestCrashLog.Text(), StringComparison.Ordinal);
+        // The cause the entry carries is the Windows error the refusal stood for (32, sharing violation).
+        Assert.Contains(new System.ComponentModel.Win32Exception(32).Message, TestCrashLog.Text(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -676,7 +679,7 @@ public class CleanupPreFlightTests : IDisposable
     public async Task A_probe_file_that_cannot_be_added_for_another_cause_is_refused_as_a_write_failure()
     {
         _file.When(f => f.WriteAllBytes(Arg.Any<string>(), Arg.Any<byte[]>()))
-            .Do(_ => throw new IOException("disk full"));
+            .Do(_ => throw new IOException("disk full", unchecked((int)0x80070070)));
 
         var vm = CreateViewModel();
         await vm.Scan.ScanWithProgressAsync(null);
@@ -696,6 +699,8 @@ public class CleanupPreFlightTests : IDisposable
         Assert.Contains(
             string.Format(InstallerClean.Resources.Strings.Error_CannotWriteFolder, _destination),
             TestCrashLog.Text(), StringComparison.Ordinal);
+        // The cause the entry carries is the Windows error the refusal stood for (112, disk full).
+        Assert.Contains(new System.ComponentModel.Win32Exception(112).Message, TestCrashLog.Text(), StringComparison.Ordinal);
     }
 
     [Fact]
