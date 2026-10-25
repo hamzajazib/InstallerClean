@@ -563,6 +563,18 @@ internal static partial class Kernel32
         public uint nLength;
         public IntPtr lpSecurityDescriptor;
         public int bInheritHandle;
+
+        /// <summary>
+        /// Attributes carrying <paramref name="securityDescriptor"/>, which is
+        /// <see cref="IntPtr.Zero"/> for the descriptor a new object inherits, and
+        /// not inheritable by a child process.
+        /// </summary>
+        public static SECURITY_ATTRIBUTES With(IntPtr securityDescriptor) => new()
+        {
+            nLength = (uint)Marshal.SizeOf<SECURITY_ATTRIBUTES>(),
+            lpSecurityDescriptor = securityDescriptor,
+            bInheritHandle = 0,
+        };
     }
 
     /// <summary>

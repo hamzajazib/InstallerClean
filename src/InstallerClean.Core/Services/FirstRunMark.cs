@@ -104,11 +104,14 @@ internal sealed class FirstRunMark : IFirstRunMark
     }
 
     /// <summary>
-    /// Writes the mark. <paramref name="createdUnderLock"/> is true where the caller holds
+    /// Writes the mark where it is absent and leaves a value already under the name as it
+    /// is, since <see cref="Read"/> answers set for a value of any kind. Answers whether the
+    /// mark is there afterwards, read back through the handle it was written through.
+    /// <paramref name="createdUnderLock"/> is true where the caller holds
     /// the claim lock, so that finding the mark absent is a fact no other process can
     /// have changed between the read and the write.
     /// </summary>
-    private void WriteMark(bool createdUnderLock)
+    private bool WriteMark(bool createdUnderLock)
     {
         try
         {
@@ -121,11 +124,14 @@ internal sealed class FirstRunMark : IFirstRunMark
             {
                 CrashLog.TryWrite(new IOException(
                     "The key for the first-run mark could not be created or opened."));
-                return;
+                return false;
             }
-            var existed = key.GetValue(ValueName, null, RegistryValueOptions.DoNotExpandEnvironmentNames) is not null;
-            key.SetValue(ValueName, 1, RegistryValueKind.DWord);
-            if (!existed && createdUnderLock) _setHere = true;
+            if (key.GetValue(ValueName, null, RegistryValueOptions.DoNotExpandEnvironmentNames) is null)
+            {
+                key.SetValue(ValueName, 1, RegistryValueKind.DWord);
+                if (createdUnderLock) _setHere = true;
+            }
+            return key.GetValue(ValueName, null, RegistryValueOptions.DoNotExpandEnvironmentNames) is not null;
         }
         catch (Exception ex)
         {
@@ -137,6 +143,7 @@ internal sealed class FirstRunMark : IFirstRunMark
             // failure's place in the entry. The window's start check sets it inside the
             // task its answer comes back in, which a throw would fault.
             CrashLog.TryWrite(ex);
+            return false;
         }
     }
 
@@ -192,11 +199,7 @@ internal sealed class FirstRunMark : IFirstRunMark
             var state = Read();
             if (state == FirstRunMarkState.Unreadable) return false;
             if (state == FirstRunMarkState.Set && !_setHere) return false;
-            if (state == FirstRunMarkState.NotSet)
-            {
-                WriteMark(createdUnderLock: true);
-                if (Read() != FirstRunMarkState.Set) return false;
-            }
+            if (state == FirstRunMarkState.NotSet && !WriteMark(createdUnderLock: true)) return false;
             _claimTaken = true;
             return true;
         }

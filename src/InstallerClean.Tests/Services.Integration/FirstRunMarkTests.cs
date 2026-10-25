@@ -67,6 +67,22 @@ public sealed class FirstRunMarkTests : IDisposable
         Assert.Equal(FirstRunMarkState.Set, Mark.Read());
     }
 
+    [Theory]
+    [InlineData(0, RegistryValueKind.DWord)]
+    [InlineData("0", RegistryValueKind.String)]
+    public void Setting_it_leaves_a_value_already_under_the_name_as_it_is(object value, RegistryValueKind kind)
+    {
+        using (var key = Registry.CurrentUser.CreateSubKey(_keyPath))
+            key.SetValue(FirstRunMark.ValueName, value, kind);
+
+        Mark.Set();
+
+        using var read = Registry.CurrentUser.OpenSubKey(_keyPath);
+        Assert.NotNull(read);
+        Assert.Equal(kind, read.GetValueKind(FirstRunMark.ValueName));
+        Assert.Equal(value, read.GetValue(FirstRunMark.ValueName));
+    }
+
     // Each claim test names a fresh Local\ lock, never FirstRunMark.ClaimLockName, so a copy of
     // InstallerClean running on the machine neither fails a test nor is held up by one.
     private readonly string _claimLock = $@"Local\InstallerClean_FirstRunMarkClaimTest_{Guid.NewGuid():N}";

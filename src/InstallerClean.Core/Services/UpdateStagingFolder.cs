@@ -71,12 +71,7 @@ public sealed class UpdateStagingFolder
             throw new Win32Exception(Marshal.GetLastPInvokeError());
         try
         {
-            var attributes = new Kernel32.SECURITY_ATTRIBUTES
-            {
-                nLength = (uint)Marshal.SizeOf<Kernel32.SECURITY_ATTRIBUTES>(),
-                lpSecurityDescriptor = descriptor,
-                bInheritHandle = 0,
-            };
+            var attributes = Kernel32.SECURITY_ATTRIBUTES.With(descriptor);
             if (!Kernel32.CreateDirectory(path, in attributes))
                 throw new Win32Exception(Marshal.GetLastPInvokeError());
         }
