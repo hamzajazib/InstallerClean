@@ -852,8 +852,10 @@ internal static class Program
     /// in the graph on the ordinary path.
     /// </param>
     /// <param name="consoleWatched">
-    /// Whether the donate line prints, or null for <see cref="ConsoleIsWatched"/>. Null
-    /// on every production path. A test passes its own answer, standard output being
+    /// Whether somebody is watching the console, which decides whether a Delete or Move
+    /// that acted on files gives the donate line at all, here or held in
+    /// <paramref name="report"/> for after the report question; or null for
+    /// <see cref="ConsoleIsWatched"/>. Null on every production path. A test passes its own answer, standard output being
     /// redirected under a test runner.
     /// </param>
     /// <param name="output">
