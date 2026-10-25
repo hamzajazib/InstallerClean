@@ -29,7 +29,8 @@ internal sealed class CancelKey
     private readonly Action<TimeSpan> _hold;
     private int _hooked;
     private int _closing;
-    // What cancelled Pressed first: 0 nothing yet, 1 Ctrl+C, 2 a close or shutdown.
+    // What cancelled Pressed first: 0 nothing yet; 1 Ctrl+C, or the starting version's
+    // cancel event (Watch); 2 a close or shutdown, recorded before Closing is set.
     private int _firstPress;
 
     /// <summary>
@@ -59,7 +60,8 @@ internal sealed class CancelKey
 
     /// <summary>
     /// Whether a close or shutdown, rather than Ctrl+C, is what cancelled
-    /// <see cref="Pressed"/>. Set before the cancellation it names.
+    /// <see cref="Pressed"/>. Settled before <see cref="Closing"/> is set and before the
+    /// cancellation it names.
     /// </summary>
     public bool ClosedFirst => Volatile.Read(ref _firstPress) == 2;
 
@@ -103,8 +105,9 @@ internal sealed class CancelKey
             case Kernel32.CTRL_LOGOFF_EVENT:
                 return true;
             case Kernel32.CTRL_CLOSE_EVENT or Kernel32.CTRL_SHUTDOWN_EVENT:
+                Interlocked.CompareExchange(ref _firstPress, 2, 0);
                 Volatile.Write(ref _closing, 1);
-                Press(closing: true);
+                Press();
                 try
                 {
                     _hold(CloseHold);
@@ -186,9 +189,9 @@ internal sealed class CancelKey
     }
 
     /// <summary>Cancels <see cref="Pressed"/>. Never throws.</summary>
-    private void Press(bool closing = false)
+    private void Press()
     {
-        Interlocked.CompareExchange(ref _firstPress, closing ? 2 : 1, 0);
+        Interlocked.CompareExchange(ref _firstPress, 1, 0);
         try
         {
             _pressed.Cancel();

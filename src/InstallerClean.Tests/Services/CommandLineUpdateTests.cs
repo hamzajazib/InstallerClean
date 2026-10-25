@@ -1263,6 +1263,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         {
             File.WriteAllText(_exe, "new");
             _host.Closing = true;
+            _host.ClosedFirst = true;
             _host.OnFileVersion = () => throw SharingViolation();
             return 0;
         };
@@ -1318,7 +1319,7 @@ public sealed class CommandLineUpdateTests : IDisposable
             readHoldNotice: TimeSpan.FromSeconds(30), readHoldWaitAfterCancel: TimeSpan.FromMilliseconds(300));
 
         // Reads come every 100 ms: about 4 in the 300 ms bound, and about 20 in the built-in one.
-        Assert.InRange(refused, 1, 12);
+        Assert.InRange(refused, 2, 12);
         Assert.IsType<CommandLineUpdateResult.Stopped>(result);
         Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
     }

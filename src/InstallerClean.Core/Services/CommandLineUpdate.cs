@@ -129,7 +129,8 @@ internal interface ICommandLineUpdateHost : IConsolePrompt
 
     /// <summary>
     /// Whether the console closing or Windows shutting down, rather than Ctrl+C, is what
-    /// cancelled the run's token. It is set before the token is cancelled.
+    /// cancelled the run's token. It is settled before <see cref="Closing"/> is set and
+    /// before the token is cancelled.
     /// </summary>
     bool ClosedFirst { get; }
 
@@ -257,8 +258,8 @@ internal sealed class CommandLineUpdate
     // The run's token, which ends a wait for a held file (Carries).
     private CancellationToken _token;
     // Set where the newer setup exited 0 and cleared once a read of the file at the path
-    // answers or this exe is renamed back to it: while set, the file there is the setup's
-    // and its version is not established (Stop).
+    // answers, a file is renamed there or nothing is found there: while set, the file there
+    // is the setup's and its version is not established (Stop).
     private bool _setupFileUnchecked;
     // Set where a read of the file at the path found the newer version, and cleared once
     // anything is renamed to that path: while set, Stop takes that answer without reading
@@ -797,7 +798,7 @@ internal sealed class CommandLineUpdate
     private CommandLineUpdateResult.Stopped RecordStopped(
         Exception? cause, bool cancelled, Exception? thenFailed = null)
     {
-        var (stopper, stopperOpening) = _host.ClosedFirst || (_host.Closing && !_token.IsCancellationRequested)
+        var (stopper, stopperOpening) = _host.ClosedFirst
             ? ("the console closing or Windows shutting down", "The console closing or Windows shutting down")
             : ("Ctrl+C", "Ctrl+C");
         var how = (cancelled
