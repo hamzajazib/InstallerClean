@@ -64,18 +64,19 @@ public sealed class UpdateRequirementsCheckTests
         var registry = Substitute.For<IRegistryReader>();
         registry.LocalMachineDwordValue(Arg.Any<string>(), Arg.Any<string>()).Returns(_ =>
         {
-            Thread.Sleep(TimeSpan.FromMilliseconds(700));
+            Thread.Sleep(TimeSpan.FromMilliseconds(2500));
             return new RegistryDwordRead(RegistryDwordState.Absent);
         });
         var updater = Updater(new Answers(HttpStatusCode.OK, NeedsNetFramework48), registry);
 
         Assert.Equal(UpdateRefusal.NeedsNetFramework48,
-            await updater.CheckRequirementsAsync("9.9.9", TimeSpan.FromMilliseconds(500), CancellationToken.None));
+            await updater.CheckRequirementsAsync("9.9.9", TimeSpan.FromSeconds(2), CancellationToken.None));
     }
 
     public static TheoryData<TimeSpan> NoLimits =>
     [
         Timeout.InfiniteTimeSpan,
+        TimeSpan.FromMilliseconds(int.MaxValue + 1L),
         TimeSpan.FromMilliseconds(uint.MaxValue - 1),
         TimeSpan.FromMilliseconds(uint.MaxValue),
         TimeSpan.MaxValue,

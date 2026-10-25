@@ -599,8 +599,7 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// </summary>
     private async Task<Requirements> RequirementsAsync(string version, TimeSpan within, CancellationToken token)
     {
-        if (_updater is null || !CanUpdateItself || (within <= TimeSpan.Zero && within != Timeout.InfiniteTimeSpan))
-            return default;
+        if (_updater is null || !CanUpdateItself || within <= TimeSpan.Zero) return default;
         try
         {
             return new Requirements(true, await _updater.CheckRequirementsAsync(version, within, token));
@@ -665,7 +664,8 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     /// of the two things it was. Where the newer version's release rules this copy out,
     /// which the download reads before it fetches anything, the download card goes and
     /// the card and the notice say why in place of Update now, with the link; that is not
-    /// a failure, and nothing is written.
+    /// a failure, and nothing is written. That holds where Cancel is pressed as the
+    /// refusal arrives as well, since it is what the release says of this copy.
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanUpdateNow))]
     private async Task UpdateNowAsync()

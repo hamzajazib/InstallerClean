@@ -25,10 +25,12 @@ public interface IAppUpdater
     /// Reads what the release of <paramref name="version"/> says its downloads need
     /// (<see cref="UpdateManifest"/>) and answers why this copy does not install it, or
     /// null where it may. The read of the release's file is given up after
-    /// <paramref name="within"/>; null, <see cref="Timeout.InfiniteTimeSpan"/> or a time
-    /// longer than a timer can be set for reads with no limit, and zero or any other
-    /// negative time gives the read up at once. The rest of the check runs to its answer. Throws <see cref="UpdateFailedException"/> at the Download stage where the
-    /// release's file could not be read, its time running out included,
+    /// <paramref name="within"/>: null, <see cref="Timeout.InfiniteTimeSpan"/> or a time
+    /// longer than a timer can be set for is no limit, and zero or a negative time gives
+    /// the read up at once. A file already kept for the version is answered from without
+    /// a read, whatever the limit, and the rest of the check runs to its answer. Throws
+    /// <see cref="UpdateFailedException"/> at the Download stage where the release's file
+    /// could not be read, its time running out included,
     /// <see cref="InvalidOperationException"/> where the kind of copy cannot update itself,
     /// and <see cref="OperationCanceledException"/> where <paramref name="cancellationToken"/>
     /// is cancelled at any point before the answer is returned.
