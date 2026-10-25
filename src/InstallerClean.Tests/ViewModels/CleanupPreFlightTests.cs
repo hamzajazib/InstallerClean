@@ -598,7 +598,7 @@ public class CleanupPreFlightTests : IDisposable
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
-        var crashLogBefore = MadeViewModels.CrashLogWithoutDestinationSaves();
+        var crashLogBefore = ViewModelCrashLog.WithoutDestinationSaves();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -613,7 +613,7 @@ public class CleanupPreFlightTests : IDisposable
         Assert.False(vm.Cleanup.IsOperating);
         Assert.Equal(string.Empty, vm.Cleanup.OperationProgress);
         // A refusal, not a fault: the crash log is left as it was.
-        Assert.Equal(crashLogBefore, MadeViewModels.CrashLogWithoutDestinationSaves());
+        Assert.Equal(crashLogBefore, ViewModelCrashLog.WithoutDestinationSaves());
     }
 
     [Fact]
@@ -629,7 +629,7 @@ public class CleanupPreFlightTests : IDisposable
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
-        var crashLogBefore = MadeViewModels.CrashLogWithoutDestinationSaves();
+        var crashLogBefore = ViewModelCrashLog.WithoutDestinationSaves();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -640,7 +640,7 @@ public class CleanupPreFlightTests : IDisposable
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
         // A failure with no established cause is a fault, so the crash log takes an entry.
-        Assert.NotEqual(crashLogBefore, MadeViewModels.CrashLogWithoutDestinationSaves());
+        Assert.NotEqual(crashLogBefore, ViewModelCrashLog.WithoutDestinationSaves());
     }
 
     [Fact]
@@ -653,7 +653,7 @@ public class CleanupPreFlightTests : IDisposable
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
-        var crashLogBefore = MadeViewModels.CrashLogWithoutDestinationSaves();
+        var crashLogBefore = ViewModelCrashLog.WithoutDestinationSaves();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -663,7 +663,7 @@ public class CleanupPreFlightTests : IDisposable
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
         // A refusal, not a fault: the crash log is left as it was.
-        Assert.Equal(crashLogBefore, MadeViewModels.CrashLogWithoutDestinationSaves());
+        Assert.Equal(crashLogBefore, ViewModelCrashLog.WithoutDestinationSaves());
     }
 
     [Fact]
@@ -676,7 +676,7 @@ public class CleanupPreFlightTests : IDisposable
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
-        var crashLogBefore = MadeViewModels.CrashLogWithoutDestinationSaves();
+        var crashLogBefore = ViewModelCrashLog.WithoutDestinationSaves();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -687,7 +687,7 @@ public class CleanupPreFlightTests : IDisposable
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
         // A failure with no established cause is a fault, so the crash log takes an entry.
-        Assert.NotEqual(crashLogBefore, MadeViewModels.CrashLogWithoutDestinationSaves());
+        Assert.NotEqual(crashLogBefore, ViewModelCrashLog.WithoutDestinationSaves());
     }
 
     [Fact]
@@ -700,7 +700,7 @@ public class CleanupPreFlightTests : IDisposable
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
-        var crashLogBefore = MadeViewModels.CrashLogWithoutDestinationSaves();
+        var crashLogBefore = ViewModelCrashLog.WithoutDestinationSaves();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -715,7 +715,7 @@ public class CleanupPreFlightTests : IDisposable
             Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
         Assert.False(vm.Cleanup.IsOperating);
         // A refusal, not a fault: the crash log is left as it was.
-        Assert.Equal(crashLogBefore, MadeViewModels.CrashLogWithoutDestinationSaves());
+        Assert.Equal(crashLogBefore, ViewModelCrashLog.WithoutDestinationSaves());
     }
 
     [Fact]
@@ -728,7 +728,7 @@ public class CleanupPreFlightTests : IDisposable
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
-        var crashLogBefore = MadeViewModels.CrashLogWithoutDestinationSaves();
+        var crashLogBefore = ViewModelCrashLog.WithoutDestinationSaves();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -742,7 +742,7 @@ public class CleanupPreFlightTests : IDisposable
             Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
         Assert.False(vm.Cleanup.IsOperating);
         // A mistake the message explains whole: the crash log is left as it was.
-        Assert.Equal(crashLogBefore, MadeViewModels.CrashLogWithoutDestinationSaves());
+        Assert.Equal(crashLogBefore, ViewModelCrashLog.WithoutDestinationSaves());
     }
 
     [Fact]

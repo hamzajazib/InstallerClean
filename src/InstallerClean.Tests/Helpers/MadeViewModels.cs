@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using InstallerClean.ViewModels;
 
 namespace InstallerClean.Tests.Helpers;
@@ -23,20 +24,31 @@ internal sealed class MadeViewModels : IDisposable
         foreach (var vm in _made)
             vm.Cleanup.FlushMoveDestination();
     }
+}
+
+/// <summary>
+/// The crash log as a view-model test compares it, kept out of AssemblyInfo.cs so that file
+/// names no view-model type.
+/// </summary>
+internal static class ViewModelCrashLog
+{
+    /// <summary>Where each entry starts: a line opening "---- " (CrashLog.TryWrite).</summary>
+    private static readonly Regex EntryStart = new("(?=^---- )", RegexOptions.Multiline);
 
     /// <summary>
     /// <see cref="TestCrashLog.Text"/> without the entries carrying
-    /// <see cref="CleanupViewModel.MoveDestinationSaveRefused"/>. A view model another test
-    /// left behind saves its destination after a delay, into the one crash log every test
-    /// shares, so a test comparing the log before and after its own work reads this and sees
-    /// only entries its work could write.
+    /// <see cref="CleanupViewModel.MoveDestinationSaveRefused"/>. A view model left behind
+    /// with a settings service that refuses saves writes one after a delay, into the one
+    /// crash log every test shares, so a test comparing the log before and after its own
+    /// work reads this and sees only entries its work could write. The text ahead of the
+    /// first entry, the header a new log opens with, is kept only where an entry is kept.
     /// </summary>
-    public static string CrashLogWithoutDestinationSaves()
+    public static string WithoutDestinationSaves()
     {
-        // Each entry starts with a line opening "---- " (CrashLog.TryWrite).
-        var entries = System.Text.RegularExpressions.Regex.Split(
-            TestCrashLog.Text(), "(?=^---- )", System.Text.RegularExpressions.RegexOptions.Multiline);
-        return string.Concat(entries.Where(
-            e => !e.Contains(CleanupViewModel.MoveDestinationSaveRefused, StringComparison.Ordinal)));
+        var parts = EntryStart.Split(TestCrashLog.Text());
+        var kept = parts.Skip(1)
+            .Where(e => !e.Contains(CleanupViewModel.MoveDestinationSaveRefused, StringComparison.Ordinal))
+            .ToList();
+        return kept.Count == 0 && parts.Length > 1 ? string.Empty : parts[0] + string.Concat(kept);
     }
 }
