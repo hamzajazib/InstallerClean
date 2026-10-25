@@ -119,6 +119,7 @@ public sealed class AppUpdater : IAppUpdater
     private readonly string _stagingRoot;
     private readonly string _stagingDescriptor;
     private readonly IRegistryReader _registry;
+    private readonly UpdateLeftoverGate _leftovers;
     private (string Version, byte[]? Manifest)? _manifest;
 
     /// <param name="kind">The kind of copy running.</param>
@@ -141,13 +142,16 @@ public sealed class AppUpdater : IAppUpdater
 
     /// <summary>
     /// Test seam: the staging folder's descriptor given as SDDL, so a suite without
-    /// administrator rights can write into it, and the registry the PC's .NET Framework
-    /// is read from.
+    /// administrator rights can write into it, the registry the PC's .NET Framework
+    /// is read from, and the gate the update marks as it begins, this process's where
+    /// none is given.
     /// </summary>
     internal AppUpdater(
         AppCopyKind kind, string exePath, UpdateDownloadService downloader, string stagingRoot,
-        string setupArguments, string stagingDescriptor, IRegistryReader registry)
+        string setupArguments, string stagingDescriptor, IRegistryReader registry,
+        UpdateLeftoverGate? leftovers = null)
     {
+        _leftovers = leftovers ?? UpdateLeftoverGate.ForThisProcess;
         Kind = kind;
         _exePath = exePath;
         _setupArguments = setupArguments;
@@ -237,6 +241,9 @@ public sealed class AppUpdater : IAppUpdater
     public async Task<PreparedUpdate> PrepareAsync(
         string version, IProgress<double?>? progress, CancellationToken cancellationToken)
     {
+        // First, so no pass of the start-up clean-up deletes what this update writes
+        // (UpdateLeftoverGate).
+        _leftovers.MarkUpdateStarted();
         var address = AppCopy.DownloadAddress(Kind, version);
         var fileName = AppCopy.DownloadFileName(Kind, version);
         if (address is null || fileName is null)

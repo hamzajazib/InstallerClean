@@ -882,9 +882,10 @@ public partial class App : Application
     /// downloaded into, trying for ten seconds, because what put each there is usually
     /// still closing as this copy starts: the copy that renamed itself, or the setup,
     /// which opens the app before it exits. Whatever will not go by then is tried again
-    /// at the next start. First, in the setup's folder, it puts back the command line an
-    /// update renamed aside where nothing took its place
-    /// (<see cref="SelfReplacement.TryPutBackMissing"/>). Never throws.
+    /// at the next start, and so is whatever is left once this copy begins an update of its
+    /// own, whose files carry the same names (<see cref="UpdateLeftoverGate"/>). First, in
+    /// the setup's folder, it puts back the command line an update renamed aside where
+    /// nothing took its place (<see cref="SelfReplacement.TryPutBackMissing"/>). Never throws.
     /// </summary>
     private static async Task RemoveUpdateLeftoversAsync()
     {
@@ -900,9 +901,12 @@ public partial class App : Application
             var oldCopyGone = exePath is null;
             for (var attempt = 0; attempt < 20; attempt++)
             {
-                foldersGone = foldersGone || UpdateStagingFolder.RemoveLeftovers(UpdateStagingFolder.DefaultRoot);
-                oldCopyGone = oldCopyGone || SelfReplacement.TryRemoveOldCopy(exePath!);
-                if (foldersGone && oldCopyGone) return;
+                var ran = UpdateLeftoverGate.ForThisProcess.TryRunPass(() =>
+                {
+                    foldersGone = foldersGone || UpdateStagingFolder.RemoveLeftovers(UpdateStagingFolder.DefaultRoot);
+                    oldCopyGone = oldCopyGone || SelfReplacement.TryRemoveOldCopy(exePath!);
+                });
+                if (!ran || (foldersGone && oldCopyGone)) return;
                 await Task.Delay(500);
             }
         }
