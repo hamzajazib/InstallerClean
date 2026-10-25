@@ -8,8 +8,12 @@ namespace InstallerClean.Tests.Services.Integration;
 /// <see cref="ProcessStartRetry"/> against a file that does not exist, which Windows
 /// refuses to start every time.
 /// </summary>
-public class ProcessStartRetryTests
+public sealed class ProcessStartRetryTests : IDisposable
 {
+    private readonly IDisposable _crashLog = TestCrashLog.OwnFolder();
+
+    public void Dispose() => _crashLog.Dispose();
+
     private static ProcessStartInfo Missing() =>
         new(Path.Combine(Path.GetTempPath(), $"InstallerClean-missing-{Guid.NewGuid():N}.exe"))
         {
@@ -21,13 +25,11 @@ public class ProcessStartRetryTests
     {
         var info = Missing();
         var waits = new List<TimeSpan>();
-        var crashLogBefore = FailedStartsInCrashLog(info.FileName);
-
         Assert.Throws<Win32Exception>(() => ProcessStartRetry.Start(info, _ => true, waits.Add));
 
         Assert.Equal(Enumerable.Repeat(ProcessStartRetry.Interval, ProcessStartRetry.Attempts - 1), waits);
         // Each failed try but the last is written; the last is the caller's to write.
-        Assert.Equal(crashLogBefore + ProcessStartRetry.Attempts - 1, FailedStartsInCrashLog(info.FileName));
+        Assert.Equal(ProcessStartRetry.Attempts - 1, TestCrashLog.FailedStartsOf(info.FileName));
     }
 
     [Fact]
@@ -35,12 +37,10 @@ public class ProcessStartRetryTests
     {
         var info = Missing();
         var waits = new List<TimeSpan>();
-        var crashLogBefore = FailedStartsInCrashLog(info.FileName);
-
         Assert.Throws<Win32Exception>(() => ProcessStartRetry.Start(info, _ => false, waits.Add));
 
         Assert.Empty(waits);
-        Assert.Equal(crashLogBefore, FailedStartsInCrashLog(info.FileName));
+        Assert.Empty(TestCrashLog.Text());
     }
 
     [Fact]
@@ -49,7 +49,6 @@ public class ProcessStartRetryTests
         var info = Missing();
         var tries = 0;
         var waitedFor = TimeSpan.Zero;
-        var crashLogBefore = FailedStartsInCrashLog(info.FileName);
 
         Assert.Throws<OperationCanceledException>(() => ProcessStartRetry.Start(
             info,
@@ -62,7 +61,7 @@ public class ProcessStartRetryTests
 
         Assert.Equal(1, tries);
         Assert.Equal(ProcessStartRetry.Interval, waitedFor);
-        Assert.Equal(crashLogBefore + 1, FailedStartsInCrashLog(info.FileName));
+        Assert.Equal(1, TestCrashLog.FailedStartsOf(info.FileName));
     }
 
     [Fact]
@@ -71,7 +70,6 @@ public class ProcessStartRetryTests
         var info = Missing();
         var asked = 0;
         var waits = 0;
-        var crashLogBefore = FailedStartsInCrashLog(info.FileName);
         // A failure short of the last try, which the caller refuses to try again.
         var refusedAt = ProcessStartRetry.Attempts - 1;
 
@@ -82,12 +80,6 @@ public class ProcessStartRetryTests
 
         Assert.Equal(refusedAt, asked);
         Assert.Equal(refusedAt - 1, waits);
-        Assert.Equal(crashLogBefore + refusedAt - 1, FailedStartsInCrashLog(info.FileName));
+        Assert.Equal(refusedAt - 1, TestCrashLog.FailedStartsOf(info.FileName));
     }
-
-    /// <summary>How many entries in the crash log are a start of <paramref name="file"/> that was refused.</summary>
-    private static int FailedStartsInCrashLog(string file) =>
-        TestCrashLog.Text().Split('\n').Count(line =>
-            line.StartsWith("System.ComponentModel.Win32Exception", StringComparison.Ordinal)
-            && line.Contains(file, StringComparison.OrdinalIgnoreCase));
 }

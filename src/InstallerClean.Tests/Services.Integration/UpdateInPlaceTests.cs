@@ -773,14 +773,8 @@ public sealed class UpdateInPlaceTests : IDisposable
         Assert.False(File.Exists(exe + SelfReplacement.OldSuffix));
         Assert.Equal(Program(2), File.ReadAllBytes(exe + SelfReplacement.NewSuffix));
         // One entry for each try: each but the last as it fails, the last once the exe is back.
-        Assert.Equal(ProcessStartRetry.Attempts, FailedStartsInCrashLog(exe));
+        Assert.Equal(ProcessStartRetry.Attempts, TestCrashLog.FailedStartsOf(exe));
     }
-
-    /// <summary>How many entries in the crash log are a start of <paramref name="exe"/> that Windows refused.</summary>
-    private static int FailedStartsInCrashLog(string exe) =>
-        TestCrashLog.Text().Split('\n').Count(line =>
-            line.StartsWith("System.ComponentModel.Win32Exception", StringComparison.Ordinal)
-            && line.Contains(exe, StringComparison.OrdinalIgnoreCase));
 
     [Fact]
     public void A_hand_over_with_nothing_written_beside_the_exe_changes_nothing_and_answers_false()

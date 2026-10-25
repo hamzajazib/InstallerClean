@@ -79,9 +79,9 @@ public sealed class UpdateLeftoverGateTests
         var pass = Task.Run(() => gate.TryRunPass(() =>
         {
             inPass.Set();
-            release.Wait();
+            release.Wait(TimeSpan.FromSeconds(30));
         }));
-        inPass.Wait();
+        Assert.True(inPass.Wait(TimeSpan.FromSeconds(10)), "The pass never ran.");
         Task mark;
         try
         {
@@ -91,7 +91,7 @@ public sealed class UpdateLeftoverGateTests
                 gate.HoldForUpdate();
             });
             // The hold has started, so a wait that ends here is the lock not holding it.
-            marking.Wait();
+            Assert.True(marking.Wait(TimeSpan.FromSeconds(10)), "The hold was never started.");
 
             await Assert.ThrowsAsync<TimeoutException>(() => mark.WaitAsync(TimeSpan.FromMilliseconds(200)));
         }

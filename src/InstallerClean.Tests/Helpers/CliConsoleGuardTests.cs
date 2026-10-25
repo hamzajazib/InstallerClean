@@ -198,26 +198,15 @@ public class CliConsoleGuardTests
     [Fact]
     public void A_failed_write_goes_to_the_crash_log_once()
     {
-        var folder = Path.Combine(Path.GetTempPath(), "InstallerClean.Tests", Guid.NewGuid().ToString("N"));
-        var suite = CrashLog.FolderForTests;
-        CrashLog.FolderForTests = folder;
-        try
-        {
-            var console = new ConsoleFailingAt("");
-            var guard = new ConsoleGuard(console);
+        using var _ = TestCrashLog.OwnFolder();
+        var console = new ConsoleFailingAt("");
+        var guard = new ConsoleGuard(console);
 
-            guard.WriteLine("first");
-            guard.WriteLine("second");
+        guard.WriteLine("first");
+        guard.WriteLine("second");
 
-            Assert.True(console.Refused == 2, "The second write's line break never reached the console.");
-            var log = File.ReadAllText(Path.Combine(folder, "crash.log"));
-            Assert.Equal(1, log.Split(ConsoleFailingAt.Message).Length - 1);
-        }
-        finally
-        {
-            CrashLog.FolderForTests = suite;
-            TestCrashLog.TryDelete(folder);
-        }
+        Assert.True(console.Refused == 2, "The second write's line break never reached the console.");
+        Assert.Equal(1, TestCrashLog.Text().Split(ConsoleFailingAt.Message).Length - 1);
     }
 
     [Theory]

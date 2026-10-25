@@ -42,8 +42,9 @@ internal static class TestCulture
 /// test runs, so a test reaching the log by a path nobody planned for is covered too, and
 /// it is deleted when the test process exits, along with the shared InstallerClean.Tests
 /// folder above it where no other run's folder is left in it. A test that changes the
-/// folder for its run, as the tests that make view models do (<c>MadeViewModels</c>), the
-/// update tests do (<see cref="OwnFolder"/>) and CrashLogTests does, puts this one back.
+/// folder for its run, through <see cref="OwnFolder"/> as the update tests, the console
+/// guard's and the event log's tests and the tests that make view models
+/// (<c>MadeViewModels</c>) do, or by hand as CrashLogTests does, puts this one back.
 /// </summary>
 internal static class TestCrashLog
 {
@@ -61,6 +62,12 @@ internal static class TestCrashLog
     /// </summary>
     internal static IDisposable OwnFolder() => new Folder();
 
+    /// <summary>
+    /// Folders are put back in the reverse of the order they were taken. Disposing one while
+    /// a folder taken after it is still current throws and changes nothing, since putting
+    /// its own previous folder back there would point the crash log at a folder already
+    /// deleted.
+    /// </summary>
     private sealed class Folder : IDisposable
     {
         private readonly string? _previous = CrashLog.FolderForTests;
@@ -72,6 +79,9 @@ internal static class TestCrashLog
         public void Dispose()
         {
             if (_disposed) return;
+            if (CrashLog.FolderForTests != _folder)
+                throw new InvalidOperationException(
+                    $"The crash log's folder is {CrashLog.FolderForTests}, not {_folder}: a folder taken after this one is still in use.");
             _disposed = true;
             CrashLog.FolderForTests = _previous;
             TryDelete(_folder);
@@ -93,10 +103,31 @@ internal static class TestCrashLog
 
     /// <summary>
     /// The crash log as it stands, after the copy it was last moved aside to, or empty where
-    /// there is neither. Read whole, so a test comparing it before and after a write sees
-    /// the entry even where the write moved a full log aside.
+    /// there is neither. Read whole, so a test sees every entry its work wrote even where a
+    /// write moved a full log aside.
     /// </summary>
     internal static string Text() => ReadIfThere(CrashLog.LogPath + CrashLog.ArchiveSuffix) + ReadIfThere(CrashLog.LogPath);
+
+    /// <summary>
+    /// The one entry in the crash log, from its opening "---- " line on. A log holding none,
+    /// or more than one, fails the test.
+    /// </summary>
+    internal static string OnlyEntry()
+    {
+        var text = Text();
+        Assert.Equal(1, text.Split('\n').Count(l => l.StartsWith("---- ", StringComparison.Ordinal)));
+        return text[text.IndexOf("---- ", StringComparison.Ordinal)..];
+    }
+
+    /// <summary>
+    /// How many entries in the crash log are a start of <paramref name="file"/> that Windows
+    /// refused, counted by the line in each that opens with the Win32Exception and names the
+    /// file.
+    /// </summary>
+    internal static int FailedStartsOf(string file) =>
+        Text().Split('\n').Count(line =>
+            line.StartsWith("System.ComponentModel.Win32Exception", StringComparison.Ordinal)
+            && line.Contains(file, StringComparison.OrdinalIgnoreCase));
 
     private static string ReadIfThere(string path) => File.Exists(path) ? File.ReadAllText(path) : string.Empty;
 

@@ -35,17 +35,6 @@ public sealed class CommandLineUpdateTests : IDisposable
         finally { _crashLog.Dispose(); }
     }
 
-    /// <summary>
-    /// The one entry in this test's crash log, from its opening "---- " line on. A run that
-    /// writes none, or more than one, fails the test.
-    /// </summary>
-    private static string OnlyCrashLogEntry()
-    {
-        var text = TestCrashLog.Text();
-        Assert.Equal(1, text.Split('\n').Count(l => l.StartsWith("---- ", StringComparison.Ordinal)));
-        return text[text.IndexOf("---- ", StringComparison.Ordinal)..];
-    }
-
     private static Func<CancellationToken, Task<UpdateCheckResult>> Answers(UpdateCheckResult result) =>
         _ => Task.FromResult(result);
 
@@ -469,7 +458,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         var result = Run(updater, canAsk: false);
 
         Assert.Equal(new CommandLineUpdateResult.CarriedOn(UpdateFailureStage.Download, Current, Latest), result);
-        Assert.DoesNotContain("the console refused it", OnlyCrashLogEntry());
+        Assert.DoesNotContain("the console refused it", TestCrashLog.OnlyEntry());
     }
 
     /// <summary>The line giving the newer version's release page.</summary>
@@ -681,7 +670,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
         Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
         Assert.Equal(nameof(UpdateFailedException), stopped.FailureType);
-        var entry = OnlyCrashLogEntry();
+        var entry = TestCrashLog.OnlyEntry();
         Assert.Contains("The run ended. The running copy was put back at the command line's path.", entry);
         Assert.Contains("The newer version could not be started.", entry);
     }
@@ -700,7 +689,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.IsType<CommandLineUpdateResult.Stopped>(result);
         Assert.Equal("old", File.ReadAllText(_exe));
         Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
-        var entry = OnlyCrashLogEntry();
+        var entry = TestCrashLog.OnlyEntry();
         Assert.Contains("A failure ended the run and Ctrl+C came as well. The running copy was put back at the command line's path.", entry);
         Assert.Contains("The newer version could not be started.", entry);
     }
@@ -761,7 +750,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         // The setup's failure is what ended the run, and the line the console refused is not.
         Assert.Equal(nameof(UpdateFailedException), Assert.IsType<CommandLineUpdateResult.Stopped>(result).FailureType);
         Assert.Null(_host.NewerVersionRun);
-        var entry = OnlyCrashLogEntry();
+        var entry = TestCrashLog.OnlyEntry();
         Assert.Contains("The setup ended with exit code 1.", entry);
     }
 
@@ -972,7 +961,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         var result = Run(Setup(), canAsk: false);
 
         Assert.Equal(new CommandLineUpdateResult.NotStarted(Current, Latest), result);
-        var entry = OnlyCrashLogEntry();
+        var entry = TestCrashLog.OnlyEntry();
         Assert.Contains("The newer version could not be started.", entry);
         Assert.DoesNotContain("the console refused it", entry);
     }
