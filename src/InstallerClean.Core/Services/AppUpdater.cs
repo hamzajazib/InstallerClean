@@ -263,102 +263,89 @@ public sealed class AppUpdater : IAppUpdater
         var hold = _leftovers.HoldForUpdate();
         try
         {
-            return await PrepareHeldAsync(version, address, fileName, hold, progress, cancellationToken)
-                .ConfigureAwait(false);
+            UpdateStagingFolder folder;
+            try
+            {
+                folder = UpdateStagingFolder.Create(_stagingRoot, _stagingDescriptor);
+            }
+            catch (Exception ex)
+            {
+                throw new UpdateFailedException(UpdateFailureStage.Install,
+                    "The folder the download is saved in could not be created.", ex);
+            }
+
+            var staged = Path.Combine(folder.FullPath, fileName);
+            try
+            {
+#if DEBUG
+                if (LocalFile() is { } local)
+                    await new UpdateDownloadService(new LocalFileAnswer(local), null)
+                        .DownloadAsync(address, staged, progress, cancellationToken).ConfigureAwait(false);
+                else
+#endif
+                await _downloader.DownloadAsync(address, staged, progress, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch
+            {
+                folder.TryRemoveIfEmpty();
+                throw;
+            }
+
+            // Read in the staging folder, which only Administrators and SYSTEM can write to. A file
+            // that is not the version asked for is deleted here, before anything copies or starts it.
+            if (Helpers.FileVersionResource.Read(staged) is not { } carried
+                || !Helpers.FileVersionResource.IsRelease(carried, version))
+            {
+                Helpers.StorageHelpers.TryDeleteTempFile(staged);
+                folder.TryRemoveIfEmpty();
+                throw new UpdateFailedException(UpdateFailureStage.Install,
+                    "The downloaded file does not carry the version it was downloaded as.");
+            }
+
+            if (Kind == AppCopyKind.Setup)
+            {
+                return new PreparedUpdate(version, staged, _setupArguments, () =>
+                {
+                    try
+                    {
+                        Helpers.StorageHelpers.TryDeleteTempFile(staged);
+                        folder.TryRemoveIfEmpty();
+                    }
+                    finally
+                    {
+                        hold.Release();
+                    }
+                });
+            }
+
+            string replacement;
+            try
+            {
+                replacement = await SelfReplacement.StageAsync(_exePath, staged, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                Helpers.StorageHelpers.TryDeleteTempFile(staged);
+                folder.TryRemoveIfEmpty();
+            }
+            // With nothing at the exe's path, the newer version is one of the two files that can
+            // go there, so it stays, and so does the hold, since a pass of the clean-up deletes it.
+            return new PreparedUpdate(version, _exePath, string.Empty, () =>
+                {
+                    if (!File.Exists(_exePath)) return;
+                    try { Helpers.StorageHelpers.TryDeleteTempFile(replacement); }
+                    finally { hold.Release(); }
+                },
+                replacement);
         }
         catch
         {
-            // Every throw below has taken away what it wrote, so nothing of this update's
-            // is left for the clean-up to delete.
+            // A throw from here on leaves nothing this update needs later, so the clean-up
+            // may run again and remove whatever of it is still on disk.
             hold.Release();
             throw;
         }
-    }
-
-    /// <summary>
-    /// <see cref="PrepareAsync"/> from the first write on, with the clean-up held off by
-    /// <paramref name="hold"/>. The prepared update releases it in its undo once nothing
-    /// it wrote is left waiting, and keeps it where the newer version stays beside an
-    /// exe whose path is empty.
-    /// </summary>
-    private async Task<PreparedUpdate> PrepareHeldAsync(string version, Uri address, string fileName,
-        UpdateLeftoverGate.Hold hold, IProgress<double?>? progress, CancellationToken cancellationToken)
-    {
-        UpdateStagingFolder folder;
-        try
-        {
-            folder = UpdateStagingFolder.Create(_stagingRoot, _stagingDescriptor);
-        }
-        catch (Exception ex)
-        {
-            throw new UpdateFailedException(UpdateFailureStage.Install,
-                "The folder the download is saved in could not be created.", ex);
-        }
-
-        var staged = Path.Combine(folder.FullPath, fileName);
-        try
-        {
-#if DEBUG
-            if (LocalFile() is { } local)
-                await new UpdateDownloadService(new LocalFileAnswer(local), null)
-                    .DownloadAsync(address, staged, progress, cancellationToken).ConfigureAwait(false);
-            else
-#endif
-            await _downloader.DownloadAsync(address, staged, progress, cancellationToken)
-                .ConfigureAwait(false);
-        }
-        catch
-        {
-            folder.TryRemoveIfEmpty();
-            throw;
-        }
-
-        // Read in the staging folder, which only Administrators and SYSTEM can write to. A file
-        // that is not the version asked for is deleted here, before anything copies or starts it.
-        if (Helpers.FileVersionResource.Read(staged) is not { } carried
-            || !Helpers.FileVersionResource.IsRelease(carried, version))
-        {
-            Helpers.StorageHelpers.TryDeleteTempFile(staged);
-            folder.TryRemoveIfEmpty();
-            throw new UpdateFailedException(UpdateFailureStage.Install,
-                "The downloaded file does not carry the version it was downloaded as.");
-        }
-
-        if (Kind == AppCopyKind.Setup)
-        {
-            return new PreparedUpdate(version, staged, _setupArguments, () =>
-            {
-                try
-                {
-                    Helpers.StorageHelpers.TryDeleteTempFile(staged);
-                    folder.TryRemoveIfEmpty();
-                }
-                finally
-                {
-                    hold.Release();
-                }
-            });
-        }
-
-        string replacement;
-        try
-        {
-            replacement = await SelfReplacement.StageAsync(_exePath, staged, cancellationToken).ConfigureAwait(false);
-        }
-        finally
-        {
-            Helpers.StorageHelpers.TryDeleteTempFile(staged);
-            folder.TryRemoveIfEmpty();
-        }
-        // With nothing at the exe's path, the newer version is one of the two files that can
-        // go there, so it stays, and so does the hold, since a pass of the clean-up deletes it.
-        return new PreparedUpdate(version, _exePath, string.Empty, () =>
-            {
-                if (!File.Exists(_exePath)) return;
-                try { Helpers.StorageHelpers.TryDeleteTempFile(replacement); }
-                finally { hold.Release(); }
-            },
-            replacement);
     }
 
 #if DEBUG

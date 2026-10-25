@@ -1,3 +1,4 @@
+using System.Security.Principal;
 using InstallerClean.Services;
 
 namespace InstallerClean.Tests.Services;
@@ -48,6 +49,22 @@ public sealed class UpdateLeftoverGateTests
 
         second.Release();
         Assert.True(gate.TryRunPass(() => { }));
+    }
+
+    [Fact]
+    public async Task A_wait_for_the_gate_ends_when_the_last_hold_is_released()
+    {
+        var gate = new UpdateLeftoverGate();
+        Assert.True(gate.WhenFree().IsCompleted);
+        var first = gate.HoldForUpdate();
+        var second = gate.HoldForUpdate();
+
+        var free = gate.WhenFree();
+        first.Release();
+        Assert.False(free.IsCompleted);
+
+        second.Release();
+        await free.WaitAsync(TimeSpan.FromSeconds(10));
     }
 
     [Fact]
@@ -123,7 +140,7 @@ public sealed class UpdateLeftoverGateTests
     public async Task An_update_from_a_copy_with_nothing_to_download_leaves_the_clean_up_running()
     {
         var gate = new UpdateLeftoverGate();
-        var updater = Updater(gate, Path.GetTempPath(), AllowsEveryDownload, AppCopyKind.Undetermined);
+        var updater = Updater(gate, Path.GetTempPath(), AllowsEveryDownload, kind: AppCopyKind.Undetermined);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => updater.PrepareAsync("9.9.9", null, CancellationToken.None));
 
@@ -175,7 +192,7 @@ public sealed class UpdateLeftoverGateTests
         {
             using var cts = new CancellationTokenSource();
             var heldDuringDownload = false;
-            var updater = Updater(gate, root, AllowsEveryDownload, onDownload: () =>
+            var updater = Updater(gate, root, AllowsEveryDownload, ThisAccountOnly, onDownload: () =>
             {
                 heldDuringDownload = !gate.TryRunPass(() => { });
                 cts.Cancel();
@@ -204,6 +221,14 @@ public sealed class UpdateLeftoverGateTests
             () => updater.CheckRequirementsAsync("9.9.9", new CancellationToken(canceled: true)));
     }
 
+    /// <summary>
+    /// The staging folder's descriptor owned by, and open to, the account running the suite,
+    /// which runs without administrator rights and so cannot make Administrators the owner.
+    /// </summary>
+    private static readonly string ThisAccountOnly = DescriptorFor(WindowsIdentity.GetCurrent().User!.Value);
+
+    private static string DescriptorFor(string sid) => $"O:{sid}D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;FA;;;{sid})";
+
     /// <summary>An update.json that lists no download, so every copy is refused.</summary>
     private const string RefusesEveryDownload = """{"schema": 1, "downloads": {}}""";
 
@@ -215,13 +240,14 @@ public sealed class UpdateLeftoverGateTests
     /// An updater for a copy of <paramref name="kind"/> whose requests are answered here:
     /// the release's update.json with <paramref name="manifest"/>, or not found where it
     /// is null, and any other request with nothing, after <paramref name="onDownload"/> runs.
+    /// Its staging folder is made with <paramref name="descriptor"/>, or the shipping one.
     /// </summary>
     private static AppUpdater Updater(
-        UpdateLeftoverGate gate, string stagingRoot, string? manifest, AppCopyKind kind = AppCopyKind.Portable,
-        Action? onDownload = null) =>
+        UpdateLeftoverGate gate, string stagingRoot, string? manifest, string? descriptor = null,
+        AppCopyKind kind = AppCopyKind.Portable, Action? onDownload = null) =>
         new(kind, Path.Combine(Path.GetTempPath(), "InstallerClean.exe"),
             new UpdateDownloadService(new Answers(manifest, onDownload), null), stagingRoot,
-            AppUpdater.WindowSetupArguments, UpdateStagingFolder.AdministratorsOnly,
+            AppUpdater.WindowSetupArguments, descriptor ?? UpdateStagingFolder.AdministratorsOnly,
             NSubstitute.Substitute.For<IRegistryReader>(), gate);
 
     private sealed class Answers(string? manifest, Action? onDownload) : HttpMessageHandler

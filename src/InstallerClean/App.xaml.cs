@@ -882,10 +882,10 @@ public partial class App : Application
     /// this exe, and removes the folders earlier updates downloaded into. It tries for ten
     /// seconds, because what put each there may still be closing as this copy starts: the
     /// copy that renamed itself, or the setup, which opens the app before it exits.
-    /// No pass runs while an update of this copy's own holds
-    /// the gate, its files carrying the same names (<see cref="UpdateLeftoverGate"/>), and
-    /// the ten seconds go on counting. Whatever will not go by then is tried again at the
-    /// next start. First, in the setup's folder, it puts back the
+    /// Whatever will not go by then is tried again at the
+    /// next start. While an update of this copy's own holds the gate, its files carrying
+    /// the same names (<see cref="UpdateLeftoverGate"/>), no pass runs and the ten seconds
+    /// wait until it lets go. First, in the setup's folder, it puts back the
     /// command line an update renamed aside where nothing took its place
     /// (<see cref="SelfReplacement.TryPutBackMissing"/>). Never throws.
     /// </summary>
@@ -901,14 +901,20 @@ public partial class App : Application
                     Path.Combine(folder, AppCopy.CommandLineFileName), SelfReplacement.SetupRunning);
             var foldersGone = false;
             var oldCopyGone = exePath is null;
-            for (var attempt = 0; attempt < 20; attempt++)
+            for (var attempt = 0; attempt < 20;)
             {
                 var ran = UpdateLeftoverGate.ForThisProcess.TryRunPass(() =>
                 {
                     foldersGone = foldersGone || UpdateStagingFolder.RemoveLeftovers(UpdateStagingFolder.DefaultRoot);
                     oldCopyGone = oldCopyGone || SelfReplacement.TryRemoveOldCopy(exePath!);
                 });
-                if (ran && foldersGone && oldCopyGone) return;
+                if (!ran)
+                {
+                    await UpdateLeftoverGate.ForThisProcess.WhenFree();
+                    continue;
+                }
+                if (foldersGone && oldCopyGone) return;
+                attempt++;
                 await Task.Delay(500);
             }
         }

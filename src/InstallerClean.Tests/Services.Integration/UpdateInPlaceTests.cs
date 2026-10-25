@@ -895,6 +895,7 @@ public sealed class UpdateInPlaceTests : IDisposable
 
         prepared.Undo();
 
+        Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
         Assert.True(gate.TryRunPass(() => { }));
     }
 

@@ -13,6 +13,7 @@ public sealed class UpdateLeftoverGate
 {
     private readonly object _gate = new();
     private int _holds;
+    private TaskCompletionSource? _free;
 
     /// <summary>The gate this process's clean-up and its updates share.</summary>
     public static UpdateLeftoverGate ForThisProcess { get; } = new();
@@ -35,6 +36,20 @@ public sealed class UpdateLeftoverGate
     }
 
     /// <summary>
+    /// Completes once no update holds the gate, at once where none does. A hold that is
+    /// never released leaves it waiting for the rest of the process.
+    /// </summary>
+    public Task WhenFree()
+    {
+        lock (_gate)
+        {
+            if (_holds == 0) return Task.CompletedTask;
+            _free ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            return _free.Task;
+        }
+    }
+
+    /// <summary>
     /// Holds the gate for an update about to write its first file, once any pass already
     /// running has ended. No pass runs until every hold taken has been released.
     /// </summary>
@@ -46,7 +61,16 @@ public sealed class UpdateLeftoverGate
 
     private void Release()
     {
-        lock (_gate) _holds--;
+        TaskCompletionSource? free = null;
+        lock (_gate)
+        {
+            if (--_holds == 0)
+            {
+                free = _free;
+                _free = null;
+            }
+        }
+        free?.TrySetResult();
     }
 
     /// <summary>One update's hold on the gate.</summary>
