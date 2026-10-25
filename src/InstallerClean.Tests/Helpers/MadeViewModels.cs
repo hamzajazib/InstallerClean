@@ -23,4 +23,20 @@ internal sealed class MadeViewModels : IDisposable
         foreach (var vm in _made)
             vm.Cleanup.FlushMoveDestination();
     }
+
+    /// <summary>
+    /// <see cref="TestCrashLog.Text"/> without the entries carrying
+    /// <see cref="CleanupViewModel.MoveDestinationSaveRefused"/>. A view model another test
+    /// left behind saves its destination after a delay, into the one crash log every test
+    /// shares, so a test comparing the log before and after its own work reads this and sees
+    /// only entries its work could write.
+    /// </summary>
+    public static string CrashLogWithoutDestinationSaves()
+    {
+        // Each entry starts with a line opening "---- " (CrashLog.TryWrite).
+        var entries = System.Text.RegularExpressions.Regex.Split(
+            TestCrashLog.Text(), "(?=^---- )", System.Text.RegularExpressions.RegexOptions.Multiline);
+        return string.Concat(entries.Where(
+            e => !e.Contains(CleanupViewModel.MoveDestinationSaveRefused, StringComparison.Ordinal)));
+    }
 }
