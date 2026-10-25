@@ -333,6 +333,26 @@ public sealed class CommandLineUpdateTests : IDisposable
             new CommandLineUpdateResult.HandedOver(CommandLineUpdate.ControlCExit, Current, Latest, "/s"), result);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Ctrl_C_as_the_release_rules_this_copy_out_cancels_and_says_nothing_of_the_refusal(bool canAsk)
+    {
+        using var cts = new CancellationTokenSource();
+        var updater = Download();
+        updater.Requirements = () =>
+        {
+            cts.Cancel();
+            return UpdateRefusal.NeedsNetFramework48;
+        };
+
+        var result = Run(updater, canAsk, token: cts.Token);
+
+        Assert.IsType<CommandLineUpdateResult.Cancelled>(result);
+        Assert.DoesNotContain(Strings.Cli_UpdateNeedsNetFramework48, _host.Output);
+        Assert.False(updater.Prepared);
+    }
+
     [Fact]
     public void Ctrl_C_during_the_download_cancels_and_starts_nothing()
     {

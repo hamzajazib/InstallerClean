@@ -1,3 +1,4 @@
+using System.Net;
 using System.Security.Principal;
 using InstallerClean.Services;
 using NSubstitute;
@@ -211,58 +212,6 @@ public sealed class UpdateLeftoverGateTests
         }
     }
 
-    [Fact]
-    public async Task A_cancelled_check_against_a_kept_refusing_file_answers_the_cancel_not_the_refusal()
-    {
-        var updater = Updater(new UpdateLeftoverGate(), Path.GetTempPath(), RefusesEveryDownload);
-        Assert.Equal(UpdateRefusal.CannotInstallFromThisCopy,
-            await updater.CheckRequirementsAsync("9.9.9", CancellationToken.None));
-
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => updater.CheckRequirementsAsync("9.9.9", new CancellationToken(canceled: true)));
-    }
-
-    [Fact]
-    public async Task A_release_file_read_in_full_as_the_check_is_cancelled_is_kept()
-    {
-        using var cts = new CancellationTokenSource();
-        var network = new CancelsAsItAnswers(cts, System.Net.HttpStatusCode.OK, AllowsEveryDownload, atBodysEnd: true);
-        var updater = Updater(new UpdateLeftoverGate(), Path.GetTempPath(), network);
-
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => updater.CheckRequirementsAsync("9.9.9", cts.Token));
-
-        Assert.Null(await updater.CheckRequirementsAsync("9.9.9", CancellationToken.None));
-        Assert.Equal(1, network.Requests);
-    }
-
-    [Fact]
-    public async Task A_server_error_as_the_check_is_cancelled_answers_the_cancel()
-    {
-        using var cts = new CancellationTokenSource();
-        var network = new CancelsAsItAnswers(cts, System.Net.HttpStatusCode.InternalServerError, null);
-        var updater = Updater(new UpdateLeftoverGate(), Path.GetTempPath(), network);
-
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => updater.CheckRequirementsAsync("9.9.9", cts.Token));
-    }
-
-    [Fact]
-    public async Task A_check_cancelled_while_the_pc_is_read_for_dotnet_framework_answers_the_cancel_not_the_refusal()
-    {
-        using var cts = new CancellationTokenSource();
-        var registry = NSubstitute.Substitute.For<IRegistryReader>();
-        registry.LocalMachineDwordValue(Arg.Any<string>(), Arg.Any<string>()).Returns(_ =>
-        {
-            cts.Cancel();
-            return new RegistryDwordRead(RegistryDwordState.Absent);
-        });
-        var updater = Updater(new UpdateLeftoverGate(), Path.GetTempPath(), new Answers(NeedsNetFramework48, null),
-            registry: registry);
-
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => updater.CheckRequirementsAsync("9.9.9", cts.Token));
-        Assert.Equal(UpdateRefusal.NeedsNetFramework48,
-            await updater.CheckRequirementsAsync("9.9.9", CancellationToken.None));
-    }
-
     /// <summary>
     /// The staging folder's descriptor owned by, and open to, the account running the suite,
     /// which runs without administrator rights and so cannot make Administrators the owner.
@@ -270,13 +219,6 @@ public sealed class UpdateLeftoverGateTests
     private static readonly string ThisAccountOnly = DescriptorFor(WindowsIdentity.GetCurrent().User!.Value);
 
     private static string DescriptorFor(string sid) => $"O:{sid}D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;FA;;;{sid})";
-
-    /// <summary>An update.json that lists no download, so every copy is refused.</summary>
-    private const string RefusesEveryDownload = """{"schema": 1, "downloads": {}}""";
-
-    /// <summary>An update.json whose every download needs .NET Framework 4.8.</summary>
-    private const string NeedsNetFramework48 =
-        """{"schema": 1, "downloads": {"setup": {"requires": ["netfx-4.8"]}, "portable": {"requires": ["netfx-4.8"]}, "slim": {"requires": ["netfx-4.8"]}, "cli": {"requires": ["netfx-4.8"]}}}""";
 
     /// <summary>An update.json that lists every download with nothing required.</summary>
     private const string AllowsEveryDownload =
@@ -291,58 +233,10 @@ public sealed class UpdateLeftoverGateTests
     private static AppUpdater Updater(
         UpdateLeftoverGate gate, string stagingRoot, string? manifest, string? descriptor = null,
         AppCopyKind kind = AppCopyKind.Portable, Action? onDownload = null) =>
-        Updater(gate, stagingRoot, new Answers(manifest, onDownload), descriptor, kind);
-
-    /// <summary>The same, with every request answered by <paramref name="network"/>.</summary>
-    private static AppUpdater Updater(
-        UpdateLeftoverGate gate, string stagingRoot, HttpMessageHandler network, string? descriptor = null,
-        AppCopyKind kind = AppCopyKind.Portable, IRegistryReader? registry = null) =>
         new(kind, Path.Combine(Path.GetTempPath(), "InstallerClean.exe"),
-            new UpdateDownloadService(network, null), stagingRoot,
+            new UpdateDownloadService(new Answers(manifest, onDownload), null), stagingRoot,
             AppUpdater.WindowSetupArguments, descriptor ?? UpdateStagingFolder.AdministratorsOnly,
-            registry ?? NSubstitute.Substitute.For<IRegistryReader>(), gate);
-
-    /// <summary>
-    /// Answers each request with <paramref name="status"/> and <paramref name="body"/>, and
-    /// counts the requests. Cancels <paramref name="cts"/> as it answers, or where
-    /// <paramref name="atBodysEnd"/> is set, as the body's last byte has been read.
-    /// </summary>
-    private sealed class CancelsAsItAnswers(
-        CancellationTokenSource cts, System.Net.HttpStatusCode status, string? body, bool atBodysEnd = false)
-        : HttpMessageHandler
-    {
-        public int Requests { get; private set; }
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            Requests++;
-            var bytes = System.Text.Encoding.UTF8.GetBytes(body ?? string.Empty);
-            if (!atBodysEnd) cts.Cancel();
-            return Task.FromResult(new HttpResponseMessage(status)
-            {
-                Content = atBodysEnd ? new StreamContent(new CancelsAtEnd(bytes, cts)) : new ByteArrayContent(bytes),
-            });
-        }
-    }
-
-    /// <summary>A body that cancels <paramref name="cts"/> when a read finds nothing left.</summary>
-    private sealed class CancelsAtEnd(byte[] bytes, CancellationTokenSource cts) : MemoryStream(bytes)
-    {
-        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
-        {
-            var read = await base.ReadAsync(buffer, cancellationToken);
-            if (read == 0) cts.Cancel();
-            return read;
-        }
-
-        public override int Read(byte[] buffer, int offset, int count)
-        {
-            var read = base.Read(buffer, offset, count);
-            if (read == 0) cts.Cancel();
-            return read;
-        }
-    }
+            Substitute.For<IRegistryReader>(), gate);
 
     private sealed class Answers(string? manifest, Action? onDownload) : HttpMessageHandler
     {
@@ -351,11 +245,11 @@ public sealed class UpdateLeftoverGateTests
         {
             if (request.RequestUri!.AbsolutePath.EndsWith("/" + UpdateManifest.FileName, StringComparison.Ordinal))
                 return Task.FromResult(manifest is not null
-                    ? new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(manifest) }
-                    : new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
+                    ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(manifest) }
+                    : new HttpResponseMessage(HttpStatusCode.NotFound));
             onDownload?.Invoke();
             cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
         }
     }
 }

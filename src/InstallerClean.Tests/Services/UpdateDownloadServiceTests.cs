@@ -269,6 +269,23 @@ public sealed class UpdateDownloadServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task A_server_error_answered_as_the_download_is_cancelled_throws_cancellation_and_leaves_nothing()
+    {
+        using var cts = new CancellationTokenSource();
+        var handler = new RoutedHandler(_ =>
+        {
+            cts.Cancel();
+            return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
+        });
+        var service = new UpdateDownloadService(handler, TimeSpan.FromSeconds(30));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => service.DownloadAsync(ReleaseAddress, Destination, null, cts.Token));
+
+        Assert.False(File.Exists(Destination));
+    }
+
+    [Fact]
     public async Task A_connection_broken_off_by_cancelling_throws_cancellation_and_leaves_nothing()
     {
         var handler = new RoutedHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)

@@ -440,7 +440,8 @@ internal sealed class CommandLineUpdate
         if (canAsk) bound.CancelAfter(_watchedCheckBound);
         try
         {
-            return _updater.CheckRequirementsAsync(latest, bound.Token).GetAwaiter().GetResult();
+            var refusal = _updater.CheckRequirementsAsync(latest, bound.Token).GetAwaiter().GetResult();
+            return token.IsCancellationRequested ? null : refusal;
         }
         catch (Exception)
         {

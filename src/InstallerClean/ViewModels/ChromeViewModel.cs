@@ -604,7 +604,10 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
         bound.CancelAfter(within);
         try
         {
-            return new Requirements(true, await _updater.CheckRequirementsAsync(version, bound.Token));
+            var refusal = await _updater.CheckRequirementsAsync(version, bound.Token);
+            // An answer that comes as the token is cancelled is not shown.
+            token.ThrowIfCancellationRequested();
+            return new Requirements(true, refusal);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {

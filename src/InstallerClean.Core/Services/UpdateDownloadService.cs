@@ -168,6 +168,11 @@ public sealed class UpdateDownloadService
             // A connection broken off by the cancel itself is the cancel.
             throw new OperationCanceledException($"{what} was cancelled.", ex, cancellationToken);
         }
+        catch (UpdateFailedException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            // An answer refused as the cancel came, a server error among them, is the cancel.
+            throw new OperationCanceledException($"{what} was cancelled.", ex, cancellationToken);
+        }
         catch (OperationCanceledException ex)
         {
             throw new UpdateFailedException(UpdateFailureStage.Download,
