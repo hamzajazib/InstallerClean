@@ -575,11 +575,33 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         var result = Run(Setup(), canAsk: true, command: "/d");
 
-        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        var stopped = Assert.IsType<CommandLineUpdateResult.Stopped>(result);
         Assert.Equal("old", File.ReadAllText(_exe));
         Assert.False(File.Exists(_exe + SelfReplacement.OldSuffix));
-        Assert.DoesNotContain(_host.Output, line => line.StartsWith(
-            string.Format(Strings.Cli_UpdateRunningInstead, "/d", Current), StringComparison.Ordinal));
+        Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
+        Assert.Equal(nameof(UpdateFailedException), stopped.FailureType);
+        Assert.Contains("The newer version was not at the command line's path, and the running copy was put back there.",
+            TestCrashLog.Text());
+    }
+
+    [Fact]
+    public void Ctrl_C_as_a_setups_newer_version_goes_from_the_path_puts_this_exe_back_and_says_so_in_the_crash_log()
+    {
+        using var cts = new CancellationTokenSource();
+        SetupInstalls();
+        _host.NewerVersionExitCode = null;
+        _host.OnNewerVersion = () => File.Delete(_exe);
+        _host.OnNotStarted = cts.Cancel;
+
+        var result = Run(Setup(), canAsk: false, token: cts.Token);
+
+        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Equal("old", File.ReadAllText(_exe));
+        Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
+        // The last entry is the one the run ended with, each entry opening with a "---- " line.
+        var last = TestCrashLog.Text().Split("---- ")[^1];
+        Assert.Contains("Ctrl+C came with the newer version not at the command line's path, and the running copy was put back there.", last);
+        Assert.DoesNotContain("could not be put back", last);
     }
 
     [Fact]
@@ -1264,6 +1286,9 @@ public sealed class CommandLineUpdateTests : IDisposable
         /// <summary>Runs once the newer version has started, before what is said then.</summary>
         public Action? OnStarted { get; set; }
 
+        /// <summary>Runs where the newer version is not started, just before the start answers so.</summary>
+        public Action? OnNotStarted { get; set; }
+
         /// <summary>How many lines had been written when the newer version started.</summary>
         public int? LinesBeforeStart { get; private set; }
 
@@ -1349,7 +1374,11 @@ public sealed class CommandLineUpdateTests : IDisposable
             NewerVersionHeldLock = HoldsLock;
             OnNewerVersion?.Invoke();
             token.ThrowIfCancellationRequested();
-            if (NewerVersionExitCode is null) return null;
+            if (NewerVersionExitCode is null)
+            {
+                OnNotStarted?.Invoke();
+                return null;
+            }
             NewerVersionRun = (file, arguments.ToArray(), fromVersion, toVersion, File.ReadAllText(file), HoldsOwnFile);
             LinesBeforeStart = Output.Count;
             OnStarted?.Invoke();

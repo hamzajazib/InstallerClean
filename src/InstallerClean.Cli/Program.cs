@@ -501,8 +501,8 @@ internal static class Program
     /// <see cref="ExitCancelled"/> after Ctrl+C at the question, during the download,
     /// after an update that failed or was not tried, with the newer version installed and
     /// not yet started, or where Ctrl+C ended the newer version before it could answer it;
-    /// or <see cref="ExitError"/> where the update failed with this version's file no
-    /// longer at its path, so nothing ran. Answers null where the run goes on with this
+    /// or <see cref="ExitError"/> where the update failed and the run could not go on with
+    /// this version, so nothing ran. Answers null where the run goes on with this
     /// version, having written the notice for an update that failed.
     /// <paramref name="cancelled"/> is whether Ctrl+C had come when the update returned.
     /// </summary>
