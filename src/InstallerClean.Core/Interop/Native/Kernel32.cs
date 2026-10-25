@@ -565,9 +565,10 @@ internal static partial class Kernel32
         public int bInheritHandle;
 
         /// <summary>
-        /// Attributes carrying <paramref name="securityDescriptor"/>, which is
-        /// <see cref="IntPtr.Zero"/> for the descriptor a new object inherits, and
-        /// not inheritable by a child process.
+        /// Attributes carrying <paramref name="securityDescriptor"/>, not inheritable by a
+        /// child process. <see cref="IntPtr.Zero"/> gives the object the descriptor it
+        /// inherits from its parent. A descriptor passed here must stay allocated until the
+        /// call these attributes are given to has returned.
         /// </summary>
         public static SECURITY_ATTRIBUTES With(IntPtr securityDescriptor) => new()
         {

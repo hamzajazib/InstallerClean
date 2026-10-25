@@ -104,12 +104,12 @@ internal sealed class FirstRunMark : IFirstRunMark
     }
 
     /// <summary>
-    /// Writes the mark where it is absent and leaves a value already under the name as it
+    /// Writes the mark where it is absent, and leaves a value already under the name as it
     /// is, since <see cref="Read"/> answers set for a value of any kind. Answers whether the
-    /// mark is there afterwards, read back through the handle it was written through.
-    /// <paramref name="createdUnderLock"/> is true where the caller holds
-    /// the claim lock, so that finding the mark absent is a fact no other process can
-    /// have changed between the read and the write.
+    /// mark is there afterwards, read from the handle the write went through.
+    /// <paramref name="createdUnderLock"/> is true where the caller holds the claim lock, so
+    /// that finding the mark absent is a fact no other process can have changed between the
+    /// read and the write.
     /// </summary>
     private bool WriteMark(bool createdUnderLock)
     {
@@ -126,12 +126,16 @@ internal sealed class FirstRunMark : IFirstRunMark
                     "The key for the first-run mark could not be created or opened."));
                 return false;
             }
+            var wrote = false;
             if (key.GetValue(ValueName, null, RegistryValueOptions.DoNotExpandEnvironmentNames) is null)
             {
                 key.SetValue(ValueName, 1, RegistryValueKind.DWord);
-                if (createdUnderLock) _setHere = true;
+                wrote = true;
             }
-            return key.GetValue(ValueName, null, RegistryValueOptions.DoNotExpandEnvironmentNames) is not null;
+            if (key.GetValue(ValueName, null, RegistryValueOptions.DoNotExpandEnvironmentNames) is null)
+                return false;
+            if (wrote && createdUnderLock) _setHere = true;
+            return true;
         }
         catch (Exception ex)
         {
