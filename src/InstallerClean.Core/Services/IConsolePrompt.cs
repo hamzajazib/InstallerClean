@@ -5,10 +5,8 @@ namespace InstallerClean.Services;
 /// and one line of the person's answer back. The command line's update and its report
 /// offer both ask through it.
 ///
-/// <see cref="WriteLine"/> and <see cref="Write"/> never throw. The command line's host
-/// writes through the guard its Main puts on the console's output, which takes a failed
-/// write, records the run's first one in crash.log and lets the run go on, so a caller
-/// needs no guard of its own. A host added later keeps that promise.
+/// <see cref="WriteLine"/> and <see cref="Write"/> never throw: a write the console
+/// refuses is the host's to deal with, and the run goes on.
 /// </summary>
 internal interface IConsolePrompt
 {

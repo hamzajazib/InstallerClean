@@ -55,6 +55,9 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
     /// </summary>
     public bool SetupRunning => _setupRunning;
 
+    // Neither throws, as IConsolePrompt promises: Main puts ConsoleGuard on the console's
+    // output before any run starts, and it takes a refused write, records a run's first in
+    // crash.log and lets the run go on. Writing anywhere but Console.Out loses that.
     public void WriteLine(string line) => Console.WriteLine(line);
 
     public void Write(string text) => Console.Write(text);

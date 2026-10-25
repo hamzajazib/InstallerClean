@@ -810,12 +810,12 @@ internal sealed class CommandLineUpdate
     /// <summary>
     /// Writes a line that closes the update once how it ended is settled: what
     /// <see cref="Stop"/> and <see cref="CarryOn"/> say, and the line saying the newer
-    /// version is installed where Ctrl+C ends the run with it in place. A console that
-    /// refuses the line changes nothing about how the run ended, whose crash.log entry, if
-    /// it has one, is already written, so the refusal goes no further. The host's console
-    /// never throws (<see cref="IConsolePrompt"/>); this catch holds the same for any host
-    /// that does, and takes only an <see cref="IOException"/>, so anything else, a resource
-    /// whose placeholders do not match its arguments among them, is thrown.
+    /// version is installed where Ctrl+C ends the run with it in place. A line the console
+    /// refuses changes nothing about how the run ended, since the update's own crash.log
+    /// entry, where it has one, is written before it. The host's writes never throw
+    /// (<see cref="IConsolePrompt"/>), and the catch here takes an <see cref="IOException"/>
+    /// from a host that does all the same. A line that cannot be built, from a resource
+    /// whose placeholders do not match its arguments, is thrown.
     /// </summary>
     private static void SayClosing(Action say)
     {
