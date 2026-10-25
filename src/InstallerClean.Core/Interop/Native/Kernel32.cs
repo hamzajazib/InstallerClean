@@ -833,6 +833,9 @@ internal static partial class Kernel32
     // sharing delete.
     public const int ERROR_SHARING_VIOLATION = 32;
 
+    // What a read answers where another process has locked the part of the file it reads.
+    public const int ERROR_LOCK_VIOLATION = 33;
+
     // The two the volume enumeration and the mount-point query answer with, and
     // both are ordinary rather than faults: ERROR_NO_MORE_FILES ends a volume
     // walk, and ERROR_MORE_DATA is the first half of the double-call buffer

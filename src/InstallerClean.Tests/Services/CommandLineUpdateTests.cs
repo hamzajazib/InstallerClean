@@ -1077,6 +1077,61 @@ public sealed class CommandLineUpdateTests : IDisposable
         new("The process cannot access the file because it is being used by another process.",
             unchecked((int)0x80070000) | Kernel32.ERROR_SHARING_VIOLATION);
 
+    /// <summary>What a read of a file another process has locked part of throws on Windows.</summary>
+    private static IOException LockViolation() =>
+        new("The process cannot access the file because another process has locked a portion of the file.",
+            unchecked((int)0x80070000) | Kernel32.ERROR_LOCK_VIOLATION);
+
+    [Fact]
+    public void A_setup_whose_newer_version_is_locked_for_a_moment_runs_it_once_let_go()
+    {
+        _host.NewerVersionExitCode = 0;
+        var refused = 0;
+        _host.OnSetup = () =>
+        {
+            File.WriteAllText(_exe, "new");
+            _host.OnFileVersion = () =>
+            {
+                if (refused++ < 2) throw LockViolation();
+            };
+            return 0;
+        };
+
+        var result = Run(Setup(), canAsk: false, readHoldWait: TimeSpan.FromSeconds(10),
+            readHoldNotice: TimeSpan.FromSeconds(10));
+
+        Assert.Equal(new CommandLineUpdateResult.HandedOver(0, Current, Latest, "/s"), result);
+        Assert.Equal(3, refused);
+    }
+
+    [Fact]
+    public void Ctrl_C_while_the_setups_newer_version_is_held_ends_the_wait_with_it_left_in_place_and_nothing_run()
+    {
+        using var cts = new CancellationTokenSource();
+        _host.OnSetup = () =>
+        {
+            File.WriteAllText(_exe, "new");
+            _host.OnFileVersion = () =>
+            {
+                cts.Cancel();
+                throw SharingViolation();
+            };
+            return 0;
+        };
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
+
+        var result = Run(Setup(), canAsk: false, token: cts.Token, readHoldWait: TimeSpan.FromSeconds(30),
+            readHoldNotice: TimeSpan.FromSeconds(30));
+
+        Assert.True(System.Diagnostics.Stopwatch.GetElapsedTime(started) < TimeSpan.FromSeconds(10));
+        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.Null(_host.NewerVersionRun);
+        var entry = TestCrashLog.OnlyEntry();
+        Assert.Contains("A failure ended the run and Ctrl+C came as well.", entry);
+        Assert.Contains("could not be read after the setup", entry);
+    }
+
     [Fact]
     public void A_setup_whose_newer_version_is_held_sharing_nothing_for_a_moment_runs_it_once_let_go()
     {

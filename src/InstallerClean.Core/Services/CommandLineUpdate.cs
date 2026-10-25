@@ -221,6 +221,7 @@ internal sealed class CommandLineUpdate
     /// </summary>
     internal static readonly TimeSpan ReadHoldNotice = TimeSpan.FromSeconds(2);
 
+    /// <summary>How often a held file is read again while the run waits for it.</summary>
     private static readonly TimeSpan ReadHoldRetryInterval = TimeSpan.FromMilliseconds(100);
 
     private readonly Func<CancellationToken, Task<UpdateCheckResult>> _check;
@@ -230,7 +231,8 @@ internal sealed class CommandLineUpdate
     private readonly TimeSpan _controlCBound;
     private readonly TimeSpan _readHoldWait;
     private readonly TimeSpan _readHoldNotice;
-    private bool _saidWaitingForFile;
+    // The run's token, which ends a wait for a held file (Carries).
+    private CancellationToken _token;
     private bool _saidInstalled;
     // Set where this exe was renamed back to a path with nothing at it (RefillThisExe).
     private bool _renamedBack;
@@ -287,6 +289,7 @@ internal sealed class CommandLineUpdate
     public CommandLineUpdateResult Run(
         bool canAsk, string command, IReadOnlyList<string> arguments, string exePath, CancellationToken token)
     {
+        _token = token;
         if (Check(canAsk, token) is not { } available)
             return token.IsCancellationRequested ? new CommandLineUpdateResult.Cancelled() : CommandLineUpdateResult.NothingTried;
 
@@ -866,8 +869,7 @@ internal sealed class CommandLineUpdate
     /// <summary>
     /// Writes a line that closes the update once how it ended is settled: what
     /// <see cref="Stop"/> and <see cref="CarryOn"/> say, and the line saying the newer
-    /// version is installed where Ctrl+C ends the run with it in place; and the line saying
-    /// the run is waiting for a held file (<see cref="Carries"/>). A line that fails
+    /// version is installed where Ctrl+C ends the run with it in place. A line that fails
     /// changes nothing about how the run ended, since the update's own crash.log entry,
     /// where it has one, is written before it. Nothing it meets leaves it. The host's
     /// writes never throw (<see cref="IConsolePrompt"/>), and an <see cref="IOException"/> from a host that
@@ -934,34 +936,36 @@ internal sealed class CommandLineUpdate
     /// before it is put in place (<see cref="AppUpdater.PrepareAsync"/>). This reads the file
     /// at this exe's path after the setup has run, so the setup's copy starts nothing unless
     /// that file is the newer version, and wherever a failed part or Ctrl+C leaves the run
-    /// saying whether the newer version is in place. A file another process holds sharing
-    /// nothing for reading is read again every 100 ms for up to <see cref="ReadHoldWait"/>,
-    /// and once the wait has gone on for <see cref="ReadHoldNotice"/> the run says, once,
-    /// that it is waiting for the file. Answers null where the read fails or the hold
-    /// outlasts the wait, with the failure in <paramref name="unread"/> for the run's entry,
-    /// so the run starts nothing and leaves the file where it is. The wait is not ended by
-    /// Ctrl+C: its answer decides whether this exe goes back over the newer version. Never
-    /// throws.
+    /// saying whether the newer version is in place. A file another process holds against
+    /// reading, with a sharing or a lock violation, is read again every
+    /// <see cref="ReadHoldRetryInterval"/> for up to <see cref="ReadHoldWait"/>, and once a
+    /// wait has gone on for <see cref="ReadHoldNotice"/> the run says that it is waiting for
+    /// the file. Ctrl+C or the console closing ends the wait. Answers null where the read
+    /// fails, the hold outlasts the wait or the wait is ended, with the failure in
+    /// <paramref name="unread"/> for the run's entry, so the run starts nothing and leaves
+    /// the file where it is. Never throws.
     /// </summary>
     private bool? Carries(string path, string version, out Exception? unread)
     {
         unread = null;
         var started = Stopwatch.GetTimestamp();
+        var said = false;
         while (true)
         {
             try
             {
                 return _host.FileVersion(path) is { } carried && Helpers.FileVersionResource.IsRelease(carried, version);
             }
-            catch (IOException ex) when (Helpers.WindowsErrors.Of(ex) == Kernel32.ERROR_SHARING_VIOLATION
-                && Stopwatch.GetElapsedTime(started) < _readHoldWait)
+            catch (IOException ex) when (Helpers.WindowsErrors.Of(ex) is Kernel32.ERROR_SHARING_VIOLATION or Kernel32.ERROR_LOCK_VIOLATION
+                && !_token.IsCancellationRequested && Stopwatch.GetElapsedTime(started) < _readHoldWait)
             {
-                if (!_saidWaitingForFile && Stopwatch.GetElapsedTime(started) >= _readHoldNotice)
+                if (!said && Stopwatch.GetElapsedTime(started) >= _readHoldNotice)
                 {
-                    _saidWaitingForFile = true;
-                    SayClosing(() => _host.WriteLine(string.Format(Strings.Cli_UpdateWaitingForFile, Path.GetFileName(path))));
+                    said = true;
+                    SayWaitingFor(path);
                 }
-                Thread.Sleep(ReadHoldRetryInterval);
+                // A token that cannot be cancelled has a handle that is never set.
+                _token.WaitHandle.WaitOne(ReadHoldRetryInterval);
             }
             catch (Exception ex)
             {
@@ -969,5 +973,24 @@ internal sealed class CommandLineUpdate
                 return null;
             }
         }
+    }
+
+    /// <summary>
+    /// Says the run is waiting for another program to let go of the file at
+    /// <paramref name="path"/>. The host's writes never throw (<see cref="IConsolePrompt"/>);
+    /// a line that cannot be built is passed over, and the wait goes on either way.
+    /// </summary>
+    private void SayWaitingFor(string path)
+    {
+        string line;
+        try
+        {
+            line = string.Format(Strings.Cli_UpdateWaitingForFile, Path.GetFileName(path));
+        }
+        catch (FormatException)
+        {
+            return;
+        }
+        _host.WriteLine(line);
     }
 }
