@@ -333,9 +333,9 @@ public sealed class AppUpdater : IAppUpdater
             throw new UpdateRefusedException(refusal, version);
 
         // Everything above only reads, so an update that ends before this point, refused,
-        // failed or cancelled, never holds the gate. A write added above this line has to
-        // go through StagingFolderUnderHold too. A cancel that came after the requirements
-        // were checked is answered here, before the hold.
+        // failed or cancelled, never holds the gate. The hold comes before the update's
+        // first write, so a write added above this line moves the hold above it. A cancel
+        // that came after the requirements were checked is answered here, before the hold.
         cancellationToken.ThrowIfCancellationRequested();
         var (hold, folder) = StagingFolderUnderHold();
         try
@@ -416,7 +416,7 @@ public sealed class AppUpdater : IAppUpdater
 
     /// <summary>
     /// Holds the gate (<see cref="UpdateLeftoverGate"/>) and then makes the folder the
-    /// download is saved in, the first file this update writes, so no pass of the start-up
+    /// download is saved in, the first thing this update writes, so no pass of the start-up
     /// clean-up deletes it or anything written in it while the update runs. Where the folder
     /// cannot be made, the hold is released and the update fails at the Install stage.
     /// </summary>
