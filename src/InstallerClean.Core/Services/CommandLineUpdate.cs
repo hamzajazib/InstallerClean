@@ -247,6 +247,7 @@ internal sealed class CommandLineUpdate
     private readonly TimeSpan _controlCBound;
     private readonly TimeSpan _readHoldWait;
     private readonly TimeSpan _readHoldNotice;
+    private readonly TimeSpan _readHoldWaitAfterCancel;
     // The run's token, which ends a wait for a held file (Carries).
     private CancellationToken _token;
     // Set where the newer setup exited 0 and cleared once a read of the file at the path
@@ -272,13 +273,16 @@ internal sealed class CommandLineUpdate
         : this(check, updater, host, WatchedCheckBound, ControlCBound) { }
 
     /// <summary>
-    /// Test seam: the bound on a watched check, the wait for Ctrl+C's cancellation and the
-    /// wait out of a held file with the point it is said, so a test need not wait any out.
+    /// Test seam: the bound on a watched check, the wait for Ctrl+C's cancellation, and the
+    /// wait out of a held file with the point it is said and its bound where Ctrl+C came
+    /// first, so a test need not wait any out.
     /// </summary>
     internal CommandLineUpdate(
         Func<CancellationToken, Task<UpdateCheckResult>> check, IAppUpdater updater, ICommandLineUpdateHost host,
-        TimeSpan watchedCheckBound, TimeSpan controlCBound, TimeSpan? readHoldWait = null, TimeSpan? readHoldNotice = null)
+        TimeSpan watchedCheckBound, TimeSpan controlCBound, TimeSpan? readHoldWait = null, TimeSpan? readHoldNotice = null,
+        TimeSpan? readHoldWaitAfterCancel = null)
     {
+        _readHoldWaitAfterCancel = readHoldWaitAfterCancel ?? ReadHoldWaitAfterCancel;
         _readHoldWait = readHoldWait ?? ReadHoldWait;
         _readHoldNotice = readHoldNotice ?? ReadHoldNotice;
         _check = check;
@@ -623,7 +627,7 @@ internal sealed class CommandLineUpdate
         bool PutBack()
         {
             backAtPath = putBack() || RefillThisExe(exePath);
-            if (backAtPath) _newerVersionConfirmed = false;
+            if (backAtPath) PathChanged();
             return backAtPath;
         }
         try
@@ -646,8 +650,10 @@ internal sealed class CommandLineUpdate
                 // failures; this arm is for a throw out of anything else EndNotStarted
                 // reaches, which still ends the run by what the file at the path carries.
                 RefillIfEmpty(exePath);
-                if (Carries(exePath, latest, out var unread, out _) is not true)
-                    return RecordStopped(ex, token.IsCancellationRequested,
+                Exception? unread = null;
+                var waitEnded = false;
+                if (!_newerVersionConfirmed && Carries(exePath, latest, out unread, out waitEnded) is not true)
+                    return RecordStopped(ex, token.IsCancellationRequested || waitEnded,
                         unread is null ? again : new AggregateException(again, unread));
                 Helpers.CrashLog.TryWrite(new AggregateException(ex, again));
                 return token.IsCancellationRequested
@@ -770,7 +776,8 @@ internal sealed class CommandLineUpdate
     /// Writes to crash.log how a run ended with nothing run and this exe renamed aside, and
     /// answers <see cref="CommandLineUpdateResult.Stopped"/> for it. The entry says
     /// what ended the run and whether this exe was renamed back to its path, with
-    /// <paramref name="cause"/> inside it, null where Ctrl+C is the whole of it. Where there
+    /// <paramref name="cause"/> inside it, null where Ctrl+C is the whole of it; the entry
+    /// names the console closing in place of Ctrl+C where the host is closing. Where there
     /// is a cause and Ctrl+C came as well, the entry says both and no order between them,
     /// since the token does not record when it was cancelled. The answer
     /// names <paramref name="cause"/>'s type, or <see cref="UpdateFailedException"/> where
@@ -780,10 +787,11 @@ internal sealed class CommandLineUpdate
     private CommandLineUpdateResult.Stopped RecordStopped(
         Exception? cause, bool cancelled, Exception? thenFailed = null)
     {
+        var stopper = _host.Closing ? "the console closing" : "Ctrl+C";
         var how = (cancelled
-                ? cause is not null ? "A failure ended the run and Ctrl+C came as well."
-                    : thenFailed is null ? "Ctrl+C ended the run."
-                    : "Ctrl+C ended the run, and a failure came as it ended."
+                ? cause is not null ? $"A failure ended the run and {stopper} came as well."
+                    : thenFailed is null ? $"{Capitalised(stopper)} ended the run."
+                    : $"{Capitalised(stopper)} ended the run, and a failure came as it ended."
                 : "The run ended.")
             + (_renamedBack
                 ? " The running copy was put back at the command line's path."
@@ -793,6 +801,8 @@ internal sealed class CommandLineUpdate
         return new CommandLineUpdateResult.Stopped(
             cause?.GetType().Name ?? nameof(UpdateFailedException), crash.Written ? crash.Path : null);
     }
+
+    private static string Capitalised(string text) => char.ToUpperInvariant(text[0]) + text[1..];
 
     /// <summary>Says the newer version is installed, once in a run.</summary>
     private void SayInstalled(string latest)
@@ -877,9 +887,9 @@ internal sealed class CommandLineUpdate
     /// to read the file at the path in the entry beside <paramref name="cause"/>, and says
     /// the update could not be installed; or, where the file at the path is the one a setup
     /// that exited 0 wrote there and no read of it has answered, says the version the setup
-    /// installed could not be checked and the command did not run. What is written to crash.log here is the entry
-    /// for how the run ended, written before the closing line, and the closing line
-    /// changes nothing about how the run ended (<see cref="SayClosing"/>).
+    /// installed could not be checked and the command did not run. What is written to
+    /// crash.log here is the entry for how the run ended, written before the closing line,
+    /// and the closing line changes nothing about how the run ended (<see cref="SayClosing"/>).
     /// <paramref name="unreadAlready"/> is a failure to read the file at the path the run
     /// has already met, which is then not read a second time: the run ends through
     /// <see cref="RecordStopped"/> on that one read, which goes in the entry beside
@@ -952,7 +962,7 @@ internal sealed class CommandLineUpdate
     /// </summary>
     private void RefillIfEmpty(string exePath)
     {
-        if (!File.Exists(exePath)) _newerVersionConfirmed = false;
+        if (!File.Exists(exePath)) PathChanged();
         if (_updater.Kind == AppCopyKind.Setup) RefillThisExe(exePath);
         else SelfReplacement.TryPutNewerVersionAtPath(exePath);
     }
@@ -970,7 +980,7 @@ internal sealed class CommandLineUpdate
             if (File.Exists(exePath)) return false;
             if (_updater.Kind == AppCopyKind.Setup && SelfReplacement.SetupRunning()) return false;
             if (!SelfReplacement.TryRefillPath(exePath, orNewerVersion: false)) return false;
-            _setupFileUnchecked = false;
+            PathChanged();
             return _renamedBack = true;
         }
         catch (Exception ex)
@@ -978,6 +988,16 @@ internal sealed class CommandLineUpdate
             Helpers.CrashLog.TryWrite(ex);
             return false;
         }
+    }
+
+    /// <summary>
+    /// Forgets what this run knows of the file at this exe's path, which has changed: a
+    /// file was renamed there, or nothing is there.
+    /// </summary>
+    private void PathChanged()
+    {
+        _newerVersionConfirmed = false;
+        _setupFileUnchecked = false;
     }
 
     /// <summary>
@@ -1016,7 +1036,7 @@ internal sealed class CommandLineUpdate
         var started = Stopwatch.GetTimestamp();
         var said = false;
         var cancelledBefore = _token.IsCancellationRequested;
-        var bound = cancelledBefore && ReadHoldWaitAfterCancel < _readHoldWait ? ReadHoldWaitAfterCancel : _readHoldWait;
+        var bound = cancelledBefore && _readHoldWaitAfterCancel < _readHoldWait ? _readHoldWaitAfterCancel : _readHoldWait;
         while (true)
         {
             try

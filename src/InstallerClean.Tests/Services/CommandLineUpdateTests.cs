@@ -48,9 +48,10 @@ public sealed class CommandLineUpdateTests : IDisposable
     private CommandLineUpdateResult Run(
         FakeUpdater updater, bool canAsk, string command = "/s", string[]? arguments = null,
         Func<CancellationToken, Task<UpdateCheckResult>>? check = null, CancellationToken token = default,
-        TimeSpan? controlCBound = null, TimeSpan? readHoldWait = null, TimeSpan? readHoldNotice = null) =>
+        TimeSpan? controlCBound = null, TimeSpan? readHoldWait = null, TimeSpan? readHoldNotice = null,
+        TimeSpan? readHoldWaitAfterCancel = null) =>
         new CommandLineUpdate(check ?? NewerOut, updater, _host, WatchedBound,
-                controlCBound ?? TimeSpan.FromMilliseconds(20), readHoldWait, readHoldNotice)
+                controlCBound ?? TimeSpan.FromMilliseconds(20), readHoldWait, readHoldNotice, readHoldWaitAfterCancel)
             .Run(canAsk, command, arguments ?? [command], _exe, token);
 
     /// <summary>The separate download: the updater has written the newer file beside the exe.</summary>
@@ -1158,7 +1159,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal(1, refused);
         Assert.Equal("new", File.ReadAllText(_exe));
         Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
-        Assert.Contains("Ctrl+C ended the run, and a failure came as it ended.", TestCrashLog.OnlyEntry());
+        Assert.Contains("The console closing ended the run, and a failure came as it ended.", TestCrashLog.OnlyEntry());
     }
 
     [Fact]
@@ -1251,11 +1252,11 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.IsType<CommandLineUpdateResult.Stopped>(result);
         Assert.Equal(3, refused);
         Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
-        Assert.Contains("Ctrl+C ended the run, and a failure came as it ended.", TestCrashLog.OnlyEntry());
+        Assert.Contains("The console closing ended the run, and a failure came as it ended.", TestCrashLog.OnlyEntry());
     }
 
     [Fact]
-    public void A_wait_the_console_closing_ends_before_Ctrl_C_reaches_the_run_still_names_it_as_what_ended_the_run()
+    public void A_wait_the_console_closing_ends_before_Ctrl_C_reaches_the_run_names_the_closing_as_what_ended_the_run()
     {
         _host.OnSetup = () =>
         {
@@ -1269,7 +1270,7 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         Assert.IsType<CommandLineUpdateResult.Stopped>(result);
         Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
-        Assert.Contains("Ctrl+C ended the run, and a failure came as it ended.", TestCrashLog.OnlyEntry());
+        Assert.Contains("The console closing ended the run, and a failure came as it ended.", TestCrashLog.OnlyEntry());
     }
 
     [Fact]
@@ -1293,6 +1294,27 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.IsType<CommandLineUpdateResult.Stopped>(result);
         Assert.True(reads > 1);
         Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
+    }
+
+    [Fact]
+    public void Ctrl_C_during_the_setup_bounds_the_wait_for_a_held_newer_version_by_the_shorter_bound()
+    {
+        using var cts = new CancellationTokenSource();
+        _host.OnSetup = () =>
+        {
+            File.WriteAllText(_exe, "new");
+            cts.Cancel();
+            _host.OnFileVersion = () => throw SharingViolation();
+            return 0;
+        };
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
+
+        var result = Run(Setup(), canAsk: false, token: cts.Token, readHoldWait: TimeSpan.FromSeconds(30),
+            readHoldNotice: TimeSpan.FromSeconds(30), readHoldWaitAfterCancel: TimeSpan.FromMilliseconds(300));
+
+        Assert.True(System.Diagnostics.Stopwatch.GetElapsedTime(started) < TimeSpan.FromSeconds(10));
+        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
     }
 
     [Fact]
