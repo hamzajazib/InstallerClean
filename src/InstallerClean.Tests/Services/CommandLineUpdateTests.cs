@@ -1042,16 +1042,37 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
-    public void A_swap_that_fails_with_nothing_at_the_exe_path_keeps_the_newer_version_beside_it()
+    public void A_swap_that_fails_with_nothing_at_the_exe_path_puts_the_newer_version_there_and_starts_nothing()
     {
         _host.OnReleaseOwnFile = () => File.Delete(_exe);
         var updater = Download();
 
         var result = Run(updater, canAsk: false);
 
-        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Equal(new CommandLineUpdateResult.NotStarted(Current, Latest), result);
         Assert.False(updater.Undone);
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.Equal(string.Format(Strings.Cli_UpdateNotStarted, Latest), _host.Output[^1]);
         Assert.Null(_host.NewerVersionRun);
+    }
+
+    [Fact]
+    public void A_failed_setup_that_leaves_nothing_at_the_path_renames_no_file_this_run_did_not_write_there()
+    {
+        // The renamed exe is gone, so putting it back fails, and a file sits beside the path
+        // under the name the copies that replace their own file write the newer version to.
+        _host.OnSetup = () =>
+        {
+            File.Delete(_exe + SelfReplacement.OldSuffix);
+            File.WriteAllText(_exe + SelfReplacement.NewSuffix, "new");
+            return 1;
+        };
+
+        var result = Run(Setup(), canAsk: false);
+
+        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.False(File.Exists(_exe));
+        Assert.Equal("new", File.ReadAllText(_exe + SelfReplacement.NewSuffix));
     }
 
     [Fact]

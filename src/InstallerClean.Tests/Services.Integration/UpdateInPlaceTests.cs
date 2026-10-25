@@ -374,21 +374,37 @@ public sealed class UpdateInPlaceTests : IDisposable
         var exe = Path.Combine(_root, "InstallerClean.exe");
         File.WriteAllBytes(exe, Program(1));
         var staged = await StagedBesideAsync(exe, 2);
+        var heldBefore = HeldOpenEntriesInCrashLog();
         var held = new FileStream(staged, FileMode.Open, FileAccess.Read, FileShare.None);
         var letGo = Task.Delay(TimeSpan.FromSeconds(3)).ContinueWith(_ => held.Dispose());
         var aside = Path.Combine(_root, "aside.exe");
 
-        var putBack = SelfReplacement.SwapInRunning(exe, CancellationToken.None, () =>
+        Func<bool> putBack;
+        try
         {
-            File.Move(exe + SelfReplacement.OldSuffix, aside);
-            Directory.CreateDirectory(exe + SelfReplacement.OldSuffix);
-        });
-        await letGo;
+            putBack = SelfReplacement.SwapInRunning(exe, CancellationToken.None, () =>
+            {
+                File.Move(exe + SelfReplacement.OldSuffix, aside);
+                Directory.CreateDirectory(exe + SelfReplacement.OldSuffix);
+            });
+        }
+        finally
+        {
+            await letGo;
+        }
 
         Assert.NotNull(putBack);
         Assert.Equal(Program(2), File.ReadAllBytes(exe));
         Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
+        // The first rename's wait ran out, which only the branch retrying the newer version
+        // writes to crash.log once the swap has gone ahead.
+        Assert.Equal(heldBefore + 1, HeldOpenEntriesInCrashLog());
     }
+
+    /// <summary>How many entries in the crash log are a change another process held up past its wait.</summary>
+    private static int HeldOpenEntriesInCrashLog() =>
+        TestCrashLog.Text().Split('\n').Count(line =>
+            line.Contains(typeof(FileHeldOpenException).FullName + ":", StringComparison.Ordinal));
 
     [Fact]
     public async Task A_put_back_whose_running_exe_will_not_go_back_leaves_the_newer_version_at_the_exe_path()

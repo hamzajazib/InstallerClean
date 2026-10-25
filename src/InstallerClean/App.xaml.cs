@@ -779,10 +779,10 @@ public partial class App : Application
     /// </summary>
     public void RelaunchForLanguageChange()
     {
+        RefillPathLeftEmpty();
         // Nulled so OnExit's own _services?.Dispose() is a no-op rather than a
         // second teardown; the flush obligation stays in the one place that has
         // always held it, MainViewModel.Dispose.
-        RefillPathLeftEmpty();
         _services?.Dispose();
         _services = null;
 
@@ -919,10 +919,9 @@ public partial class App : Application
     /// ends it without <see cref="OnExit"/>, so the caller has already settled what
     /// closing would. Where the newer version does not say so, this exe is back at its
     /// own path and the app's windows come back as they were. Where nothing is at that
-    /// path, this exe is renamed back to it, or the newer version where this exe will not
-    /// go (<see cref="SelfReplacement.TryRefillPath"/>), and where neither goes the windows
-    /// come back all the same and the app tries again as it closes
-    /// (<see cref="RefillPathLeftEmpty"/>).
+    /// path, this exe is renamed back to it (<see cref="SelfReplacement.TryRefillPath"/>),
+    /// and where it will not go the windows come back all the same and the app puts one of
+    /// the two files there as it closes (<see cref="RefillPathLeftEmpty"/>).
     /// </summary>
     /// <remarks>
     /// The windows are hidden for the wait, which can run to
@@ -943,7 +942,9 @@ public partial class App : Application
         using (Dispatcher.DisableProcessing())
         {
             SelfReplacement.HandOverAndEnd(exePath, version);
-            if (!File.Exists(exePath) && !SelfReplacement.TryRefillPath(exePath)) _pathLeftEmpty = exePath;
+            // Only this exe goes back here: the newer version at the path while the windows come
+            // back would be a version this process neither started nor runs from.
+            if (!SelfReplacement.TryRefillPath(exePath, orNewerVersion: false)) _pathLeftEmpty = exePath;
         }
         if (released) RetakeAfterHandOverFailed();
         foreach (var window in hidden) window.Show();
@@ -956,12 +957,14 @@ public partial class App : Application
     /// it renamed aside back there, or the newer version beside it
     /// (<see cref="SelfReplacement.TryRefillPath"/>), so the next start from a shortcut
     /// finds a file. Runs as the app closes or relaunches, first, so the container's
-    /// disposal and what follows run with this exe back at its path where it can be.
+    /// disposal and what follows run with this exe back at its path where it goes there.
+    /// Where the newer version goes there instead, a relaunch for a language starts it.
     /// </summary>
     private static void RefillPathLeftEmpty()
     {
-        if (Interlocked.Exchange(ref _pathLeftEmpty, null) is { } exePath)
-            SelfReplacement.TryRefillPath(exePath);
+        if (_pathLeftEmpty is not { } exePath) return;
+        _pathLeftEmpty = null;
+        SelfReplacement.TryRefillPath(exePath);
     }
 
     /// <summary>

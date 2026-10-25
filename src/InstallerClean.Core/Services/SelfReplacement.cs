@@ -439,20 +439,20 @@ public static class SelfReplacement
 
     /// <summary>
     /// Where nothing is at <paramref name="exePath"/>, renames the copy an update moved
-    /// aside back to it, or where that will not go, the newer version waiting beside it.
-    /// Each only where it is a plain file, and neither replaces a file that has appeared at
-    /// the path. A rename of the copy this process runs from is one Windows allows. It does
-    /// not ask whether a setup is running, as <see cref="TryPutBackMissing"/> does, so it is
-    /// for the copies that replace their own file, which no setup writes. Answers whether a
-    /// file is at the path. Never throws.
+    /// aside back to it, or where that will not go and <paramref name="orNewerVersion"/>,
+    /// the newer version waiting beside it. Each only where it is a plain file, and neither
+    /// replaces a file that has appeared at the path. A rename of the copy this process
+    /// runs from is one Windows allows. It does not ask whether a setup is running, as
+    /// <see cref="TryPutBackMissing"/> does, so a caller on the setup's copy asks first.
+    /// Answers whether a file is at the path. Never throws.
     /// </summary>
-    public static bool TryRefillPath(string exePath)
+    public static bool TryRefillPath(string exePath, bool orNewerVersion = true)
     {
         try
         {
             return File.Exists(exePath)
                 || TryRenamePlainFile(exePath + OldSuffix, exePath)
-                || TryRenamePlainFile(exePath + NewSuffix, exePath);
+                || (orNewerVersion && TryRenamePlainFile(exePath + NewSuffix, exePath));
         }
         catch (Exception ex)
         {
@@ -463,7 +463,7 @@ public static class SelfReplacement
 
     /// <summary><see cref="TryRename"/> where <paramref name="from"/> is a plain file, and false otherwise.</summary>
     private static bool TryRenamePlainFile(string from, string to) =>
-        File.Exists(from) && (File.GetAttributes(from) & FileAttributes.ReparsePoint) == 0 && TryRename(from, to);
+        File.Exists(from) && !IsReparsePoint(from) && TryRename(from, to);
 
     /// <summary>
     /// Runs <paramref name="change"/>, a rename or delete of <paramref name="path"/>, and
@@ -844,7 +844,7 @@ public static class SelfReplacement
         {
             var oldPath = exePath + OldSuffix;
             if (File.Exists(exePath) || !File.Exists(oldPath)) return false;
-            if ((File.GetAttributes(oldPath) & FileAttributes.ReparsePoint) != 0) return false;
+            if (IsReparsePoint(oldPath)) return false;
             if (setupRunning() || IsOpen(oldPath)) return false;
             File.Move(oldPath, exePath, overwrite: false);
             return true;
@@ -930,10 +930,17 @@ public static class SelfReplacement
     /// </summary>
     private static void DeletePlainFile(string path)
     {
-        if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
-            throw new IOException("The file in the way is a reparse point.");
+        if (IsReparsePoint(path)) throw new IOException("The file in the way is a reparse point.");
         File.Delete(path);
     }
+
+    /// <summary>
+    /// Whether <paramref name="path"/> is a reparse point, which nothing here follows.
+    /// Throws where its attributes cannot be read, so an unreadable file is never taken
+    /// for a plain one.
+    /// </summary>
+    private static bool IsReparsePoint(string path) =>
+        (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
 
     /// <summary>
     /// Renames <paramref name="from"/> to <paramref name="to"/>, waiting for another
