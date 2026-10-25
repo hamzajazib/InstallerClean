@@ -332,26 +332,14 @@ public sealed class AppUpdater : IAppUpdater
         if (await CheckRequirementsHereAsync(version, null, cancellationToken).ConfigureAwait(false) is { } refusal)
             throw new UpdateRefusedException(refusal, version);
 
-        // Before the first file this update writes, so no pass of the start-up clean-up
-        // deletes one (UpdateLeftoverGate). Everything above only reads, so an update that
-        // ends before this point, refused, failed or cancelled, never holds the gate. A
-        // write added above this line has to move the hold above it too. A cancel that
-        // came after the requirements were checked is answered here, before the hold.
+        // Everything above only reads, so an update that ends before this point, refused,
+        // failed or cancelled, never holds the gate. A write added above this line has to
+        // go through StagingFolderUnderHold too. A cancel that came after the requirements
+        // were checked is answered here, before the hold.
         cancellationToken.ThrowIfCancellationRequested();
-        var hold = _leftovers.HoldForUpdate();
+        var (hold, folder) = StagingFolderUnderHold();
         try
         {
-            UpdateStagingFolder folder;
-            try
-            {
-                folder = UpdateStagingFolder.Create(_stagingRoot, _stagingDescriptor);
-            }
-            catch (Exception ex)
-            {
-                throw new UpdateFailedException(UpdateFailureStage.Install,
-                    "The folder the download is saved in could not be created.", ex);
-            }
-
             var staged = Path.Combine(folder.FullPath, fileName);
             try
             {
@@ -423,6 +411,27 @@ public sealed class AppUpdater : IAppUpdater
             // may run again and remove whatever of it is still on disk.
             hold.Release();
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Holds the gate (<see cref="UpdateLeftoverGate"/>) and then makes the folder the
+    /// download is saved in, the first file this update writes, so no pass of the start-up
+    /// clean-up deletes it or anything written in it while the update runs. Where the folder
+    /// cannot be made, the hold is released and the update fails at the Install stage.
+    /// </summary>
+    private (UpdateLeftoverGate.Hold Hold, UpdateStagingFolder Folder) StagingFolderUnderHold()
+    {
+        var hold = _leftovers.HoldForUpdate();
+        try
+        {
+            return (hold, UpdateStagingFolder.Create(_stagingRoot, _stagingDescriptor));
+        }
+        catch (Exception ex)
+        {
+            hold.Release();
+            throw new UpdateFailedException(UpdateFailureStage.Install,
+                "The folder the download is saved in could not be created.", ex);
         }
     }
 
