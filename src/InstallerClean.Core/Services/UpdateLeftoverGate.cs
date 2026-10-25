@@ -12,15 +12,17 @@ namespace InstallerClean.Services;
 public sealed class UpdateLeftoverGate
 {
     private readonly object _gate = new();
-    private bool _updateWriting;
+    private bool _updateHasWritten;
 
     /// <summary>The gate this process's clean-up and its updates share.</summary>
     public static UpdateLeftoverGate ForThisProcess { get; } = new();
 
     /// <summary>
     /// Runs <paramref name="pass"/>, one pass of the clean-up, and answers true, where no
-    /// update in this process is about to write or writing; otherwise runs nothing and
-    /// answers false, and the caller stops. <see cref="MarkUpdateWriting"/> waits for a
+    /// update in this process has reached its first write; otherwise runs nothing and
+    /// answers false, and the caller stops. The answer stays false for the rest of the
+    /// process, whatever becomes of that update, since a later try can write the same
+    /// names. <see cref="MarkUpdateWriting"/> waits for a
     /// pass already running, on whichever thread the update has reached, so keep the pass
     /// short and synchronous.
     /// </summary>
@@ -28,7 +30,7 @@ public sealed class UpdateLeftoverGate
     {
         lock (_gate)
         {
-            if (_updateWriting) return false;
+            if (_updateHasWritten) return false;
             pass();
             return true;
         }
@@ -40,6 +42,6 @@ public sealed class UpdateLeftoverGate
     /// </summary>
     internal void MarkUpdateWriting()
     {
-        lock (_gate) _updateWriting = true;
+        lock (_gate) _updateHasWritten = true;
     }
 }

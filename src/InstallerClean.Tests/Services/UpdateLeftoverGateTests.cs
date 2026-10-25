@@ -3,14 +3,14 @@ using InstallerClean.Services;
 namespace InstallerClean.Tests.Services;
 
 /// <summary>
-/// The gate between the start-up clean-up and an update this process begins
-/// (<see cref="UpdateLeftoverGate"/>): a pass runs until an update is about to write its
-/// first file, and none after.
+/// The gate between the start-up clean-up and this process's own update
+/// (<see cref="UpdateLeftoverGate"/>): a pass runs until an update reaches its first
+/// write, and none after, whatever becomes of that update.
 /// </summary>
 public sealed class UpdateLeftoverGateTests
 {
     [Fact]
-    public void A_pass_runs_while_no_update_has_begun()
+    public void A_pass_runs_while_no_update_has_reached_its_first_write()
     {
         var gate = new UpdateLeftoverGate();
         var passes = 0;
@@ -22,7 +22,7 @@ public sealed class UpdateLeftoverGateTests
     }
 
     [Fact]
-    public void No_pass_runs_once_an_update_has_begun()
+    public void No_pass_runs_once_an_update_has_reached_its_first_write()
     {
         var gate = new UpdateLeftoverGate();
         var passes = 0;
@@ -34,7 +34,7 @@ public sealed class UpdateLeftoverGateTests
     }
 
     [Fact]
-    public async Task An_update_that_begins_during_a_pass_waits_for_it_to_end()
+    public async Task An_update_reaching_its_first_write_during_a_pass_waits_for_it_to_end()
     {
         var gate = new UpdateLeftoverGate();
         using var inPass = new ManualResetEventSlim();
@@ -45,18 +45,25 @@ public sealed class UpdateLeftoverGateTests
             release.Wait();
         }));
         inPass.Wait();
+        Task mark;
+        try
+        {
+            mark = Task.Run(gate.MarkUpdateWriting);
 
-        var mark = Task.Run(gate.MarkUpdateWriting);
+            Assert.False(mark.Wait(TimeSpan.FromMilliseconds(200)));
+        }
+        finally
+        {
+            release.Set();
+        }
 
-        Assert.False(mark.Wait(TimeSpan.FromMilliseconds(200)));
-        release.Set();
         Assert.True(await pass);
         await mark;
         Assert.False(gate.TryRunPass(() => { }));
     }
 
     [Fact]
-    public async Task An_update_about_to_write_marks_it_begun_even_where_the_write_then_fails()
+    public async Task An_update_that_fails_at_its_first_write_still_stops_the_clean_up()
     {
         var gate = new UpdateLeftoverGate();
         // A file where the staging root should be, so the staging folder cannot be made.
@@ -92,12 +99,20 @@ public sealed class UpdateLeftoverGateTests
     public async Task An_update_from_a_copy_with_nothing_to_download_leaves_the_clean_up_running()
     {
         var gate = new UpdateLeftoverGate();
-        var updater = new AppUpdater(AppCopyKind.Undetermined, Path.Combine(Path.GetTempPath(), "InstallerClean.exe"),
-            new UpdateDownloadService(new Answers(AllowsEveryDownload), null), Path.GetTempPath(),
-            AppUpdater.WindowSetupArguments, UpdateStagingFolder.AdministratorsOnly,
-            NSubstitute.Substitute.For<IRegistryReader>(), gate);
+        var updater = Updater(gate, Path.GetTempPath(), AllowsEveryDownload, AppCopyKind.Undetermined);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => updater.PrepareAsync("9.9.9", null, CancellationToken.None));
+
+        Assert.True(gate.TryRunPass(() => { }));
+    }
+
+    [Fact]
+    public async Task An_update_whose_release_file_cannot_be_read_leaves_the_clean_up_running()
+    {
+        var gate = new UpdateLeftoverGate();
+        var updater = Updater(gate, Path.GetTempPath(), "not json");
+
+        await Assert.ThrowsAsync<UpdateFailedException>(() => updater.PrepareAsync("9.9.9", null, CancellationToken.None));
 
         Assert.True(gate.TryRunPass(() => { }));
     }
@@ -107,12 +122,13 @@ public sealed class UpdateLeftoverGateTests
         """{"schema": 1, "downloads": {"setup": {"requires": []}, "portable": {"requires": []}, "slim": {"requires": []}, "cli": {"requires": []}}}""";
 
     /// <summary>
-    /// A portable copy's updater whose requests are answered here: the release's
-    /// update.json with <paramref name="manifest"/>, or not found where it is null, and
-    /// any other request with nothing.
+    /// An updater for a copy of <paramref name="kind"/> whose requests are answered here:
+    /// the release's update.json with <paramref name="manifest"/>, or not found where it
+    /// is null, and any other request with nothing.
     /// </summary>
-    private static AppUpdater Updater(UpdateLeftoverGate gate, string stagingRoot, string? manifest) =>
-        new(AppCopyKind.Portable, Path.Combine(Path.GetTempPath(), "InstallerClean.exe"),
+    private static AppUpdater Updater(
+        UpdateLeftoverGate gate, string stagingRoot, string? manifest, AppCopyKind kind = AppCopyKind.Portable) =>
+        new(kind, Path.Combine(Path.GetTempPath(), "InstallerClean.exe"),
             new UpdateDownloadService(new Answers(manifest), null), stagingRoot, AppUpdater.WindowSetupArguments,
             UpdateStagingFolder.AdministratorsOnly, NSubstitute.Substitute.For<IRegistryReader>(), gate);
 

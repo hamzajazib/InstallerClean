@@ -882,8 +882,9 @@ public partial class App : Application
     /// downloaded into, trying for ten seconds, because what put each there is usually
     /// still closing as this copy starts: the copy that renamed itself, or the setup,
     /// which opens the app before it exits. Whatever will not go by then is tried again
-    /// at the next start, and so is whatever is left once this copy begins an update of its
-    /// own, whose files carry the same names (<see cref="UpdateLeftoverGate"/>). First, in
+    /// at the next start, and so is whatever is left once an update of this copy's own is
+    /// about to write its first file, its files carrying the same names
+    /// (<see cref="UpdateLeftoverGate"/>). First, in
     /// the setup's folder, it puts back the command line an update renamed aside where
     /// nothing took its place (<see cref="SelfReplacement.TryPutBackMissing"/>). Never throws.
     /// </summary>
