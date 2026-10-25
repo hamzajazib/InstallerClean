@@ -177,7 +177,7 @@ public sealed class UpdateLeftoverGateTests
     {
         var gate = new UpdateLeftoverGate();
         var updater = Updater(gate, Path.GetTempPath(), AllowsEveryDownload);
-        Assert.Null(await updater.CheckRequirementsAsync("9.9.9", CancellationToken.None));
+        Assert.Null(await updater.CheckRequirementsAsync("9.9.9", null, CancellationToken.None));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => updater.PrepareAsync("9.9.9", null, new CancellationToken(canceled: true)));

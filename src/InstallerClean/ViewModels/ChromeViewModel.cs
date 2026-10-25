@@ -600,14 +600,9 @@ public partial class ChromeViewModel : ObservableObject, IDisposable
     private async Task<Requirements> RequirementsAsync(string version, TimeSpan within, CancellationToken token)
     {
         if (_updater is null || !CanUpdateItself || within <= TimeSpan.Zero) return default;
-        using var bound = CancellationTokenSource.CreateLinkedTokenSource(token);
-        bound.CancelAfter(within);
         try
         {
-            var refusal = await _updater.CheckRequirementsAsync(version, bound.Token);
-            // An answer that comes as the token is cancelled is not shown.
-            token.ThrowIfCancellationRequested();
-            return new Requirements(true, refusal);
+            return new Requirements(true, await _updater.CheckRequirementsAsync(version, within, token));
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {

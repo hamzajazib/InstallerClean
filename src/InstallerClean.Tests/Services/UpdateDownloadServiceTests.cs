@@ -286,7 +286,7 @@ public sealed class UpdateDownloadServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task A_file_that_cannot_be_saved_as_the_download_is_cancelled_is_a_failure_to_install()
+    public async Task A_file_that_cannot_be_created_as_the_download_is_cancelled_is_a_failure_to_install()
     {
         using var cts = new CancellationTokenSource();
         var handler = new RoutedHandler(_ =>

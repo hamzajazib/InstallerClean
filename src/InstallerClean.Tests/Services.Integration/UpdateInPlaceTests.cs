@@ -1177,7 +1177,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         var updater = new AppUpdater(kind, exe, new UpdateDownloadService(network, null), stagingRoot,
             AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
 
-        Assert.Equal(UpdateRefusal.NeedsNetFramework48, await updater.CheckRequirementsAsync(CoreRelease, CancellationToken.None));
+        Assert.Equal(UpdateRefusal.NeedsNetFramework48, await updater.CheckRequirementsAsync(CoreRelease, null, CancellationToken.None));
         var refused = await Assert.ThrowsAsync<UpdateRefusedException>(
             () => updater.PrepareAsync(CoreRelease, null, CancellationToken.None));
 
@@ -1201,7 +1201,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         var updater = new AppUpdater(AppCopyKind.Portable, exe, new UpdateDownloadService(network, null), stagingRoot,
             AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, registry);
 
-        Assert.Equal(UpdateRefusal.NeedsNetFramework48, await updater.CheckRequirementsAsync(CoreRelease, CancellationToken.None));
+        Assert.Equal(UpdateRefusal.NeedsNetFramework48, await updater.CheckRequirementsAsync(CoreRelease, null, CancellationToken.None));
         registry.LocalMachineDwordValue(Arg.Any<string>(), Arg.Any<string>())
             .Returns(new RegistryDwordRead(RegistryDwordState.Read, 528040));
         var prepared = await updater.PrepareAsync(CoreRelease, null, CancellationToken.None);
@@ -1223,8 +1223,8 @@ public sealed class UpdateInPlaceTests : IDisposable
         var above = $"{UpdateManifest.LastVersionWithoutManifest.Major}.{UpdateManifest.LastVersionWithoutManifest.Minor + 1}.0";
         var atOrBelow = UpdateManifest.LastVersionWithoutManifest.ToString(3);
 
-        Assert.Equal(UpdateRefusal.CannotInstallFromThisCopy, await updater.CheckRequirementsAsync(above, CancellationToken.None));
-        Assert.Null(await updater.CheckRequirementsAsync(atOrBelow, CancellationToken.None));
+        Assert.Equal(UpdateRefusal.CannotInstallFromThisCopy, await updater.CheckRequirementsAsync(above, null, CancellationToken.None));
+        Assert.Null(await updater.CheckRequirementsAsync(atOrBelow, null, CancellationToken.None));
         Assert.Equal(2, network.ManifestRequests);
     }
 
@@ -1237,8 +1237,8 @@ public sealed class UpdateInPlaceTests : IDisposable
         var updater = new AppUpdater(AppCopyKind.Portable, exe, new UpdateDownloadService(network, null), _root,
             AppUpdater.WindowSetupArguments, AdministratorsAndThisAccount, NoRegistry);
 
-        await updater.CheckRequirementsAsync("9.9.9", CancellationToken.None);
-        await updater.CheckRequirementsAsync("9.9.9", CancellationToken.None);
+        await updater.CheckRequirementsAsync("9.9.9", null, CancellationToken.None);
+        await updater.CheckRequirementsAsync("9.9.9", null, CancellationToken.None);
 
         Assert.Equal(2, network.ManifestRequests);
     }
@@ -1255,7 +1255,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         for (var i = 0; i < 2; i++)
         {
             var failure = await Assert.ThrowsAsync<UpdateFailedException>(
-                () => updater.CheckRequirementsAsync(CoreRelease, CancellationToken.None));
+                () => updater.CheckRequirementsAsync(CoreRelease, null, CancellationToken.None));
             Assert.Equal(UpdateFailureStage.Download, failure.Stage);
         }
         Assert.Equal(2, network.ManifestRequests);

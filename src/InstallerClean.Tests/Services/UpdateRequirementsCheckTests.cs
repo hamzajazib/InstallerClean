@@ -7,9 +7,9 @@ namespace InstallerClean.Tests.Services;
 /// <summary>
 /// An update's read of what the release's update.json requires
 /// (<see cref="AppUpdater.CheckRequirementsAsync"/>) when the token is cancelled while it
-/// runs: a cancel before the answer is answered as a cancel, never as a read that failed,
-/// a file read in full is kept, an answer worked out stands, and an update answers a
-/// cancel before a refusal.
+/// runs, and with a time limit: a cancel is answered as a cancel wherever it comes, never
+/// as a refusal or a read that failed; a file read in full is kept; and the time limit
+/// covers the read of the file alone, running out as a read that failed.
 /// </summary>
 public sealed class UpdateRequirementsCheckTests
 {
@@ -18,10 +18,10 @@ public sealed class UpdateRequirementsCheckTests
     {
         var updater = Updater(new Answers(HttpStatusCode.OK, RefusesEveryDownload));
         Assert.Equal(UpdateRefusal.CannotInstallFromThisCopy,
-            await updater.CheckRequirementsAsync("9.9.9", CancellationToken.None));
+            await updater.CheckRequirementsAsync("9.9.9", null, CancellationToken.None));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => updater.CheckRequirementsAsync("9.9.9", new CancellationToken(canceled: true)));
+            () => updater.CheckRequirementsAsync("9.9.9", null, new CancellationToken(canceled: true)));
     }
 
     [Fact]
@@ -31,9 +31,9 @@ public sealed class UpdateRequirementsCheckTests
         var network = new Answers(HttpStatusCode.OK, AllowsEveryDownload, cancelAtBodysEnd: cts);
         var updater = Updater(network);
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => updater.CheckRequirementsAsync("9.9.9", cts.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => updater.CheckRequirementsAsync("9.9.9", null, cts.Token));
 
-        Assert.Null(await updater.CheckRequirementsAsync("9.9.9", CancellationToken.None));
+        Assert.Null(await updater.CheckRequirementsAsync("9.9.9", null, CancellationToken.None));
         Assert.Equal(1, network.Requests);
     }
 
@@ -43,16 +43,45 @@ public sealed class UpdateRequirementsCheckTests
         using var cts = new CancellationTokenSource();
         var updater = Updater(new Answers(HttpStatusCode.InternalServerError, null, cancelAsItAnswers: cts));
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => updater.CheckRequirementsAsync("9.9.9", cts.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => updater.CheckRequirementsAsync("9.9.9", null, cts.Token));
     }
 
     [Fact]
-    public async Task A_check_whose_time_runs_out_while_the_pc_is_read_for_dotnet_framework_keeps_its_refusal()
+    public async Task A_check_cancelled_while_the_pc_is_read_for_dotnet_framework_answers_the_cancel_not_the_refusal()
     {
         using var cts = new CancellationTokenSource();
         var updater = Updater(new Answers(HttpStatusCode.OK, NeedsNetFramework48), CancelsAsItIsRead(cts));
 
-        Assert.Equal(UpdateRefusal.NeedsNetFramework48, await updater.CheckRequirementsAsync("9.9.9", cts.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => updater.CheckRequirementsAsync("9.9.9", null, cts.Token));
+        Assert.Equal(UpdateRefusal.NeedsNetFramework48,
+            await updater.CheckRequirementsAsync("9.9.9", null, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task A_time_limit_that_runs_out_while_the_pc_is_read_for_dotnet_framework_keeps_the_refusal()
+    {
+        var registry = Substitute.For<IRegistryReader>();
+        registry.LocalMachineDwordValue(Arg.Any<string>(), Arg.Any<string>()).Returns(_ =>
+        {
+            Thread.Sleep(TimeSpan.FromMilliseconds(300));
+            return new RegistryDwordRead(RegistryDwordState.Absent);
+        });
+        var updater = Updater(new Answers(HttpStatusCode.OK, NeedsNetFramework48), registry);
+
+        Assert.Equal(UpdateRefusal.NeedsNetFramework48,
+            await updater.CheckRequirementsAsync("9.9.9", TimeSpan.FromMilliseconds(50), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task A_read_that_runs_past_its_time_limit_is_a_read_that_failed_not_a_cancel()
+    {
+        var updater = Updater(new Stalls());
+
+        var failed = await Assert.ThrowsAsync<UpdateFailedException>(
+            () => updater.CheckRequirementsAsync("9.9.9", TimeSpan.FromMilliseconds(50), CancellationToken.None));
+
+        Assert.Equal(UpdateFailureStage.Download, failed.Stage);
     }
 
     [Fact]
@@ -120,6 +149,17 @@ public sealed class UpdateRequirementsCheckTests
                     ? new ByteArrayContent(bytes)
                     : new StreamContent(new CancelsAtEnd(bytes, cancelAtBodysEnd)),
             });
+        }
+    }
+
+    /// <summary>Answers no request until it is cancelled.</summary>
+    private sealed class Stalls : HttpMessageHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            throw new InvalidOperationException("A delay without end ended.");
         }
     }
 

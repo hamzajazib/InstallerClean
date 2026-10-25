@@ -334,22 +334,24 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Theory]
-    [InlineData(1, true)]
-    [InlineData(1, false)]
-    [InlineData(2, true)]
-    [InlineData(2, false)]
-    public void Ctrl_C_during_either_read_of_the_release_cancels_and_says_nothing_of_a_refusal(int cancelledRead, bool canAsk)
+    [InlineData(1, true, true)]
+    [InlineData(1, false, true)]
+    [InlineData(2, true, true)]
+    [InlineData(2, false, true)]
+    [InlineData(2, true, false)]
+    [InlineData(2, false, false)]
+    public void Ctrl_C_during_either_read_of_the_release_cancels_with_nothing_downloaded_or_refused(
+        int cancelledRead, bool canAsk, bool refuses)
     {
         using var cts = new CancellationTokenSource();
         var updater = Download();
         var reads = 0;
         // The first read fails where the second is the one cancelled, so the run reads again.
-        // The cancelled read still answers its refusal, as a read that had worked it out does.
         updater.Requirements = () =>
         {
             if (++reads < cancelledRead) throw new UpdateFailedException(UpdateFailureStage.Download, "failed");
             cts.Cancel();
-            return UpdateRefusal.NeedsNetFramework48;
+            return refuses ? UpdateRefusal.NeedsNetFramework48 : null;
         };
         if (canAsk) _host.Answers.Enqueue("y");
 
@@ -357,7 +359,27 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         Assert.IsType<CommandLineUpdateResult.Cancelled>(result);
         Assert.DoesNotContain(Strings.Cli_UpdateNeedsNetFramework48, _host.Output);
+        Assert.DoesNotContain(string.Format(Strings.UpdateNotice_Downloading, Latest), _host.Output);
         Assert.False(updater.Prepared);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void The_read_before_the_question_is_given_the_watched_bound_and_the_updates_own_read_none(bool canAsk)
+    {
+        var updater = Download();
+        var reads = 0;
+        updater.Requirements = () => ++reads == 1
+            ? throw new UpdateFailedException(UpdateFailureStage.Download, "failed")
+            : null;
+        if (canAsk) _host.Answers.Enqueue("y");
+        _host.NewerVersionExitCode = 0;
+
+        Run(updater, canAsk);
+
+        TimeSpan? watched = TimeSpan.FromMilliseconds(200);
+        Assert.Equal(canAsk ? [watched, null] : new TimeSpan?[] { null, null }, updater.RequirementLimits);
     }
 
     [Fact]
@@ -1331,14 +1353,25 @@ public sealed class CommandLineUpdateTests : IDisposable
         public AppCopyKind Kind => kind;
         public ScoopUpdate? ScoopUpdate => null;
 
-        /// <summary>What the release's update.json answers; a throw stands for a read that failed.</summary>
+        /// <summary>
+        /// What the release's update.json answers; a throw stands for a read that failed. A
+        /// cancel of the token, before or during the answer, is answered as the cancel, as
+        /// the real check does.
+        /// </summary>
         public Func<UpdateRefusal?> Requirements { get; set; } = () => null;
         public int RequirementReads { get; private set; }
 
-        public Task<UpdateRefusal?> CheckRequirementsAsync(string version, CancellationToken cancellationToken)
+        /// <summary>The time limits the reads were given, in order.</summary>
+        public List<TimeSpan?> RequirementLimits { get; } = [];
+
+        public Task<UpdateRefusal?> CheckRequirementsAsync(
+            string version, TimeSpan? within, CancellationToken cancellationToken)
         {
             RequirementReads++;
-            return Task.FromResult(Requirements());
+            RequirementLimits.Add(within);
+            var answer = Requirements();
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(answer);
         }
         public string FileToStart => fileToStart;
         public bool Prepared { get; private set; }

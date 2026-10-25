@@ -24,15 +24,15 @@ public interface IAppUpdater
     /// <summary>
     /// Reads what the release of <paramref name="version"/> says its downloads need
     /// (<see cref="UpdateManifest"/>) and answers why this copy does not install it, or
-    /// null where it may. Throws <see cref="UpdateFailedException"/> at the Download stage
-    /// where the release's file could not be read,
+    /// null where it may. The read of the release's file is given up after
+    /// <paramref name="within"/>, where one is given; the rest of the check runs to its
+    /// answer. Throws <see cref="UpdateFailedException"/> at the Download stage where the
+    /// release's file could not be read, its time running out included,
     /// <see cref="InvalidOperationException"/> where the kind of copy cannot update itself,
-    /// and <see cref="OperationCanceledException"/> where the token is cancelled before the
-    /// answer is worked out. The answer stands where a cancel comes after that, the PC's
-    /// registry read included, so a token carrying a time limit does not throw away a
-    /// refusal, and a caller acting on a refusal reads its own cancel off its token first.
+    /// and <see cref="OperationCanceledException"/> where <paramref name="cancellationToken"/>
+    /// is cancelled at any point before the answer is returned.
     /// </summary>
-    Task<UpdateRefusal?> CheckRequirementsAsync(string version, CancellationToken cancellationToken);
+    Task<UpdateRefusal?> CheckRequirementsAsync(string version, TimeSpan? within, CancellationToken cancellationToken);
 
     /// <summary>
     /// Downloads <paramref name="version"/> as the same kind of copy, where its release
@@ -211,15 +211,16 @@ public sealed class AppUpdater : IAppUpdater
     /// such as a page a network puts in GitHub's place, fails as a read that could not be
     /// made and is not kept.
     /// </summary>
-    public async Task<UpdateRefusal?> CheckRequirementsAsync(string version, CancellationToken cancellationToken)
+    public async Task<UpdateRefusal?> CheckRequirementsAsync(
+        string version, TimeSpan? within, CancellationToken cancellationToken)
     {
         if (UpdateManifest.DownloadKey(Kind) is null)
             throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
 
-        // A cancel before the answer is worked out is answered as the cancel, never as a
-        // read of the release that failed, the download service answering a read refused
-        // as the cancel came with the cancel. A file read in full is kept first, so a cancel
-        // as the read ends costs no second read.
+        // A cancel is answered as the cancel wherever it comes, never as a refusal or a read
+        // of the release that failed, the download service answering a read refused as the
+        // cancel came with the cancel. A file read in full is kept first, so a cancel as the
+        // read ends costs no second read.
         byte[]? manifest;
         if (_manifest is { } kept && kept.Version == version)
         {
@@ -232,8 +233,7 @@ public sealed class AppUpdater : IAppUpdater
                 manifest = local.Absent ? null : ReadLocalManifest(local.Path);
             else
 #endif
-            manifest = await _downloader.ReadAsync(UpdateManifest.Address(version), UpdateManifest.MaxBytes, cancellationToken)
-                .ConfigureAwait(false);
+            manifest = await ReadWithinAsync(version, within, cancellationToken).ConfigureAwait(false);
             var isJson = manifest is null || UpdateManifest.IsJson(manifest);
             if (manifest is not null && isJson) _manifest = (version, manifest);
             cancellationToken.ThrowIfCancellationRequested();
@@ -242,7 +242,31 @@ public sealed class AppUpdater : IAppUpdater
         }
         cancellationToken.ThrowIfCancellationRequested();
 
-        return UpdateManifest.Judge(manifest, version, Kind, () => UpdateManifest.HasNetFramework48(_registry));
+        var answer = UpdateManifest.Judge(manifest, version, Kind, () => UpdateManifest.HasNetFramework48(_registry));
+        // The judgement reads the registry, and a cancel can come while it does.
+        cancellationToken.ThrowIfCancellationRequested();
+        return answer;
+    }
+
+    /// <summary>
+    /// Reads the release's update.json, giving up after <paramref name="within"/> where one
+    /// is given. Time running out is a read that failed, at the Download stage, and only a
+    /// cancel of <paramref name="cancellationToken"/> is answered as a cancel.
+    /// </summary>
+    private async Task<byte[]?> ReadWithinAsync(string version, TimeSpan? within, CancellationToken cancellationToken)
+    {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        if (within is { } limit) deadline.CancelAfter(limit > TimeSpan.Zero ? limit : TimeSpan.Zero);
+        try
+        {
+            return await _downloader.ReadAsync(UpdateManifest.Address(version), UpdateManifest.MaxBytes, deadline.Token)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new UpdateFailedException(UpdateFailureStage.Download,
+                "The release's update.json was not read in the time given.", ex);
+        }
     }
 
     public async Task<PreparedUpdate> PrepareAsync(
@@ -253,12 +277,8 @@ public sealed class AppUpdater : IAppUpdater
         if (address is null || fileName is null)
             throw new InvalidOperationException($"A copy of kind {Kind} has no download to update from.");
 
-        if (await CheckRequirementsAsync(version, cancellationToken).ConfigureAwait(false) is { } refusal)
-        {
-            // A cancel that came as the refusal was worked out is answered as the cancel.
-            cancellationToken.ThrowIfCancellationRequested();
+        if (await CheckRequirementsAsync(version, null, cancellationToken).ConfigureAwait(false) is { } refusal)
             throw new UpdateRefusedException(refusal, version);
-        }
 
         // Before the first file this update writes, so no pass of the start-up clean-up
         // deletes one (UpdateLeftoverGate). Everything above only reads, so an update that

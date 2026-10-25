@@ -644,7 +644,7 @@ public class ChromeViewModelTests
     }
 
     private void RequirementsAnswer(UpdateRefusal? refusal) =>
-        _updater.CheckRequirementsAsync("9.9.9", Arg.Any<CancellationToken>()).Returns(refusal);
+        _updater.CheckRequirementsAsync("9.9.9", Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>()).Returns(refusal);
 
     private static string RefusalLine(UpdateRefusal refusal) =>
         refusal == UpdateRefusal.NeedsNetFramework48
@@ -683,7 +683,7 @@ public class ChromeViewModelTests
         await vm.RunAutomaticUpdateCheckAsync();
 
         AssertRefused(vm, refusal);
-        await _updater.Received(1).CheckRequirementsAsync("9.9.9", Arg.Any<CancellationToken>());
+        await _updater.Received(1).CheckRequirementsAsync("9.9.9", Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>());
     }
 
     [Theory]
@@ -709,7 +709,7 @@ public class ChromeViewModelTests
     public async Task A_read_that_fails_offers_Update_now_and_says_nothing()
     {
         var vm = CreateRequirementsViewModel();
-        _updater.CheckRequirementsAsync("9.9.9", Arg.Any<CancellationToken>()).Returns(
+        _updater.CheckRequirementsAsync("9.9.9", Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>()).Returns(
             Task.FromException<UpdateRefusal?>(new UpdateFailedException(UpdateFailureStage.Download, "no")));
 
         await vm.RunAutomaticUpdateCheckAsync();
@@ -723,20 +723,21 @@ public class ChromeViewModelTests
     }
 
     [Fact]
-    public async Task A_read_that_runs_past_its_bound_is_ended_and_offers_Update_now()
+    public async Task A_read_given_its_bound_that_runs_past_it_offers_Update_now()
     {
         var vm = CreateRequirementsViewModel(requirementsBound: TimeSpan.FromMilliseconds(50));
-        CancellationToken given = default;
-        _updater.CheckRequirementsAsync("9.9.9", Arg.Any<CancellationToken>()).Returns(async call =>
+        TimeSpan? given = null;
+        _updater.CheckRequirementsAsync("9.9.9", Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>()).Returns(call =>
         {
-            given = call.Arg<CancellationToken>();
-            await Task.Delay(TimeSpan.FromSeconds(10), given);
-            return (UpdateRefusal?)UpdateRefusal.CannotInstallFromThisCopy;
+            given = call.Arg<TimeSpan?>();
+            return Task.FromException<UpdateRefusal?>(
+                new UpdateFailedException(UpdateFailureStage.Download, "not read in the time given"));
         });
 
         await vm.RunAutomaticUpdateCheckAsync();
 
-        Assert.True(given.IsCancellationRequested);
+        Assert.NotNull(given);
+        Assert.True(given <= TimeSpan.FromMilliseconds(50));
         Assert.True(vm.HasNewerVersion);
         Assert.True(vm.ShowsUpdateNow);
         Assert.False(vm.IsUpdateRefused);
@@ -756,7 +757,7 @@ public class ChromeViewModelTests
 
         await vm.RunAutomaticUpdateCheckAsync();
 
-        await _updater.DidNotReceiveWithAnyArgs().CheckRequirementsAsync(default!, default);
+        await _updater.DidNotReceiveWithAnyArgs().CheckRequirementsAsync(default!, default, default);
         Assert.True(vm.HasNewerVersion);
         Assert.True(vm.ShowsUpdateNow);
     }
@@ -772,7 +773,7 @@ public class ChromeViewModelTests
         Assert.Equal(Strings.UpdateNotice_CopyCannotTell, vm.UpdateNoticeDetailText);
         Assert.False(vm.ShowsUpdateNow);
         Assert.True(vm.ShowsReleaseLink);
-        await _updater.DidNotReceiveWithAnyArgs().CheckRequirementsAsync(default!, default);
+        await _updater.DidNotReceiveWithAnyArgs().CheckRequirementsAsync(default!, default, default);
     }
 
     [Theory]
@@ -786,7 +787,7 @@ public class ChromeViewModelTests
 
         Assert.True(vm.HasNewerVersion);
         Assert.Equal(Strings.UpdateNotice_Recommended, vm.UpdateNoticeDetailText);
-        await _updater.DidNotReceiveWithAnyArgs().CheckRequirementsAsync(default!, default);
+        await _updater.DidNotReceiveWithAnyArgs().CheckRequirementsAsync(default!, default, default);
     }
 
     [Fact]
@@ -845,7 +846,7 @@ public class ChromeViewModelTests
         var vm = CreateRequirementsViewModel();
         RequirementsAnswer(UpdateRefusal.NeedsNetFramework48);
         await vm.RunAutomaticUpdateCheckAsync();
-        _updater.CheckRequirementsAsync("9.9.9", Arg.Any<CancellationToken>()).Returns(
+        _updater.CheckRequirementsAsync("9.9.9", Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>()).Returns(
             Task.FromException<UpdateRefusal?>(new UpdateFailedException(UpdateFailureStage.Download, "no")));
 
         await vm.CheckForUpdatesCommand.ExecuteAsync(null);
@@ -860,7 +861,7 @@ public class ChromeViewModelTests
         RequirementsAnswer(UpdateRefusal.NeedsNetFramework48);
         await vm.RunAutomaticUpdateCheckAsync();
         CheckAnswers(new UpdateAvailable("2.1.0", "9.9.10"));
-        _updater.CheckRequirementsAsync("9.9.10", Arg.Any<CancellationToken>()).Returns(
+        _updater.CheckRequirementsAsync("9.9.10", Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>()).Returns(
             Task.FromException<UpdateRefusal?>(new UpdateFailedException(UpdateFailureStage.Download, "no")));
 
         await vm.CheckForUpdatesCommand.ExecuteAsync(null);
