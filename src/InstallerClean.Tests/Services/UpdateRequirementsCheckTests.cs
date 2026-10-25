@@ -102,14 +102,10 @@ public sealed class UpdateRequirementsCheckTests
     }
 
     [Fact]
-    public async Task A_limit_of_zero_fetches_nothing_and_a_file_already_kept_still_answers()
+    public async Task A_file_already_kept_answers_with_no_time_given()
     {
         var network = new Answers(HttpStatusCode.OK, RefusesEveryDownload);
         var updater = Updater(network);
-
-        await Assert.ThrowsAsync<UpdateFailedException>(
-            () => updater.CheckRequirementsAsync("9.9.9", TimeSpan.Zero, CancellationToken.None));
-        Assert.Equal(0, network.Requests);
 
         Assert.Equal(UpdateRefusal.CannotInstallFromThisCopy,
             await updater.CheckRequirementsAsync("9.9.9", null, CancellationToken.None));
@@ -119,16 +115,28 @@ public sealed class UpdateRequirementsCheckTests
     }
 
     [Theory]
+    [InlineData(0.5)]
     [InlineData(0)]
     [InlineData(-2)]
-    public async Task A_limit_of_zero_or_less_gives_the_read_up_at_once(int milliseconds)
+    public async Task A_limit_under_a_millisecond_fetches_nothing_and_fails_the_read(double milliseconds)
     {
-        var updater = Updater(new Stalls());
+        var network = new Answers(HttpStatusCode.OK, RefusesEveryDownload);
+        var updater = Updater(network);
 
         var failed = await Assert.ThrowsAsync<UpdateFailedException>(() => updater.CheckRequirementsAsync(
             "9.9.9", TimeSpan.FromMilliseconds(milliseconds), CancellationToken.None));
 
         Assert.Equal(UpdateFailureStage.Download, failed.Stage);
+        Assert.Equal(0, network.Requests);
+    }
+
+    [Fact]
+    public async Task A_cancel_with_no_time_given_answers_the_cancel()
+    {
+        var updater = Updater(new Answers(HttpStatusCode.OK, RefusesEveryDownload));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => updater.CheckRequirementsAsync(
+            "9.9.9", TimeSpan.Zero, new CancellationToken(canceled: true)));
     }
 
     [Fact]

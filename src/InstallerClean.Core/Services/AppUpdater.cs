@@ -26,8 +26,9 @@ public interface IAppUpdater
     /// (<see cref="UpdateManifest"/>) and answers why this copy does not install it, or
     /// null where it may. The read of the release's file is given up after
     /// <paramref name="within"/>: null, <see cref="Timeout.InfiniteTimeSpan"/> or a time
-    /// longer than a timer can be set for is no limit, and zero or a negative time gives
-    /// the read up at once. A file already kept for the version is answered from without
+    /// longer than a timer can be set for is no limit (<see cref="IsNoLimit"/>), and less
+    /// than a millisecond fetches nothing and fails as a read that could not be made. A
+    /// file already kept for the version is answered from without
     /// a read, whatever the limit, and the rest of the check runs to its answer. Throws
     /// <see cref="UpdateFailedException"/> at the Download stage where the release's file
     /// could not be read, its time running out included,
@@ -36,6 +37,15 @@ public interface IAppUpdater
     /// is cancelled at any point before the answer is returned.
     /// </summary>
     Task<UpdateRefusal?> CheckRequirementsAsync(string version, TimeSpan? within, CancellationToken cancellationToken);
+
+    /// <summary>The longest time <see cref="CancellationTokenSource.CancelAfter(TimeSpan)"/> takes.</summary>
+    private static readonly TimeSpan MaxTimerLimit = TimeSpan.FromMilliseconds(uint.MaxValue - 1);
+
+    /// <summary>
+    /// Whether a time limit given to <see cref="CheckRequirementsAsync"/> is no limit:
+    /// <see cref="Timeout.InfiniteTimeSpan"/>, or longer than a timer can be set for.
+    /// </summary>
+    public static bool IsNoLimit(TimeSpan within) => within == Timeout.InfiniteTimeSpan || within > MaxTimerLimit;
 
     /// <summary>
     /// Downloads <paramref name="version"/> as the same kind of copy, where its release
@@ -251,15 +261,6 @@ public sealed class AppUpdater : IAppUpdater
         return answer;
     }
 
-    /// <summary>The longest time <see cref="CancellationTokenSource.CancelAfter(TimeSpan)"/> takes.</summary>
-    private static readonly TimeSpan MaxTimerLimit = TimeSpan.FromMilliseconds(uint.MaxValue - 1);
-
-    /// <summary>
-    /// Whether <paramref name="within"/>, given to <see cref="CheckRequirementsAsync"/>, is no
-    /// limit: <see cref="Timeout.InfiniteTimeSpan"/>, or longer than a timer can be set for.
-    /// </summary>
-    public static bool IsNoLimit(TimeSpan within) => within == Timeout.InfiniteTimeSpan || within > MaxTimerLimit;
-
     /// <summary>
     /// Reads the release's update.json, giving up after <paramref name="within"/> as
     /// <see cref="IAppUpdater.CheckRequirementsAsync"/> describes. Time running out is a read
@@ -268,13 +269,17 @@ public sealed class AppUpdater : IAppUpdater
     /// </summary>
     private async Task<byte[]?> ReadWithinAsync(string version, TimeSpan? within, CancellationToken cancellationToken)
     {
-        if (within is not { } limit || IsNoLimit(limit))
+        if (within is not { } limit || IAppUpdater.IsNoLimit(limit))
             return await _downloader.ReadAsync(UpdateManifest.Address(version), UpdateManifest.MaxBytes, cancellationToken)
                 .ConfigureAwait(false);
-        // No time at all fetches nothing.
-        if (limit <= TimeSpan.Zero)
+        // Less than a millisecond is a timer set to fire at once, so it fetches nothing. A
+        // cancel is still answered as the cancel.
+        if (limit < TimeSpan.FromMilliseconds(1))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
             throw new UpdateFailedException(UpdateFailureStage.Download,
                 "The release's update.json was not read in the time given.");
+        }
 
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(limit);
