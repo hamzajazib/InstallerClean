@@ -240,6 +240,9 @@ internal sealed class CommandLineUpdate
     private readonly TimeSpan _readHoldWait;
     private readonly TimeSpan _readHoldNotice;
     // The run's token, which ends a wait for a held file (Carries).
+    // Set where the newer setup exited 0, so a file at the path held for as long as the run
+    // waits for it is one whose version could not be checked (Stop).
+    private bool _setupFinished;
     private CancellationToken _token;
     private bool _saidInstalled;
     // Set where this exe was renamed back to a path with nothing at it (RefillThisExe).
@@ -815,6 +818,7 @@ internal sealed class CommandLineUpdate
             throw;
         }
         prepared.Undo();
+        _setupFinished = exitCode == 0;
 
         UpdateFailedException? failed = null;
         if (exitCode != 0)
@@ -829,8 +833,7 @@ internal sealed class CommandLineUpdate
             var readFailed = new UpdateFailedException(UpdateFailureStage.Install,
                 "The version of the file at the command line's path could not be read after the setup.", unread);
             return Stop(waitEnded ? null : readFailed,
-                exePath, current, latest, token.IsCancellationRequested, unreadAlready: readFailed,
-                setupVersionUnchecked: unread is IOException held && IsHeld(held));
+                exePath, current, latest, token.IsCancellationRequested, unreadAlready: readFailed);
         }
         else if (!carries)
             failed = new UpdateFailedException(UpdateFailureStage.Install,
@@ -850,23 +853,22 @@ internal sealed class CommandLineUpdate
     /// start: <see cref="CommandLineUpdateResult.UpdatedThenCancelled"/> where
     /// <paramref name="cancelled"/>, and otherwise
     /// <see cref="CommandLineUpdateResult.NotStarted"/> with what failed written to
-    /// crash.log. Where it does not, ends through <see cref="RecordStopped"/> and says the
-    /// update could not be installed, with a failure to read the file at the path in the
-    /// entry beside <paramref name="cause"/>. What is written to crash.log here is the entry
+    /// crash.log. Where it does not, ends through <see cref="RecordStopped"/>, with a failure
+    /// to read the file at the path in the entry beside <paramref name="cause"/>, and says
+    /// the update could not be installed; or, where the newer setup exited 0 and another
+    /// process held the file at the path for as long as the run waited for it, or Ctrl+C or
+    /// the console closing ended that wait, says the version the setup installed could not
+    /// be checked and the command did not run. What is written to crash.log here is the entry
     /// for how the run ended, written before the closing line, and the closing line
     /// changes nothing about how the run ended (<see cref="SayClosing"/>).
     /// <paramref name="unreadAlready"/> is a failure to read the file at the path the run
     /// has already met, which is then not read a second time: the run ends through
     /// <see cref="RecordStopped"/> on that one read, which goes in the entry beside
-    /// <paramref name="cause"/> unless it is the cause. <paramref name="setupVersionUnchecked"/>
-    /// is set where a setup that exited 0 left a file at the path that another process held
-    /// for as long as the run waited for it: the closing line then says the version could
-    /// not be checked and the command did not run, in place of saying the update could not
-    /// be installed.
+    /// <paramref name="cause"/> unless it is the cause.
     /// </summary>
     private CommandLineUpdateResult Stop(
         Exception? cause, string exePath, string current, string latest, bool cancelled,
-        Exception? unreadAlready = null, bool setupVersionUnchecked = false)
+        Exception? unreadAlready = null)
     {
         RefillIfEmpty(exePath);
         var unread = unreadAlready;
@@ -882,7 +884,8 @@ internal sealed class CommandLineUpdate
             return new CommandLineUpdateResult.NotStarted(current, latest);
         }
         var stopped = RecordStopped(cause, cancelled, ReferenceEquals(unread, cause) ? null : unread);
-        SayClosing(() => _host.WriteLine(setupVersionUnchecked ? Strings.Cli_UpdateNotChecked : Strings.UpdateNotice_InstallFailed));
+        var versionUnchecked = _setupFinished && (unread as IOException ?? unread?.InnerException as IOException) is { } held && IsHeld(held);
+        SayClosing(() => _host.WriteLine(versionUnchecked ? Strings.Cli_UpdateNotChecked : Strings.UpdateNotice_InstallFailed));
         return stopped;
     }
 

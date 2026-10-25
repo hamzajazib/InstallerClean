@@ -1208,6 +1208,21 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
+    public void A_setups_newer_version_that_will_not_start_and_is_then_held_ends_with_its_version_unchecked()
+    {
+        SetupInstalls();
+        _host.NewerVersionExitCode = null;
+        _host.OnNewerVersion = () => _host.OnFileVersion = () => throw SharingViolation();
+
+        var result = Run(Setup(), canAsk: false, readHoldWait: TimeSpan.FromMilliseconds(300),
+            readHoldNotice: TimeSpan.FromSeconds(30));
+
+        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
+    }
+
+    [Fact]
     public void Ctrl_C_during_the_setup_still_waits_out_a_brief_hold_on_its_newer_version()
     {
         using var cts = new CancellationTokenSource();

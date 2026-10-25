@@ -2349,8 +2349,8 @@ InstallerClean уже был запущен от имени администра
        wrote at the command line's path and the run waits for it before reading its version.
        0 = the file's name, installerclean-cli.exe, as it is on disk and left as written. -->
   <!-- Where the newer setup finished and another program held the file it wrote at the
-       command line's path for as long as the run waited for it, or Ctrl+C ended that wait.
-       The run ends with nothing run, before /s, /d or /m. -->
+       command line's path for as long as the run waited for it, or Ctrl+C or the console
+       closing ended that wait. The run ends with nothing run, before /s, /d or /m. -->
   <!-- Where the newer version is in place at the command line's path but would not start,
        so the run ends with nothing run and the next run of the command starts the newer
        version. 0 = its version. -->

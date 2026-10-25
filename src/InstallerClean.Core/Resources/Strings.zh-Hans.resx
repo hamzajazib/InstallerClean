@@ -2433,8 +2433,8 @@ InstallerClean 本来就以管理员身份运行，所以再那样启动一次�
        0 = the file's name, installerclean-cli.exe, as it is on disk and left as written. -->
   <data name="Cli.UpdateWaitingForFile" xml:space="preserve"><value>正在等待另一个程序释放 {0}…</value></data>
   <!-- Where the newer setup finished and another program held the file it wrote at the
-       command line's path for as long as the run waited for it, or Ctrl+C ended that wait.
-       The run ends with nothing run, before /s, /d or /m. -->
+       command line's path for as long as the run waited for it, or Ctrl+C or the console
+       closing ended that wait. The run ends with nothing run, before /s, /d or /m. -->
   <data name="Cli.UpdateNotChecked" xml:space="preserve"><value>InstallerClean 无法检查安装程序安装的版本，因此你的命令未运行。请再次运行。</value></data>
   <!-- Where the newer version is in place at the command line's path but would not start,
        so the run ends with nothing run and the next run of the command starts the newer

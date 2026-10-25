@@ -2433,8 +2433,8 @@ Voer InstallerClean opnieuw uit als administrator.</value></data>
        0 = the file's name, installerclean-cli.exe, as it is on disk and left as written. -->
   <data name="Cli.UpdateWaitingForFile" xml:space="preserve"><value>Wachten tot een ander programma {0} vrijgeeft...</value></data>
   <!-- Where the newer setup finished and another program held the file it wrote at the
-       command line's path for as long as the run waited for it, or Ctrl+C ended that wait.
-       The run ends with nothing run, before /s, /d or /m. -->
+       command line's path for as long as the run waited for it, or Ctrl+C or the console
+       closing ended that wait. The run ends with nothing run, before /s, /d or /m. -->
   <data name="Cli.UpdateNotChecked" xml:space="preserve"><value>InstallerClean kon de versie die het installatieprogramma heeft geïnstalleerd niet controleren, dus je opdracht is niet uitgevoerd. Voer hem opnieuw uit.</value></data>
   <!-- Where the newer version is in place at the command line's path but would not start,
        so the run ends with nothing run and the next run of the command starts the newer
