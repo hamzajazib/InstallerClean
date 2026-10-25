@@ -21,7 +21,7 @@ namespace InstallerClean.Tests.ViewModels;
 /// Directory and File as fakes) so a single probe call can be held open on a
 /// gate and the Cancel click landed at an exact point inside it.
 /// </summary>
-public class CleanupPreFlightTests
+public class CleanupPreFlightTests : IDisposable
 {
     // Every specification of MoveFilesAsync below names the trailing under-lease
     // argument, and the DidNotReceive ones are why it matters most: the argument
@@ -54,6 +54,8 @@ public class CleanupPreFlightTests
     public CleanupPreFlightTests()
     {
         _settingsService.Load().Returns(new AppSettings());
+        // A working settings service: a destination save that does land records nothing.
+        _settingsService.Update(Arg.Any<Action<AppSettings>>()).Returns(true);
         // Check() returns Clean or Block, never null (the interface contract);
         // default it Clean so the act-time pending-reboot re-check proceeds.
         _rebootService.Check().Returns(PendingRebootResult.Clean);
@@ -80,12 +82,29 @@ public class CleanupPreFlightTests
     }
 
     private MainViewModel CreateViewModel() =>
-        new(_scanService, _moveService, _deleteService,
+        Made(new MainViewModel(_scanService, _moveService, _deleteService,
             _settingsService, _rebootService, _msiInfoService,
             _dialogService, _confirmationService, _windowService,
             _fileSystem, _resultLogService, _updateCheckService, _reverifier,
             _earlierRunCheck, _firstRunMark, _windowsRegion,
-            destinationGuard: new ByPathDestinationGuard(_fileSystem));
+            destinationGuard: new ByPathDestinationGuard(_fileSystem)));
+
+    /// <summary>
+    /// Every view model this class made, disposed after its test, so a destination save
+    /// still waiting out its delay cannot land in a later test.
+    /// </summary>
+    private readonly List<MainViewModel> _made = new();
+
+    private MainViewModel Made(MainViewModel vm)
+    {
+        _made.Add(vm);
+        return vm;
+    }
+
+    public void Dispose()
+    {
+        foreach (var vm in _made) vm.Dispose();
+    }
 
     /// <summary>
     /// Spins until <paramref name="condition"/> holds. The view-models have no
@@ -591,7 +610,7 @@ public class CleanupPreFlightTests
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
-        var crashLogBefore = TestCrashLog.Text();
+        var crashLogBefore = TestCrashLog.TextWithoutDestinationSaves();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -606,7 +625,7 @@ public class CleanupPreFlightTests
         Assert.False(vm.Cleanup.IsOperating);
         Assert.Equal(string.Empty, vm.Cleanup.OperationProgress);
         // A refusal, not a fault: the crash log is left as it was.
-        Assert.Equal(crashLogBefore, TestCrashLog.Text());
+        Assert.Equal(crashLogBefore, TestCrashLog.TextWithoutDestinationSaves());
     }
 
     [Fact]
@@ -622,7 +641,7 @@ public class CleanupPreFlightTests
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
-        var crashLogBefore = TestCrashLog.Text();
+        var crashLogBefore = TestCrashLog.TextWithoutDestinationSaves();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -633,7 +652,7 @@ public class CleanupPreFlightTests
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
         // A failure with no established cause is a fault, so the crash log takes an entry.
-        Assert.NotEqual(crashLogBefore, TestCrashLog.Text());
+        Assert.NotEqual(crashLogBefore, TestCrashLog.TextWithoutDestinationSaves());
     }
 
     [Fact]
@@ -646,7 +665,7 @@ public class CleanupPreFlightTests
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
-        var crashLogBefore = TestCrashLog.Text();
+        var crashLogBefore = TestCrashLog.TextWithoutDestinationSaves();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -656,7 +675,7 @@ public class CleanupPreFlightTests
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
         // A refusal, not a fault: the crash log is left as it was.
-        Assert.Equal(crashLogBefore, TestCrashLog.Text());
+        Assert.Equal(crashLogBefore, TestCrashLog.TextWithoutDestinationSaves());
     }
 
     [Fact]
@@ -669,7 +688,7 @@ public class CleanupPreFlightTests
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
-        var crashLogBefore = TestCrashLog.Text();
+        var crashLogBefore = TestCrashLog.TextWithoutDestinationSaves();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -680,7 +699,7 @@ public class CleanupPreFlightTests
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
         // A failure with no established cause is a fault, so the crash log takes an entry.
-        Assert.NotEqual(crashLogBefore, TestCrashLog.Text());
+        Assert.NotEqual(crashLogBefore, TestCrashLog.TextWithoutDestinationSaves());
     }
 
     [Fact]
@@ -693,7 +712,7 @@ public class CleanupPreFlightTests
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
-        var crashLogBefore = TestCrashLog.Text();
+        var crashLogBefore = TestCrashLog.TextWithoutDestinationSaves();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -708,7 +727,7 @@ public class CleanupPreFlightTests
             Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
         Assert.False(vm.Cleanup.IsOperating);
         // A refusal, not a fault: the crash log is left as it was.
-        Assert.Equal(crashLogBefore, TestCrashLog.Text());
+        Assert.Equal(crashLogBefore, TestCrashLog.TextWithoutDestinationSaves());
     }
 
     [Fact]
@@ -721,7 +740,7 @@ public class CleanupPreFlightTests
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
-        var crashLogBefore = TestCrashLog.Text();
+        var crashLogBefore = TestCrashLog.TextWithoutDestinationSaves();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -735,7 +754,7 @@ public class CleanupPreFlightTests
             Arg.Any<IProgress<OperationProgress>?>(), Arg.Any<CancellationToken>());
         Assert.False(vm.Cleanup.IsOperating);
         // A mistake the message explains whole: the crash log is left as it was.
-        Assert.Equal(crashLogBefore, TestCrashLog.Text());
+        Assert.Equal(crashLogBefore, TestCrashLog.TextWithoutDestinationSaves());
     }
 
     [Fact]

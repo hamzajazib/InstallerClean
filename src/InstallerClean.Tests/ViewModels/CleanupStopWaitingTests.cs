@@ -24,7 +24,7 @@ namespace InstallerClean.Tests.ViewModels;
 /// the destination guard are substituted as in <see cref="CleanupPreFlightTests"/>, so the
 /// check before the Move is reached.
 /// </summary>
-public class CleanupStopWaitingTests
+public class CleanupStopWaitingTests : IDisposable
 {
     // Every specification of MoveFilesAsync below names the trailing under-lease argument,
     // which is optional on the interface and never omitted by the app.
@@ -54,6 +54,8 @@ public class CleanupStopWaitingTests
     public CleanupStopWaitingTests()
     {
         _settingsService.Load().Returns(new AppSettings());
+        // A working settings service: a destination save that does land records nothing.
+        _settingsService.Update(Arg.Any<Action<AppSettings>>()).Returns(true);
         _rebootService.Check().Returns(PendingRebootResult.Clean);
         _confirmationService.ConfirmMove(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>())
             .Returns(true);
@@ -73,12 +75,29 @@ public class CleanupStopWaitingTests
     }
 
     private MainViewModel CreateViewModel() =>
-        new(_scanService, _moveService, _deleteService,
+        Made(new MainViewModel(_scanService, _moveService, _deleteService,
             _settingsService, _rebootService, _msiInfoService,
             _dialogService, _confirmationService, _windowService,
             _fileSystem, _resultLogService, _updateCheckService, _reverifier,
             _earlierRunCheck, _firstRunMark, _windowsRegion,
-            destinationGuard: new ByPathDestinationGuard(_fileSystem));
+            destinationGuard: new ByPathDestinationGuard(_fileSystem)));
+
+    /// <summary>
+    /// Every view model this class made, disposed after its test, so a destination save
+    /// still waiting out its delay cannot land in a later test.
+    /// </summary>
+    private readonly List<MainViewModel> _made = new();
+
+    private MainViewModel Made(MainViewModel vm)
+    {
+        _made.Add(vm);
+        return vm;
+    }
+
+    public void Dispose()
+    {
+        foreach (var vm in _made) vm.Dispose();
+    }
 
     private static string WaitLine(string root) => DisplayHelpers.WaitingFor(root);
 

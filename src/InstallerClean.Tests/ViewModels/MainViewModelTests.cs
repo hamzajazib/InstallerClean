@@ -10,7 +10,7 @@ using InstallerClean.ViewModels;
 
 namespace InstallerClean.Tests.ViewModels;
 
-public class MainViewModelTests
+public class MainViewModelTests : IDisposable
 {
     private static readonly string Orphaned = Strings.Reason_Orphaned;
 
@@ -81,6 +81,29 @@ public class MainViewModelTests
     private MainViewModel CreateViewModel() => CreateViewModel(new AppSettings());
 
     /// <summary>
+    /// Every view model this class made, disposed after its test, so a destination save
+    /// still waiting out its delay cannot land in a later test.
+    /// </summary>
+    private readonly List<MainViewModel> _made = new();
+
+    public MainViewModelTests()
+    {
+        // A working settings service: a destination save that does land records nothing.
+        _settingsService.Update(Arg.Any<Action<AppSettings>>()).Returns(true);
+    }
+
+    private MainViewModel Made(MainViewModel vm)
+    {
+        _made.Add(vm);
+        return vm;
+    }
+
+    public void Dispose()
+    {
+        foreach (var vm in _made) vm.Dispose();
+    }
+
+    /// <summary>
     /// Build a MainViewModel against the substituted services with a
     /// caller-provided initial AppSettings. The one place in this class
     /// that constructs a MainViewModel, so a change to the constructor's
@@ -99,14 +122,14 @@ public class MainViewModelTests
         _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns(ci => new ReverifyResult((IReadOnlyList<string>)ci[0]!, Array.Empty<string>()));
 
-        return new MainViewModel(
+        return Made(new MainViewModel(
             _scanService, _moveService, _deleteService,
             _settingsService, _rebootService, _msiInfoService,
             _dialogService, _confirmationService, _windowService,
             _fileSystem, _resultLogService, _updateCheckService, _reverifier,
             _earlierRunCheck, _firstRunMark, _windowsRegion,
             destinationGuard: new ByPathDestinationGuard(_fileSystem),
-            appUpdater: appUpdater);
+            appUpdater: appUpdater));
     }
 
     /// <summary>

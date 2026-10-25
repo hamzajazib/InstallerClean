@@ -18,7 +18,7 @@ namespace InstallerClean.Tests.EndToEnd;
 /// multiple commands together (scan -> orphans found -> move ->
 /// completion overlay) and assert the resulting cross-VM state.
 /// </summary>
-public class ScanMoveCompletionTests
+public class ScanMoveCompletionTests : IDisposable
 {
     // The action-service stubs below name the trailing under-lease argument: it
     // is optional on the interface and never omitted in practice, so a stub that
@@ -42,6 +42,29 @@ public class ScanMoveCompletionTests
 
     private readonly MockFileSystem _fileSystem = new();
 
+    /// <summary>
+    /// Every view model this class made, disposed after its test, so a destination save
+    /// still waiting out its delay cannot land in a later test.
+    /// </summary>
+    private readonly List<MainViewModel> _made = new();
+
+    public ScanMoveCompletionTests()
+    {
+        // A working settings service: a destination save that does land records nothing.
+        _settingsService.Update(Arg.Any<Action<AppSettings>>()).Returns(true);
+    }
+
+    private MainViewModel Made(MainViewModel vm)
+    {
+        _made.Add(vm);
+        return vm;
+    }
+
+    public void Dispose()
+    {
+        foreach (var vm in _made) vm.Dispose();
+    }
+
     private MainViewModel CreateMain()
     {
         _settingsService.Load().Returns(new AppSettings());
@@ -50,13 +73,13 @@ public class ScanMoveCompletionTests
         _rebootService.Check().Returns(PendingRebootResult.Clean);
         _reverifier.ReverifyAsync(Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>(), Arg.Any<IProgress<ScanProgressUpdate>?>())
             .Returns(ci => new ReverifyResult((IReadOnlyList<string>)ci[0]!, Array.Empty<string>()));
-        return new MainViewModel(
+        return Made(new MainViewModel(
             _scanService, _moveService, _deleteService,
             _settingsService, _rebootService, _msiInfoService,
             _dialogService, _confirmationService, _windowService,
             _fileSystem, _resultLogService, _updateCheckService, _reverifier,
             _earlierRunCheck, _firstRunMark, _windowsRegion,
-            destinationGuard: new ByPathDestinationGuard(_fileSystem));
+            destinationGuard: new ByPathDestinationGuard(_fileSystem)));
     }
 
     [Fact]
@@ -198,6 +221,7 @@ public class ScanMoveCompletionTests
         // External concerns stay substituted.
         var settingsService = Substitute.For<ISettingsService>();
         settingsService.Load().Returns(new AppSettings());
+        settingsService.Update(Arg.Any<Action<AppSettings>>()).Returns(true);
         var rebootService = Substitute.For<IPendingRebootService>();
         rebootService.Check().Returns(PendingRebootResult.Clean);
         // Real re-verifier over the same query service: it re-runs the same
@@ -220,13 +244,13 @@ public class ScanMoveCompletionTests
         // probes that folder through it, so two distinct MockFileSystems
         // would split the folder from its probe; sharing the instance
         // keeps the test honest about the production graph.
-        var vm = new MainViewModel(
+        var vm = Made(new MainViewModel(
             scanService, moveService, deleteService,
             settingsService, rebootService, msiInfoService,
             dialogService, confirmationService, windowService,
             fs, resultLogService, updateCheckService, reverifier,
             Substitute.For<IEarlierRunCheck>(), FirstRunMarks.Claiming(), Substitute.For<IWindowsRegion>(),
-            destinationGuard: new ByPathDestinationGuard(fs));
+            destinationGuard: new ByPathDestinationGuard(fs)));
 
         // Stage 1: real scan finds the two orphans.
         await vm.Scan.ScanWithProgressAsync(null);

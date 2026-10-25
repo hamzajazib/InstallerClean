@@ -68,6 +68,26 @@ internal static class TestCrashLog
     /// </summary>
     internal static string Text() => ReadIfThere(CrashLog.LogPath + CrashLog.ArchiveSuffix) + ReadIfThere(CrashLog.LogPath);
 
+    /// <summary>
+    /// The message a view model's delayed save of the move destination writes where the
+    /// settings service refuses it (CleanupViewModel).
+    /// </summary>
+    internal const string DestinationSaveRefused = "Settings.Update returned false during MoveDestination debounced save.";
+
+    /// <summary>
+    /// <see cref="Text"/> without the entries carrying <see cref="DestinationSaveRefused"/>.
+    /// A view model another test left behind saves its destination after a delay, into the
+    /// one crash log every test shares, so a test comparing the log before and after its
+    /// own work reads this and sees only entries its work could write.
+    /// </summary>
+    internal static string TextWithoutDestinationSaves()
+    {
+        // Each entry starts with a line opening "---- " (CrashLog.TryWrite).
+        var entries = System.Text.RegularExpressions.Regex.Split(
+            Text(), "(?=^---- )", System.Text.RegularExpressions.RegexOptions.Multiline);
+        return string.Concat(entries.Where(e => !e.Contains(DestinationSaveRefused, StringComparison.Ordinal)));
+    }
+
     private static string ReadIfThere(string path) => File.Exists(path) ? File.ReadAllText(path) : string.Empty;
 
     /// <summary>
