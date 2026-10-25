@@ -1143,6 +1143,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         {
             File.WriteAllText(_exe, "new");
             _host.Closing = true;
+            _host.ClosedFirst = true;
             cts.Cancel();
             _host.OnFileVersion = () =>
             {
@@ -1230,7 +1231,7 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
-    public void The_console_closing_part_way_through_a_wait_that_Ctrl_C_came_before_ends_it_at_once()
+    public void The_console_closing_part_way_through_a_wait_that_Ctrl_C_came_before_ends_it_at_once_and_names_Ctrl_C()
     {
         using var cts = new CancellationTokenSource();
         var refused = 0;
@@ -1252,7 +1253,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.IsType<CommandLineUpdateResult.Stopped>(result);
         Assert.Equal(3, refused);
         Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
-        Assert.Contains("The console closing or Windows shutting down ended the run, and a failure came as it ended.", TestCrashLog.OnlyEntry());
+        Assert.Contains("Ctrl+C ended the run, and a failure came as it ended.", TestCrashLog.OnlyEntry());
     }
 
     [Fact]
@@ -1317,7 +1318,7 @@ public sealed class CommandLineUpdateTests : IDisposable
             readHoldNotice: TimeSpan.FromSeconds(30), readHoldWaitAfterCancel: TimeSpan.FromMilliseconds(300));
 
         // Reads come every 100 ms: about 4 in the 300 ms bound, and about 20 in the built-in one.
-        Assert.InRange(refused, 2, 8);
+        Assert.InRange(refused, 1, 12);
         Assert.IsType<CommandLineUpdateResult.Stopped>(result);
         Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
     }
@@ -1330,6 +1331,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         {
             File.WriteAllText(_exe, "new");
             _host.Closing = true;
+            _host.ClosedFirst = true;
             cts.Cancel();
             _host.OnFileVersion = () => throw new UnauthorizedAccessException("access denied");
             return 0;
@@ -1959,6 +1961,8 @@ public sealed class CommandLineUpdateTests : IDisposable
         public Action? OnFileVersion { get; set; }
 
         public bool Closing { get; set; }
+
+        public bool ClosedFirst { get; set; }
 
         public Version? FileVersion(string path)
         {

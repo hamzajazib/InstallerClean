@@ -29,6 +29,8 @@ internal sealed class CancelKey
     private readonly Action<TimeSpan> _hold;
     private int _hooked;
     private int _closing;
+    // What cancelled Pressed first: 0 nothing yet, 1 Ctrl+C, 2 a close or shutdown.
+    private int _firstPress;
 
     /// <summary>
     /// How long a close or shutdown event holds the process: a second inside the five
@@ -54,6 +56,12 @@ internal sealed class CancelKey
     /// the process within seconds.
     /// </summary>
     public bool Closing => Volatile.Read(ref _closing) == 1;
+
+    /// <summary>
+    /// Whether a close or shutdown, rather than Ctrl+C, is what cancelled
+    /// <see cref="Pressed"/>. Set before the cancellation it names.
+    /// </summary>
+    public bool ClosedFirst => Volatile.Read(ref _firstPress) == 2;
 
     /// <summary>The handler the command line hooks.</summary>
     public static CancelKey Process { get; } = new();
@@ -96,7 +104,7 @@ internal sealed class CancelKey
                 return true;
             case Kernel32.CTRL_CLOSE_EVENT or Kernel32.CTRL_SHUTDOWN_EVENT:
                 Volatile.Write(ref _closing, 1);
-                Press();
+                Press(closing: true);
                 try
                 {
                     _hold(CloseHold);
@@ -178,8 +186,9 @@ internal sealed class CancelKey
     }
 
     /// <summary>Cancels <see cref="Pressed"/>. Never throws.</summary>
-    private void Press()
+    private void Press(bool closing = false)
     {
+        Interlocked.CompareExchange(ref _firstPress, closing ? 2 : 1, 0);
         try
         {
             _pressed.Cancel();

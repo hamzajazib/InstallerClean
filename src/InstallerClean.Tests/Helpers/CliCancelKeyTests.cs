@@ -203,6 +203,29 @@ public class CliCancelKeyTests
     }
 
     [Fact]
+    public void A_close_that_comes_first_is_named_as_what_cancelled_the_run()
+    {
+        var key = new CancelKey(_ => null, _ => { });
+
+        key.Control(Kernel32.CTRL_CLOSE_EVENT);
+        key.Take(null, CtrlC());
+
+        Assert.True(key.ClosedFirst);
+    }
+
+    [Fact]
+    public void A_close_after_Ctrl_C_leaves_Ctrl_C_named_as_what_cancelled_the_run()
+    {
+        var key = new CancelKey(_ => null, _ => { });
+
+        key.Take(null, CtrlC());
+        key.Control(Kernel32.CTRL_CLOSE_EVENT);
+
+        Assert.False(key.ClosedFirst);
+        Assert.True(key.Closing);
+    }
+
+    [Fact]
     public void The_run_is_cancelled_before_the_hold_starts()
     {
         CancelKey? key = null;

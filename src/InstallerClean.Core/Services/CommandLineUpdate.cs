@@ -128,6 +128,12 @@ internal interface ICommandLineUpdateHost : IConsolePrompt
     bool Closing { get; }
 
     /// <summary>
+    /// Whether the console closing or Windows shutting down, rather than Ctrl+C, is what
+    /// cancelled the run's token. It is set before the token is cancelled.
+    /// </summary>
+    bool ClosedFirst { get; }
+
+    /// <summary>
     /// Loads what the rest of the run reaches, and checks the event source, while the
     /// running exe's file is still whole (<see cref="SelfReplacement.PrepareToMoveAside"/>).
     /// Called once, immediately before the running exe is renamed aside.
@@ -258,10 +264,6 @@ internal sealed class CommandLineUpdate
     // anything is renamed to that path: while set, Stop takes that answer without reading
     // the file again.
     private bool _newerVersionConfirmed;
-    // Set where the console closing or Windows shutting down cancelled the run, read as the
-    // token is cancelled or as a wait for a held file sees the closing first, so the run's
-    // entry names that rather than Ctrl+C (RecordStopped).
-    private volatile bool _cancelledByClosing;
     private bool _saidInstalled;
     // Set where this exe was renamed back to a path with nothing at it (RefillThisExe).
     private bool _renamedBack;
@@ -322,9 +324,6 @@ internal sealed class CommandLineUpdate
         bool canAsk, string command, IReadOnlyList<string> arguments, string exePath, CancellationToken token)
     {
         _token = token;
-        // The host marks itself closing before it cancels the token for a close, so this reads
-        // what cancelled it.
-        using var cancelledBy = token.Register(() => { if (_host.Closing) _cancelledByClosing = true; });
         if (Check(canAsk, token) is not { } available)
             return token.IsCancellationRequested ? new CommandLineUpdateResult.Cancelled() : CommandLineUpdateResult.NothingTried;
 
@@ -787,8 +786,9 @@ internal sealed class CommandLineUpdate
     /// what ended the run and whether this exe was renamed back to its path, with
     /// <paramref name="cause"/> inside it, null where Ctrl+C, the console closing or Windows
     /// shutting down is the whole of it. The entry names the console closing or Windows
-    /// shutting down in place of Ctrl+C where that is what cancelled the run. Where there is a cause and Ctrl+C came
-    /// as well, the entry says both and no order between them,
+    /// shutting down in place of Ctrl+C where that is what came first
+    /// (<see cref="ICommandLineUpdateHost.ClosedFirst"/>). Where there is a cause and
+    /// either came as well, the entry says both and no order between them,
     /// since the token does not record when it was cancelled. The answer
     /// names <paramref name="cause"/>'s type, or <see cref="UpdateFailedException"/> where
     /// there is none. <paramref name="thenFailed"/>, a failure that came as the run ended,
@@ -797,7 +797,7 @@ internal sealed class CommandLineUpdate
     private CommandLineUpdateResult.Stopped RecordStopped(
         Exception? cause, bool cancelled, Exception? thenFailed = null)
     {
-        var (stopper, stopperOpening) = _cancelledByClosing
+        var (stopper, stopperOpening) = _host.ClosedFirst || (_host.Closing && !_token.IsCancellationRequested)
             ? ("the console closing or Windows shutting down", "The console closing or Windows shutting down")
             : ("Ctrl+C", "Ctrl+C");
         var how = (cancelled
@@ -972,7 +972,7 @@ internal sealed class CommandLineUpdate
     /// </summary>
     private void RefillIfEmpty(string exePath)
     {
-        if (!File.Exists(exePath)) _newerVersionConfirmed = false;
+        if (!File.Exists(exePath)) PathChanged();
         if (_updater.Kind == AppCopyKind.Setup) RefillThisExe(exePath);
         else SelfReplacement.TryPutNewerVersionAtPath(exePath);
     }
@@ -1001,8 +1001,8 @@ internal sealed class CommandLineUpdate
     }
 
     /// <summary>
-    /// Forgets what this run knows of the file at this exe's path, which a file has just
-    /// been renamed to.
+    /// Forgets what this run knows of the file at this exe's path, which has changed: a
+    /// file was renamed there, or nothing is there.
     /// </summary>
     private void PathChanged()
     {
@@ -1052,8 +1052,7 @@ internal sealed class CommandLineUpdate
             try
             {
                 var carries = _host.FileVersion(path) is { } carried && Helpers.FileVersionResource.IsRelease(carried, version);
-                // A path with nothing at it tells nothing about the setup's file.
-                if (File.Exists(path)) _setupFileUnchecked = false;
+                _setupFileUnchecked = false;
                 _newerVersionConfirmed = carries;
                 return carries;
             }
@@ -1061,14 +1060,10 @@ internal sealed class CommandLineUpdate
             {
                 if (ex is IOException held && IsHeld(held))
                 {
-                    // Each condition is read once, so the entry names what really ended the wait.
                     if (_host.Closing || (!cancelledBefore && _token.IsCancellationRequested))
                     {
                         unread = ex;
                         waitEnded = true;
-                        // The host marks itself closing before it cancels the token, so a
-                        // closing seen here may come before the token says so.
-                        if (_host.Closing) _cancelledByClosing = true;
                         return null;
                     }
                     if (Stopwatch.GetElapsedTime(started) < bound)
