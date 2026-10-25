@@ -1159,7 +1159,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal(1, refused);
         Assert.Equal("new", File.ReadAllText(_exe));
         Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
-        Assert.Contains("The console closing ended the run, and a failure came as it ended.", TestCrashLog.OnlyEntry());
+        Assert.Contains("The console closing or Windows shutting down ended the run, and a failure came as it ended.", TestCrashLog.OnlyEntry());
     }
 
     [Fact]
@@ -1252,7 +1252,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.IsType<CommandLineUpdateResult.Stopped>(result);
         Assert.Equal(3, refused);
         Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
-        Assert.Contains("The console closing ended the run, and a failure came as it ended.", TestCrashLog.OnlyEntry());
+        Assert.Contains("The console closing or Windows shutting down ended the run, and a failure came as it ended.", TestCrashLog.OnlyEntry());
     }
 
     [Fact]
@@ -1270,7 +1270,7 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         Assert.IsType<CommandLineUpdateResult.Stopped>(result);
         Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
-        Assert.Contains("The console closing ended the run, and a failure came as it ended.", TestCrashLog.OnlyEntry());
+        Assert.Contains("The console closing or Windows shutting down ended the run, and a failure came as it ended.", TestCrashLog.OnlyEntry());
     }
 
     [Fact]
@@ -1312,7 +1312,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         var result = Run(Setup(), canAsk: false, token: cts.Token, readHoldWait: TimeSpan.FromSeconds(30),
             readHoldNotice: TimeSpan.FromSeconds(30), readHoldWaitAfterCancel: TimeSpan.FromMilliseconds(300));
 
-        Assert.True(System.Diagnostics.Stopwatch.GetElapsedTime(started) < TimeSpan.FromSeconds(10));
+        Assert.True(System.Diagnostics.Stopwatch.GetElapsedTime(started) < TimeSpan.FromSeconds(1.5));
         Assert.IsType<CommandLineUpdateResult.Stopped>(result);
         Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
     }

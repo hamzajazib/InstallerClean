@@ -258,6 +258,9 @@ internal sealed class CommandLineUpdate
     // anything is renamed to that path: while set, Stop takes that answer without reading
     // the file again.
     private bool _newerVersionConfirmed;
+    // Set where the console closing or Windows shutting down ended a wait for a held file,
+    // so the run's entry names that rather than Ctrl+C (RecordStopped).
+    private bool _waitEndedByClosing;
     private bool _saidInstalled;
     // Set where this exe was renamed back to a path with nothing at it (RefillThisExe).
     private bool _renamedBack;
@@ -644,11 +647,13 @@ internal sealed class CommandLineUpdate
             {
                 // Ending the run failed as well, before how it ended was settled, so nothing
                 // more is said, and the run ends with nothing run, answered by what the file
-                // at the path carries. What ended the run is ex, and its entry names again
-                // beside it, with a failure to read the file at the path where there is one.
-                // The refill, the look at the file and SayClosing each catch their own
-                // failures; this arm is for a throw out of anything else EndNotStarted
-                // reaches, which still ends the run by what the file at the path carries.
+                // at the path carries: a newer version this run has already found there, with
+                // nothing renamed to the path since, is taken without a fresh look. What ended
+                // the run is ex, and its entry names again beside it, with a failure to read
+                // the file at the path where there is one. The refill, the look at the file
+                // and SayClosing each catch their own failures; this arm is for a throw out of
+                // anything else EndNotStarted reaches, which still ends the run by what the
+                // file at the path carries.
                 RefillIfEmpty(exePath);
                 Exception? unread = null;
                 var waitEnded = false;
@@ -776,9 +781,11 @@ internal sealed class CommandLineUpdate
     /// Writes to crash.log how a run ended with nothing run and this exe renamed aside, and
     /// answers <see cref="CommandLineUpdateResult.Stopped"/> for it. The entry says
     /// what ended the run and whether this exe was renamed back to its path, with
-    /// <paramref name="cause"/> inside it, null where Ctrl+C is the whole of it; the entry
-    /// names the console closing in place of Ctrl+C where the host is closing. Where there
-    /// is a cause and Ctrl+C came as well, the entry says both and no order between them,
+    /// <paramref name="cause"/> inside it, null where Ctrl+C, the console closing or Windows
+    /// shutting down is the whole of it. The entry names the console closing or Windows
+    /// shutting down in place of Ctrl+C where that is what ended a wait for a held file
+    /// (<see cref="Carries"/>), and Ctrl+C otherwise. Where there is a cause and Ctrl+C came
+    /// as well, the entry says both and no order between them,
     /// since the token does not record when it was cancelled. The answer
     /// names <paramref name="cause"/>'s type, or <see cref="UpdateFailedException"/> where
     /// there is none. <paramref name="thenFailed"/>, a failure that came as the run ended,
@@ -787,12 +794,14 @@ internal sealed class CommandLineUpdate
     private CommandLineUpdateResult.Stopped RecordStopped(
         Exception? cause, bool cancelled, Exception? thenFailed = null)
     {
-        var stopper = _host.Closing ? "the console closing" : "Ctrl+C";
-        var how = (cancelled
-                ? cause is not null ? $"A failure ended the run and {stopper} came as well."
-                    : thenFailed is null ? $"{Capitalised(stopper)} ended the run."
-                    : $"{Capitalised(stopper)} ended the run, and a failure came as it ended."
-                : "The run ended.")
+        var how = (!cancelled ? "The run ended."
+                : _waitEndedByClosing
+                    ? cause is not null ? "A failure ended the run and the console closing or Windows shutting down came as well."
+                        : thenFailed is null ? "The console closing or Windows shutting down ended the run."
+                        : "The console closing or Windows shutting down ended the run, and a failure came as it ended."
+                    : cause is not null ? "A failure ended the run and Ctrl+C came as well."
+                        : thenFailed is null ? "Ctrl+C ended the run."
+                        : "Ctrl+C ended the run, and a failure came as it ended.")
             + (_renamedBack
                 ? " The running copy was put back at the command line's path."
                 : " The running copy was left renamed aside.");
@@ -801,8 +810,6 @@ internal sealed class CommandLineUpdate
         return new CommandLineUpdateResult.Stopped(
             cause?.GetType().Name ?? nameof(UpdateFailedException), crash.Written ? crash.Path : null);
     }
-
-    private static string Capitalised(string text) => char.ToUpperInvariant(text[0]) + text[1..];
 
     /// <summary>Says the newer version is installed, once in a run.</summary>
     private void SayInstalled(string latest)
@@ -962,7 +969,7 @@ internal sealed class CommandLineUpdate
     /// </summary>
     private void RefillIfEmpty(string exePath)
     {
-        if (!File.Exists(exePath)) PathChanged();
+        if (!File.Exists(exePath)) _newerVersionConfirmed = false;
         if (_updater.Kind == AppCopyKind.Setup) RefillThisExe(exePath);
         else SelfReplacement.TryPutNewerVersionAtPath(exePath);
     }
@@ -1051,10 +1058,12 @@ internal sealed class CommandLineUpdate
                 if (ex is IOException held && IsHeld(held))
                 {
                     // Each condition is read once, so the entry names what really ended the wait.
-                    if (_host.Closing || (!cancelledBefore && _token.IsCancellationRequested))
+                    var closing = _host.Closing;
+                    if (closing || (!cancelledBefore && _token.IsCancellationRequested))
                     {
                         unread = ex;
                         waitEnded = true;
+                        _waitEndedByClosing = closing;
                         return null;
                     }
                     if (Stopwatch.GetElapsedTime(started) < bound)
