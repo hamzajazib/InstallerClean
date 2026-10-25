@@ -879,10 +879,10 @@ public partial class App : Application
 
     /// <summary>
     /// Deletes the copy an update renamed aside and the newer version an update left beside
-    /// this exe, and removes the folders earlier updates downloaded into, trying for ten
-    /// seconds, because what put each there is usually
-    /// still closing as this copy starts: the copy that renamed itself, or the setup,
-    /// which opens the app before it exits. Whatever will not go by then is tried again
+    /// this exe, and removes the folders earlier updates downloaded into. It tries for ten
+    /// seconds, because what put the renamed copy or a folder there is usually still
+    /// closing as this copy starts: the copy that renamed itself, or the setup, which opens
+    /// the app before it exits. Whatever will not go by then is tried again
     /// at the next start, and so is whatever is left once an update of this copy's own is
     /// about to write its first file, its files carrying the same names
     /// (<see cref="UpdateLeftoverGate"/>). First, in the setup's folder, it puts back the

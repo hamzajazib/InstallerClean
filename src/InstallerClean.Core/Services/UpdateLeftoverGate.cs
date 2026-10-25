@@ -12,6 +12,7 @@ namespace InstallerClean.Services;
 public sealed class UpdateLeftoverGate
 {
     private readonly object _gate = new();
+    // Set once an update is about to write, and never cleared.
     private bool _closed;
 
     /// <summary>The gate this process's clean-up and its updates share.</summary>
