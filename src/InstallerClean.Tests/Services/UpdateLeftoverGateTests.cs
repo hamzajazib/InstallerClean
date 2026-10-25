@@ -4,13 +4,13 @@ namespace InstallerClean.Tests.Services;
 
 /// <summary>
 /// The gate between the start-up clean-up and this process's own update
-/// (<see cref="UpdateLeftoverGate"/>): a pass runs until an update reaches its first
-/// write, and none after, whatever becomes of that update.
+/// (<see cref="UpdateLeftoverGate"/>): a pass runs until an update is about to write its
+/// first file, and none after, whatever becomes of that update.
 /// </summary>
 public sealed class UpdateLeftoverGateTests
 {
     [Fact]
-    public void A_pass_runs_while_no_update_has_reached_its_first_write()
+    public void A_pass_runs_while_no_update_is_about_to_write()
     {
         var gate = new UpdateLeftoverGate();
         var passes = 0;
@@ -22,7 +22,7 @@ public sealed class UpdateLeftoverGateTests
     }
 
     [Fact]
-    public void No_pass_runs_once_an_update_has_reached_its_first_write()
+    public void No_pass_runs_once_an_update_is_about_to_write()
     {
         var gate = new UpdateLeftoverGate();
         var passes = 0;
@@ -34,11 +34,12 @@ public sealed class UpdateLeftoverGateTests
     }
 
     [Fact]
-    public async Task An_update_reaching_its_first_write_during_a_pass_waits_for_it_to_end()
+    public async Task An_update_about_to_write_during_a_pass_waits_for_it_to_end()
     {
         var gate = new UpdateLeftoverGate();
         using var inPass = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
+        using var marking = new ManualResetEventSlim();
         var pass = Task.Run(() => gate.TryRunPass(() =>
         {
             inPass.Set();
@@ -48,13 +49,20 @@ public sealed class UpdateLeftoverGateTests
         Task mark;
         try
         {
-            mark = Task.Run(gate.MarkUpdateWriting);
+            mark = Task.Run(() =>
+            {
+                marking.Set();
+                gate.MarkUpdateWriting();
+            });
+            // The mark has started, so a wait that ends here is the lock not holding it.
+            marking.Wait();
 
             Assert.False(mark.Wait(TimeSpan.FromMilliseconds(200)));
         }
         finally
         {
             release.Set();
+            pass.Wait();
         }
 
         Assert.True(await pass);
@@ -63,7 +71,7 @@ public sealed class UpdateLeftoverGateTests
     }
 
     [Fact]
-    public async Task An_update_that_fails_at_its_first_write_still_stops_the_clean_up()
+    public async Task An_update_whose_first_write_fails_still_stops_the_clean_up()
     {
         var gate = new UpdateLeftoverGate();
         // A file where the staging root should be, so the staging folder cannot be made.
@@ -113,6 +121,18 @@ public sealed class UpdateLeftoverGateTests
         var updater = Updater(gate, Path.GetTempPath(), "not json");
 
         await Assert.ThrowsAsync<UpdateFailedException>(() => updater.PrepareAsync("9.9.9", null, CancellationToken.None));
+
+        Assert.True(gate.TryRunPass(() => { }));
+    }
+
+    [Fact]
+    public async Task An_update_cancelled_before_it_writes_leaves_the_clean_up_running()
+    {
+        var gate = new UpdateLeftoverGate();
+        var updater = Updater(gate, Path.GetTempPath(), AllowsEveryDownload);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => updater.PrepareAsync("9.9.9", null, new CancellationToken(canceled: true)));
 
         Assert.True(gate.TryRunPass(() => { }));
     }

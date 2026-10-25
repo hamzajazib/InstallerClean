@@ -884,9 +884,9 @@ public partial class App : Application
     /// which opens the app before it exits. Whatever will not go by then is tried again
     /// at the next start, and so is whatever is left once an update of this copy's own is
     /// about to write its first file, its files carrying the same names
-    /// (<see cref="UpdateLeftoverGate"/>). First, in
-    /// the setup's folder, it puts back the command line an update renamed aside where
-    /// nothing took its place (<see cref="SelfReplacement.TryPutBackMissing"/>). Never throws.
+    /// (<see cref="UpdateLeftoverGate"/>). First, in the setup's folder, it puts back the
+    /// command line an update renamed aside where nothing took its place
+    /// (<see cref="SelfReplacement.TryPutBackMissing"/>). Never throws.
     /// </summary>
     private static async Task RemoveUpdateLeftoversAsync()
     {

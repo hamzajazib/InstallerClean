@@ -12,25 +12,27 @@ namespace InstallerClean.Services;
 public sealed class UpdateLeftoverGate
 {
     private readonly object _gate = new();
-    private bool _updateHasWritten;
+    private bool _updateAboutToWrite;
 
     /// <summary>The gate this process's clean-up and its updates share.</summary>
     public static UpdateLeftoverGate ForThisProcess { get; } = new();
 
     /// <summary>
     /// Runs <paramref name="pass"/>, one pass of the clean-up, and answers true, where no
-    /// update in this process has reached its first write; otherwise runs nothing and
-    /// answers false, and the caller stops. The answer stays false for the rest of the
-    /// process, whatever becomes of that update, since a later try can write the same
-    /// names. <see cref="MarkUpdateWriting"/> waits for a
-    /// pass already running, on whichever thread the update has reached, so keep the pass
-    /// short and synchronous.
+    /// update in this process is about to write its first file or has written one;
+    /// otherwise runs nothing and answers false, and the caller stops. The answer stays
+    /// false for the rest of the process, whatever becomes of that update: what a prepared
+    /// update leaves for the hand-over, the staged setup or the newer version beside the
+    /// exe, stays in use after <see cref="AppUpdater.PrepareAsync"/> returns.
+    /// <see cref="MarkUpdateWriting"/> waits for a pass already running, on whichever
+    /// thread the update has reached, the window's own among them, so keep the pass short
+    /// and synchronous.
     /// </summary>
     public bool TryRunPass(Action pass)
     {
         lock (_gate)
         {
-            if (_updateHasWritten) return false;
+            if (_updateAboutToWrite) return false;
             pass();
             return true;
         }
@@ -42,6 +44,6 @@ public sealed class UpdateLeftoverGate
     /// </summary>
     internal void MarkUpdateWriting()
     {
-        lock (_gate) _updateHasWritten = true;
+        lock (_gate) _updateAboutToWrite = true;
     }
 }
