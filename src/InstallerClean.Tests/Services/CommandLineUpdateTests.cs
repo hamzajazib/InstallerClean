@@ -659,8 +659,11 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         var result = Run(Setup(), canAsk: false);
 
-        Assert.Equal(nameof(IOException), Assert.IsType<CommandLineUpdateResult.Stopped>(result).FailureType);
+        // The setup's failure is what ended the run, and the line the console refused is not.
+        Assert.Equal(nameof(UpdateFailedException), Assert.IsType<CommandLineUpdateResult.Stopped>(result).FailureType);
         Assert.Null(_host.NewerVersionRun);
+        var last = TestCrashLog.Text().Split("---- ")[^1];
+        Assert.Contains("The setup ended with exit code 1.", last);
     }
 
     [Fact]

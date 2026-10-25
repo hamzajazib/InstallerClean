@@ -210,6 +210,9 @@ internal sealed class CommandLineUpdate
     private bool _saidInstalled;
     // Set where this exe was renamed back to a path with nothing at it (RefillThisExe).
     private bool _renamedBack;
+    // Set once Stop has written what ended the run to crash.log, and the answer it gave.
+    private bool _recorded;
+    private CommandLineUpdateResult.Stopped? _stopped;
 
     /// <param name="check">Asks GitHub for the newest version.</param>
     /// <param name="updater">
@@ -576,9 +579,10 @@ internal sealed class CommandLineUpdate
             {
                 // Saying so failed as well, so nothing more is said, and the run ends with
                 // nothing run, answered by what the file at the path carries.
+                // Where Stop had already written what ended the run, that entry stands.
                 RefillIfEmpty(exePath);
-                if (!Carries(exePath, latest)) return RecordStopped(again, token.IsCancellationRequested);
-                Helpers.CrashLog.TryWrite(again);
+                if (!Carries(exePath, latest)) return _stopped ?? RecordStopped(again, token.IsCancellationRequested);
+                if (!_recorded) Helpers.CrashLog.TryWrite(again);
                 return token.IsCancellationRequested
                     ? new CommandLineUpdateResult.UpdatedThenCancelled(current, latest)
                     : new CommandLineUpdateResult.NotStarted(current, latest);
@@ -710,7 +714,8 @@ internal sealed class CommandLineUpdate
                 ? ", and the running copy was put back at the command line's path."
                 : " with the running copy renamed aside.");
         var crash = Helpers.CrashLog.TryWrite(new UpdateFailedException(UpdateFailureStage.Install, how, cause));
-        return new CommandLineUpdateResult.Stopped(
+        _recorded = true;
+        return _stopped = new CommandLineUpdateResult.Stopped(
             cause?.GetType().Name ?? nameof(UpdateFailedException), crash.Written ? crash.Path : null);
     }
 
@@ -778,8 +783,9 @@ internal sealed class CommandLineUpdate
     /// start: <see cref="CommandLineUpdateResult.UpdatedThenCancelled"/> where
     /// <paramref name="cancelled"/>, and otherwise
     /// <see cref="CommandLineUpdateResult.NotStarted"/> with what failed written to
-    /// crash.log. Where it does not, says the update could not be installed and ends
-    /// through <see cref="RecordStopped"/>.
+    /// crash.log. Where it does not, ends through <see cref="RecordStopped"/> and says the
+    /// update could not be installed. What is written to crash.log here is written before
+    /// anything is said, so a console that refuses the line leaves it as the run's entry.
     /// </summary>
     private CommandLineUpdateResult Stop(
         Exception? cause, string exePath, string current, string latest, bool cancelled)
@@ -792,13 +798,19 @@ internal sealed class CommandLineUpdate
                 SayInstalled(latest);
                 return new CommandLineUpdateResult.UpdatedThenCancelled(current, latest);
             }
-            if (cause is not null) Helpers.CrashLog.TryWrite(cause);
+            if (cause is not null)
+            {
+                Helpers.CrashLog.TryWrite(cause);
+                _recorded = true;
+            }
             _host.WriteLine(string.Format(Strings.Cli_UpdateNotStarted, latest));
             return new CommandLineUpdateResult.NotStarted(current, latest);
         }
-        // Said first, so a console that refuses the line leaves one entry, the fallback's.
+        // A run already ended here, whose closing line the console refused, keeps its entry.
+        if (_stopped is { } earlier) return earlier;
+        var stopped = RecordStopped(cause, cancelled);
         _host.WriteLine(Strings.UpdateNotice_InstallFailed);
-        return RecordStopped(cause, cancelled);
+        return stopped;
     }
 
     /// <summary>
