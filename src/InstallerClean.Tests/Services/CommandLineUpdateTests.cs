@@ -967,6 +967,46 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
+    public void A_not_started_line_that_throws_after_the_runs_entry_adds_no_second_entry()
+    {
+        SetupInstalls();
+        _host.NewerVersionExitCode = null;
+        _host.OnWriteLine = line =>
+        {
+            if (line == string.Format(Strings.Cli_UpdateNotStarted, Latest))
+                throw new InvalidOperationException("the host's own fault");
+        };
+
+        var result = Run(Setup(), canAsk: false);
+
+        Assert.Equal(new CommandLineUpdateResult.NotStarted(Current, Latest), result);
+        var entry = TestCrashLog.OnlyEntry();
+        Assert.Contains("The newer version could not be started.", entry);
+        Assert.DoesNotContain("the host's own fault", entry);
+    }
+
+    [Fact]
+    public void A_stopped_runs_closing_line_that_throws_keeps_the_failed_start_as_the_runs_cause_and_entry()
+    {
+        SetupInstalls();
+        _host.NewerVersionExitCode = null;
+        _host.OnNewerVersion = () => File.Delete(_exe);
+        _host.OnWriteLine = line =>
+        {
+            if (line == Strings.UpdateNotice_InstallFailed) throw new InvalidOperationException("the host's own fault");
+        };
+
+        var result = Run(Setup(), canAsk: false);
+
+        var stopped = Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Equal(nameof(UpdateFailedException), stopped.FailureType);
+        Assert.Equal("old", File.ReadAllText(_exe));
+        var entry = TestCrashLog.OnlyEntry();
+        Assert.Contains("The newer version could not be started.", entry);
+        Assert.DoesNotContain("the host's own fault", entry);
+    }
+
+    [Fact]
     public void A_setup_that_fails_with_this_exe_unable_to_go_back_ends_the_run_with_nothing_run()
     {
         _host.OnSetup = () =>

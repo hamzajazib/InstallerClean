@@ -210,6 +210,10 @@ internal sealed class CommandLineUpdate
     private bool _saidInstalled;
     // Set where this exe was renamed back to a path with nothing at it (RefillThisExe).
     private bool _renamedBack;
+    // Set once the entry saying how the run ended has been written (WriteRunEnd), and the
+    // answer RecordStopped gave, so a failure after either adds no second entry.
+    private bool _wroteRunEnd;
+    private CommandLineUpdateResult.Stopped? _stopped;
 
     /// <param name="check">Asks GitHub for the newest version.</param>
     /// <param name="updater">
@@ -581,10 +585,12 @@ internal sealed class CommandLineUpdate
             catch (Exception again) when (!backAtPath)
             {
                 // Saying so failed as well, so nothing more is said, and the run ends with
-                // nothing run, answered by what the file at the path carries.
+                // nothing run, answered by what the file at the path carries. What ended
+                // the run is ex, and the entry names it with again beside it, unless the
+                // run's entry was written before again came.
                 RefillIfEmpty(exePath);
-                if (!Carries(exePath, latest)) return RecordStopped(again, token.IsCancellationRequested);
-                Helpers.CrashLog.TryWrite(again);
+                if (!Carries(exePath, latest)) return RecordStopped(ex, token.IsCancellationRequested, again);
+                WriteRunEnd(new AggregateException(ex, again));
                 return token.IsCancellationRequested
                     ? new CommandLineUpdateResult.UpdatedThenCancelled(current, latest)
                     : new CommandLineUpdateResult.NotStarted(current, latest);
@@ -709,19 +715,37 @@ internal sealed class CommandLineUpdate
     /// is a cause and Ctrl+C came as well, the entry says both and no order between them,
     /// since the token does not record when it was cancelled. The answer
     /// names <paramref name="cause"/>'s type, or <see cref="UpdateFailedException"/> where
-    /// there is none.
+    /// there is none. <paramref name="thenFailed"/>, a failure that came after
+    /// <paramref name="cause"/> as the run ended, goes in the entry beside it. A run that
+    /// has already recorded its end answers as it did then, and one whose entry is already
+    /// written writes nothing more.
     /// </summary>
-    private CommandLineUpdateResult.Stopped RecordStopped(Exception? cause, bool cancelled)
+    private CommandLineUpdateResult.Stopped RecordStopped(
+        Exception? cause, bool cancelled, Exception? thenFailed = null)
     {
+        if (_stopped is { } recorded) return recorded;
         var how = (cancelled
                 ? cause is null ? "Ctrl+C ended the run." : "A failure ended the run and Ctrl+C came as well."
                 : "The run ended.")
             + (_renamedBack
                 ? " The running copy was put back at the command line's path."
                 : " The running copy was left renamed aside.");
-        var crash = Helpers.CrashLog.TryWrite(new UpdateFailedException(UpdateFailureStage.Install, how, cause));
-        return new CommandLineUpdateResult.Stopped(
-            cause?.GetType().Name ?? nameof(UpdateFailedException), crash.Written ? crash.Path : null);
+        var inner = cause is not null && thenFailed is not null ? new AggregateException(cause, thenFailed) : cause;
+        var crash = WriteRunEnd(new UpdateFailedException(UpdateFailureStage.Install, how, inner));
+        return _stopped = new CommandLineUpdateResult.Stopped(
+            cause?.GetType().Name ?? nameof(UpdateFailedException), crash is { Written: true } ? crash.Value.Path : null);
+    }
+
+    /// <summary>
+    /// Writes <paramref name="entry"/> to crash.log as the entry saying how the run ended,
+    /// and answers where it went, or writes nothing and answers null where that entry is
+    /// already written, so a run ends with one.
+    /// </summary>
+    private (string Path, bool Written)? WriteRunEnd(Exception entry)
+    {
+        if (_wroteRunEnd) return null;
+        _wroteRunEnd = true;
+        return Helpers.CrashLog.TryWrite(entry);
     }
 
     /// <summary>Says the newer version is installed, once in a run.</summary>
@@ -790,7 +814,8 @@ internal sealed class CommandLineUpdate
     /// <see cref="CommandLineUpdateResult.NotStarted"/> with what failed written to
     /// crash.log. Where it does not, ends through <see cref="RecordStopped"/> and says the
     /// update could not be installed. What is written to crash.log here is written before
-    /// the closing line, and no closing line throws (<see cref="SayClosing"/>).
+    /// the closing line, as the run's one entry (<see cref="WriteRunEnd"/>), and a console
+    /// that refuses the closing line changes nothing (<see cref="SayClosing"/>).
     /// </summary>
     private CommandLineUpdateResult Stop(
         Exception? cause, string exePath, string current, string latest, bool cancelled)
@@ -803,7 +828,7 @@ internal sealed class CommandLineUpdate
                 SayClosing(() => SayInstalled(latest));
                 return new CommandLineUpdateResult.UpdatedThenCancelled(current, latest);
             }
-            if (cause is not null) Helpers.CrashLog.TryWrite(cause);
+            if (cause is not null) WriteRunEnd(cause);
             SayClosing(() => _host.WriteLine(string.Format(Strings.Cli_UpdateNotStarted, latest)));
             return new CommandLineUpdateResult.NotStarted(current, latest);
         }
