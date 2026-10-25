@@ -677,6 +677,7 @@ const MAP = {
   'Cli.ReportNotSent': `Звіт не надіслано.`,
   'Cli.ReportCouldNotBeSent': `Не вдалося надіслати звіт. Його збережено в {0}.`,
   'Cli.ReportWaiting': `Надсилається звіт, що чекає на надсилання ще з раннішого запуску.`,
+  'Cli.UpdateWaitingForFile': `Очікування, поки інша програма звільнить {0}...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

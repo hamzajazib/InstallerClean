@@ -583,6 +583,7 @@ Ayrıntılar şuraya yazıldı:
   'Cli.ReportNotSent': `Rapor gönderilmedi.`,
   'Cli.ReportCouldNotBeSent': `Rapor gönderilemedi. {0} konumunda saklanıyor.`,
   'Cli.ReportWaiting': `Daha önceki bir çalıştırmadan beri bekleyen bir rapor gönderiliyor.`,
+  'Cli.UpdateWaitingForFile': `Başka bir programın {0} dosyasını bırakması bekleniyor...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

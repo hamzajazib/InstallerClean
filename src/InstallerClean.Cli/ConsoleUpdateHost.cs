@@ -142,7 +142,7 @@ internal sealed class ConsoleUpdateHost(string arg) : ICommandLineUpdateHost
     }
 
     public Version? FileVersion(string path) =>
-        FileVersionResource.Read(path) is { } version && (version.Major, version.Minor, version.Build) != (0, 0, 0)
+        FileVersionResource.ReadIfThere(path) is { } version && (version.Major, version.Minor, version.Build) != (0, 0, 0)
             ? version
             : null;
 

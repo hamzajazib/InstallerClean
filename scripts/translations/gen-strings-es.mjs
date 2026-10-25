@@ -594,6 +594,7 @@ const MAP = {
   'Cli.ReportNotSent': `Informe no enviado.`,
   'Cli.ReportCouldNotBeSent': `No se pudo enviar el informe. Se conserva en {0}.`,
   'Cli.ReportWaiting': `Se envía un informe que esperaba desde una ejecución anterior.`,
+  'Cli.UpdateWaitingForFile': `Esperando a que otro programa libere {0}...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

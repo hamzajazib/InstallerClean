@@ -735,6 +735,7 @@ const CLI = {
   'Cli.ReportNotSent': `Отчёт не отправлен.`,
   'Cli.ReportCouldNotBeSent': `Не удалось отправить отчёт. Он хранится в {0}.`,
   'Cli.ReportWaiting': `Отправляется отчёт, ожидающий отправки ещё с более раннего запуска.`,
+  'Cli.UpdateWaitingForFile': `Ожидание, пока другая программа освободит {0}...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

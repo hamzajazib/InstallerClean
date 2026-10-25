@@ -572,6 +572,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Versi baru akan memindai dan menampilkan daftar temuannya, tanpa memindahkan apa pun. Untuk memindahkan, jalankan /m lagi setelahnya. |
 | InstallerClean is in use, so it can't update itself now. | InstallerClean sedang digunakan, jadi tidak dapat memperbarui dirinya sekarang. |
 | Running {0} with InstallerClean {1} instead. | Menjalankan {0} dengan InstallerClean {1} sebagai gantinya. |
+| Waiting for another program to let go of {0}... | Menunggu program lain melepaskan {0}... |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} telah terpasang, tetapi tidak dapat dijalankan. Jalankan perintah itu lagi. |
 | {0}: {1} | {0}: {1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | Versi ini memerlukan .NET Framework 4.8. Pasang dari Microsoft, mulai ulang PC, lalu jalankan InstallerClean lagi untuk memperbarui. |

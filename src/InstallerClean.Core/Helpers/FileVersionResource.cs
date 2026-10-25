@@ -40,13 +40,34 @@ internal static class FileVersionResource
     {
         try
         {
-            using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            return Read(file);
+            return ReadIfThere(path);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// The file version <paramref name="path"/> carries, or null where no file is there, it
+    /// is not a program or library, or it carries no version resource. A file that is there
+    /// and cannot be opened or read throws <see cref="IOException"/> or
+    /// <see cref="UnauthorizedAccessException"/>, so a caller can tell a file another process
+    /// holds from one that carries no version. The file is opened sharing read, write and
+    /// delete, so only a handle that shares nothing for reading refuses it.
+    /// </summary>
+    public static Version? ReadIfThere(string path)
+    {
+        FileStream file;
+        try
+        {
+            file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return null;
+        }
+        using (file) return Read(file);
     }
 
     /// <summary>

@@ -570,6 +570,7 @@ const MAP = {
   'Cli.ReportNotSent': `報告未傳送。`,
   'Cli.ReportCouldNotBeSent': `無法傳送報告。報告保存在 {0}。`,
   'Cli.ReportWaiting': `正在傳送較早一次執行留下的待傳送報告。`,
+  'Cli.UpdateWaitingForFile': `正在等待另一個程式釋放 {0}...`,
 };
 
 // PARSE CONTROL. About the READING and not about the content, and it exits 2,

@@ -572,6 +572,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Yeni sürüm tarayıp bulduklarını listeleyecek, hiçbir şeyi taşımayacak. Taşımak için ardından /m komutunu yeniden çalıştırın. |
 | InstallerClean is in use, so it can't update itself now. | InstallerClean kullanımda olduğu için şu anda kendini güncelleyemiyor. |
 | Running {0} with InstallerClean {1} instead. | Bunun yerine {0} komutu InstallerClean {1} ile çalıştırılıyor. |
+| Waiting for another program to let go of {0}... | Başka bir programın {0} dosyasını bırakması bekleniyor... |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | InstallerClean {0} sürümü yüklendi ancak başlatılamadı. Komutu yeniden çalıştırın. |
 | {0}: {1} | {0}: {1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | Bu sürüm .NET Framework 4.8 gerektiriyor. Microsoft'tan yükleyin, bilgisayarı yeniden başlatın, ardından güncellemek için InstallerClean'i yeniden çalıştırın. |

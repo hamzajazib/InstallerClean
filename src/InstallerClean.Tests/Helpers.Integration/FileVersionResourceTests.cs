@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Reflection;
 using InstallerClean.Helpers;
+using InstallerClean.Interop.Native;
 
 namespace InstallerClean.Tests.Helpers.Integration;
 
@@ -75,6 +76,33 @@ public sealed class FileVersionResourceTests : IDisposable
     [Fact]
     public void A_missing_file_answers_null() =>
         Assert.Null(FileVersionResource.Read(Path.Combine(_folder, "absent.exe")));
+
+    [Fact]
+    public void A_missing_file_answers_null_from_the_read_that_throws_for_a_file_it_cannot_open() =>
+        Assert.Null(FileVersionResource.ReadIfThere(Path.Combine(_folder, "absent.exe")));
+
+    [Fact]
+    public void A_file_held_open_sharing_nothing_answers_null()
+    {
+        var copy = CopyOf(Path.Combine(Environment.SystemDirectory, "kernel32.dll"), "held.dll");
+        using var held = new FileStream(copy, FileMode.Open, FileAccess.Read, FileShare.None);
+
+        Assert.Null(FileVersionResource.Read(copy));
+    }
+
+    /// <summary>
+    /// A holder sharing reading does not refuse this read (A_file_held_open_for_writing_is_still_read);
+    /// the holder here shares nothing, the one that does.
+    /// </summary>
+    [Fact]
+    public void A_file_held_open_sharing_nothing_throws_a_sharing_violation_from_the_read_that_throws()
+    {
+        var copy = CopyOf(Path.Combine(Environment.SystemDirectory, "kernel32.dll"), "held.dll");
+        using var held = new FileStream(copy, FileMode.Open, FileAccess.Read, FileShare.None);
+
+        var thrown = Assert.ThrowsAny<IOException>(() => FileVersionResource.ReadIfThere(copy));
+        Assert.Equal(Kernel32.ERROR_SHARING_VIOLATION, WindowsErrors.Of(thrown));
+    }
 
     [Fact]
     public void A_file_that_is_not_a_program_answers_null()

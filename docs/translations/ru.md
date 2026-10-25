@@ -572,6 +572,7 @@ A few lines (the app name, version, file-size formats, and the command-line tool
 | The new version will scan and list what it finds, without moving anything. To move, run /m again afterwards. | Новая версия просканирует и покажет список найденного, ничего не перемещая. Чтобы переместить, затем снова запустите /m. |
 | InstallerClean is in use, so it can't update itself now. | InstallerClean используется, поэтому сейчас не может обновиться. |
 | Running {0} with InstallerClean {1} instead. | Вместо этого команда {0} будет выполнена в InstallerClean {1}. |
+| Waiting for another program to let go of {0}... | Ожидание, пока другая программа освободит {0}... |
 | InstallerClean {0} is installed but couldn't be started. Run the command again. | Версия InstallerClean {0} установлена, но запустить её не удалось. Выполните команду ещё раз. |
 | {0}: {1} | {0}: {1} |
 | It needs .NET Framework 4.8. Install it from Microsoft, restart the PC, then run InstallerClean again to update. | Для этой версии нужен .NET Framework 4.8. Установите его с сайта Microsoft, перезагрузите компьютер, а затем снова запустите InstallerClean, чтобы выполнить обновление. |

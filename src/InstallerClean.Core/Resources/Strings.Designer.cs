@@ -323,6 +323,7 @@ public static class Strings
     public static string Cli_UpdateNotStarted => Get("Cli.UpdateNotStarted");
     public static string Cli_UpdatePrompt => Get("Cli.UpdatePrompt");
     public static string Cli_UpdateRunningInstead => Get("Cli.UpdateRunningInstead");
+    public static string Cli_UpdateWaitingForFile => Get("Cli.UpdateWaitingForFile");
     public static string Cli_WithheldReasons_CandidateIdentity => Get("Cli.WithheldReasons.CandidateIdentity");
     public static string Cli_WithheldReasons_DeclaredPatchUnestablished => Get("Cli.WithheldReasons.DeclaredPatchUnestablished");
     public static string Cli_WithheldReasons_DeclaredProductUnestablished => Get("Cli.WithheldReasons.DeclaredProductUnestablished");

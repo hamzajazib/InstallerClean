@@ -2428,6 +2428,10 @@ InstallerClean'i yönetici olarak yeniden çalıştırın.</value></data>
        before the run goes on with the version it is. 0 = the command given, /s, /d or /m,
        as typed and left as written; 1 = the version that runs it. -->
   <data name="Cli.UpdateRunningInstead" xml:space="preserve"><value>Bunun yerine {0} komutu InstallerClean {1} ile çalıştırılıyor.</value></data>
+  <!-- After the newer setup has finished, while another program holds the file the setup
+       wrote at the command line's path and the run waits for it before reading its version.
+       0 = the file's name, installerclean-cli.exe, as it is on disk and left as written. -->
+  <data name="Cli.UpdateWaitingForFile" xml:space="preserve"><value>Başka bir programın {0} dosyasını bırakması bekleniyor...</value></data>
   <!-- Where the newer version is in place at the command line's path but would not start,
        so the run ends with nothing run and the next run of the command starts the newer
        version. 0 = its version. -->

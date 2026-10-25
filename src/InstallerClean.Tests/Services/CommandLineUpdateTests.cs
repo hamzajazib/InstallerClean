@@ -1,3 +1,4 @@
+using InstallerClean.Interop.Native;
 using InstallerClean.Resources;
 using InstallerClean.Services;
 
@@ -47,9 +48,9 @@ public sealed class CommandLineUpdateTests : IDisposable
     private CommandLineUpdateResult Run(
         FakeUpdater updater, bool canAsk, string command = "/s", string[]? arguments = null,
         Func<CancellationToken, Task<UpdateCheckResult>>? check = null, CancellationToken token = default,
-        TimeSpan? controlCBound = null) =>
+        TimeSpan? controlCBound = null, TimeSpan? readHoldWait = null, TimeSpan? readHoldNotice = null) =>
         new CommandLineUpdate(check ?? NewerOut, updater, _host, WatchedBound,
-                controlCBound ?? TimeSpan.FromMilliseconds(20))
+                controlCBound ?? TimeSpan.FromMilliseconds(20), readHoldWait, readHoldNotice)
             .Run(canAsk, command, arguments ?? [command], _exe, token);
 
     /// <summary>The separate download: the updater has written the newer file beside the exe.</summary>
@@ -1043,23 +1044,92 @@ public sealed class CommandLineUpdateTests : IDisposable
     [Fact]
     public void A_setup_whose_newer_version_cannot_be_read_afterwards_is_left_in_place_with_nothing_run()
     {
+        var reads = 0;
         SetupInstalls();
         _host.OnSetup = () =>
         {
             File.WriteAllText(_exe, "new");
-            _host.OnFileVersion = () => throw new IOException("the version could not be read");
+            _host.OnFileVersion = () =>
+            {
+                reads++;
+                throw new IOException("the version could not be read");
+            };
             return 0;
         };
 
         var result = Run(Setup(), canAsk: false);
 
         Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Equal(1, reads);
         Assert.Equal("new", File.ReadAllText(_exe));
         Assert.Null(_host.NewerVersionRun);
         Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
         var entry = TestCrashLog.OnlyEntry();
         Assert.Contains("could not be read after the setup", entry);
         Assert.Contains("the version could not be read", entry);
+    }
+
+    /// <summary>
+    /// What the host's read of a file another process holds sharing nothing for reading
+    /// throws on Windows: an <see cref="IOException"/> carrying ERROR_SHARING_VIOLATION.
+    /// </summary>
+    private static IOException SharingViolation() =>
+        new("The process cannot access the file because it is being used by another process.",
+            unchecked((int)0x80070000) | Kernel32.ERROR_SHARING_VIOLATION);
+
+    [Fact]
+    public void A_setup_whose_newer_version_is_held_sharing_nothing_for_a_moment_runs_it_once_let_go()
+    {
+        _host.NewerVersionExitCode = 0;
+        var refused = 0;
+        _host.OnSetup = () =>
+        {
+            File.WriteAllText(_exe, "new");
+            _host.OnFileVersion = () =>
+            {
+                if (refused++ < 3) throw SharingViolation();
+            };
+            return 0;
+        };
+
+        var result = Run(Setup(), canAsk: false, readHoldWait: TimeSpan.FromSeconds(10),
+            readHoldNotice: TimeSpan.FromSeconds(10));
+
+        Assert.Equal(new CommandLineUpdateResult.HandedOver(0, Current, Latest, "/s"), result);
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.NotNull(_host.NewerVersionRun);
+        Assert.Equal(4, refused);
+        Assert.DoesNotContain(_host.Output, line => line.Contains("Waiting for another program"));
+    }
+
+    [Fact]
+    public void A_setup_whose_newer_version_stays_held_sharing_nothing_says_so_once_and_is_left_in_place_with_nothing_run()
+    {
+        var refused = 0;
+        _host.OnSetup = () =>
+        {
+            File.WriteAllText(_exe, "new");
+            _host.OnFileVersion = () =>
+            {
+                refused++;
+                throw SharingViolation();
+            };
+            return 0;
+        };
+
+        var result = Run(Setup(), canAsk: false, readHoldWait: TimeSpan.FromMilliseconds(600),
+            readHoldNotice: TimeSpan.FromMilliseconds(200));
+
+        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.False(File.Exists(_exe + SelfReplacement.NewSuffix));
+        Assert.Null(_host.NewerVersionRun);
+        Assert.True(refused > 1);
+        Assert.Single(_host.Output, string.Format(Strings.Cli_UpdateWaitingForFile, Path.GetFileName(_exe)));
+        Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
+        var entry = TestCrashLog.OnlyEntry();
+        Assert.Contains("could not be read after the setup", entry);
+        Assert.Contains("being used by another process", entry);
     }
 
     [Fact]
@@ -1274,6 +1344,23 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         Assert.Equal(new CommandLineUpdateResult.UpdatedThenCancelled(Current, Latest), result);
         Assert.Equal(string.Format(Strings.Cli_UpdateInstalled, Latest), Assert.Single(_host.Output));
+    }
+
+    [Fact]
+    public void Ctrl_C_after_the_swap_where_the_file_at_the_path_cannot_be_read_names_both_in_the_crash_log()
+    {
+        File.WriteAllText(_exe, "new");
+        _host.OnFileVersion = () => throw new IOException("the version could not be read");
+        var update = new CommandLineUpdate(NewerOut, Download(), _host);
+        var prepared = new PreparedUpdate("9.9.9", _exe, string.Empty, () => { }, _exe + SelfReplacement.NewSuffix);
+
+        var result = update.CancelAfterSwap(prepared, _exe, Current, Latest, putBack: () => false);
+
+        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
+        var entry = TestCrashLog.OnlyEntry();
+        Assert.Contains("Ctrl+C ended the run, and a failure came as it ended.", entry);
+        Assert.Contains("the version could not be read", entry);
     }
 
     [Fact]
