@@ -639,8 +639,10 @@ public class CleanupPreFlightTests : IDisposable
         AssertFolderRemoved();
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
-        // A failure with no established cause is a fault, so the crash log takes an entry.
-        Assert.NotEqual(crashLogBefore, ViewModelCrashLog.WithoutDestinationSaves());
+        // A failure with no established cause is a fault, so the crash log takes its entry.
+        var crashLogAfter = ViewModelCrashLog.WithoutDestinationSaves();
+        Assert.StartsWith(crashLogBefore, crashLogAfter, StringComparison.Ordinal);
+        Assert.Contains("sharing violation", crashLogAfter[crashLogBefore.Length..], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -686,8 +688,10 @@ public class CleanupPreFlightTests : IDisposable
         AssertFolderRemoved();
         _confirmationService.DidNotReceive().ConfirmMove(
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
-        // A failure with no established cause is a fault, so the crash log takes an entry.
-        Assert.NotEqual(crashLogBefore, ViewModelCrashLog.WithoutDestinationSaves());
+        // A failure with no established cause is a fault, so the crash log takes its entry.
+        var crashLogAfter = ViewModelCrashLog.WithoutDestinationSaves();
+        Assert.StartsWith(crashLogBefore, crashLogAfter, StringComparison.Ordinal);
+        Assert.Contains("disk full", crashLogAfter[crashLogBefore.Length..], StringComparison.Ordinal);
     }
 
     [Fact]
