@@ -42,9 +42,8 @@ internal static class TestCulture
 /// test runs, so a test reaching the log by a path nobody planned for is covered too, and
 /// it is deleted when the test process exits, along with the shared InstallerClean.Tests
 /// folder above it where no other run's folder is left in it. A test that changes the
-/// folder for its run, through <see cref="OwnFolder"/> as the update tests, the console
-/// guard's and the event log's tests and the tests that make view models
-/// (<c>MadeViewModels</c>) do, or by hand as CrashLogTests does, puts this one back.
+/// folder for its run, through <see cref="OwnFolder"/> or by hand as CrashLogTests does,
+/// puts this one back.
 /// </summary>
 internal static class TestCrashLog
 {
@@ -64,9 +63,10 @@ internal static class TestCrashLog
 
     /// <summary>
     /// Folders are put back in the reverse of the order they were taken. Disposing one while
-    /// a folder taken after it is still current throws and changes nothing, since putting
-    /// its own previous folder back there would point the crash log at a folder already
-    /// deleted.
+    /// the crash log points anywhere else throws and changes nothing: putting its previous
+    /// folder back then would send the writes of whatever set the current folder elsewhere,
+    /// and the later put-back of that one would point the crash log at this folder after it
+    /// is deleted.
     /// </summary>
     private sealed class Folder : IDisposable
     {
@@ -81,7 +81,7 @@ internal static class TestCrashLog
             if (_disposed) return;
             if (CrashLog.FolderForTests != _folder)
                 throw new InvalidOperationException(
-                    $"The crash log's folder is {CrashLog.FolderForTests}, not {_folder}: a folder taken after this one is still in use.");
+                    $"The crash log's folder is {CrashLog.FolderForTests}, not {_folder}, which is being put back.");
             _disposed = true;
             CrashLog.FolderForTests = _previous;
             TryDelete(_folder);
@@ -106,7 +106,12 @@ internal static class TestCrashLog
     /// there is neither. Read whole, so a test sees every entry its work wrote even where a
     /// write moved a full log aside.
     /// </summary>
-    internal static string Text() => ReadIfThere(CrashLog.LogPath + CrashLog.ArchiveSuffix) + ReadIfThere(CrashLog.LogPath);
+    internal static string Text()
+    {
+        var archive = ReadIfThere(CrashLog.LogPath + CrashLog.ArchiveSuffix);
+        if (archive.Length > 0 && !archive.EndsWith('\n')) archive += "\n";
+        return archive + ReadIfThere(CrashLog.LogPath);
+    }
 
     /// <summary>
     /// The one entry in the crash log, from its opening "---- " line on. A log holding none,
@@ -114,9 +119,9 @@ internal static class TestCrashLog
     /// </summary>
     internal static string OnlyEntry()
     {
-        var text = Text();
-        Assert.Equal(1, text.Split('\n').Count(l => l.StartsWith("---- ", StringComparison.Ordinal)));
-        return text[text.IndexOf("---- ", StringComparison.Ordinal)..];
+        var lines = Text().Split('\n');
+        Assert.Equal(1, lines.Count(l => l.StartsWith("---- ", StringComparison.Ordinal)));
+        return string.Join('\n', lines.SkipWhile(l => !l.StartsWith("---- ", StringComparison.Ordinal)));
     }
 
     /// <summary>

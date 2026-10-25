@@ -81,10 +81,10 @@ public sealed class UpdateLeftoverGateTests
             inPass.Set();
             release.Wait(TimeSpan.FromSeconds(30));
         }));
-        Assert.True(inPass.Wait(TimeSpan.FromSeconds(10)), "The pass never ran.");
-        Task mark;
+        Task? mark = null;
         try
         {
+            Assert.True(inPass.Wait(TimeSpan.FromSeconds(10)), "The pass never ran.");
             mark = Task.Run(() =>
             {
                 marking.Set();
@@ -100,8 +100,8 @@ public sealed class UpdateLeftoverGateTests
             release.Set();
         }
 
-        Assert.True(await pass);
-        await mark;
+        Assert.True(await pass.WaitAsync(TimeSpan.FromSeconds(10)));
+        await mark.WaitAsync(TimeSpan.FromSeconds(10));
         Assert.False(gate.TryRunPass(() => { }));
     }
 
