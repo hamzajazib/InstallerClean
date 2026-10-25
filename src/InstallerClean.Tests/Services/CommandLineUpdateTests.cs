@@ -1063,7 +1063,7 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal(1, reads);
         Assert.Equal("new", File.ReadAllText(_exe));
         Assert.Null(_host.NewerVersionRun);
-        Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
+        Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
         var entry = TestCrashLog.OnlyEntry();
         Assert.Contains("could not be read after the setup", entry);
         Assert.Contains("the version could not be read", entry);
@@ -1203,23 +1203,96 @@ public sealed class CommandLineUpdateTests : IDisposable
         var result = Run(Setup(), canAsk: false, token: cts.Token);
 
         Assert.IsType<CommandLineUpdateResult.Stopped>(result);
-        Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
+        Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
         Assert.Contains("A failure ended the run and Ctrl+C came as well.", TestCrashLog.OnlyEntry());
     }
 
     [Fact]
-    public void A_setups_newer_version_that_will_not_start_and_is_then_held_ends_with_its_version_unchecked()
+    public void A_setups_confirmed_newer_version_that_will_not_start_and_is_then_held_ends_as_installed_and_not_started()
     {
         SetupInstalls();
         _host.NewerVersionExitCode = null;
-        _host.OnNewerVersion = () => _host.OnFileVersion = () => throw SharingViolation();
+        var readsAfterStart = 0;
+        _host.OnNewerVersion = () => _host.OnFileVersion = () =>
+        {
+            readsAfterStart++;
+            throw SharingViolation();
+        };
+
+        var result = Run(Setup(), canAsk: false, readHoldWait: TimeSpan.FromMilliseconds(300),
+            readHoldNotice: TimeSpan.FromSeconds(30));
+
+        Assert.Equal(new CommandLineUpdateResult.NotStarted(Current, Latest), result);
+        Assert.Equal(0, readsAfterStart);
+        Assert.Equal("new", File.ReadAllText(_exe));
+        Assert.Equal(string.Format(Strings.Cli_UpdateNotStarted, Latest), _host.Output[^1]);
+    }
+
+    [Fact]
+    public void The_console_closing_part_way_through_a_wait_that_Ctrl_C_came_before_ends_it_at_once()
+    {
+        using var cts = new CancellationTokenSource();
+        var refused = 0;
+        _host.OnSetup = () =>
+        {
+            File.WriteAllText(_exe, "new");
+            cts.Cancel();
+            _host.OnFileVersion = () =>
+            {
+                if (++refused == 3) _host.Closing = true;
+                throw SharingViolation();
+            };
+            return 0;
+        };
+
+        var result = Run(Setup(), canAsk: false, token: cts.Token, readHoldWait: TimeSpan.FromSeconds(30),
+            readHoldNotice: TimeSpan.FromSeconds(30));
+
+        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Equal(3, refused);
+        Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
+        Assert.Contains("Ctrl+C ended the run, and a failure came as it ended.", TestCrashLog.OnlyEntry());
+    }
+
+    [Fact]
+    public void A_wait_the_console_closing_ends_before_Ctrl_C_reaches_the_run_still_names_it_as_what_ended_the_run()
+    {
+        _host.OnSetup = () =>
+        {
+            File.WriteAllText(_exe, "new");
+            _host.Closing = true;
+            _host.OnFileVersion = () => throw SharingViolation();
+            return 0;
+        };
+
+        var result = Run(Setup(), canAsk: false);
+
+        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
+        Assert.Contains("Ctrl+C ended the run, and a failure came as it ended.", TestCrashLog.OnlyEntry());
+    }
+
+    [Fact]
+    public void A_setup_that_left_another_version_at_the_path_says_the_update_failed_though_a_later_read_is_held()
+    {
+        var reads = 0;
+        _host.OnSetup = () =>
+        {
+            File.WriteAllText(_exe, "partial");
+            Directory.CreateDirectory(_exe + SelfReplacement.NewSuffix);
+            _host.OnFileVersion = () =>
+            {
+                if (reads++ > 0) throw SharingViolation();
+            };
+            return 0;
+        };
 
         var result = Run(Setup(), canAsk: false, readHoldWait: TimeSpan.FromMilliseconds(300),
             readHoldNotice: TimeSpan.FromSeconds(30));
 
         Assert.IsType<CommandLineUpdateResult.Stopped>(result);
-        Assert.Equal("new", File.ReadAllText(_exe));
-        Assert.Equal(Strings.Cli_UpdateNotChecked, _host.Output[^1]);
+        Assert.True(reads > 1);
+        Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
     }
 
     [Fact]

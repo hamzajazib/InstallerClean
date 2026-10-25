@@ -122,8 +122,8 @@ internal interface ICommandLineUpdateHost : IConsolePrompt
     Version? FileVersion(string path);
 
     /// <summary>
-    /// Whether the console is being closed, or Windows is logging off or shutting down, so
-    /// the process has seconds left before Windows ends it.
+    /// Whether the console is being closed or Windows is shutting down, so the process has
+    /// seconds left before Windows ends it.
     /// </summary>
     bool Closing { get; }
 
@@ -229,6 +229,14 @@ internal sealed class CommandLineUpdate
     /// </summary>
     internal static readonly TimeSpan ReadHoldNotice = TimeSpan.FromSeconds(2);
 
+    /// <summary>
+    /// How long that wait goes on at most where Ctrl+C came before it started. A second
+    /// Ctrl+C changes nothing, so this keeps a run somebody has already asked to stop from
+    /// sitting on a held file for the whole of <see cref="ReadHoldWait"/>; the console
+    /// closing ends the wait whatever its bound.
+    /// </summary>
+    internal static readonly TimeSpan ReadHoldWaitAfterCancel = TimeSpan.FromSeconds(2);
+
     /// <summary>How often a held file is read again while the run waits for it.</summary>
     private static readonly TimeSpan ReadHoldRetryInterval = TimeSpan.FromMilliseconds(100);
 
@@ -240,10 +248,15 @@ internal sealed class CommandLineUpdate
     private readonly TimeSpan _readHoldWait;
     private readonly TimeSpan _readHoldNotice;
     // The run's token, which ends a wait for a held file (Carries).
-    // Set where the newer setup exited 0, so a file at the path held for as long as the run
-    // waits for it is one whose version could not be checked (Stop).
-    private bool _setupFinished;
     private CancellationToken _token;
+    // Set where the newer setup exited 0 and cleared once a read of the file at the path
+    // answers or this exe is renamed back to it: while set, the file there is the setup's
+    // and its version is not established (Stop).
+    private bool _setupFileUnchecked;
+    // Set where a read of the file at the path found the newer version, and cleared once
+    // anything is renamed to that path: while set, Stop takes that answer without reading
+    // the file again.
+    private bool _newerVersionConfirmed;
     private bool _saidInstalled;
     // Set where this exe was renamed back to a path with nothing at it (RefillThisExe).
     private bool _renamedBack;
@@ -607,7 +620,12 @@ internal sealed class CommandLineUpdate
         // nothing below answers ends the update as a newer version that did not start,
         // which is what it is: the host throws nothing once the newer version has started.
         var backAtPath = false;
-        bool PutBack() => backAtPath = putBack() || RefillThisExe(exePath);
+        bool PutBack()
+        {
+            backAtPath = putBack() || RefillThisExe(exePath);
+            if (backAtPath) _newerVersionConfirmed = false;
+            return backAtPath;
+        }
         try
         {
             return AfterRename(canAsk, command, arguments, exePath, current, latest, isSetup, prepared, PutBack, token);
@@ -818,7 +836,7 @@ internal sealed class CommandLineUpdate
             throw;
         }
         prepared.Undo();
-        _setupFinished = exitCode == 0;
+        _setupFileUnchecked = exitCode == 0;
 
         UpdateFailedException? failed = null;
         if (exitCode != 0)
@@ -833,7 +851,7 @@ internal sealed class CommandLineUpdate
             var readFailed = new UpdateFailedException(UpdateFailureStage.Install,
                 "The version of the file at the command line's path could not be read after the setup.", unread);
             return Stop(waitEnded ? null : readFailed,
-                exePath, current, latest, token.IsCancellationRequested, unreadAlready: readFailed);
+                exePath, current, latest, token.IsCancellationRequested || waitEnded, unreadAlready: readFailed);
         }
         else if (!carries)
             failed = new UpdateFailedException(UpdateFailureStage.Install,
@@ -853,12 +871,13 @@ internal sealed class CommandLineUpdate
     /// start: <see cref="CommandLineUpdateResult.UpdatedThenCancelled"/> where
     /// <paramref name="cancelled"/>, and otherwise
     /// <see cref="CommandLineUpdateResult.NotStarted"/> with what failed written to
-    /// crash.log. Where it does not, ends through <see cref="RecordStopped"/>, with a failure
+    /// crash.log. Where a read in this run has already found the newer version there and
+    /// nothing has been renamed to the path since, that answer is taken and the file is not
+    /// read again. Where it does not, ends through <see cref="RecordStopped"/>, with a failure
     /// to read the file at the path in the entry beside <paramref name="cause"/>, and says
-    /// the update could not be installed; or, where the newer setup exited 0 and another
-    /// process held the file at the path for as long as the run waited for it, or Ctrl+C or
-    /// the console closing ended that wait, says the version the setup installed could not
-    /// be checked and the command did not run. What is written to crash.log here is the entry
+    /// the update could not be installed; or, where the file at the path is the one a setup
+    /// that exited 0 wrote there and no read of it has answered, says the version the setup
+    /// installed could not be checked and the command did not run. What is written to crash.log here is the entry
     /// for how the run ended, written before the closing line, and the closing line
     /// changes nothing about how the run ended (<see cref="SayClosing"/>).
     /// <paramref name="unreadAlready"/> is a failure to read the file at the path the run
@@ -872,7 +891,8 @@ internal sealed class CommandLineUpdate
     {
         RefillIfEmpty(exePath);
         var unread = unreadAlready;
-        if (unread is null && Carries(exePath, latest, out unread, out _) is true)
+        var waitEnded = false;
+        if (unread is null && (_newerVersionConfirmed || Carries(exePath, latest, out unread, out waitEnded) is true))
         {
             if (cancelled)
             {
@@ -883,9 +903,8 @@ internal sealed class CommandLineUpdate
             SayClosing(() => _host.WriteLine(string.Format(Strings.Cli_UpdateNotStarted, latest)));
             return new CommandLineUpdateResult.NotStarted(current, latest);
         }
-        var stopped = RecordStopped(cause, cancelled, ReferenceEquals(unread, cause) ? null : unread);
-        var versionUnchecked = _setupFinished && (unread as IOException ?? unread?.InnerException as IOException) is { } held && IsHeld(held);
-        SayClosing(() => _host.WriteLine(versionUnchecked ? Strings.Cli_UpdateNotChecked : Strings.UpdateNotice_InstallFailed));
+        var stopped = RecordStopped(cause, cancelled || waitEnded, ReferenceEquals(unread, cause) ? null : unread);
+        SayClosing(() => _host.WriteLine(_setupFileUnchecked ? Strings.Cli_UpdateNotChecked : Strings.UpdateNotice_InstallFailed));
         return stopped;
     }
 
@@ -933,6 +952,7 @@ internal sealed class CommandLineUpdate
     /// </summary>
     private void RefillIfEmpty(string exePath)
     {
+        if (!File.Exists(exePath)) _newerVersionConfirmed = false;
         if (_updater.Kind == AppCopyKind.Setup) RefillThisExe(exePath);
         else SelfReplacement.TryPutNewerVersionAtPath(exePath);
     }
@@ -949,7 +969,9 @@ internal sealed class CommandLineUpdate
         {
             if (File.Exists(exePath)) return false;
             if (_updater.Kind == AppCopyKind.Setup && SelfReplacement.SetupRunning()) return false;
-            return _renamedBack = SelfReplacement.TryRefillPath(exePath, orNewerVersion: false);
+            if (!SelfReplacement.TryRefillPath(exePath, orNewerVersion: false)) return false;
+            _setupFileUnchecked = false;
+            return _renamedBack = true;
         }
         catch (Exception ex)
         {
@@ -976,13 +998,16 @@ internal sealed class CommandLineUpdate
     /// <see cref="ReadHoldRetryInterval"/> for up to <see cref="ReadHoldWait"/>, and once a
     /// wait has gone on for <see cref="ReadHoldNotice"/> the run says that it is waiting for
     /// the file. Ctrl+C that comes during the wait ends it, and so does the console
-    /// closing, whenever it came: Windows ends a closing console's process within seconds,
-    /// and the run writes its entry first. A wait that Ctrl+C came before goes on, since
-    /// nothing ends the process then and the newer version may be a moment away. Answers
-    /// null where the read fails, the hold outlasts the wait or the wait is ended, with the
-    /// failure in <paramref name="unread"/> for the run's entry and
-    /// <paramref name="waitEnded"/> set where Ctrl+C or the closing ended the wait, so the
-    /// run starts nothing and leaves the file where it is. Never throws.
+    /// closing or Windows shutting down, whenever it came: Windows ends the process within
+    /// seconds then, and the run writes its entry first. Where Ctrl+C came before the
+    /// wait, which a second Ctrl+C cannot end, the wait goes on for
+    /// <see cref="ReadHoldWaitAfterCancel"/> at most. Answers null where the read fails, the
+    /// hold outlasts the wait or the wait is ended, with the failure in
+    /// <paramref name="unread"/> for the run's entry and <paramref name="waitEnded"/> set
+    /// where Ctrl+C or the closing ended the wait, so the run starts nothing and leaves the
+    /// file where it is. A read that answers clears <see cref="_setupFileUnchecked"/> and
+    /// sets <see cref="_newerVersionConfirmed"/> to its answer.
+    /// Never throws.
     /// </summary>
     private bool? Carries(string path, string version, out Exception? unread, out bool waitEnded)
     {
@@ -991,28 +1016,41 @@ internal sealed class CommandLineUpdate
         var started = Stopwatch.GetTimestamp();
         var said = false;
         var cancelledBefore = _token.IsCancellationRequested;
-        bool Ended() => _host.Closing || (!cancelledBefore && _token.IsCancellationRequested);
+        var bound = cancelledBefore && ReadHoldWaitAfterCancel < _readHoldWait ? ReadHoldWaitAfterCancel : _readHoldWait;
         while (true)
         {
             try
             {
-                return _host.FileVersion(path) is { } carried && Helpers.FileVersionResource.IsRelease(carried, version);
-            }
-            catch (IOException ex) when (IsHeld(ex) && !Ended() && Stopwatch.GetElapsedTime(started) < _readHoldWait)
-            {
-                if (!said && Stopwatch.GetElapsedTime(started) >= _readHoldNotice)
-                {
-                    said = true;
-                    SayGuarded(() => _host.WriteLine(string.Format(Strings.Cli_UpdateWaitingForFile, Path.GetFileName(path))));
-                }
-                // A token that cannot be cancelled has a handle that is never set.
-                if (cancelledBefore) Thread.Sleep(ReadHoldRetryInterval);
-                else _token.WaitHandle.WaitOne(ReadHoldRetryInterval);
+                var carries = _host.FileVersion(path) is { } carried && Helpers.FileVersionResource.IsRelease(carried, version);
+                _setupFileUnchecked = false;
+                _newerVersionConfirmed = carries;
+                return carries;
             }
             catch (Exception ex)
             {
+                if (ex is IOException held && IsHeld(held))
+                {
+                    // Each condition is read once, so the entry names what really ended the wait.
+                    if (_host.Closing || (!cancelledBefore && _token.IsCancellationRequested))
+                    {
+                        unread = ex;
+                        waitEnded = true;
+                        return null;
+                    }
+                    if (Stopwatch.GetElapsedTime(started) < bound)
+                    {
+                        if (!said && Stopwatch.GetElapsedTime(started) >= _readHoldNotice)
+                        {
+                            said = true;
+                            SayGuarded(() => _host.WriteLine(string.Format(Strings.Cli_UpdateWaitingForFile, Path.GetFileName(path))));
+                        }
+                        // A token that cannot be cancelled has a handle that is never set.
+                        if (cancelledBefore) Thread.Sleep(ReadHoldRetryInterval);
+                        else _token.WaitHandle.WaitOne(ReadHoldRetryInterval);
+                        continue;
+                    }
+                }
                 unread = ex;
-                waitEnded = ex is IOException held && IsHeld(held) && Ended();
                 return null;
             }
         }
