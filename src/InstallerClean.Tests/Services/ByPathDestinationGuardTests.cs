@@ -60,6 +60,34 @@ public class ByPathDestinationGuardTests
     }
 
     [Fact]
+    public void A_folder_that_is_not_there_is_created_and_answers_made()
+    {
+        Assert.Equal(FolderCreation.Made, _guard.TryCreateFolder("X"));
+
+        _directory.Received(1).CreateDirectory("X");
+    }
+
+    [Fact]
+    public void A_folder_that_is_there_answers_already_there_and_is_not_created()
+    {
+        _directory.Exists("X").Returns(true);
+
+        Assert.Equal(FolderCreation.AlreadyThere, _guard.TryCreateFolder("X"));
+
+        _directory.DidNotReceive().CreateDirectory(Arg.Any<string>());
+    }
+
+    [Theory]
+    [MemberData(nameof(RefusalNames))]
+    public void A_create_the_filesystem_refuses_answers_failed(string refusalName)
+    {
+        var refusal = NewRefusal(refusalName);
+        _directory.When(d => d.CreateDirectory("X")).Do(_ => throw refusal);
+
+        Assert.Equal(FolderCreation.Failed, _guard.TryCreateFolder("X"));
+    }
+
+    [Fact]
     public void An_emptied_folder_is_removed_with_the_one_argument_Delete()
     {
         Assert.True(_guard.TryRemoveEmptyFolder("X", "Y"));

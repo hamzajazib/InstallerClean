@@ -230,10 +230,10 @@ public sealed class MoveFilesService : IMoveFilesService
             // each only while it is empty. The gates between the two leave them: a
             // destination that has just been shown to resolve into the installer
             // cache or a system folder is not a place to remove a folder from.
-            var createdFolders = CreatedFolders.MissingOnPath(_fs, destinationFolder);
+            var createdFolders = new List<string>();
             try
             {
-                CreateDestinationFolder(destinationFolder);
+                CreateDestinationFolder(destinationFolder, createdFolders);
             }
             catch
             {
@@ -780,7 +780,8 @@ public sealed class MoveFilesService : IMoveFilesService
     };
 
     /// <summary>
-    /// Wraps <c>Directory.CreateDirectory</c> so framework-thrown
+    /// Wraps <see cref="CreatedFolders.Create"/>, which fills <paramref name="createdFolders"/>
+    /// with the folders the create made, so framework-thrown
     /// UnauthorizedAccessException and IOException are remapped to the
     /// same UnauthorizedAccessException-with-localised-message that
     /// <see cref="ProbeDestinationWriteable"/> produces. The caller's
@@ -788,11 +789,11 @@ public sealed class MoveFilesService : IMoveFilesService
     /// path-bearing message is preserved on InnerException for crash
     /// log consumers but never reaches the displayed UI.
     /// </summary>
-    private void CreateDestinationFolder(string folder)
+    private void CreateDestinationFolder(string folder, List<string> createdFolders)
     {
         try
         {
-            _fs.Directory.CreateDirectory(folder);
+            CreatedFolders.Create(_fs, _destinationGuard, folder, createdFolders);
         }
         catch (UnauthorizedAccessException ex)
         {

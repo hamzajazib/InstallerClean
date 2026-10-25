@@ -1,22 +1,34 @@
 using System.IO.Abstractions;
+using System.Runtime.InteropServices;
 using InstallerClean.Helpers;
 using InstallerClean.Interop.Native;
 
 namespace InstallerClean.Services;
 
 /// <summary>
-/// The three acts a Move makes inside the folder the user chose for it: a write test,
-/// the discarding of a copy a half-completed move left, and the removal of a folder the
-/// Move created. The user may pick a folder another account can write, so each act is
-/// reached in a way that a folder swapped in under the same name part way through cannot
-/// redirect. The removal reaches the folder through every folder the Move made above it,
-/// each opened without following a link, so a link put in place of any of them refuses
-/// the removal. <see cref="HandleDestinationGuard"/> is that way in the app;
+/// The four acts a Move makes on its destination: the creation of a folder, a write
+/// test, the discarding of a copy a half-completed move left, and the removal of a
+/// folder the Move created. The creation says from the create itself whether it made the
+/// folder. The user may pick a folder another account can write, so the write test, the
+/// discard and the removal are each reached in a way that a folder swapped in under the
+/// same name part way through cannot redirect. The removal reaches the folder through
+/// every folder the Move made above it, each opened without following a link, so a link
+/// put in place of any of them refuses the removal.
+/// <see cref="HandleDestinationGuard"/> is that way in the app;
 /// <see cref="ByPathDestinationGuard"/> is the one the test seams use, where the real
 /// filesystem is substituted.
 /// </summary>
 public interface IDestinationGuard
 {
+    /// <summary>
+    /// Creates the one folder <paramref name="folder"/>, whose parent is there already,
+    /// and says from the create itself whether it made it: <see cref="FolderCreation.Made"/>
+    /// where this call made it, <see cref="FolderCreation.AlreadyThere"/> where the name
+    /// was taken before the call, and <see cref="FolderCreation.Failed"/> where the create
+    /// failed for any other reason. Never throws.
+    /// </summary>
+    FolderCreation TryCreateFolder(string folder);
+
     /// <summary>
     /// Whether the folder accepts a new file and lets it be read back, with the Win32
     /// cause of a refusal in <paramref name="failureCode"/> for a caller to record and
@@ -47,6 +59,23 @@ public interface IDestinationGuard
     bool TryRemoveEmptyFolder(string folder, string existingAncestor);
 }
 
+/// <summary>What <see cref="IDestinationGuard.TryCreateFolder"/> found.</summary>
+public enum FolderCreation
+{
+    /// <summary>
+    /// The create failed, so nothing is established about the folder. First member so
+    /// that it is what the type's own zero carries, for the reason
+    /// <see cref="FirstRunMarkState.Unreadable"/> is first.
+    /// </summary>
+    Failed,
+
+    /// <summary>The create made the folder.</summary>
+    Made,
+
+    /// <summary>The folder was there before the create, as a folder or as anything else with that name.</summary>
+    AlreadyThere,
+}
+
 /// <summary>
 /// Reaches each act through a handle opened on the destination folder, so the act lands
 /// on the folder the handle names and not on a folder put in its place under the same
@@ -54,6 +83,27 @@ public interface IDestinationGuard
 /// </summary>
 internal sealed class HandleDestinationGuard : IDestinationGuard
 {
+    public FolderCreation TryCreateFolder(string folder)
+    {
+        try
+        {
+            var attributes = new Kernel32.SECURITY_ATTRIBUTES
+            {
+                nLength = (uint)Marshal.SizeOf<Kernel32.SECURITY_ATTRIBUTES>(),
+                lpSecurityDescriptor = IntPtr.Zero,
+                bInheritHandle = 0,
+            };
+            if (Kernel32.CreateDirectory(folder, in attributes)) return FolderCreation.Made;
+            return Marshal.GetLastPInvokeError() == Kernel32.ERROR_ALREADY_EXISTS
+                ? FolderCreation.AlreadyThere
+                : FolderCreation.Failed;
+        }
+        catch
+        {
+            return FolderCreation.Failed;
+        }
+    }
+
     public bool TryProbeWritable(string folder, out int failureCode, out WriteProbeRefusal refusal) =>
         DirectoryGuard.TryProbeWritable(folder, out failureCode, out refusal);
 
@@ -90,6 +140,24 @@ internal sealed class HandleDestinationGuard : IDestinationGuard
 internal sealed class ByPathDestinationGuard(IFileSystem fileSystem) : IDestinationGuard
 {
     private readonly IFileSystem _fs = fileSystem;
+
+    /// <summary>
+    /// Reads whether the folder is there and creates it where it is not. A create that
+    /// throws is <see cref="FolderCreation.Failed"/>.
+    /// </summary>
+    public FolderCreation TryCreateFolder(string folder)
+    {
+        try
+        {
+            if (_fs.Directory.Exists(folder)) return FolderCreation.AlreadyThere;
+            _fs.Directory.CreateDirectory(folder);
+            return FolderCreation.Made;
+        }
+        catch
+        {
+            return FolderCreation.Failed;
+        }
+    }
 
     /// <summary>
     /// Writes an empty file, reads it back and deletes it, giving the answers the app's

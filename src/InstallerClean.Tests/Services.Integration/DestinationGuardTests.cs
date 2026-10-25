@@ -108,6 +108,48 @@ public sealed class DestinationGuardTests : IDisposable
     }
 
     [Fact]
+    public void A_folder_that_is_not_there_is_made()
+    {
+        var folder = Path.Combine(_root, "new");
+
+        Assert.Equal(FolderCreation.Made, _guard.TryCreateFolder(folder));
+
+        Assert.True(Directory.Exists(folder));
+    }
+
+    [Fact]
+    public void A_folder_that_is_there_is_already_there_and_keeps_what_it_holds()
+    {
+        var folder = Directory.CreateDirectory(Path.Combine(_root, "there")).FullName;
+        File.WriteAllText(Path.Combine(folder, "keep.txt"), "x");
+
+        Assert.Equal(FolderCreation.AlreadyThere, _guard.TryCreateFolder(folder));
+
+        Assert.True(File.Exists(Path.Combine(folder, "keep.txt")));
+    }
+
+    [Fact]
+    public void A_file_at_the_name_is_already_there_and_is_left()
+    {
+        var file = Path.Combine(_root, "file");
+        File.WriteAllText(file, "x");
+
+        Assert.Equal(FolderCreation.AlreadyThere, _guard.TryCreateFolder(file));
+
+        Assert.True(File.Exists(file));
+    }
+
+    [Fact]
+    public void A_folder_whose_parent_is_not_there_fails_and_makes_nothing()
+    {
+        var parent = Path.Combine(_root, "missing");
+
+        Assert.Equal(FolderCreation.Failed, _guard.TryCreateFolder(Path.Combine(parent, "child")));
+
+        Assert.False(Directory.Exists(parent));
+    }
+
+    [Fact]
     public void A_chain_of_created_folders_is_removed_from_the_leaf_up()
     {
         var leaf = Directory.CreateDirectory(Path.Combine(_root, "a", "b", "c")).FullName;

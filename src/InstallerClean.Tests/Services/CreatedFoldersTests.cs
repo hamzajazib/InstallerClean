@@ -96,6 +96,147 @@ public class CreatedFoldersTests
         Assert.All(missing, folder => Assert.False(string.IsNullOrEmpty(Path.GetDirectoryName(folder))));
     }
 
+    private IDestinationGuard GuardAnswering(params (string Folder, FolderCreation Answer)[] answers)
+    {
+        var guard = Substitute.For<IDestinationGuard>();
+        foreach (var (folder, answer) in answers)
+            guard.TryCreateFolder(folder).Returns(answer);
+        return guard;
+    }
+
+    [Fact]
+    public void Every_folder_the_guard_made_is_listed_destination_first_and_the_destination_is_not_created_again()
+    {
+        var guard = GuardAnswering(
+            (Folder("a"), FolderCreation.Made), (Folder("a", "b"), FolderCreation.Made),
+            (Folder("a", "b", "c"), FolderCreation.Made));
+        var made = new List<string>();
+
+        CreatedFolders.Create(_fs, guard, Folder("a", "b", "c"), made);
+
+        Assert.Equal([Folder("a", "b", "c"), Folder("a", "b"), Folder("a")], made);
+        Assert.False(_fs.Directory.Exists(Folder("a", "b", "c")));
+    }
+
+    [Fact]
+    public void The_folders_are_created_top_most_first()
+    {
+        var guard = Substitute.For<IDestinationGuard>();
+        guard.TryCreateFolder(Arg.Any<string>()).Returns(FolderCreation.Made);
+
+        CreatedFolders.Create(_fs, guard, Folder("a", "b", "c"), new List<string>());
+
+        Received.InOrder(() =>
+        {
+            guard.TryCreateFolder(Folder("a"));
+            guard.TryCreateFolder(Folder("a", "b"));
+            guard.TryCreateFolder(Folder("a", "b", "c"));
+        });
+    }
+
+    [Fact]
+    public void A_folder_the_guard_found_already_there_is_not_listed_though_it_looked_absent()
+    {
+        var guard = GuardAnswering(
+            (Folder("a"), FolderCreation.Made), (Folder("a", "b"), FolderCreation.AlreadyThere),
+            (Folder("a", "b", "c"), FolderCreation.Made));
+        var made = new List<string>();
+
+        CreatedFolders.Create(_fs, guard, Folder("a", "b", "c"), made);
+
+        Assert.Equal([Folder("a", "b", "c")], made);
+    }
+
+    [Fact]
+    public void A_folder_found_already_there_at_the_top_leaves_the_folders_below_it_listed()
+    {
+        var guard = GuardAnswering(
+            (Folder("a"), FolderCreation.AlreadyThere), (Folder("a", "b"), FolderCreation.Made),
+            (Folder("a", "b", "c"), FolderCreation.Made));
+        var made = new List<string>();
+
+        CreatedFolders.Create(_fs, guard, Folder("a", "b", "c"), made);
+
+        Assert.Equal([Folder("a", "b", "c"), Folder("a", "b")], made);
+    }
+
+    [Fact]
+    public void A_destination_found_already_there_lists_nothing()
+    {
+        var guard = GuardAnswering(
+            (Folder("a"), FolderCreation.Made), (Folder("a", "b"), FolderCreation.AlreadyThere));
+        var made = new List<string>();
+
+        CreatedFolders.Create(_fs, guard, Folder("a", "b"), made);
+
+        Assert.Empty(made);
+    }
+
+    [Fact]
+    public void A_destination_that_is_there_before_the_create_asks_nothing_of_the_guard()
+    {
+        _fs.AddDirectory(Folder("a", "b"));
+        var guard = Substitute.For<IDestinationGuard>();
+        var made = new List<string>();
+
+        CreatedFolders.Create(_fs, guard, Folder("a", "b"), made);
+
+        Assert.Empty(made);
+        guard.DidNotReceiveWithAnyArgs().TryCreateFolder(default!);
+    }
+
+    [Fact]
+    public void A_failed_create_ends_the_creating_and_leaves_that_folder_and_those_below_it_listed()
+    {
+        var guard = GuardAnswering(
+            (Folder("a"), FolderCreation.Made), (Folder("a", "b"), FolderCreation.Failed));
+        var made = new List<string>();
+
+        CreatedFolders.Create(_fs, guard, Folder("a", "b", "c"), made);
+
+        Assert.Equal([Folder("a", "b", "c"), Folder("a", "b"), Folder("a")], made);
+        guard.DidNotReceive().TryCreateFolder(Folder("a", "b", "c"));
+    }
+
+    [Fact]
+    public void A_failed_create_is_followed_by_the_destination_being_created_through_the_filesystem()
+    {
+        var guard = Substitute.For<IDestinationGuard>();
+
+        CreatedFolders.Create(_fs, guard, Folder("a", "b"), new List<string>());
+
+        Assert.True(_fs.Directory.Exists(Folder("a", "b")));
+    }
+
+    [Fact]
+    public void A_failed_create_that_the_filesystem_also_refuses_throws_with_the_folders_listed()
+    {
+        var guard = Substitute.For<IDestinationGuard>();
+        var directory = Substitute.For<IDirectory>();
+        directory.Exists(_root).Returns(true);
+        directory.When(d => d.CreateDirectory(Arg.Any<string>())).Do(_ => throw new IOException("refused"));
+        var fileSystem = Substitute.For<IFileSystem>();
+        fileSystem.Directory.Returns(directory);
+        fileSystem.Path.Returns(_fs.Path);
+        var made = new List<string>();
+
+        Assert.Throws<IOException>(() => CreatedFolders.Create(fileSystem, guard, Folder("a", "b"), made));
+
+        Assert.Equal([Folder("a", "b"), Folder("a")], made);
+    }
+
+    [Fact]
+    public void Folders_already_in_the_list_are_left_where_they_are()
+    {
+        var guard = GuardAnswering(
+            (Folder("a"), FolderCreation.AlreadyThere), (Folder("a", "b"), FolderCreation.Made));
+        var made = new List<string> { "earlier" };
+
+        CreatedFolders.Create(_fs, guard, Folder("a", "b"), made);
+
+        Assert.Equal(["earlier", Folder("a", "b")], made);
+    }
+
     [Fact]
     public void Folders_that_are_empty_are_removed_in_the_order_given()
     {

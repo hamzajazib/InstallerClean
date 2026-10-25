@@ -816,11 +816,12 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         // stall for the SMB timeout on a mapped drive or a UNC share that has
         // gone away, and any of them on the dispatcher freezes the window.
         // The operation's source is installed first so the overlay's Cancel
-        // button can interrupt the wait. The folder is created through
-        // IFileSystem and the write probe goes through the injected destination
-        // guard, so a test that substitutes both creates and probes nothing on
-        // the real disk. The gates and the free-space query read the real disk,
-        // so a mock cannot talk its way past a safety check.
+        // button can interrupt the wait. The folders are created through the
+        // injected destination guard, as is the write probe, with IFileSystem
+        // making whatever the guard leaves, so a test that substitutes both
+        // creates and probes nothing on the real disk. The gates and the
+        // free-space query read the real disk, so a mock cannot talk its way
+        // past a safety check.
         //
         // Nothing here touches view-model state: the verdict comes back as a
         // record and is applied below, on the dispatcher.
@@ -833,7 +834,7 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
         // way through the probe abandons the move with the folders already
         // created. The write happens before the first await, and the await is
         // the barrier, so the read after it sees it.
-        IReadOnlyList<string> createdFolders = [];
+        var createdFolders = new List<string>();
         var probeTask = Task.Run(() =>
         {
             // Never let files move back inside C:\Windows\Installer.
@@ -851,15 +852,13 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
             if (InstallerCacheHelpers.IsSystemFolderOrChild(dest))
                 return DestinationPreFlight.Rejected(insideSystemFolder: true);
 
-            // Asked before the create, because after it the answer is always
-            // yes. The create makes the destination and every missing folder
+            // The create makes the destination and every missing folder
             // above it, and a move that then never happens should leave none of
             // them behind; a folder that was already there is the user's and is
-            // never touched. Set before CreateDirectory so a throw from the
-            // create cannot leave the list saying none about a folder that did
-            // appear.
-            createdFolders = CreatedFolders.MissingOnPath(_fs, dest);
-            _fs.Directory.CreateDirectory(dest);
+            // never touched. The create says which folders it made, and fills
+            // the list before its first create, so a throw part way cannot leave
+            // the list saying none about a folder that did appear.
+            CreatedFolders.Create(_fs, _destinationGuard, dest, createdFolders);
             probeToken.ThrowIfCancellationRequested();
             // The guard writes a write-test file through a handle opened on the
             // folder, opens it again to read it, and removes it, so a folder
