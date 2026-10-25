@@ -747,8 +747,8 @@ internal sealed class CommandLineUpdate
 
     /// <summary>
     /// Ends the run where this exe is renamed aside and cannot be put back. Where nothing is
-    /// at <paramref name="exePath"/>, the newer version beside it is renamed there first
-    /// (<see cref="RefillIfEmpty"/>). Where the file at the path then carries
+    /// at <paramref name="exePath"/>, this exe or the newer version beside it is renamed
+    /// there first (<see cref="RefillIfEmpty"/>). Where the file at the path then carries
     /// the newer version, the run ends as one whose newer version did not start:
     /// <see cref="CommandLineUpdateResult.UpdatedThenCancelled"/> where
     /// <paramref name="cancelled"/>, and otherwise <see cref="CommandLineUpdateResult.NotStarted"/>
@@ -777,16 +777,16 @@ internal sealed class CommandLineUpdate
     }
 
     /// <summary>
-    /// On a swap, where nothing is at <paramref name="exePath"/>, renames the newer version
-    /// beside it there (<see cref="SelfReplacement.TryPutNewerVersionAtPath"/>), so a later
-    /// run finds a file there. This exe has had its own try at going back first
-    /// (<see cref="RefillThisExe"/>), whose success carries the run on. On the setup's copy
-    /// nothing is renamed here: a file beside it under the newer version's name is one the
-    /// setup wrote and this run refused.
+    /// Where nothing is at <paramref name="exePath"/>, renames this exe back to it
+    /// (<see cref="RefillThisExe"/>), or on a swap the newer version beside it where this
+    /// exe will not go (<see cref="SelfReplacement.TryPutNewerVersionAtPath"/>), so a later
+    /// run finds a file there. On the setup's copy only this exe goes back: a file beside
+    /// it under the newer version's name is one the setup wrote and this run refused.
     /// </summary>
     private void RefillIfEmpty(string exePath)
     {
-        if (_updater.Kind != AppCopyKind.Setup) SelfReplacement.TryPutNewerVersionAtPath(exePath);
+        if (!RefillThisExe(exePath) && _updater.Kind != AppCopyKind.Setup)
+            SelfReplacement.TryPutNewerVersionAtPath(exePath);
     }
 
     /// <summary>

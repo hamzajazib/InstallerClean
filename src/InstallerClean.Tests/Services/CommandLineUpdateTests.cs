@@ -1076,9 +1076,11 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
-    public void Ctrl_C_after_the_swap_with_nothing_at_the_path_puts_the_newer_version_there()
+    public void Ctrl_C_after_the_swap_where_this_exe_will_not_go_back_puts_the_newer_version_at_the_path()
     {
-        File.Move(_exe, _exe + SelfReplacement.OldSuffix);
+        // A folder in place of the renamed exe refuses every rename of it.
+        File.Delete(_exe);
+        Directory.CreateDirectory(_exe + SelfReplacement.OldSuffix);
         File.WriteAllText(_exe + SelfReplacement.NewSuffix, "new");
         var update = new CommandLineUpdate(NewerOut, Download(), _host);
         var prepared = new PreparedUpdate("9.9.9", _exe, string.Empty, () => { }, _exe + SelfReplacement.NewSuffix);
@@ -1087,7 +1089,21 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         Assert.Equal(new CommandLineUpdateResult.UpdatedThenCancelled(Current, Latest), result);
         Assert.Equal("new", File.ReadAllText(_exe));
-        Assert.Equal("old", File.ReadAllText(_exe + SelfReplacement.OldSuffix));
+    }
+
+    [Fact]
+    public void Ctrl_C_after_the_swap_with_nothing_at_the_path_puts_this_exe_back_before_the_newer_version()
+    {
+        File.Move(_exe, _exe + SelfReplacement.OldSuffix);
+        File.WriteAllText(_exe + SelfReplacement.NewSuffix, "new");
+        var update = new CommandLineUpdate(NewerOut, Download(), _host);
+        var prepared = new PreparedUpdate("9.9.9", _exe, string.Empty, () => { }, _exe + SelfReplacement.NewSuffix);
+
+        var result = update.CancelAfterSwap(prepared, _exe, Current, Latest, putBack: () => false);
+
+        Assert.IsType<CommandLineUpdateResult.Stopped>(result);
+        Assert.Equal("old", File.ReadAllText(_exe));
+        Assert.Equal("new", File.ReadAllText(_exe + SelfReplacement.NewSuffix));
     }
 
     [Fact]

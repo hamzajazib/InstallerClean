@@ -397,20 +397,19 @@ public sealed class UpdateInPlaceTests : IDisposable
         Assert.NotNull(putBack);
         Assert.Equal(Program(2), File.ReadAllBytes(exe));
         Assert.False(File.Exists(exe + SelfReplacement.NewSuffix));
-        // The first rename's wait ran out, which only the branch retrying the newer version
-        // writes to crash.log once the swap has gone ahead.
-        Assert.Equal(1, HeldOpenEntriesInCrashLog(_root));
+        // The rename back of the running exe was tried and refused, which happens only once
+        // the first rename's wait has run out, and the swap went ahead all the same.
+        Assert.Equal(1, MissingFileEntriesInCrashLog(exe + SelfReplacement.OldSuffix));
     }
 
     /// <summary>
-    /// How many entries in the crash log are a change to a file in <paramref name="folder"/>
-    /// that another process held up past its wait. The entry's first line names the file
-    /// through the error it wraps.
+    /// How many entries in the crash log are a rename refused because
+    /// <paramref name="path"/> is not a file. The entry's first line names the path.
     /// </summary>
-    private static int HeldOpenEntriesInCrashLog(string folder) =>
+    private static int MissingFileEntriesInCrashLog(string path) =>
         TestCrashLog.Text().Split('\n').Count(line =>
-            line.Contains(typeof(FileHeldOpenException).FullName + ":", StringComparison.Ordinal)
-            && line.Contains(folder, StringComparison.OrdinalIgnoreCase));
+            line.StartsWith(typeof(FileNotFoundException).FullName + ":", StringComparison.Ordinal)
+            && line.Contains(path, StringComparison.OrdinalIgnoreCase));
 
     [Fact]
     public async Task A_put_back_whose_running_exe_will_not_go_back_leaves_the_newer_version_at_the_exe_path()

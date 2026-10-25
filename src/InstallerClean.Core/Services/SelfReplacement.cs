@@ -452,7 +452,7 @@ public static class SelfReplacement
         {
             return File.Exists(exePath)
                 || TryRenamePlainFile(exePath + OldSuffix, exePath)
-                || (orNewerVersion && TryRenamePlainFile(exePath + NewSuffix, exePath));
+                || (orNewerVersion && TryPutNewerVersionAtPath(exePath));
         }
         catch (Exception ex)
         {
@@ -582,7 +582,7 @@ public static class SelfReplacement
             // With nothing at the path, this exe goes back and the window carries on; where it
             // will not, the newer version goes there and stays, as where a start fails below.
             if (!File.Exists(exePath) && !TryRefillPath(exePath, orNewerVersion: false)
-                && TryRenamePlainFile(exePath + NewSuffix, exePath))
+                && TryPutNewerVersionAtPath(exePath))
                 EndThisProcess();
             return false;
         }
