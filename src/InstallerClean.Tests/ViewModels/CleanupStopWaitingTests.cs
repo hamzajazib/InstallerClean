@@ -85,7 +85,17 @@ public class CleanupStopWaitingTests : IDisposable
     /// <summary>The view models this class made, flushed after each test.</summary>
     private readonly MadeViewModels _made = new();
 
-    public void Dispose() => _made.Dispose();
+    /// <summary>
+    /// Flushes on the stand-in, after everything posted to it, as the window flushes on its
+    /// own thread.
+    /// </summary>
+    public void Dispose()
+    {
+        var flushed = _dispatcher.RunAsync(_made.Dispose);
+        if (!flushed.Wait(TimeSpan.FromSeconds(10)))
+            throw new TimeoutException("The dispatcher stand-in did not reach the flush.");
+        flushed.GetAwaiter().GetResult();
+    }
 
     private static string WaitLine(string root) => DisplayHelpers.WaitingFor(root);
 

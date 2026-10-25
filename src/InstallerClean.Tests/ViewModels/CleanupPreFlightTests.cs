@@ -49,9 +49,7 @@ public class CleanupPreFlightTests : IDisposable
 
     private readonly IUpdateCheckService _updateCheckService = Substitute.For<IUpdateCheckService>();
 
-    // A name of each test's own, so a crash-log entry naming it can only be that test's.
-    private readonly string _destination =
-        Path.Combine(Path.GetTempPath(), "ic-test-preflight-" + Guid.NewGuid().ToString("N"));
+    private readonly string _destination = Path.Combine(Path.GetTempPath(), "ic-test-preflight");
 
     public CleanupPreFlightTests()
     {
@@ -600,7 +598,6 @@ public class CleanupPreFlightTests : IDisposable
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
-        var crashLogBefore = ViewModelCrashLog.WithoutDestinationSaves();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -616,7 +613,7 @@ public class CleanupPreFlightTests : IDisposable
         Assert.Equal(string.Empty, vm.Cleanup.OperationProgress);
         // A refusal, not a fault: nothing the log gained names this test's folder or carries
         // its refusal.
-        var gained = ViewModelCrashLog.AppendedSince(crashLogBefore);
+        var gained = TestCrashLog.Text();
         Assert.DoesNotContain(_destination, gained, StringComparison.Ordinal);
         Assert.DoesNotContain("read refused", gained, StringComparison.Ordinal);
     }
@@ -634,7 +631,6 @@ public class CleanupPreFlightTests : IDisposable
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
-        var crashLogBefore = ViewModelCrashLog.WithoutDestinationSaves();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -648,7 +644,7 @@ public class CleanupPreFlightTests : IDisposable
         // write failure the pre-flight raises for this destination.
         Assert.Contains(
             string.Format(InstallerClean.Resources.Strings.Error_CannotWriteFolder, _destination),
-            ViewModelCrashLog.AppendedSince(crashLogBefore), StringComparison.Ordinal);
+            TestCrashLog.Text(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -661,7 +657,6 @@ public class CleanupPreFlightTests : IDisposable
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
-        var crashLogBefore = ViewModelCrashLog.WithoutDestinationSaves();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -672,7 +667,7 @@ public class CleanupPreFlightTests : IDisposable
             Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
         // A refusal, not a fault: nothing the log gained names this test's folder or carries
         // its refusal.
-        var gained = ViewModelCrashLog.AppendedSince(crashLogBefore);
+        var gained = TestCrashLog.Text();
         Assert.DoesNotContain(_destination, gained, StringComparison.Ordinal);
         Assert.DoesNotContain("create refused", gained, StringComparison.Ordinal);
     }
@@ -687,7 +682,6 @@ public class CleanupPreFlightTests : IDisposable
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
-        var crashLogBefore = ViewModelCrashLog.WithoutDestinationSaves();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -701,7 +695,7 @@ public class CleanupPreFlightTests : IDisposable
         // write failure the pre-flight raises for this destination.
         Assert.Contains(
             string.Format(InstallerClean.Resources.Strings.Error_CannotWriteFolder, _destination),
-            ViewModelCrashLog.AppendedSince(crashLogBefore), StringComparison.Ordinal);
+            TestCrashLog.Text(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -714,7 +708,6 @@ public class CleanupPreFlightTests : IDisposable
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
-        var crashLogBefore = ViewModelCrashLog.WithoutDestinationSaves();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -730,7 +723,7 @@ public class CleanupPreFlightTests : IDisposable
         Assert.False(vm.Cleanup.IsOperating);
         // A refusal, not a fault: nothing the log gained names this test's folder or carries
         // its refusal.
-        var gained = ViewModelCrashLog.AppendedSince(crashLogBefore);
+        var gained = TestCrashLog.Text();
         Assert.DoesNotContain(_destination, gained, StringComparison.Ordinal);
         Assert.DoesNotContain("create refused", gained, StringComparison.Ordinal);
     }
@@ -745,7 +738,6 @@ public class CleanupPreFlightTests : IDisposable
         await vm.Scan.ScanWithProgressAsync(null);
         vm.Cleanup.MoveDestination = _destination;
 
-        var crashLogBefore = ViewModelCrashLog.WithoutDestinationSaves();
         await vm.Cleanup.MoveAllCommand.ExecuteAsync(null);
 
         _dialogService.Received(1).ShowWarning(
@@ -760,7 +752,7 @@ public class CleanupPreFlightTests : IDisposable
         Assert.False(vm.Cleanup.IsOperating);
         // A mistake the message explains whole: the crash log is left as it was.
         // Nothing the log gained names this test's folder or carries its refusal.
-        var gained = ViewModelCrashLog.AppendedSince(crashLogBefore);
+        var gained = TestCrashLog.Text();
         Assert.DoesNotContain(_destination, gained, StringComparison.Ordinal);
         Assert.DoesNotContain("no such drive", gained, StringComparison.Ordinal);
     }

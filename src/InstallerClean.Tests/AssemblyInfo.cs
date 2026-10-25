@@ -48,10 +48,13 @@ internal static class TestCrashLog
 {
     private static readonly string Shared = Path.Combine(Path.GetTempPath(), "InstallerClean.Tests");
 
+    /// <summary>A folder of its own under the shared one, not yet made.</summary>
+    internal static string NewFolder() => Path.Combine(Shared, Guid.NewGuid().ToString("N"));
+
     [ModuleInitializer]
     internal static void Redirect()
     {
-        var folder = Path.Combine(Shared, Guid.NewGuid().ToString("N"));
+        var folder = NewFolder();
         CrashLog.FolderForTests = folder;
         AppDomain.CurrentDomain.ProcessExit += (_, _) =>
         {
