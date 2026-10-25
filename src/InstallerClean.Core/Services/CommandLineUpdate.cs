@@ -277,8 +277,10 @@ internal sealed class CommandLineUpdate
             return CommandLineUpdateResult.NothingTried;
         }
 
-        if (Requirements(canAsk, latest, token) is { } refusal) return Refused(refusal, latest);
+        // Ctrl+C comes before a refusal that came back with it.
+        var refusal = Requirements(canAsk, latest, token);
         if (token.IsCancellationRequested) return new CommandLineUpdateResult.Cancelled();
+        if (refusal is not null) return Refused(refusal.Value, latest);
 
         if (canAsk)
         {
@@ -432,7 +434,8 @@ internal sealed class CommandLineUpdate
     /// is waiting. A read that fails in any way or runs out answers null: the update reads
     /// the file again before it says it is downloading, refusing as this does where the
     /// file rules this copy out, and failing as a download where it still cannot be read.
-    /// Ctrl+C answers null too, and the caller reads it off the token.
+    /// A refusal can come back with Ctrl+C pressed, so the caller reads Ctrl+C off the
+    /// token before it acts on the answer.
     /// </summary>
     private UpdateRefusal? Requirements(bool canAsk, string latest, CancellationToken token)
     {
@@ -507,7 +510,10 @@ internal sealed class CommandLineUpdate
         {
             if (InUse(holdsLock, exePath)) throw InUseFailure();
             if (_updater.CheckRequirementsAsync(latest, token).GetAwaiter().GetResult() is { } refusal)
+            {
+                token.ThrowIfCancellationRequested();
                 throw new UpdateRefusedException(refusal, latest);
+            }
             _host.WriteLine(string.Format(Strings.UpdateNotice_Downloading, latest));
             prepared = _updater.PrepareAsync(latest, null, token).GetAwaiter().GetResult();
 

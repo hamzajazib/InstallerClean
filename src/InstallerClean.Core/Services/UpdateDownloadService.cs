@@ -171,8 +171,9 @@ public sealed class UpdateDownloadService
         catch (UpdateFailedException ex) when (ex.Stage == UpdateFailureStage.Download
             && cancellationToken.IsCancellationRequested)
         {
-            // A server's answer refused as the cancel came, an error among them, is the
-            // cancel. A failure to save what arrived is the Install stage's and stays one.
+            // A Download-stage failure that comes as the cancel does, a server's error answer or
+            // a body refused for what it holds among them, is the cancel. A failure to save
+            // what arrived is the Install stage's and stays a failure.
             throw new OperationCanceledException($"{what} was cancelled.", ex, cancellationToken);
         }
         catch (OperationCanceledException ex)

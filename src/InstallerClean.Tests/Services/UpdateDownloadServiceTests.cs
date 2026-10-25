@@ -286,6 +286,24 @@ public sealed class UpdateDownloadServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task A_file_that_cannot_be_saved_as_the_download_is_cancelled_is_a_failure_to_install()
+    {
+        using var cts = new CancellationTokenSource();
+        var handler = new RoutedHandler(_ =>
+        {
+            cts.Cancel();
+            return Body(Program());
+        });
+        var service = new UpdateDownloadService(handler, TimeSpan.FromSeconds(30));
+        var nowhere = Path.Combine(_folder, "missing", "download.exe");
+
+        var failed = await Assert.ThrowsAsync<UpdateFailedException>(
+            () => service.DownloadAsync(ReleaseAddress, nowhere, null, cts.Token));
+
+        Assert.Equal(UpdateFailureStage.Install, failed.Stage);
+    }
+
+    [Fact]
     public async Task A_connection_broken_off_by_cancelling_throws_cancellation_and_leaves_nothing()
     {
         var handler = new RoutedHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)

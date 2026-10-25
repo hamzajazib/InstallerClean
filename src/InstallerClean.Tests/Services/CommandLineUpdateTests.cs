@@ -344,13 +344,14 @@ public sealed class CommandLineUpdateTests : IDisposable
         var updater = Download();
         var reads = 0;
         // The first read fails where the second is the one cancelled, so the run reads again.
+        // The cancelled read still answers its refusal, as a read that had worked it out does.
         updater.Requirements = () =>
         {
             if (++reads < cancelledRead) throw new UpdateFailedException(UpdateFailureStage.Download, "failed");
             cts.Cancel();
-            throw new OperationCanceledException(cts.Token);
+            return UpdateRefusal.NeedsNetFramework48;
         };
-        _host.Answers.Enqueue("y");
+        if (canAsk) _host.Answers.Enqueue("y");
 
         var result = Run(updater, canAsk, token: cts.Token);
 
