@@ -182,11 +182,13 @@ $dataExtensions = [System.Collections.Generic.HashSet[string]]::new([string[]]@(
 # Every look for a file in a run's own folder or under %TEMP%\.net, where a single-file
 # build extracts its own libraries, and every image it loaded from anywhere but its own
 # exe. A look is left out where it is for data, by $dataExtensions; where it is for the
-# run's own exe or the exe's .old or .new copy beside it; and where it is at a path the
+# run's own exe, the exe's .old or .new copy beside it, or a name a replace leaves beside
+# it (Get-ReplaceSuffixes), which every start clears; and where it is at a path the
 # run opens as a folder or has rows under, as the folders a bundle extracts into.
 function Get-Libraries($rows, [string]$folder, [string]$exe) {
   $own = $folder.TrimEnd('\') + '\'
   $self = $own + $exe
+  $neighbours = @($self, "$self.old", "$self.new") + @(Get-ReplaceSuffixes | ForEach-Object { "$self$_" })
   # A path the run opens as a directory, or one another of its rows lies under.
   $folders = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
   foreach ($row in $rows) {
@@ -199,7 +201,7 @@ function Get-Libraries($rows, [string]$folder, [string]$exe) {
     $place = if ($row.Path.StartsWith($own, 'OrdinalIgnoreCase')) { 'own' } elseif ($row.Path -match '\\\.net\\') { 'extraction' } else { 'elsewhere' }
     if ($row.Operation -eq 'Load Image') { if ($row.Path -eq $self) { continue } }
     elseif ($place -eq 'elsewhere' -or $folders.Contains($row.Path) -or $dataExtensions.Contains([IO.Path]::GetExtension($row.Path)) -or
-      ($place -eq 'own' -and $row.Path -in $self, "$self.old", "$self.new")) { continue }
+      ($place -eq 'own' -and $row.Path -in $neighbours)) { continue }
     [pscustomobject]@{
       Index = $i + 1; Place = $place; Operation = $row.Operation; Result = $row.Result
       Relative = $(if ($place -eq 'own') { $row.Path.Substring($own.Length) })
@@ -989,8 +991,8 @@ function Test-SetupControls {
 # Runs Get-Libraries, Get-RunPlants and Test-PlantedRun over records made up for the
 # purpose. The first pass looks beside the exe for a .dll, an upper-case .OCX, a .drv,
 # an .exe and a dotted name with no extension Windows knows, each of which must be
-# planted for, and for each data name $dataExtensions holds, the exe itself and its
-# .old and .new, and a folder it creates, none of which may be. The second pass must
+# planted for, and for each data name $dataExtensions holds, the exe itself, its .old and
+# .new, the names a replace leaves beside it, and a folder it creates, none of which may be. The second pass must
 # fail where it loads the planted .drv and where it loads a file from beside itself
 # that the first pass did not look for, and pass the load of its own exe.
 function Test-ImageNameControls {
@@ -1006,6 +1008,7 @@ function Test-ImageNameControls {
   $looked = 'control.dll', 'CONTROL.OCX', 'winspool.drv', 'helper.exe', 'System.IO.Compression.Native',
     'control.runtimeconfig.json', 'control.pdb', 'control.dll.config', 'control.en', 'control.ENU', 'control.en-US',
     'control.exe', 'control.exe.old', 'control.exe.new', 'work'
+  $looked = @($looked) + @(Get-ReplaceSuffixes | ForEach-Object { "control.exe$_" })
   try {
     New-Item -ItemType Directory -Force -Path $first, $second | Out-Null
     Set-Content -Path $source -Value 'control'
