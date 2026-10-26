@@ -801,12 +801,10 @@ public sealed class CommandLineUpdateTests : IDisposable
         // The setup's failure is what ended the run, and the line the console refused is not.
         Assert.Equal(nameof(UpdateFailedException), Assert.IsType<CommandLineUpdateResult.Stopped>(result).FailureType);
         Assert.Null(_host.NewerVersionRun);
-        // The put-back's refused rename of the setup's file onto the folder at .new writes
-        // its own entry first, and the run's entry follows it.
+        // The run's entry is the last, and the refused line writes none of its own.
         var entries = TestCrashLog.Entries();
-        Assert.Equal(2, entries.Count);
-        Assert.Contains("System.IO.", entries[0]);
-        Assert.Contains("The setup ended with exit code 1.", entries[1]);
+        Assert.Contains("The setup ended with exit code 1.", entries[^1]);
+        Assert.DoesNotContain(entries, entry => entry.Contains("the console refused it"));
     }
 
     [Fact]
@@ -1481,6 +1479,15 @@ public sealed class CommandLineUpdateTests : IDisposable
         Assert.Equal(nameof(UpdateFailedException), stopped.FailureType);
         Assert.Equal(Strings.UpdateNotice_InstallFailed, _host.Output[^1]);
         Assert.Null(_host.NewerVersionRun);
+        // What the setup left stays at the path, this exe beside it and the folder at .new.
+        Assert.Equal("partial", File.ReadAllText(_exe));
+        Assert.True(File.Exists(_exe + SelfReplacement.OldSuffix));
+        Assert.True(Directory.Exists(_exe + SelfReplacement.NewSuffix));
+        // The put-back's refused rename onto that folder is written first, then the run's entry.
+        var entries = TestCrashLog.Entries();
+        var rename = entries.ToList().FindIndex(entry => entry.Contains("SelfReplacement.TryRename"));
+        var run = entries.ToList().FindIndex(entry => entry.Contains("The setup ended with exit code 1."));
+        Assert.InRange(rename, 0, run - 1);
     }
 
     [Theory]
