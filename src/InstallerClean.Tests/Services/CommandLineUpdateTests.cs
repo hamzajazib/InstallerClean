@@ -727,7 +727,7 @@ public sealed class CommandLineUpdateTests : IDisposable
     }
 
     [Fact]
-    public void A_throw_after_the_setup_and_before_the_start_ends_the_run_as_installed()
+    public void A_console_that_refuses_the_installed_line_after_the_setup_still_starts_the_newer_version()
     {
         SetupInstalls();
         _host.NewerVersionExitCode = 0;
@@ -738,29 +738,48 @@ public sealed class CommandLineUpdateTests : IDisposable
 
         var result = Run(Setup(), canAsk: false);
 
-        Assert.Equal(new CommandLineUpdateResult.NotStarted(Current, Latest), result);
+        Assert.Equal(new CommandLineUpdateResult.HandedOver(0, Current, Latest, "/s"), result);
         Assert.Equal("new", File.ReadAllText(_exe));
-        Assert.Equal(string.Format(Strings.Cli_UpdateNotStarted, Latest), _host.Output[^1]);
-        Assert.Null(_host.NewerVersionRun);
+        Assert.NotNull(_host.NewerVersionRun);
+        Assert.DoesNotContain(string.Format(Strings.Cli_UpdateNotStarted, Latest), _host.Output);
+        Assert.Empty(TestCrashLog.Entries());
     }
 
     [Fact]
-    public void A_console_that_refuses_every_line_after_the_setup_ends_the_run_as_installed()
+    public void A_console_that_refuses_every_line_after_the_setup_still_runs_the_scan_a_delete_answered_yes_to()
     {
+        _host.Answers.Enqueue("y");
         SetupInstalls();
         _host.NewerVersionExitCode = 0;
         _host.OnWriteLine = line =>
         {
             if (line == string.Format(Strings.Cli_UpdateInstalled, Latest)
-                || line == string.Format(Strings.Cli_UpdateNotStarted, Latest))
+                || line == Strings.Cli_UpdateListsOnlyAfterDelete)
                 throw new IOException("the console refused it");
+        };
+
+        var result = Run(Setup(), canAsk: true, command: "/d", arguments: ["/d", "D:\\Backup"]);
+
+        Assert.Equal(new CommandLineUpdateResult.HandedOver(0, Current, Latest, "/s"), result);
+        Assert.Equal(new[] { "/s" }, _host.NewerVersionRun!.Value.Arguments);
+        Assert.Empty(TestCrashLog.Entries());
+    }
+
+    [Fact]
+    public void A_line_after_the_setup_that_fails_other_than_as_a_console_refusal_goes_to_the_crash_log_and_the_newer_version_still_starts()
+    {
+        SetupInstalls();
+        _host.NewerVersionExitCode = 0;
+        _host.OnWriteLine = line =>
+        {
+            if (line == string.Format(Strings.Cli_UpdateInstalled, Latest)) throw new InvalidOperationException("a fault in the host");
         };
 
         var result = Run(Setup(), canAsk: false);
 
-        Assert.Equal(new CommandLineUpdateResult.NotStarted(Current, Latest), result);
-        Assert.Equal("new", File.ReadAllText(_exe));
-        Assert.Null(_host.NewerVersionRun);
+        Assert.Equal(new CommandLineUpdateResult.HandedOver(0, Current, Latest, "/s"), result);
+        Assert.NotNull(_host.NewerVersionRun);
+        Assert.Contains("a fault in the host", TestCrashLog.OnlyEntry());
     }
 
     [Fact]

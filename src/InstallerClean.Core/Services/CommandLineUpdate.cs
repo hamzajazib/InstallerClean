@@ -696,8 +696,9 @@ internal sealed class CommandLineUpdate
 
         // The setup has installed the newer version whether or not it starts, so its copy
         // says so now. On a swap it is said once the newer version has started, since until
-        // then a failed start or Ctrl+C puts this exe back wherever it can.
-        if (isSetup) SayInstalledAndWhatRuns();
+        // then a failed start or Ctrl+C puts this exe back wherever it can. A line that fails
+        // here changes nothing about the run, which goes on to start the newer version.
+        if (isSetup) SayGuarded(SayInstalledAndWhatRuns);
 
         IReadOnlyList<string> run = canAsk ? ["/s"] : arguments;
         int? exitCode;
