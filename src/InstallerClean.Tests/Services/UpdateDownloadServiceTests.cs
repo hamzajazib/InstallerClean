@@ -262,12 +262,28 @@ public sealed class UpdateDownloadServiceTests : IDisposable
         return (file, Path.Combine(_folder, "gate"), bytes);
     }
 
-    /// <summary>Waits for the download to reach the gate, failing the test after ten seconds.</summary>
+    /// <summary>
+    /// Waits for the download to reach the gate, failing the test after ten seconds. The
+    /// download writes its reached file empty, so a planted one holding text is not taken for it.
+    /// </summary>
     private static async Task UntilReached(string gate, Task download)
     {
         var reached = gate + AppUpdater.GateReachedSuffix;
-        for (var i = 0; i < 100 && !File.Exists(reached) && !download.IsCompleted; i++) await Task.Delay(100);
-        Assert.True(File.Exists(reached), "the download did not reach the gate");
+        bool Written() => File.Exists(reached) && new FileInfo(reached).Length == 0;
+        for (var i = 0; i < 100 && !Written() && !download.IsCompleted; i++) await Task.Delay(100);
+        Assert.True(Written(), "the download did not reach the gate");
+    }
+
+    [Theory]
+    [InlineData(2, 1)]
+    [InlineData(3, 1)]
+    [InlineData(4 * 1024 * 1024, 2 * 1024 * 1024)]
+    [InlineData(16 * 1024 * 1024, 8 * 1024 * 1024)]
+    [InlineData(100 * 1024 * 1024, 8 * 1024 * 1024)]
+    public void The_gate_holds_a_file_part_way(long length, long heldAt)
+    {
+        Assert.Equal(heldAt, AppUpdater.GatePoint(length));
+        Assert.InRange(heldAt, 1, length - 1);
     }
 
     /// <summary>The length of the file being written, read through a handle so it is current.</summary>
@@ -301,8 +317,10 @@ public sealed class UpdateDownloadServiceTests : IDisposable
     public async Task A_download_held_at_the_gate_finishes_whole_once_the_gate_file_exists()
     {
         var (file, gate, bytes) = GatedLocalFile();
-        // Left by an earlier run; a gate already there would not hold this one.
+        // Left by an earlier run: a gate already there would not hold this one, and a reached
+        // file already there would cue a press before this one is held.
         File.WriteAllText(gate, string.Empty);
+        File.WriteAllText(gate + AppUpdater.GateReachedSuffix, "stale");
         var service = new UpdateDownloadService(new AppUpdater.LocalFileAnswer(file, gate), TimeSpan.FromSeconds(30));
         var reported = new List<double?>();
 
@@ -330,11 +348,14 @@ public sealed class UpdateDownloadServiceTests : IDisposable
         Assert.False(File.Exists(Destination));
     }
 
-    [Fact]
-    public async Task A_gate_that_is_not_a_full_path_fails_the_download()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_gate_that_is_not_a_full_path_or_whose_folder_is_not_there_fails_the_download(bool fullPath)
     {
         var (file, _, _) = GatedLocalFile();
-        var service = new UpdateDownloadService(new AppUpdater.LocalFileAnswer(file, "gate"), TimeSpan.FromSeconds(30));
+        var gate = fullPath ? Path.Combine(_folder, "not-there", "gate") : "gate";
+        var service = new UpdateDownloadService(new AppUpdater.LocalFileAnswer(file, gate), TimeSpan.FromSeconds(30));
 
         var failure = await Assert.ThrowsAsync<UpdateFailedException>(
             () => service.DownloadAsync(ReleaseAddress, Destination, null, CancellationToken.None));
