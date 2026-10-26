@@ -678,6 +678,32 @@ internal static partial class Kernel32
     public const uint WAIT_FAILED = 0xFFFFFFFF;
 
     /// <summary>
+    /// Renames <paramref name="lpExistingFileName"/> to <paramref name="lpNewFileName"/> as
+    /// <paramref name="dwFlags"/> says. With <see cref="MOVEFILE_REPLACE_EXISTING"/> a file at
+    /// the new name is replaced in the same step, so a reader of that name finds the old file
+    /// or the new one and never neither; a link at the new name is replaced, not followed.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "MoveFileExW", SetLastError = true,
+                   StringMarshalling = StringMarshalling.Utf16)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool MoveFileEx(string lpExistingFileName, string lpNewFileName, uint dwFlags);
+
+    public const uint MOVEFILE_REPLACE_EXISTING = 0x1;
+
+    /// <summary>The move returns only once it is written to the disk.</summary>
+    public const uint MOVEFILE_WRITE_THROUGH = 0x8;
+
+    /// <summary>
+    /// Gives the file <paramref name="lpExistingFileName"/> a second name,
+    /// <paramref name="lpFileName"/>, in a folder on the same volume. Fails where the volume
+    /// has no hard links, as FAT and exFAT have none, and where a file has that name.
+    /// </summary>
+    [LibraryImport(Library, EntryPoint = "CreateHardLinkW", SetLastError = true,
+                   StringMarshalling = StringMarshalling.Utf16)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool CreateHardLink(string lpFileName, string lpExistingFileName, IntPtr lpSecurityAttributes);
+
+    /// <summary>
     /// Suspends the calling thread for <paramref name="dwMilliseconds"/>. Like
     /// <see cref="WaitForMultipleObjects"/>, it dispatches nothing meanwhile.
     /// </summary>

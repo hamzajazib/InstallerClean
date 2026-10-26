@@ -6,6 +6,10 @@ namespace InstallerClean.Helpers;
 /// window and the command line alike. The newer version says through
 /// <see cref="StartedEventSwitch"/> that its own code is running, and the copy that
 /// started it waits for that before it ends (<see cref="Services.SelfReplacement"/>).
+/// A newer version a copy has downloaded is asked through <see cref="ReplaceCopySwitch"/>,
+/// <see cref="AfterProcessSwitch"/> and <see cref="StartedEventSwitch"/> to put itself at
+/// that copy's path once the copy has ended (<see cref="Services.ExeReplacement"/>), and a
+/// copy it puts back after a failure is started with <see cref="UpdateFailedSwitch"/>.
 /// </summary>
 /// <remarks>
 /// Every version from <see cref="FirstVersionTakingHandOverSwitches"/> on passes
@@ -111,6 +115,117 @@ internal static class HandOverContract
     }
 
     /// <summary>
+    /// The switch through which a copy updating itself names, after the colon, the full
+    /// path of its own exe, for the newer version it has downloaded to put itself there
+    /// (<see cref="Services.ExeReplacement"/>). One of the three a replace is asked with
+    /// (<see cref="ReadReplaceRequest"/>).
+    /// </summary>
+    internal const string ReplaceCopySwitch = "/replacecopy:";
+
+    /// <summary>
+    /// The switch through which a copy updating itself passes, after the colon, its own
+    /// process ID, which the newer version waits on before it replaces the copy's file.
+    /// One of the three a replace is asked with (<see cref="ReadReplaceRequest"/>).
+    /// </summary>
+    internal const string AfterProcessSwitch = "/afterprocess:";
+
+    /// <summary>
+    /// The switch a newer version that could not put itself at a copy's path starts that
+    /// copy with, having left it there: the window opens saying the update couldn't be
+    /// installed. It carries nothing; what failed is in crash.log.
+    /// </summary>
+    /// <remarks>
+    /// The copy given it is the older one, so every window from
+    /// <see cref="FirstVersionTakingHandOverSwitches"/> on takes it, and every later version
+    /// starts a copy it has put back with this switch and no other: an older window given a
+    /// switch it does not know opens without saying the update failed.
+    /// </remarks>
+    internal const string UpdateFailedSwitch = "/updatefailed";
+
+    /// <summary>
+    /// The arguments a copy updating itself starts the newer version it downloaded with,
+    /// for that version to put itself at <paramref name="exePath"/> once the process
+    /// <paramref name="processId"/> has ended, setting the event <paramref name="startedEventId"/>
+    /// stands for once it is ready to.
+    /// </summary>
+    internal static List<string> ReplaceArguments(string exePath, int processId, Guid startedEventId) =>
+    [
+        ReplaceCopySwitch + exePath,
+        AfterProcessSwitch + processId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        StartedEventArgument(startedEventId),
+    ];
+
+    /// <summary>
+    /// Reads whether <paramref name="args"/> ask this copy to put itself at another copy's
+    /// path. <see cref="ReplaceRead.Asked"/>, with <paramref name="request"/> set, where each
+    /// of the three switches <see cref="ReplaceArguments"/> builds is there once, in any
+    /// place and any case of the switch, the path fully qualified, the process ID a whole
+    /// number above nought and the event's id a GUID in the form
+    /// <see cref="StartedEventArgument"/> writes. Every other argument is left, in order, in
+    /// <see cref="ReplaceRequest.Command"/>: none asks for the replace alone, and on the
+    /// command line any asks for that command to be run first, standing for the copy at the
+    /// path. <see cref="ReplaceRead.NotAsked"/> where no argument starts with
+    /// <see cref="ReplaceCopySwitch"/> or <see cref="AfterProcessSwitch"/>, and
+    /// <see cref="ReplaceRead.Refused"/> where one does and the three are not each there
+    /// once and well formed: such a start runs nothing and sets no event.
+    /// </summary>
+    /// <remarks>
+    /// A copy from <see cref="FirstVersionTakingHandOverSwitches"/> on starts the newer
+    /// version it updates to with these three, and on the command line with the command as
+    /// typed, <see cref="CliContract.CancelEventSwitch"/> and <see cref="CliContract.NoUpdateSwitch"/>
+    /// beside them, and it goes on doing so for every newer version it ever updates to. So
+    /// every later version reads these three as a request to replace and the arguments
+    /// beside them as the command, or no copy from that version on can update to it.
+    /// </remarks>
+    internal static ReplaceRead ReadReplaceRequest(string[] args, out ReplaceRequest? request)
+    {
+        request = null;
+        if (!args.Any(a => a.StartsWith(ReplaceCopySwitch, StringComparison.OrdinalIgnoreCase)
+                || a.StartsWith(AfterProcessSwitch, StringComparison.OrdinalIgnoreCase)))
+            return ReplaceRead.NotAsked;
+
+        string? exePath = null, processId = null, startedEvent = null;
+        var command = new List<string>(args.Length);
+        foreach (var arg in args)
+        {
+            if (!TakeValue(arg, ReplaceCopySwitch, ref exePath, out var twice)
+                && !TakeValue(arg, AfterProcessSwitch, ref processId, out twice)
+                && !TakeValue(arg, StartedEventSwitch, ref startedEvent, out twice))
+                command.Add(arg);
+            if (twice) return ReplaceRead.Refused;
+        }
+        if (exePath is null || !Path.IsPathFullyQualified(exePath)
+            || !int.TryParse(processId, System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out var id) || id <= 0
+            || !Guid.TryParseExact(startedEvent, "N", out _))
+            return ReplaceRead.Refused;
+        request = new ReplaceRequest(exePath, id, startedEvent!, command.ToArray());
+        return ReplaceRead.Asked;
+
+        // Takes the value after switchName where arg starts with it; twice where one was taken already.
+        static bool TakeValue(string arg, string switchName, ref string? value, out bool twice)
+        {
+            twice = false;
+            if (!arg.StartsWith(switchName, StringComparison.OrdinalIgnoreCase)) return false;
+            twice = value is not null;
+            value = arg[switchName.Length..];
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Takes every <see cref="UpdateFailedSwitch"/> out of <paramref name="args"/>, in any
+    /// case, and answers what is left, with <paramref name="updateFailed"/> saying whether
+    /// there was one.
+    /// </summary>
+    internal static string[] TakeUpdateFailed(string[] args, out bool updateFailed)
+    {
+        var rest = args.Where(a => !a.Equals(UpdateFailedSwitch, StringComparison.OrdinalIgnoreCase)).ToArray();
+        updateFailed = rest.Length != args.Length;
+        return rest;
+    }
+
+    /// <summary>
     /// Takes every <paramref name="switchName"/> carrying an event's id out of
     /// <paramref name="args"/>, wherever it stands and in any case, and answers what is
     /// left. <paramref name="id"/> is the first one's id, or null where there is none. One
@@ -165,3 +280,24 @@ internal static class HandOverContract
         }
     }
 }
+
+/// <summary>What <see cref="HandOverContract.ReadReplaceRequest"/> found.</summary>
+internal enum ReplaceRead
+{
+    /// <summary>Nothing asks this copy to replace another.</summary>
+    NotAsked,
+
+    /// <summary>The three switches ask it, well formed.</summary>
+    Asked,
+
+    /// <summary>A replace switch is there and the three are not: this start runs nothing.</summary>
+    Refused,
+}
+
+/// <summary>
+/// A request to put this copy at <paramref name="ExePath"/> once the process
+/// <paramref name="ProcessId"/> has ended, setting the event <paramref name="StartedEvent"/>
+/// names once it is ready to, and on the command line to run <paramref name="Command"/>
+/// first where it holds anything (<see cref="HandOverContract.ReadReplaceRequest"/>).
+/// </summary>
+internal sealed record ReplaceRequest(string ExePath, int ProcessId, string StartedEvent, IReadOnlyList<string> Command);

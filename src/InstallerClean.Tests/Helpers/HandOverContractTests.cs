@@ -197,4 +197,92 @@ public sealed class HandOverContractTests : IDisposable
             count++;
         return count;
     }
+
+    [Fact]
+    public void ReplaceArguments_are_read_back_as_the_request_they_carry()
+    {
+        var id = Guid.Parse(EventId);
+        var args = HandOverContract.ReplaceArguments(@"D:\Tools\InstallerClean.exe", 4242, id).ToArray();
+
+        Assert.Equal(new[] { @"/replacecopy:D:\Tools\InstallerClean.exe", "/afterprocess:4242", "/startedevent:" + EventId }, args);
+        Assert.Equal(ReplaceRead.Asked, HandOverContract.ReadReplaceRequest(args, out var request));
+        Assert.Equal(@"D:\Tools\InstallerClean.exe", request!.ExePath);
+        Assert.Equal(4242, request.ProcessId);
+        Assert.Equal(EventId, request.StartedEvent);
+        Assert.Empty(request.Command);
+    }
+
+    [Fact]
+    public void A_replace_is_read_with_its_three_switches_in_any_order_and_case()
+    {
+        string[] args = ["/STARTEDEVENT:" + EventId, "/AfterProcess:7", @"/ReplaceCopy:C:\x\InstallerClean-portable.exe"];
+
+        Assert.Equal(ReplaceRead.Asked, HandOverContract.ReadReplaceRequest(args, out var request));
+        Assert.Equal(@"C:\x\InstallerClean-portable.exe", request!.ExePath);
+        Assert.Equal(7, request.ProcessId);
+        Assert.Equal(EventId, request.StartedEvent);
+        Assert.Empty(request.Command);
+    }
+
+    [Fact]
+    public void The_arguments_beside_the_three_are_the_command_in_the_order_given()
+    {
+        string[] args =
+        [
+            "/m", "D:\\Backup", "/cancelevent:" + OtherEventId, @"/replacecopy:C:\x\installerclean-cli.exe",
+            "/noupdate", "/afterprocess:7", "/startedevent:" + EventId,
+        ];
+
+        Assert.Equal(ReplaceRead.Asked, HandOverContract.ReadReplaceRequest(args, out var request));
+        Assert.Equal(@"C:\x\installerclean-cli.exe", request!.ExePath);
+        Assert.Equal(new[] { "/m", "D:\\Backup", "/cancelevent:" + OtherEventId, "/noupdate" }, request.Command);
+    }
+
+    [Theory]
+    [InlineData(new object[] { new[] { "/s" } })]
+    [InlineData(new object[] { new[] { "/startedevent:" + EventId } })]
+    [InlineData(new object[] { new string[0] })]
+    public void Arguments_with_no_replace_switch_ask_for_no_replace(string[] args)
+    {
+        Assert.Equal(ReplaceRead.NotAsked, HandOverContract.ReadReplaceRequest(args, out var request));
+        Assert.Null(request);
+    }
+
+    [Theory]
+    // One or two of the three.
+    [InlineData(new object[] { new[] { @"/replacecopy:C:\a.exe" } })]
+    [InlineData(new object[] { new[] { "/afterprocess:7", "/startedevent:" + EventId } })]
+    // A switch twice.
+    [InlineData(new object[] { new[] { @"/replacecopy:C:\a.exe", @"/replacecopy:C:\b.exe", "/afterprocess:7", "/startedevent:" + EventId } })]
+    [InlineData(new object[] { new[] { @"/replacecopy:C:\a.exe", "/afterprocess:7", "/startedevent:" + EventId, "/startedevent:" + OtherEventId } })]
+    // A command beside two of them.
+    [InlineData(new object[] { new[] { @"/replacecopy:C:\a.exe", "/afterprocess:7", "/s" } })]
+    // A path that is not fully qualified.
+    [InlineData(new object[] { new[] { "/replacecopy:a.exe", "/afterprocess:7", "/startedevent:" + EventId } })]
+    [InlineData(new object[] { new[] { "/replacecopy:", "/afterprocess:7", "/startedevent:" + EventId } })]
+    // A process ID that is not a whole number above nought.
+    [InlineData(new object[] { new[] { @"/replacecopy:C:\a.exe", "/afterprocess:0", "/startedevent:" + EventId } })]
+    [InlineData(new object[] { new[] { @"/replacecopy:C:\a.exe", "/afterprocess:-7", "/startedevent:" + EventId } })]
+    [InlineData(new object[] { new[] { @"/replacecopy:C:\a.exe", "/afterprocess: 7", "/startedevent:" + EventId } })]
+    [InlineData(new object[] { new[] { @"/replacecopy:C:\a.exe", "/afterprocess:7x", "/startedevent:" + EventId } })]
+    [InlineData(new object[] { new[] { @"/replacecopy:C:\a.exe", "/afterprocess:99999999999", "/startedevent:" + EventId } })]
+    // An event id that is not a GUID in the form the switch carries.
+    [InlineData(new object[] { new[] { @"/replacecopy:C:\a.exe", "/afterprocess:7", "/startedevent:x" } })]
+    [InlineData(new object[] { new[] { @"/replacecopy:C:\a.exe", "/afterprocess:7", "/startedevent:{6f1c2a3b-0000-4000-8000-000000000001}" } })]
+    public void A_replace_switch_without_each_of_the_three_once_and_well_formed_is_refused(string[] args)
+    {
+        Assert.Equal(ReplaceRead.Refused, HandOverContract.ReadReplaceRequest(args, out var request));
+        Assert.Null(request);
+    }
+
+    [Theory]
+    [InlineData(new[] { "/updatefailed" }, new string[0], true)]
+    [InlineData(new[] { "/UpdateFailed", "/languagechanged" }, new[] { "/languagechanged" }, true)]
+    [InlineData(new[] { "/languagechanged" }, new[] { "/languagechanged" }, false)]
+    [InlineData(new[] { "/updatefailed:x" }, new[] { "/updatefailed:x" }, false)]
+    public void TakeUpdateFailed_takes_the_switch_out_in_any_case(string[] args, string[] rest, bool updateFailed)
+    {
+        Assert.Equal(rest, HandOverContract.TakeUpdateFailed(args, out var taken));
+        Assert.Equal(updateFailed, taken);
+    }
 }
