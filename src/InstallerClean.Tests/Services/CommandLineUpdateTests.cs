@@ -2032,6 +2032,9 @@ public sealed class CommandLineUpdateTests : IDisposable
                     deleteDownload: DeleteDownload));
         }
 
+        public Task<PreparedUpdate> PrepareStagedRunAsync(string version, CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+
         /// <summary>Deletes the download and its folder where nothing else is in it, as the real download does.</summary>
         private void DeleteDownload()
         {

@@ -61,6 +61,23 @@ public interface IAppUpdater
     /// </summary>
     Task<PreparedUpdate> PrepareAsync(
         string version, IProgress<double?>? progress, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Downloads the command line of <paramref name="version"/> for the command line to run
+    /// its command with, into a staging folder of its own, and answers with it as
+    /// <see cref="PreparedUpdate.FileToStart"/>. The setup's copy first downloads the newer
+    /// setup into the same folder, under the name the newer version looks for beside its own
+    /// exe. Each file is checked for the version it was downloaded as, through a handle
+    /// opened to read it that shares only reading, and that handle is kept open until
+    /// <see cref="PreparedUpdate.Undo"/> or the end of the process, so no other process can
+    /// write, rename or delete the file meanwhile. The setup's copy goes ahead only where the
+    /// release allows both its setup and its command line on this PC; where one release entry
+    /// cannot be installed from this copy, that is the answer, ahead of one needing .NET
+    /// Framework 4.8. Throws as <see cref="PrepareAsync"/> does, and
+    /// <see cref="InvalidOperationException"/> for every kind but the setup's copy and the
+    /// command line's own download; none of them leaves anything on disk.
+    /// </summary>
+    Task<PreparedUpdate> PrepareStagedRunAsync(string version, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -90,7 +107,8 @@ public sealed class PreparedUpdate
     /// <summary>
     /// The program to start: the newer setup, or the newer version itself, in the folder it
     /// was downloaded to. Where the command line has written the newer version beside its
-    /// own exe (<see cref="CommandLineUpdate.StageBeside"/>), the exe's path.
+    /// own exe (<see cref="CommandLineUpdate.StageBeside"/>), the exe's path. For a run from
+    /// the staging folder, the newer command line there.
     /// </summary>
     public string FileToStart { get; }
 
@@ -100,7 +118,9 @@ public sealed class PreparedUpdate
     /// <summary>
     /// Where the newer version at <see cref="FileToStart"/> is started to put itself at the
     /// running exe's path, that path. Null where something else puts it there: the setup's
-    /// copy's setup, or the command line's rename of the version written beside its exe.
+    /// copy's setup, or the command line's rename of the version written beside its exe. For
+    /// a run from the staging folder, the running exe's path, which the run stands for and
+    /// the newer version, or on the setup's copy its setup, takes the place of.
     /// </summary>
     public string? Replaces { get; }
 
@@ -119,7 +139,10 @@ public sealed class PreparedUpdate
     /// once what was downloaded has been written elsewhere, and keeps the hold on the
     /// start-up clean-up until <see cref="Undo"/> or the end of the process. Once the
     /// folder has gone, neither this nor <see cref="Undo"/> reaches into its path again.
-    /// Does nothing where the update was not downloaded to a folder of its own. Never throws.
+    /// Does nothing where the update was not downloaded to a folder of its own, or was
+    /// prepared for the command line to run from that folder
+    /// (<see cref="IAppUpdater.PrepareStagedRunAsync"/>), whose files are used where they are.
+    /// Never throws.
     /// </summary>
     public void DeleteDownload()
     {
@@ -132,7 +155,9 @@ public sealed class PreparedUpdate
 /// The update from inside the app. The setup's copy downloads the newer setup and runs
 /// it; the portable, the slim and the command line's own download download the newer
 /// version of the same file. The window starts it to put itself at the running exe's path;
-/// the command line writes it beside its own exe (<see cref="CommandLineUpdate.StageBeside"/>).
+/// the command line writes it beside its own exe (<see cref="CommandLineUpdate.StageBeside"/>),
+/// or runs its command with the newer command line from the staging folder
+/// (<see cref="PrepareStagedRunAsync"/>).
 /// Each download is saved in a staging folder only Administrators and SYSTEM can write to,
 /// and checked there for the version it was downloaded as before anything uses it. A build from source,
 /// Scoop's copy and an undetermined copy have no download, and
@@ -163,6 +188,12 @@ public sealed class AppUpdater : IAppUpdater
 
     /// <summary>A release's update.json read in full, and the version it was read for.</summary>
     private sealed record KeptManifest(string Version, byte[] Manifest);
+
+    /// <summary>
+    /// The handles holding the files of every run from a staging folder this process has
+    /// prepared and not undone (<see cref="PrepareStagedRunAsync"/>).
+    /// </summary>
+    private static readonly List<FileStream> HeldForTheProcess = [];
 
     /// <param name="kind">The kind of copy running.</param>
     /// <param name="exePath">The running exe's path.</param>
@@ -271,6 +302,46 @@ public sealed class AppUpdater : IAppUpdater
     private async Task<UpdateRefusal?> CheckRequirementsHereAsync(
         string version, TimeSpan? within, CancellationToken cancellationToken)
     {
+        var manifest = await ReadManifestHereAsync(version, within, cancellationToken).ConfigureAwait(false);
+        var answer = UpdateManifest.Judge(manifest, version, Kind, () => UpdateManifest.HasNetFramework48(_registry));
+        // The judgement reads the registry, and a cancel can come while it does.
+        cancellationToken.ThrowIfCancellationRequested();
+        return answer;
+    }
+
+    /// <summary>
+    /// The check <see cref="PrepareStagedRunAsync"/> makes. The command line's own download
+    /// is judged as <see cref="CheckRequirementsHereAsync"/> judges it. The setup's copy is
+    /// judged against the release's setup and its command line, from one read of the
+    /// release's file, because the newer command line runs on this PC before its setup does.
+    /// Where either cannot be installed from this copy that is the answer, since installing
+    /// .NET Framework 4.8 would not change it.
+    /// </summary>
+    private async Task<UpdateRefusal?> CheckStagedRunRequirementsHereAsync(
+        string version, CancellationToken cancellationToken)
+    {
+        var manifest = await ReadManifestHereAsync(version, null, cancellationToken).ConfigureAwait(false);
+        AppCopyKind[] kinds = Kind == AppCopyKind.Setup ? [AppCopyKind.Setup, AppCopyKind.CommandLineDownload] : [Kind];
+        // Read once, where any entry asks for it.
+        var hasNetFramework48 = new Lazy<bool>(() => UpdateManifest.HasNetFramework48(_registry));
+        var answers = kinds.Select(kind => UpdateManifest.Judge(manifest, version, kind, () => hasNetFramework48.Value))
+            .ToList();
+        // The judgements read the registry, and a cancel can come while they do.
+        cancellationToken.ThrowIfCancellationRequested();
+        return answers.Contains(UpdateRefusal.CannotInstallFromThisCopy)
+            ? UpdateRefusal.CannotInstallFromThisCopy
+            : answers.FirstOrDefault(answer => answer is not null);
+    }
+
+    /// <summary>
+    /// The release's update.json, or null where the release has none: the file kept for
+    /// <paramref name="version"/> where there is one, and otherwise read, giving up after
+    /// <paramref name="within"/>. Throws <see cref="UpdateFailedException"/> at the Download
+    /// stage where the file could not be read or is not JSON.
+    /// </summary>
+    private async Task<byte[]?> ReadManifestHereAsync(
+        string version, TimeSpan? within, CancellationToken cancellationToken)
+    {
         // A cancel is answered as the cancel wherever it comes, never as a refusal or a read
         // of the release that failed, the download service answering a read refused as the
         // cancel came with the cancel. A file read in full is kept first, so a cancel as the
@@ -295,11 +366,7 @@ public sealed class AppUpdater : IAppUpdater
             if (!isJson)
                 throw new UpdateFailedException(UpdateFailureStage.Download, "The release's update.json is not JSON.");
         }
-
-        var answer = UpdateManifest.Judge(manifest, version, Kind, () => UpdateManifest.HasNetFramework48(_registry));
-        // The judgement reads the registry, and a cancel can come while it does.
-        cancellationToken.ThrowIfCancellationRequested();
-        return answer;
+        return manifest;
     }
 
     /// <summary>
@@ -366,7 +433,7 @@ public sealed class AppUpdater : IAppUpdater
             try
             {
 #if DEBUG
-                if (LocalFile() is { } local)
+                if (LocalFile(Kind) is { } local)
                     await new UpdateDownloadService(new LocalFileAnswer(local, DownloadGate()), null)
                         .DownloadAsync(address, staged, progress, cancellationToken).ConfigureAwait(false);
                 else
@@ -434,6 +501,140 @@ public sealed class AppUpdater : IAppUpdater
         }
     }
 
+    public async Task<PreparedUpdate> PrepareStagedRunAsync(string version, CancellationToken cancellationToken)
+    {
+        if (Kind is not (AppCopyKind.Setup or AppCopyKind.CommandLineDownload))
+            throw new InvalidOperationException($"A copy of kind {Kind} has no command line to run from a download.");
+
+        // Everything after this runs on a pool thread, as in PrepareAsync.
+        await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+
+        if (await CheckStagedRunRequirementsHereAsync(version, cancellationToken).ConfigureAwait(false) is { } refusal)
+            throw new UpdateRefusedException(refusal, version);
+
+        // The hold comes before the first write, as in PrepareAsync.
+        cancellationToken.ThrowIfCancellationRequested();
+        var (hold, folder) = StagingFolderUnderHold();
+        var staged = new List<string>();
+        var holds = new List<FileStream>();
+        void TakeAway()
+        {
+            foreach (var file in holds) file.Dispose();
+            foreach (var path in staged) Helpers.StorageHelpers.TryDeleteTempFile(path);
+            folder.TryRemoveIfEmpty();
+        }
+
+        try
+        {
+            // The setup comes first, so a setup that fails its check costs no download of the
+            // command line. Each file is held from its check on, so the start-up clean-up of
+            // another process, which takes files of both names, cannot take the first while the
+            // second downloads.
+            if (Kind == AppCopyKind.Setup)
+                await StageHeldAsync(AppCopyKind.Setup, version, folder, staged, holds, cancellationToken)
+                    .ConfigureAwait(false);
+            var commandLine = await StageHeldAsync(
+                AppCopyKind.CommandLineDownload, version, folder, staged, holds, cancellationToken)
+                .ConfigureAwait(false);
+
+            // The run starts the command line from the staging folder, and the newer version
+            // puts itself, or on the setup's copy its setup, in this copy's place from there.
+            // So once the run has started nothing is undone: the files stay held and the
+            // gate stays out until this process ends. The handles are kept in a list that
+            // lives as long as the process, since a handle nothing references is closed by
+            // its finalizer, whatever the caller keeps.
+            lock (HeldForTheProcess) HeldForTheProcess.AddRange(holds);
+            return new PreparedUpdate(version, commandLine, string.Empty, () =>
+                {
+                    try
+                    {
+                        lock (HeldForTheProcess) HeldForTheProcess.RemoveAll(holds.Contains);
+                        TakeAway();
+                    }
+                    finally
+                    {
+                        hold.Release();
+                    }
+                },
+                _exePath);
+        }
+        catch
+        {
+            try
+            {
+                TakeAway();
+            }
+            finally
+            {
+                hold.Release();
+            }
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Downloads the <paramref name="kind"/> download of <paramref name="version"/> into
+    /// <paramref name="folder"/>, adds its path to <paramref name="staged"/> before the
+    /// download starts, and checks the version it carries through a handle that shares only
+    /// reading, which is added to <paramref name="holds"/> and kept open. Answers the path.
+    /// Throws <see cref="UpdateFailedException"/> at the Install stage where the file does not
+    /// carry the version, including where it cannot be opened that way.
+    /// </summary>
+    private async Task<string> StageHeldAsync(
+        AppCopyKind kind, string version, UpdateStagingFolder folder, List<string> staged, List<FileStream> holds,
+        CancellationToken cancellationToken)
+    {
+        var path = Path.Combine(folder.FullPath, AppCopy.DownloadFileName(kind, version)!);
+        var address = AppCopy.DownloadAddress(kind, version)!;
+        staged.Add(path);
+#if DEBUG
+        // The gate holds only the command line's download, the last, so a cancel there takes
+        // away a setup already checked and held as well as a file part written.
+        if (LocalFile(kind) is { } local)
+            await new UpdateDownloadService(
+                    new LocalFileAnswer(local, kind == AppCopyKind.CommandLineDownload ? DownloadGate() : null), null)
+                .DownloadAsync(address, path, null, cancellationToken).ConfigureAwait(false);
+        else
+#endif
+        await _downloader.DownloadAsync(address, path, null, cancellationToken).ConfigureAwait(false);
+
+        // The bytes checked are the bytes held, read through the handle that holds them. The
+        // open shares only reading, so it fails where another process has the file open to
+        // write or delete it.
+        FileStream held;
+        try
+        {
+            held = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            throw new UpdateFailedException(UpdateFailureStage.Install,
+                "The downloaded file could not be opened to hold it.", ex);
+        }
+        try
+        {
+            Version? carried;
+            try
+            {
+                carried = Helpers.FileVersionResource.Read(held);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                carried = null;
+            }
+            if (carried is null || !Helpers.FileVersionResource.IsRelease(carried, version))
+                throw new UpdateFailedException(UpdateFailureStage.Install,
+                    "The downloaded file does not carry the version it was downloaded as.");
+        }
+        catch
+        {
+            held.Dispose();
+            throw;
+        }
+        holds.Add(held);
+        return path;
+    }
+
     /// <summary>
     /// Holds the gate (<see cref="UpdateLeftoverGate"/>) and then makes the folder the
     /// download is saved in, the first thing this update writes, so no pass of the start-up
@@ -457,7 +658,7 @@ public sealed class AppUpdater : IAppUpdater
 
 #if DEBUG
     /// <summary>
-    /// Set to the path of a setup, a Debug build whose copy is the setup's runs that
+    /// Set to the path of a setup, a Debug build whose copy is the setup's takes that
     /// setup in place of downloading one, so a setup built from this tree's script can
     /// be tried before any release carries it. The setup has to carry the version the
     /// update check names, as any download does, which
@@ -471,7 +672,9 @@ public sealed class AppUpdater : IAppUpdater
     /// Set to the full path of a newer copy of the kind this one replaces itself with (the
     /// portable, the slim or the command line), a Debug build that replaces itself takes
     /// that file as the body of its download, and then stages and swaps it in as it would
-    /// any download, so an update to a build from this tree can be tried offline. It has to
+    /// any download, so an update to a build from this tree can be tried offline. A run from
+    /// the staging folder takes it as the newer command line, the setup's copy included, which
+    /// takes its setup from <see cref="LocalSetupVariable"/>. It has to
     /// carry the version the update check names, as the setup does. Held inside
     /// <c>#if DEBUG</c> the same way.
     /// </summary>
@@ -496,7 +699,10 @@ public sealed class AppUpdater : IAppUpdater
     /// does: on Cancel, on Ctrl+C, and on the download's stall timeout, which fails a download
     /// held at the gate longer than that timeout as one that stopped arriving. A download from
     /// GitHub is never held. A gate that is not a full path or whose folder is not there, or a
-    /// reached file that cannot be written, fails the download. Held inside <c>#if DEBUG</c> the same way.
+    /// reached file that cannot be written, fails the download. A run from the staging folder
+    /// holds only its download of the command line, the last of its downloads, so a cancel
+    /// there takes away a setup already checked and held as well as a file part written. Held
+    /// inside <c>#if DEBUG</c> the same way.
     /// </summary>
     internal const string DownloadGateVariable = "INSTALLERCLEAN_DEBUG_DOWNLOAD_GATE";
 
@@ -547,12 +753,12 @@ public sealed class AppUpdater : IAppUpdater
     }
 
     /// <summary>
-    /// The file <see cref="LocalSetupVariable"/> names for the setup's copy, or the one
+    /// The file <see cref="LocalSetupVariable"/> names for a download of the setup, or the one
     /// <see cref="LocalDownloadVariable"/> names for every other kind; null where it is unset.
     /// </summary>
-    private string? LocalFile()
+    private static string? LocalFile(AppCopyKind kind)
     {
-        var path = Kind == AppCopyKind.Setup
+        var path = kind == AppCopyKind.Setup
             ? Environment.GetEnvironmentVariable(LocalSetupVariable)
             : Environment.GetEnvironmentVariable(LocalDownloadVariable);
         return path is { Length: > 0 } ? path : null;

@@ -5,9 +5,11 @@ namespace InstallerClean.Services;
 /// process starts. The clean-up deletes the staging folders' downloads and the newer
 /// version beside the exe by their names, and an update writes files under the same
 /// names while it runs, opened with delete sharing, so a pass of the clean-up while it
-/// runs would delete them. From just before <see cref="AppUpdater.PrepareAsync"/> writes
-/// its first file until nothing it wrote is waiting to be used, the update holds the gate
-/// (<see cref="HoldForUpdate"/>) and no pass runs.
+/// runs would delete them. From just before <see cref="AppUpdater.PrepareAsync"/> or
+/// <see cref="AppUpdater.PrepareStagedRunAsync"/> writes its first file until nothing it
+/// wrote is waiting to be used, the update holds the gate (<see cref="HoldForUpdate"/>) and
+/// no pass runs. A run from the staging folder that has started holds it until the process
+/// ends.
 /// </summary>
 public sealed class UpdateLeftoverGate
 {
@@ -52,8 +54,8 @@ public sealed class UpdateLeftoverGate
     /// Holds the gate for an update about to write its first file, once any pass already
     /// running has ended, blocking the calling thread until then. No pass runs until every
     /// hold taken has been released. An update takes it in AppUpdater's
-    /// StagingFolderUnderHold, on the pool thread <see cref="AppUpdater.PrepareAsync"/> moves
-    /// to, never the window's.
+    /// StagingFolderUnderHold, on the pool thread <see cref="AppUpdater.PrepareAsync"/> or
+    /// <see cref="AppUpdater.PrepareStagedRunAsync"/> moves to, never the window's.
     /// </summary>
     internal Hold HoldForUpdate()
     {

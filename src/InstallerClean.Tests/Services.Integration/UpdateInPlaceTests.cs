@@ -39,7 +39,7 @@ public sealed class UpdateInPlaceTests : IDisposable
     /// cannot set Administrators as the owner the way the shipping descriptor does, and
     /// could not write into the folder without its own entry.
     /// </summary>
-    private static readonly string AdministratorsAndThisAccount =
+    internal static readonly string AdministratorsAndThisAccount =
         $"O:{ThisAccountSid}D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;FA;;;{ThisAccountSid})";
 
     /// <summary>
@@ -47,7 +47,7 @@ public sealed class UpdateInPlaceTests : IDisposable
     /// is told to accept for a folder made with <see cref="AdministratorsAndThisAccount"/>:
     /// this account alongside SYSTEM and Administrators.
     /// </summary>
-    private static readonly DirectoryGuard.FolderExpectation ThisAccountExpectation = new(
+    internal static readonly DirectoryGuard.FolderExpectation ThisAccountExpectation = new(
         new HashSet<string> { ThisAccountSid, DirectoryGuard.SystemSid, DirectoryGuard.AdministratorsSid },
         new HashSet<string> { ThisAccountSid, DirectoryGuard.SystemSid, DirectoryGuard.AdministratorsSid },
         requireProtected: true);
@@ -77,7 +77,7 @@ public sealed class UpdateInPlaceTests : IDisposable
         }
     }
 
-    private static byte[] Program(byte fill)
+    internal static byte[] Program(byte fill)
     {
         var bytes = new byte[2048];
         Array.Fill(bytes, fill);
@@ -93,7 +93,7 @@ public sealed class UpdateInPlaceTests : IDisposable
     /// The release the Core library's file version names, which a download built by
     /// <see cref="Release"/> carries, as the update check gives a version.
     /// </summary>
-    private static readonly string CoreRelease = FileVersionResource.Read(CoreLibrary) is { } v
+    internal static readonly string CoreRelease = FileVersionResource.Read(CoreLibrary) is { } v
         ? UpdateCheckService.NormaliseToBuild(v).ToString()
         : throw new InvalidOperationException("The Core library carries no file version.");
 
@@ -102,13 +102,13 @@ public sealed class UpdateInPlaceTests : IDisposable
     /// <paramref name="tag"/> appended, so two of them differ while the version resource
     /// both carry is the same.
     /// </summary>
-    private static byte[] Release(byte tag) => [.. File.ReadAllBytes(CoreLibrary), .. Enumerable.Repeat(tag, 16)];
+    internal static byte[] Release(byte tag) => [.. File.ReadAllBytes(CoreLibrary), .. Enumerable.Repeat(tag, 16)];
 
     /// <summary>A registry that answers nothing, so .NET Framework 4.8 reads as not installed.</summary>
-    private static readonly IRegistryReader NoRegistry = NSubstitute.Substitute.For<IRegistryReader>();
+    internal static readonly IRegistryReader NoRegistry = NSubstitute.Substitute.For<IRegistryReader>();
 
     /// <summary>An update.json that lists every download with nothing required.</summary>
-    private const string AllowsEveryDownload =
+    internal const string AllowsEveryDownload =
         """{"schema": 1, "downloads": {"setup": {"requires": []}, "portable": {"requires": []}, "slim": {"requires": []}, "cli": {"requires": []}}}""";
 
     /// <summary>
