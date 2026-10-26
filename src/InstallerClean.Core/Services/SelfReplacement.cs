@@ -500,10 +500,7 @@ public static class SelfReplacement
     /// <remarks>
     /// A rename of a file a run of the command line holds as its own meets a sharing
     /// violation too, so the update that meets one waits the whole of
-    /// <see cref="HoldWait"/> before it says InstallerClean is in use. The window's
-    /// hand-over waits on the window's own thread, so each wait stays well short of the
-    /// five seconds or so after which Windows marks a window that has drawn nothing as not
-    /// responding.
+    /// <see cref="HoldWait"/> before it says InstallerClean is in use.
     /// </remarks>
     private static void WaitOutHold(string path, Action change, CancellationToken token)
     {

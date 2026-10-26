@@ -890,8 +890,7 @@ public partial class CompletionViewModel : ObservableObject
     /// no longer than <see cref="ExitWaitBound"/> for every send and save still running.
     /// </summary>
     /// <remarks>
-    /// Runs on the window's thread as the app closes and before an update hands over to the
-    /// newer version. The wait dispatches nothing (<see cref="HandleWait"/>), so no message
+    /// Runs on the window's thread as the app closes, an update's hand-over included. The wait dispatches nothing (<see cref="HandleWait"/>), so no message
     /// sent to the thread is handled while it waits. Work still running at the bound is
     /// written to crash.log each time the wait runs out. Where Windows refuses the wait,
     /// that is written instead and nothing is waited for.

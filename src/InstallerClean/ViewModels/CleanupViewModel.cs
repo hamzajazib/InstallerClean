@@ -329,8 +329,8 @@ public partial class CleanupViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Saves a move destination still waiting out its debounce, now, and stops the
-    /// debounced save. The language relaunch reaches it through <see cref="Dispose"/>;
-    /// an update calls it before the newer version starts and reads the same file.
+    /// debounced save. Closing the app, the language relaunch and an update's hand-over
+    /// included, reaches it through <see cref="Dispose"/>.
     /// </summary>
     public void FlushMoveDestination()
     {

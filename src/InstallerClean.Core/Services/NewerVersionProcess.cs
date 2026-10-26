@@ -18,8 +18,8 @@ internal static class NewerVersionProcess
     /// (<see cref="HandOverContract.ReplaceArguments"/>), and waits up to
     /// <see cref="HandOverContract.StartBound"/> for it to say it will. Answers as
     /// <see cref="StartAndAwait"/> does. A newer version answered as
-    /// <see cref="NewerVersionAnswer.StillRunning"/> sets the event before it touches the
-    /// path, and the event is gone once this returns, so it puts nothing at the path unless
+    /// <see cref="NewerVersionAnswer.StillRunning"/> sets the event before it moves anything
+    /// onto the path, and the event is gone once this returns, so it puts nothing at the path unless
     /// it had already opened the event; crash.log says so. The waits
     /// between tries at the start, and every other wait here, dispatch nothing, so on a
     /// window's thread no window code runs during them. Never throws.

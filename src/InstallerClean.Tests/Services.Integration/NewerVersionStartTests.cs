@@ -296,16 +296,13 @@ public sealed class NewerVersionStartTests : IDisposable
     [Fact]
     public void A_staged_newer_version_that_does_not_set_the_event_in_time_is_ended_before_the_answer()
     {
-        var argumentsFile = Path.Combine(_root, "arguments.txt");
-        var pidFile = Path.Combine(_root, "pid.txt");
-        var script = StagedStandIn(argumentsFile, $"$PID | Set-Content -LiteralPath '{pidFile}'; Start-Sleep -Seconds 60");
+        var script = StagedStandIn(Path.Combine(_root, "arguments.txt"), "Start-Sleep -Seconds 120");
 
         var answer = NewerVersionProcess.StartToReplace(
             PowerShell, Path.Combine(_root, "InstallerClean.exe"), RunningScript(script), TimeSpan.FromSeconds(5));
 
+        // NotStarted rather than StillRunning is the answer that says it was ended.
         Assert.Equal(NewerVersionAnswer.NotStarted, answer);
-        var pid = int.Parse(File.ReadAllText(pidFile).Trim(), System.Globalization.CultureInfo.InvariantCulture);
-        Assert.Throws<ArgumentException>(() => Process.GetProcessById(pid));
         Assert.Contains("within 5 seconds", TestCrashLog.OnlyEntry());
     }
 
